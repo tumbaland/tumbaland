@@ -11,8 +11,11 @@
   ],
   "scripts": {
     "dev:frontends": "concurrently \"npm run dev -w shell\" \"npm run dev -w finance-front\" \"npm run dev -w relationship-front\"",
+    "dev:backends": "concurrently \"npm run dev -w finance-back\" \"npm run dev -w relationship-back\"",
+    "dev:full": "concurrently \"npm run dev -w shell\" \"npm run dev -w finance-front\" \"npm run dev -w relationship-front\" \"npm run dev -w finance-back\" \"npm run dev -w relationship-back\"",
     "dev": "npm run dev:frontends",
     "build:frontends": "npm run build -w shell && npm run build -w finance-front && npm run build -w relationship-front",
+    "build:backends": "npm run build -w finance-back && npm run build -w relationship-back",
     "build": "npm run build:frontends"
   },
   "keywords": [],
