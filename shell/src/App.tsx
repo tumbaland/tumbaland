@@ -1,103 +1,169 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import './App.css';
-import { loadAndMountMicrofrontend, MicroFrontendType, unmountAllMicrofrontends, unmountMicrofrontend } from './utils/microfrontend-loader';
+
+type AppName = 'home' | 'finance' | 'relationship';
+
+interface AppConfig {
+  name: string;
+  url: string;
+  port: number;
+  description: string;
+}
+
+const apps: Record<Exclude<AppName, 'home'>, AppConfig> = {
+  finance: {
+    name: 'Finance Management',
+    url: 'http://localhost:3001',
+    port: 3001,
+    description: 'Manage your finances, track transactions, and monitor expenses.'
+  },
+  relationship: {
+    name: 'Relationship Manager',
+    url: 'http://localhost:3002',
+    port: 3002,
+    description: 'Manage your contacts and relationships effectively.'
+  }
+};
 
 function App() {
-  const [currentApp, setCurrentApp] = useState<MicroFrontendType | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [currentApp, setCurrentApp] = useState<AppName>('home');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Handle app switching
-    if (currentApp) {
-      setIsLoading(true);
-      const containerId = `${currentApp}-container`;
+  const handleAppChange = async (appName: AppName) => {
+    if (appName === 'home') {
+      setCurrentApp('home');
+      setError(null);
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Check if the app is running by making a simple fetch request
+      await fetch(apps[appName].url, {
+        method: 'GET',
+        mode: 'no-cors'
+      });
       
-      // Load and mount the microfrontend
-      loadAndMountMicrofrontend(currentApp, containerId)
-        .finally(() => {
-          setIsLoading(false);
-        });
+      setCurrentApp(appName);
+    } catch (err) {
+      setError(`Failed to connect to ${apps[appName].name}. Please make sure it's running on port ${apps[appName].port}.`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="loading">
+          <div>Loading application...</div>
+        </div>
+      );
     }
 
-    // Cleanup on component unmount
-    return () => {
-      unmountAllMicrofrontends();
-    };
-  }, [currentApp]);
-
-  // Handle returning to home
-  const handleGoHome = () => {
-    if (currentApp) {
-      const containerId = `${currentApp}-container`;
-      unmountMicrofrontend(containerId);
+    if (error) {
+      return (
+        <div className="error">
+          <h3>Connection Error</h3>
+          <p>{error}</p>
+          <button 
+            onClick={() => setCurrentApp('home')}
+            className="retry-button"
+          >
+            Back to Home
+          </button>
+        </div>
+      );
     }
-    setCurrentApp(null);
+
+    if (currentApp === 'home') {
+      return (
+        <div className="welcome-section">
+          <h2>Welcome to TumbaLand</h2>
+          <p>
+            Your integrated platform for managing finances and relationships. 
+            Select an application from the menu above or click on a card below to get started.
+          </p>
+          
+          <div className="app-grid">
+            <div 
+              className="app-card finance"
+              onClick={() => handleAppChange('finance')}
+            >
+              <h3>💰 Finance Management</h3>
+              <p>{apps.finance.description}</p>
+              <span className="port-info">Port: {apps.finance.port}</span>
+            </div>
+            
+            <div 
+              className="app-card relationship"
+              onClick={() => handleAppChange('relationship')}
+            >
+              <h3>👥 Relationship Manager</h3>
+              <p>{apps.relationship.description}</p>
+              <span className="port-info">Port: {apps.relationship.port}</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Render the selected micro-frontend in an iframe
+    const app = apps[currentApp];
+    return (
+      <div className="iframe-container">
+        <iframe
+          src={app.url}
+          title={app.name}
+          width="100%"
+          height="100%"
+          style={{ border: 'none' }}
+          onError={() => setError(`Failed to load ${app.name}`)}
+        />
+      </div>
+    );
   };
 
   return (
-    <div className="shell-container">
-      <header className="shell-header">
-        <h1>Tumbaland Microfrontend Application</h1>
-        <nav>
-          <button 
-            onClick={() => setCurrentApp('finance')}
-            className={currentApp === 'finance' ? 'active' : ''}
-          >
-            Finance App
-          </button>
-          <button 
-            onClick={() => setCurrentApp('relationship')}
-            className={currentApp === 'relationship' ? 'active' : ''}
-          >
-            Relationship App
-          </button>
-          {currentApp && (
-            <button 
-              onClick={handleGoHome}
-              className="reset-button"
-            >
-              Home
-            </button>
-          )}
-        </nav>
+    <div className="app">
+      <header className="header">
+        <div className="container">
+          <h1>🌍 TumbaLand</h1>
+          <p className="tagline">Simple Micro-Frontend Architecture</p>
+        </div>
       </header>
-      
-      <main className="content-area">
-        {/* Container divs - always in DOM but hidden when not active */}
-        <div 
-          id="finance-container" 
-          className="app-container" 
-          style={{ display: currentApp === 'finance' ? 'flex' : 'none' }}
-        >
-          {isLoading && currentApp === 'finance' && (
-            <div className="loading">Loading Finance microfrontend...</div>
-          )}
+
+      <nav className="nav">
+        <div className="nav-container">
+          <ul className="nav-list">
+            <li
+              className={`nav-item ${currentApp === 'home' ? 'active' : ''}`}
+              onClick={() => handleAppChange('home')}
+            >
+              🏠 Home
+            </li>
+            <li
+              className={`nav-item ${currentApp === 'finance' ? 'active' : ''}`}
+              onClick={() => handleAppChange('finance')}
+            >
+              💰 Finance
+            </li>
+            <li
+              className={`nav-item ${currentApp === 'relationship' ? 'active' : ''}`}
+              onClick={() => handleAppChange('relationship')}
+            >
+              👥 Relationships
+            </li>
+          </ul>
         </div>
-        
-        <div 
-          id="relationship-container" 
-          className="app-container"
-          style={{ display: currentApp === 'relationship' ? 'flex' : 'none' }}
-        >
-          {isLoading && currentApp === 'relationship' && (
-            <div className="loading">Loading Relationship microfrontend...</div>
-          )}
-        </div>
-        
-        <div 
-          className="welcome"
-          style={{ display: !currentApp ? 'block' : 'none' }}
-        >
-          <h2>Welcome to the Shell Application</h2>
-          <p>Please select a microfrontend from the navigation above</p>
-          <div className="tech-stack">
-            <p>Built with:</p>
-            <ul>
-              <li>React v19</li>
-              <li>TypeScript</li>
-              <li>Vite</li>
-            </ul>
-          </div>
+      </nav>
+
+      <main className="container">
+        <div className="main-content">
+          {renderContent()}
         </div>
       </main>
     </div>
