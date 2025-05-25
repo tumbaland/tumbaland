@@ -18,11 +18,5 @@ export default defineConfig({
     target: 'esnext',
     minify: false,
     cssCodeSplit: false,
-    lib: {
-      entry: resolve(__dirname, 'src/main.tsx'),
-      name: 'RelationshipApp',
-      formats: ['es'],
-      fileName: 'relationship-app',
-    },
   },
 })

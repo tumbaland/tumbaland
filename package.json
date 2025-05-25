@@ -16,8 +16,17 @@
     "dev:finance-service": "npm run dev -w apps/backends/domain/finance-service",
     "dev:relationship-service": "npm run dev -w apps/backends/domain/relationship-service",
     "dev:back": "concurrently \"npm run dev:finance-service\" \"npm run dev:relationship-service\"",
-    "dev:all": "concurrently \"npm run dev:frontends\" \"npm run dev:backends\"",
-    "dev": "npm run dev:frontends"
+    "dev:all": "concurrently \"npm run dev:front\" \"npm run dev:back\"",
+    "dev": "npm run dev:front",
+    "build:shell": "npm run build -w apps/frontends/shell",
+    "build:finance-frontend": "npm run build -w apps/frontends/finance", 
+    "build:relationship-frontend": "npm run build -w apps/frontends/relationship",
+    "build:finance-service": "npm run build -w apps/backends/domain/finance-service",
+    "build:relationship-service": "npm run build -w apps/backends/domain/relationship-service",
+    "build:front": "concurrently \"npm run build:shell\" \"npm run build:finance-frontend\" \"npm run build:relationship-frontend\"",
+    "build:back": "concurrently \"npm run build:finance-service\" \"npm run build:relationship-service\"",
+    "build": "npm run build:front && npm run build:back",
+    "lint": "echo \"Error: no lint specified\" && exit 1"
   },
   "devDependencies": {
     "@types/cors": "^2.8.18",

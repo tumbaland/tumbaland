@@ -1,4 +1,3 @@
-import React from 'react';
 import './App.css';
 import { useAssets } from './hooks/useAssets';
 import Header from './components/Header';
