@@ -1,5 +1,5 @@
 {
-  "name": "finance-back",
+  "name": "finance-service",
   "version": "1.0.0",
   "description": "Finance Backend API for Tumbaland Microfrontend Application",
   "main": "dist/index.js",

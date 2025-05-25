@@ -1,5 +1,5 @@
 {
-  "name": "relationship-back",
+  "name": "relationship-service",
   "version": "1.0.0",
   "description": "Relationship Backend API for Tumbaland Microfrontend Application",
   "main": "dist/index.js",
