@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
+import dotenv from 'dotenv';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://admin:adminpassword@localhost:27017/relationship?authSource=admin';
+dotenv.config();
+const MONGODB_URI = process.env.MONGODB_URI || '';
 
 export const connectDB = async (): Promise<void> => {
   try {
