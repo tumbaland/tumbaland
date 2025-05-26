@@ -8,19 +8,6 @@ export default defineConfig({
   server: {
     port: 3000,
     cors: true,
-    proxy: {
-      // Proxy API calls to avoid CORS issues during development
-      '/api/finance': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/finance/, ''),
-      },
-      '/api/relationship': {
-        target: 'http://localhost:3002',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/relationship/, ''),
-      },
-    },
   },
   resolve: {
     alias: {

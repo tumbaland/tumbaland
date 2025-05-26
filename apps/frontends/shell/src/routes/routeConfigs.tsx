@@ -27,7 +27,7 @@ export const routeConfigs: RouteConfig[] = [
     path: '/finance',
     element: ({ loading, onIframeLoad }: RouteElementProps) => (
       <AppIframe 
-        src="http://localhost:3001"
+        src={import.meta.env.VITE_FINANCE_APP_URL}
         loading={loading}
         onLoad={onIframeLoad}
       />
@@ -37,7 +37,7 @@ export const routeConfigs: RouteConfig[] = [
     path: '/relationship',
     element: ({ loading, onIframeLoad }: RouteElementProps) => (
       <AppIframe 
-        src="http://localhost:3002"
+        src={import.meta.env.VITE_RELATIONSHIP_APP_URL}
         loading={loading}
         onLoad={onIframeLoad}
       />

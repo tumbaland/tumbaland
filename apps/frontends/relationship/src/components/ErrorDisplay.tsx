@@ -1,4 +1,5 @@
 import React from 'react';
+import Header from './Header';
 
 interface ErrorDisplayProps {
   error: string;
@@ -7,12 +8,14 @@ interface ErrorDisplayProps {
 
 const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ error, onRetry }) => {
   return (
-    <div className="error-display">
-      <div className="error-content">
-        <h3>Oops! Something went wrong</h3>
-        <p className="error-message">{error}</p>
+    <div className="finance-app">
+      <Header onRefresh={function (): void {
+        throw new Error('Function not implemented.');
+      } } />
+      <div className="error">
+        <p>Error: {error}</p>
         <button onClick={onRetry} className="retry-button">
-          Try Again
+          Retry
         </button>
       </div>
     </div>
