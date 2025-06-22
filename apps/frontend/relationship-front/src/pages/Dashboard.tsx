@@ -1,12 +1,5 @@
 import React from "react";
-import {
-  Box,
-  Typography,
-  Paper,
-  CircularProgress,
-  Chip,
-  Divider,
-} from "@mui/material";
+import { Box, Typography, CircularProgress } from "@mui/material";
 import {
   AccessTime,
   Favorite,
@@ -138,7 +131,7 @@ const Dashboard: React.FC = () => {
             color="info.main"
           />
         </Box>
-      </Box>{" "}
+      </Box>
       {/* Additional Stats Row */}
       <Box sx={{ display: "flex", gap: 3, mb: 4, flexWrap: "wrap" }}>
         <Box sx={{ minWidth: 280, flex: 1 }}>
@@ -176,175 +169,21 @@ const Dashboard: React.FC = () => {
             subtitle={`${displayStats.trends.lastWeekHours} hours last week`}
             color="info.main"
           />
-        </Box>      </Box>
-        {/* Hours Bar Chart Section */}
+        </Box>
+      </Box>
       <Box sx={{ mb: 4 }}>
         <HoursBarChart />
       </Box>
-        {/* Monthly Stacked Bar Chart Section */}
       <Box sx={{ mb: 4 }}>
         <MonthlyStackedBarChart />
       </Box>
-        {/* Activity Stacked Bar Chart Section - Full Width */}
-      <Box sx={{ mb: 4, width: '100%' }}>
+      <Box sx={{ mb: 4, width: "100%" }}>
         <ActivityStackedBarChart height={500} />
       </Box>
-        {/* Weekly Heatmap Section */}
-      <Box sx={{ mb: 4, width: '100%' }}>
+      <Box sx={{ mb: 4, width: "100%" }}>
         <WeeklyHeatmap />
       </Box>
-      
-      {/* Charts Section */}
-      <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
-        <Box sx={{ flex: 2, minWidth: 400 }}>
-          <Paper
-            sx={{ p: 3, height: 400, display: "flex", flexDirection: "column" }}
-          >
-            {" "}
-            <Typography variant="h6" gutterBottom>
-              Activity Breakdown
-            </Typography>
-            {displayStats.breakdown.length > 0 ? (
-              <Box
-                sx={{
-                  mt: 2,
-                  flexGrow: 1,
-                  overflowY: "auto",
-                  pr: 1,
-                }}
-              >
-                {displayStats.breakdown.map((activity, index) => (
-                  <Box key={index} sx={{ mb: 2 }}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        mb: 1,
-                      }}
-                    >
-                      <Typography
-                        variant="body2"
-                        sx={{ textTransform: "capitalize" }}
-                      >
-                        {activity.type}
-                      </Typography>
-                      <Typography variant="body2">
-                        {activity.count} times ({activity.percentage}%)
-                      </Typography>
-                    </Box>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        mb: 1,
-                      }}
-                    >
-                      <Typography variant="caption" color="text.secondary">
-                        {activity.totalHours} hours total
-                      </Typography>
-                      <Chip
-                        label={`${activity.percentage}%`}
-                        size="small"
-                        color={index < 3 ? "primary" : "default"}
-                      />
-                    </Box>
-                    <Box
-                      sx={{
-                        width: "100%",
-                        height: 8,
-                        backgroundColor: "grey.200",
-                        borderRadius: 1,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          width: `${activity.percentage}%`,
-                          height: "100%",
-                          backgroundColor:
-                            index < 3 ? "primary.main" : "grey.400",
-                          transition: "width 0.3s ease",
-                        }}
-                      />
-                    </Box>{" "}
-                    {index < displayStats.breakdown.length - 1 && (
-                      <Divider sx={{ mt: 2 }} />
-                    )}
-                  </Box>
-                ))}
-              </Box>
-            ) : (
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexGrow: 1,
-                  color: "text.secondary",
-                }}
-              >
-                <Typography>Activity breakdown will appear here</Typography>
-              </Box>
-            )}
-          </Paper>
-        </Box>
-        <Box sx={{ flex: 1, minWidth: 300 }}>
-          <Paper
-            sx={{ p: 3, height: 400, display: "flex", flexDirection: "column" }}
-          >
-            {" "}
-            <Typography variant="h6" gutterBottom>
-              Recent Trends
-            </Typography>
-            <Box
-              sx={{
-                mt: 3,
-                flexGrow: 1,
-                overflowY: "auto",
-                pr: 1,
-              }}
-            >
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <Box sx={{ p: 2, backgroundColor: "grey.50", borderRadius: 1 }}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Weekly Average
-                  </Typography>
-                  <Typography variant="h4" color="primary.main">
-                    {displayStats.trends.weeklyAverage.toFixed(1)}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    hours per week
-                  </Typography>
-                </Box>
-                <Box sx={{ p: 2, backgroundColor: "grey.50", borderRadius: 1 }}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Monthly Average
-                  </Typography>
-                  <Typography variant="h4" color="secondary.main">
-                    {displayStats.trends.monthlyAverage.toFixed(1)}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    hours per month
-                  </Typography>
-                </Box>
-                <Box sx={{ p: 2, backgroundColor: "grey.50", borderRadius: 1 }}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Last Week
-                  </Typography>
-                  <Typography variant="h4" color="info.main">
-                    {displayStats.trends.lastWeekHours}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    hours total
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
-          </Paper>
-        </Box>
-      </Box>
-      {/* Cumulative Timeline Section */}
-      <Box sx={{ mb: 4, width: '100%' }}>
+      <Box sx={{ mb: 4, width: "100%" }}>
         <CumulativeTimeline height={400} />
       </Box>
     </Box>
