@@ -41,14 +41,14 @@ const Dashboard: React.FC = () => {
       activitiesCount,
       daysTogether
     };
-  }, [activities]);
-  // Use statistics from API if available, otherwise use fallback
+  }, [activities]);  // Use statistics from API if available, otherwise use fallback
   const displayStats = statistics ? {
     totalHours: statistics.totalHoursTogether,
     sexActivities: statistics.sexActivityDays,
     activitiesCount: statistics.totalActivities,
-    avgHours: statistics.avgHoursPerActivity,
+    avgHours: statistics.avgHoursPerDay,
     activitiesThisMonth: statistics.activitiesThisMonth,
+    daysTogether: statistics.daysTogether,
     mostFrequent: statistics.mostFrequentActivity,
     trends: statistics.recentTrends,
     breakdown: statistics.activityBreakdown
@@ -58,6 +58,7 @@ const Dashboard: React.FC = () => {
     activitiesCount: fallbackStats.activitiesCount,
     avgHours: fallbackStats.totalHours / (fallbackStats.activitiesCount || 1),
     activitiesThisMonth: 0,
+    daysTogether: fallbackStats.daysTogether,
     mostFrequent: { type: 'none', count: 0 },
     trends: { weeklyAverage: 0, monthlyAverage: 0, lastWeekHours: 0, lastMonthHours: 0 },
     breakdown: []
@@ -140,13 +141,21 @@ const Dashboard: React.FC = () => {
             subtitle={`${displayStats.activitiesCount} shared experiences`}
             color="error.main"
           />
+        </Box>        <Box sx={{ minWidth: 280, flex: 1 }}>
+          <StatCard
+            icon={<Timeline />}
+            title="Days Together"
+            value={displayStats.daysTogether}
+            subtitle={`${displayStats.daysTogether} days since Jan 25, 2024`}
+            color="warning.main"
+          />
         </Box>
         <Box sx={{ minWidth: 280, flex: 1 }}>
           <StatCard
             icon={<TrendingUp />}
-            title="Average Hours/Activity"
+            title="Average Hours/Day"
             value={displayStats.avgHours.toFixed(1)}
-            subtitle={`${displayStats.avgHours.toFixed(1)} hours per activity`}
+            subtitle={`${displayStats.avgHours.toFixed(1)} hours per day`}
             color="info.main"
           />
         </Box>
@@ -195,12 +204,17 @@ const Dashboard: React.FC = () => {
       )}      {/* Charts Section */}
       <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
         <Box sx={{ flex: 2, minWidth: 400 }}>
-          <Paper sx={{ p: 3, height: 400 }}>
+          <Paper sx={{ p: 3, height: 400, display: 'flex', flexDirection: 'column' }}>
             <Typography variant="h6" gutterBottom>
               Activity Breakdown
             </Typography>
             {statistics && statistics.activityBreakdown.length > 0 ? (
-              <Box sx={{ mt: 2 }}>
+              <Box sx={{ 
+                mt: 2, 
+                flexGrow: 1, 
+                overflowY: 'auto',
+                pr: 1
+              }}>
                 {statistics.activityBreakdown.map((activity, index) => (
                   <Box key={index} sx={{ mb: 2 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
@@ -239,7 +253,9 @@ const Dashboard: React.FC = () => {
                         }}
                       />
                     </Box>
-                    <Divider sx={{ mt: 2 }} />
+                    {index < statistics.activityBreakdown.length - 1 && (
+                      <Divider sx={{ mt: 2 }} />
+                    )}
                   </Box>
                 ))}
               </Box>
@@ -249,7 +265,7 @@ const Dashboard: React.FC = () => {
                   display: 'flex', 
                   alignItems: 'center', 
                   justifyContent: 'center', 
-                  height: '70%',
+                  flexGrow: 1,
                   color: 'text.secondary'
                 }}
               >
@@ -259,11 +275,17 @@ const Dashboard: React.FC = () => {
           </Paper>
         </Box>
         <Box sx={{ flex: 1, minWidth: 300 }}>
-          <Paper sx={{ p: 3, height: 400 }}>
+          <Paper sx={{ p: 3, height: 400, display: 'flex', flexDirection: 'column' }}>
             <Typography variant="h6" gutterBottom>
               Recent Trends
-            </Typography>            {statistics ? (
-              <Box sx={{ mt: 3 }}>
+            </Typography>
+            {statistics ? (
+              <Box sx={{ 
+                mt: 3, 
+                flexGrow: 1, 
+                overflowY: 'auto',
+                pr: 1
+              }}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <Box sx={{ p: 2, backgroundColor: 'grey.50', borderRadius: 1 }}>
                     <Typography variant="subtitle2" gutterBottom>
@@ -306,7 +328,7 @@ const Dashboard: React.FC = () => {
                   display: 'flex', 
                   alignItems: 'center', 
                   justifyContent: 'center', 
-                  height: '70%',
+                  flexGrow: 1,
                   color: 'text.secondary'
                 }}
               >

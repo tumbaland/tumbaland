@@ -5,7 +5,8 @@ export interface RelationshipStatistics {
   sexActivityDays: number;
   totalActivities: number;
   activitiesThisMonth: number;
-  avgHoursPerActivity: number;
+  avgHoursPerDay: number;
+  daysTogether: number;
   mostFrequentActivity: {
     type: string;
     count: number;

@@ -33,7 +33,7 @@ const ActivitySchema: Schema = new Schema({
     type: {
       type: String,
       required: true,
-      enum: ['movies', 'cooking', 'dining', 'lunch', 'gaming', 'other', 'sex', 'together']
+      enum: ['movies', 'cooking', 'dining', 'coffee', 'gaming', 'other', 'sex', 'together']
     },
     description: {
       type: String,

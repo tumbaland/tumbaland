@@ -5,7 +5,8 @@ export interface RelationshipStatistics {
   sexActivityDays: number;
   totalActivities: number;
   activitiesThisMonth: number;
-  avgHoursPerActivity: number;
+  avgHoursPerDay: number;
+  daysTogether: number;
   mostFrequentActivity: {
     type: string;
     count: number;
@@ -122,13 +123,15 @@ export const getRelationshipStatistics = async (timeframe: string = 'all'): Prom
         .sort({ date: -1 })
         .limit(100)
         .select('date hours activity.type')
-    ]);
-
-    // Calculate basic stats
+    ]);    // Calculate basic stats
     const totalActivities = totalStats[0]?.totalActivities || 0;
     const totalHours = totalStats[0]?.totalHours || 0;
-    const avgHoursPerActivity = totalStats[0]?.avgHours || 0;
     const sexActivityDays = sexActivities[0]?.uniqueDays || 0;
+
+    // Calculate average hours per day
+    const timeDiffMs = endDate.getTime() - startDate.getTime();
+    const daysDiff = Math.max(1, Math.ceil(timeDiffMs / (1000 * 60 * 60 * 24)));
+    const avgHoursPerDay = totalHours / daysDiff;
 
     // Calculate this month's activities
     const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -172,17 +175,20 @@ export const getRelationshipStatistics = async (timeframe: string = 'all'): Prom
           }
         }
       ])
-    ]);
-
-    const lastWeekHours = lastWeekStats[0]?.totalHours || 0;
+    ]);    const lastWeekHours = lastWeekStats[0]?.totalHours || 0;
     const lastMonthHours = lastMonthStats[0]?.totalHours || 0;
     const weeklyAverage = lastWeekHours / 7;
-    const monthlyAverage = lastMonthHours / 30;    return {
+    const monthlyAverage = lastMonthHours / 30;
+
+    // Calculate days together since relationship start (January 25, 2024)
+    const relationshipStartDate = new Date('2024-01-25');
+    const daysTogether = Math.floor((now.getTime() - relationshipStartDate.getTime()) / (1000 * 60 * 60 * 24));    return {
       totalHoursTogether: Math.round(totalHours * 100) / 100,
       sexActivityDays,
       totalActivities,
       activitiesThisMonth: thisMonthActivities,
-      avgHoursPerActivity: Math.round(avgHoursPerActivity * 100) / 100,
+      avgHoursPerDay: Math.round(avgHoursPerDay * 100) / 100,
+      daysTogether,
       mostFrequentActivity: {
         type: mostFrequentActivity.type,
         count: mostFrequentActivity.count
