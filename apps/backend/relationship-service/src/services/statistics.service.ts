@@ -46,6 +46,19 @@ export interface MonthlyStatisticsData {
   daysNotMet: number;
 }
 
+export interface MonthlyActivityData {
+  month: string;
+  year: number;
+  activities: {
+    [key: string]: {
+      count: number;
+      hours: number;
+    };
+  };
+  totalHours: number;
+  totalActivities: number;
+}
+
 export const getRelationshipStatistics = async (timeframe: string = 'all'): Promise<RelationshipStatistics> => {
   try {
     // Calculate date range based on timeframe
@@ -356,5 +369,98 @@ export const getMonthlyStatistics = async (year?: number): Promise<MonthlyStatis
   } catch (error) {
     console.error('Error calculating monthly statistics:', error);
     throw new Error('Failed to calculate monthly statistics');
+  }
+};
+
+export const getMonthlyActivityBreakdown = async (year?: number): Promise<MonthlyActivityData[]> => {
+  try {
+    // Build aggregation pipeline
+    const pipeline: any[] = [];
+    
+    // Add match stage if year is specified
+    if (year) {
+      const startDate = new Date(year, 0, 1);
+      const endDate = new Date(year + 1, 0, 1);
+      pipeline.push({
+        $match: {
+          date: {
+            $gte: startDate,
+            $lt: endDate
+          }
+        }
+      });
+    }
+
+    // Add grouping stages
+    pipeline.push(
+      {
+        $group: {
+          _id: {
+            year: { $year: '$date' },
+            month: { $month: '$date' },
+            activityType: '$activity.type'
+          },
+          count: { $sum: 1 },
+          totalHours: { $sum: '$hours' }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: '$_id.year',
+            month: '$_id.month'
+          },
+          activities: {
+            $push: {
+              type: '$_id.activityType',
+              count: '$count',
+              hours: '$totalHours'
+            }
+          },
+          totalActivities: { $sum: '$count' },
+          totalHours: { $sum: '$totalHours' }
+        }
+      },
+      {
+        $sort: {
+          '_id.year': 1 as const,
+          '_id.month': 1 as const
+        }
+      }
+    );
+
+    const result = await Activity.aggregate(pipeline);
+
+    // Transform the result to match our interface
+    const transformedResult: MonthlyActivityData[] = result.map(item => {
+      const activities: { [key: string]: { count: number; hours: number } } = {};
+        // Initialize only the activity types we want to display (excluding together and sex)
+      const activityTypes = ['movies', 'cooking', 'dining', 'coffee', 'gaming', 'other'];
+      activityTypes.forEach(type => {
+        activities[type] = { count: 0, hours: 0 };
+      });
+        // Fill in actual data (only for allowed activity types)
+      item.activities.forEach((activity: any) => {
+        if (activities.hasOwnProperty(activity.type)) {
+          activities[activity.type] = {
+            count: activity.count || 0,
+            hours: activity.hours || 0
+          };
+        }
+      });
+
+      return {
+        month: item._id.month.toString().padStart(2, '0'),
+        year: item._id.year,
+        activities,
+        totalHours: item.totalHours || 0,
+        totalActivities: item.totalActivities || 0
+      };
+    });
+
+    return transformedResult;
+  } catch (error) {
+    console.error('Error calculating monthly activity breakdown:', error);
+    throw new Error('Failed to calculate monthly activity breakdown');
   }
 };
