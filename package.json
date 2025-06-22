@@ -5,7 +5,8 @@
   "description": "Scalable microfrontend and microservices platform",
   "workspaces": [
     "apps/frontend/*",
-    "apps/backend/*"
+    "apps/backend/*",
+    "libs/*"
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
@@ -39,6 +40,10 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^7.1.2",
+    "@mui/material": "^7.1.2",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",

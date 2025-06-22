@@ -14,6 +14,13 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* Path mapping for shared components */
+    "baseUrl": ".",
+    "paths": {
+      "@tumbaland/components": ["../../../libs/components/src/index.ts"],
+      "@tumbaland/components/*": ["../../../libs/components/src/*"]
+    },
+
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,
