@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getRelationshipStatistics, getMonthlyHours, getMonthlyStatistics, getMonthlyActivityBreakdown } from '../services/statistics.service';
+import { getRelationshipStatistics, getMonthlyHours, getMonthlyStatistics, getMonthlyActivityBreakdown, getWeeklyHeatmapData } from '../services/statistics.service';
 
 // Get relationship statistics
 export const getStatistics = async (req: Request, res: Response): Promise<void> => {
@@ -149,6 +149,37 @@ export const getMonthlyActivityBreakdownData = async (req: Request, res: Respons
     console.error('Error fetching monthly activity breakdown:', error);
     res.status(500).json({
       error: 'Failed to fetch monthly activity breakdown',
+      message: error.message
+    });
+  }
+};
+
+// Get weekly heatmap data
+export const getWeeklyHeatmapDataController = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { year } = req.query;
+    const selectedYear = year ? parseInt(year as string) : undefined;
+    
+    // Validate year if provided
+    if (year && (isNaN(selectedYear!) || selectedYear! < 2000 || selectedYear! > new Date().getFullYear() + 1)) {
+      res.status(400).json({
+        error: 'Invalid year',
+        message: 'Year must be a valid number between 2000 and next year'
+      });
+      return;
+    }
+
+    const heatmapData = await getWeeklyHeatmapData(selectedYear);
+    
+    res.json({
+      success: true,
+      data: heatmapData,
+      generatedAt: new Date().toISOString()
+    });
+  } catch (error: any) {
+    console.error('Error fetching weekly heatmap data:', error);
+    res.status(500).json({
+      error: 'Failed to fetch weekly heatmap data',
       message: error.message
     });
   }

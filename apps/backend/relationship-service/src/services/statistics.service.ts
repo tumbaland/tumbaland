@@ -59,6 +59,22 @@ export interface MonthlyActivityData {
   totalActivities: number;
 }
 
+export interface WeeklyHeatmapData {
+  date: string; // YYYY-MM-DD format
+  dayOfWeek: number; // 0-6 (Sunday-Saturday)
+  week: number; // Week number in the year
+  month: number;
+  year: number;
+  totalActivities: number;
+  totalHours: number;
+  activities: {
+    [key: string]: {
+      count: number;
+      hours: number;
+    };
+  };
+}
+
 export const getRelationshipStatistics = async (timeframe: string = 'all'): Promise<RelationshipStatistics> => {
   try {
     // Calculate date range based on timeframe
@@ -462,5 +478,96 @@ export const getMonthlyActivityBreakdown = async (year?: number): Promise<Monthl
   } catch (error) {
     console.error('Error calculating monthly activity breakdown:', error);
     throw new Error('Failed to calculate monthly activity breakdown');
+  }
+};
+
+export const getWeeklyHeatmapData = async (year?: number): Promise<WeeklyHeatmapData[]> => {
+  try {
+    // Build aggregation pipeline
+    const pipeline: any[] = [];
+    
+    // Add match stage if year is specified
+    if (year) {
+      const startDate = new Date(year, 0, 1);
+      const endDate = new Date(year + 1, 0, 1);
+      pipeline.push({
+        $match: {
+          date: {
+            $gte: startDate,
+            $lt: endDate
+          }
+        }
+      });
+    }
+
+    // Add grouping by date
+    pipeline.push(
+      {
+        $group: {
+          _id: {
+            date: {
+              $dateToString: {
+                format: "%Y-%m-%d",
+                date: "$date"
+              }
+            },
+            year: { $year: '$date' },
+            month: { $month: '$date' },
+            dayOfWeek: { $dayOfWeek: '$date' },
+            week: { $week: '$date' }
+          },
+          activities: {
+            $push: {
+              type: '$activity.type',
+              hours: '$hours'
+            }
+          },
+          totalActivities: { $sum: 1 },
+          totalHours: { $sum: '$hours' }
+        }
+      },
+      {
+        $sort: {
+          '_id.date': 1
+        }
+      }
+    );
+
+    const result = await Activity.aggregate(pipeline);
+
+    // Transform the result to match our interface
+    const transformedResult: WeeklyHeatmapData[] = result.map(item => {
+      const activities: { [key: string]: { count: number; hours: number } } = {};
+      
+      // Initialize activity types
+      const activityTypes = ['movies', 'cooking', 'dining', 'coffee', 'gaming', 'other'];
+      activityTypes.forEach(type => {
+        activities[type] = { count: 0, hours: 0 };
+      });
+      
+      // Count activities by type
+      item.activities.forEach((activity: any) => {
+        if (activities.hasOwnProperty(activity.type)) {
+          activities[activity.type].count++;
+          activities[activity.type].hours += activity.hours || 0;
+        }
+      });
+
+      return {
+        date: item._id.date,
+        dayOfWeek: item._id.dayOfWeek - 1, // Convert to 0-6 (Sunday-Saturday)
+        week: item._id.week,
+        month: item._id.month,
+        year: item._id.year,
+        totalActivities: item.totalActivities || 0,
+        totalHours: item.totalHours || 0,
+        activities
+      };
+    });
+
+    return transformedResult;
+  } catch (error) {
+    console.error('Error calculating weekly heatmap data:', error);
+    throw new Error('Failed to calculate weekly heatmap data');
   }
 };

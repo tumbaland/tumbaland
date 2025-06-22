@@ -20,6 +20,7 @@ import StatCard from "../components/StatCard";
 import HoursBarChart from "../components/HoursBarChart";
 import MonthlyStackedBarChart from "../components/MonthlyStackedBarChart";
 import ActivityStackedBarChart from "../components/ActivityStackedBarChart";
+import WeeklyHeatmap from "../components/WeeklyHeatmap";
 
 const Dashboard: React.FC = () => {
   const {
@@ -186,6 +187,10 @@ const Dashboard: React.FC = () => {
         {/* Activity Stacked Bar Chart Section - Full Width */}
       <Box sx={{ mb: 4, width: '100%' }}>
         <ActivityStackedBarChart height={500} />
+      </Box>
+        {/* Weekly Heatmap Section */}
+      <Box sx={{ mb: 4, width: '100%' }}>
+        <WeeklyHeatmap />
       </Box>
       
       {/* Charts Section */}

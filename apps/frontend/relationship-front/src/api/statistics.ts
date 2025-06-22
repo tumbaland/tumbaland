@@ -94,6 +94,28 @@ export interface MonthlyActivityBreakdownResponse {
   generatedAt: string;
 }
 
+export interface WeeklyHeatmapData {
+  date: string; // YYYY-MM-DD format
+  dayOfWeek: number; // 0-6 (Sunday-Saturday)
+  week: number; // Week number in the year
+  month: number;
+  year: number;
+  totalActivities: number;
+  totalHours: number;
+  activities: {
+    [key: string]: {
+      count: number;
+      hours: number;
+    };
+  };
+}
+
+export interface WeeklyHeatmapResponse {
+  success: boolean;
+  data: WeeklyHeatmapData[];
+  generatedAt: string;
+}
+
 /**
  * Get relationship statistics
  * @param timeframe - Optional: 'week', 'month', 'quarter', 'year', 'all' (default: 'all')
@@ -174,10 +196,27 @@ export const getMonthlyActivityBreakdown = async (year?: number): Promise<Monthl
   }
 };
 
+/**
+ * Get weekly heatmap data
+ * @param year - Optional: specific year to filter by
+ */
+export const getWeeklyHeatmapData = async (year?: number): Promise<WeeklyHeatmapData[]> => {
+  try {
+    const response = await apiClient.get<WeeklyHeatmapResponse>('/statistics/weekly-heatmap', {
+      params: year ? { year } : {}
+    });
+    return response.data.data;
+  } catch (error: any) {
+    console.error('Error fetching weekly heatmap data:', error);
+    throw new Error(error.response?.data?.message || 'Failed to fetch weekly heatmap data');
+  }
+};
+
 export const statisticsApi = {
   getStatistics,
   getActivityBreakdown,
   getMonthlyHours,
   getMonthlyStatistics,
   getMonthlyActivityBreakdown,
+  getWeeklyHeatmapData,
 };
