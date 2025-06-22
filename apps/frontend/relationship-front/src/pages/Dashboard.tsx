@@ -1,17 +1,36 @@
-import React from 'react';
-import { Box, Card, CardContent, Typography, Paper } from '@mui/material';
-import { AccessTime, Favorite, CalendarToday, Timeline } from '@mui/icons-material';
-import TimeTracker from '../components/TimeTracker';
+import React, { useMemo } from 'react';
+import { Box, Card, CardContent, Typography, Paper, CircularProgress } from '@mui/material';
+import { AccessTime, Favorite, Timeline, Event } from '@mui/icons-material';
+import { useActivities } from '../hooks/useActivities';
 
 const Dashboard: React.FC = () => {
-  // Mock data for demonstration
-  const relationshipStats = {
-    totalHours: 245,
-    thisWeekHours: 28,
-    activitiesCount: 156,
-    daysTogether: 89,
-    favoriteActivity: 'Cooking'
-  };
+  const { activities = [], loading, error } = useActivities();
+
+  // Calculate relationship stats from real data
+  const relationshipStats = useMemo(() => {
+    // Relationship start date
+    const startDate = new Date('2024-01-25');
+    const today = new Date();
+    const daysTogether = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    // Calculate stats from activities
+    const totalHours = activities.reduce((sum, activity) => {
+      return sum + (activity.hours || 0);
+    }, 0);
+
+    const sexActivities = activities.filter(activity => 
+      activity.activity.type === 'sex'
+    ).length;
+
+    const activitiesCount = activities.length;
+
+    return {
+      totalHours,
+      sexActivities,
+      activitiesCount,
+      daysTogether
+    };
+  }, [activities]);
 
   const StatCard = ({ icon, title, value, subtitle, color }: any) => (
     <Card elevation={2} sx={{ height: '100%' }}>
@@ -31,52 +50,66 @@ const Dashboard: React.FC = () => {
           {subtitle}
         </Typography>
       </CardContent>
-    </Card>
-  );
+    </Card>  );
+
+  if (loading) {
+    return (
+      <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Relationship Dashboard
+        </Typography>
+        <Typography color="error">
+          Error loading data: {error}
+        </Typography>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" component="h1" gutterBottom>
         Relationship Dashboard
       </Typography>
       
-      {/* Time Tracker */}
-      <TimeTracker />
-      
       {/* Stats Cards */}
       <Box sx={{ display: 'flex', gap: 3, mb: 4, flexWrap: 'wrap' }}>
-        <Box sx={{ minWidth: 280, flex: 1 }}>
-          <StatCard
+        <Box sx={{ minWidth: 280, flex: 1 }}>          <StatCard
             icon={<AccessTime />}
             title="Total Hours Together"
-            value={`${relationshipStats.totalHours}h`}
-            subtitle="Quality time spent"
+            value={relationshipStats.totalHours}
+            subtitle={`${relationshipStats.totalHours} hours spent together`}
             color="primary.main"
           />
         </Box>
-        <Box sx={{ minWidth: 280, flex: 1 }}>
-          <StatCard
-            icon={<CalendarToday />}
-            title="This Week"
-            value={`${relationshipStats.thisWeekHours}h`}
-            subtitle="Time together this week"
+        <Box sx={{ minWidth: 280, flex: 1 }}>          <StatCard
+            icon={<Favorite />}
+            title="Sex Activities"
+            value={relationshipStats.sexActivities}
+            subtitle={`${relationshipStats.sexActivities} intimate moments`}
             color="success.main"
           />
         </Box>
-        <Box sx={{ minWidth: 280, flex: 1 }}>
-          <StatCard
-            icon={<Favorite />}
+        <Box sx={{ minWidth: 280, flex: 1 }}>          <StatCard
+            icon={<Event />}
             title="Activities Done"
             value={relationshipStats.activitiesCount}
-            subtitle="Shared experiences"
+            subtitle={`${relationshipStats.activitiesCount} shared experiences`}
             color="error.main"
           />
         </Box>
-        <Box sx={{ minWidth: 280, flex: 1 }}>
-          <StatCard
+        <Box sx={{ minWidth: 280, flex: 1 }}>          <StatCard
             icon={<Timeline />}
             title="Days Together"
             value={relationshipStats.daysTogether}
-            subtitle="Since tracking started"
+            subtitle={`${relationshipStats.daysTogether} days since Jan 25, 2024`}
             color="info.main"
           />
         </Box>

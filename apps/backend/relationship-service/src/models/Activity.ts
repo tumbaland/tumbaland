@@ -22,21 +22,22 @@ const ActivitySchema: Schema = new Schema({
   },
   hours: {
     type: Number,
-    required: true,
-    min: 1,
+    required: false,
+    min: 0,
     validate: {
       validator: Number.isInteger,
       message: 'Hours must be an integer'
     }
-  },  activity: {
+  },  
+  activity: {
     type: {
       type: String,
       required: true,
-      enum: ['movies', 'cooking', 'dining', 'date', 'walk', 'shopping', 'gaming', 'other']
+      enum: ['movies', 'cooking', 'dining', 'lunch', 'gaming', 'other', 'sex', 'together']
     },
     description: {
       type: String,
-      required: true,
+      required: false,
       maxlength: 500
     }
   }
@@ -52,7 +53,7 @@ ActivitySchema.index({ 'createdAt': -1 });
 
 // Static methods
 ActivitySchema.statics.getActivityTypes = function() {
-  return ['movies', 'cooking', 'dining', 'date', 'walk', 'shopping', 'gaming', 'other'];
+  return ['movies', 'cooking', 'dining', 'lunch', 'gaming', 'other', 'sex', 'together'];
 };
 
 ActivitySchema.statics.getActivitiesByDateRange = function(startDate: Date, endDate: Date) {

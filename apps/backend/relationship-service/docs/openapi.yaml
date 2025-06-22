@@ -1,0 +1,573 @@
+openapi: 3.0.3
+info:
+  title: Relationship Service API
+  description: API for managing relationship activities and tracking shared experiences
+  version: 1.0.0
+  contact:
+    name: Tumbaland Development Team
+    email: dev@tumbaland.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:4002/api
+    description: Development server
+  - url: https://api.tumbaland.com/relationship
+    description: Production server
+
+tags:
+  - name: activities
+    description: Operations related to relationship activities
+  - name: stats
+    description: Statistics and analytics for activities
+  - name: health
+    description: Service health and status
+
+paths:
+  /activities:
+    get:
+      tags:
+        - activities
+      summary: Get all activities
+      description: Retrieve a list of activities with optional filtering and pagination
+      parameters:
+        - name: activityType
+          in: query
+          description: Filter by activity type
+          required: false
+          schema:
+            $ref: '#/components/schemas/ActivityType'
+        - name: startDate
+          in: query
+          description: Filter activities from this date (ISO 8601 format)
+          required: false
+          schema:
+            type: string
+            format: date
+            example: "2025-01-01"
+        - name: endDate
+          in: query
+          description: Filter activities up to this date (ISO 8601 format)
+          required: false
+          schema:
+            type: string
+            format: date
+            example: "2025-12-31"
+        - name: limit
+          in: query
+          description: Maximum number of activities to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: page
+          in: query
+          description: Page number for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+      responses:
+        '200':
+          description: Successfully retrieved activities
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      activities:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Activity'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      tags:
+        - activities
+      summary: Create a new activity
+      description: Create a new relationship activity record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateActivityRequest'
+      responses:
+        '201':
+          description: Activity created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Activity'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /activities/{id}:
+    get:
+      tags:
+        - activities
+      summary: Get activity by ID
+      description: Retrieve a specific activity by its ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Activity ID
+          schema:
+            type: string
+            format: objectid
+            example: "60f7b3b3b3b3b3b3b3b3b3b3"
+      responses:
+        '200':
+          description: Successfully retrieved activity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Activity'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      tags:
+        - activities
+      summary: Update activity by ID
+      description: Update an existing activity record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Activity ID
+          schema:
+            type: string
+            format: objectid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateActivityRequest'
+      responses:
+        '200':
+          description: Activity updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Activity'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - activities
+      summary: Delete activity by ID
+      description: Delete an existing activity record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Activity ID
+          schema:
+            type: string
+            format: objectid
+      responses:
+        '200':
+          description: Activity deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Activity deleted successfully"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /activities/recent:
+    get:
+      tags:
+        - activities
+      summary: Get recent activities
+      description: Retrieve the most recent activities
+      parameters:
+        - name: limit
+          in: query
+          description: Number of recent activities to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: Successfully retrieved recent activities
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Activity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /activities/date-range:
+    get:
+      tags:
+        - activities
+      summary: Get activities by date range
+      description: Retrieve activities within a specific date range
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          description: Start date for the range (ISO 8601 format)
+          schema:
+            type: string
+            format: date
+            example: "2025-01-01"
+        - name: endDate
+          in: query
+          required: true
+          description: End date for the range (ISO 8601 format)
+          schema:
+            type: string
+            format: date
+            example: "2025-01-31"
+      responses:
+        '200':
+          description: Successfully retrieved activities for date range
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Activity'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /activities/types:
+    get:
+      tags:
+        - activities
+      summary: Get activity types
+      description: Retrieve all available activity types
+      responses:
+        '200':
+          description: Successfully retrieved activity types
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ActivityType'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /activities/stats:
+    get:
+      tags:
+        - stats
+      summary: Get activity statistics
+      description: Retrieve statistics and analytics for activities
+      parameters:
+        - name: startDate
+          in: query
+          description: Start date for statistics calculation
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          description: End date for statistics calculation
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Successfully retrieved activity statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ActivityStats'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    Activity:
+      type: object
+      properties:
+        _id:
+          type: string
+          format: objectid
+          description: Unique identifier for the activity
+          example: "60f7b3b3b3b3b3b3b3b3b3b3"
+        date:
+          type: string
+          format: date
+          description: Date when the activity occurred
+          example: "2025-06-22"
+        hours:
+          type: integer
+          minimum: 0
+          description: Duration of the activity in hours
+          example: 2
+        activity:
+          type: object
+          properties:
+            type:
+              $ref: '#/components/schemas/ActivityType'
+            description:
+              type: string
+              maxLength: 500
+              description: Detailed description of the activity
+              example: "Watched a romantic comedy together"
+          required:
+            - type
+            - description
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the record was created
+          example: "2025-06-22T14:30:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the record was last updated
+          example: "2025-06-22T14:30:00.000Z"
+      required:
+        - _id
+        - date
+        - hours
+        - activity
+        - createdAt
+        - updatedAt
+
+    CreateActivityRequest:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          description: Date when the activity occurred
+          example: "2025-06-22"
+        hours:
+          type: integer
+          minimum: 0
+          description: Duration of the activity in hours
+          example: 2
+        activity:
+          type: object
+          properties:
+            type:
+              $ref: '#/components/schemas/ActivityType'
+            description:
+              type: string
+              maxLength: 500
+              description: Detailed description of the activity
+              example: "Watched a romantic comedy together"
+          required:
+            - type
+            - description
+      required:
+        - date
+        - hours
+        - activity
+
+    UpdateActivityRequest:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          description: Date when the activity occurred
+        hours:
+          type: integer
+          minimum: 0
+          description: Duration of the activity in hours
+        activity:
+          type: object
+          properties:
+            type:
+              $ref: '#/components/schemas/ActivityType'
+            description:
+              type: string
+              maxLength: 500
+              description: Detailed description of the activity
+
+    ActivityType:
+      type: string
+      enum:
+        - movies
+        - cooking
+        - dining
+        - lunch
+        - gaming
+        - other
+        - sex
+        - together
+      description: Type of relationship activity
+      example: "movies"
+
+    ActivityStats:
+      type: object
+      properties:
+        _id:
+          $ref: '#/components/schemas/ActivityType'
+        count:
+          type: integer
+          description: Number of activities of this type
+          example: 15
+        totalHours:
+          type: integer
+          description: Total hours spent on this activity type
+          example: 45
+        avgHours:
+          type: number
+          format: float
+          description: Average hours per activity of this type
+          example: 3.0
+
+    Pagination:
+      type: object
+      properties:
+        currentPage:
+          type: integer
+          example: 1
+        totalPages:
+          type: integer
+          example: 5
+        totalItems:
+          type: integer
+          example: 100
+        itemsPerPage:
+          type: integer
+          example: 20
+        hasNextPage:
+          type: boolean
+          example: true
+        hasPrevPage:
+          type: boolean
+          example: false
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Activity not found"
+        message:
+          type: string
+          description: Detailed error description
+          example: "The requested activity with ID 60f7b3b3b3b3b3b3b3b3b3b3 could not be found"
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid input data
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Missing required fields: date, hours, and activity are required"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Activity not found"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "Internal server error occurred"
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for authentication
+
+# Apply security globally (uncomment when authentication is implemented)
+# security:
+#   - BearerAuth: []

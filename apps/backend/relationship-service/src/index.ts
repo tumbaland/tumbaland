@@ -10,7 +10,7 @@ import activityRoutes from './routes/activities';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 4002; // Using port 4002 to avoid conflict with finance-back
+const PORT = process.env.PORT || 4002;
 
 // Connect to MongoDB
 connectDB();
@@ -21,7 +21,7 @@ app.use(express.json());
 app.use(morgan('dev'));
 
 // Serve static documentation files
-app.use('/docs', express.static(path.join(__dirname, '../docs')));
+app.use('/api/docs', express.static(path.join(__dirname, '../docs')));
 
 // API Documentation route
 app.get('/api-docs', (req: Request, res: Response) => {
@@ -46,7 +46,7 @@ app.use('{*any}', (req: Request, res: Response) => {
   res.status(404).json({
     error: 'Route not found',
     message: `The route ${req.method} ${req.originalUrl} does not exist.`,
-    availableRoutes: ['/health', '/api-docs', '/docs', '/api/activities']
+    availableRoutes: ['/api/docs']
   });
 });
 
@@ -62,9 +62,7 @@ app.use((error: Error, req: Request, res: Response, next: any) => {
 // Start the server
 app.listen(PORT, () => {
   console.log(`🚀 Relationship backend server is running on port ${PORT}`);
-  console.log(`📍 Health check: http://localhost:${PORT}/health`);
-  console.log(`📚 API docs: http://localhost:${PORT}/api-docs`);
-  console.log(`💕 Activity tracking: http://localhost:${PORT}/api/activities`);
+  console.log(`📚 API docs: http://localhost:${PORT}/api/docs`);
 });
 
 export default app;
