@@ -1,5 +1,5 @@
 import express from 'express';
-import { getStatistics, getActivityBreakdown, getMonthlyHoursData, getMonthlyStatisticsData, getMonthlyActivityBreakdownData, getWeeklyHeatmapDataController } from '../controllers/statistics.controller';
+import { getStatistics, getActivityBreakdown, getMonthlyHoursData, getMonthlyStatisticsData, getMonthlyActivityBreakdownData, getWeeklyHeatmapDataController, getCumulativeTimelineDataController } from '../controllers/statistics.controller';
 
 const router = express.Router();
 
@@ -44,5 +44,12 @@ router.get('/monthly-activity-breakdown', getMonthlyActivityBreakdownData);
  * @query year - Optional: specific year to filter by
  */
 router.get('/weekly-heatmap', getWeeklyHeatmapDataController);
+
+/**
+ * @route GET /api/statistics/cumulative-timeline
+ * @desc Get cumulative timeline data
+ * @query year - Optional: specific year to filter by
+ */
+router.get('/cumulative-timeline', getCumulativeTimelineDataController);
 
 export default router;

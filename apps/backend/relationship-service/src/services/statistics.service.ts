@@ -75,6 +75,20 @@ export interface WeeklyHeatmapData {
   };
 }
 
+export interface CumulativeTimelineData {
+  date: string; // YYYY-MM-DD format
+  dailyActivities: number;
+  cumulativeActivities: number;
+  dailyHours: number;
+  cumulativeHours: number;
+  activityBreakdown: {
+    [key: string]: {
+      dailyCount: number;
+      cumulativeCount: number;
+    };
+  };
+}
+
 export const getRelationshipStatistics = async (timeframe: string = 'all'): Promise<RelationshipStatistics> => {
   try {
     // Calculate date range based on timeframe
@@ -569,5 +583,114 @@ export const getWeeklyHeatmapData = async (year?: number): Promise<WeeklyHeatmap
   } catch (error) {
     console.error('Error calculating weekly heatmap data:', error);
     throw new Error('Failed to calculate weekly heatmap data');
+  }
+};
+
+export const getCumulativeTimelineData = async (year?: number): Promise<CumulativeTimelineData[]> => {
+  try {
+    // Build aggregation pipeline
+    const pipeline: any[] = [];
+    
+    // Add match stage if year is specified
+    if (year) {
+      const startDate = new Date(year, 0, 1);
+      const endDate = new Date(year + 1, 0, 1);
+      pipeline.push({
+        $match: {
+          date: {
+            $gte: startDate,
+            $lt: endDate
+          }
+        }
+      });
+    }
+
+    // Group by date and get daily totals
+    pipeline.push(
+      {
+        $group: {
+          _id: {
+            date: {
+              $dateToString: {
+                format: "%Y-%m-%d",
+                date: "$date"
+              }
+            }
+          },
+          activities: {
+            $push: {
+              type: '$activity.type',
+              hours: '$hours'
+            }
+          },
+          dailyActivities: { $sum: 1 },
+          dailyHours: { $sum: '$hours' }
+        }
+      },
+      {
+        $sort: {
+          '_id.date': 1
+        }
+      }
+    );
+
+    const result = await Activity.aggregate(pipeline);
+
+    // Transform and calculate cumulative totals
+    let cumulativeActivities = 0;
+    let cumulativeHours = 0;
+    const cumulativeActivityBreakdown: { [key: string]: number } = {};
+    
+    // Initialize activity type counters
+    const activityTypes = ['movies', 'cooking', 'dining', 'coffee', 'gaming', 'other'];
+    activityTypes.forEach(type => {
+      cumulativeActivityBreakdown[type] = 0;
+    });
+
+    const transformedResult: CumulativeTimelineData[] = result.map(item => {
+      // Count daily activities by type
+      const dailyActivityBreakdown: { [key: string]: number } = {};
+      activityTypes.forEach(type => {
+        dailyActivityBreakdown[type] = 0;
+      });
+
+      item.activities.forEach((activity: any) => {
+        if (dailyActivityBreakdown.hasOwnProperty(activity.type)) {
+          dailyActivityBreakdown[activity.type]++;
+        }
+      });
+
+      // Update cumulative totals
+      cumulativeActivities += item.dailyActivities;
+      cumulativeHours += item.dailyHours;
+
+      // Update cumulative activity breakdown
+      activityTypes.forEach(type => {
+        cumulativeActivityBreakdown[type] += dailyActivityBreakdown[type];
+      });
+
+      // Build activity breakdown object
+      const activityBreakdown: { [key: string]: { dailyCount: number; cumulativeCount: number } } = {};
+      activityTypes.forEach(type => {
+        activityBreakdown[type] = {
+          dailyCount: dailyActivityBreakdown[type],
+          cumulativeCount: cumulativeActivityBreakdown[type]
+        };
+      });
+
+      return {
+        date: item._id.date,
+        dailyActivities: item.dailyActivities || 0,
+        cumulativeActivities,
+        dailyHours: item.dailyHours || 0,
+        cumulativeHours,
+        activityBreakdown
+      };
+    });
+
+    return transformedResult;
+  } catch (error) {
+    console.error('Error calculating cumulative timeline data:', error);
+    throw new Error('Failed to calculate cumulative timeline data');
   }
 };

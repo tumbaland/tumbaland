@@ -21,6 +21,7 @@ import HoursBarChart from "../components/HoursBarChart";
 import MonthlyStackedBarChart from "../components/MonthlyStackedBarChart";
 import ActivityStackedBarChart from "../components/ActivityStackedBarChart";
 import WeeklyHeatmap from "../components/WeeklyHeatmap";
+import CumulativeTimeline from "../components/CumulativeTimeline";
 
 const Dashboard: React.FC = () => {
   const {
@@ -341,6 +342,10 @@ const Dashboard: React.FC = () => {
             </Box>
           </Paper>
         </Box>
+      </Box>
+      {/* Cumulative Timeline Section */}
+      <Box sx={{ mb: 4, width: '100%' }}>
+        <CumulativeTimeline height={400} />
       </Box>
     </Box>
   );

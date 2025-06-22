@@ -116,6 +116,26 @@ export interface WeeklyHeatmapResponse {
   generatedAt: string;
 }
 
+export interface CumulativeTimelineData {
+  date: string; // YYYY-MM-DD format
+  dailyActivities: number;
+  cumulativeActivities: number;
+  dailyHours: number;
+  cumulativeHours: number;
+  activityBreakdown: {
+    [key: string]: {
+      dailyCount: number;
+      cumulativeCount: number;
+    };
+  };
+}
+
+export interface CumulativeTimelineResponse {
+  success: boolean;
+  data: CumulativeTimelineData[];
+  generatedAt: string;
+}
+
 /**
  * Get relationship statistics
  * @param timeframe - Optional: 'week', 'month', 'quarter', 'year', 'all' (default: 'all')
@@ -212,6 +232,22 @@ export const getWeeklyHeatmapData = async (year?: number): Promise<WeeklyHeatmap
   }
 };
 
+/**
+ * Get cumulative timeline data
+ * @param year - Optional: specific year to filter by
+ */
+export const getCumulativeTimelineData = async (year?: number): Promise<CumulativeTimelineData[]> => {
+  try {
+    const response = await apiClient.get<CumulativeTimelineResponse>('/statistics/cumulative-timeline', {
+      params: year ? { year } : {}
+    });
+    return response.data.data;
+  } catch (error: any) {
+    console.error('Error fetching cumulative timeline data:', error);
+    throw new Error(error.response?.data?.message || 'Failed to fetch cumulative timeline data');
+  }
+};
+
 export const statisticsApi = {
   getStatistics,
   getActivityBreakdown,
@@ -219,4 +255,5 @@ export const statisticsApi = {
   getMonthlyStatistics,
   getMonthlyActivityBreakdown,
   getWeeklyHeatmapData,
+  getCumulativeTimelineData,
 };
