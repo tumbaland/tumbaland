@@ -125,7 +125,7 @@ const HoursBarChart: React.FC<BarChartProps> = ({
           </FormControl>
         </Box>
         
-        <Box sx={{ position: 'relative', height: height - 60, mt: 2, border: '1px solid #ddd', mb: 4 }}> {/* Added mb for month labels */}
+        <Box sx={{ position: 'relative', height: height - 60, mt: 2, border: '1px solid #ddd', mb: 4, pt: 3 }}> {/* Added pt for top numbers */}
           {/* Y-axis labels */}
           <Box sx={{ 
             position: 'absolute', 
@@ -196,8 +196,7 @@ const HoursBarChart: React.FC<BarChartProps> = ({
                     zIndex: 2,
                     height: '100%', // Full height of container
                     position: 'relative'
-                  }}>
-                    {/* The actual bar */}
+                  }}>                    {/* The actual bar */}
                     <Box
                       sx={{
                         width: '100%',
@@ -213,6 +212,22 @@ const HoursBarChart: React.FC<BarChartProps> = ({
                         }
                       }}
                     />
+                      {/* Hours number on top of bar */}
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        position: 'absolute',
+                        top: -20,
+                        fontSize: '0.7rem',
+                        fontWeight: 'bold',
+                        color: item.hours > 0 ? '#1976d2' : '#888',
+                        textAlign: 'center',
+                        width: '100%'
+                      }}
+                    >
+                      {item.hours}h
+                    </Typography>
+                    
                     {/* Month label - positioned absolutely at bottom */}
                     <Typography 
                       variant="caption" 

@@ -18,6 +18,7 @@ import {
 import { useStatistics } from "../hooks/useStatistics";
 import StatCard from "../components/StatCard";
 import HoursBarChart from "../components/HoursBarChart";
+import MonthlyStackedBarChart from "../components/MonthlyStackedBarChart";
 
 const Dashboard: React.FC = () => {
   const {
@@ -173,10 +174,14 @@ const Dashboard: React.FC = () => {
             color="info.main"
           />
         </Box>      </Box>
-      
-      {/* Hours Bar Chart Section */}
+        {/* Hours Bar Chart Section */}
       <Box sx={{ mb: 4 }}>
         <HoursBarChart />
+      </Box>
+      
+      {/* Monthly Stacked Bar Chart Section */}
+      <Box sx={{ mb: 4 }}>
+        <MonthlyStackedBarChart />
       </Box>
       
       {/* Charts Section */}

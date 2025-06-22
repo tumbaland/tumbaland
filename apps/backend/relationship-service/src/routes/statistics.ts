@@ -1,5 +1,5 @@
 import express from 'express';
-import { getStatistics, getActivityBreakdown, getMonthlyHoursData } from '../controllers/statistics.controller';
+import { getStatistics, getActivityBreakdown, getMonthlyHoursData, getMonthlyStatisticsData } from '../controllers/statistics.controller';
 
 const router = express.Router();
 
@@ -23,5 +23,12 @@ router.get('/breakdown', getActivityBreakdown);
  * @query year - Optional: specific year to filter by
  */
 router.get('/monthly-hours', getMonthlyHoursData);
+
+/**
+ * @route GET /api/statistics/monthly-stats
+ * @desc Get monthly statistics (days breakdown)
+ * @query year - Optional: specific year to filter by
+ */
+router.get('/monthly-stats', getMonthlyStatisticsData);
 
 export default router;

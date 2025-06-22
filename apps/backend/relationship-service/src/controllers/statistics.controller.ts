@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getRelationshipStatistics, getMonthlyHours } from '../services/statistics.service';
+import { getRelationshipStatistics, getMonthlyHours, getMonthlyStatistics } from '../services/statistics.service';
 
 // Get relationship statistics
 export const getStatistics = async (req: Request, res: Response): Promise<void> => {
@@ -87,6 +87,37 @@ export const getMonthlyHoursData = async (req: Request, res: Response): Promise<
     console.error('Error fetching monthly hours:', error);
     res.status(500).json({
       error: 'Failed to fetch monthly hours',
+      message: error.message
+    });
+  }
+};
+
+// Get monthly statistics (days breakdown)
+export const getMonthlyStatisticsData = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { year } = req.query;
+    const selectedYear = year ? parseInt(year as string) : undefined;
+    
+    // Validate year if provided
+    if (year && (isNaN(selectedYear!) || selectedYear! < 2000 || selectedYear! > new Date().getFullYear() + 1)) {
+      res.status(400).json({
+        error: 'Invalid year',
+        message: 'Year must be a valid number between 2000 and next year'
+      });
+      return;
+    }
+
+    const monthlyStats = await getMonthlyStatistics(selectedYear);
+    
+    res.json({
+      success: true,
+      data: monthlyStats,
+      generatedAt: new Date().toISOString()
+    });
+  } catch (error: any) {
+    console.error('Error fetching monthly statistics:', error);
+    res.status(500).json({
+      error: 'Failed to fetch monthly statistics',
       message: error.message
     });
   }

@@ -37,6 +37,15 @@ export interface MonthlyHoursData {
   activities: number;
 }
 
+export interface MonthlyStatisticsData {
+  month: string;
+  year: number;
+  totalDays: number;
+  daysMet: number;
+  daysWithSex: number;
+  daysNotMet: number;
+}
+
 export const getRelationshipStatistics = async (timeframe: string = 'all'): Promise<RelationshipStatistics> => {
   try {
     // Calculate date range based on timeframe
@@ -272,5 +281,80 @@ export const getMonthlyHours = async (year?: number): Promise<MonthlyHoursData[]
   } catch (error) {
     console.error('Error calculating monthly hours:', error);
     throw new Error('Failed to calculate monthly hours statistics');
+  }
+};
+
+export const getMonthlyStatistics = async (year?: number): Promise<MonthlyStatisticsData[]> => {
+  try {
+    // Build query conditions
+    const conditions: any = {};
+    
+    if (year) {
+      conditions.date = {
+        $gte: new Date(year, 0, 1),
+        $lt: new Date(year + 1, 0, 1)
+      };
+    }
+
+    // Get all activities
+    const activities = await Activity.find(conditions).sort({ date: 1 });
+
+    // Group by year-month
+    const monthlyData = new Map<string, { daysMet: Set<string>; daysWithSex: Set<string> }>();
+
+    activities.forEach(activity => {
+      const date = new Date(activity.date);
+      const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+      const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD format
+      
+      if (!monthlyData.has(monthKey)) {
+        monthlyData.set(monthKey, { 
+          daysMet: new Set<string>(), 
+          daysWithSex: new Set<string>() 
+        });
+      }
+      
+      const data = monthlyData.get(monthKey)!;
+      data.daysMet.add(dateKey);
+      
+      if (activity.activity.type === 'sex') {
+        data.daysWithSex.add(dateKey);
+      }
+    });
+
+    // Convert to array format with proper calculations
+    const result: MonthlyStatisticsData[] = [];
+    
+    for (const [monthKey, data] of monthlyData.entries()) {
+      const [yearStr, monthStr] = monthKey.split('-');
+      const year = parseInt(yearStr);
+      const month = parseInt(monthStr);
+      
+      // Calculate total days in month
+      const totalDays = new Date(year, month, 0).getDate();
+      const daysMet = data.daysMet.size;
+      const daysWithSex = data.daysWithSex.size;
+      const daysNotMet = totalDays - daysMet;
+      
+      result.push({
+        month: monthStr,
+        year: year,
+        totalDays: totalDays,
+        daysMet: daysMet,
+        daysWithSex: daysWithSex,
+        daysNotMet: daysNotMet
+      });
+    }
+
+    // Sort by year and month
+    result.sort((a, b) => {
+      if (a.year !== b.year) return a.year - b.year;
+      return parseInt(a.month) - parseInt(b.month);
+    });
+
+    return result;
+  } catch (error) {
+    console.error('Error calculating monthly statistics:', error);
+    throw new Error('Failed to calculate monthly statistics');
   }
 };
