@@ -1,5 +1,5 @@
 import express from 'express';
-import { getStatistics, getActivityBreakdown, getMonthlyHoursData, getMonthlyStatisticsData, getMonthlyActivityBreakdownData, getWeeklyHeatmapDataController, getCumulativeTimelineDataController } from '../controllers/statistics.controller';
+import { getStatistics, getMonthlyHoursData, getMonthlyStatisticsData, getMonthlyActivityBreakdownData, getWeeklyHeatmapDataController, getCumulativeTimelineDataController } from '../controllers/statistics.controller';
 
 const router = express.Router();
 
@@ -9,13 +9,6 @@ const router = express.Router();
  * @query timeframe - Optional: week, month, quarter, year, all (default: all)
  */
 router.get('/', getStatistics);
-
-/**
- * @route GET /api/statistics/breakdown
- * @desc Get activity breakdown statistics
- * @query timeframe - Optional: week, month, quarter, year, all (default: all)
- */
-router.get('/breakdown', getActivityBreakdown);
 
 /**
  * @route GET /api/statistics/monthly-hours

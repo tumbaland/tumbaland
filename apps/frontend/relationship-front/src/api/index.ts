@@ -20,6 +20,5 @@ export {
 
 export {
   getStatistics,
-  getActivityBreakdown,
   statisticsApi
 } from './statistics';

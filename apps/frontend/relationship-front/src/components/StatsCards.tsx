@@ -1,132 +1,171 @@
-import React from "react";
-import { Box, CircularProgress, Alert } from "@mui/material";
+import React, { useState } from "react";
+import { 
+  Box, 
+  CircularProgress, 
+  Alert, 
+  FormControl, 
+  Select, 
+  MenuItem, 
+  InputLabel,
+  Typography,
+  Card,
+  CardContent
+} from "@mui/material";
 import {
   AccessTime,
   Favorite,
   Timeline,
   Event,
-  TrendingUp,
-  Assessment,
 } from "@mui/icons-material";
 import { useStatistics } from "../hooks/useStatistics";
 import StatCard from "./StatCard";
 
 const StatsCards: React.FC = () => {
-  const { statistics, loading, error } = useStatistics();
+  const [timeframe, setTimeframe] = useState<string>('all');
+  const { statistics, loading, error } = useStatistics({ timeframe });
 
+  const timeframeOptions = [
+    { value: 'week', label: 'Last 7 Days' },
+    { value: 'month', label: 'This Month' },
+    { value: 'quarter', label: 'This Quarter' },
+    { value: 'year', label: 'This Year' },
+    { value: 'all', label: 'All Time' }
+  ];
+  const handleTimeframeChange = (event: any) => {
+    setTimeframe(event.target.value);
+  };
+
+  const getTimeframeLabel = () => {
+    const option = timeframeOptions.find(opt => opt.value === timeframe);
+    return option ? option.label.toLowerCase() : 'all time';
+  };
   if (loading) {
     return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "200px",
-        }}
-      >
-        <CircularProgress />
-      </Box>
+      <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
+        <CardContent>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              minHeight: "200px",
+            }}
+          >
+            <CircularProgress />
+          </Box>
+        </CardContent>
+      </Card>
     );
   }
 
   if (error) {
     return (
-      <Alert severity="error" sx={{ mb: 3 }}>
-        Error loading statistics: {error}
-      </Alert>
+      <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
+        <CardContent>
+          <Alert severity="error">
+            Error loading statistics: {error}
+          </Alert>
+        </CardContent>
+      </Card>
     );
   }
 
   if (!statistics) {
     return (
-      <Alert severity="warning" sx={{ mb: 3 }}>
-        No statistics available. Please check if the backend is running.
-      </Alert>
+      <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
+        <CardContent>
+          <Alert severity="warning">
+            No statistics available. Please check if the backend is running.
+          </Alert>
+        </CardContent>
+      </Card>
     );
   }
-
   return (
-    <>
-      {/* Primary Stats Cards */}
-      <Box sx={{ display: "flex", gap: 3, mb: 4, flexWrap: "wrap" }}>
-        <Box sx={{ minWidth: 280, flex: 1 }}>
-          <StatCard
-            icon={<Timeline />}
-            title="Days"
-            value={statistics.daysTogether}
-            subtitle={`${statistics.daysTogether} days since Jan 25, 2024`}
-            color="warning.main"
-          />
+    <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
+      <CardContent sx={{ p: 3 }}>
+        {/* Header with Title and Timeframe Selector */}
+        <Box sx={{ 
+          mb: 3, 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          pb: 2,
+          borderBottom: '1px solid',
+          borderColor: 'divider'
+        }}>
+          <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+            Relationship Statistics
+          </Typography>
+          <FormControl sx={{ minWidth: 200 }}>
+            <InputLabel id="timeframe-select-label">Timeframe</InputLabel>
+            <Select
+              labelId="timeframe-select-label"
+              id="timeframe-select"
+              value={timeframe}
+              label="Timeframe"
+              onChange={handleTimeframeChange}
+              size="small"
+            >
+              {timeframeOptions.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>        {/* Stats Cards Grid */}
+        <Box sx={{ 
+          display: "grid", 
+          gridTemplateColumns: { 
+            xs: '1fr', 
+            sm: 'repeat(2, 1fr)', 
+            lg: 'repeat(4, 1fr)' 
+          }, 
+          gap: 3,
+          p: 2,
+          backgroundColor: 'grey.50',
+          borderRadius: 1
+        }}>
+          <Box>
+            <StatCard
+              icon={<Timeline />}
+              title="Days"
+              value={statistics.daysTogether}
+              subtitle={`${statistics.daysTogether} days since Jan 25, 2024`}
+              color="warning.main"
+            />
+          </Box>
+          <Box>
+            <StatCard
+              icon={<AccessTime />}
+              title="Total Hours Together"
+              value={statistics.totalHoursTogether}
+              subtitle={`${statistics.totalHoursTogether} hours for ${getTimeframeLabel()}`}
+              color="primary.main"
+            />
+          </Box>
+          <Box>
+            <StatCard
+              icon={<Favorite />}
+              title="Make Love Days"
+              value={statistics.sexActivityDays}
+              subtitle={`${statistics.sexActivityDays} love days for ${getTimeframeLabel()}`}
+              color="error.main"
+            />
+          </Box>
+          <Box>
+            <StatCard
+              icon={<Event />}
+              title="Total Activities"
+              value={statistics.totalActivities}
+              subtitle={`${statistics.totalActivities} activities for ${getTimeframeLabel()}`}
+              color="error.main"
+            />
+          </Box>
         </Box>
-        <Box sx={{ minWidth: 280, flex: 1 }}>
-          <StatCard
-            icon={<AccessTime />}
-            title="Total Hours Together"
-            value={statistics.totalHoursTogether}
-            subtitle={`${statistics.totalHoursTogether} hours spent together`}
-            color="primary.main"
-          />
-        </Box>{" "}
-        <Box sx={{ minWidth: 280, flex: 1 }}>
-          <StatCard
-            icon={<Favorite />}
-            title="Make Love Days"
-            value={statistics.sexActivityDays}
-            subtitle={`${statistics.sexActivityDays} love days`}
-            color="error.main"
-          />
-        </Box>
-        <Box sx={{ minWidth: 280, flex: 1 }}>
-          <StatCard
-            icon={<Event />}
-            title="Total Activities"
-            value={statistics.totalActivities}
-            subtitle={`${statistics.totalActivities} shared experiences`}
-            color="error.main"
-          />
-        </Box>
-      </Box>
-
-      {/* Secondary Stats Cards */}
-      <Box sx={{ display: "flex", gap: 3, mb: 4, flexWrap: "wrap" }}>
-        <Box sx={{ minWidth: 280, flex: 1 }}>
-          <StatCard
-            icon={<Timeline />}
-            title="This Month"
-            value={statistics.activitiesThisMonth}
-            subtitle={`${statistics.activitiesThisMonth} activities this month`}
-            color="warning.main"
-          />
-        </Box>
-        <Box sx={{ minWidth: 280, flex: 1 }}>
-          <StatCard
-            icon={<Assessment />}
-            title="Most Frequent"
-            value={statistics.mostFrequentActivity.type}
-            subtitle={`${statistics.mostFrequentActivity.count} times`}
-            color="secondary.main"
-          />
-        </Box>
-        <Box sx={{ minWidth: 280, flex: 1 }}>
-          <StatCard
-            icon={<TrendingUp />}
-            title="Weekly Average"
-            value={statistics.recentTrends.weeklyAverage.toFixed(1)}
-            subtitle={`${statistics.recentTrends.weeklyAverage.toFixed(1)} hours/week`}
-            color="success.main"
-          />
-        </Box>
-        <Box sx={{ minWidth: 280, flex: 1 }}>
-          <StatCard
-            icon={<Timeline />}
-            title="Last Week"
-            value={statistics.recentTrends.lastWeekHours}
-            subtitle={`${statistics.recentTrends.lastWeekHours} hours last week`}
-            color="info.main"
-          />
-        </Box>
-      </Box>
-    </>
+      </CardContent>
+    </Card>
   );
 };
 

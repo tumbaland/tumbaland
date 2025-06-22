@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Typography } from "@mui/material";
+import { Box } from "@mui/material";
 import StatsCards from "../components/StatsCards";
 import HoursBarChart from "../components/HoursBarChart";
 import MonthlyStackedBarChart from "../components/MonthlyStackedBarChart";
@@ -10,9 +10,6 @@ import CumulativeTimeline from "../components/CumulativeTimeline";
 const Dashboard: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Relationship Dashboard
-      </Typography>
       <StatsCards />
       <Box sx={{ mb: 4 }}>
         <HoursBarChart />

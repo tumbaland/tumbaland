@@ -27,35 +27,8 @@ export const getStatistics = async (req: Request, res: Response): Promise<void> 
       generatedAt: new Date().toISOString()
     });
   } catch (error: any) {
-    console.error('Error fetching statistics:', error);
-    res.status(500).json({
+    console.error('Error fetching statistics:', error);    res.status(500).json({
       error: 'Failed to fetch statistics',
-      message: error.message
-    });
-  }
-};
-
-// Get activity breakdown statistics
-export const getActivityBreakdown = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { timeframe } = req.query;
-    const selectedTimeframe = (timeframe as string) || 'all';
-    
-    const statistics = await getRelationshipStatistics(selectedTimeframe);
-    
-    res.json({
-      success: true,
-      data: {
-        breakdown: statistics.activityBreakdown,
-        totalActivities: statistics.totalActivities,
-        timeframe: selectedTimeframe
-      },
-      generatedAt: new Date().toISOString()
-    });
-  } catch (error: any) {
-    console.error('Error fetching activity breakdown:', error);
-    res.status(500).json({
-      error: 'Failed to fetch activity breakdown',
       message: error.message
     });
   }
