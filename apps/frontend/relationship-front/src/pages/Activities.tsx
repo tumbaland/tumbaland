@@ -30,33 +30,40 @@ import DeleteActivityButton from "../components/DeleteActivityButton";
 
 const Activities: React.FC = () => {
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(20);
-  const [sortBy, setSortBy] = useState<string>('date');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  
-  const { 
-    activities = [], 
-    loading, 
-    error, 
-    pagination, 
-    refetch 
-  } = useActivities({ 
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [sortBy, setSortBy] = useState<string>("date");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  const {
+    activities = [],
+    loading,
+    error,
+    pagination,
+    refetch,
+  } = useActivities({
     page: page + 1, // API uses 1-based pagination
     limit: rowsPerPage,
     sortBy,
-    sortOrder
+    sortOrder,
   });
   const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage);
   };
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const value = parseInt(event.target.value, 10);
+    if (value === -1) {
+      setRowsPerPage(10000); // Set to a very high number to load all
+    } else {
+      setRowsPerPage(value);
+    }
     setPage(0);
   };
 
   const handleSort = (field: string) => {
-    const isAsc = sortBy === field && sortOrder === 'asc';
-    setSortOrder(isAsc ? 'desc' : 'asc');
+    const isAsc = sortBy === field && sortOrder === "asc";
+    setSortOrder(isAsc ? "desc" : "asc");
     setSortBy(field);
     setPage(0); // Reset to first page when sorting
   };
@@ -132,44 +139,45 @@ const Activities: React.FC = () => {
         </Typography>
         <AddActivityModal onActivityAdded={refetch} />
       </Box>
-      
+
       <Paper sx={{ width: "100%", overflow: "hidden" }}>
         <TableContainer>
           <Table stickyHeader>
-            {" "}            <TableHead>
+            {" "}
+            <TableHead>
               <TableRow>
                 <TableCell>
                   <TableSortLabel
-                    active={sortBy === 'date'}
-                    direction={sortBy === 'date' ? sortOrder : 'asc'}
-                    onClick={() => handleSort('date')}
+                    active={sortBy === "date"}
+                    direction={sortBy === "date" ? sortOrder : "asc"}
+                    onClick={() => handleSort("date")}
                   >
                     Date
                   </TableSortLabel>
                 </TableCell>
                 <TableCell>
                   <TableSortLabel
-                    active={sortBy === 'activity'}
-                    direction={sortBy === 'activity' ? sortOrder : 'asc'}
-                    onClick={() => handleSort('activity')}
+                    active={sortBy === "activity"}
+                    direction={sortBy === "activity" ? sortOrder : "asc"}
+                    onClick={() => handleSort("activity")}
                   >
                     Activity
                   </TableSortLabel>
                 </TableCell>
                 <TableCell align="right">
                   <TableSortLabel
-                    active={sortBy === 'hours'}
-                    direction={sortBy === 'hours' ? sortOrder : 'asc'}
-                    onClick={() => handleSort('hours')}
+                    active={sortBy === "hours"}
+                    direction={sortBy === "hours" ? sortOrder : "asc"}
+                    onClick={() => handleSort("hours")}
                   >
                     Duration (hrs)
                   </TableSortLabel>
                 </TableCell>
                 <TableCell>
                   <TableSortLabel
-                    active={sortBy === 'description'}
-                    direction={sortBy === 'description' ? sortOrder : 'asc'}
-                    onClick={() => handleSort('description')}
+                    active={sortBy === "description"}
+                    direction={sortBy === "description" ? sortOrder : "asc"}
+                    onClick={() => handleSort("description")}
                   >
                     Description
                   </TableSortLabel>
@@ -210,7 +218,8 @@ const Activities: React.FC = () => {
                       </Box>
                     </TableCell>
                     <TableCell align="right">{activity.hours}</TableCell>
-                    <TableCell>{activity.activity.description}</TableCell>{" "}                    <TableCell align="center">
+                    <TableCell>{activity.activity.description}</TableCell>{" "}
+                    <TableCell align="center">
                       <DeleteActivityButton
                         activityId={activity._id || activity.id || ""}
                         onDeleted={refetch}
@@ -219,18 +228,17 @@ const Activities: React.FC = () => {
                   </TableRow>
                 ))
               )}
-            </TableBody>          
-            </Table>
-            
-        <TablePagination
-          rowsPerPageOptions={[10, 20, 50, 100]}
-          component="div"
-          count={pagination.total}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-        />
+            </TableBody>
+          </Table>{" "}
+          <TablePagination
+            rowsPerPageOptions={[10, 100, 1000, { label: "All", value: -1 }]}
+            component="div"
+            count={pagination.total}
+            rowsPerPage={rowsPerPage === 10000 ? -1 : rowsPerPage}
+            page={rowsPerPage === 10000 ? 0 : page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+          />
         </TableContainer>
       </Paper>
     </Box>
