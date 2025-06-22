@@ -17,6 +17,7 @@ import {
 } from "@mui/icons-material";
 import { useStatistics } from "../hooks/useStatistics";
 import StatCard from "../components/StatCard";
+import HoursBarChart from "../components/HoursBarChart";
 
 const Dashboard: React.FC = () => {
   const {
@@ -171,8 +172,13 @@ const Dashboard: React.FC = () => {
             subtitle={`${displayStats.trends.lastWeekHours} hours last week`}
             color="info.main"
           />
-        </Box>
+        </Box>      </Box>
+      
+      {/* Hours Bar Chart Section */}
+      <Box sx={{ mb: 4 }}>
+        <HoursBarChart />
       </Box>
+      
       {/* Charts Section */}
       <Box sx={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
         <Box sx={{ flex: 2, minWidth: 400 }}>

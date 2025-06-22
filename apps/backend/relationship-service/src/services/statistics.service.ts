@@ -30,6 +30,13 @@ export interface RelationshipStatistics {
   };
 }
 
+export interface MonthlyHoursData {
+  month: string;
+  year: number;
+  hours: number;
+  activities: number;
+}
+
 export const getRelationshipStatistics = async (timeframe: string = 'all'): Promise<RelationshipStatistics> => {
   try {
     // Calculate date range based on timeframe
@@ -209,5 +216,61 @@ export const getRelationshipStatistics = async (timeframe: string = 'all'): Prom
   } catch (error: any) {
     console.error('Error calculating relationship statistics:', error);
     throw new Error(`Failed to calculate statistics: ${error.message}`);
+  }
+};
+
+export const getMonthlyHours = async (year?: number): Promise<MonthlyHoursData[]> => {
+  try {
+    // Build query conditions
+    const conditions: any = {};
+    
+    if (year) {
+      conditions.date = {
+        $gte: new Date(year, 0, 1),
+        $lt: new Date(year + 1, 0, 1)
+      };
+    }
+
+    // Get all activities
+    const activities = await Activity.find(conditions).sort({ date: 1 });
+
+    // Group by year-month
+    const monthlyData = new Map<string, { hours: number; activities: number }>();
+
+    activities.forEach(activity => {
+      const date = new Date(activity.date);
+      const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+      
+      if (!monthlyData.has(monthKey)) {
+        monthlyData.set(monthKey, { hours: 0, activities: 0 });
+      }
+        const data = monthlyData.get(monthKey)!;
+      data.hours += activity.hours || 0;
+      data.activities += 1;
+    });
+
+    // Convert to array format
+    const result: MonthlyHoursData[] = [];
+    
+    for (const [monthKey, data] of monthlyData.entries()) {
+      const [yearStr, monthStr] = monthKey.split('-');
+      result.push({
+        month: monthStr,
+        year: parseInt(yearStr),
+        hours: Math.round(data.hours * 100) / 100, // Round to 2 decimal places
+        activities: data.activities
+      });
+    }
+
+    // Sort by year and month
+    result.sort((a, b) => {
+      if (a.year !== b.year) return a.year - b.year;
+      return parseInt(a.month) - parseInt(b.month);
+    });
+
+    return result;
+  } catch (error) {
+    console.error('Error calculating monthly hours:', error);
+    throw new Error('Failed to calculate monthly hours statistics');
   }
 };

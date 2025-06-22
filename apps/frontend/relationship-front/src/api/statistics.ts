@@ -47,6 +47,19 @@ export interface ActivityBreakdownResponse {
   generatedAt: string;
 }
 
+export interface MonthlyHoursData {
+  month: string;
+  year: number;
+  hours: number;
+  activities: number;
+}
+
+export interface MonthlyHoursResponse {
+  success: boolean;
+  data: MonthlyHoursData[];
+  generatedAt: string;
+}
+
 /**
  * Get relationship statistics
  * @param timeframe - Optional: 'week', 'month', 'quarter', 'year', 'all' (default: 'all')
@@ -79,7 +92,24 @@ export const getActivityBreakdown = async (timeframe: string = 'all'): Promise<A
   }
 };
 
+/**
+ * Get monthly hours statistics
+ * @param year - Optional: specific year to filter by
+ */
+export const getMonthlyHours = async (year?: number): Promise<MonthlyHoursData[]> => {
+  try {
+    const response = await apiClient.get<MonthlyHoursResponse>('/statistics/monthly-hours', {
+      params: year ? { year } : {}
+    });
+    return response.data.data;
+  } catch (error: any) {
+    console.error('Error fetching monthly hours:', error);
+    throw new Error(error.response?.data?.message || 'Failed to fetch monthly hours');
+  }
+};
+
 export const statisticsApi = {
   getStatistics,
   getActivityBreakdown,
+  getMonthlyHours,
 };
