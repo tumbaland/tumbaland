@@ -1,13 +1,24 @@
 import React, { useMemo } from 'react';
-import { Box, Card, CardContent, Typography, Paper, CircularProgress } from '@mui/material';
-import { AccessTime, Favorite, Timeline, Event } from '@mui/icons-material';
+import { 
+  Box, 
+  Card, 
+  CardContent, 
+  Typography, 
+  Paper, 
+  CircularProgress, 
+  Chip,
+  Divider
+} from '@mui/material';
+import { AccessTime, Favorite, Timeline, Event, TrendingUp, Assessment } from '@mui/icons-material';
 import { useActivities } from '../hooks/useActivities';
+import { useStatistics } from '../hooks/useStatistics';
 
 const Dashboard: React.FC = () => {
-  const { activities = [], loading, error } = useActivities();
+  const { activities = [] } = useActivities();
+  const { statistics, loading: statsLoading, error: statsError } = useStatistics();
 
-  // Calculate relationship stats from real data
-  const relationshipStats = useMemo(() => {
+  // Calculate relationship stats from real data (fallback)
+  const fallbackStats = useMemo(() => {
     // Relationship start date
     const startDate = new Date('2024-01-25');
     const today = new Date();
@@ -31,6 +42,26 @@ const Dashboard: React.FC = () => {
       daysTogether
     };
   }, [activities]);
+  // Use statistics from API if available, otherwise use fallback
+  const displayStats = statistics ? {
+    totalHours: statistics.totalHoursTogether,
+    sexActivities: statistics.sexActivityDays,
+    activitiesCount: statistics.totalActivities,
+    avgHours: statistics.avgHoursPerActivity,
+    activitiesThisMonth: statistics.activitiesThisMonth,
+    mostFrequent: statistics.mostFrequentActivity,
+    trends: statistics.recentTrends,
+    breakdown: statistics.activityBreakdown
+  } : {
+    totalHours: fallbackStats.totalHours,
+    sexActivities: fallbackStats.sexActivities,
+    activitiesCount: fallbackStats.activitiesCount,
+    avgHours: fallbackStats.totalHours / (fallbackStats.activitiesCount || 1),
+    activitiesThisMonth: 0,
+    mostFrequent: { type: 'none', count: 0 },
+    trends: { weeklyAverage: 0, monthlyAverage: 0, lastWeekHours: 0, lastMonthHours: 0 },
+    breakdown: []
+  };
 
   const StatCard = ({ icon, title, value, subtitle, color }: any) => (
     <Card elevation={2} sx={{ height: '100%' }}>
@@ -51,6 +82,9 @@ const Dashboard: React.FC = () => {
         </Typography>
       </CardContent>
     </Card>  );
+
+  const loading = statsLoading;
+  const error = statsError;
 
   if (loading) {
     return (
@@ -78,79 +112,207 @@ const Dashboard: React.FC = () => {
       <Typography variant="h4" component="h1" gutterBottom>
         Relationship Dashboard
       </Typography>
-      
-      {/* Stats Cards */}
+        {/* Stats Cards */}
       <Box sx={{ display: 'flex', gap: 3, mb: 4, flexWrap: 'wrap' }}>
-        <Box sx={{ minWidth: 280, flex: 1 }}>          <StatCard
+        <Box sx={{ minWidth: 280, flex: 1 }}>
+          <StatCard
             icon={<AccessTime />}
             title="Total Hours Together"
-            value={relationshipStats.totalHours}
-            subtitle={`${relationshipStats.totalHours} hours spent together`}
+            value={displayStats.totalHours}
+            subtitle={`${displayStats.totalHours} hours spent together`}
             color="primary.main"
           />
         </Box>
-        <Box sx={{ minWidth: 280, flex: 1 }}>          <StatCard
+        <Box sx={{ minWidth: 280, flex: 1 }}>
+          <StatCard
             icon={<Favorite />}
-            title="Sex Activities"
-            value={relationshipStats.sexActivities}
-            subtitle={`${relationshipStats.sexActivities} intimate moments`}
+            title="Sex Activity Days"
+            value={displayStats.sexActivities}
+            subtitle={`${displayStats.sexActivities} intimate days`}
             color="success.main"
           />
         </Box>
-        <Box sx={{ minWidth: 280, flex: 1 }}>          <StatCard
+        <Box sx={{ minWidth: 280, flex: 1 }}>
+          <StatCard
             icon={<Event />}
-            title="Activities Done"
-            value={relationshipStats.activitiesCount}
-            subtitle={`${relationshipStats.activitiesCount} shared experiences`}
+            title="Total Activities"
+            value={displayStats.activitiesCount}
+            subtitle={`${displayStats.activitiesCount} shared experiences`}
             color="error.main"
           />
         </Box>
-        <Box sx={{ minWidth: 280, flex: 1 }}>          <StatCard
-            icon={<Timeline />}
-            title="Days Together"
-            value={relationshipStats.daysTogether}
-            subtitle={`${relationshipStats.daysTogether} days since Jan 25, 2024`}
+        <Box sx={{ minWidth: 280, flex: 1 }}>
+          <StatCard
+            icon={<TrendingUp />}
+            title="Average Hours/Activity"
+            value={displayStats.avgHours.toFixed(1)}
+            subtitle={`${displayStats.avgHours.toFixed(1)} hours per activity`}
             color="info.main"
           />
         </Box>
       </Box>
 
-      {/* Charts Section */}
+      {/* Additional Stats Row */}
+      {statistics && (
+        <Box sx={{ display: 'flex', gap: 3, mb: 4, flexWrap: 'wrap' }}>
+          <Box sx={{ minWidth: 280, flex: 1 }}>
+            <StatCard
+              icon={<Timeline />}
+              title="This Month"
+              value={displayStats.activitiesThisMonth}
+              subtitle={`${displayStats.activitiesThisMonth} activities this month`}
+              color="warning.main"
+            />
+          </Box>
+          <Box sx={{ minWidth: 280, flex: 1 }}>
+            <StatCard
+              icon={<Assessment />}
+              title="Most Frequent"
+              value={displayStats.mostFrequent.type}
+              subtitle={`${displayStats.mostFrequent.count} times`}
+              color="secondary.main"
+            />
+          </Box>
+          <Box sx={{ minWidth: 280, flex: 1 }}>
+            <StatCard
+              icon={<TrendingUp />}
+              title="Weekly Average"
+              value={displayStats.trends.weeklyAverage.toFixed(1)}
+              subtitle={`${displayStats.trends.weeklyAverage.toFixed(1)} hours/week`}
+              color="success.main"
+            />
+          </Box>
+          <Box sx={{ minWidth: 280, flex: 1 }}>
+            <StatCard
+              icon={<Timeline />}
+              title="Last Week"
+              value={displayStats.trends.lastWeekHours}
+              subtitle={`${displayStats.trends.lastWeekHours} hours last week`}
+              color="info.main"
+            />
+          </Box>
+        </Box>
+      )}      {/* Charts Section */}
       <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
         <Box sx={{ flex: 2, minWidth: 400 }}>
           <Paper sx={{ p: 3, height: 400 }}>
             <Typography variant="h6" gutterBottom>
-              Time Spent Together Over Time
+              Activity Breakdown
             </Typography>
-            <Box 
-              sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                height: '100%',
-                color: 'text.secondary'
-              }}
-            >
-              <Typography>Time tracking chart will be implemented here</Typography>
-            </Box>
+            {statistics && statistics.activityBreakdown.length > 0 ? (
+              <Box sx={{ mt: 2 }}>
+                {statistics.activityBreakdown.map((activity, index) => (
+                  <Box key={index} sx={{ mb: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
+                        {activity.type}
+                      </Typography>
+                      <Typography variant="body2">
+                        {activity.count} times ({activity.percentage}%)
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="caption" color="text.secondary">
+                        {activity.totalHours} hours total
+                      </Typography>
+                      <Chip 
+                        label={`${activity.percentage}%`} 
+                        size="small" 
+                        color={index < 3 ? 'primary' : 'default'}
+                      />
+                    </Box>
+                    <Box 
+                      sx={{ 
+                        width: '100%', 
+                        height: 8, 
+                        backgroundColor: 'grey.200',
+                        borderRadius: 1,
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <Box 
+                        sx={{ 
+                          width: `${activity.percentage}%`, 
+                          height: '100%',
+                          backgroundColor: index < 3 ? 'primary.main' : 'grey.400',
+                          transition: 'width 0.3s ease'
+                        }}
+                      />
+                    </Box>
+                    <Divider sx={{ mt: 2 }} />
+                  </Box>
+                ))}
+              </Box>
+            ) : (
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  height: '70%',
+                  color: 'text.secondary'
+                }}
+              >
+                <Typography>Activity breakdown will appear here</Typography>
+              </Box>
+            )}
           </Paper>
         </Box>
         <Box sx={{ flex: 1, minWidth: 300 }}>
           <Paper sx={{ p: 3, height: 400 }}>
             <Typography variant="h6" gutterBottom>
-              Favorite Activities
-            </Typography>
-            <Box 
-              sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                height: '100%',
-                color: 'text.secondary'
-              }}
-            >
-              <Typography>Activity distribution chart will be here</Typography>
-            </Box>
+              Recent Trends
+            </Typography>            {statistics ? (
+              <Box sx={{ mt: 3 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Box sx={{ p: 2, backgroundColor: 'grey.50', borderRadius: 1 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Weekly Average
+                    </Typography>
+                    <Typography variant="h4" color="primary.main">
+                      {displayStats.trends.weeklyAverage.toFixed(1)}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      hours per week
+                    </Typography>
+                  </Box>
+                  <Box sx={{ p: 2, backgroundColor: 'grey.50', borderRadius: 1 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Monthly Average
+                    </Typography>
+                    <Typography variant="h4" color="secondary.main">
+                      {displayStats.trends.monthlyAverage.toFixed(1)}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      hours per month
+                    </Typography>
+                  </Box>
+                  <Box sx={{ p: 2, backgroundColor: 'grey.50', borderRadius: 1 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Last Week
+                    </Typography>
+                    <Typography variant="h4" color="info.main">
+                      {displayStats.trends.lastWeekHours}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      hours total
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+            ) : (
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  height: '70%',
+                  color: 'text.secondary'
+                }}
+              >
+                <Typography>Trends will appear here</Typography>
+              </Box>
+            )}
           </Paper>
         </Box>
       </Box>

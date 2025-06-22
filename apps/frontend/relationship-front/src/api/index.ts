@@ -2,6 +2,7 @@
 export * from './types';
 export * from './config';
 export * from './activities';
+export * from './statistics';
 
 // Convenience re-exports for commonly used items
 export { apiClient as api } from './config';
@@ -16,3 +17,9 @@ export {
   getRecentActivities,
   getActivityTypes
 } from './activities';
+
+export {
+  getStatistics,
+  getActivityBreakdown,
+  statisticsApi
+} from './statistics';

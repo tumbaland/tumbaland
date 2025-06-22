@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { connectDB } from './config/database';
 import activityRoutes from './routes/activities';
+import statisticsRoutes from './routes/statistics';
 
 // Load environment variables
 dotenv.config();
@@ -30,6 +31,7 @@ app.get('/api-docs', (req: Request, res: Response) => {
 
 // Routes
 app.use('/api', activityRoutes);
+app.use('/api/statistics', statisticsRoutes);
 
 // Basic health check route
 app.get('/health', (req: Request, res: Response) => {
@@ -42,7 +44,7 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 // 404 handler
-app.use('{*any}', (req: Request, res: Response) => {
+app.use('*', (req: Request, res: Response) => {
   res.status(404).json({
     error: 'Route not found',
     message: `The route ${req.method} ${req.originalUrl} does not exist.`,

@@ -8,17 +8,25 @@ export const createActivity = async (req: Request, res: Response): Promise<void>
     const activityData: Partial<IActivity> = req.body;
     
     // Validate required fields
-    if (!activityData.date || !activityData.hours || !activityData.activity) {
+    if (!activityData.date || !activityData.activity) {
       res.status(400).json({
-        error: 'Missing required fields: date, hours, and activity are required'
+        error: 'Missing required fields: date and activity are required'
       });
       return;
     }
 
     // Validate activity object structure
-    if (!activityData.activity.type || !activityData.activity.description) {
+    if (!activityData.activity.type) {
       res.status(400).json({
-        error: 'Activity object must contain both type and description'
+        error: 'Activity object must contain type'
+      });
+      return;
+    }
+
+    // Validate hours if provided (must be non-negative)
+    if (activityData.hours !== undefined && activityData.hours < 0) {
+      res.status(400).json({
+        error: 'Hours must be a non-negative number'
       });
       return;
     }
