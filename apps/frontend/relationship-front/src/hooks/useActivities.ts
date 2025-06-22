@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Activity,
   CreateActivityRequest,
@@ -21,28 +21,47 @@ export const useActivities = (filters?: GetActivitiesFilters) => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0
+  });
+  // Memoize filters to prevent infinite loop
+  const memoizedFilters = useMemo(() => filters, [
+    filters?.page,
+    filters?.limit,
+    filters?.activityType,
+    filters?.startDate,
+    filters?.endDate,
+    filters?.sortBy,
+    filters?.sortOrder
+  ]);
   const loadActivities = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await apiGetActivities(filters);
+      const data = await apiGetActivities(memoizedFilters);
       console.log('Raw API data:', data);
-      console.log('Data type:', typeof data);
-      console.log('Is array:', Array.isArray(data));
-        // Handle the ActivitiesResponse structure
+      
+      // Handle the ActivitiesResponse structure
       if (Array.isArray(data)) {
         console.log('Setting activities directly (array):', data);
         setActivities(data);
+        setPagination(prev => ({ ...prev, total: data.length }));
       } else {
         console.log('Setting activities from data.activities:', data.activities);
         setActivities(data.activities || []);
+        if (data.pagination) {
+          setPagination(data.pagination);
+        }
       }
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Failed to load activities');
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [memoizedFilters]);
 
   useEffect(() => {
     loadActivities();
@@ -93,11 +112,11 @@ export const useActivities = (filters?: GetActivitiesFilters) => {
   const refetch = () => {
     loadActivities();
   };
-
   return {
     activities,
     loading,
     error,
+    pagination,
     createActivity,
     updateActivity,
     deleteActivity,

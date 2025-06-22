@@ -8,11 +8,13 @@ import ActivityForm from './ActivityForm';
 interface AddActivityModalProps {
   buttonText?: string;
   buttonProps?: React.ComponentProps<typeof Button>;
+  onActivityAdded?: () => void;
 }
 
 const AddActivityModal: React.FC<AddActivityModalProps> = ({
   buttonText = 'Add Activity',
-  buttonProps = {}
+  buttonProps = {},
+  onActivityAdded
 }) => {
   const [isFormOpen, setIsFormOpen] = useState(false);
 
@@ -25,9 +27,10 @@ const AddActivityModal: React.FC<AddActivityModalProps> = ({
   };  const handleCreateActivity = async (data: CreateActivityRequest): Promise<boolean> => {
     try {
       await createActivity(data);
-      // Don't close modal here - let ActivityForm handle it
-      // Reload the page to refresh all activities
-      // window.location.reload();
+      // Call the callback to refresh the data
+      if (onActivityAdded) {
+        onActivityAdded();
+      }
       return true;
     } catch (error) {
       console.error('Failed to create activity:', error);

@@ -38,6 +38,8 @@ export interface GetActivitiesFilters {
   endDate?: Date | string;
   limit?: number;
   page?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
 export interface ActivityStats {

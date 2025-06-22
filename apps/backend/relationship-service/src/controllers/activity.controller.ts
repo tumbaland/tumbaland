@@ -43,7 +43,9 @@ export const getActivities = async (req: Request, res: Response): Promise<void> 
       startDate,
       endDate,
       limit,
-      page
+      page,
+      sortBy,
+      sortOrder
     } = req.query;
 
     const filters: any = {};
@@ -51,14 +53,24 @@ export const getActivities = async (req: Request, res: Response): Promise<void> 
     if (activityType) filters.activityType = activityType as string;
     if (startDate) filters.startDate = new Date(startDate as string);
     if (endDate) filters.endDate = new Date(endDate as string);
-    if (limit) filters.limit = parseInt(limit as string);
-    if (page) filters.page = parseInt(page as string);
+    if (limit) filters.limit = parseInt(limit as string) || 20;
+    if (page) filters.page = parseInt(page as string) || 1;
+    if (sortBy) filters.sortBy = sortBy as string;
+    if (sortOrder) filters.sortOrder = sortOrder as 'asc' | 'desc';
 
     const result = await ActivityService.getActivities(filters);
     
     res.json({
       success: true,
-      data: result
+      data: {
+        activities: result.activities,
+        pagination: {
+          page: result.page,
+          limit: filters.limit,
+          total: result.total,
+          totalPages: result.totalPages
+        }
+      }
     });
   } catch (error: any) {
     res.status(500).json({

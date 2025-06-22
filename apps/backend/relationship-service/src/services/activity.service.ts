@@ -17,6 +17,8 @@ export const getActivities = async (filters: {
   endDate?: Date;
   limit?: number;
   page?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 } = {}): Promise<{ activities: IActivity[]; total: number; page: number; totalPages: number }> => {
   try {
     const {
@@ -24,7 +26,9 @@ export const getActivities = async (filters: {
       startDate,
       endDate,
       limit = 20,
-      page = 1
+      page = 1,
+      sortBy = 'date',
+      sortOrder = 'desc'
     } = filters;
 
     // Build query
@@ -40,13 +44,39 @@ export const getActivities = async (filters: {
       if (endDate) query.date.$lte = endDate;
     }
 
+    // Build sort object
+    const sortObj: any = {};
+    const sortDirection = sortOrder === 'asc' ? 1 : -1;
+    
+    // Map frontend sort fields to database fields
+    switch (sortBy) {
+      case 'date':
+        sortObj.date = sortDirection;
+        break;
+      case 'hours':
+        sortObj.hours = sortDirection;
+        break;
+      case 'activity':
+      case 'activityType':
+        sortObj['activity.type'] = sortDirection;
+        break;
+      case 'description':
+        sortObj['activity.description'] = sortDirection;
+        break;
+      case 'createdAt':
+        sortObj.createdAt = sortDirection;
+        break;
+      default:
+        sortObj.date = -1; // Default to date descending
+    }
+
     // Calculate pagination
     const skip = (page - 1) * limit;
     
     // Execute queries
     const [activities, total] = await Promise.all([
       Activity.find(query)
-        .sort({ date: -1 })
+        .sort(sortObj)
         .skip(skip)
         .limit(limit)
         .lean(),

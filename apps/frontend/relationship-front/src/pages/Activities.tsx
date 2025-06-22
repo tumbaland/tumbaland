@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Box,
   Typography,
@@ -12,6 +12,8 @@ import {
   Chip,
   CircularProgress,
   Alert,
+  TablePagination,
+  TableSortLabel,
 } from "@mui/material";
 import {
   Restaurant,
@@ -27,7 +29,37 @@ import AddActivityModal from "../components/AddActivityModal";
 import DeleteActivityButton from "../components/DeleteActivityButton";
 
 const Activities: React.FC = () => {
-  const { activities = [], loading, error, refetch } = useActivities();
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [sortBy, setSortBy] = useState<string>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  
+  const { 
+    activities = [], 
+    loading, 
+    error, 
+    pagination, 
+    refetch 
+  } = useActivities({ 
+    page: page + 1, // API uses 1-based pagination
+    limit: rowsPerPage,
+    sortBy,
+    sortOrder
+  });
+  const handleChangePage = (_event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const handleSort = (field: string) => {
+    const isAsc = sortBy === field && sortOrder === 'asc';
+    setSortOrder(isAsc ? 'desc' : 'asc');
+    setSortBy(field);
+    setPage(0); // Reset to first page when sorting
+  };
 
   const getActivityIcon = (activityType: ActivityType) => {
     const icons = {
@@ -85,7 +117,6 @@ const Activities: React.FC = () => {
       </Box>
     );
   }
-
   return (
     <Box sx={{ p: 3 }}>
       <Box
@@ -99,18 +130,50 @@ const Activities: React.FC = () => {
         <Typography variant="h4" component="h1">
           Activities Together
         </Typography>
-        <AddActivityModal />
+        <AddActivityModal onActivityAdded={refetch} />
       </Box>
+      
       <Paper sx={{ width: "100%", overflow: "hidden" }}>
         <TableContainer>
           <Table stickyHeader>
-            {" "}
-            <TableHead>
+            {" "}            <TableHead>
               <TableRow>
-                <TableCell>Date</TableCell>
-                <TableCell>Activity</TableCell>
-                <TableCell align="right">Duration (hrs)</TableCell>
-                <TableCell>Description</TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={sortBy === 'date'}
+                    direction={sortBy === 'date' ? sortOrder : 'asc'}
+                    onClick={() => handleSort('date')}
+                  >
+                    Date
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={sortBy === 'activity'}
+                    direction={sortBy === 'activity' ? sortOrder : 'asc'}
+                    onClick={() => handleSort('activity')}
+                  >
+                    Activity
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell align="right">
+                  <TableSortLabel
+                    active={sortBy === 'hours'}
+                    direction={sortBy === 'hours' ? sortOrder : 'asc'}
+                    onClick={() => handleSort('hours')}
+                  >
+                    Duration (hrs)
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell>
+                  <TableSortLabel
+                    active={sortBy === 'description'}
+                    direction={sortBy === 'description' ? sortOrder : 'asc'}
+                    onClick={() => handleSort('description')}
+                  >
+                    Description
+                  </TableSortLabel>
+                </TableCell>
                 <TableCell align="center">Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -147,8 +210,7 @@ const Activities: React.FC = () => {
                       </Box>
                     </TableCell>
                     <TableCell align="right">{activity.hours}</TableCell>
-                    <TableCell>{activity.activity.description}</TableCell>{" "}
-                    <TableCell align="center">
+                    <TableCell>{activity.activity.description}</TableCell>{" "}                    <TableCell align="center">
                       <DeleteActivityButton
                         activityId={activity._id || activity.id || ""}
                         onDeleted={refetch}
@@ -157,8 +219,18 @@ const Activities: React.FC = () => {
                   </TableRow>
                 ))
               )}
-            </TableBody>
-          </Table>
+            </TableBody>          
+            </Table>
+            
+        <TablePagination
+          rowsPerPageOptions={[10, 20, 50, 100]}
+          component="div"
+          count={pagination.total}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+        />
         </TableContainer>
       </Paper>
     </Box>

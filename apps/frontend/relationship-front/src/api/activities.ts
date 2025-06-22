@@ -31,6 +31,8 @@ export const getActivities = async (filters?: GetActivitiesFilters): Promise<Act
   if (filters?.endDate) params.append('endDate', new Date(filters.endDate).toISOString());
   if (filters?.limit) params.append('limit', filters.limit.toString());
   if (filters?.page) params.append('page', filters.page.toString());
+  if (filters?.sortBy) params.append('sortBy', filters.sortBy);
+  if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
 
   const response = await apiClient.get<ApiResponse<ActivitiesResponse>>(
     `/activities${params.toString() ? `?${params.toString()}` : ''}`
