@@ -4,29 +4,21 @@
   "private": true,
   "description": "Scalable microfrontend and microservices platform",
   "workspaces": [
-    "apps/frontends/*",
-    "apps/backends/core/*",
-    "apps/backends/domain/*"
+    "apps/frontend/*",
+    "apps/backend/*"
   ],
   "scripts": {
-    "dev:shell": "npm run dev -w apps/frontends/shell",
-    "dev:finance-frontend": "npm run dev -w apps/frontends/finance",
-    "dev:relationship-frontend": "npm run dev -w apps/frontends/relationship",
-    "dev:front": "concurrently \"npm run dev:shell\" \"npm run dev:finance-frontend\" \"npm run dev:relationship-frontend\"",
-    "dev:finance-service": "npm run dev -w apps/backends/domain/finance-service",
-    "dev:relationship-service": "npm run dev -w apps/backends/domain/relationship-service",
-    "dev:back": "concurrently \"npm run dev:finance-service\" \"npm run dev:relationship-service\"",
-    "dev:all": "concurrently \"npm run dev:front\" \"npm run dev:back\"",
-    "dev": "npm run dev:front",
-    "build:shell": "npm run build -w apps/frontends/shell",
-    "build:finance-frontend": "npm run build -w apps/frontends/finance", 
-    "build:relationship-frontend": "npm run build -w apps/frontends/relationship",
-    "build:finance-service": "npm run build -w apps/backends/domain/finance-service",
-    "build:relationship-service": "npm run build -w apps/backends/domain/relationship-service",
-    "build:front": "concurrently \"npm run build:shell\" \"npm run build:finance-frontend\" \"npm run build:relationship-frontend\"",
-    "build:back": "concurrently \"npm run build:finance-service\" \"npm run build:relationship-service\"",
-    "build": "npm run build:front && npm run build:back",
-    "lint": "echo \"Error: no lint specified\" && exit 1"
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "concurrently \"npm run dev --workspace=finance-service\" \"npm run dev --workspace=relationship-service\"",
+    "dev:frontend": "concurrently \"npm run dev --workspace=finance-front\" \"npm run dev --workspace=relationship-front\"",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "npm run build --workspace=finance-service && npm run build --workspace=relationship-service",
+    "build:frontend": "npm run build --workspace=finance-front && npm run build --workspace=relationship-front",
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:backend": "concurrently \"npm run start --workspace=finance-service\" \"npm run start --workspace=relationship-service\"",
+    "start:frontend": "concurrently \"npm run preview --workspace=finance-front\" \"npm run preview --workspace=relationship-front\"",
+    "lint": "npm run lint --workspaces",
+    "test": "npm run test --workspaces"
   },
   "devDependencies": {
     "@types/cors": "^2.8.18",
