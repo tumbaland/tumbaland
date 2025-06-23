@@ -1,0 +1,49 @@
+{
+  "name": "file-service",
+  "version": "1.0.0",
+  "description": "File upload service with Google Cloud Storage integration",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "node dist/index.js",
+    "dev": "nodemon --exec ts-node src/index.ts",
+    "build": "tsc",
+    "test": "jest",
+    "lint": "eslint . --ext ts --report-unused-disable-directives --max-warnings 0"
+  },
+  "dependencies": {
+    "@google-cloud/storage": "^7.7.0",
+    "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1",
+    "uuid": "^9.0.1",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0",
+    "dotenv": "^16.3.1",
+    "joi": "^17.11.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3",
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0",
+    "@types/express": "^4.17.17",
+    "@types/multer": "^1.4.7",
+    "@types/cors": "^2.8.13",
+    "@types/morgan": "^1.9.4",
+    "@types/uuid": "^9.0.2",
+    "@types/jest": "^29.5.0",
+    "@types/supertest": "^2.0.12",
+    "ts-node": "^10.9.0",
+    "rimraf": "^5.0.0",
+    "ts-jest": "^29.1.0"
+  },
+  "keywords": [
+    "file-upload",
+    "google-cloud-storage",
+    "express",
+    "api"
+  ],
+  "author": "Tumbaland Team",
+  "license": "MIT"
+}
