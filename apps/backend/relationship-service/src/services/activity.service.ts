@@ -220,7 +220,7 @@ export const getRecentActivities = async (limit: number = 10): Promise<IActivity
 // Get unique activity types
 export const getActivityTypes = async (): Promise<string[]> => {
   try {
-    return ['movies', 'cooking', 'coffee', 'gaming', 'other', 'sex', 'together'];
+    return ['movies', 'cooking', 'dining', 'coffee', 'gaming', 'other', 'sex', 'together'];
   } catch (error: any) {
     throw new Error(`Failed to get activity types: ${error.message}`);
   }
