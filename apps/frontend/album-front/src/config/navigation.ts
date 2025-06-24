@@ -10,10 +10,6 @@ export const navigationItems: Omit<NavigationItem, 'onClick'>[] = [
     path: '/albums'
   },
   {
-    label: 'Photos',
-    path: '/manage'
-  },
-  {
     label: 'Collage',
     path: '/collage'
   }

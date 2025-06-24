@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import Photo from '../models/Photo';
 import Album from '../models/Album';
-import { deleteFile, getSignedUrl, getFileUploadSignedUrl } from '../services/fileService';
+import { deleteFile, getFileUrl, getFileUploadSignedUrl } from '../services/fileService';
 
 // Create a new photo record (after file upload)
 export const createPhoto = async (req: Request, res: Response): Promise<void> => {
@@ -117,7 +117,7 @@ export const getPhotosByAlbum = async (req: Request, res: Response): Promise<voi
     const photosWithUrls = await Promise.all(
       photos.map(async (photo) => {
         try {
-          const signedUrl = await getSignedUrl(photo.fileId);
+          const signedUrl = await getFileUrl(photo.fileId);
           return {
             ...photo.toObject(),
             signedUrl
@@ -164,7 +164,7 @@ export const getPhotoById = async (req: Request, res: Response): Promise<void> =
       });
       return;
     }    try {
-      const signedUrl = await getSignedUrl(photo.fileId);
+      const signedUrl = await getFileUrl(photo.fileId);
       res.json({
         success: true,
         data: {

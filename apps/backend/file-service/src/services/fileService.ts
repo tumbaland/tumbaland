@@ -1,5 +1,6 @@
 import { bucket } from "../config/storage";
 import { generateFileName } from "../config/multer";
+import * as cacheService from "../config/cache";
 import {
   FileUploadData,
   FileDownloadData,
@@ -99,6 +100,9 @@ export const deleteFile = async (fileId: string): Promise<FileDeleteResult> => {
     }
 
     await file.delete();
+
+    // Remove from cache as well
+    await cacheService.removeFromCache(fileId);
 
     return {
       message: "File deleted successfully",

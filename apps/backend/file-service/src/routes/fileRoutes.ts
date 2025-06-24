@@ -14,6 +14,23 @@ router.post(
 // Get upload signed URL (for direct client uploads)
 router.post("/upload-url", fileController.getUploadSignedUrl as any);
 
+// Serve file directly (with caching) - NEW ENDPOINT
+router.get("/serve/:fileId", fileController.serveFile as any);
+
+// OPTIONS handler for serve endpoint (CORS preflight)
+router.options("/serve/:fileId", (req, res) => {
+  res.set({
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Cross-Origin-Resource-Policy": "cross-origin"
+  });
+  res.status(200).end();
+});
+
+// Get cache statistics - NEW ENDPOINT
+router.get("/cache/stats", fileController.getCacheStats as any);
+
 // Get signed URL for file access
 router.get("/signed-url/:fileId", fileController.getSignedUrl as any);
 

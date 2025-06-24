@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import Album from '../models/Album';
 import Photo from '../models/Photo';
-import { deleteFile, getSignedUrl } from '../services/fileService';
+import { deleteFile, getFileUrl } from '../services/fileService';
 
 // Create a new album
 export const createAlbum = async (req: Request, res: Response): Promise<void> => {
@@ -61,16 +61,15 @@ export const getAlbums = async (req: Request, res: Response): Promise<void> => {
     const albumsWithCounts = await Promise.all(
       albums.map(async (album) => {
         const photoCount = await Photo.countDocuments({ albumId: album._id });
-        
-        let coverPhoto = null;
+          let coverPhoto = null;
         if (album.coverPhotoId) {
           try {
             const coverPhotoDoc = await Photo.findById(album.coverPhotoId);
             if (coverPhotoDoc) {
-              const signedUrl = await getSignedUrl(coverPhotoDoc.fileId);
+              const fileUrl = await getFileUrl(coverPhotoDoc.fileId);
               coverPhoto = {
                 ...coverPhotoDoc.toObject(),
-                signedUrl
+                signedUrl: fileUrl
               };
             }
           } catch (error) {
@@ -122,17 +121,15 @@ export const getAlbumById = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    const photoCount = await Photo.countDocuments({ albumId: id });
-
-    let coverPhoto = null;
+    const photoCount = await Photo.countDocuments({ albumId: id });    let coverPhoto = null;
     if (album.coverPhotoId) {
       try {
         const coverPhotoDoc = await Photo.findById(album.coverPhotoId);
         if (coverPhotoDoc) {
-          const signedUrl = await getSignedUrl(coverPhotoDoc.fileId);
+          const fileUrl = await getFileUrl(coverPhotoDoc.fileId);
           coverPhoto = {
             ...coverPhotoDoc.toObject(),
-            signedUrl
+            signedUrl: fileUrl
           };
         }
       } catch (error) {

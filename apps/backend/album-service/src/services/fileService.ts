@@ -37,6 +37,16 @@ export const getSignedUrl = async (fileId: string): Promise<string> => {
   }
 };
 
+export const getFileUrl = async (fileId: string): Promise<string> => {
+  try {
+    // Use the direct file serving endpoint for better performance
+    return `${FILE_SERVICE_URL}/serve/${fileId}`;
+  } catch (error) {
+    console.error('Error getting file URL:', error);
+    throw new Error('Failed to get file URL');
+  }
+};
+
 export const deleteFile = async (fileId: string): Promise<boolean> => {
   try {
     await axios.delete(`${FILE_SERVICE_URL}/${fileId}`);

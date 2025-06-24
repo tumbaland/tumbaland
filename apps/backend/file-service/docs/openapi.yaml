@@ -309,6 +309,120 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /serve/{fileId}:
+    get:
+      tags:
+        - files
+      summary: Serve file directly (with caching)
+      description: |
+        Serve a file directly from the cache or download it from Google Cloud Storage.
+        This endpoint provides better performance by caching files locally and serving
+        them directly without requiring signed URLs.
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          description: The unique file ID
+          schema:
+            type: string
+            example: "21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg"
+      responses:
+        '200':
+          description: File served successfully
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Type:
+              description: The MIME type of the file
+              schema:
+                type: string
+            Content-Length:
+              description: The size of the file in bytes
+              schema:
+                type: integer
+            Cache-Control:
+              description: Cache control headers
+              schema:
+                type: string
+            ETag:
+              description: Entity tag for caching
+              schema:
+                type: string
+        '304':
+          description: Not modified (cached version is current)
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /cache/stats:
+    get:
+      tags:
+        - files
+      summary: Get cache statistics
+      description: |
+        Retrieve statistics about the local file cache including total files,
+        cache size, and configuration information.
+      responses:
+        '200':
+          description: Cache statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      totalFiles:
+                        type: integer
+                        description: Number of files in cache
+                        example: 150
+                      totalSize:
+                        type: integer
+                        description: Total cache size in bytes
+                        example: 52428800
+                      totalSizeFormatted:
+                        type: string
+                        description: Human readable cache size
+                        example: "50 MB"
+                      oldestFile:
+                        type: string
+                        description: Oldest cached file ID
+                        example: "abc123.jpg"
+                      newestFile:
+                        type: string
+                        description: Newest cached file ID
+                        example: "xyz789.png"
+                      cacheDir:
+                        type: string
+                        description: Cache directory path
+                        example: "./cache"
+                      maxAge:
+                        type: string
+                        description: Maximum cache age in milliseconds
+                        example: "86400000"
+                      maxSize:
+                        type: string
+                        description: Maximum cache size in bytes
+                        example: "1073741824"
+                      maxSizeFormatted:
+                        type: string
+                        description: Human readable maximum cache size
+                        example: "1 GB"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
 components:
   schemas:
     FileUploadData:
