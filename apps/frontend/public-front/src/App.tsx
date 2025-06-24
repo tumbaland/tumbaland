@@ -1,20 +1,11 @@
-import { BrowserRouter as Router } from 'react-router-dom';
-import AppLayout from './components/AppLayout';
-import AppRoutes from './routes';
-
-function AppContent() {
-  return (
-    <AppLayout>
-      <AppRoutes />
-    </AppLayout>
-  );
-}
+import Layout from './components/Layout';
+import WelcomeCard from './components/WelcomeCard';
 
 function App() {
   return (
-    <Router>
-      <AppContent />
-    </Router>
+    <Layout>
+      <WelcomeCard />
+    </Layout>
   );
 }
 
