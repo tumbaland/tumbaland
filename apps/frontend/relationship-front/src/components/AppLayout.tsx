@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import Container from "@mui/material/Container";
 import Layout from './Layout';
-import AppHeader from './AppHeader';
+import AuthHeader from './AuthHeader';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -10,7 +10,7 @@ interface AppLayoutProps {
 const AppLayout = ({ children }: AppLayoutProps) => {
   return (
     <Layout>
-      <AppHeader />
+      <AuthHeader title="Relationships" />
       <Container maxWidth="xl">
         {children}
       </Container>
