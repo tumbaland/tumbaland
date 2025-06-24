@@ -15,6 +15,7 @@ export interface Activity {
 export type ActivityType = 
   | 'movies' 
   | 'cooking' 
+  | 'dining'
   | 'coffee'
   | 'gaming' 
   | 'other' 

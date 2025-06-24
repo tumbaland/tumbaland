@@ -14,16 +14,18 @@ import {
 } from '@mui/material';
 import { AccountCircle, Login, Logout } from '@mui/icons-material';
 import { authService, User } from '../services/authService';
+import { useNavigate } from 'react-router-dom';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import ListIcon from '@mui/icons-material/List';
 
-interface AuthHeaderProps {
-  title: string;
-}
+interface AuthHeaderProps {}
 
-const AuthHeader: React.FC<AuthHeaderProps> = ({ title }) => {
+const AuthHeader: React.FC<AuthHeaderProps> = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -59,6 +61,19 @@ const AuthHeader: React.FC<AuthHeaderProps> = ({ title }) => {
     handleMenuClose();
     // The logout service will refresh the page, so no need to update state
   };
+
+  const menuItems = [
+    {
+      label: 'Dashboard',
+      icon: <DashboardIcon fontSize="small" sx={{ mr: 1 }} />,
+      onClick: () => navigate('/'),
+    },
+    {
+      label: 'Activities',
+      icon: <ListIcon fontSize="small" sx={{ mr: 1 }} />,
+      onClick: () => navigate('/activities'),
+    },
+  ];
 
   const renderAuthSection = () => {
     if (isLoading) {
@@ -145,12 +160,28 @@ const AuthHeader: React.FC<AuthHeaderProps> = ({ title }) => {
   };
 
   return (
-    <AppBar position="static" elevation={2}>
+    <AppBar position="static" elevation={2} sx={{ background: '#fff', color: '#222', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.03)' }}>
       <Toolbar>
-        <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-          💕 {title}
-        </Typography>
-        
+        {/* Menu items */}
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {menuItems.map((item) => (
+            <Button
+              key={item.label}
+              color="inherit"
+              startIcon={item.icon}
+              onClick={item.onClick}
+              sx={{
+                fontWeight: 500,
+                textTransform: 'none',
+                background: 'none',
+                '&:hover': { background: 'rgba(0,0,0,0.04)' },
+              }}
+            >
+              {item.label}
+            </Button>
+          ))}
+        </Box>
+        <Box sx={{ flexGrow: 1 }} />
         {renderAuthSection()}
       </Toolbar>
     </AppBar>

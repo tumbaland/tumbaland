@@ -3,42 +3,42 @@ import { ActivityType } from '../api/types';
 // Activity type display configurations
 export const ACTIVITY_CONFIG = {
   movies: {
-    label: 'Movie Night',
+    label: 'Movies',
     color: 'primary' as const,
     icon: '🎬'
   },
   cooking: {
-    label: 'Cooking Together',
+    label: 'Cooking',
     color: 'warning' as const,
     icon: '👨‍🍳'
   },
   dining: {
-    label: 'Dining Out',
+    label: 'Eating Outside',
     color: 'success' as const,
     icon: '🍽️'
   },
   coffee: {
-    label: 'Coffee Break',
+    label: 'Coffee',
     color: 'info' as const,
     icon: '🥗'
   },
   gaming: {
-    label: 'Gaming Session',
+    label: 'Gaming',
     color: 'secondary' as const,
     icon: '🎮'
   },
   other: {
-    label: 'Other Activity',
+    label: 'Other',
     color: 'default' as const,
     icon: '✨'
   },
   sex: {
-    label: 'Intimate Time',
+    label: 'Sex',
     color: 'error' as const,
     icon: '💝'
   },
   together: {
-    label: 'Quality Time',
+    label: 'Together',
     color: 'primary' as const,
     icon: '💕'
   }

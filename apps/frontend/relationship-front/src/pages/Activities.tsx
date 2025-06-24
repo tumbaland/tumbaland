@@ -72,6 +72,7 @@ const Activities: React.FC = () => {
     const icons = {
       movies: <Movie />,
       cooking: <Restaurant />,
+      dining: <Restaurant />,
       coffee: <Restaurant />,
       gaming: <SportsEsports />,
       together: <Flight />,

@@ -20,6 +20,8 @@ export interface HeaderProps {
   onAccountClick?: () => void;
 }
 
+const textColor = '#334155'; // dark gray for header text
+
 const Header: React.FC<HeaderProps> = ({
   title = 'App',
   menuItems = [
@@ -34,43 +36,43 @@ const Header: React.FC<HeaderProps> = ({
     <AppBar 
       position="static" 
       sx={{ 
-        backgroundColor: 'black',
+        backgroundColor: 'transparent',
         margin: 0,
         padding: 0,
-        boxShadow: 'none'
+        boxShadow: 'none',
+        backdropFilter: 'blur(8px)',
       }}
+      elevation={0}
     >
       <Toolbar sx={{ padding: 0 }}>
-        <IconButton
+        {/* Hide the drawer/menu button */}
+        {/* <IconButton
           size="large"
           edge="start"
           color="inherit"
           aria-label="menu"
-          sx={{ mr: 2 }}
+          sx={{ mr: 2, color: textColor }}
           onClick={onMenuClick}
         >
           <MenuIcon />
-        </IconButton>
-        
-        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+        </IconButton> */}
+        <Typography variant="h6" component="div" sx={{ flexGrow: 1, color: textColor }}>
           {title}
         </Typography>
-        
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           {menuItems.map((item, index) => (
             <Button 
               key={index} 
-              color="inherit" 
+              sx={{ color: textColor }}
               onClick={item.onClick}
             >
               {item.label}
             </Button>
           ))}
-          
           <IconButton
             size="large"
             aria-label="account of current user"
-            color="inherit"
+            sx={{ color: textColor }}
             onClick={onAccountClick}
           >
             <AccountCircle />
