@@ -11,10 +11,10 @@ const Dashboard: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <StatsCards />
-      <Box sx={{ mb: 4 }}>
+      <Box sx={{ mb: 4, width: "100%" }}>
         <HoursBarChart />
       </Box>
-      <Box sx={{ mb: 4 }}>
+      <Box sx={{ mb: 4, width: "100%" }}>
         <MonthlyStackedBarChart />
       </Box>
       <Box sx={{ mb: 4, width: "100%" }}>
