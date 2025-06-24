@@ -197,42 +197,59 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
             multiple
             accept="image/*"
             style={{ display: 'none' }}
-            onChange={handleFileSelect}
-          />
+            onChange={handleFileSelect}          />
         </Box>
+
+        {uploading && (
+          <Box sx={{ mt: 2, mb: 2 }}>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              Uploading... {Math.round(uploadProgress)}%
+            </Typography>
+            <LinearProgress variant="determinate" value={uploadProgress} />
+          </Box>
+        )}
 
         {files.length > 0 && (
           <Box>
             <Typography variant="subtitle1" sx={{ mb: 1 }}>
               Selected Files ({files.length})
-            </Typography>            <List>
+            </Typography>
+
+            <List dense>
               {files.map((fileItem) => (
-                <ListItem key={fileItem.id} divider>
+                <ListItem key={fileItem.id} divider sx={{ py: 0.5 }}>
                   <ListItemText
-                    primary={fileItem.file.name}
-                    secondary={formatFileSize(fileItem.file.size)}
+                    primary={
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          fontSize: '0.875rem',
+                          wordBreak: 'break-all',
+                          lineHeight: 1.2
+                        }}
+                      >
+                        {fileItem.file.name}
+                      </Typography>
+                    }
+                    secondary={
+                      <Typography variant="caption" color="text.secondary">
+                        {formatFileSize(fileItem.file.size)}
+                      </Typography>
+                    }
                   />
                   <ListItemSecondaryAction>
                     <IconButton 
                       edge="end" 
+                      size="small"
                       onClick={() => removeFile(fileItem.id)}
                       disabled={uploading}
                     >
-                      <DeleteIcon />
+                      <DeleteIcon fontSize="small" />
                     </IconButton>
                   </ListItemSecondaryAction>
                 </ListItem>
               ))}
             </List>
-          </Box>
-        )}
-
-        {uploading && (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              Uploading... {Math.round(uploadProgress)}%
-            </Typography>
-            <LinearProgress variant="determinate" value={uploadProgress} />
           </Box>
         )}
       </DialogContent>

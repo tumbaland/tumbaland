@@ -91,7 +91,7 @@ export const createPhoto = async (req: Request, res: Response): Promise<void> =>
 export const getPhotosByAlbum = async (req: Request, res: Response): Promise<void> => {
   try {
     const { albumId } = req.params;
-    const { page = 1, limit = 20, search } = req.query;
+    const { page = 1, limit, search } = req.query;
 
     // Check if album exists
     const album = await Album.findById(albumId);
@@ -101,19 +101,21 @@ export const getPhotosByAlbum = async (req: Request, res: Response): Promise<voi
         message: 'Album not found'
       });
       return;
-    }
-
-    const query: any = { albumId };
+    }    const query: any = { albumId };
     if (search) {
       query.$text = { $search: search as string };
+    }    // Handle pagination - if limit is not provided or is 0, fetch all photos
+    const limitNum = limit ? Number(limit) : undefined;
+    const pageNum = Number(page);
+    
+    let photosQuery = Photo.find(query).sort({ createdAt: -1 });
+    
+    if (limitNum && limitNum > 0) {
+      photosQuery = photosQuery.limit(limitNum).skip((pageNum - 1) * limitNum);
     }
-
-    const photos = await Photo.find(query)
-      .sort({ createdAt: -1 })
-      .limit(Number(limit))
-      .skip((Number(page) - 1) * Number(limit));
-
-    const total = await Photo.countDocuments(query);    // Get signed URLs for photos
+    
+    const photos = await photosQuery;
+    const total = await Photo.countDocuments(query);// Get signed URLs for photos
     const photosWithUrls = await Promise.all(
       photos.map(async (photo) => {
         try {
@@ -127,17 +129,15 @@ export const getPhotosByAlbum = async (req: Request, res: Response): Promise<voi
           return photo.toObject();
         }
       })
-    );
-
-    res.json({
+    );    res.json({
       success: true,
       data: {
         photos: photosWithUrls,
         pagination: {
-          page: Number(page),
-          limit: Number(limit),
+          page: pageNum,
+          limit: limitNum || 0,
           total,
-          pages: Math.ceil(total / Number(limit))
+          pages: limitNum && limitNum > 0 ? Math.ceil(total / limitNum) : 1
         }
       }
     });

@@ -14,7 +14,12 @@ import {
   Fab,
   Dialog,
   DialogContent,
-  IconButton
+  IconButton,
+  Pagination,
+  FormControl,
+  Select,
+  MenuItem,
+  InputLabel
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -35,23 +40,25 @@ const AlbumDetailPage: React.FC = () => {
   const { albumId } = useParams<{ albumId: string }>();
   const navigate = useNavigate();  const [album, setAlbum] = useState<Album | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number>(0);
   const [showPhotoViewer, setShowPhotoViewer] = useState(false);
-  const [imageLoading, setImageLoading] = useState(false);
   const [loadingAlbum, setLoadingAlbum] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const {
     photos,
     loading: photosLoading,
     error: photosError,
+    pagination,
     fetchPhotos,
     deletePhoto
   } = usePhotos(albumId || '', {
-    search: searchTerm || undefined,
-    limit: 50
+    page: currentPage,
+    limit: pageSize === 0 ? undefined : pageSize, // 0 means "All"
+    search: searchTerm || undefined
   });
 
   useEffect(() => {
@@ -181,6 +188,20 @@ const AlbumDetailPage: React.FC = () => {
     fetchPhotos();
   };
 
+  // Reset to first page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+  const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
+    setCurrentPage(value);
+  };
+
+  const handlePageSizeChange = (event: any) => {
+    const newPageSize = parseInt(event.target.value);
+    setPageSize(newPageSize);
+    setCurrentPage(1); // Reset to first page when changing page size
+  };
+
   if (loadingAlbum) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
@@ -245,9 +266,7 @@ const AlbumDetailPage: React.FC = () => {
         >
           Upload Photos
         </Button>
-      </Box>
-
-      {/* Search */}
+      </Box>      {/* Search */}
       <Box mb={4}>
         <TextField
           placeholder="Search photos..."
@@ -262,6 +281,50 @@ const AlbumDetailPage: React.FC = () => {
           }}
           sx={{ maxWidth: 400 }}
         />
+      </Box>
+
+      {/* Pagination Controls */}
+      <Box 
+        display="flex" 
+        justifyContent="space-between" 
+        alignItems="center" 
+        mb={3}
+        sx={{ 
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: { xs: 2, sm: 0 }
+        }}
+      >
+        <Box display="flex" alignItems="center" gap={2}>
+          <Typography variant="body2" color="text.secondary">
+            {pagination.total} {pagination.total === 1 ? 'photo' : 'photos'} total
+          </Typography>
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            <InputLabel>Per page</InputLabel>
+            <Select
+              value={pageSize}
+              onChange={handlePageSizeChange}
+              label="Per page"
+            >
+              <MenuItem value={10}>10</MenuItem>
+              <MenuItem value={20}>20</MenuItem>
+              <MenuItem value={50}>50</MenuItem>
+              <MenuItem value={100}>100</MenuItem>
+              <MenuItem value={0}>All</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
+        
+        {pageSize > 0 && pagination.pages > 1 && (
+          <Pagination
+            count={pagination.pages}
+            page={currentPage}
+            onChange={handlePageChange}
+            color="primary"
+            size="medium"
+            showFirstButton
+            showLastButton
+          />
+        )}
       </Box>
 
       {/* Error Alert */}
@@ -309,8 +372,22 @@ const AlbumDetailPage: React.FC = () => {
                 isCoverPhoto={album?.coverPhotoId === photo._id}
               />
             </Grid>
-          ))}
-        </Grid>
+          ))}        </Grid>
+      )}
+
+      {/* Bottom Pagination */}
+      {photos.length > 0 && pageSize > 0 && pagination.pages > 1 && (
+        <Box mt={4} display="flex" justifyContent="center">
+          <Pagination
+            count={pagination.pages}
+            page={currentPage}
+            onChange={handlePageChange}
+            color="primary"
+            size="large"
+            showFirstButton
+            showLastButton
+          />
+        </Box>
       )}
 
       {/* Upload Dialog */}

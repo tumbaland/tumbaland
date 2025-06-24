@@ -121,7 +121,7 @@ const AlbumsPage: React.FC = () => {
     <Container maxWidth="xl" sx={{ py: 4 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
         <Typography variant="h4" component="h1">
-          My Albums
+          Albums
         </Typography>
         <Button
           variant="contained"
