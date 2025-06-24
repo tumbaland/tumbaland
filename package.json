@@ -10,8 +10,8 @@
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:back": "concurrently \"npm run dev --workspace=file-service\" \"npm run dev --workspace=finance-service\" \"npm run dev --workspace=relationship-service\"",
-    "dev:front": "concurrently \"npm run dev --workspace=collage-front\" \"npm run dev --workspace=finance-front\" \"npm run dev --workspace=relationship-front\"",
+    "dev:back": "concurrently \"npm run dev --workspace=collage-service\" \"npm run dev --workspace=file-service\" \"npm run dev --workspace=finance-service\" \"npm run dev --workspace=relationship-service\"",
+    "dev:front": "concurrently \"npm run dev --workspace=public-front\" \"npm run dev --workspace=collage-front\" \"npm run dev --workspace=finance-front\" \"npm run dev --workspace=relationship-front\"",
     "build": "npm run build:backend && npm run build:frontend",
     "build:backend": "npm run build --workspace=finance-service && npm run build --workspace=relationship-service",
     "build:frontend": "npm run build --workspace=finance-front && npm run build --workspace=relationship-front",
