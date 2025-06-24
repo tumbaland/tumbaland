@@ -5,7 +5,28 @@ const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
+  const [initializationAttempted, setInitializationAttempted] = useState(false);
 
+  const initializeAuth = () => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    const redirectUri = new URLSearchParams(window.location.search).get('redirect_uri') || 'http://localhost:3000';
+    
+    if (!clientId) {
+      setError('Google Client ID is not configured. Please check your environment variables.');
+      return;
+    }
+
+    console.log('Initializing Google Sign-In...');
+    setError(null);
+    setInitializationAttempted(true);
+
+    try {
+      initializeGoogleSignIn(clientId, redirectUri);
+    } catch (err) {
+      console.error('Error initializing Google Sign-In:', err);
+      setError('Failed to initialize Google Sign-In: ' + (err as Error).message);
+    }
+  };
   useEffect(() => {
     const checkExistingAuth = async () => {
       try {
@@ -21,33 +42,35 @@ const LoginPage: React.FC = () => {
           return;
         }
       } catch (err) {
-        console.log('No existing auth found');
-      }
-
-      // Initialize Google Sign-In if not authenticated
+        console.log('No existing auth found:', err);
+      }      // Initialize Google Sign-In if not authenticated
       const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
       const redirectUri = new URLSearchParams(window.location.search).get('redirect_uri') || 'http://localhost:3000';
       
+      console.log('Environment check:');
+      console.log('- Client ID:', clientId ? `${clientId.substring(0, 10)}...` : 'MISSING');
+      console.log('- Redirect URI:', redirectUri);
+      console.log('- Auth Service URL:', import.meta.env.VITE_AUTH_SERVICE_URL);
+      console.log('- Google script loaded:', !!window.google);
+      console.log('- Document ready state:', document.readyState);
+      
       if (!clientId) {
-        setError('Google Client ID is not configured');
+        setError('Google Client ID is not configured. Please check your environment variables.');
         setIsLoading(false);
         return;
       }
 
-      console.log('Initializing Google Sign-In with Client ID:', clientId);
-      console.log('Redirect URI:', redirectUri);
+      console.log('Initializing Google Sign-In...');
+      setIsLoading(false); // Show the button container immediately
+      setInitializationAttempted(true);
 
-      // Wait a bit for the Google script to load
-      setTimeout(() => {
-        try {
-          initializeGoogleSignIn(clientId, redirectUri);
-          setIsLoading(false);
-        } catch (err) {
-          console.error('Error initializing Google Sign-In:', err);
-          setError('Failed to initialize Google Sign-In');
-          setIsLoading(false);
-        }
-      }, 500);
+      // Initialize Google Sign-In with multiple attempts
+      try {
+        initializeGoogleSignIn(clientId, redirectUri);
+      } catch (err) {
+        console.error('Error initializing Google Sign-In:', err);
+        setError('Failed to initialize Google Sign-In: ' + (err as Error).message);
+      }
     };
 
     checkExistingAuth();
@@ -156,13 +179,96 @@ const LoginPage: React.FC = () => {
                 Logout
               </button>
             </div>
-          </div>
-        ) : (
+          </div>        ) : (
           <div>
             {isLoading ? (
-              <div style={{ color: '#666' }}>Loading...</div>
-            ) : (
-              <div id="google-signin-button" style={{ marginTop: '1rem' }}></div>
+              <div style={{ color: '#666', padding: '2rem' }}>
+                <div>Loading Google Sign-In...</div>
+                <div style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                  Please wait while we initialize the authentication system.
+                </div>
+              </div>            ) : (
+              <div>
+                <div 
+                  id="google-signin-button" 
+                  style={{ 
+                    marginTop: '1rem', 
+                    minHeight: '50px',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    border: '1px dashed #ddd',
+                    borderRadius: '4px',
+                    padding: '1rem',
+                    backgroundColor: '#fafafa'
+                  }}
+                >
+                  {initializationAttempted ? (
+                    <div style={{ 
+                      color: '#666', 
+                      fontSize: '0.9rem',
+                      textAlign: 'center'
+                    }}>
+                      <div style={{ marginBottom: '0.5rem' }}>⏳ Loading Google Sign-In...</div>
+                      <div style={{ fontSize: '0.8rem' }}>
+                        If the button doesn't appear, try refreshing the page.
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ color: '#666', fontSize: '0.9rem' }}>
+                      Preparing authentication...
+                    </div>
+                  )}
+                </div>
+                
+                <div style={{ marginTop: '1rem', textAlign: 'center' }}>
+                  <button 
+                    onClick={initializeAuth}
+                    style={{
+                      backgroundColor: '#f5f5f5',
+                      color: '#666',
+                      border: '1px solid #ddd',
+                      padding: '0.5rem 1rem',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem',
+                      marginRight: '0.5rem'
+                    }}
+                  >
+                    Retry Google Sign-In
+                  </button>
+                  <button 
+                    onClick={() => window.location.reload()}
+                    style={{
+                      backgroundColor: '#f5f5f5',
+                      color: '#666',
+                      border: '1px solid #ddd',
+                      padding: '0.5rem 1rem',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem'
+                    }}
+                  >
+                    Refresh Page
+                  </button>
+                </div>
+                
+                {error && (
+                  <div style={{ 
+                    marginTop: '1rem',
+                    padding: '0.5rem',
+                    backgroundColor: '#ffebee',
+                    color: '#d32f2f',
+                    borderRadius: '4px',
+                    fontSize: '0.9rem'
+                  }}>
+                    Error: {error}
+                    <div style={{ fontSize: '0.8rem', marginTop: '0.5rem', color: '#666' }}>
+                      Check browser console for detailed logs
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
             
             <p style={{ 
