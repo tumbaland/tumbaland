@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import * as fileService from "../services/fileService";
 import * as cacheService from "../config/cache";
+import { generateFileName } from "../config/multer";
 import Joi from "joi";
 import {
   ListFilesQuery,
@@ -278,11 +279,13 @@ export const getUploadSignedUrl = async (
         },
       } as ApiError);
       return;
-    }
-
-    const { fileName, contentType, expirationMinutes = 15 } = req.body;
+    }    const { fileName, contentType, expirationMinutes = 15 } = req.body;
+    
+    // Generate unique filename for upload
+    const uniqueFileName = generateFileName(fileName);
+    
     const signedUrl = await fileService.getUploadSignedUrl(
-      fileName,
+      uniqueFileName,
       contentType,
       expirationMinutes
     );
@@ -290,7 +293,7 @@ export const getUploadSignedUrl = async (
       success: true,
       data: {
         uploadUrl: signedUrl,
-        fileName,
+        fileName: uniqueFileName,
         contentType,
         expiresInMinutes: expirationMinutes,
         expiresAt: new Date(
