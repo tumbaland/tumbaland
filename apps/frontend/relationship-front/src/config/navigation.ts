@@ -12,10 +12,6 @@ export const navigationItems: Omit<NavigationItem, 'onClick'>[] = [
   {
     label: 'Activities',
     path: '/activities'
-  },
-  {
-    label: 'Photo Album',
-    path: '/photos'
   }
 ];
 
