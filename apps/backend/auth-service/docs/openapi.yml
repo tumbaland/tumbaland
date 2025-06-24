@@ -1,0 +1,37 @@
+openapi: 3.0.0
+info:
+  title: Auth Service API
+  version: 1.0.0
+  description: API documentation for the Auth Service
+paths:
+  /auth/validate:
+    post:
+      summary: Validate Google ID Token
+      description: Validates a Google ID token and returns user information.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                idToken:
+                  type: string
+                  description: The Google ID token to validate.
+      responses:
+        '200':
+          description: Token is valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  user:
+                    type: object
+                    description: User information from the Google ID token.
+        '400':
+          description: Token is missing
+        '401':
+          description: Token is invalid
