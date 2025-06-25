@@ -116,7 +116,7 @@ const LoginPage: React.FC = () => {
         textAlign: 'center',
         minWidth: '300px'
       }}>
-        <h1 style={{ marginBottom: '2rem', color: '#333' }}>Welcome to Tumbaland</h1>
+        <h1 style={{ marginBottom: '2rem', color: '#333' }}>Login to Tumbaland</h1>
         
         {error && (
           <div style={{ 

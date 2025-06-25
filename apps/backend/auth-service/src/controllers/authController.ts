@@ -28,7 +28,7 @@ export const validateToken = async (req: Request, res: Response, next: NextFunct
 
     // Set secure cookie for SSO across subdomains
     const cookieOptions = {
-      httpOnly: true,
+      httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax' as const,
       domain: process.env.COOKIE_DOMAIN || 'localhost',
@@ -71,6 +71,6 @@ export const verifyAuth = (req: Request, res: Response): void => {
   res.json({ 
     success: true, 
     authenticated: !!req.user,
-    user: req.user || null
+    user: req.user || null,
   });
 };

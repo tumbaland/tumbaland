@@ -1,6 +1,5 @@
 import * as jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
 const JWT_EXPIRES_IN = '7d';
 
 export interface UserPayload {
@@ -11,10 +10,12 @@ export interface UserPayload {
 }
 
 export const generateJWT = (user: UserPayload): string => {
+  const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
   return jwt.sign(user, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 };
 
 export const verifyJWT = (token: string): UserPayload => {
+  const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
   try {
     return jwt.verify(token, JWT_SECRET) as UserPayload;
   } catch (error) {

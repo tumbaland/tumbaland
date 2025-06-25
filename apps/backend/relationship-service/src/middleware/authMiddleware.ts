@@ -1,8 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
-
 export interface UserPayload {
   id: string;
   email: string;
@@ -12,6 +10,7 @@ export interface UserPayload {
 
 export function authenticateToken(req: Request, res: Response, next: NextFunction): void {
   try {
+    const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
     const token =
       req.cookies?.access_token ||
       req.headers.authorization?.replace('Bearer ', '');
