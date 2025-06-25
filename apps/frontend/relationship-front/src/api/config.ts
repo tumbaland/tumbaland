@@ -3,6 +3,20 @@ import axios, { AxiosInstance, AxiosResponse } from 'axios';
 // API Configuration
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4002/api';
 
+// Helper to read JWT token from cookie
+function getJwtTokenFromCookie(cookieName = 'access_token') {
+  const match = document.cookie.match(new RegExp('(^| )' + cookieName + '=([^;]+)'));
+  return match ? match[2] : null;
+}
+
+// On app load, read JWT from cookie and save to localStorage if not already present
+(function syncJwtToken() {
+  const token = getJwtTokenFromCookie();
+  if (token && localStorage.getItem('authToken') !== token) {
+    localStorage.setItem('authToken', token);
+  }
+})();
+
 // Create axios instance with default configuration
 export const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -12,14 +26,18 @@ export const apiClient: AxiosInstance = axios.create({
   },
 });
 
-// Request interceptor for adding auth tokens if needed in the future
+// Request interceptor for adding auth tokens
 apiClient.interceptors.request.use(
   (config) => {
-    // Add auth token if available
-    // const token = localStorage.getItem('authToken');
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`;
-    // }
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      // Axios always provides config.headers as AxiosHeaders, but for type safety:
+      if (typeof config.headers?.set === 'function') {
+        config.headers.set('Authorization', `Bearer ${token}`);
+      } else if (config.headers) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+      }
+    }
     return config;
   },
   (error) => {
