@@ -113,7 +113,11 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
       const week = [];
 
       for (let day = 0; day < 7; day++) {
-        const dateStr = currentDate.toISOString().split("T")[0];
+        // Parse date string as local date to avoid timezone issues
+        const year = currentDate.getFullYear();
+        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+        const dayOfMonth = String(currentDate.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${dayOfMonth}`;
         const dayData = dataMap.get(dateStr);
         const isCurrentYear = currentDate.getFullYear() === yearToShow;
 
@@ -122,7 +126,7 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
           data: dayData,
           isCurrentYear,
           dayOfWeek: day,
-          displayDate: new Date(currentDate),
+          displayDate: new Date(year, currentDate.getMonth(), currentDate.getDate()),
         });
 
         currentDate.setDate(currentDate.getDate() + 1);
