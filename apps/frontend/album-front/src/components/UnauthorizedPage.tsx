@@ -18,8 +18,7 @@ const UnauthorizedPage: React.FC = () => {
         </Typography>
         
         <Typography variant="body1" color="text.secondary" paragraph>
-          You need to be logged in to access the Album Manager. 
-          Please sign in with your Google account to continue.
+          You need to be logged in to access the Tumbaland.
         </Typography>
         
         <Box sx={{ mt: 4 }}>
@@ -33,10 +32,6 @@ const UnauthorizedPage: React.FC = () => {
             Sign In to Continue
           </Button>
         </Box>
-        
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 3, display: 'block' }}>
-          🎵 Secure access to your music collection
-        </Typography>
       </Paper>
     </Container>
   );

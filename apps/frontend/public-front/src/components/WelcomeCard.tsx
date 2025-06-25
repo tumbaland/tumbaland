@@ -1,26 +1,42 @@
-import React from 'react';
+import { Box } from '@mui/material';
 
 export default function WelcomeCard() {
   return (
-    <div style={{
-      flex: 1,
-      flexWrap: 'wrap',
+    <Box sx={{
+      minHeight: '100vh',
+      width: '100%',
+      background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
+      position: 'relative',
+      overflow: 'hidden',
     }}>
-      <div style={{
-        background: 'rgba(255,255,255,0.95)',
-        borderRadius: '1.5rem',
-        boxShadow: '0 8px 32px 0 rgba(99,102,241,0.10)',
-        padding: '3rem',
-        maxWidth: 1080,
-        textAlign: 'center',
-      }}>
-        <h1 style={{ color: '#1e293b', fontSize: '2.5rem', fontWeight: 700, letterSpacing: '-1px' }}>
-          Welcome to Tumbaland
-        </h1>
-      </div>
-    </div>
+      {/* Decorative background shapes */}
+      <Box sx={{
+        position: 'absolute',
+        top: -120,
+        left: -120,
+        width: 320,
+        height: 320,
+        bgcolor: 'primary.light',
+        opacity: 0.18,
+        borderRadius: '50%',
+        zIndex: 0,
+        filter: 'blur(12px)'
+      }} />
+      <Box sx={{
+        position: 'absolute',
+        bottom: -100,
+        right: -100,
+        width: 260,
+        height: 260,
+        bgcolor: 'secondary.light',
+        opacity: 0.15,
+        borderRadius: '50%',
+        zIndex: 0,
+        filter: 'blur(10px)'
+      }} />
+    </Box>
   );
 }
