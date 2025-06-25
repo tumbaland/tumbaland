@@ -55,7 +55,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
           date: formatDateForInput(activity.date),
           hours: activity.hours,
           activityType: activity.activity.type,
-          description: activity.activity.description,
+          description: activity.activity.description || "",
         });
       } else {
         // Create mode - set defaults
@@ -141,14 +141,28 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
           )}
           <TextField
             label="Date"
-            type="date"
-            value={formData.date}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, date: e.target.value }))
-            }
+            type="text"
+            value={(() => {
+              if (!formData.date) return '';
+              const d = new Date(formData.date);
+              const day = String(d.getDate()).padStart(2, '0');
+              const month = String(d.getMonth() + 1).padStart(2, '0');
+              const year = d.getFullYear();
+              return `${day}.${month}.${year}`;
+            })()}
+            onChange={(e) => {
+              // Parse DD.MM.YYYY to ISO string
+              const [day, month, year] = e.target.value.split('.')
+              let iso = '';
+              if (day && month && year) {
+                iso = new Date(`${year}-${month}-${day}`).toISOString().slice(0, 10);
+              }
+              setFormData((prev) => ({ ...prev, date: iso }));
+            }}
             fullWidth
             required
             InputLabelProps={{ shrink: true }}
+            placeholder="DD.MM.YYYY"
           />{" "}
           <TextField
             label="Duration (hours) - Optional"

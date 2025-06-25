@@ -27,6 +27,7 @@ import { useActivities } from "../hooks/useActivities";
 import { ActivityType } from "../api/types";
 import AddActivityModal from "../components/AddActivityModal";
 import DeleteActivityButton from "../components/DeleteActivityButton";
+import EditActivityModal from "../components/EditActivityModal";
 
 const Activities: React.FC = () => {
   const [page, setPage] = useState(0);
@@ -221,6 +222,10 @@ const Activities: React.FC = () => {
                     <TableCell align="right">{activity.hours}</TableCell>
                     <TableCell>{activity.activity.description}</TableCell>{" "}
                     <TableCell align="center">
+                      <EditActivityModal
+                        activity={activity}
+                        onActivityUpdated={refetch}
+                      />
                       <DeleteActivityButton
                         activityId={activity._id || activity.id || ""}
                         onDeleted={refetch}
