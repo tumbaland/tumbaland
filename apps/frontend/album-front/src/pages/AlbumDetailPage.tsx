@@ -400,13 +400,25 @@ const AlbumDetailPage: React.FC = () => {
       <Dialog
         open={showPhotoViewer}
         onClose={handleClosePhotoViewer}
-        maxWidth="lg"
-        fullWidth
+        fullScreen
         PaperProps={{
-          sx: { bgcolor: 'black' }
+          sx: { bgcolor: 'transparent', boxShadow: 'none' }
         }}
       >
-        <DialogContent sx={{ p: 0, position: 'relative' }}>
+        <DialogContent sx={{ p: 0, m: 0, width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+          {/* Backdrop for dimming and click-to-close */}
+          <Box
+            onClick={handleClosePhotoViewer}
+            sx={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              height: '100vh',
+              bgcolor: 'rgba(0,0,0,0.5)',
+              zIndex: 1,
+            }}
+          />
           {/* Close Button */}
           <IconButton
             onClick={handleClosePhotoViewer}
@@ -416,7 +428,7 @@ const AlbumDetailPage: React.FC = () => {
               right: 16,
               color: 'white',
               bgcolor: 'rgba(0, 0, 0, 0.5)',
-              zIndex: 2,
+              zIndex: 3,
               '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.7)' }
             }}
           >
@@ -434,7 +446,7 @@ const AlbumDetailPage: React.FC = () => {
                 transform: 'translateY(-50%)',
                 color: 'white',
                 bgcolor: 'rgba(0, 0, 0, 0.5)',
-                zIndex: 2,
+                zIndex: 3,
                 '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.7)' },
                 width: 56,
                 height: 56
@@ -455,7 +467,7 @@ const AlbumDetailPage: React.FC = () => {
                 transform: 'translateY(-50%)',
                 color: 'white',
                 bgcolor: 'rgba(0, 0, 0, 0.5)',
-                zIndex: 2,
+                zIndex: 3,
                 '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.7)' },
                 width: 56,
                 height: 56
@@ -477,7 +489,7 @@ const AlbumDetailPage: React.FC = () => {
               px: 2,
               py: 1,
               borderRadius: 1,
-              zIndex: 2
+              zIndex: 3
             }}
           >
             <Typography variant="body2">
@@ -490,21 +502,25 @@ const AlbumDetailPage: React.FC = () => {
               src={selectedPhoto.signedUrl}
               alt={selectedPhoto.title || selectedPhoto.originalName}
               sx={{
-                width: '100%',
-                height: 'auto',
+                maxWidth: '90vw',
                 maxHeight: '90vh',
                 objectFit: 'contain',
                 cursor: 'pointer',
-                userSelect: 'none'
+                userSelect: 'none',
+                margin: 'auto',
+                display: 'block',
+                width: 'auto',
+                height: 'auto',
+                zIndex: 2,
+                boxShadow: 3,
+                borderRadius: 2,
+                background: 'black'
               }}
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
               onClick={(e) => {
+                e.stopPropagation();
                 const rect = e.currentTarget.getBoundingClientRect();
                 const clickX = e.clientX - rect.left;
                 const imageWidth = rect.width;
-                
                 // Click on left third = previous, right third = next, middle = close
                 if (clickX < imageWidth / 3 && selectedPhotoIndex > 0) {
                   handlePreviousPhoto();
@@ -527,7 +543,7 @@ const AlbumDetailPage: React.FC = () => {
                 bgcolor: 'rgba(0, 0, 0, 0.7)',
                 p: 2,
                 borderRadius: 1,
-                zIndex: 2
+                zIndex: 3
               }}
             >
               {selectedPhoto.title && (
