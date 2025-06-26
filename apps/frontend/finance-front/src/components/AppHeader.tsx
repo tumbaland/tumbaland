@@ -56,9 +56,9 @@ const AppHeader: React.FC = () => {
       onClick: () => navigate('/'),
     },
     {
-      label: 'Transactions',
+      label: 'Records',
       icon: <ListIcon fontSize="small" sx={{ mr: 1 }} />,
-      onClick: () => navigate('/transactions'),
+      onClick: () => navigate('/records'),
     },
   ];
 

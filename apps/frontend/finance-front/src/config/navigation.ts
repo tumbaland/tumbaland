@@ -10,8 +10,8 @@ export const navigationItems: Omit<NavigationItem, 'onClick'>[] = [
     path: '/'
   },
   {
-    label: 'Transactions',
-    path: '/transactions'
+    label: 'Records',
+    path: '/records'
   }
 ];
 

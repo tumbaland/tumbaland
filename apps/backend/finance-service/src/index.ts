@@ -4,7 +4,7 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import path from 'path';
 import { connectDB } from './config/database';
-import assetRoutes from './routes/assets';
+import financeRecordsRoutes from './routes/financeRecords';
 
 // Load environment variables
 dotenv.config();
@@ -21,7 +21,7 @@ app.use(express.json());
 app.use(morgan('dev'));
 
 // Routes
-app.use('/api/assets', assetRoutes);
+app.use('/api/finance-records', financeRecordsRoutes);
 
 // Serve OpenAPI docs as static files
 app.use('/api/docs', express.static(path.join(__dirname, '../docs')));

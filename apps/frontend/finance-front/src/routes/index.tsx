@@ -1,12 +1,12 @@
 import { Routes, Route } from 'react-router-dom';
 import Dashboard from '../pages/Dashboard';
-import Transactions from '../pages/Transactions';
+import FinancialRecords from '../pages/FinancialRecords';
 
 const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<Dashboard />} />
-      <Route path="/transactions" element={<Transactions />} />
+      <Route path="/records" element={<FinancialRecords />} />
     </Routes>
   );
 };
