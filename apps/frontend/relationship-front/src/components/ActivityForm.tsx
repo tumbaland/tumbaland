@@ -141,28 +141,14 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
           )}
           <TextField
             label="Date"
-            type="text"
-            value={(() => {
-              if (!formData.date) return '';
-              const d = new Date(formData.date);
-              const day = String(d.getDate()).padStart(2, '0');
-              const month = String(d.getMonth() + 1).padStart(2, '0');
-              const year = d.getFullYear();
-              return `${day}.${month}.${year}`;
-            })()}
+            type="date"
+            value={formData.date}
             onChange={(e) => {
-              // Parse DD.MM.YYYY to ISO string
-              const [day, month, year] = e.target.value.split('.')
-              let iso = '';
-              if (day && month && year) {
-                iso = new Date(`${year}-${month}-${day}`).toISOString().slice(0, 10);
-              }
-              setFormData((prev) => ({ ...prev, date: iso }));
+              setFormData((prev) => ({ ...prev, date: e.target.value }));
             }}
             fullWidth
             required
             InputLabelProps={{ shrink: true }}
-            placeholder="DD.MM.YYYY"
           />{" "}
           <TextField
             label="Duration (hours) - Optional"
