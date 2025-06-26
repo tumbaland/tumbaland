@@ -1,121 +1,178 @@
 services:
-  mongodb:
-    image: mongo:8.0.9
-    container_name: tumbaland-mongodb
+  # Frontend apps
+  album-front:
+    build:
+      context: ./apps/frontend/album-front
+      dockerfile: Dockerfile
+      args:
+        VITE_ALBUM_API_URL: ${VITE_ALBUM_API_URL}
+        VITE_FILE_API_URL: ${VITE_FILE_API_URL}
+        VITE_AUTH_SERVICE_URL: ${VITE_AUTH_SERVICE_URL}
+        VITE_AUTH_FRONT_URL: ${VITE_AUTH_FRONT_URL}
+        NODE_ENV: production
+    image: album-front:latest
     restart: unless-stopped
     ports:
-      - "27017:27017"
+      - "3002:80"
+
+  auth-front:
+    build:
+      context: ./apps/frontend/auth-front
+      dockerfile: Dockerfile
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
+        VITE_AUTH_SERVICE_URL: ${VITE_AUTH_SERVICE_URL}
+        NODE_ENV: production
+    image: auth-front:latest
+    restart: unless-stopped
+    ports:
+      - "3004:80"
+
+  finance-front:
+    build:
+      context: ./apps/frontend/finance-front
+      dockerfile: Dockerfile
+      args:
+        VITE_FINANCE_API_URL: ${VITE_FINANCE_API_URL}
+        VITE_AUTH_SERVICE_URL: ${VITE_AUTH_SERVICE_URL}
+        VITE_AUTH_FRONT_URL: ${VITE_AUTH_FRONT_URL}
+        NODE_ENV: production
+    image: finance-front:latest
+    restart: unless-stopped
+    ports:
+      - "3003:80"
+
+  shell-front:
+    build:
+      context: ./apps/frontend/shell-front
+      dockerfile: Dockerfile
+      args:
+        VITE_RELATIONSHIP_URL: ${VITE_RELATIONSHIP_URL}
+        VITE_ALBUM_URL: ${VITE_ALBUM_URL}
+        VITE_FINANCE_URL: ${VITE_FINANCE_URL}
+        NODE_ENV: production
+    image: shell-front:latest
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+
+  relationship-front:
+    build:
+      context: ./apps/frontend/relationship-front
+      dockerfile: Dockerfile
+      args:
+        VITE_RELATIONSHIP_API_URL: ${VITE_RELATIONSHIP_API_URL}
+        VITE_AUTH_SERVICE_URL: ${VITE_AUTH_SERVICE_URL}
+        VITE_AUTH_FRONT_URL: ${VITE_AUTH_FRONT_URL}
+        NODE_ENV: production
+    image: relationship-front:latest
+    restart: unless-stopped
+    ports:
+      - "3001:80"
+
+  # Backend apps
+  album-service:
+    build:
+      context: ./apps/backend/album-service
+      dockerfile: Dockerfile
+    image: album-service:latest
+    restart: unless-stopped
+    ports:
+      - "4002:4002"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: adminpassword
-      MONGO_INITDB_DATABASE: tumbaland
+      - PORT=4002
+      - NODE_ENV=production
+      - MONGODB_URI=${MONGODB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - FILE_API_URL=${FILE_API_URL}
+
+  auth-service:
+    build:
+      context: ./apps/backend/auth-service
+      dockerfile: Dockerfile
+    image: auth-service:latest
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    environment:
+      - PORT=5001
+      - NODE_ENV=production
+      - MONGODB_URI=${MONGODB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - COOKIE_DOMAIN=${COOKIE_DOMAIN}
+      - CORS_ORIGIN=${CORS_ORIGIN}
+
+  file-service:
+    build:
+      context: ./apps/backend/file-service
+      dockerfile: Dockerfile
+    image: file-service:latest
+    restart: unless-stopped
+    ports:
+      - "5002:5002"
+    environment:
+      - PORT=5002
+      - NODE_ENV=production
+      - JWT_SECRET=${JWT_SECRET}
+      - GOOGLE_CLOUD_PROJECT_ID=${GOOGLE_CLOUD_PROJECT_ID}
+      - GOOGLE_CLOUD_BUCKET_NAME=${GOOGLE_CLOUD_BUCKET_NAME}
+      - GOOGLE_CLOUD_KEY_FILE_BASE64=${GOOGLE_CLOUD_KEY_FILE_BASE64}
+      - FILE_CACHE_DIR=./cache
+      - CACHE_MAX_AGE=864000000
+      - CACHE_MAX_SIZE=1073741824
+      - CORS_ORIGIN=${CORS_ORIGIN}
+
+  finance-service:
+    build:
+      context: ./apps/backend/finance-service
+      dockerfile: Dockerfile
+    image: finance-service:latest
+    restart: unless-stopped
+    ports:
+      - "4003:4003"
+    environment:
+      - PORT=4003
+      - NODE_ENV=production
+      - MONGODB_URI=${MONGODB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+
+  relationship-service:
+    build:
+      context: ./apps/backend/relationship-service
+      dockerfile: Dockerfile
+    image: relationship-service:latest
+    restart: unless-stopped
+    ports:
+      - "4001:4001"
+    environment:
+      - PORT=4001
+      - NODE_ENV=production
+      - MONGODB_URI=${MONGODB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+
+  tumbaland-proxy:
+    build:
+      context: ./apps/infra/tumbaland-proxy
+      dockerfile: Dockerfile
+    image: tumbaland-proxy:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
     volumes:
-      - mongodb_data:/data/db
-      - mongodb_config:/data/configdb
-    networks:
-      - tumbaland-network
-    healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    command: mongod --auth
-
-  mongo-express:
-    image: mongo-express:1.0.2
-    container_name: tumbaland-mongo-ui
-    restart: unless-stopped
-    ports:
-      - "8081:8081"
-    environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
-      ME_CONFIG_MONGODB_ADMINPASSWORD: adminpassword
-      ME_CONFIG_MONGODB_SERVER: mongodb
-      ME_CONFIG_MONGODB_PORT: 27017
-      ME_CONFIG_BASICAUTH_USERNAME: admin
-      ME_CONFIG_BASICAUTH_PASSWORD: adminpassword
-      ME_CONFIG_MONGODB_URL: mongodb://admin:adminpassword@mongodb:27017/    
-    networks:
-      - tumbaland-network
-
-  mariadb:
-    image: mariadb:11.7.2
-    container_name: tumbaland-mariadb
-    restart: unless-stopped
-    ports:
-      - "3306:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword123
-      MYSQL_DATABASE: tumbaland
-      MYSQL_USER: tumbaland_user
-      MYSQL_PASSWORD: tumbaland_password
-    volumes:
-      - mariadb_data:/var/lib/mysql
-    networks:
-      - tumbaland-network
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword123"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-  phpmyadmin:
-    image: phpmyadmin:5.2.2
-    container_name: tumbaland-phpmyadmin
-    restart: unless-stopped
-    ports:
-      - "8080:80"
-    environment:
-      PMA_HOST: mariadb
-      PMA_PORT: 3306
-      PMA_USER: root
-      PMA_PASSWORD: rootpassword123
-      MYSQL_ROOT_PASSWORD: rootpassword123
-    networks:
-      - tumbaland-network
-
-  redis:
-    image: redis:8.0.1
-    container_name: tumbaland-redis
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    command: redis-server --requirepass redispassword123
-    volumes:
-      - redis_data:/data
-    networks:
-      - tumbaland-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  redis-commander:
-    image: rediscommander/redis-commander:latest
-    container_name: tumbaland-redis-ui
-    restart: unless-stopped
-    ports:
-      - "8082:8081"
-    environment:
-      REDIS_HOSTS: redis:redis:6379:0:redispassword123
-      HTTP_USER: admin
-      HTTP_PASSWORD: redisui123
-    networks:
-      - tumbaland-network
-
-volumes:
-  mongodb_data:
-    driver: local
-  mongodb_config:
-    driver: local
-  mariadb_data:
-    driver: local
-  redis_data:
-    driver: local
-
-networks:
-  tumbaland-network:
-    driver: bridge
+      - ./apps/infra/tumbaland-proxy/certs/live:/etc/letsencrypt/live
+      - ./apps/infra/tumbaland-proxy/certs/archive:/etc/letsencrypt/archive
+      - ./apps/infra/tumbaland-proxy/certs/renewal:/etc/letsencrypt/renewal
+      - ./apps/infra/tumbaland-proxy/html:/usr/share/nginx/html
+    depends_on:
+      - album-front
+      - album-service
+      - auth-front
+      - auth-service
+      - file-service
+      - finance-front
+      - finance-service
+      - shell-front
+      - relationship-front
+      - relationship-service
