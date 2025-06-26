@@ -10,7 +10,7 @@ import assetRoutes from './routes/assets';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 4003; // Using port 4001 for finance-back
+const PORT = process.env.PORT || 4003;
 
 // Connect to MongoDB
 connectDB();
@@ -20,16 +20,11 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));
 
-// Serve static documentation files
-app.use('/docs', express.static(path.join(__dirname, '../docs')));
-
-// API Documentation route
-app.get('/api-docs', (req: Request, res: Response) => {
-  res.redirect('/docs/index.html');
-});
-
 // Routes
-app.use('/api', assetRoutes);
+app.use('/api/assets', assetRoutes);
+
+// Serve OpenAPI docs as static files
+app.use('/api/docs', express.static(path.join(__dirname, '../docs')));
 
 // Basic health check route
 app.get('/health', (req: Request, res: Response) => {

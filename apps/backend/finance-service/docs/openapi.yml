@@ -1,0 +1,82 @@
+openapi: 3.0.3
+info:
+  title: Finance Service API
+  version: 1.0.0
+  description: API documentation for the Finance Service
+servers:
+  - url: /api
+paths:
+  /assets:
+    get:
+      summary: Get all assets
+      tags: [Assets]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of assets
+    post:
+      summary: Create a new asset
+      tags: [Assets]
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Asset created
+  /assets/{id}:
+    get:
+      summary: Get asset by ID
+      tags: [Assets]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Asset details
+    put:
+      summary: Update asset by ID
+      tags: [Assets]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Asset updated
+    delete:
+      summary: Delete asset by ID
+      tags: [Assets]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Asset deleted
+
+# Tags for grouping
+# These will show as separate sections in Swagger UI
+#
+tags:
+  - name: Assets
+    description: Endpoints for managing financial assets
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
