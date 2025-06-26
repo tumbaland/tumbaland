@@ -156,34 +156,6 @@ const AlbumDetailPage: React.FC = () => {
     };
   }, [showPhotoViewer, selectedPhotoIndex, photos.length]);
 
-  // Touch/swipe navigation for mobile
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
-
-    if (isLeftSwipe && selectedPhotoIndex < photos.length - 1) {
-      handleNextPhoto();
-    }
-    if (isRightSwipe && selectedPhotoIndex > 0) {
-      handlePreviousPhoto();
-    }
-  };
-
   const handleUploadComplete = () => {
     fetchPhotos();
   };
