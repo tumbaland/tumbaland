@@ -10,7 +10,7 @@ import assetRoutes from './routes/assets';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 4001; // Using port 4001 for finance-back
+const PORT = process.env.PORT || 4003; // Using port 4001 for finance-back
 
 // Connect to MongoDB
 connectDB();

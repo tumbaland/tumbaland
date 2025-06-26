@@ -11,7 +11,7 @@ import statisticsRoutes from './routes/statistics';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 4002;
+const PORT = process.env.PORT || 4001;
 
 // Connect to MongoDB
 connectDB();

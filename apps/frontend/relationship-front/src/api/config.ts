@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4002/api';
+const API_BASE_URL = import.meta.env.VITE_RELATIONSHIP_API_URL || 'http://localhost:4001/api';
 
 // Helper to read JWT token from cookie
 function getJwtTokenFromCookie(cookieName = 'access_token') {

@@ -15,9 +15,10 @@ export interface AppLink {
 
 interface SideMenuProps {
   appLinks: AppLink[];
+  onLinkClick?: (url: string) => void;
 }
 
-export function SideMenu({ appLinks }: SideMenuProps) {
+export function SideMenu({ appLinks, onLinkClick }: SideMenuProps) {
   return (
     <Drawer
       variant="permanent"
@@ -57,21 +58,38 @@ export function SideMenu({ appLinks }: SideMenuProps) {
         {appLinks.map((link) => (
           <Tooltip key={link.name} title={link.name} placement="right" arrow>
             <ListItem disablePadding>
-              <ListItemButton
-                component="a"
-                href={link.url}
-                sx={{ justifyContent: "center", minHeight: 56 }}
-              >
-                <ListItemIcon
-                  sx={{
-                    color: "inherit",
-                    minWidth: 0,
-                    justifyContent: "center",
-                  }}
+              {onLinkClick ? (
+                <ListItemButton
+                  onClick={() => onLinkClick(link.url)}
+                  sx={{ justifyContent: "center", minHeight: 56 }}
                 >
-                  {link.icon}
-                </ListItemIcon>
-              </ListItemButton>
+                  <ListItemIcon
+                    sx={{
+                      color: "inherit",
+                      minWidth: 0,
+                      justifyContent: "center",
+                    }}
+                  >
+                    {link.icon}
+                  </ListItemIcon>
+                </ListItemButton>
+              ) : (
+                <ListItemButton
+                  component="a"
+                  href={link.url}
+                  sx={{ justifyContent: "center", minHeight: 56 }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      color: "inherit",
+                      minWidth: 0,
+                      justifyContent: "center",
+                    }}
+                  >
+                    {link.icon}
+                  </ListItemIcon>
+                </ListItemButton>
+              )}
             </ListItem>
           </Tooltip>
         ))}
