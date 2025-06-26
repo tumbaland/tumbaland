@@ -16,10 +16,13 @@
     "morgan": "^1.10.0",
     "dotenv": "^16.5.0",
     "mongoose": "^8.15.0",
-    "axios": "^1.7.0"
+    "axios": "^1.7.0",
+    "jsonwebtoken": "^9.0.2",
+    "path": "^0.12.7"
   },
   "devDependencies": {
     "@types/express": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/cors": "^2.8.18",
     "@types/morgan": "^1.9.9",
     "@types/node": "^22.15.3",

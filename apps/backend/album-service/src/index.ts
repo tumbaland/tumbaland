@@ -25,6 +25,9 @@ app.use(morgan('dev'));
 app.use('/api/albums', albumRoutes);
 app.use('/api/photos', photoRoutes);
 
+// Serve OpenAPI docs as static files
+app.use('/api/docs', express.static(path.join(__dirname, '../docs')));
+
 // Basic health check route
 app.get('/health', (req: Request, res: Response) => {
   res.json({ 

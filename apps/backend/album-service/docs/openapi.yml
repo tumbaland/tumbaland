@@ -1,0 +1,87 @@
+openapi: 3.0.3
+info:
+  title: Album Service API
+  version: 1.0.0
+  description: API documentation for the Album Service
+servers:
+  - url: /api
+paths:
+  /albums:
+    get:
+      summary: Get all albums
+      responses:
+        '200':
+          description: List of albums
+    post:
+      summary: Create a new album
+      responses:
+        '201':
+          description: Album created
+  /albums/{id}:
+    get:
+      summary: Get album by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Album details
+    put:
+      summary: Update album by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Album updated
+    delete:
+      summary: Delete album by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Album deleted
+  /photos:
+    get:
+      summary: Get all photos
+      responses:
+        '200':
+          description: List of photos
+    post:
+      summary: Upload a new photo
+      responses:
+        '201':
+          description: Photo uploaded
+  /photos/{id}:
+    get:
+      summary: Get photo by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Photo details
+    delete:
+      summary: Delete photo by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Photo deleted
