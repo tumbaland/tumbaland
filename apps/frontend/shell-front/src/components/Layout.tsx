@@ -1,10 +1,10 @@
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, ReactNode } from 'react';
-import { SideMenu } from '@tumbaland/components/side-menu';
 import AlbumIcon from '@mui/icons-material/PhotoAlbum';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import CircularProgress from '@mui/material/CircularProgress';
+import { SideMenu } from './SideMenu';
 
 const iconColor = '#334155'; // dark gray
 
