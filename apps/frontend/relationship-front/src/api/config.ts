@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_RELATIONSHIP_API_URL || 'http://localhost:4001/api';
+const API_BASE_URL = import.meta.env.VITE_RELATIONSHIP_API_URL || 'http://localhost:4001';
 
 // Helper to read JWT token from cookie
 function getJwtTokenFromCookie(cookieName = 'access_token') {
@@ -19,7 +19,7 @@ function getJwtTokenFromCookie(cookieName = 'access_token') {
 
 // Create axios instance with default configuration
 export const apiClient: AxiosInstance = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: `${API_BASE_URL}/api`,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
