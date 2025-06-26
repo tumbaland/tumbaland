@@ -4,12 +4,14 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 const cookieParser = require('cookie-parser');
 import authRoutes from './routes/authRoutes';
+import path from 'path';
+import fs from 'fs';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 4003;
+const PORT = process.env.PORT || 5001;
 
 // Middleware
 app.use(express.json());
@@ -24,7 +26,8 @@ app.use(
             'http://localhost:3001',
             'http://localhost:3002',
             'http://localhost:3003',
-            'http://localhost:3004'
+            'http://localhost:3004',
+            'http://localhost:5001'
           ];
       console.log('CORS request from:', origin);
       if (!origin || allowedOrigins.includes(origin)) {
@@ -41,8 +44,16 @@ app.use(
 );
 app.use(morgan('dev'));
 
+// Serve static documentation files
+app.use("/api/docs", express.static(path.join(__dirname, "../docs")));
+
 // Routes
 app.use('/auth', authRoutes);
+
+// Documentation root redirect
+app.get("/docs", (req: Request, res: Response) => {
+  res.redirect("/api/docs/index.html");
+});
 
 // Basic health check route
 app.get('/health', (req: Request, res: Response) => {
