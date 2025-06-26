@@ -1,13 +1,6 @@
 {
   "name": "@tumbaland/components",
   "version": "1.0.0",
-  "description": "Shared UI components for Tumbaland applications",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
-  "keywords": [
-    "react",
-    "components",
-    "ui",
-    "material-ui"
-  ]
+  "author": "Toomas Tahves",
+  "license": "MIT"
 }

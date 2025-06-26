@@ -1,7 +1,8 @@
 {
   "name": "auth-front",
   "version": "1.0.0",
-  "private": true,
+  "author": "Toomas Tahves",
+  "license": "MIT",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

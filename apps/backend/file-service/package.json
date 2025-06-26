@@ -1,8 +1,8 @@
 {
   "name": "file-service",
   "version": "1.0.0",
-  "description": "File upload service with Google Cloud Storage integration",
-  "main": "dist/index.js",
+  "author": "Toomas Tahves",
+  "license": "MIT",
   "scripts": {
     "start": "node dist/index.js",
     "dev": "nodemon --exec ts-node src/index.ts",
@@ -40,13 +40,5 @@
     "@types/supertest": "^2.0.12",
     "@types/uuid": "^9.0.2",
     "eslint": "^8.0.0"
-  },
-  "keywords": [
-    "api",
-    "express",
-    "file-upload",
-    "google-cloud-storage"
-  ],
-  "author": "Tumbaland Team",
-  "license": "MIT"
+  }
 }

@@ -1,8 +1,8 @@
 {
   "name": "tumbaland",
   "version": "1.0.0",
-  "private": true,
-  "description": "Scalable microfrontend and microservices platform",
+  "author": "Toomas Tahves",
+  "license": "MIT",
   "workspaces": [
     "apps/frontend/*",
     "apps/backend/*",
@@ -55,22 +55,5 @@
     "react-router-dom": "^7.6.0",
     "recharts": "^2.15.4",
     "uuid": "^11.1.0"
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=8.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/your-org/tumbaland.git"
-  },
-  "keywords": [
-    "microfrontend",
-    "microservices",
-    "react",
-    "typescript",
-    "monorepo"
-  ],
-  "author": "Toomas Tahves",
-  "license": "MIT"
+  }
 }
