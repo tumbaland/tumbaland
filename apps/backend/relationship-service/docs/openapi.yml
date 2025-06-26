@@ -1,0 +1,203 @@
+openapi: 3.0.3
+info:
+  title: Relationship Service API
+  version: 1.0.0
+  description: API documentation for the Relationship Service
+servers:
+  - url: /api
+paths:
+  /activities:
+    get:
+      summary: Get all activities
+      tags: [Activities]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of activities
+    post:
+      summary: Create a new activity
+      tags: [Activities]
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Activity created
+  /activities/recent:
+    get:
+      summary: Get recent activities
+      tags: [Activities]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Recent activities
+  /activities/stats:
+    get:
+      summary: Get activity stats
+      tags: [Activities]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Activity stats
+  /activities/date-range:
+    get:
+      summary: Get activities by date range
+      tags: [Activities]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Activities in date range
+  /activities/types:
+    get:
+      summary: Get activity types
+      tags: [Activities]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Activity types
+  /activities/{id}:
+    get:
+      summary: Get activity by ID
+      tags: [Activities]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Activity details
+    put:
+      summary: Update activity by ID
+      tags: [Activities]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Activity updated
+    delete:
+      summary: Delete activity by ID
+      tags: [Activities]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Activity deleted
+  /statistics:
+    get:
+      summary: Get relationship statistics
+      tags: [Statistics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: timeframe
+          schema:
+            type: string
+            enum: [week, month, quarter, year, all]
+            default: all
+      responses:
+        '200':
+          description: Statistics data
+  /statistics/monthly-hours:
+    get:
+      summary: Get monthly hours statistics
+      tags: [Statistics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: year
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Monthly hours data
+  /statistics/monthly-stats:
+    get:
+      summary: Get monthly statistics (days breakdown)
+      tags: [Statistics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: year
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Monthly statistics data
+  /statistics/monthly-activity-breakdown:
+    get:
+      summary: Get monthly activity breakdown statistics
+      tags: [Statistics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: year
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Monthly activity breakdown data
+  /statistics/weekly-heatmap:
+    get:
+      summary: Get weekly heatmap data
+      tags: [Statistics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: year
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Weekly heatmap data
+  /statistics/cumulative-timeline:
+    get:
+      summary: Get cumulative timeline data
+      tags: [Statistics]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: year
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cumulative timeline data
+
+tags:
+  - name: Activities
+    description: Endpoints for managing activities
+  - name: Statistics
+    description: Endpoints for retrieving statistics
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

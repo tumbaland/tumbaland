@@ -15,14 +15,14 @@ import { authenticateToken } from '../middleware/authMiddleware';
 const router = Router();
 
 // CRUD routes
-router.post('/activities', authenticateToken, createActivity);
-router.get('/activities', authenticateToken, getActivities);
-router.get('/activities/recent', authenticateToken, getRecentActivities);
-router.get('/activities/stats', authenticateToken, getActivityStats);
-router.get('/activities/date-range', authenticateToken, getActivitiesByDateRange);
-router.get('/activities/types', authenticateToken, getActivityTypes);
-router.get('/activities/:id', authenticateToken, getActivityById);
-router.put('/activities/:id', authenticateToken, updateActivity);
-router.delete('/activities/:id', authenticateToken, deleteActivity);
+router.post('/', authenticateToken, createActivity);
+router.get('/', authenticateToken, getActivities);
+router.get('/recent', authenticateToken, getRecentActivities);
+router.get('/stats', authenticateToken, getActivityStats);
+router.get('/date-range', authenticateToken, getActivitiesByDateRange);
+router.get('/types', authenticateToken, getActivityTypes);
+router.get('/:id', authenticateToken, getActivityById);
+router.put('/:id', authenticateToken, updateActivity);
+router.delete('/:id', authenticateToken, deleteActivity);
 
 export default router;
