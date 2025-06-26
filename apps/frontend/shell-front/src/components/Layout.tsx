@@ -61,7 +61,12 @@ export default function Layout({ children }: LayoutProps) {
       background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)',
       fontFamily: 'Inter, sans-serif',
     }}>
-      <SideMenu appLinks={appLinks} onLinkClick={handleLinkClick} />
+      <SideMenu 
+        appLinks={appLinks} 
+        onLinkClick={handleLinkClick}
+        currentRoute={location.pathname}
+        routeToUrl={routeToUrl}
+      />
       <div style={{ flex: 1, display: 'flex', alignItems: 'stretch', justifyContent: 'center', position: 'relative' }}>
         {iframeUrl ? (
           <>
