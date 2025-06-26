@@ -1,15 +1,37 @@
 import { Storage } from "@google-cloud/storage";
+import fs from "fs";
+import os from "os";
+import path from "path";
 
 // Configure Google Cloud Storage authentication
 let storageConfig: any = {
   projectId: process.env.GOOGLE_CLOUD_PROJECT_ID,
 };
 
-// Method 1: Using service account key file
-if (process.env.GOOGLE_CLOUD_KEY_FILE) {
+// Method 1: Using base64-encoded service account key
+if (process.env.GOOGLE_CLOUD_KEY_FILE_BASE64) {
+  try {
+    const decoded = Buffer.from(
+      process.env.GOOGLE_CLOUD_KEY_FILE_BASE64,
+      "base64"
+    ).toString("utf-8");
+    const tempPath = path.join(os.tmpdir(), `gcloud-key-${Date.now()}.json`);
+    fs.writeFileSync(tempPath, decoded, { encoding: "utf-8" });
+    storageConfig.keyFilename = tempPath;
+    console.log(
+      "Using Google Cloud key from base64 env var, written to:",
+      tempPath
+    );
+  } catch (error) {
+    console.error("Error decoding GOOGLE_CLOUD_KEY_FILE_BASE64:", error);
+    throw new Error("Invalid base64 in GOOGLE_CLOUD_KEY_FILE_BASE64");
+  }
+}
+// Method 2: Using service account key file
+else if (process.env.GOOGLE_CLOUD_KEY_FILE) {
   storageConfig.keyFilename = process.env.GOOGLE_CLOUD_KEY_FILE;
 }
-// Method 2: Using credentials from environment variable
+// Method 3: Using credentials from environment variable
 else if (process.env.GOOGLE_CLOUD_CREDENTIALS) {
   try {
     const credentials = JSON.parse(process.env.GOOGLE_CLOUD_CREDENTIALS);
@@ -21,7 +43,7 @@ else if (process.env.GOOGLE_CLOUD_CREDENTIALS) {
     );
   }
 }
-// Method 3: Application Default Credentials (when running on Google Cloud)
+// Method 4: Application Default Credentials (when running on Google Cloud)
 else {
   console.log(
     "Using Application Default Credentials (good for Google Cloud deployment)"
