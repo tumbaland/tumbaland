@@ -62,7 +62,7 @@ const LoginPage: React.FC = () => {
   };
 
   const handleContinue = () => {
-    const redirectUri = new URLSearchParams(window.location.search).get('redirect_uri') || 'http://localhost:3000';
+    const redirectUri = new URLSearchParams(window.location.search).get('redirect_uri') || '/';
     window.location.href = redirectUri;
   };
 
