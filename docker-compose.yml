@@ -102,6 +102,7 @@ services:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - COOKIE_DOMAIN=${COOKIE_DOMAIN}
       - CORS_ORIGIN=${CORS_ORIGIN}
+      - AUTHORIZED_EMAILS=${AUTHORIZED_EMAILS}
 
   file-service:
     build:

@@ -4,15 +4,26 @@ import { generateJWT, UserPayload } from '../services/jwtService';
 
 export const validateToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    console.log('Received validateToken request:', req.body);
+    const authorizedEmails = (process.env.AUTHORIZED_EMAILS || '')
+      .split(',')
+      .map(email => email.trim())
+      .filter(email => email.length > 0);
     const { idToken } = req.body;
     if (!idToken) {
       res.status(400).json({ success: false, message: 'Token is required' });
       return;
-    }    const googleUser = await verifyGoogleToken(idToken);
+    }
+    const googleUser = await verifyGoogleToken(idToken);
     
     if (!googleUser) {
       res.status(401).json({ success: false, message: 'Invalid Google token' });
+      return;
+    }
+    
+    // Check if the user's email is authorized
+    const userEmail = googleUser.email || '';
+    if (!authorizedEmails.includes(userEmail)) {
+      res.status(403).json({ success: false, message: 'Email is not authorized' });
       return;
     }
     
