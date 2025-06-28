@@ -1,0 +1,33 @@
+openapi: 3.0.3
+info:
+  title: Public Service API
+  version: 1.0.0
+  description: Simple API for random todo recommendations
+servers:
+  - url: http://localhost:4000
+paths:
+  /api/todo/random:
+    get:
+      summary: Get a random todo
+      description: Returns a random todo recommendation from the list
+      responses:
+        '200':
+          description: A random todo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  todo:
+                    type: string
+                    example: "Take a SUP yoga class on Lake Viljandi or Lake Harku"
+        '500':
+          description: No todos available
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: No todos available
