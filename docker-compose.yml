@@ -71,6 +71,18 @@ services:
       - "3001:80"
 
   # Backend apps
+  public-service:
+    build:
+      context: ./apps/backend/public-service
+      dockerfile: Dockerfile
+    image: public-service:latest
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - NODE_ENV=production
+
   album-service:
     build:
       context: ./apps/backend/album-service
@@ -177,3 +189,4 @@ services:
       - shell-front
       - relationship-front
       - relationship-service
+      - public-service
