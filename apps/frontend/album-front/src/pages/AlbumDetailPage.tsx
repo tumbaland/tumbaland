@@ -3,7 +3,6 @@ import {
   Box,
   Container,
   Typography,
-  Grid,
   Button,
   TextField,
   InputAdornment,
@@ -333,9 +332,16 @@ const AlbumDetailPage: React.FC = () => {
             </Button>
           )}
         </Box>
-      ) : (        <Grid container spacing={2}>
+      ) : (
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr 1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr', lg: '1fr 1fr 1fr 1fr 1fr 1fr' },
+            gap: 2,
+          }}
+        >
           {photos.map((photo) => (
-            <Grid item xs={6} sm={4} md={3} lg={2} key={photo._id}>
+            <Box key={photo._id}>
               <PhotoCard
                 photo={photo}
                 onView={handleViewPhoto}
@@ -343,8 +349,9 @@ const AlbumDetailPage: React.FC = () => {
                 onSetCover={handleSetCoverPhoto}
                 isCoverPhoto={album?.coverPhotoId === photo._id}
               />
-            </Grid>
-          ))}        </Grid>
+            </Box>
+          ))}
+        </Box>
       )}
 
       {/* Bottom Pagination */}

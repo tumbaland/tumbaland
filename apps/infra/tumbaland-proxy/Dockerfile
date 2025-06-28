@@ -10,13 +10,9 @@ RUN apk add nano certbot openssl
 
 WORKDIR /app
 
-# Copy entrypoint script
-COPY ./entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
 COPY . .
 
 # Expose ports
 EXPOSE 80 443
 
-ENTRYPOINT ["/entrypoint.sh"]
+CMD ["nginx", "-g", "daemon off;"]

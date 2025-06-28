@@ -4,17 +4,13 @@ import {
   CardContent,
   CardMedia,
   Typography,
-  IconButton,
   Chip,
   Box,
   Menu,
   MenuItem
 } from '@mui/material';
 import {
-  MoreVert as MoreVertIcon,
-  PhotoLibrary as PhotoLibraryIcon,
-  Public as PublicIcon,
-  Lock as LockIcon
+  PhotoLibrary as PhotoLibraryIcon
 } from '@mui/icons-material';
 import { Album } from '../types';
 
@@ -28,11 +24,6 @@ interface AlbumCardProps {
 const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete }) => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
-
-  const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
-    event.stopPropagation();
-    setAnchorEl(event.currentTarget);
-  };
 
   const handleMenuClose = () => {
     setAnchorEl(null);
@@ -49,37 +40,58 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete }
   };
 
   return (
-    <Card 
-      sx={{ 
-        height: '100%', 
-        display: 'flex', 
+    <Card
+      sx={{
+        width: 220,
+        maxWidth: '100%',
+        height: '100%',
+        display: 'flex',
         flexDirection: 'column',
+        justifyContent: 'space-between',
+        boxShadow: 3,
+        borderRadius: 2,
+        overflow: 'hidden',
         cursor: 'pointer',
         transition: 'transform 0.2s, box-shadow 0.2s',
         '&:hover': {
           transform: 'translateY(-2px)',
           boxShadow: 4
         }
-      }}      onClick={() => onView(album)}
+      }}
+      onClick={() => onView(album)}
     >
-      <Box sx={{ position: 'relative' }}>
-        <CardMedia
-          sx={{
-            height: 200,
-            bgcolor: 'grey.200',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundImage: album.coverPhoto?.signedUrl ? `url(${album.coverPhoto.signedUrl})` : 'none',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          }}
-        >
-          {!album.coverPhoto?.signedUrl && (
+      <Box sx={{ position: 'relative', width: '100%', pt: '100%' /* 1:1 aspect ratio */ }}>
+        {album.coverPhoto?.signedUrl ? (
+          <CardMedia
+            component="img"
+            image={album.coverPhoto.signedUrl}
+            alt={album.name}
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+            }}
+          />
+        ) : (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'grey.100',
+            }}
+          >
             <PhotoLibraryIcon sx={{ fontSize: 60, color: 'grey.400' }} />
-          )}
-        </CardMedia>
-        
+          </Box>
+        )}
         {album.coverPhoto?.signedUrl && (
           <Box
             sx={{
@@ -96,27 +108,9 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete }
       </Box>
       
       <CardContent sx={{ flexGrow: 1 }}>
-        <Box display="flex" justifyContent="space-between" alignItems="flex-start">
-          <Typography variant="h6" component="h2" noWrap sx={{ flexGrow: 1, mr: 1 }}>
-            {album.name}
-          </Typography>
-          <Box display="flex" alignItems="center" gap={0.5}>
-            {album.isPublic ? (
-              <PublicIcon sx={{ fontSize: 16, color: 'success.main' }} />
-            ) : (
-              <LockIcon sx={{ fontSize: 16, color: 'grey.500' }} />
-            )}
-            {(onEdit || onDelete) && (
-              <IconButton 
-                size="small" 
-                onClick={handleMenuClick}
-                sx={{ ml: 0.5 }}
-              >
-                <MoreVertIcon fontSize="small" />
-              </IconButton>
-            )}
-          </Box>
-        </Box>
+        <Typography gutterBottom variant="h6" component="div" noWrap>
+          {album.name}
+        </Typography>
         
         {album.description && (
           <Typography 

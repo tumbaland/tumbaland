@@ -3,7 +3,6 @@ import {
   Box,
   Container,
   Typography,
-  Grid,
   Button,
   TextField,
   InputAdornment,
@@ -178,17 +177,23 @@ const AlbumsPage: React.FC = () => {
           )}
         </Box>
       ) : (
-        <Grid container spacing={3}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr', lg: '1fr 1fr 1fr 1fr' },
+            gap: 3,
+          }}
+        >
           {albums.map((album) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={album._id}>
+            <Box key={album._id}>
               <AlbumCard
                 album={album}
                 onView={handleViewAlbum}
                 onDelete={handleDeleteAlbum}
               />
-            </Grid>
+            </Box>
           ))}
-        </Grid>
+        </Box>
       )}
 
       {/* Create Album Dialog */}

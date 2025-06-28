@@ -140,15 +140,15 @@ const AssetDonutChart: React.FC<DonutChartProps> = ({ data, totalValue }) => {
           </Box>
 
           {/* Legend */}
-          <Box sx={{ flexGrow: 1, minWidth: 200 }}>
+          <Box sx={{ flexGrow: 1, minWidth: 120, maxWidth: 180 }}>
             {assetClasses.map((asset) => (
               <Box
                 key={asset.key}
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
-                  mb: 1.5,
-                  p: 1,
+                  mb: 1,
+                  p: 0.5,
                   borderRadius: 1,
                   cursor: 'pointer',
                   bgcolor: hoveredSegment === asset.key ? 'grey.50' : 'transparent',
@@ -159,11 +159,11 @@ const AssetDonutChart: React.FC<DonutChartProps> = ({ data, totalValue }) => {
               >
                 <Box
                   sx={{
-                    width: 16,
-                    height: 16,
+                    width: 12,
+                    height: 12,
                     bgcolor: asset.color,
                     borderRadius: '50%',
-                    mr: 2,
+                    mr: 1,
                     flexShrink: 0,
                     border: hoveredSegment === asset.key ? '2px solid rgba(0,0,0,0.2)' : 'none',
                     transform: hoveredSegment === asset.key ? 'scale(1.1)' : 'scale(1)',
@@ -171,10 +171,10 @@ const AssetDonutChart: React.FC<DonutChartProps> = ({ data, totalValue }) => {
                   }}
                 />
                 <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.875rem' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.75rem' }} noWrap>
                     {asset.label}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.7rem' }} noWrap>
                     {formatCurrency(asset.value)}
                   </Typography>
                 </Box>
@@ -183,7 +183,7 @@ const AssetDonutChart: React.FC<DonutChartProps> = ({ data, totalValue }) => {
                   sx={{
                     fontWeight: 'bold',
                     color: asset.color,
-                    fontSize: '0.875rem',
+                    fontSize: '0.75rem',
                     minWidth: 'fit-content',
                   }}
                 >

@@ -2,5 +2,7 @@
   "name": "@tumbaland/components",
   "version": "1.0.0",
   "author": "Toomas Tahves",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {}
 }

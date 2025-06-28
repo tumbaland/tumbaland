@@ -70,20 +70,52 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
   };
 
   return (
-    <Card 
-      sx={{ 
-        height: '100%', 
-        display: 'flex', 
+    <Card
+      sx={{
+        width: 220,
+        maxWidth: '100%',
+        height: '100%',
+        display: 'flex',
         flexDirection: 'column',
-        cursor: 'pointer',
-        transition: 'transform 0.2s, box-shadow 0.2s',
-        '&:hover': {
-          transform: 'translateY(-2px)',
-          boxShadow: 4
-        }
+        justifyContent: 'space-between',
+        boxShadow: 3,
+        borderRadius: 2,
+        overflow: 'hidden',
       }}
       onClick={() => onView(photo)}
-    >      <Box sx={{ position: 'relative' }}>
+    >
+      <Box sx={{ position: 'relative', width: '100%', aspectRatio: '1 / 1' }}>
+        {photo.signedUrl ? (
+          <CardMedia
+            component="img"
+            image={photo.signedUrl}
+            alt={photo.title || photo.originalName}
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+            }}
+          />
+        ) : (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              bgcolor: 'grey.200',
+            }}
+          >
+            <ImageIcon sx={{ fontSize: 60, color: 'grey.400' }} />
+          </Box>
+        )}
         {isCoverPhoto && (
           <Box
             sx={{
@@ -107,40 +139,7 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
             Cover
           </Box>
         )}
-        
-        <CardMedia
-          component="img"
-          sx={{
-            height: 200,
-            objectFit: 'cover',
-            bgcolor: 'grey.200'
-          }}
-          image={photo.signedUrl}
-          alt={photo.title || photo.originalName}
-          onError={(e) => {
-            // Fallback to icon if image fails to load
-            const target = e.target as HTMLImageElement;
-            target.style.display = 'none';
-          }}
-        />
-        
-        {!photo.signedUrl && (
-          <Box
-            sx={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              bgcolor: 'grey.200'
-            }}
-          >
-            <ImageIcon sx={{ fontSize: 60, color: 'grey.400' }} />
-          </Box>
-        )}        {(onEdit || onDelete || onSetCover) && (
+        {(onEdit || onDelete || onSetCover) && (
           <IconButton 
             size="small" 
             onClick={handleMenuClick}

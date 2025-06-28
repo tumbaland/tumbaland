@@ -34,26 +34,24 @@ app.use(
 );
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN 
-      ? process.env.CORS_ORIGIN.split(',') 
-      : [
-          'http://localhost:3002'
-        ],
+    origin: process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(",")
+      : ["http://localhost:3002"],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    exposedHeaders: ['Content-Type', 'Content-Length', 'ETag', 'Cache-Control']
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    exposedHeaders: ["Content-Type", "Content-Length", "ETag", "Cache-Control"],
   })
 );
 app.use(morgan("combined"));
 app.use(express.json());
 
 // Additional CORS middleware for file serving
-app.use('/api/serve', (req: Request, res: Response, next: NextFunction) => {
-  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+app.use("/api/serve", (req: Request, res: Response, next: NextFunction) => {
+  res.header("Cross-Origin-Resource-Policy", "cross-origin");
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
   next();
 });
 
@@ -83,25 +81,15 @@ app.use((error: any, req: Request, res: Response, next: NextFunction) => {
   });
 });
 
-// 404 handler
-app.use("*", (req: Request, res: Response) => {
-  res.status(404).json({
-    error: {
-      message: "Route not found",
-      status: 404,
-    },
-  });
-});
-
 app.listen(PORT, async () => {
   console.log(`File service running on port ${PORT}`);
-  
+
   // Initialize cache directory
   try {
     await ensureCacheDir();
-    console.log('Cache directory initialized');
+    console.log("Cache directory initialized");
   } catch (error) {
-    console.error('Failed to initialize cache directory:', error);
+    console.error("Failed to initialize cache directory:", error);
   }
 });
 

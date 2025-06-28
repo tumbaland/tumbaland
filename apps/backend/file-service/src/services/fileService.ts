@@ -24,7 +24,7 @@ export const uploadFile = async (
     });
 
     return new Promise((resolve, reject) => {
-      stream.on("error", (error) => {
+      stream.on("error", (error: Error) => {
         reject(error);
       });
       stream.on("finish", async () => {
@@ -161,7 +161,7 @@ export const listFiles = async (
 
     // Generate signed URLs for all files
     const fileList: FileMetadata[] = await Promise.all(
-      files.map(async (file) => {
+      files.map(async (file: any) => {
         const signedUrl = await getSignedUrl(file.name, 60);
         return {
           id: file.name,

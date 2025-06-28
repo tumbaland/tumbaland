@@ -36,15 +36,6 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-// 404 handler
-app.use('{*any}', (req: Request, res: Response) => {
-  res.status(404).json({
-    error: 'Route not found',
-    message: `The route ${req.method} ${req.originalUrl} does not exist.`,
-    availableRoutes: ['/health', '/api-docs', '/docs', '/api/assets']
-  });
-});
-
 // Error handler
 app.use((error: Error, req: Request, res: Response, next: any) => {
   console.error('Unhandled error:', error);
