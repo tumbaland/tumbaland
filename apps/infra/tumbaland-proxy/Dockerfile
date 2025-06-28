@@ -11,7 +11,7 @@ RUN apk add nano certbot openssl
 WORKDIR /app
 
 # Copy entrypoint script
-COPY ../certificates/entrypoint.sh /entrypoint.sh
+COPY ./entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 COPY . .
