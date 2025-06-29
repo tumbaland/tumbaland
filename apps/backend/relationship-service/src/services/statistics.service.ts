@@ -343,7 +343,7 @@ export const getMonthlyActivityBreakdown = async (year?: number): Promise<Monthl
     const result = await Activity.aggregate(pipeline);
 
     // Transform the result to match our interface
-    const transformedResult: MonthlyActivityData[] = result.map(item => {
+    const transformedResult: MonthlyActivityData[] = result.map((item: any) => {
       const activities: { [key: string]: { count: number; hours: number } } = {};
         // Initialize only the activity types we want to display (excluding together and sex)
       const activityTypes = ['movies', 'cooking', 'dining', 'coffee', 'gaming', 'other'];
@@ -431,7 +431,7 @@ export const getWeeklyHeatmapData = async (year?: number): Promise<WeeklyHeatmap
     const result = await Activity.aggregate(pipeline);
 
     // Transform the result to match our interface
-    const transformedResult: WeeklyHeatmapData[] = result.map(item => {
+    const transformedResult: WeeklyHeatmapData[] = result.map((item: any) => {
       const activities: { [key: string]: { count: number; hours: number } } = {};
       
       // Initialize activity types
@@ -528,7 +528,7 @@ export const getCumulativeTimelineData = async (year?: number): Promise<Cumulati
       cumulativeActivityBreakdown[type] = 0;
     });
 
-    const transformedResult: CumulativeTimelineData[] = result.map(item => {
+    const transformedResult: CumulativeTimelineData[] = result.map((item: any) => {
       // Count daily activities by type
       const dailyActivityBreakdown: { [key: string]: number } = {};
       activityTypes.forEach(type => {
