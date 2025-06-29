@@ -7,27 +7,34 @@
    - For production/CI, use `.env.production`.
 
 2. **Build all services:**
+   - You can build all services at once (from the root):
+     ```sh
+     sudo docker-compose --env-file .env -f apps/backend/{service-name}/compose.yml build
+     ```
+   - Or use the provided script to build and start everything:
+     ```sh
+     sh startup.sh
+     ```
 
-   ```sh
-   sudo docker-compose build --no-cache
-   ```
-
-3. **Start all services in background:**
-
-   ```sh
-   sudo docker-compose up -d
-   ```
-
-4. **Access the app:**
+3. **Access the app:**
    - Main site: http://localhost:3000 or https://tumbaland.eu
    - Other services: see Nginx config for subdomains.
 
-5. **Stop all services:**
+4. **Stop all services:**
    ```sh
-   sudo docker-compose down && sudo docker image prune -a
+   sudo docker-compose -f apps/backend/{service-name}/compose.yml down
+   # Or stop all containers:
+   sudo docker stop $(docker ps -q)
    ```
 
-6. **Build single service separately:**
+6. **Build or start a single service separately:**
    ```sh
-   sudo docker-compose build {service-name}
+   sudo docker-compose --env-file .env -f apps/backend/album-service/compose.yml build
+   sudo docker-compose --env-file .env -f apps/backend/album-service/compose.yml up -d
    ```
+
+---
+
+- All services use a shared external Docker network: `tumbanet`.
+- The root `.env` file is used for all services via the `--env-file` option.
+- See `startup.sh` (Linux/macOS/WSL) for automated startup.

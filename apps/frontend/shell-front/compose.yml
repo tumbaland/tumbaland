@@ -1,0 +1,21 @@
+services:
+  shell-front:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_RELATIONSHIP_URL: ${VITE_RELATIONSHIP_URL}
+        VITE_ALBUM_URL: ${VITE_ALBUM_URL}
+        VITE_FINANCE_URL: ${VITE_FINANCE_URL}
+        VITE_PUBLIC_API_URL: ${VITE_PUBLIC_API_URL}
+        NODE_ENV: production
+    image: shell-front:latest
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    networks:
+      - tumbanet
+
+networks:
+  tumbanet:
+    external: true

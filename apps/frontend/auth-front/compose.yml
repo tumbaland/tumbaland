@@ -1,0 +1,19 @@
+services:
+  auth-front:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
+        VITE_AUTH_SERVICE_URL: ${VITE_AUTH_SERVICE_URL}
+        NODE_ENV: production
+    image: auth-front:latest
+    restart: unless-stopped
+    ports:
+      - "3004:80"
+    networks:
+      - tumbanet
+
+networks:
+  tumbanet:
+    external: true

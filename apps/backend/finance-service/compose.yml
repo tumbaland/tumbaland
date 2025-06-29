@@ -1,0 +1,21 @@
+services:
+  finance-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: finance-service:latest
+    restart: unless-stopped
+    ports:
+      - "4003:4003"
+    environment:
+      - PORT=4003
+      - NODE_ENV=production
+      - MONGODB_URI=${MONGODB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY}
+    networks:
+      - tumbanet
+
+networks:
+  tumbanet:
+    external: true

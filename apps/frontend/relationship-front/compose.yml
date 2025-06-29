@@ -1,0 +1,20 @@
+services:
+  relationship-front:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_RELATIONSHIP_API_URL: ${VITE_RELATIONSHIP_API_URL}
+        VITE_AUTH_SERVICE_URL: ${VITE_AUTH_SERVICE_URL}
+        VITE_AUTH_FRONT_URL: ${VITE_AUTH_FRONT_URL}
+        NODE_ENV: production
+    image: relationship-front:latest
+    restart: unless-stopped
+    ports:
+      - "3001:80"
+    networks:
+      - tumbanet
+
+networks:
+  tumbanet:
+    external: true

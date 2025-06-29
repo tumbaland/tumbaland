@@ -1,0 +1,21 @@
+services:
+  album-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: album-service:latest
+    restart: unless-stopped
+    ports:
+      - "4002:4002"
+    environment:
+      - PORT=4002
+      - NODE_ENV=production
+      - MONGODB_URI=${MONGODB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - FILE_API_URL=${FILE_API_URL}
+    networks:
+      - tumbanet
+
+networks:
+  tumbanet:
+    external: true

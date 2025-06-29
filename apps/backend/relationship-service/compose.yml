@@ -1,0 +1,20 @@
+services:
+  relationship-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: relationship-service:latest
+    restart: unless-stopped
+    ports:
+      - "4001:4001"
+    environment:
+      - PORT=4001
+      - NODE_ENV=production
+      - MONGODB_URI=${MONGODB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+    networks:
+      - tumbanet
+
+networks:
+  tumbanet:
+    external: true

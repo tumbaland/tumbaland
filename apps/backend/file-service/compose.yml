@@ -1,0 +1,26 @@
+services:
+  file-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: file-service:latest
+    restart: unless-stopped
+    ports:
+      - "5002:5002"
+    environment:
+      - PORT=5002
+      - NODE_ENV=production
+      - JWT_SECRET=${JWT_SECRET}
+      - GOOGLE_CLOUD_PROJECT_ID=${GOOGLE_CLOUD_PROJECT_ID}
+      - GOOGLE_CLOUD_BUCKET_NAME=${GOOGLE_CLOUD_BUCKET_NAME}
+      - GOOGLE_CLOUD_KEY_FILE_BASE64=${GOOGLE_CLOUD_KEY_FILE_BASE64}
+      - FILE_CACHE_DIR=./cache
+      - CACHE_MAX_AGE=864000000
+      - CACHE_MAX_SIZE=1073741824
+      - CORS_ORIGIN=${CORS_ORIGIN}
+    networks:
+      - tumbanet
+
+networks:
+  tumbanet:
+    external: true
