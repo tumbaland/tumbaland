@@ -18,7 +18,7 @@ fi
 # Create the shared Docker network if it doesn't exist
 if ! docker network inspect "$NETWORK" >/dev/null 2>&1; then
   echo "Creating Docker network: $NETWORK"
-  sudo docker network create "$NETWORK"
+  sudo docker network create "$NETWORK" || true
 else
   echo "Docker network $NETWORK already exists."
 fi
