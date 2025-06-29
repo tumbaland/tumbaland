@@ -1,16 +1,16 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import './index.css';
-import LoginPage from './pages/LoginPage';
+import { CssBaseline } from '@mui/material';
+import App from './App';
 
 const element = document.getElementById('auth-root');
 if (element) {
   ReactDOM.createRoot(element).render(
     <React.StrictMode>
-      <LoginPage />
+      <CssBaseline />
+      <App />
     </React.StrictMode>
   );
 }
 
-// Export the App component
-export { LoginPage };
+export { App };

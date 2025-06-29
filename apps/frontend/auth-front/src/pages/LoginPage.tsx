@@ -27,7 +27,7 @@ const LoginPage: React.FC = () => {
         console.log('No existing auth found:', err);
       }
       const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-      const redirectUri = new URLSearchParams(window.location.search).get('redirect_uri') || 'http://localhost:3000';
+      const redirectUri = new URLSearchParams(window.location.search).get('redirect_uri') || '/';
       if (!clientId) {
         setError('Google Client ID is not configured. Please check your environment variables.');
         setIsLoading(false);

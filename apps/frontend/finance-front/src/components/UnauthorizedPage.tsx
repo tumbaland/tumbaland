@@ -12,12 +12,15 @@ const UnauthorizedPage: React.FC = () => {
     <Container maxWidth="sm" sx={{ mt: 8 }}>
       <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
         <Lock sx={{ fontSize: 64, color: 'primary.main', mb: 2 }} />
+        
         <Typography variant="h4" component="h1" gutterBottom color="primary">
           Access Restricted
         </Typography>
+        
         <Typography variant="body1" color="text.secondary" paragraph>
           You need to be logged in to access the Tumbaland.
         </Typography>
+        
         <Box sx={{ mt: 4 }}>
           <Button
             variant="contained"

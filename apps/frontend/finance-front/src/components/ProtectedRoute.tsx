@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { authService } from '../services/authService';
 import UnauthorizedPage from './UnauthorizedPage';
-import AppHeader from './AppHeader';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -24,6 +23,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         setIsLoading(false);
       }
     };
+
     checkAuth();
   }, []);
 
@@ -51,12 +51,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return <UnauthorizedPage />;
   }
 
-  return (
-    <>
-      <AppHeader />
-      {children}
-    </>
-  );
+  return <>{children}</>;
 };
 
 export default ProtectedRoute;

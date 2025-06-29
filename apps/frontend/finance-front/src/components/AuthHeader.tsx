@@ -12,7 +12,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
 import { authService, User } from '../services/authService';
 
-const AppHeader: React.FC = () => {
+const AuthHeader: React.FC = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -167,4 +167,4 @@ const AppHeader: React.FC = () => {
   );
 };
 
-export default AppHeader;
+export default AuthHeader;
