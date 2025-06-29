@@ -102,7 +102,7 @@ jobs:
     if: ${{ needs.detect-changes.outputs.matrix != '' && needs.detect-changes.outputs.matrix != '{"app":[]}' }}
     runs-on: ubuntu-latest
     strategy:
-      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix != '' && needs.detect-changes.outputs.matrix != '{"app":[]}' && needs.detect-changes.outputs.matrix || '{"app":[{}]}' ) }}
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
