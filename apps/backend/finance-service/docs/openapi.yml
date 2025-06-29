@@ -6,41 +6,110 @@ info:
 servers:
   - url: /api
 paths:
-  /assets:
+  /finance-records:
     get:
-      summary: Get all assets
-      tags: [Assets]
+      summary: Get all finance records
+      tags: [FinanceRecords]
       security:
         - bearerAuth: []
       responses:
         '200':
-          description: List of assets
+          description: List of finance records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FinanceRecord'
     post:
-      summary: Create a new asset
-      tags: [Assets]
+      summary: Add a new finance record
+      tags: [FinanceRecords]
       security:
         - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinanceRecord'
       responses:
         '201':
-          description: Asset created
-  /assets/{id}:
+          description: Finance record created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinanceRecord'
+  /ticker-price-history:
     get:
-      summary: Get asset by ID
-      tags: [Assets]
+      summary: Get all ticker price history records
+      tags: [TickerPriceHistory]
       security:
         - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
       responses:
         '200':
-          description: Asset details
+          description: List of ticker price history records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TickerPriceHistory'
+    post:
+      summary: Fetch and save latest prices for all tracked tickers
+      tags: [TickerPriceHistory]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Prices fetched and saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TickerPriceHistory'
+  /tracked-tickers:
+    get:
+      summary: Get all tracked tickers
+      tags: [TrackedTickers]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of tracked tickers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TrackedTicker'
+    post:
+      summary: Add a new tracked ticker
+      tags: [TrackedTickers]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackedTicker'
+      responses:
+        '201':
+          description: Tracked ticker created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackedTicker'
+  /tracked-tickers/{id}:
     put:
-      summary: Update asset by ID
-      tags: [Assets]
+      summary: Update tracked ticker
+      tags: [TrackedTickers]
       security:
         - bearerAuth: []
       parameters:
@@ -49,12 +118,22 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackedTicker'
       responses:
         '200':
-          description: Asset updated
+          description: Tracked ticker updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackedTicker'
     delete:
-      summary: Delete asset by ID
-      tags: [Assets]
+      summary: Delete tracked ticker
+      tags: [TrackedTickers]
       security:
         - bearerAuth: []
       parameters:
@@ -65,14 +144,89 @@ paths:
             type: string
       responses:
         '204':
-          description: Asset deleted
+          description: Tracked ticker deleted
+  /user-portfolio:
+    get:
+      summary: Get all user portfolio entries
+      tags: [UserPortfolio]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of user portfolio entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserPortfolio'
+    post:
+      summary: Add a new user portfolio entry
+      tags: [UserPortfolio]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPortfolio'
+      responses:
+        '201':
+          description: User portfolio entry created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPortfolio'
+  /user-portfolio/{id}:
+    put:
+      summary: Update user portfolio entry
+      tags: [UserPortfolio]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPortfolio'
+      responses:
+        '200':
+          description: User portfolio entry updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPortfolio'
+    delete:
+      summary: Delete user portfolio entry
+      tags: [UserPortfolio]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: User portfolio entry deleted
 
-# Tags for grouping
-# These will show as separate sections in Swagger UI
-#
 tags:
-  - name: Assets
-    description: Endpoints for managing financial assets
+  - name: FinanceRecords
+    description: Endpoints for managing finance records
+  - name: TrackedTickers
+    description: Endpoints for managing tracked tickers
+  - name: TickerPriceHistory
+    description: Endpoints for ticker price history
+  - name: UserPortfolio
+    description: Endpoints for user portfolio management
 
 components:
   securitySchemes:
@@ -80,3 +234,64 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    TrackedTicker:
+      type: object
+      properties:
+        ticker:
+          type: string
+        displayName:
+          type: string
+        description:
+          type: string
+        dateAdded:
+          type: string
+          format: date-time
+        isActive:
+          type: boolean
+    TickerPriceHistory:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date-time
+        ticker:
+          type: string
+        price:
+          type: number
+    UserPortfolio:
+      type: object
+      properties:
+        ticker:
+          type: string
+        quantity:
+          type: number
+        avgBuyPrice:
+          type: number
+        buyDate:
+          type: string
+          format: date
+        notes:
+          type: string
+    FinanceRecord:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date-time
+        secondPillar:
+          type: number
+        secondPillarGain:
+          type: number
+        thirdPillar:
+          type: number
+        thirdPillarGain:
+          type: number
+        etfPortfolio:
+          type: number
+        etfGain:
+          type: number
+        cash:
+          type: number
+        gold:
+          type: number
