@@ -26,3 +26,8 @@
    ```sh
    sudo docker-compose down && sudo docker image prune -a
    ```
+
+6. **Build single service separately:**
+   ```sh
+   sudo docker-compose build {service-name}
+   ```

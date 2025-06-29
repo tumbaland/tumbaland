@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import TrackedTicker from '../models/TrackedTicker';
 import {
   getAllTrackedTickers,
   createTrackedTicker,

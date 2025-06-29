@@ -1,8 +1,5 @@
 import axios from 'axios';
 
-const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY;
-const BASE_URL = 'https://www.alphavantage.co/query';
-
 export interface StockPriceData {
   close: number;
   open: number;
@@ -13,6 +10,8 @@ export interface StockPriceData {
 
 // Fetch latest OHLCV price for a symbol (supports European stocks)
 export async function fetchStockPrice(symbol: string): Promise<StockPriceData | null> {
+  const BASE_URL = 'https://www.alphavantage.co/query';
+  const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY;
   if (!ALPHA_VANTAGE_API_KEY) {
     throw new Error('Alpha Vantage API key not set in environment variables');
   }
