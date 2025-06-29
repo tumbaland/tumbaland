@@ -69,7 +69,7 @@ jobs:
             echo 'matrix={"app":[]}' >> $GITHUB_OUTPUT
           else
             printf '%s\n' "${CHANGED_SERVICES[@]}" | jq -s '{app: .}' > matrix.json
-            echo "matrix=$(cat matrix.json)" >> $GITHUB_OUTPUT
+            echo "matrix=$(jq -c . matrix.json)" >> $GITHUB_OUTPUT
           fi
 
   build-and-push:
