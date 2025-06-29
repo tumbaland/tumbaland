@@ -1,4 +1,5 @@
 export interface TrackedTickerResponse {
+  _id: string;
   ticker: string;
   displayName: string;
   description?: string;

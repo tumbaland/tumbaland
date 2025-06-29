@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getTickerPriceHistory, fetchAndSaveTickerPrices } from '../controllers/tickerPriceHistory.controller';
+import { getTickerPriceHistory, fetchAndSaveTickerPrices, deleteTickerPriceHistory } from '../controllers/tickerPriceHistory.controller';
 import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = Router();
@@ -8,5 +8,7 @@ const router = Router();
 router.get('/', authenticateToken, getTickerPriceHistory);
 // Fetch and save latest prices
 router.post('/fetch', authenticateToken, fetchAndSaveTickerPrices);
+// Delete a price history record by id
+router.delete('/:id', authenticateToken, deleteTickerPriceHistory);
 
 export default router;

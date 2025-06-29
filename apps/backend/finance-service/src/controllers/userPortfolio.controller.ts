@@ -12,11 +12,16 @@ export const getUserPortfolios = async (req: Request, res: Response<UserPortfoli
   try {
     const portfolios = await getAllUserPortfolios();
     const response: UserPortfolioResponse[] = portfolios.map(p => ({
+      _id: p._id?.toString(),
       ticker: p.symbol, // assuming symbol is still used in model, otherwise use p.ticker
       quantity: p.quantity,
       avgBuyPrice: p.avgBuyPrice,
       buyDate: p.buyDate ? p.buyDate.toISOString().split('T')[0] : undefined,
-      notes: p.notes
+      notes: p.notes,
+      latestPrice: p.latestPrice,
+      currentValue: p.currentValue,
+      valueIncrease: p.valueIncrease,
+      percentIncrease: p.percentIncrease
     }));
     res.json(response);
   } catch (err) {

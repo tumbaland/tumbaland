@@ -13,6 +13,7 @@ export const getTrackedTickers = async (req: Request, res: Response<TrackedTicke
   try {
     const tickers = await getAllTrackedTickers();
     const response: TrackedTickerResponse[] = tickers.map(t => ({
+      _id: (t._id as any).toString(),
       ticker: t.ticker,
       displayName: t.displayName,
       description: t.description,
@@ -31,6 +32,7 @@ export const addTrackedTicker = async (req: Request, res: Response<TrackedTicker
     const { ticker, displayName, description, isActive } = req.body;
     const created = await createTrackedTicker({ ticker, displayName, description, isActive });
     const response: TrackedTickerResponse = {
+      _id: created._id,
       ticker: created.ticker,
       displayName: created.displayName,
       description: created.description,
@@ -39,7 +41,7 @@ export const addTrackedTicker = async (req: Request, res: Response<TrackedTicker
     };
     res.status(201).json(response);
   } catch (err) {
-    res.status(400).json({ error: 'Failed to add tracked ticker' });
+    res.status(500).json({ error: 'Failed to add tracked ticker' });
   }
 };
 
@@ -51,6 +53,7 @@ export const editTrackedTicker = async (req: Request, res: Response<TrackedTicke
     const updated = await updateTrackedTicker(id, { ticker, displayName, description, isActive });
     if (!updated) return res.status(404).json({ error: 'Tracked ticker not found' });
     const response: TrackedTickerResponse = {
+      _id: updated._id,
       ticker: updated.ticker,
       displayName: updated.displayName,
       description: updated.description,

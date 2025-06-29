@@ -1,7 +1,34 @@
 import UserPortfolio from '../models/UserPortfolio';
+import TickerPriceHistory from '../models/TickerPriceHistory';
 
 export const getAllUserPortfolios = async () => {
-  return UserPortfolio.find().sort({ symbol: 1 });
+  const portfolios = await UserPortfolio.find().sort({ symbol: 1 });
+  // Fetch latest price for each ticker
+  const tickers = portfolios.map(p => p.symbol);
+  // Get latest price for each ticker
+  const latestPrices = await TickerPriceHistory.aggregate([
+    { $match: { ticker: { $in: tickers } } },
+    { $sort: { date: -1 } },
+    { $group: {
+      _id: '$ticker',
+      latestPrice: { $first: '$price' },
+    }}
+  ]);
+  const priceMap = Object.fromEntries(latestPrices.map(p => [p._id, p.latestPrice]));
+  // Attach latest price, value increase, percent increase
+  return portfolios.map(p => {
+    const latestPrice = priceMap[p.symbol];
+    const currentValue = latestPrice !== undefined ? latestPrice * p.quantity : undefined;
+    const valueIncrease = latestPrice !== undefined ? (latestPrice - p.avgBuyPrice) * p.quantity : undefined;
+    const percentIncrease = latestPrice !== undefined ? ((latestPrice - p.avgBuyPrice) / p.avgBuyPrice) * 100 : undefined;
+    return {
+      ...p.toObject(),
+      latestPrice,
+      currentValue,
+      valueIncrease,
+      percentIncrease
+    };
+  });
 };
 
 export const createUserPortfolio = async (data: { symbol: string; quantity: number; avgBuyPrice: number; buyDate?: Date; notes?: string }) => {
