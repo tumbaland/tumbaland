@@ -145,4 +145,5 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             cd ~/tumbaland
-            docker-compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} up -d --pull always
+            docker-compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} pull
+            docker-compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} up -d
