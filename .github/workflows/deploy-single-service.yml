@@ -35,54 +35,67 @@ jobs:
             relationship-front)
               CONTEXT=./apps/frontend/relationship-front
               DOCKERFILE=./apps/frontend/relationship-front/Dockerfile
+              DEPLOYPATH=apps/frontend/relationship-front/compose.yml
               ;;
             album-front)
               CONTEXT=./apps/frontend/album-front
               DOCKERFILE=./apps/frontend/album-front/Dockerfile
+              DEPLOYPATH=apps/frontend/album-front/compose.yml
               ;;
             finance-front)
               CONTEXT=./apps/frontend/finance-front
               DOCKERFILE=./apps/frontend/finance-front/Dockerfile
+              DEPLOYPATH=apps/frontend/finance-front/compose.yml
               ;;
             shell-front)
               CONTEXT=./apps/frontend/shell-front
               DOCKERFILE=./apps/frontend/shell-front/Dockerfile
+              DEPLOYPATH=apps/frontend/shell-front/compose.yml
               ;;
             auth-front)
               CONTEXT=./apps/frontend/auth-front
               DOCKERFILE=./apps/frontend/auth-front/Dockerfile
+              DEPLOYPATH=apps/frontend/auth-front/compose.yml
               ;;
             album-service)
               CONTEXT=./apps/backend/album-service
               DOCKERFILE=./apps/backend/album-service/Dockerfile
+              DEPLOYPATH=apps/backend/album-service/compose.yml
               ;;
             auth-service)
               CONTEXT=./apps/backend/auth-service
               DOCKERFILE=./apps/backend/auth-service/Dockerfile
+              DEPLOYPATH=apps/backend/auth-service/compose.yml
               ;;
             file-service)
               CONTEXT=./apps/backend/file-service
               DOCKERFILE=./apps/backend/file-service/Dockerfile
+              DEPLOYPATH=apps/backend/file-service/compose.yml
               ;;
             finance-service)
               CONTEXT=./apps/backend/finance-service
               DOCKERFILE=./apps/backend/finance-service/Dockerfile
+              DEPLOYPATH=apps/backend/finance-service/compose.yml
               ;;
             public-service)
               CONTEXT=./apps/backend/public-service
               DOCKERFILE=./apps/backend/public-service/Dockerfile
+              DEPLOYPATH=apps/backend/public-service/compose.yml
               ;;
             relationship-service)
               CONTEXT=./apps/backend/relationship-service
               DOCKERFILE=./apps/backend/relationship-service/Dockerfile
+              DEPLOYPATH=apps/backend/relationship-service/compose.yml
               ;;
             tumbaland-proxy)
               CONTEXT=./apps/infra/tumbaland-proxy
               DOCKERFILE=./apps/infra/tumbaland-proxy/Dockerfile
+              DEPLOYPATH=apps/infra/tumbaland-proxy/compose.yml
               ;;
           esac
           echo "context=$CONTEXT" >> $GITHUB_OUTPUT
           echo "dockerfile=$DOCKERFILE" >> $GITHUB_OUTPUT
+          echo "deploy_path=$DEPLOYPATH" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -109,7 +122,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           source: ${{ steps.vars.outputs.context }}/compose.yml
-          target: ~/tumbaland/${{ steps.vars.outputs.context }}/compose.yml
+          target: ~/tumbaland/${{ steps.vars.outputs.deploy_path }}
 
       - name: SSH and deploy on server
         uses: appleboy/ssh-action@v1.0.3
@@ -119,4 +132,4 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             cd ~/tumbaland
-            sudo docker-compose --env-file .env -f ${{ steps.vars.outputs.context }}/compose.yml up -d --pull always
+            sudo docker-compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} up -d --pull always
