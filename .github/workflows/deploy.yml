@@ -93,7 +93,7 @@ jobs:
     if: ${{ needs.detect-changes.outputs.matrix != '' && needs.detect-changes.outputs.matrix != '{"app":[]}' }}
     runs-on: ubuntu-latest
     strategy:
-      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix || '{"app":[]}' ) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -118,11 +118,12 @@ jobs:
     if: ${{ needs.detect-changes.outputs.matrix != '' && needs.detect-changes.outputs.matrix != '{"app":[]}' }}
     runs-on: ubuntu-latest
     strategy:
-      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix || '{"app":[]}' ) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Copy compose file to server
+        if: ${{ matrix.app.name != '' && matrix.app.path != '' }}
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -131,6 +132,7 @@ jobs:
           source: apps/${{ matrix.app.path }}/${{ matrix.app.name }}/compose.yml
           target: ~/tumbaland/apps/${{ matrix.app.path }}/${{ matrix.app.name }}/compose.yml
       - name: SSH and deploy on server
+        if: ${{ matrix.app.name != '' && matrix.app.path != '' }}
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
