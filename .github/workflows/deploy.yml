@@ -18,6 +18,12 @@ on:
       - 'apps/backend/public-service/**'
       - 'apps/infra/tumbaland-proxy/**'
       - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+    inputs:
+      services:
+        description: 'Comma-separated list of service names to redeploy (leave blank to redeploy all)'
+        required: false
+        default: ''
 
 jobs:
   detect-changes:
@@ -32,9 +38,6 @@ jobs:
       - name: Detect changed services and set matrix
         id: set-matrix
         run: |
-          git fetch origin ${{ github.event.before }}
-          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
-          echo "$CHANGED" > changed.txt
           SERVICES='[
             {"name":"relationship-front","context":"./apps/frontend/relationship-front","dockerfile":"./apps/frontend/relationship-front/Dockerfile","path":"frontend"},
             {"name":"album-front","context":"./apps/frontend/album-front","dockerfile":"./apps/frontend/album-front/Dockerfile","path":"frontend"},
@@ -50,6 +53,19 @@ jobs:
             {"name":"tumbaland-proxy","context":"./apps/infra/tumbaland-proxy","dockerfile":"./apps/infra/tumbaland-proxy/Dockerfile","path":"infra"}
           ]'
           echo "$SERVICES" > all_services.json
+
+          # If manual trigger, use input services
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.services }}" ]; then
+            IFS=',' read -ra SELECTED <<< "${{ github.event.inputs.services }}"
+            jq -c --argjson selected "[\"${SELECTED[@]}\"]" '.[] | select(.name as $n | $selected | index($n))' all_services.json | jq -s '{app: .}' > matrix.json
+            echo "matrix=$(jq -c . matrix.json)" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Normal change detection
+          git fetch origin ${{ github.event.before }}
+          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+          echo "$CHANGED" > changed.txt
           CHANGED_SERVICES=()
           while IFS= read -r svc; do
             name=$(echo "$svc" | jq -r .name)
