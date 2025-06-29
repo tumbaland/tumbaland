@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: file-service:latest
+    image: toomastahves/file-service:latest
     restart: unless-stopped
     ports:
       - "5002:5002"

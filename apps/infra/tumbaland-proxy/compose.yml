@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: tumbaland-proxy:latest
+    image: toomastahves/tumbaland-proxy:latest
     restart: unless-stopped
     ports:
       - "80:80"

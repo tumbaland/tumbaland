@@ -10,7 +10,7 @@ services:
         VITE_AUTH_SERVICE_URL: ${VITE_AUTH_SERVICE_URL}
         VITE_AUTH_FRONT_URL: ${VITE_AUTH_FRONT_URL}
         NODE_ENV: production
-    image: album-front:latest
+    image: toomastahves/album-front:latest
     restart: unless-stopped
     ports:
       - "3002:80"

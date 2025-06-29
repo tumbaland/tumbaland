@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: relationship-service:latest
+    image: toomastahves/relationship-service:latest
     restart: unless-stopped
     ports:
       - "4001:4001"

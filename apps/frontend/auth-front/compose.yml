@@ -7,7 +7,7 @@ services:
         VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
         VITE_AUTH_SERVICE_URL: ${VITE_AUTH_SERVICE_URL}
         NODE_ENV: production
-    image: auth-front:latest
+    image: toomastahves/auth-front:latest
     restart: unless-stopped
     ports:
       - "3004:80"

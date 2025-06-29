@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: public-service:latest
+    image: toomastahves/public-service:latest
     restart: unless-stopped
     ports:
       - "4000:4000"

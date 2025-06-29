@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: auth-service:latest
+    image: toomastahves/auth-service:latest
     restart: unless-stopped
     ports:
       - "5001:5001"

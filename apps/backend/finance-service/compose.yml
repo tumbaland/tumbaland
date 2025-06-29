@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: finance-service:latest
+    image: toomastahves/finance-service:latest
     restart: unless-stopped
     ports:
       - "4003:4003"

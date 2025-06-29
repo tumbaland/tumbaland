@@ -9,7 +9,7 @@ services:
         VITE_FINANCE_URL: ${VITE_FINANCE_URL}
         VITE_PUBLIC_API_URL: ${VITE_PUBLIC_API_URL}
         NODE_ENV: production
-    image: shell-front:latest
+    image: toomastahves/shell-front:latest
     restart: unless-stopped
     ports:
       - "3000:80"
