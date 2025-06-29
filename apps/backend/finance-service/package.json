@@ -14,7 +14,9 @@
     "dotenv": "^17.0.0",
     "express": "^5.1.0",
     "cors": "^2.8.5",
+    "joi": "^17.13.3",
     "morgan": "^1.10.0",
+    "node-cron": "^4.1.1",
     "mongoose": "^8.15.0",
     "axios": "^1.7.0",
     "jsonwebtoken": "^9.0.2",
@@ -23,6 +25,7 @@
   "devDependencies": {
     "@types/express": "^5.0.2",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/joi": "^17.2.2",
     "@types/cors": "^2.8.18",
     "@types/morgan": "^1.9.9",
     "@types/node": "^24.0.7",
