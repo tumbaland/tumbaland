@@ -135,7 +135,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           source: ${{ steps.vars.outputs.context }}/compose.yml
-          target: ~/tumbaland/${{ steps.vars.outputs.deploy_dir }}/compose.yml
+          target: ~/tumbaland/${{ steps.vars.outputs.deploy_dir }}/
 
       - name: SSH and deploy on server
         uses: appleboy/ssh-action@v1.0.3
