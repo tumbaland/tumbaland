@@ -14,14 +14,18 @@
     "dotenv": "^17.0.0",
     "express": "^5.1.0",
     "cors": "^2.8.5",
+    "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
+    "mongoose": "^8.15.0",
     "axios": "^1.7.0",
     "path": "^0.12.7"
   },
   "devDependencies": {
     "@types/express": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/cors": "^2.8.18",
     "@types/morgan": "^1.9.9",
+    "@types/mongoose": "^5.11.96",
     "@types/node": "^24.0.7",
     "@types/jest": "^30.0.0",
     "typescript": "^5.8.3",
