@@ -6,7 +6,7 @@
    - Copy `.env.example` to `.env` and fill in missing values.
    - For production/CI, use `.env.production`.
 
-2. **Build all services:**
+2. **Build services:**
    - You can build all services at once (from the root):
      ```sh
      sudo docker-compose --env-file .env -f apps/backend/{service-name}/compose.yml build
@@ -20,11 +20,12 @@
    - Main site: http://localhost:3000 or https://tumbaland.eu
    - Other services: see Nginx config for subdomains.
 
-4. **Stop all services:**
+4. **Stop services:**
    ```sh
    sudo docker-compose -f apps/backend/{service-name}/compose.yml down
    # Or stop all containers:
-   sudo docker stop $(docker ps -q)
+   sudo docker rm -f $(sudo docker ps -aq)
+   sudo docker image prune -a
    ```
 
 6. **Build or start a single service separately:**
