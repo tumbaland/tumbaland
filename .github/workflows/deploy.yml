@@ -102,7 +102,7 @@ jobs:
     if: ${{ needs.detect-changes.outputs.matrix != '' && needs.detect-changes.outputs.matrix != '{"app":[]}' }}
     runs-on: ubuntu-latest
     strategy:
-      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix != '' && needs.detect-changes.outputs.matrix != '{"app":[]}' && needs.detect-changes.outputs.matrix || '{"app":[{}]}' ) }}
     steps:
       - name: Copy compose file to server
         uses: appleboy/scp-action@v0.1.7
