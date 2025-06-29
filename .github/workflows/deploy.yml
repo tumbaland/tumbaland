@@ -21,9 +21,23 @@ on:
   workflow_dispatch:
     inputs:
       services:
-        description: 'Comma-separated list of service names to redeploy (leave blank to redeploy all)'
-        required: false
-        default: ''
+        description: 'Select a service to redeploy (or "all" for all)'
+        required: true
+        type: choice
+        options:
+          - all
+          - relationship-front
+          - album-front
+          - finance-front
+          - shell-front
+          - auth-front
+          - album-service
+          - auth-service
+          - file-service
+          - finance-service
+          - public-service
+          - relationship-service
+          - tumbaland-proxy
 
 jobs:
   detect-changes:
@@ -55,11 +69,17 @@ jobs:
           echo "$SERVICES" > all_services.json
 
           # If manual trigger, use input services
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.services }}" ]; then
-            IFS=',' read -ra SELECTED <<< "${{ github.event.inputs.services }}"
-            jq -c --argjson selected "[\"${SELECTED[@]}\"]" '.[] | select(.name as $n | $selected | index($n))' all_services.json | jq -s '{app: .}' > matrix.json
-            echo "matrix=$(jq -c . matrix.json)" >> $GITHUB_OUTPUT
-            exit 0
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ github.event.inputs.services }}" = "all" ]; then
+              jq -s '{app: .}' all_services.json > matrix.json
+              echo "matrix=$(jq -c . matrix.json)" >> $GITHUB_OUTPUT
+              exit 0
+            else
+              selected=$(echo "${{ github.event.inputs.services }}" | jq -R 'split(",") | map(. | gsub("^\\s+|\\s+$"; ""))')
+              jq -c --argjson selected "$selected" '.[] | select(.name as $n | $selected | index($n))' all_services.json | jq -s '{app: .}' > matrix.json
+              echo "matrix=$(jq -c . matrix.json)" >> $GITHUB_OUTPUT
+              exit 0
+            fi
           fi
 
           # Normal change detection
