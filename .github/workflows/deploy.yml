@@ -104,6 +104,8 @@ jobs:
     strategy:
       matrix: ${{ fromJson(needs.detect-changes.outputs.matrix != '' && needs.detect-changes.outputs.matrix != '{"app":[]}' && needs.detect-changes.outputs.matrix || '{"app":[{}]}' ) }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
       - name: Copy compose file to server
         uses: appleboy/scp-action@v0.1.7
         with:
