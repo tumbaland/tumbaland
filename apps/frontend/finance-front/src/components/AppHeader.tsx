@@ -60,6 +60,21 @@ const AppHeader: React.FC = () => {
       icon: <ListIcon fontSize="small" sx={{ mr: 1 }} />,
       onClick: () => navigate('/records'),
     },
+    {
+      label: 'Tracked Tickers',
+      icon: <ListIcon fontSize="small" sx={{ mr: 1 }} />,
+      onClick: () => navigate('/tracked-tickers'),
+    },
+    {
+      label: 'User Portfolio',
+      icon: <ListIcon fontSize="small" sx={{ mr: 1 }} />,
+      onClick: () => navigate('/user-portfolio'),
+    },
+    {
+      label: 'Ticker Price History',
+      icon: <ListIcon fontSize="small" sx={{ mr: 1 }} />,
+      onClick: () => navigate('/ticker-price-history'),
+    },
   ];
 
   const renderAuthSection = () => {

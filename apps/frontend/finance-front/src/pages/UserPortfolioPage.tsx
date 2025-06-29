@@ -1,0 +1,340 @@
+import React, { useEffect, useState } from 'react';
+import {
+  getUserPortfolios,
+  addUserPortfolio,
+  updateUserPortfolio,
+  deleteUserPortfolio,
+  UserPortfolio
+} from '../services/userPortfolioService';
+import {
+  Box,
+  Typography,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Button,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
+  Tooltip,
+  TableFooter,
+  TableSortLabel
+} from '@mui/material';
+import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
+import ConfirmationModal from '../components/ConfirmationModal';
+
+const defaultForm: Omit<UserPortfolio, '_id'> = {
+  ticker: '',
+  quantity: 0,
+  avgBuyPrice: 0
+};
+
+const UserPortfolioPage: React.FC = () => {
+  const [portfolios, setPortfolios] = useState<UserPortfolio[]>([]);
+  const [form, setForm] = useState(defaultForm);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [orderBy, setOrderBy] = useState<keyof UserPortfolio>('ticker');
+  const [order, setOrder] = useState<'asc' | 'desc'>('asc');
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
+  const fetchPortfolios = async () => {
+    try {
+      const data = await getUserPortfolios();
+      setPortfolios(Array.isArray(data) ? data : []);
+    } catch {
+      setPortfolios([]);
+      setError('Failed to load portfolio');
+    }
+  };
+
+  useEffect(() => { fetchPortfolios(); }, []);
+
+  const handleOpenDialog = (portfolio?: UserPortfolio) => {
+    if (portfolio) {
+      setForm({
+        ticker: portfolio.ticker,
+        quantity: portfolio.quantity,
+        avgBuyPrice: portfolio.avgBuyPrice
+      });
+      setEditingId(portfolio._id!);
+    } else {
+      setForm(defaultForm);
+      setEditingId(null);
+    }
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setForm(defaultForm);
+    setEditingId(null);
+    setError(null);
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setForm(f => ({ ...f, [name]: name === 'quantity' || name === 'avgBuyPrice' ? Number(value) : value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingId) {
+        await updateUserPortfolio(editingId, form);
+      } else {
+        await addUserPortfolio(form);
+      }
+      fetchPortfolios();
+      handleCloseDialog();
+    } catch {
+      setError('Failed to save portfolio entry');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    setPendingDeleteId(id);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!pendingDeleteId) return;
+    try {
+      await deleteUserPortfolio(pendingDeleteId);
+      fetchPortfolios();
+    } catch {
+      setError('Failed to delete portfolio entry');
+    } finally {
+      setConfirmOpen(false);
+      setPendingDeleteId(null);
+    }
+  };
+
+  const handleSort = (property: keyof UserPortfolio) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
+
+  const sortedPortfolios = React.useMemo(() => {
+    return [...portfolios].sort((a, b) => {
+      let aValue = a[orderBy];
+      let bValue = b[orderBy];
+      if (orderBy === 'buyDate') {
+        aValue = aValue ? new Date(aValue as string).getTime() : 0;
+        bValue = bValue ? new Date(bValue as string).getTime() : 0;
+      }
+      if (aValue === undefined || bValue === undefined) return 0;
+      if (aValue < bValue) return order === 'asc' ? -1 : 1;
+      if (aValue > bValue) return order === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [portfolios, orderBy, order]);
+
+  return (
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" component="h1">
+          User Portfolio
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          sx={{ bgcolor: 'primary.main' }}
+          onClick={() => handleOpenDialog()}
+        >
+          Add Entry
+        </Button>
+      </Box>
+      <TableContainer component={Paper} sx={{ width: '100%' }}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>
+                <TableSortLabel
+                  active={orderBy === 'ticker'}
+                  direction={orderBy === 'ticker' ? order : 'asc'}
+                  onClick={() => handleSort('ticker')}
+                >
+                  Ticker
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={orderBy === 'quantity'}
+                  direction={orderBy === 'quantity' ? order : 'asc'}
+                  onClick={() => handleSort('quantity')}
+                >
+                  Quantity
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={orderBy === 'avgBuyPrice'}
+                  direction={orderBy === 'avgBuyPrice' ? order : 'asc'}
+                  onClick={() => handleSort('avgBuyPrice')}
+                >
+                  Avg. Buy Price
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={orderBy === 'latestPrice'}
+                  direction={orderBy === 'latestPrice' ? order : 'asc'}
+                  onClick={() => handleSort('latestPrice')}
+                >
+                  Latest Price
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={orderBy === 'currentValue'}
+                  direction={orderBy === 'currentValue' ? order : 'asc'}
+                  onClick={() => handleSort('currentValue')}
+                >
+                  Current Value
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={orderBy === 'valueIncrease'}
+                  direction={orderBy === 'valueIncrease' ? order : 'asc'}
+                  onClick={() => handleSort('valueIncrease')}
+                >
+                  Value Change
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={orderBy === 'percentIncrease'}
+                  direction={orderBy === 'percentIncrease' ? order : 'asc'}
+                  onClick={() => handleSort('percentIncrease')}
+                >
+                  % Change
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {sortedPortfolios.map((p, idx) => (
+              <TableRow key={p._id || p.ticker || idx}>
+                <TableCell>{p.ticker}</TableCell>
+                <TableCell>{p.quantity}</TableCell>
+                <TableCell>{p.avgBuyPrice}</TableCell>
+                <TableCell>{p.latestPrice !== undefined ? p.latestPrice.toFixed(2) : '-'}</TableCell>
+                <TableCell>{p.currentValue !== undefined ? p.currentValue.toFixed(2) : '-'}</TableCell>
+                <TableCell>{p.valueIncrease !== undefined ? p.valueIncrease.toFixed(2) : '-'}</TableCell>
+                <TableCell>{p.percentIncrease !== undefined ? p.percentIncrease.toFixed(2) + '%' : '-'}</TableCell>
+                <TableCell>
+                  <Tooltip title="Edit">
+                    <IconButton color="primary" onClick={() => handleOpenDialog(p)}>
+                      <EditIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Delete">
+                    <IconButton
+                      onClick={e => {
+                        e.stopPropagation();
+                        handleDelete(p._id ?? '');
+                      }}
+                      color="error"
+                      disabled={!p._id || typeof p._id !== 'string' || p._id === ''}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Tooltip>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+          <TableFooter>
+            <TableRow>
+              <TableCell colSpan={3} sx={{ fontWeight: 'bold' }}>Total</TableCell>
+              <TableCell />
+              <TableCell sx={{ fontWeight: 'bold' }}>
+                {portfolios.reduce((sum, p) => sum + (p.currentValue ?? 0), 0).toFixed(2)}
+              </TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>
+                {portfolios.reduce((sum, p) => sum + (p.valueIncrease ?? 0), 0).toFixed(2)}
+              </TableCell>
+              <TableCell sx={{ fontWeight: 'bold' }}>
+                {/* Weighted average percent change */}
+                {(() => {
+                  const totalBuyIn = portfolios.reduce((sum, p) => sum + (p.avgBuyPrice * p.quantity), 0);
+                  const totalCurrent = portfolios.reduce((sum, p) => sum + ((p.latestPrice ?? 0) * p.quantity), 0);
+                  if (totalBuyIn === 0) return '-';
+                  const percent = ((totalCurrent - totalBuyIn) / totalBuyIn) * 100;
+                  return percent.toFixed(2) + '%';
+                })()}
+              </TableCell>
+              <TableCell />
+            </TableRow>
+          </TableFooter>
+        </Table>
+      </TableContainer>
+      <Dialog open={dialogOpen} onClose={handleCloseDialog} fullWidth maxWidth="sm">
+        <form onSubmit={handleSubmit}>
+          <DialogTitle>{editingId ? 'Edit Portfolio Entry' : 'Add Portfolio Entry'}</DialogTitle>
+          <DialogContent>
+            <TextField
+              margin="dense"
+              label="Ticker"
+              name="ticker"
+              value={form.ticker}
+              onChange={handleChange}
+              fullWidth
+              required
+            />
+            <TextField
+              margin="dense"
+              label="Quantity"
+              name="quantity"
+              type="number"
+              value={form.quantity}
+              onChange={handleChange}
+              fullWidth
+              required
+            />
+            <TextField
+              margin="dense"
+              label="Avg. Buy Price"
+              name="avgBuyPrice"
+              type="number"
+              value={form.avgBuyPrice}
+              onChange={handleChange}
+              fullWidth
+              required
+            />
+            {error && <Typography color="error">{error}</Typography>}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseDialog}>Cancel</Button>
+            <Button type="submit" variant="contained">{editingId ? 'Update' : 'Add'}</Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+      <ConfirmationModal
+        open={confirmOpen}
+        title="Delete Portfolio Entry"
+        message="Are you sure you want to delete this portfolio entry? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        severity="error"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => { setConfirmOpen(false); setPendingDeleteId(null); }}
+      />
+    </Box>
+  );
+};
+
+export default UserPortfolioPage;

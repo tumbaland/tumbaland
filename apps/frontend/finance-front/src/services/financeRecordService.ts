@@ -19,3 +19,7 @@ export const updateFinanceRecord = async (id: string, data: any) => {
   const response = await apiClient.put(`/finance-records/${id}`, data);
   return response.data;
 };
+
+export const fetchFinanceRecords = async () => {
+  return apiClient.post('/finance-records/fetch');
+};

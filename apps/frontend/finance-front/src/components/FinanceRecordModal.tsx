@@ -7,6 +7,7 @@ import {
   TextField,
   Button
 } from '@mui/material';
+import { fetchFinanceRecords } from '../services/financeRecordService';
 
 // Helper to get YYYY-MM-DD for input type=date
 function getInputDate(date: string | Date) {
@@ -116,6 +117,20 @@ const FinanceRecordModal: React.FC<{
     <DialogActions>
       <Button onClick={onClose}>Cancel</Button>
       <Button onClick={() => onSubmit(form)} variant="contained">{title.includes('Edit') ? 'Update' : 'Add'}</Button>
+      <Button
+        onClick={async () => {
+          try {
+            await fetchFinanceRecords();
+            // Optionally, show a success message or refresh data
+          } catch {
+            // Optionally, show an error message
+          }
+        }}
+        color="secondary"
+        variant="outlined"
+      >
+        Fetch Records
+      </Button>
     </DialogActions>
   </Dialog>
 );
