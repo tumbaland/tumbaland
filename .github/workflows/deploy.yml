@@ -95,6 +95,7 @@ jobs:
           file: ${{ matrix.app.dockerfile }}
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.app.name }}:latest
+          platforms: linux/arm64
 
   deploy:
     needs: build-and-push
