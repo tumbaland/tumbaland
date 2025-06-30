@@ -140,6 +140,40 @@ jobs:
             VITE_RELATIONSHIP_API_URL=${{ vars.VITE_RELATIONSHIP_API_URL }}
             VITE_PUBLIC_API_URL=${{ vars.VITE_PUBLIC_API_URL }}
 
+      - name: Generate .env file
+        run: |
+          echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" > .env
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+          echo "GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}" >> .env
+          echo "GOOGLE_CLOUD_KEY_FILE_BASE64=${{ secrets.GOOGLE_CLOUD_KEY_FILE_BASE64 }}" >> .env
+          echo "AUTHORIZED_EMAILS=${{ vars.AUTHORIZED_EMAILS }}" >> .env
+          echo "COOKIE_DOMAIN=${{ vars.COOKIE_DOMAIN }}" >> .env
+          echo "GOOGLE_CLOUD_PROJECT_ID=${{ vars.GOOGLE_CLOUD_PROJECT_ID }}" >> .env
+          echo "GOOGLE_CLOUD_BUCKET_NAME=${{ vars.GOOGLE_CLOUD_BUCKET_NAME }}" >> .env
+          echo "CORS_ORIGIN=${{ vars.CORS_ORIGIN }}" >> .env
+          echo "ALPHA_VANTAGE_API_KEY=${{ secrets.ALPHA_VANTAGE_API_KEY }}" >> .env
+          echo "FILE_API_URL=${{ vars.FILE_API_URL }}" >> .env
+          echo "VITE_GOOGLE_CLIENT_ID=${{ vars.VITE_GOOGLE_CLIENT_ID }}" >> .env
+          echo "VITE_FILE_API_URL=${{ vars.VITE_FILE_API_URL }}" >> .env
+          echo "VITE_ALBUM_API_URL=${{ vars.VITE_ALBUM_API_URL }}" >> .env
+          echo "VITE_AUTH_SERVICE_URL=${{ vars.VITE_AUTH_SERVICE_URL }}" >> .env
+          echo "VITE_AUTH_FRONT_URL=${{ vars.VITE_AUTH_FRONT_URL }}" >> .env
+          echo "VITE_FINANCE_API_URL=${{ vars.VITE_FINANCE_API_URL }}" >> .env
+          echo "VITE_RELATIONSHIP_URL=${{ vars.VITE_RELATIONSHIP_URL }}" >> .env
+          echo "VITE_ALBUM_URL=${{ vars.VITE_ALBUM_URL }}" >> .env
+          echo "VITE_FINANCE_URL=${{ vars.VITE_FINANCE_URL }}" >> .env
+          echo "VITE_RELATIONSHIP_API_URL=${{ vars.VITE_RELATIONSHIP_API_URL }}" >> .env
+          echo "VITE_PUBLIC_API_URL=${{ vars.VITE_PUBLIC_API_URL }}" >> .env
+
+      - name: Copy .env file to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: .env
+          target: ~/tumbaland/
+
       - name: Copy compose file to server
         uses: appleboy/scp-action@v0.1.7
         with:
