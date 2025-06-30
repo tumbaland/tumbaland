@@ -18,7 +18,9 @@ import {
   FormControl,
   Select,
   MenuItem,
-  InputLabel
+  InputLabel,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -47,6 +49,10 @@ const AlbumDetailPage: React.FC = () => {
   const [showPhotoViewer, setShowPhotoViewer] = useState(false);
   const [loadingAlbum, setLoadingAlbum] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [imgDimensions, setImgDimensions] = useState<{ width: number; height: number } | null>(null);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isPortrait = window.innerHeight > window.innerWidth;
   const {
     photos,
     loading: photosLoading,
@@ -480,9 +486,13 @@ const AlbumDetailPage: React.FC = () => {
               component="img"
               src={selectedPhoto.signedUrl}
               alt={selectedPhoto.title || selectedPhoto.originalName}
+              onLoad={e => {
+                const img = e.currentTarget as HTMLImageElement;
+                setImgDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+              }}
               sx={{
-                maxWidth: '90vw',
-                maxHeight: '90vh',
+                maxWidth: isMobile && imgDimensions && imgDimensions.width > imgDimensions.height && isPortrait ? '100vh' : '90vw',
+                maxHeight: isMobile && imgDimensions && imgDimensions.width > imgDimensions.height && isPortrait ? '100vw' : '90vh',
                 objectFit: 'contain',
                 cursor: 'pointer',
                 userSelect: 'none',
@@ -493,7 +503,9 @@ const AlbumDetailPage: React.FC = () => {
                 zIndex: 2,
                 boxShadow: 3,
                 borderRadius: 2,
-                background: 'black'
+                background: 'black',
+                transform: isMobile && imgDimensions && imgDimensions.width > imgDimensions.height && isPortrait ? 'rotate(90deg)' : 'none',
+                transition: 'transform 0.3s',
               }}
               onClick={(e) => {
                 e.stopPropagation();
