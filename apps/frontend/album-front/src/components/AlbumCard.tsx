@@ -42,8 +42,8 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete }
   return (
     <Card
       sx={{
-        width: 220,
-        maxWidth: '100%',
+        width: '100%',
+        maxWidth: { xs: '100%', sm: 260 },
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
