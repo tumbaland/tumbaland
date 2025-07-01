@@ -1,3 +1,12 @@
+# [1.0.0](https://github.com/toomastahves/tumbaland/compare/v1.4.0...v1.0.0) (2025-07-01)
+
+
+### Bug Fixes
+
+* sort tags correctly ([5fda753](https://github.com/toomastahves/tumbaland/commit/5fda753859a17df6a0e7e0e99d6bd5c874045859))
+
+
+
 # [1.0.0](https://github.com/toomastahves/tumbaland/compare/v1.3.4...v1.0.0) (2025-07-01)
 
 
