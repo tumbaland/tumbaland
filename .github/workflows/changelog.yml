@@ -27,16 +27,26 @@ jobs:
       - name: Install conventional-changelog-cli
         run: npm install -g conventional-changelog-cli
 
-      - name: Get latest tag
-        id: get_tag
+      - name: Get latest and previous tags (semver sort)
+        id: get_tags
         run: |
-          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          tags=($(git tag --sort=-v:refname))
+          latest_tag="${tags[0]:-v0.0.0}"
+          previous_tag="${tags[1]:-}"
           echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
+          echo "previous_tag=$previous_tag" >> $GITHUB_OUTPUT
 
-      - name: Generate changelog (unreleased)
+      - name: Generate changelog (compare previous to latest tag)
         run: |
-          latest_tag="${{ steps.get_tag.outputs.latest_tag }}"
-          conventional-changelog -p angular -i CHANGELOG.md -s --from-tag $latest_tag --to-ref HEAD
+          latest_tag="${{ steps.get_tags.outputs.latest_tag }}"
+          previous_tag="${{ steps.get_tags.outputs.previous_tag }}"
+          if [ -n "$previous_tag" ]; then
+            from_tag=$previous_tag
+          else
+            from_tag="v0.0.0"
+          fi
+          # Generate changelog from previous tag to latest tag
+          conventional-changelog -p angular -i CHANGELOG.md -s --from-tag $from_tag --to-tag $latest_tag
 
       - name: Commit changelog
         run: |
