@@ -73,7 +73,20 @@ jobs:
           echo "version=$new_version" >> $GITHUB_OUTPUT
 
       - name: Generate or update CHANGELOG.md
-        run: conventional-changelog -p angular -i CHANGELOG.md -s --from-tag v1.0.0
+        run: |
+          # Get the latest tag after possible bump
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          previous_tag=$(git tag --sort=-creatordate | grep -v "^$latest_tag$" | head -n1 || echo "")
+          # If there is only one tag, use that as from-tag, else use previous tag
+          if [ -n "$previous_tag" ]; then
+            from_tag=$previous_tag
+          else
+            from_tag="v0.0.0"
+          fi
+          # Generate changelog from previous tag to latest tag
+          conventional-changelog -p angular -i CHANGELOG.md -s --from-tag $from_tag --to-tag $latest_tag
+          # Remove duplicate or empty entries at the top (optional, for cleanups)
+          sed -i '/^# \[/!b;n;/^$/d' CHANGELOG.md
 
       - name: Commit and push changelog
         run: |
