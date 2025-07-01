@@ -156,73 +156,89 @@ const UserPortfolioPage: React.FC = () => {
         </Button>
       </Box>
       <TableContainer component={Paper} sx={{ width: '100%' }}>
-        <Table>
+        <Table
+          stickyHeader
+          size="small"
+          sx={{
+            minWidth: 500,
+            fontSize: { xs: '0.72rem', sm: '0.95rem' },
+            '& th, & td': {
+              px: { xs: 0.5, sm: 1 },
+              py: { xs: 0.5, sm: 0.8 },
+              fontSize: { xs: '0.72rem', sm: '0.95rem' },
+              whiteSpace: { xs: 'nowrap', sm: 'normal' },
+              maxWidth: { xs: 80, sm: 'none' },
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            },
+          }}
+        >
           <TableHead>
             <TableRow>
-              <TableCell>
+              <TableCell sx={{ minWidth: 60 }}>
                 <TableSortLabel
                   active={orderBy === 'ticker'}
                   direction={orderBy === 'ticker' ? order : 'asc'}
                   onClick={() => handleSort('ticker')}
                 >
-                  Ticker
+                  <span style={{ fontSize: '0.72rem' }}>Ticker</span>
                 </TableSortLabel>
               </TableCell>
-              <TableCell>
+              <TableCell sx={{ minWidth: 80 }}>
                 <TableSortLabel
                   active={orderBy === 'quantity'}
                   direction={orderBy === 'quantity' ? order : 'asc'}
                   onClick={() => handleSort('quantity')}
                 >
-                  Quantity
+                  <span style={{ fontSize: '0.72rem' }}>Quantity</span>
                 </TableSortLabel>
               </TableCell>
-              <TableCell>
+              <TableCell sx={{ minWidth: 100 }}>
                 <TableSortLabel
                   active={orderBy === 'avgBuyPrice'}
                   direction={orderBy === 'avgBuyPrice' ? order : 'asc'}
                   onClick={() => handleSort('avgBuyPrice')}
                 >
-                  Avg. Buy Price
+                  <span style={{ fontSize: '0.72rem' }}>Avg. Buy Price</span>
                 </TableSortLabel>
               </TableCell>
-              <TableCell>
+              <TableCell sx={{ minWidth: 100 }}>
                 <TableSortLabel
                   active={orderBy === 'latestPrice'}
                   direction={orderBy === 'latestPrice' ? order : 'asc'}
                   onClick={() => handleSort('latestPrice')}
                 >
-                  Latest Price
+                  <span style={{ fontSize: '0.72rem' }}>Latest Price</span>
                 </TableSortLabel>
               </TableCell>
-              <TableCell>
+              <TableCell sx={{ minWidth: 100 }}>
                 <TableSortLabel
                   active={orderBy === 'currentValue'}
                   direction={orderBy === 'currentValue' ? order : 'asc'}
                   onClick={() => handleSort('currentValue')}
                 >
-                  Current Value
+                  <span style={{ fontSize: '0.72rem' }}>Current Value</span>
                 </TableSortLabel>
               </TableCell>
-              <TableCell>
+              <TableCell sx={{ minWidth: 100 }}>
                 <TableSortLabel
                   active={orderBy === 'valueIncrease'}
                   direction={orderBy === 'valueIncrease' ? order : 'asc'}
                   onClick={() => handleSort('valueIncrease')}
                 >
-                  Value Change
+                  <span style={{ fontSize: '0.72rem' }}>Value Change</span>
                 </TableSortLabel>
               </TableCell>
-              <TableCell>
+              <TableCell sx={{ minWidth: 80 }}>
                 <TableSortLabel
                   active={orderBy === 'percentIncrease'}
                   direction={orderBy === 'percentIncrease' ? order : 'asc'}
                   onClick={() => handleSort('percentIncrease')}
                 >
-                  % Change
+                  <span style={{ fontSize: '0.72rem' }}>% Change</span>
                 </TableSortLabel>
               </TableCell>
-              <TableCell>Actions</TableCell>
+              <TableCell align="center" sx={{ minWidth: 60 }}><span style={{ fontSize: '0.72rem' }}>Actions</span></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -235,7 +251,7 @@ const UserPortfolioPage: React.FC = () => {
                 <TableCell>{p.currentValue !== undefined ? p.currentValue.toFixed(2) : '-'}</TableCell>
                 <TableCell>{p.valueIncrease !== undefined ? p.valueIncrease.toFixed(2) : '-'}</TableCell>
                 <TableCell>{p.percentIncrease !== undefined ? p.percentIncrease.toFixed(2) + '%' : '-'}</TableCell>
-                <TableCell>
+                <TableCell align="center">
                   <Tooltip title="Edit">
                     <IconButton color="primary" onClick={() => handleOpenDialog(p)}>
                       <EditIcon />

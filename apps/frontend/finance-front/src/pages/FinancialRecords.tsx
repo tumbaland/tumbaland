@@ -10,7 +10,11 @@ import {
   TableHead,
   TableRow,
   Button,
-  TableSortLabel
+  TableSortLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material';
 import { Add, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { getFinanceRecords, createFinanceRecord, deleteFinanceRecord, updateFinanceRecord } from '../services/financeRecordService';
@@ -30,6 +34,8 @@ const FinancialRecords: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<string>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchRecords();
@@ -120,9 +126,24 @@ const FinancialRecords: React.FC = () => {
     fetchRecords();
   };
 
-  const handleDelete = async (id: string) => {
-    await deleteFinanceRecord(id);
-    fetchRecords();
+  // Replace handleDelete with confirmation logic
+  const handleDeleteClick = (id: string) => {
+    setDeleteId(id);
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (deleteId) {
+      await deleteFinanceRecord(deleteId);
+      setDeleteConfirmOpen(false);
+      setDeleteId(null);
+      fetchRecords();
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteConfirmOpen(false);
+    setDeleteId(null);
   };
 
   const handleSort = (column: string) => {
@@ -220,109 +241,127 @@ const FinancialRecords: React.FC = () => {
 
       <Paper sx={{ width: '100%', overflow: 'hidden' }}>
         <TableContainer>
-          <Table stickyHeader>
+          <Table
+            stickyHeader
+            size="small"
+            sx={{
+              minWidth: 500,
+              fontSize: { xs: '0.72rem', sm: '0.95rem' },
+              '& th, & td': {
+                px: { xs: 0.5, sm: 1 },
+                py: { xs: 0.5, sm: 0.8 },
+                fontSize: { xs: '0.72rem', sm: '0.95rem' },
+                whiteSpace: { xs: 'nowrap', sm: 'normal' },
+                maxWidth: { xs: 80, sm: 'none' },
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              },
+            }}
+          >
             <TableHead>
               <TableRow>
-                <TableCell>
+                <TableCell sx={{ minWidth: 60 }}>
                   <TableSortLabel
                     active={sortBy === 'date'}
                     direction={sortBy === 'date' ? sortOrder : 'asc'}
                     onClick={() => handleSort('date')}
                   >
-                    Date
+                    <span style={{ fontSize: '0.78em' }}>Date</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell align="right">
+                <TableCell align="right" sx={{ minWidth: 80 }}>
                   <TableSortLabel
                     active={sortBy === 'secondPillar'}
                     direction={sortBy === 'secondPillar' ? sortOrder : 'asc'}
                     onClick={() => handleSort('secondPillar')}
                   >
-                    2nd Pillar
+                    <span style={{ fontSize: '0.78em' }}>2nd Pillar</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell align="right">
+                <TableCell align="right" sx={{ minWidth: 80 }}>
                   <TableSortLabel
                     active={sortBy === 'secondPillarGain'}
                     direction={sortBy === 'secondPillarGain' ? sortOrder : 'asc'}
                     onClick={() => handleSort('secondPillarGain')}
                   >
-                    2nd Pillar Gain
+                    <span style={{ fontSize: '0.78em' }}>2nd Pillar Gain</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell align="right">
+                <TableCell align="right" sx={{ minWidth: 80 }}>
                   <TableSortLabel
                     active={sortBy === 'thirdPillar'}
                     direction={sortBy === 'thirdPillar' ? sortOrder : 'asc'}
                     onClick={() => handleSort('thirdPillar')}
                   >
-                    3rd Pillar
+                    <span style={{ fontSize: '0.78em' }}>3rd Pillar</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell align="right">
+                <TableCell align="right" sx={{ minWidth: 80 }}>
                   <TableSortLabel
                     active={sortBy === 'thirdPillarGain'}
                     direction={sortBy === 'thirdPillarGain' ? sortOrder : 'asc'}
                     onClick={() => handleSort('thirdPillarGain')}
                   >
-                    3rd Pillar Gain
+                    <span style={{ fontSize: '0.78em' }}>3rd Pillar Gain</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell align="right">
+                <TableCell align="right" sx={{ minWidth: 80 }}>
                   <TableSortLabel
                     active={sortBy === 'etfPortfolio'}
                     direction={sortBy === 'etfPortfolio' ? sortOrder : 'asc'}
                     onClick={() => handleSort('etfPortfolio')}
                   >
-                    ETF Portfolio
+                    <span style={{ fontSize: '0.78em' }}>ETF Portfolio</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell align="right">
+                <TableCell align="right" sx={{ minWidth: 80 }}>
                   <TableSortLabel
                     active={sortBy === 'etfGain'}
                     direction={sortBy === 'etfGain' ? sortOrder : 'asc'}
                     onClick={() => handleSort('etfGain')}
                   >
-                    ETF Gain
+                    <span style={{ fontSize: '0.78em' }}>ETF Gain</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell align="right">
+                <TableCell align="right" sx={{ minWidth: 80 }}>
                   <TableSortLabel
                     active={sortBy === 'cash'}
                     direction={sortBy === 'cash' ? sortOrder : 'asc'}
                     onClick={() => handleSort('cash')}
                   >
-                    Cash
+                    <span style={{ fontSize: '0.78em' }}>Cash</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell align="right">
+                <TableCell align="right" sx={{ minWidth: 80 }}>
                   <TableSortLabel
                     active={sortBy === 'gold'}
                     direction={sortBy === 'gold' ? sortOrder : 'asc'}
                     onClick={() => handleSort('gold')}
                   >
-                    Gold
+                    <span style={{ fontSize: '0.78em' }}>Gold</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell align="right">
+                <TableCell align="right" sx={{ minWidth: 90 }}>
                   <TableSortLabel
                     active={sortBy === 'netWorth'}
                     direction={sortBy === 'netWorth' ? sortOrder : 'asc'}
                     onClick={() => handleSort('netWorth')}
                   >
-                    Total
+                    <span style={{ fontSize: '0.78em' }}>Total</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell align="right">
+                <TableCell align="right" sx={{ minWidth: 80 }}>
                   <TableSortLabel
                     active={sortBy === 'gain'}
                     direction={sortBy === 'gain' ? sortOrder : 'asc'}
                     onClick={() => handleSort('gain')}
                   >
-                    Gain
+                    <span style={{ fontSize: '0.78em' }}>Gain</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell align="center">Actions</TableCell>
+                <TableCell align="center" sx={{ minWidth: 60 }}>
+                  <span style={{ fontSize: '0.78em' }}>Actions</span>
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -351,7 +390,7 @@ const FinancialRecords: React.FC = () => {
                       <Button color="primary" size="small" onClick={() => handleEditOpen(record)}>
                         <EditIcon />
                       </Button>
-                      <Button color="error" size="small" onClick={() => handleDelete(record._id || record.id)}>
+                      <Button color="error" size="small" onClick={() => handleDeleteClick(record._id || record.id)}>
                         <DeleteIcon />
                       </Button>
                     </TableCell>
@@ -362,6 +401,21 @@ const FinancialRecords: React.FC = () => {
           </Table>
         </TableContainer>
       </Paper>
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onClose={handleDeleteCancel}>
+        <DialogTitle>Delete Record</DialogTitle>
+        <DialogContent>
+          <Typography>Are you sure you want to delete this record? This action cannot be undone.</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteCancel} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

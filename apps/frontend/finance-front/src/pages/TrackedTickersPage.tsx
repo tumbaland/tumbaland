@@ -143,13 +143,29 @@ const TrackedTickersPage: React.FC = () => {
         </Button>
       </Box>
       <TableContainer component={Paper} sx={{ width: '100%' }}>
-        <Table>
+        <Table
+          stickyHeader
+          size="small"
+          sx={{
+            minWidth: 400,
+            fontSize: { xs: '0.72rem', sm: '0.95rem' },
+            '& th, & td': {
+              px: { xs: 0.5, sm: 1 },
+              py: { xs: 0.5, sm: 0.8 },
+              fontSize: { xs: '0.72rem', sm: '0.95rem' },
+              whiteSpace: { xs: 'nowrap', sm: 'normal' },
+              maxWidth: { xs: 80, sm: 'none' },
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            },
+          }}
+        >
           <TableHead>
             <TableRow>
-              <TableCell>Ticker</TableCell>
-              <TableCell>Display Name</TableCell>
-              <TableCell>Date Added</TableCell>
-              <TableCell>Actions</TableCell>
+              <TableCell sx={{ minWidth: 60 }}><span style={{ fontSize: '0.72rem' }}>Ticker</span></TableCell>
+              <TableCell sx={{ minWidth: 100 }}><span style={{ fontSize: '0.72rem' }}>Display Name</span></TableCell>
+              <TableCell sx={{ minWidth: 100 }}><span style={{ fontSize: '0.72rem' }}>Date Added</span></TableCell>
+              <TableCell align="center" sx={{ minWidth: 60 }}><span style={{ fontSize: '0.72rem' }}>Actions</span></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -158,7 +174,7 @@ const TrackedTickersPage: React.FC = () => {
                 <TableCell>{t.ticker}</TableCell>
                 <TableCell>{t.displayName}</TableCell>
                 <TableCell>{formatDate(t.dateAdded)}</TableCell>
-                <TableCell>
+                <TableCell align="center">
                   <Tooltip title="Edit">
                     <IconButton color="primary" onClick={() => handleOpenDialog(t)}>
                       <EditIcon />

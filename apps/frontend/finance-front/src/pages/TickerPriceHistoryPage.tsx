@@ -163,73 +163,89 @@ const TickerPriceHistoryPage: React.FC = () => {
         <Typography color="error">{error}</Typography>
       ) : (
         <TableContainer component={Paper} sx={{ width: '100%' }}>
-          <Table>
+          <Table
+            stickyHeader
+            size="small"
+            sx={{
+              minWidth: 500,
+              fontSize: { xs: '0.72rem', sm: '0.95rem' },
+              '& th, & td': {
+                px: { xs: 0.5, sm: 1 },
+                py: { xs: 0.5, sm: 0.8 },
+                fontSize: { xs: '0.72rem', sm: '0.95rem' },
+                whiteSpace: { xs: 'nowrap', sm: 'normal' },
+                maxWidth: { xs: 80, sm: 'none' },
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              },
+            }}
+          >
             <TableHead>
               <TableRow>
-                <TableCell>
+                <TableCell sx={{ minWidth: 60 }}>
                   <TableSortLabel
                     active={orderBy === 'ticker'}
                     direction={orderBy === 'ticker' ? order : 'asc'}
                     onClick={() => handleSort('ticker')}
                   >
-                    Ticker
+                    <span style={{ fontSize: '0.72rem' }}>Ticker</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell>
+                <TableCell sx={{ minWidth: 80 }}>
                   <TableSortLabel
                     active={orderBy === 'date'}
                     direction={orderBy === 'date' ? order : 'desc'}
                     onClick={() => handleSort('date')}
                   >
-                    Date
+                    <span style={{ fontSize: '0.72rem' }}>Date</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell>
+                <TableCell sx={{ minWidth: 80 }}>
                   <TableSortLabel
                     active={orderBy === 'close'}
                     direction={orderBy === 'close' ? order : 'desc'}
                     onClick={() => handleSort('close')}
                   >
-                    Close
+                    <span style={{ fontSize: '0.72rem' }}>Close</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell>
+                <TableCell sx={{ minWidth: 80 }}>
                   <TableSortLabel
                     active={orderBy === 'open'}
                     direction={orderBy === 'open' ? order : 'desc'}
                     onClick={() => handleSort('open')}
                   >
-                    Open
+                    <span style={{ fontSize: '0.72rem' }}>Open</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell>
+                <TableCell sx={{ minWidth: 80 }}>
                   <TableSortLabel
                     active={orderBy === 'high'}
                     direction={orderBy === 'high' ? order : 'desc'}
                     onClick={() => handleSort('high')}
                   >
-                    High
+                    <span style={{ fontSize: '0.72rem' }}>High</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell>
+                <TableCell sx={{ minWidth: 80 }}>
                   <TableSortLabel
                     active={orderBy === 'low'}
                     direction={orderBy === 'low' ? order : 'desc'}
                     onClick={() => handleSort('low')}
                   >
-                    Low
+                    <span style={{ fontSize: '0.72rem' }}>Low</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell>
+                <TableCell sx={{ minWidth: 80 }}>
                   <TableSortLabel
                     active={orderBy === 'volume'}
                     direction={orderBy === 'volume' ? order : 'desc'}
                     onClick={() => handleSort('volume')}
                   >
-                    Volume
+                    <span style={{ fontSize: '0.72rem' }}>Volume</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell>Actions</TableCell>
+                <TableCell align="center" sx={{ minWidth: 60 }}><span style={{ fontSize: '0.72rem' }}>Actions</span></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -242,7 +258,7 @@ const TickerPriceHistoryPage: React.FC = () => {
                   <TableCell>{h.high ?? ''}</TableCell>
                   <TableCell>{h.low ?? ''}</TableCell>
                   <TableCell>{h.volume ?? ''}</TableCell>
-                  <TableCell>
+                  <TableCell align="center">
                     <Tooltip title="Delete">
                       <IconButton
                         color="error"
