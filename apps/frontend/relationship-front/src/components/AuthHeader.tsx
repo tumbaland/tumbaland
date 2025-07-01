@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  AppBar, 
-  Toolbar, 
-  Typography, 
-  Button, 
-  Avatar, 
-  Box, 
-  Menu, 
-  MenuItem, 
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  Avatar,
+  Box,
+  Menu,
+  MenuItem,
   IconButton,
   CircularProgress,
   Divider
@@ -15,8 +15,10 @@ import {
 import { AccountCircle, Login, Logout } from '@mui/icons-material';
 import { authService, User } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import ListIcon from '@mui/icons-material/List';
+import { menuItems } from '../const/menuItems';
+import MenuIcon from '@mui/icons-material/Menu';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useTheme } from '@mui/material/styles';
 
 interface AuthHeaderProps {}
 
@@ -26,6 +28,15 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
+  const [mobileMenuAnchor, setMobileMenuAnchor] = useState<null | HTMLElement>(null);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const handleMobileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setMobileMenuAnchor(event.currentTarget);
+  };
+  const handleMobileMenuClose = () => {
+    setMobileMenuAnchor(null);
+  };
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -62,18 +73,10 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
     // The logout service will refresh the page, so no need to update state
   };
 
-  const menuItems = [
-    {
-      label: 'Dashboard',
-      icon: <DashboardIcon fontSize="small" sx={{ mr: 1 }} />,
-      onClick: () => navigate('/'),
-    },
-    {
-      label: 'Activities',
-      icon: <ListIcon fontSize="small" sx={{ mr: 1 }} />,
-      onClick: () => navigate('/activities'),
-    },
-  ];
+  const menuItemsWithHandlers = menuItems.map((item) => ({
+    ...item,
+    onClick: () => navigate(item.path),
+  }));
 
   const renderAuthSection = () => {
     if (isLoading) {
@@ -162,25 +165,58 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
   return (
     <AppBar position="static" elevation={2} sx={{ background: '#fff', color: '#222', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.03)' }}>
       <Toolbar>
-        {/* Menu items */}
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          {menuItems.map((item) => (
-            <Button
-              key={item.label}
+        {isMobile ? (
+          <>
+            <IconButton
               color="inherit"
-              startIcon={item.icon}
-              onClick={item.onClick}
-              sx={{
-                fontWeight: 500,
-                textTransform: 'none',
-                background: 'none',
-                '&:hover': { background: 'rgba(0,0,0,0.04)' },
-              }}
+              edge="start"
+              aria-label="menu"
+              onClick={handleMobileMenuOpen}
+              sx={{ mr: 1 }}
             >
-              {item.label}
-            </Button>
-          ))}
-        </Box>
+              <MenuIcon />
+            </IconButton>
+            <Menu
+              anchorEl={mobileMenuAnchor}
+              open={Boolean(mobileMenuAnchor)}
+              onClose={handleMobileMenuClose}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+            >
+              {menuItemsWithHandlers.map((item) => (
+                <MenuItem
+                  key={item.label}
+                  onClick={() => {
+                    item.onClick();
+                    handleMobileMenuClose();
+                  }}
+                >
+                  {item.icon}
+                  {item.label}
+                </MenuItem>
+              ))}
+            </Menu>
+          </>
+        ) : (
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            {menuItemsWithHandlers.map((item) => (
+              <Button
+                key={item.label}
+                color="inherit"
+                startIcon={item.icon}
+                onClick={item.onClick}
+                sx={{
+                  fontWeight: 500,
+                  textTransform: 'none',
+                  background: 'none',
+                  '&:hover': { background: 'rgba(0,0,0,0.04)' },
+                }}
+              >
+                {item.label}
+              </Button>
+            ))}
+          </Box>
+        )}
         <Box sx={{ flexGrow: 1 }} />
         {renderAuthSection()}
       </Toolbar>

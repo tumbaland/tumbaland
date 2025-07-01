@@ -15,14 +15,6 @@ import {
   TablePagination,
   TableSortLabel,
 } from "@mui/material";
-import {
-  Restaurant,
-  Movie,
-  SportsEsports,
-  Flight,
-  Favorite,
-  Category,
-} from "@mui/icons-material";
 import { useActivities } from "../hooks/useActivities";
 import { ActivityType } from "../api/types";
 import AddActivityModal from "../components/AddActivityModal";
@@ -67,20 +59,6 @@ const Activities: React.FC = () => {
     setSortOrder(isAsc ? "desc" : "asc");
     setSortBy(field);
     setPage(0); // Reset to first page when sorting
-  };
-
-  const getActivityIcon = (activityType: ActivityType) => {
-    const icons = {
-      movies: <Movie />,
-      cooking: <Restaurant />,
-      dining: <Restaurant />,
-      coffee: <Restaurant />,
-      gaming: <SportsEsports />,
-      together: <Flight />,
-      sex: <Favorite />,
-      other: <Category />,
-    };
-    return icons[activityType] || <Category />;
   };
 
   const getActivityColor = (activityType: ActivityType) => {
@@ -130,69 +108,93 @@ const Activities: React.FC = () => {
     <Box sx={{ p: 3 }}>
       <Box
         sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
+          display: 'flex',
+          flexDirection: { xs: 'column', sm: 'row' },
+          justifyContent: { xs: 'flex-start', sm: 'space-between' },
+          alignItems: { xs: 'stretch', sm: 'center' },
+          gap: 2,
           mb: 3,
         }}
       >
-        <Typography variant="h4" component="h1">
+        <Typography variant="h4" component="h1" sx={{ mb: { xs: 1, sm: 0 } }}>
           Activities Together
         </Typography>
         <AddActivityModal onActivityAdded={refetch} />
       </Box>
 
-      <Paper sx={{ width: "100%", overflow: "hidden" }}>
-        <TableContainer>
-          <Table stickyHeader>
-            {" "}
+      <Paper
+        sx={{
+          width: "100%",
+          overflowX: "auto",
+          boxShadow: { xs: 'none', sm: undefined },
+        }}
+      >
+        <TableContainer sx={{ maxHeight: 'none', overflowY: 'unset' }}>
+          <Table
+            stickyHeader
+            size="small"
+            sx={{
+              minWidth: 500,
+              fontSize: { xs: '0.72rem', sm: '0.95rem' },
+              '& th, & td': {
+                px: { xs: 0.5, sm: 1 },
+                py: { xs: 0.5, sm: 0.8 },
+                fontSize: { xs: '0.72rem', sm: '0.95rem' },
+                whiteSpace: { xs: 'nowrap', sm: 'normal' },
+                maxWidth: { xs: 80, sm: 'none' },
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              },
+            }}
+          >
             <TableHead>
               <TableRow>
-                <TableCell>
+                <TableCell sx={{ minWidth: 60 }}>
                   <TableSortLabel
                     active={sortBy === "date"}
                     direction={sortBy === "date" ? sortOrder : "asc"}
                     onClick={() => handleSort("date")}
                   >
-                    Date
+                    <span style={{ fontSize: '0.78em' }}>Date</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell>
+                <TableCell sx={{ minWidth: 50, maxWidth: 70, width: 60 }}>
                   <TableSortLabel
                     active={sortBy === "activity"}
                     direction={sortBy === "activity" ? sortOrder : "asc"}
                     onClick={() => handleSort("activity")}
                   >
-                    Activity
+                    <span style={{ fontSize: '0.78em' }}>Activity</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell align="right">
+                <TableCell align="right" sx={{ minWidth: 60 }}>
                   <TableSortLabel
                     active={sortBy === "hours"}
                     direction={sortBy === "hours" ? sortOrder : "asc"}
                     onClick={() => handleSort("hours")}
                   >
-                    Duration (hrs)
+                    <span style={{ fontSize: '0.78em' }}>Duration</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell>
+                <TableCell sx={{ minWidth: 140, maxWidth: 220, width: 180 }}>
                   <TableSortLabel
                     active={sortBy === "description"}
                     direction={sortBy === "description" ? sortOrder : "asc"}
                     onClick={() => handleSort("description")}
                   >
-                    Description
+                    <span style={{ fontSize: '0.78em' }}>Description</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell align="center">Actions</TableCell>
+                <TableCell align="center" sx={{ minWidth: 60 }}>
+                  <span style={{ fontSize: '0.78em' }}>Actions</span>
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {" "}
               {!activities || activities.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
-                    <Typography variant="body2" color="text.secondary">
+                  <TableCell colSpan={5} align="center" sx={{ py: 2 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.72rem', sm: '0.95rem' } }}>
                       No activities yet. Click "Add Activity" to get started!
                     </Typography>
                   </TableCell>
@@ -203,39 +205,26 @@ const Activities: React.FC = () => {
                     key={activity._id || activity.id}
                     sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
                   >
-                    {" "}
                     <TableCell>{formatDate(activity.date)}</TableCell>
                     <TableCell>
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                      >
-                        {getActivityIcon(activity.activity.type)}
-                        <Chip
-                          label={activity.activity.type}
-                          color={
-                            getActivityColor(activity.activity.type) as any
-                          }
-                          size="small"
-                        />
-                      </Box>
+                      <Chip
+                        label={activity.activity.type}
+                        color={getActivityColor(activity.activity.type) as any}
+                        size="small"
+                        sx={{ fontSize: { xs: '0.62rem', sm: '0.80rem' }, height: { xs: 18, sm: 22 } }}
+                      />
                     </TableCell>
                     <TableCell align="right">{activity.hours}</TableCell>
-                    <TableCell>{activity.activity.description}</TableCell>{" "}
+                    <TableCell sx={{ maxWidth: { xs: 140, sm: 220 }, minWidth: { xs: 100, sm: 140 }, width: { xs: 120, sm: 180 } }}>{activity.activity.description}</TableCell>
                     <TableCell align="center">
-                      <EditActivityModal
-                        activity={activity}
-                        onActivityUpdated={refetch}
-                      />
-                      <DeleteActivityButton
-                        activityId={activity._id || activity.id || ""}
-                        onDeleted={refetch}
-                      />
+                      <EditActivityModal activity={activity} onActivityUpdated={refetch} />
+                      <DeleteActivityButton activityId={activity._id || activity.id || ""} onDeleted={refetch} />
                     </TableCell>
                   </TableRow>
                 ))
               )}
             </TableBody>
-          </Table>{" "}
+          </Table>
           <TablePagination
             rowsPerPageOptions={[10, 100, 1000, { label: "All", value: -1 }]}
             component="div"
@@ -244,6 +233,23 @@ const Activities: React.FC = () => {
             page={rowsPerPage === 10000 ? 0 : page}
             onPageChange={handleChangePage}
             onRowsPerPageChange={handleChangeRowsPerPage}
+            sx={{
+              '.MuiTablePagination-toolbar': {
+                minHeight: { xs: 32, sm: 52 },
+                px: { xs: 0.5, sm: 2 },
+                justifyContent: { xs: 'flex-start', sm: 'flex-end' },
+                display: 'flex',
+              },
+              '.MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows': {
+                fontSize: { xs: '0.72rem', sm: '0.95rem' },
+              },
+              '.MuiTablePagination-select': {
+                fontSize: { xs: '0.72rem', sm: '0.95rem' },
+              },
+              '.MuiTablePagination-actions': {
+                mx: { xs: 0, sm: 1 },
+              },
+            }}
           />
         </TableContainer>
       </Paper>

@@ -26,7 +26,7 @@ const MONTHS = [
 ];
 
 const HoursBarChart: React.FC<BarChartProps> = ({ 
-  title = 'Hours Spent Together Per Month', 
+  title = 'Hours per Month', 
   year,
   height = 300 
 }) => {

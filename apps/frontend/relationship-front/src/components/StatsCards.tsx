@@ -85,19 +85,27 @@ const StatsCards: React.FC = () => {
     <Card sx={{ mb: 4, borderRadius: 2, boxShadow: 3 }}>
       <CardContent sx={{ p: 3 }}>
         {/* Header with Title and Timeframe Selector */}
-        <Box sx={{ 
-          mb: 3, 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          pb: 2,
-          borderBottom: '1px solid',
-          borderColor: 'divider'
-        }}>
-          <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+        <Box
+          sx={{
+            mb: 3,
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            justifyContent: 'space-between',
+            alignItems: { xs: 'stretch', sm: 'center' },
+            gap: 2,
+            pb: 2,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          <Typography
+            variant="h5"
+            component="h2"
+            sx={{ fontWeight: 'bold', color: 'text.primary' }}
+          >
             Relationship Statistics
           </Typography>
-          <FormControl sx={{ minWidth: 200 }}>
+          <FormControl sx={{ minWidth: { xs: 120, sm: 200 }, width: { xs: '100%', sm: 'auto' } }} size="small">
             <InputLabel id="timeframe-select-label">Timeframe</InputLabel>
             <Select
               labelId="timeframe-select-label"
@@ -105,7 +113,6 @@ const StatsCards: React.FC = () => {
               value={timeframe}
               label="Timeframe"
               onChange={handleTimeframeChange}
-              size="small"
             >
               {timeframeOptions.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
@@ -114,19 +121,22 @@ const StatsCards: React.FC = () => {
               ))}
             </Select>
           </FormControl>
-        </Box>        {/* Stats Cards Grid */}
-        <Box sx={{ 
-          display: "grid", 
-          gridTemplateColumns: { 
-            xs: '1fr', 
-            sm: 'repeat(2, 1fr)', 
-            lg: 'repeat(4, 1fr)' 
-          }, 
-          gap: 3,
-          p: 2,
-          backgroundColor: 'grey.50',
-          borderRadius: 1
-        }}>
+        </Box>
+        {/* Stats Cards Grid */}
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: 'repeat(2, 1fr)',
+              md: 'repeat(4, 1fr)',
+            },
+            gap: { xs: 2, sm: 3 },
+            p: { xs: 0, sm: 2 },
+            backgroundColor: { xs: 'transparent', sm: 'grey.50' },
+            borderRadius: { xs: 0, sm: 1 },
+          }}
+        >
           <Box>
             <StatCard
               icon={<Timeline />}

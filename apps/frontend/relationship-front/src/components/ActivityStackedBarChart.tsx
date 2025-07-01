@@ -60,7 +60,7 @@ const ACTIVITY_LABELS: { [key: string]: string } = {
 };
 
 const ActivityStackedBarChart: React.FC<ActivityStackedBarChartProps> = ({
-  title = "Monthly Activities Breakdown (Movies, Cooking, Dining, Coffee, Gaming, Other)",
+  title = "Monthly Activities",
   year,
   height = 500,
 }) => {
@@ -258,6 +258,11 @@ const ActivityStackedBarChart: React.FC<ActivityStackedBarChartProps> = ({
               borderLeft: "1px solid #e0e0e0",
               borderBottom: "1px solid #e0e0e0",
               position: "relative",
+              minWidth: { xs: 'unset', sm: 'unset' },
+              width: { xs: 'auto', sm: 'auto' },
+              overflowX: { xs: 'visible', sm: 'visible' },
+              WebkitOverflowScrolling: 'touch',
+              transition: 'width 0.2s',
             }}
           >
             {/* Grid lines */}
@@ -303,6 +308,7 @@ const ActivityStackedBarChart: React.FC<ActivityStackedBarChartProps> = ({
                   key={`${item.year}-${item.month}`}
                   sx={{
                     flex: 1,
+                    maxWidth: { xs: 20, sm: 60 },
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
@@ -310,7 +316,7 @@ const ActivityStackedBarChart: React.FC<ActivityStackedBarChartProps> = ({
                     zIndex: 2,
                     height: "100%",
                     position: "relative",
-                    minWidth: 30, // Ensure minimum width for each bar
+                    mx: { xs: 0, sm: 0.5 },
                   }}
                 >
                   {/* Total count on top */}
@@ -334,7 +340,7 @@ const ActivityStackedBarChart: React.FC<ActivityStackedBarChartProps> = ({
                   <Box
                     sx={{
                       width: "100%",
-                      maxWidth: 60, // Increased from 40 to make bars wider
+                      maxWidth: { xs: 20, sm: 60 },
                       height: `${Math.max(filteredBarHeight, filteredTotalActivities > 0 ? 2 : 0)}%`,
                       position: "relative",
                       display: "flex",
