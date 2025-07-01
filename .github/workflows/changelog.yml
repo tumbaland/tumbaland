@@ -1,0 +1,74 @@
+name: Generate and Commit Changelog
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Needed for full git history
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install conventional-changelog-cli and angular preset
+        run: npm install -g conventional-changelog-cli conventional-changelog-angular
+
+      - name: Bump version and create tag based on conventional commits
+        id: version_bump
+        run: |
+          # Get latest tag (vX.Y.Z or v0.0.0 if none)
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          version=${latest_tag#v}
+          IFS='.' read -r major minor patch <<< "$version"
+
+          # Get commits since last tag
+          commits=$(git log "$latest_tag"..HEAD --pretty=%B)
+
+          bump=patch
+          if echo "$commits" | grep -qE '^feat|^feature'; then
+            bump=minor
+          fi
+          if echo "$commits" | grep -qE 'BREAKING CHANGE|!:'; then
+            bump=major
+          fi
+
+          # Bump version
+          if [ "$bump" = "major" ]; then
+            major=$((major+1)); minor=0; patch=0
+          elif [ "$bump" = "minor" ]; then
+            minor=$((minor+1)); patch=0
+          else
+            patch=$((patch+1))
+          fi
+          new_version="$major.$minor.$patch"
+          new_tag="v$new_version"
+
+          # Only tag if new version > old version
+          if [ "$new_tag" != "$latest_tag" ]; then
+            git tag "$new_tag"
+            git push origin "$new_tag"
+            echo "Bumped $latest_tag -> $new_tag ($bump)"
+          else
+            echo "No version bump needed."
+          fi
+          echo "version=$new_version" >> $GITHUB_OUTPUT
+
+      - name: Generate or update CHANGELOG.md
+        run: conventional-changelog -p angular -i CHANGELOG.md -s -r 0
+
+      - name: Commit and push changelog
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git diff --cached --quiet || git commit -m "chore: update CHANGELOG.md [skip ci]"
+          git push
