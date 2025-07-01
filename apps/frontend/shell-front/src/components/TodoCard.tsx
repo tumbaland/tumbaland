@@ -31,10 +31,10 @@ export default function WelcomeCard() {
       <Box sx={{
         position: 'relative',
         zIndex: 1,
-        bgcolor: 'white',
+        bgcolor: 'rgba(255,255,255,0.18)',
         p: 4,
         borderRadius: 4,
-        boxShadow: 6,
+        boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.18)',
         minWidth: 340,
         maxWidth: 400,
         textAlign: 'center',
@@ -42,6 +42,9 @@ export default function WelcomeCard() {
         flexDirection: 'column',
         alignItems: 'center',
         gap: 2,
+        backdropFilter: 'blur(16px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+        border: '1.5px solid rgba(255,255,255,0.32)',
       }}>
         <p style={{
           fontSize: 22,
