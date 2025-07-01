@@ -1,0 +1,88 @@
+
+# --- NEW WORKFLOW: Reliable Conventional Changelog & Tagging ---
+name: Conventional Changelog & Tag
+
+on:
+  push:
+    branches:
+      - main2
+
+permissions:
+  contents: write
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install conventional-changelog-cli
+        run: npm install -g conventional-changelog-cli
+
+      - name: Get latest and previous tags (semver sort)
+        id: get_tags
+        run: |
+          tags=($(git tag --sort=-v:refname))
+          latest_tag="${tags[0]:-v0.0.0}"
+          previous_tag="${tags[1]:-}"
+          echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
+          echo "previous_tag=$previous_tag" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog (compare previous to latest tag)
+        run: |
+          latest_tag="${{ steps.get_tags.outputs.latest_tag }}"
+          previous_tag="${{ steps.get_tags.outputs.previous_tag }}"
+          if [ -n "$previous_tag" ]; then
+            from_tag=$previous_tag
+          else
+            from_tag="v0.0.0"
+          fi
+          # Generate changelog from previous tag to latest tag
+          conventional-changelog -p angular -i CHANGELOG.md -s --from-tag $from_tag --to-tag $latest_tag
+
+      - name: Commit changelog
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git diff --cached --quiet || git commit -m "chore: update CHANGELOG.md"
+          git push
+
+      - name: Bump version and create tag (based on conventional commits)
+        id: version_bump
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
+
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          version=${latest_tag#v}
+          IFS='.' read -r major minor patch <<< "$version"
+          commits=$(git log "$latest_tag"..HEAD --pretty=%B)
+          bump=patch
+          if echo "$commits" | grep -qE '^feat|^feature'; then bump=minor; fi
+          if echo "$commits" | grep -qE 'BREAKING CHANGE|!:'; then bump=major; fi
+          if [ "$bump" = "major" ]; then major=$((major+1)); minor=0; patch=0;
+          elif [ "$bump" = "minor" ]; then minor=$((minor+1)); patch=0;
+          else patch=$((patch+1)); fi
+          new_version="$major.$minor.$patch"
+          new_tag="v$new_version"
+          if [ "$new_tag" != "$latest_tag" ]; then
+            git tag "$new_tag"
+            git push origin "$new_tag"
+            echo "Bumped $latest_tag -> $new_tag ($bump)"
+          else
+            echo "No version bump needed."
+          fi
+          echo "version=$new_version" >> $GITHUB_OUTPUT
+          git push
