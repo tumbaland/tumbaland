@@ -66,12 +66,8 @@ jobs:
           echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
           echo "version=$new_version" >> $GITHUB_OUTPUT
 
-      - name: Create new tag locally (do not push yet)
-        if: steps.version_bump.outputs.new_tag != steps.version_bump.outputs.latest_tag
-        run: |
-          git tag "${{ steps.version_bump.outputs.new_tag }}"
 
-      - name: Generate or update CHANGELOG.md (after local tag)
+      - name: Generate or update CHANGELOG.md (before tag)
         run: |
           new_tag="${{ steps.version_bump.outputs.new_tag }}"
           latest_tag="${{ steps.version_bump.outputs.latest_tag }}"
@@ -81,8 +77,8 @@ jobs:
           else
             from_tag="v0.0.0"
           fi
-          # Generate changelog from previous tag to new tag (now tag exists locally)
-          conventional-changelog -p angular -i CHANGELOG.md -s --from-tag $from_tag --to-tag $new_tag
+          # Generate changelog from previous tag to HEAD (unreleased)
+          conventional-changelog -p angular -i CHANGELOG.md -s --from-tag $from_tag --to-ref HEAD
           sed -i '/^# \[/!b;n;/^$/d' CHANGELOG.md
 
       - name: Commit and push changelog
@@ -93,9 +89,10 @@ jobs:
           git diff --cached --quiet || git commit -m "chore: update CHANGELOG.md"
           git push
 
-      - name: Push new tag
+      - name: Create and push new tag (after changelog commit)
         if: steps.version_bump.outputs.new_tag != steps.version_bump.outputs.latest_tag
         run: |
+          git tag "${{ steps.version_bump.outputs.new_tag }}"
           git push origin "${{ steps.version_bump.outputs.new_tag }}"
           echo "Bumped ${{ steps.version_bump.outputs.latest_tag }} -> ${{ steps.version_bump.outputs.new_tag }}"
 
