@@ -73,7 +73,7 @@ jobs:
           echo "version=$new_version" >> $GITHUB_OUTPUT
 
       - name: Generate or update CHANGELOG.md
-        run: conventional-changelog -p angular -i CHANGELOG.md -s -r 0
+        run: conventional-changelog -p angular -i CHANGELOG.md -s --from-tag v1.0.0
 
       - name: Commit and push changelog
         run: |
