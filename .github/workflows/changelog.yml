@@ -26,8 +26,7 @@ jobs:
       - name: Install conventional-changelog-cli and angular preset
         run: npm install -g conventional-changelog-cli conventional-changelog-angular
 
-
-      - name: Bump version and prepare new tag (no tag creation yet)
+      - name: Bump version and create tag based on conventional commits
         id: version_bump
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -62,40 +61,32 @@ jobs:
           fi
           new_version="$major.$minor.$patch"
           new_tag="v$new_version"
-          echo "new_tag=$new_tag" >> $GITHUB_OUTPUT
-          echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
+
+          # Only tag if new version > old version
+          if [ "$new_tag" != "$latest_tag" ]; then
+            git tag "$new_tag"
+            git push origin "$new_tag"
+            echo "Bumped $latest_tag -> $new_tag ($bump)"
+          else
+            echo "No version bump needed."
+          fi
           echo "version=$new_version" >> $GITHUB_OUTPUT
 
-      - name: Generate or update CHANGELOG.md (before tag)
+      - name: Generate or update CHANGELOG.md
         run: |
-          # Use the new tag and previous tag for changelog
-          new_tag="${{ steps.version_bump.outputs.new_tag }}"
-          latest_tag="${{ steps.version_bump.outputs.latest_tag }}"
+          # Get the latest tag after possible bump
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
           previous_tag=$(git tag --sort=-creatordate | grep -v "^$latest_tag$" | head -n1 || echo "")
+          # If there is only one tag, use that as from-tag, else use previous tag
           if [ -n "$previous_tag" ]; then
             from_tag=$previous_tag
           else
             from_tag="v0.0.0"
           fi
-          # Generate changelog from previous tag to HEAD (unreleased)
-          conventional-changelog -p angular -i CHANGELOG.md -s --from-tag $from_tag --to-ref HEAD
+          # Generate changelog from previous tag to latest tag
+          conventional-changelog -p angular -i CHANGELOG.md -s --from-tag $from_tag --to-tag $latest_tag
           # Remove duplicate or empty entries at the top (optional, for cleanups)
           sed -i '/^# \[/!b;n;/^$/d' CHANGELOG.md
-
-      - name: Commit and push changelog
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add CHANGELOG.md
-          git diff --cached --quiet || git commit -m "chore: update CHANGELOG.md"
-          git push
-
-      - name: Create and push new tag
-        if: steps.version_bump.outputs.new_tag != steps.version_bump.outputs.latest_tag
-        run: |
-          git tag "${{ steps.version_bump.outputs.new_tag }}"
-          git push origin "${{ steps.version_bump.outputs.new_tag }}"
-          echo "Bumped ${{ steps.version_bump.outputs.latest_tag }} -> ${{ steps.version_bump.outputs.new_tag }}"
 
       - name: Commit and push changelog
         run: |
