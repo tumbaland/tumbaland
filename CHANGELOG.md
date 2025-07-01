@@ -1,5 +1,12 @@
 # [1.0.0](https://github.com/toomastahves/tumbaland/compare/v1.3.3...v1.0.0) (2025-07-01)
 
+### Bug Fixes
+
+* more fixes to changelog ([c03f4c7](https://github.com/toomastahves/tumbaland/commit/c03f4c7b1aac6f7416ac69cf45523c232c5d8260))
+
+
+
+# [1.0.0](https://github.com/toomastahves/tumbaland/compare/v1.3.3...v1.0.0) (2025-07-01)
 
 # [1.0.0](https://github.com/toomastahves/tumbaland/compare/v1.3.1...v1.0.0) (2025-07-01)
 ### Bug Fixes
