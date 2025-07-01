@@ -1,4 +1,7 @@
+
 name: Deploy Single Service
+
+run-name: Deploy ${{ github.event.inputs.service || 'manual' }}
 
 on:
   workflow_dispatch:
