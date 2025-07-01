@@ -77,8 +77,8 @@ jobs:
           else
             from_tag="v0.0.0"
           fi
-          # Generate changelog from previous tag to HEAD (unreleased)
-          conventional-changelog -p angular -i CHANGELOG.md -s --from-tag $from_tag --to-ref HEAD
+          # Generate changelog from previous tag to new tag (simulate new tag)
+          conventional-changelog -p angular -i CHANGELOG.md -s --from-tag $from_tag --to-tag $new_tag
           # Remove duplicate or empty entries at the top (optional, for cleanups)
           sed -i '/^# \[/!b;n;/^$/d' CHANGELOG.md
 
