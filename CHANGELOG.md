@@ -1,5 +1,12 @@
-# [1.0.0](https://github.com/toomastahves/tumbaland/compare/v1.4.0...v1.0.0) (2025-07-01)
+# [1.0.0](https://github.com/toomastahves/tumbaland/compare/v1.4.1...v1.0.0) (2025-07-01)
 
+### Features
+
+* old changelog ([124d51d](https://github.com/toomastahves/tumbaland/commit/124d51d972038aefe4580651ece73c1f0daa5549))
+
+
+
+# [1.0.0](https://github.com/toomastahves/tumbaland/compare/v1.4.0...v1.0.0) (2025-07-01)
 
 ### Bug Fixes
 
@@ -9,7 +16,6 @@
 
 # [1.0.0](https://github.com/toomastahves/tumbaland/compare/v1.3.4...v1.0.0) (2025-07-01)
 
-
 ### Features
 
 * last attempt to fix changelog ([342552b](https://github.com/toomastahves/tumbaland/commit/342552b9b189759efe42288d78b337827761080f))
@@ -17,7 +23,6 @@
 
 
 # [1.0.0](https://github.com/toomastahves/tumbaland/compare/v1.3.3...v1.0.0) (2025-07-01)
-
 ### Bug Fixes
 
 * more fixes to changelog ([c03f4c7](https://github.com/toomastahves/tumbaland/commit/c03f4c7b1aac6f7416ac69cf45523c232c5d8260))
@@ -25,7 +30,6 @@
 
 
 # [1.0.0](https://github.com/toomastahves/tumbaland/compare/v1.3.3...v1.0.0) (2025-07-01)
-
 # [1.0.0](https://github.com/toomastahves/tumbaland/compare/v1.3.1...v1.0.0) (2025-07-01)
 ### Bug Fixes
 
