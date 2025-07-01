@@ -16,7 +16,7 @@ import { AccountCircle, Login, Logout } from '@mui/icons-material';
 import { authService, User } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
 import { menuItems } from '../const/menuItems';
-import MenuIcon from '@mui/icons-material/Menu';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 
@@ -167,15 +167,47 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
       <Toolbar>
         {isMobile ? (
           <>
-            <IconButton
-              color="inherit"
-              edge="start"
-              aria-label="menu"
-              onClick={handleMobileMenuOpen}
-              sx={{ mr: 1 }}
-            >
-              <MenuIcon />
-            </IconButton>
+            <Box sx={{ flexGrow: 0, display: 'flex', justifyContent: 'flex-start', alignItems: 'center', minHeight: 56, pl: 5 }}>
+              <Button
+                color="inherit"
+                onClick={handleMobileMenuOpen}
+                endIcon={<ExpandMoreIcon />}
+                sx={{
+                  fontWeight: 500,
+                  textTransform: 'none',
+                  background: 'none',
+                  px: 1.5,
+                  minWidth: 0,
+                  borderRadius: 2,
+                  '&:hover': { background: 'rgba(0,0,0,0.04)' },
+                  maxWidth: '70vw',
+                  overflow: 'hidden',
+                  whiteSpace: 'nowrap',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {/* Show current route label, fallback to first menu item */}
+                {(() => {
+                  // Find the menu item with the longest matching path prefix
+                  let bestMatch = null;
+                  let bestLength = -1;
+                  for (const item of menuItemsWithHandlers) {
+                    if (
+                      item.path === '/' && location.pathname === '/' && bestLength < 1
+                    ) {
+                      bestMatch = item;
+                      bestLength = 1;
+                    } else if (
+                      item.path !== '/' && location.pathname.startsWith(item.path) && item.path.length > bestLength
+                    ) {
+                      bestMatch = item;
+                      bestLength = item.path.length;
+                    }
+                  }
+                  return bestMatch ? bestMatch.label : menuItemsWithHandlers[0]?.label;
+                })()}
+              </Button>
+            </Box>
             <Menu
               anchorEl={mobileMenuAnchor}
               open={Boolean(mobileMenuAnchor)}
@@ -186,6 +218,7 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
               {menuItemsWithHandlers.map((item) => (
                 <MenuItem
                   key={item.label}
+                  selected={location.pathname.startsWith(item.path)}
                   onClick={() => {
                     item.onClick();
                     handleMobileMenuClose();
