@@ -5,7 +5,7 @@ name: Conventional Changelog & Tag
 on:
   push:
     branches:
-      - main2
+      - main
 
 permissions:
   contents: write
