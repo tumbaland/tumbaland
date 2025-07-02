@@ -10,7 +10,6 @@ import {
   Box,
   Alert,
   CircularProgress,
-  Typography,
 } from "@mui/material";
 import { Activity, ActivityType, CreateActivityRequest } from "../api/types";
 import { useActivityTypes } from "../hooks/useActivities";
@@ -61,7 +60,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
         // Create mode - set defaults
         setFormData({
           date: formatDateForInput(new Date()),
-          hours: 1,
+          hours: 0,
           activityType: "" as ActivityType,
           description: "",
         });
@@ -148,8 +147,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
             }}
             fullWidth
             required
-            InputLabelProps={{ shrink: true }}
-          />{" "}
+          />
           <TextField
             label="Duration (hours) - Optional"
             type="number"
@@ -184,12 +182,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
             ) : (
               availableTypes.map((type) => (
                 <MenuItem key={type} value={type}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <Typography component="span">
-                      {ACTIVITY_CONFIG[type]?.icon || "✨"}
-                    </Typography>
-                    {ACTIVITY_CONFIG[type]?.label || type}
-                  </Box>
+                  {ACTIVITY_CONFIG[type]?.label || type}
                 </MenuItem>
               ))
             )}
