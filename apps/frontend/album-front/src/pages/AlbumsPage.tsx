@@ -10,8 +10,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  FormControlLabel,
-  Switch,
   Chip,
   Alert,
   CircularProgress,
@@ -34,7 +32,6 @@ const AlbumsPage: React.FC = () => {
   const [newAlbum, setNewAlbum] = useState({
     name: '',
     description: '',
-    isPublic: false,
     tags: [] as string[]
   });
   const [tagInput, setTagInput] = useState('');
@@ -64,7 +61,7 @@ const AlbumsPage: React.FC = () => {
     try {
       await createAlbum(newAlbum);
       setShowCreateDialog(false);
-      setNewAlbum({ name: '', description: '', isPublic: false, tags: [] });
+      setNewAlbum({ name: '', description: '', tags: [] });
       setTagInput('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create album');
@@ -118,14 +115,25 @@ const AlbumsPage: React.FC = () => {
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-        <Typography variant="h4" component="h1">
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={4}
+        sx={{
+          flexDirection: { xs: 'column', sm: 'row' },
+          alignItems: { xs: 'stretch', sm: 'center' },
+          gap: { xs: 2, sm: 0 }
+        }}
+      >
+        <Typography variant="h4" component="h1" sx={{ mb: { xs: 1, sm: 0 } }}>
           Albums
         </Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => setShowCreateDialog(true)}
+          sx={{ width: { xs: '100%', sm: 'auto' } }}
         >
           Create Album
         </Button>
@@ -229,16 +237,7 @@ const AlbumsPage: React.FC = () => {
             sx={{ mb: 2 }}
           />
           
-          <FormControlLabel
-            control={
-              <Switch
-                checked={newAlbum.isPublic}
-                onChange={(e) => setNewAlbum(prev => ({ ...prev, isPublic: e.target.checked }))}
-              />
-            }
-            label="Make album public"
-            sx={{ mb: 2 }}
-          />
+          {/* Removed public/private selection */}
           
           <TextField
             margin="dense"
