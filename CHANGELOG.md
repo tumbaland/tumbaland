@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.3](https://github.com/toomastahves/tumbaland/compare/v0.0.2...v0.0.3) (2025-07-02)
+
+
+### Features
+
+* load variables at runtime ([864a019](https://github.com/toomastahves/tumbaland/commit/864a019f6f43d83c291918cfe3a935400eaa439f))
+
 ### [0.0.2](https://github.com/toomastahves/tumbaland/compare/v0.0.1...v0.0.2) (2025-07-02)
 
 
