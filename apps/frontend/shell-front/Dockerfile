@@ -7,7 +7,7 @@ RUN npm i
 RUN npm run build
 
 # ---- Production Stage ----
-FROM nginx:alpine
+FROM nginx:1.26-alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY ./nginx.conf /etc/nginx/conf.d/default.conf
 COPY ./entrypoint.sh /entrypoint.sh
