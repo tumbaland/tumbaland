@@ -1,4 +1,5 @@
-import React, { cloneElement, useState } from "react";
+import React, { cloneElement, useState, useContext } from "react";
+import { ConfigContext } from '../App';
 import Drawer from "@mui/material/Drawer";
 import Box from "@mui/material/Box";
 import List from "@mui/material/List";
@@ -26,7 +27,8 @@ function SideMenu({ appLinks, onLinkClick, currentRoute, routeToUrl }: {
   currentRoute?: string;
   routeToUrl?: Record<string, string>;
 }) {
-  const homeUrl = import.meta.env.VITE_HOME_URL || "/";
+  const config = useContext(ConfigContext);
+  const homeUrl = config.VITE_HOME_URL || "/";
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [mobileOpen, setMobileOpen] = useState(false);

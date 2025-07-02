@@ -1,39 +1,40 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useState, ReactNode } from 'react';
+import { useState, ReactNode, useContext } from 'react';
+
 import AlbumIcon from '@mui/icons-material/PhotoAlbum';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import CircularProgress from '@mui/material/CircularProgress';
 import { SideMenu } from './SideMenu';
-
-const iconColor = '#334155'; // dark gray
-
-const appLinks = [
-  {
-    name: 'Relationship',
-    url: import.meta.env.VITE_RELATIONSHIP_URL || 'http://localhost:3001',
-    icon: <FavoriteIcon sx={{ color: iconColor }} />,
-  },
-  {
-    name: 'Album',
-    url: import.meta.env.VITE_ALBUM_URL || 'http://localhost:3002',
-    icon: <AlbumIcon sx={{ color: iconColor }} />,
-  },
-  {
-    name: 'Finance',
-    url: import.meta.env.VITE_FINANCE_URL || 'http://localhost:3003',
-    icon: <AttachMoneyIcon sx={{ color: iconColor }} />,
-  },
-];
+import { ConfigContext } from '../App';
 
 interface LayoutProps {
   children: ReactNode;
 }
 
 export default function Layout({ children }: LayoutProps) {
+  const config = useContext(ConfigContext);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  const appLinks = [
+    {
+      name: 'Relationship',
+      url: config.VITE_RELATIONSHIP_URL || 'http://localhost:3001',
+      icon: <FavoriteIcon sx={{ color: '#334155' }} />,
+    },
+    {
+      name: 'Album',
+      url: config.VITE_ALBUM_URL || 'http://localhost:3002',
+      icon: <AlbumIcon sx={{ color: '#334155' }} />,
+    },
+    {
+      name: 'Finance',
+      url: config.VITE_FINANCE_URL || 'http://localhost:3003',
+      icon: <AttachMoneyIcon sx={{ color: '#334155' }} />,
+    },
+  ];
 
   // Map route paths to app URLs
   const routeToUrl: Record<string, string> = {

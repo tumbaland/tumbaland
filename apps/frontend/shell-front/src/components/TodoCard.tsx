@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useContext } from 'react';
 import { Box } from '@mui/material';
 import CasinoIcon from '@mui/icons-material/Casino';
+import { ConfigContext } from '../App';
 
-const API_URL = import.meta.env.VITE_PUBLIC_API_URL || 'http://localhost:4000';
-
-export default function WelcomeCard() {
+export default function TodoCard() {
+  const config = useContext(ConfigContext);
+  const API_URL = config.VITE_PUBLIC_API_URL || 'http://localhost:4000';
   const [todo, setTodo] = useState<string | null>(null);
 
   useEffect(() => {
@@ -15,7 +16,7 @@ export default function WelcomeCard() {
           setTodo(data.todo);
         }
       });
-  }, []);
+  }, [API_URL]);
 
   return (
     <Box sx={{
