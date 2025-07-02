@@ -1,8 +1,16 @@
+<<<<<<< HEAD
 # Changelog
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
 ## 1.1.0 (2025-07-02)
+=======
+# [1.0.0](https://github.com/toomastahves/tumbaland/compare/v1.5.2...v1.0.0) (2025-07-01)
+
+
+
+# [1.0.0](https://github.com/toomastahves/tumbaland/compare/v1.5.1...v1.0.0) (2025-07-01)
+>>>>>>> 88f55df8f0715bde849b1c128145d08e80166033
 
 
 ### Features
