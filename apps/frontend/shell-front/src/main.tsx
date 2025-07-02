@@ -1,14 +1,15 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { CssBaseline } from '@mui/material';
-import App from './App';
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import { ConfigProvider } from "./config/ConfigProvider";
 
-const element = document.getElementById('public-root');
+const element = document.getElementById("public-root");
 if (element) {
   ReactDOM.createRoot(element).render(
     <React.StrictMode>
-      <CssBaseline />
-      <App />
+      <ConfigProvider>
+        <App />
+      </ConfigProvider>
     </React.StrictMode>
   );
 }
