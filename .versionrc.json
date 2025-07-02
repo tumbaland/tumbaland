@@ -1,0 +1,11 @@
+{
+  "types": [
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Bug Fixes" },
+    { "type": "docs", "section": "Documentation" },
+    { "type": "chore", "section": "Chores", "hidden": false },
+    { "type": "refactor", "section": "Refactoring" }
+  ],
+  "changelogHeader": "# Tumbalog",
+  "tagPrefix": "v"
+}
