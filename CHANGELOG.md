@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.5](https://github.com/toomastahves/tumbaland/compare/v0.0.4...v0.0.5) (2025-07-02)
+
+
+### Features
+
+* use context provider for loading env vars ([f8e6d20](https://github.com/toomastahves/tumbaland/commit/f8e6d203cf11535c666832fcf153372d2c958cd8))
+
 ### [0.0.4](https://github.com/toomastahves/tumbaland/compare/v0.0.3...v0.0.4) (2025-07-02)
 
 
