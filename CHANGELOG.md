@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.6](https://github.com/toomastahves/tumbaland/compare/v0.0.5...v0.0.6) (2025-07-03)
+
+
+### Features
+
+* setup file upload cors for album ([720c704](https://github.com/toomastahves/tumbaland/commit/720c704cfa567499d391a96da12dac64a52fee51))
+
 ### [0.0.5](https://github.com/toomastahves/tumbaland/compare/v0.0.4...v0.0.5) (2025-07-02)
 
 
