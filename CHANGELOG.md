@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.7](https://github.com/toomastahves/tumbaland/compare/v0.0.6...v0.0.7) (2025-07-03)
+
+
+### Features
+
+* make album name and description editable ([f95a845](https://github.com/toomastahves/tumbaland/commit/f95a845bdd908ddabbaf220f0bc68b6f01b06459))
+
 ### [0.0.6](https://github.com/toomastahves/tumbaland/compare/v0.0.5...v0.0.6) (2025-07-03)
 
 
