@@ -28,8 +28,7 @@ import {
   ArrowBack as ArrowBackIcon,
   Close as CloseIcon,
   NavigateBefore as NavigateBeforeIcon,
-  NavigateNext as NavigateNextIcon,
-  Edit as EditIcon
+  NavigateNext as NavigateNextIcon
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePhotos } from '../hooks/usePhotos';
