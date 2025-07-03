@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.8](https://github.com/toomastahves/tumbaland/compare/v0.0.7...v0.0.8) (2025-07-03)
+
+
+### Bug Fixes
+
+* remove unused icon ([8ece922](https://github.com/toomastahves/tumbaland/commit/8ece9220b153e060fe7ebaeeb3e93d667a7878c3))
+
 ### [0.0.7](https://github.com/toomastahves/tumbaland/compare/v0.0.6...v0.0.7) (2025-07-03)
 
 
