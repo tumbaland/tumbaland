@@ -13,16 +13,20 @@ import {
   Chip,
   Alert,
   CircularProgress,
-  Fab
+  Fab,
+  IconButton
 } from '@mui/material';
 import {
   Search as SearchIcon,
   Add as AddIcon,
-  PhotoLibrary as PhotoLibraryIcon
+  PhotoLibrary as PhotoLibraryIcon,
+  MoreVert as MoreVertIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAlbums } from '../hooks/useAlbums';
 import AlbumCard from '../components/AlbumCard';
+import EditAlbumDialog from '../components/EditAlbumDialog';
+import { albumService } from '../services/albumService';
 import { Album } from '../types';
 
 const AlbumsPage: React.FC = () => {
@@ -37,6 +41,8 @@ const AlbumsPage: React.FC = () => {
   const [tagInput, setTagInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingAlbum, setEditingAlbum] = useState<Album | null>(null);
 
   const { 
     albums, 
@@ -103,6 +109,21 @@ const AlbumsPage: React.FC = () => {
 
   const handleViewAlbum = (album: Album) => {
     navigate(`/albums/${album._id}`);
+  };
+
+  const handleOpenEditDialog = (album: Album) => {
+    setEditingAlbum(album);
+    setShowEditDialog(true);
+  };
+
+  const handleCloseEditDialog = () => {
+    setShowEditDialog(false);
+    setEditingAlbum(null);
+  };
+
+  const handleSaveEditAlbum = async (albumId: string, data: { name: string; description: string }) => {
+    await albumService.updateAlbum(albumId, data);
+    // Optionally, refresh albums list here if needed
   };
 
   if (loading) {
@@ -193,14 +214,38 @@ const AlbumsPage: React.FC = () => {
           }}
         >
           {albums.map((album) => (
-            <Box key={album._id}>
-              <AlbumCard
-                album={album}
-                onView={handleViewAlbum}
-                onDelete={handleDeleteAlbum}
-              />
-            </Box>
+            <AlbumCard
+              key={album._id}
+              album={album}
+              onView={handleViewAlbum}
+              onDelete={handleDeleteAlbum}
+              editButton={
+                <IconButton
+                  onClick={e => { e.stopPropagation(); handleOpenEditDialog(album); }}
+                  size="small"
+                  sx={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 8,
+                    bgcolor: 'rgba(255,255,255,0.9)',
+                    boxShadow: 1,
+                    zIndex: 2,
+                    '&:hover': { bgcolor: 'rgba(255,255,255,1)' }
+                  }}
+                  aria-label="Edit album"
+                >
+                  <MoreVertIcon fontSize="small" />
+                </IconButton>
+              }
+            />
           ))}
+      {/* Edit Album Dialog */}
+      <EditAlbumDialog
+        open={showEditDialog}
+        album={editingAlbum}
+        onClose={handleCloseEditDialog}
+        onSave={handleSaveEditAlbum}
+      />
         </Box>
       )}
 

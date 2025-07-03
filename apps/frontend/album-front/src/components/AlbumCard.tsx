@@ -19,9 +19,10 @@ interface AlbumCardProps {
   onView: (album: Album) => void;
   onEdit?: (album: Album) => void;
   onDelete?: (album: Album) => void;
+  editButton?: React.ReactNode;
 }
 
-const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete }) => {
+const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete, editButton }) => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
@@ -105,6 +106,7 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete }
             }}
           />
         )}
+        {editButton}
       </Box>
       
       <CardContent sx={{ flexGrow: 1 }}>

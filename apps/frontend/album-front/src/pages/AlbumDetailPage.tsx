@@ -28,7 +28,8 @@ import {
   ArrowBack as ArrowBackIcon,
   Close as CloseIcon,
   NavigateBefore as NavigateBeforeIcon,
-  NavigateNext as NavigateNextIcon
+  NavigateNext as NavigateNextIcon,
+  Edit as EditIcon
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePhotos } from '../hooks/usePhotos';
@@ -69,7 +70,6 @@ const AlbumDetailPage: React.FC = () => {
   useEffect(() => {
     const fetchAlbum = async () => {
       if (!albumId) return;
-      
       try {
         setLoadingAlbum(true);
         const response = await albumService.getAlbumById(albumId);
@@ -80,7 +80,6 @@ const AlbumDetailPage: React.FC = () => {
         setLoadingAlbum(false);
       }
     };
-
     fetchAlbum();
   }, [albumId]);
   const handleDeletePhoto = async (photo: Photo) => {
@@ -222,7 +221,7 @@ const AlbumDetailPage: React.FC = () => {
             <IconButton onClick={() => navigate('/albums')} sx={{ mr: 1 }}>
               <ArrowBackIcon />
             </IconButton>
-            <Typography variant="h4" component="h1">
+            <Typography variant="h4" component="h1" sx={{ mr: 1 }}>
               {album.name}
             </Typography>
           </Box>
@@ -243,7 +242,7 @@ const AlbumDetailPage: React.FC = () => {
         >
           Upload Photos
         </Button>
-      </Box>      {/* Search */}
+      </Box>
       <Box mb={4}>
         <TextField
           placeholder="Search photos..."
