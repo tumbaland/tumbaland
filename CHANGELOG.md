@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.10](https://github.com/toomastahves/tumbaland/compare/v0.0.9...v0.0.10) (2025-07-05)
+
+
+### Features
+
+* **album-front:** use runtime vars ([da5335a](https://github.com/toomastahves/tumbaland/commit/da5335a33a12085cfd767251b033ffc44fed05d9))
+
 ### [0.0.9](https://github.com/toomastahves/tumbaland/compare/v0.0.8...v0.0.9) (2025-07-05)
 
 
