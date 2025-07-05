@@ -1,8 +1,8 @@
-import { getConfig } from './runtime';
+import { getGlobalConfig } from './ConfigProvider';
 
 // Base fetch wrapper with auth handling
 export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
-  const appConfig = getConfig();
+  const appConfig = getGlobalConfig();
   const token = localStorage.getItem('authToken');
   
   const requestConfig: RequestInit = {

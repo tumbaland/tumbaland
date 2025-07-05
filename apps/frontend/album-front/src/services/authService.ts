@@ -4,7 +4,7 @@
  */
 
 import { User, AuthResponse } from '../types';
-import { getConfig } from '../config/runtime';
+import { getGlobalConfig } from '../config/ConfigProvider';
 
 // Helper to read JWT token from cookie
 function getJwtTokenFromCookie(cookieName = 'access_token'): string | null {
@@ -40,7 +40,7 @@ export const authService = {
   // Check authentication status
   async checkAuth(): Promise<AuthResponse> {
     try {
-      const config = getConfig();
+      const config = getGlobalConfig();
       const response = await fetch(`${config.AUTH_SERVICE_URL}/auth/verify`, {
         credentials: 'include',
         headers: {
@@ -65,7 +65,7 @@ export const authService = {
 
   // Redirect to login page
   redirectToLogin(returnUrl?: string): void {
-    const config = getConfig();
+    const config = getGlobalConfig();
     const currentUrl = returnUrl || window.location.href;
     const loginUrl = `${config.AUTH_FRONT_URL}?redirect_uri=${encodeURIComponent(currentUrl)}`;
     window.location.href = loginUrl;
@@ -74,7 +74,7 @@ export const authService = {
   // Logout user
   async logout(): Promise<boolean> {
     try {
-      const config = getConfig();
+      const config = getGlobalConfig();
       const response = await fetch(`${config.AUTH_SERVICE_URL}/auth/logout`, {
         method: 'POST',
         credentials: 'include',

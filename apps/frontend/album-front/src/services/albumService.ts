@@ -1,4 +1,4 @@
-import { albumApi } from '../config/api';
+import { albumApi } from '../config/albumApi';
 import { 
   Album, 
   CreateAlbumData, 

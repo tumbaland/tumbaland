@@ -1,22 +1,20 @@
-import { BrowserRouter as Router } from 'react-router-dom';
-import AppLayout from './components/AppLayout';
-import AppRoutes from './routes';
-import ProtectedRoute from './components/ProtectedRoute';
+import React from "react";
+import { BrowserRouter as Router } from "react-router-dom";
+import AppLayout from "./components/AppLayout";
+import AppRoutes from "./routes";
+import ProtectedRoute from "./components/ProtectedRoute";
+import { AppConfig } from "./config/ConfigProvider";
 
-function AppContent() {
-  return (
-    <ProtectedRoute>
-      <AppLayout>
-        <AppRoutes />
-      </AppLayout>
-    </ProtectedRoute>
-  );
-}
+export const ConfigContext = React.createContext<AppConfig>({});
 
 function App() {
   return (
     <Router>
-      <AppContent />
+      <ProtectedRoute>
+        <AppLayout>
+          <AppRoutes />
+        </AppLayout>
+      </ProtectedRoute>
     </Router>
   );
 }
