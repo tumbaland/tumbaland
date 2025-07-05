@@ -1,59 +1,78 @@
-import axios from 'axios';
+// API Configuration with fetch
+const VITE_ALBUM_API_URL = import.meta.env.VITE_ALBUM_API_URL || 'http://localhost:4002';
 
-const API_BASE_URL = import.meta.env.VITE_ALBUM_API_URL || 'http://localhost:4002';
+// Base fetch wrapper with auth handling
+export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
+  const token = localStorage.getItem('authToken');
+  
+  const config: RequestInit = {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+  };
 
-// Helper to read JWT token from cookie
-function getJwtTokenFromCookie(cookieName = 'access_token') {
-  const match = document.cookie.match(new RegExp('(^| )' + cookieName + '=([^;]+)'));
-  return match ? match[2] : null;
+  console.log(token ? 'Adding Authorization header' : 'No auth token found in localStorage');
+
+  const response = await fetch(`${VITE_ALBUM_API_URL}/api${endpoint}`, config);
+  
+  if (!response.ok) {
+    console.error('API Error:', response.status, response.statusText);
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+
+  return response;
 }
 
-// On app load, read JWT from cookie and save to localStorage if not already present
-(function syncJwtToken() {
-  const token = getJwtTokenFromCookie();
-  console.log('token', token)
-  if (token && localStorage.getItem('authToken') !== token) {
-    localStorage.setItem('authToken', token);
-  }
-})();
-
-export const albumApi = axios.create({
-  baseURL: `${API_BASE_URL}/api`,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Request interceptor for error handling
-albumApi.interceptors.request.use(
-  (config) => {
-    // Add auth token if available
-    const token = localStorage.getItem('authToken');
-    // Axios always provides config.headers as AxiosHeaders, but for type safety:
-    if (token) {
-      (config.headers = config.headers || {});
-      // For Axios v1+, use set method if available
-      if (typeof config.headers.set === 'function') {
-        config.headers.set('Authorization', `Bearer ${token}`);
-      } else {
-        config.headers['Authorization'] = `Bearer ${token}`;
+// Helper methods for common HTTP verbs
+export const albumApi = {
+  async get(endpoint: string, options?: { params?: Record<string, any> }): Promise<{ data: any }> {
+    let url = endpoint;
+    if (options?.params) {
+      const searchParams = new URLSearchParams();
+      Object.entries(options.params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, String(value));
+        }
+      });
+      const paramString = searchParams.toString();
+      if (paramString) {
+        url += `?${paramString}`;
       }
-      console.log('Adding Authorization header:', config.headers['Authorization'] || (config.headers.get && config.headers.get('Authorization')));
-    } else {
-      console.log('No auth token found in localStorage');
     }
-    return config;
+    
+    const response = await apiFetch(url);
+    const data = await response.json();
+    return { data };
   },
-  (error) => Promise.reject(error)
-);
 
-// Response interceptor for error handling
-albumApi.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    console.error('API Error:', error);
-    return Promise.reject(error);
-  }
-);
+  async post(endpoint: string, body?: any): Promise<{ data: any }> {
+    const response = await apiFetch(endpoint, {
+      method: 'POST',
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await response.json();
+    return { data };
+  },
+
+  async put(endpoint: string, body?: any): Promise<{ data: any }> {
+    const response = await apiFetch(endpoint, {
+      method: 'PUT',
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await response.json();
+    return { data };
+  },
+
+  async delete(endpoint: string): Promise<{ data: any }> {
+    const response = await apiFetch(endpoint, {
+      method: 'DELETE',
+    });
+    const data = await response.json();
+    return { data };
+  },
+};
 
 export default albumApi;

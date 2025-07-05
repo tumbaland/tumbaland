@@ -13,7 +13,8 @@ import {
   Divider,
 } from "@mui/material";
 import { AccountCircle, Login, Logout } from "@mui/icons-material";
-import { authService, User } from "../services/authService";
+import { authService } from "../services/authService";
+import { User } from "../types";
 
 interface AuthHeaderProps {}
 

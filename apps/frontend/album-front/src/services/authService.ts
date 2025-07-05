@@ -9,13 +9,50 @@ import { User, AuthResponse } from '../types';
 const AUTH_SERVICE_URL = import.meta.env.VITE_AUTH_SERVICE_URL || 'http://localhost:5001';
 const AUTH_FRONT_URL = import.meta.env.VITE_AUTH_FRONT_URL || 'http://localhost:3004';
 
+// Helper to read JWT token from cookie
+function getJwtTokenFromCookie(cookieName = 'access_token'): string | null {
+  const match = document.cookie.match(new RegExp('(^| )' + cookieName + '=([^;]+)'));
+  return match ? match[2] : null;
+}
+
+// Sync JWT token from cookie to localStorage
+function syncJwtToken(): void {
+  const token = getJwtTokenFromCookie();
+  console.log('token', token);
+  if (token && localStorage.getItem('authToken') !== token) {
+    localStorage.setItem('authToken', token);
+  }
+}
+
 export const authService = {
+  // Initialize auth service (sync JWT from cookie)
+  init(): void {
+    syncJwtToken();
+  },
+
+  // Get JWT token from localStorage
+  getToken(): string | null {
+    return localStorage.getItem('authToken');
+  },
+
+  // Sync JWT token from cookie to localStorage
+  syncToken(): void {
+    syncJwtToken();
+  },
+
   // Check authentication status
   async checkAuth(): Promise<AuthResponse> {
     try {
       const response = await fetch(`${AUTH_SERVICE_URL}/auth/verify`, {
         credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const data = await response.json();
       return {
@@ -41,7 +78,14 @@ export const authService = {
       const response = await fetch(`${AUTH_SERVICE_URL}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const data = await response.json();
       if (data.success) {
