@@ -1,4 +1,13 @@
 # Tumbalog
+### [0.0.9](https://github.com/toomastahves/tumbaland/compare/v0.0.8...v0.0.9) (2025-07-05)
+
+
+### Features
+
+* make env vars local instead of global ([d361f28](https://github.com/toomastahves/tumbaland/commit/d361f28553fc5d12273351fcb5eaacdce9ac9599))
+* refactor authservice to fucntional style ([9be7b25](https://github.com/toomastahves/tumbaland/commit/9be7b25ba4b8d8431cc77a561391eb737c7c11fa))
+* replace axios with fetch in album front ([0f965fd](https://github.com/toomastahves/tumbaland/commit/0f965fd900f40790b1a49a60fb0d515290a4cbe2))
+
 ### [0.0.8](https://github.com/toomastahves/tumbaland/compare/v0.0.7...v0.0.8) (2025-07-03)
 
 
