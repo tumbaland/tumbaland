@@ -5,7 +5,7 @@ import { ConfigContext } from '../App';
 
 export default function TodoCard() {
   const config = useContext(ConfigContext);
-  const API_URL = config.VITE_PUBLIC_API_URL || 'http://localhost:4000';
+  const API_URL = config.VITE_PUBLIC_API_URL;
   const [todo, setTodo] = useState<string | null>(null);
 
   useEffect(() => {

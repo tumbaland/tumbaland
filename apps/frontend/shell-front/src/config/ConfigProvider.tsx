@@ -2,8 +2,14 @@ import { useEffect, useState, ReactNode } from "react";
 import { CssBaseline } from "@mui/material";
 import { ConfigContext } from "../App";
 import { Loader } from "../components/Loader";
-import { AppConfig } from "./AppConfig";
 import { ErrorPage } from "../components/ErrorPage";
+
+export interface AppConfig {
+  VITE_RELATIONSHIP_URL?: string;
+  VITE_ALBUM_URL?: string;
+  VITE_FINANCE_URL?: string;
+  VITE_PUBLIC_API_URL?: string;
+}
 
 interface ConfigProviderProps {
   children: ReactNode;

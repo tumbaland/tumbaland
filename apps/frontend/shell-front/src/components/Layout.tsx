@@ -21,16 +21,19 @@ export default function Layout({ children }: LayoutProps) {
   const appLinks = [
     {
       name: 'Relationship',
+      route: '/relationship',
       url: config.VITE_RELATIONSHIP_URL || 'http://localhost:3001',
       icon: <FavoriteIcon sx={{ color: '#334155' }} />,
     },
     {
       name: 'Album',
+      route: '/album',
       url: config.VITE_ALBUM_URL || 'http://localhost:3002',
       icon: <AlbumIcon sx={{ color: '#334155' }} />,
     },
     {
       name: 'Finance',
+      route: '/finance',
       url: config.VITE_FINANCE_URL || 'http://localhost:3003',
       icon: <AttachMoneyIcon sx={{ color: '#334155' }} />,
     },
