@@ -4,6 +4,7 @@
  */
 
 import { User, AuthResponse } from '../types';
+import { getConfig } from '../config/runtime';
 
 // Helper to read JWT token from cookie
 function getJwtTokenFromCookie(cookieName = 'access_token'): string | null {
@@ -39,8 +40,8 @@ export const authService = {
   // Check authentication status
   async checkAuth(): Promise<AuthResponse> {
     try {
-      const AUTH_SERVICE_URL = import.meta.env.VITE_AUTH_SERVICE_URL;
-      const response = await fetch(`${AUTH_SERVICE_URL}/auth/verify`, {
+      const config = getConfig();
+      const response = await fetch(`${config.AUTH_SERVICE_URL}/auth/verify`, {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
@@ -64,17 +65,17 @@ export const authService = {
 
   // Redirect to login page
   redirectToLogin(returnUrl?: string): void {
-    const AUTH_FRONT_URL = import.meta.env.VITE_AUTH_FRONT_URL;
+    const config = getConfig();
     const currentUrl = returnUrl || window.location.href;
-    const loginUrl = `${AUTH_FRONT_URL}?redirect_uri=${encodeURIComponent(currentUrl)}`;
+    const loginUrl = `${config.AUTH_FRONT_URL}?redirect_uri=${encodeURIComponent(currentUrl)}`;
     window.location.href = loginUrl;
   },
 
   // Logout user
   async logout(): Promise<boolean> {
     try {
-      const AUTH_SERVICE_URL = import.meta.env.VITE_AUTH_SERVICE_URL;
-      const response = await fetch(`${AUTH_SERVICE_URL}/auth/logout`, {
+      const config = getConfig();
+      const response = await fetch(`${config.AUTH_SERVICE_URL}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
         headers: {

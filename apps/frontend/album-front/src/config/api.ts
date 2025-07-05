@@ -1,9 +1,11 @@
+import { getConfig } from './runtime';
+
 // Base fetch wrapper with auth handling
 export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
-  const VITE_ALBUM_API_URL = import.meta.env.VITE_ALBUM_API_URL;
+  const appConfig = getConfig();
   const token = localStorage.getItem('authToken');
   
-  const config: RequestInit = {
+  const requestConfig: RequestInit = {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -14,7 +16,7 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
 
   console.log(token ? 'Adding Authorization header' : 'No auth token found in localStorage');
 
-  const response = await fetch(`${VITE_ALBUM_API_URL}/api${endpoint}`, config);
+  const response = await fetch(`${appConfig.ALBUM_API_URL}/api${endpoint}`, requestConfig);
   
   if (!response.ok) {
     console.error('API Error:', response.status, response.statusText);
