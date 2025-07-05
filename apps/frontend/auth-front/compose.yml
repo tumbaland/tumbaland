@@ -3,12 +3,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
-        VITE_AUTH_SERVICE_URL: ${VITE_AUTH_SERVICE_URL}
-        NODE_ENV: production
     image: toomastahves/auth-front:latest
     restart: unless-stopped
+    environment:
+      - GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+      - AUTH_SERVICE_URL=${VITE_AUTH_SERVICE_URL}
     ports:
       - "3004:80"
     networks:

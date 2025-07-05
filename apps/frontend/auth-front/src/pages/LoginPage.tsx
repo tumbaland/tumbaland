@@ -3,18 +3,19 @@ import { Box, Card, CardContent, Typography, Divider, Alert } from '@mui/materia
 import { initializeGoogleSignIn } from '../authFlow';
 import LoggedInUser from '../components/LoggedInUser';
 import LoginPrompt from '../components/LoginPrompt';
+import { useConfig } from '../config/useConfig';
 
 const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
   const [initializationAttempted, setInitializationAttempted] = useState(false);
+  const config = useConfig();
 
   useEffect(() => {
     const checkExistingAuth = async () => {
       try {
-        const authServiceUrl = import.meta.env.VITE_AUTH_SERVICE_URL || 'http://localhost:5001';
-        const response = await fetch(`${authServiceUrl}/auth/verify`, {
+        const response = await fetch(`${config.AUTH_SERVICE_URL}/auth/verify`, {
           credentials: 'include'
         });
         const data = await response.json();
@@ -26,29 +27,30 @@ const LoginPage: React.FC = () => {
       } catch (err) {
         console.log('No existing auth found:', err);
       }
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
       const redirectUri = new URLSearchParams(window.location.search).get('redirect_uri') || '/';
-      if (!clientId) {
+      
+      if (!config.GOOGLE_CLIENT_ID) {
         setError('Google Client ID is not configured. Please check your environment variables.');
         setIsLoading(false);
         return;
       }
+
       setIsLoading(false);
       setInitializationAttempted(true);
       try {
-        initializeGoogleSignIn(clientId, redirectUri);
+        initializeGoogleSignIn(config.GOOGLE_CLIENT_ID, redirectUri);
       } catch (err) {
         console.error('Error initializing Google Sign-In:', err);
         setError('Failed to initialize Google Sign-In: ' + (err as Error).message);
       }
     };
     checkExistingAuth();
-  }, []);
+  }, [config]);
 
   const handleLogout = async () => {
     try {
-      const authServiceUrl = import.meta.env.VITE_AUTH_SERVICE_URL || 'http://localhost:5001';
-      const response = await fetch(`${authServiceUrl}/auth/logout`, {
+      const response = await fetch(`${config.AUTH_SERVICE_URL}/auth/logout`, {
         method: 'POST',
         credentials: 'include'
       });

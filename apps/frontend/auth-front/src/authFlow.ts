@@ -1,3 +1,5 @@
+import { getGlobalConfig } from './config/ConfigProvider';
+
 declare global {
   interface Window {
     google: any;
@@ -7,11 +9,11 @@ declare global {
 
 function handleCredentialResponse(response: { credential: string }, redirectUri: string) {
   const idToken = response.credential;
-  const authServiceUrl = import.meta.env.VITE_AUTH_SERVICE_URL || 'http://localhost:5001';
+  const config = getGlobalConfig();
 
-  console.log('Sending token to auth service:', authServiceUrl);
+  console.log('Sending token to auth service:', config.AUTH_SERVICE_URL);
 
-  fetch(`${authServiceUrl}/auth/validate`, {
+  fetch(`${config.AUTH_SERVICE_URL}/auth/validate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ idToken }),
