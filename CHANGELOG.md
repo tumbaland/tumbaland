@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.12](https://github.com/toomastahves/tumbaland/compare/v0.0.11...v0.0.12) (2025-07-05)
+
+
+### Chores
+
+* **album-front:** add config hook ([b23b91c](https://github.com/toomastahves/tumbaland/commit/b23b91c62b40a7bf893576f3bf247681fb43cc66))
+
 ### [0.0.11](https://github.com/toomastahves/tumbaland/compare/v0.0.10...v0.0.11) (2025-07-05)
 
 
