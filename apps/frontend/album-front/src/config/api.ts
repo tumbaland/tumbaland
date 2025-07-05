@@ -1,8 +1,6 @@
-// API Configuration with fetch
-const VITE_ALBUM_API_URL = import.meta.env.VITE_ALBUM_API_URL || 'http://localhost:4002';
-
 // Base fetch wrapper with auth handling
 export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
+  const VITE_ALBUM_API_URL = import.meta.env.VITE_ALBUM_API_URL;
   const token = localStorage.getItem('authToken');
   
   const config: RequestInit = {

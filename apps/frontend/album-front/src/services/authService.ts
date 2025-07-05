@@ -5,10 +5,6 @@
 
 import { User, AuthResponse } from '../types';
 
-// Configuration
-const AUTH_SERVICE_URL = import.meta.env.VITE_AUTH_SERVICE_URL || 'http://localhost:5001';
-const AUTH_FRONT_URL = import.meta.env.VITE_AUTH_FRONT_URL || 'http://localhost:3004';
-
 // Helper to read JWT token from cookie
 function getJwtTokenFromCookie(cookieName = 'access_token'): string | null {
   const match = document.cookie.match(new RegExp('(^| )' + cookieName + '=([^;]+)'));
@@ -43,6 +39,7 @@ export const authService = {
   // Check authentication status
   async checkAuth(): Promise<AuthResponse> {
     try {
+      const AUTH_SERVICE_URL = import.meta.env.VITE_AUTH_SERVICE_URL;
       const response = await fetch(`${AUTH_SERVICE_URL}/auth/verify`, {
         credentials: 'include',
         headers: {
@@ -67,6 +64,7 @@ export const authService = {
 
   // Redirect to login page
   redirectToLogin(returnUrl?: string): void {
+    const AUTH_FRONT_URL = import.meta.env.VITE_AUTH_FRONT_URL;
     const currentUrl = returnUrl || window.location.href;
     const loginUrl = `${AUTH_FRONT_URL}?redirect_uri=${encodeURIComponent(currentUrl)}`;
     window.location.href = loginUrl;
@@ -75,6 +73,7 @@ export const authService = {
   // Logout user
   async logout(): Promise<boolean> {
     try {
+      const AUTH_SERVICE_URL = import.meta.env.VITE_AUTH_SERVICE_URL;
       const response = await fetch(`${AUTH_SERVICE_URL}/auth/logout`, {
         method: 'POST',
         credentials: 'include',

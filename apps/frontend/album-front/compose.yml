@@ -6,7 +6,6 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_ALBUM_API_URL: ${VITE_ALBUM_API_URL}
-        VITE_FILE_API_URL: ${VITE_FILE_API_URL}
         VITE_AUTH_SERVICE_URL: ${VITE_AUTH_SERVICE_URL}
         VITE_AUTH_FRONT_URL: ${VITE_AUTH_FRONT_URL}
         NODE_ENV: production
