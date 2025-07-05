@@ -1,11 +1,11 @@
 import { useContext } from 'react';
 import { ConfigContext } from '../App';
-import { AppConfig } from './ConfigProvider';
+import { AppConfig } from '../config/ConfigProvider';
 
 export function useConfig(): AppConfig {
   const config = useContext(ConfigContext);
   
-  if (!config || !config.ALBUM_API_URL) {
+  if (!config) {
     throw new Error('useConfig must be used within a ConfigProvider');
   }
   
