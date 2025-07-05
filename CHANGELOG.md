@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.11](https://github.com/toomastahves/tumbaland/compare/v0.0.10...v0.0.11) (2025-07-05)
+
+
+### Features
+
+* **album-front:** use config provider ([181c40a](https://github.com/toomastahves/tumbaland/commit/181c40abf9a452c16219004c3ba40d336478c70e))
+
 ### [0.0.10](https://github.com/toomastahves/tumbaland/compare/v0.0.9...v0.0.10) (2025-07-05)
 
 
