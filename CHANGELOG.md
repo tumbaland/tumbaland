@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.13](https://github.com/toomastahves/tumbaland/compare/v0.0.12...v0.0.13) (2025-07-05)
+
+
+### Chores
+
+* **shell-front:** refactor config ([f4bd923](https://github.com/toomastahves/tumbaland/commit/f4bd9238d36bcaf30f7330397da714716d1787a6))
+
 ### [0.0.12](https://github.com/toomastahves/tumbaland/compare/v0.0.11...v0.0.12) (2025-07-05)
 
 
