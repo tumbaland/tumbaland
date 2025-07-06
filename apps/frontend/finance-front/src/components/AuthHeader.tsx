@@ -12,7 +12,8 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
-import { authService, User } from '../services/authService';
+import { authService } from '../services/authService';
+import { User } from '../types';
 
 const AuthHeader: React.FC = () => {
   const navigate = useNavigate();
