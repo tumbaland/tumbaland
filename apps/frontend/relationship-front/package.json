@@ -12,7 +12,6 @@
   "dependencies": {
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "axios": "^1.6.0",
     "@mui/material": "^7.1.2",
     "@mui/icons-material": "^7.1.2",
     "@emotion/react": "^11.11.1",

@@ -1,4 +1,4 @@
-import { apiClient } from './config';
+import { relationshipApi } from '../config/relationshipApi';
 
 export interface RelationshipStatistics {
   totalHoursTogether: number;
@@ -109,7 +109,7 @@ export interface CumulativeTimelineResponse {
  */
 export const getStatistics = async (timeframe: string = 'all'): Promise<RelationshipStatistics> => {
   try {
-    const response = await apiClient.get<StatisticsResponse>('/statistics', {
+    const response = await relationshipApi.get('/statistics', {
       params: { timeframe }    });
     return response.data.data;
   } catch (error: any) {
@@ -124,7 +124,7 @@ export const getStatistics = async (timeframe: string = 'all'): Promise<Relation
  */
 export const getMonthlyHours = async (year?: number): Promise<MonthlyHoursData[]> => {
   try {
-    const response = await apiClient.get<MonthlyHoursResponse>('/statistics/monthly-hours', {
+    const response = await relationshipApi.get('/statistics/monthly-hours', {
       params: year ? { year } : {}
     });
     return response.data.data;
@@ -140,7 +140,7 @@ export const getMonthlyHours = async (year?: number): Promise<MonthlyHoursData[]
  */
 export const getMonthlyStatistics = async (year?: number): Promise<MonthlyStatisticsData[]> => {
   try {
-    const response = await apiClient.get<MonthlyStatisticsResponse>('/statistics/monthly-stats', {
+    const response = await relationshipApi.get('/statistics/monthly-stats', {
       params: year ? { year } : {}
     });
     return response.data.data;
@@ -156,7 +156,7 @@ export const getMonthlyStatistics = async (year?: number): Promise<MonthlyStatis
  */
 export const getMonthlyActivityBreakdown = async (year?: number): Promise<MonthlyActivityData[]> => {
   try {
-    const response = await apiClient.get<MonthlyActivityBreakdownResponse>('/statistics/monthly-activity-breakdown', {
+    const response = await relationshipApi.get('/statistics/monthly-activity-breakdown', {
       params: year ? { year } : {}
     });
     return response.data.data;
@@ -172,7 +172,7 @@ export const getMonthlyActivityBreakdown = async (year?: number): Promise<Monthl
  */
 export const getWeeklyHeatmapData = async (year?: number): Promise<WeeklyHeatmapData[]> => {
   try {
-    const response = await apiClient.get<WeeklyHeatmapResponse>('/statistics/weekly-heatmap', {
+    const response = await relationshipApi.get('/statistics/weekly-heatmap', {
       params: year ? { year } : {}
     });
     return response.data.data;
@@ -188,7 +188,7 @@ export const getWeeklyHeatmapData = async (year?: number): Promise<WeeklyHeatmap
  */
 export const getCumulativeTimelineData = async (year?: number): Promise<CumulativeTimelineData[]> => {
   try {
-    const response = await apiClient.get<CumulativeTimelineResponse>('/statistics/cumulative-timeline', {
+    const response = await relationshipApi.get('/statistics/cumulative-timeline', {
       params: year ? { year } : {}
     });
     return response.data.data;

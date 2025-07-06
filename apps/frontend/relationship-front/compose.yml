@@ -3,13 +3,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        VITE_RELATIONSHIP_API_URL: ${VITE_RELATIONSHIP_API_URL}
-        VITE_AUTH_SERVICE_URL: ${VITE_AUTH_SERVICE_URL}
-        VITE_AUTH_FRONT_URL: ${VITE_AUTH_FRONT_URL}
-        NODE_ENV: production
     image: toomastahves/relationship-front:latest
     restart: unless-stopped
+    environment:
+      RELATIONSHIP_API_URL: ${VITE_RELATIONSHIP_API_URL}
+      AUTH_SERVICE_URL: ${VITE_AUTH_SERVICE_URL}
+      AUTH_FRONT_URL: ${VITE_AUTH_FRONT_URL}
     ports:
       - "3001:80"
     networks:

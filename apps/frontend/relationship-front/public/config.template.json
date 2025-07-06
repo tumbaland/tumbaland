@@ -1,0 +1,5 @@
+{
+  "RELATIONSHIP_API_URL": "http://localhost:3001",
+  "AUTH_SERVICE_URL": "http://localhost:5000",
+  "AUTH_FRONT_URL": "http://localhost:3010"
+}

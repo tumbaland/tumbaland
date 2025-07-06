@@ -1,32 +1,56 @@
 /**
- * Simple Auth Service Integration for Relationship App
- * Copy the auth service from libs/components/src/auth/authService.ts
+ * Functional Auth Service Integration for Album App
+ * Follows the same pattern as albumService and photoService
  */
 
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  picture?: string;
+import { AuthResponse, User } from '../types';
+import { getGlobalConfig } from '../config/ConfigProvider';
+
+// Helper to read JWT token from cookie
+function getJwtTokenFromCookie(cookieName = 'access_token'): string | null {
+  const match = document.cookie.match(new RegExp('(^| )' + cookieName + '=([^;]+)'));
+  return match ? match[2] : null;
 }
 
-export class AuthService {
-  private authServiceUrl: string;
-  private authFrontUrl: string;
-
-  constructor(
-    authServiceUrl = import.meta.env.VITE_AUTH_SERVICE_URL || 'http://localhost:5001',
-    authFrontUrl = import.meta.env.VITE_AUTH_FRONT_URL || 'http://localhost:3004'
-  ) {
-    this.authServiceUrl = authServiceUrl;
-    this.authFrontUrl = authFrontUrl;
+// Sync JWT token from cookie to localStorage
+function syncJwtToken(): void {
+  const token = getJwtTokenFromCookie();
+  console.log('token', token);
+  if (token && localStorage.getItem('authToken') !== token) {
+    localStorage.setItem('authToken', token);
   }
+}
 
-  async checkAuth(): Promise<{ authenticated: boolean; user: User | null }> {
+export const authService = {
+  // Initialize auth service (sync JWT from cookie)
+  init(): void {
+    syncJwtToken();
+  },
+
+  // Get JWT token from localStorage
+  getToken(): string | null {
+    return localStorage.getItem('authToken');
+  },
+
+  // Sync JWT token from cookie to localStorage
+  syncToken(): void {
+    syncJwtToken();
+  },
+
+  // Check authentication status
+  async checkAuth(): Promise<AuthResponse> {
     try {
-      const response = await fetch(`${this.authServiceUrl}/auth/verify`, {
+      const config = getGlobalConfig();
+      const response = await fetch(`${config.AUTH_SERVICE_URL}/auth/verify`, {
         credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const data = await response.json();
       return {
@@ -37,23 +61,36 @@ export class AuthService {
       console.error('Auth check failed:', error);
       return { authenticated: false, user: null };
     }
-  }
+  },
 
+  // Redirect to login page
   redirectToLogin(returnUrl?: string): void {
+    const config = getGlobalConfig();
     const currentUrl = returnUrl || window.location.href;
-    const loginUrl = `${this.authFrontUrl}?redirect_uri=${encodeURIComponent(currentUrl)}`;
+    const loginUrl = `${config.AUTH_FRONT_URL}?redirect_uri=${encodeURIComponent(currentUrl)}`;
     window.location.href = loginUrl;
-  }
+  },
 
+  // Logout user
   async logout(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.authServiceUrl}/auth/logout`, {
+      const config = getGlobalConfig();
+      const response = await fetch(`${config.AUTH_SERVICE_URL}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const data = await response.json();
       if (data.success) {
+        // Clear local storage auth token
+        localStorage.removeItem('authToken');
         window.location.reload(); // Refresh the page after logout
       }
       return data.success;
@@ -61,7 +98,17 @@ export class AuthService {
       console.error('Logout failed:', error);
       return false;
     }
-  }
-}
+  },
 
-export const authService = new AuthService();
+  // Get current user info
+  async getCurrentUser(): Promise<User | null> {
+    const authResult = await this.checkAuth();
+    return authResult.user;
+  },
+
+  // Check if user is authenticated
+  async isAuthenticated(): Promise<boolean> {
+    const authResult = await this.checkAuth();
+    return authResult.authenticated;
+  }
+};

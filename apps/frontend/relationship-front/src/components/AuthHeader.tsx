@@ -13,12 +13,13 @@ import {
   Divider
 } from '@mui/material';
 import { AccountCircle, Login, Logout } from '@mui/icons-material';
-import { authService, User } from '../services/authService';
+import { authService } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
 import { menuItems } from '../const/menuItems';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
+import { User } from '../types';
 
 interface AuthHeaderProps {}
 

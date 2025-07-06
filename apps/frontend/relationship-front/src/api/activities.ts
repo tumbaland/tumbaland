@@ -1,4 +1,4 @@
-import { apiClient } from './config';
+import { relationshipApi } from '../config/relationshipApi';
 import {
   Activity,
   CreateActivityRequest,
@@ -6,7 +6,6 @@ import {
   GetActivitiesFilters,
   ActivityStats,
   ActivityType,
-  ApiResponse,
   ActivitiesResponse
 } from './types';
 
@@ -16,7 +15,7 @@ import {
  * Create a new activity
  */
 export const createActivity = async (activityData: CreateActivityRequest): Promise<Activity> => {
-  const response = await apiClient.post<ApiResponse<Activity>>('/activities', activityData);
+  const response = await relationshipApi.post('/activities', activityData);
   return response.data.data;
 };
 
@@ -34,7 +33,7 @@ export const getActivities = async (filters?: GetActivitiesFilters): Promise<Act
   if (filters?.sortBy) params.append('sortBy', filters.sortBy);
   if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
 
-  const response = await apiClient.get<ApiResponse<ActivitiesResponse>>(
+  const response = await relationshipApi.get(
     `/activities${params.toString() ? `?${params.toString()}` : ''}`
   );
   return response.data.data;
@@ -44,7 +43,7 @@ export const getActivities = async (filters?: GetActivitiesFilters): Promise<Act
  * Get activity by ID
  */
 export const getActivityById = async (id: string): Promise<Activity> => {
-  const response = await apiClient.get<ApiResponse<Activity>>(`/activities/${id}`);
+  const response = await relationshipApi.get(`/activities/${id}`);
   return response.data.data;
 };
 
@@ -52,7 +51,7 @@ export const getActivityById = async (id: string): Promise<Activity> => {
  * Update activity by ID
  */
 export const updateActivity = async (id: string, updateData: UpdateActivityRequest): Promise<Activity> => {
-  const response = await apiClient.put<ApiResponse<Activity>>(`/activities/${id}`, updateData);
+  const response = await relationshipApi.put(`/activities/${id}`, updateData);
   return response.data.data;
 };
 
@@ -60,7 +59,7 @@ export const updateActivity = async (id: string, updateData: UpdateActivityReque
  * Delete activity by ID
  */
 export const deleteActivity = async (id: string): Promise<void> => {
-  await apiClient.delete(`/activities/${id}`);
+  await relationshipApi.delete(`/activities/${id}`);
 };
 
 /**
@@ -72,7 +71,7 @@ export const getActivityStats = async (filters?: { startDate?: Date | string; en
   if (filters?.startDate) params.append('startDate', new Date(filters.startDate).toISOString());
   if (filters?.endDate) params.append('endDate', new Date(filters.endDate).toISOString());
 
-  const response = await apiClient.get<ApiResponse<ActivityStats>>(
+  const response = await relationshipApi.get(
     `/activities/stats${params.toString() ? `?${params.toString()}` : ''}`
   );
   return response.data.data;
@@ -86,7 +85,7 @@ export const getActivitiesByDateRange = async (startDate: Date | string, endDate
   params.append('startDate', new Date(startDate).toISOString());
   params.append('endDate', new Date(endDate).toISOString());
 
-  const response = await apiClient.get<ApiResponse<Activity[]>>(`/activities/date-range?${params.toString()}`);
+  const response = await relationshipApi.get(`/activities/date-range?${params.toString()}`);
   return response.data.data;
 };
 
@@ -94,7 +93,7 @@ export const getActivitiesByDateRange = async (startDate: Date | string, endDate
  * Get recent activities
  */
 export const getRecentActivities = async (limit: number = 10): Promise<Activity[]> => {
-  const response = await apiClient.get<ApiResponse<Activity[]>>(`/activities/recent?limit=${limit}`);
+  const response = await relationshipApi.get(`/activities/recent?limit=${limit}`);
   return response.data.data;
 };
 
@@ -102,6 +101,6 @@ export const getRecentActivities = async (limit: number = 10): Promise<Activity[
  * Get available activity types
  */
 export const getActivityTypes = async (): Promise<ActivityType[]> => {
-  const response = await apiClient.get<ApiResponse<ActivityType[]>>('/activities/types');
+  const response = await relationshipApi.get('/activities/types');
   return response.data.data;
 };

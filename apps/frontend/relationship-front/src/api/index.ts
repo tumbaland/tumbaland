@@ -1,11 +1,10 @@
 // Export all API functions and types from a single entry point
 export * from './types';
-export * from './config';
 export * from './activities';
 export * from './statistics';
 
 // Convenience re-exports for commonly used items
-export { apiClient as api } from './config';
+export { relationshipApi as api } from '../config/relationshipApi';
 export {
   createActivity,
   getActivities,
