@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.14](https://github.com/toomastahves/tumbaland/compare/v0.0.13...v0.0.14) (2025-07-05)
+
+
+### Chores
+
+* **auth-front:** use config provider ([12eae88](https://github.com/toomastahves/tumbaland/commit/12eae88f892e3b2747151a2a9ab9d65df756c3fb))
+
 ### [0.0.13](https://github.com/toomastahves/tumbaland/compare/v0.0.12...v0.0.13) (2025-07-05)
 
 
