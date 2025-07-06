@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.18](https://github.com/toomastahves/tumbaland/compare/v0.0.17...v0.0.18) (2025-07-06)
+
+
+### Features
+
+* **relationship-front:** remove axios and add config provider ([8efe51e](https://github.com/toomastahves/tumbaland/commit/8efe51e87a23443dafbbd7d07aad0abe21a60f43))
+
 ### [0.0.17](https://github.com/toomastahves/tumbaland/compare/v0.0.16...v0.0.17) (2025-07-06)
 
 
