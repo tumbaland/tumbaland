@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.17](https://github.com/toomastahves/tumbaland/compare/v0.0.16...v0.0.17) (2025-07-06)
+
+
+### Features
+
+* **finance-front:** remove axios ([f8e8e8c](https://github.com/toomastahves/tumbaland/commit/f8e8e8c7923c5cebeecc70de5971a926d7f1828b))
+
 ### [0.0.16](https://github.com/toomastahves/tumbaland/compare/v0.0.15...v0.0.16) (2025-07-06)
 
 
