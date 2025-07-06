@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.19](https://github.com/toomastahves/tumbaland/compare/v0.0.18...v0.0.19) (2025-07-06)
+
+
+### Chores
+
+* **workflows:** remove build args ([6287d48](https://github.com/toomastahves/tumbaland/commit/6287d48699dcff2ac107e1841d11cf5009593bb9))
+
 ### [0.0.18](https://github.com/toomastahves/tumbaland/compare/v0.0.17...v0.0.18) (2025-07-06)
 
 
