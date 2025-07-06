@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.24](https://github.com/toomastahves/tumbaland/compare/v0.0.23...v0.0.24) (2025-07-06)
+
+
+### Bug Fixes
+
+* **shell-front:** show loader between navigations ([8e04c8c](https://github.com/toomastahves/tumbaland/commit/8e04c8c81ef72e722b46a3af66189eaaa64fa98c))
+
 ### [0.0.23](https://github.com/toomastahves/tumbaland/compare/v0.0.22...v0.0.23) (2025-07-06)
 
 
