@@ -5,7 +5,7 @@ import { useConfig } from '../hooks/useConfig';
 
 export default function TodoCard() {
   const config = useConfig();
-  const API_URL = config.VITE_PUBLIC_API_URL;
+  const API_URL = config.PUBLIC_API_URL;
   const [todo, setTodo] = useState<string | null>(null);
 
   useEffect(() => {

@@ -1,11 +1,8 @@
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useState, ReactNode } from 'react';
-
-import AlbumIcon from '@mui/icons-material/PhotoAlbum';
-import FavoriteIcon from '@mui/icons-material/Favorite';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import { useLocation } from 'react-router-dom';
+import { useState, ReactNode, useEffect } from 'react';
 import CircularProgress from '@mui/material/CircularProgress';
 import { SideMenu } from './SideMenu';
+import { getAppByRoute } from '../config/apps';
 import { useConfig } from '../hooks/useConfig';
 
 interface LayoutProps {
@@ -13,50 +10,19 @@ interface LayoutProps {
 }
 
 export default function Layout({ children }: LayoutProps) {
-  const config = useConfig();
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
   const location = useLocation();
+  const config = useConfig();
+  
+  const currentApp = getAppByRoute(location.pathname);
+  const appUrl = currentApp?.urlKey ? config[currentApp.urlKey] : undefined;
+  const showIframe = appUrl && location.pathname !== '/';
 
-  const appLinks = [
-    {
-      name: 'Relationship',
-      route: '/relationship',
-      url: config.VITE_RELATIONSHIP_URL || 'http://localhost:3001',
-      icon: <FavoriteIcon sx={{ color: '#334155' }} />,
-    },
-    {
-      name: 'Album',
-      route: '/album',
-      url: config.VITE_ALBUM_URL || 'http://localhost:3002',
-      icon: <AlbumIcon sx={{ color: '#334155' }} />,
-    },
-    {
-      name: 'Finance',
-      route: '/finance',
-      url: config.VITE_FINANCE_URL || 'http://localhost:3003',
-      icon: <AttachMoneyIcon sx={{ color: '#334155' }} />,
-    },
-  ];
-
-  // Map route paths to app URLs
-  const routeToUrl: Record<string, string> = {
-    '/relationship': appLinks[0].url,
-    '/album': appLinks[1].url,
-    '/finance': appLinks[2].url,
-  };
-
-  // Determine which iframe to show based on the route
-  const iframeUrl = routeToUrl[location.pathname] || null;
-
-  const handleLinkClick = (url: string) => {
-    // Find the route for the clicked URL
-    const route = Object.entries(routeToUrl).find(([, v]) => v === url)?.[0];
-    if (route) {
-      navigate(route);
+  useEffect(() => {
+    if (showIframe) {
       setLoading(true);
     }
-  };
+  }, [showIframe]);
 
   return (
     <div style={{
@@ -65,14 +31,9 @@ export default function Layout({ children }: LayoutProps) {
       background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)',
       fontFamily: 'Inter, sans-serif',
     }}>
-      <SideMenu 
-        appLinks={appLinks} 
-        onLinkClick={handleLinkClick}
-        currentRoute={location.pathname}
-        routeToUrl={routeToUrl}
-      />
+      <SideMenu currentRoute={location.pathname} />
       <div style={{ flex: 1, display: 'flex', alignItems: 'stretch', justifyContent: 'center', position: 'relative' }}>
-        {iframeUrl ? (
+        {showIframe ? (
           <>
             {loading && (
               <div style={{
@@ -91,8 +52,8 @@ export default function Layout({ children }: LayoutProps) {
               </div>
             )}
             <iframe
-              src={iframeUrl}
-              title="App Content"
+              src={appUrl}
+              title={currentApp!.name}
               style={{ width: '100%', height: '100vh', border: 'none', zIndex: 1 }}
               allow="fullscreen"
               onLoad={() => setLoading(false)}

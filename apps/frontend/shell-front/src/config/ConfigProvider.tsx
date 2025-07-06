@@ -4,10 +4,10 @@ import { Loader } from "../components/Loader";
 import { ErrorPage } from "../components/ErrorPage";
 
 export interface AppConfig {
-  VITE_RELATIONSHIP_URL?: string;
-  VITE_ALBUM_URL?: string;
-  VITE_FINANCE_URL?: string;
-  VITE_PUBLIC_API_URL?: string;
+  RELATIONSHIP_URL?: string;
+  ALBUM_URL?: string;
+  FINANCE_URL?: string;
+  PUBLIC_API_URL?: string;
 }
 
 // Global config variable for non-React code access
@@ -42,10 +42,10 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
         // Fallback for local dev: use Vite env vars if available
         if (import.meta && import.meta.env && import.meta.env.DEV) {
           const devConfig: AppConfig = {
-            VITE_RELATIONSHIP_URL: import.meta.env.VITE_RELATIONSHIP_URL,
-            VITE_ALBUM_URL: import.meta.env.VITE_ALBUM_URL,
-            VITE_FINANCE_URL: import.meta.env.VITE_FINANCE_URL,
-            VITE_PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL,
+            RELATIONSHIP_URL: import.meta.env.VITE_RELATIONSHIP_URL,
+            ALBUM_URL: import.meta.env.VITE_ALBUM_URL,
+            FINANCE_URL: import.meta.env.VITE_FINANCE_URL,
+            PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL,
           };
           globalConfig = devConfig;
           setConfig(devConfig);

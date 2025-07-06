@@ -1,0 +1,4 @@
+{
+  "ALBUM_API_URL": "{{ALBUM_API_URL}}",
+  "AUTH_SERVICE_URL": "{{AUTH_SERVICE_URL}}"
+}

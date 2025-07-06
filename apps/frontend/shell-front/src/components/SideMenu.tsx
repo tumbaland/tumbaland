@@ -1,4 +1,5 @@
-import React, { cloneElement, useState } from "react";
+import { useState } from "react";
+import { useNavigate } from 'react-router-dom';
 import Drawer from "@mui/material/Drawer";
 import Box from "@mui/material/Box";
 import List from "@mui/material/List";
@@ -6,39 +7,29 @@ import ListItem from "@mui/material/ListItem";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import Tooltip from "@mui/material/Tooltip";
-import HomeIcon from "@mui/icons-material/Home";
 import MenuIcon from "@mui/icons-material/Menu";
 import IconButton from "@mui/material/IconButton";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useTheme } from "@mui/material/styles";
+import { APPS } from '../config/apps';
 
-export interface AppLink {
-  name: string;
-  url: string;
-  icon: React.ReactElement;
+interface SideMenuProps {
+  currentRoute?: string;
 }
 
-export { SideMenu };
-
-function SideMenu({ appLinks, onLinkClick, currentRoute, routeToUrl }: {
-  appLinks: AppLink[];
-  onLinkClick?: (url: string) => void;
-  currentRoute?: string;
-  routeToUrl?: Record<string, string>;
-}) {
-  const homeUrl = "/";
+export function SideMenu({ currentRoute }: SideMenuProps) {
+  const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const isCurrent = (url: string) => {
-    if (currentRoute && routeToUrl) {
-      return routeToUrl[currentRoute] === url;
-    }
-    return false;
+  const handleAppClick = (route: string) => {
+    navigate(route);
+    if (isMobile) setMobileOpen(false);
   };
 
-  // Drawer content as a function for reuse
+  const isActive = (route: string) => currentRoute === route;
+
   const drawerContent = (
     <Box sx={{
       mt: 9,
@@ -53,99 +44,37 @@ function SideMenu({ appLinks, onLinkClick, currentRoute, routeToUrl }: {
       minWidth: 0,
     }}>
       <List sx={{ width: '100%', p: 0 }}>
-      <Tooltip key="Home" title="Home" placement="right" arrow>
-        <ListItem disablePadding>
-          <ListItemButton
-            component="a"
-            href={homeUrl}
-            disabled={isCurrent(homeUrl)}
-            sx={{ justifyContent: "center", minHeight: 56 }}
-            onClick={() => isMobile && setMobileOpen(false)}
-          >
-            <ListItemIcon
-              sx={{
-                color: "inherit",
-                minWidth: 0,
-                justifyContent: "center",
-              }}
-            >
-              <HomeIcon />
-            </ListItemIcon>
-          </ListItemButton>
-        </ListItem>
-      </Tooltip>
-      {appLinks.map((link: AppLink) => {
-        const current = isCurrent(link.url);
-        let iconColor = undefined;
-        if (current) {
-          if (link.name.toLowerCase().includes("relationship")) iconColor = "#ef4444";
-          else if (link.name.toLowerCase().includes("album")) iconColor = "#3b82f6";
-          else if (link.name.toLowerCase().includes("finance") || link.name.toLowerCase().includes("money")) iconColor = "#22c55e";
-        }
-        const icon = current && iconColor
-          ? cloneElement(link.icon as React.ReactElement<any>, { sx: { ...((link.icon as React.ReactElement<any>).props.sx || {}), color: iconColor } })
-          : link.icon;
-        return (
-          <Tooltip key={link.name} title={link.name} placement="right" arrow>
-            <ListItem disablePadding>
-              {onLinkClick ? (
+        {APPS.map((app) => {
+          const IconComponent = app.icon;
+          const active = isActive(app.route);
+          
+          return (
+            <Tooltip key={app.name} title={app.name} placement="right" arrow>
+              <ListItem disablePadding>
                 <ListItemButton
-                  onClick={() => {
-                    if (!current) onLinkClick(link.url);
-                    if (isMobile) setMobileOpen(false);
-                  }}
-                  disabled={current}
+                  onClick={() => handleAppClick(app.route)}
+                  disabled={active}
                   sx={{
                     justifyContent: "center",
                     minHeight: 56,
-                    color: current ? "#fff" : undefined,
-                    borderRadius: current ? "12px" : undefined,
-                    boxShadow: current ? "0 2px 8px 0 #6366f133" : undefined,
-                    fontWeight: current ? 700 : undefined,
-                    transition: "all 0.2s",
+                    backgroundColor: 'transparent',
+                    color: active ? app.color : '#334155'
                   }}
                 >
                   <ListItemIcon
                     sx={{
-                      color: current ? iconColor : undefined,
+                      color: 'inherit',
                       minWidth: 0,
                       justifyContent: "center",
                     }}
                   >
-                    {icon}
+                    <IconComponent />
                   </ListItemIcon>
                 </ListItemButton>
-              ) : (
-                <ListItemButton
-                  component="a"
-                  href={link.url}
-                  disabled={current}
-                  sx={{
-                    justifyContent: "center",
-                    minHeight: 56,
-                    color: current ? "#fff" : undefined,
-                    borderRadius: current ? "12px" : undefined,
-                    boxShadow: current ? "0 2px 8px 0 #6366f133" : undefined,
-                    fontWeight: current ? 700 : undefined,
-                    transition: "all 0.2s",
-                  }}
-                  onClick={() => isMobile && setMobileOpen(false)}
-                >
-                  <ListItemIcon
-                    sx={{
-                      color: current ? iconColor : undefined,
-                      minWidth: 0,
-                      justifyContent: "center",
-                    }}
-                  >
-                    {icon}
-                  </ListItemIcon>
-                </ListItemButton>
-              )}
-            </ListItem>
-          </Tooltip>
-        );
-      })}
+              </ListItem>
+            </Tooltip>
+          );
+        })}
       </List>
     </Box>
   );
@@ -202,5 +131,4 @@ function SideMenu({ appLinks, onLinkClick, currentRoute, routeToUrl }: {
       {drawerContent}
     </Drawer>
   );
-
 }

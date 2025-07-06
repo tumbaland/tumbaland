@@ -1,12 +1,12 @@
 import { BrowserRouter } from "react-router-dom";
 import Layout from "./components/Layout";
-import TodoCard from "./components/TodoCard";
+import AppRoutes from "./routes/AppRoutes";
 
 function App() {
   return (
     <BrowserRouter>
       <Layout>
-        <TodoCard />
+        <AppRoutes />
       </Layout>
     </BrowserRouter>
   );
