@@ -1,25 +1,25 @@
-import { apiClient } from '../api/config';
+import { financeApi } from '../config/financeApi';
 
 export const getFinanceRecords = async () => {
-  const response = await apiClient.get(`/finance-records`);
+  const response = await financeApi.get(`/finance-records`);
   return response.data;
 };
 
 export const createFinanceRecord = async (data: any) => {
-  const response = await apiClient.post(`/finance-records`, data);
+  const response = await financeApi.post(`/finance-records`, data);
   return response.data;
 };
 
 export const deleteFinanceRecord = async (id: string) => {
-  const response = await apiClient.delete(`/finance-records/${id}`);
+  const response = await financeApi.delete(`/finance-records/${id}`);
   return response.data;
 };
 
 export const updateFinanceRecord = async (id: string, data: any) => {
-  const response = await apiClient.put(`/finance-records/${id}`, data);
+  const response = await financeApi.put(`/finance-records/${id}`, data);
   return response.data;
 };
 
 export const fetchFinanceRecords = async () => {
-  return apiClient.post('/finance-records/fetch');
+  return financeApi.post('/finance-records/fetch');
 };

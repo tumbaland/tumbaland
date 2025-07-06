@@ -13,5 +13,3 @@ if (element) {
     </React.StrictMode>
   );
 }
-
-export { App };
