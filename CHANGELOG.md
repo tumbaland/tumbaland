@@ -1,4 +1,12 @@
 # Tumbalog
+### [0.0.15](https://github.com/toomastahves/tumbaland/compare/v0.0.14...v0.0.15) (2025-07-06)
+
+
+### Features
+
+* **finance-front:** use config provider ([5f902d7](https://github.com/toomastahves/tumbaland/commit/5f902d7a1226871be19bba0acc0d143d120c4ca5))
+* **shell-front:** update config provider ([9307280](https://github.com/toomastahves/tumbaland/commit/93072802376277a023dc5e13338098bfcb5120d4))
+
 ### [0.0.14](https://github.com/toomastahves/tumbaland/compare/v0.0.13...v0.0.14) (2025-07-05)
 
 
