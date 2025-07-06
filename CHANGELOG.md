@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.23](https://github.com/toomastahves/tumbaland/compare/v0.0.22...v0.0.23) (2025-07-06)
+
+
+### Bug Fixes
+
+* **shell-front:** entrypoint location ([d632390](https://github.com/toomastahves/tumbaland/commit/d63239003c84145764ca0fe3aed08bb6ce42c8c8))
+
 ### [0.0.22](https://github.com/toomastahves/tumbaland/compare/v0.0.21...v0.0.22) (2025-07-06)
 
 
