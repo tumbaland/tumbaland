@@ -1,19 +1,19 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useState, ReactNode, useContext } from 'react';
+import { useState, ReactNode } from 'react';
 
 import AlbumIcon from '@mui/icons-material/PhotoAlbum';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import CircularProgress from '@mui/material/CircularProgress';
 import { SideMenu } from './SideMenu';
-import { ConfigContext } from '../App';
+import { useConfig } from '../hooks/useConfig';
 
 interface LayoutProps {
   children: ReactNode;
 }
 
 export default function Layout({ children }: LayoutProps) {
-  const config = useContext(ConfigContext);
+  const config = useConfig();
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();

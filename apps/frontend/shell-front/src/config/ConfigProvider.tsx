@@ -1,6 +1,5 @@
-import { useEffect, useState, ReactNode } from "react";
+import { createContext, useEffect, useState, ReactNode } from "react";
 import { CssBaseline } from "@mui/material";
-import { ConfigContext } from "../App";
 import { Loader } from "../components/Loader";
 import { ErrorPage } from "../components/ErrorPage";
 
@@ -10,6 +9,16 @@ export interface AppConfig {
   VITE_FINANCE_URL?: string;
   VITE_PUBLIC_API_URL?: string;
 }
+
+// Global config variable for non-React code access
+let globalConfig: AppConfig = {};
+
+export function getGlobalConfig(): AppConfig {
+  return globalConfig;
+}
+
+// Create the context in the same file as the provider
+export const ConfigContext = createContext<AppConfig>({});
 
 interface ConfigProviderProps {
   children: ReactNode;
@@ -25,7 +34,10 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
         if (!res.ok) throw new Error("Config fetch failed");
         return res.json();
       })
-      .then(setConfig)
+      .then((loadedConfig: AppConfig) => {
+        globalConfig = loadedConfig;
+        setConfig(loadedConfig);
+      })
       .catch((err) => {
         // Fallback for local dev: use Vite env vars if available
         if (import.meta && import.meta.env && import.meta.env.DEV) {
@@ -35,6 +47,7 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
             VITE_FINANCE_URL: import.meta.env.VITE_FINANCE_URL,
             VITE_PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL,
           };
+          globalConfig = devConfig;
           setConfig(devConfig);
         } else {
           setError(err.message);
