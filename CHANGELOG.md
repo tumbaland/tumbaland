@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.16](https://github.com/toomastahves/tumbaland/compare/v0.0.15...v0.0.16) (2025-07-06)
+
+
+### Bug Fixes
+
+* **finance-front:** env vars ([14c5dba](https://github.com/toomastahves/tumbaland/commit/14c5dba573254176a14128fe354eac94a4ed95a8))
+
 ### [0.0.15](https://github.com/toomastahves/tumbaland/compare/v0.0.14...v0.0.15) (2025-07-06)
 
 
