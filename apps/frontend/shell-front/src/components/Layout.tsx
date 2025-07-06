@@ -22,7 +22,7 @@ export default function Layout({ children }: LayoutProps) {
     if (showIframe) {
       setLoading(true);
     }
-  }, [showIframe]);
+  }, [appUrl]); // Trigger loading when the URL changes, not just showIframe
 
   return (
     <div style={{
