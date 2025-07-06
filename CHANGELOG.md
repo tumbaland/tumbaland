@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.20](https://github.com/toomastahves/tumbaland/compare/v0.0.19...v0.0.20) (2025-07-06)
+
+
+### Bug Fixes
+
+* **relationship-front:** generate vars ([1e6eaab](https://github.com/toomastahves/tumbaland/commit/1e6eaabfc287390b0d61dc610c1656d21879ffff))
+
 ### [0.0.19](https://github.com/toomastahves/tumbaland/compare/v0.0.18...v0.0.19) (2025-07-06)
 
 
