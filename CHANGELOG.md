@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.32](https://github.com/toomastahves/tumbaland/compare/v0.0.31...v0.0.32) (2025-07-07)
+
+
+### Features
+
+* add activities per category and timeframe ([8ce2805](https://github.com/toomastahves/tumbaland/commit/8ce28051b440e1bc5204f82c571207abcbfdb571))
+
 ### [0.0.31](https://github.com/toomastahves/tumbaland/compare/v0.0.30...v0.0.31) (2025-07-07)
 
 
