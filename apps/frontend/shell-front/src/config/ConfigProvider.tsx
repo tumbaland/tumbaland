@@ -1,24 +1,44 @@
-import { createContext, useEffect, useState, ReactNode } from "react";
+import { useEffect, useState, ReactNode } from "react";
 import { CssBaseline } from "@mui/material";
 import { Loader } from "../components/Loader";
 import { ErrorPage } from "../components/ErrorPage";
+import React from "react";
 
 export interface AppConfig {
-  RELATIONSHIP_URL?: string;
   ALBUM_URL?: string;
   FINANCE_URL?: string;
+  RELATIONSHIP_URL?: string;
   PUBLIC_API_URL?: string;
 }
 
-// Global config variable for non-React code access
-let globalConfig: AppConfig = {};
+// Global configuration holder for non-React services
+let globalConfig: AppConfig | null = null;
 
-export function getGlobalConfig(): AppConfig {
-  return globalConfig;
+export const ConfigContext = React.createContext<AppConfig>({});
+
+// Helper function to create config from environment variables
+function createDevConfig(): AppConfig {
+  return {
+    ALBUM_URL: import.meta.env.VITE_ALBUM_URL,
+    FINANCE_URL: import.meta.env.VITE_FINANCE_URL,
+    RELATIONSHIP_URL: import.meta.env.VITE_RELATIONSHIP_URL,
+    PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL,
+  };
 }
 
-// Create the context in the same file as the provider
-export const ConfigContext = createContext<AppConfig>({});
+export function getGlobalConfig(): AppConfig {
+  if (!globalConfig) {
+    // During HMR in development, config might be temporarily unavailable
+    if (import.meta && import.meta.env && import.meta.env.DEV) {
+      // Return a safe fallback config during HMR using environment variables
+      const fallbackConfig = createDevConfig();
+      console.warn('Using fallback configuration during HMR:', fallbackConfig);
+      return fallbackConfig;
+    }
+    throw new Error('Configuration not initialized. Make sure ConfigProvider is mounted.');
+  }
+  return globalConfig;
+}
 
 interface ConfigProviderProps {
   children: ReactNode;
@@ -29,29 +49,30 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // In development, use environment variables directly
+    if (import.meta && import.meta.env && import.meta.env.DEV) {
+      const devConfig = createDevConfig();
+      console.log('Using development configuration from environment variables:', devConfig);
+      setConfig(devConfig);
+      globalConfig = devConfig;
+      return;
+    }
+
+    // In production, fetch config.json
     fetch("/config.json")
       .then((res) => {
         if (!res.ok) throw new Error("Config fetch failed");
         return res.json();
       })
-      .then((loadedConfig: AppConfig) => {
-        globalConfig = loadedConfig;
+      .then((loadedConfig) => {
+        console.log('Using production configuration from config.json:', loadedConfig);
         setConfig(loadedConfig);
+        // Set global config for non-React services
+        globalConfig = loadedConfig;
       })
       .catch((err) => {
-        // Fallback for local dev: use Vite env vars if available
-        if (import.meta && import.meta.env && import.meta.env.DEV) {
-          const devConfig: AppConfig = {
-            RELATIONSHIP_URL: import.meta.env.VITE_RELATIONSHIP_URL,
-            ALBUM_URL: import.meta.env.VITE_ALBUM_URL,
-            FINANCE_URL: import.meta.env.VITE_FINANCE_URL,
-            PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL,
-          };
-          globalConfig = devConfig;
-          setConfig(devConfig);
-        } else {
-          setError(err.message);
-        }
+        console.error('Configuration load error:', err);
+        setError(err.message);
       });
   }, []);
 
