@@ -446,7 +446,7 @@ const MonthlyStackedBarChart: React.FC<StackedBarChartProps> = ({
               {data.reduce((sum, item) => sum + item.daysWithSex, 0)}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Total Sex Days
+              Total Love Days
             </Typography>
           </Box>
           <Box textAlign="center">

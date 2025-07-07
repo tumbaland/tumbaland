@@ -245,3 +245,53 @@ export const getActivityTypes = async (req: Request, res: Response): Promise<voi
     });
   }
 };
+
+// Get recent activities summary by category and timeline
+export const getRecentActivitiesSummary = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const categories = ['movies', 'cooking', 'dining', 'coffee', 'gaming', 'other'];
+    const timelines = [
+      { label: 'Last Month', months: 1 },
+      { label: 'Last 3 Months', months: 3 },
+      { label: 'Last Year', months: 12 }
+    ];
+
+    const result: Record<string, any> = {};
+
+    for (const category of categories) {
+      result[category] = {};
+      
+      for (const timeline of timelines) {
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setMonth(startDate.getMonth() - timeline.months);
+
+        // Get all activities for this category and timeframe
+        const allActivities = await ActivityService.getActivitiesByDateRange(startDate, endDate);
+        
+        // Filter by activity type and sort from oldest to newest (reverse order)
+        const activities = allActivities
+          .filter(activity => activity.activity.type === category)
+          .sort((a, b) => {
+            const dateA = new Date(a.date);
+            const dateB = new Date(b.date);
+            return dateA.getTime() - dateB.getTime(); // Oldest first
+          });
+
+        result[category][`${timeline.months}months`] = {
+          label: timeline.label,
+          activities: activities
+        };
+      }
+    }
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      error: error.message
+    });
+  }
+};

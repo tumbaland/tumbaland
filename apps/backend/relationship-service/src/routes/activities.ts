@@ -8,6 +8,7 @@ import {
   getActivityStats,
   getActivitiesByDateRange,
   getRecentActivities,
+  getRecentActivitiesSummary,
   getActivityTypes
 } from '../controllers/activity.controller';
 import { authenticateToken } from '../middleware/authMiddleware';
@@ -18,6 +19,7 @@ const router = Router();
 router.post('/', authenticateToken, createActivity);
 router.get('/', authenticateToken, getActivities);
 router.get('/recent', authenticateToken, getRecentActivities);
+router.get('/recent-summary', authenticateToken, getRecentActivitiesSummary);
 router.get('/stats', authenticateToken, getActivityStats);
 router.get('/date-range', authenticateToken, getActivitiesByDateRange);
 router.get('/types', authenticateToken, getActivityTypes);

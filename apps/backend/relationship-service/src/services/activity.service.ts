@@ -28,7 +28,7 @@ export const getActivities = async (filters: {
       limit = 20,
       page = 1,
       sortBy = 'date',
-      sortOrder = 'desc'
+      sortOrder = 'asc'
     } = filters;
 
     // Build query

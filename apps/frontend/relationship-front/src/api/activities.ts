@@ -104,3 +104,11 @@ export const getActivityTypes = async (): Promise<ActivityType[]> => {
   const response = await relationshipApi.get('/activities/types');
   return response.data.data;
 };
+
+/**
+ * Get recent activities summary by category and timeline
+ */
+export const getRecentActivitiesSummary = async (): Promise<any> => {
+  const response = await relationshipApi.get('/activities/recent-summary');
+  return response.data.data;
+};

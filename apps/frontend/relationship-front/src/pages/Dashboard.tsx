@@ -1,6 +1,7 @@
 import React from "react";
 import { Box } from "@mui/material";
 import StatsCards from "../components/StatsCards";
+import RecentActivitiesCards from "../components/RecentActivitiesCards";
 import HoursBarChart from "../components/HoursBarChart";
 import MonthlyStackedBarChart from "../components/MonthlyStackedBarChart";
 import ActivityStackedBarChart from "../components/ActivityStackedBarChart";
@@ -11,6 +12,7 @@ const Dashboard: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <StatsCards />
+      <RecentActivitiesCards />
       <Box sx={{ mb: 4, width: "100%" }}>
         <HoursBarChart />
       </Box>
