@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.28](https://github.com/toomastahves/tumbaland/compare/v0.0.27...v0.0.28) (2025-07-07)
+
+
+### Features
+
+* fix config provider for local env ([ddebbc9](https://github.com/toomastahves/tumbaland/commit/ddebbc95921395597d2668a4982a4978f15e399e))
+
 ### [0.0.27](https://github.com/toomastahves/tumbaland/compare/v0.0.26...v0.0.27) (2025-07-07)
 
 
