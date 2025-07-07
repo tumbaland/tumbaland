@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.31](https://github.com/toomastahves/tumbaland/compare/v0.0.30...v0.0.31) (2025-07-07)
+
+
+### Features
+
+* **relationship-front:** set cumulative timelne labels ([4e3b4a6](https://github.com/toomastahves/tumbaland/commit/4e3b4a6d1f6bffcd94a62a1aa621974188850cce))
+
 ### [0.0.30](https://github.com/toomastahves/tumbaland/compare/v0.0.29...v0.0.30) (2025-07-07)
 
 
