@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.29](https://github.com/toomastahves/tumbaland/compare/v0.0.28...v0.0.29) (2025-07-07)
+
+
+### Bug Fixes
+
+* **album-front:** set correct export ([46d5fa7](https://github.com/toomastahves/tumbaland/commit/46d5fa7b2c85d6b240697399f1e9f34154d29999))
+
 ### [0.0.28](https://github.com/toomastahves/tumbaland/compare/v0.0.27...v0.0.28) (2025-07-07)
 
 
