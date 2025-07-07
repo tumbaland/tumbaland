@@ -14,19 +14,25 @@ import {
   Alert,
   CircularProgress,
   Fab,
-  IconButton
+  IconButton,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText
 } from '@mui/material';
 import {
   Search as SearchIcon,
   Add as AddIcon,
   PhotoLibrary as PhotoLibraryIcon,
-  MoreVert as MoreVertIcon
+  MoreVert as MoreVertIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAlbums } from '../hooks/useAlbums';
 import AlbumCard from '../components/AlbumCard';
 import EditAlbumDialog from '../components/EditAlbumDialog';
-import { albumService } from '../services/albumService';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { Album } from '../types';
 
 const AlbumsPage: React.FC = () => {
@@ -43,12 +49,18 @@ const AlbumsPage: React.FC = () => {
   const [creating, setCreating] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingAlbum, setEditingAlbum] = useState<Album | null>(null);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [albumToDelete, setAlbumToDelete] = useState<Album | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const { 
     albums, 
     loading, 
     error: albumsError, 
     createAlbum, 
+    updateAlbum,
     deleteAlbum 
   } = useAlbums({
     search: searchTerm || undefined,
@@ -77,13 +89,28 @@ const AlbumsPage: React.FC = () => {
   };
 
   const handleDeleteAlbum = async (album: Album) => {
-    if (window.confirm(`Are you sure you want to delete "${album.name}"? This will also delete all photos in the album.`)) {
-      try {
-        await deleteAlbum(album._id);
-      } catch (err) {
-        alert('Failed to delete album');
-      }
+    setAlbumToDelete(album);
+    setShowDeleteDialog(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!albumToDelete) return;
+
+    setDeleting(true);
+    try {
+      await deleteAlbum(albumToDelete._id);
+      setShowDeleteDialog(false);
+      setAlbumToDelete(null);
+    } catch (err) {
+      alert('Failed to delete album');
+    } finally {
+      setDeleting(false);
     }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteDialog(false);
+    setAlbumToDelete(null);
   };
 
   const handleAddTag = (event: React.KeyboardEvent) => {
@@ -122,8 +149,37 @@ const AlbumsPage: React.FC = () => {
   };
 
   const handleSaveEditAlbum = async (albumId: string, data: { name: string; description: string }) => {
-    await albumService.updateAlbum(albumId, data);
-    // Optionally, refresh albums list here if needed
+    try {
+      await updateAlbum(albumId, data);
+    } catch (err) {
+      console.error('Failed to update album:', err);
+      alert('Failed to update album');
+    }
+  };
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLButtonElement>, album: Album) => {
+    event.stopPropagation();
+    setAnchorEl(event.currentTarget);
+    setSelectedAlbum(album);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedAlbum(null);
+  };
+
+  const handleMenuEdit = () => {
+    if (selectedAlbum) {
+      handleOpenEditDialog(selectedAlbum);
+    }
+    handleMenuClose();
+  };
+
+  const handleMenuDelete = () => {
+    if (selectedAlbum) {
+      handleDeleteAlbum(selectedAlbum);
+    }
+    handleMenuClose();
   };
 
   if (loading) {
@@ -221,7 +277,7 @@ const AlbumsPage: React.FC = () => {
               onDelete={handleDeleteAlbum}
               editButton={
                 <IconButton
-                  onClick={e => { e.stopPropagation(); handleOpenEditDialog(album); }}
+                  onClick={(e) => handleMenuOpen(e, album)}
                   size="small"
                   sx={{
                     position: 'absolute',
@@ -232,13 +288,40 @@ const AlbumsPage: React.FC = () => {
                     zIndex: 2,
                     '&:hover': { bgcolor: 'rgba(255,255,255,1)' }
                   }}
-                  aria-label="Edit album"
+                  aria-label="Album options"
                 >
                   <MoreVertIcon fontSize="small" />
                 </IconButton>
               }
             />
           ))}
+        </Box>
+      )}
+
+      {/* Options Menu */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <MenuItem onClick={handleMenuEdit}>
+          <ListItemIcon>
+            <EditIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Edit Album</ListItemText>
+        </MenuItem>
+        <MenuItem 
+          onClick={handleMenuDelete}
+          disabled={selectedAlbum?.photoCount !== 0}
+        >
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Delete Album</ListItemText>
+        </MenuItem>
+      </Menu>
+
       {/* Edit Album Dialog */}
       <EditAlbumDialog
         open={showEditDialog}
@@ -246,8 +329,23 @@ const AlbumsPage: React.FC = () => {
         onClose={handleCloseEditDialog}
         onSave={handleSaveEditAlbum}
       />
-        </Box>
-      )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={showDeleteDialog}
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        title="Delete Album"
+        message={
+          albumToDelete
+            ? `Are you sure you want to delete "${albumToDelete.name}"?`
+            : ''
+        }
+        confirmText="Delete Album"
+        cancelText="Cancel"
+        variant="danger"
+        loading={deleting}
+      />
 
       {/* Create Album Dialog */}
       <Dialog open={showCreateDialog} onClose={() => setShowCreateDialog(false)} maxWidth="sm" fullWidth>

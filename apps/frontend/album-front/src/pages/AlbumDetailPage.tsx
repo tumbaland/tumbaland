@@ -35,6 +35,8 @@ import { usePhotos } from '../hooks/usePhotos';
 import { albumService } from '../services/albumService';
 import PhotoCard from '../components/PhotoCard';
 import FileUpload from '../components/FileUpload';
+import ConfirmDialog from '../components/ConfirmDialog';
+import EditPhotoDialog from '../components/EditPhotoDialog';
 import { Album, Photo } from '../types';
 
 const AlbumDetailPage: React.FC = () => {
@@ -50,6 +52,11 @@ const AlbumDetailPage: React.FC = () => {
   const [loadingAlbum, setLoadingAlbum] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [imgDimensions, setImgDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [photoToEdit, setPhotoToEdit] = useState<Photo | null>(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isPortrait = window.innerHeight > window.innerWidth;
@@ -59,6 +66,7 @@ const AlbumDetailPage: React.FC = () => {
     error: photosError,
     pagination,
     fetchPhotos,
+    updatePhoto,
     deletePhoto
   } = usePhotos(albumId || '', {
     page: currentPage,
@@ -82,12 +90,46 @@ const AlbumDetailPage: React.FC = () => {
     fetchAlbum();
   }, [albumId]);
   const handleDeletePhoto = async (photo: Photo) => {
-    if (window.confirm(`Are you sure you want to delete "${photo.title || photo.originalName}"?`)) {
-      try {
-        await deletePhoto(photo._id);
-      } catch (err) {
-        alert('Failed to delete photo');
-      }
+    setPhotoToDelete(photo);
+    setShowDeleteDialog(true);
+  };
+
+  const handleConfirmDeletePhoto = async () => {
+    if (!photoToDelete) return;
+
+    setDeleting(true);
+    try {
+      await deletePhoto(photoToDelete._id);
+      setShowDeleteDialog(false);
+      setPhotoToDelete(null);
+    } catch (err) {
+      alert('Failed to delete photo');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleCancelDeletePhoto = () => {
+    setShowDeleteDialog(false);
+    setPhotoToDelete(null);
+  };
+
+  const handleEditPhoto = (photo: Photo) => {
+    setPhotoToEdit(photo);
+    setShowEditDialog(true);
+  };
+
+  const handleCloseEditPhoto = () => {
+    setShowEditDialog(false);
+    setPhotoToEdit(null);
+  };
+
+  const handleSaveEditPhoto = async (photoId: string, data: { title?: string; description?: string }) => {
+    try {
+      await updatePhoto(photoId, data);
+    } catch (err) {
+      console.error('Failed to update photo:', err);
+      alert('Failed to update photo');
     }
   };
 
@@ -349,6 +391,7 @@ const AlbumDetailPage: React.FC = () => {
               <PhotoCard
                 photo={photo}
                 onView={handleViewPhoto}
+                onEdit={handleEditPhoto}
                 onDelete={handleDeletePhoto}
                 onSetCover={handleSetCoverPhoto}
                 isCoverPhoto={album?.coverPhotoId === photo._id}
@@ -379,7 +422,32 @@ const AlbumDetailPage: React.FC = () => {
         open={showUploadDialog}
         onClose={() => setShowUploadDialog(false)}
         onUploadComplete={handleUploadComplete}
-      />      {/* Photo Viewer Dialog */}
+      />
+
+      {/* Delete Photo Confirmation Dialog */}
+      <ConfirmDialog
+        open={showDeleteDialog}
+        onClose={handleCancelDeletePhoto}
+        onConfirm={handleConfirmDeletePhoto}
+        title="Delete Photo"
+        message={
+          photoToDelete
+            ? `Are you sure you want to delete photo?`
+            : ''
+        }
+        confirmText="Delete Photo"
+        cancelText="Cancel"
+        variant="danger"
+        loading={deleting}
+      />
+
+      {/* Edit Photo Dialog */}
+      <EditPhotoDialog
+        open={showEditDialog}
+        photo={photoToEdit}
+        onClose={handleCloseEditPhoto}
+        onSave={handleSaveEditPhoto}
+      />
       <Dialog
         open={showPhotoViewer}
         onClose={handleClosePhotoViewer}
@@ -389,7 +457,6 @@ const AlbumDetailPage: React.FC = () => {
         }}
       >
         <DialogContent sx={{ p: 0, m: 0, width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
-          {/* Backdrop for dimming and click-to-close */}
           <Box
             onClick={handleClosePhotoViewer}
             sx={{
@@ -518,34 +585,6 @@ const AlbumDetailPage: React.FC = () => {
                 }
               }}
             />
-          )}
-
-          {/* Photo Info Overlay */}
-          {selectedPhoto && (selectedPhoto.title || selectedPhoto.description) && (
-            <Box
-              sx={{
-                position: 'absolute',
-                bottom: 60,
-                left: 16,
-                right: 16,
-                color: 'white',
-                bgcolor: 'rgba(0, 0, 0, 0.7)',
-                p: 2,
-                borderRadius: 1,
-                zIndex: 3
-              }}
-            >
-              {selectedPhoto.title && (
-                <Typography variant="h6" gutterBottom>
-                  {selectedPhoto.title}
-                </Typography>
-              )}
-              {selectedPhoto.description && (
-                <Typography variant="body2">
-                  {selectedPhoto.description}
-                </Typography>
-              )}
-            </Box>
           )}
         </DialogContent>
       </Dialog>
