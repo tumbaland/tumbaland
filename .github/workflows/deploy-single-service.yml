@@ -24,6 +24,11 @@ on:
           - relationship-service
           - tumbaland-proxy
 
+# Ensure only one deployment runs at a time to prevent server overload
+concurrency:
+  group: tumbaland-deployment
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
