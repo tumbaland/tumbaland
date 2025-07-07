@@ -12,9 +12,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { Activity, ActivityType, CreateActivityRequest } from "../api/types";
-import { useActivityTypes } from "../hooks/useActivities";
 import {
-  ACTIVITY_CONFIG,
   formatDateForInput,
   validateActivity,
 } from "../utils/activityUtils";
@@ -34,7 +32,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
   activity,
   title,
 }) => {
-  const { types: availableTypes, loading: typesLoading } = useActivityTypes();
+  const availableTypes = ['movies', 'cooking', 'dining', 'coffee', 'gaming', 'other', 'sex', 'together'];
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   // Form state
@@ -172,20 +170,12 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
             }
             fullWidth
             required
-            disabled={typesLoading}
           >
-            {typesLoading ? (
-              <MenuItem disabled>
-                <CircularProgress size={20} sx={{ mr: 1 }} />
-                Loading types...
-              </MenuItem>
-            ) : (
-              availableTypes.map((type) => (
+            {availableTypes.map((type) => (
                 <MenuItem key={type} value={type}>
-                  {ACTIVITY_CONFIG[type]?.label || type}
+                  {type}
                 </MenuItem>
-              ))
-            )}
+              ))}
           </TextField>{" "}
           <TextField
             label="Description - Optional"
@@ -209,7 +199,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({
         <Button
           type="submit"
           variant="contained"
-          disabled={loading || typesLoading}
+          disabled={loading}
           startIcon={loading ? <CircularProgress size={20} /> : null}
         >
           {loading ? "Saving..." : isEditMode ? "Update" : "Create"}

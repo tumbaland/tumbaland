@@ -1,56 +1,5 @@
 import { ActivityType } from '../api/types';
 
-// Activity type display configurations
-export const ACTIVITY_CONFIG = {
-  movies: {
-    label: 'Movies',
-    color: 'primary' as const,
-    icon: '🎬'
-  },
-  cooking: {
-    label: 'Cooking',
-    color: 'warning' as const,
-    icon: '👨‍🍳'
-  },
-  dining: {
-    label: 'Eating Outside',
-    color: 'success' as const,
-    icon: '🍽️'
-  },
-  coffee: {
-    label: 'Coffee',
-    color: 'info' as const,
-    icon: '🥗'
-  },
-  gaming: {
-    label: 'Gaming',
-    color: 'secondary' as const,
-    icon: '🎮'
-  },
-  other: {
-    label: 'Other',
-    color: 'default' as const,
-    icon: '✨'
-  },
-  sex: {
-    label: 'Sex',
-    color: 'error' as const,
-    icon: '💝'
-  },
-  together: {
-    label: 'Together',
-    color: 'primary' as const,
-    icon: '💕'
-  }
-};
-
-/**
- * Get display configuration for an activity type
- */
-export const getActivityConfig = (type: ActivityType) => {
-  return ACTIVITY_CONFIG[type] || ACTIVITY_CONFIG.other;
-};
-
 /**
  * Format date for display
  */
@@ -122,13 +71,6 @@ export const validateActivity = (activity: {
   }
 
   return errors;
-};
-
-/**
- * Get color for activity type (compatible with MUI)
- */
-export const getActivityColor = (type: ActivityType): 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' => {
-  return getActivityConfig(type).color;
 };
 
 /**

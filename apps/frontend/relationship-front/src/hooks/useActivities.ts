@@ -4,8 +4,7 @@ import {
   CreateActivityRequest,
   UpdateActivityRequest,
   GetActivitiesFilters,
-  ActivityStats,
-  ActivityType
+  ActivityStats
 } from '../api/types';
 import {
   createActivity as apiCreateActivity,
@@ -13,8 +12,7 @@ import {
   updateActivity as apiUpdateActivity,
   deleteActivity as apiDeleteActivity,
   getActivityStats as apiGetActivityStats,
-  getRecentActivities as apiGetRecentActivities,
-  getActivityTypes as apiGetActivityTypes
+  getRecentActivities as apiGetRecentActivities
 } from '../api/activities';
 
 export const useActivities = (filters?: GetActivitiesFilters) => {
@@ -174,27 +172,3 @@ export const useRecentActivities = (limit: number = 10) => {
   return { activities, loading, error, refetch: loadRecentActivities };
 };
 
-export const useActivityTypes = () => {
-  const [types, setTypes] = useState<ActivityType[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadTypes = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await apiGetActivityTypes();
-        setTypes(data);
-      } catch (err: any) {
-        setError(err.response?.data?.error || err.message || 'Failed to load activity types');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadTypes();
-  }, []);
-
-  return { types, loading, error };
-};
