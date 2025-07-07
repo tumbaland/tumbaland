@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.30](https://github.com/toomastahves/tumbaland/compare/v0.0.29...v0.0.30) (2025-07-07)
+
+
+### Features
+
+* setup concurrent jobs ([d54a631](https://github.com/toomastahves/tumbaland/commit/d54a6314fb3d6d6a1fd2cb913807cc7e3aff59c8))
+
 ### [0.0.29](https://github.com/toomastahves/tumbaland/compare/v0.0.28...v0.0.29) (2025-07-07)
 
 
