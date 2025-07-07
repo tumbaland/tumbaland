@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from "react";
 import {
   Box,
   Card,
@@ -13,8 +13,11 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Chip,
-} from '@mui/material';
-import { getCumulativeTimelineData, CumulativeTimelineData } from '../api/statistics';
+} from "@mui/material";
+import {
+  getCumulativeTimelineData,
+  CumulativeTimelineData,
+} from "../api/statistics";
 
 interface CumulativeTimelineProps {
   title?: string;
@@ -24,41 +27,54 @@ interface CumulativeTimelineProps {
 
 // Activity colors for line visualization
 const ACTIVITY_COLORS: { [key: string]: string } = {
-  movies: '#e53e3e',
-  cooking: '#38a169',
-  dining: '#ed8936',
-  coffee: '#8b4513',
-  gaming: '#9f7aea',
-  other: '#718096',
-  total: '#1976d2'
+  movies: "#e53e3e",
+  cooking: "#38a169",
+  dining: "#ed8936",
+  coffee: "#8b4513",
+  gaming: "#9f7aea",
+  other: "#718096",
+  total: "#1976d2",
 };
 
 const ACTIVITY_LABELS: { [key: string]: string } = {
-  movies: 'Movies',
-  cooking: 'Cooking',
-  dining: 'Dining',
-  coffee: 'Coffee',
-  gaming: 'Gaming',
-  other: 'Other',
-  total: 'Total'
+  movies: "Movies",
+  cooking: "Cooking",
+  dining: "Dining",
+  coffee: "Coffee",
+  gaming: "Gaming",
+  other: "Other",
+  total: "Total",
 };
 
-const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({ 
-  title = 'Cumulative Activity Timeline', 
+const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
+  title = "Cumulative Activity Timeline",
   year,
-  height = 400 
+  height = 400,
 }) => {
   const [data, setData] = useState<CumulativeTimelineData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | undefined>(year);
-  const [viewMode, setViewMode] = useState<'activities' | 'hours'>('activities');  const [selectedLines, setSelectedLines] = useState<string[]>(['total']);
+  const [viewMode, setViewMode] = useState<"activities" | "hours">(
+    "activities"
+  );
+  const [selectedLines, setSelectedLines] = useState<string[]>([
+    "movies",
+    "cooking",
+    "dining",
+    "coffee",
+    "gaming",
+    "other",
+  ]);
   const [containerWidth, setContainerWidth] = useState<number>(800); // Start with reasonable default
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Generate available years (from 2024 to current year)
   const currentYear = new Date().getFullYear();
-  const availableYears = Array.from({ length: currentYear - 2023 }, (_, i) => 2024 + i);  // Update container width on resize
+  const availableYears = Array.from(
+    { length: currentYear - 2023 },
+    (_, i) => 2024 + i
+  ); // Update container width on resize
   useEffect(() => {
     const updateWidth = () => {
       if (containerRef.current) {
@@ -81,10 +97,10 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
       resizeObserver.observe(containerRef.current);
     }
 
-    window.addEventListener('resize', updateWidth);
-    
+    window.addEventListener("resize", updateWidth);
+
     return () => {
-      window.removeEventListener('resize', updateWidth);
+      window.removeEventListener("resize", updateWidth);
       resizeObserver.disconnect();
     };
   }, [data]); // Run when data changes to ensure proper measurement
@@ -95,27 +111,30 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
         setLoading(true);
         setError(null);
         const timelineData = await getCumulativeTimelineData(selectedYear);
-        console.log('Fetched timeline data:', timelineData);
+        console.log("Fetched timeline data:", timelineData);
         setData(timelineData);
       } catch (err) {
-        console.error('Error fetching timeline data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load data');
+        console.error("Error fetching timeline data:", err);
+        setError(err instanceof Error ? err.message : "Failed to load data");
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [selectedYear]);  // Calculate chart dimensions and scaling
+  }, [selectedYear]); // Calculate chart dimensions and scaling
   const chartHeight = height - 160; // Leave space for controls and stats
   const chartWidth = containerWidth; // Use container width
-  const padding = 40;  const plotHeight = chartHeight - padding * 2;
-  
+  const padding = 40;
+  const plotHeight = chartHeight - padding * 2;
+
   // Get cumulative values for each activity type
   const getActivityLineData = (activityType: string) => {
-    return data.map(item => {
-      if (activityType === 'total') {
-        return viewMode === 'activities' ? item.cumulativeActivities : item.cumulativeHours;
+    return data.map((item) => {
+      if (activityType === "total") {
+        return viewMode === "activities"
+          ? item.cumulativeActivities
+          : item.cumulativeHours;
       }
       return item.activityBreakdown[activityType]?.cumulativeCount || 0;
     });
@@ -124,50 +143,56 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
   // Get max values for scaling based on selected lines
   const getMaxValueForSelectedLines = () => {
     if (selectedLines.length === 0) return 1;
-    
+
     let maxValue = 0;
-    
-    selectedLines.forEach(activityType => {
+
+    selectedLines.forEach((activityType) => {
       const values = getActivityLineData(activityType);
       const lineMax = Math.max(...values);
       maxValue = Math.max(maxValue, lineMax);
     });
-    
+
     return Math.max(maxValue, 1); // Ensure minimum of 1
   };
 
   const maxValue = getMaxValueForSelectedLines();
   // Create SVG path for a line
   const createPath = (values: number[]) => {
-    if (values.length === 0) return '';
-    
+    if (values.length === 0) return "";
+
     const svgWidth = Math.max(chartWidth, 600);
     const svgPlotWidth = svgWidth - padding * 2;
-    
+
     const points = values.map((value, index) => {
       const x = padding + (index / (values.length - 1)) * svgPlotWidth;
       const y = padding + plotHeight - (value / maxValue) * plotHeight;
       return `${x},${y}`;
     });
 
-    return `M ${points.join(' L ')}`;
+    return `M ${points.join(" L ")}`;
   };
 
   // Toggle line visibility
   const toggleLine = (activityType: string) => {
-    setSelectedLines(prev => 
+    setSelectedLines((prev) =>
       prev.includes(activityType)
-        ? prev.filter(type => type !== activityType)
+        ? prev.filter((type) => type !== activityType)
         : [...prev, activityType]
     );
-  };  if (loading) {
+  };
+  if (loading) {
     return (
       <Card elevation={2}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
             {title}
           </Typography>
-          <Box display="flex" justifyContent="center" alignItems="center" height={height}>
+          <Box
+            display="flex"
+            justifyContent="center"
+            alignItems="center"
+            height={height}
+          >
             <CircularProgress />
           </Box>
         </CardContent>
@@ -195,7 +220,12 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
           <Typography variant="h6" gutterBottom>
             {title}
           </Typography>
-          <Box display="flex" justifyContent="center" alignItems="center" height={height}>
+          <Box
+            display="flex"
+            justifyContent="center"
+            alignItems="center"
+            height={height}
+          >
             <Typography color="text.secondary">No data available</Typography>
           </Box>
         </CardContent>
@@ -207,11 +237,16 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
     <Card elevation={2}>
       <CardContent>
         {/* Header Controls */}
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={2}>
-          <Typography variant="h6">
-            {title}
-          </Typography>
-          
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          mb={2}
+          flexWrap="wrap"
+          gap={2}
+        >
+          <Typography variant="h6">{title}</Typography>
+
           <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
             {/* View Mode Toggle */}
             <ToggleButtonGroup
@@ -228,12 +263,18 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
             <FormControl size="small" sx={{ minWidth: 120 }}>
               <InputLabel>Year</InputLabel>
               <Select
-                value={selectedYear || 'all'}
+                value={selectedYear || "all"}
                 label="Year"
-                onChange={(e) => setSelectedYear(e.target.value === 'all' ? undefined : Number(e.target.value))}
+                onChange={(e) =>
+                  setSelectedYear(
+                    e.target.value === "all"
+                      ? undefined
+                      : Number(e.target.value)
+                  )
+                }
               >
                 <MenuItem value="all">All Years</MenuItem>
-                {availableYears.map(yearOption => (
+                {availableYears.map((yearOption) => (
                   <MenuItem key={yearOption} value={yearOption}>
                     {yearOption}
                   </MenuItem>
@@ -242,9 +283,8 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
             </FormControl>
           </Box>
         </Box>
-
         {/* Line Toggle Chips */}
-        <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+        <Box sx={{ mb: 2, display: "flex", flexWrap: "wrap", gap: 1 }}>
           {Object.entries(ACTIVITY_COLORS).map(([activityType, color]) => (
             <Chip
               key={activityType}
@@ -253,27 +293,32 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
               clickable
               onClick={() => toggleLine(activityType)}
               sx={{
-                backgroundColor: selectedLines.includes(activityType) ? color : '#e0e0e0',
-                color: selectedLines.includes(activityType) ? 'white' : '#666',
-                '& .MuiChip-label': {
-                  fontSize: '0.75rem'
-                }
+                backgroundColor: selectedLines.includes(activityType)
+                  ? color
+                  : "#e0e0e0",
+                color: selectedLines.includes(activityType) ? "white" : "#666",
+                "& .MuiChip-label": {
+                  fontSize: "0.75rem",
+                },
               }}
             />
           ))}
-        </Box>        {/* Chart Container */}
-        <Box sx={{ width: '100%', pb: 2 }} ref={containerRef}>
-          <Box sx={{ width: '100%' }}>
-            <svg 
-              width="100%" 
-              height={chartHeight} 
+        </Box>{" "}
+        {/* Chart Container */}
+        <Box sx={{ width: "100%", pb: 2 }} ref={containerRef}>
+          <Box sx={{ width: "100%" }}>
+            <svg
+              width="100%"
+              height={chartHeight}
               viewBox={`0 0 ${Math.max(chartWidth, 600)} ${chartHeight}`}
-              style={{ border: '1px solid #e0e0e0' }}
-            >              {/* Grid lines */}
+              style={{ border: "1px solid #e0e0e0" }}
+            >
+              {" "}
+              {/* Grid lines */}
               {[0.25, 0.5, 0.75, 1].map((ratio, index) => {
                 const svgWidth = Math.max(chartWidth, 600);
                 const svgPlotWidth = svgWidth - padding * 2;
-                
+
                 return (
                   <g key={index}>
                     <line
@@ -296,7 +341,6 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
                   </g>
                 );
               })}
-
               {/* Y-axis */}
               <line
                 x1={padding}
@@ -305,7 +349,8 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
                 y2={padding + plotHeight}
                 stroke="#e0e0e0"
                 strokeWidth="2"
-              />              {/* X-axis */}
+              />{" "}
+              {/* X-axis */}
               <line
                 x1={padding}
                 y1={padding + plotHeight}
@@ -314,9 +359,8 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
                 stroke="#e0e0e0"
                 strokeWidth="2"
               />
-
               {/* Activity Lines */}
-              {selectedLines.map(activityType => {
+              {selectedLines.map((activityType) => {
                 const values = getActivityLineData(activityType);
                 const path = createPath(values);
                 const color = ACTIVITY_COLORS[activityType];
@@ -332,16 +376,19 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
                     strokeLinejoin="round"
                   />
                 );
-              })}              {/* Data points */}
-              {selectedLines.map(activityType => {
+              })}{" "}
+              {/* Data points */}
+              {selectedLines.map((activityType) => {
                 const values = getActivityLineData(activityType);
                 const color = ACTIVITY_COLORS[activityType];
                 const svgWidth = Math.max(chartWidth, 600);
                 const svgPlotWidth = svgWidth - padding * 2;
 
                 return values.map((value, index) => {
-                  const x = padding + (index / (values.length - 1)) * svgPlotWidth;
-                  const y = padding + plotHeight - (value / maxValue) * plotHeight;
+                  const x =
+                    padding + (index / (values.length - 1)) * svgPlotWidth;
+                  const y =
+                    padding + plotHeight - (value / maxValue) * plotHeight;
 
                   return (
                     <circle
@@ -354,38 +401,55 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
                       strokeWidth="1"
                     >
                       <title>
-                        {`${data[index].date}: ${value} ${viewMode === 'activities' ? 'activities' : 'hours'}`}
+                        {`${data[index].date}: ${value} ${viewMode === "activities" ? "activities" : "hours"}`}
                       </title>
                     </circle>
                   );
                 });
-              })}              {/* Date labels (show every nth date to avoid overcrowding) */}
-              {data.filter((_, index) => index % Math.ceil(data.length / 10) === 0).map((item, index) => {
-                const originalIndex = index * Math.ceil(data.length / 10);
-                const svgWidth = Math.max(chartWidth, 600);
-                const svgPlotWidth = svgWidth - padding * 2;
-                const x = padding + (originalIndex / (data.length - 1)) * svgPlotWidth;
-                
-                return (
-                  <text
-                    key={item.date}
-                    x={x}
-                    y={padding + plotHeight + 15}
-                    fontSize="10"
-                    fill="#666"
-                    textAnchor="middle"
-                    transform={`rotate(-45, ${x}, ${padding + plotHeight + 15})`}
-                  >
-                    {new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  </text>
-                );
-              })}
+              })}{" "}
+              {/* Date labels (show every nth date to avoid overcrowding) */}
+              {data
+                .filter((_, index) => index % Math.ceil(data.length / 10) === 0)
+                .map((item, index) => {
+                  const originalIndex = index * Math.ceil(data.length / 10);
+                  const svgWidth = Math.max(chartWidth, 600);
+                  const svgPlotWidth = svgWidth - padding * 2;
+                  const x =
+                    padding +
+                    (originalIndex / (data.length - 1)) * svgPlotWidth;
+
+                  return (
+                    <text
+                      key={item.date}
+                      x={x}
+                      y={padding + plotHeight + 15}
+                      fontSize="10"
+                      fill="#666"
+                      textAnchor="middle"
+                      transform={`rotate(-45, ${x}, ${padding + plotHeight + 15})`}
+                    >
+                      {new Date(item.date).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </text>
+                  );
+                })}
             </svg>
           </Box>
         </Box>
-
         {/* Summary stats */}
-        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-around', pt: 2, borderTop: '1px solid #e0e0e0', flexWrap: 'wrap', gap: 2 }}>
+        <Box
+          sx={{
+            mt: 2,
+            display: "flex",
+            justifyContent: "space-around",
+            pt: 2,
+            borderTop: "1px solid #e0e0e0",
+            flexWrap: "wrap",
+            gap: 2,
+          }}
+        >
           <Box textAlign="center">
             <Typography variant="h6" color="primary">
               {data.length > 0 ? data[data.length - 1].cumulativeActivities : 0}
@@ -396,7 +460,9 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
           </Box>
           <Box textAlign="center">
             <Typography variant="h6" color="primary">
-              {data.length > 0 ? Math.round(data[data.length - 1].cumulativeHours) : 0}
+              {data.length > 0
+                ? Math.round(data[data.length - 1].cumulativeHours)
+                : 0}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               Total Hours
@@ -412,7 +478,12 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
           </Box>
           <Box textAlign="center">
             <Typography variant="h6" color="primary">
-              {data.length > 0 ? Math.round(data.reduce((sum, item) => sum + item.dailyActivities, 0) / data.length) : 0}
+              {data.length > 0
+                ? Math.round(
+                    data.reduce((sum, item) => sum + item.dailyActivities, 0) /
+                      data.length
+                  )
+                : 0}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               Avg Per Day
