@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.25](https://github.com/toomastahves/tumbaland/compare/v0.0.24...v0.0.25) (2025-07-07)
+
+
+### Bug Fixes
+
+* **shell-front:** env vars ([5c9837d](https://github.com/toomastahves/tumbaland/commit/5c9837d43f1a17bbb83f889d99adc8fc877bc032))
+
 ### [0.0.24](https://github.com/toomastahves/tumbaland/compare/v0.0.23...v0.0.24) (2025-07-06)
 
 
