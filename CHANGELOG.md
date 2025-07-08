@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.41](https://github.com/toomastahves/tumbaland/compare/v0.0.40...v0.0.41) (2025-07-08)
+
+
+### Features
+
+* **shell-front:** use rotateDir ([26d22bb](https://github.com/toomastahves/tumbaland/commit/26d22bbec109a6e0848dda0d297374a5b29a28fb))
+
 ### [0.0.40](https://github.com/toomastahves/tumbaland/compare/v0.0.39...v0.0.40) (2025-07-08)
 
 
