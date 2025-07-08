@@ -15,12 +15,12 @@ export const menuItems = [
     path: '/records',
   },
   {
-    label: 'Tracked Tickers',
+    label: 'Tickers',
     icon: <TrendingUpIcon fontSize="small" sx={{ mr: 1 }} />,
     path: '/tracked-tickers',
   },
   {
-    label: 'ETF Portfolio',
+    label: 'Portfolio',
     icon: <PieChartIcon fontSize="small" sx={{ mr: 1 }} />,
     path: '/user-portfolio',
   },

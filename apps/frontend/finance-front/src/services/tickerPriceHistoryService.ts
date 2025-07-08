@@ -1,3 +1,4 @@
+
 import { financeApi } from '../config/financeApi';
 
 export interface TickerPriceHistory {
@@ -27,4 +28,6 @@ export const deleteTickerPriceHistory = async (id: string): Promise<void> => {
   await financeApi.delete(`/ticker-price-history/${id}`);
 };
 
-// No add, update, or delete methods since this is read-only and fetched from Yahoo Finance
+export const fetchAllTickerPriceHistory = async (ticker: string): Promise<void> => {
+  await financeApi.post('/ticker-price-history/fetch-all', { ticker });
+};

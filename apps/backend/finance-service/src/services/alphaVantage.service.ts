@@ -1,3 +1,41 @@
+import TickerPriceHistory from '../models/TickerPriceHistory';
+
+// Fetch all historic OHLCV prices for a symbol and save to DB
+export async function fetchAndSaveAllStockHistory(symbol: string): Promise<number> {
+  const BASE_URL = 'https://www.alphavantage.co/query';
+  const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY;
+  if (!ALPHA_VANTAGE_API_KEY) {
+    throw new Error('Alpha Vantage API key not set in environment variables');
+  }
+  const url = `${BASE_URL}?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=full&apikey=${ALPHA_VANTAGE_API_KEY}`;
+  try {
+    const response = await axios.get(url);
+    const timeSeries = response.data['Time Series (Daily)'];
+    if (!timeSeries) return 0;
+    let saved = 0;
+    for (const [date, data] of Object.entries(timeSeries)) {
+      const d = data as Record<string, string>;
+      await TickerPriceHistory.findOneAndUpdate(
+        { ticker: symbol, date: new Date(date) },
+        {
+          ticker: symbol,
+          date: new Date(date),
+          price: parseFloat(d['4. close']),
+          open: parseFloat(d['1. open']),
+          high: parseFloat(d['2. high']),
+          low: parseFloat(d['3. low']),
+          volume: parseFloat(d['5. volume'])
+        },
+        { upsert: true, new: true }
+      );
+      saved++;
+    }
+    return saved;
+  } catch (error) {
+    console.error('Error fetching/saving stock history from Alpha Vantage:', error);
+    return 0;
+  }
+}
 import axios from 'axios';
 
 export interface StockPriceData {

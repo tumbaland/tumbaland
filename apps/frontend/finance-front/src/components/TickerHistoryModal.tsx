@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, TextField } from '@mui/material';
+import { Box, Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, TextField, CircularProgress } from '@mui/material';
 import TickerHistoryTable from './TickerHistoryTable';
-import { getTickerPriceHistory, TickerPriceHistory, deleteTickerPriceHistory } from '../services/tickerPriceHistoryService';
+import { getTickerPriceHistory, TickerPriceHistory, deleteTickerPriceHistory, fetchAllTickerPriceHistory } from '../services/tickerPriceHistoryService';
 import ConfirmationModal from './ConfirmationModal';
 
 interface TickerHistoryModalProps {
@@ -41,9 +41,10 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
   useEffect(() => {
     if (open) {
       const now = new Date();
-      const year = now.getFullYear();
-      const start = `${year}-01-01`;
-      const end = `${year}-12-31`;
+      const end = now.toISOString().slice(0, 10);
+      const prevMonth = new Date(now);
+      prevMonth.setMonth(prevMonth.getMonth() - 1);
+      const start = prevMonth.toISOString().slice(0, 10);
       setStartDate(start);
       setEndDate(end);
       setPendingStartDate(start);
@@ -118,9 +119,12 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
           >
             Apply Filters
           </Button>
+          {/* Fetch All Records button moved below table */}
         </Box>
         {loading ? (
-          <Typography>Loading...</Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+            <CircularProgress size={48} color="primary" />
+          </Box>
         ) : error ? (
           <Typography color="error">{error}</Typography>
         ) : filteredHistory.length === 0 ? (
@@ -260,6 +264,36 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
                 setConfirmOpen(true);
               }}
             />
+            {/* Fetch All Records action at the bottom */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mt: 3, mb: 1 }}>
+              <Button
+                variant="outlined"
+                color="secondary"
+                sx={{ mb: 1, fontWeight: 600, px: 3, py: 1.2, fontSize: 16 }}
+                onClick={async () => {
+                  if (!ticker) return;
+                  setLoading(true);
+                  setError(null);
+                  try {
+                    await fetchAllTickerPriceHistory(ticker);
+                    // Refetch history after import
+                    const data = await getTickerPriceHistory(ticker);
+                    setHistory(data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
+                  } catch (err) {
+                    setError('Failed to fetch all records');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              >
+                Fetch & Update All Historical Records
+              </Button>
+              <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 520, textAlign: 'center' }}>
+                <b>Note:</b> This action may take a long time.<br />
+                It will fetch <b>all available historical records</b> for this ticker and <b>update any existing records</b> in the database.<br />
+                Please be patient and do not close the window until the process is complete.
+              </Typography>
+            </Box>
             <ConfirmationModal
               open={confirmOpen}
               title="Delete Price History Record"

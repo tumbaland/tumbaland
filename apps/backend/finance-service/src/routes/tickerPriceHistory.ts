@@ -1,8 +1,11 @@
+
 import { Router } from 'express';
-import { getTickerPriceHistory, fetchAndSaveTickerPrices, deleteTickerPriceHistory } from '../controllers/tickerPriceHistory.controller';
+import { getTickerPriceHistory, fetchAndSaveTickerPrices, deleteTickerPriceHistory, fetchAndSaveAllTickerHistory } from '../controllers/tickerPriceHistory.controller';
 import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = Router();
+// Fetch and save all historic prices for a ticker
+router.post('/fetch-all', authenticateToken, fetchAndSaveAllTickerHistory);
 
 // Get all portfolio history
 router.get('/', authenticateToken, getTickerPriceHistory);

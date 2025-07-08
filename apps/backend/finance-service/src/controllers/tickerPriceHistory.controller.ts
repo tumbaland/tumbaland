@@ -1,6 +1,21 @@
 import { Request, Response } from 'express';
 import TickerPriceHistory from '../models/TickerPriceHistory';
-import { fetchStockPrice } from '../services/alphaVantage.service';
+import { fetchStockPrice, fetchAndSaveAllStockHistory } from '../services/alphaVantage.service';
+
+// POST /api/ticker-price-history/fetch-all - fetch and save all historic prices for a ticker
+export const fetchAndSaveAllTickerHistory = async (req: Request, res: Response) => {
+  const { ticker } = req.body;
+  if (!ticker) {
+    res.status(400).json({ error: 'Missing ticker in request body' });
+    return;
+  }
+  try {
+    const savedCount = await fetchAndSaveAllStockHistory(ticker);
+    res.status(200).json({ message: `Fetched and saved ${savedCount} records for ${ticker}` });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch and save all ticker history', details: err instanceof Error ? (err as Error).message : err });
+  }
+};
 import TrackedTicker from '../models/TrackedTicker';
 import { TickerPriceHistoryResponse, FetchAndSavePricesResponse } from '../types/tickerPriceHistory.types';
 
