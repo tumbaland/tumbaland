@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from 'react-router-dom';
-import Drawer from "@mui/material/Drawer";
 import Box from "@mui/material/Box";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
@@ -30,42 +29,55 @@ export function SideMenu({ currentRoute }: SideMenuProps) {
 
   const isActive = (route: string) => currentRoute === route;
 
-  const drawerContent = (
-    <Box sx={{
-      mt: 9,
-      px: 1.5,
-      py: 2,
-      borderRadius: 3,
-      background: '#fff',
-      boxShadow: '0 2px 8px 0 #6366f111',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      minWidth: 0,
-    }}>
+  // Custom permanent side menu for desktop
+  const sideMenuContent = (
+    <Box
+      sx={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        height: '100vh',
+        width: 60,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        pt: 9,
+        zIndex: 1200,
+        background: 'rgba(255,255,255,0.08)',
+        backdropFilter: 'blur(12px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(12px) saturate(180%)',
+        borderRight: '1.5px solid rgba(255,255,255,0.18)',
+        boxShadow: '0 2px 8px 0 #6366f111',
+      }}
+    >
       <List sx={{ width: '100%', p: 0 }}>
         {APPS.map((app) => {
           const IconComponent = app.icon;
           const active = isActive(app.route);
-          
           return (
             <Tooltip key={app.name} title={app.name} placement="right" arrow>
               <ListItem disablePadding>
                 <ListItemButton
                   onClick={() => handleAppClick(app.route)}
-                  disabled={active}
                   sx={{
                     justifyContent: "center",
                     minHeight: 56,
                     backgroundColor: 'transparent',
-                    color: active ? app.color : '#334155'
+                    color: '#334155',
                   }}
                 >
                   <ListItemIcon
                     sx={{
-                      color: 'inherit',
+                      color: active ? app.color : '#334155',
                       minWidth: 0,
                       justifyContent: "center",
+                      background: 'transparent',
+                      p: 0.5,
+                      borderRadius: '50%',
+                      transition: 'background 0.2s, color 0.2s',
+                      '&:hover': {
+                        background: 'rgba(255,255,255,0.12)',
+                      },
                     }}
                   >
                     <IconComponent />
@@ -79,56 +91,101 @@ export function SideMenu({ currentRoute }: SideMenuProps) {
     </Box>
   );
 
+  // Mobile: show burger icon and custom drawer
   if (isMobile) {
     return (
       <>
         <IconButton
           color="inherit"
           aria-label="open drawer"
-          onClick={() => setMobileOpen(true)}
-          sx={{ position: "fixed", top: 8, left: 8, zIndex: 1301 }}
+          onClick={() => setMobileOpen((open) => !open)}
+          sx={{ position: "fixed", top: 8, left: 8, zIndex: 2001 }}
         >
           <MenuIcon />
         </IconButton>
-        <Drawer
-          variant="temporary"
-          anchor="left"
-          open={mobileOpen}
-          onClose={() => setMobileOpen(false)}
-          ModalProps={{ keepMounted: true }}
+        {/* Overlay for closing drawer by clicking outside */}
+        {mobileOpen && (
+          <Box
+            onClick={() => setMobileOpen(false)}
+            sx={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              height: '100vh',
+              zIndex: 1999,
+              background: 'transparent',
+            }}
+          />
+        )}
+        <Box
           sx={{
-            "& .MuiDrawer-paper": {
-              width: 56,
-              boxSizing: "border-box",
-              background: "#fff",
-              color: "#222",
-              borderRight: "1px solid #e0e0e0",
-            },
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: 60,
+            height: '100vh',
+            background: mobileOpen ? 'rgba(255,255,255,0.08)' : 'transparent',
+            backdropFilter: mobileOpen ? 'blur(12px) saturate(180%)' : 'none',
+            WebkitBackdropFilter: mobileOpen ? 'blur(12px) saturate(180%)' : 'none',
+            borderRight: mobileOpen ? '1.5px solid rgba(255,255,255,0.18)' : 'none',
+            boxShadow: mobileOpen ? '0 2px 8px 0 #6366f111' : 'none',
+            zIndex: 2000,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            pt: 9,
+            transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',
+            transition: 'transform 0.35s cubic-bezier(0.4,0,0.2,1), background 0.2s, box-shadow 0.2s, border-right 0.2s, backdrop-filter 0.2s',
+            pointerEvents: mobileOpen ? 'auto' : 'none',
           }}
         >
-          {drawerContent}
-        </Drawer>
+          <List sx={{ width: '100%', p: 0 }}>
+            {APPS.map((app) => {
+              const IconComponent = app.icon;
+              const active = isActive(app.route);
+              return (
+                <Tooltip key={app.name} title={app.name} placement="right" arrow>
+                  <ListItem disablePadding>
+                    <ListItemButton
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAppClick(app.route);
+                      }}
+                      sx={{
+                        justifyContent: "center",
+                        minHeight: 56,
+                        backgroundColor: 'transparent',
+                        color: '#fff',
+                      }}
+                    >
+                      <ListItemIcon
+                        sx={{
+                          color: active ? app.color : '#334155',
+                          minWidth: 0,
+                          justifyContent: "center",
+                          background: 'transparent',
+                          p: 0.5,
+                          borderRadius: '50%',
+                          transition: 'background 0.2s, color 0.2s',
+                          '&:hover': {
+                            background: 'rgba(255,255,255,0.12)',
+                          },
+                        }}
+                      >
+                        <IconComponent />
+                      </ListItemIcon>
+                    </ListItemButton>
+                  </ListItem>
+                </Tooltip>
+              );
+            })}
+          </List>
+        </Box>
       </>
     );
   }
 
-  return (
-    <Drawer
-      variant="permanent"
-      anchor="left"
-      sx={{
-        width: 60,
-        flexShrink: 0,
-        "& .MuiDrawer-paper": {
-          width: 60,
-          boxSizing: "border-box",
-          background: "#fff",
-          color: "#222",
-          borderRight: "1px solid #e0e0e0",
-        },
-      }}
-    >
-      {drawerContent}
-    </Drawer>
-  );
+  // Desktop: show permanent side menu
+  return sideMenuContent;
 }
