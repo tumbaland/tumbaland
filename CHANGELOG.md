@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.39](https://github.com/toomastahves/tumbaland/compare/v0.0.38...v0.0.39) (2025-07-08)
+
+
+### Features
+
+* **shell-front:** pretty pink front ([f319b05](https://github.com/toomastahves/tumbaland/commit/f319b0511f2c50ed7ec98a8ae3bce6d967b55207))
+
 ### [0.0.38](https://github.com/toomastahves/tumbaland/compare/v0.0.37...v0.0.38) (2025-07-08)
 
 
