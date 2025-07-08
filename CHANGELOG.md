@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.42](https://github.com/toomastahves/tumbaland/compare/v0.0.41...v0.0.42) (2025-07-08)
+
+
+### Features
+
+* **shell-front:** optimizations ([c0c0f1a](https://github.com/toomastahves/tumbaland/commit/c0c0f1a8bac3358e68cca09233f8e641c567643d))
+
 ### [0.0.41](https://github.com/toomastahves/tumbaland/compare/v0.0.40...v0.0.41) (2025-07-08)
 
 
