@@ -1,6 +1,6 @@
 import * as jwt from 'jsonwebtoken';
 
-const JWT_EXPIRES_IN = '7d';
+const JWT_EXPIRES_IN = '1h';
 
 export interface UserPayload {
   id: string;
