@@ -18,7 +18,6 @@ interface TickerHistoryTableProps {
 }
 
 const TickerHistoryTable: React.FC<TickerHistoryTableProps> = ({ rows, onDeleteRow }) => {
-  const theme = useTheme();
   return (
     <Box sx={{ width: '100%', mt: 2 }}>
       <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>

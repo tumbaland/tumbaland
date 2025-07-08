@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Tooltip, TextField } from '@mui/material';
+import { Box, Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, TextField } from '@mui/material';
 import TickerHistoryTable from './TickerHistoryTable';
 import { getTickerPriceHistory, TickerPriceHistory, deleteTickerPriceHistory } from '../services/tickerPriceHistoryService';
 import ConfirmationModal from './ConfirmationModal';
@@ -89,13 +89,13 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
             mb: 2,
             alignItems: { xs: 'stretch', sm: 'center' },
             width: '100%',
+            mt: 2,
           }}
         >
           <TextField
             label="Start Date"
             type="date"
             size="small"
-            InputLabelProps={{ shrink: true }}
             value={pendingStartDate}
             onChange={e => setPendingStartDate(e.target.value)}
             sx={{ minWidth: { xs: 0, sm: 160 }, flex: 1 }}
@@ -104,7 +104,6 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
             label="End Date"
             type="date"
             size="small"
-            InputLabelProps={{ shrink: true }}
             value={pendingEndDate}
             onChange={e => setPendingEndDate(e.target.value)}
             sx={{ minWidth: { xs: 0, sm: 160 }, flex: 1 }}
