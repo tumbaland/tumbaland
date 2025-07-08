@@ -1,4 +1,12 @@
 # Tumbalog
+### [0.0.36](https://github.com/toomastahves/tumbaland/compare/v0.0.35...v0.0.36) (2025-07-08)
+
+
+### Features
+
+* **finance:** fetch all historical records per ticker ([1e351f8](https://github.com/toomastahves/tumbaland/commit/1e351f840155eded84afb498ce25e430ac0e7712))
+* update icons ([1a92a00](https://github.com/toomastahves/tumbaland/commit/1a92a00b049e7b3cc8e58e064c26dbc11f094d08))
+
 ### [0.0.35](https://github.com/toomastahves/tumbaland/compare/v0.0.34...v0.0.35) (2025-07-08)
 
 
