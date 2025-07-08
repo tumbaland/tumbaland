@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.34](https://github.com/toomastahves/tumbaland/compare/v0.0.33...v0.0.34) (2025-07-08)
+
+
+### Bug Fixes
+
+* **finance-service:** avoid duplicate record fetching ([7a53ad2](https://github.com/toomastahves/tumbaland/commit/7a53ad2550db80f4832aadb979816d60488172cd))
+
 ### [0.0.33](https://github.com/toomastahves/tumbaland/compare/v0.0.32...v0.0.33) (2025-07-08)
 
 
