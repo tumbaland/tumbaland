@@ -13,10 +13,13 @@ export function startDailyPortfolioUpdate() {
         const ticker = tracked.ticker;
         const priceData = await fetchStockPrice(ticker);
         if (priceData) {
+          // Normalize date to midnight UTC for both filter and update
+          const today = new Date();
+          today.setUTCHours(0, 0, 0, 0);
           await TickerPriceHistory.findOneAndUpdate(
-            { ticker, date: new Date().toISOString().slice(0, 10) },
+            { ticker, date: today },
             {
-              date: new Date(),
+              date: today,
               ticker,
               price: priceData.close,
               open: priceData.open,
