@@ -71,7 +71,7 @@ function SparkleStars({ count = 69 }: { count?: number }) {
               color,
               opacity: 0.95,
               filter: 'drop-shadow(0 0 8px #fff) drop-shadow(0 0 16px #fff8)',
-              animation: `sparkleStar ${duration}s ease-in-out ${delay}s infinite, sparkleRotate ${rotateDuration}s linear ${delay}s infinite`,
+              animation: `sparkleStar ${duration}s ease-in-out ${delay}s infinite, sparkleRotate${rotateDir === 1 ? '' : 'Reverse'} ${rotateDuration}s linear ${delay}s infinite`,
               userSelect: 'none',
             }}
           >
@@ -88,6 +88,10 @@ function SparkleStars({ count = 69 }: { count?: number }) {
         @keyframes sparkleRotate {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
+        }
+        @keyframes sparkleRotateReverse {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(-360deg); }
         }
       `}</style>
     </Box>
