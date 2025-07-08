@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, TextField, CircularProgress } from '@mui/material';
+import { Box, Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, TextField, CircularProgress, MenuItem, Select, FormControl, InputLabel } from '@mui/material';
 import TickerHistoryTable from './TickerHistoryTable';
 import { getTickerPriceHistory, TickerPriceHistory, deleteTickerPriceHistory, fetchAllTickerPriceHistory } from '../services/tickerPriceHistoryService';
 import ConfirmationModal from './ConfirmationModal';
@@ -18,6 +18,7 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
   const [endDate, setEndDate] = useState<string>('');
   const [pendingStartDate, setPendingStartDate] = useState<string>('');
   const [pendingEndDate, setPendingEndDate] = useState<string>('');
+  const [quickRange, setQuickRange] = useState<string>('1m');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
@@ -37,9 +38,10 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
     return () => window.removeEventListener('resize', handleResize);
   }, [open]);
 
-  // Set default date range to this year on open
+  // Set default date range to last 1 month on open
   useEffect(() => {
     if (open) {
+      setQuickRange('1m');
       const now = new Date();
       const end = now.toISOString().slice(0, 10);
       const prevMonth = new Date(now);
@@ -51,6 +53,47 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
       setPendingEndDate(end);
     }
   }, [open]);
+
+  // Handle quick range selection
+  const handleQuickRange = (value: string) => {
+    setQuickRange(value);
+    const now = new Date();
+    let start: string;
+    let end = now.toISOString().slice(0, 10);
+    switch (value) {
+      case '1m': {
+        const d = new Date(now); d.setMonth(d.getMonth() - 1); start = d.toISOString().slice(0, 10); break;
+      }
+      case '3m': {
+        const d = new Date(now); d.setMonth(d.getMonth() - 3); start = d.toISOString().slice(0, 10); break;
+      }
+      case '1y': {
+        const d = new Date(now); d.setFullYear(d.getFullYear() - 1); start = d.toISOString().slice(0, 10); break;
+      }
+      case '3y': {
+        const d = new Date(now); d.setFullYear(d.getFullYear() - 3); start = d.toISOString().slice(0, 10); break;
+      }
+      case '5y': {
+        const d = new Date(now); d.setFullYear(d.getFullYear() - 5); start = d.toISOString().slice(0, 10); break;
+      }
+      case 'all':
+      default: {
+        // Set to earliest available date in history, or fallback to 10 years ago
+        let earliest = '';
+        if (history.length > 0) {
+          earliest = history.reduce((min, h) => h.date < min ? h.date : min, history[0].date);
+        } else {
+          const d = new Date(now); d.setFullYear(d.getFullYear() - 10); earliest = d.toISOString().slice(0, 10);
+        }
+        start = earliest;
+        break;
+      }
+    }
+    setStartDate(start);
+    setEndDate(end);
+    setPendingStartDate(start);
+    setPendingEndDate(end);
+  };
 
   useEffect(() => {
     if (open && ticker) {
@@ -71,10 +114,28 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
       const beforeEnd = !endDate || d <= endDate;
       return afterStart && beforeEnd;
     });
-  // Only use close price for chart
-  const prices = filteredHistory.map(h => h.close);
-  const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
-  const maxPrice = prices.length > 0 ? Math.max(...prices) : 1;
+
+  // Downsample for chart if too many points
+  function downsampleHistory(data: TickerPriceHistory[], maxPoints: number = 500): TickerPriceHistory[] {
+    if (data.length <= maxPoints) return data;
+    const step = Math.ceil(data.length / maxPoints);
+    const result: TickerPriceHistory[] = [];
+    for (let i = 0; i < data.length; i += step) {
+      result.push(data[i]);
+    }
+    // Always include last point for completeness
+    if (result[result.length - 1] !== data[data.length - 1]) {
+      result.push(data[data.length - 1]);
+    }
+    return result;
+  }
+
+  const chartHistory = downsampleHistory(filteredHistory);
+
+  // For statistics, always use the full filteredHistory
+  const statsPrices = filteredHistory.map(h => h.close);
+  const minPrice = statsPrices.length > 0 ? Math.min(...statsPrices) : 0;
+  const maxPrice = statsPrices.length > 0 ? Math.max(...statsPrices) : 1;
 
 
   return (
@@ -93,6 +154,22 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
             mt: 2,
           }}
         >
+          <FormControl size="small" sx={{ minWidth: { xs: 0, sm: 180 }, flex: 1 }}>
+            <InputLabel id="quick-range-label">Quick Range</InputLabel>
+            <Select
+              labelId="quick-range-label"
+              value={quickRange}
+              label="Quick Range"
+              onChange={e => handleQuickRange(e.target.value)}
+            >
+              <MenuItem value="1m">Last 1 month</MenuItem>
+              <MenuItem value="3m">Last 3 months</MenuItem>
+              <MenuItem value="1y">Last 1 year</MenuItem>
+              <MenuItem value="3y">Last 3 years</MenuItem>
+              <MenuItem value="5y">Last 5 years</MenuItem>
+              <MenuItem value="all">All time</MenuItem>
+            </Select>
+          </FormControl>
           <TextField
             label="Start Date"
             type="date"
@@ -119,7 +196,6 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
           >
             Apply Filters
           </Button>
-          {/* Fetch All Records button moved below table */}
         </Box>
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
@@ -192,10 +268,10 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
                     );
                   })}
                   {/* Line for close price */}
-                  {filteredHistory.length > 1 && (
+                  {chartHistory.length > 1 && (
                     <path
-                      d={filteredHistory.map((item, i) => {
-                        const x = 60 + (i * (containerWidth - 2 * 60)) / (filteredHistory.length - 1 || 1);
+                      d={chartHistory.map((item, i) => {
+                        const x = 60 + (i * (containerWidth - 2 * 60)) / (chartHistory.length - 1 || 1);
                         const y = 300 - 60 - ((item.close - minPrice) / (maxPrice - minPrice || 1)) * (300 - 2 * 60);
                         return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
                       }).join(' ')}
@@ -206,8 +282,8 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
                       strokeLinejoin="round"
                     />
                   )}
-                  {/* Data points */}
-                  {filteredHistory.map((item, i) => {
+                  {/* Data points: only draw for < 1 year range */}
+                  {(['1m', '3m'].includes(quickRange)) && filteredHistory.map((item, i) => {
                     const x = 60 + (i * (containerWidth - 2 * 60)) / (filteredHistory.length - 1 || 1);
                     const y = 300 - 60 - ((item.close - minPrice) / (maxPrice - minPrice || 1)) * (300 - 2 * 60);
                     return (
@@ -240,7 +316,7 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
                 }}
               >
                 <Box textAlign="center" sx={{ mb: { xs: 1, sm: 0 } }}>
-                  <Typography variant="h6" color="primary" sx={{ fontSize: { xs: 16, sm: 20 } }}>{prices.length}</Typography>
+                  <Typography variant="h6" color="primary" sx={{ fontSize: { xs: 16, sm: 20 } }}>{statsPrices.length}</Typography>
                   <Typography variant="caption" color="text.secondary">Data Points</Typography>
                 </Box>
                 <Box textAlign="center" sx={{ mb: { xs: 1, sm: 0 } }}>
