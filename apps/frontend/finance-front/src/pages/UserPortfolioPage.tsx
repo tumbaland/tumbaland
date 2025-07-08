@@ -342,7 +342,7 @@ const UserPortfolioPage: React.FC = () => {
       <ConfirmationModal
         open={confirmOpen}
         title="Delete Portfolio Entry"
-        message="Are you sure you want to delete this portfolio entry? This action cannot be undone."
+        message="Are you sure you want to delete this portfolio entry?"
         confirmText="Delete"
         cancelText="Cancel"
         severity="error"

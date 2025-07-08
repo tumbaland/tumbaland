@@ -27,6 +27,7 @@ import {
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 import ConfirmationModal from '../components/ConfirmationModal';
+import TickerHistoryModal from '../components/TickerHistoryModal';
 
 const defaultForm: Omit<TrackedTicker, '_id' | 'dateAdded'> = {
   ticker: '',
@@ -43,6 +44,8 @@ const TrackedTickersPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
 
   const fetchTickers = async () => {
     try {
@@ -117,6 +120,16 @@ const TrackedTickersPage: React.FC = () => {
     }
   };
 
+  const handleOpenHistory = (ticker: string) => {
+    setSelectedTicker(ticker);
+    setHistoryModalOpen(true);
+  };
+
+  const handleCloseHistory = () => {
+    setHistoryModalOpen(false);
+    setSelectedTicker(null);
+  };
+
   // Helper to format date as DD.MM.YYYY
   const formatDate = (iso?: string) => {
     if (!iso) return '';
@@ -170,11 +183,12 @@ const TrackedTickersPage: React.FC = () => {
           </TableHead>
           <TableBody>
             {tickers.map((t, idx) => (
-              <TableRow key={t._id || t.ticker || idx}>
+              <TableRow key={t._id || t.ticker || idx} hover style={{ cursor: 'pointer' }}
+                onClick={() => handleOpenHistory(t.ticker)}>
                 <TableCell>{t.ticker}</TableCell>
                 <TableCell>{t.displayName}</TableCell>
                 <TableCell>{formatDate(t.dateAdded)}</TableCell>
-                <TableCell align="center">
+                <TableCell align="center" onClick={e => e.stopPropagation()}>
                   <Tooltip title="Edit">
                     <IconButton color="primary" onClick={() => handleOpenDialog(t)}>
                       <EditIcon />
@@ -231,12 +245,17 @@ const TrackedTickersPage: React.FC = () => {
       <ConfirmationModal
         open={confirmOpen}
         title="Delete Ticker"
-        message="Are you sure you want to delete this tracked ticker? This action cannot be undone."
+        message="Are you sure you want to delete this tracked ticker?"
         confirmText="Delete"
         cancelText="Cancel"
         severity="error"
         onConfirm={handleConfirmDelete}
         onCancel={() => { setConfirmOpen(false); setPendingDeleteId(null); }}
+      />
+      <TickerHistoryModal
+        open={historyModalOpen}
+        onClose={handleCloseHistory}
+        ticker={selectedTicker || ''}
       />
     </Box>
   );

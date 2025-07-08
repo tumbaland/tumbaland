@@ -3,7 +3,6 @@ import Dashboard from "../pages/Dashboard";
 import FinancialRecords from "../pages/FinancialRecords";
 import TrackedTickersPage from "../pages/TrackedTickersPage";
 import UserPortfolioPage from "../pages/UserPortfolioPage";
-import TickerPriceHistoryPage from "../pages/TickerPriceHistoryPage";
 
 const AppRoutes = () => {
   return (
@@ -12,10 +11,6 @@ const AppRoutes = () => {
       <Route path="/records" element={<FinancialRecords />} />
       <Route path="/tracked-tickers" element={<TrackedTickersPage />} />
       <Route path="/user-portfolio" element={<UserPortfolioPage />} />
-      <Route
-        path="/ticker-price-history"
-        element={<TickerPriceHistoryPage />}
-      />
     </Routes>
   );
 };

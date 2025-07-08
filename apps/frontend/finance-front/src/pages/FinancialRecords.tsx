@@ -10,13 +10,10 @@ import {
   TableHead,
   TableRow,
   Button,
-  TableSortLabel,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions
+  TableSortLabel
 } from '@mui/material';
 import { Add, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import ConfirmationModal from '../components/ConfirmationModal';
 import { getFinanceRecords, createFinanceRecord, deleteFinanceRecord, updateFinanceRecord } from '../services/financeRecordService';
 import FinanceRecordModal from '../components/FinanceRecordModal';
 
@@ -401,21 +398,16 @@ const FinancialRecords: React.FC = () => {
           </Table>
         </TableContainer>
       </Paper>
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteConfirmOpen} onClose={handleDeleteCancel}>
-        <DialogTitle>Delete Record</DialogTitle>
-        <DialogContent>
-          <Typography>Are you sure you want to delete this record? This action cannot be undone.</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleDeleteCancel} color="primary">
-            Cancel
-          </Button>
-          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmationModal
+        open={deleteConfirmOpen}
+        title="Delete Record"
+        message="Are you sure you want to delete this record?"
+        confirmText="Delete"
+        cancelText="Cancel"
+        severity="error"
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+      />
     </Box>
   );
 };

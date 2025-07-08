@@ -8,7 +8,7 @@ export const menuItems = [
     path: '/',
   },
   {
-    label: 'Records',
+    label: 'Old Records',
     icon: <ListIcon fontSize="small" sx={{ mr: 1 }} />,
     path: '/records',
   },
@@ -18,13 +18,8 @@ export const menuItems = [
     path: '/tracked-tickers',
   },
   {
-    label: 'User Portfolio',
+    label: 'ETF Portfolio',
     icon: <ListIcon fontSize="small" sx={{ mr: 1 }} />,
     path: '/user-portfolio',
-  },
-  {
-    label: 'Ticker Price History',
-    icon: <ListIcon fontSize="small" sx={{ mr: 1 }} />,
-    path: '/ticker-price-history',
   },
 ];

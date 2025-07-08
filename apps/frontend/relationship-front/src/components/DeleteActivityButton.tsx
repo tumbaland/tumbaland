@@ -68,7 +68,7 @@ const DeleteActivityButton: React.FC<DeleteActivityButtonProps> = ({
       </Tooltip>      <ConfirmationModal
         open={showConfirmation}
         title="Delete Activity"
-        message="Are you sure you want to delete this activity? This action cannot be undone."
+        message="Are you sure you want to delete this activity?"
         confirmText="Delete"
         cancelText="Cancel"
         severity="error"
