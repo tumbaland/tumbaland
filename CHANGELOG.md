@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.33](https://github.com/toomastahves/tumbaland/compare/v0.0.32...v0.0.33) (2025-07-08)
+
+
+### Features
+
+* **finance-front:** add tracked tickers modals ([d3d91a7](https://github.com/toomastahves/tumbaland/commit/d3d91a7e63258026b9db76581035cbead7661021))
+
 ### [0.0.32](https://github.com/toomastahves/tumbaland/compare/v0.0.31...v0.0.32) (2025-07-07)
 
 
