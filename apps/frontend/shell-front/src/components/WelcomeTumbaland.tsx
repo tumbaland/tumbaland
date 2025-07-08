@@ -1,42 +1,44 @@
+
+import { useMemo } from 'react';
 import { Box } from '@mui/material';
+
 
 function SparkleStars({ count = 69 }: { count?: number }) {
   const symbols = ['✦', '✧', '✩', '✫', '✬', '✯', '✰', '★', '❉', '❋'];
   const colors = [
-    '#ffe0f7', // pastel pink
-    '#ffb6de', // pastel rose
-    '#ffd6fa', // pastel lavender
-    '#ffb4fa', // pastel magenta
-    '#ffb4e6', // pastel blush
-    '#ffe6fa', // pastel light pink
-    '#fff0e6', // pastel peach
-    '#fff7b2', // pastel yellow
-    '#ffd6e6', // pastel light rose
-    '#f6baff', // pastel blue
-    '#baffc9', // pastel mint
-    '#b2e7ff', // pastel sky blue
-    '#b2ffd6', // pastel green
-    '#e6ffb2', // pastel lime
-    '#ffe6b2', // pastel orange
-    '#e6e6ff', // pastel violet
-    '#b2baff', // pastel periwinkle
-    '#ffd6b2', // pastel apricot
-    '#e6ffd6', // pastel light green
-    '#ffd6d6', // pastel coral
-    '#e6f7ff', // pastel icy blue
-    '#d6ffe6', // pastel teal
-    '#f7e6ff', // pastel lilac
-    '#f7ffd6', // pastel lemon
-    '#d6e6ff', // pastel baby blue
-    '#f7e6d6', // pastel cream
-    '#e6fff7', // pastel aqua
-    '#f7d6ff', // pastel orchid
-    '#d6fff7', // pastel turquoise
-    '#f7d6d6', // pastel blush red
-    '#fff',    // keep a few white for sparkle
-    '#fff',
-    '#fff',
+    '#ffe0f7', '#ffb6de', '#ffd6fa', '#ffb4fa', '#ffb4e6', '#ffe6fa', '#fff0e6', '#fff7b2',
+    '#ffd6e6', '#f6baff', '#baffc9', '#b2e7ff', '#b2ffd6', '#e6ffb2', '#ffe6b2', '#e6e6ff',
+    '#b2baff', '#ffd6b2', '#e6ffd6', '#ffd6d6', '#e6f7ff', '#d6ffe6', '#f7e6ff', '#f7ffd6',
+    '#d6e6ff', '#f7e6d6', '#e6fff7', '#f7d6ff', '#d6fff7', '#f7d6d6', '#fff', '#fff', '#fff',
   ];
+
+  // Precompute all star properties only once per mount or count change
+  const stars = useMemo(() => {
+    return Array.from({ length: count }).map((_, i) => {
+      const symbol = symbols[Math.floor(Math.random() * symbols.length)];
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const left = Math.random() * 96 + 1;
+      const top = Math.random() * 80 + 2;
+      const size = Math.random() * 8 + 6;
+      const duration = Math.random() * 0.8 + 0.8;
+      const delay = Math.random() * 1.5;
+      const rotateDir = Math.random() > 0.5 ? 1 : -1;
+      const rotateDuration = (Math.random() * 1.2 + 1.2).toFixed(2);
+      return {
+        symbol,
+        color,
+        left,
+        top,
+        size,
+        duration,
+        delay,
+        rotateDir,
+        rotateDuration,
+        key: i,
+      };
+    });
+  }, [count]);
+
   return (
     <Box
       sx={{
@@ -49,36 +51,25 @@ function SparkleStars({ count = 69 }: { count?: number }) {
         zIndex: 2,
       }}
     >
-      {[...Array(count)].map((_, i) => {
-        const symbol = symbols[Math.floor(Math.random() * symbols.length)];
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        const left = Math.random() * 96 + 1;
-        const top = Math.random() * 80 + 2;
-        const size = Math.random() * 8 + 6; // smaller stars
-        const duration = Math.random() * 0.8 + 0.8; // faster sparkle
-        const delay = Math.random() * 1.5;
-        // Add a random rotation direction and speed for each star
-        const rotateDir = Math.random() > 0.5 ? 1 : -1;
-        const rotateDuration = (Math.random() * 1.2 + 1.2).toFixed(2);
-        return (
-          <Box
-            key={i}
-            sx={{
-              position: 'absolute',
-              left: `${left}%`,
-              top: `${top}%`,
-              fontSize: `${size}px`,
-              color,
-              opacity: 0.95,
-              filter: 'drop-shadow(0 0 8px #fff) drop-shadow(0 0 16px #fff8)',
-              animation: `sparkleStar ${duration}s ease-in-out ${delay}s infinite, sparkleRotate${rotateDir === 1 ? '' : 'Reverse'} ${rotateDuration}s linear ${delay}s infinite`,
-              userSelect: 'none',
-            }}
-          >
-            {symbol}
-          </Box>
-        );
-      })}
+      {stars.map(star => (
+        <Box
+          key={star.key}
+          sx={{
+            position: 'absolute',
+            left: `${star.left}%`,
+            top: `${star.top}%`,
+            fontSize: `${star.size}px`,
+            color: star.color,
+            opacity: 0.95,
+            filter: 'drop-shadow(0 0 8px #fff) drop-shadow(0 0 16px #fff8)',
+            animation: `sparkleStar ${star.duration}s ease-in-out ${star.delay}s infinite, sparkleRotate${star.rotateDir === 1 ? '' : 'Reverse'} ${star.rotateDuration}s linear ${star.delay}s infinite`,
+            userSelect: 'none',
+            willChange: 'transform, opacity',
+          }}
+        >
+          {star.symbol}
+        </Box>
+      ))}
       <style>{`
         @keyframes sparkleStar {
           0%, 100% { opacity: 0.7; filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 16px #fff8); }

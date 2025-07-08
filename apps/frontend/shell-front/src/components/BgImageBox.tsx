@@ -4,7 +4,7 @@ export default function BgImageBox() {
   return (
     <Box
       component="img"
-      src="/b2.jpg"
+      src="/background.png"
       sx={{
         position: "fixed",
         top: 0,
