@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.37](https://github.com/toomastahves/tumbaland/compare/v0.0.36...v0.0.37) (2025-07-08)
+
+
+### Features
+
+* **auth-service:** reduce jwt to 1h ([85a7066](https://github.com/toomastahves/tumbaland/commit/85a7066b183edcb189b0d60066b6fb645704556f))
+
 ### [0.0.36](https://github.com/toomastahves/tumbaland/compare/v0.0.35...v0.0.36) (2025-07-08)
 
 
