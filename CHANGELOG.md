@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.40](https://github.com/toomastahves/tumbaland/compare/v0.0.39...v0.0.40) (2025-07-08)
+
+
+### Features
+
+* **shell-front:** pretty frontpage ([284fb98](https://github.com/toomastahves/tumbaland/commit/284fb98de25534881c1c3fb07394e7339e1cdb50))
+
 ### [0.0.39](https://github.com/toomastahves/tumbaland/compare/v0.0.38...v0.0.39) (2025-07-08)
 
 
