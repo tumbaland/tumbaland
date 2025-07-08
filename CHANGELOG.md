@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.38](https://github.com/toomastahves/tumbaland/compare/v0.0.37...v0.0.38) (2025-07-08)
+
+
+### Features
+
+* **finance-front:** improve chart ([2dd7c51](https://github.com/toomastahves/tumbaland/commit/2dd7c514ab6ea887b87d484aa6c60f006adc1ae3))
+
 ### [0.0.37](https://github.com/toomastahves/tumbaland/compare/v0.0.36...v0.0.37) (2025-07-08)
 
 
