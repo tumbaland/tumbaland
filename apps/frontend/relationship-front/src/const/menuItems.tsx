@@ -1,5 +1,5 @@
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import ListIcon from '@mui/icons-material/List';
+import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
 
 export const menuItems = [
   {
@@ -9,7 +9,7 @@ export const menuItems = [
   },
   {
     label: 'Activities',
-    icon: <ListIcon fontSize="small" sx={{ mr: 1 }} />,
+    icon: <DirectionsRunIcon fontSize="small" sx={{ mr: 1 }} />,
     path: '/activities',
   },
 ];

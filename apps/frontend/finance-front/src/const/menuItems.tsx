@@ -1,5 +1,7 @@
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import ListIcon from '@mui/icons-material/List';
+import HistoryIcon from '@mui/icons-material/History';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import PieChartIcon from '@mui/icons-material/PieChart';
 
 export const menuItems = [
   {
@@ -9,17 +11,17 @@ export const menuItems = [
   },
   {
     label: 'Old Records',
-    icon: <ListIcon fontSize="small" sx={{ mr: 1 }} />,
+    icon: <HistoryIcon fontSize="small" sx={{ mr: 1 }} />,
     path: '/records',
   },
   {
     label: 'Tracked Tickers',
-    icon: <ListIcon fontSize="small" sx={{ mr: 1 }} />,
+    icon: <TrendingUpIcon fontSize="small" sx={{ mr: 1 }} />,
     path: '/tracked-tickers',
   },
   {
     label: 'ETF Portfolio',
-    icon: <ListIcon fontSize="small" sx={{ mr: 1 }} />,
+    icon: <PieChartIcon fontSize="small" sx={{ mr: 1 }} />,
     path: '/user-portfolio',
   },
 ];
