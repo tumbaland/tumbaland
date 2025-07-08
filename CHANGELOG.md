@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.35](https://github.com/toomastahves/tumbaland/compare/v0.0.34...v0.0.35) (2025-07-08)
+
+
+### Bug Fixes
+
+* **finance-front:** show date labels ([c6a0bda](https://github.com/toomastahves/tumbaland/commit/c6a0bdaf62ba07f3bea928a66536084c5409ac48))
+
 ### [0.0.34](https://github.com/toomastahves/tumbaland/compare/v0.0.33...v0.0.34) (2025-07-08)
 
 
