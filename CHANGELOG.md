@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.44](https://github.com/toomastahves/tumbaland/compare/v0.0.43...v0.0.44) (2025-07-10)
+
+
+### Features
+
+* optimize frontpage ([c444b1f](https://github.com/toomastahves/tumbaland/commit/c444b1f5b581f55af2b79273db247de447cbe018))
+
 ### [0.0.43](https://github.com/toomastahves/tumbaland/compare/v0.0.42...v0.0.43) (2025-07-10)
 
 
