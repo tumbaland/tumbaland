@@ -42,7 +42,7 @@ export function SideMenu({ currentRoute }: SideMenuProps) {
         flexDirection: 'column',
         alignItems: 'center',
         pt: 9,
-        zIndex: 1200,
+        zIndex: 1,
         background: 'rgba(255,255,255,0.08)',
         backdropFilter: 'blur(12px) saturate(180%)',
         WebkitBackdropFilter: 'blur(12px) saturate(180%)',

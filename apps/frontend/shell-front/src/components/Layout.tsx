@@ -47,7 +47,7 @@ export default function Layout({ children }: LayoutProps) {
           alignItems: 'stretch',
           justifyContent: 'center',
           position: 'relative',
-          marginLeft: isMobile ? 0 : 60,
+          marginLeft: showIframe ? (isMobile ? 0 : 60) : 0,
           transition: 'margin-left 0.3s',
           overflow: 'auto',
         }}

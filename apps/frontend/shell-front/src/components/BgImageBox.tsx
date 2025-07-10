@@ -1,6 +1,7 @@
+import { memo } from "react";
 import { Box } from "@mui/material";
 
-export default function BgImageBox() {
+const BgImageBox = memo(function BgImageBox() {
   return (
     <Box
       component="img"
@@ -16,7 +17,11 @@ export default function BgImageBox() {
         opacity: 0.55,
         pointerEvents: "none",
         userSelect: "none",
+        // Enable hardware acceleration
+        transform: "translate3d(0, 0, 0)",
       }}
     />
   );
-}
+});
+
+export default BgImageBox;

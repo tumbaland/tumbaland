@@ -1,12 +1,11 @@
 
-import { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 import { Box } from '@mui/material';
-
 
 type CuteFallingStarsProps = { count?: number };
 
 // Precompute star properties for better performance and less layout thrash
-export default function CuteFallingStars({ count = 24 }: CuteFallingStarsProps) {
+const CuteFallingStars = memo(function CuteFallingStars({ count = 24 }: CuteFallingStarsProps) {
   const symbols = ['★', '✦', '✧', '✩', '✫', '✬', '✯', '✰'];
   const colors = ['#fff', '#ffe0f7', '#f8e1ff', '#ffd6ec'];
 
@@ -82,4 +81,6 @@ export default function CuteFallingStars({ count = 24 }: CuteFallingStarsProps) 
       `}</style>
     </Box>
   );
-}
+});
+
+export default CuteFallingStars;

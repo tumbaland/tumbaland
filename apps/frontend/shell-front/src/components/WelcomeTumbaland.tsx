@@ -1,7 +1,6 @@
 
-import { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 import { Box } from '@mui/material';
-
 
 function SparkleStars({ count = 69 }: { count?: number }) {
   const symbols = ['✦', '✧', '✩', '✫', '✬', '✯', '✰', '★', '❉', '❋'];
@@ -89,7 +88,7 @@ function SparkleStars({ count = 69 }: { count?: number }) {
   );
 }
 
-export default function WelcomeTumbaland() {
+const WelcomeTumbaland = memo(function WelcomeTumbaland() {
   return (
     <Box sx={{ position: 'relative', display: 'inline-block', mb: 2 }}>
       <Box
@@ -109,4 +108,6 @@ export default function WelcomeTumbaland() {
       <SparkleStars count={69} />
     </Box>
   );
-}
+});
+
+export default WelcomeTumbaland;
