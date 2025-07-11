@@ -187,5 +187,6 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
             cd ~/tumbaland
+            export COMPOSE_HTTP_TIMEOUT=300
             docker-compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} pull
             docker-compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} up -d

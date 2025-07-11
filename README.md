@@ -13,3 +13,8 @@
 3. **Access the app:**
    - Main site: http://localhost:3000
    - Other services: see Nginx config for subdomains.
+
+4. Enter PI
+   ```sh
+   ssh tom@192.168.0.131
+   ```
