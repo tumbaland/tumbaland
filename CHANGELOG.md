@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.46](https://github.com/toomastahves/tumbaland/compare/v0.0.45...v0.0.46) (2025-07-11)
+
+
+### Features
+
+* update deployment ([c065681](https://github.com/toomastahves/tumbaland/commit/c0656811328a738a57e485f314604951e006be6b))
+
 ### [0.0.45](https://github.com/toomastahves/tumbaland/compare/v0.0.44...v0.0.45) (2025-07-11)
 
 
