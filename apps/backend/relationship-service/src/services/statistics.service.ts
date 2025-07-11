@@ -98,16 +98,26 @@ export const getRelationshipStatistics = async (timeframe: string = 'all'): Prom
         $lte: endDate
       }
     };    // Get basic statistics
-    const [totalStats, sexActivities] = await Promise.all([
-      // Total statistics
+    const [totalStats, totalHoursStats, sexActivities] = await Promise.all([
+      // Total statistics (excluding 'sex' and 'together' activities)
+      Activity.aggregate([
+        { $match: { ...dateFilter, 'activity.type': { $nin: ['sex', 'together'] } } },
+        {
+          $group: {
+            _id: null,
+            totalActivities: { $sum: 1 },
+            avgHours: { $avg: { $ifNull: ['$hours', 0] } }
+          }
+        }
+      ]),
+
+      // Total hours (including all activities)
       Activity.aggregate([
         { $match: dateFilter },
         {
           $group: {
             _id: null,
-            totalActivities: { $sum: 1 },
-            totalHours: { $sum: { $ifNull: ['$hours', 0] } },
-            avgHours: { $avg: { $ifNull: ['$hours', 0] } }
+            totalHours: { $sum: { $ifNull: ['$hours', 0] } }
           }
         }
       ]),
@@ -135,8 +145,9 @@ export const getRelationshipStatistics = async (timeframe: string = 'all'): Prom
 
     // Calculate basic stats
     const totalActivities = totalStats[0]?.totalActivities || 0;
-    const totalHours = totalStats[0]?.totalHours || 0;
-    const sexActivityDays = sexActivities[0]?.uniqueDays || 0;    // Calculate days together since relationship start (January 25, 2024)
+    const totalHours = totalHoursStats[0]?.totalHours || 0;
+    const sexActivityDays = sexActivities[0]?.uniqueDays || 0;
+    // Calculate days together since relationship start (January 25, 2024)
     const relationshipStartDate = new Date('2024-01-25');
     const daysTogether = Math.floor((now.getTime() - relationshipStartDate.getTime()) / (1000 * 60 * 60 * 24));
 
@@ -448,13 +459,15 @@ export const getWeeklyHeatmapData = async (year?: number): Promise<WeeklyHeatmap
         }
       });
 
+      // Filter out 'together' and 'sex' types for totalActivities
+      const filteredActivities = item.activities.filter((activity: any) => activity.type !== 'sex' && activity.type !== 'together');
       return {
         date: item._id.date,
         dayOfWeek: item._id.dayOfWeek - 1, // Convert to 0-6 (Sunday-Saturday)
         week: item._id.week,
         month: item._id.month,
         year: item._id.year,
-        totalActivities: item.totalActivities || 0,
+        totalActivities: filteredActivities.length,
         totalHours: item.totalHours || 0,
         activities
       };
@@ -535,14 +548,17 @@ export const getCumulativeTimelineData = async (year?: number): Promise<Cumulati
         dailyActivityBreakdown[type] = 0;
       });
 
-      item.activities.forEach((activity: any) => {
+      // Filter out 'sex' and 'together' for cumulativeActivities
+      const filteredActivities = item.activities.filter((activity: any) => activity.type !== 'sex' && activity.type !== 'together');
+
+      filteredActivities.forEach((activity: any) => {
         if (dailyActivityBreakdown.hasOwnProperty(activity.type)) {
           dailyActivityBreakdown[activity.type]++;
         }
       });
 
       // Update cumulative totals
-      cumulativeActivities += item.dailyActivities;
+      cumulativeActivities += filteredActivities.length;
       cumulativeHours += item.dailyHours;
 
       // Update cumulative activity breakdown
@@ -561,7 +577,7 @@ export const getCumulativeTimelineData = async (year?: number): Promise<Cumulati
 
       return {
         date: item._id.date,
-        dailyActivities: item.dailyActivities || 0,
+        dailyActivities: filteredActivities.length,
         cumulativeActivities,
         dailyHours: item.dailyHours || 0,
         cumulativeHours,

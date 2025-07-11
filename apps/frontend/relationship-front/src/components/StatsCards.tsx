@@ -149,7 +149,7 @@ const StatsCards: React.FC = () => {
           <Box>
             <StatCard
               icon={<AccessTime />}
-              title="Total Hours Together"
+              title="Total Hours"
               value={statistics.totalHoursTogether}
               subtitle={`${statistics.totalHoursTogether} hours for ${getTimeframeLabel()}`}
               color="primary.main"
@@ -158,7 +158,7 @@ const StatsCards: React.FC = () => {
           <Box>
             <StatCard
               icon={<Favorite />}
-              title="Make Love Days"
+              title="Love Days"
               value={statistics.sexActivityDays}
               subtitle={`${statistics.sexActivityDays} love days for ${getTimeframeLabel()}`}
               color="error.main"
