@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.45](https://github.com/toomastahves/tumbaland/compare/v0.0.44...v0.0.45) (2025-07-11)
+
+
+### Features
+
+* filter out activities ([611841e](https://github.com/toomastahves/tumbaland/commit/611841e9fad968cc909c7e85c41abaa13a1cfdc2))
+
 ### [0.0.44](https://github.com/toomastahves/tumbaland/compare/v0.0.43...v0.0.44) (2025-07-10)
 
 
