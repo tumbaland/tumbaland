@@ -46,6 +46,7 @@ const CollageDetailsPage: React.FC = () => {
     setCaptionEditValue(currentCaption);
   };
 
+
   // Save caption edit
   const handleCaptionSave = () => {
     if (captionEditIdx === null) return;
@@ -59,6 +60,19 @@ const CollageDetailsPage: React.FC = () => {
     // Also update collage.config.photos in memory for immediate UI feedback
     if (collage && collage.config && collage.config.photos && collage.config.photos[captionEditIdx]) {
       collage.config.photos[captionEditIdx].caption = captionEditValue;
+      setCollage({ ...collage });
+    }
+    setCaptionEditIdx(null);
+    setCaptionEditValue('');
+  };
+
+  // Delete photo from canvas
+  const handleDeletePhoto = () => {
+    if (captionEditIdx === null) return;
+    setCanvasPhotos((prev) => prev.filter((_, idx) => idx !== captionEditIdx));
+    // Also update collage.config.photos in memory for immediate UI feedback
+    if (collage && collage.config && collage.config.photos) {
+      collage.config.photos.splice(captionEditIdx, 1);
       setCollage({ ...collage });
     }
     setCaptionEditIdx(null);
@@ -316,7 +330,7 @@ const CollageDetailsPage: React.FC = () => {
               })}
       {/* Caption Edit Dialog */}
       <Dialog open={captionEditIdx !== null} onClose={handleCaptionCancel} maxWidth="xs" fullWidth>
-        <DialogTitle>Edit Photo Caption</DialogTitle>
+        <DialogTitle>Edit Photo</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
@@ -328,6 +342,7 @@ const CollageDetailsPage: React.FC = () => {
           />
         </DialogContent>
         <DialogActions>
+          <Button onClick={handleDeletePhoto} color="error">Delete</Button>
           <Button onClick={handleCaptionCancel}>Cancel</Button>
           <Button onClick={handleCaptionSave} variant="contained">Save</Button>
         </DialogActions>
