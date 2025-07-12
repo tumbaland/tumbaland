@@ -6,7 +6,7 @@ cat > /usr/share/nginx/html/config.json << EOF
   "ALBUM_API_URL": "${ALBUM_API_URL}",
   "AUTH_SERVICE_URL": "${AUTH_SERVICE_URL}",
   "AUTH_FRONT_URL": "${AUTH_FRONT_URL}",
-  "ALBUM_FRONT_URL: "${ALBUM_FRONT_URL}"
+  "ALBUM_FRONT_URL": "${ALBUM_FRONT_URL}"
 }
 EOF
 
