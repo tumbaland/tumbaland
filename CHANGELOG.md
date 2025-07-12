@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.62](https://github.com/toomastahves/tumbaland/compare/v0.0.61...v0.0.62) (2025-07-12)
+
+
+### Features
+
+* reduce font ([577f68b](https://github.com/toomastahves/tumbaland/commit/577f68b9b7555fd8e092f5a85e4d6ecfb759a067))
+
 ### [0.0.61](https://github.com/toomastahves/tumbaland/compare/v0.0.60...v0.0.61) (2025-07-12)
 
 
