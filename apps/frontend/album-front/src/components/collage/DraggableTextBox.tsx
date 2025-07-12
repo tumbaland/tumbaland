@@ -116,7 +116,6 @@ const DraggableTextBox: React.FC<DraggableTextBoxProps> = ({ textBoxes, setTextB
           onDoubleClick={() => onDoubleClick(idx)}
         >
           <Typography
-            variant="h3"
             sx={{
               color: '#e91e63', // vibrant pink
               width: '100%',
@@ -129,6 +128,7 @@ const DraggableTextBox: React.FC<DraggableTextBoxProps> = ({ textBoxes, setTextB
               whiteSpace: 'pre-line',
               fontFamily: 'inherit',
               lineHeight: 1.1,
+              fontSize: '2rem',
             }}
           >
             {textBox.text}
