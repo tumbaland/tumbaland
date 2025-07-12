@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.52](https://github.com/toomastahves/tumbaland/compare/v0.0.51...v0.0.52) (2025-07-12)
+
+
+### Features
+
+* fix config ([1960c1d](https://github.com/toomastahves/tumbaland/commit/1960c1dad80d3d73530ccd6619ccae57fe239f02))
+
 ### [0.0.51](https://github.com/toomastahves/tumbaland/compare/v0.0.50...v0.0.51) (2025-07-12)
 
 
