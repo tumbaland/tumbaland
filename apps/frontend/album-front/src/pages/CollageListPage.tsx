@@ -136,47 +136,48 @@ const CollageListPage: React.FC = () => {
         >
           {collages.map((collage) => (
             <Box key={collage._id}>
-              <Card key={`card-${collage._id}`} sx={{ position: 'relative' }}>
+              <Box
+                sx={{
+                  position: 'relative',
+                  bgcolor: 'background.paper',
+                  borderRadius: 3,
+                  boxShadow: 2,
+                  p: 3,
+                  minHeight: 120,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'flex-start',
+                  transition: 'box-shadow 0.2s, background 0.2s',
+                  cursor: 'pointer',
+                  '&:hover': {
+                    boxShadow: 6,
+                    bgcolor: 'grey.50',
+                  },
+                }}
+                onClick={() => window.open(`/collage/${collage._id}`, '_blank')}
+              >
                 <IconButton
                   aria-label="more"
                   aria-controls="collage-menu"
                   aria-haspopup="true"
-                  onClick={(e) => handleMenuOpen(e, collage)}
+                  onClick={e => { e.stopPropagation(); handleMenuOpen(e, collage); }}
                   sx={{ position: 'absolute', top: 8, right: 8, zIndex: 2 }}
                 >
                   <MoreVertIcon />
                 </IconButton>
-                <CardActionArea target="_blank" href={`/collage/${collage._id}`}>
-                  {collage.config?.photos?.[0]?.filename ? (
-                    <CardMedia
-                      component="img"
-                      height="140"
-                      image={collage.config.photos[0].filename}
-                      alt={collage.title}
-                    />
-                  ) : (
-                    <Box
-                      sx={{
-                        height: 140,
-                        bgcolor: 'grey.100',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      <GridOnIcon color="disabled" sx={{ fontSize: 48 }} />
-                    </Box>
-                  )}
-                  <CardContent>
-                    <Typography variant="h6" noWrap>
-                      {collage.title}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" noWrap>
-                      {collage.config?.title?.subtitle ?? ''}
-                    </Typography>
-                  </CardContent>
-                </CardActionArea>
-              </Card>
+                <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5, maxWidth: '90%' }} noWrap>
+                  {collage.title}
+                </Typography>
+                {collage.config?.title?.subtitle && (
+                  <Typography variant="body2" color="text.secondary" sx={{ maxWidth: '90%' }} noWrap>
+                    {collage.config.title.subtitle}
+                  </Typography>
+                )}
+                <Typography variant="caption" color="text.disabled" sx={{ mt: 1 }}>
+                  {collage._id}
+                </Typography>
+              </Box>
             </Box>
           ))}
       <Menu

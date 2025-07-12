@@ -11,8 +11,6 @@ const CollageLayout: React.FC<CollageLayoutProps> = ({ children }) => {
       sx={{
         width: '100vw',
         height: '100vh',
-        bgcolor: '#222',
-        color: '#fff',
         overflow: 'hidden',
         position: 'fixed',
         top: 0,
