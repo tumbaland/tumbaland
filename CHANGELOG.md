@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.53](https://github.com/toomastahves/tumbaland/compare/v0.0.52...v0.0.53) (2025-07-12)
+
+
+### Features
+
+* fix file path ([ee696b1](https://github.com/toomastahves/tumbaland/commit/ee696b16e0fec7c620c70147db4625a7ec96a72d))
+
 ### [0.0.52](https://github.com/toomastahves/tumbaland/compare/v0.0.51...v0.0.52) (2025-07-12)
 
 
