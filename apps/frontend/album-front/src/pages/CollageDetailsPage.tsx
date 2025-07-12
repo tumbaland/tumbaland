@@ -8,7 +8,6 @@ import CollageLayout from '../components/collage/CollageLayout';
 import { Collage } from '../types/collage';
 import { useCollage } from '../hooks/useCollage';
 
-
 interface CanvasPhoto {
   id: string;
   src: string;
@@ -137,15 +136,22 @@ const CollageDetailsPage: React.FC = () => {
     if (!collage) return;
     setSaving(true);
     try {
-      const photos = canvasPhotos.map((p, idx) => ({
-        filename: p.src,
-        position: { left: p.x, top: p.y },
-        width: p.width,
-        height: p.height,
-        rotation: p.rotation || 0,
-        caption:
-          (p.caption !== undefined ? p.caption : (collage?.config?.photos && collage.config.photos[idx]?.caption) || '')
-      }));
+      const photos = canvasPhotos.map((p, idx) => {
+        // Only save the filename, not the full URL
+        let filename = p.src;
+        if (filename.includes('/')) {
+          filename = filename.substring(filename.lastIndexOf('/') + 1);
+        }
+        return {
+          filename,
+          position: { left: p.x, top: p.y },
+          width: p.width,
+          height: p.height,
+          rotation: p.rotation || 0,
+          caption:
+            (p.caption !== undefined ? p.caption : (collage?.config?.photos && collage.config.photos[idx]?.caption) || '')
+        };
+      });
       // Save text boxes to config
       const texts = canvasTexts.map(t => ({
         id: t.id,
@@ -374,7 +380,7 @@ const CollageDetailsPage: React.FC = () => {
                       zIndex: 2,
                       border: '2px solid #fff',
                       borderRadius: 2,
-                      background: '#222',
+                      background: '#fff',
                       cursor:
                         dragPhotoId === photo.id
                           ? 'grabbing'
