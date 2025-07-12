@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.59](https://github.com/toomastahves/tumbaland/compare/v0.0.58...v0.0.59) (2025-07-12)
+
+
+### Features
+
+* add edit and view mode to collage ([ba456bc](https://github.com/toomastahves/tumbaland/commit/ba456bcc887a6ad3421f82f312a0ec319753ab0e))
+
 ### [0.0.58](https://github.com/toomastahves/tumbaland/compare/v0.0.57...v0.0.58) (2025-07-12)
 
 
