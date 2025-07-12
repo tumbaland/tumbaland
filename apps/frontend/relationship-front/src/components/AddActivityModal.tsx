@@ -24,7 +24,8 @@ const AddActivityModal: React.FC<AddActivityModalProps> = ({
 
   const handleCloseModal = () => {
     setIsFormOpen(false);
-  };  const handleCreateActivity = async (data: CreateActivityRequest): Promise<boolean> => {
+  };
+  const handleCreateActivity = async (data: CreateActivityRequest): Promise<boolean> => {
     try {
       await createActivity(data);
       // Call the callback to refresh the data

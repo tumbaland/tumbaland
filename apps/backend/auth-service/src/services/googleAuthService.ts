@@ -6,7 +6,7 @@ export const verifyGoogleToken = async (idToken: string) => {
   try {
     const ticket = await client.verifyIdToken({
       idToken,
-      audience: process.env.GOOGLE_CLIENT_ID,
+      audience: process.env.GOOGLE_CLIENT_ID
     });
     const payload = ticket.getPayload();
     return payload; // Contains user info like email, name, etc.

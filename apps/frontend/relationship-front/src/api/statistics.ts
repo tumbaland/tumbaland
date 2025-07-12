@@ -110,7 +110,8 @@ export interface CumulativeTimelineResponse {
 export const getStatistics = async (timeframe: string = 'all'): Promise<RelationshipStatistics> => {
   try {
     const response = await relationshipApi.get('/statistics', {
-      params: { timeframe }    });
+      params: { timeframe }
+    });
     return response.data.data;
   } catch (error: any) {
     console.error('Error fetching statistics:', error);
@@ -204,5 +205,5 @@ export const statisticsApi = {
   getMonthlyStatistics,
   getMonthlyActivityBreakdown,
   getWeeklyHeatmapData,
-  getCumulativeTimelineData,
+  getCumulativeTimelineData
 };

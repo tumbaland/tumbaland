@@ -66,7 +66,8 @@ export interface CumulativeTimelineData {
   };
 }
 
-export const getRelationshipStatistics = async (timeframe: string = 'all'): Promise<RelationshipStatistics> => {  try {
+export const getRelationshipStatistics = async (timeframe: string = 'all'): Promise<RelationshipStatistics> => {
+  try {
     // Calculate date range based on timeframe
     const now = new Date();
     let startDate: Date;
@@ -92,12 +93,15 @@ export const getRelationshipStatistics = async (timeframe: string = 'all'): Prom
     const endDate = now;
 
     // Build date filter
-    const dateFilter = timeframe === 'all' ? {} : {
-      date: {
-        $gte: startDate,
-        $lte: endDate
-      }
-    };    // Get basic statistics
+    const dateFilter =
+      timeframe === 'all'
+        ? {}
+        : {
+            date: {
+              $gte: startDate,
+              $lte: endDate
+            }
+          }; // Get basic statistics
     const [totalStats, totalHoursStats, sexActivities] = await Promise.all([
       // Total statistics (excluding 'sex' and 'together' activities)
       Activity.aggregate([
@@ -124,11 +128,11 @@ export const getRelationshipStatistics = async (timeframe: string = 'all'): Prom
 
       // Sex activity days
       Activity.aggregate([
-        { 
-          $match: { 
+        {
+          $match: {
             ...dateFilter,
-            'activity.type': 'sex' 
-          } 
+            'activity.type': 'sex'
+          }
         },
         {
           $group: {
@@ -167,7 +171,7 @@ export const getMonthlyHours = async (year?: number): Promise<MonthlyHoursData[]
   try {
     // Build query conditions
     const conditions: any = {};
-    
+
     if (year) {
       conditions.date = {
         $gte: new Date(year, 0, 1),
@@ -181,21 +185,21 @@ export const getMonthlyHours = async (year?: number): Promise<MonthlyHoursData[]
     // Group by year-month
     const monthlyData = new Map<string, { hours: number; activities: number }>();
 
-    activities.forEach(activity => {
+    activities.forEach((activity) => {
       const date = new Date(activity.date);
       const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-      
+
       if (!monthlyData.has(monthKey)) {
         monthlyData.set(monthKey, { hours: 0, activities: 0 });
       }
-        const data = monthlyData.get(monthKey)!;
+      const data = monthlyData.get(monthKey)!;
       data.hours += activity.hours || 0;
       data.activities += 1;
     });
 
     // Convert to array format
     const result: MonthlyHoursData[] = [];
-    
+
     for (const [monthKey, data] of monthlyData.entries()) {
       const [yearStr, monthStr] = monthKey.split('-');
       result.push({
@@ -223,7 +227,7 @@ export const getMonthlyStatistics = async (year?: number): Promise<MonthlyStatis
   try {
     // Build query conditions
     const conditions: any = {};
-    
+
     if (year) {
       conditions.date = {
         $gte: new Date(year, 0, 1),
@@ -237,21 +241,21 @@ export const getMonthlyStatistics = async (year?: number): Promise<MonthlyStatis
     // Group by year-month
     const monthlyData = new Map<string, { daysMet: Set<string>; daysWithSex: Set<string> }>();
 
-    activities.forEach(activity => {
+    activities.forEach((activity) => {
       const date = new Date(activity.date);
       const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
       const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD format
-      
+
       if (!monthlyData.has(monthKey)) {
-        monthlyData.set(monthKey, { 
-          daysMet: new Set<string>(), 
-          daysWithSex: new Set<string>() 
+        monthlyData.set(monthKey, {
+          daysMet: new Set<string>(),
+          daysWithSex: new Set<string>()
         });
       }
-      
+
       const data = monthlyData.get(monthKey)!;
       data.daysMet.add(dateKey);
-      
+
       if (activity.activity.type === 'sex') {
         data.daysWithSex.add(dateKey);
       }
@@ -259,18 +263,18 @@ export const getMonthlyStatistics = async (year?: number): Promise<MonthlyStatis
 
     // Convert to array format with proper calculations
     const result: MonthlyStatisticsData[] = [];
-    
+
     for (const [monthKey, data] of monthlyData.entries()) {
       const [yearStr, monthStr] = monthKey.split('-');
       const year = parseInt(yearStr);
       const month = parseInt(monthStr);
-      
+
       // Calculate total days in month
       const totalDays = new Date(year, month, 0).getDate();
       const daysMet = data.daysMet.size;
       const daysWithSex = data.daysWithSex.size;
       const daysNotMet = totalDays - daysMet;
-      
+
       result.push({
         month: monthStr,
         year: year,
@@ -298,7 +302,7 @@ export const getMonthlyActivityBreakdown = async (year?: number): Promise<Monthl
   try {
     // Build aggregation pipeline
     const pipeline: any[] = [];
-    
+
     // Add match stage if year is specified
     if (year) {
       const startDate = new Date(year, 0, 1);
@@ -356,12 +360,12 @@ export const getMonthlyActivityBreakdown = async (year?: number): Promise<Monthl
     // Transform the result to match our interface
     const transformedResult: MonthlyActivityData[] = result.map((item: any) => {
       const activities: { [key: string]: { count: number; hours: number } } = {};
-        // Initialize only the activity types we want to display (excluding together and sex)
+      // Initialize only the activity types we want to display (excluding together and sex)
       const activityTypes = ['movies', 'cooking', 'dining', 'coffee', 'gaming', 'other'];
-      activityTypes.forEach(type => {
+      activityTypes.forEach((type) => {
         activities[type] = { count: 0, hours: 0 };
       });
-        // Fill in actual data (only for allowed activity types)
+      // Fill in actual data (only for allowed activity types)
       item.activities.forEach((activity: any) => {
         if (activities.hasOwnProperty(activity.type)) {
           activities[activity.type] = {
@@ -391,7 +395,7 @@ export const getWeeklyHeatmapData = async (year?: number): Promise<WeeklyHeatmap
   try {
     // Build aggregation pipeline
     const pipeline: any[] = [];
-    
+
     // Add match stage if year is specified
     if (year) {
       const startDate = new Date(year, 0, 1);
@@ -413,8 +417,8 @@ export const getWeeklyHeatmapData = async (year?: number): Promise<WeeklyHeatmap
           _id: {
             date: {
               $dateToString: {
-                format: "%Y-%m-%d",
-                date: "$date"
+                format: '%Y-%m-%d',
+                date: '$date'
               }
             },
             year: { $year: '$date' },
@@ -444,13 +448,13 @@ export const getWeeklyHeatmapData = async (year?: number): Promise<WeeklyHeatmap
     // Transform the result to match our interface
     const transformedResult: WeeklyHeatmapData[] = result.map((item: any) => {
       const activities: { [key: string]: { count: number; hours: number } } = {};
-      
+
       // Initialize activity types
       const activityTypes = ['movies', 'cooking', 'dining', 'coffee', 'gaming', 'other'];
-      activityTypes.forEach(type => {
+      activityTypes.forEach((type) => {
         activities[type] = { count: 0, hours: 0 };
       });
-      
+
       // Count activities by type
       item.activities.forEach((activity: any) => {
         if (activities.hasOwnProperty(activity.type)) {
@@ -460,7 +464,9 @@ export const getWeeklyHeatmapData = async (year?: number): Promise<WeeklyHeatmap
       });
 
       // Filter out 'together' and 'sex' types for totalActivities
-      const filteredActivities = item.activities.filter((activity: any) => activity.type !== 'sex' && activity.type !== 'together');
+      const filteredActivities = item.activities.filter(
+        (activity: any) => activity.type !== 'sex' && activity.type !== 'together'
+      );
       return {
         date: item._id.date,
         dayOfWeek: item._id.dayOfWeek - 1, // Convert to 0-6 (Sunday-Saturday)
@@ -484,7 +490,7 @@ export const getCumulativeTimelineData = async (year?: number): Promise<Cumulati
   try {
     // Build aggregation pipeline
     const pipeline: any[] = [];
-    
+
     // Add match stage if year is specified
     if (year) {
       const startDate = new Date(year, 0, 1);
@@ -506,8 +512,8 @@ export const getCumulativeTimelineData = async (year?: number): Promise<Cumulati
           _id: {
             date: {
               $dateToString: {
-                format: "%Y-%m-%d",
-                date: "$date"
+                format: '%Y-%m-%d',
+                date: '$date'
               }
             }
           },
@@ -534,22 +540,24 @@ export const getCumulativeTimelineData = async (year?: number): Promise<Cumulati
     let cumulativeActivities = 0;
     let cumulativeHours = 0;
     const cumulativeActivityBreakdown: { [key: string]: number } = {};
-    
+
     // Initialize activity type counters
     const activityTypes = ['movies', 'cooking', 'dining', 'coffee', 'gaming', 'other'];
-    activityTypes.forEach(type => {
+    activityTypes.forEach((type) => {
       cumulativeActivityBreakdown[type] = 0;
     });
 
     const transformedResult: CumulativeTimelineData[] = result.map((item: any) => {
       // Count daily activities by type
       const dailyActivityBreakdown: { [key: string]: number } = {};
-      activityTypes.forEach(type => {
+      activityTypes.forEach((type) => {
         dailyActivityBreakdown[type] = 0;
       });
 
       // Filter out 'sex' and 'together' for cumulativeActivities
-      const filteredActivities = item.activities.filter((activity: any) => activity.type !== 'sex' && activity.type !== 'together');
+      const filteredActivities = item.activities.filter(
+        (activity: any) => activity.type !== 'sex' && activity.type !== 'together'
+      );
 
       filteredActivities.forEach((activity: any) => {
         if (dailyActivityBreakdown.hasOwnProperty(activity.type)) {
@@ -562,13 +570,13 @@ export const getCumulativeTimelineData = async (year?: number): Promise<Cumulati
       cumulativeHours += item.dailyHours;
 
       // Update cumulative activity breakdown
-      activityTypes.forEach(type => {
+      activityTypes.forEach((type) => {
         cumulativeActivityBreakdown[type] += dailyActivityBreakdown[type];
       });
 
       // Build activity breakdown object
       const activityBreakdown: { [key: string]: { dailyCount: number; cumulativeCount: number } } = {};
-      activityTypes.forEach(type => {
+      activityTypes.forEach((type) => {
         activityBreakdown[type] = {
           dailyCount: dailyActivityBreakdown[type],
           cumulativeCount: cumulativeActivityBreakdown[type]

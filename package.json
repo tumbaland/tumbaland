@@ -13,7 +13,8 @@
     "dev:back": "concurrently \"npm run dev --workspace=auth-service\" \"npm run dev --workspace=public-service\" \"npm run dev --workspace=album-service\" \"npm run dev --workspace=file-service\" \"npm run dev --workspace=finance-service\" \"npm run dev --workspace=relationship-service\"",
     "dev:front": "concurrently \"npm run dev --workspace=auth-front\" \"npm run dev --workspace=shell-front\" \"npm run dev --workspace=album-front\" \"npm run dev --workspace=finance-front\" \"npm run dev --workspace=relationship-front\"",
     "lint": "npm run lint --workspaces",
-    "test": "npm run test --workspaces"
+    "test": "npm run test --workspaces",
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

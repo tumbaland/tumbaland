@@ -6,27 +6,27 @@ export const validateToken = async (req: Request, res: Response, next: NextFunct
   try {
     const authorizedEmails = (process.env.AUTHORIZED_EMAILS || '')
       .split(',')
-      .map(email => email.trim())
-      .filter(email => email.length > 0);
+      .map((email) => email.trim())
+      .filter((email) => email.length > 0);
     const { idToken } = req.body;
     if (!idToken) {
       res.status(400).json({ success: false, message: 'Token is required' });
       return;
     }
     const googleUser = await verifyGoogleToken(idToken);
-    
+
     if (!googleUser) {
       res.status(401).json({ success: false, message: 'Invalid Google token' });
       return;
     }
-    
+
     // Check if the user's email is authorized
     const userEmail = googleUser.email || '';
     if (!authorizedEmails.includes(userEmail)) {
       res.status(403).json({ success: false, message: 'Email is not authorized' });
       return;
     }
-    
+
     // Create our own JWT token with user info
     const userPayload: UserPayload = {
       id: googleUser.sub || '',
@@ -49,8 +49,8 @@ export const validateToken = async (req: Request, res: Response, next: NextFunct
 
     res.cookie('access_token', jwtToken, cookieOptions);
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       user: userPayload,
       token: jwtToken // Also return token for manual storage if needed
     });
@@ -74,14 +74,14 @@ export const getProfile = (req: Request, res: Response): void => {
     res.status(401).json({ success: false, message: 'Not authenticated' });
     return;
   }
-  
+
   res.json({ success: true, user: req.user });
 };
 
 export const verifyAuth = (req: Request, res: Response): void => {
-  res.json({ 
-    success: true, 
+  res.json({
+    success: true,
     authenticated: !!req.user,
-    user: req.user || null,
+    user: req.user || null
   });
 };

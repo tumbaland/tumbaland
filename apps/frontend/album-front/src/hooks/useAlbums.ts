@@ -2,12 +2,7 @@ import { useState, useEffect } from 'react';
 import { Album } from '../types';
 import { albumService } from '../services/albumService';
 
-export const useAlbums = (params?: {
-  page?: number;
-  limit?: number;
-  search?: string;
-  isPublic?: boolean;
-}) => {
+export const useAlbums = (params?: { page?: number; limit?: number; search?: string; isPublic?: boolean }) => {
   const [albums, setAlbums] = useState<Album[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +31,12 @@ export const useAlbums = (params?: {
     fetchAlbums();
   }, [params?.page, params?.limit, params?.search, params?.isPublic]);
 
-  const createAlbum = async (albumData: { name: string; description?: string; isPublic?: boolean; tags?: string[] }) => {
+  const createAlbum = async (albumData: {
+    name: string;
+    description?: string;
+    isPublic?: boolean;
+    tags?: string[];
+  }) => {
     try {
       const response = await albumService.createAlbum(albumData);
       await fetchAlbums(); // Refresh the list

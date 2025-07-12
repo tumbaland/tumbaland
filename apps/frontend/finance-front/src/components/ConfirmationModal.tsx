@@ -1,13 +1,5 @@
 import React from 'react';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Typography,
-  Box
-} from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Box } from '@mui/material';
 import { Warning } from '@mui/icons-material';
 
 interface ConfirmationModalProps {
@@ -58,12 +50,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onCancel}
-      maxWidth="sm"
-      fullWidth
-    >
+    <Dialog open={open} onClose={onCancel} maxWidth="sm" fullWidth>
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           {getIcon()}
@@ -79,19 +66,11 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       </DialogContent>
       <DialogActions sx={{ p: 3, gap: 1 }}>
         {cancelText && (
-          <Button 
-            onClick={onCancel}
-            variant="outlined"
-            color="inherit"
-          >
+          <Button onClick={onCancel} variant="outlined" color="inherit">
             {cancelText}
           </Button>
         )}
-        <Button 
-          onClick={onConfirm}
-          variant="contained"
-          color={getConfirmButtonColor() as any}
-        >
+        <Button onClick={onConfirm} variant="contained" color={getConfirmButtonColor() as any}>
           {confirmText}
         </Button>
       </DialogActions>

@@ -10,7 +10,7 @@ import {
   FormControl,
   Select,
   MenuItem,
-  InputLabel,
+  InputLabel
 } from '@mui/material';
 import { getMonthlyHours, MonthlyHoursData } from '../api/statistics';
 
@@ -20,16 +20,9 @@ interface BarChartProps {
   height?: number;
 }
 
-const MONTHS = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-const HoursBarChart: React.FC<BarChartProps> = ({ 
-  title = 'Hours per Month', 
-  year,
-  height = 300 
-}) => {
+const HoursBarChart: React.FC<BarChartProps> = ({ title = 'Hours per Month', year, height = 300 }) => {
   const [data, setData] = useState<MonthlyHoursData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +30,8 @@ const HoursBarChart: React.FC<BarChartProps> = ({
 
   // Generate available years (from 2024 to current year)
   const currentYear = new Date().getFullYear();
-  const availableYears = Array.from({ length: currentYear - 2023 }, (_, i) => 2024 + i);  useEffect(() => {
+  const availableYears = Array.from({ length: currentYear - 2023 }, (_, i) => 2024 + i);
+  useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -56,7 +50,7 @@ const HoursBarChart: React.FC<BarChartProps> = ({
     fetchData();
   }, [selectedYear]);
 
-  const maxHours = Math.max(...data.map(d => d.hours), 1);
+  const maxHours = Math.max(...data.map((d) => d.hours), 1);
   console.log('Chart render data:', { data, maxHours }); // Debug log
 
   if (loading) {
@@ -105,9 +99,7 @@ const HoursBarChart: React.FC<BarChartProps> = ({
     <Card elevation={2}>
       <CardContent>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h6">
-            {title}
-          </Typography>
+          <Typography variant="h6">{title}</Typography>
           <FormControl size="small" sx={{ minWidth: 120 }}>
             <InputLabel>Year</InputLabel>
             <Select
@@ -116,7 +108,7 @@ const HoursBarChart: React.FC<BarChartProps> = ({
               onChange={(e) => setSelectedYear(e.target.value === 'all' ? undefined : Number(e.target.value))}
             >
               <MenuItem value="all">All Years</MenuItem>
-              {availableYears.map(yearOption => (
+              {availableYears.map((yearOption) => (
                 <MenuItem key={yearOption} value={yearOption}>
                   {yearOption}
                 </MenuItem>
@@ -124,36 +116,54 @@ const HoursBarChart: React.FC<BarChartProps> = ({
             </Select>
           </FormControl>
         </Box>
-        
-        <Box sx={{ position: 'relative', height: height - 60, mt: 2, border: '1px solid #ddd', mb: 4, pt: 3 }}> {/* Added pt for top numbers */}
+
+        <Box
+          sx={{
+            position: 'relative',
+            height: height - 60,
+            mt: 2,
+            border: '1px solid #ddd',
+            mb: 4,
+            pt: 3
+          }}
+        >
+          {' '}
+          {/* Added pt for top numbers */}
           {/* Y-axis labels */}
-          <Box sx={{ 
-            position: 'absolute', 
-            left: 0, 
-            top: 0, 
-            height: '100%', 
-            width: 40,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            alignItems: 'flex-end',
-            pr: 1
-          }}>
-            {[maxHours, Math.round(maxHours * 0.75), Math.round(maxHours * 0.5), Math.round(maxHours * 0.25), 0].map((value, index) => (
-              <Typography key={index} variant="caption" color="text.secondary">
-                {value}h
-              </Typography>
-            ))}
-          </Box>          {/* Chart area */}
-          <Box sx={{ 
-            ml: 5, 
-            height: '100%', 
-            display: 'flex', 
-            alignItems: 'flex-end',
-            borderLeft: '1px solid #e0e0e0',
-            borderBottom: '1px solid #e0e0e0',
-            position: 'relative'
-          }}>
+          <Box
+            sx={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              height: '100%',
+              width: 40,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              alignItems: 'flex-end',
+              pr: 1
+            }}
+          >
+            {[maxHours, Math.round(maxHours * 0.75), Math.round(maxHours * 0.5), Math.round(maxHours * 0.25), 0].map(
+              (value, index) => (
+                <Typography key={index} variant="caption" color="text.secondary">
+                  {value}h
+                </Typography>
+              )
+            )}
+          </Box>{' '}
+          {/* Chart area */}
+          <Box
+            sx={{
+              ml: 5,
+              height: '100%',
+              display: 'flex',
+              alignItems: 'flex-end',
+              borderLeft: '1px solid #e0e0e0',
+              borderBottom: '1px solid #e0e0e0',
+              position: 'relative'
+            }}
+          >
             {/* Grid lines */}
             {[0.25, 0.5, 0.75, 1].map((ratio, index) => (
               <Box
@@ -176,27 +186,31 @@ const HoursBarChart: React.FC<BarChartProps> = ({
               const monthIndex = parseInt(item.month) - 1;
               const monthName = MONTHS[monthIndex] || `M${item.month}`;
               const actualBarHeight = Math.max(barHeight, item.hours > 0 ? 2 : 0);
-              
+
               console.log('Bar data:', { item, barHeight, actualBarHeight, monthName, maxHours }); // Debug log
-              
+
               return (
                 <Tooltip
                   key={`${item.year}-${item.month}`}
                   title={`${monthName} ${item.year}: ${item.hours} hours (${item.activities} activities)`}
                   arrow
                 >
-                  <Box sx={{ 
-                    flex: 1, 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'center',
-                    justifyContent: 'flex-end',
-                    mx: 0.5,
-                    cursor: 'pointer',
-                    zIndex: 2,
-                    height: '100%', // Full height of container
-                    position: 'relative'
-                  }}>                    {/* The actual bar */}
+                  <Box
+                    sx={{
+                      flex: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'flex-end',
+                      mx: 0.5,
+                      cursor: 'pointer',
+                      zIndex: 2,
+                      height: '100%', // Full height of container
+                      position: 'relative'
+                    }}
+                  >
+                    {' '}
+                    {/* The actual bar */}
                     <Box
                       sx={{
                         width: '100%',
@@ -208,14 +222,14 @@ const HoursBarChart: React.FC<BarChartProps> = ({
                         transition: 'all 0.3s ease',
                         '&:hover': {
                           backgroundColor: '#1565c0',
-                          transform: 'scaleY(1.05)',
+                          transform: 'scaleY(1.05)'
                         }
                       }}
                     />
-                      {/* Hours number on top of bar */}
-                    <Typography 
-                      variant="caption" 
-                      sx={{ 
+                    {/* Hours number on top of bar */}
+                    <Typography
+                      variant="caption"
+                      sx={{
                         position: 'absolute',
                         top: -20,
                         fontSize: '0.7rem',
@@ -227,11 +241,10 @@ const HoursBarChart: React.FC<BarChartProps> = ({
                     >
                       {item.hours}h
                     </Typography>
-                    
                     {/* Month label - positioned absolutely at bottom */}
-                    <Typography 
-                      variant="caption" 
-                      sx={{ 
+                    <Typography
+                      variant="caption"
+                      sx={{
                         position: 'absolute',
                         bottom: -30,
                         transform: 'rotate(-45deg)',
@@ -255,7 +268,15 @@ const HoursBarChart: React.FC<BarChartProps> = ({
         </Typography>
 
         {/* Summary stats */}
-        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-around', pt: 2, borderTop: '1px solid #e0e0e0' }}>
+        <Box
+          sx={{
+            mt: 2,
+            display: 'flex',
+            justifyContent: 'space-around',
+            pt: 2,
+            borderTop: '1px solid #e0e0e0'
+          }}
+        >
           <Box textAlign="center">
             <Typography variant="h6" color="primary">
               {data.reduce((sum, item) => sum + item.hours, 0)}
@@ -274,7 +295,7 @@ const HoursBarChart: React.FC<BarChartProps> = ({
           </Box>
           <Box textAlign="center">
             <Typography variant="h6" color="primary">
-              {Math.max(...data.map(d => d.hours))}
+              {Math.max(...data.map((d) => d.hours))}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               Peak Month

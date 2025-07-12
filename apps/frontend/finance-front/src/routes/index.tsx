@@ -1,8 +1,8 @@
-import { Routes, Route } from "react-router-dom";
-import Dashboard from "../pages/Dashboard";
-import FinancialRecords from "../pages/FinancialRecords";
-import TrackedTickersPage from "../pages/TrackedTickersPage";
-import UserPortfolioPage from "../pages/UserPortfolioPage";
+import { Routes, Route } from 'react-router-dom';
+import Dashboard from '../pages/Dashboard';
+import FinancialRecords from '../pages/FinancialRecords';
+import TrackedTickersPage from '../pages/TrackedTickersPage';
+import UserPortfolioPage from '../pages/UserPortfolioPage';
 
 const AppRoutes = () => {
   return (

@@ -34,70 +34,75 @@ export interface IPhoto extends Document {
   updatedAt: Date;
 }
 
-const PhotoSchema: Schema = new Schema({
-  filename: {
-    type: String,
-    required: true
-  },
-  originalName: {
-    type: String,
-    required: true
-  },
-  fileId: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  albumId: {
-    type: Schema.Types.ObjectId,
-    ref: 'Album',
-    required: true
-  },
-  title: {
-    type: String,
-    trim: true,
-    maxlength: 100
-  },
-  description: {
-    type: String,
-    trim: true,
-    maxlength: 1000
-  },
-  mimetype: {
-    type: String,
-    required: true
-  },
-  size: {
-    type: Number,
-    required: true
-  },
-  width: Number,
-  height: Number,
-  tags: [{
-    type: String,
-    trim: true
-  }],
-  metadata: {
-    dateTaken: Date,
-    location: {
-      latitude: Number,
-      longitude: Number,
-      address: String
+const PhotoSchema: Schema = new Schema(
+  {
+    filename: {
+      type: String,
+      required: true
     },
-    camera: {
-      make: String,
-      model: String,
-      settings: {
-        iso: Number,
-        aperture: String,
-        shutterSpeed: String,
-        focalLength: String
+    originalName: {
+      type: String,
+      required: true
+    },
+    fileId: {
+      type: String,
+      required: true,
+      unique: true
+    },
+    albumId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Album',
+      required: true
+    },
+    title: {
+      type: String,
+      trim: true,
+      maxlength: 100
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: 1000
+    },
+    mimetype: {
+      type: String,
+      required: true
+    },
+    size: {
+      type: Number,
+      required: true
+    },
+    width: Number,
+    height: Number,
+    tags: [
+      {
+        type: String,
+        trim: true
+      }
+    ],
+    metadata: {
+      dateTaken: Date,
+      location: {
+        latitude: Number,
+        longitude: Number,
+        address: String
+      },
+      camera: {
+        make: String,
+        model: String,
+        settings: {
+          iso: Number,
+          aperture: String,
+          shutterSpeed: String,
+          focalLength: String
+        }
       }
     }
+  },
+  {
+    timestamps: true
   }
-}, {
-  timestamps: true
-});
+);
 
 // Indexes for performance
 PhotoSchema.index({ albumId: 1, createdAt: -1 });

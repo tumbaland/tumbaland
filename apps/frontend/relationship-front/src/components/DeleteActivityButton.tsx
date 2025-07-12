@@ -10,11 +10,8 @@ interface DeleteActivityButtonProps {
   disabled?: boolean;
 }
 
-const DeleteActivityButton: React.FC<DeleteActivityButtonProps> = ({
-  activityId,
-  onDeleted,
-  disabled = false
-}) => {  const [isDeleting, setIsDeleting] = useState(false);
+const DeleteActivityButton: React.FC<DeleteActivityButtonProps> = ({ activityId, onDeleted, disabled = false }) => {
+  const [isDeleting, setIsDeleting] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,7 +23,7 @@ const DeleteActivityButton: React.FC<DeleteActivityButtonProps> = ({
     setShowConfirmation(false);
     setIsDeleting(true);
     setError(null);
-    
+
     try {
       await deleteActivity(activityId);
       if (onDeleted) {
@@ -53,19 +50,11 @@ const DeleteActivityButton: React.FC<DeleteActivityButtonProps> = ({
   return (
     <>
       <Tooltip title="Delete activity">
-        <IconButton
-          onClick={handleDeleteClick}
-          disabled={disabled || isDeleting}
-          color="error"
-          size="small"
-        >
-          {isDeleting ? (
-            <CircularProgress size={20} />
-          ) : (
-            <Delete fontSize="small" />
-          )}
+        <IconButton onClick={handleDeleteClick} disabled={disabled || isDeleting} color="error" size="small">
+          {isDeleting ? <CircularProgress size={20} /> : <Delete fontSize="small" />}
         </IconButton>
-      </Tooltip>      <ConfirmationModal
+      </Tooltip>{' '}
+      <ConfirmationModal
         open={showConfirmation}
         title="Delete Activity"
         message="Are you sure you want to delete this activity?"
@@ -74,7 +63,8 @@ const DeleteActivityButton: React.FC<DeleteActivityButtonProps> = ({
         severity="error"
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
-      />      {error && (
+      />{' '}
+      {error && (
         <ConfirmationModal
           open={!!error}
           title="Error"

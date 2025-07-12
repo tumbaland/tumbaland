@@ -29,7 +29,7 @@ const LoginPage: React.FC = () => {
       }
 
       const redirectUri = new URLSearchParams(window.location.search).get('redirect_uri') || '/';
-      
+
       if (!config.GOOGLE_CLIENT_ID) {
         setError('Google Client ID is not configured. Please check your environment variables.');
         setIsLoading(false);
@@ -69,31 +69,37 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <Box sx={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)',
-      fontFamily: 'Inter, Roboto, sans-serif',
-    }}>
-      <Card sx={{
-        p: { xs: 3, sm: 5 },
-        borderRadius: 5,
-        boxShadow: 8,
-        minWidth: 340,
-        maxWidth: 380,
-        width: '100%',
-        textAlign: 'center',
-        background: 'rgba(255,255,255,0.98)',
-      }}>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)',
+        fontFamily: 'Inter, Roboto, sans-serif'
+      }}
+    >
+      <Card
+        sx={{
+          p: { xs: 3, sm: 5 },
+          borderRadius: 5,
+          boxShadow: 8,
+          minWidth: 340,
+          maxWidth: 380,
+          width: '100%',
+          textAlign: 'center',
+          background: 'rgba(255,255,255,0.98)'
+        }}
+      >
         <CardContent>
           <Typography variant="h4" fontWeight={700} color="primary.dark" mb={2}>
             Tumbaland Login
           </Typography>
           <Divider sx={{ mb: 3, opacity: 0.15 }} />
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
           )}
           {user ? (
             <LoggedInUser user={user} onContinue={handleContinue} onLogout={handleLogout} />

@@ -13,8 +13,7 @@ declare global {
 export const authenticateToken = (req: Request, res: Response, next: NextFunction): void => {
   try {
     // Check for token in cookies first, then Authorization header
-    const token = req.cookies?.access_token || 
-                 req.headers.authorization?.replace('Bearer ', '');
+    const token = req.cookies?.access_token || req.headers.authorization?.replace('Bearer ', '');
 
     if (!token) {
       res.status(401).json({ success: false, message: 'Access token required' });
@@ -32,8 +31,7 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
 
 export const optionalAuth = (req: Request, res: Response, next: NextFunction): void => {
   try {
-    const token = req.cookies?.access_token || 
-                 req.headers.authorization?.replace('Bearer ', '');
+    const token = req.cookies?.access_token || req.headers.authorization?.replace('Bearer ', '');
 
     if (token) {
       const user = verifyJWT(token);

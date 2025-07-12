@@ -29,12 +29,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   if (isLoading) {
     return (
-      <Box 
-        sx={{ 
-          display: 'flex', 
+      <Box
+        sx={{
+          display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'center', 
-          alignItems: 'center', 
+          justifyContent: 'center',
+          alignItems: 'center',
           height: '100vh',
           backgroundColor: '#faf0e6'
         }}

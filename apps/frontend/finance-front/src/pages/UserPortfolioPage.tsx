@@ -57,7 +57,9 @@ const UserPortfolioPage: React.FC = () => {
     }
   };
 
-  useEffect(() => { fetchPortfolios(); }, []);
+  useEffect(() => {
+    fetchPortfolios();
+  }, []);
 
   const handleOpenDialog = (portfolio?: UserPortfolio) => {
     if (portfolio) {
@@ -83,7 +85,10 @@ const UserPortfolioPage: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setForm(f => ({ ...f, [name]: name === 'quantity' || name === 'avgBuyPrice' ? Number(value) : value }));
+    setForm((f) => ({
+      ...f,
+      [name]: name === 'quantity' || name === 'avgBuyPrice' ? Number(value) : value
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -169,8 +174,8 @@ const UserPortfolioPage: React.FC = () => {
               whiteSpace: { xs: 'nowrap', sm: 'normal' },
               maxWidth: { xs: 80, sm: 'none' },
               overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            },
+              textOverflow: 'ellipsis'
+            }
           }}
         >
           <TableHead>
@@ -238,7 +243,9 @@ const UserPortfolioPage: React.FC = () => {
                   <span style={{ fontSize: '0.72rem' }}>% Change</span>
                 </TableSortLabel>
               </TableCell>
-              <TableCell align="center" sx={{ minWidth: 60 }}><span style={{ fontSize: '0.72rem' }}>Actions</span></TableCell>
+              <TableCell align="center" sx={{ minWidth: 60 }}>
+                <span style={{ fontSize: '0.72rem' }}>Actions</span>
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -259,7 +266,7 @@ const UserPortfolioPage: React.FC = () => {
                   </Tooltip>
                   <Tooltip title="Delete">
                     <IconButton
-                      onClick={e => {
+                      onClick={(e) => {
                         e.stopPropagation();
                         handleDelete(p._id ?? '');
                       }}
@@ -275,7 +282,9 @@ const UserPortfolioPage: React.FC = () => {
           </TableBody>
           <TableFooter>
             <TableRow>
-              <TableCell colSpan={3} sx={{ fontWeight: 'bold' }}>Total</TableCell>
+              <TableCell colSpan={3} sx={{ fontWeight: 'bold' }}>
+                Total
+              </TableCell>
               <TableCell />
               <TableCell sx={{ fontWeight: 'bold' }}>
                 {portfolios.reduce((sum, p) => sum + (p.currentValue ?? 0), 0).toFixed(2)}
@@ -286,8 +295,8 @@ const UserPortfolioPage: React.FC = () => {
               <TableCell sx={{ fontWeight: 'bold' }}>
                 {/* Weighted average percent change */}
                 {(() => {
-                  const totalBuyIn = portfolios.reduce((sum, p) => sum + (p.avgBuyPrice * p.quantity), 0);
-                  const totalCurrent = portfolios.reduce((sum, p) => sum + ((p.latestPrice ?? 0) * p.quantity), 0);
+                  const totalBuyIn = portfolios.reduce((sum, p) => sum + p.avgBuyPrice * p.quantity, 0);
+                  const totalCurrent = portfolios.reduce((sum, p) => sum + (p.latestPrice ?? 0) * p.quantity, 0);
                   if (totalBuyIn === 0) return '-';
                   const percent = ((totalCurrent - totalBuyIn) / totalBuyIn) * 100;
                   return percent.toFixed(2) + '%';
@@ -335,7 +344,9 @@ const UserPortfolioPage: React.FC = () => {
           </DialogContent>
           <DialogActions>
             <Button onClick={handleCloseDialog}>Cancel</Button>
-            <Button type="submit" variant="contained">{editingId ? 'Update' : 'Add'}</Button>
+            <Button type="submit" variant="contained">
+              {editingId ? 'Update' : 'Add'}
+            </Button>
           </DialogActions>
         </form>
       </Dialog>
@@ -347,7 +358,10 @@ const UserPortfolioPage: React.FC = () => {
         cancelText="Cancel"
         severity="error"
         onConfirm={handleConfirmDelete}
-        onCancel={() => { setConfirmOpen(false); setPendingDeleteId(null); }}
+        onCancel={() => {
+          setConfirmOpen(false);
+          setPendingDeleteId(null);
+        }}
       />
     </Box>
   );

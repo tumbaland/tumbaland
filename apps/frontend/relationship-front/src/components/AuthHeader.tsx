@@ -51,7 +51,7 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
         setIsLoading(false);
       }
     };
-    
+
     checkAuth();
   }, []);
 
@@ -76,7 +76,7 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
 
   const menuItemsWithHandlers = menuItems.map((item) => ({
     ...item,
-    onClick: () => navigate(item.path),
+    onClick: () => navigate(item.path)
   }));
 
   const renderAuthSection = () => {
@@ -104,11 +104,7 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
             color="inherit"
           >
             {user.picture ? (
-              <Avatar
-                src={user.picture}
-                alt={user.name}
-                sx={{ width: 32, height: 32 }}
-              />
+              <Avatar src={user.picture} alt={user.name} sx={{ width: 32, height: 32 }} />
             ) : (
               <AccountCircle />
             )}
@@ -119,7 +115,7 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
             open={Boolean(anchorEl)}
             onClose={handleMenuClose}
             MenuListProps={{
-              'aria-labelledby': 'account-button',
+              'aria-labelledby': 'account-button'
             }}
             transformOrigin={{ horizontal: 'right', vertical: 'top' }}
             anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
@@ -145,12 +141,12 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
     }
 
     return (
-      <Button 
-        color="inherit" 
+      <Button
+        color="inherit"
         onClick={handleLogin}
         variant="outlined"
         startIcon={<Login />}
-        sx={{ 
+        sx={{
           borderColor: 'rgba(255, 255, 255, 0.3)',
           '&:hover': {
             borderColor: 'rgba(255, 255, 255, 0.7)',
@@ -164,11 +160,24 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
   };
 
   return (
-    <AppBar position="static" elevation={2} sx={{ background: '#fff', color: '#222', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.03)' }}>
+    <AppBar
+      position="static"
+      elevation={2}
+      sx={{ background: '#fff', color: '#222', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.03)' }}
+    >
       <Toolbar>
         {isMobile ? (
           <>
-            <Box sx={{ flexGrow: 0, display: 'flex', justifyContent: 'flex-start', alignItems: 'center', minHeight: 56, pl: 5 }}>
+            <Box
+              sx={{
+                flexGrow: 0,
+                display: 'flex',
+                justifyContent: 'flex-start',
+                alignItems: 'center',
+                minHeight: 56,
+                pl: 5
+              }}
+            >
               <Button
                 color="inherit"
                 onClick={handleMobileMenuOpen}
@@ -184,7 +193,7 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
                   maxWidth: '70vw',
                   overflow: 'hidden',
                   whiteSpace: 'nowrap',
-                  textOverflow: 'ellipsis',
+                  textOverflow: 'ellipsis'
                 }}
               >
                 {/* Show current route label, fallback to first menu item */}
@@ -193,13 +202,13 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
                   let bestMatch = null;
                   let bestLength = -1;
                   for (const item of menuItemsWithHandlers) {
-                    if (
-                      item.path === '/' && location.pathname === '/' && bestLength < 1
-                    ) {
+                    if (item.path === '/' && location.pathname === '/' && bestLength < 1) {
                       bestMatch = item;
                       bestLength = 1;
                     } else if (
-                      item.path !== '/' && location.pathname.startsWith(item.path) && item.path.length > bestLength
+                      item.path !== '/' &&
+                      location.pathname.startsWith(item.path) &&
+                      item.path.length > bestLength
                     ) {
                       bestMatch = item;
                       bestLength = item.path.length;
@@ -243,7 +252,7 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
                   fontWeight: 500,
                   textTransform: 'none',
                   background: 'none',
-                  '&:hover': { background: 'rgba(0,0,0,0.04)' },
+                  '&:hover': { background: 'rgba(0,0,0,0.04)' }
                 }}
               >
                 {item.label}

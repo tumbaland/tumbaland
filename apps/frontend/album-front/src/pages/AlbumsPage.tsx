@@ -55,13 +55,13 @@ const AlbumsPage: React.FC = () => {
   const [albumToDelete, setAlbumToDelete] = useState<Album | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const { 
-    albums, 
-    loading, 
-    error: albumsError, 
-    createAlbum, 
+  const {
+    albums,
+    loading,
+    error: albumsError,
+    createAlbum,
     updateAlbum,
-    deleteAlbum 
+    deleteAlbum
   } = useAlbums({
     search: searchTerm || undefined,
     limit: 20
@@ -118,7 +118,7 @@ const AlbumsPage: React.FC = () => {
       event.preventDefault();
       const tag = tagInput.trim();
       if (!newAlbum.tags.includes(tag)) {
-        setNewAlbum(prev => ({
+        setNewAlbum((prev) => ({
           ...prev,
           tags: [...prev.tags, tag]
         }));
@@ -128,9 +128,9 @@ const AlbumsPage: React.FC = () => {
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
-    setNewAlbum(prev => ({
+    setNewAlbum((prev) => ({
       ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove)
+      tags: prev.tags.filter((tag) => tag !== tagToRemove)
     }));
   };
 
@@ -227,7 +227,7 @@ const AlbumsPage: React.FC = () => {
               <InputAdornment position="start">
                 <SearchIcon />
               </InputAdornment>
-            ),
+            )
           }}
           sx={{ maxWidth: 400 }}
         />
@@ -246,17 +246,10 @@ const AlbumsPage: React.FC = () => {
             {searchTerm ? 'No albums found' : 'No albums yet'}
           </Typography>
           <Typography variant="body2" color="text.secondary" mb={3}>
-            {searchTerm 
-              ? 'Try adjusting your search terms' 
-              : 'Create your first album to get started'
-            }
+            {searchTerm ? 'Try adjusting your search terms' : 'Create your first album to get started'}
           </Typography>
           {!searchTerm && (
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => setShowCreateDialog(true)}
-            >
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => setShowCreateDialog(true)}>
               Create Album
             </Button>
           )}
@@ -265,8 +258,13 @@ const AlbumsPage: React.FC = () => {
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr', lg: '1fr 1fr 1fr 1fr' },
-            gap: 3,
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: '1fr 1fr',
+              md: '1fr 1fr 1fr',
+              lg: '1fr 1fr 1fr 1fr'
+            },
+            gap: 3
           }}
         >
           {albums.map((album) => (
@@ -299,22 +297,14 @@ const AlbumsPage: React.FC = () => {
       )}
 
       {/* Options Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        onClick={(e) => e.stopPropagation()}
-      >
+      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose} onClick={(e) => e.stopPropagation()}>
         <MenuItem onClick={handleMenuEdit}>
           <ListItemIcon>
             <EditIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText>Edit Album</ListItemText>
         </MenuItem>
-        <MenuItem 
-          onClick={handleMenuDelete}
-          disabled={selectedAlbum?.photoCount !== 0}
-        >
+        <MenuItem onClick={handleMenuDelete} disabled={selectedAlbum?.photoCount !== 0}>
           <ListItemIcon>
             <DeleteIcon fontSize="small" />
           </ListItemIcon>
@@ -336,11 +326,7 @@ const AlbumsPage: React.FC = () => {
         onClose={handleCancelDelete}
         onConfirm={handleConfirmDelete}
         title="Delete Album"
-        message={
-          albumToDelete
-            ? `Are you sure you want to delete "${albumToDelete.name}"?`
-            : ''
-        }
+        message={albumToDelete ? `Are you sure you want to delete "${albumToDelete.name}"?` : ''}
         confirmText="Delete Album"
         cancelText="Cancel"
         variant="danger"
@@ -356,7 +342,7 @@ const AlbumsPage: React.FC = () => {
               {error}
             </Alert>
           )}
-          
+
           <TextField
             autoFocus
             margin="dense"
@@ -364,10 +350,10 @@ const AlbumsPage: React.FC = () => {
             fullWidth
             variant="outlined"
             value={newAlbum.name}
-            onChange={(e) => setNewAlbum(prev => ({ ...prev, name: e.target.value }))}
+            onChange={(e) => setNewAlbum((prev) => ({ ...prev, name: e.target.value }))}
             sx={{ mb: 2 }}
           />
-          
+
           <TextField
             margin="dense"
             label="Description (optional)"
@@ -376,12 +362,12 @@ const AlbumsPage: React.FC = () => {
             rows={3}
             variant="outlined"
             value={newAlbum.description}
-            onChange={(e) => setNewAlbum(prev => ({ ...prev, description: e.target.value }))}
+            onChange={(e) => setNewAlbum((prev) => ({ ...prev, description: e.target.value }))}
             sx={{ mb: 2 }}
           />
-          
+
           {/* Removed public/private selection */}
-          
+
           <TextField
             margin="dense"
             label="Tags (press Enter to add)"
@@ -392,21 +378,16 @@ const AlbumsPage: React.FC = () => {
             onKeyDown={handleAddTag}
             sx={{ mb: 1 }}
           />
-          
+
           {newAlbum.tags.length > 0 && (
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
               {newAlbum.tags.map((tag, index) => (
-                <Chip
-                  key={index}
-                  label={tag}
-                  onDelete={() => handleRemoveTag(tag)}
-                  size="small"
-                />
+                <Chip key={index} label={tag} onDelete={() => handleRemoveTag(tag)} size="small" />
               ))}
             </Box>
           )}
         </DialogContent>
-        
+
         <DialogActions>
           <Button onClick={() => setShowCreateDialog(false)} disabled={creating}>
             Cancel

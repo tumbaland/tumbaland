@@ -21,20 +21,20 @@ syncJwtToken();
 export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
   const appConfig = getGlobalConfig();
   const token = localStorage.getItem('authToken');
-  
+
   const requestConfig: RequestInit = {
     ...options,
     headers: {
       'Content-Type': 'application/json',
       ...options.headers,
-      ...(token && { Authorization: `Bearer ${token}` }),
-    },
+      ...(token && { Authorization: `Bearer ${token}` })
+    }
   };
 
   console.log(token ? 'Adding Authorization header' : 'No auth token found in localStorage');
 
   const response = await fetch(`${appConfig.RELATIONSHIP_API_URL}/api${endpoint}`, requestConfig);
-  
+
   if (!response.ok) {
     if (response.status === 401) {
       console.error('Unauthorized access - redirecting to login');
@@ -64,7 +64,7 @@ export const relationshipApi = {
         url += `?${paramString}`;
       }
     }
-    
+
     const response = await apiFetch(url);
     const data = await response.json();
     return { data };
@@ -73,7 +73,7 @@ export const relationshipApi = {
   async post(endpoint: string, body?: any): Promise<{ data: any }> {
     const response = await apiFetch(endpoint, {
       method: 'POST',
-      body: body ? JSON.stringify(body) : undefined,
+      body: body ? JSON.stringify(body) : undefined
     });
     const data = await response.json();
     return { data };
@@ -82,7 +82,7 @@ export const relationshipApi = {
   async put(endpoint: string, body?: any): Promise<{ data: any }> {
     const response = await apiFetch(endpoint, {
       method: 'PUT',
-      body: body ? JSON.stringify(body) : undefined,
+      body: body ? JSON.stringify(body) : undefined
     });
     const data = await response.json();
     return { data };
@@ -90,11 +90,11 @@ export const relationshipApi = {
 
   async delete(endpoint: string): Promise<{ data: any }> {
     const response = await apiFetch(endpoint, {
-      method: 'DELETE',
+      method: 'DELETE'
     });
     const data = await response.json();
     return { data };
-  },
+  }
 };
 
 export default relationshipApi;

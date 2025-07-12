@@ -9,7 +9,7 @@ services:
       - GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
       - AUTH_SERVICE_URL=${VITE_AUTH_SERVICE_URL}
     ports:
-      - "3004:80"
+      - '3004:80'
     networks:
       - tumbanet
 

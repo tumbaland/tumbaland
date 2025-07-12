@@ -1,10 +1,5 @@
 import { albumApi } from '../config/albumApi';
-import { 
-  Album, 
-  CreateAlbumData, 
-  ApiResponse, 
-  PaginatedResponse 
-} from '../types';
+import { Album, CreateAlbumData, ApiResponse, PaginatedResponse } from '../types';
 
 export const albumService = {
   // Create a new album
@@ -31,7 +26,10 @@ export const albumService = {
   },
 
   // Update album
-  async updateAlbum(id: string, albumData: Partial<CreateAlbumData> & { coverPhotoId?: string }): Promise<ApiResponse<Album>> {
+  async updateAlbum(
+    id: string,
+    albumData: Partial<CreateAlbumData> & { coverPhotoId?: string }
+  ): Promise<ApiResponse<Album>> {
     const response = await albumApi.put(`/albums/${id}`, albumData);
     return response.data;
   },

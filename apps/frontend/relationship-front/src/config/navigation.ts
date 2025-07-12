@@ -16,7 +16,7 @@ export const navigationItems: Omit<NavigationItem, 'onClick'>[] = [
 ];
 
 export const createNavigationItems = (navigate: (path: string) => void): NavigationItem[] => {
-  return navigationItems.map(item => ({
+  return navigationItems.map((item) => ({
     ...item,
     onClick: () => navigate(item.path)
   }));

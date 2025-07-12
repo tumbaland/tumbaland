@@ -17,7 +17,7 @@ function handleCredentialResponse(response: { credential: string }, redirectUri:
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ idToken }),
-    credentials: 'include', // Include cookies in the request
+    credentials: 'include' // Include cookies in the request
   })
     .then((res) => {
       if (!res.ok) {
@@ -44,7 +44,7 @@ export function initializeGoogleSignIn(clientId: string, redirectUri: string) {
   console.log('Starting Google Sign-In initialization...');
   console.log('Client ID:', clientId);
   console.log('Redirect URI:', redirectUri);
-  
+
   let retryCount = 0;
   const maxRetries = 100; // Wait up to 10 seconds
   let googleInitialized = false;
@@ -56,9 +56,11 @@ export function initializeGoogleSignIn(clientId: string, redirectUri: string) {
     }
 
     // Check if Google button is already rendered (look for Google's button class)
-    if (buttonElement.querySelector('[data-testid="google-signin-button"]') || 
-        buttonElement.querySelector('div[role="button"]') ||
-        buttonElement.innerHTML.includes('Sign in with Google')) {
+    if (
+      buttonElement.querySelector('[data-testid="google-signin-button"]') ||
+      buttonElement.querySelector('div[role="button"]') ||
+      buttonElement.innerHTML.includes('Sign in with Google')
+    ) {
       console.log('Google button already rendered');
       return true;
     }
@@ -67,11 +69,8 @@ export function initializeGoogleSignIn(clientId: string, redirectUri: string) {
     try {
       // Clear any existing content first
       buttonElement.innerHTML = '';
-      
-      window.google.accounts.id.renderButton(
-        buttonElement,
-        { theme: 'outline', size: 'large' }
-      );
+
+      window.google.accounts.id.renderButton(buttonElement, { theme: 'outline', size: 'large' });
       console.log('Google Sign-In button rendered successfully');
       return true;
     } catch (error) {
@@ -86,7 +85,7 @@ export function initializeGoogleSignIn(clientId: string, redirectUri: string) {
     console.log('- Google script loaded flag:', window.googleScriptLoaded);
     console.log('- Google accounts:', !!(window.google && window.google.accounts));
     console.log('- Google accounts.id:', !!(window.google && window.google.accounts && window.google.accounts.id));
-    
+
     // Check if Google Sign-In library is loaded
     if (!window.google || !window.google.accounts || !window.google.accounts.id) {
       if (retryCount < maxRetries) {
@@ -106,7 +105,7 @@ export function initializeGoogleSignIn(clientId: string, redirectUri: string) {
       try {
         window.google.accounts.id.initialize({
           client_id: clientId,
-          callback: (response: { credential: string }) => handleCredentialResponse(response, redirectUri),
+          callback: (response: { credential: string }) => handleCredentialResponse(response, redirectUri)
         });
         console.log('Google Sign-In initialized');
         googleInitialized = true;
@@ -119,7 +118,7 @@ export function initializeGoogleSignIn(clientId: string, redirectUri: string) {
 
     // Try to render the button
     const buttonRendered = renderGoogleButton();
-    
+
     if (!buttonRendered && retryCount < maxRetries) {
       console.log('Button not rendered yet, retrying...');
       setTimeout(initializeGoogle, 100);
@@ -150,10 +149,10 @@ export function initializeGoogleSignIn(clientId: string, redirectUri: string) {
   };
 
   // Use multiple strategies to ensure initialization happens
-  
+
   // Strategy 1: Start immediately
   setTimeout(initializeGoogle, 0);
-  
+
   // Strategy 2: Wait for DOM to be fully ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
@@ -162,7 +161,7 @@ export function initializeGoogleSignIn(clientId: string, redirectUri: string) {
   } else {
     setTimeout(initializeGoogle, 100);
   }
-  
+
   // Strategy 3: Wait a bit longer in case of slow loading
   setTimeout(initializeGoogle, 500);
   setTimeout(initializeGoogle, 1000);

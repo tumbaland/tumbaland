@@ -1,5 +1,5 @@
 // Imports the Google Cloud client library
-const {Storage} = require('@google-cloud/storage');
+const { Storage } = require('@google-cloud/storage');
 
 // Creates a client - this will use the service account credentials from the file-service
 const storage = new Storage({
@@ -12,18 +12,15 @@ const bucketName = 'tumbabucket';
 async function setCorsConfiguration() {
   try {
     console.log(`Setting CORS configuration for bucket: ${bucketName}`);
-    
+
     const corsConfiguration = [
       {
-        origin: [
-          'http://localhost:3002',
-          'https://album.tumbaland.eu',
-        ],
+        origin: ['http://localhost:3002', 'https://album.tumbaland.eu'],
         method: ['GET', 'POST', 'PUT', 'DELETE', 'HEAD', 'OPTIONS'],
         responseHeader: [
-          'Content-Type', 
-          'Access-Control-Allow-Origin', 
-          'Access-Control-Allow-Methods', 
+          'Content-Type',
+          'Access-Control-Allow-Origin',
+          'Access-Control-Allow-Methods',
           'Access-Control-Allow-Headers',
           'Authorization',
           'X-Requested-With'
@@ -34,14 +31,13 @@ async function setCorsConfiguration() {
 
     // Set CORS configuration
     await storage.bucket(bucketName).setCorsConfiguration(corsConfiguration);
-    
+
     console.log(`CORS configuration set successfully for bucket: ${bucketName}`);
-    
+
     // Verify the configuration
     const [metadata] = await storage.bucket(bucketName).getMetadata();
     console.log('Current CORS configuration:');
     console.log(JSON.stringify(metadata.cors, null, 2));
-    
   } catch (error) {
     console.error('Error setting CORS configuration:', error);
   }
@@ -51,10 +47,10 @@ async function getBucketMetadata() {
   try {
     // Get Bucket Metadata
     const [metadata] = await storage.bucket(bucketName).getMetadata();
-    
+
     console.log('Bucket metadata:');
     console.log(JSON.stringify(metadata, null, 2));
-    
+
     if (metadata.cors) {
       console.log('\nCurrent CORS configuration:');
       console.log(JSON.stringify(metadata.cors, null, 2));

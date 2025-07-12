@@ -6,7 +6,7 @@ services:
     image: toomastahves/relationship-service:latest
     restart: unless-stopped
     ports:
-      - "4001:4001"
+      - '4001:4001'
     environment:
       - PORT=4001
       - NODE_ENV=production

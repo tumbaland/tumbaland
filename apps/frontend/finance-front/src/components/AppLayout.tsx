@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import Container from "@mui/material/Container";
+import Container from '@mui/material/Container';
 import AuthHeader from './AuthHeader';
 import { Box } from '@mui/material';
 
@@ -12,9 +12,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
     <Box sx={{ minHeight: '100vh', backgroundColor: '#f5f5f5', display: 'flex' }}>
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <AuthHeader />
-        <Container maxWidth="xl">
-          {children}
-        </Container>
+        <Container maxWidth="xl">{children}</Container>
       </Box>
     </Box>
   );

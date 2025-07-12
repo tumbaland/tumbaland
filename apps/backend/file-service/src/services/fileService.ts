@@ -1,33 +1,26 @@
-import { bucket } from "../config/storage";
-import { generateFileName } from "../config/multer";
-import * as cacheService from "../config/cache";
-import {
-  FileUploadData,
-  FileDownloadData,
-  FileDeleteResult,
-  FileMetadata,
-} from "../types";
+import { bucket } from '../config/storage';
+import { generateFileName } from '../config/multer';
+import * as cacheService from '../config/cache';
+import { FileUploadData, FileDownloadData, FileDeleteResult, FileMetadata } from '../types';
 
 // Upload file to Google Cloud Storage
-export const uploadFile = async (
-  file: Express.Multer.File
-): Promise<FileUploadData> => {
+export const uploadFile = async (file: Express.Multer.File): Promise<FileUploadData> => {
   try {
     const fileName = generateFileName(file.originalname);
     const fileUpload = bucket.file(fileName);
 
     const stream = fileUpload.createWriteStream({
       metadata: {
-        contentType: file.mimetype,
+        contentType: file.mimetype
       },
-      resumable: false,
+      resumable: false
     });
 
     return new Promise((resolve, reject) => {
-      stream.on("error", (error: Error) => {
+      stream.on('error', (error: Error) => {
         reject(error);
       });
-      stream.on("finish", async () => {
+      stream.on('finish', async () => {
         try {
           // Get file metadata to confirm upload
           const [metadata] = await fileUpload.getMetadata();
@@ -41,7 +34,7 @@ export const uploadFile = async (
             size: file.size,
             mimetype: file.mimetype,
             url: signedUrl, // Use signed URL for secure access
-            uploadedAt: new Date().toISOString(),
+            uploadedAt: new Date().toISOString()
           };
 
           resolve(fileData);
@@ -58,16 +51,14 @@ export const uploadFile = async (
 };
 
 // Download file from Google Cloud Storage
-export const downloadFile = async (
-  fileId: string
-): Promise<FileDownloadData> => {
+export const downloadFile = async (fileId: string): Promise<FileDownloadData> => {
   try {
     const file = bucket.file(fileId);
 
     // Check if file exists
     const [exists] = await file.exists();
     if (!exists) {
-      throw new Error("File not found");
+      throw new Error('File not found');
     }
 
     // Get file metadata
@@ -80,8 +71,8 @@ export const downloadFile = async (
       metadata: {
         contentType: metadata.contentType,
         size: metadata.size || 0,
-        name: metadata.name || fileId,
-      },
+        name: metadata.name || fileId
+      }
     };
   } catch (error) {
     throw new Error(`Failed to download file: ${(error as Error).message}`);
@@ -96,7 +87,7 @@ export const deleteFile = async (fileId: string): Promise<FileDeleteResult> => {
     // Check if file exists
     const [exists] = await file.exists();
     if (!exists) {
-      throw new Error("File not found");
+      throw new Error('File not found');
     }
 
     await file.delete();
@@ -105,9 +96,9 @@ export const deleteFile = async (fileId: string): Promise<FileDeleteResult> => {
     await cacheService.removeFromCache(fileId);
 
     return {
-      message: "File deleted successfully",
+      message: 'File deleted successfully',
       fileId,
-      deletedAt: new Date().toISOString(),
+      deletedAt: new Date().toISOString()
     };
   } catch (error) {
     throw new Error(`Failed to delete file: ${(error as Error).message}`);
@@ -115,16 +106,14 @@ export const deleteFile = async (fileId: string): Promise<FileDeleteResult> => {
 };
 
 // Get file metadata
-export const getFileMetadata = async (
-  fileId: string
-): Promise<FileMetadata> => {
+export const getFileMetadata = async (fileId: string): Promise<FileMetadata> => {
   try {
     const file = bucket.file(fileId);
 
     // Check if file exists
     const [exists] = await file.exists();
     if (!exists) {
-      throw new Error("File not found");
+      throw new Error('File not found');
     }
 
     const [metadata] = await file.getMetadata();
@@ -139,7 +128,7 @@ export const getFileMetadata = async (
       contentType: metadata.contentType,
       created: metadata.timeCreated,
       updated: metadata.updated,
-      url: signedUrl, // Use signed URL for secure access
+      url: signedUrl // Use signed URL for secure access
     };
   } catch (error) {
     throw new Error(`Failed to get file metadata: ${(error as Error).message}`);
@@ -147,14 +136,11 @@ export const getFileMetadata = async (
 };
 
 // List all files in bucket
-export const listFiles = async (
-  prefix: string = "",
-  limit: number = 100
-): Promise<FileMetadata[]> => {
+export const listFiles = async (prefix: string = '', limit: number = 100): Promise<FileMetadata[]> => {
   try {
     const options = {
       prefix,
-      maxResults: limit,
+      maxResults: limit
     };
 
     const [files] = await bucket.getFiles(options);
@@ -170,7 +156,7 @@ export const listFiles = async (
           contentType: file.metadata.contentType,
           created: file.metadata.timeCreated,
           updated: file.metadata.updated,
-          url: signedUrl, // Use signed URL for secure access
+          url: signedUrl // Use signed URL for secure access
         };
       })
     );
@@ -182,31 +168,26 @@ export const listFiles = async (
 };
 
 // Generate signed URL for secure file access (for uniform bucket-level access)
-export const getSignedUrl = async (
-  fileId: string,
-  expirationMinutes: number = 60
-): Promise<string> => {
+export const getSignedUrl = async (fileId: string, expirationMinutes: number = 60): Promise<string> => {
   try {
     const file = bucket.file(fileId);
 
     // Check if file exists
     const [exists] = await file.exists();
     if (!exists) {
-      throw new Error("File not found");
+      throw new Error('File not found');
     }
 
     const options = {
-      version: "v4" as const,
-      action: "read" as const,
-      expires: Date.now() + expirationMinutes * 60 * 1000, // expires in specified minutes
+      version: 'v4' as const,
+      action: 'read' as const,
+      expires: Date.now() + expirationMinutes * 60 * 1000 // expires in specified minutes
     };
 
     const [signedUrl] = await file.getSignedUrl(options);
     return signedUrl;
   } catch (error) {
-    throw new Error(
-      `Failed to generate signed URL: ${(error as Error).message}`
-    );
+    throw new Error(`Failed to generate signed URL: ${(error as Error).message}`);
   }
 };
 
@@ -220,17 +201,15 @@ export const getUploadSignedUrl = async (
     const file = bucket.file(fileName);
 
     const options = {
-      version: "v4" as const,
-      action: "write" as const,
+      version: 'v4' as const,
+      action: 'write' as const,
       expires: Date.now() + expirationMinutes * 60 * 1000, // expires in specified minutes
-      contentType,
+      contentType
     };
 
     const [signedUrl] = await file.getSignedUrl(options);
     return signedUrl;
   } catch (error) {
-    throw new Error(
-      `Failed to generate upload signed URL: ${(error as Error).message}`
-    );
+    throw new Error(`Failed to generate upload signed URL: ${(error as Error).message}`);
   }
 };

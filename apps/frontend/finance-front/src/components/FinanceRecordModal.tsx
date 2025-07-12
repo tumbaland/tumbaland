@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Button
-} from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button } from '@mui/material';
 
 // Helper to get YYYY-MM-DD for input type=date
 function getInputDate(date: string | Date) {
@@ -37,7 +30,7 @@ const FinanceRecordModal: React.FC<{
         type="date"
         fullWidth
         value={getInputDate(form.date)}
-        onChange={e => setForm((f: any) => ({ ...f, date: e.target.value }))}
+        onChange={(e) => setForm((f: any) => ({ ...f, date: e.target.value }))}
         InputLabelProps={{ shrink: true }}
       />
       <TextField
@@ -47,7 +40,7 @@ const FinanceRecordModal: React.FC<{
         type="number"
         fullWidth
         value={form.secondPillar}
-        onChange={e => setForm((f: any) => ({ ...f, secondPillar: e.target.value }))}
+        onChange={(e) => setForm((f: any) => ({ ...f, secondPillar: e.target.value }))}
       />
       <TextField
         margin="dense"
@@ -56,7 +49,7 @@ const FinanceRecordModal: React.FC<{
         type="number"
         fullWidth
         value={form.secondPillarGain}
-        onChange={e => setForm((f: any) => ({ ...f, secondPillarGain: e.target.value }))}
+        onChange={(e) => setForm((f: any) => ({ ...f, secondPillarGain: e.target.value }))}
       />
       <TextField
         margin="dense"
@@ -65,7 +58,7 @@ const FinanceRecordModal: React.FC<{
         type="number"
         fullWidth
         value={form.thirdPillar}
-        onChange={e => setForm((f: any) => ({ ...f, thirdPillar: e.target.value }))}
+        onChange={(e) => setForm((f: any) => ({ ...f, thirdPillar: e.target.value }))}
       />
       <TextField
         margin="dense"
@@ -74,7 +67,7 @@ const FinanceRecordModal: React.FC<{
         type="number"
         fullWidth
         value={form.thirdPillarGain}
-        onChange={e => setForm((f: any) => ({ ...f, thirdPillarGain: e.target.value }))}
+        onChange={(e) => setForm((f: any) => ({ ...f, thirdPillarGain: e.target.value }))}
       />
       <TextField
         margin="dense"
@@ -83,7 +76,7 @@ const FinanceRecordModal: React.FC<{
         type="number"
         fullWidth
         value={form.etfPortfolio}
-        onChange={e => setForm((f: any) => ({ ...f, etfPortfolio: e.target.value }))}
+        onChange={(e) => setForm((f: any) => ({ ...f, etfPortfolio: e.target.value }))}
       />
       <TextField
         margin="dense"
@@ -92,7 +85,7 @@ const FinanceRecordModal: React.FC<{
         type="number"
         fullWidth
         value={form.etfGain}
-        onChange={e => setForm((f: any) => ({ ...f, etfGain: e.target.value }))}
+        onChange={(e) => setForm((f: any) => ({ ...f, etfGain: e.target.value }))}
       />
       <TextField
         margin="dense"
@@ -101,7 +94,7 @@ const FinanceRecordModal: React.FC<{
         type="number"
         fullWidth
         value={form.cash}
-        onChange={e => setForm((f: any) => ({ ...f, cash: e.target.value }))}
+        onChange={(e) => setForm((f: any) => ({ ...f, cash: e.target.value }))}
       />
       <TextField
         margin="dense"
@@ -110,12 +103,14 @@ const FinanceRecordModal: React.FC<{
         type="number"
         fullWidth
         value={form.gold}
-        onChange={e => setForm((f: any) => ({ ...f, gold: e.target.value }))}
+        onChange={(e) => setForm((f: any) => ({ ...f, gold: e.target.value }))}
       />
     </DialogContent>
     <DialogActions>
       <Button onClick={onClose}>Cancel</Button>
-      <Button onClick={() => onSubmit(form)} variant="contained">{title.includes('Edit') ? 'Update' : 'Add'}</Button>
+      <Button onClick={() => onSubmit(form)} variant="contained">
+        {title.includes('Edit') ? 'Update' : 'Add'}
+      </Button>
     </DialogActions>
   </Dialog>
 );

@@ -19,7 +19,7 @@ app.use(cookieParser());
 app.use(
   cors({
     origin: (origin, callback) => {
-      const allowedOrigins = process.env.CORS_ORIGIN 
+      const allowedOrigins = process.env.CORS_ORIGIN
         ? process.env.CORS_ORIGIN.split(',')
         : [
             'http://localhost:3000',
@@ -45,20 +45,20 @@ app.use(
 app.use(morgan('dev'));
 
 // Serve static documentation files
-app.use("/api/docs", express.static(path.join(__dirname, "../docs")));
+app.use('/api/docs', express.static(path.join(__dirname, '../docs')));
 
 // Routes
 app.use('/auth', authRoutes);
 
 // Documentation root redirect
-app.get("/docs", (req: Request, res: Response) => {
-  res.redirect("/api/docs/index.html");
+app.get('/docs', (req: Request, res: Response) => {
+  res.redirect('/api/docs/index.html');
 });
 
 // Basic health check route
 app.get('/health', (req: Request, res: Response) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     service: 'auth-service',
     timestamp: new Date().toISOString(),
     version: '1.0.0'

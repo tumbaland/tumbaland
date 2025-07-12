@@ -1,6 +1,10 @@
-
 import { Router } from 'express';
-import { getTickerPriceHistory, fetchAndSaveTickerPrices, deleteTickerPriceHistory, fetchAndSaveAllTickerHistory } from '../controllers/tickerPriceHistory.controller';
+import {
+  getTickerPriceHistory,
+  fetchAndSaveTickerPrices,
+  deleteTickerPriceHistory,
+  fetchAndSaveAllTickerHistory
+} from '../controllers/tickerPriceHistory.controller';
 import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = Router();

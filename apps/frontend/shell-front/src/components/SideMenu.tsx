@@ -1,15 +1,15 @@
-import { useState } from "react";
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Box from "@mui/material/Box";
-import List from "@mui/material/List";
-import ListItem from "@mui/material/ListItem";
-import ListItemButton from "@mui/material/ListItemButton";
-import ListItemIcon from "@mui/material/ListItemIcon";
-import Tooltip from "@mui/material/Tooltip";
-import MenuIcon from "@mui/icons-material/Menu";
-import IconButton from "@mui/material/IconButton";
-import useMediaQuery from "@mui/material/useMediaQuery";
-import { useTheme } from "@mui/material/styles";
+import Box from '@mui/material/Box';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import Tooltip from '@mui/material/Tooltip';
+import MenuIcon from '@mui/icons-material/Menu';
+import IconButton from '@mui/material/IconButton';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useTheme } from '@mui/material/styles';
 import { APPS } from '../config/apps';
 
 interface SideMenuProps {
@@ -19,7 +19,7 @@ interface SideMenuProps {
 export function SideMenu({ currentRoute }: SideMenuProps) {
   const navigate = useNavigate();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleAppClick = (route: string) => {
@@ -47,7 +47,7 @@ export function SideMenu({ currentRoute }: SideMenuProps) {
         backdropFilter: 'blur(12px) saturate(180%)',
         WebkitBackdropFilter: 'blur(12px) saturate(180%)',
         borderRight: '1.5px solid rgba(255,255,255,0.18)',
-        boxShadow: '0 2px 8px 0 #6366f111',
+        boxShadow: '0 2px 8px 0 #6366f111'
       }}
     >
       <List sx={{ width: '100%', p: 0 }}>
@@ -60,24 +60,24 @@ export function SideMenu({ currentRoute }: SideMenuProps) {
                 <ListItemButton
                   onClick={() => handleAppClick(app.route)}
                   sx={{
-                    justifyContent: "center",
+                    justifyContent: 'center',
                     minHeight: 56,
                     backgroundColor: 'transparent',
-                    color: '#334155',
+                    color: '#334155'
                   }}
                 >
                   <ListItemIcon
                     sx={{
                       color: active ? app.color : '#334155',
                       minWidth: 0,
-                      justifyContent: "center",
+                      justifyContent: 'center',
                       background: 'transparent',
                       p: 0.5,
                       borderRadius: '50%',
                       transition: 'background 0.2s, color 0.2s',
                       '&:hover': {
-                        background: 'rgba(255,255,255,0.12)',
-                      },
+                        background: 'rgba(255,255,255,0.12)'
+                      }
                     }}
                   >
                     <IconComponent />
@@ -99,7 +99,7 @@ export function SideMenu({ currentRoute }: SideMenuProps) {
           color="inherit"
           aria-label="open drawer"
           onClick={() => setMobileOpen((open) => !open)}
-          sx={{ position: "fixed", top: 8, left: 8, zIndex: 2001 }}
+          sx={{ position: 'fixed', top: 8, left: 8, zIndex: 2001 }}
         >
           <MenuIcon />
         </IconButton>
@@ -114,7 +114,7 @@ export function SideMenu({ currentRoute }: SideMenuProps) {
               width: '100vw',
               height: '100vh',
               zIndex: 1999,
-              background: 'transparent',
+              background: 'transparent'
             }}
           />
         )}
@@ -136,8 +136,9 @@ export function SideMenu({ currentRoute }: SideMenuProps) {
             alignItems: 'center',
             pt: 9,
             transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',
-            transition: 'transform 0.35s cubic-bezier(0.4,0,0.2,1), background 0.2s, box-shadow 0.2s, border-right 0.2s, backdrop-filter 0.2s',
-            pointerEvents: mobileOpen ? 'auto' : 'none',
+            transition:
+              'transform 0.35s cubic-bezier(0.4,0,0.2,1), background 0.2s, box-shadow 0.2s, border-right 0.2s, backdrop-filter 0.2s',
+            pointerEvents: mobileOpen ? 'auto' : 'none'
           }}
         >
           <List sx={{ width: '100%', p: 0 }}>
@@ -153,24 +154,24 @@ export function SideMenu({ currentRoute }: SideMenuProps) {
                         handleAppClick(app.route);
                       }}
                       sx={{
-                        justifyContent: "center",
+                        justifyContent: 'center',
                         minHeight: 56,
                         backgroundColor: 'transparent',
-                        color: '#fff',
+                        color: '#fff'
                       }}
                     >
                       <ListItemIcon
                         sx={{
                           color: active ? app.color : '#334155',
                           minWidth: 0,
-                          justifyContent: "center",
+                          justifyContent: 'center',
                           background: 'transparent',
                           p: 0.5,
                           borderRadius: '50%',
                           transition: 'background 0.2s, color 0.2s',
                           '&:hover': {
-                            background: 'rgba(255,255,255,0.12)',
-                          },
+                            background: 'rgba(255,255,255,0.12)'
+                          }
                         }}
                       >
                         <IconComponent />

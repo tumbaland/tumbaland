@@ -58,7 +58,10 @@ export const deleteFile = async (fileId: string): Promise<boolean> => {
   }
 };
 
-export const getFileUploadSignedUrl = async (filename: string, mimetype: string): Promise<{ url: string; fileId: string }> => {
+export const getFileUploadSignedUrl = async (
+  filename: string,
+  mimetype: string
+): Promise<{ url: string; fileId: string }> => {
   try {
     const FILE_API_URL = process.env.FILE_API_URL;
     const response = await axios.post(`${FILE_API_URL}/api/upload-url`, {

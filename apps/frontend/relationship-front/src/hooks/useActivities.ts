@@ -26,27 +26,30 @@ export const useActivities = (filters?: GetActivitiesFilters) => {
     totalPages: 0
   });
   // Memoize filters to prevent infinite loop
-  const memoizedFilters = useMemo(() => filters, [
-    filters?.page,
-    filters?.limit,
-    filters?.activityType,
-    filters?.startDate,
-    filters?.endDate,
-    filters?.sortBy,
-    filters?.sortOrder
-  ]);
+  const memoizedFilters = useMemo(
+    () => filters,
+    [
+      filters?.page,
+      filters?.limit,
+      filters?.activityType,
+      filters?.startDate,
+      filters?.endDate,
+      filters?.sortBy,
+      filters?.sortOrder
+    ]
+  );
   const loadActivities = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const data = await apiGetActivities(memoizedFilters);
       console.log('Raw API data:', data);
-      
+
       // Handle the ActivitiesResponse structure
       if (Array.isArray(data)) {
         console.log('Setting activities directly (array):', data);
         setActivities(data);
-        setPagination(prev => ({ ...prev, total: data.length }));
+        setPagination((prev) => ({ ...prev, total: data.length }));
       } else {
         console.log('Setting activities from data.activities:', data.activities);
         setActivities(data.activities || []);
@@ -69,7 +72,7 @@ export const useActivities = (filters?: GetActivitiesFilters) => {
     setError(null);
     try {
       const newActivity = await apiCreateActivity(activityData);
-      setActivities(prev => [newActivity, ...prev]);
+      setActivities((prev) => [newActivity, ...prev]);
       return newActivity;
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Failed to create activity');
@@ -81,10 +84,8 @@ export const useActivities = (filters?: GetActivitiesFilters) => {
     setError(null);
     try {
       const updatedActivity = await apiUpdateActivity(id, updateData);
-      setActivities(prev => 
-        prev.map(activity => 
-          (activity._id || activity.id) === id ? updatedActivity : activity
-        )
+      setActivities((prev) =>
+        prev.map((activity) => ((activity._id || activity.id) === id ? updatedActivity : activity))
       );
       return updatedActivity;
     } catch (err: any) {
@@ -97,9 +98,7 @@ export const useActivities = (filters?: GetActivitiesFilters) => {
     setError(null);
     try {
       await apiDeleteActivity(id);
-      setActivities(prev => 
-        prev.filter(activity => (activity._id || activity.id) !== id)
-      );
+      setActivities((prev) => prev.filter((activity) => (activity._id || activity.id) !== id));
       return true;
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Failed to delete activity');
@@ -171,4 +170,3 @@ export const useRecentActivities = (limit: number = 10) => {
 
   return { activities, loading, error, refetch: loadRecentActivities };
 };
-

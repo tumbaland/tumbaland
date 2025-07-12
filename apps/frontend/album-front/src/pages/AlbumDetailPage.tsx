@@ -41,7 +41,8 @@ import { Album, Photo } from '../types';
 
 const AlbumDetailPage: React.FC = () => {
   const { albumId } = useParams<{ albumId: string }>();
-  const navigate = useNavigate();  const [album, setAlbum] = useState<Album | null>(null);
+  const navigate = useNavigate();
+  const [album, setAlbum] = useState<Album | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -135,7 +136,7 @@ const AlbumDetailPage: React.FC = () => {
 
   const handleSetCoverPhoto = async (photo: Photo) => {
     if (!albumId) return;
-    
+
     try {
       const response = await albumService.setCoverPhoto(albumId, photo._id);
       setAlbum(response.data);
@@ -146,7 +147,7 @@ const AlbumDetailPage: React.FC = () => {
     }
   };
   const handleViewPhoto = (photo: Photo) => {
-    const photoIndex = photos.findIndex(p => p._id === photo._id);
+    const photoIndex = photos.findIndex((p) => p._id === photo._id);
     setSelectedPhoto(photo);
     setSelectedPhotoIndex(photoIndex);
     setShowPhotoViewer(true);
@@ -230,9 +231,7 @@ const AlbumDetailPage: React.FC = () => {
   if (error || !album) {
     return (
       <Container maxWidth="xl" sx={{ py: 4 }}>
-        <Alert severity="error">
-          {error || 'Album not found'}
-        </Alert>
+        <Alert severity="error">{error || 'Album not found'}</Alert>
         <Button onClick={() => navigate('/albums')} sx={{ mt: 2 }}>
           Back to Albums
         </Button>
@@ -244,12 +243,7 @@ const AlbumDetailPage: React.FC = () => {
     <Container maxWidth="xl" sx={{ py: 4 }}>
       {/* Breadcrumbs */}
       <Breadcrumbs sx={{ mb: 2 }}>
-        <Link
-          component="button"
-          variant="body1"
-          onClick={() => navigate('/albums')}
-          sx={{ textDecoration: 'none' }}
-        >
+        <Link component="button" variant="body1" onClick={() => navigate('/albums')} sx={{ textDecoration: 'none' }}>
           Albums
         </Link>
         <Typography color="text.primary">{album.name}</Typography>
@@ -276,11 +270,7 @@ const AlbumDetailPage: React.FC = () => {
             {album.isPublic ? ' • Public' : ' • Private'}
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={<CloudUploadIcon />}
-          onClick={() => setShowUploadDialog(true)}
-        >
+        <Button variant="contained" startIcon={<CloudUploadIcon />} onClick={() => setShowUploadDialog(true)}>
           Upload Photos
         </Button>
       </Box>
@@ -294,19 +284,19 @@ const AlbumDetailPage: React.FC = () => {
               <InputAdornment position="start">
                 <SearchIcon />
               </InputAdornment>
-            ),
+            )
           }}
           sx={{ maxWidth: 400 }}
         />
       </Box>
 
       {/* Pagination Controls */}
-      <Box 
-        display="flex" 
-        justifyContent="space-between" 
-        alignItems="center" 
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
         mb={3}
-        sx={{ 
+        sx={{
           flexDirection: { xs: 'column', sm: 'row' },
           gap: { xs: 2, sm: 0 }
         }}
@@ -317,11 +307,7 @@ const AlbumDetailPage: React.FC = () => {
           </Typography>
           <FormControl size="small" sx={{ minWidth: 120 }}>
             <InputLabel>Per page</InputLabel>
-            <Select
-              value={pageSize}
-              onChange={handlePageSizeChange}
-              label="Per page"
-            >
+            <Select value={pageSize} onChange={handlePageSizeChange} label="Per page">
               <MenuItem value={10}>10</MenuItem>
               <MenuItem value={20}>20</MenuItem>
               <MenuItem value={50}>50</MenuItem>
@@ -330,7 +316,7 @@ const AlbumDetailPage: React.FC = () => {
             </Select>
           </FormControl>
         </Box>
-        
+
         {pageSize > 0 && pagination.pages > 1 && (
           <Pagination
             count={pagination.pages}
@@ -363,17 +349,10 @@ const AlbumDetailPage: React.FC = () => {
             {searchTerm ? 'No photos found' : 'No photos yet'}
           </Typography>
           <Typography variant="body2" color="text.secondary" mb={3}>
-            {searchTerm 
-              ? 'Try adjusting your search terms' 
-              : 'Upload your first photos to get started'
-            }
+            {searchTerm ? 'Try adjusting your search terms' : 'Upload your first photos to get started'}
           </Typography>
           {!searchTerm && (
-            <Button
-              variant="contained"
-              startIcon={<CloudUploadIcon />}
-              onClick={() => setShowUploadDialog(true)}
-            >
+            <Button variant="contained" startIcon={<CloudUploadIcon />} onClick={() => setShowUploadDialog(true)}>
               Upload Photos
             </Button>
           )}
@@ -382,8 +361,13 @@ const AlbumDetailPage: React.FC = () => {
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr', lg: '1fr 1fr 1fr 1fr' },
-            gap: 3,
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: '1fr 1fr',
+              md: '1fr 1fr 1fr',
+              lg: '1fr 1fr 1fr 1fr'
+            },
+            gap: 3
           }}
         >
           {photos.map((photo) => (
@@ -430,11 +414,7 @@ const AlbumDetailPage: React.FC = () => {
         onClose={handleCancelDeletePhoto}
         onConfirm={handleConfirmDeletePhoto}
         title="Delete Photo"
-        message={
-          photoToDelete
-            ? `Are you sure you want to delete photo?`
-            : ''
-        }
+        message={photoToDelete ? `Are you sure you want to delete photo?` : ''}
         confirmText="Delete Photo"
         cancelText="Cancel"
         variant="danger"
@@ -456,7 +436,19 @@ const AlbumDetailPage: React.FC = () => {
           sx: { bgcolor: 'transparent', boxShadow: 'none' }
         }}
       >
-        <DialogContent sx={{ p: 0, m: 0, width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+        <DialogContent
+          sx={{
+            p: 0,
+            m: 0,
+            width: '100vw',
+            height: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+            overflow: 'hidden'
+          }}
+        >
           <Box
             onClick={handleClosePhotoViewer}
             sx={{
@@ -466,7 +458,7 @@ const AlbumDetailPage: React.FC = () => {
               width: '100vw',
               height: '100vh',
               bgcolor: 'rgba(0,0,0,0.5)',
-              zIndex: 1,
+              zIndex: 1
             }}
           />
           {/* Close Button */}
@@ -484,7 +476,6 @@ const AlbumDetailPage: React.FC = () => {
           >
             <CloseIcon />
           </IconButton>
-
           {/* Previous Button */}
           {selectedPhotoIndex > 0 && (
             <IconButton
@@ -505,7 +496,6 @@ const AlbumDetailPage: React.FC = () => {
               <NavigateBeforeIcon fontSize="large" />
             </IconButton>
           )}
-
           {/* Next Button */}
           {selectedPhotoIndex < photos.length - 1 && (
             <IconButton
@@ -526,7 +516,6 @@ const AlbumDetailPage: React.FC = () => {
               <NavigateNextIcon fontSize="large" />
             </IconButton>
           )}
-
           {/* Photo Counter */}
           <Box
             sx={{
@@ -545,19 +534,26 @@ const AlbumDetailPage: React.FC = () => {
             <Typography variant="body2">
               {selectedPhotoIndex + 1} of {photos.length}
             </Typography>
-          </Box>          {/* Photo Image */}
+          </Box>{' '}
+          {/* Photo Image */}
           {selectedPhoto && (
             <Box
               component="img"
               src={selectedPhoto.signedUrl}
               alt={selectedPhoto.title || selectedPhoto.originalName}
-              onLoad={e => {
+              onLoad={(e) => {
                 const img = e.currentTarget as HTMLImageElement;
                 setImgDimensions({ width: img.naturalWidth, height: img.naturalHeight });
               }}
               sx={{
-                maxWidth: isMobile && imgDimensions && imgDimensions.width > imgDimensions.height && isPortrait ? '100vh' : '90vw',
-                maxHeight: isMobile && imgDimensions && imgDimensions.width > imgDimensions.height && isPortrait ? '100vw' : '90vh',
+                maxWidth:
+                  isMobile && imgDimensions && imgDimensions.width > imgDimensions.height && isPortrait
+                    ? '100vh'
+                    : '90vw',
+                maxHeight:
+                  isMobile && imgDimensions && imgDimensions.width > imgDimensions.height && isPortrait
+                    ? '100vw'
+                    : '90vh',
                 objectFit: 'contain',
                 cursor: 'pointer',
                 userSelect: 'none',
@@ -569,8 +565,11 @@ const AlbumDetailPage: React.FC = () => {
                 boxShadow: 3,
                 borderRadius: 2,
                 background: 'black',
-                transform: isMobile && imgDimensions && imgDimensions.width > imgDimensions.height && isPortrait ? 'rotate(90deg)' : 'none',
-                transition: 'transform 0.3s',
+                transform:
+                  isMobile && imgDimensions && imgDimensions.width > imgDimensions.height && isPortrait
+                    ? 'rotate(90deg)'
+                    : 'none',
+                transition: 'transform 0.3s'
               }}
               onClick={(e) => {
                 e.stopPropagation();

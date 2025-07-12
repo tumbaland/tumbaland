@@ -23,7 +23,7 @@ const AssetDonutChart: React.FC<DonutChartProps> = ({ data, totalValue }) => {
       style: 'currency',
       currency: 'EUR',
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(amount);
   };
 
@@ -36,8 +36,8 @@ const AssetDonutChart: React.FC<DonutChartProps> = ({ data, totalValue }) => {
     { key: 'thirdPillar', label: 'Third Pillar', value: data.thirdPillar, color: '#764ba2' },
     { key: 'etfPortfolio', label: 'ETF Portfolio', value: data.etfPortfolio, color: '#11998e' },
     { key: 'cash', label: 'Cash', value: data.cash, color: '#38ef7d' },
-    { key: 'gold', label: 'Gold', value: data.gold, color: '#ffd700' },
-  ].filter(asset => asset.value > 0); // Only show assets with values
+    { key: 'gold', label: 'Gold', value: data.gold, color: '#ffd700' }
+  ].filter((asset) => asset.value > 0); // Only show assets with values
 
   if (totalValue === 0) {
     return (
@@ -64,11 +64,11 @@ const AssetDonutChart: React.FC<DonutChartProps> = ({ data, totalValue }) => {
 
   let cumulativePercentage = 0;
 
-  const createSegment = (asset: typeof assetClasses[0]) => {
+  const createSegment = (asset: (typeof assetClasses)[0]) => {
     const percentage = (asset.value / totalValue) * 100;
     const strokeDasharray = `${(percentage / 100) * circumference} ${circumference}`;
-    const strokeDashoffset = -cumulativePercentage * circumference / 100;
-    
+    const strokeDashoffset = (-cumulativePercentage * circumference) / 100;
+
     cumulativePercentage += percentage;
 
     const isHovered = hoveredSegment === asset.key;
@@ -92,7 +92,7 @@ const AssetDonutChart: React.FC<DonutChartProps> = ({ data, totalValue }) => {
           transformOrigin: `${size / 2}px ${size / 2}px`,
           transition: 'all 0.3s ease',
           cursor: 'pointer',
-          filter: isHovered ? 'brightness(1.1)' : 'none',
+          filter: isHovered ? 'brightness(1.1)' : 'none'
         }}
         onMouseEnter={() => setHoveredSegment(asset.key)}
         onMouseLeave={() => setHoveredSegment(null)}
@@ -111,14 +111,21 @@ const AssetDonutChart: React.FC<DonutChartProps> = ({ data, totalValue }) => {
           <PieChart sx={{ mr: 1 }} />
           Asset Allocation
         </Typography>
-        
-        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 3 }}>
+
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: 'center',
+            gap: 3
+          }}
+        >
           {/* Donut Chart */}
           <Box sx={{ position: 'relative' }}>
             <svg width={size} height={size} style={{ transform: 'rotate(0deg)' }}>
               {assetClasses.map(createSegment)}
             </svg>
-            
+
             {/* Center content */}
             <Box
               sx={{
@@ -127,7 +134,7 @@ const AssetDonutChart: React.FC<DonutChartProps> = ({ data, totalValue }) => {
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
                 textAlign: 'center',
-                maxWidth: '60%',
+                maxWidth: '60%'
               }}
             >
               <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
@@ -152,7 +159,7 @@ const AssetDonutChart: React.FC<DonutChartProps> = ({ data, totalValue }) => {
                   borderRadius: 1,
                   cursor: 'pointer',
                   bgcolor: hoveredSegment === asset.key ? 'grey.50' : 'transparent',
-                  transition: 'background-color 0.2s ease',
+                  transition: 'background-color 0.2s ease'
                 }}
                 onMouseEnter={() => setHoveredSegment(asset.key)}
                 onMouseLeave={() => setHoveredSegment(null)}
@@ -167,7 +174,7 @@ const AssetDonutChart: React.FC<DonutChartProps> = ({ data, totalValue }) => {
                     flexShrink: 0,
                     border: hoveredSegment === asset.key ? '2px solid rgba(0,0,0,0.2)' : 'none',
                     transform: hoveredSegment === asset.key ? 'scale(1.1)' : 'scale(1)',
-                    transition: 'all 0.2s ease',
+                    transition: 'all 0.2s ease'
                   }}
                 />
                 <Box sx={{ flexGrow: 1, minWidth: 0 }}>
@@ -184,7 +191,7 @@ const AssetDonutChart: React.FC<DonutChartProps> = ({ data, totalValue }) => {
                     fontWeight: 'bold',
                     color: asset.color,
                     fontSize: '0.75rem',
-                    minWidth: 'fit-content',
+                    minWidth: 'fit-content'
                   }}
                 >
                   {getPercentage(asset.value)}%

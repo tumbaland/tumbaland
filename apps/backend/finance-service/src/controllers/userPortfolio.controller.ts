@@ -11,7 +11,7 @@ import { UserPortfolioResponse, ErrorResponse } from '../types/userPortfolio.typ
 export const getUserPortfolios = async (req: Request, res: Response<UserPortfolioResponse[] | ErrorResponse>) => {
   try {
     const portfolios = await getAllUserPortfolios();
-    const response: UserPortfolioResponse[] = portfolios.map(p => ({
+    const response: UserPortfolioResponse[] = portfolios.map((p) => ({
       _id: p._id?.toString(),
       ticker: p.symbol, // assuming symbol is still used in model, otherwise use p.ticker
       quantity: p.quantity,
@@ -33,7 +33,13 @@ export const getUserPortfolios = async (req: Request, res: Response<UserPortfoli
 export const addUserPortfolio = async (req: Request, res: Response<UserPortfolioResponse | ErrorResponse>) => {
   try {
     const { ticker, quantity, avgBuyPrice, buyDate, notes } = req.body;
-    const created = await createUserPortfolio({ symbol: ticker, quantity, avgBuyPrice, buyDate, notes });
+    const created = await createUserPortfolio({
+      symbol: ticker,
+      quantity,
+      avgBuyPrice,
+      buyDate,
+      notes
+    });
     const response: UserPortfolioResponse = {
       ticker: created.symbol,
       quantity: created.quantity,
@@ -52,7 +58,13 @@ export const editUserPortfolio = async (req: Request, res: Response<UserPortfoli
   try {
     const { id } = req.params;
     const { ticker, quantity, avgBuyPrice, buyDate, notes } = req.body;
-    const updated = await updateUserPortfolio(id, { symbol: ticker, quantity, avgBuyPrice, buyDate, notes });
+    const updated = await updateUserPortfolio(id, {
+      symbol: ticker,
+      quantity,
+      avgBuyPrice,
+      buyDate,
+      notes
+    });
     if (!updated) return res.status(404).json({ error: 'Portfolio entry not found' });
     const response: UserPortfolioResponse = {
       ticker: updated.symbol,

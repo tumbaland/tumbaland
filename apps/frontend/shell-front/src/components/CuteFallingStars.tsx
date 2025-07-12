@@ -1,4 +1,3 @@
-
 import { useMemo, memo } from 'react';
 import { Box } from '@mui/material';
 
@@ -31,7 +30,7 @@ const CuteFallingStars = memo(function CuteFallingStars({ count = 24 }: CuteFall
         animationDelay,
         rotateDir,
         duration,
-        key: i,
+        key: i
       };
     });
   }, [count]);
@@ -45,10 +44,10 @@ const CuteFallingStars = memo(function CuteFallingStars({ count = 24 }: CuteFall
         width: '100vw',
         height: '100vh',
         pointerEvents: 'none',
-        zIndex: 1000,
+        zIndex: 1000
       }}
     >
-      {stars.map(star => (
+      {stars.map((star) => (
         <Box
           key={star.key}
           sx={{
@@ -62,11 +61,11 @@ const CuteFallingStars = memo(function CuteFallingStars({ count = 24 }: CuteFall
             animationDelay: `${star.animationDelay}s`,
             userSelect: 'none',
             filter: 'drop-shadow(0 1px 2px #fff4)',
-            willChange: 'transform, opacity',
+            willChange: 'transform, opacity'
           }}
           style={{
             // Use CSS variable for direction
-            ['--rotateDir' as any]: star.rotateDir,
+            ['--rotateDir' as any]: star.rotateDir
           }}
         >
           {star.symbol}

@@ -1,8 +1,8 @@
-import { useEffect, useState, ReactNode } from "react";
-import { CssBaseline } from "@mui/material";
-import { Loader } from "../components/Loader";
-import { ErrorPage } from "../components/ErrorPage";
-import React from "react";
+import { useEffect, useState, ReactNode } from 'react';
+import { CssBaseline } from '@mui/material';
+import { Loader } from '../components/Loader';
+import { ErrorPage } from '../components/ErrorPage';
+import React from 'react';
 
 export interface AppConfig {
   ALBUM_URL?: string;
@@ -22,7 +22,7 @@ function createDevConfig(): AppConfig {
     ALBUM_URL: import.meta.env.VITE_ALBUM_URL,
     FINANCE_URL: import.meta.env.VITE_FINANCE_URL,
     RELATIONSHIP_URL: import.meta.env.VITE_RELATIONSHIP_URL,
-    PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL,
+    PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL
   };
 }
 
@@ -59,9 +59,9 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
     }
 
     // In production, fetch config.json
-    fetch("/config.json")
+    fetch('/config.json')
       .then((res) => {
-        if (!res.ok) throw new Error("Config fetch failed");
+        if (!res.ok) throw new Error('Config fetch failed');
         return res.json();
       })
       .then((loadedConfig) => {

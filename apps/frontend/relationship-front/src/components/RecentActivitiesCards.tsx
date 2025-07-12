@@ -12,7 +12,7 @@ import {
   MenuItem,
   SelectChangeEvent,
   IconButton,
-  Tooltip,
+  Tooltip
 } from '@mui/material';
 import { ExpandMore, ExpandLess } from '@mui/icons-material';
 import { getRecentActivitiesSummary } from '../api/activities';
@@ -26,7 +26,7 @@ interface TimelineOption {
 const timelineOptions: TimelineOption[] = [
   { label: 'Last Month', months: 1 },
   { label: 'Last 3 Months', months: 3 },
-  { label: 'Last Year', months: 12 },
+  { label: 'Last Year', months: 12 }
 ];
 
 const categoryConfig: Record<ActivityType, { label: string; color: string }> = {
@@ -37,7 +37,7 @@ const categoryConfig: Record<ActivityType, { label: string; color: string }> = {
   gaming: { label: 'Gaming', color: '#9c27b0' },
   other: { label: 'Other', color: '#607d8b' },
   sex: { label: 'Sex', color: '#f44336' },
-  together: { label: 'Together', color: '#2196f3' },
+  together: { label: 'Together', color: '#2196f3' }
 };
 
 const RecentActivitiesCards: React.FC = () => {
@@ -54,7 +54,7 @@ const RecentActivitiesCards: React.FC = () => {
   };
 
   const toggleCardExpansion = (category: string) => {
-    setExpandedCards(prev => {
+    setExpandedCards((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(category)) {
         newSet.delete(category);
@@ -70,13 +70,13 @@ const RecentActivitiesCards: React.FC = () => {
       try {
         setLoading(true);
         const summaryData = await getRecentActivitiesSummary();
-        
+
         const dataMap: Record<string, Activity[]> = {};
-        
+
         // Transform the summary data to match our expected format
-        categories.forEach(category => {
+        categories.forEach((category) => {
           if (summaryData[category]) {
-            timelineOptions.forEach(timeline => {
+            timelineOptions.forEach((timeline) => {
               const key = `${category}-${timeline.months}`;
               const timelineKey = `${timeline.months}months`;
               dataMap[key] = summaryData[category][timelineKey]?.activities || [];
@@ -120,45 +120,49 @@ const RecentActivitiesCards: React.FC = () => {
   }
   return (
     <Box sx={{ mb: 4 }}>
-      <Typography 
-        variant="h5" 
-        gutterBottom 
-        sx={{ 
-          mb: 3, 
+      <Typography
+        variant="h5"
+        gutterBottom
+        sx={{
+          mb: 3,
           fontWeight: 600,
           fontSize: { xs: '1.25rem', sm: '1.5rem' }
         }}
       >
         Recent Activities by Category
       </Typography>
-      
+
       <Box
         sx={{
           display: 'grid',
           gridTemplateColumns: {
             xs: '1fr',
             sm: 'repeat(2, 1fr)',
-            md: 'repeat(3, 1fr)',
+            md: 'repeat(3, 1fr)'
           },
-          gap: { xs: 1, sm: 1.5 }, // Reduced from xs: 1.5, sm: 2
+          gap: { xs: 1, sm: 1.5 } // Reduced from xs: 1.5, sm: 2
         }}
       >
         {categories.map((category) => (
-          <Card 
+          <Card
             key={category}
-            sx={{ 
+            sx={{
               height: '100%',
               border: `2px solid ${categoryConfig[category].color}`,
               borderRadius: 2,
               '&:hover': {
                 boxShadow: 6,
                 transform: 'translateY(-2px)',
-                transition: 'all 0.2s ease-in-out',
-              },
+                transition: 'all 0.2s ease-in-out'
+              }
             }}
           >
-            <CardContent sx={{ p: { xs: 1.25, sm: 1.5 } }}> {/* Reduced from xs: 1.5, sm: 2 */}
-              <Box display="flex" alignItems="center" justifyContent="space-between" mb={1.5}> {/* Reduced from mb={2} */}
+            <CardContent sx={{ p: { xs: 1.25, sm: 1.5 } }}>
+              {' '}
+              {/* Reduced from xs: 1.5, sm: 2 */}
+              <Box display="flex" alignItems="center" justifyContent="space-between" mb={1.5}>
+                {' '}
+                {/* Reduced from mb={2} */}
                 <Chip
                   label={categoryConfig[category].label}
                   sx={{
@@ -166,7 +170,7 @@ const RecentActivitiesCards: React.FC = () => {
                     color: 'white',
                     fontWeight: 600,
                     fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                    height: { xs: 24, sm: 28 },
+                    height: { xs: 24, sm: 28 }
                   }}
                 />
                 <Box display="flex" alignItems="center" gap={0.5}>
@@ -178,13 +182,13 @@ const RecentActivitiesCards: React.FC = () => {
                         fontSize: { xs: '0.65rem', sm: '0.7rem' },
                         height: { xs: 28, sm: 32 },
                         '& .MuiSelect-select': {
-                          py: { xs: 0.5, sm: 0.75 },
-                        },
+                          py: { xs: 0.5, sm: 0.75 }
+                        }
                       }}
                     >
                       {timelineOptions.map((timeline) => (
-                        <MenuItem 
-                          key={timeline.months} 
+                        <MenuItem
+                          key={timeline.months}
                           value={timeline.months}
                           sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem' } }}
                         >
@@ -204,8 +208,8 @@ const RecentActivitiesCards: React.FC = () => {
                           sx={{
                             p: 0.5,
                             '& .MuiSvgIcon-root': {
-                              fontSize: { xs: '1rem', sm: '1.2rem' },
-                            },
+                              fontSize: { xs: '1rem', sm: '1.2rem' }
+                            }
                           }}
                         >
                           {expandedCards.has(category) ? <ExpandLess /> : <ExpandMore />}
@@ -215,7 +219,6 @@ const RecentActivitiesCards: React.FC = () => {
                   })()}
                 </Box>
               </Box>
-
               {(() => {
                 const key = `${category}-${selectedTimeline}`;
                 const activities = activitiesData[key] || [];
@@ -223,9 +226,9 @@ const RecentActivitiesCards: React.FC = () => {
                 return (
                   <Box>
                     {activities.length === 0 ? (
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
+                      <Typography
+                        variant="body2"
+                        sx={{
                           color: 'text.disabled',
                           fontSize: { xs: '0.65rem', sm: '0.7rem' },
                           fontStyle: 'italic',
@@ -236,61 +239,61 @@ const RecentActivitiesCards: React.FC = () => {
                         No activities found
                       </Typography>
                     ) : (
-                      <Box 
-                        sx={{ 
+                      <Box
+                        sx={{
                           maxHeight: expandedCards.has(category) ? 'none' : { xs: 200, sm: 250 },
                           overflowY: expandedCards.has(category) ? 'visible' : 'auto',
                           pr: expandedCards.has(category) ? 0 : 0.5,
                           '&::-webkit-scrollbar': {
                             width: '4px',
-                            display: expandedCards.has(category) ? 'none' : 'block',
+                            display: expandedCards.has(category) ? 'none' : 'block'
                           },
                           '&::-webkit-scrollbar-track': {
                             background: '#f1f1f1',
-                            borderRadius: '4px',
+                            borderRadius: '4px'
                           },
                           '&::-webkit-scrollbar-thumb': {
                             background: '#888',
-                            borderRadius: '4px',
+                            borderRadius: '4px'
                           },
                           '&::-webkit-scrollbar-thumb:hover': {
-                            background: '#555',
-                          },
+                            background: '#555'
+                          }
                         }}
                       >
                         {activities.map((activity, index) => (
-                          <Box 
+                          <Box
                             key={activity._id || activity.id || index}
-                            sx={{ 
-                              display: 'flex', 
+                            sx={{
+                              display: 'flex',
                               alignItems: 'flex-start',
                               mb: 0.25, // Reduced from 0.75
                               pb: 0.25, // Reduced from 0.5
                               borderBottom: index < activities.length - 1 ? '1px solid' : 'none',
-                              borderBottomColor: 'divider',
+                              borderBottomColor: 'divider'
                             }}
                           >
-                            <Typography 
-                              variant="body2" 
-                              sx={{ 
+                            <Typography
+                              variant="body2"
+                              sx={{
                                 fontSize: { xs: '0.6rem', sm: '0.65rem' },
                                 color: 'text.secondary',
                                 fontWeight: 600,
                                 minWidth: 'fit-content',
                                 mr: 0.75, // Reduced from 1
-                                lineHeight: 1.2, // Added for more compact text
+                                lineHeight: 1.2 // Added for more compact text
                               }}
                             >
                               {formatDate(activity.date)}
                             </Typography>
-                            <Typography 
-                              variant="body2" 
-                              sx={{ 
+                            <Typography
+                              variant="body2"
+                              sx={{
                                 fontSize: { xs: '0.65rem', sm: '0.7rem' },
                                 lineHeight: 1.2, // Reduced from 1.3
                                 color: 'text.primary',
                                 flex: 1,
-                                wordBreak: 'break-word',
+                                wordBreak: 'break-word'
                               }}
                             >
                               {activity.activity.description || 'No description'}

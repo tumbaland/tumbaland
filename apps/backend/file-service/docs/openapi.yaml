@@ -3,7 +3,7 @@ info:
   title: File Service API
   description: |
     A comprehensive file upload service with Google Cloud Storage integration, featuring signed URLs for secure access with uniform bucket-level access.
-    
+
     ## Key Features
     - File upload with automatic UUID-based naming
     - Secure signed URLs for file access
@@ -66,14 +66,14 @@ paths:
                 $ref: '#/components/schemas/UploadResponse'
               example:
                 success: true
-                message: "File uploaded successfully"
+                message: 'File uploaded successfully'
                 data:
-                  id: "21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg"
-                  name: "Big party.jpg"
+                  id: '21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg'
+                  name: 'Big party.jpg'
                   size: 75430
-                  mimetype: "image/jpeg"
-                  url: "https://storage.googleapis.com/tumbabucket/21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&..."
-                  uploadedAt: "2025-06-23T10:53:34.000Z"
+                  mimetype: 'image/jpeg'
+                  url: 'https://storage.googleapis.com/tumbabucket/21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&...'
+                  uploadedAt: '2025-06-23T10:53:34.000Z'
         '400':
           description: Bad request - No file provided
           content:
@@ -82,7 +82,7 @@ paths:
                 $ref: '#/components/schemas/ApiError'
               example:
                 error:
-                  message: "No file provided"
+                  message: 'No file provided'
                   status: 400
         '500':
           $ref: '#/components/responses/InternalServerError'
@@ -105,11 +105,11 @@ paths:
                 fileName:
                   type: string
                   description: The desired filename for the upload
-                  example: "my-image.jpg"
+                  example: 'my-image.jpg'
                 contentType:
                   type: string
                   description: The MIME type of the file
-                  example: "image/jpeg"
+                  example: 'image/jpeg'
                 expirationMinutes:
                   type: integer
                   minimum: 1
@@ -146,7 +146,7 @@ paths:
           description: The unique file ID (generated during upload)
           schema:
             type: string
-            example: "21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg"
+            example: '21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg'
         - name: expires
           in: query
           required: false
@@ -184,7 +184,7 @@ paths:
           description: The unique file ID (generated during upload)
           schema:
             type: string
-            example: "21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg"
+            example: '21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg'
       responses:
         '200':
           description: File downloaded successfully
@@ -198,7 +198,7 @@ paths:
               description: The MIME type of the file
               schema:
                 type: string
-                example: "image/jpeg"
+                example: 'image/jpeg'
             Content-Length:
               description: The size of the file in bytes
               schema:
@@ -229,7 +229,7 @@ paths:
           description: The unique file ID (generated during upload)
           schema:
             type: string
-            example: "21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg"
+            example: '21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg'
       responses:
         '200':
           description: File metadata retrieved successfully
@@ -256,7 +256,7 @@ paths:
           description: The unique file ID (generated during upload)
           schema:
             type: string
-            example: "21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg"
+            example: '21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg'
       responses:
         '200':
           description: File deleted successfully
@@ -286,7 +286,7 @@ paths:
           description: Filter files by prefix
           schema:
             type: string
-            example: "images/"
+            example: 'images/'
         - name: limit
           in: query
           required: false
@@ -325,7 +325,7 @@ paths:
           description: The unique file ID
           schema:
             type: string
-            example: "21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg"
+            example: '21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg'
       responses:
         '200':
           description: File served successfully
@@ -395,31 +395,31 @@ paths:
                       totalSizeFormatted:
                         type: string
                         description: Human readable cache size
-                        example: "50 MB"
+                        example: '50 MB'
                       oldestFile:
                         type: string
                         description: Oldest cached file ID
-                        example: "abc123.jpg"
+                        example: 'abc123.jpg'
                       newestFile:
                         type: string
                         description: Newest cached file ID
-                        example: "xyz789.png"
+                        example: 'xyz789.png'
                       cacheDir:
                         type: string
                         description: Cache directory path
-                        example: "./cache"
+                        example: './cache'
                       maxAge:
                         type: string
                         description: Maximum cache age in milliseconds
-                        example: "86400000"
+                        example: '86400000'
                       maxSize:
                         type: string
                         description: Maximum cache size in bytes
-                        example: "1073741824"
+                        example: '1073741824'
                       maxSizeFormatted:
                         type: string
                         description: Human readable maximum cache size
-                        example: "1 GB"
+                        example: '1 GB'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -431,11 +431,11 @@ components:
         id:
           type: string
           description: Generated unique filename (UUID-based)
-          example: "21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg"
+          example: '21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg'
         name:
           type: string
           description: Original filename
-          example: "Big party.jpg"
+          example: 'Big party.jpg'
         size:
           type: integer
           description: File size in bytes
@@ -443,16 +443,16 @@ components:
         mimetype:
           type: string
           description: MIME type of the file
-          example: "image/jpeg"
+          example: 'image/jpeg'
         url:
           type: string
           description: Signed URL for secure access (expires in 1 hour)
-          example: "https://storage.googleapis.com/tumbabucket/21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&..."
+          example: 'https://storage.googleapis.com/tumbabucket/21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&...'
         uploadedAt:
           type: string
           format: date-time
           description: Upload timestamp in ISO format
-          example: "2025-06-23T10:53:34.000Z"
+          example: '2025-06-23T10:53:34.000Z'
       required:
         - id
         - name
@@ -467,11 +467,11 @@ components:
         id:
           type: string
           description: Unique file ID
-          example: "21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg"
+          example: '21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg'
         name:
           type: string
           description: File name (original or ID)
-          example: "Big party.jpg"
+          example: 'Big party.jpg'
         size:
           type: integer
           description: File size in bytes
@@ -479,21 +479,21 @@ components:
         contentType:
           type: string
           description: MIME type of the file
-          example: "image/jpeg"
+          example: 'image/jpeg'
         created:
           type: string
           format: date-time
           description: Creation timestamp
-          example: "2025-06-23T10:53:34.000Z"
+          example: '2025-06-23T10:53:34.000Z'
         updated:
           type: string
           format: date-time
           description: Last update timestamp
-          example: "2025-06-23T10:53:34.000Z"
+          example: '2025-06-23T10:53:34.000Z'
         url:
           type: string
           description: Signed URL for secure access
-          example: "https://storage.googleapis.com/tumbabucket/21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&..."
+          example: 'https://storage.googleapis.com/tumbabucket/21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&...'
       required:
         - id
         - name
@@ -508,7 +508,7 @@ components:
           example: true
         message:
           type: string
-          example: "File uploaded successfully"
+          example: 'File uploaded successfully'
         data:
           $ref: '#/components/schemas/FileUploadData'
       required:
@@ -540,11 +540,11 @@ components:
             signedUrl:
               type: string
               description: The signed URL for file access
-              example: "https://storage.googleapis.com/tumbabucket/21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&..."
+              example: 'https://storage.googleapis.com/tumbabucket/21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&...'
             fileId:
               type: string
               description: The file ID
-              example: "21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg"
+              example: '21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg'
             expiresInMinutes:
               type: integer
               description: Expiration time in minutes
@@ -553,7 +553,7 @@ components:
               type: string
               format: date-time
               description: Absolute expiration timestamp
-              example: "2025-06-23T11:53:34.000Z"
+              example: '2025-06-23T11:53:34.000Z'
           required:
             - signedUrl
             - fileId
@@ -575,15 +575,15 @@ components:
             uploadUrl:
               type: string
               description: The signed URL for direct upload
-              example: "https://storage.googleapis.com/tumbabucket/my-file.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&..."
+              example: 'https://storage.googleapis.com/tumbabucket/my-file.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&...'
             fileName:
               type: string
               description: The filename for upload
-              example: "my-file.jpg"
+              example: 'my-file.jpg'
             contentType:
               type: string
               description: The content type
-              example: "image/jpeg"
+              example: 'image/jpeg'
             expiresInMinutes:
               type: integer
               description: Expiration time in minutes
@@ -592,7 +592,7 @@ components:
               type: string
               format: date-time
               description: Absolute expiration timestamp
-              example: "2025-06-23T11:08:34.000Z"
+              example: '2025-06-23T11:08:34.000Z'
           required:
             - uploadUrl
             - fileName
@@ -614,16 +614,16 @@ components:
           properties:
             message:
               type: string
-              example: "File deleted successfully"
+              example: 'File deleted successfully'
             fileId:
               type: string
               description: The deleted file ID
-              example: "21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg"
+              example: '21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg'
             deletedAt:
               type: string
               format: date-time
               description: Deletion timestamp
-              example: "2025-06-23T10:53:34.000Z"
+              example: '2025-06-23T10:53:34.000Z'
           required:
             - message
             - fileId
@@ -668,7 +668,7 @@ components:
             message:
               type: string
               description: Error description
-              example: "File not found"
+              example: 'File not found'
             status:
               type: integer
               description: HTTP status code
@@ -688,7 +688,7 @@ components:
             $ref: '#/components/schemas/ApiError'
           example:
             error:
-              message: "Invalid file ID format"
+              message: 'Invalid file ID format'
               status: 400
 
     FileNotFound:
@@ -699,7 +699,7 @@ components:
             $ref: '#/components/schemas/ApiError'
           example:
             error:
-              message: "File not found"
+              message: 'File not found'
               status: 404
 
     InternalServerError:
@@ -710,7 +710,7 @@ components:
             $ref: '#/components/schemas/ApiError'
           example:
             error:
-              message: "Internal server error"
+              message: 'Internal server error'
               status: 500
 
   examples:
@@ -718,27 +718,27 @@ components:
       summary: Successful file upload
       value:
         success: true
-        message: "File uploaded successfully"
+        message: 'File uploaded successfully'
         data:
-          id: "21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg"
-          name: "Big party.jpg"
+          id: '21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg'
+          name: 'Big party.jpg'
           size: 75430
-          mimetype: "image/jpeg"
-          url: "https://storage.googleapis.com/tumbabucket/21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&..."
-          uploadedAt: "2025-06-23T10:53:34.000Z"
+          mimetype: 'image/jpeg'
+          url: 'https://storage.googleapis.com/tumbabucket/21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&...'
+          uploadedAt: '2025-06-23T10:53:34.000Z'
 
     FileMetadataExample:
       summary: File metadata response
       value:
         success: true
         data:
-          id: "21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg"
-          name: "Big party.jpg"
+          id: '21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg'
+          name: 'Big party.jpg'
           size: 75430
-          contentType: "image/jpeg"
-          created: "2025-06-23T10:53:34.000Z"
-          updated: "2025-06-23T10:53:34.000Z"
-          url: "https://storage.googleapis.com/tumbabucket/21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&..."
+          contentType: 'image/jpeg'
+          created: '2025-06-23T10:53:34.000Z'
+          updated: '2025-06-23T10:53:34.000Z'
+          url: 'https://storage.googleapis.com/tumbabucket/21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&...'
 
     ListFilesExample:
       summary: List files response
@@ -746,18 +746,18 @@ components:
         success: true
         data:
           files:
-            - id: "21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg"
-              name: "Big party.jpg"
+            - id: '21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg'
+              name: 'Big party.jpg'
               size: 75430
-              contentType: "image/jpeg"
-              created: "2025-06-23T10:53:34.000Z"
-              updated: "2025-06-23T10:53:34.000Z"
-              url: "https://storage.googleapis.com/tumbabucket/21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&..."
-            - id: "f8d2e1c9-4b3a-5c6d-7e8f-9a0b1c2d3e4f.png"
-              name: "Screenshot.png"
+              contentType: 'image/jpeg'
+              created: '2025-06-23T10:53:34.000Z'
+              updated: '2025-06-23T10:53:34.000Z'
+              url: 'https://storage.googleapis.com/tumbabucket/21d197c3-7e7a-458d-a7d6-b1a271f657af.jpg?X-Goog-Algorithm=GOOG4-RSA-SHA256&...'
+            - id: 'f8d2e1c9-4b3a-5c6d-7e8f-9a0b1c2d3e4f.png'
+              name: 'Screenshot.png'
               size: 156789
-              contentType: "image/png"
-              created: "2025-06-23T09:30:15.000Z"
-              updated: "2025-06-23T09:30:15.000Z"
-              url: "https://storage.googleapis.com/tumbabucket/f8d2e1c9-4b3a-5c6d-7e8f-9a0b1c2d3e4f.png?X-Goog-Algorithm=GOOG4-RSA-SHA256&..."
+              contentType: 'image/png'
+              created: '2025-06-23T09:30:15.000Z'
+              updated: '2025-06-23T09:30:15.000Z'
+              url: 'https://storage.googleapis.com/tumbabucket/f8d2e1c9-4b3a-5c6d-7e8f-9a0b1c2d3e4f.png?X-Goog-Algorithm=GOOG4-RSA-SHA256&...'
           count: 2

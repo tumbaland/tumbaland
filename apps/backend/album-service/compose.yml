@@ -6,7 +6,7 @@ services:
     image: toomastahves/album-service:latest
     restart: unless-stopped
     ports:
-      - "4002:4002"
+      - '4002:4002'
     environment:
       - PORT=4002
       - NODE_ENV=production

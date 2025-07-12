@@ -4,7 +4,12 @@ export const getAllTrackedTickers = async () => {
   return TrackedTicker.find().sort({ ticker: 1 });
 };
 
-export const createTrackedTicker = async (data: { ticker: string; displayName: string; description?: string; isActive?: boolean }) => {
+export const createTrackedTicker = async (data: {
+  ticker: string;
+  displayName: string;
+  description?: string;
+  isActive?: boolean;
+}) => {
   const tracked = new TrackedTicker({
     ...data,
     dateAdded: new Date(),
@@ -13,7 +18,10 @@ export const createTrackedTicker = async (data: { ticker: string; displayName: s
   return tracked.save();
 };
 
-export const updateTrackedTicker = async (id: string, data: { ticker?: string; displayName?: string; description?: string; isActive?: boolean }) => {
+export const updateTrackedTicker = async (
+  id: string,
+  data: { ticker?: string; displayName?: string; description?: string; isActive?: boolean }
+) => {
   return TrackedTicker.findByIdAndUpdate(id, data, { new: true });
 };
 

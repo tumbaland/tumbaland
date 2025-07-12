@@ -30,8 +30,8 @@ app.use('/api/docs', express.static(path.join(__dirname, '../docs')));
 
 // Basic health check route
 app.get('/health', (req: Request, res: Response) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     service: 'album-service',
     timestamp: new Date().toISOString(),
     mongodb: 'connected'

@@ -11,7 +11,7 @@ services:
       FINANCE_URL: ${VITE_FINANCE_URL}
       PUBLIC_API_URL: ${VITE_PUBLIC_API_URL}
     ports:
-      - "3000:80"
+      - '3000:80'
     networks:
       - tumbanet
 

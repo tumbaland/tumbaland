@@ -57,7 +57,9 @@ const TrackedTickersPage: React.FC = () => {
     }
   };
 
-  useEffect(() => { fetchTickers(); }, []);
+  useEffect(() => {
+    fetchTickers();
+  }, []);
 
   const handleOpenDialog = (ticker?: TrackedTicker) => {
     if (ticker) {
@@ -84,7 +86,7 @@ const TrackedTickersPage: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    setForm(f => ({ ...f, [name]: type === 'checkbox' ? checked : value }));
+    setForm((f) => ({ ...f, [name]: type === 'checkbox' ? checked : value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -169,33 +171,45 @@ const TrackedTickersPage: React.FC = () => {
               whiteSpace: { xs: 'nowrap', sm: 'normal' },
               maxWidth: { xs: 80, sm: 'none' },
               overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            },
+              textOverflow: 'ellipsis'
+            }
           }}
         >
           <TableHead>
             <TableRow>
-              <TableCell sx={{ minWidth: 60 }}><span style={{ fontSize: '0.72rem' }}>Ticker</span></TableCell>
-              <TableCell sx={{ minWidth: 100 }}><span style={{ fontSize: '0.72rem' }}>Display Name</span></TableCell>
-              <TableCell sx={{ minWidth: 100 }}><span style={{ fontSize: '0.72rem' }}>Date Added</span></TableCell>
-              <TableCell align="center" sx={{ minWidth: 60 }}><span style={{ fontSize: '0.72rem' }}>Actions</span></TableCell>
+              <TableCell sx={{ minWidth: 60 }}>
+                <span style={{ fontSize: '0.72rem' }}>Ticker</span>
+              </TableCell>
+              <TableCell sx={{ minWidth: 100 }}>
+                <span style={{ fontSize: '0.72rem' }}>Display Name</span>
+              </TableCell>
+              <TableCell sx={{ minWidth: 100 }}>
+                <span style={{ fontSize: '0.72rem' }}>Date Added</span>
+              </TableCell>
+              <TableCell align="center" sx={{ minWidth: 60 }}>
+                <span style={{ fontSize: '0.72rem' }}>Actions</span>
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {tickers.map((t, idx) => (
-              <TableRow key={t._id || t.ticker || idx} hover style={{ cursor: 'pointer' }}
-                onClick={() => handleOpenHistory(t.ticker)}>
+              <TableRow
+                key={t._id || t.ticker || idx}
+                hover
+                style={{ cursor: 'pointer' }}
+                onClick={() => handleOpenHistory(t.ticker)}
+              >
                 <TableCell>{t.ticker}</TableCell>
                 <TableCell>{t.displayName}</TableCell>
                 <TableCell>{formatDate(t.dateAdded)}</TableCell>
-                <TableCell align="center" onClick={e => e.stopPropagation()}>
+                <TableCell align="center" onClick={(e) => e.stopPropagation()}>
                   <Tooltip title="Edit">
                     <IconButton color="primary" onClick={() => handleOpenDialog(t)}>
                       <EditIcon />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Delete">
-                    <IconButton 
+                    <IconButton
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDelete(t._id ?? '');
@@ -238,7 +252,9 @@ const TrackedTickersPage: React.FC = () => {
           </DialogContent>
           <DialogActions>
             <Button onClick={handleCloseDialog}>Cancel</Button>
-            <Button type="submit" variant="contained">{editingId ? 'Update' : 'Add'}</Button>
+            <Button type="submit" variant="contained">
+              {editingId ? 'Update' : 'Add'}
+            </Button>
           </DialogActions>
         </form>
       </Dialog>
@@ -250,13 +266,12 @@ const TrackedTickersPage: React.FC = () => {
         cancelText="Cancel"
         severity="error"
         onConfirm={handleConfirmDelete}
-        onCancel={() => { setConfirmOpen(false); setPendingDeleteId(null); }}
+        onCancel={() => {
+          setConfirmOpen(false);
+          setPendingDeleteId(null);
+        }}
       />
-      <TickerHistoryModal
-        open={historyModalOpen}
-        onClose={handleCloseHistory}
-        ticker={selectedTicker || ''}
-      />
+      <TickerHistoryModal open={historyModalOpen} onClose={handleCloseHistory} ticker={selectedTicker || ''} />
     </Box>
   );
 };

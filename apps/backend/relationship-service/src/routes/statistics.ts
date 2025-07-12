@@ -1,5 +1,12 @@
 import express from 'express';
-import { getStatistics, getMonthlyHoursData, getMonthlyStatisticsData, getMonthlyActivityBreakdownData, getWeeklyHeatmapDataController, getCumulativeTimelineDataController } from '../controllers/statistics.controller';
+import {
+  getStatistics,
+  getMonthlyHoursData,
+  getMonthlyStatisticsData,
+  getMonthlyActivityBreakdownData,
+  getWeeklyHeatmapDataController,
+  getCumulativeTimelineDataController
+} from '../controllers/statistics.controller';
 import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = express.Router();

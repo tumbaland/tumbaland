@@ -14,7 +14,12 @@ import {
 } from '@mui/material';
 import { Add, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import ConfirmationModal from '../components/ConfirmationModal';
-import { getFinanceRecords, createFinanceRecord, deleteFinanceRecord, updateFinanceRecord } from '../services/financeRecordService';
+import {
+  getFinanceRecords,
+  createFinanceRecord,
+  deleteFinanceRecord,
+  updateFinanceRecord
+} from '../services/financeRecordService';
 import FinanceRecordModal from '../components/FinanceRecordModal';
 
 const FinancialRecords: React.FC = () => {
@@ -23,10 +28,26 @@ const FinancialRecords: React.FC = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [createForm, setCreateForm] = useState({
-    date: '', secondPillar: '', secondPillarGain: '', thirdPillar: '', thirdPillarGain: '', etfPortfolio: '', etfGain: '', cash: '', gold: ''
+    date: '',
+    secondPillar: '',
+    secondPillarGain: '',
+    thirdPillar: '',
+    thirdPillarGain: '',
+    etfPortfolio: '',
+    etfGain: '',
+    cash: '',
+    gold: ''
   });
   const [editForm, setEditForm] = useState({
-    date: '', secondPillar: '', secondPillarGain: '', thirdPillar: '', thirdPillarGain: '', etfPortfolio: '', etfGain: '', cash: '', gold: ''
+    date: '',
+    secondPillar: '',
+    secondPillarGain: '',
+    thirdPillar: '',
+    thirdPillarGain: '',
+    etfPortfolio: '',
+    etfGain: '',
+    cash: '',
+    gold: ''
   });
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<string>('date');
@@ -68,7 +89,17 @@ const FinancialRecords: React.FC = () => {
   }
 
   const handleCreateOpen = () => {
-    setCreateForm({ date: toLocalInputDate(new Date()), secondPillar: '', secondPillarGain: '', thirdPillar: '', thirdPillarGain: '', etfPortfolio: '', etfGain: '', cash: '', gold: '' });
+    setCreateForm({
+      date: toLocalInputDate(new Date()),
+      secondPillar: '',
+      secondPillarGain: '',
+      thirdPillar: '',
+      thirdPillarGain: '',
+      etfPortfolio: '',
+      etfGain: '',
+      cash: '',
+      gold: ''
+    });
     setCreateOpen(true);
   };
   const handleCreateClose = () => setCreateOpen(false);
@@ -154,30 +185,29 @@ const FinancialRecords: React.FC = () => {
 
   // Helper to calculate net worth for a record
   function calcNetWorth(record: any) {
-    const sum = [
-      'secondPillar',
-      'thirdPillar',
-      'etfPortfolio',
-      'cash',
-      'gold'
-    ].reduce((sum, key) => sum + (Number(record[key]) || 0), 0);
+    const sum = ['secondPillar', 'thirdPillar', 'etfPortfolio', 'cash', 'gold'].reduce(
+      (sum, key) => sum + (Number(record[key]) || 0),
+      0
+    );
     return Math.round(sum * 100) / 100;
   }
 
   // Helper to calculate total gain for a record
   function calcGain(record: any) {
-    const sum = [
-      'secondPillarGain',
-      'thirdPillarGain',
-      'etfGain'
-    ].reduce((sum, key) => sum + (Number(record[key]) || 0), 0);
+    const sum = ['secondPillarGain', 'thirdPillarGain', 'etfGain'].reduce(
+      (sum, key) => sum + (Number(record[key]) || 0),
+      0
+    );
     return Math.round(sum * 100) / 100;
   }
 
   // Helper to format numbers with thousands separator and two decimals
   function formatNumber(value: number | string) {
     if (value === null || value === undefined || value === '') return '';
-    return Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return Number(value).toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
   }
 
   function sortedRecords() {
@@ -209,12 +239,7 @@ const FinancialRecords: React.FC = () => {
         <Typography variant="h4" component="h1">
           Finance Records
         </Typography>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          sx={{ bgcolor: 'primary.main' }}
-          onClick={handleCreateOpen}
-        >
+        <Button variant="contained" startIcon={<Add />} sx={{ bgcolor: 'primary.main' }} onClick={handleCreateOpen}>
           Add Record
         </Button>
       </Box>
@@ -251,8 +276,8 @@ const FinancialRecords: React.FC = () => {
                 whiteSpace: { xs: 'nowrap', sm: 'normal' },
                 maxWidth: { xs: 80, sm: 'none' },
                 overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              },
+                textOverflow: 'ellipsis'
+              }
             }}
           >
             <TableHead>
@@ -363,15 +388,16 @@ const FinancialRecords: React.FC = () => {
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={12}>Loading...</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={12}>Loading...</TableCell>
+                </TableRow>
               ) : sortedRecords().length === 0 ? (
-                <TableRow><TableCell colSpan={12}>No records found.</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={12}>No records found.</TableCell>
+                </TableRow>
               ) : (
                 sortedRecords().map((record: any) => (
-                  <TableRow
-                    key={record._id || record.id}
-                    sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                  >
+                  <TableRow key={record._id || record.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
                     <TableCell>{formatDate(record.date)}</TableCell>
                     <TableCell align="right">{formatNumber(record.secondPillar)}</TableCell>
                     <TableCell align="right">{formatNumber(record.secondPillarGain)}</TableCell>

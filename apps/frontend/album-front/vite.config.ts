@@ -6,18 +6,18 @@ import { resolve } from 'path';
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 3002,
+    port: 3002
   },
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
-      '@tumbaland/components': resolve(__dirname, '../../../libs/components/src'),
-    },
+      '@tumbaland/components': resolve(__dirname, '../../../libs/components/src')
+    }
   },
   build: {
     modulePreload: false,
     target: 'esnext',
     minify: false,
-    cssCodeSplit: false,
-  },
-})
+    cssCodeSplit: false
+  }
+});

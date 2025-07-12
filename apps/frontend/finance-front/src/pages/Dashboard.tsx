@@ -1,13 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Chip,
-  CircularProgress,
-  Alert
-} from '@mui/material';
+import { Box, Card, CardContent, Typography, Chip, CircularProgress, Alert } from '@mui/material';
 import {
   TrendingUp,
   TrendingDown,
@@ -61,11 +53,11 @@ const Dashboard: React.FC = () => {
     try {
       setLoading(true);
       const response = await getFinanceRecords();
-      const sortedRecords = response.sort((a: FinanceRecord, b: FinanceRecord) => 
-        new Date(b.date).getTime() - new Date(a.date).getTime()
+      const sortedRecords = response.sort(
+        (a: FinanceRecord, b: FinanceRecord) => new Date(b.date).getTime() - new Date(a.date).getTime()
       );
       setRecords(sortedRecords);
-      
+
       if (sortedRecords.length > 0) {
         calculatePortfolioSummary(sortedRecords);
       }
@@ -95,7 +87,7 @@ const Dashboard: React.FC = () => {
         thirdPillar: latest.thirdPillar,
         etfPortfolio: latest.etfPortfolio,
         cash: latest.cash,
-        gold: latest.gold,
+        gold: latest.gold
       }
     });
   };
@@ -105,7 +97,7 @@ const Dashboard: React.FC = () => {
       style: 'currency',
       currency: 'EUR',
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(amount);
   };
 
@@ -143,11 +135,16 @@ const Dashboard: React.FC = () => {
               display: 'grid',
               gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
               gap: 3,
-              mb: 4,
+              mb: 4
             }}
           >
             {/* Total Portfolio Value */}
-            <Card sx={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+            <Card
+              sx={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white'
+              }}
+            >
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <AccountBalance sx={{ mr: 2, fontSize: 32 }} />
@@ -159,23 +156,40 @@ const Dashboard: React.FC = () => {
               </CardContent>
             </Card>
             {/* Total Gains */}
-            <Card sx={{ background: portfolioSummary.totalGains >= 0 ? 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)' : 'linear-gradient(135deg, #fd746c 0%, #ff9068 100%)', color: 'white' }}>
+            <Card
+              sx={{
+                background:
+                  portfolioSummary.totalGains >= 0
+                    ? 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)'
+                    : 'linear-gradient(135deg, #fd746c 0%, #ff9068 100%)',
+                color: 'white'
+              }}
+            >
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  {portfolioSummary.totalGains >= 0 ? <TrendingUp sx={{ mr: 2, fontSize: 32 }} /> : <TrendingDown sx={{ mr: 2, fontSize: 32 }} />}
+                  {portfolioSummary.totalGains >= 0 ? (
+                    <TrendingUp sx={{ mr: 2, fontSize: 32 }} />
+                  ) : (
+                    <TrendingDown sx={{ mr: 2, fontSize: 32 }} />
+                  )}
                   <Typography variant="h6">Total Gains</Typography>
                 </Box>
                 <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
                   {formatCurrency(portfolioSummary.totalGains)}
                 </Typography>
-                <Chip 
+                <Chip
                   label={`${portfolioSummary.gainsPercentage >= 0 ? '+' : ''}${portfolioSummary.gainsPercentage.toFixed(2)}%`}
                   sx={{ mt: 1, bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }}
                 />
               </CardContent>
             </Card>
             {/* Asset Classes */}
-            <Card sx={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
+            <Card
+              sx={{
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white'
+              }}
+            >
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <PieChart sx={{ mr: 2, fontSize: 32 }} />
@@ -197,7 +211,7 @@ const Dashboard: React.FC = () => {
               display: 'grid',
               gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
               gap: 3,
-              mb: 4,
+              mb: 4
             }}
           >
             {/* Breakdown Cards */}
@@ -213,15 +227,40 @@ const Dashboard: React.FC = () => {
                     gridTemplateColumns: { xs: '1fr 1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' },
                     gap: 1.5,
                     mt: 2,
-                    justifyContent: 'center',
+                    justifyContent: 'center'
                   }}
                 >
-                  {[ 
-                    { label: 'Second Pillar', value: portfolioSummary.breakdown.secondPillar, icon: <Savings />, color: '#667eea' },
-                    { label: 'Third Pillar', value: portfolioSummary.breakdown.thirdPillar, icon: <AccountBalance />, color: '#764ba2' },
-                    { label: 'ETF Portfolio', value: portfolioSummary.breakdown.etfPortfolio, icon: <TrendingUp />, color: '#11998e' },
-                    { label: 'Cash', value: portfolioSummary.breakdown.cash, icon: <MonetizationOn />, color: '#38ef7d' },
-                    { label: 'Gold', value: portfolioSummary.breakdown.gold, icon: <Diamond />, color: '#ffd700' },
+                  {[
+                    {
+                      label: 'Second Pillar',
+                      value: portfolioSummary.breakdown.secondPillar,
+                      icon: <Savings />,
+                      color: '#667eea'
+                    },
+                    {
+                      label: 'Third Pillar',
+                      value: portfolioSummary.breakdown.thirdPillar,
+                      icon: <AccountBalance />,
+                      color: '#764ba2'
+                    },
+                    {
+                      label: 'ETF Portfolio',
+                      value: portfolioSummary.breakdown.etfPortfolio,
+                      icon: <TrendingUp />,
+                      color: '#11998e'
+                    },
+                    {
+                      label: 'Cash',
+                      value: portfolioSummary.breakdown.cash,
+                      icon: <MonetizationOn />,
+                      color: '#38ef7d'
+                    },
+                    {
+                      label: 'Gold',
+                      value: portfolioSummary.breakdown.gold,
+                      icon: <Diamond />,
+                      color: '#ffd700'
+                    }
                   ].map((item) => (
                     <Box
                       key={item.label}
@@ -238,13 +277,17 @@ const Dashboard: React.FC = () => {
                         bgcolor: 'grey.50',
                         borderRadius: 2,
                         boxShadow: 1,
-                        gap: 0.5,
+                        gap: 0.5
                       }}
                     >
                       <Box sx={{ color: item.color, mb: 0.5 }}>{item.icon}</Box>
-                      <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.95rem' }}>{item.label}</Typography>
-                      <Typography variant="subtitle1" sx={{ color: item.color, fontWeight: 'bold', fontSize: '1rem' }}>{formatCurrency(item.value)}</Typography>
-                      <Chip 
+                      <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.95rem' }}>
+                        {item.label}
+                      </Typography>
+                      <Typography variant="subtitle1" sx={{ color: item.color, fontWeight: 'bold', fontSize: '1rem' }}>
+                        {formatCurrency(item.value)}
+                      </Typography>
+                      <Chip
                         label={`${getPercentageOfTotal(item.value, portfolioSummary.totalValue)}%`}
                         size="small"
                         sx={{ bgcolor: item.color, color: 'white', fontSize: '0.75rem' }}
@@ -255,10 +298,7 @@ const Dashboard: React.FC = () => {
               </CardContent>
             </Card>
             {/* Donut Chart */}
-            <AssetDonutChart 
-              data={portfolioSummary.breakdown} 
-              totalValue={portfolioSummary.totalValue} 
-            />
+            <AssetDonutChart data={portfolioSummary.breakdown} totalValue={portfolioSummary.totalValue} />
             {/* Performance Summary */}
             <Card sx={{ width: '100%', maxWidth: 400 }}>
               <CardContent>
@@ -267,26 +307,47 @@ const Dashboard: React.FC = () => {
                   Performance Summary
                 </Typography>
                 <Box sx={{ mt: 2 }}>
-                  {records.length > 0 && [
-                    { label: 'Second Pillar Gain', value: records[0].secondPillarGain, color: '#667eea' },
-                    { label: 'Third Pillar Gain', value: records[0].thirdPillarGain, color: '#764ba2' },
-                    { label: 'ETF Gain', value: records[0].etfGain, color: '#11998e' },
-                  ].map((item) => (
-                    <Box key={item.label} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                      <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
-                        {item.label}
-                      </Typography>
-                      <Typography 
-                        variant="h6" 
-                        sx={{ 
-                          color: item.value >= 0 ? 'success.main' : 'error.main',
-                          fontWeight: 'bold'
+                  {records.length > 0 &&
+                    [
+                      {
+                        label: 'Second Pillar Gain',
+                        value: records[0].secondPillarGain,
+                        color: '#667eea'
+                      },
+                      {
+                        label: 'Third Pillar Gain',
+                        value: records[0].thirdPillarGain,
+                        color: '#764ba2'
+                      },
+                      { label: 'ETF Gain', value: records[0].etfGain, color: '#11998e' }
+                    ].map((item) => (
+                      <Box
+                        key={item.label}
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          mb: 2,
+                          p: 2,
+                          bgcolor: 'grey.50',
+                          borderRadius: 1
                         }}
                       >
-                        {item.value >= 0 ? '+' : ''}{formatCurrency(item.value)}
-                      </Typography>
-                    </Box>
-                  ))}
+                        <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
+                          {item.label}
+                        </Typography>
+                        <Typography
+                          variant="h6"
+                          sx={{
+                            color: item.value >= 0 ? 'success.main' : 'error.main',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          {item.value >= 0 ? '+' : ''}
+                          {formatCurrency(item.value)}
+                        </Typography>
+                      </Box>
+                    ))}
                 </Box>
               </CardContent>
             </Card>

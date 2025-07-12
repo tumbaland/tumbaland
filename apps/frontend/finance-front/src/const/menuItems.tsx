@@ -7,21 +7,21 @@ export const menuItems = [
   {
     label: 'Dashboard',
     icon: <DashboardIcon fontSize="small" sx={{ mr: 1 }} />,
-    path: '/',
+    path: '/'
   },
   {
     label: 'Old Records',
     icon: <HistoryIcon fontSize="small" sx={{ mr: 1 }} />,
-    path: '/records',
+    path: '/records'
   },
   {
     label: 'Tickers',
     icon: <TrendingUpIcon fontSize="small" sx={{ mr: 1 }} />,
-    path: '/tracked-tickers',
+    path: '/tracked-tickers'
   },
   {
     label: 'Portfolio',
     icon: <PieChartIcon fontSize="small" sx={{ mr: 1 }} />,
-    path: '/user-portfolio',
-  },
+    path: '/user-portfolio'
+  }
 ];

@@ -1,9 +1,9 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
-import App from "./App";
-import { ConfigProvider } from "./config/ConfigProvider";
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import { ConfigProvider } from './config/ConfigProvider';
 
-const element = document.getElementById("finance-root");
+const element = document.getElementById('finance-root');
 if (element) {
   ReactDOM.createRoot(element).render(
     <React.StrictMode>

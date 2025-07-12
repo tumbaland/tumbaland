@@ -11,11 +11,7 @@ interface EditActivityModalProps {
   onActivityUpdated?: () => void;
 }
 
-const EditActivityModal: React.FC<EditActivityModalProps> = ({
-  activity,
-  buttonProps = {},
-  onActivityUpdated,
-}) => {
+const EditActivityModal: React.FC<EditActivityModalProps> = ({ activity, buttonProps = {}, onActivityUpdated }) => {
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   const handleOpenModal = () => {
@@ -43,13 +39,7 @@ const EditActivityModal: React.FC<EditActivityModalProps> = ({
 
   return (
     <>
-      <IconButton
-        color="primary"
-        onClick={handleOpenModal}
-        size="small"
-        {...buttonProps}
-        aria-label="Edit Activity"
-      >
+      <IconButton color="primary" onClick={handleOpenModal} size="small" {...buttonProps} aria-label="Edit Activity">
         <Edit />
       </IconButton>
       <ActivityForm

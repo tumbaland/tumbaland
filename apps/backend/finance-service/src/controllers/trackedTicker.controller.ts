@@ -11,7 +11,7 @@ import { TrackedTickerResponse, ErrorResponse } from '../types/trackedTicker.typ
 export const getTrackedTickers = async (req: Request, res: Response<TrackedTickerResponse[] | ErrorResponse>) => {
   try {
     const tickers = await getAllTrackedTickers();
-    const response: TrackedTickerResponse[] = tickers.map(t => ({
+    const response: TrackedTickerResponse[] = tickers.map((t) => ({
       _id: (t._id as any).toString(),
       ticker: t.ticker,
       displayName: t.displayName,

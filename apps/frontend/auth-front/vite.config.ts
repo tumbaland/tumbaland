@@ -9,22 +9,22 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     server: {
-      port: 3004,
+      port: 3004
     },
     resolve: {
       alias: {
         '@': resolve(__dirname, './src'),
-        '@tumbaland/components': resolve(__dirname, '../../../libs/components/src'),
-      },
+        '@tumbaland/components': resolve(__dirname, '../../../libs/components/src')
+      }
     },
     define: {
-      'process.env': env, // Expose .env variables to the app
+      'process.env': env // Expose .env variables to the app
     },
     build: {
       modulePreload: false,
       target: 'esnext',
       minify: false,
-      cssCodeSplit: false,
-    },
+      cssCodeSplit: false
+    }
   };
 });

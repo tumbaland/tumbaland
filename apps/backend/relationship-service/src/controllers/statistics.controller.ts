@@ -1,15 +1,22 @@
 import { Request, Response } from 'express';
-import { getRelationshipStatistics, getMonthlyHours, getMonthlyStatistics, getMonthlyActivityBreakdown, getWeeklyHeatmapData, getCumulativeTimelineData } from '../services/statistics.service';
+import {
+  getRelationshipStatistics,
+  getMonthlyHours,
+  getMonthlyStatistics,
+  getMonthlyActivityBreakdown,
+  getWeeklyHeatmapData,
+  getCumulativeTimelineData
+} from '../services/statistics.service';
 
 // Get relationship statistics
 export const getStatistics = async (req: Request, res: Response): Promise<void> => {
   try {
     const { timeframe } = req.query;
-    
+
     // Validate timeframe parameter
     const validTimeframes = ['week', 'month', 'quarter', 'year', 'all'];
     const selectedTimeframe = (timeframe as string) || 'all';
-      if (!validTimeframes.includes(selectedTimeframe)) {
+    if (!validTimeframes.includes(selectedTimeframe)) {
       res.status(400).json({
         error: 'Invalid timeframe',
         message: 'Timeframe must be one of: week, month, quarter, year, all',
@@ -19,7 +26,7 @@ export const getStatistics = async (req: Request, res: Response): Promise<void> 
     }
 
     const statistics = await getRelationshipStatistics(selectedTimeframe);
-    
+
     res.json({
       success: true,
       data: statistics,
@@ -27,7 +34,8 @@ export const getStatistics = async (req: Request, res: Response): Promise<void> 
       generatedAt: new Date().toISOString()
     });
   } catch (error: any) {
-    console.error('Error fetching statistics:', error);    res.status(500).json({
+    console.error('Error fetching statistics:', error);
+    res.status(500).json({
       error: 'Failed to fetch statistics',
       message: error.message
     });
@@ -39,7 +47,7 @@ export const getMonthlyHoursData = async (req: Request, res: Response): Promise<
   try {
     const { year } = req.query;
     const selectedYear = year ? parseInt(year as string) : undefined;
-    
+
     // Validate year if provided
     if (year && (isNaN(selectedYear!) || selectedYear! < 2000 || selectedYear! > new Date().getFullYear() + 1)) {
       res.status(400).json({
@@ -50,7 +58,7 @@ export const getMonthlyHoursData = async (req: Request, res: Response): Promise<
     }
 
     const monthlyHours = await getMonthlyHours(selectedYear);
-    
+
     res.json({
       success: true,
       data: monthlyHours,
@@ -70,7 +78,7 @@ export const getMonthlyStatisticsData = async (req: Request, res: Response): Pro
   try {
     const { year } = req.query;
     const selectedYear = year ? parseInt(year as string) : undefined;
-    
+
     // Validate year if provided
     if (year && (isNaN(selectedYear!) || selectedYear! < 2000 || selectedYear! > new Date().getFullYear() + 1)) {
       res.status(400).json({
@@ -81,7 +89,7 @@ export const getMonthlyStatisticsData = async (req: Request, res: Response): Pro
     }
 
     const monthlyStats = await getMonthlyStatistics(selectedYear);
-    
+
     res.json({
       success: true,
       data: monthlyStats,
@@ -101,7 +109,7 @@ export const getMonthlyActivityBreakdownData = async (req: Request, res: Respons
   try {
     const { year } = req.query;
     const selectedYear = year ? parseInt(year as string) : undefined;
-    
+
     // Validate year if provided
     if (year && (isNaN(selectedYear!) || selectedYear! < 2000 || selectedYear! > new Date().getFullYear() + 1)) {
       res.status(400).json({
@@ -112,7 +120,7 @@ export const getMonthlyActivityBreakdownData = async (req: Request, res: Respons
     }
 
     const monthlyActivityData = await getMonthlyActivityBreakdown(selectedYear);
-    
+
     res.json({
       success: true,
       data: monthlyActivityData,
@@ -132,7 +140,7 @@ export const getWeeklyHeatmapDataController = async (req: Request, res: Response
   try {
     const { year } = req.query;
     const selectedYear = year ? parseInt(year as string) : undefined;
-    
+
     // Validate year if provided
     if (year && (isNaN(selectedYear!) || selectedYear! < 2000 || selectedYear! > new Date().getFullYear() + 1)) {
       res.status(400).json({
@@ -143,7 +151,7 @@ export const getWeeklyHeatmapDataController = async (req: Request, res: Response
     }
 
     const heatmapData = await getWeeklyHeatmapData(selectedYear);
-    
+
     res.json({
       success: true,
       data: heatmapData,
@@ -163,7 +171,7 @@ export const getCumulativeTimelineDataController = async (req: Request, res: Res
   try {
     const { year } = req.query;
     const selectedYear = year ? parseInt(year as string) : undefined;
-    
+
     // Validate year if provided
     if (year && (isNaN(selectedYear!) || selectedYear! < 2000 || selectedYear! > new Date().getFullYear() + 1)) {
       res.status(400).json({
@@ -174,7 +182,7 @@ export const getCumulativeTimelineDataController = async (req: Request, res: Res
     }
 
     const timelineData = await getCumulativeTimelineData(selectedYear);
-    
+
     res.json({
       success: true,
       data: timelineData,

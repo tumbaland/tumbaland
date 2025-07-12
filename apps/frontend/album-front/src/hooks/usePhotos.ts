@@ -2,11 +2,14 @@ import { useState, useEffect } from 'react';
 import { Photo } from '../types';
 import { photoService } from '../services/photoService';
 
-export const usePhotos = (albumId: string, params?: {
-  page?: number;
-  limit?: number;
-  search?: string;
-}) => {
+export const usePhotos = (
+  albumId: string,
+  params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }
+) => {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +22,7 @@ export const usePhotos = (albumId: string, params?: {
 
   const fetchPhotos = async () => {
     if (!albumId) return;
-    
+
     try {
       setLoading(true);
       setError(null);

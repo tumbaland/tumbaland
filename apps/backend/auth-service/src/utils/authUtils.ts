@@ -20,13 +20,10 @@ export interface AuthResponse {
 /**
  * Check if user is authenticated by calling the auth service
  */
-export const checkAuth = async (
-  authServiceUrl = 'http://localhost:5001',
-  token?: string
-): Promise<AuthResponse> => {
+export const checkAuth = async (authServiceUrl = 'http://localhost:5001', token?: string): Promise<AuthResponse> => {
   try {
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json'
     };
 
     if (token) {
@@ -36,7 +33,7 @@ export const checkAuth = async (
     const response = await fetch(`${authServiceUrl}/auth/verify`, {
       method: 'GET',
       headers,
-      credentials: 'include', // Include cookies
+      credentials: 'include' // Include cookies
     });
 
     return await response.json();
@@ -45,7 +42,7 @@ export const checkAuth = async (
     return {
       success: false,
       authenticated: false,
-      message: 'Failed to check authentication',
+      message: 'Failed to check authentication'
     };
   }
 };
@@ -53,10 +50,7 @@ export const checkAuth = async (
 /**
  * Redirect to auth service for login
  */
-export const redirectToLogin = (
-  authFrontUrl = 'http://localhost:3004',
-  returnUrl?: string
-): void => {
+export const redirectToLogin = (authFrontUrl = 'http://localhost:3004', returnUrl?: string): void => {
   const currentUrl = returnUrl || window.location.href;
   const loginUrl = `${authFrontUrl}?redirect_uri=${encodeURIComponent(currentUrl)}`;
   window.location.href = loginUrl;
@@ -65,13 +59,11 @@ export const redirectToLogin = (
 /**
  * Logout user by calling auth service
  */
-export const logout = async (
-  authServiceUrl = 'http://localhost:5001'
-): Promise<boolean> => {
+export const logout = async (authServiceUrl = 'http://localhost:5001'): Promise<boolean> => {
   try {
     const response = await fetch(`${authServiceUrl}/auth/logout`, {
       method: 'POST',
-      credentials: 'include',
+      credentials: 'include'
     });
 
     const data = await response.json();
@@ -91,7 +83,7 @@ export const getUserProfile = async (
 ): Promise<User | null> => {
   try {
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json'
     };
 
     if (token) {
@@ -101,7 +93,7 @@ export const getUserProfile = async (
     const response = await fetch(`${authServiceUrl}/auth/profile`, {
       method: 'GET',
       headers,
-      credentials: 'include',
+      credentials: 'include'
     });
 
     const data = await response.json();

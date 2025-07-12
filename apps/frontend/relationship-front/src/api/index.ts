@@ -17,7 +17,4 @@ export {
   getActivityTypes
 } from './activities';
 
-export {
-  getStatistics,
-  statisticsApi
-} from './statistics';
+export { getStatistics, statisticsApi } from './statistics';

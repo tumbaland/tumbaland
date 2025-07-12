@@ -43,14 +43,15 @@ export const createAlbum = async (req: Request, res: Response): Promise<void> =>
 export const getAlbums = async (req: Request, res: Response): Promise<void> => {
   try {
     const { page = 1, limit = 10, search, isPublic } = req.query;
-    
+
     const query: any = {};
     if (search) {
       query.$text = { $search: search as string };
     }
     if (isPublic !== undefined) {
       query.isPublic = isPublic === 'true';
-    }    const albums = await Album.find(query)
+    }
+    const albums = await Album.find(query)
       .sort({ updatedAt: -1 })
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit));
@@ -61,7 +62,7 @@ export const getAlbums = async (req: Request, res: Response): Promise<void> => {
     const albumsWithCounts = await Promise.all(
       albums.map(async (album) => {
         const photoCount = await Photo.countDocuments({ albumId: album._id });
-          let coverPhoto = null;
+        let coverPhoto = null;
         if (album.coverPhotoId) {
           try {
             const coverPhotoDoc = await Photo.findById(album.coverPhotoId);
@@ -76,7 +77,7 @@ export const getAlbums = async (req: Request, res: Response): Promise<void> => {
             console.error(`Failed to get cover photo for album ${album._id}:`, error);
           }
         }
-        
+
         return {
           ...album.toObject(),
           photoCount,
@@ -110,9 +111,9 @@ export const getAlbums = async (req: Request, res: Response): Promise<void> => {
 export const getAlbumById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    
+
     const album = await Album.findById(id);
-    
+
     if (!album) {
       res.status(404).json({
         success: false,
@@ -121,7 +122,8 @@ export const getAlbumById = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    const photoCount = await Photo.countDocuments({ albumId: id });    let coverPhoto = null;
+    const photoCount = await Photo.countDocuments({ albumId: id });
+    let coverPhoto = null;
     if (album.coverPhotoId) {
       try {
         const coverPhotoDoc = await Photo.findById(album.coverPhotoId);
@@ -206,7 +208,7 @@ export const deleteAlbum = async (req: Request, res: Response): Promise<void> =>
     }
 
     // Get all photos in the album
-    const photos = await Photo.find({ albumId: id });    // Delete all photos and associated files
+    const photos = await Photo.find({ albumId: id }); // Delete all photos and associated files
     for (const photo of photos) {
       try {
         await deleteFile(photo.fileId);

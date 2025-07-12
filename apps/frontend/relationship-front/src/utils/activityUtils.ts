@@ -88,17 +88,20 @@ export const sortActivitiesByDate = <T extends { date: Date | string }>(activiti
  * Group activities by month
  */
 export const groupActivitiesByMonth = <T extends { date: Date | string }>(activities: T[]): Record<string, T[]> => {
-  return activities.reduce((groups, activity) => {
-    const date = new Date(activity.date);
-    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    
-    if (!groups[monthKey]) {
-      groups[monthKey] = [];
-    }
-    groups[monthKey].push(activity);
-    
-    return groups;
-  }, {} as Record<string, T[]>);
+  return activities.reduce(
+    (groups, activity) => {
+      const date = new Date(activity.date);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+      if (!groups[monthKey]) {
+        groups[monthKey] = [];
+      }
+      groups[monthKey].push(activity);
+
+      return groups;
+    },
+    {} as Record<string, T[]>
+  );
 };
 
 /**

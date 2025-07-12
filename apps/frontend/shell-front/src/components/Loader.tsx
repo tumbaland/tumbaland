@@ -1,13 +1,13 @@
-import { Box, CircularProgress } from "@mui/material";
+import { Box, CircularProgress } from '@mui/material';
 
 export function Loader() {
   return (
     <Box
       sx={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        height: "100vh",
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh'
       }}
     >
       <CircularProgress size={40} />

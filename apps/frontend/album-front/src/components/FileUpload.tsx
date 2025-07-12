@@ -42,25 +42,25 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
-      const newFiles = Array.from(event.target.files).map(file => ({
+      const newFiles = Array.from(event.target.files).map((file) => ({
         file,
         id: `${Date.now()}-${Math.random()}`
       }));
-      
+
       // Filter for image files only
-      const imageFiles = newFiles.filter(item => item.file.type.startsWith('image/'));
-      
+      const imageFiles = newFiles.filter((item) => item.file.type.startsWith('image/'));
+
       if (imageFiles.length !== newFiles.length) {
         setError('Only image files are allowed');
       } else {
         setError(null);
       }
-      
-      setFiles(prev => [...prev, ...imageFiles]);
+
+      setFiles((prev) => [...prev, ...imageFiles]);
     }
   };
   const removeFile = (fileId: string) => {
-    setFiles(prev => prev.filter(item => item.id !== fileId));
+    setFiles((prev) => prev.filter((item) => item.id !== fileId));
   };
 
   const formatFileSize = (bytes: number) => {
@@ -80,22 +80,15 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
 
     try {
       let completed = 0;
-      
+
       for (const fileItem of files) {
         const file = fileItem.file;
         try {
           // Get signed URL for upload
-          const signedUrlResponse = await photoService.getUploadSignedUrl(
-            file.name,
-            file.type,
-            albumId
-          );
+          const signedUrlResponse = await photoService.getUploadSignedUrl(file.name, file.type, albumId);
 
           // Upload file to signed URL
-          await photoService.uploadFileToSignedUrl(
-            signedUrlResponse.data.uploadUrl,
-            file
-          );
+          await photoService.uploadFileToSignedUrl(signedUrlResponse.data.uploadUrl, file);
 
           // Create photo record
           await photoService.createPhoto({
@@ -104,7 +97,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
             fileId: signedUrlResponse.data.fileId,
             albumId: albumId,
             mimetype: file.type,
-            size: file.size,
+            size: file.size
             // TODO: Extract image dimensions
             // width: undefined,
             // height: undefined,
@@ -138,20 +131,20 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
   };
   const handleDrop = (event: React.DragEvent) => {
     event.preventDefault();
-    const droppedFiles = Array.from(event.dataTransfer.files).map(file => ({
+    const droppedFiles = Array.from(event.dataTransfer.files).map((file) => ({
       file,
       id: `${Date.now()}-${Math.random()}`
     }));
-    
-    const imageFiles = droppedFiles.filter(item => item.file.type.startsWith('image/'));
-    
+
+    const imageFiles = droppedFiles.filter((item) => item.file.type.startsWith('image/'));
+
     if (imageFiles.length !== droppedFiles.length) {
       setError('Only image files are allowed');
     } else {
       setError(null);
     }
-    
-    setFiles(prev => [...prev, ...imageFiles]);
+
+    setFiles((prev) => [...prev, ...imageFiles]);
   };
 
   const handleDragOver = (event: React.DragEvent) => {
@@ -167,7 +160,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
             {error}
           </Alert>
         )}
-        
+
         <Box
           sx={{
             border: '2px dashed',
@@ -197,7 +190,8 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
             multiple
             accept="image/*"
             style={{ display: 'none' }}
-            onChange={handleFileSelect}          />
+            onChange={handleFileSelect}
+          />
         </Box>
 
         {uploading && (
@@ -220,9 +214,9 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
                 <ListItem key={fileItem.id} divider sx={{ py: 0.5 }}>
                   <ListItemText
                     primary={
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
+                      <Typography
+                        variant="body2"
+                        sx={{
                           fontSize: '0.875rem',
                           wordBreak: 'break-all',
                           lineHeight: 1.2
@@ -238,12 +232,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
                     }
                   />
                   <ListItemSecondaryAction>
-                    <IconButton 
-                      edge="end" 
-                      size="small"
-                      onClick={() => removeFile(fileItem.id)}
-                      disabled={uploading}
-                    >
+                    <IconButton edge="end" size="small" onClick={() => removeFile(fileItem.id)} disabled={uploading}>
                       <DeleteIcon fontSize="small" />
                     </IconButton>
                   </ListItemSecondaryAction>
@@ -253,7 +242,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
           </Box>
         )}
       </DialogContent>
-      
+
       <DialogActions>
         <Button onClick={handleClose} disabled={uploading}>
           Cancel

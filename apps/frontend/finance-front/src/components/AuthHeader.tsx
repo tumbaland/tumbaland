@@ -63,7 +63,7 @@ const AuthHeader: React.FC = () => {
 
   const menuItemsWithHandlers = menuItems.map((item) => ({
     ...item,
-    onClick: () => navigate(item.path),
+    onClick: () => navigate(item.path)
   }));
 
   const renderAuthSection = () => {
@@ -129,12 +129,25 @@ const AuthHeader: React.FC = () => {
   };
 
   return (
-    <AppBar position="static" elevation={2} sx={{ background: '#fff', color: '#222', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.03)' }}>
+    <AppBar
+      position="static"
+      elevation={2}
+      sx={{ background: '#fff', color: '#222', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.03)' }}
+    >
       <Toolbar>
         {isMobile ? (
           <>
             {/* Center the active menu item button */}
-            <Box sx={{ flexGrow: 0, display: 'flex', justifyContent: 'flex-start', alignItems: 'center', minHeight: 56, pl: 5}}>
+            <Box
+              sx={{
+                flexGrow: 0,
+                display: 'flex',
+                justifyContent: 'flex-start',
+                alignItems: 'center',
+                minHeight: 56,
+                pl: 5
+              }}
+            >
               <Button
                 color="inherit"
                 onClick={handleMobileMenuOpen}
@@ -150,7 +163,7 @@ const AuthHeader: React.FC = () => {
                   maxWidth: '70vw',
                   overflow: 'hidden',
                   whiteSpace: 'nowrap',
-                  textOverflow: 'ellipsis',
+                  textOverflow: 'ellipsis'
                 }}
               >
                 {/* Show current route label, fallback to first menu item */}
@@ -159,13 +172,13 @@ const AuthHeader: React.FC = () => {
                   let bestMatch = null;
                   let bestLength = -1;
                   for (const item of menuItemsWithHandlers) {
-                    if (
-                      item.path === '/' && location.pathname === '/' && bestLength < 1
-                    ) {
+                    if (item.path === '/' && location.pathname === '/' && bestLength < 1) {
                       bestMatch = item;
                       bestLength = 1;
                     } else if (
-                      item.path !== '/' && location.pathname.startsWith(item.path) && item.path.length > bestLength
+                      item.path !== '/' &&
+                      location.pathname.startsWith(item.path) &&
+                      item.path.length > bestLength
                     ) {
                       bestMatch = item;
                       bestLength = item.path.length;
@@ -209,7 +222,7 @@ const AuthHeader: React.FC = () => {
                   fontWeight: 500,
                   textTransform: 'none',
                   background: 'none',
-                  '&:hover': { background: 'rgba(0,0,0,0.04)' },
+                  '&:hover': { background: 'rgba(0,0,0,0.04)' }
                 }}
               >
                 {item.label}

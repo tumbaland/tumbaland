@@ -6,7 +6,7 @@ services:
     image: toomastahves/file-service:latest
     restart: unless-stopped
     ports:
-      - "5002:5002"
+      - '5002:5002'
     environment:
       - PORT=5002
       - NODE_ENV=production

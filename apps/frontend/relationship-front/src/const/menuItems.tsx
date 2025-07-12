@@ -5,11 +5,11 @@ export const menuItems = [
   {
     label: 'Dashboard',
     icon: <DashboardIcon fontSize="small" sx={{ mr: 1 }} />,
-    path: '/',
+    path: '/'
   },
   {
     label: 'Activities',
     icon: <DirectionsRunIcon fontSize="small" sx={{ mr: 1 }} />,
-    path: '/activities',
-  },
+    path: '/activities'
+  }
 ];

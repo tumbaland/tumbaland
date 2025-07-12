@@ -1,20 +1,6 @@
 import React from 'react';
-import {
-  Card,
-  CardMedia,
-  CardContent,
-  Typography,
-  IconButton,
-  Box,
-  Menu,
-  MenuItem,
-  Chip
-} from '@mui/material';
-import {
-  MoreVert as MoreVertIcon,
-  Image as ImageIcon,
-  Star as StarIcon
-} from '@mui/icons-material';
+import { Card, CardMedia, CardContent, Typography, IconButton, Box, Menu, MenuItem, Chip } from '@mui/material';
+import { MoreVert as MoreVertIcon, Image as ImageIcon, Star as StarIcon } from '@mui/icons-material';
 import { Photo } from '../types';
 
 interface PhotoCardProps {
@@ -26,14 +12,7 @@ interface PhotoCardProps {
   isCoverPhoto?: boolean;
 }
 
-const PhotoCard: React.FC<PhotoCardProps> = ({ 
-  photo, 
-  onView, 
-  onEdit, 
-  onDelete, 
-  onSetCover, 
-  isCoverPhoto = false 
-}) => {
+const PhotoCard: React.FC<PhotoCardProps> = ({ photo, onView, onEdit, onDelete, onSetCover, isCoverPhoto = false }) => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
@@ -80,7 +59,7 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
         justifyContent: 'space-between',
         boxShadow: 3,
         borderRadius: 2,
-        overflow: 'hidden',
+        overflow: 'hidden'
       }}
       onClick={() => onView(photo)}
     >
@@ -96,7 +75,7 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
               left: 0,
               width: '100%',
               height: '100%',
-              objectFit: 'cover',
+              objectFit: 'cover'
             }}
           />
         ) : (
@@ -110,7 +89,7 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              bgcolor: 'grey.200',
+              bgcolor: 'grey.200'
             }}
           >
             <ImageIcon sx={{ fontSize: 60, color: 'grey.400' }} />
@@ -140,10 +119,10 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
           </Box>
         )}
         {(onEdit || onDelete || onSetCover) && (
-          <IconButton 
-            size="small" 
+          <IconButton
+            size="small"
             onClick={handleMenuClick}
-            sx={{ 
+            sx={{
               position: 'absolute',
               top: 8,
               right: 8,
@@ -155,22 +134,16 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
           </IconButton>
         )}
       </Box>
-      
       <CardContent sx={{ flexGrow: 1, p: 2 }}>
-        <Typography 
-          variant="subtitle2" 
-          component="h3" 
-          noWrap 
-          sx={{ fontWeight: 600 }}
-        >
+        <Typography variant="subtitle2" component="h3" noWrap sx={{ fontWeight: 600 }}>
           {photo.title || photo.originalName}
         </Typography>
-        
+
         {photo.description && (
-          <Typography 
-            variant="body2" 
-            color="text.secondary" 
-            sx={{ 
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{
               mt: 0.5,
               display: '-webkit-box',
               WebkitLineClamp: 2,
@@ -181,54 +154,27 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
             {photo.description}
           </Typography>
         )}
-        
+
         <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
           {formatFileSize(photo.size)}
           {photo.width && photo.height && ` • ${photo.width}×${photo.height}`}
         </Typography>
-        
+
         {photo.tags && photo.tags.length > 0 && (
           <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
             {photo.tags.slice(0, 2).map((tag, index) => (
-              <Chip 
-                key={index} 
-                label={tag} 
-                size="small" 
-                variant="outlined"
-                sx={{ fontSize: '0.7rem' }}
-              />
+              <Chip key={index} label={tag} size="small" variant="outlined" sx={{ fontSize: '0.7rem' }} />
             ))}
             {photo.tags.length > 2 && (
-              <Chip 
-                label={`+${photo.tags.length - 2}`} 
-                size="small" 
-                variant="outlined"
-                sx={{ fontSize: '0.7rem' }}
-              />
+              <Chip label={`+${photo.tags.length - 2}`} size="small" variant="outlined" sx={{ fontSize: '0.7rem' }} />
             )}
           </Box>
         )}
-      </CardContent>      <Menu
-        anchorEl={anchorEl}
-        open={open}
-        onClose={handleMenuClose}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {onSetCover && !isCoverPhoto && (
-          <MenuItem onClick={handleSetCover}>
-            Set as Cover Photo
-          </MenuItem>
-        )}
-        {onEdit && (
-          <MenuItem onClick={handleEdit}>
-            Edit Photo
-          </MenuItem>
-        )}
-        {onDelete && (
-          <MenuItem onClick={handleDelete}>
-            Delete Photo
-          </MenuItem>
-        )}
+      </CardContent>{' '}
+      <Menu anchorEl={anchorEl} open={open} onClose={handleMenuClose} onClick={(e) => e.stopPropagation()}>
+        {onSetCover && !isCoverPhoto && <MenuItem onClick={handleSetCover}>Set as Cover Photo</MenuItem>}
+        {onEdit && <MenuItem onClick={handleEdit}>Edit Photo</MenuItem>}
+        {onDelete && <MenuItem onClick={handleDelete}>Delete Photo</MenuItem>}
       </Menu>
     </Card>
   );

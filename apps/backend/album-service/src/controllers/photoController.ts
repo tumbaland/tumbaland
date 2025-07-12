@@ -101,21 +101,22 @@ export const getPhotosByAlbum = async (req: Request, res: Response): Promise<voi
         message: 'Album not found'
       });
       return;
-    }    const query: any = { albumId };
+    }
+    const query: any = { albumId };
     if (search) {
       query.$text = { $search: search as string };
-    }    // Handle pagination - if limit is not provided or is 0, fetch all photos
+    } // Handle pagination - if limit is not provided or is 0, fetch all photos
     const limitNum = limit ? Number(limit) : undefined;
     const pageNum = Number(page);
-    
+
     let photosQuery = Photo.find(query).sort({ createdAt: -1 });
-    
+
     if (limitNum && limitNum > 0) {
       photosQuery = photosQuery.limit(limitNum).skip((pageNum - 1) * limitNum);
     }
-    
+
     const photos = await photosQuery;
-    const total = await Photo.countDocuments(query);// Get signed URLs for photos
+    const total = await Photo.countDocuments(query); // Get signed URLs for photos
     const photosWithUrls = await Promise.all(
       photos.map(async (photo) => {
         try {
@@ -129,7 +130,8 @@ export const getPhotosByAlbum = async (req: Request, res: Response): Promise<voi
           return photo.toObject();
         }
       })
-    );    res.json({
+    );
+    res.json({
       success: true,
       data: {
         photos: photosWithUrls,
@@ -154,16 +156,17 @@ export const getPhotosByAlbum = async (req: Request, res: Response): Promise<voi
 export const getPhotoById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    
+
     const photo = await Photo.findById(id).populate('albumId');
-    
+
     if (!photo) {
       res.status(404).json({
         success: false,
         message: 'Photo not found'
       });
       return;
-    }    try {
+    }
+    try {
       const signedUrl = await getFileUrl(photo.fileId);
       res.json({
         success: true,
@@ -236,7 +239,7 @@ export const deletePhoto = async (req: Request, res: Response): Promise<void> =>
         message: 'Photo not found'
       });
       return;
-    }    // Delete file from file service
+    } // Delete file from file service
     try {
       await deleteFile(photo.fileId);
     } catch (error) {
@@ -247,11 +250,11 @@ export const deletePhoto = async (req: Request, res: Response): Promise<void> =>
     const album = await Album.findOne({ coverPhotoId: photo._id });
     if (album) {
       // Find another photo in the same album to set as cover
-      const anotherPhoto = await Photo.findOne({ 
-        albumId: photo.albumId, 
-        _id: { $ne: photo._id } 
+      const anotherPhoto = await Photo.findOne({
+        albumId: photo.albumId,
+        _id: { $ne: photo._id }
       });
-      
+
       album.coverPhotoId = anotherPhoto ? (anotherPhoto._id as string).toString() : undefined;
       await album.save();
     }
@@ -293,7 +296,7 @@ export const getUploadSignedUrlRequest = async (req: Request, res: Response): Pr
         message: 'Album not found'
       });
       return;
-    }    // Get upload signed URL from file service
+    } // Get upload signed URL from file service
     const { url, fileId } = await getFileUploadSignedUrl(filename, mimetype);
 
     res.json({

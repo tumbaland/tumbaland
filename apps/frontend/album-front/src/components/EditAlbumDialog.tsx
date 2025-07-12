@@ -53,7 +53,11 @@ const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({ open, album, onClose,
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Edit Album</DialogTitle>
       <DialogContent>
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
         <TextField
           autoFocus
           margin="dense"
@@ -61,7 +65,7 @@ const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({ open, album, onClose,
           fullWidth
           variant="outlined"
           value={name}
-          onChange={e => setName(e.target.value)}
+          onChange={(e) => setName(e.target.value)}
           sx={{ mb: 2 }}
         />
         <TextField
@@ -72,12 +76,14 @@ const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({ open, album, onClose,
           rows={3}
           variant="outlined"
           value={description}
-          onChange={e => setDescription(e.target.value)}
+          onChange={(e) => setDescription(e.target.value)}
           sx={{ mb: 2 }}
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button onClick={onClose} disabled={saving}>
+          Cancel
+        </Button>
         <Button onClick={handleSave} variant="contained" disabled={saving}>
           {saving ? <CircularProgress size={20} /> : 'Save'}
         </Button>

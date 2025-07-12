@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
 // Hook to detect mobile devices and reduced motion preference
 export function usePerformanceOptimizations() {
@@ -8,7 +8,9 @@ export function usePerformanceOptimizations() {
   useEffect(() => {
     // Check if device is mobile
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768 || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+      setIsMobile(
+        window.innerWidth < 768 || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      );
     };
 
     // Check for reduced motion preference

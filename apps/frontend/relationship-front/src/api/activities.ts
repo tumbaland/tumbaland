@@ -24,7 +24,7 @@ export const createActivity = async (activityData: CreateActivityRequest): Promi
  */
 export const getActivities = async (filters?: GetActivitiesFilters): Promise<ActivitiesResponse> => {
   const params = new URLSearchParams();
-  
+
   if (filters?.activityType) params.append('activityType', filters.activityType);
   if (filters?.startDate) params.append('startDate', new Date(filters.startDate).toISOString());
   if (filters?.endDate) params.append('endDate', new Date(filters.endDate).toISOString());
@@ -33,9 +33,7 @@ export const getActivities = async (filters?: GetActivitiesFilters): Promise<Act
   if (filters?.sortBy) params.append('sortBy', filters.sortBy);
   if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
 
-  const response = await relationshipApi.get(
-    `/activities${params.toString() ? `?${params.toString()}` : ''}`
-  );
+  const response = await relationshipApi.get(`/activities${params.toString() ? `?${params.toString()}` : ''}`);
   return response.data.data;
 };
 
@@ -65,22 +63,26 @@ export const deleteActivity = async (id: string): Promise<void> => {
 /**
  * Get activity statistics
  */
-export const getActivityStats = async (filters?: { startDate?: Date | string; endDate?: Date | string }): Promise<ActivityStats> => {
+export const getActivityStats = async (filters?: {
+  startDate?: Date | string;
+  endDate?: Date | string;
+}): Promise<ActivityStats> => {
   const params = new URLSearchParams();
-  
+
   if (filters?.startDate) params.append('startDate', new Date(filters.startDate).toISOString());
   if (filters?.endDate) params.append('endDate', new Date(filters.endDate).toISOString());
 
-  const response = await relationshipApi.get(
-    `/activities/stats${params.toString() ? `?${params.toString()}` : ''}`
-  );
+  const response = await relationshipApi.get(`/activities/stats${params.toString() ? `?${params.toString()}` : ''}`);
   return response.data.data;
 };
 
 /**
  * Get activities by date range
  */
-export const getActivitiesByDateRange = async (startDate: Date | string, endDate: Date | string): Promise<Activity[]> => {
+export const getActivitiesByDateRange = async (
+  startDate: Date | string,
+  endDate: Date | string
+): Promise<Activity[]> => {
   const params = new URLSearchParams();
   params.append('startDate', new Date(startDate).toISOString());
   params.append('endDate', new Date(endDate).toISOString());

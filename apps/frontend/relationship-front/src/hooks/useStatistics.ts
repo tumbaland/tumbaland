@@ -15,7 +15,7 @@ interface UseStatisticsReturn {
 
 export const useStatistics = (options: UseStatisticsOptions = {}): UseStatisticsReturn => {
   const { timeframe = 'all', refreshInterval } = options;
-  
+
   const [statistics, setStatistics] = useState<RelationshipStatistics | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +50,6 @@ export const useStatistics = (options: UseStatisticsOptions = {}): UseStatistics
     statistics,
     loading,
     error,
-    refetch: fetchStatistics,
+    refetch: fetchStatistics
   };
 };

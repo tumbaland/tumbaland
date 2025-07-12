@@ -1,11 +1,5 @@
 import { albumApi } from '../config/albumApi';
-import { 
-  Photo, 
-  CreatePhotoData, 
-  ApiResponse, 
-  PaginatedResponse,
-  UploadSignedUrlResponse 
-} from '../types';
+import { Photo, CreatePhotoData, ApiResponse, PaginatedResponse, UploadSignedUrlResponse } from '../types';
 
 export const photoService = {
   // Create a new photo record
@@ -15,11 +9,14 @@ export const photoService = {
   },
 
   // Get photos by album
-  async getPhotosByAlbum(albumId: string, params?: {
-    page?: number;
-    limit?: number;
-    search?: string;
-  }): Promise<PaginatedResponse<Photo>> {
+  async getPhotosByAlbum(
+    albumId: string,
+    params?: {
+      page?: number;
+      limit?: number;
+      search?: string;
+    }
+  ): Promise<PaginatedResponse<Photo>> {
     const response = await albumApi.get(`/photos/album/${albumId}`, { params });
     return response.data;
   },
@@ -31,7 +28,10 @@ export const photoService = {
   },
 
   // Update photo
-  async updatePhoto(id: string, photoData: Partial<Pick<Photo, 'title' | 'description' | 'tags' | 'metadata'>>): Promise<ApiResponse<Photo>> {
+  async updatePhoto(
+    id: string,
+    photoData: Partial<Pick<Photo, 'title' | 'description' | 'tags' | 'metadata'>>
+  ): Promise<ApiResponse<Photo>> {
     const response = await albumApi.put(`/photos/${id}`, photoData);
     return response.data;
   },
@@ -43,7 +43,11 @@ export const photoService = {
   },
 
   // Get upload signed URL
-  async getUploadSignedUrl(filename: string, mimetype: string, albumId: string): Promise<ApiResponse<UploadSignedUrlResponse>> {
+  async getUploadSignedUrl(
+    filename: string,
+    mimetype: string,
+    albumId: string
+  ): Promise<ApiResponse<UploadSignedUrlResponse>> {
     const response = await albumApi.post('/photos/upload-url', {
       filename,
       mimetype,
@@ -58,8 +62,8 @@ export const photoService = {
       method: 'PUT',
       body: file,
       headers: {
-        'Content-Type': file.type,
-      },
+        'Content-Type': file.type
+      }
     });
   }
 };

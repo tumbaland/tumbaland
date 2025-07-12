@@ -11,33 +11,27 @@ export const createActivity = async (activityData: Partial<IActivity>): Promise<
 };
 
 // Get all activities with optional filters
-export const getActivities = async (filters: {
-  activityType?: string;
-  startDate?: Date;
-  endDate?: Date;
-  limit?: number;
-  page?: number;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
-} = {}): Promise<{ activities: IActivity[]; total: number; page: number; totalPages: number }> => {
+export const getActivities = async (
+  filters: {
+    activityType?: string;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+    page?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  } = {}
+): Promise<{ activities: IActivity[]; total: number; page: number; totalPages: number }> => {
   try {
-    const {
-      activityType,
-      startDate,
-      endDate,
-      limit = 20,
-      page = 1,
-      sortBy = 'date',
-      sortOrder = 'asc'
-    } = filters;
+    const { activityType, startDate, endDate, limit = 20, page = 1, sortBy = 'date', sortOrder = 'asc' } = filters;
 
     // Build query
     const query: any = {};
-    
+
     if (activityType) {
       query['activity.type'] = activityType;
     }
-    
+
     if (startDate || endDate) {
       query.date = {};
       if (startDate) query.date.$gte = startDate;
@@ -47,7 +41,7 @@ export const getActivities = async (filters: {
     // Build sort object
     const sortObj: any = {};
     const sortDirection = sortOrder === 'asc' ? 1 : -1;
-    
+
     // Map frontend sort fields to database fields
     switch (sortBy) {
       case 'date':
@@ -72,14 +66,10 @@ export const getActivities = async (filters: {
 
     // Calculate pagination
     const skip = (page - 1) * limit;
-    
+
     // Execute queries
     const [activities, total] = await Promise.all([
-      Activity.find(query)
-        .sort(sortObj)
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+      Activity.find(query).sort(sortObj).skip(skip).limit(limit).lean(),
       Activity.countDocuments(query)
     ]);
 
@@ -108,11 +98,7 @@ export const getActivityById = async (id: string): Promise<IActivity | null> => 
 // Update activity by ID
 export const updateActivity = async (id: string, updateData: Partial<IActivity>): Promise<IActivity | null> => {
   try {
-    return await Activity.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    );
+    return await Activity.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
   } catch (error: any) {
     throw new Error(`Failed to update activity: ${error.message}`);
   }
@@ -129,13 +115,15 @@ export const deleteActivity = async (id: string): Promise<boolean> => {
 };
 
 // Get activity statistics
-export const getActivityStats = async (filters: {
-  startDate?: Date;
-  endDate?: Date;
-} = {}): Promise<any> => {
+export const getActivityStats = async (
+  filters: {
+    startDate?: Date;
+    endDate?: Date;
+  } = {}
+): Promise<any> => {
   try {
     const { startDate, endDate } = filters;
-    
+
     // Build match stage for date filtering
     const matchStage: any = {};
     if (startDate || endDate) {
@@ -145,11 +133,11 @@ export const getActivityStats = async (filters: {
     }
 
     const pipeline = [];
-    
+
     // Add match stage if there are filters
     if (Object.keys(matchStage).length > 0) {
       pipeline.push({ $match: matchStage });
-    }    // Group by activity type
+    } // Group by activity type
     pipeline.push({
       $group: {
         _id: '$activity.type',
@@ -209,9 +197,7 @@ export const getActivitiesByDateRange = async (startDate: Date, endDate: Date): 
 // Get recent activities
 export const getRecentActivities = async (limit: number = 10): Promise<IActivity[]> => {
   try {
-    return await Activity.find()
-      .sort({ createdAt: -1 })
-      .limit(limit);
+    return await Activity.find().sort({ createdAt: -1 }).limit(limit);
   } catch (error: any) {
     throw new Error(`Failed to get recent activities: ${error.message}`);
   }

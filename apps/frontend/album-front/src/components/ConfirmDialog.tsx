@@ -1,17 +1,6 @@
-import React from "react";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Typography,
-  Box,
-  IconButton,
-} from "@mui/material";
-import {
-  Close as CloseIcon,
-} from "@mui/icons-material";
+import React from 'react';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, Box, IconButton } from '@mui/material';
+import { Close as CloseIcon } from '@mui/icons-material';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -21,7 +10,7 @@ interface ConfirmDialogProps {
   message: string;
   confirmText?: string;
   cancelText?: string;
-  variant?: "warning" | "danger" | "info";
+  variant?: 'warning' | 'danger' | 'info';
   loading?: boolean;
 }
 
@@ -31,36 +20,36 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onConfirm,
   title,
   message,
-  confirmText = "Confirm",
-  cancelText = "Cancel",
-  variant = "warning",
-  loading = false,
+  confirmText = 'Confirm',
+  cancelText = 'Cancel',
+  variant = 'warning',
+  loading = false
 }) => {
   const getVariantStyles = () => {
     switch (variant) {
-      case "danger":
+      case 'danger':
         return {
-          iconColor: "error.main",
-          iconBgColor: "error.light",
-          confirmButtonColor: "error" as const,
+          iconColor: 'error.main',
+          iconBgColor: 'error.light',
+          confirmButtonColor: 'error' as const
         };
-      case "warning":
+      case 'warning':
         return {
-          iconColor: "warning.main",
-          iconBgColor: "warning.light",
-          confirmButtonColor: "warning" as const,
+          iconColor: 'warning.main',
+          iconBgColor: 'warning.light',
+          confirmButtonColor: 'warning' as const
         };
-      case "info":
+      case 'info':
         return {
-          iconColor: "info.main",
-          iconBgColor: "info.light",
-          confirmButtonColor: "primary" as const,
+          iconColor: 'info.main',
+          iconBgColor: 'info.light',
+          confirmButtonColor: 'primary' as const
         };
       default:
         return {
-          iconColor: "warning.main",
-          iconBgColor: "warning.light",
-          confirmButtonColor: "warning" as const,
+          iconColor: 'warning.main',
+          iconBgColor: 'warning.light',
+          confirmButtonColor: 'warning' as const
         };
     }
   };
@@ -76,45 +65,37 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       PaperProps={{
         sx: {
           borderRadius: 2,
-          p: 1,
-        },
+          p: 1
+        }
       }}
     >
-      <Box sx={{ position: "relative" }}>
+      <Box sx={{ position: 'relative' }}>
         <IconButton
           onClick={onClose}
           sx={{
-            position: "absolute",
+            position: 'absolute',
             right: 8,
             top: 8,
-            color: "grey.500",
-            zIndex: 1,
+            color: 'grey.500',
+            zIndex: 1
           }}
           disabled={loading}
         >
           <CloseIcon />
         </IconButton>
 
-        <DialogTitle sx={{ textAlign: "center", pt: 3, pb: 2 }}>
-          <Typography fontWeight="600">
-            {title}
-          </Typography>
+        <DialogTitle sx={{ textAlign: 'center', pt: 3, pb: 2 }}>
+          <Typography fontWeight="600">{title}</Typography>
         </DialogTitle>
 
-        <DialogContent sx={{ textAlign: "center", pt: 0, pb: 2 }}>
+        <DialogContent sx={{ textAlign: 'center', pt: 0, pb: 2 }}>
           <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
             {message}
           </Typography>
         </DialogContent>
 
-        <DialogActions sx={{ justifyContent: "center", gap: 2, pb: 3, px: 3 }}>
-          <Button
-            onClick={onClose}
-            variant="outlined"
-            size="large"
-            disabled={loading}
-            sx={{ minWidth: 100 }}
-          >
+        <DialogActions sx={{ justifyContent: 'center', gap: 2, pb: 3, px: 3 }}>
+          <Button onClick={onClose} variant="outlined" size="large" disabled={loading} sx={{ minWidth: 100 }}>
             {cancelText}
           </Button>
           <Button
@@ -125,7 +106,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             disabled={loading}
             sx={{ minWidth: 100 }}
           >
-            {loading ? "Processing..." : confirmText}
+            {loading ? 'Processing...' : confirmText}
           </Button>
         </DialogActions>
       </Box>

@@ -1,14 +1,42 @@
-
 import { useMemo, memo } from 'react';
 import { Box } from '@mui/material';
 
 function SparkleStars({ count = 69 }: { count?: number }) {
   const symbols = ['✦', '✧', '✩', '✫', '✬', '✯', '✰', '★', '❉', '❋'];
   const colors = [
-    '#ffe0f7', '#ffb6de', '#ffd6fa', '#ffb4fa', '#ffb4e6', '#ffe6fa', '#fff0e6', '#fff7b2',
-    '#ffd6e6', '#f6baff', '#baffc9', '#b2e7ff', '#b2ffd6', '#e6ffb2', '#ffe6b2', '#e6e6ff',
-    '#b2baff', '#ffd6b2', '#e6ffd6', '#ffd6d6', '#e6f7ff', '#d6ffe6', '#f7e6ff', '#f7ffd6',
-    '#d6e6ff', '#f7e6d6', '#e6fff7', '#f7d6ff', '#d6fff7', '#f7d6d6', '#fff', '#fff', '#fff',
+    '#ffe0f7',
+    '#ffb6de',
+    '#ffd6fa',
+    '#ffb4fa',
+    '#ffb4e6',
+    '#ffe6fa',
+    '#fff0e6',
+    '#fff7b2',
+    '#ffd6e6',
+    '#f6baff',
+    '#baffc9',
+    '#b2e7ff',
+    '#b2ffd6',
+    '#e6ffb2',
+    '#ffe6b2',
+    '#e6e6ff',
+    '#b2baff',
+    '#ffd6b2',
+    '#e6ffd6',
+    '#ffd6d6',
+    '#e6f7ff',
+    '#d6ffe6',
+    '#f7e6ff',
+    '#f7ffd6',
+    '#d6e6ff',
+    '#f7e6d6',
+    '#e6fff7',
+    '#f7d6ff',
+    '#d6fff7',
+    '#f7d6d6',
+    '#fff',
+    '#fff',
+    '#fff'
   ];
 
   // Precompute all star properties only once per mount or count change
@@ -33,7 +61,7 @@ function SparkleStars({ count = 69 }: { count?: number }) {
         delay,
         rotateDir,
         rotateDuration,
-        key: i,
+        key: i
       };
     });
   }, [count]);
@@ -47,10 +75,10 @@ function SparkleStars({ count = 69 }: { count?: number }) {
         width: '100%',
         height: '100%',
         pointerEvents: 'none',
-        zIndex: 2,
+        zIndex: 2
       }}
     >
-      {stars.map(star => (
+      {stars.map((star) => (
         <Box
           key={star.key}
           sx={{
@@ -63,7 +91,7 @@ function SparkleStars({ count = 69 }: { count?: number }) {
             filter: 'drop-shadow(0 0 8px #fff) drop-shadow(0 0 16px #fff8)',
             animation: `sparkleStar ${star.duration}s ease-in-out ${star.delay}s infinite, sparkleRotate${star.rotateDir === 1 ? '' : 'Reverse'} ${star.rotateDuration}s linear ${star.delay}s infinite`,
             userSelect: 'none',
-            willChange: 'transform, opacity',
+            willChange: 'transform, opacity'
           }}
         >
           {star.symbol}
@@ -100,7 +128,7 @@ const WelcomeTumbaland = memo(function WelcomeTumbaland() {
           color: '#ff1fae',
           letterSpacing: 2,
           zIndex: 1,
-          position: 'relative',
+          position: 'relative'
         }}
       >
         Welcome to Tumbaland

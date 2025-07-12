@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Card,
@@ -11,9 +11,9 @@ import {
   Select,
   MenuItem,
   InputLabel,
-  Chip,
-} from "@mui/material";
-import { getMonthlyStatistics, MonthlyStatisticsData } from "../api/statistics";
+  Chip
+} from '@mui/material';
+import { getMonthlyStatistics, MonthlyStatisticsData } from '../api/statistics';
 
 interface StackedBarChartProps {
   title?: string;
@@ -21,37 +21,24 @@ interface StackedBarChartProps {
   height?: number;
 }
 
-const MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const COLORS = {
-  daysWithSex: "#e91e63", // Pink for sex days
-  daysMet: "#2196f3", // Blue for days met (without sex)
-  daysNotMet: "#f5f5f5", // Light gray for days not met
+  daysWithSex: '#e91e63', // Pink for sex days
+  daysMet: '#2196f3', // Blue for days met (without sex)
+  daysNotMet: '#f5f5f5' // Light gray for days not met
 };
 
 const LEGEND_ITEMS = [
-  { key: "daysWithSex", label: "Make Love", color: COLORS.daysWithSex },
-  { key: "daysMet", label: "Just Meet", color: COLORS.daysMet },
-  { key: "daysNotMet", label: "Miss You", color: COLORS.daysNotMet },
+  { key: 'daysWithSex', label: 'Make Love', color: COLORS.daysWithSex },
+  { key: 'daysMet', label: 'Just Meet', color: COLORS.daysMet },
+  { key: 'daysNotMet', label: 'Miss You', color: COLORS.daysNotMet }
 ];
 
 const MonthlyStackedBarChart: React.FC<StackedBarChartProps> = ({
-  title = "Monthly Days Breakdown",
+  title = 'Monthly Days Breakdown',
   year,
-  height = 400,
+  height = 400
 }) => {
   const [data, setData] = useState<MonthlyStatisticsData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,10 +47,7 @@ const MonthlyStackedBarChart: React.FC<StackedBarChartProps> = ({
 
   // Generate available years (from 2024 to current year)
   const currentYear = new Date().getFullYear();
-  const availableYears = Array.from(
-    { length: currentYear - 2023 },
-    (_, i) => 2024 + i
-  );
+  const availableYears = Array.from({ length: currentYear - 2023 }, (_, i) => 2024 + i);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -71,11 +55,11 @@ const MonthlyStackedBarChart: React.FC<StackedBarChartProps> = ({
         setLoading(true);
         setError(null);
         const monthlyData = await getMonthlyStatistics(selectedYear);
-        console.log("Fetched monthly statistics:", monthlyData); // Debug log
+        console.log('Fetched monthly statistics:', monthlyData); // Debug log
         setData(monthlyData);
       } catch (err) {
-        console.error("Error fetching monthly statistics:", err); // Debug log
-        setError(err instanceof Error ? err.message : "Failed to load data");
+        console.error('Error fetching monthly statistics:', err); // Debug log
+        setError(err instanceof Error ? err.message : 'Failed to load data');
       } finally {
         setLoading(false);
       }
@@ -93,12 +77,7 @@ const MonthlyStackedBarChart: React.FC<StackedBarChartProps> = ({
           <Typography variant="h6" gutterBottom>
             {title}
           </Typography>
-          <Box
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            height={height}
-          >
+          <Box display="flex" justifyContent="center" alignItems="center" height={height}>
             <CircularProgress />
           </Box>
         </CardContent>
@@ -126,12 +105,7 @@ const MonthlyStackedBarChart: React.FC<StackedBarChartProps> = ({
           <Typography variant="h6" gutterBottom>
             {title}
           </Typography>
-          <Box
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            height={height}
-          >
+          <Box display="flex" justifyContent="center" alignItems="center" height={height}>
             <Typography color="text.secondary">No data available</Typography>
           </Box>
         </CardContent>
@@ -142,23 +116,14 @@ const MonthlyStackedBarChart: React.FC<StackedBarChartProps> = ({
   return (
     <Card elevation={2}>
       <CardContent>
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="center"
-          mb={2}
-        >
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <Typography variant="h6">{title}</Typography>
           <FormControl size="small" sx={{ minWidth: 120 }}>
             <InputLabel>Year</InputLabel>
             <Select
-              value={selectedYear || "all"}
+              value={selectedYear || 'all'}
               label="Year"
-              onChange={(e) =>
-                setSelectedYear(
-                  e.target.value === "all" ? undefined : Number(e.target.value)
-                )
-              }
+              onChange={(e) => setSelectedYear(e.target.value === 'all' ? undefined : Number(e.target.value))}
             >
               <MenuItem value="all">All Years</MenuItem>
               {availableYears.map((yearOption) => (
@@ -171,7 +136,7 @@ const MonthlyStackedBarChart: React.FC<StackedBarChartProps> = ({
         </Box>
 
         {/* Legend */}
-        <Box sx={{ display: "flex", gap: 2, mb: 2, flexWrap: "wrap" }}>
+        <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap' }}>
           {LEGEND_ITEMS.map((item) => (
             <Chip
               key={item.key}
@@ -179,54 +144,50 @@ const MonthlyStackedBarChart: React.FC<StackedBarChartProps> = ({
               size="small"
               sx={{
                 backgroundColor: item.color,
-                color: item.key === "daysNotMet" ? "#666" : "white",
-                "& .MuiChip-label": {
-                  fontSize: "0.75rem",
-                },
+                color: item.key === 'daysNotMet' ? '#666' : 'white',
+                '& .MuiChip-label': {
+                  fontSize: '0.75rem'
+                }
               }}
             />
           ))}
         </Box>
 
-        <Box sx={{ position: "relative", height: height - 120, mt: 2, mb: 4 }}>
+        <Box sx={{ position: 'relative', height: height - 120, mt: 2, mb: 4 }}>
           {/* Y-axis labels */}
           <Box
             sx={{
-              position: "absolute",
+              position: 'absolute',
               left: 0,
               top: 0,
-              height: "100%",
+              height: '100%',
               width: 40,
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between",
-              alignItems: "flex-end",
-              pr: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              alignItems: 'flex-end',
+              pr: 1
             }}
           >
-            {[
-              maxDays,
-              Math.round(maxDays * 0.75),
-              Math.round(maxDays * 0.5),
-              Math.round(maxDays * 0.25),
-              0,
-            ].map((value, index) => (
-              <Typography key={index} variant="caption" color="text.secondary">
-                {value}
-              </Typography>
-            ))}
+            {[maxDays, Math.round(maxDays * 0.75), Math.round(maxDays * 0.5), Math.round(maxDays * 0.25), 0].map(
+              (value, index) => (
+                <Typography key={index} variant="caption" color="text.secondary">
+                  {value}
+                </Typography>
+              )
+            )}
           </Box>
 
           {/* Chart area */}
           <Box
             sx={{
               ml: 5,
-              height: "100%",
-              display: "flex",
-              alignItems: "flex-end",
-              borderLeft: "1px solid #e0e0e0",
-              borderBottom: "1px solid #e0e0e0",
-              position: "relative",
+              height: '100%',
+              display: 'flex',
+              alignItems: 'flex-end',
+              borderLeft: '1px solid #e0e0e0',
+              borderBottom: '1px solid #e0e0e0',
+              position: 'relative'
             }}
           >
             {/* Grid lines */}
@@ -234,16 +195,16 @@ const MonthlyStackedBarChart: React.FC<StackedBarChartProps> = ({
               <Box
                 key={index}
                 sx={{
-                  position: "absolute",
+                  position: 'absolute',
                   left: 0,
                   right: 0,
                   bottom: `${ratio * 100}%`,
-                  height: "1px",
-                  backgroundColor: "#f0f0f0",
-                  zIndex: 1,
+                  height: '1px',
+                  backgroundColor: '#f0f0f0',
+                  zIndex: 1
                 }}
               />
-            ))}{" "}
+            ))}{' '}
             {/* Stacked Bars */}
             {data.map((item) => {
               const monthIndex = parseInt(item.month) - 1;
@@ -252,18 +213,17 @@ const MonthlyStackedBarChart: React.FC<StackedBarChartProps> = ({
               // Calculate heights as percentages of the container
               const totalBarHeight = (item.totalDays / maxDays) * 100;
               const daysWithSexHeight = (item.daysWithSex / maxDays) * 100;
-              const daysMetWithoutSexHeight =
-                ((item.daysMet - item.daysWithSex) / maxDays) * 100;
+              const daysMetWithoutSexHeight = ((item.daysMet - item.daysWithSex) / maxDays) * 100;
               const daysNotMetHeight = (item.daysNotMet / maxDays) * 100;
 
-              console.log("Stacked bar data:", {
+              console.log('Stacked bar data:', {
                 item,
                 totalBarHeight,
                 daysWithSexHeight,
                 daysMetWithoutSexHeight,
                 daysNotMetHeight,
                 monthName,
-                maxDays,
+                maxDays
               });
 
               return (
@@ -271,59 +231,57 @@ const MonthlyStackedBarChart: React.FC<StackedBarChartProps> = ({
                   key={`${item.year}-${item.month}`}
                   sx={{
                     flex: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "flex-end",
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
                     mx: 0.5,
-                    cursor: "pointer",
+                    cursor: 'pointer',
                     zIndex: 2,
-                    height: "100%",
-                    position: "relative",
+                    height: '100%',
+                    position: 'relative'
                   }}
                 >
                   {/* Single container for all segments */}
                   <Box
                     sx={{
-                      width: "100%",
+                      width: '100%',
                       maxWidth: 40,
                       height: `${Math.max(totalBarHeight, 2)}%`,
-                      position: "relative",
-                      border: "1px solid #ccc", // Debug border
+                      position: 'relative',
+                      border: '1px solid #ccc' // Debug border
                     }}
                   >
-                    {" "}                    {/* Days with sex (bottom segment) - positioned absolutely */}
+                    {' '}
+                    {/* Days with sex (bottom segment) - positioned absolutely */}
                     {item.daysWithSex > 0 && (
-                      <Tooltip
-                        title={`${monthName} ${item.year}: ${item.daysWithSex} days with sex`}
-                        arrow
-                      >
+                      <Tooltip title={`${monthName} ${item.year}: ${item.daysWithSex} days with sex`} arrow>
                         <Box
                           sx={{
-                            position: "absolute",
+                            position: 'absolute',
                             bottom: 0,
                             left: 0,
                             right: 0,
                             height: `${(daysWithSexHeight / totalBarHeight) * 100}%`,
                             backgroundColor: COLORS.daysWithSex,
-                            border: "1px solid #ddd",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            "&:hover": {
-                              backgroundColor: "#c2185b",
-                            },
+                            border: '1px solid #ddd',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            '&:hover': {
+                              backgroundColor: '#c2185b'
+                            }
                           }}
                         >
                           {/* Always show number, adjust font size for small segments */}
                           <Typography
                             variant="caption"
                             sx={{
-                              fontSize: (daysWithSexHeight / totalBarHeight) * 100 > 25 ? "0.7rem" : "0.6rem",
-                              fontWeight: "bold",
-                              color: "white",
-                              textAlign: "center",
-                              lineHeight: 1,
+                              fontSize: (daysWithSexHeight / totalBarHeight) * 100 > 25 ? '0.7rem' : '0.6rem',
+                              fontWeight: 'bold',
+                              color: 'white',
+                              textAlign: 'center',
+                              lineHeight: 1
                             }}
                           >
                             {item.daysWithSex}
@@ -339,29 +297,29 @@ const MonthlyStackedBarChart: React.FC<StackedBarChartProps> = ({
                       >
                         <Box
                           sx={{
-                            position: "absolute",
+                            position: 'absolute',
                             bottom: `${(daysWithSexHeight / totalBarHeight) * 100}%`,
                             left: 0,
                             right: 0,
                             height: `${(daysMetWithoutSexHeight / totalBarHeight) * 100}%`,
                             backgroundColor: COLORS.daysMet,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            "&:hover": {
-                              backgroundColor: "#1976d2",
-                            },
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            '&:hover': {
+                              backgroundColor: '#1976d2'
+                            }
                           }}
                         >
                           {/* Always show number, adjust font size for small segments */}
                           <Typography
                             variant="caption"
                             sx={{
-                              fontSize: (daysMetWithoutSexHeight / totalBarHeight) * 100 > 25 ? "0.7rem" : "0.6rem",
-                              fontWeight: "bold",
-                              color: "white",
-                              textAlign: "center",
-                              lineHeight: 1,
+                              fontSize: (daysMetWithoutSexHeight / totalBarHeight) * 100 > 25 ? '0.7rem' : '0.6rem',
+                              fontWeight: 'bold',
+                              color: 'white',
+                              textAlign: 'center',
+                              lineHeight: 1
                             }}
                           >
                             {item.daysMet - item.daysWithSex}
@@ -371,37 +329,34 @@ const MonthlyStackedBarChart: React.FC<StackedBarChartProps> = ({
                     )}
                     {/* Days not met (top segment) */}
                     {item.daysNotMet > 0 && (
-                      <Tooltip
-                        title={`${monthName} ${item.year}: ${item.daysNotMet} days not met`}
-                        arrow
-                      >
+                      <Tooltip title={`${monthName} ${item.year}: ${item.daysNotMet} days not met`} arrow>
                         <Box
                           sx={{
-                            position: "absolute",
+                            position: 'absolute',
                             top: 0,
                             left: 0,
                             right: 0,
                             height: `${(daysNotMetHeight / totalBarHeight) * 100}%`,
                             backgroundColor: COLORS.daysNotMet,
-                            borderRadius: "4px 4px 0 0",
-                            border: "1px solid #ddd",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            "&:hover": {
-                              backgroundColor: "#e0e0e0",
-                            },
+                            borderRadius: '4px 4px 0 0',
+                            border: '1px solid #ddd',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            '&:hover': {
+                              backgroundColor: '#e0e0e0'
+                            }
                           }}
                         >
                           {/* Always show number, adjust font size for small segments */}
                           <Typography
                             variant="caption"
                             sx={{
-                              fontSize: (daysNotMetHeight / totalBarHeight) * 100 > 25 ? "0.7rem" : "0.6rem",
-                              fontWeight: "bold",
-                              color: "#666",
-                              textAlign: "center",
-                              lineHeight: 1,
+                              fontSize: (daysNotMetHeight / totalBarHeight) * 100 > 25 ? '0.7rem' : '0.6rem',
+                              fontWeight: 'bold',
+                              color: '#666',
+                              textAlign: 'center',
+                              lineHeight: 1
                             }}
                           >
                             {item.daysNotMet}
@@ -415,12 +370,12 @@ const MonthlyStackedBarChart: React.FC<StackedBarChartProps> = ({
                   <Typography
                     variant="caption"
                     sx={{
-                      position: "absolute",
+                      position: 'absolute',
                       bottom: -30,
-                      transform: "rotate(-45deg)",
-                      transformOrigin: "center",
-                      whiteSpace: "nowrap",
-                      fontSize: "0.75rem",
+                      transform: 'rotate(-45deg)',
+                      transformOrigin: 'center',
+                      whiteSpace: 'nowrap',
+                      fontSize: '0.75rem'
                     }}
                   >
                     {monthName}
@@ -435,10 +390,10 @@ const MonthlyStackedBarChart: React.FC<StackedBarChartProps> = ({
         <Box
           sx={{
             mt: 2,
-            display: "flex",
-            justifyContent: "space-around",
+            display: 'flex',
+            justifyContent: 'space-around',
             pt: 2,
-            borderTop: "1px solid #e0e0e0",
+            borderTop: '1px solid #e0e0e0'
           }}
         >
           <Box textAlign="center">

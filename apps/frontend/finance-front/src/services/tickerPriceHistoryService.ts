@@ -1,4 +1,3 @@
-
 import { financeApi } from '../config/financeApi';
 
 export interface TickerPriceHistory {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Card,
@@ -10,9 +10,9 @@ import {
   FormControl,
   Select,
   MenuItem,
-  InputLabel,
-} from "@mui/material";
-import { getWeeklyHeatmapData, WeeklyHeatmapData } from "../api/statistics";
+  InputLabel
+} from '@mui/material';
+import { getWeeklyHeatmapData, WeeklyHeatmapData } from '../api/statistics';
 
 interface WeeklyHeatmapProps {
   title?: string;
@@ -20,39 +20,22 @@ interface WeeklyHeatmapProps {
   height?: number;
 }
 
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 // Color intensity levels based on activity count
 const getActivityColor = (count: number, maxCount: number): string => {
-  if (count === 0) return "#ebedf0";
+  if (count === 0) return '#ebedf0';
 
   const intensity = count / maxCount;
-  if (intensity <= 0.2) return "#c6e48b";
-  if (intensity <= 0.4) return "#7bc96f";
-  if (intensity <= 0.6) return "#239a3b";
-  if (intensity <= 0.8) return "#196127";
-  return "#0d4820";
+  if (intensity <= 0.2) return '#c6e48b';
+  if (intensity <= 0.4) return '#7bc96f';
+  if (intensity <= 0.6) return '#239a3b';
+  if (intensity <= 0.8) return '#196127';
+  return '#0d4820';
 };
 
-const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
-  title = "Activity Heatmap",
-  year,
-  height = 200,
-}) => {
+const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({ title = 'Activity Heatmap', year, height = 200 }) => {
   const [data, setData] = useState<WeeklyHeatmapData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,10 +43,7 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
 
   // Generate available years (from 2024 to current year)
   const currentYear = new Date().getFullYear();
-  const availableYears = Array.from(
-    { length: currentYear - 2023 },
-    (_, i) => 2024 + i
-  );
+  const availableYears = Array.from({ length: currentYear - 2023 }, (_, i) => 2024 + i);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -71,11 +51,11 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
         setLoading(true);
         setError(null);
         const heatmapData = await getWeeklyHeatmapData(selectedYear);
-        console.log("Fetched heatmap data:", heatmapData);
+        console.log('Fetched heatmap data:', heatmapData);
         setData(heatmapData);
       } catch (err) {
-        console.error("Error fetching heatmap data:", err);
-        setError(err instanceof Error ? err.message : "Failed to load data");
+        console.error('Error fetching heatmap data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load data');
       } finally {
         setLoading(false);
       }
@@ -126,7 +106,7 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
           data: dayData,
           isCurrentYear,
           dayOfWeek: day,
-          displayDate: new Date(year, currentDate.getMonth(), currentDate.getDate()),
+          displayDate: new Date(year, currentDate.getMonth(), currentDate.getDate())
         });
 
         currentDate.setDate(currentDate.getDate() + 1);
@@ -144,29 +124,25 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
   };
 
   if (loading) {
-  return (
-    <Card elevation={2}
-      sx={{
-        maxWidth: { xs: '100vw', sm: 900 },
-        width: { xs: '100vw', sm: '100%' },
-        boxSizing: 'border-box',
-        mx: { xs: -2, sm: 'auto' }, // allow card to stretch edge-to-edge on mobile
-        px: { xs: 0, sm: 0 },
-        borderRadius: { xs: 0, sm: 2 },
-        // Remove box-shadow on mobile for a flatter look
-        boxShadow: { xs: 'none', sm: undefined },
-      }}
-    >
-      <CardContent sx={{ px: { xs: 1, sm: 2 }, py: { xs: 1, sm: 2 } }}>
+    return (
+      <Card
+        elevation={2}
+        sx={{
+          maxWidth: { xs: '100vw', sm: 900 },
+          width: { xs: '100vw', sm: '100%' },
+          boxSizing: 'border-box',
+          mx: { xs: -2, sm: 'auto' }, // allow card to stretch edge-to-edge on mobile
+          px: { xs: 0, sm: 0 },
+          borderRadius: { xs: 0, sm: 2 },
+          // Remove box-shadow on mobile for a flatter look
+          boxShadow: { xs: 'none', sm: undefined }
+        }}
+      >
+        <CardContent sx={{ px: { xs: 1, sm: 2 }, py: { xs: 1, sm: 2 } }}>
           <Typography variant="h6" gutterBottom>
             {title}
           </Typography>
-          <Box
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            height={height}
-          >
+          <Box display="flex" justifyContent="center" alignItems="center" height={height}>
             <CircularProgress />
           </Box>
         </CardContent>
@@ -197,7 +173,7 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
           width: '100%',
           maxWidth: { xs: '100vw', sm: 900 },
           boxSizing: 'border-box',
-          mx: 'auto',
+          mx: 'auto'
         }}
       >
         <Box
@@ -207,10 +183,12 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
             alignItems: { xs: 'stretch', sm: 'center' },
             justifyContent: 'space-between',
             gap: 2,
-            mb: 2,
+            mb: 2
           }}
         >
-          <Typography variant="h6" sx={{ mb: { xs: 1, sm: 0 } }}>{title}</Typography>
+          <Typography variant="h6" sx={{ mb: { xs: 1, sm: 0 } }}>
+            {title}
+          </Typography>
           <FormControl size="small" sx={{ minWidth: { xs: 120, sm: 120 }, width: { xs: '100%', sm: 'auto' } }}>
             <InputLabel>Year</InputLabel>
             <Select
@@ -229,21 +207,21 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
         {/* Heatmap Grid */}
         <Box
           sx={{
-            overflowX: "auto",
+            overflowX: 'auto',
             pb: 2,
-            display: "flex",
+            display: 'flex',
             justifyContent: { xs: 'flex-start', sm: 'center' },
             width: '100%',
-            maxWidth: '100vw',
+            maxWidth: '100vw'
           }}
         >
           <Box
             sx={{
-              display: "flex",
+              display: 'flex',
               gap: 1,
               minWidth: { xs: 'unset', sm: 800 },
               width: { xs: '100%', sm: 'auto' },
-              maxWidth: { xs: '100vw', sm: 900 },
+              maxWidth: { xs: '100vw', sm: 900 }
             }}
           >
             {/* Day labels */}
@@ -252,7 +230,7 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
                 display: { xs: 'none', sm: 'flex' },
                 flexDirection: 'column',
                 gap: 1,
-                pt: 4,
+                pt: 4
               }}
             >
               {DAYS.map((day, index) => (
@@ -262,13 +240,10 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
                     height: 12,
                     display: 'flex',
                     alignItems: 'center',
-                    opacity: index % 2 === 0 ? 1 : 0,
+                    opacity: index % 2 === 0 ? 1 : 0
                   }}
                 >
-                  <Typography
-                    variant="caption"
-                    sx={{ fontSize: '0.7rem', width: 25 }}
-                  >
+                  <Typography variant="caption" sx={{ fontSize: '0.7rem', width: 25 }}>
                     {index % 2 === 0 ? day : ''}
                   </Typography>
                 </Box>
@@ -280,8 +255,7 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
               <Box sx={{ display: { xs: 'none', sm: 'flex' }, mb: 1, height: 20, gap: 1 }}>
                 {weeks.map((week, weekIndex) => {
                   const firstDayOfWeek = week[0].displayDate;
-                  const showMonth =
-                    firstDayOfWeek.getDate() <= 7 || weekIndex === 0;
+                  const showMonth = firstDayOfWeek.getDate() <= 7 || weekIndex === 0;
 
                   return (
                     <Box
@@ -289,14 +263,11 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
                       sx={{
                         width: 12,
                         display: 'flex',
-                        justifyContent: 'center',
+                        justifyContent: 'center'
                       }}
                     >
                       {showMonth && (
-                        <Typography
-                          variant="caption"
-                          sx={{ fontSize: '0.7rem' }}
-                        >
+                        <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
                           {MONTHS[firstDayOfWeek.getMonth()]}
                         </Typography>
                       )}
@@ -306,22 +277,20 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
               </Box>
 
               {/* Heatmap cells */}
-              <Box sx={{ display: "flex", gap: { xs: 0.15, sm: 0.7 } }}>
+              <Box sx={{ display: 'flex', gap: { xs: 0.15, sm: 0.7 } }}>
                 {weeks.map((week, weekIndex) => (
                   <Box
                     key={weekIndex}
                     sx={{
-                      display: "flex",
-                      flexDirection: "column",
+                      display: 'flex',
+                      flexDirection: 'column',
                       gap: { xs: 0.15, sm: 0.7 },
-                      width: { xs: 3.5, sm: 10 },
+                      width: { xs: 3.5, sm: 10 }
                     }}
                   >
                     {week.map((day, dayIndex) => {
                       const activityCount = day.data?.totalActivities || 0;
-                      const color = day.isCurrentYear
-                        ? getActivityColor(activityCount, maxActivityCount)
-                        : "#ebedf0";
+                      const color = day.isCurrentYear ? getActivityColor(activityCount, maxActivityCount) : '#ebedf0';
 
                       const tooltipTitle = day.data
                         ? `${day.displayDate.toLocaleDateString()}: ${activityCount} activities (${day.data.totalHours}h)`
@@ -334,14 +303,14 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
                               width: { xs: 3.5, sm: 10 },
                               height: { xs: 3.5, sm: 10 },
                               backgroundColor: color,
-                              border: "1px solid #e1e4e8",
-                              borderRadius: "2px",
-                              cursor: "pointer",
-                              transition: "all 0.2s ease",
-                              "&:hover": {
-                                transform: "scale(1.2)",
-                                borderColor: "#333",
-                              },
+                              border: '1px solid #e1e4e8',
+                              borderRadius: '2px',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                transform: 'scale(1.2)',
+                                borderColor: '#333'
+                              }
                             }}
                           />
                         </Tooltip>
@@ -363,7 +332,7 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
             gap: 2,
             mt: 2,
             pt: 2,
-            borderTop: '1px solid #e0e0e0',
+            borderTop: '1px solid #e0e0e0'
           }}
         >
           <Typography variant="caption" color="text.secondary" sx={{ mb: { xs: 1, sm: 0 } }}>
@@ -379,12 +348,9 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
                 sx={{
                   width: 12,
                   height: 12,
-                  backgroundColor: getActivityColor(
-                    intensity * maxActivityCount,
-                    maxActivityCount
-                  ),
+                  backgroundColor: getActivityColor(intensity * maxActivityCount, maxActivityCount),
                   border: '1px solid #e1e4e8',
-                  borderRadius: '2px',
+                  borderRadius: '2px'
                 }}
               />
             ))}
@@ -394,7 +360,17 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
           </Box>
         </Box>
         {/* Summary stats */}
-        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-around', pt: 2, borderTop: '1px solid #e0e0e0', flexWrap: 'wrap', gap: 2 }}>
+        <Box
+          sx={{
+            mt: 2,
+            display: 'flex',
+            justifyContent: 'space-around',
+            pt: 2,
+            borderTop: '1px solid #e0e0e0',
+            flexWrap: 'wrap',
+            gap: 2
+          }}
+        >
           <Box textAlign="center">
             <Typography variant="h6" color="primary">
               {data.reduce((sum, item) => sum + item.totalActivities, 0)}

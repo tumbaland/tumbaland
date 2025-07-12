@@ -1,7 +1,26 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Dialog, DialogTitle, DialogContent, DialogActions, Button, Typography, TextField, CircularProgress, MenuItem, Select, FormControl, InputLabel } from '@mui/material';
+import {
+  Box,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Typography,
+  TextField,
+  CircularProgress,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel
+} from '@mui/material';
 import TickerHistoryTable from './TickerHistoryTable';
-import { getTickerPriceHistory, TickerPriceHistory, deleteTickerPriceHistory, fetchAllTickerPriceHistory } from '../services/tickerPriceHistoryService';
+import {
+  getTickerPriceHistory,
+  TickerPriceHistory,
+  deleteTickerPriceHistory,
+  fetchAllTickerPriceHistory
+} from '../services/tickerPriceHistoryService';
 import ConfirmationModal from './ConfirmationModal';
 
 interface TickerHistoryModalProps {
@@ -62,28 +81,45 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
     let end = now.toISOString().slice(0, 10);
     switch (value) {
       case '1m': {
-        const d = new Date(now); d.setMonth(d.getMonth() - 1); start = d.toISOString().slice(0, 10); break;
+        const d = new Date(now);
+        d.setMonth(d.getMonth() - 1);
+        start = d.toISOString().slice(0, 10);
+        break;
       }
       case '3m': {
-        const d = new Date(now); d.setMonth(d.getMonth() - 3); start = d.toISOString().slice(0, 10); break;
+        const d = new Date(now);
+        d.setMonth(d.getMonth() - 3);
+        start = d.toISOString().slice(0, 10);
+        break;
       }
       case '1y': {
-        const d = new Date(now); d.setFullYear(d.getFullYear() - 1); start = d.toISOString().slice(0, 10); break;
+        const d = new Date(now);
+        d.setFullYear(d.getFullYear() - 1);
+        start = d.toISOString().slice(0, 10);
+        break;
       }
       case '3y': {
-        const d = new Date(now); d.setFullYear(d.getFullYear() - 3); start = d.toISOString().slice(0, 10); break;
+        const d = new Date(now);
+        d.setFullYear(d.getFullYear() - 3);
+        start = d.toISOString().slice(0, 10);
+        break;
       }
       case '5y': {
-        const d = new Date(now); d.setFullYear(d.getFullYear() - 5); start = d.toISOString().slice(0, 10); break;
+        const d = new Date(now);
+        d.setFullYear(d.getFullYear() - 5);
+        start = d.toISOString().slice(0, 10);
+        break;
       }
       case 'all':
       default: {
         // Set to earliest available date in history, or fallback to 10 years ago
         let earliest = '';
         if (history.length > 0) {
-          earliest = history.reduce((min, h) => h.date < min ? h.date : min, history[0].date);
+          earliest = history.reduce((min, h) => (h.date < min ? h.date : min), history[0].date);
         } else {
-          const d = new Date(now); d.setFullYear(d.getFullYear() - 10); earliest = d.toISOString().slice(0, 10);
+          const d = new Date(now);
+          d.setFullYear(d.getFullYear() - 10);
+          earliest = d.toISOString().slice(0, 10);
         }
         start = earliest;
         break;
@@ -99,7 +135,7 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
     if (open && ticker) {
       setLoading(true);
       getTickerPriceHistory(ticker)
-        .then(data => setHistory(data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())))
+        .then((data) => setHistory(data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())))
         .catch(() => setError('Failed to load history'))
         .finally(() => setLoading(false));
     }
@@ -107,8 +143,8 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
 
   // Only closing prices, filtered by date and ticker
   const filteredHistory = history
-    .filter(h => h.ticker === ticker)
-    .filter(h => {
+    .filter((h) => h.ticker === ticker)
+    .filter((h) => {
       const d = new Date(h.date).toISOString().slice(0, 10);
       const afterStart = !startDate || d >= startDate;
       const beforeEnd = !endDate || d <= endDate;
@@ -133,10 +169,9 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
   const chartHistory = downsampleHistory(filteredHistory);
 
   // For statistics, always use the full filteredHistory
-  const statsPrices = filteredHistory.map(h => h.close);
+  const statsPrices = filteredHistory.map((h) => h.close);
   const minPrice = statsPrices.length > 0 ? Math.min(...statsPrices) : 0;
   const maxPrice = statsPrices.length > 0 ? Math.max(...statsPrices) : 1;
-
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
@@ -151,7 +186,7 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
             mb: 2,
             alignItems: { xs: 'stretch', sm: 'center' },
             width: '100%',
-            mt: 2,
+            mt: 2
           }}
         >
           <FormControl size="small" sx={{ minWidth: { xs: 0, sm: 180 }, flex: 1 }}>
@@ -160,7 +195,7 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
               labelId="quick-range-label"
               value={quickRange}
               label="Quick Range"
-              onChange={e => handleQuickRange(e.target.value)}
+              onChange={(e) => handleQuickRange(e.target.value)}
             >
               <MenuItem value="1m">Last 1 month</MenuItem>
               <MenuItem value="3m">Last 3 months</MenuItem>
@@ -175,7 +210,7 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
             type="date"
             size="small"
             value={pendingStartDate}
-            onChange={e => setPendingStartDate(e.target.value)}
+            onChange={(e) => setPendingStartDate(e.target.value)}
             sx={{ minWidth: { xs: 0, sm: 160 }, flex: 1 }}
           />
           <TextField
@@ -183,7 +218,7 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
             type="date"
             size="small"
             value={pendingEndDate}
-            onChange={e => setPendingEndDate(e.target.value)}
+            onChange={(e) => setPendingEndDate(e.target.value)}
             sx={{ minWidth: { xs: 0, sm: 160 }, flex: 1 }}
           />
           <Button
@@ -219,7 +254,7 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
                   {/* Grid lines */}
                   <defs>
                     <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#f0f0f0" strokeWidth="1"/>
+                      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#f0f0f0" strokeWidth="1" />
                     </pattern>
                   </defs>
                   <rect width="100%" height="100%" fill="url(#grid)" />
@@ -229,14 +264,7 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
                     const y = 300 - 60 - ((value - minPrice) / (maxPrice - minPrice || 1)) * (300 - 2 * 60);
                     return (
                       <g key={ratio}>
-                        <line
-                          x1={60}
-                          y1={y}
-                          x2={containerWidth - 60}
-                          y2={y}
-                          stroke="#e0e0e0"
-                          strokeWidth="1"
-                        />
+                        <line x1={60} y1={y} x2={containerWidth - 60} y2={y} stroke="#e0e0e0" strokeWidth="1" />
                         <text
                           x={60 - 10}
                           y={y + 4}
@@ -252,7 +280,8 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
                   })}
                   {/* X-axis labels (dates evenly spaced) */}
                   {filteredHistory.map((item, i) => {
-                    if (i % Math.ceil(filteredHistory.length / 7) !== 0 && i !== filteredHistory.length - 1) return null;
+                    if (i % Math.ceil(filteredHistory.length / 7) !== 0 && i !== filteredHistory.length - 1)
+                      return null;
                     const x = 60 + (i * (containerWidth - 2 * 60)) / (filteredHistory.length - 1 || 1);
                     return (
                       <text
@@ -270,11 +299,13 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
                   {/* Line for close price */}
                   {chartHistory.length > 1 && (
                     <path
-                      d={chartHistory.map((item, i) => {
-                        const x = 60 + (i * (containerWidth - 2 * 60)) / (chartHistory.length - 1 || 1);
-                        const y = 300 - 60 - ((item.close - minPrice) / (maxPrice - minPrice || 1)) * (300 - 2 * 60);
-                        return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-                      }).join(' ')}
+                      d={chartHistory
+                        .map((item, i) => {
+                          const x = 60 + (i * (containerWidth - 2 * 60)) / (chartHistory.length - 1 || 1);
+                          const y = 300 - 60 - ((item.close - minPrice) / (maxPrice - minPrice || 1)) * (300 - 2 * 60);
+                          return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+                        })
+                        .join(' ')}
                       fill="none"
                       stroke="#1976d2"
                       strokeWidth="2.5"
@@ -283,24 +314,25 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
                     />
                   )}
                   {/* Data points: only draw for < 1 year range */}
-                  {(['1m', '3m'].includes(quickRange)) && filteredHistory.map((item, i) => {
-                    const x = 60 + (i * (containerWidth - 2 * 60)) / (filteredHistory.length - 1 || 1);
-                    const y = 300 - 60 - ((item.close - minPrice) / (maxPrice - minPrice || 1)) * (300 - 2 * 60);
-                    return (
-                      <g key={item.date}>
-                        <circle
-                          cx={x}
-                          cy={y}
-                          r={window.innerWidth < 600 ? 3 : 5}
-                          fill="#1976d2"
-                          stroke="#fff"
-                          strokeWidth="2"
-                        >
-                          <title>{`${new Date(item.date).toLocaleDateString()}: ${item.close.toFixed(2)}`}</title>
-                        </circle>
-                      </g>
-                    );
-                  })}
+                  {['1m', '3m'].includes(quickRange) &&
+                    filteredHistory.map((item, i) => {
+                      const x = 60 + (i * (containerWidth - 2 * 60)) / (filteredHistory.length - 1 || 1);
+                      const y = 300 - 60 - ((item.close - minPrice) / (maxPrice - minPrice || 1)) * (300 - 2 * 60);
+                      return (
+                        <g key={item.date}>
+                          <circle
+                            cx={x}
+                            cy={y}
+                            r={window.innerWidth < 600 ? 3 : 5}
+                            fill="#1976d2"
+                            stroke="#fff"
+                            strokeWidth="2"
+                          >
+                            <title>{`${new Date(item.date).toLocaleDateString()}: ${item.close.toFixed(2)}`}</title>
+                          </circle>
+                        </g>
+                      );
+                    })}
                 </svg>
               </Box>
               {/* Summary */}
@@ -312,20 +344,32 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
                   justifyContent: 'space-around',
                   pt: 2,
                   borderTop: '1px solid #e0e0e0',
-                  gap: { xs: 2, sm: 0 },
+                  gap: { xs: 2, sm: 0 }
                 }}
               >
                 <Box textAlign="center" sx={{ mb: { xs: 1, sm: 0 } }}>
-                  <Typography variant="h6" color="primary" sx={{ fontSize: { xs: 16, sm: 20 } }}>{statsPrices.length}</Typography>
-                  <Typography variant="caption" color="text.secondary">Data Points</Typography>
+                  <Typography variant="h6" color="primary" sx={{ fontSize: { xs: 16, sm: 20 } }}>
+                    {statsPrices.length}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Data Points
+                  </Typography>
                 </Box>
                 <Box textAlign="center" sx={{ mb: { xs: 1, sm: 0 } }}>
-                  <Typography variant="h6" color="primary" sx={{ fontSize: { xs: 16, sm: 20 } }}>{maxPrice.toFixed(2)}</Typography>
-                  <Typography variant="caption" color="text.secondary">Max Close</Typography>
+                  <Typography variant="h6" color="primary" sx={{ fontSize: { xs: 16, sm: 20 } }}>
+                    {maxPrice.toFixed(2)}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Max Close
+                  </Typography>
                 </Box>
                 <Box textAlign="center">
-                  <Typography variant="h6" color="primary" sx={{ fontSize: { xs: 16, sm: 20 } }}>{minPrice.toFixed(2)}</Typography>
-                  <Typography variant="caption" color="text.secondary">Min Close</Typography>
+                  <Typography variant="h6" color="primary" sx={{ fontSize: { xs: 16, sm: 20 } }}>
+                    {minPrice.toFixed(2)}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Min Close
+                  </Typography>
                 </Box>
               </Box>
             </Box>
@@ -334,7 +378,7 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
               rows={filteredHistory}
               onDeleteRow={(row) => {
                 // Try to find the _id from the original history array
-                const match = history.find(h => h.date === row.date && h.ticker === ticker);
+                const match = history.find((h) => h.date === row.date && h.ticker === ticker);
                 if (!match || !match._id) return;
                 setPendingDeleteId(match._id);
                 setConfirmOpen(true);
@@ -365,8 +409,11 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
                 Fetch & Update All Historical Records
               </Button>
               <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 520, textAlign: 'center' }}>
-                <b>Note:</b> This action may take a long time.<br />
-                It will fetch <b>all available historical records</b> for this ticker and <b>update any existing records</b> in the database.<br />
+                <b>Note:</b> This action may take a long time.
+                <br />
+                It will fetch <b>all available historical records</b> for this ticker and{' '}
+                <b>update any existing records</b> in the database.
+                <br />
                 Please be patient and do not close the window until the process is complete.
               </Typography>
             </Box>
@@ -381,7 +428,7 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
                 if (!pendingDeleteId) return;
                 try {
                   await deleteTickerPriceHistory(pendingDeleteId);
-                  setHistory(hist => hist.filter(x => x._id !== pendingDeleteId));
+                  setHistory((hist) => hist.filter((x) => x._id !== pendingDeleteId));
                 } catch {
                   // Optionally show error
                 } finally {
@@ -389,13 +436,18 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
                   setPendingDeleteId(null);
                 }
               }}
-              onCancel={() => { setConfirmOpen(false); setPendingDeleteId(null); }}
+              onCancel={() => {
+                setConfirmOpen(false);
+                setPendingDeleteId(null);
+              }}
             />
           </>
         )}
       </DialogContent>
       <DialogActions sx={{ p: { xs: 1, sm: 2 } }}>
-        <Button onClick={onClose} sx={{ width: { xs: '100%', sm: 'auto' } }}>Close</Button>
+        <Button onClick={onClose} sx={{ width: { xs: '100%', sm: 'auto' } }}>
+          Close
+        </Button>
       </DialogActions>
     </Dialog>
   );

@@ -1,17 +1,6 @@
 import React from 'react';
-import {
-  Card,
-  CardContent,
-  CardMedia,
-  Typography,
-  Chip,
-  Box,
-  Menu,
-  MenuItem
-} from '@mui/material';
-import {
-  PhotoLibrary as PhotoLibraryIcon
-} from '@mui/icons-material';
+import { Card, CardContent, CardMedia, Typography, Chip, Box, Menu, MenuItem } from '@mui/material';
+import { PhotoLibrary as PhotoLibraryIcon } from '@mui/icons-material';
 import { Album } from '../types';
 
 interface AlbumCardProps {
@@ -73,7 +62,7 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete, 
               left: 0,
               width: '100%',
               height: '100%',
-              objectFit: 'cover',
+              objectFit: 'cover'
             }}
           />
         ) : (
@@ -87,7 +76,7 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete, 
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: 'grey.100',
+              backgroundColor: 'grey.100'
             }}
           >
             <PhotoLibraryIcon sx={{ fontSize: 60, color: 'grey.400' }} />
@@ -108,18 +97,18 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete, 
         )}
         {editButton}
       </Box>
-      
+
       <CardContent sx={{ flexGrow: 1 }}>
         <Typography gutterBottom variant="h6" component="div" noWrap>
           {album.name}
         </Typography>
-        
+
         {album.description && (
-          <Typography 
-            variant="body2" 
-            color="text.secondary" 
-            sx={{ 
-              mt: 1, 
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{
+              mt: 1,
               display: '-webkit-box',
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
@@ -129,50 +118,26 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete, 
             {album.description}
           </Typography>
         )}
-        
+
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           {album.photoCount} {album.photoCount === 1 ? 'photo' : 'photos'}
         </Typography>
-        
+
         {album.tags && album.tags.length > 0 && (
           <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
             {album.tags.slice(0, 3).map((tag, index) => (
-              <Chip 
-                key={index} 
-                label={tag} 
-                size="small" 
-                variant="outlined"
-                sx={{ fontSize: '0.75rem' }}
-              />
+              <Chip key={index} label={tag} size="small" variant="outlined" sx={{ fontSize: '0.75rem' }} />
             ))}
             {album.tags.length > 3 && (
-              <Chip 
-                label={`+${album.tags.length - 3}`} 
-                size="small" 
-                variant="outlined"
-                sx={{ fontSize: '0.75rem' }}
-              />
+              <Chip label={`+${album.tags.length - 3}`} size="small" variant="outlined" sx={{ fontSize: '0.75rem' }} />
             )}
           </Box>
         )}
       </CardContent>
 
-      <Menu
-        anchorEl={anchorEl}
-        open={open}
-        onClose={handleMenuClose}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {onEdit && (
-          <MenuItem onClick={handleEdit}>
-            Edit Album
-          </MenuItem>
-        )}
-        {onDelete && (
-          <MenuItem onClick={handleDelete}>
-            Delete Album
-          </MenuItem>
-        )}
+      <Menu anchorEl={anchorEl} open={open} onClose={handleMenuClose} onClick={(e) => e.stopPropagation()}>
+        {onEdit && <MenuItem onClick={handleEdit}>Edit Album</MenuItem>}
+        {onDelete && <MenuItem onClick={handleDelete}>Delete Album</MenuItem>}
       </Menu>
     </Card>
   );

@@ -12,15 +12,7 @@ export interface Activity {
   updatedAt?: Date | string;
 }
 
-export type ActivityType = 
-  | 'movies' 
-  | 'cooking' 
-  | 'dining'
-  | 'coffee'
-  | 'gaming' 
-  | 'other' 
-  | 'sex' 
-  | 'together';
+export type ActivityType = 'movies' | 'cooking' | 'dining' | 'coffee' | 'gaming' | 'other' | 'sex' | 'together';
 
 export interface CreateActivityRequest {
   date: Date | string;

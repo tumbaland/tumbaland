@@ -6,7 +6,7 @@ import { IActivity } from '../models/Activity';
 export const createActivity = async (req: Request, res: Response): Promise<void> => {
   try {
     const activityData: Partial<IActivity> = req.body;
-    
+
     // Validate required fields
     if (!activityData.date || !activityData.activity) {
       res.status(400).json({
@@ -46,18 +46,10 @@ export const createActivity = async (req: Request, res: Response): Promise<void>
 // Get all activities with filters
 export const getActivities = async (req: Request, res: Response): Promise<void> => {
   try {
-    const {
-      activityType,
-      startDate,
-      endDate,
-      limit,
-      page,
-      sortBy,
-      sortOrder
-    } = req.query;
+    const { activityType, startDate, endDate, limit, page, sortBy, sortOrder } = req.query;
 
     const filters: any = {};
-    
+
     if (activityType) filters.activityType = activityType as string;
     if (startDate) filters.startDate = new Date(startDate as string);
     if (endDate) filters.endDate = new Date(endDate as string);
@@ -67,7 +59,7 @@ export const getActivities = async (req: Request, res: Response): Promise<void> 
     if (sortOrder) filters.sortOrder = sortOrder as 'asc' | 'desc';
 
     const result = await ActivityService.getActivities(filters);
-    
+
     res.json({
       success: true,
       data: {
@@ -92,7 +84,7 @@ export const getActivityById = async (req: Request, res: Response): Promise<void
   try {
     const { id } = req.params;
     const activity = await ActivityService.getActivityById(id);
-    
+
     if (!activity) {
       res.status(404).json({
         error: 'Activity not found'
@@ -118,7 +110,7 @@ export const updateActivity = async (req: Request, res: Response): Promise<void>
     const updateData = req.body;
 
     const activity = await ActivityService.updateActivity(id, updateData);
-    
+
     if (!activity) {
       res.status(404).json({
         error: 'Activity not found'
@@ -142,7 +134,7 @@ export const deleteActivity = async (req: Request, res: Response): Promise<void>
   try {
     const { id } = req.params;
     const deleted = await ActivityService.deleteActivity(id);
-    
+
     if (!deleted) {
       res.status(404).json({
         error: 'Activity not found'
@@ -165,13 +157,13 @@ export const deleteActivity = async (req: Request, res: Response): Promise<void>
 export const getActivityStats = async (req: Request, res: Response): Promise<void> => {
   try {
     const { startDate, endDate } = req.query;
-    
+
     const filters: any = {};
     if (startDate) filters.startDate = new Date(startDate as string);
     if (endDate) filters.endDate = new Date(endDate as string);
 
     const stats = await ActivityService.getActivityStats(filters);
-    
+
     res.json({
       success: true,
       data: stats
@@ -187,7 +179,7 @@ export const getActivityStats = async (req: Request, res: Response): Promise<voi
 export const getActivitiesByDateRange = async (req: Request, res: Response): Promise<void> => {
   try {
     const { startDate, endDate } = req.query;
-    
+
     if (!startDate || !endDate) {
       res.status(400).json({
         error: 'Both startDate and endDate are required'
@@ -199,7 +191,7 @@ export const getActivitiesByDateRange = async (req: Request, res: Response): Pro
       new Date(startDate as string),
       new Date(endDate as string)
     );
-    
+
     res.json({
       success: true,
       data: activities
@@ -216,9 +208,9 @@ export const getRecentActivities = async (req: Request, res: Response): Promise<
   try {
     const { limit } = req.query;
     const limitNum = limit ? parseInt(limit as string) : 10;
-    
+
     const activities = await ActivityService.getRecentActivities(limitNum);
-    
+
     res.json({
       success: true,
       data: activities
@@ -234,7 +226,7 @@ export const getRecentActivities = async (req: Request, res: Response): Promise<
 export const getActivityTypes = async (req: Request, res: Response): Promise<void> => {
   try {
     const types = await ActivityService.getActivityTypes();
-    
+
     res.json({
       success: true,
       data: types
@@ -260,7 +252,7 @@ export const getRecentActivitiesSummary = async (req: Request, res: Response): P
 
     for (const category of categories) {
       result[category] = {};
-      
+
       for (const timeline of timelines) {
         const endDate = new Date();
         const startDate = new Date();
@@ -268,10 +260,10 @@ export const getRecentActivitiesSummary = async (req: Request, res: Response): P
 
         // Get all activities for this category and timeframe
         const allActivities = await ActivityService.getActivitiesByDateRange(startDate, endDate);
-        
+
         // Filter by activity type and sort from oldest to newest (reverse order)
         const activities = allActivities
-          .filter(activity => activity.activity.type === category)
+          .filter((activity) => activity.activity.type === category)
           .sort((a, b) => {
             const dateA = new Date(a.date);
             const dateB = new Date(b.date);

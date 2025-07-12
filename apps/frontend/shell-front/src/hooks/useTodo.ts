@@ -11,20 +11,20 @@ export function useTodo() {
 
   const fetchTodo = useCallback(async () => {
     if (isLoadingRef.current) return; // Prevent multiple concurrent requests
-    
+
     isLoadingRef.current = true;
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const res = await fetch(`${API_URL}/api/todo/random`);
-      
+
       if (!res.ok) {
         throw new Error(`Failed to fetch todo: ${res.status}`);
       }
-      
+
       const data: { todo: string } = await res.json();
-      
+
       if (data && data.todo) {
         setTodo(data.todo);
       } else {

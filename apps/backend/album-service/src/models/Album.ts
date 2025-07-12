@@ -10,33 +10,38 @@ export interface IAlbum extends Document {
   tags: string[];
 }
 
-const AlbumSchema: Schema = new Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 100
+const AlbumSchema: Schema = new Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: 500
+    },
+    coverPhotoId: {
+      type: String,
+      ref: 'Photo'
+    },
+    isPublic: {
+      type: Boolean,
+      default: false
+    },
+    tags: [
+      {
+        type: String,
+        trim: true
+      }
+    ]
   },
-  description: {
-    type: String,
-    trim: true,
-    maxlength: 500
-  },
-  coverPhotoId: {
-    type: String,
-    ref: 'Photo'
-  },
-  isPublic: {
-    type: Boolean,
-    default: false
-  },
-  tags: [{
-    type: String,
-    trim: true
-  }]
-}, {
-  timestamps: true
-});
+  {
+    timestamps: true
+  }
+);
 
 // Index for searching
 AlbumSchema.index({ name: 'text', description: 'text', tags: 'text' });

@@ -20,7 +20,7 @@ paths:
                 properties:
                   todo:
                     type: string
-                    example: "Take a SUP yoga class on Lake Viljandi or Lake Harku"
+                    example: 'Take a SUP yoga class on Lake Viljandi or Lake Harku'
         '500':
           description: No todos available
           content:

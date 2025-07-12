@@ -44,8 +44,8 @@ export const authService = {
       const response = await fetch(`${config.AUTH_SERVICE_URL}/auth/verify`, {
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'
+        }
       });
 
       if (!response.ok) {
@@ -55,7 +55,7 @@ export const authService = {
       const data = await response.json();
       return {
         authenticated: data.success && data.authenticated,
-        user: data.user || null,
+        user: data.user || null
       };
     } catch (error) {
       console.error('Auth check failed:', error);
@@ -79,8 +79,8 @@ export const authService = {
         method: 'POST',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'
+        }
       });
 
       if (!response.ok) {

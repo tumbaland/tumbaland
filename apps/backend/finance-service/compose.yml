@@ -6,7 +6,7 @@ services:
     image: toomastahves/finance-service:latest
     restart: unless-stopped
     ports:
-      - "4003:4003"
+      - '4003:4003'
     environment:
       - PORT=4003
       - NODE_ENV=production

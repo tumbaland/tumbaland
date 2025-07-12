@@ -13,7 +13,10 @@ export const fetchAndSaveAllTickerHistory = async (req: Request, res: Response) 
     const savedCount = await fetchAndSaveAllStockHistory(ticker);
     res.status(200).json({ message: `Fetched and saved ${savedCount} records for ${ticker}` });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch and save all ticker history', details: err instanceof Error ? (err as Error).message : err });
+    res.status(500).json({
+      error: 'Failed to fetch and save all ticker history',
+      details: err instanceof Error ? (err as Error).message : err
+    });
   }
 };
 import TrackedTicker from '../models/TrackedTicker';
@@ -24,7 +27,7 @@ export const getTickerPriceHistory = async (req: Request, res: Response<TickerPr
   try {
     const records = await TickerPriceHistory.find().sort({ date: -1 });
     const response: TickerPriceHistoryResponse[] = records
-      .map(r => ({
+      .map((r) => ({
         _id: r._id?.toString(), // Add the MongoDB id to the response
         date: r.date.toISOString(),
         ticker: r.ticker,
@@ -56,7 +59,7 @@ export const fetchAndSaveTickerPrices = async (req: Request, res: Response<Fetch
   } else {
     // Fetch all tracked tickers from DB
     const trackedTickers = await TrackedTicker.find();
-    tickers = trackedTickers.map(t => t.ticker);
+    tickers = trackedTickers.map((t) => t.ticker);
   }
   for (const ticker of tickers) {
     const priceData = await fetchStockPrice(ticker);

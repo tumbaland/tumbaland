@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -10,11 +10,11 @@ import {
   MenuItem,
   IconButton,
   CircularProgress,
-  Divider,
-} from "@mui/material";
-import { AccountCircle, Login, Logout } from "@mui/icons-material";
-import { authService } from "../services/authService";
-import { User } from "../types";
+  Divider
+} from '@mui/material';
+import { AccountCircle, Login, Logout } from '@mui/icons-material';
+import { authService } from '../services/authService';
+import { User } from '../types';
 
 interface AuthHeaderProps {}
 
@@ -31,7 +31,7 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
         setIsAuthenticated(authenticated);
         setUser(user);
       } catch (error) {
-        console.error("Auth check failed:", error);
+        console.error('Auth check failed:', error);
       } finally {
         setIsLoading(false);
       }
@@ -62,7 +62,7 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
   const renderAuthSection = () => {
     if (isLoading) {
       return (
-        <Box sx={{ display: "flex", alignItems: "center" }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <CircularProgress size={24} color="inherit" />
         </Box>
       );
@@ -70,11 +70,8 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
 
     if (isAuthenticated && user) {
       return (
-        <Box sx={{ display: "flex", alignItems: "center" }}>
-          <Typography
-            variant="body2"
-            sx={{ mr: 2, display: { xs: "none", sm: "block" } }}
-          >
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Typography variant="body2" sx={{ mr: 2, display: { xs: 'none', sm: 'block' } }}>
             {user.name}
           </Typography>
           <IconButton
@@ -87,11 +84,7 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
             color="inherit"
           >
             {user.picture ? (
-              <Avatar
-                src={user.picture}
-                alt={user.name}
-                sx={{ width: 32, height: 32 }}
-              />
+              <Avatar src={user.picture} alt={user.name} sx={{ width: 32, height: 32 }} />
             ) : (
               <AccountCircle />
             )}
@@ -102,17 +95,17 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
             open={Boolean(anchorEl)}
             onClose={handleMenuClose}
             MenuListProps={{
-              "aria-labelledby": "account-button",
+              'aria-labelledby': 'account-button'
             }}
-            transformOrigin={{ horizontal: "right", vertical: "top" }}
-            anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+            transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+            anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
           >
             <MenuItem disabled>
               <Box
                 sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "flex-start",
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start'
                 }}
               >
                 <Typography variant="body2" fontWeight="bold">
@@ -140,11 +133,11 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
         variant="outlined"
         startIcon={<Login />}
         sx={{
-          borderColor: "rgba(255, 255, 255, 0.3)",
-          "&:hover": {
-            borderColor: "rgba(255, 255, 255, 0.7)",
-            backgroundColor: "rgba(255, 255, 255, 0.1)",
-          },
+          borderColor: 'rgba(255, 255, 255, 0.3)',
+          '&:hover': {
+            borderColor: 'rgba(255, 255, 255, 0.7)',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)'
+          }
         }}
       >
         Login
@@ -157,17 +150,13 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
       position="static"
       elevation={2}
       sx={{
-        background: "#fff",
-        color: "#222",
-        boxShadow: "0 2px 8px 0 rgba(0,0,0,0.03)",
+        background: '#fff',
+        color: '#222',
+        boxShadow: '0 2px 8px 0 rgba(0,0,0,0.03)'
       }}
     >
       <Toolbar>
-        <Typography
-          variant="h6"
-          component="div"
-          sx={{ flexGrow: 1, fontWeight: "bold" }}
-        ></Typography>
+        <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}></Typography>
         {renderAuthSection()}
       </Toolbar>
     </AppBar>

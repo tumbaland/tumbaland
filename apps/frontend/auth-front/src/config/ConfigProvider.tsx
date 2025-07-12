@@ -1,8 +1,8 @@
-import { useEffect, useState, ReactNode } from "react";
-import { CssBaseline } from "@mui/material";
-import { Loader } from "../components/Loader";
-import { ErrorPage } from "../components/ErrorPage";
-import React from "react";
+import { useEffect, useState, ReactNode } from 'react';
+import { CssBaseline } from '@mui/material';
+import { Loader } from '../components/Loader';
+import { ErrorPage } from '../components/ErrorPage';
+import React from 'react';
 
 export interface AppConfig {
   GOOGLE_CLIENT_ID?: string;
@@ -18,7 +18,7 @@ export const ConfigContext = React.createContext<AppConfig>({});
 function createDevConfig(): AppConfig {
   return {
     GOOGLE_CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-    AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL,
+    AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL
   };
 }
 
@@ -55,9 +55,9 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
     }
 
     // In production, fetch config.json
-    fetch("/config.json")
+    fetch('/config.json')
       .then((res) => {
-        if (!res.ok) throw new Error("Config fetch failed");
+        if (!res.ok) throw new Error('Config fetch failed');
         return res.json();
       })
       .then((loadedConfig) => {

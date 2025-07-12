@@ -10,9 +10,7 @@ import {
   IconButton,
   CircularProgress
 } from '@mui/material';
-import {
-  Close as CloseIcon
-} from '@mui/icons-material';
+import { Close as CloseIcon } from '@mui/icons-material';
 import { Photo } from '../types';
 
 interface EditPhotoDialogProps {
@@ -22,12 +20,7 @@ interface EditPhotoDialogProps {
   onSave: (photoId: string, data: { title?: string; description?: string }) => Promise<void>;
 }
 
-const EditPhotoDialog: React.FC<EditPhotoDialogProps> = ({
-  open,
-  photo,
-  onClose,
-  onSave
-}) => {
+const EditPhotoDialog: React.FC<EditPhotoDialogProps> = ({ open, photo, onClose, onSave }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
@@ -78,11 +71,7 @@ const EditPhotoDialog: React.FC<EditPhotoDialogProps> = ({
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 2 }}>
         Edit Photo
-        <IconButton
-          onClick={handleClose}
-          disabled={saving}
-          sx={{ color: 'grey.500' }}
-        >
+        <IconButton onClick={handleClose} disabled={saving} sx={{ color: 'grey.500' }}>
           <CloseIcon />
         </IconButton>
       </DialogTitle>
@@ -115,9 +104,7 @@ const EditPhotoDialog: React.FC<EditPhotoDialogProps> = ({
                   }}
                 />
               ) : (
-                <Box sx={{ textAlign: 'center', color: 'grey.500' }}>
-                  No preview available
-                </Box>
+                <Box sx={{ textAlign: 'center', color: 'grey.500' }}>No preview available</Box>
               )}
             </Box>
 
@@ -151,11 +138,7 @@ const EditPhotoDialog: React.FC<EditPhotoDialogProps> = ({
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 3 }}>
-        <Button
-          onClick={handleClose}
-          disabled={saving}
-          variant="outlined"
-        >
+        <Button onClick={handleClose} disabled={saving} variant="outlined">
           Cancel
         </Button>
         <Button

@@ -6,6 +6,7 @@
    - Copy `.env.example` to `.env` and fill in missing values.
 
 2. **Start local development:**
+
    ```sh
    npm run dev
    ```
