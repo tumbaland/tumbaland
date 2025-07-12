@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.63](https://github.com/toomastahves/tumbaland/compare/v0.0.62...v0.0.63) (2025-07-12)
+
+
+### Features
+
+* save viewport to config ([b44307c](https://github.com/toomastahves/tumbaland/commit/b44307c999a26105266f8215a15157673875949a))
+
 ### [0.0.62](https://github.com/toomastahves/tumbaland/compare/v0.0.61...v0.0.62) (2025-07-12)
 
 
