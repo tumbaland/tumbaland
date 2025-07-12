@@ -1,4 +1,10 @@
 # Tumbalog
+### [0.0.47](https://github.com/toomastahves/tumbaland/compare/v0.0.46...v0.0.47) (2025-07-12)
+
+
+### Features
+
+* setup linter ([850a70e](https://github.com/toomastahves/tumbaland/commit/850a70eec4defb3d4f60f91b65147c13a634afb4))
 
 ### [0.0.45](https://github.com/toomastahves/tumbaland/compare/v0.0.44...v0.0.45) (2025-07-11)
 
