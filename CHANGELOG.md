@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.50](https://github.com/toomastahves/tumbaland/compare/v0.0.49...v0.0.50) (2025-07-12)
+
+
+### Features
+
+* add delete photo ([3f5e591](https://github.com/toomastahves/tumbaland/commit/3f5e5911e8477fc9c86b0dc39a2abce99626eff4))
+
 ### [0.0.49](https://github.com/toomastahves/tumbaland/compare/v0.0.48...v0.0.49) (2025-07-12)
 
 
