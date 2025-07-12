@@ -1,5 +1,5 @@
 import React from 'react';
-import { List, ListItem, ListItemAvatar, Avatar, ListItemText, ListItemButton, Typography } from '@mui/material';
+import { List, ListItem, ListItemAvatar, Avatar, ListItemButton, Typography } from '@mui/material';
 
 export interface AlbumPhoto {
   _id: string;
