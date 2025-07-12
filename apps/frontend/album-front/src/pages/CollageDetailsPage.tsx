@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Box, CircularProgress, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from '@mui/material';
+import DraggableTextBox, { CanvasText } from '../components/collage/DraggableTextBox';
 import AlbumPhotoList, { AlbumPhoto } from '../components/AlbumPhotoList';
 import CollageMenu from '../components/collage/CollageMenu';
 import CollageLayout from '../components/collage/CollageLayout';
 import { Collage } from '../types/collage';
 import { useCollage } from '../hooks/useCollage';
+
 
 interface CanvasPhoto {
   id: string;
@@ -17,6 +19,8 @@ interface CanvasPhoto {
   rotation?: number;
   caption?: string;
 }
+
+// CanvasText now imported from DraggableTextBox
 
 const CollageDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -31,6 +35,55 @@ const CollageDetailsPage: React.FC = () => {
   // Caption edit state
   const [captionEditIdx, setCaptionEditIdx] = useState<number | null>(null);
   const [captionEditValue, setCaptionEditValue] = useState('');
+  // Text box state
+  const [canvasTexts, setCanvasTexts] = useState<CanvasText[]>([]);
+  const [textEditIdx, setTextEditIdx] = useState<number | null>(null);
+  const [textEditValue, setTextEditValue] = useState('');
+  // Add new text box to canvas
+  const handleAddTextBox = () => {
+    setCanvasTexts((prev) => [
+      ...prev,
+      {
+        id: 'text-' + Date.now(),
+        text: 'Double-click to edit',
+        x: 200 + Math.random() * 100,
+        y: 200 + Math.random() * 100,
+        width: 180,
+        height: 48,
+      },
+    ]);
+  };
+
+
+
+  // Double-click to edit text box
+  const handleTextBoxDoubleClick = (idx: number) => {
+    setTextEditIdx(idx);
+    setTextEditValue(canvasTexts[idx]?.text || '');
+  };
+
+  // Save text box edit
+  const handleTextSave = () => {
+    if (textEditIdx === null) return;
+    setCanvasTexts((prev) =>
+      prev.map((t, idx) => (idx === textEditIdx ? { ...t, text: textEditValue } : t))
+    );
+    setTextEditIdx(null);
+    setTextEditValue('');
+  };
+
+  const handleTextCancel = () => {
+    setTextEditIdx(null);
+    setTextEditValue('');
+  };
+
+  // Delete text box
+  const handleDeleteTextBox = () => {
+    if (textEditIdx === null) return;
+    setCanvasTexts((prev) => prev.filter((_, idx) => idx !== textEditIdx));
+    setTextEditIdx(null);
+    setTextEditValue('');
+  };
 
   // Save canvas state to backend
   // Open caption edit dialog
@@ -93,11 +146,21 @@ const CollageDetailsPage: React.FC = () => {
         caption:
           (p.caption !== undefined ? p.caption : (collage?.config?.photos && collage.config.photos[idx]?.caption) || '')
       }));
+      // Save text boxes to config
+      const texts = canvasTexts.map(t => ({
+        id: t.id,
+        text: t.text,
+        x: t.x,
+        y: t.y,
+        width: t.width,
+        height: t.height,
+      }));
       await updateCollage(collage._id, {
         ...collage,
         config: {
           ...collage.config,
           photos,
+          texts,
           backgroundColor,
         },
         albumId: collage.albumId,
@@ -139,6 +202,21 @@ const CollageDetailsPage: React.FC = () => {
                 };
               })
             );
+          }
+          // Load text boxes from config if present
+          if (data.collage.config?.texts) {
+            setCanvasTexts(
+              data.collage.config.texts.map((t: any) => ({
+                id: t.id,
+                text: t.text,
+                x: t.x,
+                y: t.y,
+                width: t.width,
+                height: t.height,
+              }))
+            );
+          } else {
+            setCanvasTexts([]);
           }
           // Load background color from config if present
           if (data.collage.config?.backgroundColor) {
@@ -258,6 +336,7 @@ const CollageDetailsPage: React.FC = () => {
           disabled={saving || loading || !collage}
           backgroundColor={backgroundColor}
           onBackgroundColorChange={setBackgroundColor}
+          onAddTextBox={handleAddTextBox}
         />
       </Box>
       {loading ? (
@@ -276,8 +355,9 @@ const CollageDetailsPage: React.FC = () => {
           <Box sx={{ flex: 1, position: 'relative', bgcolor: backgroundColor, overflow: 'auto' }}>
             {/* Canvas background and photos */}
             <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+              {/* Render photos */}
               {canvasPhotos.map((photo, idx) => {
-                // Try to get caption from canvasPhotos first, then collage.config.photos if available
+                // ...existing code for photos...
                 let caption = photo.caption;
                 if (!caption && collage?.config?.photos && collage.config.photos[idx] && collage.config.photos[idx].caption) {
                   caption = collage.config.photos[idx].caption;
@@ -294,7 +374,7 @@ const CollageDetailsPage: React.FC = () => {
                       zIndex: 2,
                       border: '2px solid #fff',
                       borderRadius: 2,
-                      background: '#fff',
+                      background: '#222',
                       cursor:
                         dragPhotoId === photo.id
                           ? 'grabbing'
@@ -343,6 +423,13 @@ const CollageDetailsPage: React.FC = () => {
                   </Box>
                 );
               })}
+
+              {/* Render text boxes */}
+              <DraggableTextBox
+                textBoxes={canvasTexts}
+                setTextBoxes={setCanvasTexts}
+                onDoubleClick={handleTextBoxDoubleClick}
+              />
       {/* Caption Edit Dialog */}
       <Dialog open={captionEditIdx !== null} onClose={handleCaptionCancel} maxWidth="xs" fullWidth>
         <DialogTitle>Edit Photo</DialogTitle>
@@ -360,6 +447,28 @@ const CollageDetailsPage: React.FC = () => {
           <Button onClick={handleDeletePhoto} color="error">Delete</Button>
           <Button onClick={handleCaptionCancel}>Cancel</Button>
           <Button onClick={handleCaptionSave} variant="contained">Save</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Text Box Edit Dialog */}
+      <Dialog open={textEditIdx !== null} onClose={handleTextCancel} maxWidth="xs" fullWidth>
+        <DialogTitle>Edit Text Box</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Text"
+            fullWidth
+            multiline
+            minRows={2}
+            value={textEditValue}
+            onChange={e => setTextEditValue(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteTextBox} color="error">Delete</Button>
+          <Button onClick={handleTextCancel}>Cancel</Button>
+          <Button onClick={handleTextSave} variant="contained">Save</Button>
         </DialogActions>
       </Dialog>
             </Box>

@@ -1,3 +1,12 @@
+export interface CollageTextBox {
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface CollageConfig {
   version: string;
   date: string;
@@ -14,6 +23,7 @@ export interface CollageConfig {
     scaleX?: string;
     scaleY?: string;
   }>;
+  texts?: CollageTextBox[];
   textSections?: Array<any>;
   title?: { text: string; subtitle?: string };
   backgroundColor?: string;

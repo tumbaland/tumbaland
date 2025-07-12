@@ -3,15 +3,17 @@ import { IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Box } from '@mu
 import AddIcon from '@mui/icons-material/Add';
 import SaveIcon from '@mui/icons-material/Save';
 import PaletteIcon from '@mui/icons-material/Palette';
+import TextFieldsIcon from '@mui/icons-material/TextFields';
 
 interface CollageMenuProps {
   onSave: () => void;
   disabled?: boolean;
   backgroundColor?: string;
   onBackgroundColorChange?: (color: string) => void;
+  onAddTextBox?: () => void;
 }
 
-const CollageMenu: React.FC<CollageMenuProps> = ({ onSave, disabled, backgroundColor = '#111', onBackgroundColorChange }) => {
+const CollageMenu: React.FC<CollageMenuProps> = ({ onSave, disabled, backgroundColor = '#111', onBackgroundColorChange, onAddTextBox }) => {
   const [color, setColor] = useState(backgroundColor);
 
   // Sync color state with prop
@@ -48,6 +50,12 @@ const CollageMenu: React.FC<CollageMenuProps> = ({ onSave, disabled, backgroundC
             <SaveIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary="Save Collage" />
+        </MenuItem>
+        <MenuItem onClick={onAddTextBox} disabled={disabled}>
+          <ListItemIcon>
+            <TextFieldsIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Add Text Box" />
         </MenuItem>
         <MenuItem disabled={disabled}>
           <ListItemIcon>
