@@ -8,9 +8,9 @@ export function useCollage() {
     return res.collages;
   }, []);
 
-  const getCollage = useCallback(async (id: string): Promise<Collage> => {
-    const res = await collageService.getCollageById(id);
-    return res.collage;
+  // Returns full response (collage and albumPhotos)
+  const getCollage = useCallback(async (id: string): Promise<any> => {
+    return collageService.getCollageById(id);
   }, []);
 
   const createCollage = useCallback(async (input: CollageInput): Promise<Collage> => {

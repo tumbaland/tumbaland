@@ -14,8 +14,8 @@ export const collageService = {
     return response.data;
   },
 
-  // Get collage by ID
-  async getCollageById(id: string): Promise<{ collage: Collage }> {
+  // Get collage by ID (returns collage and albumPhotos)
+  async getCollageById(id: string): Promise<{ collage: Collage; albumPhotos: any[] }> {
     const response = await albumApi.get(`/collages/${id}`);
     return response.data;
   },
