@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.60](https://github.com/toomastahves/tumbaland/compare/v0.0.59...v0.0.60) (2025-07-12)
+
+
+### Bug Fixes
+
+* improve collage captions ([02b3f78](https://github.com/toomastahves/tumbaland/commit/02b3f78f0f6584d27b30a7bc7cdba28243c5db1b))
+
 ### [0.0.59](https://github.com/toomastahves/tumbaland/compare/v0.0.58...v0.0.59) (2025-07-12)
 
 
