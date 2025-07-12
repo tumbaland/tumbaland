@@ -367,9 +367,27 @@ const CollageDetailsPage: React.FC = () => {
             </Box>
           )}
           {/* Canvas Area */}
-          <Box sx={{ flex: 1, position: 'relative', bgcolor: backgroundColor, overflow: 'auto' }}>
+          <Box
+            sx={{
+              flex: 1,
+              position: 'relative',
+              bgcolor: backgroundColor,
+              overflow: 'auto',
+              minHeight: { xs: '100vh', sm: '100vh' },
+              pb: { xs: 8, sm: 0 }, // Add bottom padding for mobile
+            }}
+          >
             {/* Canvas background and photos */}
-            <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                minHeight: '100%',
+                pb: { xs: 8, sm: 0 }, // Extra bottom padding for mobile
+              }}
+            >
               {/* Render photos */}
               {canvasPhotos.map((photo, idx) => {
                 let caption = photo.caption;
