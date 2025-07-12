@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.64](https://github.com/toomastahves/tumbaland/compare/v0.0.63...v0.0.64) (2025-07-12)
+
+
+### Bug Fixes
+
+* open collage menu ([1ea1665](https://github.com/toomastahves/tumbaland/commit/1ea1665253d5007d27f5fe82768ed877d9d14c77))
+
 ### [0.0.63](https://github.com/toomastahves/tumbaland/compare/v0.0.62...v0.0.63) (2025-07-12)
 
 
