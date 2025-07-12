@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.57](https://github.com/toomastahves/tumbaland/compare/v0.0.56...v0.0.57) (2025-07-12)
+
+
+### Features
+
+* update collage list ([075f03c](https://github.com/toomastahves/tumbaland/commit/075f03ce336d49fa792e3c1e4d1925c80642ce94))
+
 ### [0.0.56](https://github.com/toomastahves/tumbaland/compare/v0.0.55...v0.0.56) (2025-07-12)
 
 
