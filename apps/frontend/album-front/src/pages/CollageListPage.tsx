@@ -150,7 +150,7 @@ const CollageListPage: React.FC = () => {
                     bgcolor: 'grey.50',
                   },
                 }}
-                onClick={() => window.open(`/collage/${collage._id}`, '_blank')}
+                onClick={() => window.open(`/collage/${collage._id}?mode=edit`, '_blank')}
               >
                 <IconButton
                   aria-label="more"
@@ -181,6 +181,10 @@ const CollageListPage: React.FC = () => {
         open={Boolean(menuAnchorEl)}
         onClose={handleMenuClose}
       >
+        <MenuItem onClick={() => {
+          if (menuCollage) window.open(`/collage/${menuCollage._id}?mode=view`, '_blank');
+          handleMenuClose();
+        }}>View</MenuItem>
         <MenuItem onClick={handleEditClick}>Edit</MenuItem>
         <MenuItem onClick={handleDeleteClick}>Delete</MenuItem>
       </Menu>

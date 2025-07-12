@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import { Box, CircularProgress, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from '@mui/material';
 import DraggableTextBox, { CanvasText } from '../components/collage/DraggableTextBox';
 import AlbumPhotoList, { AlbumPhoto } from '../components/AlbumPhotoList';
@@ -23,6 +23,10 @@ interface CanvasPhoto {
 
 const CollageDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const mode = searchParams.get('mode') || 'edit';
+  const isViewMode = mode === 'view';
   const { getCollage, updateCollage } = useCollage();
   const [collage, setCollage] = useState<Collage | null>(null);
   const [albumPhotos, setAlbumPhotos] = useState<AlbumPhoto[]>([]);
@@ -259,23 +263,21 @@ const CollageDetailsPage: React.FC = () => {
   const [resizeOrigin, setResizeOrigin] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [resizeStart, setResizeStart] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
 
-  // Start drag or resize mode on click
+  // Start drag or resize mode on click (disabled in view mode)
   const handlePhotoClick = (id: string, e: React.MouseEvent<HTMLImageElement, MouseEvent>, photo: CanvasPhoto) => {
+    if (isViewMode) return;
     const rect = (e.target as HTMLElement).getBoundingClientRect();
     const offsetX = e.clientX - rect.left;
     const offsetY = e.clientY - rect.top;
-    // Center 60% triggers drag, edges trigger resize
-    const edgeThreshold = 0.2; // 20% on each side
+    const edgeThreshold = 0.2;
     const xPercent = offsetX / rect.width;
     const yPercent = offsetY / rect.height;
     const isEdge = xPercent < edgeThreshold || xPercent > 1 - edgeThreshold || yPercent < edgeThreshold || yPercent > 1 - edgeThreshold;
     if (isEdge) {
-      // Start resize mode
       setResizePhotoId(id);
       setResizeOrigin({ x: e.clientX, y: e.clientY });
       setResizeStart({ width: photo.width, height: photo.height });
     } else {
-      // Start/stop drag mode
       if (dragPhotoId === id) {
         setDragPhotoId(null);
         setDragOffset({ x: 0, y: 0 });
@@ -289,8 +291,9 @@ const CollageDetailsPage: React.FC = () => {
     }
   };
 
-  // Move photo with mouse when in drag mode
+  // Move photo with mouse when in drag mode (disabled in view mode)
   useEffect(() => {
+    if (isViewMode) return;
     if (!dragPhotoId) return;
     const handleMouseMove = (e: MouseEvent) => {
       setCanvasPhotos((prev) =>
@@ -305,10 +308,11 @@ const CollageDetailsPage: React.FC = () => {
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
     };
-  }, [dragPhotoId, dragOffset]);
+  }, [dragPhotoId, dragOffset, isViewMode]);
 
-  // Resize photo with mouse when in resize mode
+  // Resize photo with mouse when in resize mode (disabled in view mode)
   useEffect(() => {
+    if (isViewMode) return;
     if (!resizePhotoId) return;
     const handleMouseMove = (e: MouseEvent) => {
       setCanvasPhotos((prev) =>
@@ -332,19 +336,22 @@ const CollageDetailsPage: React.FC = () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [resizePhotoId, resizeOrigin, resizeStart]);
+  }, [resizePhotoId, resizeOrigin, resizeStart, isViewMode]);
 
   return (
     <CollageLayout>
-      <Box sx={{ position: 'absolute', top: 16, right: 24, zIndex: 20 }}>
-        <CollageMenu
-          onSave={handleSave}
-          disabled={saving || loading || !collage}
-          backgroundColor={backgroundColor}
-          onBackgroundColorChange={setBackgroundColor}
-          onAddTextBox={handleAddTextBox}
-        />
-      </Box>
+      {/* Hide menu in view mode */}
+      {!isViewMode && (
+        <Box sx={{ position: 'absolute', top: 16, right: 24, zIndex: 20 }}>
+          <CollageMenu
+            onSave={handleSave}
+            disabled={saving || loading || !collage}
+            backgroundColor={backgroundColor}
+            onBackgroundColorChange={setBackgroundColor}
+            onAddTextBox={handleAddTextBox}
+          />
+        </Box>
+      )}
       {loading ? (
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
           <CircularProgress />
@@ -353,17 +360,18 @@ const CollageDetailsPage: React.FC = () => {
         <Typography color="error">{error}</Typography>
       ) : collage ? (
         <Box sx={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
-          {/* Sidebar: Album Photos */}
-          <Box sx={{ width: 110, bgcolor: '#222', color: '#fff', p: 2, borderRight: '1px solid #333', overflowY: 'auto' }}>
-            <AlbumPhotoList photos={albumPhotos} onPhotoClick={handleAddPhoto} />
-          </Box>
+          {/* Sidebar: Album Photos (hide in view mode) */}
+          {!isViewMode && (
+            <Box sx={{ width: 110, bgcolor: '#222', color: '#fff', p: 2, borderRight: '1px solid #333', overflowY: 'auto' }}>
+              <AlbumPhotoList photos={albumPhotos} onPhotoClick={handleAddPhoto} />
+            </Box>
+          )}
           {/* Canvas Area */}
           <Box sx={{ flex: 1, position: 'relative', bgcolor: backgroundColor, overflow: 'auto' }}>
             {/* Canvas background and photos */}
             <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
               {/* Render photos */}
               {canvasPhotos.map((photo, idx) => {
-                // ...existing code for photos...
                 let caption = photo.caption;
                 if (!caption && collage?.config?.photos && collage.config.photos[idx] && collage.config.photos[idx].caption) {
                   caption = collage.config.photos[idx].caption;
@@ -381,12 +389,7 @@ const CollageDetailsPage: React.FC = () => {
                       border: '2px solid #fff',
                       borderRadius: 2,
                       background: '#fff',
-                      cursor:
-                        dragPhotoId === photo.id
-                          ? 'grabbing'
-                          : resizePhotoId === photo.id
-                          ? 'nwse-resize'
-                          : 'pointer',
+                      cursor: isViewMode ? 'default' : (dragPhotoId === photo.id ? 'grabbing' : resizePhotoId === photo.id ? 'nwse-resize' : 'pointer'),
                       userSelect: 'none',
                     }}
                   >
@@ -394,32 +397,34 @@ const CollageDetailsPage: React.FC = () => {
                       <img
                         src={photo.src}
                         alt="collage"
-                        onMouseDown={e => handlePhotoClick(photo.id, e, photo)}
-                        onDoubleClick={() => handlePhotoDoubleClick(idx)}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6, cursor: dragPhotoId === photo.id ? 'grabbing' : resizePhotoId === photo.id ? 'nwse-resize' : 'pointer' }}
+                        onMouseDown={isViewMode ? undefined : (e => handlePhotoClick(photo.id, e, photo))}
+                        onDoubleClick={isViewMode ? undefined : (() => handlePhotoDoubleClick(idx))}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6, cursor: isViewMode ? 'default' : (dragPhotoId === photo.id ? 'grabbing' : resizePhotoId === photo.id ? 'nwse-resize' : 'pointer') }}
                         draggable={false}
                       />
                       {/* Optional: show resize handle at bottom-right corner visually */}
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          right: 0,
-                          bottom: 0,
-                          width: 16,
-                          height: 16,
-                          opacity: 0.7,
-                          borderRadius: 1,
-                          cursor: 'nwse-resize',
-                          zIndex: 10,
-                          display: 'block',
-                        }}
-                        onMouseDown={e => {
-                          e.stopPropagation();
-                          setResizePhotoId(photo.id);
-                          setResizeOrigin({ x: e.clientX, y: e.clientY });
-                          setResizeStart({ width: photo.width, height: photo.height });
-                        }}
-                      />
+                      {!isViewMode && (
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            right: 0,
+                            bottom: 0,
+                            width: 16,
+                            height: 16,
+                            opacity: 0.7,
+                            borderRadius: 1,
+                            cursor: 'nwse-resize',
+                            zIndex: 10,
+                            display: 'block',
+                          }}
+                          onMouseDown={e => {
+                            e.stopPropagation();
+                            setResizePhotoId(photo.id);
+                            setResizeOrigin({ x: e.clientX, y: e.clientY });
+                            setResizeStart({ width: photo.width, height: photo.height });
+                          }}
+                        />
+                      )}
                       {caption && (
                         <Typography variant="caption" sx={{ color: '#111', bgcolor: '#fff', px: 0.5, borderRadius: 1, mt: 0.5, maxWidth: '100%', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', boxShadow: '0 1px 4px rgba(0,0,0,0.12)' }}>
                           {caption}
@@ -433,50 +438,53 @@ const CollageDetailsPage: React.FC = () => {
               {/* Render text boxes */}
               <DraggableTextBox
                 textBoxes={canvasTexts}
-                setTextBoxes={setCanvasTexts}
-                onDoubleClick={handleTextBoxDoubleClick}
+                setTextBoxes={isViewMode ? (() => {}) : setCanvasTexts}
+                onDoubleClick={isViewMode ? (() => {}) : handleTextBoxDoubleClick}
               />
-      {/* Caption Edit Dialog */}
-      <Dialog open={captionEditIdx !== null} onClose={handleCaptionCancel} maxWidth="xs" fullWidth>
-        <DialogTitle>Edit Photo</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Caption"
-            fullWidth
-            value={captionEditValue}
-            onChange={e => setCaptionEditValue(e.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleDeletePhoto} color="error">Delete</Button>
-          <Button onClick={handleCaptionCancel}>Cancel</Button>
-          <Button onClick={handleCaptionSave} variant="contained">Save</Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Text Box Edit Dialog */}
-      <Dialog open={textEditIdx !== null} onClose={handleTextCancel} maxWidth="xs" fullWidth>
-        <DialogTitle>Edit Text Box</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Text"
-            fullWidth
-            multiline
-            minRows={2}
-            value={textEditValue}
-            onChange={e => setTextEditValue(e.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleDeleteTextBox} color="error">Delete</Button>
-          <Button onClick={handleTextCancel}>Cancel</Button>
-          <Button onClick={handleTextSave} variant="contained">Save</Button>
-        </DialogActions>
-      </Dialog>
+              {/* Caption Edit Dialog (edit mode only) */}
+              {!isViewMode && (
+                <Dialog open={captionEditIdx !== null} onClose={handleCaptionCancel} maxWidth="xs" fullWidth>
+                  <DialogTitle>Edit Photo</DialogTitle>
+                  <DialogContent>
+                    <TextField
+                      autoFocus
+                      margin="dense"
+                      label="Caption"
+                      fullWidth
+                      value={captionEditValue}
+                      onChange={e => setCaptionEditValue(e.target.value)}
+                    />
+                  </DialogContent>
+                  <DialogActions>
+                    <Button onClick={handleDeletePhoto} color="error">Delete</Button>
+                    <Button onClick={handleCaptionCancel}>Cancel</Button>
+                    <Button onClick={handleCaptionSave} variant="contained">Save</Button>
+                  </DialogActions>
+                </Dialog>
+              )}
+              {/* Text Box Edit Dialog (edit mode only) */}
+              {!isViewMode && (
+                <Dialog open={textEditIdx !== null} onClose={handleTextCancel} maxWidth="xs" fullWidth>
+                  <DialogTitle>Edit Text Box</DialogTitle>
+                  <DialogContent>
+                    <TextField
+                      autoFocus
+                      margin="dense"
+                      label="Text"
+                      fullWidth
+                      multiline
+                      minRows={2}
+                      value={textEditValue}
+                      onChange={e => setTextEditValue(e.target.value)}
+                    />
+                  </DialogContent>
+                  <DialogActions>
+                    <Button onClick={handleDeleteTextBox} color="error">Delete</Button>
+                    <Button onClick={handleTextCancel}>Cancel</Button>
+                    <Button onClick={handleTextSave} variant="contained">Save</Button>
+                  </DialogActions>
+                </Dialog>
+              )}
             </Box>
           </Box>
         </Box>
