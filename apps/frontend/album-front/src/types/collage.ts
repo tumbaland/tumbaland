@@ -16,6 +16,7 @@ export interface CollageConfig {
   }>;
   textSections?: Array<any>;
   title?: { text: string; subtitle?: string };
+  backgroundColor?: string;
 }
 
 export interface Collage {

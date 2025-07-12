@@ -31,6 +31,7 @@ const CollageDetailsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [backgroundColor, setBackgroundColor] = useState<string>('#111');
   // Caption edit state
   const [captionEditIdx, setCaptionEditIdx] = useState<number | null>(null);
   const [captionEditValue, setCaptionEditValue] = useState('');
@@ -87,7 +88,6 @@ const CollageDetailsPage: React.FC = () => {
     if (!collage) return;
     setSaving(true);
     try {
-      // Save photo layout info and captions to config.photos
       const photos = canvasPhotos.map((p, idx) => ({
         filename: p.src,
         position: { left: p.x, top: p.y },
@@ -95,7 +95,6 @@ const CollageDetailsPage: React.FC = () => {
         height: p.height,
         rotation: p.rotation || 0,
         caption:
-          // Prefer caption from canvasPhotos, fallback to collage.config.photos if present
           (p.caption !== undefined ? p.caption : (collage?.config?.photos && collage.config.photos[idx]?.caption) || '')
       }));
       await updateCollage(collage._id, {
@@ -103,6 +102,7 @@ const CollageDetailsPage: React.FC = () => {
         config: {
           ...collage.config,
           photos,
+          backgroundColor,
         },
         albumId: collage.albumId,
       });
@@ -125,16 +125,30 @@ const CollageDetailsPage: React.FC = () => {
           // Load initial canvas photos from config if present
           if (data.collage.config?.photos) {
             setCanvasPhotos(
-              data.collage.config.photos.map((p: any, idx: number) => ({
-                id: p.filename + '-' + idx,
-                src: p.filename,
-                x: p.position?.left || 100,
-                y: p.position?.top || 100,
-                width: p.width || 120,
-                height: p.height || 120,
-                rotation: p.rotation || 0
-              }))
+              data.collage.config.photos.map((p: any, idx: number) => {
+                // Find album photo with matching filename
+                let albumPhoto = (data.albumPhotos || []).find((ap: any) => {
+                  // Try to match by filename only
+                  const apFilename = ap.filename || (ap.signedUrl ? ap.signedUrl.split('/').pop() : undefined);
+                  return apFilename === p.filename;
+                });
+                return {
+                  id: p.filename + '-' + idx,
+                  src: albumPhoto ? albumPhoto.signedUrl : p.filename, // fallback to filename if not found
+                  x: p.position?.left || 100,
+                  y: p.position?.top || 100,
+                  width: p.width || 120,
+                  height: p.height || 120,
+                  rotation: p.rotation || 0
+                };
+              })
             );
+          }
+          // Load background color from config if present
+          if (data.collage.config?.backgroundColor) {
+            setBackgroundColor(data.collage.config.backgroundColor);
+          } else {
+            setBackgroundColor('#111');
           }
         }
       })
@@ -243,7 +257,12 @@ const CollageDetailsPage: React.FC = () => {
   return (
     <CollageLayout>
       <Box sx={{ position: 'absolute', top: 16, right: 24, zIndex: 20 }}>
-        <CollageMenu onSave={handleSave} disabled={saving || loading || !collage} />
+        <CollageMenu
+          onSave={handleSave}
+          disabled={saving || loading || !collage}
+          backgroundColor={backgroundColor}
+          onBackgroundColorChange={setBackgroundColor}
+        />
       </Box>
       {loading ? (
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
@@ -258,7 +277,7 @@ const CollageDetailsPage: React.FC = () => {
             <AlbumPhotoList photos={albumPhotos} onPhotoClick={handleAddPhoto} />
           </Box>
           {/* Canvas Area */}
-          <Box sx={{ flex: 1, position: 'relative', bgcolor: '#111', overflow: 'auto' }}>
+          <Box sx={{ flex: 1, position: 'relative', bgcolor: backgroundColor, overflow: 'auto' }}>
             {/* Canvas background and photos */}
             <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
               {canvasPhotos.map((photo, idx) => {
