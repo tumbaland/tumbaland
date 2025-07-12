@@ -1,15 +1,11 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Box, CircularProgress, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from '@mui/material';
 import AlbumPhotoList, { AlbumPhoto } from '../components/AlbumPhotoList';
-import CollageMenu from '../components/CollageMenu';
+import CollageMenu from '../components/collage/CollageMenu';
 import CollageLayout from '../components/collage/CollageLayout';
-// import { Rnd } from 'react-rnd';
 import { Collage } from '../types/collage';
 import { useCollage } from '../hooks/useCollage';
-
-// AlbumPhoto type imported from AlbumPhotoList
 
 interface CanvasPhoto {
   id: string;
@@ -298,7 +294,7 @@ const CollageDetailsPage: React.FC = () => {
                       zIndex: 2,
                       border: '2px solid #fff',
                       borderRadius: 2,
-                      background: '#222',
+                      background: '#fff',
                       cursor:
                         dragPhotoId === photo.id
                           ? 'grabbing'
@@ -339,7 +335,7 @@ const CollageDetailsPage: React.FC = () => {
                         }}
                       />
                       {caption && (
-                        <Typography variant="caption" sx={{ color: '#fff', bgcolor: 'rgba(0,0,0,0.6)', px: 0.5, borderRadius: 1, mt: 0.5, maxWidth: '100%', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <Typography variant="caption" sx={{ color: '#111', bgcolor: '#fff', px: 0.5, borderRadius: 1, mt: 0.5, maxWidth: '100%', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', boxShadow: '0 1px 4px rgba(0,0,0,0.12)' }}>
                           {caption}
                         </Typography>
                       )}

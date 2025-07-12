@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Box } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -13,8 +12,13 @@ interface CollageMenuProps {
 }
 
 const CollageMenu: React.FC<CollageMenuProps> = ({ onSave, disabled, backgroundColor = '#111', onBackgroundColorChange }) => {
-  const [colorAnchorEl, setColorAnchorEl] = useState<null | HTMLElement>(null);
   const [color, setColor] = useState(backgroundColor);
+
+  // Sync color state with prop
+  React.useEffect(() => {
+    setColor(backgroundColor);
+  }, [backgroundColor]);
+
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setColor(e.target.value);
     if (onBackgroundColorChange) onBackgroundColorChange(e.target.value);
