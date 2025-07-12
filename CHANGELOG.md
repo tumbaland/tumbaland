@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.48](https://github.com/toomastahves/tumbaland/compare/v0.0.47...v0.0.48) (2025-07-12)
+
+
+### Features
+
+* setup collage service and front ([bba746e](https://github.com/toomastahves/tumbaland/commit/bba746e8753a6fb0c7b2d7a4d0bd528ab024b85c))
+
 ### [0.0.47](https://github.com/toomastahves/tumbaland/compare/v0.0.46...v0.0.47) (2025-07-12)
 
 
