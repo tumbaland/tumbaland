@@ -35,6 +35,14 @@ const CollageDetailsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [backgroundColor, setBackgroundColor] = useState<string>('#111');
+  // Viewport state: initialize from browser window size
+  const getInitialViewport = () => {
+    if (typeof window !== 'undefined') {
+      return { width: window.innerWidth, height: window.innerHeight };
+    }
+    return { width: 1200, height: 800 };
+  };
+  const [viewport, setViewport] = useState<{ width: number; height: number }>(getInitialViewport());
   // Caption edit state
   const [captionEditIdx, setCaptionEditIdx] = useState<number | null>(null);
   const [captionEditValue, setCaptionEditValue] = useState('');
@@ -165,6 +173,11 @@ const CollageDetailsPage: React.FC = () => {
         width: t.width,
         height: t.height,
       }));
+      // Save viewport to config
+      const viewportConfig = {
+        width: window.innerWidth,
+        height: window.innerHeight,
+      };
       await updateCollage(collage._id, {
         ...collage,
         config: {
@@ -172,6 +185,7 @@ const CollageDetailsPage: React.FC = () => {
           photos,
           texts,
           backgroundColor,
+          viewport: viewportConfig,
         },
         albumId: collage.albumId,
       });
@@ -233,6 +247,17 @@ const CollageDetailsPage: React.FC = () => {
             setBackgroundColor(data.collage.config.backgroundColor);
           } else {
             setBackgroundColor('#111');
+          }
+          // Load viewport from config if present, else use browser size
+          if (data.collage.config?.viewport && data.collage.config.viewport.width && data.collage.config.viewport.height) {
+            setViewport({
+              width: data.collage.config.viewport.width,
+              height: data.collage.config.viewport.height,
+            });
+          } else if (typeof window !== 'undefined') {
+            setViewport({ width: window.innerWidth, height: window.innerHeight });
+          } else {
+            setViewport({ width: 1200, height: 800 });
           }
         }
       })
@@ -374,7 +399,12 @@ const CollageDetailsPage: React.FC = () => {
               bgcolor: backgroundColor,
               overflow: 'auto',
               minHeight: { xs: '100vh', sm: '100vh' },
-              pb: { xs: 8, sm: 0 }, // Add bottom padding for mobile
+              pb: { xs: 8, sm: 0 },
+              width: viewport.width,
+              height: viewport.height,
+              maxWidth: '100vw',
+              maxHeight: '100vh',
+              margin: '0 auto',
             }}
           >
             {/* Canvas background and photos */}
