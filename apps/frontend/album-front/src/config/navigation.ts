@@ -1,17 +1,25 @@
+
+
+import PhotoAlbumIcon from '@mui/icons-material/PhotoAlbum';
+import GridOnIcon from '@mui/icons-material/GridOn';
+
 export interface NavigationItem {
   label: string;
   path: string;
+  icon?: React.ElementType;
   onClick?: () => void;
 }
 
 export const navigationItems: Omit<NavigationItem, 'onClick'>[] = [
   {
     label: 'Albums',
-    path: '/albums'
+    path: '/albums',
+    icon: PhotoAlbumIcon
   },
   {
     label: 'Collage',
-    path: '/collage'
+    path: '/collage',
+    icon: GridOnIcon
   }
 ];
 

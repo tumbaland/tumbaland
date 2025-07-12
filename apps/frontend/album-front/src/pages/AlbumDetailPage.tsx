@@ -90,6 +90,7 @@ const AlbumDetailPage: React.FC = () => {
     };
     fetchAlbum();
   }, [albumId]);
+
   const handleDeletePhoto = async (photo: Photo) => {
     setPhotoToDelete(photo);
     setShowDeleteDialog(true);

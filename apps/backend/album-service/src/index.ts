@@ -6,6 +6,7 @@ import path from 'path';
 import connectDB from './config/database';
 import albumRoutes from './routes/albumRoutes';
 import photoRoutes from './routes/photoRoutes';
+import collageRoutes from './collage/collageRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -24,6 +25,7 @@ app.use(morgan('dev'));
 // Routes
 app.use('/api/albums', albumRoutes);
 app.use('/api/photos', photoRoutes);
+app.use('/api/collages', collageRoutes);
 
 // Serve OpenAPI docs as static files
 app.use('/api/docs', express.static(path.join(__dirname, '../docs')));

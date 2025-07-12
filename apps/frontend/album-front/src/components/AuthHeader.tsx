@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import {
   AppBar,
@@ -10,11 +11,16 @@ import {
   MenuItem,
   IconButton,
   CircularProgress,
-  Divider
+  Divider,
+  useMediaQuery
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { AccountCircle, Login, Logout } from '@mui/icons-material';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { User } from '../types';
+import { navigationItems } from '../config/navigation';
 
 interface AuthHeaderProps {}
 
@@ -145,6 +151,19 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
     );
   };
 
+  const navigate = useNavigate();
+  const location = useLocation();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [mobileMenuAnchor, setMobileMenuAnchor] = useState<null | HTMLElement>(null);
+
+  const handleMobileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setMobileMenuAnchor(event.currentTarget);
+  };
+  const handleMobileMenuClose = () => {
+    setMobileMenuAnchor(null);
+  };
+
   return (
     <AppBar
       position="static"
@@ -156,8 +175,111 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
       }}
     >
       <Toolbar>
-        <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}></Typography>
-        {renderAuthSection()}
+        {isMobile ? (
+          <>
+            <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', minHeight: 56, pl: 4 }}>
+              <Button
+                color="inherit"
+                onClick={handleMobileMenuOpen}
+                endIcon={<ExpandMoreIcon />}
+                sx={{
+                  fontWeight: 500,
+                  textTransform: 'none',
+                  background: 'none',
+                  px: 1.5,
+                  minWidth: 0,
+                  borderRadius: 2,
+                  '&:hover': { background: 'rgba(0,0,0,0.04)' },
+                  maxWidth: '70vw',
+                  overflow: 'hidden',
+                  whiteSpace: 'nowrap',
+                  textOverflow: 'ellipsis',
+                  ml: 2 // push menu button slightly right
+                }}
+              >
+                {/* Show current route label, fallback to first menu item */}
+                {(() => {
+                  let bestMatch = null;
+                  let bestLength = -1;
+                  for (const item of navigationItems) {
+                    if (item.path === '/' && location.pathname === '/' && bestLength < 1) {
+                      bestMatch = item;
+                      bestLength = 1;
+                    } else if (
+                      item.path !== '/' &&
+                      location.pathname.startsWith(item.path) &&
+                      item.path.length > bestLength
+                    ) {
+                      bestMatch = item;
+                      bestLength = item.path.length;
+                    }
+                  }
+                  return bestMatch ? bestMatch.label : navigationItems[0]?.label;
+                })()}
+              </Button>
+            </Box>
+            <Box sx={{ flexGrow: 0, ml: 'auto' }}>{renderAuthSection()}</Box>
+            <Menu
+              anchorEl={mobileMenuAnchor}
+              open={Boolean(mobileMenuAnchor)}
+              onClose={handleMobileMenuClose}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+            >
+              {navigationItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.path;
+                return (
+                  <MenuItem
+                    key={item.path}
+                    selected={isActive}
+                    onClick={() => {
+                      if (item.label === 'Collage') {
+                        const collageUrl = `${import.meta.env.VITE_ALBUM_FRONT_URL || ''}/collage`;
+                        window.open(collageUrl, '_blank', 'noopener,noreferrer');
+                      } else {
+                        navigate(item.path);
+                      }
+                      handleMobileMenuClose();
+                    }}
+                  >
+                    {Icon && <Icon sx={{ mr: 1 }} />}
+                    {item.label}
+                  </MenuItem>
+                );
+              })}
+            </Menu>
+          </>
+        ) : (
+          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexGrow: 1 }}>
+              {navigationItems.map((item) => {
+                const isActive = location.pathname === item.path;
+                const buttonSx = {
+                  fontWeight: isActive ? 700 : 500,
+                  textTransform: 'none',
+                  background: 'none',
+                  borderRadius: 2,
+                  px: 2,
+                  color: isActive ? 'primary.main' : 'inherit',
+                  '&:hover': { background: 'rgba(0,0,0,0.04)' }
+                };
+                const Icon = item.icon;
+                return (
+                  <Button
+                    key={item.path}
+                    onClick={() => navigate(item.path)}
+                    sx={buttonSx}
+                    startIcon={Icon ? <Icon sx={{ mr: 1 }} /> : undefined}
+                  >
+                    {item.label}
+                  </Button>
+                );
+              })}
+            </Box>
+            <Box sx={{ flexGrow: 0, ml: 2 }}>{renderAuthSection()}</Box>
+          </Box>
+        )}
       </Toolbar>
     </AppBar>
   );

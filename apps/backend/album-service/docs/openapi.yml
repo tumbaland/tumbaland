@@ -5,20 +5,130 @@ info:
   description: API documentation for the Album Service
 servers:
   - url: /api
+tags:
+  - name: Collage
+    description: Operations related to collages
+  - name: Album
+    description: Operations related to albums
+  - name: Photo
+    description: Operations related to photos
 paths:
+  /collages:
+    get:
+      tags:
+        - Collage
+      summary: Get all collages
+      responses:
+        '200':
+          description: List of collages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  collages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Collage'
+    post:
+      tags:
+        - Collage
+      summary: Create a new collage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollageInput'
+      responses:
+        '201':
+          description: Collage created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  collage:
+                    $ref: '#/components/schemas/Collage'
+  /collages/{id}:
+    get:
+      tags:
+        - Collage
+      summary: Get collage by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Collage details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  collage:
+                    $ref: '#/components/schemas/Collage'
+    put:
+      tags:
+        - Collage
+      summary: Update collage by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollageInput'
+      responses:
+        '200':
+          description: Collage updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  collage:
+                    $ref: '#/components/schemas/Collage'
+    delete:
+      tags:
+        - Collage
+      summary: Delete collage by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Collage deleted
   /albums:
     get:
+      tags:
+        - Album
       summary: Get all albums
       responses:
         '200':
           description: List of albums
     post:
+      tags:
+        - Album
       summary: Create a new album
       responses:
         '201':
           description: Album created
   /albums/{id}:
     get:
+      tags:
+        - Album
       summary: Get album by ID
       parameters:
         - in: path
@@ -30,6 +140,8 @@ paths:
         '200':
           description: Album details
     put:
+      tags:
+        - Album
       summary: Update album by ID
       parameters:
         - in: path
@@ -41,6 +153,8 @@ paths:
         '200':
           description: Album updated
     delete:
+      tags:
+        - Album
       summary: Delete album by ID
       parameters:
         - in: path
@@ -53,17 +167,23 @@ paths:
           description: Album deleted
   /photos:
     get:
+      tags:
+        - Photo
       summary: Get all photos
       responses:
         '200':
           description: List of photos
     post:
+      tags:
+        - Photo
       summary: Upload a new photo
       responses:
         '201':
           description: Photo uploaded
   /photos/{id}:
     get:
+      tags:
+        - Photo
       summary: Get photo by ID
       parameters:
         - in: path
@@ -75,6 +195,8 @@ paths:
         '200':
           description: Photo details
     delete:
+      tags:
+        - Photo
       summary: Delete photo by ID
       parameters:
         - in: path
@@ -85,3 +207,83 @@ paths:
       responses:
         '204':
           description: Photo deleted
+components:
+  schemas:
+    CollageConfig:
+      type: object
+      properties:
+        version:
+          type: string
+        date:
+          type: string
+        viewport:
+          type: object
+          properties:
+            width:
+              type: integer
+            height:
+              type: integer
+        theme:
+          type: string
+        photos:
+          type: array
+          items:
+            type: object
+            properties:
+              filename:
+                type: string
+              caption:
+                type: string
+              position:
+                type: object
+                properties:
+                  left:
+                    type: integer
+                  top:
+                    type: integer
+              width:
+                type: integer
+              height:
+                type: integer
+              rotation:
+                type: number
+              frameVisible:
+                type: boolean
+              scaleX:
+                type: string
+              scaleY:
+                type: string
+        textSections:
+          type: array
+          items:
+            type: object
+        title:
+          type: object
+          properties:
+            text:
+              type: string
+            subtitle:
+              type: string
+    CollageInput:
+      type: object
+      required:
+        - title
+        - config
+      properties:
+        title:
+          type: string
+        config:
+          $ref: '#/components/schemas/CollageConfig'
+        ownerId:
+          type: string
+    Collage:
+      allOf:
+        - $ref: '#/components/schemas/CollageInput'
+        - type: object
+          properties:
+            id:
+              type: string
+            createdAt:
+              type: string
+            updatedAt:
+              type: string
