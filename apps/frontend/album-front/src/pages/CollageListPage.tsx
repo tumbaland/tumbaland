@@ -3,16 +3,11 @@ import {
   Box,
   Typography,
   Button,
-  Card,
-  CardContent,
-  CardActionArea,
-  CardMedia,
   CircularProgress,
   IconButton,
   Menu,
   MenuItem
 } from '@mui/material';
-import GridOnIcon from '@mui/icons-material/GridOn';
 import AddIcon from '@mui/icons-material/Add';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { useCollage } from '../hooks/useCollage';
