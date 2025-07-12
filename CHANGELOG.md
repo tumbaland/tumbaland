@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.56](https://github.com/toomastahves/tumbaland/compare/v0.0.55...v0.0.56) (2025-07-12)
+
+
+### Features
+
+* update caption color ([603fec5](https://github.com/toomastahves/tumbaland/commit/603fec52a5d9fcd4469f17eb32dcd87375824251))
+
 ### [0.0.55](https://github.com/toomastahves/tumbaland/compare/v0.0.54...v0.0.55) (2025-07-12)
 
 
