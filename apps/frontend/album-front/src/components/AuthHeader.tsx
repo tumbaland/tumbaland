@@ -234,12 +234,7 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
                     key={item.path}
                     selected={isActive}
                     onClick={() => {
-                      if (item.label === 'Collage') {
-                        const collageUrl = `${import.meta.env.VITE_ALBUM_FRONT_URL || ''}/collage`;
-                        window.open(collageUrl, '_blank', 'noopener,noreferrer');
-                      } else {
-                        navigate(item.path);
-                      }
+                      navigate(item.path);
                       handleMobileMenuClose();
                     }}
                   >
