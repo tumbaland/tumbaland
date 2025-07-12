@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.49](https://github.com/toomastahves/tumbaland/compare/v0.0.48...v0.0.49) (2025-07-12)
+
+
+### Features
+
+* setup photo canvas ([10d2c51](https://github.com/toomastahves/tumbaland/commit/10d2c513c924840b1e48b58ab7c0e2698dff29e0))
+
 ### [0.0.48](https://github.com/toomastahves/tumbaland/compare/v0.0.47...v0.0.48) (2025-07-12)
 
 
