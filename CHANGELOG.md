@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.55](https://github.com/toomastahves/tumbaland/compare/v0.0.54...v0.0.55) (2025-07-12)
+
+
+### Features
+
+* add text box to collage ([30f02ab](https://github.com/toomastahves/tumbaland/commit/30f02ab4c0398fb135a7ebc5fedf996d6cd3f5f1))
+
 ### [0.0.54](https://github.com/toomastahves/tumbaland/compare/v0.0.53...v0.0.54) (2025-07-12)
 
 
