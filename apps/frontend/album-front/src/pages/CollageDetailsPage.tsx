@@ -426,9 +426,30 @@ const CollageDetailsPage: React.FC = () => {
                         />
                       )}
                       {caption && (
-                        <Typography variant="caption" sx={{ color: '#111', bgcolor: '#fff', px: 0.5, borderRadius: 1, mt: 0.5, maxWidth: '100%', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', boxShadow: '0 1px 4px rgba(0,0,0,0.12)' }}>
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            left: 0,
+                            bottom: 0,
+                            width: '100%',
+                            bgcolor: 'rgba(255,255,255,0.95)',
+                            color: '#111',
+                            px: 1,
+                            py: 0.5,
+                            borderBottomLeftRadius: 8,
+                            borderBottomRightRadius: 8,
+                            fontSize: { xs: '0.85rem', sm: '0.95rem' },
+                            textAlign: 'center',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            boxShadow: '0 1px 4px rgba(0,0,0,0.12)',
+                            zIndex: 20,
+                            pointerEvents: 'none',
+                          }}
+                        >
                           {caption}
-                        </Typography>
+                        </Box>
                       )}
                     </Box>
                   </Box>
