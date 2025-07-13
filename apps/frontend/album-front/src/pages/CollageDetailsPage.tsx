@@ -288,9 +288,12 @@ const CollageDetailsPage: React.FC = () => {
   const [resizeOrigin, setResizeOrigin] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [resizeStart, setResizeStart] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
 
-  // Start drag or resize mode on click (disabled in view mode)
+  // Disable drag/resize if any modal is open
+  const isModalOpen = captionEditIdx !== null || textEditIdx !== null;
+
+  // Start drag or resize mode on click (disabled in view mode or when modal open)
   const handlePhotoClick = (id: string, e: React.MouseEvent<HTMLImageElement, MouseEvent>, photo: CanvasPhoto) => {
-    if (isViewMode) return;
+    if (isViewMode || isModalOpen) return;
     const rect = (e.target as HTMLElement).getBoundingClientRect();
     const offsetX = e.clientX - rect.left;
     const offsetY = e.clientY - rect.top;
@@ -318,7 +321,7 @@ const CollageDetailsPage: React.FC = () => {
 
   // Move photo with mouse when in drag mode (disabled in view mode)
   useEffect(() => {
-    if (isViewMode) return;
+    if (isViewMode || isModalOpen) return;
     if (!dragPhotoId) return;
     const handleMouseMove = (e: MouseEvent) => {
       setCanvasPhotos((prev) =>
@@ -333,11 +336,11 @@ const CollageDetailsPage: React.FC = () => {
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
     };
-  }, [dragPhotoId, dragOffset, isViewMode]);
+  }, [dragPhotoId, dragOffset, isViewMode, isModalOpen]);
 
   // Resize photo with mouse when in resize mode (disabled in view mode)
   useEffect(() => {
-    if (isViewMode) return;
+    if (isViewMode || isModalOpen) return;
     if (!resizePhotoId) return;
     const handleMouseMove = (e: MouseEvent) => {
       setCanvasPhotos((prev) =>
@@ -361,7 +364,7 @@ const CollageDetailsPage: React.FC = () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [resizePhotoId, resizeOrigin, resizeStart, isViewMode]);
+  }, [resizePhotoId, resizeOrigin, resizeStart, isViewMode, isModalOpen]);
 
   return (
     <CollageLayout>
@@ -507,8 +510,8 @@ const CollageDetailsPage: React.FC = () => {
               {/* Render text boxes */}
               <DraggableTextBox
                 textBoxes={canvasTexts}
-                setTextBoxes={isViewMode ? (() => {}) : setCanvasTexts}
-                onDoubleClick={isViewMode ? (() => {}) : handleTextBoxDoubleClick}
+                setTextBoxes={isViewMode || isModalOpen ? (() => {}) : setCanvasTexts}
+                onDoubleClick={isViewMode || isModalOpen ? (() => {}) : handleTextBoxDoubleClick}
               />
               {/* Caption Edit Dialog (edit mode only) */}
               {!isViewMode && (
