@@ -1,4 +1,12 @@
 # Tumbalog
+### [0.0.65](https://github.com/toomastahves/tumbaland/compare/v0.0.64...v0.0.65) (2025-07-13)
+
+
+### Features
+
+* add hover to photo list view ([bc33ef2](https://github.com/toomastahves/tumbaland/commit/bc33ef221daedde084ad6b45b5648bf755612a62))
+* improve dragging ([d638875](https://github.com/toomastahves/tumbaland/commit/d638875c5da86b1506a6212cf2d3ae0e8bbff028))
+
 ### [0.0.64](https://github.com/toomastahves/tumbaland/compare/v0.0.63...v0.0.64) (2025-07-12)
 
 
