@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { Box, CircularProgress, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from '@mui/material';
 import DraggableTextBox, { CanvasText } from '../components/collage/DraggableTextBox';
-import AlbumPhotoList, { AlbumPhoto } from '../components/AlbumPhotoList';
+import AlbumPhotoList, { AlbumPhoto } from '../components/collage/AlbumPhotoList';
 import CollageMenu from '../components/collage/CollageMenu';
 import CollageLayout from '../components/collage/CollageLayout';
 import { Collage } from '../types/collage';
