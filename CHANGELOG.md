@@ -1,4 +1,10 @@
 # Tumbalog
+### [0.0.66](https://github.com/toomastahves/tumbaland/compare/v0.0.65...v0.0.66) (2025-07-14)
+
+
+### Bug Fixes
+
+* linter ([7da3fad](https://github.com/toomastahves/tumbaland/commit/7da3fad56c4a01089a811bf7b2d3c37c1c39e56c))
 
 ### [0.0.65](https://github.com/toomastahves/tumbaland/compare/v0.0.64...v0.0.65) (2025-07-13)
 
