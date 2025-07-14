@@ -1,137 +1,119 @@
 # Tumbalog
-### [0.0.65](https://github.com/toomastahves/tumbaland/compare/v0.0.64...v0.0.65) (2025-07-13)
 
+### [0.0.65](https://github.com/toomastahves/tumbaland/compare/v0.0.64...v0.0.65) (2025-07-13)
 
 ### Features
 
-* add hover to photo list view ([bc33ef2](https://github.com/toomastahves/tumbaland/commit/bc33ef221daedde084ad6b45b5648bf755612a62))
-* improve dragging ([d638875](https://github.com/toomastahves/tumbaland/commit/d638875c5da86b1506a6212cf2d3ae0e8bbff028))
+- add hover to photo list view ([bc33ef2](https://github.com/toomastahves/tumbaland/commit/bc33ef221daedde084ad6b45b5648bf755612a62))
+- improve dragging ([d638875](https://github.com/toomastahves/tumbaland/commit/d638875c5da86b1506a6212cf2d3ae0e8bbff028))
 
 ### [0.0.64](https://github.com/toomastahves/tumbaland/compare/v0.0.63...v0.0.64) (2025-07-12)
 
-
 ### Bug Fixes
 
-* open collage menu ([1ea1665](https://github.com/toomastahves/tumbaland/commit/1ea1665253d5007d27f5fe82768ed877d9d14c77))
+- open collage menu ([1ea1665](https://github.com/toomastahves/tumbaland/commit/1ea1665253d5007d27f5fe82768ed877d9d14c77))
 
 ### [0.0.63](https://github.com/toomastahves/tumbaland/compare/v0.0.62...v0.0.63) (2025-07-12)
 
-
 ### Features
 
-* save viewport to config ([b44307c](https://github.com/toomastahves/tumbaland/commit/b44307c999a26105266f8215a15157673875949a))
+- save viewport to config ([b44307c](https://github.com/toomastahves/tumbaland/commit/b44307c999a26105266f8215a15157673875949a))
 
 ### [0.0.62](https://github.com/toomastahves/tumbaland/compare/v0.0.61...v0.0.62) (2025-07-12)
 
-
 ### Features
 
-* reduce font ([577f68b](https://github.com/toomastahves/tumbaland/commit/577f68b9b7555fd8e092f5a85e4d6ecfb759a067))
+- reduce font ([577f68b](https://github.com/toomastahves/tumbaland/commit/577f68b9b7555fd8e092f5a85e4d6ecfb759a067))
 
 ### [0.0.61](https://github.com/toomastahves/tumbaland/compare/v0.0.60...v0.0.61) (2025-07-12)
 
-
 ### Features
 
-* add bottom padding ([411da0a](https://github.com/toomastahves/tumbaland/commit/411da0a991c8615a7f601a7c4c3b49138ed37fd7))
+- add bottom padding ([411da0a](https://github.com/toomastahves/tumbaland/commit/411da0a991c8615a7f601a7c4c3b49138ed37fd7))
 
 ### [0.0.60](https://github.com/toomastahves/tumbaland/compare/v0.0.59...v0.0.60) (2025-07-12)
 
-
 ### Bug Fixes
 
-* improve collage captions ([02b3f78](https://github.com/toomastahves/tumbaland/commit/02b3f78f0f6584d27b30a7bc7cdba28243c5db1b))
+- improve collage captions ([02b3f78](https://github.com/toomastahves/tumbaland/commit/02b3f78f0f6584d27b30a7bc7cdba28243c5db1b))
 
 ### [0.0.59](https://github.com/toomastahves/tumbaland/compare/v0.0.58...v0.0.59) (2025-07-12)
 
-
 ### Features
 
-* add edit and view mode to collage ([ba456bc](https://github.com/toomastahves/tumbaland/commit/ba456bcc887a6ad3421f82f312a0ec319753ab0e))
+- add edit and view mode to collage ([ba456bc](https://github.com/toomastahves/tumbaland/commit/ba456bcc887a6ad3421f82f312a0ec319753ab0e))
 
 ### [0.0.58](https://github.com/toomastahves/tumbaland/compare/v0.0.57...v0.0.58) (2025-07-12)
 
-
 ### Features
 
-* remove imports ([01d5d18](https://github.com/toomastahves/tumbaland/commit/01d5d188df14847375c4a2a46bd8d8c000454e28))
+- remove imports ([01d5d18](https://github.com/toomastahves/tumbaland/commit/01d5d188df14847375c4a2a46bd8d8c000454e28))
 
 ### [0.0.57](https://github.com/toomastahves/tumbaland/compare/v0.0.56...v0.0.57) (2025-07-12)
 
-
 ### Features
 
-* update collage list ([075f03c](https://github.com/toomastahves/tumbaland/commit/075f03ce336d49fa792e3c1e4d1925c80642ce94))
+- update collage list ([075f03c](https://github.com/toomastahves/tumbaland/commit/075f03ce336d49fa792e3c1e4d1925c80642ce94))
 
 ### [0.0.56](https://github.com/toomastahves/tumbaland/compare/v0.0.55...v0.0.56) (2025-07-12)
 
-
 ### Features
 
-* update caption color ([603fec5](https://github.com/toomastahves/tumbaland/commit/603fec52a5d9fcd4469f17eb32dcd87375824251))
+- update caption color ([603fec5](https://github.com/toomastahves/tumbaland/commit/603fec52a5d9fcd4469f17eb32dcd87375824251))
 
 ### [0.0.55](https://github.com/toomastahves/tumbaland/compare/v0.0.54...v0.0.55) (2025-07-12)
 
-
 ### Features
 
-* add text box to collage ([30f02ab](https://github.com/toomastahves/tumbaland/commit/30f02ab4c0398fb135a7ebc5fedf996d6cd3f5f1))
+- add text box to collage ([30f02ab](https://github.com/toomastahves/tumbaland/commit/30f02ab4c0398fb135a7ebc5fedf996d6cd3f5f1))
 
 ### [0.0.54](https://github.com/toomastahves/tumbaland/compare/v0.0.53...v0.0.54) (2025-07-12)
 
-
 ### Features
 
-* change caption style ([26c82bc](https://github.com/toomastahves/tumbaland/commit/26c82bc277216ceb0a2e62a9bd9113d8c424c9a9))
+- change caption style ([26c82bc](https://github.com/toomastahves/tumbaland/commit/26c82bc277216ceb0a2e62a9bd9113d8c424c9a9))
 
 ### [0.0.53](https://github.com/toomastahves/tumbaland/compare/v0.0.52...v0.0.53) (2025-07-12)
 
-
 ### Features
 
-* fix file path ([ee696b1](https://github.com/toomastahves/tumbaland/commit/ee696b16e0fec7c620c70147db4625a7ec96a72d))
+- fix file path ([ee696b1](https://github.com/toomastahves/tumbaland/commit/ee696b16e0fec7c620c70147db4625a7ec96a72d))
 
 ### [0.0.52](https://github.com/toomastahves/tumbaland/compare/v0.0.51...v0.0.52) (2025-07-12)
 
-
 ### Features
 
-* fix config ([1960c1d](https://github.com/toomastahves/tumbaland/commit/1960c1dad80d3d73530ccd6619ccae57fe239f02))
+- fix config ([1960c1d](https://github.com/toomastahves/tumbaland/commit/1960c1dad80d3d73530ccd6619ccae57fe239f02))
 
 ### [0.0.51](https://github.com/toomastahves/tumbaland/compare/v0.0.50...v0.0.51) (2025-07-12)
 
-
 ### Features
 
-* remove import ([4fe4aa0](https://github.com/toomastahves/tumbaland/commit/4fe4aa0effeca768280821542e0274badebfe139))
+- remove import ([4fe4aa0](https://github.com/toomastahves/tumbaland/commit/4fe4aa0effeca768280821542e0274badebfe139))
 
 ### [0.0.50](https://github.com/toomastahves/tumbaland/compare/v0.0.49...v0.0.50) (2025-07-12)
 
-
 ### Features
 
-* add delete photo ([3f5e591](https://github.com/toomastahves/tumbaland/commit/3f5e5911e8477fc9c86b0dc39a2abce99626eff4))
+- add delete photo ([3f5e591](https://github.com/toomastahves/tumbaland/commit/3f5e5911e8477fc9c86b0dc39a2abce99626eff4))
 
 ### [0.0.49](https://github.com/toomastahves/tumbaland/compare/v0.0.48...v0.0.49) (2025-07-12)
 
-
 ### Features
 
-* setup photo canvas ([10d2c51](https://github.com/toomastahves/tumbaland/commit/10d2c513c924840b1e48b58ab7c0e2698dff29e0))
+- setup photo canvas ([10d2c51](https://github.com/toomastahves/tumbaland/commit/10d2c513c924840b1e48b58ab7c0e2698dff29e0))
 
 ### [0.0.48](https://github.com/toomastahves/tumbaland/compare/v0.0.47...v0.0.48) (2025-07-12)
 
-
 ### Features
 
-* setup collage service and front ([bba746e](https://github.com/toomastahves/tumbaland/commit/bba746e8753a6fb0c7b2d7a4d0bd528ab024b85c))
+- setup collage service and front ([bba746e](https://github.com/toomastahves/tumbaland/commit/bba746e8753a6fb0c7b2d7a4d0bd528ab024b85c))
 
 ### [0.0.47](https://github.com/toomastahves/tumbaland/compare/v0.0.46...v0.0.47) (2025-07-12)
 
-
 ### Features
 
-* setup linter ([850a70e](https://github.com/toomastahves/tumbaland/commit/850a70eec4defb3d4f60f91b65147c13a634afb4))
+- setup linter ([850a70e](https://github.com/toomastahves/tumbaland/commit/850a70eec4defb3d4f60f91b65147c13a634afb4))
 
 ### [0.0.45](https://github.com/toomastahves/tumbaland/compare/v0.0.44...v0.0.45) (2025-07-11)
 

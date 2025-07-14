@@ -1,4 +1,4 @@
-import { Collage, CollageInput } from "../types/collage";
+import { Collage, CollageInput } from '../types/collage';
 import { albumApi } from '../config/albumApi';
 
 export const collageService = {
@@ -29,5 +29,5 @@ export const collageService = {
   // Delete collage
   async deleteCollage(id: string): Promise<void> {
     await albumApi.delete(`/collages/${id}`);
-  },
+  }
 };

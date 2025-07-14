@@ -31,7 +31,7 @@ const AlbumPhotoList: React.FC<AlbumPhotoListProps> = ({ photos, onPhotoClick })
     setHoveredPhoto(photo);
     setOverlayPos({
       top,
-      left: rect.right + 8 + window.scrollX,
+      left: rect.right + 8 + window.scrollX
     });
   };
   const handleMouseLeave = () => {
@@ -41,13 +41,15 @@ const AlbumPhotoList: React.FC<AlbumPhotoListProps> = ({ photos, onPhotoClick })
 
   return (
     <>
-      <Typography variant="h6" gutterBottom>Photos</Typography>
+      <Typography variant="h6" gutterBottom>
+        Photos
+      </Typography>
       <List sx={{ position: 'relative' }}>
         {photos.map((photo) => (
           <ListItem
             key={photo._id}
             disablePadding
-            onMouseEnter={e => handleMouseEnter(e, photo)}
+            onMouseEnter={(e) => handleMouseEnter(e, photo)}
             onMouseLeave={handleMouseLeave}
             sx={{ position: 'relative' }}
           >
@@ -76,7 +78,7 @@ const AlbumPhotoList: React.FC<AlbumPhotoListProps> = ({ photos, onPhotoClick })
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              pointerEvents: 'none',
+              pointerEvents: 'none'
             }}
           >
             <img
@@ -88,7 +90,7 @@ const AlbumPhotoList: React.FC<AlbumPhotoListProps> = ({ photos, onPhotoClick })
                 borderRadius: 8,
                 display: 'block',
                 objectFit: 'contain',
-                pointerEvents: 'none',
+                pointerEvents: 'none'
               }}
             />
           </Box>

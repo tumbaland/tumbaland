@@ -32,6 +32,6 @@ export function useCollage() {
     getCollage,
     createCollage,
     updateCollage,
-    deleteCollage,
+    deleteCollage
   };
 }

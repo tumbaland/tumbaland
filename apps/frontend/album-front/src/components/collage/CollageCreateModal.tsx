@@ -1,6 +1,17 @@
-
 import React, { useState } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  Box,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
+} from '@mui/material';
 import { CollageInput } from '../../types/collage';
 import { useAlbums } from '../../hooks/useAlbums';
 
@@ -17,9 +28,8 @@ const defaultConfig = {
   theme: 'default',
   photos: [],
   textSections: [],
-  title: { text: '', subtitle: '' },
+  title: { text: '', subtitle: '' }
 };
-
 
 export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, onClose, onCreate }) => {
   const [title, setTitle] = useState('');
@@ -37,9 +47,9 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
         title,
         config: {
           ...defaultConfig,
-          title: { text: title, subtitle },
+          title: { text: title, subtitle }
         },
-        albumId,
+        albumId
       });
       setTitle('');
       setSubtitle('');
@@ -72,10 +82,12 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
             labelId="album-select-label"
             value={albumId}
             label="Album"
-            onChange={e => setAlbumId(e.target.value)}
+            onChange={(e) => setAlbumId(e.target.value)}
           >
-            {albums.map(album => (
-              <MenuItem key={album._id} value={album._id}>{album.name}</MenuItem>
+            {albums.map((album) => (
+              <MenuItem key={album._id} value={album._id}>
+                {album.name}
+              </MenuItem>
             ))}
           </Select>
         </FormControl>
@@ -85,7 +97,7 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
           label="Title"
           fullWidth
           value={title}
-          onChange={e => setTitle(e.target.value)}
+          onChange={(e) => setTitle(e.target.value)}
           disabled={loading}
         />
         <TextField
@@ -93,13 +105,19 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
           label="Subtitle"
           fullWidth
           value={subtitle}
-          onChange={e => setSubtitle(e.target.value)}
+          onChange={(e) => setSubtitle(e.target.value)}
           disabled={loading}
         />
-        {error && <Box color="error.main" mt={1}>{error}</Box>}
+        {error && (
+          <Box color="error.main" mt={1}>
+            {error}
+          </Box>
+        )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose} disabled={loading}>Cancel</Button>
+        <Button onClick={handleClose} disabled={loading}>
+          Cancel
+        </Button>
         <Button onClick={handleCreate} variant="contained" color="primary" disabled={loading || !title || !albumId}>
           Create
         </Button>

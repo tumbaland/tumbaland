@@ -1,6 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
-import { Box, CircularProgress, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from '@mui/material';
+import {
+  Box,
+  CircularProgress,
+  Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField
+} from '@mui/material';
 import DraggableTextBox, { CanvasText } from '../components/collage/DraggableTextBox';
 import AlbumPhotoList, { AlbumPhoto } from '../components/collage/AlbumPhotoList';
 import CollageMenu from '../components/collage/CollageMenu';
@@ -60,12 +70,10 @@ const CollageDetailsPage: React.FC = () => {
         x: 200 + Math.random() * 100,
         y: 200 + Math.random() * 100,
         width: 180,
-        height: 48,
-      },
+        height: 48
+      }
     ]);
   };
-
-
 
   // Double-click to edit text box
   const handleTextBoxDoubleClick = (idx: number) => {
@@ -76,9 +84,7 @@ const CollageDetailsPage: React.FC = () => {
   // Save text box edit
   const handleTextSave = () => {
     if (textEditIdx === null) return;
-    setCanvasTexts((prev) =>
-      prev.map((t, idx) => (idx === textEditIdx ? { ...t, text: textEditValue } : t))
-    );
+    setCanvasTexts((prev) => prev.map((t, idx) => (idx === textEditIdx ? { ...t, text: textEditValue } : t)));
     setTextEditIdx(null);
     setTextEditValue('');
   };
@@ -107,17 +113,10 @@ const CollageDetailsPage: React.FC = () => {
     setCaptionEditValue(currentCaption);
   };
 
-
   // Save caption edit
   const handleCaptionSave = () => {
     if (captionEditIdx === null) return;
-    setCanvasPhotos((prev) =>
-      prev.map((p, idx) =>
-        idx === captionEditIdx
-          ? { ...p, caption: captionEditValue }
-          : p
-      )
-    );
+    setCanvasPhotos((prev) => prev.map((p, idx) => (idx === captionEditIdx ? { ...p, caption: captionEditValue } : p)));
     // Also update collage.config.photos in memory for immediate UI feedback
     if (collage && collage.config && collage.config.photos && collage.config.photos[captionEditIdx]) {
       collage.config.photos[captionEditIdx].caption = captionEditValue;
@@ -161,22 +160,22 @@ const CollageDetailsPage: React.FC = () => {
           height: p.height,
           rotation: p.rotation || 0,
           caption:
-            (p.caption !== undefined ? p.caption : (collage?.config?.photos && collage.config.photos[idx]?.caption) || '')
+            p.caption !== undefined ? p.caption : (collage?.config?.photos && collage.config.photos[idx]?.caption) || ''
         };
       });
       // Save text boxes to config
-      const texts = canvasTexts.map(t => ({
+      const texts = canvasTexts.map((t) => ({
         id: t.id,
         text: t.text,
         x: t.x,
         y: t.y,
         width: t.width,
-        height: t.height,
+        height: t.height
       }));
       // Save viewport to config
       const viewportConfig = {
         width: window.innerWidth,
-        height: window.innerHeight,
+        height: window.innerHeight
       };
       await updateCollage(collage._id, {
         ...collage,
@@ -185,9 +184,9 @@ const CollageDetailsPage: React.FC = () => {
           photos,
           texts,
           backgroundColor,
-          viewport: viewportConfig,
+          viewport: viewportConfig
         },
-        albumId: collage.albumId,
+        albumId: collage.albumId
       });
     } catch (e) {
       setError('Failed to save collage');
@@ -236,7 +235,7 @@ const CollageDetailsPage: React.FC = () => {
                 x: t.x,
                 y: t.y,
                 width: t.width,
-                height: t.height,
+                height: t.height
               }))
             );
           } else {
@@ -249,10 +248,14 @@ const CollageDetailsPage: React.FC = () => {
             setBackgroundColor('#111');
           }
           // Load viewport from config if present, else use browser size
-          if (data.collage.config?.viewport && data.collage.config.viewport.width && data.collage.config.viewport.height) {
+          if (
+            data.collage.config?.viewport &&
+            data.collage.config.viewport.width &&
+            data.collage.config.viewport.height
+          ) {
             setViewport({
               width: data.collage.config.viewport.width,
-              height: data.collage.config.viewport.height,
+              height: data.collage.config.viewport.height
             });
           } else if (typeof window !== 'undefined') {
             setViewport({ width: window.innerWidth, height: window.innerHeight });
@@ -300,7 +303,11 @@ const CollageDetailsPage: React.FC = () => {
     const edgeThreshold = 0.2;
     const xPercent = offsetX / rect.width;
     const yPercent = offsetY / rect.height;
-    const isEdge = xPercent < edgeThreshold || xPercent > 1 - edgeThreshold || yPercent < edgeThreshold || yPercent > 1 - edgeThreshold;
+    const isEdge =
+      xPercent < edgeThreshold ||
+      xPercent > 1 - edgeThreshold ||
+      yPercent < edgeThreshold ||
+      yPercent > 1 - edgeThreshold;
     if (isEdge) {
       setResizePhotoId(id);
       setResizeOrigin({ x: e.clientX, y: e.clientY });
@@ -325,11 +332,7 @@ const CollageDetailsPage: React.FC = () => {
     if (!dragPhotoId) return;
     const handleMouseMove = (e: MouseEvent) => {
       setCanvasPhotos((prev) =>
-        prev.map((p) =>
-          p.id === dragPhotoId
-            ? { ...p, x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y }
-            : p
-        )
+        prev.map((p) => (p.id === dragPhotoId ? { ...p, x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y } : p))
       );
     };
     window.addEventListener('mousemove', handleMouseMove);
@@ -349,7 +352,7 @@ const CollageDetailsPage: React.FC = () => {
             ? {
                 ...p,
                 width: Math.max(40, resizeStart.width + (e.clientX - resizeOrigin.x)),
-                height: Math.max(40, resizeStart.height + (e.clientY - resizeOrigin.y)),
+                height: Math.max(40, resizeStart.height + (e.clientY - resizeOrigin.y))
               }
             : p
         )
@@ -390,7 +393,16 @@ const CollageDetailsPage: React.FC = () => {
         <Box sx={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
           {/* Sidebar: Album Photos (hide in view mode) */}
           {!isViewMode && (
-            <Box sx={{ width: 110, bgcolor: '#222', color: '#fff', p: 2, borderRight: '1px solid #333', overflowY: 'auto' }}>
+            <Box
+              sx={{
+                width: 110,
+                bgcolor: '#222',
+                color: '#fff',
+                p: 2,
+                borderRight: '1px solid #333',
+                overflowY: 'auto'
+              }}
+            >
               <AlbumPhotoList photos={albumPhotos} onPhotoClick={handleAddPhoto} />
             </Box>
           )}
@@ -407,7 +419,7 @@ const CollageDetailsPage: React.FC = () => {
               height: viewport.height,
               maxWidth: '100vw',
               maxHeight: '100vh',
-              margin: '0 auto',
+              margin: '0 auto'
             }}
           >
             {/* Canvas background and photos */}
@@ -418,13 +430,18 @@ const CollageDetailsPage: React.FC = () => {
                 left: 0,
                 width: '100%',
                 minHeight: '100%',
-                pb: { xs: 8, sm: 0 }, // Extra bottom padding for mobile
+                pb: { xs: 8, sm: 0 } // Extra bottom padding for mobile
               }}
             >
               {/* Render photos */}
               {canvasPhotos.map((photo, idx) => {
                 let caption = photo.caption;
-                if (!caption && collage?.config?.photos && collage.config.photos[idx] && collage.config.photos[idx].caption) {
+                if (
+                  !caption &&
+                  collage?.config?.photos &&
+                  collage.config.photos[idx] &&
+                  collage.config.photos[idx].caption
+                ) {
                   caption = collage.config.photos[idx].caption;
                 }
                 return (
@@ -440,17 +457,44 @@ const CollageDetailsPage: React.FC = () => {
                       border: '2px solid #fff',
                       borderRadius: 2,
                       background: '#fff',
-                      cursor: isViewMode ? 'default' : (dragPhotoId === photo.id ? 'grabbing' : resizePhotoId === photo.id ? 'nwse-resize' : 'pointer'),
-                      userSelect: 'none',
+                      cursor: isViewMode
+                        ? 'default'
+                        : dragPhotoId === photo.id
+                          ? 'grabbing'
+                          : resizePhotoId === photo.id
+                            ? 'nwse-resize'
+                            : 'pointer',
+                      userSelect: 'none'
                     }}
                   >
-                    <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+                    <Box
+                      sx={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        position: 'relative'
+                      }}
+                    >
                       <img
                         src={photo.src}
                         alt="collage"
-                        onMouseDown={isViewMode ? undefined : (e => handlePhotoClick(photo.id, e, photo))}
-                        onDoubleClick={isViewMode ? undefined : (() => handlePhotoDoubleClick(idx))}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6, cursor: isViewMode ? 'default' : (dragPhotoId === photo.id ? 'grabbing' : resizePhotoId === photo.id ? 'nwse-resize' : 'pointer') }}
+                        onMouseDown={isViewMode ? undefined : (e) => handlePhotoClick(photo.id, e, photo)}
+                        onDoubleClick={isViewMode ? undefined : () => handlePhotoDoubleClick(idx)}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          borderRadius: 6,
+                          cursor: isViewMode
+                            ? 'default'
+                            : dragPhotoId === photo.id
+                              ? 'grabbing'
+                              : resizePhotoId === photo.id
+                                ? 'nwse-resize'
+                                : 'pointer'
+                        }}
                         draggable={false}
                       />
                       {/* Optional: show resize handle at bottom-right corner visually */}
@@ -466,9 +510,9 @@ const CollageDetailsPage: React.FC = () => {
                             borderRadius: 1,
                             cursor: 'nwse-resize',
                             zIndex: 10,
-                            display: 'block',
+                            display: 'block'
                           }}
-                          onMouseDown={e => {
+                          onMouseDown={(e) => {
                             e.stopPropagation();
                             setResizePhotoId(photo.id);
                             setResizeOrigin({ x: e.clientX, y: e.clientY });
@@ -496,7 +540,7 @@ const CollageDetailsPage: React.FC = () => {
                             whiteSpace: 'nowrap',
                             boxShadow: '0 1px 4px rgba(0,0,0,0.12)',
                             zIndex: 20,
-                            pointerEvents: 'none',
+                            pointerEvents: 'none'
                           }}
                         >
                           {caption}
@@ -510,8 +554,8 @@ const CollageDetailsPage: React.FC = () => {
               {/* Render text boxes */}
               <DraggableTextBox
                 textBoxes={canvasTexts}
-                setTextBoxes={isViewMode || isModalOpen ? (() => {}) : setCanvasTexts}
-                onDoubleClick={isViewMode || isModalOpen ? (() => {}) : handleTextBoxDoubleClick}
+                setTextBoxes={isViewMode || isModalOpen ? () => {} : setCanvasTexts}
+                onDoubleClick={isViewMode || isModalOpen ? () => {} : handleTextBoxDoubleClick}
               />
               {/* Caption Edit Dialog (edit mode only) */}
               {!isViewMode && (
@@ -524,13 +568,17 @@ const CollageDetailsPage: React.FC = () => {
                       label="Caption"
                       fullWidth
                       value={captionEditValue}
-                      onChange={e => setCaptionEditValue(e.target.value)}
+                      onChange={(e) => setCaptionEditValue(e.target.value)}
                     />
                   </DialogContent>
                   <DialogActions>
-                    <Button onClick={handleDeletePhoto} color="error">Delete</Button>
+                    <Button onClick={handleDeletePhoto} color="error">
+                      Delete
+                    </Button>
                     <Button onClick={handleCaptionCancel}>Cancel</Button>
-                    <Button onClick={handleCaptionSave} variant="contained">Save</Button>
+                    <Button onClick={handleCaptionSave} variant="contained">
+                      Save
+                    </Button>
                   </DialogActions>
                 </Dialog>
               )}
@@ -547,13 +595,17 @@ const CollageDetailsPage: React.FC = () => {
                       multiline
                       minRows={2}
                       value={textEditValue}
-                      onChange={e => setTextEditValue(e.target.value)}
+                      onChange={(e) => setTextEditValue(e.target.value)}
                     />
                   </DialogContent>
                   <DialogActions>
-                    <Button onClick={handleDeleteTextBox} color="error">Delete</Button>
+                    <Button onClick={handleDeleteTextBox} color="error">
+                      Delete
+                    </Button>
                     <Button onClick={handleTextCancel}>Cancel</Button>
-                    <Button onClick={handleTextSave} variant="contained">Save</Button>
+                    <Button onClick={handleTextSave} variant="contained">
+                      Save
+                    </Button>
                   </DialogActions>
                 </Dialog>
               )}

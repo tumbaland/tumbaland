@@ -16,7 +16,6 @@ export const getCollageById = async (id: string): Promise<ICollage | null> => {
   return CollageModel.findById(id);
 };
 
-
 export const getCollageList = async (albumId?: string): Promise<ICollage[]> => {
   const filter = albumId ? { albumId } : {};
   return CollageModel.find(filter).sort({ createdAt: -1 });

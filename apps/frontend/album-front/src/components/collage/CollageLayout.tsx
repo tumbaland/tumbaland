@@ -17,7 +17,7 @@ const CollageLayout: React.FC<CollageLayoutProps> = ({ children }) => {
         left: 0,
         zIndex: 1300,
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'column'
       }}
     >
       {children}

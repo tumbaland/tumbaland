@@ -13,7 +13,13 @@ interface CollageMenuProps {
   onAddTextBox?: () => void;
 }
 
-const CollageMenu: React.FC<CollageMenuProps> = ({ onSave, disabled, backgroundColor = '#111', onBackgroundColorChange, onAddTextBox }) => {
+const CollageMenu: React.FC<CollageMenuProps> = ({
+  onSave,
+  disabled,
+  backgroundColor = '#111',
+  onBackgroundColorChange,
+  onAddTextBox
+}) => {
   const [color, setColor] = useState(backgroundColor);
 
   // Sync color state with prop
@@ -62,7 +68,13 @@ const CollageMenu: React.FC<CollageMenuProps> = ({ onSave, disabled, backgroundC
             <PaletteIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary="Background Color" />
-          <Box component="input" type="color" value={color} onChange={handleColorChange} sx={{ ml: 2, border: 0, background: 'none', width: 32, height: 32, p: 0, minWidth: 0 }} />
+          <Box
+            component="input"
+            type="color"
+            value={color}
+            onChange={handleColorChange}
+            sx={{ ml: 2, border: 0, background: 'none', width: 32, height: 32, p: 0, minWidth: 0 }}
+          />
         </MenuItem>
       </Menu>
     </>

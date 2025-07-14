@@ -1,4 +1,3 @@
-
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface CollageConfig {
@@ -40,14 +39,12 @@ export interface ICollage extends Document {
   updatedAt: Date;
 }
 
-
-
 const CollageSchema = new Schema<ICollage>(
   {
     title: { type: String, required: true },
     config: { type: Schema.Types.Mixed, required: true, default: () => ({ photos: [] }) },
     albumId: { type: String, required: true }, // New: albumId at root
-    ownerId: { type: String },
+    ownerId: { type: String }
   },
   { timestamps: true }
 );

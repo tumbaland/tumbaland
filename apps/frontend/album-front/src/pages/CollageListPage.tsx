@@ -1,13 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  Box,
-  Typography,
-  Button,
-  CircularProgress,
-  IconButton,
-  Menu,
-  MenuItem
-} from '@mui/material';
+import { Box, Typography, Button, CircularProgress, IconButton, Menu, MenuItem } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { useCollage } from '../hooks/useCollage';
@@ -147,8 +139,8 @@ const CollageListPage: React.FC = () => {
                   cursor: 'pointer',
                   '&:hover': {
                     boxShadow: 6,
-                    bgcolor: 'grey.50',
-                  },
+                    bgcolor: 'grey.50'
+                  }
                 }}
                 onClick={() => window.open(`/collage/${collage._id}?mode=edit`, '_blank')}
               >
@@ -156,7 +148,10 @@ const CollageListPage: React.FC = () => {
                   aria-label="more"
                   aria-controls="collage-menu"
                   aria-haspopup="true"
-                  onClick={e => { e.stopPropagation(); handleMenuOpen(e, collage); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleMenuOpen(e, collage);
+                  }}
                   sx={{ position: 'absolute', top: 8, right: 8, zIndex: 2 }}
                 >
                   <MoreVertIcon />
@@ -175,38 +170,37 @@ const CollageListPage: React.FC = () => {
               </Box>
             </Box>
           ))}
-      <Menu
-        id="collage-menu"
-        anchorEl={menuAnchorEl}
-        open={Boolean(menuAnchorEl)}
-        onClose={handleMenuClose}
-      >
-        <MenuItem onClick={() => {
-          if (menuCollage) window.open(`/collage/${menuCollage._id}?mode=view`, '_blank');
-          handleMenuClose();
-        }}>View</MenuItem>
-        <MenuItem onClick={handleEditClick}>Edit</MenuItem>
-        <MenuItem onClick={handleDeleteClick}>Delete</MenuItem>
-      </Menu>
-      {selectedCollage && (
-        <CollageEditModal
-          open={editModalOpen}
-          onClose={handleEditModalClose}
-          onSave={handleEditSave}
-          initialData={selectedCollage}
-        />
-      )}
-      <ConfirmDialog
-        open={deleteDialogOpen}
-        onClose={handleDeleteCancel}
-        onConfirm={handleDeleteConfirm}
-        title="Delete Collage"
-        message={collageToDelete ? `Are you sure you want to delete "${collageToDelete.title}"?` : ''}
-        confirmText="Delete Collage"
-        cancelText="Cancel"
-        variant="danger"
-        loading={deleting}
-      />
+          <Menu id="collage-menu" anchorEl={menuAnchorEl} open={Boolean(menuAnchorEl)} onClose={handleMenuClose}>
+            <MenuItem
+              onClick={() => {
+                if (menuCollage) window.open(`/collage/${menuCollage._id}?mode=view`, '_blank');
+                handleMenuClose();
+              }}
+            >
+              View
+            </MenuItem>
+            <MenuItem onClick={handleEditClick}>Edit</MenuItem>
+            <MenuItem onClick={handleDeleteClick}>Delete</MenuItem>
+          </Menu>
+          {selectedCollage && (
+            <CollageEditModal
+              open={editModalOpen}
+              onClose={handleEditModalClose}
+              onSave={handleEditSave}
+              initialData={selectedCollage}
+            />
+          )}
+          <ConfirmDialog
+            open={deleteDialogOpen}
+            onClose={handleDeleteCancel}
+            onConfirm={handleDeleteConfirm}
+            title="Delete Collage"
+            message={collageToDelete ? `Are you sure you want to delete "${collageToDelete.title}"?` : ''}
+            confirmText="Delete Collage"
+            cancelText="Cancel"
+            variant="danger"
+            loading={deleting}
+          />
         </Box>
       )}
     </Box>

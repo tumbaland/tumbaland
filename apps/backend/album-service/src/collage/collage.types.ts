@@ -1,4 +1,3 @@
-
 import { CollageConfig } from './collage.model';
 
 export interface CollageInput {

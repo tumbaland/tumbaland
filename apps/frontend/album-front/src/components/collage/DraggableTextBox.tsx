@@ -46,9 +46,7 @@ const DraggableTextBox: React.FC<DraggableTextBoxProps> = ({ textBoxes, setTextB
     const handleMouseMove = (e: MouseEvent) => {
       setTextBoxes((prev) =>
         prev.map((t) =>
-          t.id === dragTextId
-            ? { ...t, x: e.clientX - dragTextOffset.x, y: e.clientY - dragTextOffset.y }
-            : t
+          t.id === dragTextId ? { ...t, x: e.clientX - dragTextOffset.x, y: e.clientY - dragTextOffset.y } : t
         )
       );
     };
@@ -73,7 +71,7 @@ const DraggableTextBox: React.FC<DraggableTextBoxProps> = ({ textBoxes, setTextB
             ? {
                 ...t,
                 width: Math.max(60, resizeStart.width + (e.clientX - resizeOrigin.x)),
-                height: Math.max(32, resizeStart.height + (e.clientY - resizeOrigin.y)),
+                height: Math.max(32, resizeStart.height + (e.clientY - resizeOrigin.y))
               }
             : t
         )
@@ -110,9 +108,9 @@ const DraggableTextBox: React.FC<DraggableTextBoxProps> = ({ textBoxes, setTextB
             justifyContent: 'center',
             cursor: dragTextId === textBox.id ? 'grabbing' : resizeTextId === textBox.id ? 'nwse-resize' : 'move',
             userSelect: 'none',
-            transition: 'box-shadow 0.2s',
+            transition: 'box-shadow 0.2s'
           }}
-          onMouseDown={e => handleTextBoxMouseDown(textBox.id, e, textBox)}
+          onMouseDown={(e) => handleTextBoxMouseDown(textBox.id, e, textBox)}
           onDoubleClick={() => onDoubleClick(idx)}
         >
           <Typography
@@ -128,7 +126,7 @@ const DraggableTextBox: React.FC<DraggableTextBoxProps> = ({ textBoxes, setTextB
               whiteSpace: 'pre-line',
               fontFamily: 'inherit',
               lineHeight: 1.1,
-              fontSize: '2rem',
+              fontSize: '2rem'
             }}
           >
             {textBox.text}
@@ -144,9 +142,9 @@ const DraggableTextBox: React.FC<DraggableTextBoxProps> = ({ textBoxes, setTextB
               height: 20,
               cursor: 'nwse-resize',
               background: 'none',
-              zIndex: 10,
+              zIndex: 10
             }}
-            onMouseDown={e => handleResizeMouseDown(textBox.id, e, textBox)}
+            onMouseDown={(e) => handleResizeMouseDown(textBox.id, e, textBox)}
           />
         </Box>
       ))}

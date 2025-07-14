@@ -1,5 +1,17 @@
 import React, { useState } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  Box,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
+} from '@mui/material';
 import { Collage, CollageInput } from '../../types/collage';
 import { useAlbums } from '../../hooks/useAlbums';
 
@@ -33,10 +45,10 @@ export const CollageEditModal: React.FC<CollageEditModalProps> = ({ open, onClos
         title,
         config: {
           ...initialData.config,
-          title: { text: title, subtitle },
+          title: { text: title, subtitle }
         },
         ownerId: initialData.ownerId,
-        albumId,
+        albumId
       });
       onClose();
     } catch (e: any) {
@@ -56,10 +68,12 @@ export const CollageEditModal: React.FC<CollageEditModalProps> = ({ open, onClos
             labelId="album-edit-select-label"
             value={albumId}
             label="Album"
-            onChange={e => setAlbumId(e.target.value)}
+            onChange={(e) => setAlbumId(e.target.value)}
           >
-            {albums.map(album => (
-              <MenuItem key={album._id} value={album._id}>{album.name}</MenuItem>
+            {albums.map((album) => (
+              <MenuItem key={album._id} value={album._id}>
+                {album.name}
+              </MenuItem>
             ))}
           </Select>
         </FormControl>
@@ -69,7 +83,7 @@ export const CollageEditModal: React.FC<CollageEditModalProps> = ({ open, onClos
           label="Title"
           fullWidth
           value={title}
-          onChange={e => setTitle(e.target.value)}
+          onChange={(e) => setTitle(e.target.value)}
           disabled={loading}
         />
         <TextField
@@ -77,13 +91,19 @@ export const CollageEditModal: React.FC<CollageEditModalProps> = ({ open, onClos
           label="Subtitle"
           fullWidth
           value={subtitle}
-          onChange={e => setSubtitle(e.target.value)}
+          onChange={(e) => setSubtitle(e.target.value)}
           disabled={loading}
         />
-        {error && <Box color="error.main" mt={1}>{error}</Box>}
+        {error && (
+          <Box color="error.main" mt={1}>
+            {error}
+          </Box>
+        )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={loading}>Cancel</Button>
+        <Button onClick={onClose} disabled={loading}>
+          Cancel
+        </Button>
         <Button onClick={handleSave} variant="contained" color="primary" disabled={loading || !title || !albumId}>
           Save
         </Button>
