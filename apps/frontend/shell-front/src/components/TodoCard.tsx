@@ -156,39 +156,6 @@ export default function TodoCard() {
             </Box>
           </Fade>
 
-          {isLoading && (
-            <Box
-              sx={{
-                minHeight: 96, // Match the text container height
-                maxHeight: 96,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                width: '80%'
-              }}
-            >
-              <Box
-                sx={{
-                  fontSize: { xs: 20, sm: 24 },
-                  fontWeight: 600,
-                  color: '#ff1fae',
-                  opacity: 0.7,
-                  animation: 'pulse 1.5s ease-in-out infinite',
-                  '@keyframes pulse': {
-                    '0%, 100%': { opacity: 0.7 },
-                    '50%': { opacity: 0.3 }
-                  }
-                }}
-              >
-                Rolling...
-              </Box>
-            </Box>
-          )}
-
           <IconButton
             aria-label="Roll for new todo"
             disabled={isLoading || isRotating}
