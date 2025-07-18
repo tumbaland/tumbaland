@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.67](https://github.com/toomastahves/tumbaland/compare/v0.0.66...v0.0.67) (2025-07-18)
+
+
+### Features
+
+* add git ignore to file service ([5e94eae](https://github.com/toomastahves/tumbaland/commit/5e94eae56ccdde59a501fd99e9133e21541020b3))
+
 ### [0.0.66](https://github.com/toomastahves/tumbaland/compare/v0.0.65...v0.0.66) (2025-07-14)
 
 
