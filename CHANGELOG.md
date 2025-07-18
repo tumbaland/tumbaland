@@ -1,4 +1,13 @@
 # Tumbalog
+### [0.0.69](https://github.com/toomastahves/tumbaland/compare/v0.0.68...v0.0.69) (2025-07-18)
+
+
+### Features
+
+* add animation to todo reload button ([af98f8b](https://github.com/toomastahves/tumbaland/commit/af98f8b4971ffa243751ceac1b07573cd0f27f4d))
+* refactor photos page ([8c1cc7c](https://github.com/toomastahves/tumbaland/commit/8c1cc7c3bde311e9704cf55bc05d56a9ee4a9776))
+* setup ai view ([e442dbd](https://github.com/toomastahves/tumbaland/commit/e442dbd0fcf4ab2bd16b903723c814076008c946))
+
 ### [0.0.68](https://github.com/toomastahves/tumbaland/compare/v0.0.67...v0.0.68) (2025-07-18)
 
 
