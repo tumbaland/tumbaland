@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.68](https://github.com/toomastahves/tumbaland/compare/v0.0.67...v0.0.68) (2025-07-18)
+
+
+### Features
+
+* add gain and loss to financial records ([680a5bd](https://github.com/toomastahves/tumbaland/commit/680a5bd99021a8797ff0a3ef53c01d887e2e71d3))
+
 ### [0.0.67](https://github.com/toomastahves/tumbaland/compare/v0.0.66...v0.0.67) (2025-07-18)
 
 
