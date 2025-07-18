@@ -223,6 +223,9 @@ const FinancialRecords: React.FC = () => {
       } else if (sortBy === 'gain') {
         aVal = calcGain(a);
         bVal = calcGain(b);
+      } else if (sortBy === 'change') {
+        aVal = calcChange(a);
+        bVal = calcChange(b);
       } else {
         aVal = Number(aVal);
         bVal = Number(bVal);
@@ -231,6 +234,19 @@ const FinancialRecords: React.FC = () => {
       if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
       return 0;
     });
+  }
+
+  // Helper to calculate change compared to previous record (sorted by date)
+  function calcChange(record: any) {
+    const recordsByDate = [...records].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const currentIndex = recordsByDate.findIndex(r => (r._id || r.id) === (record._id || record.id));
+    
+    if (currentIndex <= 0) return 0; // No previous record or first record
+    
+    const currentNetWorth = calcNetWorth(record);
+    const previousNetWorth = calcNetWorth(recordsByDate[currentIndex - 1]);
+    
+    return Math.round((currentNetWorth - previousNetWorth) * 100) / 100;
   }
 
   return (
@@ -381,6 +397,15 @@ const FinancialRecords: React.FC = () => {
                     <span style={{ fontSize: '0.78em' }}>Gain</span>
                   </TableSortLabel>
                 </TableCell>
+                <TableCell align="right" sx={{ minWidth: 80 }}>
+                  <TableSortLabel
+                    active={sortBy === 'change'}
+                    direction={sortBy === 'change' ? sortOrder : 'asc'}
+                    onClick={() => handleSort('change')}
+                  >
+                    <span style={{ fontSize: '0.78em' }}>Change</span>
+                  </TableSortLabel>
+                </TableCell>
                 <TableCell align="center" sx={{ minWidth: 60 }}>
                   <span style={{ fontSize: '0.78em' }}>Actions</span>
                 </TableCell>
@@ -389,36 +414,48 @@ const FinancialRecords: React.FC = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={12}>Loading...</TableCell>
+                  <TableCell colSpan={13}>Loading...</TableCell>
                 </TableRow>
               ) : sortedRecords().length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={12}>No records found.</TableCell>
+                  <TableCell colSpan={13}>No records found.</TableCell>
                 </TableRow>
               ) : (
-                sortedRecords().map((record: any) => (
-                  <TableRow key={record._id || record.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                    <TableCell>{formatDate(record.date)}</TableCell>
-                    <TableCell align="right">{formatNumber(record.secondPillar)}</TableCell>
-                    <TableCell align="right">{formatNumber(record.secondPillarGain)}</TableCell>
-                    <TableCell align="right">{formatNumber(record.thirdPillar)}</TableCell>
-                    <TableCell align="right">{formatNumber(record.thirdPillarGain)}</TableCell>
-                    <TableCell align="right">{formatNumber(record.etfPortfolio)}</TableCell>
-                    <TableCell align="right">{formatNumber(record.etfGain)}</TableCell>
-                    <TableCell align="right">{formatNumber(record.cash)}</TableCell>
-                    <TableCell align="right">{formatNumber(record.gold)}</TableCell>
-                    <TableCell align="right">{formatNumber(calcNetWorth(record))}</TableCell>
-                    <TableCell align="right">{formatNumber(calcGain(record))}</TableCell>
-                    <TableCell align="center">
-                      <Button color="primary" size="small" onClick={() => handleEditOpen(record)}>
-                        <EditIcon />
-                      </Button>
-                      <Button color="error" size="small" onClick={() => handleDeleteClick(record._id || record.id)}>
-                        <DeleteIcon />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                sortedRecords().map((record: any) => {
+                  const change = calcChange(record);
+                  return (
+                    <TableRow key={record._id || record.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                      <TableCell>{formatDate(record.date)}</TableCell>
+                      <TableCell align="right">{formatNumber(record.secondPillar)}</TableCell>
+                      <TableCell align="right">{formatNumber(record.secondPillarGain)}</TableCell>
+                      <TableCell align="right">{formatNumber(record.thirdPillar)}</TableCell>
+                      <TableCell align="right">{formatNumber(record.thirdPillarGain)}</TableCell>
+                      <TableCell align="right">{formatNumber(record.etfPortfolio)}</TableCell>
+                      <TableCell align="right">{formatNumber(record.etfGain)}</TableCell>
+                      <TableCell align="right">{formatNumber(record.cash)}</TableCell>
+                      <TableCell align="right">{formatNumber(record.gold)}</TableCell>
+                      <TableCell align="right">{formatNumber(calcNetWorth(record))}</TableCell>
+                      <TableCell align="right">{formatNumber(calcGain(record))}</TableCell>
+                      <TableCell 
+                        align="right" 
+                        sx={{ 
+                          color: change > 0 ? 'success.main' : change < 0 ? 'error.main' : 'inherit',
+                          fontWeight: change !== 0 ? 'bold' : 'normal'
+                        }}
+                      >
+                        {change === 0 ? '-' : (change > 0 ? '+' : '') + formatNumber(change)}
+                      </TableCell>
+                      <TableCell align="center">
+                        <Button color="primary" size="small" onClick={() => handleEditOpen(record)}>
+                          <EditIcon />
+                        </Button>
+                        <Button color="error" size="small" onClick={() => handleDeleteClick(record._id || record.id)}>
+                          <DeleteIcon />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
