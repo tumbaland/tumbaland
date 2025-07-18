@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.70](https://github.com/toomastahves/tumbaland/compare/v0.0.69...v0.0.70) (2025-07-18)
+
+
+### Bug Fixes
+
+* set type ([494f831](https://github.com/toomastahves/tumbaland/commit/494f83103aefecefc81167ad1c6dbf4d7190931e))
+
 ### [0.0.69](https://github.com/toomastahves/tumbaland/compare/v0.0.68...v0.0.69) (2025-07-18)
 
 
