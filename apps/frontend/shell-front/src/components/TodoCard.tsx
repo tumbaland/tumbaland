@@ -14,7 +14,7 @@ export default function TodoCard() {
   const [todoVisible, setTodoVisible] = useState(true);
   const [currentTodo, setCurrentTodo] = useState(todo);
   const [rotationDegrees, setRotationDegrees] = useState(0);
-  const rotationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const rotationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Update current todo when new one is loaded
   useEffect(() => {
