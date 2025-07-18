@@ -1,5 +1,5 @@
-import { useCallback, useMemo } from 'react';
-import { Box } from '@mui/material';
+import { useCallback, useMemo, useState, useRef, useEffect } from 'react';
+import { Box, Fade, Paper, IconButton } from '@mui/material';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import CuteFallingStars from './CuteFallingStars';
 import WelcomeTumbaland from './WelcomeTumbaland';
@@ -10,76 +10,78 @@ import { useTodo } from '../hooks/useTodo';
 export default function TodoCard() {
   const { todo, isLoading, error, fetchTodo } = useTodo();
   const { isMobile, prefersReducedMotion } = usePerformanceOptimizations();
+  const [isRotating, setIsRotating] = useState(false);
+  const [todoVisible, setTodoVisible] = useState(true);
+  const [currentTodo, setCurrentTodo] = useState(todo);
+  const [rotationDegrees, setRotationDegrees] = useState(0);
+  const rotationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Memoize button styles to avoid recreating objects on every render
-  const buttonBaseStyle = useMemo(
-    () => ({
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      cursor: isLoading ? 'not-allowed' : 'pointer',
-      background: 'none',
-      border: 'none',
-      outline: 'none',
-      padding: 0,
-      width: 44,
-      height: 44,
-      borderRadius: '50%',
-      transition: 'background 0.18s, transform 0.1s',
-      opacity: isLoading ? 0.6 : 1
-    }),
-    [isLoading]
-  );
+  // Update current todo when new one is loaded
+  useEffect(() => {
+    if (todo && !isLoading) {
+      // Small delay to create smooth fade effect
+      const timer = setTimeout(() => {
+        setCurrentTodo(todo);
+        setTodoVisible(true);
+      }, 200);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [todo, isLoading]);
 
-  // Memoize hover handlers to avoid creating new functions on every render
-  const handleMouseOver = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>) => {
-      if (!isLoading) {
-        e.currentTarget.style.background = 'rgba(255,31,174,0.12)';
-      }
-    },
-    [isLoading]
-  );
+  // Enhanced click handler with animations
+  const handleFetchTodo = useCallback(async () => {
+    if (isLoading || isRotating) return;
 
-  const handleMouseOut = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.background = 'none';
-  }, []);
+    // Start animations
+    setIsRotating(true);
+    setTodoVisible(false);
+    setRotationDegrees(prev => prev + 360); // Always rotate forward
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>) => {
-      if (!isLoading) {
-        e.currentTarget.style.transform = 'scale(0.92)';
-      }
-    },
-    [isLoading]
-  );
+    // Clear any existing timeout
+    if (rotationTimeoutRef.current) {
+      clearTimeout(rotationTimeoutRef.current);
+    }
 
-  const handleMouseUp = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.transform = 'scale(1)';
-  }, []);
+    // Fetch new todo
+    await fetchTodo();
 
-  // Memoize card styles with mobile-optimized backdrop filter
+    // Stop rotation after animation duration
+    rotationTimeoutRef.current = setTimeout(() => {
+      setIsRotating(false);
+    }, 300);
+  }, [isLoading, isRotating, fetchTodo]);
+
+  // Enhanced card design with glassmorphism effect
   const cardStyle = useMemo(
     () => ({
       position: 'relative' as const,
       zIndex: 1,
-      bgcolor: 'rgba(255,255,255,0.18)',
-      p: 4,
+      // Modern glassmorphism gradient
+      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.12))',
+      p: { xs: 3, sm: 4 },
       borderRadius: 4,
-      boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.18)',
-      minWidth: 340,
-      maxWidth: 400,
+      boxShadow: '0 25px 50px 0 rgba(31, 38, 135, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.4)',
+      minWidth: { xs: 320, sm: 380 },
+      maxWidth: 420,
+      minHeight: 200,
       textAlign: 'center' as const,
       display: 'flex',
       flexDirection: 'column' as const,
       alignItems: 'center',
-      gap: 2,
-      // Reduce backdrop filter intensity on mobile for better performance
-      backdropFilter: isMobile ? 'blur(4px) saturate(140%)' : 'blur(8px) saturate(160%)',
-      WebkitBackdropFilter: isMobile ? 'blur(4px) saturate(140%)' : 'blur(8px) saturate(160%)',
-      border: '1.5px solid rgba(255,255,255,0.32)',
-      // Add transform3d to enable hardware acceleration
-      transform: 'translate3d(0, 0, 0)'
+      justifyContent: 'center',
+      gap: 3,
+      // Enhanced backdrop filter for better blur effect
+      backdropFilter: isMobile ? 'blur(15px) saturate(180%)' : 'blur(25px) saturate(200%)',
+      WebkitBackdropFilter: isMobile ? 'blur(15px) saturate(180%)' : 'blur(25px) saturate(200%)',
+      border: '1px solid rgba(255, 255, 255, 0.3)',
+      transform: 'translate3d(0, 0, 0)',
+      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+      '&:hover': {
+        transform: 'translate3d(0, -6px, 0) scale(1.02)',
+        boxShadow: '0 35px 70px 0 rgba(31, 38, 135, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.5)',
+        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.15))'
+      }
     }),
     [isMobile]
   );
@@ -91,11 +93,18 @@ export default function TodoCard() {
     return 24;
   }, [isMobile, prefersReducedMotion]);
 
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      if (rotationTimeoutRef.current) {
+        clearTimeout(rotationTimeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <>
-      {/* Conditionally render particles based on performance preferences */}
       {particleCount > 0 && <CuteFallingStars count={particleCount} />}
-      {/* Main content */}
       <Box
         sx={{
           minHeight: '100vh',
@@ -106,45 +115,114 @@ export default function TodoCard() {
           alignItems: 'center',
           justifyContent: 'center',
           flexDirection: 'column',
-          // Enable hardware acceleration
           transform: 'translate3d(0, 0, 0)'
         }}
       >
         <WelcomeTumbaland />
         <BgImageBox />
-        <Box sx={cardStyle}>
-          <p
-            style={{
-              fontSize: 22,
-              fontWeight: 500,
-              color: error ? '#ff4444' : '#ff1fae',
-              margin: '24px 0 16px 0',
-              minHeight: 48
+        <Paper sx={cardStyle} elevation={0}>
+          <Fade in={todoVisible && !isLoading} timeout={400}>
+            <Box
+              sx={{
+                minHeight: 96, // Fixed height for 3 lines of text
+                maxHeight: 96, // Prevent growing beyond 3 lines
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden' // Prevent text overflow
+              }}
+            >
+              <Box
+                component="p"
+                sx={{
+                  fontSize: { xs: 20, sm: 24 },
+                  fontWeight: 300,
+                  color: error ? '#ff6b6b' : '#ff1fae',
+                  margin: 0,
+                  lineHeight: 1.4,
+                  textShadow: '0 2px 8px rgba(255, 31, 174, 0.3)',
+                  transition: 'all 0.3s ease',
+                  px: 2,
+                  textAlign: 'center',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 3, // Limit to 3 lines
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+              >
+                {error ? 'Failed to load todo' : currentTodo || 'Loading...'}
+              </Box>
+            </Box>
+          </Fade>
+
+          {isLoading && (
+            <Box
+              sx={{
+                minHeight: 96, // Match the text container height
+                maxHeight: 96,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '80%'
+              }}
+            >
+              <Box
+                sx={{
+                  fontSize: { xs: 20, sm: 24 },
+                  fontWeight: 600,
+                  color: '#ff1fae',
+                  opacity: 0.7,
+                  animation: 'pulse 1.5s ease-in-out infinite',
+                  '@keyframes pulse': {
+                    '0%, 100%': { opacity: 0.7 },
+                    '50%': { opacity: 0.3 }
+                  }
+                }}
+              >
+                Rolling...
+              </Box>
+            </Box>
+          )}
+
+          <IconButton
+            aria-label="Roll for new todo"
+            disabled={isLoading || isRotating}
+            onClick={handleFetchTodo}
+            sx={{
+              width: 56,
+              height: 56,
+              border: '2px solid rgba(255, 31, 174, 0.3)',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                border: '2px solid rgba(255, 31, 174, 0.5)',
+                transform: 'scale(1.05)',
+                boxShadow: '0 8px 20px rgba(255, 31, 174, 0.4)'
+              },
+              '&:active': {
+                transform: 'scale(0.95)'
+              },
+              '&:disabled': {
+                opacity: 0.6,
+                cursor: 'not-allowed'
+              }
             }}
           >
-            {isLoading ? 'Rolling...' : error ? 'Failed to load todo' : todo || 'Loading...'}
-          </p>
-          <button
-            aria-label="Roll for new todo"
-            disabled={isLoading}
-            onClick={fetchTodo}
-            style={buttonBaseStyle}
-            onMouseOver={handleMouseOver}
-            onMouseOut={handleMouseOut}
-            onMouseDown={handleMouseDown}
-            onMouseUp={handleMouseUp}
-          >
             <AutorenewIcon
-              style={{
+              sx={{
                 fontSize: 32,
                 color: '#ff1fae',
-                filter: 'drop-shadow(0 2px 6px #ff1fae33)',
-                transform: isLoading ? 'rotate(360deg)' : 'none',
-                transition: prefersReducedMotion ? 'none' : 'transform 0.6s ease-in-out'
+                filter: 'drop-shadow(0 2px 8px rgba(255, 31, 174, 0.4))',
+                transform: `rotate(${rotationDegrees}deg)`,
+                transition: prefersReducedMotion ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
               }}
             />
-          </button>
-        </Box>
+          </IconButton>
+        </Paper>
       </Box>
     </>
   );
