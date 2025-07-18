@@ -22,6 +22,7 @@ interface PhotosGridProps {
   onEditPhoto: (photo: Photo) => void;
   onDeletePhoto: (photo: Photo) => void;
   onSetCoverPhoto: (photo: Photo) => void;
+  onViewPhotoDetails: (photo: Photo) => void;
   onUploadPhotos: () => void;
 }
 
@@ -35,6 +36,7 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
   onEditPhoto,
   onDeletePhoto,
   onSetCoverPhoto,
+  onViewPhotoDetails,
   onUploadPhotos
 }) => {
   // Error Alert
@@ -101,6 +103,7 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
             onEdit={onEditPhoto}
             onDelete={onDeletePhoto}
             onSetCover={onSetCoverPhoto}
+            onViewDetails={onViewPhotoDetails}
             isCoverPhoto={album?.coverPhotoId === photo._id}
           />
         </Box>

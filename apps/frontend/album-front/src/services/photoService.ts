@@ -65,5 +65,5 @@ export const photoService = {
         'Content-Type': file.type
       }
     });
-  }
+  },
 };

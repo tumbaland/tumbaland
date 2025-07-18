@@ -9,10 +9,19 @@ interface PhotoCardProps {
   onEdit?: (photo: Photo) => void;
   onDelete?: (photo: Photo) => void;
   onSetCover?: (photo: Photo) => void;
+  onViewDetails?: (photo: Photo) => void;
   isCoverPhoto?: boolean;
 }
 
-const PhotoCard: React.FC<PhotoCardProps> = ({ photo, onView, onEdit, onDelete, onSetCover, isCoverPhoto = false }) => {
+const PhotoCard: React.FC<PhotoCardProps> = ({ 
+  photo, 
+  onView, 
+  onEdit, 
+  onDelete, 
+  onSetCover, 
+  onViewDetails,
+  isCoverPhoto = false 
+}) => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
@@ -37,6 +46,11 @@ const PhotoCard: React.FC<PhotoCardProps> = ({ photo, onView, onEdit, onDelete, 
 
   const handleSetCover = () => {
     if (onSetCover) onSetCover(photo);
+    handleMenuClose();
+  };
+
+  const handleViewDetails = () => {
+    if (onViewDetails) onViewDetails(photo);
     handleMenuClose();
   };
 
@@ -172,6 +186,7 @@ const PhotoCard: React.FC<PhotoCardProps> = ({ photo, onView, onEdit, onDelete, 
         )}
       </CardContent>{' '}
       <Menu anchorEl={anchorEl} open={open} onClose={handleMenuClose} onClick={(e) => e.stopPropagation()}>
+        {onViewDetails && <MenuItem onClick={handleViewDetails}>View Details</MenuItem>}
         {onSetCover && !isCoverPhoto && <MenuItem onClick={handleSetCover}>Set as Cover Photo</MenuItem>}
         {onEdit && <MenuItem onClick={handleEdit}>Edit Photo</MenuItem>}
         {onDelete && <MenuItem onClick={handleDelete}>Delete Photo</MenuItem>}

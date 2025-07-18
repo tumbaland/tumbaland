@@ -134,6 +134,10 @@ const AlbumDetailPage: React.FC = () => {
     }
   };
 
+  const handleViewPhotoDetails = (photo: Photo) => {
+    navigate(`/albums/${albumId}/photos/${photo._id}`);
+  };
+
   const handleUploadComplete = () => {
     fetchPhotos();
   };
@@ -203,6 +207,7 @@ const AlbumDetailPage: React.FC = () => {
         onEditPhoto={handleEditPhoto}
         onDeletePhoto={handleDeletePhoto}
         onSetCoverPhoto={handleSetCoverPhoto}
+        onViewPhotoDetails={handleViewPhotoDetails}
         onUploadPhotos={() => setShowUploadDialog(true)}
       />
 
