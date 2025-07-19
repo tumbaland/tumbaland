@@ -168,7 +168,7 @@ const fetchPhotoFile = async (photoId: string): Promise<Blob> => {
     const photo = photoResponse.data;
     
     // Use the file service URL pattern from backend
-    const FILE_API_URL = import.meta.env.VITE_FILE_API_URL;
+    const FILE_API_URL = getConfig().FILE_API_URL;
     const fileUrl = `${FILE_API_URL}/api/serve/${photo.fileId}`;
     
     const controller = new AbortController();
