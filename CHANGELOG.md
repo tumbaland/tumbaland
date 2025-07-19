@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.76](https://github.com/toomastahves/tumbaland/compare/v0.0.75...v0.0.76) (2025-07-19)
+
+
+### Bug Fixes
+
+* zombies ([7fc0062](https://github.com/toomastahves/tumbaland/commit/7fc0062021a84759588e8336cceab7b45d72de28))
+
 ### [0.0.75](https://github.com/toomastahves/tumbaland/compare/v0.0.74...v0.0.75) (2025-07-19)
 
 
