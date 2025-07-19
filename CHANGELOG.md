@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.71](https://github.com/toomastahves/tumbaland/compare/v0.0.70...v0.0.71) (2025-07-18)
+
+
+### Features
+
+* remove rolling ([f06a99d](https://github.com/toomastahves/tumbaland/commit/f06a99dd7b9c85e43fef32ecbc30fdc00eef331e))
+
 ### [0.0.70](https://github.com/toomastahves/tumbaland/compare/v0.0.69...v0.0.70) (2025-07-18)
 
 
