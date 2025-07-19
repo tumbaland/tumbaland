@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.72](https://github.com/toomastahves/tumbaland/compare/v0.0.71...v0.0.72) (2025-07-19)
+
+
+### Features
+
+* use segmentation service and object detection service ([609f9f9](https://github.com/toomastahves/tumbaland/commit/609f9f94e82dac3ab803f6b5102c1e9c51b4f761))
+
 ### [0.0.71](https://github.com/toomastahves/tumbaland/compare/v0.0.70...v0.0.71) (2025-07-18)
 
 
