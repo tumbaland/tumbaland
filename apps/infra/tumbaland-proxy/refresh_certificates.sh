@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Domains to generate certs for (space-separated)
-DOMAINS="tumbaland.eu api.tumbaland.eu album.tumbaland.eu album-api.tumbaland.eu relationship.tumbaland.eu relationship-api.tumbaland.eu finance.tumbaland.eu finance-api.tumbaland.eu auth.tumbaland.eu auth-api.tumbaland.eu file-api.tumbaland.eu"
+DOMAINS="tumbaland.eu api.tumbaland.eu album.tumbaland.eu album-api.tumbaland.eu relationship.tumbaland.eu relationship-api.tumbaland.eu finance.tumbaland.eu finance-api.tumbaland.eu auth.tumbaland.eu auth-api.tumbaland.eu file-api.tumbaland.eu object-detection-api.tumbaland.eu segmentation-api.tumbaland.eu "
 
 EMAIL="toomastahves@hotmail.com"  # CHANGE THIS
 WEBROOT="/usr/share/nginx/html"  # Nginx must be running and serving this path
