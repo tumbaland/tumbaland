@@ -159,6 +159,8 @@ jobs:
           echo "VITE_FINANCE_URL=${{ vars.VITE_FINANCE_URL }}" >> .env
           echo "VITE_RELATIONSHIP_API_URL=${{ vars.VITE_RELATIONSHIP_API_URL }}" >> .env
           echo "VITE_PUBLIC_API_URL=${{ vars.VITE_PUBLIC_API_URL }}" >> .env
+          echo "VITE_OBJECT_DETECTION_API_URL=${{ vars.VITE_OBJECT_DETECTION_API_URL }}" >> .env
+          echo "VITE_SEGMENTATION_API_URL=${{ vars.VITE_SEGMENTATION_API_URL }}" >> .env
 
       - name: Copy .env file to server
         uses: appleboy/scp-action@v0.1.7
