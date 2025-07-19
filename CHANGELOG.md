@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.73](https://github.com/toomastahves/tumbaland/compare/v0.0.72...v0.0.73) (2025-07-19)
+
+
+### Bug Fixes
+
+* config generation ([a827e32](https://github.com/toomastahves/tumbaland/commit/a827e32d360b05fa8e38feb3b6f1e8801b418d43))
+
 ### [0.0.72](https://github.com/toomastahves/tumbaland/compare/v0.0.71...v0.0.72) (2025-07-19)
 
 
