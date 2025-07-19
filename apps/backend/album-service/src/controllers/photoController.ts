@@ -315,3 +315,136 @@ export const getUploadSignedUrlRequest = async (req: Request, res: Response): Pr
     });
   }
 };
+
+// Update photo with AI analysis results
+export const updatePhotoAIAnalysis = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { analysisType, resultId, totalDetections, totalMasks, segmentationType, processingTime } = req.body;
+
+    // Validate required fields
+    if (!analysisType || !resultId || processingTime === undefined) {
+      res.status(400).json({
+        success: false,
+        message: 'Missing required fields: analysisType, resultId, processingTime'
+      });
+      return;
+    }
+
+    // Validate analysis type
+    if (!['objectDetection', 'segmentation'].includes(analysisType)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid analysis type. Must be "objectDetection" or "segmentation"'
+      });
+      return;
+    }
+
+    const photo = await Photo.findById(id);
+    if (!photo) {
+      res.status(404).json({
+        success: false,
+        message: 'Photo not found'
+      });
+      return;
+    }
+
+    // Initialize aiAnalysis if it doesn't exist
+    if (!photo.aiAnalysis) {
+      photo.aiAnalysis = {};
+    }
+
+    // Update the specific analysis type
+    if (analysisType === 'objectDetection') {
+      photo.aiAnalysis.objectDetection = {
+        resultId,
+        analyzedAt: new Date(),
+        totalDetections: totalDetections || 0,
+        processingTime
+      };
+    } else if (analysisType === 'segmentation') {
+      photo.aiAnalysis.segmentation = {
+        resultId,
+        analyzedAt: new Date(),
+        totalMasks: totalMasks || 0,
+        segmentationType: segmentationType || 'automatic',
+        processingTime
+      };
+    }
+
+    await photo.save();
+
+    res.json({
+      success: true,
+      data: photo
+    });
+  } catch (error) {
+    console.error('Error updating photo AI analysis:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update photo AI analysis'
+    });
+  }
+};
+
+// Get photos that need AI analysis
+export const getPhotosForAIAnalysis = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { albumId } = req.params;
+    const { analysisType, page = 1, limit = 20 } = req.query;
+
+    // Validate analysis type
+    if (analysisType && !['objectDetection', 'segmentation'].includes(analysisType as string)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid analysis type. Must be "objectDetection" or "segmentation"'
+      });
+      return;
+    }
+
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Build query to find photos without specific AI analysis
+    let query: any = { albumId };
+
+    if (analysisType === 'objectDetection') {
+      query['aiAnalysis.objectDetection.resultId'] = { $exists: false };
+    } else if (analysisType === 'segmentation') {
+      query['aiAnalysis.segmentation.resultId'] = { $exists: false };
+    } else {
+      // Find photos without any AI analysis
+      query.$or = [
+        { 'aiAnalysis.objectDetection.resultId': { $exists: false } },
+        { 'aiAnalysis.segmentation.resultId': { $exists: false } }
+      ];
+    }
+
+    const [photos, total] = await Promise.all([
+      Photo.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .populate('albumId', 'name'),
+      Photo.countDocuments(query)
+    ]);
+
+    res.json({
+      success: true,
+      data: photos,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum)
+      }
+    });
+  } catch (error) {
+    console.error('Error getting photos for AI analysis:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get photos for AI analysis'
+    });
+  }
+};

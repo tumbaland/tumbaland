@@ -23,9 +23,9 @@ import {
   Delete as DeleteIcon,
   Download as DownloadIcon,
   Share as ShareIcon,
-  Analytics as AnalyticsIcon,
-  Label as LabelIcon,
-  PhotoLibrary as PhotoLibraryIcon
+  SmartToy as SmartToyIcon,
+  ViewInAr as ViewInArIcon,
+  Info as InfoIcon
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Photo, Album } from '../types';
@@ -33,7 +33,9 @@ import { albumService } from '../services/albumService';
 import { photoService } from '../services/photoService';
 import EditPhotoDialog from '../components/EditPhotoDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { aiService } from '../services/aiService';
+import { aiService, AIServiceError, HealthStatus, ObjectDetectionResult, SegmentationResult } from '../services/aiService';
+import ObjectDetectionView from '../components/ObjectDetectionView';
+import SegmentationView from '../components/SegmentationView';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -67,12 +69,26 @@ const PhotoDetailPage: React.FC = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [tabValue, setTabValue] = useState(0);
+  const [tabValue, setTabValue] = useState(0); // Start with Basic Info tab
 
   // ML Analysis states
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analyzingType, setAnalyzingType] = useState<string | null>(null);
   const [analysisResults, setAnalysisResults] = useState<any>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
+  const [checkingHealth, setCheckingHealth] = useState(false);
+  
+  // Detailed results states
+  const [detailedResults, setDetailedResults] = useState<{
+    objectDetection?: ObjectDetectionResult;
+    segmentation?: SegmentationResult;
+  } | null>(null);
+  const [loadingDetails, setLoadingDetails] = useState<string | null>(null);
+  const [fetchAttempted, setFetchAttempted] = useState<{
+    objectDetection?: boolean;
+    segmentation?: boolean;
+  }>({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -140,40 +156,150 @@ const PhotoDetailPage: React.FC = () => {
     if (!photo) return;
 
     setIsAnalyzing(true);
+    setAnalyzingType(analysisType);
     setAnalysisError(null);
+    // Clear any existing detailed results for this analysis type
+    if (analysisType === 'detection') {
+      setDetailedResults(prev => ({ ...prev, objectDetection: undefined }));
+      setFetchAttempted(prev => ({ ...prev, objectDetection: false }));
+    } else if (analysisType === 'segmentation') {
+      setDetailedResults(prev => ({ ...prev, segmentation: undefined }));
+      setFetchAttempted(prev => ({ ...prev, segmentation: false }));
+    }
     
     try {
       let response;
       
       switch (analysisType) {
-        case 'classification':
-          response = await aiService.runImageClassification(photo._id);
-          break;
         case 'detection':
-          response = await aiService.runObjectDetection(photo._id);
+          response = await aiService.detectObjects(photo._id, {
+            confidenceThreshold: 0.25,
+            createVisualization: true
+          });
+          // Update photo with AI analysis reference
+          if (response.success) {
+            await photoService.updatePhotoAIAnalysis(photo._id, {
+              analysisType: 'objectDetection',
+              resultId: response.result_id,
+              totalDetections: response.total_detections,
+              processingTime: response.processing_time
+            });
+          }
           break;
         case 'segmentation':
-          response = await aiService.runSemanticSegmentation(photo._id);
-          break;
-        case 'tagging':
-          response = await aiService.generateAutoTags(photo._id);
+          response = await aiService.segmentImage(photo._id, {
+            multimaskOutput: true
+          });
+          // Update photo with AI analysis reference
+          if (response.success) {
+            await photoService.updatePhotoAIAnalysis(photo._id, {
+              analysisType: 'segmentation',
+              resultId: response.result_id,
+              totalMasks: response.total_masks,
+              segmentationType: response.segmentation_type,
+              processingTime: response.processing_time
+            });
+          }
           break;
         default:
-          throw new Error(`Unknown analysis type: ${analysisType}`);
+          throw new Error(`Analysis type "${analysisType}" is not yet implemented`);
       }
       
       setAnalysisResults({
         type: analysisType,
         timestamp: new Date().toISOString(),
-        results: response.data
+        results: response
       });
+
+      // Refresh photo data to get updated AI analysis
+      const updatedPhoto = await photoService.getPhotoById(photo._id);
+      setPhoto(updatedPhoto.data);
+      
     } catch (err) {
-      setAnalysisError(`Failed to run ${analysisType} analysis`);
+      if (err instanceof AIServiceError) {
+        setAnalysisError(`${err.service} service error: ${err.message}`);
+      } else {
+        setAnalysisError(`Failed to run ${analysisType} analysis: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      }
       console.error(`${analysisType} analysis error:`, err);
     } finally {
       setIsAnalyzing(false);
+      setAnalyzingType(null);
     }
   };
+
+  const fetchDetailedResults = async (analysisType: 'objectDetection' | 'segmentation', resultId: string) => {
+    setLoadingDetails(analysisType);
+    setAnalysisError(null);
+    
+    // Mark that we've attempted to fetch this result
+    setFetchAttempted(prev => ({ ...prev, [analysisType]: true }));
+    
+    try {
+      if (analysisType === 'objectDetection') {
+        const result = await aiService.getObjectDetectionResult(resultId);
+        setDetailedResults(prev => ({ ...prev, objectDetection: result }));
+      } else if (analysisType === 'segmentation') {
+        const result = await aiService.getSegmentationResult(resultId);
+        setDetailedResults(prev => ({ ...prev, segmentation: result }));
+      }
+    } catch (err) {
+      // Just log the error and set a simple error message
+      console.error('Error fetching detailed results:', err);
+      setAnalysisError(`Unable to load detailed analysis results. The results may no longer be available.`);
+    } finally {
+      setLoadingDetails(null);
+    }
+  };
+
+  const handleRunObjectDetection = async () => {
+    await handleRunAnalysis('detection');
+  };
+
+  const handleRunSegmentation = async () => {
+    await handleRunAnalysis('segmentation');
+  };
+
+  const checkServicesHealth = async () => {
+    setCheckingHealth(true);
+    try {
+      const health = await aiService.checkAllServicesHealth();
+      setHealthStatus(health);
+    } catch (err) {
+      console.error('Health check failed:', err);
+      setHealthStatus({
+        segmentation: false,
+        objectDetection: false,
+        lastChecked: new Date()
+      });
+    } finally {
+      setCheckingHealth(false);
+    }
+  };
+
+  // Check health when component mounts
+  useEffect(() => {
+    checkServicesHealth();
+  }, []);
+
+  // Auto-fetch detailed results when photo analysis data is available
+  useEffect(() => {
+    if (photo?.aiAnalysis?.objectDetection?.resultId && 
+        !detailedResults?.objectDetection && 
+        loadingDetails !== 'objectDetection' &&
+        !fetchAttempted.objectDetection) {
+      fetchDetailedResults('objectDetection', photo.aiAnalysis.objectDetection.resultId);
+    }
+  }, [photo?.aiAnalysis?.objectDetection?.resultId, detailedResults?.objectDetection, loadingDetails, fetchAttempted.objectDetection]);
+
+  useEffect(() => {
+    if (photo?.aiAnalysis?.segmentation?.resultId && 
+        !detailedResults?.segmentation && 
+        loadingDetails !== 'segmentation' &&
+        !fetchAttempted.segmentation) {
+      fetchDetailedResults('segmentation', photo.aiAnalysis.segmentation.resultId);
+    }
+  }, [photo?.aiAnalysis?.segmentation?.resultId, detailedResults?.segmentation, loadingDetails, fetchAttempted.segmentation]);
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -281,207 +407,208 @@ const PhotoDetailPage: React.FC = () => {
         </Box>
       </Box>
 
-      <Box sx={{ display: 'flex', gap: 4, flexDirection: { xs: 'column', md: 'row' } }}>
-        {/* Photo Display */}
-        <Box sx={{ flex: 2 }}>
-          <Paper elevation={2} sx={{ p: 2, mb: 3 }}>
-            <Box
-              component="img"
-              src={photo.signedUrl}
-              alt={photo.title || photo.originalName}
-              sx={{
-                width: '100%',
-                height: 'auto',
-                maxHeight: '70vh',
-                objectFit: 'contain',
-                borderRadius: 1
-              }}
-            />
-          </Paper>
-        </Box>
-
-        {/* Photo Details Sidebar */}
-        <Box sx={{ flex: 1 }}>
-          <Paper elevation={2} sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Photo Details
-            </Typography>
-            
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                Description
-              </Typography>
-              <Typography variant="body1">
-                {photo.description || 'No description'}
-              </Typography>
-            </Box>
-
-            <Divider sx={{ my: 2 }} />
-
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" color="text.secondary">
-                File Size
-              </Typography>
-              <Typography variant="body1">
-                {formatFileSize(photo.size)}
-              </Typography>
-            </Box>
-
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" color="text.secondary">
-                Dimensions
-              </Typography>
-              <Typography variant="body1">
-                {photo.width && photo.height ? `${photo.width} × ${photo.height}` : 'Unknown'}
-              </Typography>
-            </Box>
-
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" color="text.secondary">
-                Upload Date
-              </Typography>
-              <Typography variant="body1">
-                {formatDate(photo.createdAt)}
-              </Typography>
-            </Box>
-
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="body2" color="text.secondary">
-                Original Name
-              </Typography>
-              <Typography variant="body1" sx={{ wordBreak: 'break-all' }}>
-                {photo.originalName}
-              </Typography>
-            </Box>
-
-            {photo.tags && photo.tags.length > 0 && (
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Tags
-                </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                  {photo.tags.map((tag, index) => (
-                    <Chip key={index} label={tag} size="small" variant="outlined" />
-                  ))}
-                </Box>
-              </Box>
-            )}
-          </Paper>
-        </Box>
-      </Box>
-
-      {/* ML Analysis Section */}
-      <Box sx={{ mt: 4 }}>
+      {/* Main Content with Tabs */}
+      <Box>
         <Paper elevation={2}>
+          {/* Header */}
+          <Box>
+            {analysisResults && (
+              <Card variant="outlined" sx={{ mb: 2 }}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    Latest Analysis Results ({analysisResults.type})
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Completed at: {formatDate(analysisResults.timestamp)}
+                  </Typography>
+                  
+                  {analysisResults.results.success && (
+                    <Box>
+                      <Typography variant="body1" gutterBottom>
+                        Analysis completed successfully!
+                      </Typography>
+                      
+                      {analysisResults.type === 'detection' && (
+                        <Box>
+                          <Typography variant="body2">
+                            • Found {analysisResults.results.total_detections} objects
+                          </Typography>
+                          <Typography variant="body2">
+                            • Processing time: {analysisResults.results.processing_time?.toFixed(2)}s
+                          </Typography>
+                          <Typography variant="body2">
+                            • Image dimensions: {analysisResults.results.image_dimensions?.width} × {analysisResults.results.image_dimensions?.height}
+                          </Typography>
+                        </Box>
+                      )}
+                      
+                      {analysisResults.type === 'segmentation' && (
+                        <Box>
+                          <Typography variant="body2">
+                            • Generated {analysisResults.results.total_masks} masks
+                          </Typography>
+                          <Typography variant="body2">
+                            • Segmentation type: {analysisResults.results.segmentation_type}
+                          </Typography>
+                          <Typography variant="body2">
+                            • Processing time: {analysisResults.results.processing_time?.toFixed(2)}s
+                          </Typography>
+                          <Typography variant="body2">
+                            • Image dimensions: {analysisResults.results.image_dimensions?.width} × {analysisResults.results.image_dimensions?.height}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </Box>
+
+          {/* Main Tabs */}
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
             <Tabs value={tabValue} onChange={handleTabChange}>
               <Tab 
                 label="Basic Info" 
-                icon={<PhotoLibraryIcon />} 
+                icon={<InfoIcon />} 
                 iconPosition="start"
               />
               <Tab 
-                label="AI Analysis" 
-                icon={<AnalyticsIcon />} 
+                label="Object Detection" 
+                icon={<SmartToyIcon />} 
                 iconPosition="start"
               />
               <Tab 
-                label="Auto Tagging" 
-                icon={<LabelIcon />} 
+                label="Segmentation" 
+                icon={<ViewInArIcon />} 
                 iconPosition="start"
               />
             </Tabs>
           </Box>
 
           <TabPanel value={tabValue} index={0}>
-            <Typography variant="h6" gutterBottom>
-              Basic Information
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              This section shows the basic metadata and EXIF data of the photo.
-            </Typography>
-            {/* TODO: Add EXIF data display */}
+            {/* Basic Info - Photo and Details Combined */}
+            <Box sx={{ display: 'flex', gap: 4, flexDirection: { xs: 'column', md: 'row' } }}>
+              {/* Photo Display */}
+              <Box sx={{ flex: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                  Photo
+                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
+                  <Box
+                    component="img"
+                    src={photo.signedUrl}
+                    alt={photo.title || photo.originalName}
+                    sx={{
+                      width: '100%',
+                      height: 'auto',
+                      maxHeight: '70vh',
+                      objectFit: 'contain',
+                      borderRadius: 1
+                    }}
+                  />
+                </Box>
+              </Box>
+
+              {/* Photo Details */}
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="h6" gutterBottom>
+                  Details
+                </Typography>
+                
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Description
+                  </Typography>
+                  <Typography variant="body1">
+                    {photo.description || 'No description'}
+                  </Typography>
+                </Box>
+
+                <Divider sx={{ my: 2 }} />
+
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    File Size
+                  </Typography>
+                  <Typography variant="body1">
+                    {formatFileSize(photo.size)}
+                  </Typography>
+                </Box>
+
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Dimensions
+                  </Typography>
+                  <Typography variant="body1">
+                    {photo.width && photo.height ? `${photo.width} × ${photo.height}` : 'Unknown'}
+                  </Typography>
+                </Box>
+
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Upload Date
+                  </Typography>
+                  <Typography variant="body1">
+                    {formatDate(photo.createdAt)}
+                  </Typography>
+                </Box>
+
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Original Name
+                  </Typography>
+                  <Typography variant="body1" sx={{ wordBreak: 'break-all' }}>
+                    {photo.originalName}
+                  </Typography>
+                </Box>
+
+                {photo.tags && photo.tags.length > 0 && (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Tags
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {photo.tags.map((tag, index) => (
+                        <Chip key={index} label={tag} size="small" variant="outlined" />
+                      ))}
+                    </Box>
+                  </Box>
+                )}
+              </Box>
+            </Box>
           </TabPanel>
 
           <TabPanel value={tabValue} index={1}>
-            <Typography variant="h6" gutterBottom>
-              AI-Powered Image Analysis
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Run machine learning analysis on this image for classification, object detection, and semantic segmentation.
-            </Typography>
-            
-            <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-              <Button
-                variant="contained"
-                onClick={() => handleRunAnalysis('classification')}
-                disabled={isAnalyzing}
-              >
-                Image Classification
-              </Button>
-              <Button
-                variant="contained"
-                onClick={() => handleRunAnalysis('detection')}
-                disabled={isAnalyzing}
-              >
-                Object Detection
-              </Button>
-              <Button
-                variant="contained"
-                onClick={() => handleRunAnalysis('segmentation')}
-                disabled={isAnalyzing}
-              >
-                Semantic Segmentation
-              </Button>
-            </Box>
-
-            {isAnalyzing && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                <CircularProgress size={24} />
-                <Typography>Running analysis...</Typography>
-              </Box>
-            )}
-
-            {analysisError && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {analysisError}
-              </Alert>
-            )}
-
-            {analysisResults && (
-              <Card variant="outlined">
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Analysis Results ({analysisResults.type})
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Completed at: {formatDate(analysisResults.timestamp)}
-                  </Typography>
-                  <Typography variant="body1">
-                    {analysisResults.results}
-                  </Typography>
-                </CardContent>
-              </Card>
-            )}
+            <ObjectDetectionView
+              photo={photo}
+              detailedResults={detailedResults?.objectDetection}
+              loadingDetails={loadingDetails}
+              analysisError={analysisError}
+              healthStatus={healthStatus}
+              checkingHealth={checkingHealth}
+              isAnalyzing={isAnalyzing && analyzingType === 'detection'}
+              onClearDetails={() => setDetailedResults(prev => ({ ...prev, objectDetection: undefined }))}
+              onRunAnalysis={handleRunObjectDetection}
+              onCheckHealth={checkServicesHealth}
+              formatDate={formatDate}
+            />
           </TabPanel>
 
           <TabPanel value={tabValue} index={2}>
-            <Typography variant="h6" gutterBottom>
-              Automatic Tagging
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Generate automatic tags based on image content using computer vision.
-            </Typography>
-            
-            <Button
-              variant="contained"
-              onClick={() => handleRunAnalysis('tagging')}
-              disabled={isAnalyzing}
-            >
-              Generate Auto Tags
-            </Button>
-            
-            {/* TODO: Display generated tags */}
+            <SegmentationView
+              photo={photo}
+              detailedResults={detailedResults?.segmentation}
+              loadingDetails={loadingDetails}
+              analysisError={analysisError}
+              healthStatus={healthStatus}
+              checkingHealth={checkingHealth}
+              isAnalyzing={isAnalyzing && analyzingType === 'segmentation'}
+              onClearDetails={() => setDetailedResults(prev => ({ ...prev, segmentation: undefined }))}
+              onRunAnalysis={handleRunSegmentation}
+              onCheckHealth={checkServicesHealth}
+              formatDate={formatDate}
+            />
           </TabPanel>
         </Paper>
       </Box>

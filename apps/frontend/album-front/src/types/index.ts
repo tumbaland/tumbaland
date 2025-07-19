@@ -43,6 +43,21 @@ export interface Photo {
       };
     };
   };
+  aiAnalysis?: {
+    objectDetection?: {
+      resultId: string;
+      analyzedAt: string;
+      totalDetections: number;
+      processingTime: number;
+    };
+    segmentation?: {
+      resultId: string;
+      analyzedAt: string;
+      totalMasks: number;
+      segmentationType: 'prompted' | 'automatic';
+      processingTime: number;
+    };
+  };
   createdAt: string;
   updatedAt: string;
 }

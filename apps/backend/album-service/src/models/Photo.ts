@@ -30,6 +30,21 @@ export interface IPhoto extends Document {
       };
     };
   };
+  aiAnalysis?: {
+    objectDetection?: {
+      resultId: string;
+      analyzedAt: Date;
+      totalDetections: number;
+      processingTime: number;
+    };
+    segmentation?: {
+      resultId: string;
+      analyzedAt: Date;
+      totalMasks: number;
+      segmentationType: 'prompted' | 'automatic';
+      processingTime: number;
+    };
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -95,6 +110,49 @@ const PhotoSchema: Schema = new Schema(
           aperture: String,
           shutterSpeed: String,
           focalLength: String
+        }
+      }
+    },
+    aiAnalysis: {
+      objectDetection: {
+        resultId: {
+          type: String,
+          required: false
+        },
+        analyzedAt: {
+          type: Date,
+          required: false
+        },
+        totalDetections: {
+          type: Number,
+          required: false
+        },
+        processingTime: {
+          type: Number,
+          required: false
+        }
+      },
+      segmentation: {
+        resultId: {
+          type: String,
+          required: false
+        },
+        analyzedAt: {
+          type: Date,
+          required: false
+        },
+        totalMasks: {
+          type: Number,
+          required: false
+        },
+        segmentationType: {
+          type: String,
+          enum: ['prompted', 'automatic'],
+          required: false
+        },
+        processingTime: {
+          type: Number,
+          required: false
         }
       }
     }

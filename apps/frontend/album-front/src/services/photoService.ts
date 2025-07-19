@@ -66,4 +66,32 @@ export const photoService = {
       }
     });
   },
+
+  // AI Analysis methods
+  async updatePhotoAIAnalysis(
+    photoId: string,
+    analysisData: {
+      analysisType: 'objectDetection' | 'segmentation';
+      resultId: string;
+      totalDetections?: number;
+      totalMasks?: number;
+      segmentationType?: 'prompted' | 'automatic';
+      processingTime: number;
+    }
+  ): Promise<ApiResponse<Photo>> {
+    const response = await albumApi.put(`/photos/${photoId}/ai-analysis`, analysisData);
+    return response.data;
+  },
+
+  async getPhotosForAIAnalysis(
+    albumId: string,
+    params?: {
+      analysisType?: 'objectDetection' | 'segmentation';
+      page?: number;
+      limit?: number;
+    }
+  ): Promise<PaginatedResponse<Photo>> {
+    const response = await albumApi.get(`/photos/album/${albumId}/ai-analysis`, { params });
+    return response.data;
+  }
 };

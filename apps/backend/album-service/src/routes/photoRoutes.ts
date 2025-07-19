@@ -5,7 +5,9 @@ import {
   getPhotoById,
   updatePhoto,
   deletePhoto,
-  getUploadSignedUrlRequest
+  getUploadSignedUrlRequest,
+  updatePhotoAIAnalysis,
+  getPhotosForAIAnalysis
 } from '../controllers/photoController';
 import { authenticateToken } from '../middleware/authMiddleware';
 
@@ -17,6 +19,10 @@ router.get('/album/:albumId', authenticateToken, getPhotosByAlbum);
 router.get('/:id', authenticateToken, getPhotoById);
 router.put('/:id', authenticateToken, updatePhoto);
 router.delete('/:id', authenticateToken, deletePhoto);
+
+// AI Analysis routes
+router.put('/:id/ai-analysis', authenticateToken, updatePhotoAIAnalysis);
+router.get('/album/:albumId/ai-analysis', authenticateToken, getPhotosForAIAnalysis);
 
 // Upload routes
 router.post('/upload-url', authenticateToken, getUploadSignedUrlRequest);
