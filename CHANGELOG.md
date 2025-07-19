@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.74](https://github.com/toomastahves/tumbaland/compare/v0.0.73...v0.0.74) (2025-07-19)
+
+
+### Features
+
+* add env vars ([b86c6d5](https://github.com/toomastahves/tumbaland/commit/b86c6d5c155b129db605ae5cee677105080af3bd))
+
 ### [0.0.73](https://github.com/toomastahves/tumbaland/compare/v0.0.72...v0.0.73) (2025-07-19)
 
 
