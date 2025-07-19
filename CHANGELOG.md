@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.78](https://github.com/toomastahves/tumbaland/compare/v0.0.77...v0.0.78) (2025-07-19)
+
+
+### Features
+
+* setup proxy for ai services ([c270acc](https://github.com/toomastahves/tumbaland/commit/c270accf98c2807aab22a53e4c0a3102dd19bbf1))
+
 ### [0.0.77](https://github.com/toomastahves/tumbaland/compare/v0.0.76...v0.0.77) (2025-07-19)
 
 
