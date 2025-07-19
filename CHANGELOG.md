@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.79](https://github.com/toomastahves/tumbaland/compare/v0.0.78...v0.0.79) (2025-07-19)
+
+
+### Features
+
+* update proxy ([ba86f11](https://github.com/toomastahves/tumbaland/commit/ba86f117d866b1fba3dc231a0adb0876e20f46d1))
+
 ### [0.0.78](https://github.com/toomastahves/tumbaland/compare/v0.0.77...v0.0.78) (2025-07-19)
 
 
