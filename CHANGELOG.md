@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.75](https://github.com/toomastahves/tumbaland/compare/v0.0.74...v0.0.75) (2025-07-19)
+
+
+### Features
+
+* optimize album service ([b449913](https://github.com/toomastahves/tumbaland/commit/b449913ab03d0304ecaa5519be6175e2ebec7155))
+
 ### [0.0.74](https://github.com/toomastahves/tumbaland/compare/v0.0.73...v0.0.74) (2025-07-19)
 
 
