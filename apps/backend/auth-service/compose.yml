@@ -16,6 +16,7 @@ services:
       - COOKIE_DOMAIN=${COOKIE_DOMAIN}
       - CORS_ORIGIN=${CORS_ORIGIN}
       - AUTHORIZED_EMAILS=${AUTHORIZED_EMAILS}
+    init: true
     networks:
       - tumbanet
 

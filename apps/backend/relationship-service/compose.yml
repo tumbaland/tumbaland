@@ -12,6 +12,7 @@ services:
       - NODE_ENV=production
       - MONGODB_URI=${MONGODB_URI}
       - JWT_SECRET=${JWT_SECRET}
+    init: true
     networks:
       - tumbanet
 
