@@ -32,13 +32,13 @@ export interface IPhoto extends Document {
   };
   aiAnalysis?: {
     objectDetection?: {
-      resultId: string;
+      jobId: string;
       analyzedAt: Date;
       totalDetections: number;
       processingTime: number;
     };
     segmentation?: {
-      resultId: string;
+      jobId: string;
       analyzedAt: Date;
       totalMasks: number;
       segmentationType: 'prompted' | 'automatic';
@@ -115,7 +115,7 @@ const PhotoSchema: Schema = new Schema(
     },
     aiAnalysis: {
       objectDetection: {
-        resultId: {
+        jobId: {
           type: String,
           required: false
         },
@@ -133,7 +133,7 @@ const PhotoSchema: Schema = new Schema(
         }
       },
       segmentation: {
-        resultId: {
+        jobId: {
           type: String,
           required: false
         },

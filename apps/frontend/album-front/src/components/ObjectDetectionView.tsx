@@ -11,7 +11,8 @@ import {
   Alert
 } from '@mui/material';
 import { Close as CloseIcon, CheckCircle as CheckCircleIcon, Warning as WarningIcon } from '@mui/icons-material';
-import { ObjectDetectionResult, HealthStatus, aiService } from '../services/aiService';
+import { ObjectDetectionResult, HealthStatus, objectDetectionService } from '../services/objectDetectionService';
+import { albumService } from '../services/albumService';
 
 interface ObjectDetectionViewNewProps {
   photo: any;
@@ -30,10 +31,10 @@ const ObjectDetectionView: React.FC<ObjectDetectionViewNewProps> = ({ photo, for
   const checkHealth = async () => {
     setCheckingHealth(true);
     try {
-      const health = await aiService.checkAllServicesHealth();
+      const health = await objectDetectionService.checkAllServicesHealth();
       setHealthStatus(health);
     } catch (err) {
-      setHealthStatus({ segmentation: false, objectDetection: false, lastChecked: new Date() });
+      setHealthStatus({ objectDetection: false, lastChecked: new Date() });
     } finally {
       setCheckingHealth(false);
     }
@@ -42,12 +43,12 @@ const ObjectDetectionView: React.FC<ObjectDetectionViewNewProps> = ({ photo, for
   useEffect(() => {
     checkHealth();
     // If previous analysis exists, fetch its details automatically
-    if (photo?.aiAnalysis?.objectDetection?.resultId) {
+    if (photo?.aiAnalysis?.objectDetection?.jobId) {
       (async () => {
         setLoadingDetails('objectDetection');
         setAnalysisError(null);
         try {
-          const jobResult = await aiService.getObjectDetectionResult(photo.aiAnalysis.objectDetection.resultId);
+          const jobResult = await objectDetectionService.getObjectDetectionResult(photo.aiAnalysis.objectDetection.jobId);
           setDetailedResults(jobResult as ObjectDetectionResult);
         } catch (err) {
           setAnalysisError('Unable to load detailed analysis results. The results may no longer be available.');
@@ -56,7 +57,7 @@ const ObjectDetectionView: React.FC<ObjectDetectionViewNewProps> = ({ photo, for
         }
       })();
     }
-  }, [photo?.aiAnalysis?.objectDetection?.resultId]);
+  }, [photo?.aiAnalysis?.objectDetection?.jobId]);
 
   // Run object detection analysis
   const runAnalysis = async () => {
@@ -65,9 +66,16 @@ const ObjectDetectionView: React.FC<ObjectDetectionViewNewProps> = ({ photo, for
     setAnalysisError(null);
     setDetailedResults(undefined);
     try {
-      const response = await aiService.detectObjects(photo._id, {});
+      const response = await objectDetectionService.detectObjects(photo._id, {});
       if (response.success) {
         setDetailedResults(response as unknown as ObjectDetectionResult);
+
+        // Update backend photo analysis info with new jobId using albumService
+        await albumService.updatePhotoAIAnalysis(photo._id, {
+          analysisType: 'objectDetection',
+          jobId: response.result_id,
+          processingTime: response.processing_time
+        });
       }
     } catch (err) {
       setAnalysisError('Failed to run object detection analysis.');
@@ -78,11 +86,11 @@ const ObjectDetectionView: React.FC<ObjectDetectionViewNewProps> = ({ photo, for
 
   // Load detailed results
   const loadDetails = async () => {
-    if (!photo?.aiAnalysis?.objectDetection?.resultId) return;
+    if (!photo?.aiAnalysis?.objectDetection?.jobId) return;
     setLoadingDetails('objectDetection');
     setAnalysisError(null);
     try {
-      const jobResult = await aiService.getObjectDetectionResult(photo.aiAnalysis.objectDetection.resultId);
+      const jobResult = await objectDetectionService.getObjectDetectionResult(photo.aiAnalysis.objectDetection.jobId);
       setDetailedResults(jobResult as ObjectDetectionResult);
     } catch (err) {
       setAnalysisError('Unable to load detailed analysis results. The results may no longer be available.');
@@ -208,7 +216,7 @@ const ObjectDetectionView: React.FC<ObjectDetectionViewNewProps> = ({ photo, for
                   </Typography>
                   <Box
                     component="img"
-                    src={detailedResults.visualization_path ? aiService.getVisualizationImageUrl(detailedResults.visualization_path) : ''}
+                    src={detailedResults.visualization_path ? objectDetectionService.getVisualizationImageUrl(detailedResults.visualization_path) : ''}
                     alt="Detection Visualization"
                     sx={{
                       width: '100%',
@@ -221,7 +229,7 @@ const ObjectDetectionView: React.FC<ObjectDetectionViewNewProps> = ({ photo, for
                     }}
                     onClick={() => {
                       if (detailedResults.visualization_path) {
-                        const imageUrl = aiService.getVisualizationImageUrl(detailedResults.visualization_path);
+                        const imageUrl = objectDetectionService.getVisualizationImageUrl(detailedResults.visualization_path);
                         window.open(imageUrl, '_blank');
                       }
                     }}

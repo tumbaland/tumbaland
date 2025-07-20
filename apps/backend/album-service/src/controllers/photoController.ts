@@ -320,13 +320,13 @@ export const getUploadSignedUrlRequest = async (req: Request, res: Response): Pr
 export const updatePhotoAIAnalysis = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { analysisType, resultId, totalDetections, totalMasks, segmentationType, processingTime } = req.body;
+    const { analysisType, jobId, totalDetections, totalMasks, segmentationType, processingTime } = req.body;
 
     // Validate required fields
-    if (!analysisType || !resultId || processingTime === undefined) {
+    if (!analysisType || !jobId || processingTime === undefined) {
       res.status(400).json({
         success: false,
-        message: 'Missing required fields: analysisType, resultId, processingTime'
+        message: 'Missing required fields: analysisType, jobId, processingTime'
       });
       return;
     }
@@ -357,14 +357,14 @@ export const updatePhotoAIAnalysis = async (req: Request, res: Response): Promis
     // Update the specific analysis type
     if (analysisType === 'objectDetection') {
       photo.aiAnalysis.objectDetection = {
-        resultId,
+        jobId,
         analyzedAt: new Date(),
         totalDetections: totalDetections || 0,
         processingTime
       };
     } else if (analysisType === 'segmentation') {
       photo.aiAnalysis.segmentation = {
-        resultId,
+        jobId,
         analyzedAt: new Date(),
         totalMasks: totalMasks || 0,
         segmentationType: segmentationType || 'automatic',
@@ -372,11 +372,10 @@ export const updatePhotoAIAnalysis = async (req: Request, res: Response): Promis
       };
     }
 
-    await photo.save();
-
+    const savedPhoto = await photo.save();
     res.json({
       success: true,
-      data: photo
+      data: savedPhoto
     });
   } catch (error) {
     console.error('Error updating photo AI analysis:', error);

@@ -11,7 +11,8 @@ import {
   Alert
 } from '@mui/material';
 import { Close as CloseIcon, CheckCircle as CheckCircleIcon, Warning as WarningIcon } from '@mui/icons-material';
-import { SegmentationResult, HealthStatus, aiService } from '../services/aiService';
+import { SegmentationResult, HealthStatus, segmentationService } from '../services/segmentationService';
+import { albumService } from '../services/albumService';
 
 interface SegmentationViewNewProps {
   photo: any;
@@ -30,10 +31,10 @@ const SegmentationView: React.FC<SegmentationViewNewProps> = ({ photo, formatDat
   const checkHealth = async () => {
     setCheckingHealth(true);
     try {
-      const health = await aiService.checkAllServicesHealth();
+      const health = await segmentationService.checkAllServicesHealth();
       setHealthStatus(health);
     } catch (err) {
-      setHealthStatus({ segmentation: false, objectDetection: false, lastChecked: new Date() });
+      setHealthStatus({ segmentation: false, lastChecked: new Date() });
     } finally {
       setCheckingHealth(false);
     }
@@ -41,13 +42,14 @@ const SegmentationView: React.FC<SegmentationViewNewProps> = ({ photo, formatDat
 
   useEffect(() => {
     checkHealth();
-    // If previous analysis exists, fetch its details automatically
-    if (photo?.aiAnalysis?.segmentation?.resultId) {
+    // Always fetch latest segmentation job details when tab is opened
+    if (photo?.aiAnalysis?.segmentation?.jobId) {
       (async () => {
         setLoadingDetails('segmentation');
         setAnalysisError(null);
         try {
-          const jobResult = await aiService.getSegmentationResult(photo.aiAnalysis.segmentation.resultId);
+          // Always fetch latest job details from backend
+          const jobResult = await segmentationService.getSegmentationResult(photo.aiAnalysis.segmentation.jobId);
           setDetailedResults(jobResult as SegmentationResult);
         } catch (err) {
           setAnalysisError('Unable to load detailed analysis results. The results may no longer be available.');
@@ -55,8 +57,11 @@ const SegmentationView: React.FC<SegmentationViewNewProps> = ({ photo, formatDat
           setLoadingDetails(null);
         }
       })();
+    } else {
+      setDetailedResults(undefined);
     }
-  }, [photo?.aiAnalysis?.segmentation?.resultId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photo]);
 
   // Run segmentation analysis
   const runAnalysis = async () => {
@@ -65,9 +70,18 @@ const SegmentationView: React.FC<SegmentationViewNewProps> = ({ photo, formatDat
     setAnalysisError(null);
     setDetailedResults(undefined);
     try {
-      const response = await aiService.segmentImage(photo._id, {});
+      const response = await segmentationService.segmentImage(photo._id, {});
       if (response.success) {
         setDetailedResults(response as SegmentationResult);
+
+        // Update backend photo analysis info with new jobId using albumService
+        await albumService.updatePhotoAIAnalysis(photo._id, {
+          analysisType: 'segmentation',
+          jobId: response.job_id,
+          totalMasks: response.total_masks,
+          segmentationType: response.segmentation_type,
+          processingTime: response.processing_time
+        });
       }
     } catch (err) {
       setAnalysisError('Failed to run segmentation analysis.');
@@ -78,11 +92,11 @@ const SegmentationView: React.FC<SegmentationViewNewProps> = ({ photo, formatDat
 
   // Load detailed results
   const loadDetails = async () => {
-    if (!photo?.aiAnalysis?.segmentation?.resultId) return;
+    if (!photo?.aiAnalysis?.segmentation?.jobId) return;
     setLoadingDetails('segmentation');
     setAnalysisError(null);
     try {
-      const jobResult = await aiService.getSegmentationResult(photo.aiAnalysis.segmentation.resultId);
+      const jobResult = await segmentationService.getSegmentationResult(photo.aiAnalysis.segmentation.jobId);
       setDetailedResults(jobResult as SegmentationResult);
     } catch (err) {
       setAnalysisError('Unable to load detailed analysis results. The results may no longer be available.');
@@ -209,7 +223,7 @@ const SegmentationView: React.FC<SegmentationViewNewProps> = ({ photo, formatDat
                 {detailedResults.job_id ? (
                   <Box
                     component="img"
-                    src={aiService.getSegmentationVisualizationUrl(detailedResults.job_id)}
+                    src={segmentationService.getSegmentationVisualizationUrl(detailedResults.job_id)}
                     alt="Segmentation Visualization"
                     sx={{
                       width: '100%',
@@ -221,7 +235,7 @@ const SegmentationView: React.FC<SegmentationViewNewProps> = ({ photo, formatDat
                       '&:hover': { opacity: 0.8 }
                     }}
                     onClick={() => {
-                      const imageUrl = aiService.getSegmentationVisualizationUrl(detailedResults.job_id);
+                      const imageUrl = segmentationService.getSegmentationVisualizationUrl(detailedResults.job_id);
                       window.open(imageUrl, '_blank');
                     }}
                   />
@@ -278,7 +292,7 @@ const SegmentationView: React.FC<SegmentationViewNewProps> = ({ photo, formatDat
                             </Typography>
                             <Box
                               component="img"
-                              src={aiService.getSegmentationMaskUrl(detailedResults.job_id, mask.mask_file_path.split('/').pop() || '')}
+                              src={segmentationService.getSegmentationMaskUrl(detailedResults.job_id, mask.mask_file_path.split('/').pop() || '')}
                               alt={`Mask ${idx + 1}`}
                               sx={{
                                 width: '100%',
@@ -290,7 +304,7 @@ const SegmentationView: React.FC<SegmentationViewNewProps> = ({ photo, formatDat
                                 '&:hover': { opacity: 0.8 }
                               }}
                               onClick={() => {
-                                const maskUrl = aiService.getSegmentationMaskUrl(detailedResults.job_id, mask.mask_file_path.split('/').pop() || '');
+                                const maskUrl = segmentationService.getSegmentationMaskUrl(detailedResults.job_id, mask.mask_file_path.split('/').pop() || '');
                                 window.open(maskUrl, '_blank');
                               }}
                             />

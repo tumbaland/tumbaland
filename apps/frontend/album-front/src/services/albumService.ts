@@ -50,5 +50,23 @@ export const albumService = {
   async removeCoverPhoto(albumId: string): Promise<ApiResponse<Album>> {
     const response = await albumApi.delete(`/albums/${albumId}/cover`);
     return response.data;
+  },
+
+  // Update photo AI analysis info
+  async updatePhotoAIAnalysis(photoId: string, analysis: {
+    analysisType: string;
+    jobId: string;
+    totalMasks?: number;
+    segmentationType?: string;
+    processingTime?: number;
+  }): Promise<any> {
+    const response = await albumApi.put(`/photos/${photoId}/ai-analysis`, {
+      analysisType: analysis.analysisType,
+      jobId: analysis.jobId,
+      totalMasks: analysis.totalMasks,
+      segmentationType: analysis.segmentationType,
+      processingTime: analysis.processingTime
+    });
+    return response.data;
   }
 };
