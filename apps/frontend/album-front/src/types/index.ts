@@ -54,7 +54,7 @@ export interface Photo {
       resultId: string;
       analyzedAt: string;
       totalMasks: number;
-      segmentationType: 'prompted' | 'automatic';
+      segmentationType: 'automatic' | 'prompted' | 'error';
       processingTime: number;
     };
   };

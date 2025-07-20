@@ -117,6 +117,21 @@ const PhotoDetailPage: React.FC = () => {
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
+    
+    // Auto-load segmentation results when segmentation tab is opened
+    if (newValue === 2 && // Segmentation tab index
+        photo?.aiAnalysis?.segmentation?.resultId && 
+        !detailedResults?.segmentation && 
+        !loadingDetails &&
+        !isAnalyzing) {
+      
+      // Try to use cached results first
+      if (analysisResults && analysisResults.type === 'segmentation' && analysisResults.results) {
+        console.log('Auto-loading cached segmentation results when tab opened');
+        const segmentationResponse = analysisResults.results as SegmentationResult;
+        setDetailedResults(prev => ({ ...prev, segmentation: segmentationResponse }));
+      }
+    }
   };
 
   const handleEdit = () => {
@@ -188,16 +203,16 @@ const PhotoDetailPage: React.FC = () => {
           break;
         case 'segmentation':
           response = await aiService.segmentImage(photo._id, {
-            multimaskOutput: true
+            // Note: multimaskOutput removed in new API, it's automatic based on model type
           });
           // Update photo with AI analysis reference
           if (response.success) {
             await photoService.updatePhotoAIAnalysis(photo._id, {
               analysisType: 'segmentation',
-              resultId: response.result_id,
+              resultId: response.job_id, // Use job_id from the new API response
               totalMasks: response.total_masks,
-              segmentationType: response.segmentation_type,
-              processingTime: response.processing_time
+              segmentationType: response.segmentation_type === 'error' ? 'automatic' : response.segmentation_type,
+              processingTime: response.processing_time || 0
             });
           }
           break;
@@ -210,6 +225,12 @@ const PhotoDetailPage: React.FC = () => {
         timestamp: new Date().toISOString(),
         results: response
       });
+
+      // For segmentation, also set detailed results immediately since new API returns everything
+      if (analysisType === 'segmentation' && response.success) {
+        console.log('Setting detailed segmentation results from fresh analysis:', response);
+        setDetailedResults(prev => ({ ...prev, segmentation: response as SegmentationResult }));
+      }
 
       // Refresh photo data to get updated AI analysis
       const updatedPhoto = await photoService.getPhotoById(photo._id);
@@ -240,8 +261,33 @@ const PhotoDetailPage: React.FC = () => {
         const result = await aiService.getObjectDetectionResult(resultId);
         setDetailedResults(prev => ({ ...prev, objectDetection: result }));
       } else if (analysisType === 'segmentation') {
-        const result = await aiService.getSegmentationResult(resultId);
-        setDetailedResults(prev => ({ ...prev, segmentation: result }));
+        // The new /results/{job_id} endpoint now returns complete detailed results
+        const jobResult = await aiService.getSegmentationResult(resultId);
+        
+        // Convert to SegmentationResult format for compatibility
+        const detailedResult: SegmentationResult = {
+          success: jobResult.success,
+          message: jobResult.message,
+          job_id: jobResult.job_id,
+          file_id: jobResult.file_id,
+          result_id: jobResult.result_id,
+          original_filename: jobResult.original_filename,
+          file_path: jobResult.file_path,
+          result_paths: jobResult.result_paths,
+          masks: jobResult.masks,
+          total_masks: jobResult.total_masks,
+          processing_time: jobResult.processing_time,
+          image_dimensions: jobResult.image_dimensions,
+          prompt_points: jobResult.prompt_points,
+          prompt_labels: jobResult.prompt_labels,
+          segmentation_type: jobResult.segmentation_type,
+          model_name: jobResult.model_name,
+          model_type: jobResult.model_type,
+          confidence_threshold: jobResult.confidence_threshold,
+          created_at: jobResult.created_at
+        };
+        
+        setDetailedResults(prev => ({ ...prev, segmentation: detailedResult }));
       }
     } catch (err) {
       // Just log the error and set a simple error message
@@ -296,10 +342,22 @@ const PhotoDetailPage: React.FC = () => {
     if (photo?.aiAnalysis?.segmentation?.resultId && 
         !detailedResults?.segmentation && 
         loadingDetails !== 'segmentation' &&
-        !fetchAttempted.segmentation) {
-      fetchDetailedResults('segmentation', photo.aiAnalysis.segmentation.resultId);
+        !fetchAttempted.segmentation &&
+        (tabValue === 2 || analysisResults?.type === 'segmentation')) { // Load when tab is open OR fresh analysis
+      
+      // For fresh analysis results, use cached data
+      if (analysisResults && analysisResults.type === 'segmentation' && analysisResults.results) {
+        console.log('Using cached segmentation results for detailed view');
+        const segmentationResponse = analysisResults.results as SegmentationResult;
+        setDetailedResults(prev => ({ ...prev, segmentation: segmentationResponse }));
+        setFetchAttempted(prev => ({ ...prev, segmentation: true }));
+      } else {
+        // For existing analysis, fetch from API using the saved job ID
+        console.log('Fetching segmentation results from API using job ID:', photo.aiAnalysis.segmentation.resultId);
+        fetchDetailedResults('segmentation', photo.aiAnalysis.segmentation.resultId);
+      }
     }
-  }, [photo?.aiAnalysis?.segmentation?.resultId, detailedResults?.segmentation, loadingDetails, fetchAttempted.segmentation]);
+  }, [photo?.aiAnalysis?.segmentation?.resultId, detailedResults?.segmentation, loadingDetails, fetchAttempted.segmentation, analysisResults, tabValue]);
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -606,6 +664,11 @@ const PhotoDetailPage: React.FC = () => {
               isAnalyzing={isAnalyzing && analyzingType === 'segmentation'}
               onClearDetails={() => setDetailedResults(prev => ({ ...prev, segmentation: undefined }))}
               onRunAnalysis={handleRunSegmentation}
+              onLoadDetails={() => {
+                if (photo?.aiAnalysis?.segmentation?.resultId) {
+                  fetchDetailedResults('segmentation', photo.aiAnalysis.segmentation.resultId);
+                }
+              }}
               onCheckHealth={checkServicesHealth}
               formatDate={formatDate}
             />

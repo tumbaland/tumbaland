@@ -22,11 +22,15 @@ const HEALTH_CHECK_TIMEOUT = 3000;
 // Type definitions for API responses
 export interface SegmentationResponse {
   success: boolean;
+  message: string;
+  job_id: string; // Added job_id field from new API
   file_id: string;
-  result_id: string;
+  result_id?: string;
   original_filename: string;
+  file_path: string;
   masks: MaskData[];
   total_masks: number;
+  processing_time?: number;
   image_dimensions: {
     width: number;
     height: number;
@@ -36,21 +40,72 @@ export interface SegmentationResponse {
     colored_masks: string;
     segmented: string;
   };
-  segmentation_type: 'prompted' | 'automatic';
-  processing_time: number;
+  segmentation_type: 'automatic' | 'prompted' | 'error';
+  created_at: string;
 }
 
 export interface MaskData {
   mask_file_path: string;
+  filename: string;
   area: number;
   bbox: number[]; // [x, y, width, height]
   predicted_iou: number;
-  stability_score: number;
+  stability_score?: number; // Optional, SAM models only
+  file_size_bytes: number;
+  created_at: string;
+  download_url: string;
+}
+
+export interface SegmentationJobResult {
+  success: boolean;
+  message: string;
+  job_id: string;
+  file_id: string;
+  result_id?: string;
+  original_filename: string;
+  file_path: string;
+  result_paths: {
+    segmented: string;
+    masks: string;
+    colored_masks: string;
+  };
+  has_masks: boolean;
+  has_visualization: boolean;
+  total_masks: number;
+  mask_count: number;
+  processing_time: number;
+  image_dimensions: {
+    width: number;
+    height: number;
+  };
+  segmentation_type: 'automatic' | 'prompted' | 'error';
+  model_name: string;
+  model_type: string;
+  confidence_threshold: number;
+  prompt_points?: number[][];
+  prompt_labels?: number[];
+  masks: MaskData[];
+  mask_files: string[];
+  visualization_file: string;
+  created_at: string;
+  file_sizes: {
+    visualization_bytes: number;
+    total_mask_bytes: number;
+    mask_directory_size: number;
+  };
+  download_urls: {
+    visualization: string;
+    masks_list: string;
+    individual_masks: string[];
+  };
 }
 
 export interface SegmentationResult {
-  _id: string;
+  success: boolean;
+  message: string;
+  job_id: string; // Added job_id field from new API
   file_id: string;
+  result_id?: string;
   original_filename: string;
   file_path: string;
   result_paths: {
@@ -60,15 +115,17 @@ export interface SegmentationResult {
   };
   masks: MaskData[];
   total_masks: number;
+  processing_time?: number;
   image_dimensions: {
     width: number;
     height: number;
   };
   prompt_points?: number[][];
   prompt_labels?: number[];
-  multimask_output: boolean;
-  segmentation_type: 'prompted' | 'automatic';
-  processing_time: number;
+  segmentation_type: 'automatic' | 'prompted' | 'error';
+  model_name?: string; // Optional, from enhanced API response
+  model_type?: string; // Optional, from enhanced API response
+  confidence_threshold?: number; // Optional, from enhanced API response
   created_at: string;
 }
 
@@ -134,7 +191,8 @@ export interface HealthStatus {
 export interface SegmentationOptions {
   promptPoints?: number[][];
   promptLabels?: number[];
-  multimaskOutput?: boolean;
+  confidenceThreshold?: number;
+  modelName?: string;
 }
 
 export interface ObjectDetectionOptions {
@@ -260,13 +318,41 @@ export const aiService = {
     try {
       const config = getConfig();
       const apiUrl = config.SEGMENTATION_API_URL;
-      const response = await fetchWithTimeout(`${apiUrl}/api/v1/segmentation/statistics`, {
+      const response = await fetchWithTimeout(`${apiUrl}/api/v1/segmentation/health`, {
         timeout: HEALTH_CHECK_TIMEOUT
       });
-      return response.ok;
+      
+      if (!response.ok) {
+        return false;
+      }
+      
+      const data = await response.json();
+      return data.status === 'healthy';
     } catch (error) {
       console.warn('Segmentation service health check failed:', error);
       return false;
+    }
+  },
+
+  async getSegmentationHealthDetails(): Promise<any> {
+    try {
+      const config = getConfig();
+      const apiUrl = config.SEGMENTATION_API_URL;
+      const response = await fetchWithTimeout(`${apiUrl}/api/v1/segmentation/health`, {
+        timeout: HEALTH_CHECK_TIMEOUT
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.warn('Segmentation service health check failed:', error);
+      throw new AIServiceError(
+        `Failed to get health details: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'segmentation'
+      );
     }
   },
 
@@ -274,10 +360,20 @@ export const aiService = {
     try {
       const config = getConfig();
       const apiUrl = config.OBJECT_DETECTION_API_URL;
-      const response = await fetchWithTimeout(`${apiUrl}/api/v1/object-detection/statistics`, {
+      // Try the proper health endpoint first, fallback to statistics if not available
+      const response = await fetchWithTimeout(`${apiUrl}/api/v1/object-detection/health`, {
         timeout: HEALTH_CHECK_TIMEOUT
       });
-      return response.ok;
+      
+      if (response.ok) {
+        return true;
+      }
+      
+      // Fallback to statistics endpoint for older versions
+      const statsResponse = await fetchWithTimeout(`${apiUrl}/api/v1/object-detection/statistics`, {
+        timeout: HEALTH_CHECK_TIMEOUT
+      });
+      return statsResponse.ok;
     } catch (error) {
       console.warn('Object detection service health check failed:', error);
       return false;
@@ -318,12 +414,23 @@ export const aiService = {
       const photo = photoResponse.data;
       const fileBlob = await fetchPhotoFile(photoId);
 
-      // Prepare form data
-      const formData = createFormDataWithFile(fileBlob, photo.originalName, {
-        prompt_points: options.promptPoints,
-        prompt_labels: options.promptLabels,
-        multimask_output: options.multimaskOutput ?? true
-      });
+      // Prepare form data for new API
+      const formData = new FormData();
+      formData.append('image', fileBlob, photo.originalName);
+      
+      // Add optional parameters
+      if (options.promptPoints && options.promptPoints.length > 0) {
+        formData.append('prompt_points', JSON.stringify(options.promptPoints));
+      }
+      if (options.promptLabels && options.promptLabels.length > 0) {
+        formData.append('prompt_labels', JSON.stringify(options.promptLabels));
+      }
+      if (options.confidenceThreshold !== undefined) {
+        formData.append('confidence_threshold', options.confidenceThreshold.toString());
+      }
+      if (options.modelName) {
+        formData.append('model_name', options.modelName);
+      }
 
       const response = await fetchWithTimeout(
         `${getConfig().SEGMENTATION_API_URL}/api/v1/segmentation/segment`,
@@ -339,6 +446,15 @@ export const aiService = {
       }
 
       const data: SegmentationResponse = await response.json();
+      
+      // Check if the response indicates success
+      if (!data.success) {
+        throw new AIServiceError(
+          data.message || 'Segmentation failed',
+          'segmentation'
+        );
+      }
+      
       return data;
     } catch (error) {
       console.error('Error in segmentImage:', error);
@@ -353,10 +469,11 @@ export const aiService = {
     }
   },
 
-  async getSegmentationResult(resultId: string): Promise<SegmentationResult> {
+  // Model management functions
+  async getAvailableSegmentationModels(): Promise<string[]> {
     try {
       const response = await fetchWithTimeout(
-        `${getConfig().SEGMENTATION_API_URL}/api/v1/segmentation/results/${resultId}`,
+        `${getConfig().SEGMENTATION_API_URL}/api/v1/segmentation/models`,
         { timeout: 10000 }
       );
       
@@ -364,22 +481,26 @@ export const aiService = {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      return await response.json();
+      const data = await response.json();
+      return data.available_models?.map((model: any) => model.name) || [];
     } catch (error) {
-      console.error('Error getting segmentation result:', error);
+      console.error('Error getting available segmentation models:', error);
       throw new AIServiceError(
-        `Failed to get segmentation result: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Failed to get available models: ${error instanceof Error ? error.message : 'Unknown error'}`,
         'segmentation',
         getErrorStatus(error)
       );
     }
   },
 
-  async getSegmentationResultsByFileId(fileId: string): Promise<{ results: SegmentationResult[]; count: number }> {
+  async switchSegmentationModel(modelName: string): Promise<{ success: boolean; message: string }> {
     try {
       const response = await fetchWithTimeout(
-        `${getConfig().SEGMENTATION_API_URL}/api/v1/segmentation/results/file/${fileId}`,
-        { timeout: 10000 }
+        `${getConfig().SEGMENTATION_API_URL}/api/v1/segmentation/models/switch/${modelName}`,
+        { 
+          method: 'POST',
+          timeout: 30000 // Model switching can take time
+        }
       );
       
       if (!response.ok) {
@@ -388,9 +509,9 @@ export const aiService = {
       
       return await response.json();
     } catch (error) {
-      console.error('Error getting segmentation results by file ID:', error);
+      console.error('Error switching segmentation model:', error);
       throw new AIServiceError(
-        `Failed to get segmentation results: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Failed to switch model: ${error instanceof Error ? error.message : 'Unknown error'}`,
         'segmentation',
         getErrorStatus(error)
       );
@@ -546,21 +667,69 @@ export const aiService = {
     }
   },
 
-  // File serving functions
-  getSegmentationFileUrl(resultId: string, fileType: 'segmented' | 'masks' | 'colored_masks'): string {
-    const config = getConfig();
-    return `${config.SEGMENTATION_API_URL}/api/v1/segmentation/files/result/${resultId}/${fileType}`;
-  },
-
-  getMaskFileUrl(resultId: string, maskIndex: number): string {
-    const config = getConfig();
-    return `${config.SEGMENTATION_API_URL}/api/v1/segmentation/files/mask/${resultId}/${maskIndex}`;
-  },
-
-  // Helper function to get full URL for segmentation file paths
+  // File serving functions - Updated for new segmentation API
+  // Helper function to get full URL for segmentation file paths (legacy support)
   getSegmentationImageUrl(filePath: string): string {
     const config = getConfig();
-    return `${config.SEGMENTATION_API_URL}/api/v1/segmentation/files/${filePath}`;
+    // Remove leading slash if present to avoid double slashes
+    const cleanPath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
+    return `${config.SEGMENTATION_API_URL}/${cleanPath}`;
+  },
+
+  // New API endpoints for downloading files
+  getSegmentationVisualizationUrl(jobId: string): string {
+    const config = getConfig();
+    return `${config.SEGMENTATION_API_URL}/api/v1/segmentation/results/${jobId}/visualization`;
+  },
+
+  getSegmentationMaskUrl(jobId: string, maskFilename: string): string {
+    const config = getConfig();
+    return `${config.SEGMENTATION_API_URL}/api/v1/segmentation/results/${jobId}/masks/${maskFilename}`;
+  },
+
+  // Get job info by job_id (limited info, just file availability)
+  async getSegmentationResult(jobId: string): Promise<SegmentationJobResult> {
+    try {
+      const config = getConfig();
+      const response = await fetchWithTimeout(
+        `${config.SEGMENTATION_API_URL}/api/v1/segmentation/results/${jobId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Segmentation job info:', result);
+      
+      return result;
+    } catch (error) {
+      console.error('Error fetching segmentation job info:', error);
+      throw new AIServiceError(
+        `Failed to fetch segmentation job info: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'segmentation',
+        getErrorStatus(error)
+      );
+    }
+  },
+
+  // Function to extract mask filename from mask_file_path
+  getMaskFilename(maskFilePath: string): string {
+    // Extract filename from path like "/results/masks_abc123-def456/mask_000.png"
+    return maskFilePath.split('/').pop() || '';
+  },
+
+  // Function to extract job_id from file paths
+  getJobIdFromPath(filePath: string): string {
+    // Extract job_id from paths like "/results/masks_abc123-def456/" or "/results/segmented_abc123-def456.png"
+    const match = filePath.match(/[_\/]([a-f0-9-]+)[\/_\.]/);
+    return match ? match[1] : '';
   },
 
   getObjectDetectionVisualizationUrl(resultId: string): string {
