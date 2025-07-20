@@ -44,6 +44,16 @@ function TabPanel(props: { children?: React.ReactNode; index: number; value: num
 }
 
 const PhotoDetailPage: React.FC = () => {
+  // Refetch photo after analysis completes
+  const refetchPhoto = async () => {
+    if (!photoId) return;
+    try {
+      const photoResponse = await photoService.getPhotoById(photoId);
+      setPhoto(photoResponse.data);
+    } catch (err) {
+      setError('Failed to reload photo after analysis');
+    }
+  };
   const { albumId, photoId } = useParams<{ albumId: string; photoId: string }>();
   const navigate = useNavigate();
   const [photo, setPhoto] = useState<Photo | null>(null);
@@ -251,12 +261,14 @@ const PhotoDetailPage: React.FC = () => {
             <ObjectDetectionView
               photo={photo}
               formatDate={formatDate}
+              onAnalysisComplete={refetchPhoto}
             />
           </TabPanel>
           <TabPanel value={tabValue} index={2}>
             <SegmentationView
               photo={photo}
               formatDate={formatDate}
+              onAnalysisComplete={refetchPhoto}
             />
           </TabPanel>
         </Paper>

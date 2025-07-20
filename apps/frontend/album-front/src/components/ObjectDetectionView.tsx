@@ -17,9 +17,10 @@ import { albumService } from '../services/albumService';
 interface ObjectDetectionViewNewProps {
   photo: any;
   formatDate: (dateString: string) => string;
+  onAnalysisComplete?: () => void;
 }
 
-const ObjectDetectionView: React.FC<ObjectDetectionViewNewProps> = ({ photo, formatDate }) => {
+const ObjectDetectionView: React.FC<ObjectDetectionViewNewProps> = ({ photo, formatDate, onAnalysisComplete }) => {
   const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
   const [checkingHealth, setCheckingHealth] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -76,6 +77,10 @@ const ObjectDetectionView: React.FC<ObjectDetectionViewNewProps> = ({ photo, for
           jobId: response.result_id,
           processingTime: response.processing_time
         });
+        // Notify parent to refetch photo
+        if (onAnalysisComplete) {
+          onAnalysisComplete();
+        }
       }
     } catch (err) {
       setAnalysisError('Failed to run object detection analysis.');

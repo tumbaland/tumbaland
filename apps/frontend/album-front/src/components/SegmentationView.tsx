@@ -17,9 +17,10 @@ import { albumService } from '../services/albumService';
 interface SegmentationViewNewProps {
   photo: any;
   formatDate: (dateString: string) => string;
+  onAnalysisComplete?: () => void;
 }
 
-const SegmentationView: React.FC<SegmentationViewNewProps> = ({ photo, formatDate }) => {
+const SegmentationView: React.FC<SegmentationViewNewProps> = ({ photo, formatDate, onAnalysisComplete }) => {
   const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
   const [checkingHealth, setCheckingHealth] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -82,6 +83,10 @@ const SegmentationView: React.FC<SegmentationViewNewProps> = ({ photo, formatDat
           segmentationType: response.segmentation_type,
           processingTime: response.processing_time
         });
+        // Notify parent to refetch photo
+        if (onAnalysisComplete) {
+          onAnalysisComplete();
+        }
       }
     } catch (err) {
       setAnalysisError('Failed to run segmentation analysis.');
