@@ -1,4 +1,12 @@
 # Tumbalog
+### [0.0.82](https://github.com/toomastahves/tumbaland/compare/v0.0.81...v0.0.82) (2025-07-20)
+
+
+### Features
+
+* refactor ai service ([ed87c42](https://github.com/toomastahves/tumbaland/commit/ed87c42b1850c8329db0e5f181ea64d2101de55b))
+* refactor sam and detection views ([d0bb3d7](https://github.com/toomastahves/tumbaland/commit/d0bb3d7c48ffb6b4fcd2c2e8940896c7b21a0382))
+
 ### [0.0.81](https://github.com/toomastahves/tumbaland/compare/v0.0.80...v0.0.81) (2025-07-20)
 
 
