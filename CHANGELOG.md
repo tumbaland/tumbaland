@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.80](https://github.com/toomastahves/tumbaland/compare/v0.0.79...v0.0.80) (2025-07-19)
+
+
+### Bug Fixes
+
+* get correct var ([f785636](https://github.com/toomastahves/tumbaland/commit/f78563679ee64f7ce50e22a550ff336843f49e86))
+
 ### [0.0.79](https://github.com/toomastahves/tumbaland/compare/v0.0.78...v0.0.79) (2025-07-19)
 
 
