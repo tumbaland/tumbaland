@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.83](https://github.com/toomastahves/tumbaland/compare/v0.0.82...v0.0.83) (2025-07-20)
+
+
+### Bug Fixes
+
+* refetch photo details ([1677b0e](https://github.com/toomastahves/tumbaland/commit/1677b0e396792eae87ff2077274877c5b0d6c300))
+
 ### [0.0.82](https://github.com/toomastahves/tumbaland/compare/v0.0.81...v0.0.82) (2025-07-20)
 
 
