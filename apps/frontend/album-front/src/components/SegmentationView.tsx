@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -13,35 +13,89 @@ import {
 import { Close as CloseIcon, CheckCircle as CheckCircleIcon, Warning as WarningIcon } from '@mui/icons-material';
 import { SegmentationResult, HealthStatus, aiService } from '../services/aiService';
 
-interface SegmentationViewProps {
+interface SegmentationViewNewProps {
   photo: any;
-  detailedResults: SegmentationResult | undefined;
-  loadingDetails: string | null;
-  analysisError: string | null;
-  healthStatus: HealthStatus | null;
-  checkingHealth: boolean;
-  isAnalyzing: boolean;
-  onClearDetails: () => void;
-  onRunAnalysis: () => void;
-  onLoadDetails: () => void;
-  onCheckHealth: () => void;
   formatDate: (dateString: string) => string;
 }
 
-const SegmentationView: React.FC<SegmentationViewProps> = ({
-  photo,
-  detailedResults,
-  loadingDetails,
-  analysisError,
-  healthStatus,
-  checkingHealth,
-  isAnalyzing,
-  onClearDetails,
-  onRunAnalysis,
-  onLoadDetails,
-  onCheckHealth,
-  formatDate
-}) => {
+const SegmentationView: React.FC<SegmentationViewNewProps> = ({ photo, formatDate }) => {
+  const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
+  const [checkingHealth, setCheckingHealth] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [detailedResults, setDetailedResults] = useState<SegmentationResult | undefined>(undefined);
+  const [loadingDetails, setLoadingDetails] = useState<string | null>(null);
+
+  // Health check logic
+  const checkHealth = async () => {
+    setCheckingHealth(true);
+    try {
+      const health = await aiService.checkAllServicesHealth();
+      setHealthStatus(health);
+    } catch (err) {
+      setHealthStatus({ segmentation: false, objectDetection: false, lastChecked: new Date() });
+    } finally {
+      setCheckingHealth(false);
+    }
+  };
+
+  useEffect(() => {
+    checkHealth();
+    // If previous analysis exists, fetch its details automatically
+    if (photo?.aiAnalysis?.segmentation?.resultId) {
+      (async () => {
+        setLoadingDetails('segmentation');
+        setAnalysisError(null);
+        try {
+          const jobResult = await aiService.getSegmentationResult(photo.aiAnalysis.segmentation.resultId);
+          setDetailedResults(jobResult as SegmentationResult);
+        } catch (err) {
+          setAnalysisError('Unable to load detailed analysis results. The results may no longer be available.');
+        } finally {
+          setLoadingDetails(null);
+        }
+      })();
+    }
+  }, [photo?.aiAnalysis?.segmentation?.resultId]);
+
+  // Run segmentation analysis
+  const runAnalysis = async () => {
+    if (!photo) return;
+    setIsAnalyzing(true);
+    setAnalysisError(null);
+    setDetailedResults(undefined);
+    try {
+      const response = await aiService.segmentImage(photo._id, {});
+      if (response.success) {
+        setDetailedResults(response as SegmentationResult);
+      }
+    } catch (err) {
+      setAnalysisError('Failed to run segmentation analysis.');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  // Load detailed results
+  const loadDetails = async () => {
+    if (!photo?.aiAnalysis?.segmentation?.resultId) return;
+    setLoadingDetails('segmentation');
+    setAnalysisError(null);
+    try {
+      const jobResult = await aiService.getSegmentationResult(photo.aiAnalysis.segmentation.resultId);
+      setDetailedResults(jobResult as SegmentationResult);
+    } catch (err) {
+      setAnalysisError('Unable to load detailed analysis results. The results may no longer be available.');
+    } finally {
+      setLoadingDetails(null);
+    }
+  };
+
+  // Clear details
+  const clearDetails = () => {
+    setDetailedResults(undefined);
+  };
+
   return (
     <Box>
       {/* Service Health Status */}
@@ -51,13 +105,12 @@ const SegmentationView: React.FC<SegmentationViewProps> = ({
             <Typography variant="h6">Segmentation Service Status</Typography>
             <Button
               size="small"
-              onClick={onCheckHealth}
+              onClick={checkHealth}
               disabled={checkingHealth}
             >
               {checkingHealth ? <CircularProgress size={16} /> : 'Refresh'}
             </Button>
           </Box>
-          
           {healthStatus && (
             <Box sx={{ display: 'flex', gap: 2 }}>
               <Chip
@@ -68,7 +121,6 @@ const SegmentationView: React.FC<SegmentationViewProps> = ({
               />
             </Box>
           )}
-          
           {healthStatus && (
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
               Last checked: {healthStatus.lastChecked.toLocaleString()}
@@ -76,19 +128,17 @@ const SegmentationView: React.FC<SegmentationViewProps> = ({
           )}
         </CardContent>
       </Card>
-
       {/* Analysis Button */}
       <Box sx={{ mb: 3 }}>
         <Button
           variant="contained"
-          onClick={onRunAnalysis}
+          onClick={runAnalysis}
           disabled={isAnalyzing || !healthStatus?.segmentation}
           startIcon={isAnalyzing && <CircularProgress size={16} />}
           fullWidth
         >
           {photo.aiAnalysis?.segmentation ? 'Re-run ' : ''}Semantic Segmentation
         </Button>
-
         {isAnalyzing && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2 }}>
             <CircularProgress size={24} />
@@ -96,14 +146,12 @@ const SegmentationView: React.FC<SegmentationViewProps> = ({
           </Box>
         )}
       </Box>
-
       {/* Error Display */}
       {analysisError && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {analysisError}
         </Alert>
       )}
-
       {/* Previous Analysis Results */}
       {photo.aiAnalysis?.segmentation && (
         <Card variant="outlined" sx={{ mb: 3 }}>
@@ -111,7 +159,6 @@ const SegmentationView: React.FC<SegmentationViewProps> = ({
             <Typography variant="h6" gutterBottom>
               Previous Segmentation Analysis
             </Typography>
-            
             <Typography variant="body2" color="text.secondary">
               Analyzed: {formatDate(photo.aiAnalysis.segmentation.analyzedAt)}
             </Typography>
@@ -124,7 +171,7 @@ const SegmentationView: React.FC<SegmentationViewProps> = ({
               <Button
                 size="small"
                 variant="outlined"
-                onClick={onLoadDetails}
+                onClick={loadDetails}
                 sx={{ mt: 1 }}
                 disabled={loadingDetails === 'segmentation'}
               >
@@ -140,235 +187,128 @@ const SegmentationView: React.FC<SegmentationViewProps> = ({
           </CardContent>
         </Card>
       )}
-
-      {/* Error Display */}
-      {analysisError && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {analysisError}
-        </Alert>
-      )}
-
       {/* Detailed Results */}
-      {(detailedResults || (photo.aiAnalysis?.segmentation && loadingDetails === 'segmentation')) && (
+      {detailedResults && (
         <Card variant="outlined">
           <CardContent>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography variant="h6">
                 Segmentation Details
               </Typography>
-              {detailedResults && (
-                <IconButton size="small" onClick={onClearDetails}>
-                  <CloseIcon />
-                </IconButton>
-              )}
+              <IconButton size="small" onClick={clearDetails}>
+                <CloseIcon />
+              </IconButton>
             </Box>
-            
-            {loadingDetails === 'segmentation' && !detailedResults && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 4 }}>
-                <CircularProgress size={24} />
-                <Typography>Loading detailed results...</Typography>
-              </Box>
-            )}
-
-            {detailedResults && (
-              <>
-                {/* Segmentation Visualizations */}
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Segmentation Visualization
+            {/* Responsive layout: image left, masks right (row on desktop, column on mobile) */}
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
+              {/* Segmentation Visualization */}
+              <Box sx={{ flex: 1, mb: { xs: 2, md: 0 } }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Segmentation Visualization
+                </Typography>
+                {detailedResults.job_id ? (
+                  <Box
+                    component="img"
+                    src={aiService.getSegmentationVisualizationUrl(detailedResults.job_id)}
+                    alt="Segmentation Visualization"
+                    sx={{
+                      width: '100%',
+                      maxWidth: 350,
+                      height: 'auto',
+                      borderRadius: 1,
+                      border: '1px solid #e0e0e0',
+                      cursor: 'pointer',
+                      '&:hover': { opacity: 0.8 }
+                    }}
+                    onClick={() => {
+                      const imageUrl = aiService.getSegmentationVisualizationUrl(detailedResults.job_id);
+                      window.open(imageUrl, '_blank');
+                    }}
+                  />
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    No visualization available for this segmentation result.
                   </Typography>
-                  {detailedResults.job_id ? (
-                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                      <Box>
-                        <Typography variant="body2" gutterBottom>
-                          Segmentation Result
-                        </Typography>
-                        <Box
-                          component="img"
-                          src={aiService.getSegmentationVisualizationUrl(detailedResults.job_id)}
-                          alt="Segmentation Visualization"
-                          sx={{
-                            width: 250,
-                            height: 'auto',
-                            borderRadius: 1,
-                            border: '1px solid #e0e0e0',
-                            cursor: 'pointer',
-                            '&:hover': {
-                              opacity: 0.8
-                            }
-                          }}
-                          onClick={() => {
-                            const imageUrl = aiService.getSegmentationVisualizationUrl(detailedResults.job_id);
-                            window.open(imageUrl, '_blank');
-                          }}
-                        />
-                      </Box>
-                    </Box>
-                  ) : detailedResults.result_paths?.colored_masks ? (
-                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                      <Box>
-                        <Typography variant="body2" gutterBottom>
-                          Colored Masks
-                        </Typography>
-                        <Box
-                          component="img"
-                          src={aiService.getSegmentationImageUrl(detailedResults.result_paths.colored_masks)}
-                          alt="Colored Masks"
-                          sx={{
-                            width: 250,
-                            height: 'auto',
-                            borderRadius: 1,
-                            border: '1px solid #e0e0e0',
-                            cursor: 'pointer',
-                            '&:hover': {
-                              opacity: 0.8
-                            }
-                          }}
-                          onClick={() => {
-                            const imageUrl = aiService.getSegmentationImageUrl(detailedResults.result_paths.colored_masks);
-                            window.open(imageUrl, '_blank');
-                          }}
-                        />
-                      </Box>
-                    </Box>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      No visualization available for this segmentation result.
-                    </Typography>
-                  )}
-                </Box>
-                
+                )}
                 {/* Analysis Summary */}
-                <Box sx={{ mb: 3 }}>
+                <Box sx={{ mt: 2 }}>
                   <Typography variant="subtitle2" gutterBottom>
                     Analysis Summary
                   </Typography>
-                  <Typography variant="body2">
-                    • Segmentation Type: {detailedResults.segmentation_type}
-                  </Typography>
-                  {detailedResults.model_name && (
-                    <Typography variant="body2">
-                      • Model: {detailedResults.model_name} ({detailedResults.model_type})
-                    </Typography>
-                  )}
-                  {detailedResults.confidence_threshold && (
-                    <Typography variant="body2">
-                      • Confidence Threshold: {detailedResults.confidence_threshold}
-                    </Typography>
-                  )}
-                  <Typography variant="body2">
-                    {detailedResults.processing_time && (
-                      `• Processing Time: ${detailedResults.processing_time.toFixed(2)}s`
-                    )}
-                  </Typography>
+                  <Typography variant="body2">Segmentation Type: {detailedResults.segmentation_type}</Typography>
+                  <Typography variant="body2">Model: {detailedResults.model_name}</Typography>
+                  <Typography variant="body2">Processing Time: {detailedResults.processing_time?.toFixed(2)}s</Typography>
                   {detailedResults.image_dimensions && (
                     <Typography variant="body2">
-                      • Image Dimensions: {detailedResults.image_dimensions.width} × {detailedResults.image_dimensions.height}
+                      Image Dimensions: {detailedResults.image_dimensions.width} × {detailedResults.image_dimensions.height}
                     </Typography>
                   )}
+                  <Typography variant="body2">Total Masks: {detailedResults.total_masks}</Typography>
                 </Box>
-                
-                {/* Individual Masks */}
+              </Box>
+              {/* Individual Masks */}
+              <Box sx={{ flex: 2 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Individual Masks
+                </Typography>
                 {detailedResults.masks && detailedResults.masks.length > 0 ? (
-                  <>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Individual Masks ({detailedResults.total_masks || detailedResults.masks.length})
-                    </Typography>
-                    <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
-                      {detailedResults.masks.map((mask, index) => (
-                    <Card key={index} variant="outlined" sx={{ mb: 1, p: 2 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Box>
-                          <Typography variant="body1" fontWeight="bold">
-                            Mask {index + 1}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            Area: {mask.area.toLocaleString()} pixels
-                          </Typography>
-                          {mask.file_size_bytes && (
-                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                              File: {(mask.file_size_bytes / 1024).toFixed(1)} KB
+                  <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
+                    {detailedResults.masks.map((mask, idx) => (
+                      <Card key={idx} variant="outlined" sx={{ mb: 1, p: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Box>
+                            <Typography variant="body1" fontWeight="bold">
+                              Mask {idx + 1}
                             </Typography>
-                          )}
+                            <Typography variant="body2" color="text.secondary">
+                              Area: {mask.area.toLocaleString()} pixels
+                            </Typography>
+                          </Box>
+                          <Box sx={{ textAlign: 'right' }}>
+                            <Chip label={`IoU: ${mask.predicted_iou.toFixed(2)}`} color={mask.predicted_iou > 0.8 ? 'success' : mask.predicted_iou > 0.5 ? 'warning' : 'default'} size="small" />
+                          </Box>
                         </Box>
-                        <Box sx={{ textAlign: 'right' }}>
-                          <Chip 
-                            label={`IoU: ${mask.predicted_iou.toFixed(2)}`}
-                            color={mask.predicted_iou > 0.8 ? 'success' : mask.predicted_iou > 0.5 ? 'warning' : 'default'}
-                            size="small"
-                            sx={{ mb: 0.5 }}
-                          />
-                          {mask.stability_score !== null && mask.stability_score !== undefined && (
-                            <>
-                              <br />
-                              <Chip 
-                                label={`Stability: ${mask.stability_score.toFixed(2)}`}
-                                color={mask.stability_score > 0.8 ? 'success' : mask.stability_score > 0.5 ? 'warning' : 'default'}
-                                size="small"
-                              />
-                            </>
-                          )}
-                        </Box>
-                      </Box>
-                      <Typography variant="body2" sx={{ mt: 1 }}>
-                        Bounding Box: ({mask.bbox[0]}, {mask.bbox[1]}) - {mask.bbox[2]} × {mask.bbox[3]}
-                      </Typography>
-                      {mask.mask_file_path && (
-                        <Box sx={{ mt: 2 }}>
-                          <Typography variant="body2" gutterBottom>
-                            Mask Visualization:
-                          </Typography>
-                          <Box
-                            component="img"
-                            src={(() => {
-                              if (detailedResults.job_id) {
-                                // Extract filename from path for the new API endpoint
-                                const filename = mask.mask_file_path.split('/').pop() || '';
-                                return aiService.getSegmentationMaskUrl(detailedResults.job_id, filename);
-                              }
-                              return aiService.getSegmentationImageUrl(mask.mask_file_path);
-                            })()}
-                            alt={`Mask ${index + 1}`}
-                            sx={{
-                              width: '100%',
-                              maxWidth: 200,
-                              height: 'auto',
-                              borderRadius: 1,
-                              border: '1px solid #e0e0e0',
-                              cursor: 'pointer',
-                              '&:hover': {
-                                opacity: 0.8
-                              }
-                            }}
-                            onClick={() => {
-                              if (detailedResults.job_id) {
-                                // Extract filename from path for the new API endpoint
-                                const filename = mask.mask_file_path.split('/').pop() || '';
-                                const maskUrl = aiService.getSegmentationMaskUrl(detailedResults.job_id, filename);
+                        <Typography variant="body2" sx={{ mt: 1 }}>
+                          Bounding Box: ({mask.bbox[0].toFixed(1)}, {mask.bbox[1].toFixed(1)}) - {mask.bbox[2].toFixed(1)} × {mask.bbox[3].toFixed(1)}
+                        </Typography>
+                        {mask.mask_file_path && detailedResults.job_id && (
+                          <Box sx={{ mt: 2 }}>
+                            <Typography variant="body2" gutterBottom>
+                              Mask Visualization:
+                            </Typography>
+                            <Box
+                              component="img"
+                              src={aiService.getSegmentationMaskUrl(detailedResults.job_id, mask.mask_file_path.split('/').pop() || '')}
+                              alt={`Mask ${idx + 1}`}
+                              sx={{
+                                width: '100%',
+                                maxWidth: 200,
+                                height: 'auto',
+                                borderRadius: 1,
+                                border: '1px solid #e0e0e0',
+                                cursor: 'pointer',
+                                '&:hover': { opacity: 0.8 }
+                              }}
+                              onClick={() => {
+                                const maskUrl = aiService.getSegmentationMaskUrl(detailedResults.job_id, mask.mask_file_path.split('/').pop() || '');
                                 window.open(maskUrl, '_blank');
-                              } else {
-                                const maskUrl = aiService.getSegmentationImageUrl(mask.mask_file_path);
-                                window.open(maskUrl, '_blank');
-                              }
-                            }}
-                          />
-                        </Box>
-                      )}
-                    </Card>
-                  ))}
-                                    </Box>
-                  </>
+                              }}
+                            />
+                          </Box>
+                        )}
+                      </Card>
+                    ))}
+                  </Box>
                 ) : (
                   <Typography variant="body2" color="text.secondary">
                     No individual mask data available.
                   </Typography>
                 )}
-              </>
-            )}
+              </Box>
+            </Box>
           </CardContent>
         </Card>
       )}
-
       {/* No Analysis Message */}
       {!photo.aiAnalysis?.segmentation && !detailedResults && (
         <Card variant="outlined">

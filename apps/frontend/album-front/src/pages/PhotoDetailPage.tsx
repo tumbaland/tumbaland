@@ -11,8 +11,6 @@ import {
   Breadcrumbs,
   Link,
   IconButton,
-  Card,
-  CardContent,
   Divider,
   Tab,
   Tabs
@@ -33,27 +31,13 @@ import { albumService } from '../services/albumService';
 import { photoService } from '../services/photoService';
 import EditPhotoDialog from '../components/EditPhotoDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { aiService, AIServiceError, HealthStatus, ObjectDetectionResult, SegmentationResult } from '../services/aiService';
-import ObjectDetectionView from '../components/ObjectDetectionView';
 import SegmentationView from '../components/SegmentationView';
+import ObjectDetectionView from '../components/ObjectDetectionView';
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-
-function TabPanel(props: TabPanelProps) {
+function TabPanel(props: { children?: React.ReactNode; index: number; value: number }) {
   const { children, value, index, ...other } = props;
-
   return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`photo-tabpanel-${index}`}
-      aria-labelledby={`photo-tab-${index}`}
-      {...other}
-    >
+    <div role="tabpanel" hidden={value !== index} id={`photo-tabpanel-${index}`} aria-labelledby={`photo-tab-${index}`} {...other}>
       {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
     </div>
   );
@@ -69,39 +53,17 @@ const PhotoDetailPage: React.FC = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [tabValue, setTabValue] = useState(0); // Start with Basic Info tab
-
-  // ML Analysis states
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analyzingType, setAnalyzingType] = useState<string | null>(null);
-  const [analysisResults, setAnalysisResults] = useState<any>(null);
-  const [analysisError, setAnalysisError] = useState<string | null>(null);
-  const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
-  const [checkingHealth, setCheckingHealth] = useState(false);
-  
-  // Detailed results states
-  const [detailedResults, setDetailedResults] = useState<{
-    objectDetection?: ObjectDetectionResult;
-    segmentation?: SegmentationResult;
-  } | null>(null);
-  const [loadingDetails, setLoadingDetails] = useState<string | null>(null);
-  const [fetchAttempted, setFetchAttempted] = useState<{
-    objectDetection?: boolean;
-    segmentation?: boolean;
-  }>({});
+  const [tabValue, setTabValue] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
       if (!albumId || !photoId) return;
-      
       try {
         setLoading(true);
-        // Fetch both photo and album data
         const [photoResponse, albumResponse] = await Promise.all([
           photoService.getPhotoById(photoId),
           albumService.getAlbumById(albumId)
         ]);
-        
         setPhoto(photoResponse.data);
         setAlbum(albumResponse.data);
       } catch (err) {
@@ -111,40 +73,19 @@ const PhotoDetailPage: React.FC = () => {
         setLoading(false);
       }
     };
-
     fetchData();
   }, [albumId, photoId]);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
-    
-    // Auto-load segmentation results when segmentation tab is opened
-    if (newValue === 2 && // Segmentation tab index
-        photo?.aiAnalysis?.segmentation?.resultId && 
-        !detailedResults?.segmentation && 
-        !loadingDetails &&
-        !isAnalyzing) {
-      
-      // Try to use cached results first
-      if (analysisResults && analysisResults.type === 'segmentation' && analysisResults.results) {
-        console.log('Auto-loading cached segmentation results when tab opened');
-        const segmentationResponse = analysisResults.results as SegmentationResult;
-        setDetailedResults(prev => ({ ...prev, segmentation: segmentationResponse }));
-      }
-    }
+    // ...existing code...
   };
 
-  const handleEdit = () => {
-    setShowEditDialog(true);
-  };
-
-  const handleDelete = () => {
-    setShowDeleteDialog(true);
-  };
+  const handleEdit = () => setShowEditDialog(true);
+  const handleDelete = () => setShowDeleteDialog(true);
 
   const handleConfirmDelete = async () => {
     if (!photo || !albumId) return;
-
     setDeleting(true);
     try {
       await photoService.deletePhoto(photo._id);
@@ -167,197 +108,8 @@ const PhotoDetailPage: React.FC = () => {
     }
   };
 
-  const handleRunAnalysis = async (analysisType: string) => {
-    if (!photo) return;
 
-    setIsAnalyzing(true);
-    setAnalyzingType(analysisType);
-    setAnalysisError(null);
-    // Clear any existing detailed results for this analysis type
-    if (analysisType === 'detection') {
-      setDetailedResults(prev => ({ ...prev, objectDetection: undefined }));
-      setFetchAttempted(prev => ({ ...prev, objectDetection: false }));
-    } else if (analysisType === 'segmentation') {
-      setDetailedResults(prev => ({ ...prev, segmentation: undefined }));
-      setFetchAttempted(prev => ({ ...prev, segmentation: false }));
-    }
-    
-    try {
-      let response;
-      
-      switch (analysisType) {
-        case 'detection':
-          response = await aiService.detectObjects(photo._id, {
-            confidenceThreshold: 0.25,
-            createVisualization: true
-          });
-          // Update photo with AI analysis reference
-          if (response.success) {
-            await photoService.updatePhotoAIAnalysis(photo._id, {
-              analysisType: 'objectDetection',
-              resultId: response.result_id,
-              totalDetections: response.total_detections,
-              processingTime: response.processing_time
-            });
-          }
-          break;
-        case 'segmentation':
-          response = await aiService.segmentImage(photo._id, {
-            // Note: multimaskOutput removed in new API, it's automatic based on model type
-          });
-          // Update photo with AI analysis reference
-          if (response.success) {
-            await photoService.updatePhotoAIAnalysis(photo._id, {
-              analysisType: 'segmentation',
-              resultId: response.job_id, // Use job_id from the new API response
-              totalMasks: response.total_masks,
-              segmentationType: response.segmentation_type === 'error' ? 'automatic' : response.segmentation_type,
-              processingTime: response.processing_time || 0
-            });
-          }
-          break;
-        default:
-          throw new Error(`Analysis type "${analysisType}" is not yet implemented`);
-      }
-      
-      setAnalysisResults({
-        type: analysisType,
-        timestamp: new Date().toISOString(),
-        results: response
-      });
-
-      // For segmentation, also set detailed results immediately since new API returns everything
-      if (analysisType === 'segmentation' && response.success) {
-        console.log('Setting detailed segmentation results from fresh analysis:', response);
-        setDetailedResults(prev => ({ ...prev, segmentation: response as SegmentationResult }));
-      }
-
-      // Refresh photo data to get updated AI analysis
-      const updatedPhoto = await photoService.getPhotoById(photo._id);
-      setPhoto(updatedPhoto.data);
-      
-    } catch (err) {
-      if (err instanceof AIServiceError) {
-        setAnalysisError(`${err.service} service error: ${err.message}`);
-      } else {
-        setAnalysisError(`Failed to run ${analysisType} analysis: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      }
-      console.error(`${analysisType} analysis error:`, err);
-    } finally {
-      setIsAnalyzing(false);
-      setAnalyzingType(null);
-    }
-  };
-
-  const fetchDetailedResults = async (analysisType: 'objectDetection' | 'segmentation', resultId: string) => {
-    setLoadingDetails(analysisType);
-    setAnalysisError(null);
-    
-    // Mark that we've attempted to fetch this result
-    setFetchAttempted(prev => ({ ...prev, [analysisType]: true }));
-    
-    try {
-      if (analysisType === 'objectDetection') {
-        const result = await aiService.getObjectDetectionResult(resultId);
-        setDetailedResults(prev => ({ ...prev, objectDetection: result }));
-      } else if (analysisType === 'segmentation') {
-        // The new /results/{job_id} endpoint now returns complete detailed results
-        const jobResult = await aiService.getSegmentationResult(resultId);
-        
-        // Convert to SegmentationResult format for compatibility
-        const detailedResult: SegmentationResult = {
-          success: jobResult.success,
-          message: jobResult.message,
-          job_id: jobResult.job_id,
-          file_id: jobResult.file_id,
-          result_id: jobResult.result_id,
-          original_filename: jobResult.original_filename,
-          file_path: jobResult.file_path,
-          result_paths: jobResult.result_paths,
-          masks: jobResult.masks,
-          total_masks: jobResult.total_masks,
-          processing_time: jobResult.processing_time,
-          image_dimensions: jobResult.image_dimensions,
-          prompt_points: jobResult.prompt_points,
-          prompt_labels: jobResult.prompt_labels,
-          segmentation_type: jobResult.segmentation_type,
-          model_name: jobResult.model_name,
-          model_type: jobResult.model_type,
-          confidence_threshold: jobResult.confidence_threshold,
-          created_at: jobResult.created_at
-        };
-        
-        setDetailedResults(prev => ({ ...prev, segmentation: detailedResult }));
-      }
-    } catch (err) {
-      // Just log the error and set a simple error message
-      console.error('Error fetching detailed results:', err);
-      setAnalysisError(`Unable to load detailed analysis results. The results may no longer be available.`);
-    } finally {
-      setLoadingDetails(null);
-    }
-  };
-
-  const handleRunObjectDetection = async () => {
-    await handleRunAnalysis('detection');
-  };
-
-  const handleRunSegmentation = async () => {
-    await handleRunAnalysis('segmentation');
-  };
-
-  const checkServicesHealth = async () => {
-    setCheckingHealth(true);
-    try {
-      const health = await aiService.checkAllServicesHealth();
-      setHealthStatus(health);
-    } catch (err) {
-      console.error('Health check failed:', err);
-      setHealthStatus({
-        segmentation: false,
-        objectDetection: false,
-        lastChecked: new Date()
-      });
-    } finally {
-      setCheckingHealth(false);
-    }
-  };
-
-  // Check health when component mounts
-  useEffect(() => {
-    checkServicesHealth();
-  }, []);
-
-  // Auto-fetch detailed results when photo analysis data is available
-  useEffect(() => {
-    if (photo?.aiAnalysis?.objectDetection?.resultId && 
-        !detailedResults?.objectDetection && 
-        loadingDetails !== 'objectDetection' &&
-        !fetchAttempted.objectDetection) {
-      fetchDetailedResults('objectDetection', photo.aiAnalysis.objectDetection.resultId);
-    }
-  }, [photo?.aiAnalysis?.objectDetection?.resultId, detailedResults?.objectDetection, loadingDetails, fetchAttempted.objectDetection]);
-
-  useEffect(() => {
-    if (photo?.aiAnalysis?.segmentation?.resultId && 
-        !detailedResults?.segmentation && 
-        loadingDetails !== 'segmentation' &&
-        !fetchAttempted.segmentation &&
-        (tabValue === 2 || analysisResults?.type === 'segmentation')) { // Load when tab is open OR fresh analysis
-      
-      // For fresh analysis results, use cached data
-      if (analysisResults && analysisResults.type === 'segmentation' && analysisResults.results) {
-        console.log('Using cached segmentation results for detailed view');
-        const segmentationResponse = analysisResults.results as SegmentationResult;
-        setDetailedResults(prev => ({ ...prev, segmentation: segmentationResponse }));
-        setFetchAttempted(prev => ({ ...prev, segmentation: true }));
-      } else {
-        // For existing analysis, fetch from API using the saved job ID
-        console.log('Fetching segmentation results from API using job ID:', photo.aiAnalysis.segmentation.resultId);
-        fetchDetailedResults('segmentation', photo.aiAnalysis.segmentation.resultId);
-      }
-    }
-  }, [photo?.aiAnalysis?.segmentation?.resultId, detailedResults?.segmentation, loadingDetails, fetchAttempted.segmentation, analysisResults, tabValue]);
+  // ...existing code...
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -400,150 +152,48 @@ const PhotoDetailPage: React.FC = () => {
     <Container maxWidth="xl" sx={{ py: 4 }}>
       {/* Breadcrumbs */}
       <Breadcrumbs sx={{ mb: 3 }}>
-        <Link 
-          component="button" 
-          variant="body1" 
-          onClick={() => navigate('/albums')} 
-          sx={{ textDecoration: 'none' }}
-        >
+        <Link component="button" variant="body1" onClick={() => navigate('/albums')} sx={{ textDecoration: 'none' }}>
           Albums
         </Link>
-        <Link 
-          component="button" 
-          variant="body1" 
-          onClick={() => navigate(`/albums/${albumId}`)} 
-          sx={{ textDecoration: 'none' }}
-        >
+        <Link component="button" variant="body1" onClick={() => navigate(`/albums/${albumId}`)} sx={{ textDecoration: 'none' }}>
           {album.name}
         </Link>
-        <Typography color="text.primary">
-          {photo.title || photo.originalName}
-        </Typography>
+        <Typography color="text.primary">{photo.title || photo.originalName}</Typography>
       </Breadcrumbs>
-
       {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
         <Box display="flex" alignItems="center">
           <IconButton onClick={() => navigate(`/albums/${albumId}`)} sx={{ mr: 2 }}>
             <ArrowBackIcon />
           </IconButton>
-          <Typography variant="h4" component="h1">
-            {photo.title || photo.originalName}
-          </Typography>
+          <Typography variant="h4" component="h1">{photo.title || photo.originalName}</Typography>
         </Box>
-        
         <Box display="flex" gap={1}>
-          <Button
-            variant="outlined"
-            startIcon={<ShareIcon />}
-            onClick={() => {/* TODO: Implement share */}}
-          >
+          <Button variant="outlined" startIcon={<ShareIcon />} onClick={() => {}}>
             Share
           </Button>
-          <Button
-            variant="outlined"
-            startIcon={<DownloadIcon />}
-            onClick={() => window.open(photo.signedUrl, '_blank')}
-          >
+          <Button variant="outlined" startIcon={<DownloadIcon />} onClick={() => window.open(photo.signedUrl, '_blank')}>
             Download
           </Button>
-          <Button
-            variant="outlined"
-            startIcon={<EditIcon />}
-            onClick={handleEdit}
-          >
+          <Button variant="outlined" startIcon={<EditIcon />} onClick={handleEdit}>
             Edit
           </Button>
-          <Button
-            variant="outlined"
-            color="error"
-            startIcon={<DeleteIcon />}
-            onClick={handleDelete}
-          >
+          <Button variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={handleDelete}>
             Delete
           </Button>
         </Box>
       </Box>
-
       {/* Main Content with Tabs */}
       <Box>
         <Paper elevation={2}>
-          {/* Header */}
-          <Box>
-            {analysisResults && (
-              <Card variant="outlined" sx={{ mb: 2 }}>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Latest Analysis Results ({analysisResults.type})
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Completed at: {formatDate(analysisResults.timestamp)}
-                  </Typography>
-                  
-                  {analysisResults.results.success && (
-                    <Box>
-                      <Typography variant="body1" gutterBottom>
-                        Analysis completed successfully!
-                      </Typography>
-                      
-                      {analysisResults.type === 'detection' && (
-                        <Box>
-                          <Typography variant="body2">
-                            • Found {analysisResults.results.total_detections} objects
-                          </Typography>
-                          <Typography variant="body2">
-                            • Processing time: {analysisResults.results.processing_time?.toFixed(2)}s
-                          </Typography>
-                          <Typography variant="body2">
-                            • Image dimensions: {analysisResults.results.image_dimensions?.width} × {analysisResults.results.image_dimensions?.height}
-                          </Typography>
-                        </Box>
-                      )}
-                      
-                      {analysisResults.type === 'segmentation' && (
-                        <Box>
-                          <Typography variant="body2">
-                            • Generated {analysisResults.results.total_masks} masks
-                          </Typography>
-                          <Typography variant="body2">
-                            • Segmentation type: {analysisResults.results.segmentation_type}
-                          </Typography>
-                          <Typography variant="body2">
-                            • Processing time: {analysisResults.results.processing_time?.toFixed(2)}s
-                          </Typography>
-                          <Typography variant="body2">
-                            • Image dimensions: {analysisResults.results.image_dimensions?.width} × {analysisResults.results.image_dimensions?.height}
-                          </Typography>
-                        </Box>
-                      )}
-                    </Box>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-          </Box>
-
           {/* Main Tabs */}
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
             <Tabs value={tabValue} onChange={handleTabChange}>
-              <Tab 
-                label="Basic Info" 
-                icon={<InfoIcon />} 
-                iconPosition="start"
-              />
-              <Tab 
-                label="Object Detection" 
-                icon={<SmartToyIcon />} 
-                iconPosition="start"
-              />
-              <Tab 
-                label="Segmentation" 
-                icon={<ViewInArIcon />} 
-                iconPosition="start"
-              />
+              <Tab label="Basic Info" icon={<InfoIcon />} iconPosition="start" />
+              <Tab label="Object Detection" icon={<SmartToyIcon />} iconPosition="start" />
+              <Tab label="Segmentation" icon={<ViewInArIcon />} iconPosition="start" />
             </Tabs>
           </Box>
-
           <TabPanel value={tabValue} index={0}>
             {/* Basic Info - Photo and Details Combined */}
             <Box sx={{ display: 'flex', gap: 4, flexDirection: { xs: 'column', md: 'row' } }}>
@@ -553,79 +203,40 @@ const PhotoDetailPage: React.FC = () => {
                   Photo
                 </Typography>
                 <Box sx={{ display: 'flex', justifyContent: 'center', p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
-                  <Box
-                    component="img"
-                    src={photo.signedUrl}
-                    alt={photo.title || photo.originalName}
-                    sx={{
-                      width: '100%',
-                      height: 'auto',
-                      maxHeight: '70vh',
-                      objectFit: 'contain',
-                      borderRadius: 1
-                    }}
-                  />
+                  <Box component="img" src={photo.signedUrl} alt={photo.title || photo.originalName} sx={{ width: '100%', height: 'auto', maxHeight: '70vh', objectFit: 'contain', borderRadius: 1 }} />
                 </Box>
               </Box>
-
               {/* Photo Details */}
               <Box sx={{ flex: 1 }}>
                 <Typography variant="h6" gutterBottom>
                   Details
                 </Typography>
-                
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="body2" color="text.secondary" gutterBottom>
                     Description
                   </Typography>
-                  <Typography variant="body1">
-                    {photo.description || 'No description'}
-                  </Typography>
+                  <Typography variant="body1">{photo.description || 'No description'}</Typography>
                 </Box>
-
                 <Divider sx={{ my: 2 }} />
-
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    File Size
-                  </Typography>
-                  <Typography variant="body1">
-                    {formatFileSize(photo.size)}
-                  </Typography>
+                  <Typography variant="body2" color="text.secondary">File Size</Typography>
+                  <Typography variant="body1">{formatFileSize(photo.size)}</Typography>
                 </Box>
-
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    Dimensions
-                  </Typography>
-                  <Typography variant="body1">
-                    {photo.width && photo.height ? `${photo.width} × ${photo.height}` : 'Unknown'}
-                  </Typography>
+                  <Typography variant="body2" color="text.secondary">Dimensions</Typography>
+                  <Typography variant="body1">{photo.width && photo.height ? `${photo.width} × ${photo.height}` : 'Unknown'}</Typography>
                 </Box>
-
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    Upload Date
-                  </Typography>
-                  <Typography variant="body1">
-                    {formatDate(photo.createdAt)}
-                  </Typography>
+                  <Typography variant="body2" color="text.secondary">Upload Date</Typography>
+                  <Typography variant="body1">{formatDate(photo.createdAt)}</Typography>
                 </Box>
-
                 <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    Original Name
-                  </Typography>
-                  <Typography variant="body1" sx={{ wordBreak: 'break-all' }}>
-                    {photo.originalName}
-                  </Typography>
+                  <Typography variant="body2" color="text.secondary">Original Name</Typography>
+                  <Typography variant="body1" sx={{ wordBreak: 'break-all' }}>{photo.originalName}</Typography>
                 </Box>
-
                 {photo.tags && photo.tags.length > 0 && (
                   <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary" gutterBottom>
-                      Tags
-                    </Typography>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>Tags</Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                       {photo.tags.map((tag, index) => (
                         <Chip key={index} label={tag} size="small" variant="outlined" />
@@ -636,66 +247,24 @@ const PhotoDetailPage: React.FC = () => {
               </Box>
             </Box>
           </TabPanel>
-
           <TabPanel value={tabValue} index={1}>
             <ObjectDetectionView
               photo={photo}
-              detailedResults={detailedResults?.objectDetection}
-              loadingDetails={loadingDetails}
-              analysisError={analysisError}
-              healthStatus={healthStatus}
-              checkingHealth={checkingHealth}
-              isAnalyzing={isAnalyzing && analyzingType === 'detection'}
-              onClearDetails={() => setDetailedResults(prev => ({ ...prev, objectDetection: undefined }))}
-              onRunAnalysis={handleRunObjectDetection}
-              onCheckHealth={checkServicesHealth}
               formatDate={formatDate}
             />
           </TabPanel>
-
           <TabPanel value={tabValue} index={2}>
             <SegmentationView
               photo={photo}
-              detailedResults={detailedResults?.segmentation}
-              loadingDetails={loadingDetails}
-              analysisError={analysisError}
-              healthStatus={healthStatus}
-              checkingHealth={checkingHealth}
-              isAnalyzing={isAnalyzing && analyzingType === 'segmentation'}
-              onClearDetails={() => setDetailedResults(prev => ({ ...prev, segmentation: undefined }))}
-              onRunAnalysis={handleRunSegmentation}
-              onLoadDetails={() => {
-                if (photo?.aiAnalysis?.segmentation?.resultId) {
-                  fetchDetailedResults('segmentation', photo.aiAnalysis.segmentation.resultId);
-                }
-              }}
-              onCheckHealth={checkServicesHealth}
               formatDate={formatDate}
             />
           </TabPanel>
         </Paper>
       </Box>
-
       {/* Edit Dialog */}
-      <EditPhotoDialog
-        open={showEditDialog}
-        photo={photo}
-        onClose={() => setShowEditDialog(false)}
-        onSave={handleSaveEdit}
-      />
-
+      <EditPhotoDialog open={showEditDialog} photo={photo} onClose={() => setShowEditDialog(false)} onSave={handleSaveEdit} />
       {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        open={showDeleteDialog}
-        onClose={() => setShowDeleteDialog(false)}
-        onConfirm={handleConfirmDelete}
-        title="Delete Photo"
-        message="Are you sure you want to delete this photo? This action cannot be undone."
-        confirmText="Delete Photo"
-        cancelText="Cancel"
-        variant="danger"
-        loading={deleting}
-      />
+      <ConfirmDialog open={showDeleteDialog} onClose={() => setShowDeleteDialog(false)} onConfirm={handleConfirmDelete} title="Delete Photo" message="Are you sure you want to delete this photo? This action cannot be undone." confirmText="Delete Photo" cancelText="Cancel" variant="danger" loading={deleting} />
     </Container>
   );
 };
