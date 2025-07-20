@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.81](https://github.com/toomastahves/tumbaland/compare/v0.0.80...v0.0.81) (2025-07-20)
+
+
+### Features
+
+* improve segmentation view ([f1dee53](https://github.com/toomastahves/tumbaland/commit/f1dee539d287a7741e4c046458c6401cb3dd5af7))
+
 ### [0.0.80](https://github.com/toomastahves/tumbaland/compare/v0.0.79...v0.0.80) (2025-07-19)
 
 
