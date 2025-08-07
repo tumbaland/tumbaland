@@ -3,6 +3,7 @@ import HistoryIcon from '@mui/icons-material/History';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import PieChartIcon from '@mui/icons-material/PieChart';
 import CalculateIcon from '@mui/icons-material/Calculate';
+import TuneIcon from '@mui/icons-material/Tune';
 
 export const menuItems = [
   {
@@ -26,8 +27,13 @@ export const menuItems = [
     path: '/user-portfolio'
   },
   {
-    label: 'Calculator',
+    label: 'Growth Calculator',
     icon: <CalculateIcon fontSize="small" sx={{ mr: 1 }} />,
     path: '/stock-growth-calculator'
+  },
+  {
+    label: 'Portfolio Optimizer',
+    icon: <TuneIcon fontSize="small" sx={{ mr: 1 }} />,
+    path: '/portfolio-optimizer'
   }
 ];

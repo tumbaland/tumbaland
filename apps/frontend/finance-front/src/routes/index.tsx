@@ -4,6 +4,7 @@ import FinancialRecords from '../pages/FinancialRecords';
 import TrackedTickersPage from '../pages/TrackedTickersPage';
 import UserPortfolioPage from '../pages/UserPortfolioPage';
 import StockGrowthCalculator from '../pages/StockGrowthCalculator';
+import PortfolioOptimizer from '../pages/PortfolioOptimizer';
 
 const AppRoutes = () => {
   return (
@@ -13,6 +14,7 @@ const AppRoutes = () => {
       <Route path="/tracked-tickers" element={<TrackedTickersPage />} />
       <Route path="/user-portfolio" element={<UserPortfolioPage />} />
       <Route path="/stock-growth-calculator" element={<StockGrowthCalculator />} />
+      <Route path="/portfolio-optimizer" element={<PortfolioOptimizer />} />
     </Routes>
   );
 };
