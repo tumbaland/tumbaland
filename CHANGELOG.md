@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.88](https://github.com/toomastahves/tumbaland/compare/v0.0.87...v0.0.88) (2025-08-08)
+
+
+### Features
+
+* update growth calculator ([7a6db65](https://github.com/toomastahves/tumbaland/commit/7a6db6586b720140cde79b5f44ba12bb53049ec0))
+
 ### [0.0.87](https://github.com/toomastahves/tumbaland/compare/v0.0.86...v0.0.87) (2025-08-08)
 
 
