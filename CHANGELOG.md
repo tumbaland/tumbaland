@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.89](https://github.com/toomastahves/tumbaland/compare/v0.0.88...v0.0.89) (2025-08-08)
+
+
+### Features
+
+* add monte carlo to calculator ([b718fd6](https://github.com/toomastahves/tumbaland/commit/b718fd6ea42ca1de09de074df467a6430d98abfd))
+
 ### [0.0.88](https://github.com/toomastahves/tumbaland/compare/v0.0.87...v0.0.88) (2025-08-08)
 
 
