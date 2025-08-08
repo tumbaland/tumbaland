@@ -13,9 +13,10 @@ interface YearlyResult {
 interface StockGrowthChartProps {
   data: YearlyResult[];
   goal?: number;
+  mcBands?: { years: number[]; p10: number[]; p50: number[]; p90: number[] };
 }
 
-const StockGrowthChart: React.FC<StockGrowthChartProps> = ({ data, goal }) => {
+const StockGrowthChart: React.FC<StockGrowthChartProps> = ({ data, goal, mcBands }) => {
   const [containerWidth, setContainerWidth] = React.useState(800);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -89,7 +90,8 @@ const StockGrowthChart: React.FC<StockGrowthChartProps> = ({ data, goal }) => {
         .map((line) => item[line.key as keyof YearlyResult] as number)
     )
   );
-  const maxWithGoal = goal ? Math.max(maxValue, goal) : maxValue;
+  const mcMax = mcBands ? Math.max(...mcBands.p90) : 0;
+  const maxWithGoal = goal ? Math.max(maxValue, goal, mcMax) : Math.max(maxValue, mcMax);
 
   const toggleLine = (key: string) => {
     setVisibleLines((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -115,6 +117,22 @@ const StockGrowthChart: React.FC<StockGrowthChartProps> = ({ data, goal }) => {
         return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
       })
       .join(' ');
+  };
+
+  const createBandPath = (years: number[], upper: number[], lower: number[]) => {
+    if (years.length === 0) return '';
+    // Upper from left to right
+    const upperPath = years
+      .map((year, i) => `L ${getXPosition(year - 1)} ${getYPosition(upper[i])}`)
+      .join(' ')
+      .replace(/^L/, 'M');
+    // Lower from right to left
+    const lowerPath = years
+      .slice()
+      .reverse()
+  .map((_, idx) => `L ${getXPosition(years.length - 1 - idx)} ${getYPosition(lower[years.length - 1 - idx])}`)
+      .join(' ');
+    return `${upperPath} ${lowerPath} Z`;
   };
 
   return (
@@ -232,6 +250,56 @@ const StockGrowthChart: React.FC<StockGrowthChartProps> = ({ data, goal }) => {
                   })}
                 </g>
               ))}
+
+            {/* Monte Carlo band (p10 - p90) and median line */}
+            {mcBands && (
+              <g>
+                {/* Shaded band p10-p90 */}
+                <path
+                  d={createBandPath(mcBands.years, mcBands.p90, mcBands.p10)}
+                  fill="#9e9e9e"
+                  opacity="0.15"
+                  stroke="none"
+                />
+                {/* Band */}
+                <path
+                  d={mcBands.years
+                    .map((year, i) => `L ${getXPosition(year - 1)} ${getYPosition(mcBands.p90[i])}`)
+                    .join(' ')
+                    .replace(/^L/, 'M')
+                  }
+                  fill="none"
+                  stroke="#9e9e9e"
+                  strokeWidth="1"
+                  strokeDasharray="2,4"
+                  opacity="0.8"
+                />
+                <path
+                  d={mcBands.years
+                    .slice().reverse()
+                    .map((_, idx) => `L ${getXPosition(mcBands.years.length - 1 - idx)} ${getYPosition(mcBands.p10[mcBands.years.length - 1 - idx])}`)
+                    .join(' ')
+                    .replace(/^L/, 'M')
+                  }
+                  fill="none"
+                  stroke="#9e9e9e"
+                  strokeWidth="1"
+                  strokeDasharray="2,4"
+                  opacity="0.8"
+                />
+                {/* Median */}
+                <path
+                  d={mcBands.years
+                    .map((year, i) => `L ${getXPosition(year - 1)} ${getYPosition(mcBands.p50[i])}`)
+                    .join(' ')
+                    .replace(/^L/, 'M')
+                  }
+                  fill="none"
+                  stroke="#616161"
+                  strokeWidth="2"
+                />
+              </g>
+            )}
 
             {/* Goal line */}
             {goal && (
