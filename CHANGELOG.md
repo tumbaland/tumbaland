@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.87](https://github.com/toomastahves/tumbaland/compare/v0.0.86...v0.0.87) (2025-08-08)
+
+
+### Bug Fixes
+
+* portfolio optimization ([9a0d2b3](https://github.com/toomastahves/tumbaland/commit/9a0d2b393e0df0989e727a67f87680f3b95d3077))
+
 ### [0.0.86](https://github.com/toomastahves/tumbaland/compare/v0.0.85...v0.0.86) (2025-08-07)
 
 
