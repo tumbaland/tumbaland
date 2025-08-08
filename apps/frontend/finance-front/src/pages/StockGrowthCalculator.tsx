@@ -6,6 +6,10 @@ import {
   Typography,
   TextField,
   Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
   Table,
   TableBody,
   TableCell,
@@ -24,6 +28,11 @@ interface CalculationInput {
   annualInvestment: number;
   maxYears: number;
   expectedInflation: number;
+  contributionFrequency: 'annual' | 'monthly';
+  monthlyInvestment: number;
+  compounding: 'annual' | 'monthly';
+  annualFee: number; // expense ratio or drag
+  targetGoal: number;
 }
 
 interface YearlyResult {
@@ -40,7 +49,12 @@ const StockGrowthCalculator: React.FC = () => {
     expectedGrowth: 10,
     annualInvestment: 6000,
     maxYears: 30,
-    expectedInflation: 2.5
+  expectedInflation: 2.5,
+  contributionFrequency: 'annual',
+  monthlyInvestment: 500,
+  compounding: 'annual',
+  annualFee: 0.0,
+  targetGoal: 0
   });
 
   const [results, setResults] = useState<YearlyResult[]>([]);
@@ -64,29 +78,61 @@ const StockGrowthCalculator: React.FC = () => {
     let totalInvested = inputs.startingCapital;
     let portfolioValue = inputs.startingCapital;
 
-    for (let year = 1; year <= inputs.maxYears; year++) {
-      // Add annual investment at the beginning of the year
-      if (year > 1) {
-        totalInvested += inputs.annualInvestment;
-        portfolioValue += inputs.annualInvestment;
+    const g = inputs.expectedGrowth / 100;
+    const f = inputs.annualFee / 100;
+    const netAnnual = (1 + g) * (1 - f) - 1; // combine growth and fee multiplicatively
+    const netMonthly = Math.pow(1 + netAnnual, 1 / 12) - 1;
+
+    if (inputs.compounding === 'annual' && inputs.contributionFrequency === 'annual') {
+      for (let year = 1; year <= inputs.maxYears; year++) {
+        if (year > 1) {
+          totalInvested += inputs.annualInvestment;
+          portfolioValue += inputs.annualInvestment;
+        }
+        portfolioValue *= 1 + netAnnual;
+        const gainFromMarket = portfolioValue - totalInvested;
+        const inflationAdjustedValue = portfolioValue / Math.pow(1 + inputs.expectedInflation / 100, year);
+        yearlyResults.push({
+          year,
+          moneyInvested: totalInvested,
+          gainFromMarket,
+          portfolioTotalValue: portfolioValue,
+          inflationAdjustedValue
+        });
       }
-
-      // Apply market growth
-      portfolioValue *= (1 + inputs.expectedGrowth / 100);
-
-      // Calculate gains
-      const gainFromMarket = portfolioValue - totalInvested;
-
-      // Calculate inflation-adjusted value
-      const inflationAdjustedValue = portfolioValue / Math.pow(1 + inputs.expectedInflation / 100, year);
-
-      yearlyResults.push({
-        year,
-        moneyInvested: totalInvested,
-        gainFromMarket,
-        portfolioTotalValue: portfolioValue,
-        inflationAdjustedValue
-      });
+    } else {
+      // Monthly simulation to support monthly compounding and/or contributions
+      const totalMonths = inputs.maxYears * 12;
+      for (let m = 1; m <= totalMonths; m++) {
+        const monthIndex = m - 1;
+        const isStartOfYear = monthIndex % 12 === 0;
+        // Contributions
+        if (inputs.contributionFrequency === 'monthly') {
+          totalInvested += inputs.monthlyInvestment;
+          portfolioValue += inputs.monthlyInvestment;
+        } else {
+          if (isStartOfYear && m > 1) {
+            totalInvested += inputs.annualInvestment;
+            portfolioValue += inputs.annualInvestment;
+          }
+        }
+        // Growth
+        if (inputs.compounding === 'monthly') {
+          portfolioValue *= 1 + netMonthly;
+        } else {
+          // annual compounding but monthly contributions; apply growth at end of each year
+          if ((m % 12) === 0) {
+            portfolioValue *= 1 + netAnnual;
+          }
+        }
+        // End of year snapshot
+        if (m % 12 === 0) {
+          const year = m / 12;
+          const gainFromMarket = portfolioValue - totalInvested;
+          const inflationAdjustedValue = portfolioValue / Math.pow(1 + inputs.expectedInflation / 100, year);
+          yearlyResults.push({ year, moneyInvested: totalInvested, gainFromMarket, portfolioTotalValue: portfolioValue, inflationAdjustedValue });
+        }
+      }
     }
 
     setResults(yearlyResults);
@@ -107,7 +153,12 @@ const StockGrowthCalculator: React.FC = () => {
       expectedGrowth: 10,
       annualInvestment: 6000,
       maxYears: 30,
-      expectedInflation: 2.5
+  expectedInflation: 2.5,
+  contributionFrequency: 'annual',
+  monthlyInvestment: 500,
+  compounding: 'annual',
+  annualFee: 0.0,
+  targetGoal: 0
     });
     setResults([]);
     setIsCalculated(false);
@@ -121,6 +172,29 @@ const StockGrowthCalculator: React.FC = () => {
   }, [inputs]);
 
   const finalResult = results[results.length - 1];
+  const goal = inputs.targetGoal > 0 ? inputs.targetGoal : undefined;
+  const yearsToGoal = goal
+    ? results.find((r) => r.portfolioTotalValue >= goal)?.year
+    : undefined;
+
+  const downloadCSV = () => {
+    if (results.length === 0) return;
+    const rows = [
+      ['Year','Money Invested','Gain from Market','Portfolio Total Value','Inflation Adjusted Value']
+    ];
+    results.forEach(r => rows.push([
+      r.year.toString(),
+      Math.round(r.moneyInvested).toString(),
+      Math.round(r.gainFromMarket).toString(),
+      Math.round(r.portfolioTotalValue).toString(),
+      Math.round(r.inflationAdjustedValue).toString()
+    ]));
+    const blob = new Blob([rows.map(r => r.join(',')).join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'growth-results.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <Box sx={{ p: 3 }}>
@@ -157,14 +231,49 @@ const StockGrowthCalculator: React.FC = () => {
                   inputProps={{ min: 0, max: 50, step: 0.1 }}
                 />
 
-                <TextField
-                  label="Annual Investment (EUR)"
-                  type="number"
-                  value={inputs.annualInvestment}
-                  onChange={handleInputChange('annualInvestment')}
-                  fullWidth
-                  inputProps={{ min: 0, step: 100 }}
-                />
+                <FormControl fullWidth>
+                  <InputLabel>Compounding</InputLabel>
+                  <Select
+                    label="Compounding"
+                    value={inputs.compounding}
+                    onChange={(e) => setInputs((p) => ({ ...p, compounding: e.target.value as any }))}
+                  >
+                    <MenuItem value="annual">Annually</MenuItem>
+                    <MenuItem value="monthly">Monthly</MenuItem>
+                  </Select>
+                </FormControl>
+
+                <FormControl fullWidth>
+                  <InputLabel>Contribution Frequency</InputLabel>
+                  <Select
+                    label="Contribution Frequency"
+                    value={inputs.contributionFrequency}
+                    onChange={(e) => setInputs((p) => ({ ...p, contributionFrequency: e.target.value as any }))}
+                  >
+                    <MenuItem value="annual">Annually</MenuItem>
+                    <MenuItem value="monthly">Monthly</MenuItem>
+                  </Select>
+                </FormControl>
+
+                {inputs.contributionFrequency === 'annual' ? (
+                  <TextField
+                    label="Annual Investment (EUR)"
+                    type="number"
+                    value={inputs.annualInvestment}
+                    onChange={handleInputChange('annualInvestment')}
+                    fullWidth
+                    inputProps={{ min: 0, step: 100 }}
+                  />
+                ) : (
+                  <TextField
+                    label="Monthly Investment (EUR)"
+                    type="number"
+                    value={inputs.monthlyInvestment}
+                    onChange={handleInputChange('monthlyInvestment')}
+                    fullWidth
+                    inputProps={{ min: 0, step: 10 }}
+                  />
+                )}
 
                 <TextField
                   label="Investment Period (Years)"
@@ -182,6 +291,25 @@ const StockGrowthCalculator: React.FC = () => {
                   onChange={handleInputChange('expectedInflation')}
                   fullWidth
                   inputProps={{ min: 0, max: 20, step: 0.1 }}
+                />
+
+                <TextField
+                  label="Annual Fee / Expense Ratio (%)"
+                  type="number"
+                  value={inputs.annualFee}
+                  onChange={handleInputChange('annualFee')}
+                  fullWidth
+                  inputProps={{ min: 0, max: 5, step: 0.05 }}
+                />
+
+                <TextField
+                  label="Target Goal (EUR)"
+                  type="number"
+                  value={inputs.targetGoal}
+                  onChange={handleInputChange('targetGoal')}
+                  fullWidth
+                  inputProps={{ min: 0, step: 500 }}
+                  helperText="Optional: used to show time to goal and goal line on the chart"
                 />
 
                 <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
@@ -241,6 +369,14 @@ const StockGrowthCalculator: React.FC = () => {
                         {formatPercentage((finalResult.gainFromMarket / finalResult.moneyInvested) * 100)}
                       </Typography>
                     </Box>
+                    {goal !== undefined && (
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="body2">Years to Goal:</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: yearsToGoal ? 'primary.main' : 'text.secondary' }}>
+                          {yearsToGoal ? `${yearsToGoal} years` : 'Not reached'}
+                        </Typography>
+                      </Box>
+                    )}
                   </Box>
                 </Box>
               )}
@@ -251,7 +387,7 @@ const StockGrowthCalculator: React.FC = () => {
         {/* Chart */}
         <Box sx={{ flex: 1 }}>
           {isCalculated && results.length > 0 && (
-            <StockGrowthChart data={results} />
+            <StockGrowthChart data={results} goal={goal} />
           )}
         </Box>
       </Box>
@@ -261,10 +397,13 @@ const StockGrowthCalculator: React.FC = () => {
           <Box sx={{ mt: 3 }}>
             <Card>
               <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', m: 0 }}>
                   <TableChart sx={{ mr: 1 }} />
                   Detailed Yearly Breakdown
-                </Typography>
+                  </Typography>
+                  <Button variant="outlined" size="small" onClick={downloadCSV}>Download CSV</Button>
+                </Box>
 
                 <TableContainer component={Paper} sx={{ maxHeight: 600, mt: 2 }}>
                   <Table stickyHeader>

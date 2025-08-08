@@ -12,9 +12,10 @@ interface YearlyResult {
 
 interface StockGrowthChartProps {
   data: YearlyResult[];
+  goal?: number;
 }
 
-const StockGrowthChart: React.FC<StockGrowthChartProps> = ({ data }) => {
+const StockGrowthChart: React.FC<StockGrowthChartProps> = ({ data, goal }) => {
   const [containerWidth, setContainerWidth] = React.useState(800);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -88,6 +89,7 @@ const StockGrowthChart: React.FC<StockGrowthChartProps> = ({ data }) => {
         .map((line) => item[line.key as keyof YearlyResult] as number)
     )
   );
+  const maxWithGoal = goal ? Math.max(maxValue, goal) : maxValue;
 
   const toggleLine = (key: string) => {
     setVisibleLines((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -102,7 +104,7 @@ const StockGrowthChart: React.FC<StockGrowthChartProps> = ({ data }) => {
   };
 
   const getYPosition = (value: number) => {
-    return chartHeight - padding - (value / maxValue) * (chartHeight - 2 * padding);
+    return chartHeight - padding - (value / maxWithGoal) * (chartHeight - 2 * padding);
   };
 
   const createPathData = (lineKey: keyof YearlyResult) => {
@@ -177,7 +179,7 @@ const StockGrowthChart: React.FC<StockGrowthChartProps> = ({ data }) => {
 
             {/* Y-axis labels */}
             {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-              const value = maxValue * ratio;
+              const value = maxWithGoal * ratio;
               const y = getYPosition(value);
               return (
                 <g key={ratio}>
@@ -230,6 +232,24 @@ const StockGrowthChart: React.FC<StockGrowthChartProps> = ({ data }) => {
                   })}
                 </g>
               ))}
+
+            {/* Goal line */}
+            {goal && (
+              <g>
+                <line
+                  x1={padding}
+                  y1={getYPosition(goal)}
+                  x2={chartWidth - padding}
+                  y2={getYPosition(goal)}
+                  stroke="#9c27b0"
+                  strokeWidth="2"
+                  strokeDasharray="6,6"
+                />
+                <text x={chartWidth - padding} y={getYPosition(goal) - 6} textAnchor="end" fontSize="12" fill="#9c27b0">
+                  Goal: {formatCurrency(goal)}
+                </text>
+              </g>
+            )}
           </svg>
         </Box>
 
