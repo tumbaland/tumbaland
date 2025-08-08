@@ -1,5 +1,6 @@
 import { useMemo, memo } from 'react';
 import { Box } from '@mui/material';
+import { usePerformanceOptimizations } from '../hooks/usePerformanceOptimizations';
 
 function SparkleStars({ count = 69 }: { count?: number }) {
   const symbols = ['✦', '✧', '✩', '✫', '✬', '✯', '✰', '★', '❉', '❋'];
@@ -117,6 +118,8 @@ function SparkleStars({ count = 69 }: { count?: number }) {
 }
 
 const WelcomeTumbaland = memo(function WelcomeTumbaland() {
+  const { isIOS, prefersReducedMotion } = usePerformanceOptimizations();
+  const showStars = !prefersReducedMotion && !isIOS;
   return (
     <Box sx={{ position: 'relative', display: 'inline-block', mb: 2 }}>
       <Box
@@ -133,7 +136,7 @@ const WelcomeTumbaland = memo(function WelcomeTumbaland() {
       >
         Welcome to Tumbaland
       </Box>
-      <SparkleStars count={69} />
+  {showStars && <SparkleStars count={48} />}
     </Box>
   );
 });

@@ -4,13 +4,15 @@ import { useEffect, useState } from 'react';
 export function usePerformanceOptimizations() {
   const [isMobile, setIsMobile] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
     // Check if device is mobile
     const checkMobile = () => {
-      setIsMobile(
-        window.innerWidth < 768 || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-      );
+      const ua = navigator.userAgent || navigator.vendor || (window as any).opera || '';
+      const mobile = window.innerWidth < 768 || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+      setIsMobile(mobile);
+      setIsIOS(/iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream);
     };
 
     // Check for reduced motion preference
@@ -31,5 +33,5 @@ export function usePerformanceOptimizations() {
     };
   }, []);
 
-  return { isMobile, prefersReducedMotion };
+  return { isMobile, prefersReducedMotion, isIOS };
 }

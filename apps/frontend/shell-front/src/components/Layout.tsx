@@ -29,11 +29,11 @@ export default function Layout({ children }: LayoutProps) {
   }, [appUrl]);
 
   return (
-    <div
+  <div
       style={{
-        minHeight: '100vh',
-        height: '100vh',
-        width: '100vw',
+    minHeight: '100dvh',
+    height: '100dvh',
+    width: '100dvw',
         overflow: 'hidden',
         display: 'flex',
         background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)',
@@ -76,7 +76,7 @@ export default function Layout({ children }: LayoutProps) {
             <iframe
               src={appUrl}
               title={currentApp!.name}
-              style={{ width: '100%', height: '100vh', border: 'none', zIndex: 1 }}
+              style={{ width: '100%', height: '100dvh', border: 'none', zIndex: 1 }}
               allow="fullscreen"
               onLoad={() => setLoading(false)}
             />

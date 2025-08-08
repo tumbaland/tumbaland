@@ -7,11 +7,10 @@ const BgImageBox = memo(function BgImageBox() {
       component="img"
       src="/background.png"
       sx={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
         objectFit: 'cover',
         zIndex: 0,
         opacity: 0.55,

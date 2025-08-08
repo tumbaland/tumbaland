@@ -9,7 +9,7 @@ import { useTodo } from '../hooks/useTodo';
 
 export default function TodoCard() {
   const { todo, isLoading, error, fetchTodo } = useTodo();
-  const { isMobile, prefersReducedMotion } = usePerformanceOptimizations();
+  const { isMobile, prefersReducedMotion, isIOS } = usePerformanceOptimizations();
   const [isRotating, setIsRotating] = useState(false);
   const [todoVisible, setTodoVisible] = useState(true);
   const [currentTodo, setCurrentTodo] = useState(todo);
@@ -72,8 +72,9 @@ export default function TodoCard() {
       justifyContent: 'center',
       gap: 3,
       // Enhanced backdrop filter for better blur effect
-      backdropFilter: isMobile ? 'blur(15px) saturate(180%)' : 'blur(25px) saturate(200%)',
-      WebkitBackdropFilter: isMobile ? 'blur(15px) saturate(180%)' : 'blur(25px) saturate(200%)',
+  // On iOS Safari backdrop-filter over large areas can trigger rendering bugs/whitescreen
+  backdropFilter: isIOS ? 'none' : (isMobile ? 'blur(15px) saturate(180%)' : 'blur(25px) saturate(200%)'),
+  WebkitBackdropFilter: isIOS ? 'none' : (isMobile ? 'blur(15px) saturate(180%)' : 'blur(25px) saturate(200%)'),
       border: '1px solid rgba(255, 255, 255, 0.3)',
       transform: 'translate3d(0, 0, 0)',
       transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -83,7 +84,7 @@ export default function TodoCard() {
         background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.15))'
       }
     }),
-    [isMobile]
+  [isMobile, isIOS]
   );
 
   // Determine particle count based on device and performance preferences
@@ -107,8 +108,9 @@ export default function TodoCard() {
       {particleCount > 0 && <CuteFallingStars count={particleCount} />}
       <Box
         sx={{
-          minHeight: '100vh',
-          width: '100vw',
+          // Avoid iOS 100vh bugs by using dynamic viewport units
+          minHeight: '100dvh',
+          width: '100dvw',
           position: 'relative',
           overflow: 'hidden',
           display: 'flex',
