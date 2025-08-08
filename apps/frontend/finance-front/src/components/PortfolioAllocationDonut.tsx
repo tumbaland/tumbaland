@@ -5,11 +5,13 @@ import { PieChart } from '@mui/icons-material';
 interface PortfolioAllocationDonutProps {
   allocation: Record<string, number>;
   totalAmount: number;
+  selectedCount?: number; // number of assets user selected
 }
 
 const PortfolioAllocationDonut: React.FC<PortfolioAllocationDonutProps> = ({
   allocation,
-  totalAmount
+  totalAmount,
+  selectedCount
 }) => {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('et-EE', {
@@ -181,11 +183,19 @@ const PortfolioAllocationDonut: React.FC<PortfolioAllocationDonutProps> = ({
               </Typography>
               <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
                 <Box>
-                  <Typography variant="body2" color="text.secondary">Number of Assets:</Typography>
+                  <Typography variant="body2" color="text.secondary">Positions (non-zero weights):</Typography>
                   <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                     {allocationData.length}
                   </Typography>
                 </Box>
+                {typeof selectedCount === 'number' && (
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">Selected Assets:</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      {selectedCount}
+                    </Typography>
+                  </Box>
+                )}
                 <Box>
                   <Typography variant="body2" color="text.secondary">Largest Position:</Typography>
                   <Typography variant="body2" sx={{ fontWeight: 'bold' }}>

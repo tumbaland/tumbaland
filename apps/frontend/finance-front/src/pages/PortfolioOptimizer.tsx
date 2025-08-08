@@ -22,8 +22,19 @@ import { getTrackedTickers, TrackedTicker } from '../services/trackedTickerServi
 import { getTickerPriceHistory, TickerPriceHistory } from '../services/tickerPriceHistoryService';
 import EfficientFrontierChart from '../components/EfficientFrontierChart';
 import OptimalPortfolioChart from '../components/OptimalPortfolioChart';
-import OptimizationResults from '../components/OptimizationResults';
-import PortfolioAllocationDonut from '../components/PortfolioAllocationDonut';
+import AllocationView from '../components/AllocationView';
+import {
+  buildMuSigma,
+  weightsTangency,
+  weightsMinVariance,
+  weightsTargetReturn,
+  portfolioReturn as pfReturn,
+  portfolioVariance as pfVariance,
+  computeEfficientFrontierUnconstrained,
+  computeEfficientFrontierNoShort,
+  projectToSimplex,
+  
+} from '../utils/portfolioMath';
 
 
 interface OptimizationInputs {
@@ -34,6 +45,7 @@ interface OptimizationInputs {
   optimizationType: 'max_sharpe' | 'min_risk' | 'target_return';
   riskFreeRate: number;
   lookbackPeriod: number;
+  allowShorts?: boolean;
 }
 
 interface AssetStats {
@@ -86,13 +98,15 @@ const PortfolioOptimizer: React.FC = () => {
     expectedReturn: 10,
     optimizationType: 'max_sharpe',
     riskFreeRate: 2.0,
-    lookbackPeriod: 252 // 1 year of trading days
+  lookbackPeriod: 252, // 1 year of trading days
+  allowShorts: false
   });
 
   const [assetStats, setAssetStats] = useState<AssetStats[]>([]);
   const [optimalPortfolio, setOptimalPortfolio] = useState<OptimalPortfolio | null>(null);
   const [efficientFrontier, setEfficientFrontier] = useState<Array<{return: number, risk: number}>>([]);
   const [correlationMatrix, setCorrelationMatrix] = useState<number[][]>([]);
+  const [dailyReturnsByTicker, setDailyReturnsByTicker] = useState<Record<string, number[]>>({});
 
   useEffect(() => {
     fetchAvailableTickers();
@@ -174,6 +188,7 @@ const PortfolioOptimizer: React.FC = () => {
 
     setAssetStats(stats);
     calculateCorrelationMatrix(allReturns);
+  setDailyReturnsByTicker(allReturns);
   };
 
   const calculateCorrelationMatrix = (allReturns: Record<string, number[]>) => {
@@ -220,48 +235,112 @@ const PortfolioOptimizer: React.FC = () => {
     return denominator === 0 ? 0 : numerator / denominator;
   };
 
+  // Basic linear algebra helpers for optimization
+  // math helpers replaced by utils
+
   const optimizePortfolio = () => {
     if (assetStats.length < 2) {
       setError('Need at least 2 assets for optimization');
       return;
     }
 
-    // Simplified optimization - in a real implementation, you'd use quadratic programming
+    const tickersAll = assetStats.map(a => a.ticker);
+    const { mu: muAll, Sigma: SigmaAll } = buildMuSigma(dailyReturnsByTicker, tickersAll);
+
+    // If shorting is disabled and we're maximizing Sharpe, pick the best Sharpe point from the constrained frontier
+    if (inputs.allowShorts === false && inputs.optimizationType === 'max_sharpe') {
+      const ef = computeEfficientFrontierNoShort(muAll, SigmaAll, 80, 320, 0.03);
+      if (ef.length > 0) {
+        const rf = inputs.riskFreeRate;
+        let best = ef[0];
+        let bestSharpe = ((best.return - rf) / Math.max(1e-9, best.risk));
+        for (const p of ef) {
+          const s = (p.return - rf) / Math.max(1e-9, p.risk);
+          if (s > bestSharpe) { bestSharpe = s; best = p; }
+        }
+        const w = best.weights || [];
+        const optimalWeights: Record<string, number> = {};
+        tickersAll.forEach((t, i) => (optimalWeights[t] = w[i] ?? 0));
+
+        // Build portfolio metrics from chosen point (best.return/risk are in percent)
+        const ret = best.return; // percent
+        const risk = best.risk; // percent
+        const sharpe = ((ret - rf) / Math.max(1e-9, risk));
+
+        // Calculate dollar allocations
+        const allocation: Record<string, number> = {};
+        Object.entries(optimalWeights).forEach(([ticker, weight]) => {
+          allocation[ticker] = weight * inputs.investmentAmount;
+        });
+
+        setOptimalPortfolio({
+          weights: optimalWeights,
+          expectedReturn: ret,
+          volatility: risk,
+          sharpeRatio: sharpe,
+          allocation
+        });
+        setEfficientFrontier(ef.map(p => ({ return: p.return, risk: p.risk })));
+        return; // Done
+      }
+    }
+
+    // We'll compute weights based on selected optimization type
     let optimalWeights: Record<string, number> = {};
-    
+
     if (inputs.optimizationType === 'max_sharpe') {
-      // Maximum Sharpe ratio: favor assets with highest Sharpe ratios
-      const totalSharpe = assetStats.reduce((sum, asset) => sum + Math.max(asset.sharpeRatio, 0), 0);
-      
-      assetStats.forEach(asset => {
-        const weight = Math.max(asset.sharpeRatio, 0) / totalSharpe;
-        optimalWeights[asset.ticker] = weight;
-      });
+      // Use math utils for tangency
+      const tickers = assetStats.map(a => a.ticker);
+      const { mu, Sigma } = buildMuSigma(dailyReturnsByTicker, tickers);
+      let w = weightsTangency(mu, Sigma, inputs.riskFreeRate / 100);
+      if (w && inputs.allowShorts === false) {
+        w = projectToSimplex(w);
+      }
+      if (w) tickers.forEach((t, i) => (optimalWeights[t] = w![i]));
+      else {
+        // Fallback: weight by positive Sharpe
+        const totalSharpe = assetStats.reduce((sum, a) => sum + Math.max(a.sharpeRatio, 0), 0) || 1;
+        assetStats.forEach(a => (optimalWeights[a.ticker] = Math.max(a.sharpeRatio, 0) / totalSharpe));
+      }
     } else if (inputs.optimizationType === 'min_risk') {
-      // Minimum variance: equal weighting for simplicity (proper implementation would use covariance matrix)
-      const equalWeight = 1 / assetStats.length;
-      assetStats.forEach(asset => {
-        optimalWeights[asset.ticker] = equalWeight;
-      });
+      // Minimum variance weights from Σ^-1 1 normalized
+      const tickers = assetStats.map(a => a.ticker);
+      const { Sigma } = buildMuSigma(dailyReturnsByTicker, tickers);
+      let w = weightsMinVariance(Sigma);
+      if (w && inputs.allowShorts === false) {
+        w = projectToSimplex(w);
+      }
+      if (w) tickers.forEach((t, i) => (optimalWeights[t] = w![i]));
+      else {
+        const eq = 1 / assetStats.length;
+        assetStats.forEach(a => (optimalWeights[a.ticker] = eq));
+      }
     } else if (inputs.optimizationType === 'target_return') {
-      // Target return optimization: weight by expected returns relative to target
-      const totalReturn = assetStats.reduce((sum, asset) => sum + asset.expectedReturn / 100, 0);
-      
-      assetStats.forEach(asset => {
-        const weight = (asset.expectedReturn / 100) / totalReturn;
-        optimalWeights[asset.ticker] = weight;
-      });
+      // Analytic target-return solution on the frontier
+      const tickers = assetStats.map(a => a.ticker);
+      const { mu, Sigma } = buildMuSigma(dailyReturnsByTicker, tickers);
+      const target = inputs.expectedReturn / 100;
+      let w = weightsTargetReturn(mu, Sigma, target);
+      if (w && inputs.allowShorts === false) {
+        w = projectToSimplex(w);
+      }
+      if (w) tickers.forEach((t, i) => (optimalWeights[t] = w![i]));
+      else {
+        // fallback to proportional to expected return
+        const total = assetStats.reduce((s, a) => s + a.expectedReturn / 100, 0) || 1;
+        assetStats.forEach(a => (optimalWeights[a.ticker] = (a.expectedReturn / 100) / total));
+      }
     }
 
     // Calculate portfolio metrics
-    const portfolioReturn = assetStats.reduce((sum, asset) => 
-      sum + optimalWeights[asset.ticker] * (asset.expectedReturn / 100), 0
-    );
-    
-    // Simplified portfolio volatility calculation (assumes perfect correlation)
-    const portfolioVolatility = assetStats.reduce((sum, asset) => 
-      sum + optimalWeights[asset.ticker] * (asset.volatility / 100), 0
-    );
+    // Use covariance matrix for proper portfolio volatility
+  const tickers = tickersAll;
+  const mu = muAll;
+  const Sigma = SigmaAll;
+  const weightsVec = tickers.map(t => optimalWeights[t] ?? 0);
+  const portfolioReturn = pfReturn(weightsVec, mu);
+  const variance = Math.max(0, pfVariance(weightsVec, Sigma));
+  const portfolioVolatility = Math.sqrt(variance);
     
     const portfolioSharpe = (portfolioReturn - inputs.riskFreeRate / 100) / portfolioVolatility;
 
@@ -279,160 +358,19 @@ const PortfolioOptimizer: React.FC = () => {
       allocation
     });
 
-    generateEfficientFrontier();
+  generateEfficientFrontier();
   };
 
   const generateEfficientFrontier = () => {
     if (assetStats.length < 2) return;
-    
-    const points: Array<{return: number, risk: number}> = [];
-    
-    // Get the range of returns for the efficient frontier
-    const minAssetReturn = Math.min(...assetStats.map(a => a.expectedReturn / 100));
-    const maxAssetReturn = Math.max(...assetStats.map(a => a.expectedReturn / 100));
-    
-    // For efficient frontier, we want to start from minimum variance portfolio
-    // and go up to higher returns, showing the minimum risk for each return level
-    const minReturn = minAssetReturn * 0.8; // Start below lowest asset return
-    const maxReturn = maxAssetReturn * 1.2; // Go beyond highest asset return
-    
-    const numPoints = 100; // More points for smoother curve
-    
-    for (let i = 0; i < numPoints; i++) {
-      const targetReturn = minReturn + (i / (numPoints - 1)) * (maxReturn - minReturn);
-      let minRisk = Infinity;
-      
-      if (assetStats.length === 2) {
-        // For 2 assets, calculate exact efficient frontier
-        const [asset1, asset2] = assetStats;
-        const r1 = asset1.expectedReturn / 100;
-        const r2 = asset2.expectedReturn / 100;
-        const σ1 = asset1.volatility / 100;
-        const σ2 = asset2.volatility / 100;
-        
-        if (Math.abs(r1 - r2) > 0.001) {
-          const w1 = (targetReturn - r2) / (r1 - r2);
-          const w2 = 1 - w1;
-          
-          // Use actual correlation
-          const correlation = correlationMatrix.length >= 2 ? correlationMatrix[0][1] : 0.3;
-          
-          // Calculate portfolio variance
-          const portfolioVariance = 
-            w1 * w1 * σ1 * σ1 + 
-            w2 * w2 * σ2 * σ2 + 
-            2 * w1 * w2 * correlation * σ1 * σ2;
-          
-          if (portfolioVariance >= 0) {
-            minRisk = Math.sqrt(portfolioVariance);
-          }
-        }
-      } else {
-        // For multiple assets, use optimization to find minimum risk
-        // Try many different weight combinations systematically
-        const numCombinations = 5000; // More combinations for better accuracy
-        
-        for (let combo = 0; combo < numCombinations; combo++) {
-          // Generate diversified portfolio weights using Dirichlet distribution simulation
-          const rawWeights: number[] = [];
-          for (let j = 0; j < assetStats.length; j++) {
-            rawWeights.push(-Math.log(Math.random())); // Exponential random variables
-          }
-          
-          // Normalize to sum to 1
-          const weightSum = rawWeights.reduce((sum, w) => sum + w, 0);
-          const weights = rawWeights.map(w => w / weightSum);
-          
-          // Calculate portfolio return
-          const portfolioReturn = assetStats.reduce((sum, asset, idx) => 
-            sum + weights[idx] * (asset.expectedReturn / 100), 0
-          );
-          
-          // Check if this achieves target return (with tight tolerance)
-          if (Math.abs(portfolioReturn - targetReturn) < 0.005) { // 0.5% tolerance
-            
-            // Calculate portfolio risk using covariance matrix
-            let portfolioVariance = 0;
-            
-            // Add diagonal terms (individual variances)
-            assetStats.forEach((asset, idx) => {
-              const variance = Math.pow(asset.volatility / 100, 2);
-              portfolioVariance += weights[idx] * weights[idx] * variance;
-            });
-            
-            // Add off-diagonal terms (covariances)
-            for (let idx1 = 0; idx1 < assetStats.length; idx1++) {
-              for (let idx2 = idx1 + 1; idx2 < assetStats.length; idx2++) {
-                const σ1 = assetStats[idx1].volatility / 100;
-                const σ2 = assetStats[idx2].volatility / 100;
-                
-                // Use correlation matrix if available
-                let correlation = 0.2; // Conservative default
-                if (correlationMatrix.length > idx1 && correlationMatrix[idx1].length > idx2) {
-                  correlation = correlationMatrix[idx1][idx2];
-                }
-                
-                portfolioVariance += 2 * weights[idx1] * weights[idx2] * correlation * σ1 * σ2;
-              }
-            }
-            
-            const portfolioRisk = Math.sqrt(Math.max(0, portfolioVariance));
-            minRisk = Math.min(minRisk, portfolioRisk);
-          }
-        }
-      }
-      
-      // Only include valid points that represent actual efficient portfolios
-      if (minRisk < Infinity && minRisk > 0) {
-        points.push({
-          return: targetReturn * 100,
-          risk: minRisk * 100
-        });
-      }
-    }
-    
-    // Filter and sort points
-    let validPoints = points
-      .filter(p => p.risk > 0 && p.return > 0 && !isNaN(p.risk) && !isNaN(p.return))
-      .sort((a, b) => a.risk - b.risk);
-    
-    // Remove points that are clearly inefficient (higher risk for same/lower return)
-    const efficientPoints: Array<{return: number, risk: number}> = [];
-    let maxReturnSoFar = -Infinity;
-    
-    for (const point of validPoints) {
-      if (point.return > maxReturnSoFar) {
-        efficientPoints.push(point);
-        maxReturnSoFar = point.return;
-      }
-    }
-    
-    // Ensure the optimal portfolio point is on the frontier
-    if (optimalPortfolio) {
-      const optimalPoint = {
-        return: optimalPortfolio.expectedReturn,
-        risk: optimalPortfolio.volatility
-      };
-      
-      // Check if optimal point is close to any existing point
-      const existingPointClose = efficientPoints.some(p => 
-        Math.abs(p.return - optimalPoint.return) < 1.0 && 
-        Math.abs(p.risk - optimalPoint.risk) < 1.0
-      );
-      
-      if (!existingPointClose) {
-        efficientPoints.push(optimalPoint);
-        efficientPoints.sort((a, b) => a.risk - b.risk);
-      }
-    }
-    
-    // Ensure we have a reasonable number of points
-    if (efficientPoints.length < 5) {
-      console.warn('Not enough points for efficient frontier');
-      return;
-    }
-    
-    setEfficientFrontier(efficientPoints);
+  // Use analytic method; no need for random sampling points here
+  // Analytic efficient frontier when shorting allowed; otherwise constrained approximation
+  const tickers = assetStats.map(a => a.ticker);
+  const { mu, Sigma } = buildMuSigma(dailyReturnsByTicker, tickers);
+  const ef = inputs.allowShorts
+    ? computeEfficientFrontierUnconstrained(mu, Sigma, 100)
+    : computeEfficientFrontierNoShort(mu, Sigma, 80, 300, 0.03);
+  if (ef.length >= 2) setEfficientFrontier(ef.map(p => ({ return: p.return, risk: p.risk })));
   };
 
   const handleTickerSelect = (ticker: string) => {
@@ -455,10 +393,10 @@ const PortfolioOptimizer: React.FC = () => {
   };
 
   useEffect(() => {
-    if (assetStats.length > 0) {
+    if (assetStats.length > 0 && Object.keys(dailyReturnsByTicker).length > 0) {
       optimizePortfolio();
     }
-  }, [assetStats, inputs.optimizationType, inputs.expectedReturn, inputs.riskFreeRate]);
+  }, [assetStats, dailyReturnsByTicker, inputs.optimizationType, inputs.expectedReturn, inputs.riskFreeRate, inputs.allowShorts]);
 
   return (
     <Box sx={{ p: 3 }}>
@@ -522,6 +460,19 @@ const PortfolioOptimizer: React.FC = () => {
                   <MenuItem value="min_risk">Minimize Risk</MenuItem>
                   <MenuItem value="target_return">Target Return</MenuItem>
                 </Select>
+              </FormControl>
+
+              {/* Allow Shorts */}
+              <FormControl fullWidth sx={{ mb: 3 }}>
+                <InputLabel shrink>Advanced</InputLabel>
+                <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                  <Chip
+                    label={inputs.allowShorts ? 'Shorting: On' : 'Shorting: Off'}
+                    color={inputs.allowShorts ? 'warning' : 'default'}
+                    onClick={() => setInputs(prev => ({ ...prev, allowShorts: !prev.allowShorts }))}
+                    size="small"
+                  />
+                </Box>
               </FormControl>
 
               {/* Risk-Free Rate */}
@@ -617,17 +568,19 @@ const PortfolioOptimizer: React.FC = () => {
           {optimalPortfolio && (
             <>
               <TabPanel value={tabValue} index={0}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  <OptimizationResults
-                    portfolio={optimalPortfolio}
-                    assetStats={assetStats}
-                    investmentAmount={inputs.investmentAmount}
-                  />
-                  <PortfolioAllocationDonut
-                    allocation={optimalPortfolio.allocation}
-                    totalAmount={inputs.investmentAmount}
-                  />
-                </Box>
+                <AllocationView
+                  portfolio={{
+                    expectedReturn: optimalPortfolio.expectedReturn,
+                    volatility: optimalPortfolio.volatility,
+                    sharpeRatio: optimalPortfolio.sharpeRatio,
+                    weights: optimalPortfolio.weights
+                  }}
+                  allocation={optimalPortfolio.allocation}
+                  assetStats={assetStats}
+                  investmentAmount={inputs.investmentAmount}
+                  selectedCount={inputs.selectedTickers.length}
+                  allowShorts={inputs.allowShorts}
+                />
               </TabPanel>
 
               <TabPanel value={tabValue} index={1}>
@@ -635,6 +588,7 @@ const PortfolioOptimizer: React.FC = () => {
                   frontierData={efficientFrontier}
                   optimalPortfolio={optimalPortfolio}
                   assetStats={assetStats}
+                  riskFreeRate={inputs.riskFreeRate}
                 />
               </TabPanel>
 

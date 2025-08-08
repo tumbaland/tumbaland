@@ -24,12 +24,14 @@ interface EfficientFrontierChartProps {
   frontierData: FrontierPoint[];
   optimalPortfolio: OptimalPortfolio;
   assetStats: AssetStats[];
+  riskFreeRate: number; // in percent
 }
 
 const EfficientFrontierChart: React.FC<EfficientFrontierChartProps> = ({
   frontierData,
   optimalPortfolio,
-  assetStats
+  assetStats,
+  riskFreeRate
 }) => {
   const [containerWidth, setContainerWidth] = React.useState(600);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -68,14 +70,45 @@ const EfficientFrontierChart: React.FC<EfficientFrontierChartProps> = ({
   const chartWidth = containerWidth;
   const padding = 80;
 
-  // Calculate bounds
-  const maxReturn = Math.max(...frontierData.map(p => p.return), ...assetStats.map(a => a.expectedReturn));
-  const minReturn = Math.min(...frontierData.map(p => p.return), ...assetStats.map(a => a.expectedReturn));
-  const maxRisk = Math.max(...frontierData.map(p => p.risk), ...assetStats.map(a => a.volatility));
-  const minRisk = Math.min(...frontierData.map(p => p.risk), ...assetStats.map(a => a.volatility));
+  // Pre-compute CAL slope (Sharpe) using optimal portfolio
+  const slope = optimalPortfolio.volatility > 0 && isFinite(optimalPortfolio.volatility)
+    ? (optimalPortfolio.expectedReturn - riskFreeRate) / optimalPortfolio.volatility
+    : 0;
 
-  const returnRange = maxReturn - minReturn;
-  const riskRange = maxRisk - minRisk;
+  // Calculate bounds; include 0% risk and risk-free rate in ranges
+  const rawMaxReturn = Math.max(
+    ...frontierData.map(p => p.return),
+    ...assetStats.map(a => a.expectedReturn),
+    optimalPortfolio.expectedReturn,
+    riskFreeRate
+  );
+  const rawMinReturn = Math.min(
+    ...frontierData.map(p => p.return),
+    ...assetStats.map(a => a.expectedReturn),
+    riskFreeRate
+  );
+  const rawMaxRisk = Math.max(
+    ...frontierData.map(p => p.risk),
+    ...assetStats.map(a => a.volatility),
+    optimalPortfolio.volatility
+  );
+  const rawMinRisk = Math.min(
+    ...frontierData.map(p => p.risk),
+    ...assetStats.map(a => a.volatility),
+    0
+  );
+
+  // Extend return bounds to accommodate CAL at extremes of risk axis
+  const calAtMinRisk = riskFreeRate + slope * rawMinRisk; // typically rawMinRisk is 0
+  const calAtMaxRisk = riskFreeRate + slope * rawMaxRisk;
+
+  const maxReturn = Math.max(rawMaxReturn, calAtMaxRisk);
+  const minReturn = Math.min(rawMinReturn, calAtMinRisk);
+  const maxRisk = Math.max(rawMaxRisk, 0);
+  const minRisk = Math.min(rawMinRisk, 0);
+
+  const returnRange = maxReturn - minReturn || 1;
+  const riskRange = maxRisk - minRisk || 1;
 
   const getXPosition = (risk: number) => {
     return padding + ((risk - minRisk) / riskRange) * (chartWidth - 2 * padding);
@@ -129,17 +162,15 @@ const EfficientFrontierChart: React.FC<EfficientFrontierChartProps> = ({
 
   const frontierPath = createSmoothPath(frontierData);
 
-  // Calculate Capital Allocation Line (CAL) - the best possible straight line
-  // This line goes from risk-free rate (0% risk) through the optimal portfolio
-  const riskFreeRate = 2.0; // Assume 2% risk-free rate (could be passed as prop)
-  const calStartX = getXPosition(0); // Risk-free asset has 0 risk
-  const calStartY = getYPosition(riskFreeRate);
-  const calEndX = getXPosition(optimalPortfolio.volatility * 2); // Extend line beyond optimal portfolio
-  
-  // Calculate the slope (Sharpe ratio) to find end point
-  const slope = (optimalPortfolio.expectedReturn - riskFreeRate) / optimalPortfolio.volatility;
-  const calEndReturn = riskFreeRate + slope * (optimalPortfolio.volatility * 2);
-  const calEndY = getYPosition(calEndReturn);
+  // Calculate Capital Allocation Line (CAL) across the visible risk domain
+  const calX1Risk = minRisk; // typically 0
+  const calX2Risk = maxRisk;
+  const calY1Return = riskFreeRate + slope * calX1Risk;
+  const calY2Return = riskFreeRate + slope * calX2Risk;
+  const calStartX = getXPosition(calX1Risk);
+  const calStartY = getYPosition(calY1Return);
+  const calEndX = getXPosition(calX2Risk);
+  const calEndY = getYPosition(calY2Return);
 
   return (
     <Card>
