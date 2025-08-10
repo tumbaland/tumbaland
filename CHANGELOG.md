@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.91](https://github.com/toomastahves/tumbaland/compare/v0.0.90...v0.0.91) (2025-08-10)
+
+
+### Features
+
+* add users to auth service ([855b5f8](https://github.com/toomastahves/tumbaland/commit/855b5f87fcbe4b7c19dce7b767c3a77d288702e8))
+
 ### [0.0.90](https://github.com/toomastahves/tumbaland/compare/v0.0.89...v0.0.90) (2025-08-08)
 
 
