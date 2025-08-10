@@ -7,6 +7,8 @@ export interface UserPayload {
   email: string;
   name: string;
   picture?: string;
+  roles?: string[];
+  isApproved?: boolean;
 }
 
 export const generateJWT = (user: UserPayload): string => {

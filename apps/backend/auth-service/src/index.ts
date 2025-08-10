@@ -4,6 +4,7 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 const cookieParser = require('cookie-parser');
 import authRoutes from './routes/authRoutes';
+import { connectDb } from './config/db';
 import path from 'path';
 import fs from 'fs';
 
@@ -74,11 +75,18 @@ app.use((error: Error, req: Request, res: Response, next: any) => {
   });
 });
 
-// Start the server
-app.listen(PORT, () => {
-  console.log(`🚀 Auth service is running on port ${PORT}`);
-  console.log(`📚 API docs: http://localhost:${PORT}/api/docs`);
-  console.log(`🔐 Health check: http://localhost:${PORT}/health`);
-});
+// Connect DB then start server
+connectDb()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`🚀 Auth service is running on port ${PORT}`);
+      console.log(`📚 API docs: http://localhost:${PORT}/api/docs`);
+      console.log(`🔐 Health check: http://localhost:${PORT}/health`);
+    });
+  })
+  .catch((err) => {
+    console.error('Failed to start auth-service:', err);
+    process.exit(1);
+  });
 
 export default app;

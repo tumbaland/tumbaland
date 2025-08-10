@@ -1,14 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyGoogleToken } from '../services/googleAuthService';
 import { generateJWT, UserPayload } from '../services/jwtService';
+import { User } from '../models/User';
 
 export const validateToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const authorizedEmails = (process.env.AUTHORIZED_EMAILS || '')
-      .split(',')
-      .map((email) => email.trim())
-      .filter((email) => email.length > 0);
-    const { idToken } = req.body;
+  const { idToken } = req.body;
     if (!idToken) {
       res.status(400).json({ success: false, message: 'Token is required' });
       return;
@@ -20,10 +17,9 @@ export const validateToken = async (req: Request, res: Response, next: NextFunct
       return;
     }
 
-    // Check if the user's email is authorized
     const userEmail = googleUser.email || '';
-    if (!authorizedEmails.includes(userEmail)) {
-      res.status(403).json({ success: false, message: 'Email is not authorized' });
+    if (!userEmail) {
+      res.status(400).json({ success: false, message: 'Email not present in Google token' });
       return;
     }
 
@@ -34,6 +30,19 @@ export const validateToken = async (req: Request, res: Response, next: NextFunct
       name: googleUser.name || '',
       picture: googleUser.picture
     };
+
+    // Upsert DB user (manual approval flow)
+    const dbUser = await User.findOneAndUpdate(
+      { email: userEmail.toLowerCase() },
+      {
+        $setOnInsert: {
+          email: userEmail.toLowerCase(),
+          signupMethod: 'google'
+        },
+        $set: { lastLoginAt: new Date() }
+      },
+      { new: true, upsert: true }
+    );
 
     const jwtToken = generateJWT(userPayload);
 
@@ -52,7 +61,8 @@ export const validateToken = async (req: Request, res: Response, next: NextFunct
     res.json({
       success: true,
       user: userPayload,
-      token: jwtToken // Also return token for manual storage if needed
+      approved: dbUser.isApproved,
+      token: jwtToken
     });
   } catch (error) {
     console.error('validateToken error:', error);
@@ -74,8 +84,8 @@ export const getProfile = (req: Request, res: Response): void => {
     res.status(401).json({ success: false, message: 'Not authenticated' });
     return;
   }
-
-  res.json({ success: true, user: req.user });
+  const dbUser = (req as any).dbUser;
+  res.json({ success: true, user: req.user, approved: dbUser ? dbUser.isApproved : undefined });
 };
 
 export const verifyAuth = (req: Request, res: Response): void => {
