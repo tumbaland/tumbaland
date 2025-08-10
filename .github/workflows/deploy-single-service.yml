@@ -141,7 +141,6 @@ jobs:
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
           echo "GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}" >> .env
           echo "GOOGLE_CLOUD_KEY_FILE_BASE64=${{ secrets.GOOGLE_CLOUD_KEY_FILE_BASE64 }}" >> .env
-          echo "AUTHORIZED_EMAILS=${{ vars.AUTHORIZED_EMAILS }}" >> .env
           echo "COOKIE_DOMAIN=${{ vars.COOKIE_DOMAIN }}" >> .env
           echo "GOOGLE_CLOUD_PROJECT_ID=${{ vars.GOOGLE_CLOUD_PROJECT_ID }}" >> .env
           echo "GOOGLE_CLOUD_BUCKET_NAME=${{ vars.GOOGLE_CLOUD_BUCKET_NAME }}" >> .env
