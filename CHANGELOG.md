@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.90](https://github.com/toomastahves/tumbaland/compare/v0.0.89...v0.0.90) (2025-08-08)
+
+
+### Bug Fixes
+
+* todos for iphone ([f9b552a](https://github.com/toomastahves/tumbaland/commit/f9b552ae5e719e23a73d6405edc0763d69e17929))
+
 ### [0.0.89](https://github.com/toomastahves/tumbaland/compare/v0.0.88...v0.0.89) (2025-08-08)
 
 
