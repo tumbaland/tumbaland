@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.103](https://github.com/toomastahves/tumbaland/compare/v0.0.102...v0.0.103) (2025-08-11)
+
+
+### Features
+
+* remove unused ArrowBackIcon ([8e35961](https://github.com/toomastahves/tumbaland/commit/8e359614214e448e8216812955ed331a2f3e438b))
+
 ### [0.0.102](https://github.com/toomastahves/tumbaland/compare/v0.0.101...v0.0.102) (2025-08-11)
 
 
