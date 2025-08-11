@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.97](https://github.com/toomastahves/tumbaland/compare/v0.0.96...v0.0.97) (2025-08-11)
+
+
+### Features
+
+* improve certificate refresh ([1bb8051](https://github.com/toomastahves/tumbaland/commit/1bb80512f1b745b54e0969763b4aafc8cf029da4))
+
 ### [0.0.96](https://github.com/toomastahves/tumbaland/compare/v0.0.95...v0.0.96) (2025-08-11)
 
 
