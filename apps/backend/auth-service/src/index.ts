@@ -6,7 +6,6 @@ const cookieParser = require('cookie-parser');
 import authRoutes from './routes/authRoutes';
 import { connectDb } from './config/db';
 import path from 'path';
-import fs from 'fs';
 
 // Load environment variables
 dotenv.config();
