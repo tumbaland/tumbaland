@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.105](https://github.com/toomastahves/tumbaland/compare/v0.0.104...v0.0.105) (2025-08-11)
+
+
+### Bug Fixes
+
+* redirect payment ([6b3ee8a](https://github.com/toomastahves/tumbaland/commit/6b3ee8a94d5357de93aa0f4e2290695be5c7b964))
+
 ### [0.0.104](https://github.com/toomastahves/tumbaland/compare/v0.0.103...v0.0.104) (2025-08-11)
 
 
