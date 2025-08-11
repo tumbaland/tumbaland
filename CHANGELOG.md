@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.95](https://github.com/toomastahves/tumbaland/compare/v0.0.94...v0.0.95) (2025-08-11)
+
+
+### Bug Fixes
+
+* remove chip import ([967ba63](https://github.com/toomastahves/tumbaland/commit/967ba631dbf49bbe0eba96cd874740eb10b50b16))
+
 ### [0.0.94](https://github.com/toomastahves/tumbaland/compare/v0.0.93...v0.0.94) (2025-08-11)
 
 
