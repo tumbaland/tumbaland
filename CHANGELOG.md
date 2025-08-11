@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.101](https://github.com/toomastahves/tumbaland/compare/v0.0.100...v0.0.101) (2025-08-11)
+
+
+### Features
+
+* update env example ([66235fa](https://github.com/toomastahves/tumbaland/commit/66235fad044fb65637e03fdb27775c5b54e0edf3))
+
 ### [0.0.100](https://github.com/toomastahves/tumbaland/compare/v0.0.99...v0.0.100) (2025-08-11)
 
 
