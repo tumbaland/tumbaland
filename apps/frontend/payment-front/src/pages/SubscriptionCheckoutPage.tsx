@@ -3,7 +3,6 @@ import { Box, Typography, Button, Card, CardContent, CircularProgress, Alert, Di
 import { useTheme } from '@mui/material/styles';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import { useSearchParams } from 'react-router-dom';
 import { paymentApi } from '../services/paymentApi';
