@@ -8,7 +8,16 @@ set -e
 #  - certbot installed in the image
 
 EMAIL="toomastahves@hotmail.com" # change if needed
+
+# Pure in-container: use standard paths
 WEBROOT="/usr/share/nginx/html"
+CERT_DIR="/etc/letsencrypt"
+mkdir -p "$WEBROOT/.well-known/acme-challenge"
+
+if [ ! -d "$WEBROOT" ]; then
+  echo "[error] Webroot directory $WEBROOT does not exist. Create it (mkdir -p)." >&2
+  exit 2
+fi
 
 # Group domains logically so we minimize cert count (Let's Encrypt rate limits):
 # Root + wildcard is NOT used here (wildcard would require DNS challenge). We keep individual certs.
@@ -33,6 +42,19 @@ payment-api.tumbaland.eu \
 
 echo "==> Starting certificate obtain/renew process"
 echo "Using webroot: $WEBROOT"
+echo "Using cert storage: $CERT_DIR"
+
+echo "[info] To verify accessibility before issuing, place a test file:"
+echo "  echo test > $WEBROOT/.well-known/acme-challenge/acme-test && curl -I http://tumbaland.eu/.well-known/acme-challenge/acme-test"
+
+# If user passes domains as CLI args, restrict to those only.
+if [ "$#" -gt 0 ]; then
+  echo "[filter] Limiting issuance to domains passed as args: $*"
+  DOMAIN_GROUPS=""
+  for D in "$@"; do
+    DOMAIN_GROUPS="$DOMAIN_GROUPS $D"
+  done
+fi
 
 for GROUP in $DOMAIN_GROUPS; do
   # Split group into array

@@ -1,52 +1,45 @@
-## Certificate Renewal / Upgrade (tumbaland-proxy)
+## tumbaland-proxy: Add Domain & Refresh Certificates
 
-Minimal steps to (re)issue or renew Let’s Encrypt certificates for all subdomains.
+### Add a New Domain
+1. Add a new `server` block to `conf.d/default.conf` for your domain, with correct `ssl_certificate` and `ssl_certificate_key` paths:
+	 - Example:
+		 ```nginx
+		 server {
+			 listen 443 ssl;
+			 server_name newsub.tumbaland.eu;
+			 ssl_certificate /etc/letsencrypt/live/newsub.tumbaland.eu/fullchain.pem;
+			 ssl_certificate_key /etc/letsencrypt/live/newsub.tumbaland.eu/privkey.pem;
+			 # ...
+		 }
+		 ```
+2. Add the domain to the `DOMAIN_GROUPS` list in `refresh_certificates.sh` (one per line).
 
-### 1. Preconditions
-* DNS A records for every domain point to this server.
-* Container running: port 80 serves `/.well-known/acme-challenge/` (already in `default.conf`).
-* Volumes mounted: `certs/*` and `html/` as in `compose.yml`.
+### Refresh Certificates (In-Container)
+1. Enter the running proxy container:
+	 ```sh
+	 docker compose -f apps/infra/tumbaland-proxy/compose.yml exec tumbaland-proxy sh
+	 ```
+2. Run the refresh script:
+	 ```sh
+	 sh /app/refresh_certificates.sh
+	 ```
+	 - To refresh only a specific domain:
+		 ```sh
+		 sh /app/refresh_certificates.sh newsub.tumbaland.eu
+		 ```
+3. Nginx will reload automatically after certs are issued/renewed.
 
-### 2. Run Renewal (Safe Anytime)
-Inside repo root:
-```
-docker compose -f apps/infra/tumbaland-proxy/compose.yml exec tumbaland-proxy sh /app/refresh_certificates.sh
-```
-Script is idempotent: unchanged, un‑expired certs are skipped; near‑expiry certs renewed; Nginx reloads.
+### Troubleshooting
+- To test challenge path:
+	```sh
+	echo test > /usr/share/nginx/html/.well-known/acme-challenge/testfile
+	curl -I http://newsub.tumbaland.eu/.well-known/acme-challenge/testfile
+	```
+- To check cert status:
+	```sh
+	ls -l /etc/letsencrypt/live/newsub.tumbaland.eu
+	openssl x509 -in /etc/letsencrypt/live/newsub.tumbaland.eu/fullchain.pem -noout -dates -subject
+	```
 
-### 3. First-Time Issue (If No Cert Yet)
-Same command as above. Let’s Encrypt rate limits: avoid running repeatedly within minutes.
-
-### 4. Add New Domain
-1. Add server block to `conf.d/default.conf` with correct `ssl_certificate` paths (will exist after first run).
-2. Append domain to `DOMAIN_GROUPS` in `refresh_certificates.sh` (one per line).
-3. Re-run the script.
-
-### 5. Check Status
-```
-docker compose -f apps/infra/tumbaland-proxy/compose.yml exec tumbaland-proxy ls -1 /etc/letsencrypt/live
-```
-Inspect expiry:
-```
-docker compose -f apps/infra/tumbaland-proxy/compose.yml exec tumbaland-proxy certbot certificates
-```
-
-### 6. Automate (Host Cron Example – Weekly)
-```
-0 4 * * 1 docker compose -f /PATH/apps/infra/tumbaland-proxy/compose.yml exec tumbaland-proxy sh /app/refresh_certificates.sh >> /var/log/tumbaland-cert.log 2>&1
-```
-
-### 7. Troubleshooting
-| Problem | Action |
-|---------|--------|
-| 404 on challenge | Ensure `/.well-known/acme-challenge/` location intact and `html/` volume exists. |
-| Renewal skipped | Not near expiry (<30 days). Force: remove domain dir in `live/` (only if you must) then rerun. |
-| Nginx shows old cert | Reload failed? Check container logs. |
-| Rate limited | Wait per LE docs or consolidate domains into fewer certs. |
-
-### 8. Optional: Dry Run
-```
-docker compose -f apps/infra/tumbaland-proxy/compose.yml exec tumbaland-proxy certbot renew --dry-run
-```
-
-Done.
+---
+All certs and webroot are managed inside the container. No host path mapping needed.
