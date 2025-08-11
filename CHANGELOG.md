@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.96](https://github.com/toomastahves/tumbaland/compare/v0.0.95...v0.0.96) (2025-08-11)
+
+
+### Features
+
+* generate certs for payments ([06ff5b1](https://github.com/toomastahves/tumbaland/commit/06ff5b15d59c740325202e7136e5461eee41d6f6))
+
 ### [0.0.95](https://github.com/toomastahves/tumbaland/compare/v0.0.94...v0.0.95) (2025-08-11)
 
 
