@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.98](https://github.com/toomastahves/tumbaland/compare/v0.0.97...v0.0.98) (2025-08-11)
+
+
+### Features
+
+* add ensure certs ([eb379b3](https://github.com/toomastahves/tumbaland/commit/eb379b3a45fb963741018a9be4af47f20a27311e))
+
 ### [0.0.97](https://github.com/toomastahves/tumbaland/compare/v0.0.96...v0.0.97) (2025-08-11)
 
 
