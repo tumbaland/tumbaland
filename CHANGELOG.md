@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.94](https://github.com/toomastahves/tumbaland/compare/v0.0.93...v0.0.94) (2025-08-11)
+
+
+### Features
+
+* add payment system ([00aa69f](https://github.com/toomastahves/tumbaland/commit/00aa69f0c70ec8ebf3e09319c6f6c7aba054e411))
+
 ### [0.0.93](https://github.com/toomastahves/tumbaland/compare/v0.0.92...v0.0.93) (2025-08-11)
 
 
