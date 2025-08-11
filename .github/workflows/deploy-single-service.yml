@@ -178,6 +178,7 @@ jobs:
           echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" >> .env
           echo "STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}" >> .env
           echo "VITE_PAYMENT_URL=${{ vars.VITE_PAYMENT_URL }}" >> .env
+          echo "PAYMENT_URL=${{ vars.PAYMENT_URL }}" >> .env
 
       - name: Copy .env file to server
         uses: appleboy/scp-action@v0.1.7
