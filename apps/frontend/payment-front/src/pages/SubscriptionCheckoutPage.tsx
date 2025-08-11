@@ -29,6 +29,33 @@ const SubscriptionCheckoutPage: React.FC = () => {
 
   const formatPrice = (cents?: number) => (cents ? `${(cents/100).toFixed(2)} € / month` : 'Free');
 
+  // Helper: safe top-level navigation when embedded in a cross-origin iframe.
+  const navigateTop = (url: string) => {
+    const absUrl = (() => {
+      try { return new URL(url, window.location.origin).href; } catch { return url; }
+    })();
+    try {
+      if (window.top && window.top !== window.self) {
+        try {
+          // Touching top.location on cross-origin will throw
+          // If not thrown, we can navigate top directly
+          // eslint-disable-next-line no-unused-expressions
+          (window.top as Window).location.href;
+          (window.top as Window).location.assign(absUrl);
+          return;
+        } catch {
+          // Cross-origin: ask parent to navigate the top-level
+          window.parent.postMessage({ source: 'payment-front', type: 'tumbaland:navigate-top', url: absUrl }, '*');
+          return;
+        }
+      }
+      // Not in iframe: regular same-tab navigation
+      window.location.assign(absUrl);
+    } catch {
+      window.location.href = absUrl;
+    }
+  };
+
   useEffect(() => {
     if (!planCode) {
       // If returning from success without plan param, don't block page; skip plan display.
@@ -72,7 +99,7 @@ const SubscriptionCheckoutPage: React.FC = () => {
           active = false;
           setPollEnded(true);
           // Use top-level redirect in case we are inside an iframe shell
-          (window.top || window).location.href = '/subscription';
+          navigateTop('/subscription');
           return;
         }
         // If Stripe session itself reaches a terminal status (complete / expired) but sub not active yet
@@ -110,17 +137,17 @@ const SubscriptionCheckoutPage: React.FC = () => {
       console.debug('checkout-session response', res);
       if (res.free && res.subscription?.status === 'active') {
         const target = (res as any).url || '/subscription';
-        window.location.href = target;
+        navigateTop(target);
         return;
       }
       const fallbackUrl = (!res.url && res.sessionId?.startsWith('cs_')) ? `https://checkout.stripe.com/c/${res.sessionId}` : res.url;
       if (fallbackUrl) {
         setRedirecting(true);
-        // Redirect in the same tab (top-level if embedded) to avoid duplicate navigation
-        (window.top || window).location.assign(fallbackUrl);
+        // Redirect in the same tab (top-level if embedded) via parent message when cross-origin
+        navigateTop(fallbackUrl);
       } else {
         // If neither free nor Stripe URL, navigate to subscription overview as safe default
-        (window.top || window).location.href = '/subscription';
+        navigateTop('/subscription');
       }
     } catch (e: any) {
       setError(e.message || 'Failed to start checkout');
