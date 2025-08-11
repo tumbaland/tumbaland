@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.104](https://github.com/toomastahves/tumbaland/compare/v0.0.103...v0.0.104) (2025-08-11)
+
+
+### Bug Fixes
+
+* payment inside iframe ([d7c975f](https://github.com/toomastahves/tumbaland/commit/d7c975ff84ffe609868b1d231c665b5e7c6516f2))
+
 ### [0.0.103](https://github.com/toomastahves/tumbaland/compare/v0.0.102...v0.0.103) (2025-08-11)
 
 
