@@ -1,0 +1,384 @@
+openapi: 3.0.3
+info:
+  title: Payment Service API
+  version: 1.0.0
+  description: API documentation for the Payment Service (plans, subscriptions, one-time payments)
+servers:
+  - url: /api
+paths:
+  /plans:
+    get:
+      summary: List active plans
+      tags: [Plans]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Active plans
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  plans:
+                    type: array
+                    items: { $ref: '#/components/schemas/Plan' }
+    post:
+      summary: Create a plan
+      description: |
+        Create a single plan (plan object). Admin only (role guard TBD).
+        For inserting multiple plans in one request, use POST /plans/bulk.
+      tags: [Plans]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanCreate'
+      responses:
+        '201':
+          description: Plan created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  plan: { $ref: '#/components/schemas/Plan' }
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: Duplicate code
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /plans/bulk:
+    post:
+      summary: Bulk create plans
+      description: Insert multiple plans at once (array of PlanCreate). Admin only (role guard TBD).
+      tags: [Plans]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { $ref: '#/components/schemas/PlanCreate' }
+            example:
+              - name: Starter
+                code: starter
+                description: Free tier with basic tools
+                priceMonthlyCents: 0
+                features:
+                  - public_content
+                  - uploads_daily_5
+                  - optimizer_basic
+                  - payments_history
+                  - support_email
+              - name: Pro
+                code: pro
+                description: Advanced investing & unlimited uploads
+                priceMonthlyCents: 900
+                priceYearlyCents: 9000
+                features:
+                  - uploads_unlimited
+                  - optimizer_advanced
+                  - mc_sim_normal_t
+                  - subscription_dashboard
+                  - support_priority
+                  - early_access
+              - name: Elite
+                code: elite
+                description: Full analytics + custom simulations
+                priceMonthlyCents: 1900
+                priceYearlyCents: 19000
+                features:
+                  - all_pro
+                  - mc_custom_distributions
+                  - historical_extended
+                  - export_data
+                  - analytics_panel
+                  - feedback_channel
+                  - sla_24h
+      responses:
+        '201':
+          description: Plans created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  plans:
+                    type: array
+                    items: { $ref: '#/components/schemas/Plan' }
+              example:
+                success: true
+                plans:
+                  - _id: "673000000000000000000001"
+                    name: Starter
+                    code: starter
+                    description: Free tier with basic tools
+                    priceMonthlyCents: 0
+                    features: [public_content, uploads_daily_5, optimizer_basic, payments_history, support_email]
+                    isActive: true
+                    createdAt: 2025-08-11T12:00:00.000Z
+                    updatedAt: 2025-08-11T12:00:00.000Z
+                  - _id: "673000000000000000000002"
+                    name: Pro
+                    code: pro
+                    description: Advanced investing & unlimited uploads
+                    priceMonthlyCents: 900
+                    priceYearlyCents: 9000
+                    features: [uploads_unlimited, optimizer_advanced, mc_sim_normal_t, subscription_dashboard, support_priority, early_access]
+                    isActive: true
+                    createdAt: 2025-08-11T12:00:00.000Z
+                    updatedAt: 2025-08-11T12:00:00.000Z
+                  - _id: "673000000000000000000003"
+                    name: Elite
+                    code: elite
+                    description: Full analytics + custom simulations
+                    priceMonthlyCents: 1900
+                    priceYearlyCents: 19000
+                    features: [all_pro, mc_custom_distributions, historical_extended, export_data, analytics_panel, feedback_channel, sla_24h]
+                    isActive: true
+                    createdAt: 2025-08-11T12:00:00.000Z
+                    updatedAt: 2025-08-11T12:00:00.000Z
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: One or more codes already exist
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /subscriptions/me:
+    get:
+      summary: Get my subscription
+      tags: [Subscriptions]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current subscription (if any)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  subscription: { $ref: '#/components/schemas/Subscription' }
+  /subscriptions/checkout-session:
+    post:
+      summary: Create a Stripe Checkout Session for a plan
+      description: |
+        Creates (or reuses) an incomplete subscription document then creates a Stripe Checkout Session.
+        Returns a session id and redirect URL. For free plans (priceMonthlyCents = 0) no session is created; subscription activates immediately.
+      tags: [Subscriptions]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ planCode ]
+              properties:
+                planCode: { type: string }
+                successUrl: { type: string }
+                cancelUrl: { type: string }
+      responses:
+        '201':
+          description: Session created or free plan activated
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      success: { type: boolean }
+                      sessionId: { type: string }
+                      url: { type: string }
+                  - type: object
+                    properties:
+                      success: { type: boolean }
+                      free: { type: boolean, example: true }
+                      subscription: { $ref: '#/components/schemas/Subscription' }
+        '400':
+          description: Missing or invalid data
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /subscriptions/checkout-session/{id}:
+    get:
+      summary: Get status of a Checkout Session
+      tags: [Subscriptions]
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Session status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  status: { type: string }
+                  payment_status: { type: string }
+                  subscription: { $ref: '#/components/schemas/Subscription' }
+  /subscriptions/cancel:
+    post:
+      summary: Cancel current subscription
+      tags: [Subscriptions]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Subscription canceled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  subscription: { $ref: '#/components/schemas/Subscription' }
+  /payments/one-time:
+    post:
+      summary: Create one-time payment (placeholder implementation)
+      tags: [Payments]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ amountCents ]
+              properties:
+                amountCents: { type: integer, minimum: 50 }
+                currency: { type: string, default: eur }
+      responses:
+        '201':
+          description: Payment created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  payment: { $ref: '#/components/schemas/Payment' }
+  /payments/mine:
+    get:
+      summary: List my payments
+      tags: [Payments]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Payments list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  payments:
+                    type: array
+                    items: { $ref: '#/components/schemas/Payment' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Plan:
+      type: object
+      properties:
+        _id: { type: string }
+        name: { type: string }
+        code: { type: string }
+        description: { type: string }
+        priceMonthlyCents: { type: integer }
+        priceYearlyCents: { type: integer }
+        features:
+          type: array
+          items: { type: string }
+        isActive: { type: boolean }
+  stripePriceId: { type: string, description: 'Stripe recurring price id used for checkout' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    PlanCreate:
+      type: object
+      required: [ name, code, priceMonthlyCents ]
+      properties:
+        name: { type: string }
+        code: { type: string }
+        description: { type: string }
+        priceMonthlyCents: { type: integer, minimum: 0 }
+        priceYearlyCents: { type: integer, minimum: 0 }
+        features:
+          type: array
+          items: { type: string }
+    Subscription:
+      type: object
+      properties:
+        _id: { type: string }
+        userEmail: { type: string }
+        planCode: { type: string }
+        status: { type: string, enum: [active, past_due, canceled, incomplete] }
+        renewsAt: { type: string, format: date-time }
+        cancelAt: { type: string, format: date-time }
+        canceledAt: { type: string, format: date-time }
+        stripeCustomerId: { type: string }
+        stripeSubscriptionId: { type: string }
+        latestInvoiceId: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Payment:
+      type: object
+      properties:
+        _id: { type: string }
+        userEmail: { type: string }
+        amountCents: { type: integer }
+        currency: { type: string }
+        type: { type: string, enum: [subscription, one_time] }
+        status: { type: string, enum: [succeeded, pending, failed, refunded] }
+        stripePaymentIntentId: { type: string }
+        stripeChargeId: { type: string }
+        metadata: { type: object }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Error:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        message: { type: string }
+      required: [success, message]
+
+tags:
+  - name: Plans
+    description: Manage subscription plans
+  - name: Subscriptions
+    description: Subscription lifecycle endpoints
+  - name: Payments
+    description: One-time payment endpoints

@@ -1,0 +1,24 @@
+services:
+  payment-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: toomastahves/payment-service:latest
+    restart: unless-stopped
+    ports:
+      - '5005:5005'
+    environment:
+      - PORT=5005
+      - NODE_ENV=production
+      - MONGODB_URI=${MONGODB_URI}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - PAYMENT_URL=${PAYMENT_URL}
+      - JWT_SECRET=${JWT_SECRET}
+    init: true
+    networks:
+      - tumbanet
+
+networks:
+  tumbanet:
+    external: true

@@ -19,16 +19,7 @@ app.use(cookieParser());
 app.use(
   cors({
     origin: (origin, callback) => {
-      const allowedOrigins = process.env.CORS_ORIGIN
-        ? process.env.CORS_ORIGIN.split(',')
-        : [
-            'http://localhost:3000',
-            'http://localhost:3001',
-            'http://localhost:3002',
-            'http://localhost:3003',
-            'http://localhost:3004',
-            'http://localhost:5001'
-          ];
+      const allowedOrigins = process.env.CORS_ORIGIN ?? '';
       console.log('CORS request from:', origin);
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);

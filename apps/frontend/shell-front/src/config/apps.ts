@@ -2,6 +2,7 @@ import AlbumIcon from '@mui/icons-material/PhotoAlbum';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import HomeIcon from '@mui/icons-material/Home';
+import PaymentIcon from '@mui/icons-material/Payment';
 import { AppConfig } from './ConfigProvider';
 
 export interface AppConfigItem {
@@ -39,6 +40,13 @@ export const APPS: AppConfigItem[] = [
     urlKey: 'FINANCE_URL',
     icon: AttachMoneyIcon,
     color: '#22c55e'
+  },
+  {
+    name: 'Payments',
+    route: '/payments',
+    urlKey: 'PAYMENT_URL',
+    icon: PaymentIcon,
+    color: '#6366f1'
   }
 ];
 

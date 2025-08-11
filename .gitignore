@@ -5,3 +5,5 @@ dist
 .env.local
 import
 certs
+.env.stripe
+infra/stripe-cli/.env.stripe

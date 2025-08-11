@@ -15,12 +15,14 @@ on:
           - finance-front
           - shell-front
           - auth-front
+          - payment-front
           - album-service
           - auth-service
           - file-service
           - finance-service
           - public-service
           - relationship-service
+          - payment-service
           - tumbaland-proxy
 
 # Ensure only one deployment runs at a time to prevent server overload
@@ -69,6 +71,12 @@ jobs:
               DEPLOYPATH=apps/frontend/auth-front/compose.yml
               DEPLOYDIR=apps/frontend/auth-front
               ;;
+            payment-front)
+              CONTEXT=./apps/frontend/payment-front
+              DOCKERFILE=./apps/frontend/payment-front/Dockerfile
+              DEPLOYPATH=apps/frontend/payment-front/compose.yml
+              DEPLOYDIR=apps/frontend/payment-front
+              ;;
             album-service)
               CONTEXT=./apps/backend/album-service
               DOCKERFILE=./apps/backend/album-service/Dockerfile
@@ -104,6 +112,12 @@ jobs:
               DOCKERFILE=./apps/backend/relationship-service/Dockerfile
               DEPLOYPATH=apps/backend/relationship-service/compose.yml
               DEPLOYDIR=apps/backend/relationship-service
+              ;;
+            payment-service)
+              CONTEXT=./apps/backend/payment-service
+              DOCKERFILE=./apps/backend/payment-service/Dockerfile
+              DEPLOYPATH=apps/backend/payment-service/compose.yml
+              DEPLOYDIR=apps/backend/payment-service
               ;;
             tumbaland-proxy)
               CONTEXT=./apps/infra/tumbaland-proxy
@@ -160,6 +174,10 @@ jobs:
           echo "VITE_PUBLIC_API_URL=${{ vars.VITE_PUBLIC_API_URL }}" >> .env
           echo "VITE_OBJECT_DETECTION_API_URL=${{ vars.VITE_OBJECT_DETECTION_API_URL }}" >> .env
           echo "VITE_SEGMENTATION_API_URL=${{ vars.VITE_SEGMENTATION_API_URL }}" >> .env
+          echo "VITE_PAYMENT_API_URL=${{ vars.VITE_PAYMENT_API_URL }}" >> .env
+          echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" >> .env
+          echo "STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}" >> .env
+          echo "VITE_PAYMENT_URL=${{ vars.VITE_PAYMENT_URL }}" >> .env
 
       - name: Copy .env file to server
         uses: appleboy/scp-action@v0.1.7
