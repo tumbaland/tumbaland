@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.92](https://github.com/toomastahves/tumbaland/compare/v0.0.91...v0.0.92) (2025-08-10)
+
+
+### Bug Fixes
+
+* add missing package ([367231c](https://github.com/toomastahves/tumbaland/commit/367231cac425e30115eba699dee31f68aab1bd83))
+
 ### [0.0.91](https://github.com/toomastahves/tumbaland/compare/v0.0.90...v0.0.91) (2025-08-10)
 
 
