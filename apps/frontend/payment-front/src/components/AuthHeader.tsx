@@ -1,34 +1,22 @@
-import React, { useEffect, useState } from 'react';
-import {
-  AppBar,
-  Toolbar,
-  Button,
-  Box,
-  Menu as MuiMenu,
-  MenuItem as MuiMenuItem,
-  CircularProgress,
-  Divider
-} from '@mui/material';
+import React from 'react';
+import { AppBar, Toolbar, Button, Box, Menu as MuiMenu, MenuItem as MuiMenuItem } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { menuItems, type AppMenuItem } from '../const/menuItems.tsx';
+import { useEffect, useState } from 'react';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
-import { AccountCircle, Login, Logout, Assignment, ListAlt, Payments } from '@mui/icons-material';
+import { AccountCircle, Login, Logout } from '@mui/icons-material';
+import Avatar from '@mui/material/Avatar';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
-import { useNavigate, useLocation } from 'react-router-dom';
+import CircularProgress from '@mui/material/CircularProgress';
+import Divider from '@mui/material/Divider';
 import { authService } from '../services/authService';
 import { User } from '../types';
 
-interface MenuItemDef { label: string; path: string; icon: React.ReactNode; }
-const menuItems: MenuItemDef[] = [
-  { label: 'Plans', path: '/', icon: <Assignment fontSize="small" sx={{ mr: 1 }} /> },
-  { label: 'Subscription', path: '/subscription', icon: <Payments fontSize="small" sx={{ mr: 1 }} /> },
-  { label: 'Payments', path: '/payments', icon: <ListAlt fontSize="small" sx={{ mr: 1 }} /> }
-];
-
 const AuthHeader: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -36,47 +24,63 @@ const AuthHeader: React.FC = () => {
   const [mobileMenuAnchor, setMobileMenuAnchor] = useState<null | HTMLElement>(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const handleMobileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setMobileMenuAnchor(event.currentTarget);
+  };
+  const handleMobileMenuClose = () => {
+    setMobileMenuAnchor(null);
+  };
 
   useEffect(() => {
-    const check = async () => {
+    const checkAuth = async () => {
       try {
         const { authenticated, user } = await authService.checkAuth();
         setIsAuthenticated(authenticated);
         setUser(user);
+      } catch (error) {
+        console.error('Auth check failed:', error);
       } finally {
         setIsLoading(false);
       }
     };
-    check();
+    checkAuth();
   }, []);
 
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget);
-  const handleMenuClose = () => setAnchorEl(null);
-  const handleMobileMenuOpen = (event: React.MouseEvent<HTMLElement>) => setMobileMenuAnchor(event.currentTarget);
-  const handleMobileMenuClose = () => setMobileMenuAnchor(null);
-
-  const handleLogin = () => authService.redirectToLogin();
-  const handleLogout = async () => { await authService.logout(); handleMenuClose(); };
-
-  const currentMenuLabel = () => {
-    let best = menuItems[0];
-    let bestLen = -1;
-    for (const item of menuItems) {
-      if (location.pathname === item.path && item.path.length > bestLen) { best = item; bestLen = item.path.length; }
-      else if (item.path !== '/' && location.pathname.startsWith(item.path) && item.path.length > bestLen) { best = item; bestLen = item.path.length; }
-    }
-    return best.label;
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+  const handleLogin = () => {
+    authService.redirectToLogin();
+  };
+  const handleLogout = async () => {
+    setIsLoading(true);
+    await authService.logout();
+    handleMenuClose();
   };
 
-  const authSection = () => {
-    if (isLoading) return <CircularProgress size={24} color="inherit" />;
+  const menuItemsWithHandlers = menuItems.map((item: AppMenuItem) => ({
+    ...item,
+    onClick: () => navigate(item.path)
+  }));
+
+  const renderAuthSection = () => {
+    if (isLoading) {
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <CircularProgress size={24} color="inherit" />
+        </Box>
+      );
+    }
     if (isAuthenticated && user) {
       return (
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <Button
             onClick={handleMenuOpen}
             color="inherit"
-            startIcon={<AccountCircle />}
+            startIcon={user?.picture ? <Avatar src={user.picture as string} sx={{ width: 32, height: 32 }} /> : <AccountCircle />}
             sx={{ textTransform: 'none', fontWeight: 500 }}
           >
             {user.name}
@@ -92,13 +96,14 @@ const AuthHeader: React.FC = () => {
           >
             <MenuItem disabled>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                <span style={{ fontWeight: 'bold' }}>{user.email}</span>
-                {user.email && <span style={{ fontSize: 12, color: '#888' }}>{user.email}</span>}
+                <span style={{ fontWeight: 'bold' }}>{user.name}</span>
+                <span style={{ fontSize: 12, color: '#888' }}>{user.email}</span>
               </Box>
             </MenuItem>
             <Divider />
             <MenuItem onClick={handleLogout}>
-              <Logout fontSize="small" style={{ marginRight: 8 }} /> Logout
+              <Logout fontSize="small" sx={{ mr: 1 }} />
+              Logout
             </MenuItem>
           </Menu>
         </Box>
@@ -111,9 +116,11 @@ const AuthHeader: React.FC = () => {
         variant="outlined"
         startIcon={<Login />}
         sx={{
-          borderColor: 'rgba(0,0,0,0.3)',
-          color: '#222',
-          '&:hover': { borderColor: 'rgba(0,0,0,0.6)', backgroundColor: 'rgba(0,0,0,0.04)' }
+          borderColor: 'rgba(255, 255, 255, 0.3)',
+          '&:hover': {
+            borderColor: 'rgba(255, 255, 255, 0.7)',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)'
+          }
         }}
       >
         Login
@@ -122,11 +129,25 @@ const AuthHeader: React.FC = () => {
   };
 
   return (
-    <AppBar position="static" elevation={2} sx={{ background: '#fff', color: '#222', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.03)' }}>
+    <AppBar
+      position="static"
+      elevation={2}
+      sx={{ background: '#fff', color: '#222', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.03)' }}
+    >
       <Toolbar>
         {isMobile ? (
           <>
-            <Box sx={{ flexGrow: 0, display: 'flex', alignItems: 'center', minHeight: 56 }}>
+            {/* Center the active menu item button */}
+            <Box
+              sx={{
+                flexGrow: 0,
+                display: 'flex',
+                justifyContent: 'flex-start',
+                alignItems: 'center',
+                minHeight: 56,
+                pl: 5
+              }}
+            >
               <Button
                 color="inherit"
                 onClick={handleMobileMenuOpen}
@@ -145,7 +166,26 @@ const AuthHeader: React.FC = () => {
                   textOverflow: 'ellipsis'
                 }}
               >
-                {currentMenuLabel()}
+                {/* Show current route label, fallback to first menu item */}
+                {(() => {
+                  // Find the menu item with the longest matching path prefix
+                  let bestMatch = null;
+                  let bestLength = -1;
+                  for (const item of menuItemsWithHandlers) {
+                    if (item.path === '/' && location.pathname === '/' && bestLength < 1) {
+                      bestMatch = item;
+                      bestLength = 1;
+                    } else if (
+                      item.path !== '/' &&
+                      location.pathname.startsWith(item.path) &&
+                      item.path.length > bestLength
+                    ) {
+                      bestMatch = item;
+                      bestLength = item.path.length;
+                    }
+                  }
+                  return bestMatch ? bestMatch.label : menuItemsWithHandlers[0]?.label;
+                })()}
               </Button>
             </Box>
             <MuiMenu
@@ -155,12 +195,12 @@ const AuthHeader: React.FC = () => {
               anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
               transformOrigin={{ vertical: 'top', horizontal: 'left' }}
             >
-              {menuItems.map((item) => (
+              {menuItemsWithHandlers.map((item: AppMenuItem & { onClick: () => void }) => (
                 <MuiMenuItem
                   key={item.label}
-                  selected={location.pathname === item.path}
+                  selected={location.pathname.startsWith(item.path)}
                   onClick={() => {
-                    navigate(item.path);
+                    item.onClick();
                     handleMobileMenuClose();
                   }}
                 >
@@ -172,18 +212,17 @@ const AuthHeader: React.FC = () => {
           </>
         ) : (
           <Box sx={{ display: 'flex', gap: 1 }}>
-            {menuItems.map((item) => (
+            {menuItemsWithHandlers.map((item: AppMenuItem & { onClick: () => void }) => (
               <Button
                 key={item.label}
                 color="inherit"
                 startIcon={item.icon}
-                onClick={() => navigate(item.path)}
+                onClick={item.onClick}
                 sx={{
                   fontWeight: 500,
                   textTransform: 'none',
                   background: 'none',
-                  '&:hover': { background: 'rgba(0,0,0,0.04)' },
-                  ...(location.pathname === item.path && { fontWeight: 600, background: 'rgba(0,0,0,0.04)' })
+                  '&:hover': { background: 'rgba(0,0,0,0.04)' }
                 }}
               >
                 {item.label}
@@ -192,7 +231,7 @@ const AuthHeader: React.FC = () => {
           </Box>
         )}
         <Box sx={{ flexGrow: 1 }} />
-        {authSection()}
+        {renderAuthSection()}
       </Toolbar>
     </AppBar>
   );

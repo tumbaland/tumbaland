@@ -1,14 +1,33 @@
-import { Box, Button, Typography } from '@mui/material';
 import React from 'react';
+import { Box, Typography, Button, Container, Paper } from '@mui/material';
+import { Lock, Login } from '@mui/icons-material';
 import { authService } from '../services/authService';
 
 const UnauthorizedPage: React.FC = () => {
+  const handleLogin = () => {
+    authService.redirectToLogin();
+  };
+
   return (
-    <Box sx={{ textAlign: 'center', mt: 8 }}>
-      <Typography variant="h4" gutterBottom>Unauthorized</Typography>
-      <Typography variant="body1" gutterBottom>You must be logged in to access this page.</Typography>
-      <Button variant="contained" color="primary" onClick={() => authService.redirectToLogin()}>Go to Login</Button>
-    </Box>
+    <Container maxWidth="sm" sx={{ mt: 8 }}>
+      <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
+        <Lock sx={{ fontSize: 64, color: 'primary.main', mb: 2 }} />
+
+        <Typography variant="h4" component="h1" gutterBottom color="primary">
+          Access Restricted
+        </Typography>
+
+        <Typography variant="body1" color="text.secondary" paragraph>
+          You need to be logged in to access the Tumbaland.
+        </Typography>
+
+        <Box sx={{ mt: 4 }}>
+          <Button variant="contained" size="large" startIcon={<Login />} onClick={handleLogin} sx={{ px: 4, py: 1.5 }}>
+            Sign In to Continue
+          </Button>
+        </Box>
+      </Paper>
+    </Container>
   );
 };
 

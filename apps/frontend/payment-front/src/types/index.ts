@@ -44,6 +44,7 @@ export interface Payment {
 export interface User {
   email: string;
   name: string;
+  picture?: string;
   roles?: string[];
   isApproved?: boolean;
 }
