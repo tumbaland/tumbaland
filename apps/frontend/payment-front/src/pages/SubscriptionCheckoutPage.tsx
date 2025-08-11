@@ -46,6 +46,19 @@ const SubscriptionCheckoutPage: React.FC = () => {
         } catch {
           // Cross-origin: ask parent to navigate the top-level
           window.parent.postMessage({ source: 'payment-front', type: 'tumbaland:navigate-top', url: absUrl }, '*');
+          // Best-effort fallback: try opening in the top browsing context from user gesture
+          // This often succeeds even when direct assignment is blocked in iframes
+          const opened = window.open(absUrl, '_top');
+          if (opened) return;
+          // Last resort: synthetic anchor click with target _top
+          const a = document.createElement('a');
+          a.href = absUrl;
+          a.target = '_top';
+          a.rel = 'noopener noreferrer';
+          a.style.display = 'none';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
           return;
         }
       }
