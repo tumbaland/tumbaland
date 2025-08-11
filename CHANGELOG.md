@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.102](https://github.com/toomastahves/tumbaland/compare/v0.0.101...v0.0.102) (2025-08-11)
+
+
+### Features
+
+* add terms and conditions ([4cb4956](https://github.com/toomastahves/tumbaland/commit/4cb4956f97e99645462eed3cc6fd8c1c923539d4))
+
 ### [0.0.101](https://github.com/toomastahves/tumbaland/compare/v0.0.100...v0.0.101) (2025-08-11)
 
 
