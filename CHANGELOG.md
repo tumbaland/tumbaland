@@ -1,4 +1,16 @@
 # Tumbalog
+### [0.0.93](https://github.com/toomastahves/tumbaland/compare/v0.0.92...v0.0.93) (2025-08-11)
+
+
+### Features
+
+* remove authorized emails ([306ba44](https://github.com/toomastahves/tumbaland/commit/306ba445e7f65833b6b35263f7d580ec12e33e5d))
+
+
+### Bug Fixes
+
+* package vulnerabilities ([6c26899](https://github.com/toomastahves/tumbaland/commit/6c26899d49726cfc0c04f9faaaa4b198376fbfdc))
+
 ### [0.0.92](https://github.com/toomastahves/tumbaland/compare/v0.0.91...v0.0.92) (2025-08-10)
 
 
