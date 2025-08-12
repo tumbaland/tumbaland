@@ -5,7 +5,25 @@ set -e
 # have a real Let's Encrypt cert so Nginx can start without crashing.
 # Real certs will later overwrite these via refresh_certificates.sh.
 
-DOMAINS="tumbaland.eu api.tumbaland.eu album.tumbaland.eu album-api.tumbaland.eu relationship.tumbaland.eu relationship-api.tumbaland.eu finance.tumbaland.eu finance-api.tumbaland.eu auth.tumbaland.eu auth-api.tumbaland.eu file-api.tumbaland.eu object-detection-api.tumbaland.eu segmentation-api.tumbaland.eu payment.tumbaland.eu payment-api.tumbaland.eu"
+DOMAINS=" \
+tumbaland.eu \
+api.tumbaland.eu \
+album.tumbaland.eu \
+album-api.tumbaland.eu \
+relationship.tumbaland.eu \
+relationship-api.tumbaland.eu \
+finance.tumbaland.eu \
+finance-api.tumbaland.eu \
+auth.tumbaland.eu \
+auth-api.tumbaland.eu \
+file-api.tumbaland.eu \
+object-detection-api.tumbaland.eu \
+segmentation-api.tumbaland.eu \
+payment.tumbaland.eu \
+payment-api.tumbaland.eu \
+group.tumbaland.eu \
+group-api.tumbaland.eu \
+"
 
 for d in $DOMAINS; do
   TARGET_DIR="/etc/letsencrypt/live/$d"

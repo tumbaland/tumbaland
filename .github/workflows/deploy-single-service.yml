@@ -16,6 +16,7 @@ on:
           - shell-front
           - auth-front
           - payment-front
+          - group-front
           - album-service
           - auth-service
           - file-service
@@ -23,6 +24,7 @@ on:
           - public-service
           - relationship-service
           - payment-service
+          - group-service
           - tumbaland-proxy
 
 # Ensure only one deployment runs at a time to prevent server overload
@@ -77,6 +79,12 @@ jobs:
               DEPLOYPATH=apps/frontend/payment-front/compose.yml
               DEPLOYDIR=apps/frontend/payment-front
               ;;
+            group-front)
+              CONTEXT=./apps/frontend/group-front
+              DOCKERFILE=./apps/frontend/group-front/Dockerfile
+              DEPLOYPATH=apps/frontend/group-front/compose.yml
+              DEPLOYDIR=apps/frontend/group-front
+              ;;
             album-service)
               CONTEXT=./apps/backend/album-service
               DOCKERFILE=./apps/backend/album-service/Dockerfile
@@ -118,6 +126,12 @@ jobs:
               DOCKERFILE=./apps/backend/payment-service/Dockerfile
               DEPLOYPATH=apps/backend/payment-service/compose.yml
               DEPLOYDIR=apps/backend/payment-service
+              ;;
+            group-service)
+              CONTEXT=./apps/backend/group-service
+              DOCKERFILE=./apps/backend/group-service/Dockerfile
+              DEPLOYPATH=apps/backend/group-service/compose.yml
+              DEPLOYDIR=apps/backend/group-service
               ;;
             tumbaland-proxy)
               CONTEXT=./apps/infra/tumbaland-proxy
@@ -179,6 +193,8 @@ jobs:
           echo "STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}" >> .env
           echo "VITE_PAYMENT_URL=${{ vars.VITE_PAYMENT_URL }}" >> .env
           echo "PAYMENT_URL=${{ vars.PAYMENT_URL }}" >> .env
+          echo "VITE_GROUP_API_URL=${{ vars.VITE_GROUP_API_URL }}" >> .env
+          echo "VITE_GROUP_URL=${{ vars.VITE_GROUP_URL }}" >> .env
 
       - name: Copy .env file to server
         uses: appleboy/scp-action@v0.1.7

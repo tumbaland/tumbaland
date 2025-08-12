@@ -1,0 +1,21 @@
+services:
+  group-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: toomastahves/group-service:latest
+    restart: unless-stopped
+    ports:
+      - '5006:5006'
+    environment:
+      - PORT=5006
+      - NODE_ENV=production
+      - MONGODB_URI=${MONGODB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+    init: true
+    networks:
+      - tumbanet
+
+networks:
+  tumbanet:
+    external: true

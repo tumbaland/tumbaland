@@ -9,6 +9,7 @@ export interface AppConfig {
   FINANCE_URL?: string;
   RELATIONSHIP_URL?: string;
   PAYMENT_URL?: string;
+  GROUP_URL?: string;
   PUBLIC_API_URL?: string;
 }
 
@@ -24,6 +25,7 @@ function createDevConfig(): AppConfig {
     FINANCE_URL: import.meta.env.VITE_FINANCE_URL,
     RELATIONSHIP_URL: import.meta.env.VITE_RELATIONSHIP_URL,
     PAYMENT_URL: import.meta.env.VITE_PAYMENT_URL,
+    GROUP_URL: import.meta.env.VITE_GROUP_URL,
     PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL
   };
 }

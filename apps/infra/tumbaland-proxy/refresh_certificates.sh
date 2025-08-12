@@ -38,6 +38,8 @@ object-detection-api.tumbaland.eu \
 segmentation-api.tumbaland.eu \
 payment.tumbaland.eu \
 payment-api.tumbaland.eu \
+group.tumbaland.eu \
+group-api.tumbaland.eu \
 "
 
 echo "==> Starting certificate obtain/renew process"

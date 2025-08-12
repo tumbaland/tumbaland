@@ -11,6 +11,7 @@ services:
       FINANCE_URL: ${VITE_FINANCE_URL}
       PUBLIC_API_URL: ${VITE_PUBLIC_API_URL}
       PAYMENT_URL: ${VITE_PAYMENT_URL}
+      GROUP_URL: ${VITE_GROUP_URL}
     ports:
       - '3000:80'
     networks:

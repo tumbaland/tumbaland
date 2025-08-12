@@ -4,6 +4,7 @@ import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import HomeIcon from '@mui/icons-material/Home';
 import PaymentIcon from '@mui/icons-material/Payment';
 import { AppConfig } from './ConfigProvider';
+import GroupsIcon from '@mui/icons-material/Groups';
 
 export interface AppConfigItem {
   name: string;
@@ -47,6 +48,14 @@ export const APPS: AppConfigItem[] = [
     urlKey: 'PAYMENT_URL',
     icon: PaymentIcon,
     color: '#6366f1'
+  }
+  ,
+  {
+    name: 'Groups',
+    route: '/groups',
+    urlKey: 'GROUP_URL',
+    icon: GroupsIcon,
+    color: '#7c3aed'
   }
 ];
 
