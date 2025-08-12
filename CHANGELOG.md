@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.107](https://github.com/toomastahves/tumbaland/compare/v0.0.106...v0.0.107) (2025-08-12)
+
+
+### Bug Fixes
+
+* certificate generation ([e81cbec](https://github.com/toomastahves/tumbaland/commit/e81cbec885d3110eac7f04b1fbe8062e5b68ad70))
+
 ### [0.0.106](https://github.com/toomastahves/tumbaland/compare/v0.0.105...v0.0.106) (2025-08-12)
 
 
