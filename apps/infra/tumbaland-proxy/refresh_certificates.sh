@@ -71,8 +71,21 @@ for GROUP in $DOMAIN_GROUPS; do
   for D in $GROUP; do
     DOM_ARGS="$DOM_ARGS -d $D"
   done
+  # Remove any existing lineage or placeholders to prevent suffixed (-0001) lineages
+  echo "[cleanup] Removing any existing lineage for $FIRST"
+  certbot delete --cert-name "$FIRST" --non-interactive >/dev/null 2>&1 || true
+  if [ -e "$CERT_DIR/live/$FIRST" ]; then
+    rm -rf "$CERT_DIR/live/$FIRST"
+  fi
+  if [ -e "$CERT_DIR/archive/$FIRST" ]; then
+    rm -rf "$CERT_DIR/archive/$FIRST"
+  fi
+  if [ -e "$CERT_DIR/renewal/$FIRST.conf" ]; then
+    rm -f "$CERT_DIR/renewal/$FIRST.conf"
+  fi
   # Use run (obtain or renew automatically). Keep existing if valid.
   certbot certonly --webroot -w "$WEBROOT" $DOM_ARGS \
+    --cert-name "$FIRST" \
     --agree-tos --email "$EMAIL" --non-interactive --rsa-key-size 4096 --keep-until-expiring --expand || {
       echo "Cert generation failed for group: $GROUP" >&2
       exit 1

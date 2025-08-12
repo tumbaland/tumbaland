@@ -41,5 +41,27 @@
 	openssl x509 -in /etc/letsencrypt/live/newsub.tumbaland.eu/fullchain.pem -noout -dates -subject
 	```
 
+#### Reset a certificate (remove old files)
+If issuance fails with messages like "live directory exists for <domain>", remove existing Let’s Encrypt files for that domain, then re-run the refresh script.
+
+1) Enter the running proxy container:
+```sh
+docker compose -f apps/infra/tumbaland-proxy/compose.yml exec tumbaland-proxy sh
+```
+
+2) Remove the domain-specific files (replace DOMAIN with your subdomain, e.g., `group.tumbaland.eu`):
+```sh
+rm -rf /etc/letsencrypt/live/DOMAIN
+rm -rf /etc/letsencrypt/archive/DOMAIN
+rm -f /etc/letsencrypt/renewal/DOMAIN.conf
+```
+
+3) Re-issue the cert for that domain:
+```sh
+sh /app/refresh_certificates.sh DOMAIN
+```
+
+Nginx will reload automatically after certs are issued.
+
 ---
 All certs and webroot are managed inside the container. No host path mapping needed.
