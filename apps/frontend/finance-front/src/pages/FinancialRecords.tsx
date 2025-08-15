@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Typography,
@@ -53,6 +53,10 @@ const FinancialRecords: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  // Date filtering state
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
+  const [quickRange, setQuickRange] = useState<string>(''); // e.g. '1M', '6M', '1Y'
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -64,6 +68,24 @@ const FinancialRecords: React.FC = () => {
     try {
       const data = await getFinanceRecords();
       setRecords(data);
+      // Initialize date filters if unset
+      if (data && data.length) {
+        const dates = data.map((r: any) => new Date(r.date)).filter((d: Date) => !isNaN(d.getTime()));
+        if (dates.length) {
+          const max = new Date(Math.max(...dates.map((d: Date) => d.getTime())));
+          const min = new Date(Math.min(...dates.map((d: Date) => d.getTime())));
+          const iso = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+          if (!endDate) setEndDate(iso(max));
+          if (!startDate) {
+            // default to last 6 months but not before earliest
+            const sixMonthsAgo = new Date(max);
+            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+            const start = sixMonthsAgo < min ? min : sixMonthsAgo;
+            setStartDate(iso(start));
+            setQuickRange('6M');
+          }
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -210,8 +232,8 @@ const FinancialRecords: React.FC = () => {
     });
   }
 
-  function sortedRecords() {
-    return [...records].sort((a, b) => {
+  function sortRecords(base: any[]) {
+    return [...base].sort((a, b) => {
       let aVal = a[sortBy];
       let bVal = b[sortBy];
       if (sortBy === 'date') {
@@ -249,6 +271,60 @@ const FinancialRecords: React.FC = () => {
     return Math.round((currentNetWorth - previousNetWorth) * 100) / 100;
   }
 
+  // Filter records by date range
+  const filteredRecords = useMemo(() => {
+    if (!startDate && !endDate) return records;
+    const startTs = startDate ? new Date(startDate).getTime() : -Infinity;
+    const endTs = endDate ? new Date(endDate).getTime() + 24*60*60*1000 - 1 : Infinity; // inclusive end day
+    return records.filter(r => {
+      const ts = new Date(r.date).getTime();
+      return !isNaN(ts) && ts >= startTs && ts <= endTs;
+    });
+  }, [records, startDate, endDate]);
+
+  const displayRecords = useMemo(() => sortRecords(filteredRecords), [filteredRecords, sortBy, sortOrder]);
+
+  // Summary computation (change across period)
+  const summary = useMemo(() => {
+    if (!displayRecords.length) return null;
+    // sort ascending by date for period endpoints
+    const byDateAsc = [...displayRecords].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const first = byDateAsc[0];
+    const last = byDateAsc[byDateAsc.length - 1];
+    const firstNet = calcNetWorth(first);
+    const lastNet = calcNetWorth(last);
+    const diff = lastNet - firstNet;
+    const pct = firstNet !== 0 ? (diff / firstNet) * 100 : 0;
+    return { first, last, firstNet, lastNet, diff, pct };
+  }, [displayRecords]);
+
+  // Quick range handlers
+  const applyQuickRange = (range: string) => {
+    const iso = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    let effectiveEnd = endDate;
+    if (!effectiveEnd) {
+      // Derive latest record date as baseline if endDate was cleared via reset
+      const maxDate = records
+        .map(r => new Date(r.date))
+        .filter(d => !isNaN(d.getTime()))
+        .sort((a, b) => b.getTime() - a.getTime())[0];
+      if (!maxDate) return; // no records
+      effectiveEnd = iso(maxDate);
+      setEndDate(effectiveEnd);
+    }
+    const start = new Date(effectiveEnd);
+    if (range === '1M') start.setMonth(start.getMonth() - 1);
+    else if (range === '6M') start.setMonth(start.getMonth() - 6);
+    else if (range === '1Y') start.setFullYear(start.getFullYear() - 1);
+    else if (range === '2Y') start.setFullYear(start.getFullYear() - 2);
+    else if (range === '3Y') start.setFullYear(start.getFullYear() - 3);
+  else if (range === 'YTD') { start.setMonth(0, 1); }
+    setStartDate(iso(start));
+    setQuickRange(range);
+  };
+
+  const clearQuickRange = () => setQuickRange('');
+
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -259,6 +335,66 @@ const FinancialRecords: React.FC = () => {
           Add Record
         </Button>
       </Box>
+
+      {/* Filters */}
+      <Paper sx={{ p: 2, mb: 2 }} variant="outlined">
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
+          <Box sx={{ position: 'relative' }}>
+            <Box component="span" sx={{ position: 'absolute', top: 4, left: 8, fontSize: 11, fontWeight: 600, letterSpacing: 0.5, color: 'text.secondary', pointerEvents: 'none', textTransform: 'uppercase' }}>From</Box>
+            <input
+              type="date"
+              aria-label="Start date"
+              value={startDate}
+              onChange={e => { setStartDate(e.target.value); clearQuickRange(); }}
+              style={{ padding: '20px 8px 6px', borderRadius: 6, border: '1px solid #ccc', fontSize: 14 }}
+            />
+          </Box>
+          <Box sx={{ position: 'relative' }}>
+            <Box component="span" sx={{ position: 'absolute', top: 4, left: 8, fontSize: 11, fontWeight: 600, letterSpacing: 0.5, color: 'text.secondary', pointerEvents: 'none', textTransform: 'uppercase' }}>To</Box>
+            <input
+              type="date"
+              aria-label="End date"
+              value={endDate}
+              onChange={e => { setEndDate(e.target.value); }}
+              style={{ padding: '20px 8px 6px', borderRadius: 6, border: '1px solid #ccc', fontSize: 14 }}
+            />
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            <Button size="small" variant={quickRange === '1M' ? 'contained' : 'outlined'} onClick={() => applyQuickRange('1M')}>Last 1M</Button>
+            <Button size="small" variant={quickRange === '6M' ? 'contained' : 'outlined'} onClick={() => applyQuickRange('6M')}>Last 6M</Button>
+            <Button size="small" variant={quickRange === 'YTD' ? 'contained' : 'outlined'} onClick={() => applyQuickRange('YTD')}>YTD</Button>
+            <Button size="small" variant={quickRange === '1Y' ? 'contained' : 'outlined'} onClick={() => applyQuickRange('1Y')}>Last 1Y</Button>
+            <Button size="small" variant={quickRange === '2Y' ? 'contained' : 'outlined'} onClick={() => applyQuickRange('2Y')}>Last 2Y</Button>
+            <Button size="small" variant={quickRange === '3Y' ? 'contained' : 'outlined'} onClick={() => applyQuickRange('3Y')}>Last 3Y</Button>
+            <Button size="small" onClick={() => { setStartDate(''); setEndDate(''); clearQuickRange(); }} disabled={!startDate && !endDate}>Reset</Button>
+          </Box>
+          {quickRange && (
+            <Typography variant="caption" color="text.secondary">Quick range active: {quickRange}</Typography>
+          )}
+          <Box sx={{ flexGrow: 1 }} />
+          <Typography variant="body2" color="text.secondary">
+            Showing {displayRecords.length} record{displayRecords.length === 1 ? '' : 's'}
+          </Typography>
+        </Box>
+      </Paper>
+      {/* Summary (moved to top) */}
+      <Paper sx={{ mb: 2, p: 2 }} variant="outlined">
+        {summary ? (
+          <Box>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+              Net Worth Change {quickRange ? `(${quickRange})` : startDate || endDate ? ' (Filtered Period)' : ''}
+            </Typography>
+            <Typography variant="body2" sx={{ lineHeight: 1.5 }}>
+              From <strong>{formatDate(summary.first.date)}</strong> at <strong>{formatNumber(summary.firstNet)}</strong> to <strong>{formatDate(summary.last.date)}</strong> at <strong>{formatNumber(summary.lastNet)}</strong>.
+              {' '}Change: <strong style={{ color: summary.diff > 0 ? '#2e7d32' : summary.diff < 0 ? '#d32f2f' : undefined }}>
+                {summary.diff > 0 ? '+' : ''}{formatNumber(summary.diff)} ({summary.diff > 0 ? '+' : ''}{summary.pct.toFixed(2)}%)
+              </strong>
+            </Typography>
+          </Box>
+        ) : (
+          <Typography variant="body2">No data in selected period.</Typography>
+        )}
+      </Paper>
 
       <FinanceRecordModal
         open={createOpen}
@@ -416,12 +552,12 @@ const FinancialRecords: React.FC = () => {
                 <TableRow>
                   <TableCell colSpan={13}>Loading...</TableCell>
                 </TableRow>
-              ) : sortedRecords().length === 0 ? (
+              ) : displayRecords.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={13}>No records found.</TableCell>
                 </TableRow>
               ) : (
-                sortedRecords().map((record: any) => {
+                displayRecords.map((record: any) => {
                   const change = calcChange(record);
                   return (
                     <TableRow key={record._id || record.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
