@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.108](https://github.com/toomastahves/tumbaland/compare/v0.0.107...v0.0.108) (2025-08-15)
+
+
+### Features
+
+* add filtesr to financial records ([aa49f22](https://github.com/toomastahves/tumbaland/commit/aa49f2207ed45a95241385d2e282f9a19316e95f))
+
 ### [0.0.107](https://github.com/toomastahves/tumbaland/compare/v0.0.106...v0.0.107) (2025-08-12)
 
 
