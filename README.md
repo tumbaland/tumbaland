@@ -3,7 +3,7 @@
 ## Quick Start
 
 1. **Copy and configure environment variables:**
-   - Copy `.env.example` to `.env` and fill in missing values.
+   - Copy `.env.example` to `.env` for each app root directory and fill in missing values.
 
 2. **Start local development:**
 
