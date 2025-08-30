@@ -218,6 +218,15 @@ const UserPortfolioPage: React.FC = () => {
               </TableCell>
               <TableCell sx={{ minWidth: 100 }}>
                 <TableSortLabel
+                  active={orderBy === 'athPrice'}
+                  direction={orderBy === 'athPrice' ? order : 'asc'}
+                  onClick={() => handleSort('athPrice')}
+                >
+                  <span style={{ fontSize: '0.72rem' }}>ATH Price</span>
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sx={{ minWidth: 100 }}>
+                <TableSortLabel
                   active={orderBy === 'currentValue'}
                   direction={orderBy === 'currentValue' ? order : 'asc'}
                   onClick={() => handleSort('currentValue')}
@@ -255,6 +264,7 @@ const UserPortfolioPage: React.FC = () => {
                 <TableCell>{p.quantity}</TableCell>
                 <TableCell>{p.avgBuyPrice}</TableCell>
                 <TableCell>{p.latestPrice !== undefined ? p.latestPrice.toFixed(2) : '-'}</TableCell>
+                <TableCell>{p.athPrice !== undefined ? p.athPrice.toFixed(2) : '-'}</TableCell>
                 <TableCell>{p.currentValue !== undefined ? p.currentValue.toFixed(2) : '-'}</TableCell>
                 <TableCell>{p.valueIncrease !== undefined ? p.valueIncrease.toFixed(2) : '-'}</TableCell>
                 <TableCell>{p.percentIncrease !== undefined ? p.percentIncrease.toFixed(2) + '%' : '-'}</TableCell>
@@ -286,6 +296,9 @@ const UserPortfolioPage: React.FC = () => {
                 Total
               </TableCell>
               <TableCell />
+              <TableCell sx={{ fontWeight: 'bold' }}>
+                {portfolios.reduce((sum, p) => sum + (p.athPrice ?? 0) * p.quantity, 0).toFixed(2)}
+              </TableCell>
               <TableCell sx={{ fontWeight: 'bold' }}>
                 {portfolios.reduce((sum, p) => sum + (p.currentValue ?? 0), 0).toFixed(2)}
               </TableCell>

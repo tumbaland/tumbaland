@@ -8,6 +8,7 @@ export interface UserPortfolio {
   buyDate?: string;
   notes?: string;
   latestPrice?: number;
+  athPrice?: number;
   currentValue?: number;
   valueIncrease?: number;
   percentIncrease?: number;

@@ -16,10 +16,22 @@ export const getAllUserPortfolios = async () => {
       }
     }
   ]);
+  // Get ATH (all-time high) price for each ticker
+  const athPrices = await TickerPriceHistory.aggregate([
+    { $match: { ticker: { $in: tickers } } },
+    {
+      $group: {
+        _id: '$ticker',
+        athPrice: { $max: '$price' }
+      }
+    }
+  ]);
   const priceMap = Object.fromEntries(latestPrices.map((p) => [p._id, p.latestPrice]));
-  // Attach latest price, value increase, percent increase
+  const athMap = Object.fromEntries(athPrices.map((p) => [p._id, p.athPrice]));
+  // Attach latest price, ATH price, value increase, percent increase
   return portfolios.map((p) => {
     const latestPrice = priceMap[p.symbol];
+    const athPrice = athMap[p.symbol];
     const currentValue = latestPrice !== undefined ? latestPrice * p.quantity : undefined;
     const valueIncrease = latestPrice !== undefined ? (latestPrice - p.avgBuyPrice) * p.quantity : undefined;
     const percentIncrease =
@@ -27,6 +39,7 @@ export const getAllUserPortfolios = async () => {
     return {
       ...p.toObject(),
       latestPrice,
+      athPrice,
       currentValue,
       valueIncrease,
       percentIncrease
