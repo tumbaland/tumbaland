@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.112](https://github.com/toomastahves/tumbaland/compare/v0.0.111...v0.0.112) (2025-08-31)
+
+
+### Features
+
+* collage image transparency and border ([b204d46](https://github.com/toomastahves/tumbaland/commit/b204d4682c1fed8c3e261cedd9049d84d21ab731))
+
 ### [0.0.111](https://github.com/toomastahves/tumbaland/compare/v0.0.110...v0.0.111) (2025-08-31)
 
 
