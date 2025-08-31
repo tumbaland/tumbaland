@@ -22,11 +22,14 @@ export interface CollageConfig {
     frameVisible?: boolean;
     scaleX?: string;
     scaleY?: string;
+    transparentBackground?: boolean;
   }>;
   texts?: CollageTextBox[];
   textSections?: Array<any>;
   title?: { text: string; subtitle?: string };
   backgroundColor?: string;
+  photoTransparencyMode?: boolean;
+  borderColor?: string;
 }
 
 export interface Collage {

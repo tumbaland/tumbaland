@@ -15,6 +15,7 @@ import DraggableTextBox, { CanvasText } from '../components/collage/DraggableTex
 import AlbumPhotoList, { AlbumPhoto } from '../components/collage/AlbumPhotoList';
 import CollageMenu from '../components/collage/CollageMenu';
 import CollageLayout from '../components/collage/CollageLayout';
+import CollagePhotoEditModal from '../components/collage/CollagePhotoEditModal';
 import { Collage } from '../types/collage';
 import { useCollage } from '../hooks/useCollage';
 
@@ -27,6 +28,8 @@ interface CanvasPhoto {
   height: number;
   rotation?: number;
   caption?: string;
+  transparentBackground?: boolean;
+  showBorder?: boolean;
 }
 
 // CanvasText now imported from DraggableTextBox
@@ -45,6 +48,8 @@ const CollageDetailsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [backgroundColor, setBackgroundColor] = useState<string>('#111');
+  const [photoTransparencyMode, setPhotoTransparencyMode] = useState<boolean>(true);
+  const [borderColor, setBorderColor] = useState<string>('#fff');
   // Viewport state: initialize from browser window size
   const getInitialViewport = () => {
     if (typeof window !== 'undefined') {
@@ -54,8 +59,10 @@ const CollageDetailsPage: React.FC = () => {
   };
   const [viewport, setViewport] = useState<{ width: number; height: number }>(getInitialViewport());
   // Caption edit state
-  const [captionEditIdx, setCaptionEditIdx] = useState<number | null>(null);
-  const [captionEditValue, setCaptionEditValue] = useState('');
+  const [photoEditModal, setPhotoEditModal] = useState<{ open: boolean; photoIndex: number | null }>({
+    open: false,
+    photoIndex: null
+  });
   // Text box state
   const [canvasTexts, setCanvasTexts] = useState<CanvasText[]>([]);
   const [textEditIdx, setTextEditIdx] = useState<number | null>(null);
@@ -105,43 +112,54 @@ const CollageDetailsPage: React.FC = () => {
   // Save canvas state to backend
   // Open caption edit dialog
   const handlePhotoDoubleClick = (idx: number) => {
-    let currentCaption = '';
-    if (collage?.config?.photos && collage.config.photos[idx] && collage.config.photos[idx].caption) {
-      currentCaption = collage.config.photos[idx].caption;
-    }
-    setCaptionEditIdx(idx);
-    setCaptionEditValue(currentCaption);
+    setPhotoEditModal({ open: true, photoIndex: idx });
   };
 
-  // Save caption edit
-  const handleCaptionSave = () => {
-    if (captionEditIdx === null) return;
-    setCanvasPhotos((prev) => prev.map((p, idx) => (idx === captionEditIdx ? { ...p, caption: captionEditValue } : p)));
+  // Save photo properties from edit modal
+  const handlePhotoSave = (photoId: string, data: { caption?: string; transparentBackground?: boolean; showBorder?: boolean }) => {
+    // Find photo index by ID
+    const photoIndex = canvasPhotos.findIndex(p => p.id === photoId);
+    if (photoIndex === -1) return;
+
+    setCanvasPhotos((prev) => 
+      prev.map((p, idx) => 
+        idx === photoIndex 
+          ? { ...p, caption: data.caption, transparentBackground: data.transparentBackground, showBorder: data.showBorder }
+          : p
+      )
+    );
+
     // Also update collage.config.photos in memory for immediate UI feedback
-    if (collage && collage.config && collage.config.photos && collage.config.photos[captionEditIdx]) {
-      collage.config.photos[captionEditIdx].caption = captionEditValue;
+    if (collage && collage.config && collage.config.photos && collage.config.photos[photoIndex]) {
+      if (data.caption !== undefined) {
+        collage.config.photos[photoIndex].caption = data.caption;
+      }
+      if (data.transparentBackground !== undefined) {
+        collage.config.photos[photoIndex].transparentBackground = data.transparentBackground;
+      }
+      if (data.showBorder !== undefined) {
+        collage.config.photos[photoIndex].frameVisible = data.showBorder;
+      }
       setCollage({ ...collage });
     }
-    setCaptionEditIdx(null);
-    setCaptionEditValue('');
   };
 
   // Delete photo from canvas
-  const handleDeletePhoto = () => {
-    if (captionEditIdx === null) return;
-    setCanvasPhotos((prev) => prev.filter((_, idx) => idx !== captionEditIdx));
+  const handleDeletePhoto = (photoId: string) => {
+    const photoIndex = canvasPhotos.findIndex(p => p.id === photoId);
+    if (photoIndex === -1) return;
+    
+    setCanvasPhotos((prev) => prev.filter((_, idx) => idx !== photoIndex));
     // Also update collage.config.photos in memory for immediate UI feedback
     if (collage && collage.config && collage.config.photos) {
-      collage.config.photos.splice(captionEditIdx, 1);
+      collage.config.photos.splice(photoIndex, 1);
       setCollage({ ...collage });
     }
-    setCaptionEditIdx(null);
-    setCaptionEditValue('');
+    setPhotoEditModal({ open: false, photoIndex: null });
   };
 
   const handleCaptionCancel = () => {
-    setCaptionEditIdx(null);
-    setCaptionEditValue('');
+    setPhotoEditModal({ open: false, photoIndex: null });
   };
   const handleSave = async () => {
     if (!collage) return;
@@ -159,6 +177,8 @@ const CollageDetailsPage: React.FC = () => {
           width: p.width,
           height: p.height,
           rotation: p.rotation || 0,
+          transparentBackground: p.transparentBackground,
+          frameVisible: p.showBorder,
           caption:
             p.caption !== undefined ? p.caption : (collage?.config?.photos && collage.config.photos[idx]?.caption) || ''
         };
@@ -184,6 +204,8 @@ const CollageDetailsPage: React.FC = () => {
           photos,
           texts,
           backgroundColor,
+          photoTransparencyMode,
+          borderColor,
           viewport: viewportConfig
         },
         albumId: collage.albumId
@@ -221,7 +243,9 @@ const CollageDetailsPage: React.FC = () => {
                   y: p.position?.top || 100,
                   width: p.width || 120,
                   height: p.height || 120,
-                  rotation: p.rotation || 0
+                  rotation: p.rotation || 0,
+                  transparentBackground: p.transparentBackground,
+                  showBorder: p.frameVisible ?? true
                 };
               })
             );
@@ -246,6 +270,18 @@ const CollageDetailsPage: React.FC = () => {
             setBackgroundColor(data.collage.config.backgroundColor);
           } else {
             setBackgroundColor('#111');
+          }
+          // Load photo transparency mode from config if present
+          if (data.collage.config?.photoTransparencyMode !== undefined) {
+            setPhotoTransparencyMode(data.collage.config.photoTransparencyMode);
+          } else {
+            setPhotoTransparencyMode(true); // default to transparent mode
+          }
+          // Load border color from config if present
+          if (data.collage.config?.borderColor) {
+            setBorderColor(data.collage.config.borderColor);
+          } else {
+            setBorderColor('#fff'); // default to white borders
           }
           // Load viewport from config if present, else use browser size
           if (
@@ -279,7 +315,9 @@ const CollageDetailsPage: React.FC = () => {
         y: 100 + Math.random() * 200,
         width: photo.width || 120,
         height: photo.height || 120,
-        rotation: 0
+        rotation: 0,
+        transparentBackground: photoTransparencyMode,
+        showBorder: true
       }
     ]);
   };
@@ -292,7 +330,7 @@ const CollageDetailsPage: React.FC = () => {
   const [resizeStart, setResizeStart] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
 
   // Disable drag/resize if any modal is open
-  const isModalOpen = captionEditIdx !== null || textEditIdx !== null;
+  const isModalOpen = photoEditModal.open || textEditIdx !== null;
 
   // Start drag or resize mode on click (disabled in view mode or when modal open)
   const handlePhotoClick = (id: string, e: React.MouseEvent<HTMLImageElement, MouseEvent>, photo: CanvasPhoto) => {
@@ -380,6 +418,10 @@ const CollageDetailsPage: React.FC = () => {
             backgroundColor={backgroundColor}
             onBackgroundColorChange={setBackgroundColor}
             onAddTextBox={handleAddTextBox}
+            photoTransparencyMode={photoTransparencyMode}
+            onPhotoTransparencyModeChange={setPhotoTransparencyMode}
+            borderColor={borderColor}
+            onBorderColorChange={setBorderColor}
           />
         </Box>
       )}
@@ -454,9 +496,9 @@ const CollageDetailsPage: React.FC = () => {
                       width: photo.width,
                       height: photo.height,
                       zIndex: 2,
-                      border: '2px solid #fff',
+                      border: (photo.showBorder ?? true) ? `2px solid ${borderColor}` : 'none',
                       borderRadius: 2,
-                      background: '#fff',
+                      background: (photo.transparentBackground ?? photoTransparencyMode) ? 'transparent' : '#fff',
                       cursor: isViewMode
                         ? 'default'
                         : dragPhotoId === photo.id
@@ -465,6 +507,12 @@ const CollageDetailsPage: React.FC = () => {
                             ? 'nwse-resize'
                             : 'pointer',
                       userSelect: 'none'
+                    }}
+                    onContextMenu={(e) => {
+                      if (!isViewMode) {
+                        e.preventDefault();
+                        setPhotoEditModal({ open: true, photoIndex: idx });
+                      }
                     }}
                   >
                     <Box
@@ -557,30 +605,18 @@ const CollageDetailsPage: React.FC = () => {
                 setTextBoxes={isViewMode || isModalOpen ? () => {} : setCanvasTexts}
                 onDoubleClick={isViewMode || isModalOpen ? () => {} : handleTextBoxDoubleClick}
               />
-              {/* Caption Edit Dialog (edit mode only) */}
+              {/* Photo Edit Modal (edit mode only) */}
               {!isViewMode && (
-                <Dialog open={captionEditIdx !== null} onClose={handleCaptionCancel} maxWidth="xs" fullWidth>
-                  <DialogTitle>Edit Photo</DialogTitle>
-                  <DialogContent>
-                    <TextField
-                      autoFocus
-                      margin="dense"
-                      label="Caption"
-                      fullWidth
-                      value={captionEditValue}
-                      onChange={(e) => setCaptionEditValue(e.target.value)}
-                    />
-                  </DialogContent>
-                  <DialogActions>
-                    <Button onClick={handleDeletePhoto} color="error">
-                      Delete
-                    </Button>
-                    <Button onClick={handleCaptionCancel}>Cancel</Button>
-                    <Button onClick={handleCaptionSave} variant="contained">
-                      Save
-                    </Button>
-                  </DialogActions>
-                </Dialog>
+                <CollagePhotoEditModal
+                  open={photoEditModal.open}
+                  photo={photoEditModal.photoIndex !== null ? canvasPhotos[photoEditModal.photoIndex] : null}
+                  onClose={handleCaptionCancel}
+                  onSave={handlePhotoSave}
+                  onDelete={handleDeletePhoto}
+                  globalTransparencyMode={photoTransparencyMode}
+                  borderColor={borderColor}
+                  globalBackgroundColor={backgroundColor}
+                />
               )}
               {/* Text Box Edit Dialog (edit mode only) */}
               {!isViewMode && (
