@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.111](https://github.com/toomastahves/tumbaland/compare/v0.0.110...v0.0.111) (2025-08-31)
+
+
+### Features
+
+* add log chart ([a40ae5a](https://github.com/toomastahves/tumbaland/commit/a40ae5a17c532f0950d365c9bd530a2341042861))
+
 ### [0.0.110](https://github.com/toomastahves/tumbaland/compare/v0.0.109...v0.0.110) (2025-08-30)
 
 
