@@ -8,7 +8,9 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  SelectChangeEvent
+  SelectChangeEvent,
+  FormControlLabel,
+  Checkbox
 } from '@mui/material';
 import { TrendingUp } from '@mui/icons-material';
 
@@ -30,7 +32,9 @@ const PortfolioChart: React.FC<PortfolioChartProps> = ({ records }) => {
   const [containerWidth, setContainerWidth] = React.useState(800);
   const containerRef = React.useRef<HTMLDivElement>(null);
   // Add state for years to show
-  const [yearsToShow, setYearsToShow] = React.useState<'All' | 1 | 3 | 5>('All');
+  const [yearsToShow, setYearsToShow] = React.useState<'All' | 1 | 3 | 5>(3);
+  // Add state for logarithmic scale
+  const [useLogScale, setUseLogScale] = React.useState(true);
 
   // Handler for dropdown (fix type)
   const handleYearsChange = (event: SelectChangeEvent<'All' | 1 | 3 | 5>) => {
@@ -112,12 +116,14 @@ const PortfolioChart: React.FC<PortfolioChartProps> = ({ records }) => {
     Object.fromEntries(assetClasses.map((a) => [a.key, true]))
   );
 
-  // Calculate maxValue based only on visible assets
-  const maxValue = Math.max(
-    ...sortedRecords.flatMap((record) =>
-      assetClasses.filter((a) => visibleAssets[a.key]).map((a) => record[a.key as keyof FinanceRecord] as number)
-    )
+  // Calculate maxValue and minValue based only on visible assets
+  const allValues = sortedRecords.flatMap((record) =>
+    assetClasses.filter((a) => visibleAssets[a.key]).map((a) => record[a.key as keyof FinanceRecord] as number)
   );
+
+  const positiveValues = allValues.filter(val => val > 0);
+  const maxValue = Math.max(...allValues);
+  const minValue = positiveValues.length > 0 ? Math.min(...positiveValues) : 1;
 
   const toggleAsset = (key: string) => {
     setVisibleAssets((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -132,16 +138,55 @@ const PortfolioChart: React.FC<PortfolioChartProps> = ({ records }) => {
   };
 
   const getYPosition = (value: number) => {
-    return chartHeight - padding - (value / maxValue) * (chartHeight - 2 * padding);
+    if (useLogScale) {
+      if (value <= 0) {
+        // For zero or negative values in log scale, position at the bottom
+        return chartHeight - padding;
+      }
+      // Use logarithmic scale for positive values
+      const logMax = Math.log10(maxValue);
+      const logMin = Math.log10(Math.max(minValue, 1));
+      const logValue = Math.log10(value);
+      const ratio = (logValue - logMin) / (logMax - logMin);
+      return chartHeight - padding - ratio * (chartHeight - 2 * padding);
+    } else {
+      // Use linear scale
+      return chartHeight - padding - (value / maxValue) * (chartHeight - 2 * padding);
+    }
   };
 
   const createPathData = (assetKey: keyof FinanceRecord) => {
+    // Find the first non-zero value index
+    const firstNonZeroIndex = sortedRecords.findIndex(record => (record[assetKey] as number) > 0);
+    
+    // If no non-zero values found, return empty path
+    if (firstNonZeroIndex === -1) return '';
+    
+    let lastValidValue = sortedRecords[firstNonZeroIndex][assetKey] as number;
+    let isFirstPoint = true;
+    
     return sortedRecords
       .map((record, index) => {
+        const originalValue = record[assetKey] as number;
+        
+        // Skip points before the first non-zero value
+        if (index < firstNonZeroIndex) return null;
+        
+        // For log scale, carry forward the last valid value when current value is 0
+        let valueToUse = originalValue;
+        if (useLogScale && originalValue <= 0) {
+          valueToUse = lastValidValue;
+        } else if (originalValue > 0) {
+          lastValidValue = originalValue;
+        }
+        
         const x = getXPosition(index);
-        const y = getYPosition(record[assetKey] as number);
-        return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+        const y = getYPosition(valueToUse);
+        const command = isFirstPoint ? 'M' : 'L';
+        isFirstPoint = false;
+        return `${command} ${x} ${y}`;
       })
+      .filter(Boolean) // Remove null entries
       .join(' ');
   };
 
@@ -163,17 +208,40 @@ const PortfolioChart: React.FC<PortfolioChartProps> = ({ records }) => {
 
   const yearLabelIndices = getYearLabelIndices();
 
+  // Generate Y-axis label values based on scale type
+  const getYAxisLabels = () => {
+    if (useLogScale && minValue > 0) {
+      // For log scale, use powers of 10
+      const logMin = Math.log10(Math.max(minValue, 1));
+      const logMax = Math.log10(maxValue);
+      const labels = [];
+      
+      // Generate logarithmic intervals
+      for (let i = 0; i <= 4; i++) {
+        const logValue = logMin + (i / 4) * (logMax - logMin);
+        const value = Math.pow(10, logValue);
+        labels.push(value);
+      }
+      return labels;
+    } else {
+      // Linear scale intervals
+      return [0, 0.25, 0.5, 0.75, 1].map(ratio => maxValue * ratio);
+    }
+  };
+
+  const yAxisLabels = getYAxisLabels();
+
   return (
     <Card>
       <CardContent>
         <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
           <TrendingUp sx={{ mr: 1 }} />
-          Portfolio Trends Over Time
+          Portfolio Trends Over Time {useLogScale && '(Logarithmic Scale)'}
         </Typography>
 
         {/* Years selector */}
-        <Box sx={{ mb: 2, maxWidth: 200 }}>
-          <FormControl fullWidth size="small">
+        <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
+          <FormControl size="small" sx={{ minWidth: 120 }}>
             <InputLabel id="years-to-show-label">Show Last</InputLabel>
             <Select labelId="years-to-show-label" value={yearsToShow} label="Show Last" onChange={handleYearsChange}>
               <MenuItem value="All">All Years</MenuItem>
@@ -182,6 +250,17 @@ const PortfolioChart: React.FC<PortfolioChartProps> = ({ records }) => {
               <MenuItem value={5}>5 Years</MenuItem>
             </Select>
           </FormControl>
+          
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={useLogScale}
+                onChange={(e) => setUseLogScale(e.target.checked)}
+                size="small"
+              />
+            }
+            label="Logarithmic Scale"
+          />
         </Box>
 
         {/* Legend with toggles */}
@@ -222,7 +301,7 @@ const PortfolioChart: React.FC<PortfolioChartProps> = ({ records }) => {
         {/* Chart Container */}
         <Box ref={containerRef} sx={{ width: '100%', mb: 2 }}>
           <svg
-            key={Object.values(visibleAssets).join('-')}
+            key={`${Object.values(visibleAssets).join('-')}-${useLogScale}`}
             width="100%"
             height={chartHeight}
             viewBox={`0 0 ${chartWidth} ${chartHeight}`}
@@ -237,11 +316,10 @@ const PortfolioChart: React.FC<PortfolioChartProps> = ({ records }) => {
             <rect width="100%" height="100%" fill="url(#grid)" />
 
             {/* Y-axis labels */}
-            {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-              const value = maxValue * ratio;
+            {yAxisLabels.map((value, index) => {
               const y = getYPosition(value);
               return (
-                <g key={ratio}>
+                <g key={index}>
                   <line x1={padding} y1={y} x2={chartWidth - padding} y2={y} stroke="#e0e0e0" strokeWidth="1" />
                   <text x={padding - 10} y={y + 4} textAnchor="end" fontSize="12" fill="#666">
                     {formatCurrency(value)}
@@ -279,12 +357,17 @@ const PortfolioChart: React.FC<PortfolioChartProps> = ({ records }) => {
                   />
                   {/* Data points */}
                   {sortedRecords.map((record, index) => {
+                    const originalValue = record[asset.key as keyof FinanceRecord] as number;
+                    
+                    // Only render dots for actual non-zero values
+                    if (originalValue <= 0) return null;
+                    
                     const x = getXPosition(index);
-                    const y = getYPosition(record[asset.key as keyof FinanceRecord] as number);
+                    const y = getYPosition(originalValue);
                     return (
                       <circle key={index} cx={x} cy={y} r="4" fill={asset.color} stroke="white" strokeWidth="2">
                         <title>
-                          {asset.label}: {formatCurrency(record[asset.key as keyof FinanceRecord] as number)} on{' '}
+                          {asset.label}: {formatCurrency(originalValue)} on{' '}
                           {formatDate(record.date)}
                         </title>
                       </circle>
