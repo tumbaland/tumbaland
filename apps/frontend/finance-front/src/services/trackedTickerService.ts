@@ -11,8 +11,13 @@ export interface TrackedTicker {
 
 const API_URL = '/tracked-tickers';
 
-export const getTrackedTickers = async (): Promise<TrackedTicker[]> => {
-  const res = await financeApi.get(API_URL);
+export const getTrackedTickers = async (groupId?: string): Promise<TrackedTicker[]> => {
+  const params = new URLSearchParams();
+  if (groupId) {
+    params.append('groupId', groupId);
+  }
+  const url = params.toString() ? `${API_URL}?${params.toString()}` : API_URL;
+  const res = await financeApi.get(url);
   return res.data;
 };
 

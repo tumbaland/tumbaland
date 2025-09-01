@@ -64,8 +64,8 @@ export const getActivities = async (
       // Personal context - show only items without groupId (personal items only)
       query.userId = userId;
       query.$or = [
-        { groupId: null },
-        { groupId: { $exists: false } }
+        { groupId: { $exists: false } },
+        { groupId: null }
       ];
     }
 

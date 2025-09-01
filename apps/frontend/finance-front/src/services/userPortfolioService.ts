@@ -16,8 +16,13 @@ export interface UserPortfolio {
 
 const API_URL = '/user-portfolio';
 
-export const getUserPortfolios = async (): Promise<UserPortfolio[]> => {
-  const res = await financeApi.get(API_URL);
+export const getUserPortfolios = async (groupId?: string): Promise<UserPortfolio[]> => {
+  const params = new URLSearchParams();
+  if (groupId) {
+    params.append('groupId', groupId);
+  }
+  const url = params.toString() ? `${API_URL}?${params.toString()}` : API_URL;
+  const res = await financeApi.get(url);
   return res.data;
 };
 

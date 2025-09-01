@@ -2,9 +2,21 @@ import TrackedTicker from '../models/TrackedTicker';
 import { buildAccessQuery, canAccessResource } from '../utils/permissionUtils';
 
 export const getAllTrackedTickers = async (userId: string, userGroups: string[] = []) => {
-  // Build permission filter to only get tickers the user can access
-  const accessQuery = buildAccessQuery(userId, userGroups, false);
-  return TrackedTicker.find(accessQuery).sort({ ticker: 1 });
+  if (userGroups.length === 0) {
+    // Personal context: only personal tickers (no groupId)
+    return TrackedTicker.find({ 
+      userId,
+      $or: [
+        { groupId: { $exists: false } },
+        { groupId: null }
+      ]
+    }).sort({ ticker: 1 });
+  } else {
+    // Group context: only group tickers
+    return TrackedTicker.find({ 
+      groupId: { $in: userGroups }
+    }).sort({ ticker: 1 });
+  }
 };
 
 export const createTrackedTicker = async (

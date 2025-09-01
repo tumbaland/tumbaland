@@ -6,6 +6,7 @@ import {
   deleteTrackedTicker,
   TrackedTicker
 } from '../services/trackedTickerService';
+import { useTenantFilter } from '../components/tenant';
 import {
   Box,
   Typography,
@@ -46,10 +47,13 @@ const TrackedTickersPage: React.FC = () => {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
+  
+  // Get the current tenant's group ID
+  const tenantGroupId = useTenantFilter();
 
   const fetchTickers = async () => {
     try {
-      const data = await getTrackedTickers();
+      const data = await getTrackedTickers(tenantGroupId);
       setTickers(Array.isArray(data) ? data : []);
     } catch {
       setTickers([]);

@@ -11,10 +11,22 @@ import { canAccessResource } from '../utils/permissionUtils';
 // GET /api/tracked-tickers
 export const getTrackedTickers = async (req: Request, res: Response<TrackedTickerResponse[] | ErrorResponse>) => {
   try {
+    const { groupId } = req.query;
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
     
-    const tickers = await getAllTrackedTickers(user.id, userGroups);
+    let tickers;
+    if (groupId) {
+      // Get tickers for specific group (user must be member)
+      if (!userGroups.includes(groupId as string)) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      tickers = await getAllTrackedTickers(user.id, [groupId as string]);
+    } else {
+      // No groupId specified: show only personal tickers (no group)
+      tickers = await getAllTrackedTickers(user.id, []);
+    }
+    
     const response: TrackedTickerResponse[] = tickers.map((t) => ({
       _id: (t._id as any).toString(),
       ticker: t.ticker,

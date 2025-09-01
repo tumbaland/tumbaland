@@ -3,10 +3,22 @@ import TickerPriceHistory from '../models/TickerPriceHistory';
 import { buildAccessQuery, canAccessResource } from '../utils/permissionUtils';
 
 export const getAllUserPortfolios = async (userId: string, userGroups: string[] = []) => {
-  // Build permission filter to only get portfolios the user can access
-  const accessQuery = buildAccessQuery(userId, userGroups, false);
-  
-  const portfolios = await UserPortfolio.find(accessQuery).sort({ symbol: 1 });
+  let portfolios;
+  if (userGroups.length === 0) {
+    // Personal context: only personal portfolios (no groupId)
+    portfolios = await UserPortfolio.find({ 
+      userId,
+      $or: [
+        { groupId: { $exists: false } },
+        { groupId: null }
+      ]
+    }).sort({ symbol: 1 });
+  } else {
+    // Group context: only group portfolios
+    portfolios = await UserPortfolio.find({ 
+      groupId: { $in: userGroups }
+    }).sort({ symbol: 1 });
+  }
   // Fetch latest price for each ticker
   const tickers = portfolios.map((p) => p.symbol);
   // Get latest price for each ticker

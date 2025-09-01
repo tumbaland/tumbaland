@@ -11,10 +11,22 @@ import { canAccessResource } from '../utils/permissionUtils';
 // GET /api/user-portfolio
 export const getUserPortfolios = async (req: Request, res: Response<UserPortfolioResponse[] | ErrorResponse>) => {
   try {
+    const { groupId } = req.query;
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
     
-    const portfolios = await getAllUserPortfolios(user.id, userGroups);
+    let portfolios;
+    if (groupId) {
+      // Get portfolios for specific group (user must be member)
+      if (!userGroups.includes(groupId as string)) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+      portfolios = await getAllUserPortfolios(user.id, [groupId as string]);
+    } else {
+      // No groupId specified: show only personal portfolios (no group)
+      portfolios = await getAllUserPortfolios(user.id, []);
+    }
+    
     const response: UserPortfolioResponse[] = portfolios.map((p) => ({
       _id: p._id?.toString(),
       ticker: p.symbol,

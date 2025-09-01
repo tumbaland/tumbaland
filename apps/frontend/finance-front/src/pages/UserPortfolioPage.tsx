@@ -6,6 +6,7 @@ import {
   deleteUserPortfolio,
   UserPortfolio
 } from '../services/userPortfolioService';
+import { useTenantFilter } from '../components/tenant';
 import {
   Box,
   Typography,
@@ -47,9 +48,12 @@ const UserPortfolioPage: React.FC = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
+  // Get the current tenant's group ID
+  const tenantGroupId = useTenantFilter();
+
   const fetchPortfolios = async () => {
     try {
-      const data = await getUserPortfolios();
+      const data = await getUserPortfolios(tenantGroupId);
       setPortfolios(Array.isArray(data) ? data : []);
     } catch {
       setPortfolios([]);
