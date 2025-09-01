@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.114](https://github.com/toomastahves/tumbaland/compare/v0.0.113...v0.0.114) (2025-09-01)
+
+
+### Features
+
+* add INTERNAL_SERVICE_TOKEN to deployment ([d9be700](https://github.com/toomastahves/tumbaland/commit/d9be700c3e3e014db88974efd8caf71a8f23bed1))
+
 ### [0.0.113](https://github.com/toomastahves/tumbaland/compare/v0.0.112...v0.0.113) (2025-09-01)
 
 
