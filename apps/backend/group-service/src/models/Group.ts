@@ -21,6 +21,7 @@ export interface IGroup extends Document {
   createdBy: string; // email
   members: IGroupMember[];
   invites?: IGroupInvite[];
+  deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,7 +40,8 @@ const GroupSchema = new Schema<IGroup>({
     token: { type: String, required: true },
     expiresAt: { type: Date, required: true },
     createdAt: { type: Date, default: Date.now }
-  }]
+  }],
+  deletedAt: { type: Date, default: null }
 },{ timestamps: true });
 
 GroupSchema.index({ 'members.email': 1 });

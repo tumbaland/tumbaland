@@ -4,8 +4,12 @@ import { promises as fsPromises } from 'fs';
 import { bucket } from './storage';
 
 const CACHE_DIR = process.env.FILE_CACHE_DIR || path.join(process.cwd(), 'cache');
-const CACHE_MAX_AGE = parseInt(process.env.CACHE_MAX_AGE || '86400000'); // 24 hours in ms
+const CACHE_MAX_AGE = parseInt(process.env.CACHE_MAX_AGE || '864000000'); // 10 days in ms
 const CACHE_MAX_SIZE = parseInt(process.env.CACHE_MAX_SIZE || '1073741824'); // 1GB in bytes
+const CLEANUP_INTERVAL = parseInt(process.env.CACHE_CLEANUP_INTERVAL || '259200000'); // 3 days in ms
+
+// Track last cleanup time to throttle cleanup operations
+let lastCleanupTime = 0;
 
 // Ensure cache directory exists
 export const ensureCacheDir = async (): Promise<void> => {
@@ -58,8 +62,12 @@ export const storeInCache = async (fileId: string, data: Buffer): Promise<void> 
     const cacheFilePath = getCacheFilePath(fileId);
     await fsPromises.writeFile(cacheFilePath, data);
 
-    // Clean up old cache files if needed
-    await cleanupCache();
+    // Clean up old cache files if needed (but not too frequently)
+    const now = Date.now();
+    if (now - lastCleanupTime > CLEANUP_INTERVAL) {
+      lastCleanupTime = now;
+      await cleanupCache();
+    }
   } catch (error) {
     console.error(`Failed to store in cache for ${fileId}:`, error);
   }

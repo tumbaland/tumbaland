@@ -13,6 +13,8 @@ services:
       - MONGODB_URI=${MONGODB_URI}
       - JWT_SECRET=${JWT_SECRET}
       - FILE_API_URL=${FILE_API_URL}
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN}
+      - GROUP_SERVICE_URL=${GROUP_SERVICE_URL}
     init: true
     networks:
       - tumbanet

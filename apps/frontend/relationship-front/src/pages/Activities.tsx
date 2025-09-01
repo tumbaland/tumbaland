@@ -4,12 +4,16 @@ import { useActivities } from '../hooks/useActivities';
 import { ActivityType } from '../api/types';
 import AddActivityModal from '../components/AddActivityModal';
 import ActivitiesTable from '../components/ActivitiesTable';
+import { useTenantFilter } from '../components/tenant';
 
 const Activities: React.FC = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [sortBy, setSortBy] = useState<string>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  
+  // Get the current tenant's group ID
+  const tenantGroupId = useTenantFilter();
 
   const {
     activities = [],
@@ -21,7 +25,8 @@ const Activities: React.FC = () => {
     page: page + 1, // API uses 1-based pagination
     limit: rowsPerPage,
     sortBy,
-    sortOrder
+    sortOrder,
+    groupId: tenantGroupId
   });
   const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage);

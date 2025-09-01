@@ -14,6 +14,7 @@ import {
   Chip
 } from '@mui/material';
 import { getMonthlyStatistics, MonthlyStatisticsData } from '../api/statistics';
+import { useTenantFilter } from './tenant';
 
 interface StackedBarChartProps {
   title?: string;
@@ -45,28 +46,31 @@ const MonthlyStackedBarChart: React.FC<StackedBarChartProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | undefined>(year);
 
+  // Get the current tenant's group ID
+  const tenantGroupId = useTenantFilter();
+
   // Generate available years (from 2024 to current year)
   const currentYear = new Date().getFullYear();
   const availableYears = Array.from({ length: currentYear - 2023 }, (_, i) => 2024 + i);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const monthlyData = await getMonthlyStatistics(selectedYear);
-        console.log('Fetched monthly statistics:', monthlyData); // Debug log
-        setData(monthlyData);
-      } catch (err) {
-        console.error('Error fetching monthly statistics:', err); // Debug log
-        setError(err instanceof Error ? err.message : 'Failed to load data');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const monthlyData = await getMonthlyStatistics(selectedYear, tenantGroupId);
+      console.log('Fetched monthly statistics:', monthlyData); // Debug log
+      setData(monthlyData);
+    } catch (err) {
+      console.error('Error fetching monthly statistics:', err); // Debug log
+      setError(err instanceof Error ? err.message : 'Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchData();
-  }, [selectedYear]);
+  }, [selectedYear, tenantGroupId]);
 
   const maxDays = Math.max(...data.map((d) => d.totalDays), 31);
 

@@ -33,16 +33,19 @@ import { useAlbums } from '../hooks/useAlbums';
 import AlbumCard from '../components/AlbumCard';
 import EditAlbumDialog from '../components/EditAlbumDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { useTenantFilter } from '../components/tenant';
 import { Album } from '../types';
 
 const AlbumsPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
+  const tenantGroupId = useTenantFilter(); // Get groupId from tenant context
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newAlbum, setNewAlbum] = useState({
     name: '',
     description: '',
-    tags: [] as string[]
+    tags: [] as string[],
+    groupId: undefined as string | undefined
   });
   const [tagInput, setTagInput] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +67,7 @@ const AlbumsPage: React.FC = () => {
     deleteAlbum
   } = useAlbums({
     search: searchTerm || undefined,
+    groupId: tenantGroupId, // Pass groupId only if present (group context), undefined for personal
     limit: 20
   });
 
@@ -77,9 +81,9 @@ const AlbumsPage: React.FC = () => {
     setError(null);
 
     try {
-      await createAlbum(newAlbum);
+      await createAlbum({ ...newAlbum, groupId: tenantGroupId }); // Use tenant context for groupId
       setShowCreateDialog(false);
-      setNewAlbum({ name: '', description: '', tags: [] });
+      setNewAlbum({ name: '', description: '', tags: [], groupId: undefined });
       setTagInput('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create album');
@@ -216,9 +220,8 @@ const AlbumsPage: React.FC = () => {
         </Button>
       </Box>
 
-      <Box mb={4}>
+      <Box mb={4} display="flex" gap={2} alignItems="center" flexWrap="wrap">
         <TextField
-          fullWidth
           placeholder="Search albums..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -229,7 +232,7 @@ const AlbumsPage: React.FC = () => {
               </InputAdornment>
             )
           }}
-          sx={{ maxWidth: 400 }}
+          sx={{ maxWidth: 400, flex: 1, minWidth: 200 }}
         />
       </Box>
 
@@ -365,6 +368,18 @@ const AlbumsPage: React.FC = () => {
             onChange={(e) => setNewAlbum((prev) => ({ ...prev, description: e.target.value }))}
             sx={{ mb: 2 }}
           />
+
+          <Box sx={{ mb: 2 }}>
+            {tenantGroupId ? (
+              <Alert severity="info">
+                This album will be created in your selected group context
+              </Alert>
+            ) : (
+              <Alert severity="info">
+                This album will be created in your personal context
+              </Alert>
+            )}
+          </Box>
 
           {/* Removed public/private selection */}
 

@@ -12,19 +12,24 @@ import {
   getActivityTypes
 } from '../controllers/activity.controller';
 import { authenticateToken } from '../middleware/authMiddleware';
+import { attachUserGroups } from '../middleware/userGroupsMiddleware';
 
 const router = Router();
 
+// Apply authentication and group middleware to all routes
+router.use(authenticateToken);
+router.use(attachUserGroups);
+
 // CRUD routes
-router.post('/', authenticateToken, createActivity);
-router.get('/', authenticateToken, getActivities);
-router.get('/recent', authenticateToken, getRecentActivities);
-router.get('/recent-summary', authenticateToken, getRecentActivitiesSummary);
-router.get('/stats', authenticateToken, getActivityStats);
-router.get('/date-range', authenticateToken, getActivitiesByDateRange);
-router.get('/types', authenticateToken, getActivityTypes);
-router.get('/:id', authenticateToken, getActivityById);
-router.put('/:id', authenticateToken, updateActivity);
-router.delete('/:id', authenticateToken, deleteActivity);
+router.post('/', createActivity);
+router.get('/', getActivities);
+router.get('/recent', getRecentActivities);
+router.get('/recent-summary', getRecentActivitiesSummary);
+router.get('/stats', getActivityStats);
+router.get('/date-range', getActivitiesByDateRange);
+router.get('/types', getActivityTypes);
+router.get('/:id', getActivityById);
+router.put('/:id', updateActivity);
+router.delete('/:id', deleteActivity);
 
 export default router;

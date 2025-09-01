@@ -8,9 +8,13 @@ export const collageService = {
     return response.data;
   },
 
-  // Get all collages
-  async getCollages(): Promise<{ collages: Collage[] }> {
-    const response = await albumApi.get('/collages');
+  // Get all collages with optional filtering
+  async getCollages(params?: { albumId?: string; groupId?: string }): Promise<{ collages: Collage[] }> {
+    const searchParams = new URLSearchParams();
+    if (params?.albumId) searchParams.set('albumId', params.albumId);
+    if (params?.groupId) searchParams.set('groupId', params.groupId);
+    
+    const response = await albumApi.get(`/collages?${searchParams.toString()}`);
     return response.data;
   },
 

@@ -3,7 +3,7 @@ import { Album, CreateAlbumData, ApiResponse, PaginatedResponse } from '../types
 
 export const albumService = {
   // Create a new album
-  async createAlbum(albumData: CreateAlbumData): Promise<ApiResponse<Album>> {
+  async createAlbum(albumData: CreateAlbumData & { groupId?: string }): Promise<ApiResponse<Album>> {
     const response = await albumApi.post('/albums', albumData);
     return response.data;
   },
@@ -14,6 +14,7 @@ export const albumService = {
     limit?: number;
     search?: string;
     isPublic?: boolean;
+    groupId?: string;
   }): Promise<PaginatedResponse<Album>> {
     const response = await albumApi.get('/albums', { params });
     return response.data;

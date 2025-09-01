@@ -2,11 +2,13 @@ import { Request, Response } from 'express';
 import Album from '../models/Album';
 import Photo from '../models/Photo';
 import { deleteFile, getFileUrl } from '../services/fileService';
+import { buildAccessQuery, canAccessResource } from '../utils/permissionUtils';
 
 // Create a new album
 export const createAlbum = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, description, isPublic = false, tags = [] } = req.body;
+    const { name, description, isPublic = false, tags = [], groupId } = req.body;
+    const user = (req as any).user;
 
     if (!name || name.trim().length === 0) {
       res.status(400).json({
@@ -20,7 +22,9 @@ export const createAlbum = async (req: Request, res: Response): Promise<void> =>
       name: name.trim(),
       description: description?.trim(),
       isPublic,
-      tags: tags.map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0)
+      tags: tags.map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0),
+      userId: user.id,
+      groupId: groupId || undefined
     });
 
     const savedAlbum = await album.save();
@@ -42,15 +46,37 @@ export const createAlbum = async (req: Request, res: Response): Promise<void> =>
 // Get all albums
 export const getAlbums = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { page = 1, limit = 10, search, isPublic } = req.query;
+    const { page = 1, limit = 10, search, isPublic, groupId } = req.query;
+    const user = (req as any).user;
+    const userGroups = (req as any).userGroups || [];
 
-    const query: any = {};
+    let query: any = {};
+    
+    // Build base query
     if (search) {
       query.$text = { $search: search as string };
     }
     if (isPublic !== undefined) {
       query.isPublic = isPublic === 'true';
     }
+
+    // Apply permission filtering
+    if (groupId) {
+      // If groupId is specified, filter by group (user must be member)
+      if (!userGroups.includes(groupId as string)) {
+        res.status(403).json({
+          success: false,
+          message: 'Access denied: Not a member of this group'
+        });
+        return;
+      }
+      query.groupId = groupId as string;
+    } else {
+      // No groupId specified: show only personal albums (no group)
+      query.userId = user.id;
+      query.groupId = { $exists: false };
+    }
+
     const albums = await Album.find(query)
       .sort({ updatedAt: -1 })
       .limit(Number(limit))
@@ -111,6 +137,7 @@ export const getAlbums = async (req: Request, res: Response): Promise<void> => {
 export const getAlbumById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    const user = (req as any).user;
 
     const album = await Album.findById(id);
 
@@ -118,6 +145,24 @@ export const getAlbumById = async (req: Request, res: Response): Promise<void> =
       res.status(404).json({
         success: false,
         message: 'Album not found'
+      });
+      return;
+    }
+
+    // Check if user can access this album
+    const userGroups = (req as any).userGroups || [];
+    const hasAccess = canAccessResource(
+      user.id,
+      album.userId,
+      album.groupId,
+      userGroups,
+      album.isPublic
+    );
+
+    if (!hasAccess && !album.isPublic) {
+      res.status(403).json({
+        success: false,
+        message: 'Access denied'
       });
       return;
     }
@@ -160,7 +205,35 @@ export const getAlbumById = async (req: Request, res: Response): Promise<void> =
 export const updateAlbum = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { name, description, isPublic, tags, coverPhotoId } = req.body;
+    const { name, description, isPublic, tags, coverPhotoId, groupId } = req.body;
+    const user = (req as any).user;
+
+    const album = await Album.findById(id);
+    if (!album) {
+      res.status(404).json({
+        success: false,
+        message: 'Album not found'
+      });
+      return;
+    }
+
+    // Check if user can modify this album
+    const userGroups = (req as any).userGroups || [];
+    const hasAccess = canAccessResource(
+      user.id,
+      album.userId,
+      album.groupId,
+      userGroups,
+      album.isPublic
+    );
+
+    if (!hasAccess) {
+      res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+      return;
+    }
 
     const updateData: any = {};
     if (name) updateData.name = name.trim();
@@ -168,8 +241,9 @@ export const updateAlbum = async (req: Request, res: Response): Promise<void> =>
     if (isPublic !== undefined) updateData.isPublic = isPublic;
     if (tags) updateData.tags = tags.map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0);
     if (coverPhotoId !== undefined) updateData.coverPhotoId = coverPhotoId;
+    if (groupId !== undefined) updateData.groupId = groupId;
 
-    const album = await Album.findByIdAndUpdate(id, updateData, { new: true });
+    const updatedAlbum = await Album.findByIdAndUpdate(id, updateData, { new: true });
 
     if (!album) {
       res.status(404).json({
@@ -182,7 +256,7 @@ export const updateAlbum = async (req: Request, res: Response): Promise<void> =>
     res.json({
       success: true,
       message: 'Album updated successfully',
-      data: album
+      data: updatedAlbum
     });
   } catch (error) {
     console.error('Error updating album:', error);

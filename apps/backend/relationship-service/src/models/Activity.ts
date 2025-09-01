@@ -11,6 +11,8 @@ export interface IActivity extends Document {
   };
   createdAt: Date;
   updatedAt: Date;
+  userId: string; // User ID who created the activity
+  groupId?: string; // Optional group association
 }
 
 // Activity schema
@@ -41,6 +43,15 @@ const ActivitySchema: Schema = new Schema(
         required: false,
         maxlength: 500
       }
+    },
+    userId: {
+      type: String,
+      required: true,
+      index: true
+    },
+    groupId: {
+      type: String,
+      index: true
     }
   },
   {

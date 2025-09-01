@@ -3,6 +3,7 @@ import { RelationshipStatistics, getStatistics } from '../api/statistics';
 
 interface UseStatisticsOptions {
   timeframe?: string;
+  groupId?: string;
   refreshInterval?: number; // in milliseconds
 }
 
@@ -14,7 +15,7 @@ interface UseStatisticsReturn {
 }
 
 export const useStatistics = (options: UseStatisticsOptions = {}): UseStatisticsReturn => {
-  const { timeframe = 'all', refreshInterval } = options;
+  const { timeframe = 'all', groupId, refreshInterval } = options;
 
   const [statistics, setStatistics] = useState<RelationshipStatistics | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -24,7 +25,7 @@ export const useStatistics = (options: UseStatisticsOptions = {}): UseStatistics
     try {
       setLoading(true);
       setError(null);
-      const data = await getStatistics(timeframe);
+      const data = await getStatistics(timeframe, groupId);
       setStatistics(data);
     } catch (err: any) {
       setError(err.message);
@@ -36,7 +37,7 @@ export const useStatistics = (options: UseStatisticsOptions = {}): UseStatistics
 
   useEffect(() => {
     fetchStatistics();
-  }, [timeframe]);
+  }, [timeframe, groupId]);
 
   // Set up refresh interval if provided
   useEffect(() => {
@@ -44,7 +45,7 @@ export const useStatistics = (options: UseStatisticsOptions = {}): UseStatistics
       const intervalId = setInterval(fetchStatistics, refreshInterval);
       return () => clearInterval(intervalId);
     }
-  }, [refreshInterval, timeframe]);
+  }, [refreshInterval, timeframe, groupId]);
 
   return {
     statistics,

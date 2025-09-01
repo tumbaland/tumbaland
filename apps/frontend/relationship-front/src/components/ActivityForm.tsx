@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { Activity, ActivityType, CreateActivityRequest } from '../api/types';
 import { formatDateForInput, validateActivity } from '../utils/activityUtils';
+import GroupSelector from './GroupSelector';
 
 interface ActivityFormProps {
   open: boolean;
@@ -31,7 +32,8 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
     date: '',
     hours: 0,
     activityType: '' as ActivityType,
-    description: ''
+    description: '',
+    groupId: undefined as string | undefined
   });
 
   // Initialize form data when dialog opens or activity changes
@@ -43,7 +45,8 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
           date: formatDateForInput(activity.date),
           hours: activity.hours,
           activityType: activity.activity.type,
-          description: activity.activity.description || ''
+          description: activity.activity.description || '',
+          groupId: (activity as any).groupId
         });
       } else {
         // Create mode - set defaults
@@ -51,7 +54,8 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
           date: formatDateForInput(new Date()),
           hours: 0,
           activityType: '' as ActivityType,
-          description: ''
+          description: '',
+          groupId: undefined
         });
       }
       setErrors([]);
@@ -68,7 +72,8 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
         ...(formData.description.trim() && {
           description: formData.description.trim()
         })
-      }
+      },
+      ...(formData.groupId && { groupId: formData.groupId })
     };
 
     // Validate
@@ -175,6 +180,14 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
             fullWidth
             inputProps={{ maxLength: 500 }}
             helperText={`${formData.description.length}/500 characters`}
+          />
+
+          <GroupSelector
+            value={formData.groupId}
+            onChange={(groupId) => setFormData((prev) => ({ ...prev, groupId }))}
+            label="Share with Group (optional)"
+            includePersonal={false}
+            includeNone={true}
           />
         </Box>
       </DialogContent>

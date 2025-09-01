@@ -35,7 +35,8 @@ export const useActivities = (filters?: GetActivitiesFilters) => {
       filters?.startDate,
       filters?.endDate,
       filters?.sortBy,
-      filters?.sortOrder
+      filters?.sortOrder,
+      filters?.groupId
     ]
   );
   const loadActivities = useCallback(async () => {

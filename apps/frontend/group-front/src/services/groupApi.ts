@@ -43,26 +43,41 @@ export const groupApi = {
     const j = await get('/api/groups/mine');
     return j?.data ?? [];
   },
+  
+  async getMyGroupIds(): Promise<string[]> {
+    const j = await get('/api/groups/mine/ids');
+    return j?.data ?? [];
+  },
+  
   async createGroup(name: string): Promise<Group> {
     const j = await post('/api/groups', { name });
     return j.data as Group;
   },
+  
   async getGroup(id: string): Promise<Group> {
     const j = await get(`/api/groups/${encodeURIComponent(id)}`);
     return j.data as Group;
   },
-  async inviteMember(id: string, inviteEmail: string, role: GroupRole = 'member'): Promise<{ token: string; expiresAt?: string }> {
-    const j = await post(`/api/groups/${encodeURIComponent(id)}/invite`, { inviteEmail, role });
-    return j.data as { token: string; expiresAt?: string };
+  
+  async updateGroup(id: string, updates: { name?: string }): Promise<Group> {
+    const j = await patch(`/api/groups/${encodeURIComponent(id)}`, updates);
+    return j.data as Group;
   },
-  async acceptInvite(id: string, token: string): Promise<boolean> {
-    await post(`/api/groups/${encodeURIComponent(id)}/accept`, { token });
-    return true;
+  
+  async deleteGroup(id: string): Promise<void> {
+    await del(`/api/groups/${encodeURIComponent(id)}`);
   },
+  
+  async addMember(id: string, email: string, role: GroupRole = 'member'): Promise<Group> {
+    const j = await post(`/api/groups/${encodeURIComponent(id)}/members`, { email, role });
+    return j.data as Group;
+  },
+  
   async updateMemberRole(id: string, memberEmail: string, role: GroupRole): Promise<Group> {
     const j = await patch(`/api/groups/${encodeURIComponent(id)}/members/${encodeURIComponent(memberEmail)}`, { role });
     return j.data as Group;
   },
+  
   async removeMember(id: string, memberEmail: string): Promise<Group> {
     const j = await del(`/api/groups/${encodeURIComponent(id)}/members/${encodeURIComponent(memberEmail)}`);
     return j.data as Group;

@@ -1,8 +1,12 @@
 import UserPortfolio from '../models/UserPortfolio';
 import TickerPriceHistory from '../models/TickerPriceHistory';
+import { buildAccessQuery, canAccessResource } from '../utils/permissionUtils';
 
-export const getAllUserPortfolios = async () => {
-  const portfolios = await UserPortfolio.find().sort({ symbol: 1 });
+export const getAllUserPortfolios = async (userId: string, userGroups: string[] = []) => {
+  // Build permission filter to only get portfolios the user can access
+  const accessQuery = buildAccessQuery(userId, userGroups, false);
+  
+  const portfolios = await UserPortfolio.find(accessQuery).sort({ symbol: 1 });
   // Fetch latest price for each ticker
   const tickers = portfolios.map((p) => p.symbol);
   // Get latest price for each ticker
@@ -47,24 +51,85 @@ export const getAllUserPortfolios = async () => {
   });
 };
 
-export const createUserPortfolio = async (data: {
-  symbol: string;
-  quantity: number;
-  avgBuyPrice: number;
-  buyDate?: Date;
-  notes?: string;
-}) => {
-  const portfolio = new UserPortfolio(data);
+export const createUserPortfolio = async (
+  data: {
+    symbol: string;
+    quantity: number;
+    avgBuyPrice: number;
+    buyDate?: Date;
+    notes?: string;
+    groupId?: string;
+  },
+  userId: string,
+  userGroups: string[] = []
+) => {
+  // Add userId to the data
+  const portfolioData = {
+    ...data,
+    userId
+  };
+  
+  // If groupId is provided, verify user has access to that group
+  if (data.groupId && !userGroups.includes(data.groupId)) {
+    throw new Error('ACCESS_DENIED');
+  }
+  
+  const portfolio = new UserPortfolio(portfolioData);
   return portfolio.save();
 };
 
 export const updateUserPortfolio = async (
   id: string,
-  data: { symbol?: string; quantity?: number; avgBuyPrice?: number; buyDate?: Date; notes?: string }
+  data: { symbol?: string; quantity?: number; avgBuyPrice?: number; buyDate?: Date; notes?: string; groupId?: string },
+  userId: string,
+  userGroups: string[] = []
 ) => {
+  // First check if user has access to this portfolio
+  const existingPortfolio = await UserPortfolio.findById(id);
+  if (!existingPortfolio) {
+    return null;
+  }
+
+  // Check permissions
+  const hasAccess = canAccessResource(
+    userId,
+    existingPortfolio.userId || '',
+    existingPortfolio.groupId,
+    userGroups,
+    false // portfolios are not public
+  );
+
+  if (!hasAccess) {
+    throw new Error('ACCESS_DENIED');
+  }
+
+  // If groupId is being updated, verify user has access to the new group
+  if (data.groupId && !userGroups.includes(data.groupId)) {
+    throw new Error('ACCESS_DENIED');
+  }
+
   return UserPortfolio.findByIdAndUpdate(id, data, { new: true });
 };
 
-export const deleteUserPortfolio = async (id: string) => {
+export const deleteUserPortfolio = async (id: string, userId: string, userGroups: string[] = []) => {
+  // First check if user has access to this portfolio
+  const existingPortfolio = await UserPortfolio.findById(id);
+  if (!existingPortfolio) {
+    throw new Error('Portfolio not found');
+  }
+
+  // Check permissions
+  const hasAccess = canAccessResource(
+    userId,
+    existingPortfolio.userId || '',
+    existingPortfolio.groupId,
+    userGroups,
+    false // portfolios are not public
+  );
+
+  if (!hasAccess) {
+    throw new Error('ACCESS_DENIED');
+  }
+
   return UserPortfolio.findByIdAndDelete(id);
 };

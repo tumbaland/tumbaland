@@ -21,6 +21,7 @@ export interface CreateActivityRequest {
     type: ActivityType;
     description?: string;
   };
+  groupId?: string;
 }
 
 export interface UpdateActivityRequest extends Partial<CreateActivityRequest> {}
@@ -33,6 +34,7 @@ export interface GetActivitiesFilters {
   page?: number;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  groupId?: string;
 }
 
 export interface ActivityStats {

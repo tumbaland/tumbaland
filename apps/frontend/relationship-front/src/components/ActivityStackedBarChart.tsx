@@ -14,6 +14,7 @@ import {
   Chip
 } from '@mui/material';
 import { getMonthlyActivityBreakdown, MonthlyActivityData } from '../api/statistics';
+import { useTenantFilter } from './tenant';
 
 interface ActivityStackedBarChartProps {
   title?: string;
@@ -53,28 +54,31 @@ const ActivityStackedBarChart: React.FC<ActivityStackedBarChartProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | undefined>(year);
 
+  // Get the current tenant's group ID
+  const tenantGroupId = useTenantFilter();
+
   // Generate available years (from 2024 to current year)
   const currentYear = new Date().getFullYear();
   const availableYears = Array.from({ length: currentYear - 2023 }, (_, i) => 2024 + i);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const monthlyData = await getMonthlyActivityBreakdown(selectedYear);
-        console.log('Fetched monthly activity data:', monthlyData);
-        setData(monthlyData);
-      } catch (err) {
-        console.error('Error fetching monthly activity data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load data');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const monthlyData = await getMonthlyActivityBreakdown(selectedYear, tenantGroupId);
+      console.log('Fetched monthly activity data:', monthlyData);
+      setData(monthlyData);
+    } catch (err) {
+      console.error('Error fetching monthly activity data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchData();
-  }, [selectedYear]);
+  }, [selectedYear, tenantGroupId]);
   // Calculate the maximum total for scaling (excluding together and sex)
   const maxTotalActivities = Math.max(
     ...data.map((d) => {

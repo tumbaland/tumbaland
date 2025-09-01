@@ -23,26 +23,32 @@ export const validateToken = async (req: Request, res: Response, next: NextFunct
       return;
     }
 
-    // Create our own JWT token with user info
-    const userPayload: UserPayload = {
-      id: googleUser.sub || '',
-      email: googleUser.email || '',
-      name: googleUser.name || '',
-      picture: googleUser.picture
-    };
-
-    // Upsert DB user (manual approval flow)
+    // Upsert DB user (automatic approval for new users)
     const dbUser = await User.findOneAndUpdate(
       { email: userEmail.toLowerCase() },
       {
         $setOnInsert: {
           email: userEmail.toLowerCase(),
-          signupMethod: 'google'
+          signupMethod: 'google',
+          isApproved: true
         },
         $set: { lastLoginAt: new Date() }
       },
       { new: true, upsert: true }
     );
+
+    if (!dbUser) {
+      res.status(500).json({ success: false, message: 'Failed to create or find user' });
+      return;
+    }
+
+    // Update userPayload to use database user ID instead of Google sub
+    const userPayload: UserPayload = {
+      id: (dbUser._id as any).toString(), // Use MongoDB _id instead of Google sub
+      email: googleUser.email || '',
+      name: googleUser.name || '',
+      picture: googleUser.picture
+    };
 
     const jwtToken = generateJWT(userPayload);
 

@@ -10,6 +10,7 @@ import {
   Diamond
 } from '@mui/icons-material';
 import { getFinanceRecords } from '../services/financeRecordService';
+import { useTenantFilter } from '../components/tenant';
 import PortfolioChart from '../components/PortfolioChart';
 import AssetDonutChart from '../components/AssetDonutChart';
 
@@ -44,15 +45,16 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [portfolioSummary, setPortfolioSummary] = useState<PortfolioSummary | null>(null);
+  const tenantGroupId = useTenantFilter(); // Get groupId from tenant context
 
   useEffect(() => {
     fetchRecords();
-  }, []);
+  }, [tenantGroupId]); // Re-fetch when tenant context changes
 
   const fetchRecords = async () => {
     try {
       setLoading(true);
-      const response = await getFinanceRecords();
+      const response = await getFinanceRecords({ groupId: tenantGroupId });
       const sortedRecords = response.sort(
         (a: FinanceRecord, b: FinanceRecord) => new Date(b.date).getTime() - new Date(a.date).getTime()
       );

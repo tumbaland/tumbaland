@@ -7,6 +7,8 @@ export interface Album {
   isPublic: boolean;
   tags: string[];
   photoCount: number;
+  userId: string;
+  groupId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -67,6 +69,7 @@ export interface CreateAlbumData {
   description?: string;
   isPublic?: boolean;
   tags?: string[];
+  groupId?: string;
 }
 
 export interface CreatePhotoData {

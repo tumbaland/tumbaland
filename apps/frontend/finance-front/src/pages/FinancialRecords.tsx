@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import { Add, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import ConfirmationModal from '../components/ConfirmationModal';
+import { useTenantFilter } from '../components/tenant';
 import {
   getFinanceRecords,
   createFinanceRecord,
@@ -24,6 +25,7 @@ import FinanceRecordModal from '../components/FinanceRecordModal';
 
 const FinancialRecords: React.FC = () => {
   const [records, setRecords] = useState<any[]>([]);
+  const tenantGroupId = useTenantFilter(); // Get groupId from tenant context
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -36,7 +38,8 @@ const FinancialRecords: React.FC = () => {
     etfPortfolio: '',
     etfGain: '',
     cash: '',
-    gold: ''
+    gold: '',
+    groupId: undefined as string | undefined
   });
   const [editForm, setEditForm] = useState({
     date: '',
@@ -61,12 +64,12 @@ const FinancialRecords: React.FC = () => {
 
   useEffect(() => {
     fetchRecords();
-  }, []);
+  }, [tenantGroupId]); // Re-fetch when tenant context changes
 
   const fetchRecords = async () => {
     setLoading(true);
     try {
-      const data = await getFinanceRecords();
+      const data = await getFinanceRecords({ groupId: tenantGroupId });
       setRecords(data);
       // Initialize date filters if unset
       if (data && data.length) {
@@ -120,7 +123,8 @@ const FinancialRecords: React.FC = () => {
       etfPortfolio: '',
       etfGain: '',
       cash: '',
-      gold: ''
+      gold: '',
+      groupId: undefined
     });
     setCreateOpen(true);
   };
@@ -152,7 +156,8 @@ const FinancialRecords: React.FC = () => {
       etfPortfolio: Number(form.etfPortfolio),
       etfGain: Number(form.etfGain),
       cash: Number(form.cash),
-      gold: Number(form.gold)
+      gold: Number(form.gold),
+      groupId: tenantGroupId // Use tenant context for groupId
     };
     await createFinanceRecord(payload);
     handleCreateClose();
@@ -338,6 +343,18 @@ const FinancialRecords: React.FC = () => {
 
       {/* Filters */}
       <Paper sx={{ p: 2, mb: 2 }} variant="outlined">
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', mb: 2 }}>
+          {/* Show current tenant context */}
+          {tenantGroupId ? (
+            <Typography variant="body2" color="primary">
+              Showing records for selected group
+            </Typography>
+          ) : (
+            <Typography variant="body2" color="primary">
+              Showing personal records
+            </Typography>
+          )}
+        </Box>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
           <Box sx={{ position: 'relative' }}>
             <Box component="span" sx={{ position: 'absolute', top: 4, left: 8, fontSize: 11, fontWeight: 600, letterSpacing: 0.5, color: 'text.secondary', pointerEvents: 'none', textTransform: 'uppercase' }}>From</Box>

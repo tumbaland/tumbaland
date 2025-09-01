@@ -34,7 +34,8 @@ export interface ICollage extends Document {
   title: string;
   config: CollageConfig;
   albumId: string; // New: albumId at root for easier querying
-  ownerId?: string;
+  userId?: string; // User ID who created the collage
+  groupId?: string; // Optional group association
   createdAt: Date;
   updatedAt: Date;
 }
@@ -44,7 +45,8 @@ const CollageSchema = new Schema<ICollage>(
     title: { type: String, required: true },
     config: { type: Schema.Types.Mixed, required: true, default: () => ({ photos: [] }) },
     albumId: { type: String, required: true }, // New: albumId at root
-    ownerId: { type: String }
+    userId: { type: String, index: true },
+    groupId: { type: String, index: true }
   },
   { timestamps: true }
 );

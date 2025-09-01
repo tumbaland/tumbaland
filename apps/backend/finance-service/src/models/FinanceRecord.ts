@@ -10,6 +10,8 @@ export interface IFinanceRecord extends Document {
   etfGain: number;
   cash: number;
   gold: number;
+  userId: string; // User ID who created the record
+  groupId?: string; // Optional group association
 }
 
 const FinanceRecordSchema: Schema = new Schema({
@@ -21,7 +23,16 @@ const FinanceRecordSchema: Schema = new Schema({
   etfPortfolio: { type: Number, required: true },
   etfGain: { type: Number, required: true },
   cash: { type: Number, required: true },
-  gold: { type: Number, required: true }
+  gold: { type: Number, required: true },
+  userId: { 
+    type: String, 
+    required: true, 
+    index: true 
+  },
+  groupId: { 
+    type: String, 
+    index: true 
+  }
 });
 
 export default mongoose.model<IFinanceRecord>('FinanceRecord', FinanceRecordSchema);

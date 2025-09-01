@@ -17,6 +17,7 @@ services:
       - FILE_CACHE_DIR=./cache
       - CACHE_MAX_AGE=864000000
       - CACHE_MAX_SIZE=1073741824
+      - CACHE_CLEANUP_INTERVAL=259200000
       - CORS_ORIGIN=${CORS_ORIGIN}
     init: true
     networks:

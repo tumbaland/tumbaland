@@ -106,11 +106,17 @@ export interface CumulativeTimelineResponse {
 /**
  * Get relationship statistics
  * @param timeframe - Optional: 'week', 'month', 'quarter', 'year', 'all' (default: 'all')
+ * @param groupId - Optional: group ID to filter by
  */
-export const getStatistics = async (timeframe: string = 'all'): Promise<RelationshipStatistics> => {
+export const getStatistics = async (timeframe: string = 'all', groupId?: string): Promise<RelationshipStatistics> => {
   try {
+    const params: Record<string, any> = { timeframe };
+    if (groupId) {
+      params.groupId = groupId;
+    }
+    
     const response = await relationshipApi.get('/statistics', {
-      params: { timeframe }
+      params
     });
     return response.data.data;
   } catch (error: any) {
@@ -122,11 +128,16 @@ export const getStatistics = async (timeframe: string = 'all'): Promise<Relation
 /**
  * Get monthly hours statistics
  * @param year - Optional: specific year to filter by
+ * @param groupId - Optional: group ID to filter by
  */
-export const getMonthlyHours = async (year?: number): Promise<MonthlyHoursData[]> => {
+export const getMonthlyHours = async (year?: number, groupId?: string): Promise<MonthlyHoursData[]> => {
   try {
+    const params: Record<string, any> = {};
+    if (year) params.year = year;
+    if (groupId) params.groupId = groupId;
+    
     const response = await relationshipApi.get('/statistics/monthly-hours', {
-      params: year ? { year } : {}
+      params: Object.keys(params).length > 0 ? params : {}
     });
     return response.data.data;
   } catch (error: any) {
@@ -138,11 +149,16 @@ export const getMonthlyHours = async (year?: number): Promise<MonthlyHoursData[]
 /**
  * Get monthly statistics (days breakdown)
  * @param year - Optional: specific year to filter by
+ * @param groupId - Optional: group ID to filter by
  */
-export const getMonthlyStatistics = async (year?: number): Promise<MonthlyStatisticsData[]> => {
+export const getMonthlyStatistics = async (year?: number, groupId?: string): Promise<MonthlyStatisticsData[]> => {
   try {
+    const params: Record<string, any> = {};
+    if (year) params.year = year;
+    if (groupId) params.groupId = groupId;
+    
     const response = await relationshipApi.get('/statistics/monthly-stats', {
-      params: year ? { year } : {}
+      params: Object.keys(params).length > 0 ? params : {}
     });
     return response.data.data;
   } catch (error: any) {
@@ -154,11 +170,16 @@ export const getMonthlyStatistics = async (year?: number): Promise<MonthlyStatis
 /**
  * Get monthly activity breakdown statistics
  * @param year - Optional: specific year to filter by
+ * @param groupId - Optional: group ID to filter by
  */
-export const getMonthlyActivityBreakdown = async (year?: number): Promise<MonthlyActivityData[]> => {
+export const getMonthlyActivityBreakdown = async (year?: number, groupId?: string): Promise<MonthlyActivityData[]> => {
   try {
+    const params: Record<string, any> = {};
+    if (year) params.year = year;
+    if (groupId) params.groupId = groupId;
+    
     const response = await relationshipApi.get('/statistics/monthly-activity-breakdown', {
-      params: year ? { year } : {}
+      params: Object.keys(params).length > 0 ? params : {}
     });
     return response.data.data;
   } catch (error: any) {
@@ -170,11 +191,16 @@ export const getMonthlyActivityBreakdown = async (year?: number): Promise<Monthl
 /**
  * Get weekly heatmap data
  * @param year - Optional: specific year to filter by
+ * @param groupId - Optional: group ID to filter by
  */
-export const getWeeklyHeatmapData = async (year?: number): Promise<WeeklyHeatmapData[]> => {
+export const getWeeklyHeatmapData = async (year?: number, groupId?: string): Promise<WeeklyHeatmapData[]> => {
   try {
+    const params: Record<string, any> = {};
+    if (year) params.year = year;
+    if (groupId) params.groupId = groupId;
+    
     const response = await relationshipApi.get('/statistics/weekly-heatmap', {
-      params: year ? { year } : {}
+      params: Object.keys(params).length > 0 ? params : {}
     });
     return response.data.data;
   } catch (error: any) {
@@ -186,11 +212,16 @@ export const getWeeklyHeatmapData = async (year?: number): Promise<WeeklyHeatmap
 /**
  * Get cumulative timeline data
  * @param year - Optional: specific year to filter by
+ * @param groupId - Optional: group ID to filter by
  */
-export const getCumulativeTimelineData = async (year?: number): Promise<CumulativeTimelineData[]> => {
+export const getCumulativeTimelineData = async (year?: number, groupId?: string): Promise<CumulativeTimelineData[]> => {
   try {
+    const params: Record<string, any> = {};
+    if (year) params.year = year;
+    if (groupId) params.groupId = groupId;
+    
     const response = await relationshipApi.get('/statistics/cumulative-timeline', {
-      params: year ? { year } : {}
+      params: Object.keys(params).length > 0 ? params : {}
     });
     return response.data.data;
   } catch (error: any) {

@@ -7,6 +7,8 @@ export interface IUserPortfolio extends Document {
   avgBuyPrice: number;
   buyDate?: Date;
   notes?: string;
+  userId: string; // User ID who created the portfolio entry
+  groupId?: string; // Optional group association
 }
 
 const UserPortfolioSchema: Schema = new Schema({
@@ -14,7 +16,16 @@ const UserPortfolioSchema: Schema = new Schema({
   quantity: { type: Number, required: true },
   avgBuyPrice: { type: Number, required: true },
   buyDate: { type: Date },
-  notes: { type: String }
+  notes: { type: String },
+  userId: { 
+    type: String, 
+    required: true, 
+    index: true 
+  },
+  groupId: { 
+    type: String, 
+    index: true 
+  }
 });
 
 export default mongoose.model<IUserPortfolio>('UserPortfolio', UserPortfolioSchema);

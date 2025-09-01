@@ -13,11 +13,19 @@ import {
 } from '@mui/material';
 import { AccessTime, Favorite, Timeline, Event } from '@mui/icons-material';
 import { useStatistics } from '../hooks/useStatistics';
+import { useTenantFilter } from '../components/tenant';
 import StatCard from './StatCard';
 
 const StatsCards: React.FC = () => {
   const [timeframe, setTimeframe] = useState<string>('all');
-  const { statistics, loading, error } = useStatistics({ timeframe });
+  
+  // Get the current tenant's group ID
+  const tenantGroupId = useTenantFilter();
+  
+  const { statistics, loading, error } = useStatistics({ 
+    timeframe, 
+    groupId: tenantGroupId 
+  });
 
   const timeframeOptions = [
     { value: 'week', label: 'Last 7 Days' },

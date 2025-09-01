@@ -17,6 +17,7 @@ import {
 import { ExpandMore, ExpandLess } from '@mui/icons-material';
 import { getRecentActivitiesSummary } from '../api/activities';
 import { Activity, ActivityType } from '../api/types';
+import { useTenantFilter } from './tenant';
 
 interface TimelineOption {
   label: string;
@@ -47,6 +48,9 @@ const RecentActivitiesCards: React.FC = () => {
   const [selectedTimeline, setSelectedTimeline] = useState<number>(1); // Default to "Last Month"
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
+  // Get the current tenant's group ID
+  const tenantGroupId = useTenantFilter();
+
   const categories: ActivityType[] = ['movies', 'cooking', 'dining', 'coffee', 'gaming', 'other'];
 
   const handleTimelineChange = (event: SelectChangeEvent<number>) => {
@@ -65,36 +69,36 @@ const RecentActivitiesCards: React.FC = () => {
     });
   };
 
+  const fetchActivitiesData = async () => {
+    try {
+      setLoading(true);
+      const summaryData = await getRecentActivitiesSummary(tenantGroupId);
+
+      const dataMap: Record<string, Activity[]> = {};
+
+      // Transform the summary data to match our expected format
+      categories.forEach((category) => {
+        if (summaryData[category]) {
+          timelineOptions.forEach((timeline) => {
+            const key = `${category}-${timeline.months}`;
+            const timelineKey = `${timeline.months}months`;
+            dataMap[key] = summaryData[category][timelineKey]?.activities || [];
+          });
+        }
+      });
+
+      setActivitiesData(dataMap);
+    } catch (err) {
+      setError('Failed to fetch activities data');
+      console.error('Error fetching activities:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchActivitiesData = async () => {
-      try {
-        setLoading(true);
-        const summaryData = await getRecentActivitiesSummary();
-
-        const dataMap: Record<string, Activity[]> = {};
-
-        // Transform the summary data to match our expected format
-        categories.forEach((category) => {
-          if (summaryData[category]) {
-            timelineOptions.forEach((timeline) => {
-              const key = `${category}-${timeline.months}`;
-              const timelineKey = `${timeline.months}months`;
-              dataMap[key] = summaryData[category][timelineKey]?.activities || [];
-            });
-          }
-        });
-
-        setActivitiesData(dataMap);
-      } catch (err) {
-        setError('Failed to fetch activities data');
-        console.error('Error fetching activities:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchActivitiesData();
-  }, []);
+  }, [tenantGroupId]);
 
   const formatDate = (date: Date | string): string => {
     const dateObj = new Date(date);

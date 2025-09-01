@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Album } from '../types';
 import { albumService } from '../services/albumService';
 
-export const useAlbums = (params?: { page?: number; limit?: number; search?: string; isPublic?: boolean }) => {
+export const useAlbums = (params?: { page?: number; limit?: number; search?: string; isPublic?: boolean; groupId?: string }) => {
   const [albums, setAlbums] = useState<Album[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,13 +29,14 @@ export const useAlbums = (params?: { page?: number; limit?: number; search?: str
 
   useEffect(() => {
     fetchAlbums();
-  }, [params?.page, params?.limit, params?.search, params?.isPublic]);
+  }, [params?.page, params?.limit, params?.search, params?.isPublic, params?.groupId]);
 
   const createAlbum = async (albumData: {
     name: string;
     description?: string;
     isPublic?: boolean;
     tags?: string[];
+    groupId?: string;
   }) => {
     try {
       const response = await albumService.createAlbum(albumData);

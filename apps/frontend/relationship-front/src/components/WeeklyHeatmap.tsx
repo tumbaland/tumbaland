@@ -13,6 +13,7 @@ import {
   InputLabel
 } from '@mui/material';
 import { getWeeklyHeatmapData, WeeklyHeatmapData } from '../api/statistics';
+import { useTenantFilter } from './tenant';
 
 interface WeeklyHeatmapProps {
   title?: string;
@@ -41,28 +42,31 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({ title = 'Activity Heatmap
   const [error, setError] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | undefined>(year);
 
+  // Get the current tenant's group ID
+  const tenantGroupId = useTenantFilter();
+
   // Generate available years (from 2024 to current year)
   const currentYear = new Date().getFullYear();
   const availableYears = Array.from({ length: currentYear - 2023 }, (_, i) => 2024 + i);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const heatmapData = await getWeeklyHeatmapData(selectedYear);
-        console.log('Fetched heatmap data:', heatmapData);
-        setData(heatmapData);
-      } catch (err) {
-        console.error('Error fetching heatmap data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load data');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const heatmapData = await getWeeklyHeatmapData(selectedYear, tenantGroupId);
+      console.log('Fetched heatmap data:', heatmapData);
+      setData(heatmapData);
+    } catch (err) {
+      console.error('Error fetching heatmap data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchData();
-  }, [selectedYear]);
+  }, [selectedYear, tenantGroupId]);
 
   // Calculate max activity count for color scaling
   const maxActivityCount = Math.max(...data.map((d) => d.totalActivities), 1);

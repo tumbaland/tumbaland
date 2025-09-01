@@ -13,6 +13,7 @@ import {
   InputLabel
 } from '@mui/material';
 import { getMonthlyHours, MonthlyHoursData } from '../api/statistics';
+import { useTenantFilter } from './tenant';
 
 interface BarChartProps {
   title?: string;
@@ -28,27 +29,31 @@ const HoursBarChart: React.FC<BarChartProps> = ({ title = 'Hours per Month', yea
   const [error, setError] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | undefined>(year);
 
+  // Get the current tenant's group ID
+  const tenantGroupId = useTenantFilter();
+
   // Generate available years (from 2024 to current year)
   const currentYear = new Date().getFullYear();
   const availableYears = Array.from({ length: currentYear - 2023 }, (_, i) => 2024 + i);
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const monthlyData = await getMonthlyHours(selectedYear);
-        console.log('Fetched monthly data:', monthlyData); // Debug log
-        setData(monthlyData);
-      } catch (err) {
-        console.error('Error fetching monthly data:', err); // Debug log
-        setError(err instanceof Error ? err.message : 'Failed to load data');
-      } finally {
-        setLoading(false);
-      }
-    };
 
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const monthlyData = await getMonthlyHours(selectedYear, tenantGroupId);
+      console.log('Fetched monthly data:', monthlyData); // Debug log
+      setData(monthlyData);
+    } catch (err) {
+      console.error('Error fetching monthly data:', err); // Debug log
+      setError(err instanceof Error ? err.message : 'Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
-  }, [selectedYear]);
+  }, [selectedYear, tenantGroupId]);
 
   const maxHours = Math.max(...data.map((d) => d.hours), 1);
   console.log('Chart render data:', { data, maxHours }); // Debug log

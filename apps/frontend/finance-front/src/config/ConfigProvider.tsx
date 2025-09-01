@@ -9,6 +9,7 @@ export interface AppConfig {
   FINANCE_API_URL?: string;
   AUTH_SERVICE_URL?: string;
   AUTH_FRONT_URL?: string;
+  GROUP_API_URL?: string;
 }
 
 // Global configuration holder for non-React services
@@ -21,7 +22,8 @@ function createDevConfig(): AppConfig {
   return {
     FINANCE_API_URL: import.meta.env.VITE_FINANCE_API_URL,
     AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL,
-    AUTH_FRONT_URL: import.meta.env.VITE_AUTH_FRONT_URL
+    AUTH_FRONT_URL: import.meta.env.VITE_AUTH_FRONT_URL,
+    GROUP_API_URL: import.meta.env.VITE_GROUP_API_URL
   };
 }
 

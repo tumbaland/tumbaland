@@ -5,7 +5,11 @@ import { IActivity } from '../models/Activity';
 // Create a new activity
 export const createActivity = async (req: Request, res: Response): Promise<void> => {
   try {
-    const activityData: Partial<IActivity> = req.body;
+    const user = (req as any).user;
+    const activityData: Partial<IActivity> = {
+      ...req.body,
+      userId: user.id
+    };
 
     // Validate required fields
     if (!activityData.date || !activityData.activity) {
@@ -46,7 +50,15 @@ export const createActivity = async (req: Request, res: Response): Promise<void>
 // Get all activities with filters
 export const getActivities = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { activityType, startDate, endDate, limit, page, sortBy, sortOrder } = req.query;
+    const { activityType, startDate, endDate, limit, page, sortBy, sortOrder, groupId } = req.query;
+    const user = (req as any).user;
+    const userGroups = (req as any).userGroups || [];
+
+    // Debug logging
+    console.log('🔍 Debug getActivities:');
+    console.log('  User from JWT:', JSON.stringify(user, null, 2));
+    console.log('  User ID:', user.id);
+    console.log('  User Groups:', userGroups);
 
     const filters: any = {};
 
@@ -57,8 +69,20 @@ export const getActivities = async (req: Request, res: Response): Promise<void> 
     if (page) filters.page = parseInt(page as string) || 1;
     if (sortBy) filters.sortBy = sortBy as string;
     if (sortOrder) filters.sortOrder = sortOrder as 'asc' | 'desc';
+    if (groupId) filters.groupId = groupId as string;
+    
+    // Add user context for permission filtering
+    filters.userId = user.id;
+    filters.userGroupIds = userGroups;
+
+    console.log('  Filters being passed to service:', JSON.stringify(filters, null, 2));
 
     const result = await ActivityService.getActivities(filters);
+
+    console.log('  Result from service:', {
+      activitiesCount: result.activities.length,
+      total: result.total
+    });
 
     res.json({
       success: true,
@@ -73,6 +97,7 @@ export const getActivities = async (req: Request, res: Response): Promise<void> 
       }
     });
   } catch (error: any) {
+    console.error('❌ Error in getActivities:', error);
     res.status(500).json({
       error: error.message
     });
@@ -207,13 +232,25 @@ export const getActivitiesByDateRange = async (req: Request, res: Response): Pro
 export const getRecentActivities = async (req: Request, res: Response): Promise<void> => {
   try {
     const { limit } = req.query;
+    const user = (req as any).user;
+    const userGroups = (req as any).userGroups || [];
     const limitNum = limit ? parseInt(limit as string) : 10;
 
-    const activities = await ActivityService.getRecentActivities(limitNum);
+    // Use the regular getActivities function with proper filtering
+    const filters = {
+      limit: limitNum,
+      page: 1,
+      sortBy: 'createdAt',
+      sortOrder: 'desc' as 'desc',
+      userId: user.id,
+      userGroupIds: userGroups
+    };
+
+    const result = await ActivityService.getActivities(filters);
 
     res.json({
       success: true,
-      data: activities
+      data: result.activities
     });
   } catch (error: any) {
     res.status(500).json({
@@ -241,6 +278,10 @@ export const getActivityTypes = async (req: Request, res: Response): Promise<voi
 // Get recent activities summary by category and timeline
 export const getRecentActivitiesSummary = async (req: Request, res: Response): Promise<void> => {
   try {
+    const { groupId } = req.query;
+    const user = (req as any).user;
+    const userGroups = (req as any).userGroups || [];
+    
     const categories = ['movies', 'cooking', 'dining', 'coffee', 'gaming', 'other'];
     const timelines = [
       { label: 'Last Month', months: 1 },
@@ -258,17 +299,26 @@ export const getRecentActivitiesSummary = async (req: Request, res: Response): P
         const startDate = new Date();
         startDate.setMonth(startDate.getMonth() - timeline.months);
 
-        // Get all activities for this category and timeframe
-        const allActivities = await ActivityService.getActivitiesByDateRange(startDate, endDate);
+        // Use the regular getActivities function with proper filtering
+        const filters: any = {
+          startDate,
+          endDate,
+          activityType: category,
+          limit: 1000, // Get all activities in the range
+          page: 1,
+          sortBy: 'date',
+          sortOrder: 'asc' as 'asc', // Oldest first
+          userId: user.id,
+          userGroupIds: userGroups
+        };
 
-        // Filter by activity type and sort from oldest to newest (reverse order)
-        const activities = allActivities
-          .filter((activity) => activity.activity.type === category)
-          .sort((a, b) => {
-            const dateA = new Date(a.date);
-            const dateB = new Date(b.date);
-            return dateA.getTime() - dateB.getTime(); // Oldest first
-          });
+        // Add groupId filter if provided
+        if (groupId) {
+          filters.groupId = groupId as string;
+        }
+
+        const activitiesResult = await ActivityService.getActivities(filters);
+        const activities = activitiesResult.activities;
 
         result[category][`${timeline.months}months`] = {
           label: timeline.label,

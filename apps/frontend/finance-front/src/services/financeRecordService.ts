@@ -1,11 +1,11 @@
 import { financeApi } from '../config/financeApi';
 
-export const getFinanceRecords = async () => {
-  const response = await financeApi.get(`/finance-records`);
+export const getFinanceRecords = async (params?: { groupId?: string }) => {
+  const response = await financeApi.get(`/finance-records`, { params });
   return response.data;
 };
 
-export const createFinanceRecord = async (data: any) => {
+export const createFinanceRecord = async (data: any & { groupId?: string }) => {
   const response = await financeApi.post(`/finance-records`, data);
   return response.data;
 };

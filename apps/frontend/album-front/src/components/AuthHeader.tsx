@@ -20,6 +20,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { User } from '../types';
 import { navigationItems } from '../config/navigation';
+import { TenantSelector, useTenant } from './tenant';
+import { useConfig } from '../hooks/useConfig';
 
 interface AuthHeaderProps {}
 
@@ -28,6 +30,19 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const config = useConfig();
+
+  // Tenant management - only call when we have valid config and authenticated user
+  const {
+    selectedTenant,
+    availableTenants,
+    loading: tenantsLoading,
+    error: tenantsError,
+    setSelectedTenant
+  } = useTenant(
+    config.GROUP_API_URL || '', 
+    isAuthenticated && config.GROUP_API_URL ? user?.email : undefined
+  );
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -217,6 +232,21 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
                 })()}
               </Button>
             </Box>
+            
+            {/* Mobile Tenant Selector */}
+            {isAuthenticated && user && (
+              <Box sx={{ mx: 1, flexShrink: 0 }}>
+                <TenantSelector
+                  selectedTenant={selectedTenant}
+                  tenants={availableTenants}
+                  onTenantChange={setSelectedTenant}
+                  loading={tenantsLoading}
+                  error={tenantsError}
+                  sx={{ minWidth: 120 }}
+                />
+              </Box>
+            )}
+            
             <Box sx={{ flexGrow: 0, ml: 'auto' }}>{renderAuthSection()}</Box>
             <Menu
               anchorEl={mobileMenuAnchor}
@@ -271,6 +301,20 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
                 );
               })}
             </Box>
+            
+            {/* Tenant Selector */}
+            {isAuthenticated && user && (
+              <Box sx={{ mx: 2 }}>
+                <TenantSelector
+                  selectedTenant={selectedTenant}
+                  tenants={availableTenants}
+                  onTenantChange={setSelectedTenant}
+                  loading={tenantsLoading}
+                  error={tenantsError}
+                />
+              </Box>
+            )}
+            
             <Box sx={{ flexGrow: 0, ml: 2 }}>{renderAuthSection()}</Box>
           </Box>
         )}

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Box } from '@mui/material';
+import GroupSelector from './GroupSelector';
 
 // Helper to get YYYY-MM-DD for input type=date
 function getInputDate(date: string | Date) {
@@ -105,6 +106,16 @@ const FinanceRecordModal: React.FC<{
         value={form.gold}
         onChange={(e) => setForm((f: any) => ({ ...f, gold: e.target.value }))}
       />
+      
+      <Box sx={{ mt: 2 }}>
+        <GroupSelector
+          value={form.groupId}
+          onChange={(groupId) => setForm((f: any) => ({ ...f, groupId }))}
+          label="Share with Group (optional)"
+          includePersonal={false}
+          includeNone={true}
+        />
+      </Box>
     </DialogContent>
     <DialogActions>
       <Button onClick={onClose}>Cancel</Button>

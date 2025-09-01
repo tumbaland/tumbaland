@@ -15,6 +15,7 @@ import {
   Chip
 } from '@mui/material';
 import { getCumulativeTimelineData, CumulativeTimelineData } from '../api/statistics';
+import { useTenantFilter } from './tenant';
 
 interface CumulativeTimelineProps {
   title?: string;
@@ -64,9 +65,29 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
   const [containerWidth, setContainerWidth] = useState<number>(800); // Start with reasonable default
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Get the current tenant's group ID
+  const tenantGroupId = useTenantFilter();
+
   // Generate available years (from 2024 to current year)
   const currentYear = new Date().getFullYear();
-  const availableYears = Array.from({ length: currentYear - 2023 }, (_, i) => 2024 + i); // Update container width on resize
+  const availableYears = Array.from({ length: currentYear - 2023 }, (_, i) => 2024 + i);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const timelineData = await getCumulativeTimelineData(selectedYear, tenantGroupId);
+      console.log('Fetched timeline data:', timelineData);
+      setData(timelineData);
+    } catch (err) {
+      console.error('Error fetching timeline data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Update container width on resize
   useEffect(() => {
     const updateWidth = () => {
       if (containerRef.current) {
@@ -98,23 +119,8 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
   }, [data]); // Run when data changes to ensure proper measurement
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const timelineData = await getCumulativeTimelineData(selectedYear);
-        console.log('Fetched timeline data:', timelineData);
-        setData(timelineData);
-      } catch (err) {
-        console.error('Error fetching timeline data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
-  }, [selectedYear]); // Calculate chart dimensions and scaling
+  }, [selectedYear, tenantGroupId]); // Calculate chart dimensions and scaling
   const chartHeight = height - 160; // Leave space for controls and stats
   const chartWidth = containerWidth; // Use container width
   const padding = 40;

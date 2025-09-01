@@ -10,6 +10,13 @@ export interface UserPayload {
 
 export function authenticateToken(req: Request, res: Response, next: NextFunction): void {
   try {
+    // Check for internal service token first
+    const internalToken = req.headers['x-internal-token'] as string;
+    if (internalToken) {
+      // Skip user auth for internal service requests - let internal service middleware handle it
+      return next();
+    }
+
     const JWT_SECRET = process.env.JWT_SECRET || '';
     const token = (req as any).cookies?.access_token || req.headers.authorization?.replace('Bearer ', '');
 

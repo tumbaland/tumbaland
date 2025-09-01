@@ -8,6 +8,8 @@ export interface IAlbum extends Document {
   updatedAt: Date;
   isPublic: boolean;
   tags: string[];
+  userId: string; // User ID who created the album
+  groupId?: string; // Optional group association
 }
 
 const AlbumSchema: Schema = new Schema(
@@ -36,7 +38,16 @@ const AlbumSchema: Schema = new Schema(
         type: String,
         trim: true
       }
-    ]
+    ],
+    userId: {
+      type: String,
+      required: true,
+      index: true
+    },
+    groupId: {
+      type: String,
+      index: true
+    }
   },
   {
     timestamps: true

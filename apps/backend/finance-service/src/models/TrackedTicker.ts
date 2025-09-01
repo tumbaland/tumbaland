@@ -7,6 +7,8 @@ export interface ITrackedTicker extends Document {
   description?: string;
   dateAdded: Date;
   isActive: boolean;
+  userId: string; // User ID who created the ticker
+  groupId?: string; // Optional group association
 }
 
 const TrackedTickerSchema: Schema = new Schema({
@@ -14,7 +16,16 @@ const TrackedTickerSchema: Schema = new Schema({
   displayName: { type: String, required: true },
   description: { type: String },
   dateAdded: { type: Date, default: Date.now },
-  isActive: { type: Boolean, default: true }
+  isActive: { type: Boolean, default: true },
+  userId: { 
+    type: String, 
+    required: true, 
+    index: true 
+  },
+  groupId: { 
+    type: String, 
+    index: true 
+  }
 });
 
 export default mongoose.model<ITrackedTicker>('TrackedTicker', TrackedTickerSchema);

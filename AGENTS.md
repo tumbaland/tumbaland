@@ -1,130 +1,278 @@
-# Tumbaland Project Context for AI Agents
+# Tumbaland Application Context for AI Agents
 
-## Project Overview
-Tumbaland is a microservices-based web application built as a monorepo using npm workspaces. It's a multi-tenant platform with separate frontend and backend services for different functional domains.
+## Overview
+Tumbaland is a comprehensive full-stack web application built with a microservices architecture. It provides multiple interconnected services for photo management, financial tracking, social relationships, and group collaboration.
 
 ## Architecture
 
-### Microservices Pattern
-- **Monorepo Structure**: All services live in a single repository with shared dependencies
-- **Service Communication**: Services communicate via REST APIs
-- **Authentication**: Centralized JWT-based auth using Google OAuth 2.0
-- **Database**: MongoDB with separate connections per service
-- **Proxy**: Nginx reverse proxy with SSL termination and subdomain routing
+### Frontend Services (React + TypeScript + Vite)
+- **Port 3001**: Relationship Management Frontend
+- **Port 3002**: Album/Photo Management Frontend  
+- **Port 3003**: Finance Tracking Frontend
+- **Port 3004**: Authentication Frontend
+- **Port 3005**: Payment Processing Frontend
+- **Port 3006**: Group Management Frontend
+- **Port 3000**: Shell/Main Frontend
 
-### Technology Stack
-- **Backend**: Node.js + TypeScript + Express + MongoDB + Mongoose
-- **Frontend**: React + TypeScript + Vite + Material-UI
-- **Infrastructure**: Docker + Docker Compose + Nginx + Let's Encrypt
-- **Development**: Concurrently for multi-service development
+#### Tenant Components Architecture
+Each frontend service includes its own `components/tenant` folder containing:
+- **TenantProvider.tsx**: Context provider for tenant management
+- **TenantSelector.tsx**: UI component for switching between personal/group contexts  
+- **useTenant.ts**: Hook for tenant selection and group fetching
+- **useTenantDataRefresh.ts**: Hook for automatic data refresh on tenant changes
 
-## Services Architecture
+> **Important**: These components are duplicated in each frontend (not shared via library) to ensure they're available during deployment without external dependencies.
 
-### Backend Services (Port Range: 4000-5006)
-1. **public-service** (4000) - Public API and todo management
-2. **relationship-service** (4001) - Activity tracking and relationship statistics
-3. **album-service** (4002) - Photo albums and collage creation
-4. **finance-service** (4003) - Financial records and portfolio tracking
-5. **auth-service** (5001) - JWT authentication and user management
-6. **file-service** (5002) - File upload/download via Google Cloud Storage
-7. **payment-service** (5005) - Stripe integration for subscriptions
-8. **group-service** (5006) - Group management functionality
+### Backend Services (Node.js + Express + MongoDB)
+- **Port 4000**: Public Service API
+- **Port 4001**: Relationship Service API
+- **Port 4002**: Album Service API
+- **Port 4003**: Finance Service API
+- **Port 5001**: Auth Service API
+- **Port 5002**: File Service API
+- **Port 5005**: Payment Service API
+- **Port 5006**: Group Service API
 
-### Frontend Services (Port Range: 3000-3007)
-1. **shell-front** (3000) - Main landing page and service navigation
-2. **relationship-front** (3001) - Relationship tracking UI
-3. **album-front** (3002) - Photo album management UI
-4. **finance-front** (3003) - Financial dashboard and portfolio UI
-5. **auth-front** (3004) - Authentication and login UI
-6. **payment-front** (3005) - Payment and subscription management UI
-7. **group-front** (3007) - Group management UI
+### AI/ML Services (Python)
+- **Port 8001**: Image Segmentation Service
+- **Port 8002**: Object Detection Service
 
-## Domain Structure (Production)
-- **Main**: tumbaland.eu (shell-front)
-- **Auth**: auth.tumbaland.eu (auth-front) + auth-api.tumbaland.eu (auth-service)
-- **Album**: album.tumbaland.eu (album-front) + album-api.tumbaland.eu (album-service)
-- **Finance**: finance.tumbaland.eu (finance-front) + finance-api.tumbaland.eu (finance-service)
-- **Relationship**: relationship.tumbaland.eu (relationship-front) + relationship-api.tumbaland.eu (relationship-service)
-- **Payment**: payment.tumbaland.eu (payment-front) + payment-api.tumbaland.eu (payment-service)
-- **Group**: group.tumbaland.eu (group-front) + group-api.tumbaland.eu (group-service)
-- **File API**: file-api.tumbaland.eu (file-service)
+## Core Features
 
-## Authentication Flow
-1. **Google OAuth**: Users authenticate via Google OAuth 2.0
-2. **JWT Tokens**: Auth service issues JWT tokens stored in cookies
-3. **SSO**: Single sign-on across all subdomains using domain cookies
-4. **Authorization**: Each service validates JWT tokens independently
-5. **User Approval**: Manual approval workflow for new users
+### 1. Authentication & User Management
+- Google OAuth 2.0 integration
+- JWT-based session management
+- User approval system (auto-approval enabled)
+- Multi-service authentication middleware
 
-## Key Patterns
+### 2. Group Management & Permissions
+- User groups with role-based access control
+- Group invitations and membership management
+- Cross-service group permission validation
+- Internal service-to-service authentication
 
-### Frontend Configuration
-- Runtime config via `/config.json` generated by Docker entrypoint scripts
-- Environment variables injected at container startup
-- Shared components library at `libs/components`
+### 3. Photo & Album Management
+- Photo upload and storage (Google Cloud Storage)
+- Album organization and sharing
+- AI-powered image processing (segmentation, object detection)
+- Photo collages with permission controls
+- File metadata and signed URL generation
 
-### Backend Patterns
-- Express.js with TypeScript
-- OpenAPI/Swagger documentation at `/api/docs`
-- Health check endpoints at `/health`
-- Centralized error handling
-- MongoDB connection with graceful shutdown
+### 4. Financial Tracking
+- Personal portfolio management
+- Stock ticker tracking and price history
+- Investment performance analytics
+- Financial record keeping with group sharing
+- Alpha Vantage API integration for market data
 
-### Development Workflow
-- `npm run dev` starts all services concurrently
-- `npm run dev:back` for backend services only
-- `npm run dev:front` for frontend services only
-- Docker Compose for production deployment
+### 5. Relationship Management
+- Personal and group relationship tracking
+- Activity logging and statistics
+- Relationship analytics and insights
+- Social interaction monitoring
+
+### 6. Payment Processing
+- Stripe payment integration
+- Subscription management
+- Payment history and receipts
+
+## Security Architecture
+
+### Permission System
+All services implement a consistent permission model:
+- **User Ownership**: Users can access their own data
+- **Group Access**: Users can access data shared with their groups  
+- **Permission Filtering**: Database queries filtered by `buildAccessQuery(userId, userGroups)`
+- **Resource Validation**: Individual resources checked with `canAccessResource()`
+
+### Inter-Service Communication
+- **Internal Service Tokens**: Services authenticate with each other using `INTERNAL_SERVICE_TOKEN`
+- **Group Context Middleware**: `userGroupsMiddleware` fetches user's group memberships
+- **Fallback Behavior**: Services continue with user-only permissions if group service unavailable
+
+### Data Models
+All user-generated content includes:
+```typescript
+{
+  userId: string;      // Owner of the resource
+  groupId?: string;    // Optional group association for sharing
+}
+```
+
+## Technology Stack
+
+### Backend
+- **Runtime**: Node.js 24+
+- **Framework**: Express.js
+- **Database**: MongoDB (mongoose ODM)
+- **Authentication**: JWT + Google OAuth
+- **File Storage**: Google Cloud Storage
+- **Payment**: Stripe API
+- **Market Data**: Alpha Vantage API
+- **Containerization**: Docker + Docker Compose
+
+### Frontend  
+- **Framework**: React 19
+- **Language**: TypeScript
+- **Build Tool**: Vite
+- **Styling**: CSS Modules/Styled Components
+- **State Management**: React hooks + Context API
+- **HTTP Client**: Fetch API
+- **Routing**: React Router
+
+### AI/ML Services
+- **Language**: Python
+- **Frameworks**: TensorFlow/PyTorch, OpenCV
+- **Services**: Image segmentation, object detection
+
+## Environment Configuration
+
+### Required Environment Variables
+```bash
+# Database
+MONGODB_URI=mongodb+srv://...
+
+# Authentication  
+JWT_SECRET=your-jwt-secret
+GOOGLE_CLIENT_ID=your-google-client-id
+
+# File Storage
+GOOGLE_CLOUD_KEY_FILE_BASE64=base64-encoded-service-account
+GOOGLE_CLOUD_PROJECT_ID=your-project-id
+GOOGLE_CLOUD_BUCKET_NAME=your-bucket-name
+
+# Inter-Service Communication
+INTERNAL_SERVICE_TOKEN=group_service_internal_token_2024
+GROUP_SERVICE_URL=http://localhost:5006
+
+# External APIs
+ALPHA_VANTAGE_API_KEY=your-api-key
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+
+# CORS & Security
+CORS_ORIGIN=http://localhost:3000,http://localhost:3001...
+COOKIE_DOMAIN=localhost
+```
+
+## Development Workflow
+
+### Common Tasks
+1. **Adding New Endpoints**: Follow the pattern of routes → controller → service → model
+2. **Permission Checks**: Always add `userGroupsMiddleware` and implement `buildAccessQuery` filtering
+3. **Error Handling**: Use consistent error responses with appropriate HTTP status codes
+4. **Service Communication**: Use internal tokens for service-to-service calls
+
+### Security Checklist
+- [ ] Routes have `authenticateToken` middleware
+- [ ] Routes have `userGroupsMiddleware` for group context
+- [ ] Service functions accept `userId` and `userGroups` parameters  
+- [ ] Database queries use `buildAccessQuery()` for permission filtering
+- [ ] Individual resources checked with `canAccessResource()`
+- [ ] Proper error handling for `ACCESS_DENIED` (403 status)
+
+## Recent Security Fixes (Applied)
+
+### Critical Vulnerabilities Fixed
+1. **Relationship Statistics**: Previously exposed all user statistics to any authenticated user
+2. **Album Collages**: Fixed unauthorized access to other users' collages  
+3. **Finance Portfolios**: Resolved data exposure where all portfolios were visible
+4. **Tracked Tickers**: Added user-specific permissions to financial ticker management
+
+### Security Pattern Applied
+All services now consistently implement:
+```typescript
+// Route level
+router.get('/', authenticateToken, userGroupsMiddleware, controller);
+
+// Controller level  
+const user = (req as any).user;
+const userGroups = (req as any).userGroups || [];
+const data = await service.getData(user.id, userGroups);
+
+// Service level
+export const getData = async (userId: string, userGroups: string[] = []) => {
+  const accessQuery = buildAccessQuery(userId, userGroups, false);
+  return Model.find(accessQuery);
+};
+```
+
+## Troubleshooting Common Issues
+
+### Group Service 401 Errors
+- Ensure all services use same `INTERNAL_SERVICE_TOKEN=group_service_internal_token_2024`
+- Check `GROUP_SERVICE_URL` points to correct group service endpoint
+- Verify group service is running and accessible
+
+### CORS Issues
+- Update `CORS_ORIGIN` environment variable with all frontend URLs
+- Check frontend API URLs match backend service ports
+
+### File Upload Issues
+- Verify Google Cloud Storage credentials and bucket permissions
+- Check `GOOGLE_CLOUD_KEY_FILE_BASE64` is properly encoded service account
+
+## API Patterns
+
+### Standard Response Format
+```typescript
+// Success
+{ data: any, success: true }
+
+// Error  
+{ error: string, success: false }
+
+// List with metadata
+{ items: any[], total: number, page: number }
+```
+
+### Common HTTP Status Codes
+- `200`: Success
+- `201`: Created
+- `204`: No Content (successful delete)
+- `400`: Bad Request (validation errors)
+- `401`: Unauthorized (invalid/missing token)
+- `403`: Forbidden (access denied)
+- `404`: Not Found
+- `500`: Internal Server Error
 
 ## Database Schema Patterns
-- User documents with email, roles, approval status
-- Service-specific collections (albums, photos, activities, finance records)
-- JWT payload includes user ID, email, name, and picture
 
-## File Structure Conventions
-- `src/` - Source code
-- `docs/` - OpenAPI documentation with custom HTML
-- `dist/` - Compiled TypeScript output
-- `compose.yml` - Docker Compose configuration per service
-- `Dockerfile` - Multi-stage builds (builder + production)
-- `tsconfig.json` - TypeScript configuration
-- `package.json` - Service-specific dependencies
+### User-Owned Resources
+```typescript
+interface UserResource {
+  _id: ObjectId;
+  userId: string;        // Required: Resource owner
+  groupId?: string;      // Optional: Group sharing
+  createdAt: Date;
+  updatedAt: Date;
+  // ... other fields
+}
+```
 
-## Environment Variables
-Each service requires specific environment variables:
-- `MONGODB_URI` - Database connection
-- `PORT` - Service port
-- Frontend services need API URLs for service communication
-- Auth service needs Google OAuth credentials and CORS origins
+### Audit Fields
+Most models include:
+- `createdAt`: Resource creation timestamp
+- `updatedAt`: Last modification timestamp  
+- `userId`: Resource owner for permission checking
+- `groupId`: Optional group association for sharing
 
-## Development Best Practices
-- All backend services use similar structure and patterns
-- Frontend services follow consistent configuration loading
-- Shared TypeScript configurations and build processes
-- Comprehensive error handling and logging
-- Docker health checks and graceful shutdowns
-- **Functional Programming Style**: Prefer functional programming patterns over object-oriented approaches
-  - Use pure functions where possible
-  - Favor immutable data structures
-  - Prefer function composition over inheritance
-  - Use functional array methods (map, filter, reduce) over loops
-  - Minimize side effects and state mutations
+## Deployment Notes
 
-## API Documentation
-- Each backend service has Swagger/OpenAPI docs
-- Interactive API testing available at `/api/docs`
-- Consistent REST API patterns across services
-- CORS configured for cross-origin requests
+### Docker Compose Structure
+- Each service has its own `compose.yml` and `Dockerfile`
+- Services communicate through `tumbanet` Docker network
+- Environment variables passed through `.env` files
+- Build images tagged as `toomastahves/service-name:latest`
 
-## Deployment
-- Production uses Docker containers
-- Nginx proxy handles SSL certificates via Let's Encrypt
-- Automated certificate renewal
-- Service discovery via Docker network (tumbanet)
+### Production Considerations
+- All services should run behind reverse proxy (nginx)
+- Implement rate limiting and request size limits
+- Use production MongoDB cluster with proper indexing
+- Enable HTTPS with SSL certificates
+- Configure monitoring and logging
+- Set up automated backups for user data
 
-When working on this codebase:
-- Follow the established patterns for new services
-- Maintain consistent error handling and logging
-- Use TypeScript strictly throughout
-- Update OpenAPI documentation when adding endpoints
-- Test locally using `npm run dev` before Docker deployment
+---
+
+*This document should be updated as new features are added or architectural changes are made.*

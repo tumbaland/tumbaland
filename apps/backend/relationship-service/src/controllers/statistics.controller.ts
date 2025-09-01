@@ -11,7 +11,9 @@ import {
 // Get relationship statistics
 export const getStatistics = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { timeframe } = req.query;
+    const { timeframe, groupId } = req.query;
+    const user = (req as any).user;
+    const userGroups = (req as any).userGroups || [];
 
     // Validate timeframe parameter
     const validTimeframes = ['week', 'month', 'quarter', 'year', 'all'];
@@ -25,7 +27,19 @@ export const getStatistics = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    const statistics = await getRelationshipStatistics(selectedTimeframe);
+    // Create filters object
+    const filters: any = { userId: user.id };
+    
+    if (groupId) {
+      // Filter by specific group
+      filters.groupId = groupId as string;
+    } else {
+      // Personal context - show only items without groupId (personal items only)
+      filters.userGroupIds = userGroups;
+      filters.personalOnly = true;
+    }
+
+    const statistics = await getRelationshipStatistics(selectedTimeframe, filters);
 
     res.json({
       success: true,
@@ -45,7 +59,9 @@ export const getStatistics = async (req: Request, res: Response): Promise<void> 
 // Get monthly hours statistics
 export const getMonthlyHoursData = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { year } = req.query;
+    const { year, groupId } = req.query;
+    const user = (req as any).user;
+    const userGroups = (req as any).userGroups || [];
     const selectedYear = year ? parseInt(year as string) : undefined;
 
     // Validate year if provided
@@ -57,7 +73,19 @@ export const getMonthlyHoursData = async (req: Request, res: Response): Promise<
       return;
     }
 
-    const monthlyHours = await getMonthlyHours(selectedYear);
+    // Create filters object
+    const filters: any = { userId: user.id };
+    
+    if (groupId) {
+      // Filter by specific group
+      filters.groupId = groupId as string;
+    } else {
+      // Personal context - show only items without groupId (personal items only)
+      filters.userGroupIds = userGroups;
+      filters.personalOnly = true;
+    }
+
+    const monthlyHours = await getMonthlyHours(selectedYear, filters);
 
     res.json({
       success: true,
@@ -76,7 +104,9 @@ export const getMonthlyHoursData = async (req: Request, res: Response): Promise<
 // Get monthly statistics (days breakdown)
 export const getMonthlyStatisticsData = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { year } = req.query;
+    const { year, groupId } = req.query;
+    const user = (req as any).user;
+    const userGroups = (req as any).userGroups || [];
     const selectedYear = year ? parseInt(year as string) : undefined;
 
     // Validate year if provided
@@ -88,7 +118,19 @@ export const getMonthlyStatisticsData = async (req: Request, res: Response): Pro
       return;
     }
 
-    const monthlyStats = await getMonthlyStatistics(selectedYear);
+    // Create filters object
+    const filters: any = { userId: user.id };
+    
+    if (groupId) {
+      // Filter by specific group
+      filters.groupId = groupId as string;
+    } else {
+      // Personal context - show only items without groupId (personal items only)
+      filters.userGroupIds = userGroups;
+      filters.personalOnly = true;
+    }
+
+    const monthlyStats = await getMonthlyStatistics(selectedYear, filters);
 
     res.json({
       success: true,
@@ -107,7 +149,9 @@ export const getMonthlyStatisticsData = async (req: Request, res: Response): Pro
 // Get monthly activity breakdown
 export const getMonthlyActivityBreakdownData = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { year } = req.query;
+    const { year, groupId } = req.query;
+    const user = (req as any).user;
+    const userGroups = (req as any).userGroups || [];
     const selectedYear = year ? parseInt(year as string) : undefined;
 
     // Validate year if provided
@@ -119,7 +163,19 @@ export const getMonthlyActivityBreakdownData = async (req: Request, res: Respons
       return;
     }
 
-    const monthlyActivityData = await getMonthlyActivityBreakdown(selectedYear);
+    // Create filters object
+    const filters: any = { userId: user.id };
+    
+    if (groupId) {
+      // Filter by specific group
+      filters.groupId = groupId as string;
+    } else {
+      // Personal context - show only items without groupId (personal items only)
+      filters.userGroupIds = userGroups;
+      filters.personalOnly = true;
+    }
+
+    const monthlyActivityData = await getMonthlyActivityBreakdown(selectedYear, filters);
 
     res.json({
       success: true,
@@ -138,7 +194,9 @@ export const getMonthlyActivityBreakdownData = async (req: Request, res: Respons
 // Get weekly heatmap data
 export const getWeeklyHeatmapDataController = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { year } = req.query;
+    const { year, groupId } = req.query;
+    const user = (req as any).user;
+    const userGroups = (req as any).userGroups || [];
     const selectedYear = year ? parseInt(year as string) : undefined;
 
     // Validate year if provided
@@ -150,7 +208,19 @@ export const getWeeklyHeatmapDataController = async (req: Request, res: Response
       return;
     }
 
-    const heatmapData = await getWeeklyHeatmapData(selectedYear);
+    // Create filters object
+    const filters: any = { userId: user.id };
+    
+    if (groupId) {
+      // Filter by specific group
+      filters.groupId = groupId as string;
+    } else {
+      // Personal context - show only items without groupId (personal items only)
+      filters.userGroupIds = userGroups;
+      filters.personalOnly = true;
+    }
+
+    const heatmapData = await getWeeklyHeatmapData(selectedYear, filters);
 
     res.json({
       success: true,
@@ -169,7 +239,9 @@ export const getWeeklyHeatmapDataController = async (req: Request, res: Response
 // Get cumulative timeline data
 export const getCumulativeTimelineDataController = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { year } = req.query;
+    const { year, groupId } = req.query;
+    const user = (req as any).user;
+    const userGroups = (req as any).userGroups || [];
     const selectedYear = year ? parseInt(year as string) : undefined;
 
     // Validate year if provided
@@ -181,7 +253,19 @@ export const getCumulativeTimelineDataController = async (req: Request, res: Res
       return;
     }
 
-    const timelineData = await getCumulativeTimelineData(selectedYear);
+    // Create filters object
+    const filters: any = { userId: user.id };
+    
+    if (groupId) {
+      // Filter by specific group
+      filters.groupId = groupId as string;
+    } else {
+      // Personal context - show only items without groupId (personal items only)
+      filters.userGroupIds = userGroups;
+      filters.personalOnly = true;
+    }
+
+    const timelineData = await getCumulativeTimelineData(selectedYear, filters);
 
     res.json({
       success: true,

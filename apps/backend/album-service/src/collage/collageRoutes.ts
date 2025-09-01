@@ -1,14 +1,19 @@
 import { Router } from 'express';
 import * as collageController from './collage.controller';
 import { authenticateToken } from '../middleware/authMiddleware';
+import { userGroupsMiddleware } from '../middleware/userGroupsMiddleware';
 
 const router = Router();
 
-router.post('/', authenticateToken, collageController.createCollage);
-router.put('/:id', authenticateToken, collageController.updateCollage);
-router.get('/:id', authenticateToken, collageController.getCollageById);
+// Apply authentication and user groups middleware to all routes
+router.use(authenticateToken);
+router.use(userGroupsMiddleware);
+
+router.post('/', collageController.createCollage);
+router.put('/:id', collageController.updateCollage);
+router.get('/:id', collageController.getCollageById);
 // GET /collages?albumId=... to filter by album
-router.get('/', authenticateToken, collageController.getCollageList);
-router.delete('/:id', authenticateToken, collageController.deleteCollage);
+router.get('/', collageController.getCollageList);
+router.delete('/:id', collageController.deleteCollage);
 
 export default router;

@@ -12,6 +12,7 @@ export interface AppConfig {
   FILE_API_URL?: string;
   SEGMENTATION_API_URL?: string;
   OBJECT_DETECTION_API_URL?: string;
+  GROUP_API_URL?: string;
 }
 
 // Global configuration holder for non-React services
@@ -28,6 +29,7 @@ function createDevConfig(): AppConfig {
     FILE_API_URL: import.meta.env.VITE_FILE_API_URL,
     SEGMENTATION_API_URL: import.meta.env.VITE_SEGMENTATION_API_URL,
     OBJECT_DETECTION_API_URL: import.meta.env.VITE_OBJECT_DETECTION_API_URL,
+    GROUP_API_URL: import.meta.env.VITE_GROUP_API_URL,
   };
 }
 

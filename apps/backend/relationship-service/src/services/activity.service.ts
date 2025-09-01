@@ -1,4 +1,5 @@
 import { Activity, IActivity } from '../models/Activity';
+import { buildAccessQuery, canAccessResource } from '../utils/permissionUtils';
 
 // Create a new activity
 export const createActivity = async (activityData: Partial<IActivity>): Promise<IActivity> => {
@@ -20,13 +21,27 @@ export const getActivities = async (
     page?: number;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
+    groupId?: string;
+    userId?: string;
+    userGroupIds?: string[];
   } = {}
 ): Promise<{ activities: IActivity[]; total: number; page: number; totalPages: number }> => {
   try {
-    const { activityType, startDate, endDate, limit = 20, page = 1, sortBy = 'date', sortOrder = 'asc' } = filters;
+    const { 
+      activityType, 
+      startDate, 
+      endDate, 
+      limit = 20, 
+      page = 1, 
+      sortBy = 'date', 
+      sortOrder = 'asc',
+      groupId,
+      userId,
+      userGroupIds = []
+    } = filters;
 
-    // Build query
-    const query: any = {};
+    // Build base query
+    let query: any = {};
 
     if (activityType) {
       query['activity.type'] = activityType;
@@ -36,6 +51,22 @@ export const getActivities = async (
       query.date = {};
       if (startDate) query.date.$gte = startDate;
       if (endDate) query.date.$lte = endDate;
+    }
+
+    // Apply permission filtering
+    if (groupId) {
+      // Check if user has access to the specific group
+      if (!userGroupIds.includes(groupId)) {
+        throw new Error('ACCESS_DENIED');
+      }
+      query.groupId = groupId;
+    } else if (userId) {
+      // Personal context - show only items without groupId (personal items only)
+      query.userId = userId;
+      query.$or = [
+        { groupId: null },
+        { groupId: { $exists: false } }
+      ];
     }
 
     // Build sort object

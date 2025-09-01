@@ -1,4 +1,5 @@
 import { Activity } from '../models/Activity';
+import { buildAccessQuery } from '../utils/permissionUtils';
 
 export interface RelationshipStatistics {
   totalHoursTogether: number;
@@ -66,8 +67,13 @@ export interface CumulativeTimelineData {
   };
 }
 
-export const getRelationshipStatistics = async (timeframe: string = 'all'): Promise<RelationshipStatistics> => {
+export const getRelationshipStatistics = async (
+  timeframe: string = 'all',
+  filters: any
+): Promise<RelationshipStatistics> => {
   try {
+    const { userId, userGroupIds = [], groupId, personalOnly } = filters;
+    
     // Calculate date range based on timeframe
     const now = new Date();
     let startDate: Date;
@@ -92,6 +98,25 @@ export const getRelationshipStatistics = async (timeframe: string = 'all'): Prom
 
     const endDate = now;
 
+    // Build access query based on filters
+    let accessQuery;
+    if (groupId) {
+      // Filter by specific group
+      accessQuery = { groupId };
+    } else if (personalOnly) {
+      // Personal context - show only items without groupId (personal items only)
+      accessQuery = { 
+        userId,
+        $or: [
+          { groupId: null },
+          { groupId: { $exists: false } }
+        ]
+      };
+    } else {
+      // Use old behavior for backward compatibility
+      accessQuery = buildAccessQuery(userId, userGroupIds, false);
+    }
+
     // Build date filter
     const dateFilter =
       timeframe === 'all'
@@ -101,11 +126,17 @@ export const getRelationshipStatistics = async (timeframe: string = 'all'): Prom
               $gte: startDate,
               $lte: endDate
             }
-          }; // Get basic statistics
+          };
+
+    // Combine access query with date filter
+    const baseQuery = {
+      ...accessQuery,
+      ...dateFilter
+    };    // Get basic statistics
     const [totalStats, totalHoursStats, sexActivities] = await Promise.all([
       // Total statistics (excluding 'sex' and 'together' activities)
       Activity.aggregate([
-        { $match: { ...dateFilter, 'activity.type': { $nin: ['sex', 'together'] } } },
+        { $match: { ...baseQuery, 'activity.type': { $nin: ['sex', 'together'] } } },
         {
           $group: {
             _id: null,
@@ -117,7 +148,7 @@ export const getRelationshipStatistics = async (timeframe: string = 'all'): Prom
 
       // Total hours (including all activities)
       Activity.aggregate([
-        { $match: dateFilter },
+        { $match: baseQuery },
         {
           $group: {
             _id: null,
@@ -130,7 +161,7 @@ export const getRelationshipStatistics = async (timeframe: string = 'all'): Prom
       Activity.aggregate([
         {
           $match: {
-            ...dateFilter,
+            ...baseQuery,
             'activity.type': 'sex'
           }
         },
@@ -167,8 +198,13 @@ export const getRelationshipStatistics = async (timeframe: string = 'all'): Prom
   }
 };
 
-export const getMonthlyHours = async (year?: number): Promise<MonthlyHoursData[]> => {
+export const getMonthlyHours = async (
+  year?: number,
+  filters: any = {}
+): Promise<MonthlyHoursData[]> => {
   try {
+    const { userId, userGroupIds = [], groupId, personalOnly } = filters;
+    
     // Build query conditions
     const conditions: any = {};
 
@@ -177,6 +213,23 @@ export const getMonthlyHours = async (year?: number): Promise<MonthlyHoursData[]
         $gte: new Date(year, 0, 1),
         $lt: new Date(year + 1, 0, 1)
       };
+    }
+
+    // Add access filtering
+    if (groupId) {
+      // Filter by specific group
+      conditions.groupId = groupId;
+    } else if (personalOnly) {
+      // Personal context - show only items without groupId (personal items only)
+      conditions.userId = userId;
+      conditions.$or = [
+        { groupId: null },
+        { groupId: { $exists: false } }
+      ];
+    } else if (userId) {
+      // Use the old behavior for backward compatibility
+      const accessQuery = buildAccessQuery(userId, userGroupIds, false);
+      Object.assign(conditions, accessQuery);
     }
 
     // Get all activities
@@ -223,8 +276,13 @@ export const getMonthlyHours = async (year?: number): Promise<MonthlyHoursData[]
   }
 };
 
-export const getMonthlyStatistics = async (year?: number): Promise<MonthlyStatisticsData[]> => {
+export const getMonthlyStatistics = async (
+  year?: number,
+  filters: any = {}
+): Promise<MonthlyStatisticsData[]> => {
   try {
+    const { userId, userGroupIds = [], groupId, personalOnly } = filters;
+    
     // Build query conditions
     const conditions: any = {};
 
@@ -233,6 +291,23 @@ export const getMonthlyStatistics = async (year?: number): Promise<MonthlyStatis
         $gte: new Date(year, 0, 1),
         $lt: new Date(year + 1, 0, 1)
       };
+    }
+
+    // Add access filtering
+    if (groupId) {
+      // Filter by specific group
+      conditions.groupId = groupId;
+    } else if (personalOnly) {
+      // Personal context - show only items without groupId (personal items only)
+      conditions.userId = userId;
+      conditions.$or = [
+        { groupId: null },
+        { groupId: { $exists: false } }
+      ];
+    } else if (userId) {
+      // Use the old behavior for backward compatibility
+      const accessQuery = buildAccessQuery(userId, userGroupIds, false);
+      Object.assign(conditions, accessQuery);
     }
 
     // Get all activities
@@ -298,24 +373,47 @@ export const getMonthlyStatistics = async (year?: number): Promise<MonthlyStatis
   }
 };
 
-export const getMonthlyActivityBreakdown = async (year?: number): Promise<MonthlyActivityData[]> => {
+export const getMonthlyActivityBreakdown = async (
+  year?: number,
+  filters: any = {}
+): Promise<MonthlyActivityData[]> => {
   try {
+    const { userId, userGroupIds = [], groupId, personalOnly } = filters;
+    
     // Build aggregation pipeline
     const pipeline: any[] = [];
 
-    // Add match stage if year is specified
+    // Build match conditions
+    const matchConditions: any = {};
+
+    // Add year filter if specified
     if (year) {
       const startDate = new Date(year, 0, 1);
       const endDate = new Date(year + 1, 0, 1);
-      pipeline.push({
-        $match: {
-          date: {
-            $gte: startDate,
-            $lt: endDate
-          }
-        }
-      });
+      matchConditions.date = {
+        $gte: startDate,
+        $lt: endDate
+      };
     }
+
+    // Add access filtering
+    if (groupId) {
+      matchConditions.groupId = groupId;
+    } else if (personalOnly) {
+      // Personal context - show only items without groupId (personal items only)
+      matchConditions.userId = userId;
+      matchConditions.$or = [
+        { groupId: null },
+        { groupId: { $exists: false } }
+      ];
+    } else if (userId) {
+      // Use the old behavior for backward compatibility
+      const accessQuery = buildAccessQuery(userId, userGroupIds, false);
+      Object.assign(matchConditions, accessQuery);
+    }
+
+    // Add match stage
+    pipeline.push({ $match: matchConditions });
 
     // Add grouping stages
     pipeline.push(
@@ -391,24 +489,47 @@ export const getMonthlyActivityBreakdown = async (year?: number): Promise<Monthl
   }
 };
 
-export const getWeeklyHeatmapData = async (year?: number): Promise<WeeklyHeatmapData[]> => {
+export const getWeeklyHeatmapData = async (
+  year?: number,
+  filters: any = {}
+): Promise<WeeklyHeatmapData[]> => {
   try {
+    const { userId, userGroupIds = [], groupId, personalOnly } = filters;
+    
     // Build aggregation pipeline
     const pipeline: any[] = [];
 
-    // Add match stage if year is specified
+    // Build match conditions
+    const matchConditions: any = {};
+
+    // Add year filter if specified
     if (year) {
       const startDate = new Date(year, 0, 1);
       const endDate = new Date(year + 1, 0, 1);
-      pipeline.push({
-        $match: {
-          date: {
-            $gte: startDate,
-            $lt: endDate
-          }
-        }
-      });
+      matchConditions.date = {
+        $gte: startDate,
+        $lt: endDate
+      };
     }
+
+    // Add access filtering
+    if (groupId) {
+      matchConditions.groupId = groupId;
+    } else if (personalOnly) {
+      // Personal context - show only items without groupId (personal items only)
+      matchConditions.userId = userId;
+      matchConditions.$or = [
+        { groupId: null },
+        { groupId: { $exists: false } }
+      ];
+    } else if (userId) {
+      // Use the old behavior for backward compatibility
+      const accessQuery = buildAccessQuery(userId, userGroupIds, false);
+      Object.assign(matchConditions, accessQuery);
+    }
+
+    // Add match stage
+    pipeline.push({ $match: matchConditions });
 
     // Add grouping by date
     pipeline.push(
@@ -486,24 +607,47 @@ export const getWeeklyHeatmapData = async (year?: number): Promise<WeeklyHeatmap
   }
 };
 
-export const getCumulativeTimelineData = async (year?: number): Promise<CumulativeTimelineData[]> => {
+export const getCumulativeTimelineData = async (
+  year?: number,
+  filters: any = {}
+): Promise<CumulativeTimelineData[]> => {
   try {
+    const { userId, userGroupIds = [], groupId, personalOnly } = filters;
+    
     // Build aggregation pipeline
     const pipeline: any[] = [];
 
-    // Add match stage if year is specified
+    // Build match conditions
+    const matchConditions: any = {};
+
+    // Add year filter if specified
     if (year) {
       const startDate = new Date(year, 0, 1);
       const endDate = new Date(year + 1, 0, 1);
-      pipeline.push({
-        $match: {
-          date: {
-            $gte: startDate,
-            $lt: endDate
-          }
-        }
-      });
+      matchConditions.date = {
+        $gte: startDate,
+        $lt: endDate
+      };
     }
+
+    // Add access filtering
+    if (groupId) {
+      matchConditions.groupId = groupId;
+    } else if (personalOnly) {
+      // Personal context - show only items without groupId (personal items only)
+      matchConditions.userId = userId;
+      matchConditions.$or = [
+        { groupId: null },
+        { groupId: { $exists: false } }
+      ];
+    } else if (userId) {
+      // Use the old behavior for backward compatibility
+      const accessQuery = buildAccessQuery(userId, userGroupIds, false);
+      Object.assign(matchConditions, accessQuery);
+    }
+
+    // Add match stage
+    pipeline.push({ $match: matchConditions });
 
     // Group by date and get daily totals
     pipeline.push(

@@ -14,12 +14,14 @@ import {
 } from '@mui/material';
 import { AccountCircle, Login, Logout } from '@mui/icons-material';
 import { authService } from '../services/authService';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { menuItems } from '../const/menuItems';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import { User } from '../types';
+import { TenantSelector, useTenant } from './tenant';
+import { useConfig } from '../config/useConfig';
 
 interface AuthHeaderProps {}
 
@@ -29,9 +31,20 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobileMenuAnchor, setMobileMenuAnchor] = useState<null | HTMLElement>(null);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const config = useConfig();
+  
+  // Tenant management
+  const {
+    selectedTenant,
+    availableTenants,
+    loading: tenantsLoading,
+    error: tenantsError,
+    setSelectedTenant
+  } = useTenant(config.GROUP_API_URL || '', user?.email);
   const handleMobileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setMobileMenuAnchor(event.currentTarget);
   };
@@ -218,6 +231,23 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
                 })()}
               </Button>
             </Box>
+            
+            {/* Mobile Tenant Selector */}
+            {isAuthenticated && user && (
+              <Box sx={{ mx: 1, flexShrink: 0 }}>
+                <TenantSelector
+                  selectedTenant={selectedTenant}
+                  tenants={availableTenants}
+                  onTenantChange={setSelectedTenant}
+                  loading={tenantsLoading}
+                  error={tenantsError}
+                  sx={{ minWidth: 110 }}
+                />
+              </Box>
+            )}
+            
+            <Box sx={{ flexGrow: 1 }} />
+            
             <Menu
               anchorEl={mobileMenuAnchor}
               open={Boolean(mobileMenuAnchor)}
@@ -261,6 +291,20 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
           </Box>
         )}
         <Box sx={{ flexGrow: 1 }} />
+        
+        {/* Tenant Selector - Only show when authenticated */}
+        {isAuthenticated && user && (
+          <Box sx={{ mx: 2 }}>
+            <TenantSelector
+              selectedTenant={selectedTenant}
+              tenants={availableTenants}
+              onTenantChange={setSelectedTenant}
+              loading={tenantsLoading}
+              error={tenantsError}
+            />
+          </Box>
+        )}
+        
         {renderAuthSection()}
       </Toolbar>
     </AppBar>
