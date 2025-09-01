@@ -1,4 +1,16 @@
 # Tumbalog
+### [0.0.115](https://github.com/toomastahves/tumbaland/compare/v0.0.114...v0.0.115) (2025-09-01)
+
+
+### Bug Fixes
+
+* correct context fetching ([24ce828](https://github.com/toomastahves/tumbaland/commit/24ce828804afadc42c050953e897871366cd04fa))
+
+
+### Chores
+
+* update package lock ([f9e49f0](https://github.com/toomastahves/tumbaland/commit/f9e49f08c13de9a2266c8111c1148d141845c353))
+
 ### [0.0.114](https://github.com/toomastahves/tumbaland/compare/v0.0.113...v0.0.114) (2025-09-01)
 
 
