@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.116](https://github.com/toomastahves/tumbaland/compare/v0.0.115...v0.0.116) (2025-09-01)
+
+
+### Chores
+
+* update dependencies ([b5db89e](https://github.com/toomastahves/tumbaland/commit/b5db89eb0f91208b9d482f1b8e9399454c329fd2))
+
 ### [0.0.115](https://github.com/toomastahves/tumbaland/compare/v0.0.114...v0.0.115) (2025-09-01)
 
 
