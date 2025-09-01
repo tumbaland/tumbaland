@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.113](https://github.com/toomastahves/tumbaland/compare/v0.0.112...v0.0.113) (2025-09-01)
+
+
+### Features
+
+* use tenant context in microservices ([a9a3e4f](https://github.com/toomastahves/tumbaland/commit/a9a3e4f727b63381cd706838eccace0daf3fcc76))
+
 ### [0.0.112](https://github.com/toomastahves/tumbaland/compare/v0.0.111...v0.0.112) (2025-08-31)
 
 
