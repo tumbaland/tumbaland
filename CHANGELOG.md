@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.118](https://github.com/toomastahves/tumbaland/compare/v0.0.117...v0.0.118) (2025-09-02)
+
+
+### Bug Fixes
+
+* double tenant selector ([ed0b262](https://github.com/toomastahves/tumbaland/commit/ed0b262188b6454b84c2c522c6f71c014c1cbb49))
+
 ### [0.0.117](https://github.com/toomastahves/tumbaland/compare/v0.0.116...v0.0.117) (2025-09-02)
 
 
