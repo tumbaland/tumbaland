@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.117](https://github.com/toomastahves/tumbaland/compare/v0.0.116...v0.0.117) (2025-09-02)
+
+
+### Features
+
+* add GROUP_API_URL variable ([04b9515](https://github.com/toomastahves/tumbaland/commit/04b95153db7b3fb116f60c8d242d4fa730707a09))
+
 ### [0.0.116](https://github.com/toomastahves/tumbaland/compare/v0.0.115...v0.0.116) (2025-09-01)
 
 
