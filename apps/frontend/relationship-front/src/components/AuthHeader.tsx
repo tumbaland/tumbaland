@@ -183,7 +183,7 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
           <>
             <Box
               sx={{
-                flexGrow: 0,
+                flexGrow: 1,
                 display: 'flex',
                 justifyContent: 'flex-start',
                 alignItems: 'center',
@@ -241,12 +241,12 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
                   onTenantChange={setSelectedTenant}
                   loading={tenantsLoading}
                   error={tenantsError}
-                  sx={{ minWidth: 110 }}
+                  sx={{ minWidth: 120 }}
                 />
               </Box>
             )}
             
-            <Box sx={{ flexGrow: 1 }} />
+            <Box sx={{ flexGrow: 0, ml: 'auto' }}>{renderAuthSection()}</Box>
             
             <Menu
               anchorEl={mobileMenuAnchor}
@@ -271,41 +271,42 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
             </Menu>
           </>
         ) : (
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            {menuItemsWithHandlers.map((item) => (
-              <Button
-                key={item.label}
-                color="inherit"
-                startIcon={item.icon}
-                onClick={item.onClick}
-                sx={{
-                  fontWeight: 500,
-                  textTransform: 'none',
-                  background: 'none',
-                  '&:hover': { background: 'rgba(0,0,0,0.04)' }
-                }}
-              >
-                {item.label}
-              </Button>
-            ))}
+          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexGrow: 1 }}>
+              {menuItemsWithHandlers.map((item) => (
+                <Button
+                  key={item.label}
+                  color="inherit"
+                  startIcon={item.icon}
+                  onClick={item.onClick}
+                  sx={{
+                    fontWeight: 500,
+                    textTransform: 'none',
+                    background: 'none',
+                    '&:hover': { background: 'rgba(0,0,0,0.04)' }
+                  }}
+                >
+                  {item.label}
+                </Button>
+              ))}
+            </Box>
+            
+            {/* Desktop Tenant Selector */}
+            {isAuthenticated && user && (
+              <Box sx={{ mx: 2 }}>
+                <TenantSelector
+                  selectedTenant={selectedTenant}
+                  tenants={availableTenants}
+                  onTenantChange={setSelectedTenant}
+                  loading={tenantsLoading}
+                  error={tenantsError}
+                />
+              </Box>
+            )}
+            
+            <Box sx={{ flexGrow: 0, ml: 2 }}>{renderAuthSection()}</Box>
           </Box>
         )}
-        <Box sx={{ flexGrow: 1 }} />
-        
-        {/* Desktop Tenant Selector - Only show when authenticated and not mobile */}
-        {!isMobile && isAuthenticated && user && (
-          <Box sx={{ mx: 2 }}>
-            <TenantSelector
-              selectedTenant={selectedTenant}
-              tenants={availableTenants}
-              onTenantChange={setSelectedTenant}
-              loading={tenantsLoading}
-              error={tenantsError}
-            />
-          </Box>
-        )}
-        
-        {renderAuthSection()}
       </Toolbar>
     </AppBar>
   );
