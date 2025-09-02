@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.120](https://github.com/toomastahves/tumbaland/compare/v0.0.119...v0.0.120) (2025-09-02)
+
+
+### Features
+
+* make auth header consistent ([58ea7d6](https://github.com/toomastahves/tumbaland/commit/58ea7d6184222502f35dbb69cb7b4f5f8a8f0685))
+
 ### [0.0.119](https://github.com/toomastahves/tumbaland/compare/v0.0.118...v0.0.119) (2025-09-02)
 
 
