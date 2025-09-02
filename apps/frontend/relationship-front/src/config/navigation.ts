@@ -1,17 +1,23 @@
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import TimelineIcon from '@mui/icons-material/Timeline';
+
 export interface NavigationItem {
   label: string;
   path: string;
+  icon?: React.ElementType;
   onClick?: () => void;
 }
 
 export const navigationItems: Omit<NavigationItem, 'onClick'>[] = [
   {
     label: 'Dashboard',
-    path: '/'
+    path: '/',
+    icon: DashboardIcon
   },
   {
     label: 'Activities',
-    path: '/activities'
+    path: '/activities',
+    icon: TimelineIcon
   }
 ];
 

@@ -10,18 +10,18 @@ import {
   MenuItem,
   IconButton,
   CircularProgress,
-  Divider
+  Divider,
+  useMediaQuery
 } from '@mui/material';
-import { AccountCircle, Login, Logout } from '@mui/icons-material';
-import { authService } from '../services/authService';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { menuItems } from '../const/menuItems';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { AccountCircle, Login, Logout } from '@mui/icons-material';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { authService } from '../services/authService';
 import { User } from '../types';
+import { navigationItems } from '../config/navigation';
 import { TenantSelector, useTenant } from './tenant';
-import { useConfig } from '../config/useConfig';
+import { useConfig } from '../hooks/useConfig';
 
 interface AuthHeaderProps {}
 
@@ -30,27 +30,19 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [mobileMenuAnchor, setMobileMenuAnchor] = useState<null | HTMLElement>(null);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const config = useConfig();
-  
-  // Tenant management
+
+  // Tenant management - only call when we have valid config and authenticated user
   const {
     selectedTenant,
     availableTenants,
     loading: tenantsLoading,
     error: tenantsError,
     setSelectedTenant
-  } = useTenant(config.GROUP_API_URL || '', user?.email);
-  const handleMobileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setMobileMenuAnchor(event.currentTarget);
-  };
-  const handleMobileMenuClose = () => {
-    setMobileMenuAnchor(null);
-  };
+  } = useTenant(
+    config.GROUP_API_URL || '', 
+    isAuthenticated && config.GROUP_API_URL ? user?.email : undefined
+  );
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -86,11 +78,6 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
     handleMenuClose();
     // The logout service will refresh the page, so no need to update state
   };
-
-  const menuItemsWithHandlers = menuItems.map((item) => ({
-    ...item,
-    onClick: () => navigate(item.path)
-  }));
 
   const renderAuthSection = () => {
     if (isLoading) {
@@ -134,7 +121,13 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
             anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
           >
             <MenuItem disabled>
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start'
+                }}
+              >
                 <Typography variant="body2" fontWeight="bold">
                   {user.name}
                 </Typography>
@@ -172,25 +165,33 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
     );
   };
 
+  const navigate = useNavigate();
+  const location = useLocation();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [mobileMenuAnchor, setMobileMenuAnchor] = useState<null | HTMLElement>(null);
+
+  const handleMobileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setMobileMenuAnchor(event.currentTarget);
+  };
+  const handleMobileMenuClose = () => {
+    setMobileMenuAnchor(null);
+  };
+
   return (
     <AppBar
       position="static"
       elevation={2}
-      sx={{ background: '#fff', color: '#222', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.03)' }}
+      sx={{
+        background: '#fff',
+        color: '#222',
+        boxShadow: '0 2px 8px 0 rgba(0,0,0,0.03)'
+      }}
     >
       <Toolbar>
         {isMobile ? (
           <>
-            <Box
-              sx={{
-                flexGrow: 1,
-                display: 'flex',
-                justifyContent: 'flex-start',
-                alignItems: 'center',
-                minHeight: 56,
-                pl: 5
-              }}
-            >
+            <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', minHeight: 56, pl: 4 }}>
               <Button
                 color="inherit"
                 onClick={handleMobileMenuOpen}
@@ -206,15 +207,15 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
                   maxWidth: '70vw',
                   overflow: 'hidden',
                   whiteSpace: 'nowrap',
-                  textOverflow: 'ellipsis'
+                  textOverflow: 'ellipsis',
+                  ml: 2 // push menu button slightly right
                 }}
               >
                 {/* Show current route label, fallback to first menu item */}
                 {(() => {
-                  // Find the menu item with the longest matching path prefix
                   let bestMatch = null;
                   let bestLength = -1;
-                  for (const item of menuItemsWithHandlers) {
+                  for (const item of navigationItems) {
                     if (item.path === '/' && location.pathname === '/' && bestLength < 1) {
                       bestMatch = item;
                       bestLength = 1;
@@ -227,7 +228,7 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
                       bestLength = item.path.length;
                     }
                   }
-                  return bestMatch ? bestMatch.label : menuItemsWithHandlers[0]?.label;
+                  return bestMatch ? bestMatch.label : navigationItems[0]?.label;
                 })()}
               </Button>
             </Box>
@@ -247,7 +248,6 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
             )}
             
             <Box sx={{ flexGrow: 0, ml: 'auto' }}>{renderAuthSection()}</Box>
-            
             <Menu
               anchorEl={mobileMenuAnchor}
               open={Boolean(mobileMenuAnchor)}
@@ -255,43 +255,54 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
               anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
               transformOrigin={{ vertical: 'top', horizontal: 'left' }}
             >
-              {menuItemsWithHandlers.map((item) => (
-                <MenuItem
-                  key={item.label}
-                  selected={location.pathname.startsWith(item.path)}
-                  onClick={() => {
-                    item.onClick();
-                    handleMobileMenuClose();
-                  }}
-                >
-                  {item.icon}
-                  {item.label}
-                </MenuItem>
-              ))}
+              {navigationItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.path;
+                return (
+                  <MenuItem
+                    key={item.path}
+                    selected={isActive}
+                    onClick={() => {
+                      navigate(item.path);
+                      handleMobileMenuClose();
+                    }}
+                  >
+                    {Icon && <Icon sx={{ mr: 1 }} />}
+                    {item.label}
+                  </MenuItem>
+                );
+              })}
             </Menu>
           </>
         ) : (
           <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexGrow: 1 }}>
-              {menuItemsWithHandlers.map((item) => (
-                <Button
-                  key={item.label}
-                  color="inherit"
-                  startIcon={item.icon}
-                  onClick={item.onClick}
-                  sx={{
-                    fontWeight: 500,
-                    textTransform: 'none',
-                    background: 'none',
-                    '&:hover': { background: 'rgba(0,0,0,0.04)' }
-                  }}
-                >
-                  {item.label}
-                </Button>
-              ))}
+              {navigationItems.map((item) => {
+                const isActive = location.pathname === item.path;
+                const buttonSx = {
+                  fontWeight: isActive ? 700 : 500,
+                  textTransform: 'none',
+                  background: 'none',
+                  borderRadius: 2,
+                  px: 2,
+                  color: isActive ? 'primary.main' : 'inherit',
+                  '&:hover': { background: 'rgba(0,0,0,0.04)' }
+                };
+                const Icon = item.icon;
+                return (
+                  <Button
+                    key={item.path}
+                    onClick={() => navigate(item.path)}
+                    sx={buttonSx}
+                    startIcon={Icon ? <Icon sx={{ mr: 1 }} /> : undefined}
+                  >
+                    {item.label}
+                  </Button>
+                );
+              })}
             </Box>
             
-            {/* Desktop Tenant Selector */}
+            {/* Tenant Selector */}
             {isAuthenticated && user && (
               <Box sx={{ mx: 2 }}>
                 <TenantSelector
