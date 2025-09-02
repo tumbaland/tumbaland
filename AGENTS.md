@@ -143,7 +143,7 @@ GOOGLE_CLOUD_BUCKET_NAME=your-bucket-name
 
 # Inter-Service Communication
 INTERNAL_SERVICE_TOKEN=group_service_internal_token_2024
-GROUP_SERVICE_URL=http://localhost:5006
+GROUP_API_URL=http://localhost:5006
 
 # External APIs
 ALPHA_VANTAGE_API_KEY=your-api-key
@@ -201,7 +201,7 @@ export const getData = async (userId: string, userGroups: string[] = []) => {
 
 ### Group Service 401 Errors
 - Ensure all services use same `INTERNAL_SERVICE_TOKEN=group_service_internal_token_2024`
-- Check `GROUP_SERVICE_URL` points to correct group service endpoint
+- Check `GROUP_API_URL` points to correct group service endpoint
 - Verify group service is running and accessible
 
 ### CORS Issues

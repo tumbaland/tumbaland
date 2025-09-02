@@ -14,10 +14,10 @@ export async function checkGroupPermission(
   userEmail: string
 ): Promise<GroupPermissionResult> {
   try {
-    const GROUP_SERVICE_URL = process.env.GROUP_SERVICE_URL || '';
+    const GROUP_API_URL = process.env.GROUP_API_URL || '';
     
     const response = await fetch(
-      `${GROUP_SERVICE_URL}/api/groups/${groupId}/membership`,
+      `${GROUP_API_URL}/api/groups/${groupId}/membership`,
       {
         headers: {
           'Authorization': `Bearer ${process.env.INTERNAL_SERVICE_TOKEN}`,

@@ -22,7 +22,7 @@ export const userGroupsMiddleware = async (
       return next();
     }
 
-    const groupServiceUrl = process.env.GROUP_SERVICE_URL;
+    const groupServiceUrl = process.env.GROUP_API_URL;
     const internalToken = process.env.INTERNAL_SERVICE_TOKEN;
     
     // Fallback if group service not configured

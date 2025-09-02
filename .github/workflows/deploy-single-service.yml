@@ -176,6 +176,7 @@ jobs:
           echo "CORS_ORIGIN=${{ vars.CORS_ORIGIN }}" >> .env
           echo "ALPHA_VANTAGE_API_KEY=${{ secrets.ALPHA_VANTAGE_API_KEY }}" >> .env
           echo "FILE_API_URL=${{ vars.FILE_API_URL }}" >> .env
+          echo "GROUP_API_URL=${{ vars.GROUP_API_URL }}" >> .env
           echo "VITE_GOOGLE_CLIENT_ID=${{ vars.VITE_GOOGLE_CLIENT_ID }}" >> .env
           echo "VITE_FILE_API_URL=${{ vars.VITE_FILE_API_URL }}" >> .env
           echo "VITE_ALBUM_API_URL=${{ vars.VITE_ALBUM_API_URL }}" >> .env
