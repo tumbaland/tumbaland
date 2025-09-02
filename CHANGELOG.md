@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.119](https://github.com/toomastahves/tumbaland/compare/v0.0.118...v0.0.119) (2025-09-02)
+
+
+### Bug Fixes
+
+* align context to right ([c4be921](https://github.com/toomastahves/tumbaland/commit/c4be921aa2732d4cc310bf56263cbad6e9bedfd9))
+
 ### [0.0.118](https://github.com/toomastahves/tumbaland/compare/v0.0.117...v0.0.118) (2025-09-02)
 
 
