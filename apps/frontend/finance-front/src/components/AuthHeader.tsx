@@ -262,8 +262,8 @@ const AuthHeader: React.FC = () => {
         )}
         <Box sx={{ flexGrow: 1 }} />
         
-        {/* Tenant Selector - Only show when authenticated */}
-        {isAuthenticated && user && (
+        {/* Desktop Tenant Selector - Only show when authenticated and not mobile */}
+        {!isMobile && isAuthenticated && user && (
           <Box sx={{ mx: 2 }}>
             <TenantSelector
               selectedTenant={selectedTenant}
