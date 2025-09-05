@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.121](https://github.com/toomastahves/tumbaland/compare/v0.0.120...v0.0.121) (2025-09-05)
+
+
+### Features
+
+* add account-front and rework application ([7a63b3c](https://github.com/toomastahves/tumbaland/commit/7a63b3c36e1665cc1f37966548fe1b2221ef8bff))
+
 ### [0.0.120](https://github.com/toomastahves/tumbaland/compare/v0.0.119...v0.0.120) (2025-09-02)
 
 
