@@ -6,11 +6,11 @@ import React from 'react';
 import { authService } from '../services/authService';
 
 export interface AppConfig {
-  ALBUM_URL?: string;
-  FINANCE_URL?: string;
-  RELATIONSHIP_URL?: string;
-  PAYMENT_URL?: string;
-  GROUP_URL?: string;
+  ALBUM_FRONT_URL?: string;
+  FINANCE_FRONT_URL?: string;
+  RELATIONSHIP_FRONT_URL?: string;
+  PAYMENT_FRONT_URL?: string;
+  GROUP_FRONT_URL?: string;
   PUBLIC_API_URL?: string;
   ACCOUNT_FRONT_URL?: string;
   AUTH_SERVICE_URL?: string;
@@ -25,11 +25,11 @@ export const ConfigContext = React.createContext<AppConfig>({});
 // Helper function to create config from environment variables
 function createDevConfig(): AppConfig {
   return {
-    ALBUM_URL: import.meta.env.VITE_ALBUM_FRONT_URL,
-    FINANCE_URL: import.meta.env.VITE_FINANCE_FRONT_URL,
-    RELATIONSHIP_URL: import.meta.env.VITE_RELATIONSHIP_FRONT_URL,
-    PAYMENT_URL: import.meta.env.VITE_PAYMENT_FRONT_URL,
-    GROUP_URL: import.meta.env.VITE_GROUP_FRONT_URL,
+    ALBUM_FRONT_URL: import.meta.env.VITE_ALBUM_FRONT_URL,
+    FINANCE_FRONT_URL: import.meta.env.VITE_FINANCE_FRONT_URL,
+    RELATIONSHIP_FRONT_URL: import.meta.env.VITE_RELATIONSHIP_FRONT_URL,
+    PAYMENT_FRONT_URL: import.meta.env.VITE_PAYMENT_FRONT_URL,
+    GROUP_FRONT_URL: import.meta.env.VITE_GROUP_FRONT_URL,
     PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL,
     ACCOUNT_FRONT_URL: import.meta.env.VITE_ACCOUNT_FRONT_URL,
     AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL,

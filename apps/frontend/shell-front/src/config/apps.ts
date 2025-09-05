@@ -25,21 +25,21 @@ export const APPS: AppConfigItem[] = [
   {
     name: 'Relationship',
     route: '/relationship',
-    urlKey: 'RELATIONSHIP_URL',
+    urlKey: 'RELATIONSHIP_FRONT_URL',
     icon: FavoriteIcon,
     color: '#ef4444'
   },
   {
     name: 'Album',
     route: '/album',
-    urlKey: 'ALBUM_URL',
+    urlKey: 'ALBUM_FRONT_URL',
     icon: AlbumIcon,
     color: '#3b82f6'
   },
   {
     name: 'Finance',
     route: '/finance',
-    urlKey: 'FINANCE_URL',
+    urlKey: 'FINANCE_FRONT_URL',
     icon: AttachMoneyIcon,
     color: '#22c55e'
   }
@@ -49,14 +49,14 @@ export const USER_APPS: AppConfigItem[] = [
   {
     name: 'Payments',
     route: '/payments',
-    urlKey: 'PAYMENT_URL',
+    urlKey: 'PAYMENT_FRONT_URL',
     icon: PaymentIcon,
     color: '#6366f1'
   },
   {
     name: 'Groups',
     route: '/groups',
-    urlKey: 'GROUP_URL',
+    urlKey: 'GROUP_FRONT_URL',
     icon: GroupsIcon,
     color: '#7c3aed'
   },
