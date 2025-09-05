@@ -6,12 +6,12 @@ services:
     image: toomastahves/shell-front:latest
     restart: unless-stopped
     environment:
-      RELATIONSHIP_URL: ${VITE_RELATIONSHIP_URL}
-      ALBUM_URL: ${VITE_ALBUM_URL}
-      FINANCE_URL: ${VITE_FINANCE_URL}
-      PUBLIC_API_URL: ${VITE_PUBLIC_API_URL}
-      PAYMENT_URL: ${VITE_PAYMENT_URL}
-      GROUP_URL: ${VITE_GROUP_URL}
+      ALBUM_FRONT_URL: ${ALBUM_FRONT_URL}
+      FINANCE_FRONT_URL: ${FINANCE_FRONT_URL}
+      RELATIONSHIP_FRONT_URL: ${RELATIONSHIP_FRONT_URL}
+      PUBLIC_API_URL: ${PUBLIC_API_URL}
+      PAYMENT_FRONT_URL: ${PAYMENT_FRONT_URL}
+      GROUP_FRONT_URL: ${GROUP_FRONT_URL}
     ports:
       - '3000:80'
     networks:

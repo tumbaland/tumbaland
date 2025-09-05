@@ -28,32 +28,32 @@ import {
   Person as PersonIcon
 } from '@mui/icons-material';
 import { Link as RouterLink } from 'react-router-dom';
-import { groupApi } from '../services/groupApi';
-import { authService } from '../services/authService';
-import { Group } from '../types';
+import { groupApi } from '../../services/groupApi';
+import { authService } from '../../services/authService';
+import { Group } from '../../types';
 
-const MyGroupsPage = () => {
+const GroupsTab = () => {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentUserEmail, setCurrentUserEmail] = useState<string>('');
-  
+
   // Create group dialog
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState('');
   const [createLoading, setCreateLoading] = useState(false);
-  
+
   // Edit group dialog
   const [editOpen, setEditOpen] = useState(false);
   const [editGroup, setEditGroup] = useState<Group | null>(null);
   const [editName, setEditName] = useState('');
   const [editLoading, setEditLoading] = useState(false);
-  
+
   // Delete confirmation dialog
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteGroup, setDeleteGroup] = useState<Group | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  
+
   // Menu state
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [menuGroup, setMenuGroup] = useState<Group | null>(null);
@@ -81,7 +81,7 @@ const MyGroupsPage = () => {
 
   const handleCreateGroup = async () => {
     if (!createName.trim()) return;
-    
+
     setCreateLoading(true);
     try {
       await groupApi.createGroup(createName.trim());
@@ -97,7 +97,7 @@ const MyGroupsPage = () => {
 
   const handleEditGroup = async () => {
     if (!editGroup?._id || !editName.trim()) return;
-    
+
     setEditLoading(true);
     try {
       await groupApi.updateGroup(editGroup._id, { name: editName.trim() });
@@ -114,7 +114,7 @@ const MyGroupsPage = () => {
 
   const handleDeleteGroup = async () => {
     if (!deleteGroup?._id) return;
-    
+
     setDeleteLoading(true);
     try {
       await groupApi.deleteGroup(deleteGroup._id);
@@ -153,7 +153,7 @@ const MyGroupsPage = () => {
 
   const getUserRole = (group: Group): string => {
     if (!currentUserEmail) return 'member';
-    
+
     const member = group.members?.find(m => m.email.toLowerCase() === currentUserEmail.toLowerCase());
     return member?.role || 'member';
   };
@@ -199,7 +199,7 @@ const MyGroupsPage = () => {
             Create Group
           </Button>
         </Stack>
-        
+
         {error && (
           <Alert severity="error" sx={{ mt: 2 }} onClose={() => setError(null)}>
             {error}
@@ -230,9 +230,9 @@ const MyGroupsPage = () => {
           }}
         >
           {groups.map((group) => (
-            <Card 
+            <Card
               key={group._id}
-              sx={{ 
+              sx={{
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
@@ -264,15 +264,15 @@ const MyGroupsPage = () => {
                 <Typography variant="h6" component="h2" gutterBottom noWrap>
                   {group.name}
                 </Typography>
-                
+
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
                   <PersonIcon fontSize="small" color="action" />
                   <Typography variant="body2" color="text.secondary">
                     {group.members?.length || 1} member{(group.members?.length || 1) !== 1 ? 's' : ''}
                   </Typography>
-                  <Chip 
-                    label={getUserRole(group)} 
-                    size="small" 
+                  <Chip
+                    label={getUserRole(group)}
+                    size="small"
                     color={getUserRole(group) === 'owner' ? 'primary' : 'default'}
                   />
                 </Stack>
@@ -334,8 +334,8 @@ const MyGroupsPage = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setCreateOpen(false)}>Cancel</Button>
-          <Button 
-            onClick={handleCreateGroup} 
+          <Button
+            onClick={handleCreateGroup}
             variant="contained"
             disabled={!createName.trim() || createLoading}
           >
@@ -361,8 +361,8 @@ const MyGroupsPage = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEditOpen(false)}>Cancel</Button>
-          <Button 
-            onClick={handleEditGroup} 
+          <Button
+            onClick={handleEditGroup}
             variant="contained"
             disabled={!editName.trim() || editLoading}
           >
@@ -381,8 +381,8 @@ const MyGroupsPage = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteOpen(false)}>Cancel</Button>
-          <Button 
-            onClick={handleDeleteGroup} 
+          <Button
+            onClick={handleDeleteGroup}
             variant="contained"
             color="error"
             disabled={deleteLoading}
@@ -395,4 +395,4 @@ const MyGroupsPage = () => {
   );
 };
 
-export default MyGroupsPage;
+export default GroupsTab;

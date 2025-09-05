@@ -3,6 +3,7 @@ import { CssBaseline } from '@mui/material';
 import { Loader } from '../components/Loader';
 import { ErrorPage } from '../components/ErrorPage';
 import React from 'react';
+import { authService } from '../services/authService';
 
 export interface AppConfig {
   ALBUM_URL?: string;
@@ -11,6 +12,9 @@ export interface AppConfig {
   PAYMENT_URL?: string;
   GROUP_URL?: string;
   PUBLIC_API_URL?: string;
+  ACCOUNT_FRONT_URL?: string;
+  AUTH_SERVICE_URL?: string;
+  AUTH_FRONT_URL?: string;
 }
 
 // Global configuration holder for non-React services
@@ -21,12 +25,15 @@ export const ConfigContext = React.createContext<AppConfig>({});
 // Helper function to create config from environment variables
 function createDevConfig(): AppConfig {
   return {
-    ALBUM_URL: import.meta.env.VITE_ALBUM_URL,
-    FINANCE_URL: import.meta.env.VITE_FINANCE_URL,
-    RELATIONSHIP_URL: import.meta.env.VITE_RELATIONSHIP_URL,
-    PAYMENT_URL: import.meta.env.VITE_PAYMENT_URL,
-    GROUP_URL: import.meta.env.VITE_GROUP_URL,
-    PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL
+    ALBUM_URL: import.meta.env.VITE_ALBUM_FRONT_URL,
+    FINANCE_URL: import.meta.env.VITE_FINANCE_FRONT_URL,
+    RELATIONSHIP_URL: import.meta.env.VITE_RELATIONSHIP_FRONT_URL,
+    PAYMENT_URL: import.meta.env.VITE_PAYMENT_FRONT_URL,
+    GROUP_URL: import.meta.env.VITE_GROUP_FRONT_URL,
+    PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL,
+    ACCOUNT_FRONT_URL: import.meta.env.VITE_ACCOUNT_FRONT_URL,
+    AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL,
+    AUTH_FRONT_URL: import.meta.env.VITE_AUTH_FRONT_URL
   };
 }
 
@@ -59,6 +66,7 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
       console.log('Using development configuration from environment variables:', devConfig);
       setConfig(devConfig);
       globalConfig = devConfig;
+      authService.init(); // Initialize auth service
       return;
     }
 
@@ -73,6 +81,7 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
         setConfig(loadedConfig);
         // Set global config for non-React services
         globalConfig = loadedConfig;
+        authService.init(); // Initialize auth service
       })
       .catch((err) => {
         console.error('Configuration load error:', err);

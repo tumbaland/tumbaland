@@ -22,10 +22,10 @@ function createDevConfig(): AppConfig {
 
 export function getGlobalConfig(): AppConfig {
   if (!globalConfig) {
-    if (import.meta && import.meta.env && import.meta.env.DEV) {
-      const fallback = createDevConfig();
-      console.warn('Using fallback configuration during HMR:', fallback);
-      return fallback;
+    const devConfig = createDevConfig();
+    if (devConfig.PAYMENT_API_URL || devConfig.AUTH_SERVICE_URL || devConfig.AUTH_FRONT_URL) {
+      console.log('Using dev configuration:', devConfig);
+      return devConfig;
     }
     throw new Error('Configuration not initialized.');
   }
@@ -39,8 +39,8 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (import.meta && import.meta.env && import.meta.env.DEV) {
-      const devConfig = createDevConfig();
+    const devConfig = createDevConfig();
+    if (devConfig.PAYMENT_API_URL || devConfig.AUTH_SERVICE_URL || devConfig.AUTH_FRONT_URL) {
       setConfig(devConfig);
       globalConfig = devConfig;
       authService.init();

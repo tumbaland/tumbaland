@@ -1,11 +1,20 @@
 import { Routes, Route } from 'react-router-dom';
-import MyGroupsPage from '../pages/MyGroupsPage';
 import GroupDetailsPage from '../pages/GroupDetailsPage';
+import { ProtectedRoute } from '../components/ProtectedRoute';
+import GroupsPage from '../pages/GroupsPage';
 
 const AppRoutes = () => (
   <Routes>
-    <Route path="/" element={<MyGroupsPage />} />
-    <Route path="/groups/:id" element={<GroupDetailsPage />} />
+    <Route path="/" element={
+      <ProtectedRoute>
+        <GroupsPage />
+      </ProtectedRoute>
+    } />
+    <Route path="/groups/:id" element={
+      <ProtectedRoute>
+        <GroupDetailsPage />
+      </ProtectedRoute>
+    } />
   </Routes>
 );
 

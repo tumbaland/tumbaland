@@ -132,7 +132,7 @@ const AuthHeader: React.FC = () => {
     <AppBar
       position="static"
       elevation={2}
-      sx={{ background: '#fff', color: '#222', boxShadow: '0 2px 8px 0 rgba(0,0,0,0.03)' }}
+      sx={{ background: 'transparent', color: '#222', boxShadow: 'none', borderBottom: '1px solid rgba(0,0,0,0.1)' }}
     >
       <Toolbar>
         {isMobile ? (

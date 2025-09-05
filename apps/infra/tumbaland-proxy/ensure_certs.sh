@@ -6,6 +6,7 @@ set -e
 # Real certs will later overwrite these via refresh_certificates.sh.
 
 DOMAINS=" \
+account.tumbaland.eu \
 tumbaland.eu \
 api.tumbaland.eu \
 album.tumbaland.eu \

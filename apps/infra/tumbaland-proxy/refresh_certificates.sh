@@ -23,6 +23,7 @@ fi
 # Root + wildcard is NOT used here (wildcard would require DNS challenge). We keep individual certs.
 
 DOMAIN_GROUPS=" \
+account.tumbaland.eu \
 tumbaland.eu \
 api.tumbaland.eu \
 album.tumbaland.eu \

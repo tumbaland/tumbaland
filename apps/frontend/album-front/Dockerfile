@@ -16,7 +16,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # Copy nginx configuration  
 COPY ./nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy config template and startup script
+# Copy startup script
 COPY ./docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 

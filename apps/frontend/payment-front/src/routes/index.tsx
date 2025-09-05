@@ -1,17 +1,23 @@
-import { Routes, Route } from 'react-router-dom';
-import PlansPage from '../pages/PlansPage';
-import SubscriptionPage from '../pages/SubscriptionPage';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import PaymentsPage from '../pages/PaymentsPage';
 import SubscriptionCheckoutPage from '../pages/SubscriptionCheckoutPage';
-import PaymentsHistoryPage from '../pages/PaymentsHistoryPage';
 import TermsPage from '../pages/TermsPage';
+import { ProtectedRoute } from '../components/ProtectedRoute';
 
 const AppRoutes = () => (
   <Routes>
-    <Route path="/" element={<PlansPage />} />
-    <Route path="/subscription" element={<SubscriptionPage />} />
-  <Route path="/subscription/checkout" element={<SubscriptionCheckoutPage />} />
-    <Route path="/payments" element={<PaymentsHistoryPage />} />
-  <Route path="/terms" element={<TermsPage />} />
+    <Route path="/" element={<Navigate to="/payments" replace />} />
+    <Route path="/payments/*" element={
+      <ProtectedRoute>
+        <PaymentsPage />
+      </ProtectedRoute>
+    } />
+    <Route path="/subscription/checkout" element={
+      <ProtectedRoute>
+        <SubscriptionCheckoutPage />
+      </ProtectedRoute>
+    } />
+    <Route path="/terms" element={<TermsPage />} />
   </Routes>
 );
 

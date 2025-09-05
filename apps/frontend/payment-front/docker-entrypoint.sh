@@ -12,3 +12,4 @@ echo "Generated config.json with runtime environment variables:"
 cat /usr/share/nginx/html/config.json
 
 exec "$@"
+

@@ -13,3 +13,4 @@ cat /usr/share/nginx/html/config.json
 
 # Execute the original command
 exec "$@"
+

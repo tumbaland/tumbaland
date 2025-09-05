@@ -1,17 +1,19 @@
 import { BrowserRouter as Router } from 'react-router-dom';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
 import AppLayout from './components/AppLayout';
 import AppRoutes from './routes';
-import ProtectedRoute from './components/ProtectedRoute';
+
+const theme = createTheme();
 
 function App() {
   return (
-    <Router>
-      <ProtectedRoute>
+    <ThemeProvider theme={theme}>
+      <Router>
         <AppLayout>
           <AppRoutes />
         </AppLayout>
-      </ProtectedRoute>
-    </Router>
+      </Router>
+    </ThemeProvider>
   );
 }
 

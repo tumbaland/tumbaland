@@ -2,6 +2,8 @@ import { useLocation } from 'react-router-dom';
 import { useState, ReactNode, useEffect } from 'react';
 import CircularProgress from '@mui/material/CircularProgress';
 import { SideMenu } from './SideMenu';
+import { HeaderNav } from './HeaderNav';
+import { ProtectedRoute } from './ProtectedRoute';
 import { getAppByRoute } from '../config/apps';
 import { useConfig } from '../hooks/useConfig';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -29,61 +31,69 @@ export default function Layout({ children }: LayoutProps) {
   }, [appUrl]);
 
   return (
-  <div
+    <div
       style={{
-    minHeight: '100dvh',
-    height: '100dvh',
-    width: '100dvw',
+        minHeight: '100dvh',
+        height: '100dvh',
+        width: '100dvw',
         overflow: 'hidden',
         display: 'flex',
+        flexDirection: 'column',
         background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)',
         fontFamily: 'Inter, sans-serif'
       }}
     >
-      <SideMenu currentRoute={location.pathname} />
-      <div
-        style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'stretch',
-          justifyContent: 'center',
-          position: 'relative',
-          marginLeft: showIframe ? (isMobile ? 0 : 60) : 0,
-          transition: 'margin-left 0.3s',
-          overflow: 'auto'
-        }}
-      >
-        {showIframe ? (
-          <>
-            {loading && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: 'rgba(255,255,255,0.6)',
-                  zIndex: 2
-                }}
-              >
-                <CircularProgress />
-              </div>
-            )}
-            <iframe
-              src={appUrl}
-              title={currentApp!.name}
-              style={{ width: '100%', height: '100dvh', border: 'none', zIndex: 1 }}
-              allow="fullscreen"
-              onLoad={() => setLoading(false)}
-            />
-          </>
-        ) : (
-          children
-        )}
+      {/* Header Navigation for Account/Groups/Billing */}
+      <HeaderNav currentRoute={location.pathname} />
+
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        <SideMenu currentRoute={location.pathname} />
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'stretch',
+            justifyContent: 'center',
+            position: 'relative',
+            marginLeft: showIframe ? (isMobile ? 0 : 60) : 0,
+            transition: 'margin-left 0.3s',
+            overflow: 'auto'
+          }}
+        >
+          {showIframe ? (
+            <ProtectedRoute>
+              <>
+                {loading && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)',
+                      zIndex: 2
+                    }}
+                  >
+                    <CircularProgress />
+                  </div>
+                )}
+                <iframe
+                  src={appUrl}
+                  title={currentApp!.name}
+                  style={{ width: '100%', height: '100%', border: 'none', zIndex: 1 }}
+                  allow="fullscreen"
+                  onLoad={() => setLoading(false)}
+                />
+              </>
+            </ProtectedRoute>
+          ) : (
+            children
+          )}
+        </div>
       </div>
     </div>
   );

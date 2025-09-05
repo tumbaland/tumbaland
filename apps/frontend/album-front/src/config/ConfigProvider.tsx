@@ -13,6 +13,9 @@ export interface AppConfig {
   SEGMENTATION_API_URL?: string;
   OBJECT_DETECTION_API_URL?: string;
   GROUP_API_URL?: string;
+  ALBUM_FRONT_URL?: string;
+  ACCOUNT_FRONT_URL?: string;
+  SHELL_FRONT_URL?: string;
 }
 
 // Global configuration holder for non-React services
@@ -30,6 +33,9 @@ function createDevConfig(): AppConfig {
     SEGMENTATION_API_URL: import.meta.env.VITE_SEGMENTATION_API_URL,
     OBJECT_DETECTION_API_URL: import.meta.env.VITE_OBJECT_DETECTION_API_URL,
     GROUP_API_URL: import.meta.env.VITE_GROUP_API_URL,
+    ALBUM_FRONT_URL: import.meta.env.VITE_ALBUM_FRONT_URL,
+    ACCOUNT_FRONT_URL: import.meta.env.VITE_ACCOUNT_FRONT_URL,
+    SHELL_FRONT_URL: import.meta.env.VITE_SHELL_FRONT_URL
   };
 }
 

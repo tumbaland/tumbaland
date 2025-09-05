@@ -1,278 +1,241 @@
-# Tumbaland Application Context for AI Agents
+# Tumbaland - AI-Powered Photo Album Platform
 
-## Overview
-Tumbaland is a comprehensive full-stack web application built with a microservices architecture. It provides multiple interconnected services for photo management, financial tracking, social relationships, and group collaboration.
+## Project Overview
+
+Tumbaland is a comprehensive photo album management platform with AI-powered features including image segmentation, object detection, and intelligent photo organization. The platform supports user authentication, group collaboration, financial tracking, and relationship management.
 
 ## Architecture
 
-### Frontend Services (React + TypeScript + Vite)
-- **Port 3001**: Relationship Management Frontend
-- **Port 3002**: Album/Photo Management Frontend  
-- **Port 3003**: Finance Tracking Frontend
-- **Port 3004**: Authentication Frontend
-- **Port 3005**: Payment Processing Frontend
-- **Port 3006**: Group Management Frontend
-- **Port 3000**: Shell/Main Frontend
+### Micro-Frontend Architecture
+- **Shell Application**: Main container app (`shell-front`) that orchestrates other frontend applications
+- **Feature Applications**: Independent frontend apps for specific domains:
+  - `album-front`: Photo album management with AI features
+  - `auth-front`: User authentication and authorization
+  - `account-front`: User account management
+  - `finance-front`: Financial tracking and payments
+  - `group-front`: Group collaboration features
+  - `payment-front`: Payment processing
+  - `relationship-front`: Social relationship management
 
-#### Tenant Components Architecture
-Each frontend service includes its own `components/tenant` folder containing:
-- **TenantProvider.tsx**: Context provider for tenant management
-- **TenantSelector.tsx**: UI component for switching between personal/group contexts  
-- **useTenant.ts**: Hook for tenant selection and group fetching
-- **useTenantDataRefresh.ts**: Hook for automatic data refresh on tenant changes
-
-> **Important**: These components are duplicated in each frontend (not shared via library) to ensure they're available during deployment without external dependencies.
-
-### Backend Services (Node.js + Express + MongoDB)
-- **Port 4000**: Public Service API
-- **Port 4001**: Relationship Service API
-- **Port 4002**: Album Service API
-- **Port 4003**: Finance Service API
-- **Port 5001**: Auth Service API
-- **Port 5002**: File Service API
-- **Port 5005**: Payment Service API
-- **Port 5006**: Group Service API
-
-### AI/ML Services (Python)
-- **Port 8001**: Image Segmentation Service
-- **Port 8002**: Object Detection Service
-
-## Core Features
-
-### 1. Authentication & User Management
-- Google OAuth 2.0 integration
-- JWT-based session management
-- User approval system (auto-approval enabled)
-- Multi-service authentication middleware
-
-### 2. Group Management & Permissions
-- User groups with role-based access control
-- Group invitations and membership management
-- Cross-service group permission validation
-- Internal service-to-service authentication
-
-### 3. Photo & Album Management
-- Photo upload and storage (Google Cloud Storage)
-- Album organization and sharing
-- AI-powered image processing (segmentation, object detection)
-- Photo collages with permission controls
-- File metadata and signed URL generation
-
-### 4. Financial Tracking
-- Personal portfolio management
-- Stock ticker tracking and price history
-- Investment performance analytics
-- Financial record keeping with group sharing
-- Alpha Vantage API integration for market data
-
-### 5. Relationship Management
-- Personal and group relationship tracking
-- Activity logging and statistics
-- Relationship analytics and insights
-- Social interaction monitoring
-
-### 6. Payment Processing
-- Stripe payment integration
-- Subscription management
-- Payment history and receipts
-
-## Security Architecture
-
-### Permission System
-All services implement a consistent permission model:
-- **User Ownership**: Users can access their own data
-- **Group Access**: Users can access data shared with their groups  
-- **Permission Filtering**: Database queries filtered by `buildAccessQuery(userId, userGroups)`
-- **Resource Validation**: Individual resources checked with `canAccessResource()`
-
-### Inter-Service Communication
-- **Internal Service Tokens**: Services authenticate with each other using `INTERNAL_SERVICE_TOKEN`
-- **Group Context Middleware**: `userGroupsMiddleware` fetches user's group memberships
-- **Fallback Behavior**: Services continue with user-only permissions if group service unavailable
-
-### Data Models
-All user-generated content includes:
-```typescript
-{
-  userId: string;      // Owner of the resource
-  groupId?: string;    // Optional group association for sharing
-}
-```
+### Microservices Backend
+- **album-service**: Photo album business logic and AI processing
+- **auth-service**: Authentication and user management
+- **file-service**: File storage and processing
+- **finance-service**: Financial operations
+- **group-service**: Group management
+- **payment-service**: Payment processing
+- **relationship-service**: Relationship management
+- **public-service**: Public API endpoints
+- **tumbaland-proxy**: API gateway and reverse proxy
 
 ## Technology Stack
 
-### Backend
-- **Runtime**: Node.js 24+
-- **Framework**: Express.js
-- **Database**: MongoDB (mongoose ODM)
-- **Authentication**: JWT + Google OAuth
-- **File Storage**: Google Cloud Storage
-- **Payment**: Stripe API
-- **Market Data**: Alpha Vantage API
-- **Containerization**: Docker + Docker Compose
-
-### Frontend  
-- **Framework**: React 19
-- **Language**: TypeScript
+### Frontend
+- **Framework**: React 18 with TypeScript
 - **Build Tool**: Vite
-- **Styling**: CSS Modules/Styled Components
-- **State Management**: React hooks + Context API
-- **HTTP Client**: Fetch API
-- **Routing**: React Router
+- **UI Library**: Material-UI (MUI)
+- **State Management**: React Context API
+- **Container**: Docker with Nginx
 
-### AI/ML Services
-- **Language**: Python
-- **Frameworks**: TensorFlow/PyTorch, OpenCV
-- **Services**: Image segmentation, object detection
+### Backend
+- **Runtime**: Node.js
+- **Framework**: Express.js
+- **Database**: MongoDB
+- **Authentication**: JWT tokens
+- **File Storage**: Google Cloud Storage
+- **Payment**: Stripe integration
 
-## Environment Configuration
+### Infrastructure
+- **Containerization**: Docker & Docker Compose
+- **CI/CD**: GitHub Actions
+- **Reverse Proxy**: Nginx
 
-### Required Environment Variables
+## Project Structure
+
+```
+tumbaland/
+├── apps/
+│   ├── frontend/
+│   │   ├── shell-front/          # Main container application
+│   │   ├── album-front/          # Photo album management
+│   │   ├── auth-front/           # Authentication
+│   │   ├── account-front/        # Account management
+│   │   ├── finance-front/        # Financial tracking
+│   │   ├── group-front/          # Group collaboration
+│   │   ├── payment-front/        # Payment processing
+│   │   ├── relationship-front/   # Relationship management
+│   │   └── [each has]:
+│   │       ├── src/
+│   │       │   ├── components/   # Reusable UI components
+│   │       │   ├── config/       # Configuration management
+│   │       │   ├── pages/        # Page components
+│   │       │   ├── services/     # API service layer
+│   │       │   └── utils/        # Utility functions
+│   │       ├── public/           # Static assets
+│   │       ├── Dockerfile        # Container build
+│   │       ├── docker-entrypoint.sh  # Runtime config generation
+│   │       ├── compose.yml       # Local development
+│   │       ├── nginx.conf        # Web server config
+│   │       ├── package.json      # Dependencies
+│   │       ├── tsconfig.json     # TypeScript config
+│   │       └── vite.config.ts    # Build configuration
+│   └── backend/
+│       ├── [service-name]/
+│       │   ├── src/
+│       │   ├── Dockerfile
+│       │   ├── compose.yml
+│       │   ├── package.json
+│       │   └── nodemon.json
+│       └── tumbaland-proxy/      # API Gateway
+├── libs/
+│   └── components/               # Shared UI components
+├── infra/
+│   └── stripe-cli/               # Stripe CLI configuration
+├── scripts/                      # Utility scripts
+└── .github/
+    └── workflows/
+        └── deploy-single-service.yml  # CI/CD pipeline
+```
+
+## Deployment Architecture
+
+### Development Environment
+- **Local Development**: Docker Compose for all services
+- **Hot Reload**: Vite dev server for frontend apps
+- **Environment Variables**: `.env.example` files with VITE_ prefixes
+- **Service Communication**: Direct HTTP calls between services
+
+### Production Environment
+- **Containerization**: Each service runs in Docker container
+- **Orchestration**: Docker Compose on production server
+- **Configuration**: Runtime environment variables (no VITE_ prefixes)
+- **Load Balancing**: Nginx reverse proxy
+
+### CI/CD Pipeline
+- **Trigger**: Manual deployment via GitHub Actions
+- **Build Process**:
+  1. Checkout code
+  2. Build Docker image
+  3. Push to Docker Hub
+  4. Generate environment variables
+  5. Deploy to production server via SSH
+  6. Restart services with new configuration
+
+## Configuration Management
+
+### Environment Variables Strategy
+
+#### Development (VITE_ prefixed)
 ```bash
-# Database
-MONGODB_URI=mongodb+srv://...
-
-# Authentication  
-JWT_SECRET=your-jwt-secret
-GOOGLE_CLIENT_ID=your-google-client-id
-
-# File Storage
-GOOGLE_CLOUD_KEY_FILE_BASE64=base64-encoded-service-account
-GOOGLE_CLOUD_PROJECT_ID=your-project-id
-GOOGLE_CLOUD_BUCKET_NAME=your-bucket-name
-
-# Inter-Service Communication
-INTERNAL_SERVICE_TOKEN=group_service_internal_token_2024
-GROUP_API_URL=http://localhost:5006
-
-# External APIs
-ALPHA_VANTAGE_API_KEY=your-api-key
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-
-# CORS & Security
-CORS_ORIGIN=http://localhost:3000,http://localhost:3001...
-COOKIE_DOMAIN=localhost
+# .env.example files
+VITE_ALBUM_API_URL=http://localhost:4002
+VITE_AUTH_SERVICE_URL=http://localhost:5001
+VITE_GOOGLE_CLIENT_ID=your_client_id
 ```
 
-## Development Workflow
-
-### Common Tasks
-1. **Adding New Endpoints**: Follow the pattern of routes → controller → service → model
-2. **Permission Checks**: Always add `userGroupsMiddleware` and implement `buildAccessQuery` filtering
-3. **Error Handling**: Use consistent error responses with appropriate HTTP status codes
-4. **Service Communication**: Use internal tokens for service-to-service calls
-
-### Security Checklist
-- [ ] Routes have `authenticateToken` middleware
-- [ ] Routes have `userGroupsMiddleware` for group context
-- [ ] Service functions accept `userId` and `userGroups` parameters  
-- [ ] Database queries use `buildAccessQuery()` for permission filtering
-- [ ] Individual resources checked with `canAccessResource()`
-- [ ] Proper error handling for `ACCESS_DENIED` (403 status)
-
-## Recent Security Fixes (Applied)
-
-### Critical Vulnerabilities Fixed
-1. **Relationship Statistics**: Previously exposed all user statistics to any authenticated user
-2. **Album Collages**: Fixed unauthorized access to other users' collages  
-3. **Finance Portfolios**: Resolved data exposure where all portfolios were visible
-4. **Tracked Tickers**: Added user-specific permissions to financial ticker management
-
-### Security Pattern Applied
-All services now consistently implement:
-```typescript
-// Route level
-router.get('/', authenticateToken, userGroupsMiddleware, controller);
-
-// Controller level  
-const user = (req as any).user;
-const userGroups = (req as any).userGroups || [];
-const data = await service.getData(user.id, userGroups);
-
-// Service level
-export const getData = async (userId: string, userGroups: string[] = []) => {
-  const accessQuery = buildAccessQuery(userId, userGroups, false);
-  return Model.find(accessQuery);
-};
+#### Production (Clean names)
+```bash
+# GitHub Actions generates
+ALBUM_API_URL=https://album-api.tumbaland.eu
+AUTH_SERVICE_URL=https://auth-api.tumbaland.eu
+GOOGLE_CLIENT_ID=production_client_id
 ```
 
-## Troubleshooting Common Issues
+### Runtime Configuration Generation
 
-### Group Service 401 Errors
-- Ensure all services use same `INTERNAL_SERVICE_TOKEN=group_service_internal_token_2024`
-- Check `GROUP_API_URL` points to correct group service endpoint
-- Verify group service is running and accessible
+Each frontend application generates `config.json` at runtime:
 
-### CORS Issues
-- Update `CORS_ORIGIN` environment variable with all frontend URLs
-- Check frontend API URLs match backend service ports
-
-### File Upload Issues
-- Verify Google Cloud Storage credentials and bucket permissions
-- Check `GOOGLE_CLOUD_KEY_FILE_BASE64` is properly encoded service account
-
-## API Patterns
-
-### Standard Response Format
-```typescript
-// Success
-{ data: any, success: true }
-
-// Error  
-{ error: string, success: false }
-
-// List with metadata
-{ items: any[], total: number, page: number }
-```
-
-### Common HTTP Status Codes
-- `200`: Success
-- `201`: Created
-- `204`: No Content (successful delete)
-- `400`: Bad Request (validation errors)
-- `401`: Unauthorized (invalid/missing token)
-- `403`: Forbidden (access denied)
-- `404`: Not Found
-- `500`: Internal Server Error
-
-## Database Schema Patterns
-
-### User-Owned Resources
-```typescript
-interface UserResource {
-  _id: ObjectId;
-  userId: string;        // Required: Resource owner
-  groupId?: string;      // Optional: Group sharing
-  createdAt: Date;
-  updatedAt: Date;
-  // ... other fields
+```javascript
+// Development: Uses VITE_ variables directly
+const config = {
+  ALBUM_API_URL: import.meta.env.VITE_ALBUM_API_URL,
+  AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL
 }
+
+// Production: Loads from config.json
+fetch('/config.json').then(config => {
+  // Use runtime configuration
+})
 ```
 
-### Audit Fields
-Most models include:
-- `createdAt`: Resource creation timestamp
-- `updatedAt`: Last modification timestamp  
-- `userId`: Resource owner for permission checking
-- `groupId`: Optional group association for sharing
+## Key Workflows
 
-## Deployment Notes
+### Development Workflow
+1. **Clone Repository**: `git clone <repo>`
+2. **Install Dependencies**: `npm install` in each frontend/backend service
+3. **Environment Setup**: Copy `.env.example` to `.env` and configure
+4. **Start Services**: `docker-compose up` for all services
+5. **Development**: Use Vite dev servers for hot reload
 
-### Docker Compose Structure
-- Each service has its own `compose.yml` and `Dockerfile`
-- Services communicate through `tumbanet` Docker network
-- Environment variables passed through `.env` files
-- Build images tagged as `toomastahves/service-name:latest`
+### Deployment Workflow
+1. **GitHub Actions Trigger**: Manual deployment selection
+2. **Service Selection**: Choose which service to deploy
+3. **Docker Build**: Build and push image to Docker Hub
+4. **Environment Generation**: Create production .env file
+5. **Server Deployment**: SSH to production server
+6. **Service Restart**: Update and restart containers
 
-### Production Considerations
-- All services should run behind reverse proxy (nginx)
-- Implement rate limiting and request size limits
-- Use production MongoDB cluster with proper indexing
-- Enable HTTPS with SSL certificates
-- Configure monitoring and logging
-- Set up automated backups for user data
+### Environment Management
+- **Development**: VITE_ prefixed variables in .env files
+- **Production**: Clean variable names via GitHub repository variables
+- **Runtime Config**: Generated config.json with actual values
+- **Security**: Secrets stored in GitHub repository secrets
 
----
+## Service Communication
 
-*This document should be updated as new features are added or architectural changes are made.*
+### API Gateway (tumbaland-proxy)
+- **Routing**: Routes requests to appropriate backend services
+- **Load Balancing**: Distributes load across service instances
+- **Authentication**: Validates JWT tokens
+- **CORS**: Handles cross-origin requests
+
+### Inter-Service Communication
+- **HTTP/HTTPS**: RESTful APIs between services
+- **Service Discovery**: Direct URLs for service communication
+- **Authentication**: Internal service tokens for backend communication
+
+## Security Considerations
+
+### Authentication & Authorization
+- **JWT Tokens**: Stateless authentication
+- **Google OAuth**: Social login integration
+- **Role-Based Access**: Different permission levels
+
+### Data Protection
+- **Environment Variables**: No secrets in codebase
+- **HTTPS Only**: Encrypted communication
+- **Input Validation**: Sanitized user inputs
+
+### Infrastructure Security
+- **Container Security**: Minimal base images
+- **Secret Management**: GitHub secrets for sensitive data
+- **Access Control**: SSH key-based server access
+
+## Development Best Practices
+
+### Code Organization
+- **Component Structure**: Reusable, modular components
+- **Service Layer**: Centralized API communication
+- **Type Safety**: Full TypeScript coverage
+
+### Testing Strategy
+- **Unit Tests**: Component and utility testing
+- **Integration Tests**: API endpoint testing
+- **E2E Tests**: Full user journey testing
+
+This architecture provides a scalable, maintainable, and secure platform for photo album management with AI-powered features, supporting both development and production environments efficiently.
+
+## Development Best Practices
+
+### Code Organization
+- **Component Structure**: Reusable, modular components
+- **Service Layer**: Centralized API communication
+- **Type Safety**: Full TypeScript coverage
+- **Error Boundaries**: Graceful error handling
+
+### Testing Strategy
+- **Unit Tests**: Component and utility testing
+- **Integration Tests**: API endpoint testing
+- **E2E Tests**: Full user journey testing
+
+This architecture provides a scalable, maintainable, and secure platform for photo album management with AI-powered features, supporting both development and production environments efficiently.

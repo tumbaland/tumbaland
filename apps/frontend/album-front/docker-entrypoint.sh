@@ -10,7 +10,9 @@ cat > /usr/share/nginx/html/config.json << EOF
   "FILE_API_URL": "${FILE_API_URL}",
   "SEGMENTATION_API_URL": "${SEGMENTATION_API_URL}",
   "OBJECT_DETECTION_API_URL": "${OBJECT_DETECTION_API_URL}",
-  "GROUP_API_URL": "${GROUP_API_URL}"
+  "GROUP_API_URL": "${GROUP_API_URL}",
+  "ACCOUNT_FRONT_URL": "${ACCOUNT_FRONT_URL}",
+  "SHELL_FRONT_URL": "${SHELL_FRONT_URL}"
 }
 EOF
 
@@ -19,3 +21,4 @@ cat /usr/share/nginx/html/config.json
 
 # Execute the original command
 exec "$@"
+

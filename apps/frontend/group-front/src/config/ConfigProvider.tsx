@@ -7,6 +7,8 @@ export interface AppConfig {
   GROUP_API_URL?: string;
   AUTH_SERVICE_URL?: string;
   AUTH_FRONT_URL?: string;
+  GROUP_FRONT_URL?: string;
+  SHELL_FRONT_URL?: string;
 }
 
 let globalConfig: AppConfig | null = null;
@@ -16,7 +18,9 @@ function createDevConfig(): AppConfig {
   return {
     GROUP_API_URL: import.meta.env.VITE_GROUP_API_URL,
     AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL,
-    AUTH_FRONT_URL: import.meta.env.VITE_AUTH_FRONT_URL
+    AUTH_FRONT_URL: import.meta.env.VITE_AUTH_FRONT_URL,
+    GROUP_FRONT_URL: import.meta.env.VITE_GROUP_FRONT_URL,
+    SHELL_FRONT_URL: import.meta.env.VITE_SHELL_FRONT_URL
   };
 }
 

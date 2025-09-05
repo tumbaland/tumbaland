@@ -3,6 +3,7 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import HomeIcon from '@mui/icons-material/Home';
 import PaymentIcon from '@mui/icons-material/Payment';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import { AppConfig } from './ConfigProvider';
 import GroupsIcon from '@mui/icons-material/Groups';
 
@@ -41,22 +42,33 @@ export const APPS: AppConfigItem[] = [
     urlKey: 'FINANCE_URL',
     icon: AttachMoneyIcon,
     color: '#22c55e'
-  },
+  }
+];
+
+export const USER_APPS: AppConfigItem[] = [
   {
     name: 'Payments',
     route: '/payments',
     urlKey: 'PAYMENT_URL',
     icon: PaymentIcon,
     color: '#6366f1'
-  }
-  ,
+  },
   {
     name: 'Groups',
     route: '/groups',
     urlKey: 'GROUP_URL',
     icon: GroupsIcon,
     color: '#7c3aed'
+  },
+  {
+    name: 'Account',
+    route: '/account',
+    urlKey: 'ACCOUNT_FRONT_URL',
+    icon: AccountCircleIcon,
+    color: '#0f172a'
   }
 ];
 
-export const getAppByRoute = (route: string) => APPS.find((app) => app.route === route);
+export const getAppByRoute = (route: string) => {
+  return [...APPS, ...USER_APPS].find((app) => app.route === route);
+};

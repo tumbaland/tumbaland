@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { AccountCircle, Login, Logout } from '@mui/icons-material';
+import { AccountCircle, Login, Logout, Person, Groups, Payment } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { User } from '../types';
@@ -137,6 +137,19 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
               </Box>
             </MenuItem>
             <Divider />
+            <MenuItem onClick={() => window.top?.location && (window.top.location.href = `${config.SHELL_FRONT_URL}/account`)}>
+              <Person fontSize="small" sx={{ mr: 1 }} />
+              Profile
+            </MenuItem>
+            <MenuItem onClick={() => window.top?.location && (window.top.location.href = `${config.SHELL_FRONT_URL}/groups`)}>
+              <Groups fontSize="small" sx={{ mr: 1 }} />
+              Groups
+            </MenuItem>
+            <MenuItem onClick={() => window.top?.location && (window.top.location.href = `${config.SHELL_FRONT_URL}/payments`)}>
+              <Payment fontSize="small" sx={{ mr: 1 }} />
+              Billing
+            </MenuItem>
+            <Divider />
             <MenuItem onClick={handleLogout}>
               <Logout fontSize="small" sx={{ mr: 1 }} />
               Logout
@@ -181,11 +194,12 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
   return (
     <AppBar
       position="static"
-      elevation={2}
+      elevation={0}
       sx={{
-        background: '#fff',
+        background: 'transparent',
         color: '#222',
-        boxShadow: '0 2px 8px 0 rgba(0,0,0,0.03)'
+        boxShadow: 'none',
+        borderBottom: '1px solid rgba(0,0,0,0.1)'
       }}
     >
       <Toolbar>

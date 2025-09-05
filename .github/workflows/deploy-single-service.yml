@@ -15,6 +15,7 @@ on:
           - finance-front
           - shell-front
           - auth-front
+          - account-front
           - payment-front
           - group-front
           - album-service
@@ -72,6 +73,12 @@ jobs:
               DOCKERFILE=./apps/frontend/auth-front/Dockerfile
               DEPLOYPATH=apps/frontend/auth-front/compose.yml
               DEPLOYDIR=apps/frontend/auth-front
+              ;;
+            account-front)
+              CONTEXT=./apps/frontend/account-front
+              DOCKERFILE=./apps/frontend/account-front/Dockerfile
+              DEPLOYPATH=apps/frontend/account-front/compose.yml
+              DEPLOYDIR=apps/frontend/account-front
               ;;
             payment-front)
               CONTEXT=./apps/frontend/payment-front
@@ -177,26 +184,26 @@ jobs:
           echo "ALPHA_VANTAGE_API_KEY=${{ secrets.ALPHA_VANTAGE_API_KEY }}" >> .env
           echo "FILE_API_URL=${{ vars.FILE_API_URL }}" >> .env
           echo "GROUP_API_URL=${{ vars.GROUP_API_URL }}" >> .env
-          echo "VITE_GOOGLE_CLIENT_ID=${{ vars.VITE_GOOGLE_CLIENT_ID }}" >> .env
-          echo "VITE_FILE_API_URL=${{ vars.VITE_FILE_API_URL }}" >> .env
-          echo "VITE_ALBUM_API_URL=${{ vars.VITE_ALBUM_API_URL }}" >> .env
-          echo "VITE_AUTH_SERVICE_URL=${{ vars.VITE_AUTH_SERVICE_URL }}" >> .env
-          echo "VITE_AUTH_FRONT_URL=${{ vars.VITE_AUTH_FRONT_URL }}" >> .env
-          echo "VITE_FINANCE_API_URL=${{ vars.VITE_FINANCE_API_URL }}" >> .env
-          echo "VITE_RELATIONSHIP_URL=${{ vars.VITE_RELATIONSHIP_URL }}" >> .env
-          echo "VITE_ALBUM_URL=${{ vars.VITE_ALBUM_URL }}" >> .env
-          echo "VITE_FINANCE_URL=${{ vars.VITE_FINANCE_URL }}" >> .env
-          echo "VITE_RELATIONSHIP_API_URL=${{ vars.VITE_RELATIONSHIP_API_URL }}" >> .env
-          echo "VITE_PUBLIC_API_URL=${{ vars.VITE_PUBLIC_API_URL }}" >> .env
-          echo "VITE_OBJECT_DETECTION_API_URL=${{ vars.VITE_OBJECT_DETECTION_API_URL }}" >> .env
-          echo "VITE_SEGMENTATION_API_URL=${{ vars.VITE_SEGMENTATION_API_URL }}" >> .env
-          echo "VITE_PAYMENT_API_URL=${{ vars.VITE_PAYMENT_API_URL }}" >> .env
+          echo "GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}" >> .env
+          echo "ALBUM_API_URL=${{ vars.ALBUM_API_URL }}" >> .env
+          echo "AUTH_SERVICE_URL=${{ vars.AUTH_SERVICE_URL }}" >> .env
+          echo "AUTH_FRONT_URL=${{ vars.AUTH_FRONT_URL }}" >> .env
+          echo "FINANCE_API_URL=${{ vars.FINANCE_API_URL }}" >> .env
+          echo "RELATIONSHIP_FRONT_URL=${{ vars.RELATIONSHIP_FRONT_URL }}" >> .env
+          echo "ALBUM_FRONT_URL=${{ vars.ALBUM_FRONT_URL }}" >> .env
+          echo "FINANCE_FRONT_URL=${{ vars.FINANCE_FRONT_URL }}" >> .env
+          echo "RELATIONSHIP_API_URL=${{ vars.RELATIONSHIP_API_URL }}" >> .env
+          echo "PUBLIC_API_URL=${{ vars.PUBLIC_API_URL }}" >> .env
+          echo "OBJECT_DETECTION_API_URL=${{ vars.OBJECT_DETECTION_API_URL }}" >> .env
+          echo "SEGMENTATION_API_URL=${{ vars.SEGMENTATION_API_URL }}" >> .env
+          echo "PAYMENT_API_URL=${{ vars.PAYMENT_API_URL }}" >> .env
           echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" >> .env
           echo "STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}" >> .env
-          echo "VITE_PAYMENT_URL=${{ vars.VITE_PAYMENT_URL }}" >> .env
+          echo "PAYMENT_FRONT_URL=${{ vars.PAYMENT_FRONT_URL }}" >> .env
           echo "PAYMENT_URL=${{ vars.PAYMENT_URL }}" >> .env
-          echo "VITE_GROUP_API_URL=${{ vars.VITE_GROUP_API_URL }}" >> .env
-          echo "VITE_GROUP_URL=${{ vars.VITE_GROUP_URL }}" >> .env
+          echo "GROUP_FRONT_URL=${{ vars.GROUP_FRONT_URL }}" >> .env
+          echo "ACCOUNT_FRONT_URL=${{ vars.ACCOUNT_FRONT_URL }}" >> .env
+          echo "SHELL_FRONT_URL=${{ vars.SHELL_FRONT_URL }}" >> .env
 
       - name: Copy .env file to server
         uses: appleboy/scp-action@v0.1.7
