@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.122](https://github.com/toomastahves/tumbaland/compare/v0.0.121...v0.0.122) (2025-09-05)
+
+
+### Bug Fixes
+
+* env vars in shell ([9cd14d4](https://github.com/toomastahves/tumbaland/commit/9cd14d4ca24c117b9cedcbbe83fc58f4df30db89))
+
 ### [0.0.121](https://github.com/toomastahves/tumbaland/compare/v0.0.120...v0.0.121) (2025-09-05)
 
 
