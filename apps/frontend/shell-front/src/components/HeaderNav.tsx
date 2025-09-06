@@ -164,6 +164,8 @@ export function HeaderNav({ currentRoute }: HeaderNavProps) {
     );
   };
 
+  const isActiveRoute = (route: string) => currentRoute === route;
+
   // Only show header nav for account management routes
   const isAccountManagementRoute = currentRoute?.startsWith('/account') ||
                                    currentRoute?.startsWith('/groups') ||
@@ -185,10 +187,37 @@ export function HeaderNav({ currentRoute }: HeaderNavProps) {
           px: 2,
           zIndex: 1000,
           position: 'relative',
-          borderBottom: '1px solid rgba(255,255,255,0.1)'
+          borderBottom: '1px solid rgba(0,0,0,0.1)'
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, pl: 5 }}>
+          {/* Compact nav icons for mobile */}
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <IconButton
+              aria-label="account"
+              color={isActiveRoute('/account') ? 'primary' : 'inherit'}
+              onClick={() => navigate('/account')}
+              size="large"
+            >
+              <Person />
+            </IconButton>
+            <IconButton
+              aria-label="groups"
+              color={isActiveRoute('/groups') ? 'primary' : 'inherit'}
+              onClick={() => navigate('/groups')}
+              size="large"
+            >
+              <Groups />
+            </IconButton>
+            <IconButton
+              aria-label="payments"
+              color={isActiveRoute('/payments') ? 'primary' : 'inherit'}
+              onClick={() => navigate('/payments')}
+              size="large"
+            >
+              <Payment />
+            </IconButton>
+          </Box>
         </Box>
 
         <Box sx={{ flexGrow: 0 }}>
@@ -210,10 +239,34 @@ export function HeaderNav({ currentRoute }: HeaderNavProps) {
         position: 'relative',
         marginLeft: '60px', // Account for fixed sidemenu width
         width: 'calc(100% - 60px)', // Ensure header spans remaining width
-        borderBottom: '1px solid rgba(255,255,255,0.1)'
+  borderBottom: '1px solid rgba(0,0,0,0.1)'
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, gap: 1 }}>
+        <Button
+          color={isActiveRoute('/account') ? 'primary' : 'inherit'}
+          onClick={() => navigate('/account')}
+          startIcon={<Person />}
+          sx={{ textTransform: 'none' }}
+        >
+          Account
+        </Button>
+        <Button
+          color={isActiveRoute('/groups') ? 'primary' : 'inherit'}
+          onClick={() => navigate('/groups')}
+          startIcon={<Groups />}
+          sx={{ textTransform: 'none' }}
+        >
+          Groups
+        </Button>
+        <Button
+          color={isActiveRoute('/payments') ? 'primary' : 'inherit'}
+          onClick={() => navigate('/payments')}
+          startIcon={<Payment />}
+          sx={{ textTransform: 'none' }}
+        >
+          Billing
+        </Button>
       </Box>
 
       <Box sx={{ flexGrow: 0 }}>
