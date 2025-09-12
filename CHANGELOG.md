@@ -1,4 +1,12 @@
 # Tumbalog
+### [0.0.128](https://github.com/toomastahves/tumbaland/compare/v0.0.127...v0.0.128) (2025-09-12)
+
+
+### Features
+
+* add readme ([7ba49ce](https://github.com/toomastahves/tumbaland/commit/7ba49ce58a8c3fd1335f887d82d64ad494a11d03))
+* create UnauthorizedPage component ([6798e6f](https://github.com/toomastahves/tumbaland/commit/6798e6f911f3d957015c7e89317e45b2ef5483d2))
+
 ### [0.0.127](https://github.com/toomastahves/tumbaland/compare/v0.0.126...v0.0.127) (2025-09-12)
 
 
