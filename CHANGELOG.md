@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.127](https://github.com/toomastahves/tumbaland/compare/v0.0.126...v0.0.127) (2025-09-12)
+
+
+### Bug Fixes
+
+* production build ([f4ae2fa](https://github.com/toomastahves/tumbaland/commit/f4ae2fa89d1606d4e699a8a94b76423a6129a169))
+
 ### [0.0.126](https://github.com/toomastahves/tumbaland/compare/v0.0.125...v0.0.126) (2025-09-12)
 
 
