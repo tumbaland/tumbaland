@@ -2,29 +2,27 @@
 
 A shared React component library for Tumbaland frontend applications, built with TypeScript and Material-UI.
 
-## Installation
+## Development
+
+### Running Storybook
+
+Start the interactive component development environment:
 
 ```bash
-npm install @tumbaland/components@^1.2.0
+npm run storybook:dev
 ```
 
-## Peer Dependencies
+### Building Documentation
 
-This library requires the following peer dependencies:
+### Building the Library
 
-```json
-{
-  "react": "^19.1.0",
-  "react-dom": "^19.1.0",
-  "@mui/material": "^7.1.2",
-  "@emotion/react": "^11.11.1",
-  "@emotion/styled": "^11.11.0"
-}
+Compile TypeScript and create distribution files:
+
+```bash
+npm run build
 ```
 
 ## Publishing the Library
-
-### Prerequisites
 
 1. **NPM Account**: You need an NPM account with publish permissions
 2. **NPM Token**: Set up authentication token for automated publishing

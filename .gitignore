@@ -7,3 +7,6 @@ import
 certs
 .env.stripe
 infra/stripe-cli/.env.stripe
+
+*storybook.log
+storybook-static

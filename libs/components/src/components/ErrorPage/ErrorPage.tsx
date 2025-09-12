@@ -2,11 +2,19 @@ import { Box, Typography, Button } from '@mui/material';
 import { ReactNode } from 'react';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 
-interface ErrorPageProps {
+/**
+ * Props for the ErrorPage component
+ */
+export interface ErrorPageProps {
+  /** The main error title to display */
   title?: string;
+  /** The error message content (can be text or React elements) */
   message?: string | ReactNode;
+  /** Custom icon to display (defaults to error icon) */
   icon?: ReactNode;
+  /** Whether to show the retry button */
   showRetry?: boolean;
+  /** Callback function when retry button is clicked */
   onRetry?: () => void;
 }
 

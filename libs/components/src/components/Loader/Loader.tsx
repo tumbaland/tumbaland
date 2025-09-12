@@ -1,8 +1,14 @@
 import { Box, CircularProgress, Typography } from '@mui/material';
 
-interface LoaderProps {
+/**
+ * Props for the Loader component
+ */
+export interface LoaderProps {
+  /** The loading message to display below the spinner */
   message?: string;
+  /** Size of the loading spinner in pixels */
   size?: number;
+  /** Whether to take full viewport height or auto height */
   fullHeight?: boolean;
 }
 
