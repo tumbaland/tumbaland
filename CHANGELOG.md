@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.129](https://github.com/toomastahves/tumbaland/compare/v0.0.128...v0.0.129) (2025-09-12)
+
+
+### Features
+
+* remove deprecated component ([ac68261](https://github.com/toomastahves/tumbaland/commit/ac682618a38ab70d62692d27b6d875297ced1870))
+
 ### [0.0.128](https://github.com/toomastahves/tumbaland/compare/v0.0.127...v0.0.128) (2025-09-12)
 
 
