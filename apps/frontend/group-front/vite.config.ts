@@ -2,13 +2,15 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
   server: { port: 3006 },
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
-      '@tumbaland/components': resolve(__dirname, '../../../libs/components/src')
+      ...(mode === 'development' && {
+        '@tumbaland/components': resolve(__dirname, '../../../libs/components/src')
+      })
     }
   },
   build: {
@@ -17,4 +19,4 @@ export default defineConfig({
     minify: false,
     cssCodeSplit: false
   }
-});
+}));

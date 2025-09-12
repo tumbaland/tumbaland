@@ -14,7 +14,9 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': resolve(__dirname, './src'),
-        '@tumbaland/components': resolve(__dirname, '../../../libs/components/src')
+        ...(mode === 'development' && {
+          '@tumbaland/components': resolve(__dirname, '../../../libs/components/src')
+        })
       }
     },
     define: {
