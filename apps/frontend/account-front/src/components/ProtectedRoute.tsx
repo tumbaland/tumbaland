@@ -1,7 +1,6 @@
 import { useState, useEffect, ReactNode } from 'react';
-import { Box, CircularProgress } from '@mui/material';
 import { authService } from '../services/authService';
-import { UnauthorizedPage } from '@tumbaland/components';
+import { UnauthorizedPage, Loader } from '@tumbaland/components';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -28,19 +27,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }, []);
 
   if (isLoading) {
-    return (
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)'
-        }}
-      >
-        <CircularProgress size={60} />
-      </Box>
-    );
+    return <Loader message="Checking authentication..." />;
   }
 
   if (!isAuthenticated) {
