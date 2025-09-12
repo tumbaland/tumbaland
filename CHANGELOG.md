@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.124](https://github.com/toomastahves/tumbaland/compare/v0.0.123...v0.0.124) (2025-09-12)
+
+
+### Bug Fixes
+
+* error message ([58c27ae](https://github.com/toomastahves/tumbaland/commit/58c27ae90528bbd4f3c35676b6a54ec9ac9f222a))
+
 ### [0.0.123](https://github.com/toomastahves/tumbaland/compare/v0.0.122...v0.0.123) (2025-09-06)
 
 
