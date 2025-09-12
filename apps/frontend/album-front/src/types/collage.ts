@@ -47,4 +47,5 @@ export interface CollageInput {
   config: CollageConfig;
   albumId: string;
   ownerId?: string;
+  groupId?: string;
 }

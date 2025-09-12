@@ -26,7 +26,8 @@ import {
   PhotoLibrary as PhotoLibraryIcon,
   MoreVert as MoreVertIcon,
   Edit as EditIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAlbums } from '../hooks/useAlbums';
@@ -64,7 +65,8 @@ const AlbumsPage: React.FC = () => {
     error: albumsError,
     createAlbum,
     updateAlbum,
-    deleteAlbum
+    deleteAlbum,
+    fetchAlbums
   } = useAlbums({
     search: searchTerm || undefined,
     groupId: tenantGroupId, // Pass groupId only if present (group context), undefined for personal
@@ -234,6 +236,15 @@ const AlbumsPage: React.FC = () => {
           }}
           sx={{ maxWidth: 400, flex: 1, minWidth: 200 }}
         />
+        <IconButton
+          onClick={() => fetchAlbums()}
+          disabled={loading}
+          color="primary"
+          sx={{ flexShrink: 0 }}
+          title="Refresh albums"
+        >
+          <RefreshIcon />
+        </IconButton>
       </Box>
 
       {albumsError && (

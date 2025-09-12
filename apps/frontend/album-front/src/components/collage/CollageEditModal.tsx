@@ -10,10 +10,14 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  IconButton,
+  InputAdornment
 } from '@mui/material';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { Collage, CollageInput } from '../../types/collage';
 import { useAlbums } from '../../hooks/useAlbums';
+import { useTenantFilter } from '../../components/tenant';
 
 interface CollageEditModalProps {
   open: boolean;
@@ -28,7 +32,10 @@ export const CollageEditModal: React.FC<CollageEditModalProps> = ({ open, onClos
   const [albumId, setAlbumId] = useState(initialData.albumId || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { albums, loading: albumsLoading } = useAlbums();
+  const tenantGroupId = useTenantFilter(); // Get groupId from tenant context
+  const { albums, loading: albumsLoading, fetchAlbums } = useAlbums({
+    groupId: tenantGroupId // Pass groupId only if present (group context), undefined for personal
+  });
 
   React.useEffect(() => {
     setTitle(initialData.title);
@@ -48,7 +55,8 @@ export const CollageEditModal: React.FC<CollageEditModalProps> = ({ open, onClos
           title: { text: title, subtitle }
         },
         ownerId: initialData.ownerId,
-        albumId
+        albumId,
+        groupId: tenantGroupId // Include the active group ID from tenant context
       });
       onClose();
     } catch (e: any) {
@@ -56,6 +64,10 @@ export const CollageEditModal: React.FC<CollageEditModalProps> = ({ open, onClos
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRefreshAlbums = () => {
+    fetchAlbums();
   };
 
   return (
@@ -69,6 +81,18 @@ export const CollageEditModal: React.FC<CollageEditModalProps> = ({ open, onClos
             value={albumId}
             label="Album"
             onChange={(e) => setAlbumId(e.target.value)}
+            endAdornment={
+              <InputAdornment position="end">
+                <IconButton
+                  onClick={handleRefreshAlbums}
+                  disabled={albumsLoading || loading}
+                  size="small"
+                  sx={{ mr: 2 }}
+                >
+                  <RefreshIcon fontSize="small" />
+                </IconButton>
+              </InputAdornment>
+            }
           >
             {albums.map((album) => (
               <MenuItem key={album._id} value={album._id}>
