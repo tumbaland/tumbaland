@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.125](https://github.com/toomastahves/tumbaland/compare/v0.0.124...v0.0.125) (2025-09-12)
+
+
+### Features
+
+* create Loader component ([f2383ae](https://github.com/toomastahves/tumbaland/commit/f2383ae1db7b4bf4f5c64f394ff45dbf2eae2973))
+
 ### [0.0.124](https://github.com/toomastahves/tumbaland/compare/v0.0.123...v0.0.124) (2025-09-12)
 
 
