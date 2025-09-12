@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Box, Typography, TableContainer, Table, TableHead, TableBody, TableRow, TableCell, Paper } from '@mui/material';
 import { paymentApi } from '../services/paymentApi';
 import { Payment } from '../types';
-import { Loader } from '../components/Loader';
+import { Loader } from '@tumbaland/components';
 
 const PaymentsHistoryPage: React.FC = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -17,7 +17,7 @@ const PaymentsHistoryPage: React.FC = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <Loader message="Loading payments" />;
+  if (loading) return <Loader message="Loading payments" fullHeight={false} />;
   if (error) return <Box sx={{ mt:4, textAlign: 'center' }}>Error loading payments: {error}</Box>;
 
   return (

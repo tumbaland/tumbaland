@@ -16,7 +16,8 @@
     "@mui/icons-material": "^7.1.2",
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
-    "react-router-dom": "^7.6.3"
+    "react-router-dom": "^7.6.3",
+    "@tumbaland/components": "*"
   },
   "devDependencies": {
     "@types/react": "^19.1.2",

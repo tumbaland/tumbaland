@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Box, Typography, Button, Card, CardContent, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Paper, Chip } from '@mui/material';
 import { paymentApi } from '../services/paymentApi';
 import { Subscription } from '../types';
-import { Loader } from '../components/Loader';
+import { Loader } from '@tumbaland/components';
 
 const SubscriptionPage: React.FC = () => {
   const [sub, setSub] = useState<Subscription | null>(null);
@@ -31,7 +31,7 @@ const SubscriptionPage: React.FC = () => {
     load();
   };
 
-  if (loading) return <Loader message="Loading subscription" />;
+  if (loading) return <Loader message="Loading subscription" fullHeight={false} />;
 
   return (
     <Box sx={{ py: 4 }}>

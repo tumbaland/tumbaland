@@ -1,8 +1,27 @@
 {
   "name": "@tumbaland/components",
-  "version": "1.0.0",
-  "author": "Toomas Tahves",
+  "version": "1.0.4",
+  "author": "Tumbaland",
   "license": "MIT",
-  "dependencies": {},
-  "devDependencies": {}
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "release": "standard-version && npm run build && npm publish --access public",
+    "release:beta": "standard-version --prerelease beta && npm run build && npm publish --access public --tag beta"
+  },
+  "dependencies": {
+    "@mui/material": "^7.1.2"
+  },
+  "peerDependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "standard-version": "^9.5.0",
+    "typescript": "^5.8.3"
+  }
 }

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Box, Typography, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Paper, Chip } from '@mui/material';
 import { paymentApi } from '../services/paymentApi';
 import { Subscription } from '../types';
-import { Loader } from '../components/Loader';
+import { Loader } from '@tumbaland/components';
 
 const statusColor: Record<string,string> = { active: 'success', past_due: 'warning', incomplete: 'info', canceled: 'default' };
 
@@ -18,7 +18,7 @@ const AllSubscriptionsPage: React.FC = () => {
       .finally(()=> setLoading(false));
   }, []);
 
-  if (loading) return <Loader message="Loading subscriptions" />;
+  if (loading) return <Loader message="Loading subscriptions" fullHeight={false} />;
   if (error) return <Box sx={{ py:4 }}>{error}</Box>;
 
   return (

@@ -1,6 +1,6 @@
 import { useEffect, useState, ReactNode } from 'react';
 import { CssBaseline } from '@mui/material';
-import { Loader } from '../components/Loader';
+import { Loader } from '@tumbaland/components';
 import { authService } from '../services/authService';
 import React from 'react';
 import { ErrorPage } from '../components/ErrorPage';

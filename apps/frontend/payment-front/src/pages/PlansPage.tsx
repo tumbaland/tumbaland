@@ -3,7 +3,7 @@ import { Box, Card, CardActions, CardContent, Button, Typography, Divider } from
 import { useNavigate } from 'react-router-dom';
 import { paymentApi } from '../services/paymentApi';
 import { Plan, Subscription } from '../types';
-import { Loader } from '../components/Loader';
+import { Loader } from '@tumbaland/components';
 
 const PlansPage: React.FC = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -29,7 +29,7 @@ const PlansPage: React.FC = () => {
     })();
   }, []);
 
-  if (loading) return <Loader message="Loading plans" />;
+  if (loading) return <Loader message="Loading plans" fullHeight={false} />;
   if (error) return <Box sx={{ mt: 4, textAlign: 'center' }}>Error loading plans: {error}</Box>;
 
   // Derive simple feature matrix; real implementation could come from backend with structured attributes
