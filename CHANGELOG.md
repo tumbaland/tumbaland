@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.126](https://github.com/toomastahves/tumbaland/compare/v0.0.125...v0.0.126) (2025-09-12)
+
+
+### Features
+
+* add ErrorPage component ([64b4aa9](https://github.com/toomastahves/tumbaland/commit/64b4aa9ccf2cf5fcd174185a0d5e35e5822f561e))
+
 ### [0.0.125](https://github.com/toomastahves/tumbaland/compare/v0.0.124...v0.0.125) (2025-09-12)
 
 
