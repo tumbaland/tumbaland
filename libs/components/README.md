@@ -2,6 +2,26 @@
 
 A shared React component library for Tumbaland frontend applications, built with TypeScript and Material-UI.
 
+## Installation
+
+```bash
+npm install @tumbaland/components@^1.2.0
+```
+
+## Peer Dependencies
+
+This library requires the following peer dependencies:
+
+```json
+{
+  "react": "^19.1.0",
+  "react-dom": "^19.1.0",
+  "@mui/material": "^7.1.2",
+  "@emotion/react": "^11.11.1",
+  "@emotion/styled": "^11.11.0"
+}
+```
+
 ## Publishing the Library
 
 ### Prerequisites

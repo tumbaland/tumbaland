@@ -1,13 +1,12 @@
 import React from 'react';
 import { Box, Typography, Button, Container, Paper } from '@mui/material';
 import { Lock, Login } from '@mui/icons-material';
-import { authService } from '../services/authService';
 
-const UnauthorizedPage: React.FC = () => {
-  const handleLogin = () => {
-    authService.redirectToLogin();
-  };
+interface UnauthorizedPageProps {
+  onLogin: () => void;
+}
 
+const UnauthorizedPage: React.FC<UnauthorizedPageProps> = ({ onLogin }) => {
   return (
     <Container maxWidth="sm" sx={{ mt: 8 }}>
       <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
@@ -22,7 +21,7 @@ const UnauthorizedPage: React.FC = () => {
         </Typography>
 
         <Box sx={{ mt: 4 }}>
-          <Button variant="contained" size="large" startIcon={<Login />} onClick={handleLogin} sx={{ px: 4, py: 1.5 }}>
+          <Button variant="contained" size="large" startIcon={<Login />} onClick={onLogin} sx={{ px: 4, py: 1.5 }}>
             Sign In to Continue
           </Button>
         </Box>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { authService } from '../services/authService';
-import UnauthorizedPage from './UnauthorizedPage';
+import { UnauthorizedPage } from '@tumbaland/components';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -48,7 +48,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   if (!isAuthenticated) {
-    return <UnauthorizedPage />;
+    return <UnauthorizedPage onLogin={() => authService.redirectToLogin()} />;
   }
 
   return <>{children}</>;
