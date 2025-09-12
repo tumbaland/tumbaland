@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.131](https://github.com/toomastahves/tumbaland/compare/v0.0.130...v0.0.131) (2025-09-12)
+
+
+### Features
+
+* use loader component ([b78b0b5](https://github.com/toomastahves/tumbaland/commit/b78b0b51b4b3b192d425206654bb368867369e43))
+
 ### [0.0.130](https://github.com/toomastahves/tumbaland/compare/v0.0.129...v0.0.130) (2025-09-12)
 
 
