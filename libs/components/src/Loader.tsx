@@ -1,5 +1,4 @@
 import { Box, CircularProgress, Typography } from '@mui/material';
-import React from 'react';
 
 interface LoaderProps {
   message?: string;

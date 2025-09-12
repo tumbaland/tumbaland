@@ -1,7 +1,7 @@
 import { useEffect, useState, ReactNode } from 'react';
 import { CssBaseline } from '@mui/material';
-import { Loader } from '@tumbaland/components';
-import { ErrorPage } from '../components/ErrorPage';
+import { Loader, ErrorPage } from '@tumbaland/components';
+import HeartBrokenIcon from '@mui/icons-material/HeartBroken';
 import React from 'react';
 import { authService } from '../services/authService';
 
@@ -90,7 +90,14 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
   }, []);
 
   if (error) {
-    return <ErrorPage />;
+    return (
+      <ErrorPage
+        title="Something went wrong"
+        message=""
+        icon={<HeartBrokenIcon sx={{ fontSize: 80, color: '#ef4444', mb: 2 }} />}
+        showRetry={false}
+      />
+    );
   }
 
   if (!config) {

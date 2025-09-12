@@ -1,9 +1,8 @@
 import { useEffect, useState, ReactNode } from 'react';
 import { CssBaseline } from '@mui/material';
-import { Loader } from '@tumbaland/components';
+import { Loader, ErrorPage } from '@tumbaland/components';
 import { authService } from '../services/authService';
 import React from 'react';
-import { ErrorPage } from '../components/ErrorPage';
 
 export interface AppConfig {
   AUTH_SERVICE_URL?: string;
