@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.132](https://github.com/toomastahves/tumbaland/compare/v0.0.131...v0.0.132) (2025-09-12)
+
+
+### Features
+
+* add group selection to collage ([12e6e0b](https://github.com/toomastahves/tumbaland/commit/12e6e0bc5dd0a9fda48e232fbaba443de2d26bb0))
+
 ### [0.0.131](https://github.com/toomastahves/tumbaland/compare/v0.0.130...v0.0.131) (2025-09-12)
 
 
