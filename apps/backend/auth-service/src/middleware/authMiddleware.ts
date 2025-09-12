@@ -39,7 +39,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
   (req as any).dbUser = dbUser;
     next();
   } catch (error) {
-    console.error('Token verification failed:', error);
+    console.error('Token verification failed:', (error as Error)?.message);
     res.status(401).json({ success: false, message: 'Invalid or expired token' });
   }
 };
