@@ -24,6 +24,8 @@ export interface PaginatedResponse<T> {
 export interface User {
   id: string;
   email: string;
+  firstName?: string;
+  lastName?: string;
   name: string;
   picture?: string;
 }
@@ -31,4 +33,15 @@ export interface User {
 export interface AuthResponse {
   authenticated: boolean;
   user: User | null;
+}
+
+export interface UpdateProfileRequest {
+  firstName?: string;
+  lastName?: string;
+}
+
+export interface UpdateProfileResponse {
+  success: boolean;
+  user: User;
+  message?: string;
 }

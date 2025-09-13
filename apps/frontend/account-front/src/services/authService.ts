@@ -106,6 +106,32 @@ export const authService = {
     return authResult.user;
   },
 
+  // Get full profile info including firstName and lastName
+  async getProfile(): Promise<User | null> {
+    try {
+      const config = getGlobalConfig();
+      
+      const response = await fetch(`${config.AUTH_SERVICE_URL}/auth/profile`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Profile fetch error:', response.status, errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.success ? data.user : null;
+    } catch (error) {
+      console.error('Get profile failed:', error);
+      return null;
+    }
+  },
+
   // Check if user is authenticated
   async isAuthenticated(): Promise<boolean> {
     const authResult = await this.checkAuth();

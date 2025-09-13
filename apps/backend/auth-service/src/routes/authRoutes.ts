@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { validateToken, logout, getProfile, verifyAuth } from '../controllers/authController';
+import { validateToken, logout, verifyAuth } from '../controllers/authController';
+import { getProfile, updateProfile } from '../controllers/profileController';
 import { authenticateToken, requireRole, requireApproved } from '../middleware/authMiddleware';
 import { User } from '../models/User';
 
@@ -13,6 +14,7 @@ router.post('/logout', authenticateToken, requireApproved, logout);
 
 // Protected routes
 router.get('/profile', authenticateToken, requireApproved, getProfile);
+router.put('/profile', authenticateToken, requireApproved, updateProfile);
 
 // Verify route now fully protected
 router.get('/verify', authenticateToken, requireApproved, verifyAuth);

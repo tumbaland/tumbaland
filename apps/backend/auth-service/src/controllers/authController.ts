@@ -85,15 +85,6 @@ export const logout = (req: Request, res: Response): void => {
   res.json({ success: true, message: 'Logged out successfully' });
 };
 
-export const getProfile = (req: Request, res: Response): void => {
-  if (!req.user) {
-    res.status(401).json({ success: false, message: 'Not authenticated' });
-    return;
-  }
-  const dbUser = (req as any).dbUser;
-  res.json({ success: true, user: req.user, approved: dbUser ? dbUser.isApproved : undefined });
-};
-
 export const verifyAuth = (req: Request, res: Response): void => {
   res.json({
     success: true,
