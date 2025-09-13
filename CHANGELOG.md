@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.133](https://github.com/toomastahves/tumbaland/compare/v0.0.132...v0.0.133) (2025-09-13)
+
+
+### Features
+
+* add update profile ([dad0641](https://github.com/toomastahves/tumbaland/commit/dad06415800a5d29e6a3f75ff2e197f5309ba0a1))
+
 ### [0.0.132](https://github.com/toomastahves/tumbaland/compare/v0.0.131...v0.0.132) (2025-09-12)
 
 
