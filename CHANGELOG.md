@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.134](https://github.com/toomastahves/tumbaland/compare/v0.0.133...v0.0.134) (2025-09-15)
+
+
+### Features
+
+* add filters to relationships ([fee7a51](https://github.com/toomastahves/tumbaland/commit/fee7a51dd78a805af25471fe0a50604046cff254))
+
 ### [0.0.133](https://github.com/toomastahves/tumbaland/compare/v0.0.132...v0.0.133) (2025-09-13)
 
 
