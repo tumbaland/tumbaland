@@ -34,6 +34,7 @@ export const useActivities = (filters?: GetActivitiesFilters) => {
       filters?.activityType,
       filters?.startDate,
       filters?.endDate,
+      filters?.description,
       filters?.sortBy,
       filters?.sortOrder,
       filters?.groupId
@@ -59,6 +60,7 @@ export const useActivities = (filters?: GetActivitiesFilters) => {
         }
       }
     } catch (err: any) {
+      console.error('useActivities: Error loading activities:', err);
       setError(err.response?.data?.error || err.message || 'Failed to load activities');
     } finally {
       setLoading(false);

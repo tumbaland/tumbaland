@@ -4,6 +4,7 @@ import { useActivities } from '../hooks/useActivities';
 import { ActivityType } from '../api/types';
 import AddActivityModal from '../components/AddActivityModal';
 import ActivitiesTable from '../components/ActivitiesTable';
+import ActivitiesFilter, { ActivityFilters } from '../components/ActivitiesFilter';
 import { useTenantFilter } from '../components/tenant';
 
 const Activities: React.FC = () => {
@@ -12,8 +13,27 @@ const Activities: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
+  // Filter state
+  const [filters, setFilters] = useState<ActivityFilters>({});
+  
   // Get the current tenant's group ID
   const tenantGroupId = useTenantFilter();
+
+  // Construct the filters object for useActivities
+  const activitiesFilters = {
+    page: page + 1, // API uses 1-based pagination
+    limit: rowsPerPage,
+    sortBy,
+    sortOrder,
+    groupId: tenantGroupId,
+    // Apply filters
+    activityType: filters.activityType,
+    startDate: filters.startDate,
+    endDate: filters.endDate,
+    description: filters.description
+  };
+
+  console.log('Activities: Final filters passed to useActivities:', activitiesFilters);
 
   const {
     activities = [],
@@ -21,13 +41,7 @@ const Activities: React.FC = () => {
     error,
     pagination,
     refetch
-  } = useActivities({
-    page: page + 1, // API uses 1-based pagination
-    limit: rowsPerPage,
-    sortBy,
-    sortOrder,
-    groupId: tenantGroupId
-  });
+  } = useActivities(activitiesFilters);
   const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage);
   };
@@ -46,6 +60,16 @@ const Activities: React.FC = () => {
     setSortOrder(isAsc ? 'desc' : 'asc');
     setSortBy(field);
     setPage(0); // Reset to first page when sorting
+  };
+
+  const handleFiltersChange = (newFilters: ActivityFilters) => {
+    setFilters(newFilters);
+    setPage(0); // Reset to first page when filtering
+  };
+
+  const handleClearFilters = () => {
+    setFilters({});
+    setPage(0);
   };
 
   const getActivityColor = (activityType: ActivityType) => {
@@ -108,6 +132,12 @@ const Activities: React.FC = () => {
         </Typography>
         <AddActivityModal onActivityAdded={refetch} />
       </Box>
+
+      <ActivitiesFilter
+        filters={filters}
+        onFiltersChange={handleFiltersChange}
+        onClearFilters={handleClearFilters}
+      />
 
       <Paper
         sx={{

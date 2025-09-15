@@ -17,6 +17,7 @@ export const getActivities = async (
     activityType?: string;
     startDate?: Date;
     endDate?: Date;
+    description?: string;
     limit?: number;
     page?: number;
     sortBy?: string;
@@ -31,6 +32,7 @@ export const getActivities = async (
       activityType, 
       startDate, 
       endDate, 
+      description,
       limit = 20, 
       page = 1, 
       sortBy = 'date', 
@@ -51,6 +53,10 @@ export const getActivities = async (
       query.date = {};
       if (startDate) query.date.$gte = startDate;
       if (endDate) query.date.$lte = endDate;
+    }
+
+    if (description) {
+      query['activity.description'] = { $regex: description, $options: 'i' };
     }
 
     // Apply permission filtering

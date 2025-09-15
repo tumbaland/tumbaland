@@ -30,6 +30,7 @@ export interface GetActivitiesFilters {
   activityType?: ActivityType;
   startDate?: Date | string;
   endDate?: Date | string;
+  description?: string;
   limit?: number;
   page?: number;
   sortBy?: string;

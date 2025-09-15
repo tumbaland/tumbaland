@@ -50,7 +50,7 @@ export const createActivity = async (req: Request, res: Response): Promise<void>
 // Get all activities with filters
 export const getActivities = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { activityType, startDate, endDate, limit, page, sortBy, sortOrder, groupId } = req.query;
+    const { activityType, startDate, endDate, description, limit, page, sortBy, sortOrder, groupId } = req.query;
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
 
@@ -65,6 +65,7 @@ export const getActivities = async (req: Request, res: Response): Promise<void> 
     if (activityType) filters.activityType = activityType as string;
     if (startDate) filters.startDate = new Date(startDate as string);
     if (endDate) filters.endDate = new Date(endDate as string);
+    if (description) filters.description = description as string;
     if (limit) filters.limit = parseInt(limit as string) || 20;
     if (page) filters.page = parseInt(page as string) || 1;
     if (sortBy) filters.sortBy = sortBy as string;

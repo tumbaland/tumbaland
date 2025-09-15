@@ -28,6 +28,7 @@ export const getActivities = async (filters?: GetActivitiesFilters): Promise<Act
   if (filters?.activityType) params.append('activityType', filters.activityType);
   if (filters?.startDate) params.append('startDate', new Date(filters.startDate).toISOString());
   if (filters?.endDate) params.append('endDate', new Date(filters.endDate).toISOString());
+  if (filters?.description) params.append('description', filters.description);
   if (filters?.limit) params.append('limit', filters.limit.toString());
   if (filters?.page) params.append('page', filters.page.toString());
   if (filters?.sortBy) params.append('sortBy', filters.sortBy);
