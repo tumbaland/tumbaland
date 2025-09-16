@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.135](https://github.com/toomastahves/tumbaland/compare/v0.0.134...v0.0.135) (2025-09-16)
+
+
+### Features
+
+* add automatic cloudflare update script ([8b4abf9](https://github.com/toomastahves/tumbaland/commit/8b4abf9e0d2d40923c7a74eacea137daea355300))
+
 ### [0.0.134](https://github.com/toomastahves/tumbaland/compare/v0.0.133...v0.0.134) (2025-09-15)
 
 
