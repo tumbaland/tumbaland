@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.136](https://github.com/toomastahves/tumbaland/compare/v0.0.135...v0.0.136) (2025-09-16)
+
+
+### Bug Fixes
+
+* default hours to empty string ([b83454f](https://github.com/toomastahves/tumbaland/commit/b83454fada83f30a1e2f91ad2b7a3e9d9a82e9bc))
+
 ### [0.0.135](https://github.com/toomastahves/tumbaland/compare/v0.0.134...v0.0.135) (2025-09-16)
 
 
