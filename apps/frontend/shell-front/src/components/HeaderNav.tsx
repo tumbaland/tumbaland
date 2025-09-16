@@ -1,35 +1,27 @@
-import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
-import {
-  Avatar,
-  Menu,
-  MenuItem,
-  IconButton,
-  Typography,
-  Divider,
-  CircularProgress
-} from '@mui/material';
-import { AccountCircle, Login, Logout, Person, Groups, Payment } from '@mui/icons-material';
+import { Person, Groups, Payment } from '@mui/icons-material';
 import { authService } from '../services/authService';
 import { User } from '../types';
+import { NotificationsMenu } from '@tumbaland/components';
+import { AccountMenu } from './AccountMenu';
+import { NavigationButtons } from './NavigationButtons';
+import { LoginButton } from '@tumbaland/components';
 
 interface HeaderNavProps {
   currentRoute?: string;
 }
 
 export function HeaderNav({ currentRoute }: HeaderNavProps) {
-  const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [notificationAnchorEl, setNotificationAnchorEl] = useState<null | HTMLElement>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -40,7 +32,7 @@ export function HeaderNav({ currentRoute }: HeaderNavProps) {
       } catch (error) {
         console.error('Auth check failed:', error);
       } finally {
-        setIsLoading(false);
+        // Loading complete
       }
     };
 
@@ -55,116 +47,44 @@ export function HeaderNav({ currentRoute }: HeaderNavProps) {
     setAnchorEl(null);
   };
 
+  const handleNotificationClick = (event: React.MouseEvent<HTMLElement>) => {
+    setNotificationAnchorEl(event.currentTarget);
+  };
+
+  const handleNotificationClose = () => {
+    setNotificationAnchorEl(null);
+  };
+
   const handleLogin = () => {
     authService.redirectToLogin();
   };
 
   const handleLogout = async () => {
-    setIsLoading(true);
     await authService.logout();
     handleMenuClose();
   };
 
-  const renderAuthSection = () => {
-    if (isLoading) {
-      return (
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <CircularProgress size={24} color="inherit" />
-        </Box>
-      );
+  // Define navigation items
+  const navigationItems = [
+    {
+      key: 'account',
+      label: 'Account',
+      route: '/account',
+      icon: Person,
+    },
+    {
+      key: 'groups',
+      label: 'Groups',
+      route: '/groups',
+      icon: Groups,
+    },
+    {
+      key: 'payments',
+      label: 'Billing',
+      route: '/payments',
+      icon: Payment,
     }
-
-    if (isAuthenticated && user) {
-      return (
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Typography variant="body2" sx={{ mr: 2, display: { xs: 'none', sm: 'block' } }}>
-            {user.name}
-          </Typography>
-          <IconButton
-            onClick={handleMenuOpen}
-            size="large"
-            edge="end"
-            aria-label="account menu"
-            aria-controls="account-menu"
-            aria-haspopup="true"
-            color="inherit"
-          >
-            {user.picture ? (
-              <Avatar src={user.picture} alt={user.name} sx={{ width: 32, height: 32 }} />
-            ) : (
-              <AccountCircle />
-            )}
-          </IconButton>
-          <Menu
-            id="account-menu"
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={handleMenuClose}
-            MenuListProps={{
-              'aria-labelledby': 'account-button'
-            }}
-            transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-            anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-          >
-            <MenuItem disabled>
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'flex-start'
-                }}
-              >
-                <Typography variant="body2" fontWeight="bold">
-                  {user.name}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {user.email}
-                </Typography>
-              </Box>
-            </MenuItem>
-            <Divider />
-            <MenuItem onClick={() => { navigate('/account'); handleMenuClose(); }}>
-              <Person fontSize="small" sx={{ mr: 1 }} />
-              Account
-            </MenuItem>
-            <MenuItem onClick={() => { navigate('/groups'); handleMenuClose(); }}>
-              <Groups fontSize="small" sx={{ mr: 1 }} />
-              Groups
-            </MenuItem>
-            <MenuItem onClick={() => { navigate('/payments'); handleMenuClose(); }}>
-              <Payment fontSize="small" sx={{ mr: 1 }} />
-              Billing
-            </MenuItem>
-            <Divider />
-            <MenuItem onClick={handleLogout}>
-              <Logout fontSize="small" sx={{ mr: 1 }} />
-              Logout
-            </MenuItem>
-          </Menu>
-        </Box>
-      );
-    }
-
-    return (
-      <Button
-        color="inherit"
-        onClick={handleLogin}
-        variant="outlined"
-        startIcon={<Login />}
-        sx={{
-          borderColor: 'rgba(0, 0, 0, 0.3)',
-          '&:hover': {
-            borderColor: 'rgba(0, 0, 0, 0.7)',
-            backgroundColor: 'rgba(0, 0, 0, 0.1)'
-          }
-        }}
-      >
-        Login
-      </Button>
-    );
-  };
-
-  const isActiveRoute = (route: string) => currentRoute === route;
+  ];
 
   // Only show header nav for account management routes
   const isAccountManagementRoute = currentRoute?.startsWith('/account') ||
@@ -191,37 +111,33 @@ export function HeaderNav({ currentRoute }: HeaderNavProps) {
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, pl: 5 }}>
-          {/* Compact nav icons for mobile */}
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            <IconButton
-              aria-label="account"
-              color={isActiveRoute('/account') ? 'primary' : 'inherit'}
-              onClick={() => navigate('/account')}
-              size="large"
-            >
-              <Person />
-            </IconButton>
-            <IconButton
-              aria-label="groups"
-              color={isActiveRoute('/groups') ? 'primary' : 'inherit'}
-              onClick={() => navigate('/groups')}
-              size="large"
-            >
-              <Groups />
-            </IconButton>
-            <IconButton
-              aria-label="payments"
-              color={isActiveRoute('/payments') ? 'primary' : 'inherit'}
-              onClick={() => navigate('/payments')}
-              size="large"
-            >
-              <Payment />
-            </IconButton>
-          </Box>
+          <NavigationButtons
+            items={navigationItems}
+            currentRoute={currentRoute}
+            variant="icons"
+          />
         </Box>
 
         <Box sx={{ flexGrow: 0 }}>
-          {renderAuthSection()}
+          {isAuthenticated && user ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <NotificationsMenu
+                onClick={handleNotificationClick}
+                anchorEl={notificationAnchorEl}
+                onClose={handleNotificationClose}
+              />
+              <AccountMenu
+                user={user}
+                anchorEl={anchorEl}
+                onMenuOpen={handleMenuOpen}
+                onMenuClose={handleMenuClose}
+                onLogout={handleLogout}
+                navigationItems={navigationItems}
+              />
+            </Box>
+          ) : (
+            <LoginButton onClick={handleLogin} />
+          )}
         </Box>
       </Box>
     );
@@ -239,38 +155,37 @@ export function HeaderNav({ currentRoute }: HeaderNavProps) {
         position: 'relative',
         marginLeft: '60px', // Account for fixed sidemenu width
         width: 'calc(100% - 60px)', // Ensure header spans remaining width
-  borderBottom: '1px solid rgba(0,0,0,0.1)'
+        borderBottom: '1px solid rgba(0,0,0,0.1)'
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, gap: 1 }}>
-        <Button
-          color={isActiveRoute('/account') ? 'primary' : 'inherit'}
-          onClick={() => navigate('/account')}
-          startIcon={<Person />}
-          sx={{ textTransform: 'none' }}
-        >
-          Account
-        </Button>
-        <Button
-          color={isActiveRoute('/groups') ? 'primary' : 'inherit'}
-          onClick={() => navigate('/groups')}
-          startIcon={<Groups />}
-          sx={{ textTransform: 'none' }}
-        >
-          Groups
-        </Button>
-        <Button
-          color={isActiveRoute('/payments') ? 'primary' : 'inherit'}
-          onClick={() => navigate('/payments')}
-          startIcon={<Payment />}
-          sx={{ textTransform: 'none' }}
-        >
-          Billing
-        </Button>
+        <NavigationButtons
+          items={navigationItems}
+          currentRoute={currentRoute}
+          variant="buttons"
+        />
       </Box>
 
       <Box sx={{ flexGrow: 0 }}>
-        {renderAuthSection()}
+        {isAuthenticated && user ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <NotificationsMenu
+              onClick={handleNotificationClick}
+              anchorEl={notificationAnchorEl}
+              onClose={handleNotificationClose}
+            />
+            <AccountMenu
+              user={user}
+              anchorEl={anchorEl}
+              onMenuOpen={handleMenuOpen}
+              onMenuClose={handleMenuClose}
+              onLogout={handleLogout}
+              navigationItems={navigationItems}
+            />
+          </Box>
+        ) : (
+          <LoginButton onClick={handleLogin} />
+        )}
       </Box>
     </Box>
   );

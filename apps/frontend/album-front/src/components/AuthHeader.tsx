@@ -15,13 +15,15 @@ import {
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { AccountCircle, Login, Logout, Person, Groups, Payment } from '@mui/icons-material';
+import { AccountCircle, Logout, Person, Groups, Payment } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { User } from '../types';
 import { navigationItems } from '../config/navigation';
 import { TenantSelector, useTenant } from './tenant';
 import { useConfig } from '../hooks/useConfig';
+import { NotificationsMenu } from '@tumbaland/components';
+import { LoginButton } from '@tumbaland/components';
 
 interface AuthHeaderProps {}
 
@@ -30,6 +32,7 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [notificationAnchorEl, setNotificationAnchorEl] = useState<null | HTMLElement>(null);
   const config = useConfig();
 
   // Tenant management - only call when we have valid config and authenticated user
@@ -68,6 +71,14 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
     setAnchorEl(null);
   };
 
+  const handleNotificationClick = (event: React.MouseEvent<HTMLElement>) => {
+    setNotificationAnchorEl(event.currentTarget);
+  };
+
+  const handleNotificationClose = () => {
+    setNotificationAnchorEl(null);
+  };
+
   const handleLogin = () => {
     authService.redirectToLogin();
   };
@@ -91,9 +102,12 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
     if (isAuthenticated && user) {
       return (
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Typography variant="body2" sx={{ mr: 2, display: { xs: 'none', sm: 'block' } }}>
-            {user.name}
-          </Typography>
+          <NotificationsMenu
+            onClick={handleNotificationClick}
+            anchorEl={notificationAnchorEl}
+            onClose={handleNotificationClose}
+            notificationCount={0} // TODO: Replace with actual notification count
+          />
           <IconButton
             onClick={handleMenuOpen}
             size="large"
@@ -160,21 +174,7 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
     }
 
     return (
-      <Button
-        color="inherit"
-        onClick={handleLogin}
-        variant="outlined"
-        startIcon={<Login />}
-        sx={{
-          borderColor: 'rgba(255, 255, 255, 0.3)',
-          '&:hover': {
-            borderColor: 'rgba(255, 255, 255, 0.7)',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)'
-          }
-        }}
-      >
-        Login
-      </Button>
+      <LoginButton onClick={handleLogin} />
     );
   };
 

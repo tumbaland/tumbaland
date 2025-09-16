@@ -4,6 +4,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { SideMenu } from './SideMenu';
 import { HeaderNav } from './HeaderNav';
 import { ProtectedRoute } from './ProtectedRoute';
+import Footer from './Footer';
 import { getAppByRoute } from '../config/apps';
 import { useConfig } from '../hooks/useConfig';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -95,6 +96,8 @@ export default function Layout({ children }: LayoutProps) {
           )}
         </div>
       </div>
+
+      <Footer isVisible={location.pathname !== '/'} />
     </div>
   );
 }
