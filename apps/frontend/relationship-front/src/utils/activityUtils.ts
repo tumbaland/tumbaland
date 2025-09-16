@@ -51,12 +51,11 @@ export const validateActivity = (activity: {
     errors.push('Date is required');
   }
 
-  // Hours is now optional, but if provided, must be valid
   if (activity.hours !== undefined && activity.hours !== null) {
-    if (activity.hours <= 0) {
-      errors.push('Duration must be greater than 0');
+    if (activity.hours < 0) {
+      errors.push('Duration must be 0 or greater');
     }
-    if (!Number.isInteger(activity.hours)) {
+    if (activity.hours > 0 && !Number.isInteger(activity.hours)) {
       errors.push('Duration must be a whole number');
     }
   }
@@ -107,6 +106,6 @@ export const groupActivitiesByMonth = <T extends { date: Date | string }>(activi
 /**
  * Calculate total hours for activities
  */
-export const calculateTotalHours = <T extends { hours: number }>(activities: T[]): number => {
-  return activities.reduce((total, activity) => total + activity.hours, 0);
+export const calculateTotalHours = <T extends { hours: number | null }>(activities: T[]): number => {
+  return activities.reduce((total, activity) => total + (activity.hours || 0), 0);
 };

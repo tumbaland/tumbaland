@@ -118,7 +118,7 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
                     sx={{ fontSize: { xs: '0.62rem', sm: '0.80rem' }, height: { xs: 18, sm: 22 } }}
                   />
                 </TableCell>
-                <TableCell align="right">{activity.hours}</TableCell>
+                <TableCell align="right">{activity.hours || '-'}</TableCell>
                 <TableCell
                   sx={{
                     maxWidth: { xs: 140, sm: 220 },

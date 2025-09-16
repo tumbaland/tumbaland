@@ -28,12 +28,18 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   // Form state
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    date: string;
+    hours: string | number | null;
+    activityType: ActivityType;
+    description: string;
+    groupId: string | undefined;
+  }>({
     date: '',
-    hours: 0,
+    hours: null,
     activityType: '' as ActivityType,
     description: '',
-    groupId: undefined as string | undefined
+    groupId: undefined
   });
 
   // Initialize form data when dialog opens or activity changes
@@ -43,7 +49,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
         // Edit mode - populate with existing data
         setFormData({
           date: formatDateForInput(activity.date),
-          hours: activity.hours,
+          hours: activity.hours || null,
           activityType: activity.activity.type,
           description: activity.activity.description || '',
           groupId: (activity as any).groupId
@@ -52,7 +58,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
         // Create mode - set defaults
         setFormData({
           date: formatDateForInput(new Date()),
-          hours: 0,
+          hours: null,
           activityType: '' as ActivityType,
           description: '',
           groupId: undefined
@@ -64,9 +70,12 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const hoursValue = formData.hours === null ? 0 : Number(formData.hours);
+
     const activityData: CreateActivityRequest = {
       date: formData.date,
-      ...(formData.hours > 0 && { hours: formData.hours }),
+      ...((hoursValue > 0 || isEditMode) && { hours: hoursValue }),
       activity: {
         type: formData.activityType,
         ...(formData.description.trim() && {
@@ -143,11 +152,11 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
           <TextField
             label="Duration (hours) - Optional"
             type="number"
-            value={formData.hours}
+            value={formData.hours === null ? '' : String(formData.hours)}
             onChange={(e) =>
               setFormData((prev) => ({
                 ...prev,
-                hours: parseInt(e.target.value) || 0
+                hours: e.target.value === '' ? null : Number(e.target.value) || null
               }))
             }
             fullWidth
