@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.138](https://github.com/toomastahves/tumbaland/compare/v0.0.137...v0.0.138) (2025-09-17)
+
+
+### Features
+
+* hide footer on mobile ([80cd7bb](https://github.com/toomastahves/tumbaland/commit/80cd7bb279a676b748675fc0359ddd39bfdd166d))
+
 ### [0.0.137](https://github.com/toomastahves/tumbaland/compare/v0.0.136...v0.0.137) (2025-09-16)
 
 
