@@ -17,7 +17,7 @@ const Footer: React.FC<FooterProps> = ({ isVisible }) => {
         width: { xs: '100%', sm: 'calc(100% - 60px)' }, // Account for sidebar width on desktop
         height: '32px',
         backgroundColor: 'rgba(248, 250, 252)',
-        display: 'flex',
+        display: { xs: 'none', sm: 'flex' }, // Hide on extra small screens, show on small and up
         alignItems: 'center',
         justifyContent: 'space-between',
         px: { xs: 1.5, sm: 2 },
