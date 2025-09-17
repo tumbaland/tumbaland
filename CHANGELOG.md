@@ -1,4 +1,16 @@
 # Tumbalog
+### [0.0.139](https://github.com/toomastahves/tumbaland/compare/v0.0.138...v0.0.139) (2025-09-17)
+
+
+### Features
+
+* make header fit screen on mobile ([802ea28](https://github.com/toomastahves/tumbaland/commit/802ea28028509a58d8e27ee421a6a7a6b2dcc18b))
+
+
+### Chores
+
+* bump version ([5ae9750](https://github.com/toomastahves/tumbaland/commit/5ae9750d204d28c059f5cb10a27a1c0fe6a00a5c))
+
 ### [0.0.138](https://github.com/toomastahves/tumbaland/compare/v0.0.137...v0.0.138) (2025-09-17)
 
 
