@@ -73,9 +73,6 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
       open={open}
       onClose={onClose}
       fullScreen
-      PaperProps={{
-        sx: { bgcolor: 'transparent', boxShadow: 'none' }
-      }}
     >
       <DialogContent
         sx={{

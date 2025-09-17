@@ -121,99 +121,97 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
       onClose={handleClose}
       maxWidth="sm"
       fullWidth
-      PaperProps={{
-        component: 'form',
-        onSubmit: handleSubmit
-      }}
     >
       <DialogTitle>{title || (isEditMode ? 'Edit Activity' : 'Add New Activity')}</DialogTitle>
 
-      <DialogContent>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 1 }}>
-          {errors.length > 0 && (
-            <Alert severity="error">
-              <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                {errors.map((error, index) => (
-                  <li key={index}>{error}</li>
-                ))}
-              </ul>
-            </Alert>
-          )}
-          <TextField
-            label="Date"
-            type="date"
-            value={formData.date}
-            onChange={(e) => {
-              setFormData((prev) => ({ ...prev, date: e.target.value }));
-            }}
-            fullWidth
-            required
-          />
-          <TextField
-            label="Duration (hours) - Optional"
-            type="number"
-            value={formData.hours === null ? '' : String(formData.hours)}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                hours: e.target.value === '' ? null : Number(e.target.value) || null
-              }))
-            }
-            fullWidth
-          />
-          <TextField
-            label="Activity Type"
-            select
-            value={formData.activityType}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                activityType: e.target.value as ActivityType
-              }))
-            }
-            fullWidth
-            required
+      <form onSubmit={handleSubmit}>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 1 }}>
+            {errors.length > 0 && (
+              <Alert severity="error">
+                <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                  {errors.map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                </ul>
+              </Alert>
+            )}
+            <TextField
+              label="Date"
+              type="date"
+              value={formData.date}
+              onChange={(e) => {
+                setFormData((prev) => ({ ...prev, date: e.target.value }));
+              }}
+              fullWidth
+              required
+            />
+            <TextField
+              label="Duration (hours) - Optional"
+              type="number"
+              value={formData.hours === null ? '' : String(formData.hours)}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  hours: e.target.value === '' ? null : Number(e.target.value) || null
+                }))
+              }
+              fullWidth
+            />
+            <TextField
+              label="Activity Type"
+              select
+              value={formData.activityType}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  activityType: e.target.value as ActivityType
+                }))
+              }
+              fullWidth
+              required
+            >
+              {availableTypes.map((type) => (
+                <MenuItem key={type} value={type}>
+                  {type}
+                </MenuItem>
+              ))}
+            </TextField>{' '}
+            <TextField
+              label="Description - Optional"
+              multiline
+              rows={3}
+              value={formData.description}
+              onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+              fullWidth
+              inputProps={{ maxLength: 500 }}
+              helperText={`${formData.description.length}/500 characters`}
+            />
+
+            <GroupSelector
+              value={formData.groupId}
+              onChange={(groupId) => setFormData((prev) => ({ ...prev, groupId }))}
+              label="Share with Group (optional)"
+              includePersonal={false}
+              includeNone={true}
+            />
+          </Box>
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={handleClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={loading}
+            startIcon={loading ? <CircularProgress size={20} /> : null}
           >
-            {availableTypes.map((type) => (
-              <MenuItem key={type} value={type}>
-                {type}
-              </MenuItem>
-            ))}
-          </TextField>{' '}
-          <TextField
-            label="Description - Optional"
-            multiline
-            rows={3}
-            value={formData.description}
-            onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-            fullWidth
-            inputProps={{ maxLength: 500 }}
-            helperText={`${formData.description.length}/500 characters`}
-          />
-
-          <GroupSelector
-            value={formData.groupId}
-            onChange={(groupId) => setFormData((prev) => ({ ...prev, groupId }))}
-            label="Share with Group (optional)"
-            includePersonal={false}
-            includeNone={true}
-          />
-        </Box>
-      </DialogContent>
-
-      <DialogActions>
-        <Button onClick={handleClose} disabled={loading}>
-          Cancel
-        </Button>
-        <Button
-          type="submit"
-          variant="contained"
-          disabled={loading}
-          startIcon={loading ? <CircularProgress size={20} /> : null}
-        >
-          {loading ? 'Saving...' : isEditMode ? 'Update' : 'Create'}
-        </Button>
-      </DialogActions>
+            {loading ? 'Saving...' : isEditMode ? 'Update' : 'Create'}
+          </Button>
+        </DialogActions>
+      </form>
     </Dialog>
   );
 };

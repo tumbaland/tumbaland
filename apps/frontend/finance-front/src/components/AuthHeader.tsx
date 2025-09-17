@@ -94,14 +94,14 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
     if (isLoading) {
       return (
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <CircularProgress size={24} color="inherit" />
+          <CircularProgress size={20} color="inherit" />
         </Box>
       );
     }
 
     if (isAuthenticated && user) {
       return (
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
           <NotificationsMenu
             onClick={handleNotificationClick}
             anchorEl={notificationAnchorEl}
@@ -110,17 +110,20 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
           />
           <IconButton
             onClick={handleMenuOpen}
-            size="large"
+            size="small" // Changed from "large" to "small" for mobile
             edge="end"
             aria-label="account menu"
             aria-controls="account-menu"
             aria-haspopup="true"
             color="inherit"
+            sx={{
+              padding: { xs: 0.5, sm: 1 }
+            }}
           >
             {user.picture ? (
-              <Avatar src={user.picture} alt={user.name} sx={{ width: 32, height: 32 }} />
+              <Avatar src={user.picture} alt={user.name} sx={{ width: { xs: 24, sm: 32 }, height: { xs: 24, sm: 32 } }} />
             ) : (
-              <AccountCircle />
+              <AccountCircle sx={{ fontSize: { xs: 20, sm: 24 } }} />
             )}
           </IconButton>
           <Menu
@@ -205,24 +208,26 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
       <Toolbar>
         {isMobile ? (
           <>
-            <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', minHeight: 56, pl: 4 }}>
+            <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', minHeight: 56, pl: { xs: 2, sm: 4 } }}>
               <Button
                 color="inherit"
                 onClick={handleMobileMenuOpen}
-                endIcon={<ExpandMoreIcon />}
+                endIcon={<ExpandMoreIcon sx={{ fontSize: { xs: 16, sm: 20 } }} />}
                 sx={{
                   fontWeight: 500,
                   textTransform: 'none',
                   background: 'none',
-                  px: 1.5,
+                  px: { xs: 0.5, sm: 1.5 },
+                  py: { xs: 0.5, sm: 1 },
                   minWidth: 0,
                   borderRadius: 2,
                   '&:hover': { background: 'rgba(0,0,0,0.04)' },
-                  maxWidth: '70vw',
+                  maxWidth: { xs: '50vw', sm: '70vw' },
                   overflow: 'hidden',
                   whiteSpace: 'nowrap',
                   textOverflow: 'ellipsis',
-                  ml: 2 // push menu button slightly right
+                  ml: { xs: 1, sm: 2 }, // push menu button slightly right
+                  fontSize: { xs: '0.875rem', sm: '1rem' }
                 }}
               >
                 {/* Show current route label, fallback to first menu item */}
@@ -249,19 +254,25 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
             
             {/* Mobile Tenant Selector */}
             {isAuthenticated && user && (
-              <Box sx={{ mx: 1, flexShrink: 0 }}>
+              <Box sx={{ mx: { xs: 1, sm: 1.5 }, flexShrink: 0 }}>
                 <TenantSelector
                   selectedTenant={selectedTenant}
                   tenants={availableTenants}
                   onTenantChange={setSelectedTenant}
                   loading={tenantsLoading}
                   error={tenantsError}
-                  sx={{ minWidth: 120 }}
+                  sx={{ 
+                    minWidth: { xs: 80, sm: 120 },
+                    '& .MuiSelect-select': {
+                      fontSize: { xs: '0.7rem', sm: '0.875rem' },
+                      padding: { xs: '2px 6px', sm: '6px 12px' }
+                    }
+                  }}
                 />
               </Box>
             )}
             
-            <Box sx={{ flexGrow: 0, ml: 'auto' }}>{renderAuthSection()}</Box>
+            <Box sx={{ flexGrow: 0, ml: { xs: 1, sm: 2 } }}>{renderAuthSection()}</Box>
             <Menu
               anchorEl={mobileMenuAnchor}
               open={Boolean(mobileMenuAnchor)}
@@ -289,8 +300,13 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
             </Menu>
           </>
         ) : (
-          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexGrow: 1 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            width: '100%', 
+            justifyContent: 'space-between'
+          }}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
               {navigationItems.map((item) => {
                 const isActive = location.pathname === item.path;
                 const buttonSx = {
@@ -316,9 +332,14 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
               })}
             </Box>
             
-            {/* Tenant Selector */}
-            {isAuthenticated && user && (
-              <Box sx={{ mx: 2 }}>
+            {/* Right side content - tenant selector and auth */}
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: { xs: 1, sm: 2 }
+            }}>
+              {/* Tenant Selector */}
+              {isAuthenticated && user && (
                 <TenantSelector
                   selectedTenant={selectedTenant}
                   tenants={availableTenants}
@@ -326,10 +347,10 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
                   loading={tenantsLoading}
                   error={tenantsError}
                 />
-              </Box>
-            )}
-            
-            <Box sx={{ flexGrow: 0, ml: 2 }}>{renderAuthSection()}</Box>
+              )}
+              
+              {renderAuthSection()}
+            </Box>
           </Box>
         )}
       </Toolbar>

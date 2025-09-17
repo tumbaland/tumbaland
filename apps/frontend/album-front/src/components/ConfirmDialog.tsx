@@ -62,12 +62,6 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       onClose={onClose}
       maxWidth="sm"
       fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: 2,
-          p: 1
-        }
-      }}
     >
       <Box sx={{ position: 'relative' }}>
         <IconButton

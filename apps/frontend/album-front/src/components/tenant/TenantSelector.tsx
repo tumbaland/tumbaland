@@ -135,13 +135,6 @@ const TenantSelector: React.FC<TenantSelectorProps> = ({
           vertical: 'top',
           horizontal: 'left',
         }}
-        PaperProps={{
-          sx: {
-            minWidth: 200,
-            maxWidth: 300,
-            mt: 0.5
-          }
-        }}
       >
         <MenuItem disabled>
           <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>

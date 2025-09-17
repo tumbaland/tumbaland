@@ -72,9 +72,6 @@ export function AccountMenu({
         }}
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        PaperProps={{
-          sx: { minWidth: 200 }
-        }}
       >
         <MenuItem disabled>
           <Box

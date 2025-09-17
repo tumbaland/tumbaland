@@ -97,12 +97,6 @@ const CollagePhotoEditModal: React.FC<CollagePhotoEditModalProps> = ({
       onClose={onClose}
       maxWidth="sm"
       fullWidth
-      PaperProps={{
-        sx: { 
-          borderRadius: 2,
-          backgroundColor: '#f8f9fa'
-        }
-      }}
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 2 }}>
         Photo Settings

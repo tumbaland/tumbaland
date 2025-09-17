@@ -65,9 +65,6 @@ const EditPhotoDialog: React.FC<EditPhotoDialogProps> = ({ open, photo, onClose,
       onClose={handleClose}
       maxWidth="sm"
       fullWidth
-      PaperProps={{
-        sx: { borderRadius: 2 }
-      }}
     >
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 2 }}>
         Edit Photo
