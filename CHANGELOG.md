@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.140](https://github.com/toomastahves/tumbaland/compare/v0.0.139...v0.0.140) (2025-09-18)
+
+
+### Features
+
+* add github server host update script ([d3fc8c4](https://github.com/toomastahves/tumbaland/commit/d3fc8c4003c254a89fb51ab81a23c362537a4557))
+
 ### [0.0.139](https://github.com/toomastahves/tumbaland/compare/v0.0.138...v0.0.139) (2025-09-17)
 
 
