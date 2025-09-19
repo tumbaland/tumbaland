@@ -8,6 +8,8 @@ services:
     ports:
       - '80:80'
       - '443:443'
+    environment:
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
     volumes:
       - ./certs/live:/etc/letsencrypt/live
       - ./certs/archive:/etc/letsencrypt/archive

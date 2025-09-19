@@ -10,3 +10,6 @@ infra/stripe-cli/.env.stripe
 
 *storybook.log
 storybook-static
+
+# Cloudflare credentials (dynamically created)
+apps/infra/tumbaland-proxy/cloudflare.ini

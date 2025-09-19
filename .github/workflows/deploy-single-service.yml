@@ -204,6 +204,7 @@ jobs:
           echo "GROUP_FRONT_URL=${{ vars.GROUP_FRONT_URL }}" >> .env
           echo "ACCOUNT_FRONT_URL=${{ vars.ACCOUNT_FRONT_URL }}" >> .env
           echo "SHELL_FRONT_URL=${{ vars.SHELL_FRONT_URL }}" >> .env
+          echo "CLOUDFLARE_CREDENTIALS=${{ secrets.CLOUDFLARE_CREDENTIALS }}" >> .env
 
       - name: Copy .env file to server
         uses: appleboy/scp-action@v0.1.7

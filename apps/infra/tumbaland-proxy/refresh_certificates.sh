@@ -1,98 +1,62 @@
 #!/bin/sh
 set -e
 
-# Simple automated certificate obtain/renew script.
+# Automated wildcard certificate obtain/renew script using Cloudflare DNS challenge.
+# Generates a single wildcard certificate for *.tumbaland.eu
 # Assumes:
-#  - Container already running with port 80 serving /.well-known/acme-challenge from /usr/share/nginx/html
-#  - default.conf contains a location for ACME challenges (it does now)
-#  - certbot installed in the image
+#  - Container has certbot-dns-cloudflare plugin installed
+#  - CLOUDFLARE_API_TOKEN environment variable is set
+#  - Cloudflare API token has DNS edit permissions for tumbaland.eu zone
 
-EMAIL="toomastahves@hotmail.com" # change if needed
-
-# Pure in-container: use standard paths
-WEBROOT="/usr/share/nginx/html"
+EMAIL="toomastahves@hotmail.com"
 CERT_DIR="/etc/letsencrypt"
-mkdir -p "$WEBROOT/.well-known/acme-challenge"
+CERT_NAME="tumbaland-wildcard"
+CLOUDFLARE_CREDENTIALS="/app/cloudflare.ini"
 
-if [ ! -d "$WEBROOT" ]; then
-  echo "[error] Webroot directory $WEBROOT does not exist. Create it (mkdir -p)." >&2
+# Verify CLOUDFLARE_API_TOKEN environment variable is set
+if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+  echo "[error] CLOUDFLARE_API_TOKEN environment variable is not set" >&2
   exit 2
 fi
 
-# Group domains logically so we minimize cert count (Let's Encrypt rate limits):
-# Root + wildcard is NOT used here (wildcard would require DNS challenge). We keep individual certs.
+# Create Cloudflare credentials file from environment variable
+echo "[info] Creating Cloudflare credentials file"
+cat > "$CLOUDFLARE_CREDENTIALS" << EOF
+# Cloudflare API credentials for certbot DNS challenge
+dns_cloudflare_api_token = $CLOUDFLARE_API_TOKEN
+EOF
 
-DOMAIN_GROUPS=" \
-account.tumbaland.eu \
-tumbaland.eu \
-api.tumbaland.eu \
-album.tumbaland.eu \
-album-api.tumbaland.eu \
-relationship.tumbaland.eu \
-relationship-api.tumbaland.eu \
-finance.tumbaland.eu \
-finance-api.tumbaland.eu \
-auth.tumbaland.eu \
-auth-api.tumbaland.eu \
-file-api.tumbaland.eu \
-object-detection-api.tumbaland.eu \
-segmentation-api.tumbaland.eu \
-payment.tumbaland.eu \
-payment-api.tumbaland.eu \
-group.tumbaland.eu \
-group-api.tumbaland.eu \
-"
-
-echo "==> Starting certificate obtain/renew process"
-echo "Using webroot: $WEBROOT"
+echo "==> Starting wildcard certificate obtain/renew process"
 echo "Using cert storage: $CERT_DIR"
+echo "Using Cloudflare credentials: $CLOUDFLARE_CREDENTIALS"
 
-echo "[info] To verify accessibility before issuing, place a test file:"
-echo "  echo test > $WEBROOT/.well-known/acme-challenge/acme-test && curl -I http://tumbaland.eu/.well-known/acme-challenge/acme-test"
-
-# If user passes domains as CLI args, restrict to those only.
-if [ "$#" -gt 0 ]; then
-  echo "[filter] Limiting issuance to domains passed as args: $*"
-  DOMAIN_GROUPS=""
-  for D in "$@"; do
-    DOMAIN_GROUPS="$DOMAIN_GROUPS $D"
-  done
+# Remove any existing lineage to prevent conflicts
+echo "[cleanup] Removing any existing wildcard certificate"
+certbot delete --cert-name "$CERT_NAME" --non-interactive >/dev/null 2>&1 || true
+if [ -e "$CERT_DIR/live/$CERT_NAME" ]; then
+  rm -rf "$CERT_DIR/live/$CERT_NAME"
+fi
+if [ -e "$CERT_DIR/archive/$CERT_NAME" ]; then
+  rm -rf "$CERT_DIR/archive/$CERT_NAME"
+fi
+if [ -e "$CERT_DIR/renewal/$CERT_NAME.conf" ]; then
+  rm -f "$CERT_DIR/renewal/$CERT_NAME.conf"
 fi
 
-for GROUP in $DOMAIN_GROUPS; do
-  # Split group into array
-  set -- $GROUP
-  FIRST=$1
-  if [ -z "$FIRST" ]; then
-    continue
-  fi
-  echo "-- Processing group: $GROUP"
-  # Build -d args
-  DOM_ARGS=""
-  for D in $GROUP; do
-    DOM_ARGS="$DOM_ARGS -d $D"
-  done
-  # Remove any existing lineage or placeholders to prevent suffixed (-0001) lineages
-  echo "[cleanup] Removing any existing lineage for $FIRST"
-  certbot delete --cert-name "$FIRST" --non-interactive >/dev/null 2>&1 || true
-  if [ -e "$CERT_DIR/live/$FIRST" ]; then
-    rm -rf "$CERT_DIR/live/$FIRST"
-  fi
-  if [ -e "$CERT_DIR/archive/$FIRST" ]; then
-    rm -rf "$CERT_DIR/archive/$FIRST"
-  fi
-  if [ -e "$CERT_DIR/renewal/$FIRST.conf" ]; then
-    rm -f "$CERT_DIR/renewal/$FIRST.conf"
-  fi
-  # Use run (obtain or renew automatically). Keep existing if valid.
-  certbot certonly --webroot -w "$WEBROOT" $DOM_ARGS \
-    --cert-name "$FIRST" \
-    --agree-tos --email "$EMAIL" --non-interactive --rsa-key-size 4096 --keep-until-expiring --expand || {
-      echo "Cert generation failed for group: $GROUP" >&2
-      exit 1
-    }
-done
+# Generate wildcard certificate using DNS-01 challenge
+echo "[info] Requesting wildcard certificate for *.tumbaland.eu"
+certbot certonly \
+  --dns-cloudflare \
+  --dns-cloudflare-credentials "$CLOUDFLARE_CREDENTIALS" \
+  -d "*.tumbaland.eu" \
+  --cert-name "$CERT_NAME" \
+  --agree-tos --email "$EMAIL" --non-interactive \
+  --rsa-key-size 4096 --keep-until-expiring --expand || {
+    echo "Wildcard certificate generation failed" >&2
+    exit 1
+  }
 
-echo "==> All certificates processed. Reloading nginx"
+echo "==> Wildcard certificate generated successfully"
+echo "==> Reloading nginx"
 nginx -s reload || echo "(warn) nginx reload failed (maybe first run)."
 echo "Done."

@@ -1,42 +1,20 @@
 #!/bin/sh
 set -e
 
-# Generate temporary self-signed certificates for any domains that do not yet
-# have a real Let's Encrypt cert so Nginx can start without crashing.
-# Real certs will later overwrite these via refresh_certificates.sh.
+# Generate temporary self-signed wildcard certificate for *.tumbaland.eu
+# so Nginx can start without crashing.
+# Real wildcard cert will later overwrite this via refresh_certificates.sh.
 
-DOMAINS=" \
-account.tumbaland.eu \
-tumbaland.eu \
-api.tumbaland.eu \
-album.tumbaland.eu \
-album-api.tumbaland.eu \
-relationship.tumbaland.eu \
-relationship-api.tumbaland.eu \
-finance.tumbaland.eu \
-finance-api.tumbaland.eu \
-auth.tumbaland.eu \
-auth-api.tumbaland.eu \
-file-api.tumbaland.eu \
-object-detection-api.tumbaland.eu \
-segmentation-api.tumbaland.eu \
-payment.tumbaland.eu \
-payment-api.tumbaland.eu \
-group.tumbaland.eu \
-group-api.tumbaland.eu \
-"
+TARGET_DIR="/etc/letsencrypt/live/tumbaland-wildcard"
 
-for d in $DOMAINS; do
-  TARGET_DIR="/etc/letsencrypt/live/$d"
-  if [ ! -f "$TARGET_DIR/fullchain.pem" ]; then
-    echo "[ensure_certs] Creating temporary self-signed cert for $d"
+if [ ! -f "$TARGET_DIR/fullchain.pem" ]; then
+    echo "[ensure_certs] Creating temporary self-signed wildcard cert for *.tumbaland.eu"
     mkdir -p "$TARGET_DIR"
     openssl req -x509 -nodes -newkey rsa:2048 -days 7 \
-      -subj "/CN=$d" \
+      -subj "/CN=*.tumbaland.eu" \
       -keyout "$TARGET_DIR/privkey.pem" \
-      -out "$TARGET_DIR/fullchain.pem" >/dev/null 2>&1 || echo "(warn) openssl failed for $d"
-  fi
-done
+      -out "$TARGET_DIR/fullchain.pem" >/dev/null 2>&1 || echo "(warn) openssl failed for wildcard cert"
+fi
 
-echo "[ensure_certs] All placeholder cert checks complete. Launching Nginx."
+echo "[ensure_certs] Wildcard placeholder cert check complete. Launching Nginx."
 exec "$@"
