@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.141](https://github.com/toomastahves/tumbaland/compare/v0.0.140...v0.0.141) (2025-09-19)
+
+
+### Features
+
+* setup wildcard certificates ([42fda65](https://github.com/toomastahves/tumbaland/commit/42fda655ca88e60c8cc2607eaebdbb82914229f6))
+
 ### [0.0.140](https://github.com/toomastahves/tumbaland/compare/v0.0.139...v0.0.140) (2025-09-18)
 
 
