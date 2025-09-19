@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.144](https://github.com/toomastahves/tumbaland/compare/v0.0.143...v0.0.144) (2025-09-19)
+
+
+### Bug Fixes
+
+* cert for non wildcard domain ([cae342c](https://github.com/toomastahves/tumbaland/commit/cae342c559ab37d4fa6563b448922ecab39efebc))
+
 ### [0.0.143](https://github.com/toomastahves/tumbaland/compare/v0.0.142...v0.0.143) (2025-09-19)
 
 
