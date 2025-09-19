@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.145](https://github.com/toomastahves/tumbaland/compare/v0.0.144...v0.0.145) (2025-09-19)
+
+
+### Bug Fixes
+
+* env var CLOUDFLARE_API_TOKEN ([d5eb5c6](https://github.com/toomastahves/tumbaland/commit/d5eb5c6f8adf96c6234f1a02041319a20128fd3a))
+
 ### [0.0.144](https://github.com/toomastahves/tumbaland/compare/v0.0.143...v0.0.144) (2025-09-19)
 
 
