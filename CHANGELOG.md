@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.142](https://github.com/toomastahves/tumbaland/compare/v0.0.141...v0.0.142) (2025-09-19)
+
+
+### Bug Fixes
+
+* certbot ([68598f8](https://github.com/toomastahves/tumbaland/commit/68598f86a3052c40869d9dc492baa051c83ad8be))
+
 ### [0.0.141](https://github.com/toomastahves/tumbaland/compare/v0.0.140...v0.0.141) (2025-09-19)
 
 
