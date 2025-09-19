@@ -7,7 +7,10 @@ RUN rm /etc/nginx/conf.d/default.conf
 COPY conf.d/ /etc/nginx/conf.d/
 
 RUN apk add --no-cache nano certbot openssl python3 py3-pip && \
-    pip3 install certbot-dns-cloudflare
+    python3 -m venv /opt/certbot-venv && \
+    /opt/certbot-venv/bin/pip install certbot-dns-cloudflare
+
+ENV PATH="/opt/certbot-venv/bin:$PATH"
 
 WORKDIR /app
 
