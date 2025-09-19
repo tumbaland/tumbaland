@@ -1,7 +1,12 @@
 #!/bin/sh
 set -e
 
-# Automated wildcard certificate renewal script using Cloudflare API
+# echo "This will generate a new certificate for tumbaland.eu and *.tumbaland.eu"
+echo "TXT records will be managed automatically via Cloudflare API"
+echo ""
+echo "Domains: tumbaland.eu, *.tumbaland.eu"
+echo "Email: $EMAIL"
+echo "Cert name: $CERT_NAME"ted wildcard certificate renewal script using Cloudflare API
 # Generates a single wildcard certificate for *.tumbaland.eu
 # Uses Cloudflare API to automatically manage DNS TXT records
 #
@@ -69,10 +74,11 @@ if [ -e "$CERT_DIR/renewal/$CERT_NAME.conf" ]; then
 fi
 
 # Generate wildcard certificate using DNS-01 challenge with Cloudflare
-echo "[info] Requesting wildcard certificate for *.tumbaland.eu"
+echo "[info] Requesting certificate for tumbaland.eu and *.tumbaland.eu"
 certbot certonly \
   --dns-cloudflare \
   --dns-cloudflare-credentials "$CLOUDFLARE_CREDENTIALS" \
+  -d "tumbaland.eu" \
   -d "*.tumbaland.eu" \
   --cert-name "$CERT_NAME" \
   --agree-tos --email "$EMAIL" --non-interactive \
