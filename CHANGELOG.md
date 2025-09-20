@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.146](https://github.com/toomastahves/tumbaland/compare/v0.0.145...v0.0.146) (2025-09-20)
+
+
+### Features
+
+* improve performance ([39ba5e1](https://github.com/toomastahves/tumbaland/commit/39ba5e13ce5fd657c0868218b9bb616bfa198f23))
+
 ### [0.0.145](https://github.com/toomastahves/tumbaland/compare/v0.0.144...v0.0.145) (2025-09-19)
 
 
