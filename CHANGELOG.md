@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.148](https://github.com/toomastahves/tumbaland/compare/v0.0.147...v0.0.148) (2025-09-22)
+
+
+### Features
+
+* create network if dont exist ([a5ab615](https://github.com/toomastahves/tumbaland/commit/a5ab61581c280edc69b5c97d94f990e6f8e47257))
+
 ### [0.0.147](https://github.com/toomastahves/tumbaland/compare/v0.0.146...v0.0.147) (2025-09-22)
 
 
