@@ -18,6 +18,7 @@ on:
           - account-front
           - payment-front
           - group-front
+          - vision-front
           - album-service
           - auth-service
           - file-service
@@ -91,6 +92,12 @@ jobs:
               DOCKERFILE=./apps/frontend/group-front/Dockerfile
               DEPLOYPATH=apps/frontend/group-front/compose.yml
               DEPLOYDIR=apps/frontend/group-front
+              ;;
+            vision-front)
+              CONTEXT=./apps/frontend/vision-front
+              DOCKERFILE=./apps/frontend/vision-front/Dockerfile
+              DEPLOYPATH=apps/frontend/vision-front/compose.yml
+              DEPLOYDIR=apps/frontend/vision-front
               ;;
             album-service)
               CONTEXT=./apps/backend/album-service
@@ -204,6 +211,8 @@ jobs:
           echo "GROUP_FRONT_URL=${{ vars.GROUP_FRONT_URL }}" >> .env
           echo "ACCOUNT_FRONT_URL=${{ vars.ACCOUNT_FRONT_URL }}" >> .env
           echo "SHELL_FRONT_URL=${{ vars.SHELL_FRONT_URL }}" >> .env
+          echo "VISION_API_URL=${{ vars.VISION_API_URL }}" >> .env
+          echo "VISION_FRONT_URL=${{ vars.VISION_FRONT_URL }}" >> .env
           echo "CLOUDFLARE_API_TOKEN=${{ secrets.CLOUDFLARE_API_TOKEN }}" >> .env
 
       - name: Copy .env file to server
@@ -233,5 +242,5 @@ jobs:
           script: |
             cd ~/tumbaland
             export COMPOSE_HTTP_TIMEOUT=300
-            docker-compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} pull
-            docker-compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} up -d
+            docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} pull
+            docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} up -d
