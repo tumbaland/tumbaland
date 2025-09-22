@@ -242,5 +242,6 @@ jobs:
           script: |
             cd ~/tumbaland
             export COMPOSE_HTTP_TIMEOUT=300
+            docker network ls | grep -q tumbanet || docker network create tumbanet
             docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} pull
             docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} up -d
