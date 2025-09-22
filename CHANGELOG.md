@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.147](https://github.com/toomastahves/tumbaland/compare/v0.0.146...v0.0.147) (2025-09-22)
+
+
+### Features
+
+* update docker compose command ([d1beb9a](https://github.com/toomastahves/tumbaland/commit/d1beb9aa809c1ec168cbfde622ec9e142a41fcfc))
+
 ### [0.0.146](https://github.com/toomastahves/tumbaland/compare/v0.0.145...v0.0.146) (2025-09-20)
 
 
