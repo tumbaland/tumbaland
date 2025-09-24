@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.149](https://github.com/toomastahves/tumbaland/compare/v0.0.148...v0.0.149) (2025-09-24)
+
+
+### Features
+
+* add multi album support to collages ([2553e54](https://github.com/toomastahves/tumbaland/commit/2553e5403b91083a1f6077c37c082ecfd1cecba7))
+
 ### [0.0.148](https://github.com/toomastahves/tumbaland/compare/v0.0.147...v0.0.148) (2025-09-22)
 
 
