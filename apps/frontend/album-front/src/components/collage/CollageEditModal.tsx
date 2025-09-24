@@ -29,7 +29,7 @@ interface CollageEditModalProps {
 export const CollageEditModal: React.FC<CollageEditModalProps> = ({ open, onClose, onSave, initialData }) => {
   const [title, setTitle] = useState(initialData.title);
   const [subtitle, setSubtitle] = useState(initialData.config?.title?.subtitle || '');
-  const [albumId, setAlbumId] = useState(initialData.albumId || '');
+  const [albumIds, setAlbumIds] = useState<string[]>(initialData.albumIds || []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const tenantGroupId = useTenantFilter(); // Get groupId from tenant context
@@ -40,7 +40,7 @@ export const CollageEditModal: React.FC<CollageEditModalProps> = ({ open, onClos
   React.useEffect(() => {
     setTitle(initialData.title);
     setSubtitle(initialData.config?.title?.subtitle || '');
-    setAlbumId(initialData.albumId || '');
+    setAlbumIds(initialData.albumIds || []);
     setError(null);
   }, [initialData, open]);
 
@@ -55,7 +55,7 @@ export const CollageEditModal: React.FC<CollageEditModalProps> = ({ open, onClos
           title: { text: title, subtitle }
         },
         ownerId: initialData.ownerId,
-        albumId,
+        albumIds,
         groupId: tenantGroupId // Include the active group ID from tenant context
       });
       onClose();
@@ -75,12 +75,13 @@ export const CollageEditModal: React.FC<CollageEditModalProps> = ({ open, onClos
       <DialogTitle>Edit Collage</DialogTitle>
       <DialogContent>
         <FormControl fullWidth margin="dense" disabled={albumsLoading || loading}>
-          <InputLabel id="album-edit-select-label">Album</InputLabel>
+          <InputLabel id="album-edit-select-label">Albums</InputLabel>
           <Select
             labelId="album-edit-select-label"
-            value={albumId}
-            label="Album"
-            onChange={(e) => setAlbumId(e.target.value)}
+            multiple
+            value={albumIds}
+            label="Albums"
+            onChange={(e) => setAlbumIds(e.target.value as string[])}
             endAdornment={
               <InputAdornment position="end">
                 <IconButton
@@ -128,7 +129,7 @@ export const CollageEditModal: React.FC<CollageEditModalProps> = ({ open, onClos
         <Button onClick={onClose} disabled={loading}>
           Cancel
         </Button>
-        <Button onClick={handleSave} variant="contained" color="primary" disabled={loading || !title || !albumId}>
+        <Button onClick={handleSave} variant="contained" color="primary" disabled={loading || !title || albumIds.length === 0}>
           Save
         </Button>
       </DialogActions>

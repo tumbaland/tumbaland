@@ -3,7 +3,7 @@ import { CollageConfig } from './collage.model';
 export interface CollageInput {
   title: string;
   config: CollageConfig;
-  albumId: string;
+  albumIds: string[];
   ownerId?: string;
 }
 

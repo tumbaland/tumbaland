@@ -49,28 +49,31 @@ export const getCollageById = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Verify user has access to the album before fetching photos
-    const album = await Album.findById(collage.albumId);
-    if (!album) {
-      res.status(404).json({ error: 'Album not found' });
+    // Verify user has access to all albums before fetching photos
+    const albums = await Album.find({ _id: { $in: collage.albumIds } });
+    if (albums.length !== collage.albumIds.length) {
+      res.status(404).json({ error: 'One or more albums not found' });
       return;
     }
 
-    const hasAlbumAccess = canAccessResource(
-      user.id,
-      album.userId || '',
-      album.groupId,
-      userGroups,
-      false // albums are not public
-    );
+    // Check access to all albums
+    for (const album of albums) {
+      const hasAlbumAccess = canAccessResource(
+        user.id,
+        album.userId || '',
+        album.groupId,
+        userGroups,
+        false // albums are not public
+      );
 
-    if (!hasAlbumAccess) {
-      res.status(403).json({ error: 'Access denied to album' });
-      return;
+      if (!hasAlbumAccess) {
+        res.status(403).json({ error: 'Access denied to one or more albums' });
+        return;
+      }
     }
 
-    // Fetch all photos for the album
-    const photos = await Photo.find({ albumId: collage.albumId }).sort({ createdAt: -1 });
+    // Fetch all photos for all albums
+    const photos = await Photo.find({ albumId: { $in: collage.albumIds } }).sort({ createdAt: -1 });
     const photosWithUrls = await Promise.all(
       photos.map(async (photo) => {
         try {

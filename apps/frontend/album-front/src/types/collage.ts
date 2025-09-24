@@ -36,7 +36,7 @@ export interface Collage {
   _id: string;
   title: string;
   config: CollageConfig;
-  albumId: string;
+  albumIds: string[];
   ownerId: string;
   createdAt: string;
   updatedAt: string;
@@ -45,7 +45,7 @@ export interface Collage {
 export interface CollageInput {
   title: string;
   config: CollageConfig;
-  albumId: string;
+  albumIds: string[];
   ownerId?: string;
   groupId?: string;
 }

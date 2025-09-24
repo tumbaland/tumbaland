@@ -27,13 +27,13 @@ export interface CollageConfig {
     text: string;
     subtitle: string;
   };
-  albumId: string; // New: albumId to link to album
+  albumIds: string[]; // Updated: albumIds array to support multiple albums
 }
 
 export interface ICollage extends Document {
   title: string;
   config: CollageConfig;
-  albumId: string; // New: albumId at root for easier querying
+  albumIds: string[]; // Updated: albumIds array for multiple albums
   userId?: string; // User ID who created the collage
   groupId?: string; // Optional group association
   createdAt: Date;
@@ -44,7 +44,7 @@ const CollageSchema = new Schema<ICollage>(
   {
     title: { type: String, required: true },
     config: { type: Schema.Types.Mixed, required: true, default: () => ({ photos: [] }) },
-    albumId: { type: String, required: true }, // New: albumId at root
+    albumIds: { type: [String], required: true }, // Updated: albumIds as array
     userId: { type: String, index: true },
     groupId: { type: String, index: true }
   },

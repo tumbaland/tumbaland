@@ -208,7 +208,7 @@ const CollageDetailsPage: React.FC = () => {
           borderColor,
           viewport: viewportConfig
         },
-        albumId: collage.albumId
+        albumIds: collage.albumIds
       });
     } catch (e) {
       setError('Failed to save collage');

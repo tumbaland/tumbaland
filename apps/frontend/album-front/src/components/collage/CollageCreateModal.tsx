@@ -38,7 +38,7 @@ const defaultConfig = {
 export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, onClose, onCreate }) => {
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
-  const [albumId, setAlbumId] = useState('');
+  const [albumIds, setAlbumIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const tenantGroupId = useTenantFilter(); // Get groupId from tenant context
@@ -56,12 +56,12 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
           ...defaultConfig,
           title: { text: title, subtitle }
         },
-        albumId,
+        albumIds,
         groupId: tenantGroupId // Include the active group ID from tenant context
       });
       setTitle('');
       setSubtitle('');
-      setAlbumId('');
+      setAlbumIds([]);
       onClose();
     } catch (e: any) {
       setError(e.message || 'Failed to create collage');
@@ -74,7 +74,7 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
     if (!loading) {
       setTitle('');
       setSubtitle('');
-      setAlbumId('');
+      setAlbumIds([]);
       setError(null);
       onClose();
     }
@@ -89,12 +89,13 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
       <DialogTitle>New Collage</DialogTitle>
       <DialogContent>
         <FormControl fullWidth margin="dense" disabled={albumsLoading || loading}>
-          <InputLabel id="album-select-label">Album</InputLabel>
+          <InputLabel id="album-select-label">Albums</InputLabel>
           <Select
             labelId="album-select-label"
-            value={albumId}
-            label="Album"
-            onChange={(e) => setAlbumId(e.target.value)}
+            multiple
+            value={albumIds}
+            label="Albums"
+            onChange={(e) => setAlbumIds(e.target.value as string[])}
             endAdornment={
               <InputAdornment position="end">
                 <IconButton
@@ -142,7 +143,7 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
         <Button onClick={handleClose} disabled={loading}>
           Cancel
         </Button>
-        <Button onClick={handleCreate} variant="contained" color="primary" disabled={loading || !title || !albumId}>
+        <Button onClick={handleCreate} variant="contained" color="primary" disabled={loading || !title || albumIds.length === 0}>
           Create
         </Button>
       </DialogActions>
