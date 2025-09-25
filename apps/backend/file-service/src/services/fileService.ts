@@ -3,15 +3,20 @@ import { FileUploadData, FileDownloadData, FileDeleteResult, FileMetadata } from
 import * as localStorage from '../config/localStorage';
 import { getFilePath } from '../config/localStorage';
 import * as signedUrlService from './signedUrlService';
-import axios from 'axios';
 import { promises as fsPromises } from 'fs';
 
 // Get metadata from album service (MongoDB)
 const getMetadataFromAlbumService = async (fileId: string): Promise<any> => {
   try {
     const ALBUM_API_URL = process.env.ALBUM_API_URL;
-    const response = await axios.get(`${ALBUM_API_URL}/api/photos/by-file/${fileId}`);
-    return response.data.data;
+    const response = await fetch(`${ALBUM_API_URL}/api/photos/by-file/${fileId}`);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data;
   } catch (error) {
     // If album service is unavailable or photo not found, return null
     console.warn(`Album service unavailable or photo not found for ${fileId}`);
@@ -120,8 +125,14 @@ export const listFiles = async (prefix: string = '', limit: number = 100): Promi
   try {
     // Get all photos from album service
     const ALBUM_API_URL = process.env.ALBUM_API_URL;
-    const response = await axios.get(`${ALBUM_API_URL}/api/photos?limit=${limit}`);
-    const photos = response.data.data?.photos || [];
+    const response = await fetch(`${ALBUM_API_URL}/api/photos?limit=${limit}`);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const photos = data.data?.photos || [];
 
     // Filter by prefix if provided
     const filteredPhotos = prefix

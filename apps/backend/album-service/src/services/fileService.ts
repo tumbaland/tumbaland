@@ -1,5 +1,3 @@
-import axios from 'axios';
-
 export interface FileMetadata {
   id: string;
   name: string;
@@ -18,8 +16,14 @@ export interface UploadResponse {
 export const getFileMetadata = async (fileId: string): Promise<FileMetadata> => {
   try {
     const FILE_API_URL = process.env.FILE_API_URL;
-    const response = await axios.get(`${FILE_API_URL}/api/${fileId}`);
-    return response.data.data;
+    const response = await fetch(`${FILE_API_URL}/api/${fileId}`);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data;
   } catch (error) {
     console.error('Error fetching file metadata:', error);
     throw new Error('Failed to fetch file metadata');
@@ -29,8 +33,14 @@ export const getFileMetadata = async (fileId: string): Promise<FileMetadata> => 
 export const getSignedUrl = async (fileId: string): Promise<string> => {
   try {
     const FILE_API_URL = process.env.FILE_API_URL;
-    const response = await axios.get(`${FILE_API_URL}/api/signed-url/${fileId}`);
-    return response.data.data.signedUrl;
+    const response = await fetch(`${FILE_API_URL}/api/signed-url/${fileId}`);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data.data.signedUrl;
   } catch (error) {
     console.error('Error getting signed URL:', error);
     throw new Error('Failed to get signed URL');
@@ -50,7 +60,14 @@ export const getFileUrl = async (fileId: string): Promise<string> => {
 export const deleteFile = async (fileId: string): Promise<boolean> => {
   try {
     const FILE_API_URL = process.env.FILE_API_URL;
-    await axios.delete(`${FILE_API_URL}/api/${fileId}`);
+    const response = await fetch(`${FILE_API_URL}/api/${fileId}`, {
+      method: 'DELETE'
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
     return true;
   } catch (error) {
     console.error('Error deleting file:', error);
@@ -64,14 +81,26 @@ export const getFileUploadSignedUrl = async (
 ): Promise<{ url: string; fileId: string }> => {
   try {
     const FILE_API_URL = process.env.FILE_API_URL;
-    const response = await axios.post(`${FILE_API_URL}/api/upload-url`, {
-      fileName: filename,
-      contentType: mimetype,
-      expirationMinutes: 15
+    const response = await fetch(`${FILE_API_URL}/api/upload-url`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        fileName: filename,
+        contentType: mimetype,
+        expirationMinutes: 15
+      })
     });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
     return {
-      url: response.data.data.uploadUrl,
-      fileId: response.data.data.fileName
+      url: data.data.uploadUrl,
+      fileId: data.data.fileName
     };
   } catch (error) {
     console.error('Error getting upload signed URL:', error);

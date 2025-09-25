@@ -9,8 +9,14 @@ export async function fetchAndSaveAllStockHistory(symbol: string): Promise<numbe
   }
   const url = `${BASE_URL}?function=TIME_SERIES_DAILY&symbol=${symbol}&outputsize=full&apikey=${ALPHA_VANTAGE_API_KEY}`;
   try {
-    const response = await axios.get(url);
-    const timeSeries = response.data['Time Series (Daily)'];
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const timeSeries = data['Time Series (Daily)'];
     if (!timeSeries) return 0;
     let saved = 0;
     for (const [date, data] of Object.entries(timeSeries)) {
@@ -36,8 +42,6 @@ export async function fetchAndSaveAllStockHistory(symbol: string): Promise<numbe
     return 0;
   }
 }
-import axios from 'axios';
-
 export interface StockPriceData {
   close: number;
   open: number;
@@ -55,8 +59,14 @@ export async function fetchStockPrice(symbol: string): Promise<StockPriceData | 
   }
   try {
     const url = `${BASE_URL}?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-    const response = await axios.get(url);
-    const timeSeries = response.data['Time Series (Daily)'];
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const timeSeries = data['Time Series (Daily)'];
     if (!timeSeries) return null;
     const latestDate = Object.keys(timeSeries)[0];
     const latest = timeSeries[latestDate];
