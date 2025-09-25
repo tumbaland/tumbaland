@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import * as fileService from '../services/fileService';
-import * as cacheService from '../config/cache';
 import { generateFileName } from '../config/multer';
+import * as localStorage from '../config/localStorage';
 import Joi from 'joi';
+import fs from 'fs';
+import { promises as fsPromises } from 'fs';
 import {
   ListFilesQuery,
   ApiError,
@@ -266,7 +268,7 @@ export const getUploadSignedUrl = async (req: Request, res: Response, next: Next
   }
 };
 
-// Serve file directly (with caching)
+// Serve file directly (from storage)
 export const serveFile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { error } = fileIdSchema.validate(req.params.fileId);
@@ -282,14 +284,17 @@ export const serveFile = async (req: Request, res: Response, next: NextFunction)
 
     const fileId = req.params.fileId;
 
-    // Get file metadata first to determine content type
+    // Get file directly from storage (no metadata JSON)
+    const filePath = localStorage.getFilePath(fileId);
+    const buffer = await fsPromises.readFile(filePath);
+
+    // Get metadata from album service
     const metadata = await fileService.getFileMetadata(fileId);
 
-    // Get file buffer (from cache or download)
-    const fileBuffer = await cacheService.getFileBuffer(fileId); // Set appropriate headers
+    // Set appropriate headers
     res.set({
       'Content-Type': metadata.contentType || 'application/octet-stream',
-      'Content-Length': fileBuffer.length.toString(),
+      'Content-Length': metadata.size?.toString() || buffer.length.toString(),
       'Cache-Control': 'public, max-age=31536000', // Cache for 1 year
       ETag: `"${fileId}"`,
       'Cross-Origin-Resource-Policy': 'cross-origin',
@@ -304,7 +309,7 @@ export const serveFile = async (req: Request, res: Response, next: NextFunction)
       return;
     }
 
-    res.send(fileBuffer);
+    res.send(buffer);
   } catch (error) {
     if ((error as Error).message.includes('File not found')) {
       res.status(404).json({
@@ -319,32 +324,64 @@ export const serveFile = async (req: Request, res: Response, next: NextFunction)
   }
 };
 
-// Get cache statistics
-export const getCacheStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+// Direct upload with signed URL (for client direct uploads) - raw file data
+export const directUploadRaw = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const stats = await cacheService.getCacheStats();
+    const { fileId } = req.params;
+    const fileAccess = (req as any).fileAccess;
 
-    res.json({
+    // Verify the token allows write access
+    if (fileAccess.action !== 'write') {
+      res.status(403).json({
+        error: {
+          message: 'Token does not allow write access',
+          status: 403
+        }
+      } as ApiError);
+      return;
+    }
+
+    // Verify fileId matches token
+    if (fileAccess.fileId !== fileId) {
+      res.status(403).json({
+        error: {
+          message: 'Token fileId does not match requested file',
+          status: 403
+        }
+      } as ApiError);
+      return;
+    }
+
+    // Get raw file data from request body
+    const fileBuffer = req.body;
+    if (!fileBuffer || !Buffer.isBuffer(fileBuffer)) {
+      res.status(400).json({
+        error: {
+          message: 'No file data provided',
+          status: 400
+        }
+      } as ApiError);
+      return;
+    }
+
+    // Get content type from headers
+    const contentType = req.headers['content-type'] || 'application/octet-stream';
+
+    // Save file directly to local storage (no metadata)
+    await localStorage.saveFileOnly(fileId, fileBuffer);
+
+    res.status(201).json({
       success: true,
+      message: 'File uploaded successfully',
       data: {
-        ...stats,
-        totalSizeFormatted: formatBytes(stats.totalSize),
-        cacheDir: process.env.FILE_CACHE_DIR || 'cache',
-        maxAge: process.env.CACHE_MAX_AGE || '86400000',
-        maxSize: process.env.CACHE_MAX_SIZE || '1073741824',
-        maxSizeFormatted: formatBytes(parseInt(process.env.CACHE_MAX_SIZE || '1073741824'))
+        id: fileId,
+        name: fileId,
+        size: fileBuffer.length,
+        mimetype: contentType,
+        uploadedAt: new Date().toISOString()
       }
     });
   } catch (error) {
     next(error);
   }
-};
-
-// Helper function to format bytes
-const formatBytes = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import Photo from '../models/Photo';
 import Album from '../models/Album';
-import { deleteFile, getFileUrl, getFileUploadSignedUrl } from '../services/fileService';
+import { deleteFile, getFileUrl, getFileUploadSignedUrl, getSignedUrl } from '../services/fileService';
 
 // Create a new photo record (after file upload)
 export const createPhoto = async (req: Request, res: Response): Promise<void> => {
@@ -120,7 +120,7 @@ export const getPhotosByAlbum = async (req: Request, res: Response): Promise<voi
     const photosWithUrls = await Promise.all(
       photos.map(async (photo) => {
         try {
-          const signedUrl = await getFileUrl(photo.fileId);
+          const signedUrl = await getSignedUrl(photo.fileId);
           return {
             ...photo.toObject(),
             signedUrl
@@ -167,7 +167,7 @@ export const getPhotoById = async (req: Request, res: Response): Promise<void> =
       return;
     }
     try {
-      const signedUrl = await getFileUrl(photo.fileId);
+      const signedUrl = await getSignedUrl(photo.fileId);
       res.json({
         success: true,
         data: {
@@ -444,6 +444,34 @@ export const getPhotosForAIAnalysis = async (req: Request, res: Response): Promi
     res.status(500).json({
       success: false,
       message: 'Failed to get photos for AI analysis'
+    });
+  }
+};
+
+// Get photo by fileId (for file service integration)
+export const getPhotoByFileId = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { fileId } = req.params;
+
+    const photo = await Photo.findOne({ fileId });
+
+    if (!photo) {
+      res.status(404).json({
+        success: false,
+        message: 'Photo not found'
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: photo
+    });
+  } catch (error) {
+    console.error('Error fetching photo by fileId:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch photo'
     });
   }
 };

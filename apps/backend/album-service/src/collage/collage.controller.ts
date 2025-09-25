@@ -36,7 +36,7 @@ export const updateCollage = async (req: Request, res: Response) => {
 
 import Photo from '../models/Photo';
 import Album from '../models/Album';
-import { getFileUrl } from '../services/fileService';
+import { getSignedUrl } from '../services/fileService';
 
 export const getCollageById = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -77,7 +77,7 @@ export const getCollageById = async (req: Request, res: Response): Promise<void>
     const photosWithUrls = await Promise.all(
       photos.map(async (photo) => {
         try {
-          const signedUrl = await getFileUrl(photo.fileId);
+          const signedUrl = await getSignedUrl(photo.fileId);
           return { ...photo.toObject(), signedUrl };
         } catch (e) {
           return photo.toObject();

@@ -13,3 +13,4 @@ storybook-static
 
 # Cloudflare credentials (dynamically created)
 apps/infra/tumbaland-proxy/cloudflare.ini
+storage

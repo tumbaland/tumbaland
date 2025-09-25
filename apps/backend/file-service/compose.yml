@@ -11,14 +11,12 @@ services:
       - PORT=5002
       - NODE_ENV=production
       - JWT_SECRET=${JWT_SECRET}
-      - GOOGLE_CLOUD_PROJECT_ID=${GOOGLE_CLOUD_PROJECT_ID}
-      - GOOGLE_CLOUD_BUCKET_NAME=${GOOGLE_CLOUD_BUCKET_NAME}
-      - GOOGLE_CLOUD_KEY_FILE_BASE64=${GOOGLE_CLOUD_KEY_FILE_BASE64}
-      - FILE_CACHE_DIR=./cache
-      - CACHE_MAX_AGE=864000000
-      - CACHE_MAX_SIZE=1073741824
-      - CACHE_CLEANUP_INTERVAL=259200000
+      - FILE_ACCESS_SECRET=${FILE_ACCESS_SECRET}
+      - ALBUM_API_URL=${ALBUM_API_URL}
       - CORS_ORIGIN=${CORS_ORIGIN}
+      - FILE_API_URL=${FILE_API_URL}
+    volumes:
+      - ./storage:/storage
     init: true
     networks:
       - tumbanet

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import Album from '../models/Album';
 import Photo from '../models/Photo';
-import { deleteFile, getFileUrl } from '../services/fileService';
+import { deleteFile, getFileUrl, getSignedUrl } from '../services/fileService';
 import { buildAccessQuery, canAccessResource } from '../utils/permissionUtils';
 
 // Create a new album
@@ -93,7 +93,7 @@ export const getAlbums = async (req: Request, res: Response): Promise<void> => {
           try {
             const coverPhotoDoc = await Photo.findById(album.coverPhotoId);
             if (coverPhotoDoc) {
-              const fileUrl = await getFileUrl(coverPhotoDoc.fileId);
+              const fileUrl = await getSignedUrl(coverPhotoDoc.fileId);
               coverPhoto = {
                 ...coverPhotoDoc.toObject(),
                 signedUrl: fileUrl
@@ -173,7 +173,7 @@ export const getAlbumById = async (req: Request, res: Response): Promise<void> =
       try {
         const coverPhotoDoc = await Photo.findById(album.coverPhotoId);
         if (coverPhotoDoc) {
-          const fileUrl = await getFileUrl(coverPhotoDoc.fileId);
+          const fileUrl = await getSignedUrl(coverPhotoDoc.fileId);
           coverPhoto = {
             ...coverPhotoDoc.toObject(),
             signedUrl: fileUrl

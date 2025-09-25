@@ -7,7 +7,8 @@ import {
   deletePhoto,
   getUploadSignedUrlRequest,
   updatePhotoAIAnalysis,
-  getPhotosForAIAnalysis
+  getPhotosForAIAnalysis,
+  getPhotoByFileId
 } from '../controllers/photoController';
 import { authenticateToken } from '../middleware/authMiddleware';
 
@@ -17,6 +18,7 @@ const router = express.Router();
 router.post('/', authenticateToken, createPhoto);
 router.get('/album/:albumId', authenticateToken, getPhotosByAlbum);
 router.get('/:id', authenticateToken, getPhotoById);
+router.get('/by-file/:fileId', getPhotoByFileId); // Public route for file service
 router.put('/:id', authenticateToken, updatePhoto);
 router.delete('/:id', authenticateToken, deletePhoto);
 

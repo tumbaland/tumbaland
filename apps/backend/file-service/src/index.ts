@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import path from 'path';
 import fileRoutes from './routes/fileRoutes';
-import { ensureCacheDir } from './config/cache';
+import { ensureStorageDirs } from './config/localStorage';
 
 const app = express();
 const PORT = process.env.PORT || 5002;
@@ -36,11 +36,22 @@ app.use(
 app.use(morgan('combined'));
 app.use(express.json());
 
+// Raw body parser for direct file uploads (before JSON parser)
+app.use('/api/upload/direct', express.raw({ type: '*/*', limit: '10mb' }));
+
 // Additional CORS middleware for file serving
 app.use('/api/serve', (req: Request, res: Response, next: NextFunction) => {
   res.header('Cross-Origin-Resource-Policy', 'cross-origin');
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  next();
+});
+
+// Additional CORS middleware for direct uploads
+app.use('/api/upload/direct', (req: Request, res: Response, next: NextFunction) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'PUT, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   next();
 });
@@ -74,12 +85,12 @@ app.use((error: any, req: Request, res: Response, next: NextFunction) => {
 app.listen(PORT, async () => {
   console.log(`File service running on port ${PORT}`);
 
-  // Initialize cache directory
+  // Initialize storage directories
   try {
-    await ensureCacheDir();
-    console.log('Cache directory initialized');
+    await ensureStorageDirs();
+    console.log('Storage directories initialized');
   } catch (error) {
-    console.error('Failed to initialize cache directory:', error);
+    console.error('Failed to initialize storage directories:', error);
   }
 });
 

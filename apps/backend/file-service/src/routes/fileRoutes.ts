@@ -1,6 +1,7 @@
 import express from 'express';
 import { upload } from '../config/multer';
 import * as fileController from '../controllers/fileController';
+import { verifySignedUrlMiddleware } from '../services/signedUrlService';
 
 const router = express.Router();
 
@@ -10,8 +11,11 @@ router.post('/upload', upload.single('file') as any, fileController.uploadFile a
 // Get upload signed URL (for direct client uploads)
 router.post('/upload-url', fileController.getUploadSignedUrl as any);
 
-// Serve file directly (with caching) - NEW ENDPOINT
-router.get('/serve/:fileId', fileController.serveFile as any);
+// Direct upload with signed URL (for client direct uploads)
+router.put('/upload/direct/:fileId', verifySignedUrlMiddleware, fileController.directUploadRaw as any);
+
+// Serve file directly (with signed URL protection)
+router.get('/serve/:fileId', verifySignedUrlMiddleware, fileController.serveFile as any);
 
 // OPTIONS handler for serve endpoint (CORS preflight)
 router.options('/serve/:fileId', (req, res) => {
@@ -23,9 +27,6 @@ router.options('/serve/:fileId', (req, res) => {
   });
   res.status(200).end();
 });
-
-// Get cache statistics - NEW ENDPOINT
-router.get('/cache/stats', fileController.getCacheStats as any);
 
 // Get signed URL for file access
 router.get('/signed-url/:fileId', fileController.getSignedUrl as any);

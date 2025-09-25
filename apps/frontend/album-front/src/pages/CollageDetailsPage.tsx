@@ -21,6 +21,7 @@ import { useCollage } from '../hooks/useCollage';
 
 interface CanvasPhoto {
   id: string;
+  fileId?: string; // The photo's database ID for persistence
   src: string;
   x: number;
   y: number;
@@ -166,13 +167,14 @@ const CollageDetailsPage: React.FC = () => {
     setSaving(true);
     try {
       const photos = canvasPhotos.map((p, idx) => {
-        // Only save the filename, not the full URL
-        let filename = p.src;
-        if (filename.includes('/')) {
-          filename = filename.substring(filename.lastIndexOf('/') + 1);
-        }
+        // Use stored fileId, or extract from URL as fallback
+        const fileId = p.fileId || (p.src.includes('/serve/') 
+          ? p.src.split('/serve/')[1]?.split('?')[0] 
+          : '');
+        
         return {
-          filename,
+          fileId,
+          filename: fileId, // Keep filename for backward compatibility
           position: { left: p.x, top: p.y },
           width: p.width,
           height: p.height,
@@ -230,14 +232,11 @@ const CollageDetailsPage: React.FC = () => {
           if (data.collage.config?.photos) {
             setCanvasPhotos(
               data.collage.config.photos.map((p: any, idx: number) => {
-                // Find album photo with matching filename
-                let albumPhoto = (data.albumPhotos || []).find((ap: any) => {
-                  // Try to match by filename only
-                  const apFilename = ap.filename || (ap.signedUrl ? ap.signedUrl.split('/').pop() : undefined);
-                  return apFilename === p.filename;
-                });
+                // Find album photo with matching fileId
+                let albumPhoto = (data.albumPhotos || []).find((ap: any) => ap.fileId === p.filename);
                 return {
                   id: p.filename + '-' + idx,
+                  fileId: p.filename, // Store the fileId for saving
                   src: albumPhoto ? albumPhoto.signedUrl : p.filename, // fallback to filename if not found
                   x: p.position?.left || 100,
                   y: p.position?.top || 100,
@@ -245,7 +244,8 @@ const CollageDetailsPage: React.FC = () => {
                   height: p.height || 120,
                   rotation: p.rotation || 0,
                   transparentBackground: p.transparentBackground,
-                  showBorder: p.frameVisible ?? true
+                  showBorder: p.frameVisible ?? true,
+                  caption: p.caption || ''
                 };
               })
             );
@@ -310,6 +310,7 @@ const CollageDetailsPage: React.FC = () => {
       ...prev,
       {
         id: photo._id + '-' + Date.now(),
+        fileId: photo._id, // Store the photo's fileId for saving
         src: photo.signedUrl,
         x: 100 + Math.random() * 200,
         y: 100 + Math.random() * 200,
