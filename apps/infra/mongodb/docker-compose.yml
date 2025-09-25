@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: tumbaland-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      # MongoDB root credentials
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password123}
+
+      # Database name (optional - MongoDB will create if needed)
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-tumbaland}
+
+      # Timezone
+      TZ: ${TZ:-UTC}
+    volumes:
+      # Persistent data storage
+      - ./data:/data/db
+
+      # Optional: Custom MongoDB configuration
+      # - ./mongod.conf:/etc/mongod.conf
+
+      # Optional: Initialization scripts
+      # - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - tumbaland-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    command: >
+      --bind_ip_all
+      --logpath /dev/stdout
+      --logappend
+      --auth
+
+  # Optional: MongoDB Express (Web UI for MongoDB)
+  mongo-express:
+    image: mongo-express:latest
+    container_name: tumbaland-mongo-express
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_ROOT_USERNAME:-admin}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_ROOT_PASSWORD:-password123}
+      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_MONGODB_PORT: 27017
+      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USERNAME:-admin}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD:-express123}
+    depends_on:
+      - mongodb
+    networks:
+      - tumbaland-network
+
+networks:
+  tumbaland-network:
+    driver: bridge
+    name: tumbaland-network

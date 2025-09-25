@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  consul-server:
+    image: hashicorp/consul:latest
+    container_name: tumbaland-consul-server
+    restart: unless-stopped
+    ports:
+      - "8500:8500"   # HTTP API
+      - "8600:8600"   # DNS
+      - "8600:8600/udp"  # DNS UDP
+    environment:
+      - CONSUL_BIND_INTERFACE=eth0
+      - CONSUL_CLIENT_INTERFACE=eth0
+      - CONSUL_HTTP_ADDR=0.0.0.0:8500
+    volumes:
+      - ./server.json:/consul/config/server.json:ro
+      - ./data:/consul/data
+    command: consul agent -server -bootstrap-expect=1 -ui -client=0.0.0.0 -config-dir=/consul/config
+    networks:
+      - tumbaland-network
+    healthcheck:
+      test: ["CMD", "consul", "info"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  consul-client:
+    image: hashicorp/consul:latest
+    container_name: tumbaland-consul-client
+    restart: unless-stopped
+    depends_on:
+      - consul-server
+    environment:
+      - CONSUL_BIND_INTERFACE=eth0
+      - CONSUL_CLIENT_INTERFACE=eth0
+    volumes:
+      - ./client.json:/consul/config/client.json:ro
+      - ./client-data:/consul/data
+    command: consul agent -join=consul-server -config-dir=/consul/config
+    networks:
+      - tumbaland-network
+    # This client runs without exposing ports, used for service registration
+
+networks:
+  tumbaland-network:
+    driver: bridge
+    name: tumbaland-network

@@ -1,0 +1,122 @@
+version: '3.8'
+
+services:
+  # Restic backup service using Docker
+  restic-backup:
+    image: restic/restic:latest
+    container_name: tumbaland-restic-backup
+    restart: "no"  # Run on schedule, don't auto-restart
+    environment:
+      # Restic repository configuration
+      RESTIC_REPOSITORY: ${RESTIC_REPOSITORY:-/backup/restic-repo}
+      RESTIC_PASSWORD: ${RESTIC_PASSWORD}
+
+      # MinIO/S3 configuration for offsite backup (optional)
+      AWS_ACCESS_KEY_ID: ${BACKUP_AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${BACKUP_AWS_SECRET_ACCESS_KEY}
+      AWS_DEFAULT_REGION: ${BACKUP_AWS_REGION:-us-east-1}
+
+      # Email notifications (optional)
+      SMTP_SERVER: ${SMTP_SERVER}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      NOTIFICATION_EMAIL: ${NOTIFICATION_EMAIL}
+    volumes:
+      # Local backup storage
+      - ./data:/backup
+
+      # Access to all infrastructure data volumes
+      - ../mongodb/data:/backup/mongodb:ro
+      - ../minio/data:/backup/minio:ro
+      - ../redis/data:/backup/redis:ro
+      - ../vault/vault_data:/backup/vault/data:ro
+      - ../vault/vault_logs:/backup/vault/logs:ro
+      - ../vault/vault_config:/backup/vault/config:ro
+      - ../consul/data:/backup/consul/server:ro
+      - ../consul/client-data:/backup/consul/client:ro
+
+      # Backup scripts
+      - ./scripts:/scripts:ro
+    networks:
+      - tumbaland-network
+    command: >
+      sh -c "
+        echo 'Starting backup process...';
+
+        # Initialize repository if it doesn't exist
+        restic init 2>/dev/null && echo 'Repository initialized' || echo 'Repository already exists';
+
+        # Run backup scripts
+        /scripts/backup-mongodb.sh;
+        /scripts/backup-minio.sh;
+        /scripts/backup-redis.sh;
+        /scripts/backup-vault.sh;
+        /scripts/backup-consul.sh;
+
+        # Prune old backups (keep last 7 daily, 4 weekly, 12 monthly)
+        restic forget --keep-daily 7 --keep-weekly 4 --keep-monthly 12 --prune;
+
+        # Check repository integrity
+        restic check;
+
+        echo 'Backup completed successfully';
+
+        # Send notification if configured
+        if [ -n '$NOTIFICATION_EMAIL' ]; then
+          echo 'Backup completed successfully' | mail -s 'Tumbaland Backup Success' $NOTIFICATION_EMAIL || true;
+        fi
+      "
+
+  # Backup metrics exporter for Prometheus
+  backup-metrics:
+    image: nginx:alpine
+    container_name: tumbaland-backup-metrics
+    restart: unless-stopped
+    ports:
+      - "9094:80"
+    volumes:
+      - ./scripts:/scripts:ro
+      - ./metrics.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - tumbaland-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Cron scheduler for automated backups
+  backup-scheduler:
+    image: alpine:latest
+    container_name: tumbaland-backup-scheduler
+    restart: unless-stopped
+    volumes:
+      - ./scripts:/scripts:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - tumbaland-network
+    command: >
+      sh -c "
+        echo 'Backup scheduler started';
+        echo '0 2 * * * docker-compose -f /scripts/../docker-compose.yml up restic-backup' > /etc/crontabs/root;
+        echo '0 3 * * 0 docker-compose -f /scripts/../docker-compose.yml --profile backup-storage up -d minio-backup' >> /etc/crontabs/root;
+        crond -f -l 8
+      "
+
+volumes:
+  # Local backup volumes
+  mongodb_backup:
+    driver: local
+  minio_backup:
+    driver: local
+  redis_backup:
+    driver: local
+  vault_backup:
+    driver: local
+  consul_backup:
+    driver: local
+
+networks:
+  tumbaland-network:
+    external: true

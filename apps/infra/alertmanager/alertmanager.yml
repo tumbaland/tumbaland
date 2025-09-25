@@ -1,0 +1,156 @@
+global:
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: '${ALERTMANAGER_SMTP_FROM}'
+  smtp_auth_username: '${ALERTMANAGER_SMTP_USERNAME}'
+  smtp_auth_password: '${ALERTMANAGER_SMTP_PASSWORD}'
+  smtp_require_tls: true
+
+  slack_api_url: '${ALERTMANAGER_SLACK_WEBHOOK_URL}'
+
+route:
+  group_by: ['alertname']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'tumbaland-alerts'
+  routes:
+  - match:
+      severity: critical
+    receiver: 'tumbaland-critical'
+    continue: true
+  - match:
+      severity: warning
+    receiver: 'tumbaland-warnings'
+  - match:
+      service: database
+    receiver: 'tumbaland-database'
+  - match:
+      service: infrastructure
+    receiver: 'tumbaland-infrastructure'
+
+receivers:
+- name: 'tumbaland-alerts'
+  slack_configs:
+  - channel: '#tumbaland-alerts'
+    title: '{{ .GroupLabels.alertname }}'
+    text: |
+      {{ range .Alerts }}
+      *Alert:* {{ .Annotations.summary }}
+      *Description:* {{ .Annotations.description }}
+      *Severity:* {{ .Labels.severity }}
+      *Service:* {{ .Labels.service }}
+      *Time:* {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+      {{ end }}
+    send_resolved: true
+  email_configs:
+  - to: '${ALERTMANAGER_EMAIL_TO}'
+    subject: 'Tumbaland Alert: {{ .GroupLabels.alertname }}'
+    body: |
+      {{ range .Alerts }}
+      Alert: {{ .Annotations.summary }}
+      Description: {{ .Annotations.description }}
+      Severity: {{ .Labels.severity }}
+      Service: {{ .Labels.service }}
+      Time: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+
+      {{ end }}
+    send_resolved: true
+
+- name: 'tumbaland-critical'
+  slack_configs:
+  - channel: '#tumbaland-critical'
+    title: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+    text: |
+      {{ range .Alerts }}
+      🚨 *CRITICAL ALERT* 🚨
+      *Alert:* {{ .Annotations.summary }}
+      *Description:* {{ .Annotations.description }}
+      *Service:* {{ .Labels.service }}
+      *Instance:* {{ .Labels.instance }}
+      *Time:* {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+      {{ end }}
+    send_resolved: true
+  email_configs:
+  - to: '${ALERTMANAGER_CRITICAL_EMAIL_TO}'
+    subject: '🚨 CRITICAL: Tumbaland Alert - {{ .GroupLabels.alertname }}'
+    body: |
+      🚨 CRITICAL ALERT 🚨
+
+      {{ range .Alerts }}
+      Alert: {{ .Annotations.summary }}
+      Description: {{ .Annotations.description }}
+      Service: {{ .Labels.service }}
+      Instance: {{ .Labels.instance }}
+      Time: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+
+      {{ end }}
+    send_resolved: true
+
+- name: 'tumbaland-warnings'
+  slack_configs:
+  - channel: '#tumbaland-warnings'
+    title: '⚠️ WARNING: {{ .GroupLabels.alertname }}'
+    text: |
+      {{ range .Alerts }}
+      ⚠️ *WARNING* ⚠️
+      *Alert:* {{ .Annotations.summary }}
+      *Description:* {{ .Annotations.description }}
+      *Service:* {{ .Labels.service }}
+      *Time:* {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+      {{ end }}
+    send_resolved: true
+
+- name: 'tumbaland-database'
+  slack_configs:
+  - channel: '#tumbaland-database'
+    title: '🗄️ Database Alert: {{ .GroupLabels.alertname }}'
+    text: |
+      {{ range .Alerts }}
+      🗄️ *DATABASE ALERT* 🗄️
+      *Alert:* {{ .Annotations.summary }}
+      *Description:* {{ .Annotations.description }}
+      *Database:* {{ .Labels.database }}
+      *Time:* {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+      {{ end }}
+    send_resolved: true
+  email_configs:
+  - to: '${ALERTMANAGER_DB_EMAIL_TO}'
+    subject: '🗄️ Database Alert: {{ .GroupLabels.alertname }}'
+    body: |
+      Database Alert
+
+      {{ range .Alerts }}
+      Alert: {{ .Annotations.summary }}
+      Description: {{ .Annotations.description }}
+      Database: {{ .Labels.database }}
+      Time: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+
+      {{ end }}
+    send_resolved: true
+
+- name: 'tumbaland-infrastructure'
+  slack_configs:
+  - channel: '#tumbaland-infrastructure'
+    title: '🏗️ Infrastructure Alert: {{ .GroupLabels.alertname }}'
+    text: |
+      {{ range .Alerts }}
+      🏗️ *INFRASTRUCTURE ALERT* 🏗️
+      *Alert:* {{ .Annotations.summary }}
+      *Description:* {{ .Annotations.description }}
+      *Component:* {{ .Labels.component }}
+      *Time:* {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+      {{ end }}
+    send_resolved: true
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'service']
+
+  - source_match:
+      alertname: 'NodeDown'
+    target_match:
+      alertname: 'ServiceDown'
+    equal: ['instance']

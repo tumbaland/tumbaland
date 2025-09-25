@@ -1,0 +1,37 @@
+# Logstash Configuration
+# Main configuration file for Logstash
+
+path.data: /usr/share/logstash/data
+path.logs: /usr/share/logstash/logs
+
+# Pipeline configuration
+pipeline:
+  batch:
+    size: 125
+    delay: 5
+  workers: 1
+
+# API configuration
+api:
+  http:
+    host: "0.0.0.0"
+    port: 9600
+
+# Logging configuration
+log:
+  level: ${LOGSTASH_LOG_LEVEL:-info}
+  format: json
+
+# Dead letter queue
+dead_letter_queue:
+  enable: true
+  max_bytes: 1024mb
+  path: "/usr/share/logstash/data/dead_letter_queue"
+
+# Metrics collection
+monitoring:
+  enabled: true
+  elasticsearch:
+    hosts: ["elasticsearch:9200"]
+    username: "elastic"
+    password: "${ELK_ELASTIC_PASSWORD:-elastic_password_123}"

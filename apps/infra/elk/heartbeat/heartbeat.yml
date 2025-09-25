@@ -1,0 +1,182 @@
+heartbeat.monitors:
+- type: http
+  name: "Tumbaland Album Service"
+  urls: ["http://album-service:3000/health"]
+  schedule: '@every 10s'
+  timeout: 5s
+  check.request:
+    method: GET
+  check.response:
+    status: [200, 201, 202]
+  tags: ["service", "album"]
+
+- type: http
+  name: "Tumbaland Auth Service"
+  urls: ["http://auth-service:3000/health"]
+  schedule: '@every 10s'
+  timeout: 5s
+  check.request:
+    method: GET
+  check.response:
+    status: [200, 201, 202]
+  tags: ["service", "auth"]
+
+- type: http
+  name: "Tumbaland File Service"
+  urls: ["http://file-service:3000/health"]
+  schedule: '@every 10s'
+  timeout: 5s
+  check.request:
+    method: GET
+  check.response:
+    status: [200, 201, 202]
+  tags: ["service", "file"]
+
+- type: http
+  name: "Tumbaland Finance Service"
+  urls: ["http://finance-service:3000/health"]
+  schedule: '@every 10s'
+  timeout: 5s
+  check.request:
+    method: GET
+  check.response:
+    status: [200, 201, 202]
+  tags: ["service", "finance"]
+
+- type: http
+  name: "Tumbaland Group Service"
+  urls: ["http://group-service:3000/health"]
+  schedule: '@every 10s'
+  timeout: 5s
+  check.request:
+    method: GET
+  check.response:
+    status: [200, 201, 202]
+  tags: ["service", "group"]
+
+- type: http
+  name: "Tumbaland Payment Service"
+  urls: ["http://payment-service:3000/health"]
+  schedule: '@every 10s'
+  timeout: 5s
+  check.request:
+    method: GET
+  check.response:
+    status: [200, 201, 202]
+  tags: ["service", "payment"]
+
+- type: http
+  name: "Tumbaland Relationship Service"
+  urls: ["http://relationship-service:3000/health"]
+  schedule: '@every 10s'
+  timeout: 5s
+  check.request:
+    method: GET
+  check.response:
+    status: [200, 201, 202]
+  tags: ["service", "relationship"]
+
+- type: http
+  name: "Tumbaland Public Service"
+  urls: ["http://public-service:3000/health"]
+  schedule: '@every 10s'
+  timeout: 5s
+  check.request:
+    method: GET
+  check.response:
+    status: [200, 201, 202]
+  tags: ["service", "public"]
+
+- type: http
+  name: "MinIO Object Storage"
+  urls: ["http://minio:9000/minio/health/live"]
+  schedule: '@every 30s'
+  timeout: 10s
+  check.request:
+    method: GET
+  check.response:
+    status: [200]
+  tags: ["storage", "minio"]
+
+- type: http
+  name: "MongoDB"
+  urls: ["http://mongodb:27017"]
+  schedule: '@every 30s'
+  timeout: 10s
+  check.request:
+    method: GET
+  check.response:
+    status: [200]
+  tags: ["database", "mongodb"]
+
+- type: http
+  name: "Redis"
+  urls: ["http://redis:6379"]
+  schedule: '@every 30s'
+  timeout: 10s
+  check.request:
+    method: GET
+  check.response:
+    status: [200]
+  tags: ["cache", "redis"]
+
+- type: http
+  name: "Elasticsearch"
+  urls: ["http://elasticsearch:9200/_cluster/health"]
+  schedule: '@every 30s'
+  timeout: 10s
+  check.request:
+    method: GET
+  check.response:
+    status: [200]
+    json:
+      - description: Check cluster status
+        condition:
+          equals:
+            status: green
+  tags: ["monitoring", "elasticsearch"]
+
+- type: http
+  name: "Logstash"
+  urls: ["http://logstash:9600/_node/stats"]
+  schedule: '@every 30s'
+  timeout: 10s
+  check.request:
+    method: GET
+  check.response:
+    status: [200]
+  tags: ["monitoring", "logstash"]
+
+- type: http
+  name: "Kibana"
+  urls: ["http://kibana:5601/api/status"]
+  schedule: '@every 30s'
+  timeout: 10s
+  check.request:
+    method: GET
+  check.response:
+    status: [200]
+  tags: ["monitoring", "kibana"]
+
+processors:
+- add_host_metadata: ~
+- add_cloud_metadata: ~
+
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+  username: "elastic"
+  password: "${ELK_ELASTIC_PASSWORD:-elastic_password_123}"
+
+setup.kibana:
+  host: "kibana:5601"
+
+setup.dashboards.enabled: true
+setup.ilm.enabled: false
+
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /usr/share/heartbeat/logs
+  name: heartbeat
+  keepfiles: 7
+  permissions: 0644

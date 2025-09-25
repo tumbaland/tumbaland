@@ -1,0 +1,66 @@
+# Filebeat Configuration for Tumbaland
+# Collects logs from Docker containers and ships to Logstash
+
+filebeat.inputs:
+- type: container
+  paths:
+    - '/var/lib/docker/containers/*/*.log'
+  processors:
+  - add_docker_metadata:
+      host: "unix:///var/run/docker.sock"
+      match_source: true
+      match_source_index: 4
+      match_short_id: true
+      cleanup_timeout: 60
+  - decode_json_fields:
+      fields: ["message"]
+      target: ""
+      overwrite_keys: true
+  - add_fields:
+      target: "tumbaland"
+      fields:
+        environment: "development"
+        platform: "docker"
+
+# Elasticsearch output (alternative to Logstash)
+# output.elasticsearch:
+#   hosts: ["elasticsearch:9200"]
+#   username: "elastic"
+#   password: "${ELK_ELASTIC_PASSWORD:-elastic_password_123}"
+#   index: "filebeat-%{+yyyy.MM.dd}"
+
+# Logstash output
+output.logstash:
+  hosts: ["logstash:5044"]
+  ssl:
+    enabled: false
+
+# Logging configuration
+logging:
+  level: info
+  to_files: true
+  files:
+    path: /usr/share/filebeat/logs
+    name: filebeat
+    keepfiles: 7
+    permissions: 0644
+  json: true
+
+# Monitoring
+monitoring:
+  enabled: true
+  elasticsearch:
+    hosts: ["elasticsearch:9200"]
+    username: "elastic"
+    password: "${ELK_ELASTIC_PASSWORD:-elastic_password_123}"
+
+# Setup for Kibana dashboards
+setup:
+  dashboards:
+    enabled: true
+  kibana:
+    host: "kibana:5601"
+    username: "elastic"
+    password: "${ELK_ELASTIC_PASSWORD:-elastic_password_123}"
+  ilm:
+    enabled: false

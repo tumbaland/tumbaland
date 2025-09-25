@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7.2-alpine
+    container_name: tumbaland-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    environment:
+      # Redis configuration via environment
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password_123}
+      REDIS_DISABLE_COMMANDS: ${REDIS_DISABLE_COMMANDS:-FLUSHDB,FLUSHALL,SHUTDOWN}
+    volumes:
+      # Persistent data storage
+      - ./data:/data
+
+      # Redis configuration file
+      - ./redis.conf:/etc/redis/redis.conf
+    networks:
+      - tumbaland-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD:-redis_password_123}
+      --maxmemory ${REDIS_MAXMEMORY:-256mb}
+      --maxmemory-policy ${REDIS_MAXMEMORY_POLICY:-allkeys-lru}
+      --tcp-keepalive 300
+      --timeout 300
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --appendonly yes
+      --appendfsync everysec
+      --loglevel ${REDIS_LOGLEVEL:-notice}
+
+  # Redis Commander (Web UI for Redis)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: tumbaland-redis-commander
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      REDIS_HOSTS: local:redis:6379:${REDIS_PASSWORD:-redis_password_123}
+      HTTP_USER: ${REDIS_COMMANDER_USER:-admin}
+      HTTP_PASSWORD: ${REDIS_COMMANDER_PASSWORD:-commander_123}
+      REDIS_CONNECTION_NAME: Tumbaland Redis
+    depends_on:
+      - redis
+    networks:
+      - tumbaland-network
+
+  # Optional: RedisInsight (Advanced Redis GUI)
+  redisinsight:
+    image: redislabs/redisinsight:latest
+    container_name: tumbaland-redisinsight
+    restart: unless-stopped
+    ports:
+      - "5540:5540"
+    volumes:
+      - ./redisinsight:/db
+    depends_on:
+      - redis
+    networks:
+      - tumbaland-network
+
+networks:
+  tumbaland-network:
+    driver: bridge
+    name: tumbaland-network

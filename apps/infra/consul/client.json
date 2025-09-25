@@ -1,0 +1,27 @@
+{
+  "datacenter": "tumbaland-dc",
+  "data_dir": "/consul/data",
+  "log_level": "INFO",
+  "node_name": "consul-client-01",
+  "server": false,
+  "ui": false,
+  "client_addr": "127.0.0.1",
+  "bind_addr": "{{ GetInterfaceIP \"eth0\" }}",
+  "advertise_addr": "{{ GetInterfaceIP \"eth0\" }}",
+  "ports": {
+    "http": -1,
+    "https": -1
+  },
+  "connect": {
+    "enabled": true
+  },
+  "telemetry": {
+    "prometheus_retention_time": "24h",
+    "disable_hostname": true
+  },
+  "acl": {
+    "enabled": false,
+    "default_policy": "allow",
+    "enable_token_persistence": true
+  }
+}

@@ -1,0 +1,172 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Tumbaland Backup Monitoring",
+    "tags": ["tumbaland", "backup"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Backup Status Overview",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "backup_recent_success",
+            "legendFormat": "Recent Backup Success"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "options": {
+                  "0": {
+                    "text": "FAILED",
+                    "color": "red"
+                  },
+                  "1": {
+                    "text": "SUCCESS",
+                    "color": "green"
+                  }
+                },
+                "type": "value"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Repository Health",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "backup_repository_health",
+            "legendFormat": "Repository Health"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Backup Age (Hours)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "backup_age_hours",
+            "legendFormat": "Hours Since Last Backup"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "h",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "orange",
+                  "value": 24
+                },
+                {
+                  "color": "red",
+                  "value": 48
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Repository Size",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "backup_repository_size_bytes",
+            "legendFormat": "Repository Size"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "bytes"
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Total Snapshots",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "backup_snapshots_total",
+            "legendFormat": "Total Snapshots"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Snapshots by Service",
+        "type": "barchart",
+        "targets": [
+          {
+            "expr": "backup_snapshots_total",
+            "legendFormat": "{{service}}"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Disk Usage",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "backup_disk_usage_percent",
+            "legendFormat": "Disk Usage %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "orange",
+                  "value": 70
+                },
+                {
+                  "color": "red",
+                  "value": 90
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Backup Trends",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "increase(backup_snapshots_total[1h])",
+            "legendFormat": "Snapshot Rate"
+          }
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-7d",
+      "to": "now"
+    },
+    "refresh": "5m"
+  }
+}

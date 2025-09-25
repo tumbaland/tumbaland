@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  haproxy:
+    image: haproxy:2.8
+    container_name: haproxy-gateway
+    ports:
+      - "80:80"       # HTTP port
+      - "443:443"     # HTTPS port (when SSL is configured)
+      - "8404:8404"   # HAProxy Stats page
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - haproxy_logs:/var/log/haproxy
+      - ./errors:/usr/local/etc/haproxy/errors:ro
+      - ./lua:/usr/local/etc/haproxy/lua:ro
+      - ./ssl:/usr/local/etc/haproxy/ssl:ro
+    networks:
+      - tumbaland-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8404/stats || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+volumes:
+  haproxy_logs:
+
+networks:
+  tumbaland-network:
+    external: true
+    name: tumbaland-network
