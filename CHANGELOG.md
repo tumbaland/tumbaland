@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.151](https://github.com/toomastahves/tumbaland/compare/v0.0.150...v0.0.151) (2025-09-26)
+
+
+### Features
+
+* add dynamic activity types ([c71dc27](https://github.com/toomastahves/tumbaland/commit/c71dc27be93a0ef6c2232eac1d014b5be39d22d8))
+
 ### [0.0.150](https://github.com/toomastahves/tumbaland/compare/v0.0.149...v0.0.150) (2025-09-26)
 
 
