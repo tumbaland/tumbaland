@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.152](https://github.com/toomastahves/tumbaland/compare/v0.0.151...v0.0.152) (2025-09-26)
+
+
+### Bug Fixes
+
+* activities by category ([2d1e67c](https://github.com/toomastahves/tumbaland/commit/2d1e67ce47cc26cbcc927040731c33eeecbd3a83))
+
 ### [0.0.151](https://github.com/toomastahves/tumbaland/compare/v0.0.150...v0.0.151) (2025-09-26)
 
 
