@@ -15,6 +15,8 @@ import {
   Chip
 } from '@mui/material';
 import { getCumulativeTimelineData, CumulativeTimelineData } from '../api/statistics';
+import { getActivityTypes } from '../api/activityTypes';
+import { ActivityType } from '../api/types';
 import { useTenantFilter } from './tenant';
 
 interface CumulativeTimelineProps {
@@ -22,27 +24,6 @@ interface CumulativeTimelineProps {
   year?: number;
   height?: number;
 }
-
-// Activity colors for line visualization
-const ACTIVITY_COLORS: { [key: string]: string } = {
-  movies: '#e53e3e',
-  cooking: '#38a169',
-  dining: '#ed8936',
-  coffee: '#8b4513',
-  gaming: '#9f7aea',
-  other: '#718096',
-  total: '#1976d2'
-};
-
-const ACTIVITY_LABELS: { [key: string]: string } = {
-  movies: 'Movies',
-  cooking: 'Cooking',
-  dining: 'Dining',
-  coffee: 'Coffee',
-  gaming: 'Gaming',
-  other: 'Other',
-  total: 'Total'
-};
 
 const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
   title = 'Cumulative Activity Timeline',
@@ -54,15 +35,9 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | undefined>(year);
   const [viewMode, setViewMode] = useState<'activities' | 'hours'>('activities');
-  const [selectedLines, setSelectedLines] = useState<string[]>([
-    'movies',
-    'cooking',
-    'dining',
-    'coffee',
-    'gaming',
-    'other'
-  ]);
+  const [selectedLines, setSelectedLines] = useState<string[]>([]);
   const [containerWidth, setContainerWidth] = useState<number>(800); // Start with reasonable default
+  const [activityTypes, setActivityTypes] = useState<ActivityType[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Get the current tenant's group ID
@@ -76,11 +51,19 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
     try {
       setLoading(true);
       setError(null);
-      const timelineData = await getCumulativeTimelineData(selectedYear, tenantGroupId);
+      const [timelineData, activityTypesResponse] = await Promise.all([
+        getCumulativeTimelineData(selectedYear, tenantGroupId),
+        getActivityTypes({ groupId: tenantGroupId })
+      ]);
       console.log('Fetched timeline data:', timelineData);
+      console.log('Fetched activity types:', activityTypesResponse);
       setData(timelineData);
+      setActivityTypes(activityTypesResponse.data);
+      setSelectedLines(activityTypesResponse.data
+        .filter(type => type.slug !== 'total')
+        .map(type => type.slug));
     } catch (err) {
-      console.error('Error fetching timeline data:', err);
+      console.error('Error fetching data:', err);
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setLoading(false);
@@ -256,22 +239,38 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
         </Box>
         {/* Line Toggle Chips */}
         <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-          {Object.entries(ACTIVITY_COLORS).map(([activityType, color]) => (
+          {activityTypes
+            .map((activityType) => (
             <Chip
-              key={activityType}
-              label={ACTIVITY_LABELS[activityType]}
+              key={activityType._id}
+              label={activityType.name}
               size="small"
               clickable
-              onClick={() => toggleLine(activityType)}
+              onClick={() => toggleLine(activityType.slug)}
               sx={{
-                backgroundColor: selectedLines.includes(activityType) ? color : '#e0e0e0',
-                color: selectedLines.includes(activityType) ? 'white' : '#666',
+                backgroundColor: selectedLines.includes(activityType.slug) ? (activityType.color || '#9e9e9e') : '#e0e0e0',
+                color: selectedLines.includes(activityType.slug) ? 'white' : '#666',
                 '& .MuiChip-label': {
                   fontSize: '0.75rem'
                 }
               }}
             />
           ))}
+          {/* Total line toggle */}
+          <Chip
+            key="total"
+            label="Total"
+            size="small"
+            clickable
+            onClick={() => toggleLine('total')}
+            sx={{
+              backgroundColor: selectedLines.includes('total') ? '#1976d2' : '#e0e0e0',
+              color: selectedLines.includes('total') ? 'white' : '#666',
+              '& .MuiChip-label': {
+                fontSize: '0.75rem'
+              }
+            }}
+          />
         </Box>{' '}
         {/* Chart Container */}
         <Box sx={{ width: '100%', pb: 2 }} ref={containerRef}>
@@ -332,7 +331,8 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
               {selectedLines.map((activityType) => {
                 const values = getActivityLineData(activityType);
                 const path = createPath(values);
-                const color = ACTIVITY_COLORS[activityType];
+                const activityTypeData = activityTypes.find(type => type.slug === activityType);
+                const color = activityType === 'total' ? '#1976d2' : (activityTypeData?.color || '#9e9e9e');
 
                 return (
                   <path
@@ -349,7 +349,8 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
               {/* Data points */}
               {selectedLines.map((activityType) => {
                 const values = getActivityLineData(activityType);
-                const color = ACTIVITY_COLORS[activityType];
+                const activityTypeData = activityTypes.find(type => type.slug === activityType);
+                const color = activityType === 'total' ? '#1976d2' : (activityTypeData?.color || '#9e9e9e');
                 const svgWidth = Math.max(chartWidth, 600);
                 const svgPlotWidth = svgWidth - padding * 2;
 

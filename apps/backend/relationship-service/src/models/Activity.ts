@@ -6,7 +6,7 @@ export interface IActivity extends Document {
   date: Date;
   hours: number; // integer
   activity: {
-    type: string;
+    typeId: mongoose.Types.ObjectId; // Reference to ActivityType
     description: string;
   };
   createdAt: Date;
@@ -33,10 +33,10 @@ const ActivitySchema: Schema = new Schema(
       }
     },
     activity: {
-      type: {
-        type: String,
-        required: true,
-        enum: ['movies', 'cooking', 'dining', 'coffee', 'gaming', 'other', 'sex', 'together']
+      typeId: {
+        type: Schema.Types.ObjectId,
+        ref: 'ActivityType',
+        required: true
       },
       description: {
         type: String,
@@ -61,13 +61,29 @@ const ActivitySchema: Schema = new Schema(
 );
 
 // Indexes for better query performance
-ActivitySchema.index({ 'activity.type': 1, date: -1 });
+ActivitySchema.index({ 'activity.typeId': 1, date: -1 });
 ActivitySchema.index({ date: -1 });
 ActivitySchema.index({ createdAt: -1 });
 
 // Static methods
-ActivitySchema.statics.getActivityTypes = function () {
-  return ['movies', 'cooking', 'dining', 'lunch', 'gaming', 'other', 'sex', 'together'];
+ActivitySchema.statics.getActivityTypes = async function (userId?: string, groupId?: string) {
+  const ActivityType = mongoose.model('ActivityType');
+  const query: any = { isActive: true };
+
+  if (groupId) {
+    query.$or = [
+      { groupId },
+      { userId, groupId: { $exists: false } }
+    ];
+  } else if (userId) {
+    query.userId = userId;
+    query.$or = [
+      { groupId: { $exists: false } },
+      { groupId: null }
+    ];
+  }
+
+  return await ActivityType.find(query).sort({ sortOrder: 1 });
 };
 
 ActivitySchema.statics.getActivitiesByDateRange = function (startDate: Date, endDate: Date) {
@@ -82,8 +98,20 @@ ActivitySchema.statics.getActivitiesByDateRange = function (startDate: Date, end
 ActivitySchema.statics.getActivityStats = function () {
   return this.aggregate([
     {
+      $lookup: {
+        from: 'activity_types',
+        localField: 'activity.typeId',
+        foreignField: '_id',
+        as: 'activityType'
+      }
+    },
+    {
+      $unwind: '$activityType'
+    },
+    {
       $group: {
-        _id: '$activity.type',
+        _id: '$activityType.slug',
+        name: { $first: '$activityType.name' },
         count: { $sum: 1 },
         totalHours: { $sum: '$hours' },
         avgHours: { $avg: '$hours' }

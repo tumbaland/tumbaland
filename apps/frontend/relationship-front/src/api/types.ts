@@ -5,20 +5,34 @@ export interface Activity {
   date: Date | string;
   hours: number;
   activity: {
-    type: ActivityType;
+    typeId: ActivityType;
     description: string;
   };
   createdAt?: Date | string;
   updatedAt?: Date | string;
 }
 
-export type ActivityType = 'movies' | 'cooking' | 'dining' | 'coffee' | 'gaming' | 'other' | 'sex' | 'together';
+export interface ActivityType {
+  _id: string;
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  userId: string;
+  groupId?: string;
+}
 
 export interface CreateActivityRequest {
   date: Date | string;
   hours?: number;
   activity: {
-    type: ActivityType;
+    typeId: string; // ActivityType ID
     description?: string;
   };
   groupId?: string;
@@ -27,7 +41,7 @@ export interface CreateActivityRequest {
 export interface UpdateActivityRequest extends Partial<CreateActivityRequest> {}
 
 export interface GetActivitiesFilters {
-  activityType?: ActivityType;
+  activityType?: string; // ActivityType slug
   startDate?: Date | string;
   endDate?: Date | string;
   description?: string;
@@ -42,9 +56,9 @@ export interface ActivityStats {
   totalActivities: number;
   totalHours: number;
   averageHoursPerActivity: number;
-  activitiesByType: Record<ActivityType, number>;
-  hoursPerType: Record<ActivityType, number>;
-  mostFrequentActivity: ActivityType;
+  activitiesByType: Record<string, number>;
+  hoursPerType: Record<string, number>;
+  mostFrequentActivity: string;
   dateRange: {
     earliest: Date | string;
     latest: Date | string;

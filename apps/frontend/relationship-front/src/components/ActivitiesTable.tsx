@@ -2,7 +2,6 @@ import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableRow, Chip, TableSortLabel, Typography } from '@mui/material';
 import EditActivityModal from '../components/EditActivityModal';
 import DeleteActivityButton from '../components/DeleteActivityButton';
-import { ActivityType } from '../api/types';
 
 import { TablePagination } from '@mui/material';
 
@@ -11,7 +10,6 @@ interface ActivitiesTableProps {
   sortBy: string;
   sortOrder: 'asc' | 'desc';
   handleSort: (field: string) => void;
-  getActivityColor: (activityType: ActivityType) => string;
   formatDate: (date: Date | string) => string;
   refetch: () => void;
   pagination: { total: number };
@@ -26,7 +24,6 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
   sortBy,
   sortOrder,
   handleSort,
-  getActivityColor,
   formatDate,
   refetch,
   pagination,
@@ -112,10 +109,14 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
                 <TableCell>{formatDate(activity.date)}</TableCell>
                 <TableCell>
                   <Chip
-                    label={activity.activity.type}
-                    color={getActivityColor(activity.activity.type) as any}
+                    label={activity.activity.typeId?.name || 'Unknown Type'}
+                    sx={{
+                      fontSize: { xs: '0.62rem', sm: '0.80rem' },
+                      height: { xs: 18, sm: 22 },
+                      backgroundColor: activity.activity.typeId?.color || '#9e9e9e',
+                      color: 'white'
+                    }}
                     size="small"
-                    sx={{ fontSize: { xs: '0.62rem', sm: '0.80rem' }, height: { xs: 18, sm: 22 } }}
                   />
                 </TableCell>
                 <TableCell align="right">{activity.hours || '-'}</TableCell>

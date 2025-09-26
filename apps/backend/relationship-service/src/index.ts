@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { connectDB } from './config/database';
 import activityRoutes from './routes/activities';
+import activityTypeRoutes from './routes/activityTypes';
 import statisticsRoutes from './routes/statistics';
 
 // Load environment variables
@@ -23,6 +24,7 @@ app.use(morgan('dev'));
 
 // Routes
 app.use('/api/activities', activityRoutes);
+app.use('/api/activity-types', activityTypeRoutes);
 app.use('/api/statistics', statisticsRoutes);
 
 // Serve OpenAPI docs as static files

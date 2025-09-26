@@ -14,6 +14,8 @@ import {
   Chip
 } from '@mui/material';
 import { getMonthlyActivityBreakdown, MonthlyActivityData } from '../api/statistics';
+import { getActivityTypes } from '../api/activityTypes';
+import { ActivityType } from '../api/types';
 import { useTenantFilter } from './tenant';
 
 interface ActivityStackedBarChartProps {
@@ -24,26 +26,6 @@ interface ActivityStackedBarChartProps {
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-// Activity colors for visual consistency (excluding together and sex)
-const ACTIVITY_COLORS: { [key: string]: string } = {
-  movies: '#e53e3e',
-  cooking: '#38a169',
-  dining: '#ed8936',
-  coffee: '#8b4513',
-  gaming: '#9f7aea',
-  other: '#718096'
-};
-
-// Activity labels for better display (excluding together and sex)
-const ACTIVITY_LABELS: { [key: string]: string } = {
-  movies: 'Movies',
-  cooking: 'Cooking',
-  dining: 'Dining',
-  coffee: 'Coffee',
-  gaming: 'Gaming',
-  other: 'Other'
-};
-
 const ActivityStackedBarChart: React.FC<ActivityStackedBarChartProps> = ({
   title = 'Monthly Activities',
   year,
@@ -53,6 +35,7 @@ const ActivityStackedBarChart: React.FC<ActivityStackedBarChartProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | undefined>(year);
+  const [activityTypes, setActivityTypes] = useState<ActivityType[]>([]);
 
   // Get the current tenant's group ID
   const tenantGroupId = useTenantFilter();
@@ -65,11 +48,16 @@ const ActivityStackedBarChart: React.FC<ActivityStackedBarChartProps> = ({
     try {
       setLoading(true);
       setError(null);
-      const monthlyData = await getMonthlyActivityBreakdown(selectedYear, tenantGroupId);
+      const [monthlyData, activityTypesResponse] = await Promise.all([
+        getMonthlyActivityBreakdown(selectedYear, tenantGroupId),
+        getActivityTypes({ groupId: tenantGroupId })
+      ]);
       console.log('Fetched monthly activity data:', monthlyData);
+      console.log('Fetched activity types:', activityTypesResponse);
       setData(monthlyData);
+      setActivityTypes(activityTypesResponse.data);
     } catch (err) {
-      console.error('Error fetching monthly activity data:', err);
+      console.error('Error fetching data:', err);
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setLoading(false);
@@ -156,13 +144,15 @@ const ActivityStackedBarChart: React.FC<ActivityStackedBarChartProps> = ({
         </Box>
         {/* Legend */}
         <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-          {Object.entries(ACTIVITY_COLORS).map(([activityType, color]) => (
+          {activityTypes
+            .filter(type => type.slug !== 'together' && type.slug !== 'sex')
+            .map((activityType) => (
             <Chip
-              key={activityType}
-              label={ACTIVITY_LABELS[activityType]}
+              key={activityType._id}
+              label={activityType.name}
               size="small"
               sx={{
-                backgroundColor: color,
+                backgroundColor: activityType.color || '#9e9e9e',
                 color: 'white',
                 '& .MuiChip-label': {
                   fontSize: '0.75rem'
@@ -303,18 +293,19 @@ const ActivityStackedBarChart: React.FC<ActivityStackedBarChartProps> = ({
                   >
                     {activityEntries.map(([activityType, activityData]) => {
                       const segmentHeight = (activityData.count / filteredTotalActivities) * 100;
+                      const activityTypeData = activityTypes.find(type => type.slug === activityType);
 
                       return (
                         <Tooltip
                           key={activityType}
-                          title={`${ACTIVITY_LABELS[activityType]}: ${activityData.count} activities (${activityData.hours}h)`}
+                          title={`${activityTypeData?.name || activityType}: ${activityData.count} activities (${activityData.hours}h)`}
                           arrow
                         >
                           <Box
                             sx={{
                               width: '100%',
                               height: `${segmentHeight}%`,
-                              backgroundColor: ACTIVITY_COLORS[activityType] || '#718096',
+                              backgroundColor: activityTypeData?.color || '#9e9e9e',
                               border: '1px solid #fff',
                               cursor: 'pointer',
                               transition: 'all 0.3s ease',

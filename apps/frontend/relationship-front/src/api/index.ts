@@ -1,6 +1,7 @@
 // Export all API functions and types from a single entry point
 export * from './types';
 export * from './activities';
+export * from './activityTypes';
 export * from './statistics';
 
 // Convenience re-exports for commonly used items

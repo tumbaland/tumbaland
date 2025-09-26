@@ -1,4 +1,4 @@
-import { ActivityType } from '../api/types';
+// Utility functions for activity management
 
 /**
  * Format date for display
@@ -42,7 +42,7 @@ export const validateActivity = (activity: {
   date?: Date | string;
   hours?: number;
   activity?: {
-    type?: ActivityType;
+    typeId?: string;
     description?: string;
   };
 }): string[] => {
@@ -60,7 +60,7 @@ export const validateActivity = (activity: {
     }
   }
 
-  if (!activity.activity?.type) {
+  if (!activity.activity?.typeId) {
     errors.push('Activity type is required');
   }
 

@@ -1,5 +1,6 @@
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import TimelineIcon from '@mui/icons-material/Timeline';
+import SettingsIcon from '@mui/icons-material/Settings';
 
 export interface NavigationItem {
   label: string;
@@ -18,6 +19,11 @@ export const navigationItems: Omit<NavigationItem, 'onClick'>[] = [
     label: 'Activities',
     path: '/activities',
     icon: TimelineIcon
+  },
+  {
+    label: 'Types',
+    path: '/activity-types',
+    icon: SettingsIcon
   }
 ];
 

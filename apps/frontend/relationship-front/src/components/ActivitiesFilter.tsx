@@ -16,9 +16,11 @@ import {
   Clear as ClearIcon
 } from '@mui/icons-material';
 import { ActivityType } from '../api/types';
+import { getActivityTypes } from '../api/activityTypes';
+import { useTenantFilter } from './tenant/useTenantDataRefresh';
 
 export interface ActivityFilters {
-  activityType?: ActivityType;
+  activityType?: string; // ActivityType slug
   startDate?: string;
   endDate?: string;
   description?: string;
@@ -30,17 +32,6 @@ interface ActivitiesFilterProps {
   onClearFilters: () => void;
 }
 
-const ACTIVITY_TYPES: { value: ActivityType; label: string }[] = [
-  { value: 'movies', label: 'Movies' },
-  { value: 'cooking', label: 'Cooking' },
-  { value: 'dining', label: 'Dining' },
-  { value: 'coffee', label: 'Coffee' },
-  { value: 'gaming', label: 'Gaming' },
-  { value: 'together', label: 'Together' },
-  { value: 'sex', label: 'Intimate' },
-  { value: 'other', label: 'Other' }
-];
-
 const ActivitiesFilter: React.FC<ActivitiesFilterProps> = React.memo(({
   filters,
   onFiltersChange,
@@ -48,6 +39,29 @@ const ActivitiesFilter: React.FC<ActivitiesFilterProps> = React.memo(({
 }) => {
   // Local state for description input to avoid immediate filtering
   const [localDescription, setLocalDescription] = useState(filters.description || '');
+  const [activityTypes, setActivityTypes] = useState<ActivityType[]>([]);
+  const [loadingTypes, setLoadingTypes] = useState(true);
+
+  // Get current tenant context for filtering
+  const tenantGroupId = useTenantFilter();
+
+  // Fetch activity types on component mount and when tenant changes
+  useEffect(() => {
+    const fetchActivityTypes = async () => {
+      try {
+        console.log('Fetching activity types for groupId:', tenantGroupId);
+        const response = await getActivityTypes({ groupId: tenantGroupId });
+        setActivityTypes(response.data);
+        console.log('Fetched activity types:', response.data);
+      } catch (error) {
+        console.error('Failed to fetch activity types:', error);
+      } finally {
+        setLoadingTypes(false);
+      }
+    };
+
+    fetchActivityTypes();
+  }, [tenantGroupId]);
 
   const handleFilterChange = useCallback((key: keyof ActivityFilters, value: string | undefined) => {
     onFiltersChange({
@@ -99,7 +113,7 @@ const ActivitiesFilter: React.FC<ActivitiesFilterProps> = React.memo(({
     const chips = [];
     
     if (filters.activityType) {
-      const activityLabel = ACTIVITY_TYPES.find(type => type.value === filters.activityType)?.label;
+      const activityLabel = activityTypes?.find(type => type.slug === filters.activityType)?.name || filters.activityType;
       chips.push(
         <Chip
           key="activityType"
@@ -208,15 +222,16 @@ const ActivitiesFilter: React.FC<ActivitiesFilterProps> = React.memo(({
           <InputLabel>Activity Type</InputLabel>
           <Select
             value={filters.activityType || ''}
-            onChange={(e) => handleFilterChange('activityType', e.target.value as ActivityType)}
+            onChange={(e) => handleFilterChange('activityType', e.target.value)}
             label="Activity Type"
+            disabled={loadingTypes}
           >
             <MenuItem value="">
               <em>All Types</em>
             </MenuItem>
-            {ACTIVITY_TYPES.map((type) => (
-              <MenuItem key={type.value} value={type.value}>
-                {type.label}
+            {activityTypes && activityTypes.map((type) => (
+              <MenuItem key={type._id} value={type.slug}>
+                {type.name}
               </MenuItem>
             ))}
           </Select>

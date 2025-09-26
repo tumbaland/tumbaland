@@ -105,7 +105,7 @@ export const getRecentActivities = async (limit: number = 10): Promise<Activity[
  * Get available activity types
  */
 export const getActivityTypes = async (): Promise<ActivityType[]> => {
-  const response = await relationshipApi.get('/activities/types');
+  const response = await relationshipApi.get('/activity-types');
   return response.data.data;
 };
 

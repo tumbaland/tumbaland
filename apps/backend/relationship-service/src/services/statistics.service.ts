@@ -134,9 +134,8 @@ export const getRelationshipStatistics = async (
       ...dateFilter
     };    // Get basic statistics
     const [totalStats, totalHoursStats, sexActivities] = await Promise.all([
-      // Total statistics (excluding 'sex' and 'together' activities)
       Activity.aggregate([
-        { $match: { ...baseQuery, 'activity.type': { $nin: ['sex', 'together'] } } },
+        { $match: { ...baseQuery, 'activity.type': { $nin: [] } } },
         {
           $group: {
             _id: null,
@@ -310,8 +309,8 @@ export const getMonthlyStatistics = async (
       Object.assign(conditions, accessQuery);
     }
 
-    // Get all activities
-    const activities = await Activity.find(conditions).sort({ date: 1 });
+    // Get all activities with populated activity types
+    const activities = await Activity.find(conditions).populate('activity.typeId').sort({ date: 1 });
 
     // Group by year-month
     const monthlyData = new Map<string, { daysMet: Set<string>; daysWithSex: Set<string> }>();
@@ -331,7 +330,7 @@ export const getMonthlyStatistics = async (
       const data = monthlyData.get(monthKey)!;
       data.daysMet.add(dateKey);
 
-      if (activity.activity.type === 'sex') {
+      if ((activity.activity as any).typeId && (activity.activity as any).typeId.slug === 'sex') {
         data.daysWithSex.add(dateKey);
       }
     });
@@ -415,6 +414,21 @@ export const getMonthlyActivityBreakdown = async (
     // Add match stage
     pipeline.push({ $match: matchConditions });
 
+    // Add lookup to populate activity types
+    pipeline.push({
+      $lookup: {
+        from: 'activity_types',
+        localField: 'activity.typeId',
+        foreignField: '_id',
+        as: 'activityType'
+      }
+    });
+
+    // Unwind the activity type
+    pipeline.push({
+      $unwind: '$activityType'
+    });
+
     // Add grouping stages
     pipeline.push(
       {
@@ -422,7 +436,7 @@ export const getMonthlyActivityBreakdown = async (
           _id: {
             year: { $year: '$date' },
             month: { $month: '$date' },
-            activityType: '$activity.type'
+            activityType: '$activityType.slug'
           },
           count: { $sum: 1 },
           totalHours: { $sum: '$hours' }
@@ -458,19 +472,13 @@ export const getMonthlyActivityBreakdown = async (
     // Transform the result to match our interface
     const transformedResult: MonthlyActivityData[] = result.map((item: any) => {
       const activities: { [key: string]: { count: number; hours: number } } = {};
-      // Initialize only the activity types we want to display (excluding together and sex)
-      const activityTypes = ['movies', 'cooking', 'dining', 'coffee', 'gaming', 'other'];
-      activityTypes.forEach((type) => {
-        activities[type] = { count: 0, hours: 0 };
-      });
-      // Fill in actual data (only for allowed activity types)
+
+      // Fill in actual data from all activity types
       item.activities.forEach((activity: any) => {
-        if (activities.hasOwnProperty(activity.type)) {
-          activities[activity.type] = {
-            count: activity.count || 0,
-            hours: activity.hours || 0
-          };
-        }
+        activities[activity.type] = {
+          count: activity.count || 0,
+          hours: activity.hours || 0
+        };
       });
 
       return {
@@ -531,6 +539,21 @@ export const getWeeklyHeatmapData = async (
     // Add match stage
     pipeline.push({ $match: matchConditions });
 
+    // Add lookup to populate activity types
+    pipeline.push({
+      $lookup: {
+        from: 'activity_types',
+        localField: 'activity.typeId',
+        foreignField: '_id',
+        as: 'activityType'
+      }
+    });
+
+    // Unwind the activity type
+    pipeline.push({
+      $unwind: '$activityType'
+    });
+
     // Add grouping by date
     pipeline.push(
       {
@@ -549,7 +572,7 @@ export const getWeeklyHeatmapData = async (
           },
           activities: {
             $push: {
-              type: '$activity.type',
+              type: '$activityType.slug',
               hours: '$hours'
             }
           },
@@ -570,24 +593,20 @@ export const getWeeklyHeatmapData = async (
     const transformedResult: WeeklyHeatmapData[] = result.map((item: any) => {
       const activities: { [key: string]: { count: number; hours: number } } = {};
 
-      // Initialize activity types
-      const activityTypes = ['movies', 'cooking', 'dining', 'coffee', 'gaming', 'other'];
-      activityTypes.forEach((type) => {
-        activities[type] = { count: 0, hours: 0 };
-      });
-
-      // Count activities by type
+      // Count activities by type (include all types)
       item.activities.forEach((activity: any) => {
-        if (activities.hasOwnProperty(activity.type)) {
-          activities[activity.type].count++;
-          activities[activity.type].hours += activity.hours || 0;
+        if (!activities[activity.type]) {
+          activities[activity.type] = { count: 0, hours: 0 };
         }
+        activities[activity.type].count++;
+        activities[activity.type].hours += activity.hours || 0;
       });
 
-      // Filter out 'together' and 'sex' types for totalActivities
+      // Filter out 'together' for totalActivities
       const filteredActivities = item.activities.filter(
-        (activity: any) => activity.type !== 'sex' && activity.type !== 'together'
+        (activity: any) => activity.type !== 'together'
       );
+
       return {
         date: item._id.date,
         dayOfWeek: item._id.dayOfWeek - 1, // Convert to 0-6 (Sunday-Saturday)
@@ -649,6 +668,21 @@ export const getCumulativeTimelineData = async (
     // Add match stage
     pipeline.push({ $match: matchConditions });
 
+    // Add lookup to populate activity types
+    pipeline.push({
+      $lookup: {
+        from: 'activity_types',
+        localField: 'activity.typeId',
+        foreignField: '_id',
+        as: 'activityType'
+      }
+    });
+
+    // Unwind the activity type
+    pipeline.push({
+      $unwind: '$activityType'
+    });
+
     // Group by date and get daily totals
     pipeline.push(
       {
@@ -663,7 +697,7 @@ export const getCumulativeTimelineData = async (
           },
           activities: {
             $push: {
-              type: '$activity.type',
+              type: '$activityType.slug',
               hours: '$hours'
             }
           },
@@ -680,58 +714,85 @@ export const getCumulativeTimelineData = async (
 
     const result = await Activity.aggregate(pipeline);
 
+    // Determine date range
+    let startDate: Date;
+    let endDate: Date;
+
+    if (year) {
+      startDate = new Date(year, 0, 1);
+      endDate = new Date(year + 1, 0, 1);
+    } else {
+      // If no year specified, find the actual date range from activities
+      if (result.length === 0) {
+        return []; // No data
+      }
+      const dates = result.map(item => new Date(item._id.date)).sort((a, b) => a.getTime() - b.getTime());
+      startDate = dates[0];
+      endDate = dates[dates.length - 1];
+    }
+
+    // Create a map of activity data by date
+    const activityDataByDate = new Map<string, any>();
+    result.forEach((item: any) => {
+      activityDataByDate.set(item._id.date, item);
+    });
+
+    // Generate all dates in the range and fill missing dates
+    const allDates: string[] = [];
+    const currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      allDates.push(currentDate.toISOString().split('T')[0]);
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
     // Transform and calculate cumulative totals
     let cumulativeActivities = 0;
     let cumulativeHours = 0;
     const cumulativeActivityBreakdown: { [key: string]: number } = {};
 
-    // Initialize activity type counters
-    const activityTypes = ['movies', 'cooking', 'dining', 'coffee', 'gaming', 'other'];
-    activityTypes.forEach((type) => {
-      cumulativeActivityBreakdown[type] = 0;
-    });
+    const transformedResult: CumulativeTimelineData[] = allDates.map((dateString) => {
+      const activityData = activityDataByDate.get(dateString);
 
-    const transformedResult: CumulativeTimelineData[] = result.map((item: any) => {
-      // Count daily activities by type
+      // Count daily activities by type (include all types)
       const dailyActivityBreakdown: { [key: string]: number } = {};
-      activityTypes.forEach((type) => {
-        dailyActivityBreakdown[type] = 0;
-      });
 
-      // Filter out 'sex' and 'together' for cumulativeActivities
-      const filteredActivities = item.activities.filter(
-        (activity: any) => activity.type !== 'sex' && activity.type !== 'together'
-      );
-
-      filteredActivities.forEach((activity: any) => {
-        if (dailyActivityBreakdown.hasOwnProperty(activity.type)) {
+      if (activityData) {
+        // Include all activities for this date
+        const allActivities = activityData.activities;
+        allActivities.forEach((activity: any) => {
+          if (!dailyActivityBreakdown[activity.type]) {
+            dailyActivityBreakdown[activity.type] = 0;
+          }
           dailyActivityBreakdown[activity.type]++;
-        }
-      });
+        });
 
-      // Update cumulative totals
-      cumulativeActivities += filteredActivities.length;
-      cumulativeHours += item.dailyHours;
+        // Update cumulative totals
+        cumulativeActivities += allActivities.length;
+        cumulativeHours += activityData.dailyHours || 0;
 
-      // Update cumulative activity breakdown
-      activityTypes.forEach((type) => {
-        cumulativeActivityBreakdown[type] += dailyActivityBreakdown[type];
-      });
+        // Update cumulative activity breakdown (include all types)
+        Object.keys(dailyActivityBreakdown).forEach((type) => {
+          if (!cumulativeActivityBreakdown[type]) {
+            cumulativeActivityBreakdown[type] = 0;
+          }
+          cumulativeActivityBreakdown[type] += dailyActivityBreakdown[type];
+        });
+      }
 
-      // Build activity breakdown object
+      // Build activity breakdown object (always include all known activity types)
       const activityBreakdown: { [key: string]: { dailyCount: number; cumulativeCount: number } } = {};
-      activityTypes.forEach((type) => {
+      Object.keys(cumulativeActivityBreakdown).forEach((type) => {
         activityBreakdown[type] = {
-          dailyCount: dailyActivityBreakdown[type],
+          dailyCount: dailyActivityBreakdown[type] || 0,
           cumulativeCount: cumulativeActivityBreakdown[type]
         };
       });
 
       return {
-        date: item._id.date,
-        dailyActivities: filteredActivities.length,
+        date: dateString,
+        dailyActivities: activityData ? activityData.activities.length : 0,
         cumulativeActivities,
-        dailyHours: item.dailyHours || 0,
+        dailyHours: activityData ? (activityData.dailyHours || 0) : 0,
         cumulativeHours,
         activityBreakdown
       };

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Typography, Paper, CircularProgress, Alert } from '@mui/material';
 import { useActivities } from '../hooks/useActivities';
-import { ActivityType } from '../api/types';
 import AddActivityModal from '../components/AddActivityModal';
 import ActivitiesTable from '../components/ActivitiesTable';
 import ActivitiesFilter, { ActivityFilters } from '../components/ActivitiesFilter';
@@ -72,20 +71,6 @@ const Activities: React.FC = () => {
     setPage(0);
   };
 
-  const getActivityColor = (activityType: ActivityType) => {
-    const colors: { [key: string]: string } = {
-      cooking: 'warning',
-      movies: 'primary',
-      gaming: 'secondary',
-      together: 'success',
-      dining: 'warning',
-      lunch: 'info',
-      sex: 'error',
-      other: 'default'
-    };
-    return colors[activityType] || 'default';
-  };
-
   const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString();
   };
@@ -151,7 +136,6 @@ const Activities: React.FC = () => {
           sortBy={sortBy}
           sortOrder={sortOrder}
           handleSort={handleSort}
-          getActivityColor={getActivityColor}
           formatDate={formatDate}
           refetch={refetch}
           pagination={pagination}

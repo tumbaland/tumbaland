@@ -46,7 +46,20 @@ export const getActivities = async (
     let query: any = {};
 
     if (activityType) {
-      query['activity.type'] = activityType;
+      // Find the activity type by slug and get its ID
+      const ActivityType = (await import('../models/ActivityType')).ActivityType;
+      const typeDoc = await ActivityType.findOne({ slug: activityType, isActive: true });
+      if (typeDoc) {
+        query['activity.typeId'] = typeDoc._id;
+      } else {
+        // If type not found, return empty results
+        return {
+          activities: [],
+          total: 0,
+          page: 1,
+          totalPages: 0
+        };
+      }
     }
 
     if (startDate || endDate) {
@@ -106,7 +119,7 @@ export const getActivities = async (
 
     // Execute queries
     const [activities, total] = await Promise.all([
-      Activity.find(query).sort(sortObj).skip(skip).limit(limit).lean(),
+      Activity.find(query).populate('activity.typeId').sort(sortObj).skip(skip).limit(limit).lean(),
       Activity.countDocuments(query)
     ]);
 
@@ -241,9 +254,25 @@ export const getRecentActivities = async (limit: number = 10): Promise<IActivity
 };
 
 // Get unique activity types
-export const getActivityTypes = async (): Promise<string[]> => {
+export const getActivityTypes = async (userId?: string, groupId?: string): Promise<any[]> => {
   try {
-    return ['movies', 'cooking', 'dining', 'coffee', 'gaming', 'other', 'sex', 'together'];
+    const ActivityType = (await import('../models/ActivityType')).ActivityType;
+    const query: any = { isActive: true };
+
+    if (groupId) {
+      query.$or = [
+        { groupId },
+        { userId, groupId: { $exists: false } }
+      ];
+    } else if (userId) {
+      query.userId = userId;
+      query.$or = [
+        { groupId: { $exists: false } },
+        { groupId: null }
+      ];
+    }
+
+    return await ActivityType.find(query).sort({ sortOrder: 1 });
   } catch (error: any) {
     throw new Error(`Failed to get activity types: ${error.message}`);
   }

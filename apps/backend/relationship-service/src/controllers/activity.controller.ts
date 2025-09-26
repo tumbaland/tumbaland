@@ -20,9 +20,27 @@ export const createActivity = async (req: Request, res: Response): Promise<void>
     }
 
     // Validate activity object structure
-    if (!activityData.activity.type) {
+    if (!activityData.activity.typeId) {
       res.status(400).json({
-        error: 'Activity object must contain type'
+        error: 'Activity object must contain typeId'
+      });
+      return;
+    }
+
+    // Validate that the activity type exists and is accessible
+    const ActivityType = (await import('../models/ActivityType')).ActivityType;
+    const activityType = await ActivityType.findOne({
+      _id: activityData.activity.typeId,
+      isActive: true,
+      $or: [
+        { userId: user.id },
+        { groupId: { $in: (req as any).userGroups || [] } }
+      ]
+    });
+
+    if (!activityType) {
+      res.status(400).json({
+        error: 'Invalid or inaccessible activity type'
       });
       return;
     }
@@ -75,8 +93,6 @@ export const getActivities = async (req: Request, res: Response): Promise<void> 
     // Add user context for permission filtering
     filters.userId = user.id;
     filters.userGroupIds = userGroups;
-
-    console.log('  Filters being passed to service:', JSON.stringify(filters, null, 2));
 
     const result = await ActivityService.getActivities(filters);
 
@@ -263,7 +279,11 @@ export const getRecentActivities = async (req: Request, res: Response): Promise<
 // Get activity types
 export const getActivityTypes = async (req: Request, res: Response): Promise<void> => {
   try {
-    const types = await ActivityService.getActivityTypes();
+    const user = (req as any).user;
+    const userGroups = (req as any).userGroups || [];
+    const { groupId } = req.query;
+
+    const types = await ActivityService.getActivityTypes(user.id, groupId as string);
 
     res.json({
       success: true,
@@ -282,8 +302,11 @@ export const getRecentActivitiesSummary = async (req: Request, res: Response): P
     const { groupId } = req.query;
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
-    
-    const categories = ['movies', 'cooking', 'dining', 'coffee', 'gaming', 'other'];
+
+    // Get available activity types
+    const activityTypes = await ActivityService.getActivityTypes(user.id, groupId as string);
+    const categories = activityTypes.map((type: any) => type.slug);
+
     const timelines = [
       { label: 'Last Month', months: 1 },
       { label: 'Last 3 Months', months: 3 },
