@@ -22,6 +22,24 @@ jobs:
           git config --global user.name "Tumbabot"
           git config --global user.email "bot@tumbaland.eu"
 
+      - name: Fetch all tags
+        run: git fetch --tags
+
+      - name: Get next version
+        id: next_version
+        run: |
+          current_version=$(node -p "require('./package.json').version")
+          bump=$(npx conventional-recommended-bump -p angular)
+          next_version=$(npx semver $current_version -i $bump)
+          echo "next_version=$next_version" >> $GITHUB_OUTPUT
+
+      - name: Delete existing next version tag if exists
+        run: |
+          if git show-ref --tags | grep -q "refs/tags/v${{ steps.next_version.outputs.next_version }}"; then
+            git push origin :v${{ steps.next_version.outputs.next_version }} || true
+            git tag -d v${{ steps.next_version.outputs.next_version }} || true
+          fi
+
       - name: Copy .versionrc.json from .github to workflow directory
         run: |
           cp .github/.versionrc.json $GITHUB_WORKSPACE/.versionrc.json
@@ -33,4 +51,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git push --follow-tags origin main
+          git push origin main
+          git push --tags origin

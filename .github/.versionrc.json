@@ -4,6 +4,6 @@
     { "type": "fix", "section": "Bug Fixes" },
     { "type": "chore", "section": "Chores", "hidden": false }
   ],
-  "changelogHeader": "# Tumbalog",
+  "header": "# Tumbalog",
   "tagPrefix": "v"
 }
