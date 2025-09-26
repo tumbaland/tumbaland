@@ -1,4 +1,25 @@
 # Tumbalog
+### [0.0.150](https://github.com/toomastahves/tumbaland/compare/v0.0.149...v0.0.150) (2025-09-26)
+
+
+### Features
+
+* add google cloud download script ([d6f2a33](https://github.com/toomastahves/tumbaland/commit/d6f2a33a62b0a1536324f4418368097e825b283e))
+* fix changelog ([9e77a2a](https://github.com/toomastahves/tumbaland/commit/9e77a2a7db1d62eac140c15fccd1236f65494e24))
+* setup enterprise infra ([6358fe7](https://github.com/toomastahves/tumbaland/commit/6358fe7c737ea6efe81662c7c85ec1b22aa9de4f))
+* use local file system for file storage ([ad01c8e](https://github.com/toomastahves/tumbaland/commit/ad01c8e44b8ce4df99c1f0e5dae8babc3293c7c5))
+
+
+### Bug Fixes
+
+* changelog ([b34bef9](https://github.com/toomastahves/tumbaland/commit/b34bef922ef5f1100413dc0d939e3fc46fe39d47))
+* storage location ([93e96cd](https://github.com/toomastahves/tumbaland/commit/93e96cd3e2ecc2e417aa43b691fbc31dc7717f3c))
+
+
+### Chores
+
+* remove axios ([b39b039](https://github.com/toomastahves/tumbaland/commit/b39b039fda840bcbb3d4d4e2ea8d650e58cfeab0))
+
 ### [0.0.149](https://github.com/toomastahves/tumbaland/compare/v0.0.148...v0.0.149) (2025-09-24)
 
 
