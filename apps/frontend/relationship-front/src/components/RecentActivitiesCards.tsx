@@ -50,7 +50,7 @@ const RecentActivitiesCards: React.FC = () => {
         setError(null);
 
         // Fetch activity types
-        const typesResponse = await getActivityTypes();
+        const typesResponse = await getActivityTypes({ groupId: tenantGroupId });
         const types = typesResponse.data;
         setActivityTypes(types);
 
@@ -58,15 +58,21 @@ const RecentActivitiesCards: React.FC = () => {
         const summaryResponse = await getRecentActivitiesSummary(tenantGroupId);
         const summaryData = summaryResponse;
 
+        console.log('Activity types:', types);
+        console.log('Summary data:', summaryData);
+
         // Transform data to use activity type slugs as keys
         const dataMap: Record<string, Activity[]> = {};
         types.forEach((type) => {
-          if (summaryData[type.slug]) {
-            const timelineKey = `${selectedTimeline}months`;
-            dataMap[type.slug] = summaryData[type.slug][timelineKey]?.activities || [];
+          const timelineKey = `${selectedTimeline}months`;
+          if (summaryData[type.slug] && summaryData[type.slug][timelineKey]) {
+            dataMap[type.slug] = summaryData[type.slug][timelineKey].activities || [];
+          } else {
+            dataMap[type.slug] = [];
           }
         });
 
+        console.log('Transformed data map:', dataMap);
         setActivitiesData(dataMap);
       } catch (err) {
         console.error('Failed to fetch data:', err);
@@ -94,43 +100,6 @@ const RecentActivitiesCards: React.FC = () => {
       return newSet;
     });
   };
-
-  // Fetch activity types and activities data
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Fetch activity types
-        const typesResponse = await getActivityTypes();
-        const types = typesResponse.data;
-        setActivityTypes(types);
-
-        // Fetch activities summary
-        const summaryResponse = await getRecentActivitiesSummary(tenantGroupId);
-        const summaryData = summaryResponse;
-
-        // Transform data to use activity type slugs as keys
-        const dataMap: Record<string, Activity[]> = {};
-        types.forEach((type) => {
-          if (summaryData[type.slug]) {
-            const timelineKey = `${selectedTimeline}months`;
-            dataMap[type.slug] = summaryData[type.slug][timelineKey]?.activities || [];
-          }
-        });
-
-        setActivitiesData(dataMap);
-      } catch (err) {
-        console.error('Failed to fetch data:', err);
-        setError('Failed to load activities data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [selectedTimeline, tenantGroupId]);
 
   const formatDate = (date: Date | string): string => {
     const dateObj = new Date(date);
@@ -181,9 +150,6 @@ const RecentActivitiesCards: React.FC = () => {
       >
         {activityTypes.map((activityType) => {
           const activities = activitiesData[activityType.slug] || [];
-          const hasActivities = activities.length > 0;
-
-          if (!hasActivities) return null;
 
           return (
             <Card
