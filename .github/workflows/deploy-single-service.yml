@@ -1,12 +1,12 @@
-name: Deploy Single Service
+name: Deploy Application Service
 
-run-name: Deploy ${{ github.event.inputs.service || 'manual' }}
+run-name: Deploy App ${{ github.event.inputs.service || 'manual' }}
 
 on:
   workflow_dispatch:
     inputs:
       service:
-        description: 'Select a service to deploy'
+        description: 'Select an application service to deploy'
         required: true
         type: choice
         options:
@@ -26,7 +26,6 @@ on:
           - relationship-service
           - payment-service
           - group-service
-          - tumbaland-proxy
 
 # Ensure only one deployment runs at a time to prevent server overload
 concurrency:
@@ -139,12 +138,6 @@ jobs:
               DOCKERFILE=./apps/backend/group-service/Dockerfile
               DEPLOYPATH=apps/backend/group-service/compose.yml
               DEPLOYDIR=apps/backend/group-service
-              ;;
-            tumbaland-proxy)
-              CONTEXT=./apps/infra/tumbaland-proxy
-              DOCKERFILE=./apps/infra/tumbaland-proxy/Dockerfile
-              DEPLOYPATH=apps/infra/tumbaland-proxy/compose.yml
-              DEPLOYDIR=apps/infra/tumbaland-proxy
               ;;
           esac
           echo "context=$CONTEXT" >> $GITHUB_OUTPUT

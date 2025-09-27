@@ -1,0 +1,18 @@
+{
+  "service": {
+    "name": "finance-service",
+    "tags": ["backend", "api", "finance"],
+    "port": 4003,
+    "address": "finance-service",
+    "check": {
+      "http": "http://finance-service:4003/health",
+      "interval": "30s",
+      "timeout": "5s",
+      "deregister_critical_service_after": "5m"
+    },
+    "meta": {
+      "version": "1.0",
+      "environment": "production"
+    }
+  }
+}

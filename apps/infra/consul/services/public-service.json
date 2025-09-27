@@ -1,0 +1,18 @@
+{
+  "service": {
+    "name": "public-service",
+    "tags": ["backend", "api", "public"],
+    "port": 4000,
+    "address": "public-service",
+    "check": {
+      "http": "http://public-service:4000/health",
+      "interval": "30s",
+      "timeout": "5s",
+      "deregister_critical_service_after": "5m"
+    },
+    "meta": {
+      "version": "1.0",
+      "environment": "production"
+    }
+  }
+}

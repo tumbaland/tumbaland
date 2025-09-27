@@ -1,0 +1,248 @@
+name: Deploy Infrastructure Service
+
+run-name: Deploy Infra ${{ github.event.inputs.service || 'manual' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Select an infrastructure service to deploy'
+        required: true
+        type: choice
+        options:
+          - consul
+          - tumbaland-proxy
+          - mongodb
+          - redis
+          - rabbitmq
+          - prometheus
+          - alertmanager
+          - jaeger
+          - minio
+          - vault
+          - haproxy
+          - elk
+
+# Ensure only one infrastructure deployment runs at a time
+concurrency:
+  group: tumbaland-infra-deployment
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set variables
+        id: vars
+        run: |
+          case "${{ github.event.inputs.service }}" in
+            consul)
+              CONTEXT=./apps/infra/consul
+              DOCKERFILE=./apps/infra/consul/Dockerfile
+              DEPLOYPATH=apps/infra/consul/docker-compose.yml
+              DEPLOYDIR=apps/infra/consul
+              ;;
+            tumbaland-proxy)
+              CONTEXT=./apps/infra/tumbaland-proxy
+              DOCKERFILE=./apps/infra/tumbaland-proxy/Dockerfile
+              DEPLOYPATH=apps/infra/tumbaland-proxy/compose.yml
+              DEPLOYDIR=apps/infra/tumbaland-proxy
+              ;;
+            mongodb)
+              CONTEXT=./apps/infra/mongodb
+              DOCKERFILE=./apps/infra/mongodb/Dockerfile
+              DEPLOYPATH=apps/infra/mongodb/docker-compose.yml
+              DEPLOYDIR=apps/infra/mongodb
+              ;;
+            redis)
+              CONTEXT=./apps/infra/redis
+              DOCKERFILE=./apps/infra/redis/Dockerfile
+              DEPLOYPATH=apps/infra/redis/docker-compose.yml
+              DEPLOYDIR=apps/infra/redis
+              ;;
+            rabbitmq)
+              CONTEXT=./apps/infra/rabbitmq
+              DOCKERFILE=./apps/infra/rabbitmq/Dockerfile
+              DEPLOYPATH=apps/infra/rabbitmq/docker-compose.yml
+              DEPLOYDIR=apps/infra/rabbitmq
+              ;;
+            prometheus)
+              CONTEXT=./apps/infra/prometheus
+              DOCKERFILE=./apps/infra/prometheus/Dockerfile
+              DEPLOYPATH=apps/infra/prometheus/docker-compose.yml
+              DEPLOYDIR=apps/infra/prometheus
+              ;;
+            alertmanager)
+              CONTEXT=./apps/infra/alertmanager
+              DOCKERFILE=./apps/infra/alertmanager/Dockerfile
+              DEPLOYPATH=apps/infra/alertmanager/docker-compose.yml
+              DEPLOYDIR=apps/infra/alertmanager
+              ;;
+            jaeger)
+              CONTEXT=./apps/infra/jaeger
+              DOCKERFILE=./apps/infra/jaeger/Dockerfile
+              DEPLOYPATH=apps/infra/jaeger/docker-compose.yml
+              DEPLOYDIR=apps/infra/jaeger
+              ;;
+            minio)
+              CONTEXT=./apps/infra/minio
+              DOCKERFILE=./apps/infra/minio/Dockerfile
+              DEPLOYPATH=apps/infra/minio/docker-compose.yml
+              DEPLOYDIR=apps/infra/minio
+              ;;
+            vault)
+              CONTEXT=./apps/infra/vault
+              DOCKERFILE=./apps/infra/vault/Dockerfile
+              DEPLOYPATH=apps/infra/vault/docker-compose.yml
+              DEPLOYDIR=apps/infra/vault
+              ;;
+            haproxy)
+              CONTEXT=./apps/infra/haproxy
+              DOCKERFILE=./apps/infra/haproxy/Dockerfile
+              DEPLOYPATH=apps/infra/haproxy/docker-compose.yml
+              DEPLOYDIR=apps/infra/haproxy
+              ;;
+            elk)
+              CONTEXT=./apps/infra/elk
+              DOCKERFILE=./apps/infra/elk/Dockerfile
+              DEPLOYPATH=apps/infra/elk/docker-compose.yml
+              DEPLOYDIR=apps/infra/elk
+              ;;
+          esac
+          echo "context=$CONTEXT" >> $GITHUB_OUTPUT
+          echo "dockerfile=$DOCKERFILE" >> $GITHUB_OUTPUT
+          echo "deploy_path=$DEPLOYPATH" >> $GITHUB_OUTPUT
+          echo "deploy_dir=$DEPLOYDIR" >> $GITHUB_OUTPUT
+
+      - name: Check if Dockerfile exists
+        id: dockerfile_check
+        run: |
+          if [ -f "${{ steps.vars.outputs.dockerfile }}" ]; then
+            echo "dockerfile_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "dockerfile_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Docker Buildx
+        if: steps.dockerfile_check.outputs.dockerfile_exists == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: steps.dockerfile_check.outputs.dockerfile_exists == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        if: steps.dockerfile_check.outputs.dockerfile_exists == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ steps.vars.outputs.context }}
+          file: ${{ steps.vars.outputs.dockerfile }}
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.inputs.service }}:latest
+          platforms: linux/arm64
+
+      - name: Generate infrastructure .env file
+        run: |
+          # Core infrastructure secrets
+          echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" > .env
+          echo "REDIS_URL=${{ secrets.REDIS_URL }}" >> .env
+          echo "RABBITMQ_URI=${{ secrets.RABBITMQ_URI }}" >> .env
+          echo "MINIO_ACCESS_KEY=${{ secrets.MINIO_ACCESS_KEY }}" >> .env
+          echo "MINIO_SECRET_KEY=${{ secrets.MINIO_SECRET_KEY }}" >> .env
+          echo "VAULT_TOKEN=${{ secrets.VAULT_TOKEN }}" >> .env
+
+          # Monitoring and logging
+          echo "PROMETHEUS_RETENTION_TIME=${{ vars.PROMETHEUS_RETENTION_TIME }}" >> .env
+          echo "ELASTICSEARCH_URI=${{ vars.ELASTICSEARCH_URI }}" >> .env
+          echo "KIBANA_URI=${{ vars.KIBANA_URI }}" >> .env
+          echo "JAEGER_ENDPOINT=${{ vars.JAEGER_ENDPOINT }}" >> .env
+
+          # Consul specific
+          echo "CONSUL_ENCRYPT_KEY=${{ secrets.CONSUL_ENCRYPT_KEY }}" >> .env
+          echo "CONSUL_ACL_MASTER_TOKEN=${{ secrets.CONSUL_ACL_MASTER_TOKEN }}" >> .env
+
+          # HAProxy
+          echo "HAPROXY_STATS_USER=${{ secrets.HAPROXY_STATS_USER }}" >> .env
+          echo "HAPROXY_STATS_PASSWORD=${{ secrets.HAPROXY_STATS_PASSWORD }}" >> .env
+
+      - name: Copy .env file to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ vars.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: .env
+          target: ~/tumbaland/
+
+      - name: Copy compose file to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ vars.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: ${{ steps.vars.outputs.deploy_path }}
+          target: ~/tumbaland/
+
+      - name: SSH and deploy infrastructure service on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ vars.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd ~/tumbaland
+            export COMPOSE_HTTP_TIMEOUT=300
+
+            # Ensure infrastructure network exists
+            docker network ls | grep -q tumbanet || docker network create tumbanet
+
+            # Backup current state before deployment
+            echo "Creating backup of current ${{ github.event.inputs.service }} state..."
+            docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} ps -q ${{ github.event.inputs.service }} | xargs -r docker inspect > ${{ github.event.inputs.service }}_backup_$(date +%Y%m%d_%H%M%S).json 2>/dev/null || true
+
+            # Pull latest image (only if we built one)
+            if [ "${{ steps.dockerfile_check.outputs.dockerfile_exists }}" = "true" ]; then
+              docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} pull ${{ github.event.inputs.service }}
+            fi
+
+            # Deploy with health check
+            echo "Deploying ${{ github.event.inputs.service }}..."
+            docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} up -d ${{ github.event.inputs.service }}
+
+            # Wait for service to be healthy
+            echo "Waiting for ${{ github.event.inputs.service }} to be healthy..."
+            timeout=300
+            while [ $timeout -gt 0 ]; do
+              if docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} ps ${{ github.event.inputs.service }} | grep -q "healthy\|running"; then
+                echo "✅ ${{ github.event.inputs.service }} is healthy"
+                break
+              fi
+              echo "Waiting for ${{ github.event.inputs.service }} to be healthy... ($timeout seconds remaining)"
+              sleep 10
+              timeout=$((timeout - 10))
+            done
+
+            if [ $timeout -le 0 ]; then
+              echo "❌ ${{ github.event.inputs.service }} failed to become healthy within 5 minutes"
+              echo "Rolling back..."
+              docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} down ${{ github.event.inputs.service }}
+              exit 1
+            fi
+
+            echo "🧹 Cleaning up old images..."
+            docker image prune -f
+
+      - name: Notify deployment status
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: "Infrastructure service ${{ github.event.inputs.service }} deployment ${{ job.status == 'success' && 'succeeded' || 'failed' }}"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

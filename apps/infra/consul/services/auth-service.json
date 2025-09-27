@@ -1,0 +1,18 @@
+{
+  "service": {
+    "name": "auth-service",
+    "tags": ["backend", "api", "authentication"],
+    "port": 5001,
+    "address": "auth-service",
+    "check": {
+      "http": "http://auth-service:5001/health",
+      "interval": "30s",
+      "timeout": "5s",
+      "deregister_critical_service_after": "5m"
+    },
+    "meta": {
+      "version": "1.0",
+      "environment": "production"
+    }
+  }
+}
