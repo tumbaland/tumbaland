@@ -62,11 +62,16 @@ services:
     command: ["/bin/bash", "-c", "
       sleep 30 && \
       echo '🔍 Starting Tumbaland service registration...' && \
-      curl -s -X PUT \
-        -H 'X-Consul-Token: '${CONSUL_ACL_TOKEN} \
-        -d '{\"service\": {\"name\": \"test-service\", \"port\": 8080, \"address\": \"test\"}}' \
-        http://consul-server:8500/v1/agent/service/register && \
-      echo '✅ Test service registered'
+      echo \"ACL Token: ${CONSUL_ACL_TOKEN:+set}\" && \
+      if [ -n \"$CONSUL_ACL_TOKEN\" ]; then \
+        curl -s -X PUT \
+          -H \"X-Consul-Token: $CONSUL_ACL_TOKEN\" \
+          -d '{\"service\": {\"name\": \"test-service\", \"port\": 8080, \"address\": \"test\"}}' \
+          http://consul-server:8500/v1/agent/service/register; \
+      else \
+        echo '❌ No ACL token set'; \
+      fi && \
+      echo '✅ Registration attempt complete'
     "]
     networks:
       - tumbanet
