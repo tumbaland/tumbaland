@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.154](https://github.com/toomastahves/tumbaland/compare/v0.0.153...v0.0.154) (2025-09-27)
+
+
+### Features
+
+* setup consol ([d64f9e0](https://github.com/toomastahves/tumbaland/commit/d64f9e0c64e22efc9ba7df6889dd5c525d6ff672))
+
 ### [0.0.153](https://github.com/toomastahves/tumbaland/compare/v0.0.152...v0.0.153) (2025-09-27)
 
 
