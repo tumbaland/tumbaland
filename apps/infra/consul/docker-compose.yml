@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   consul-server:
     image: hashicorp/consul:latest

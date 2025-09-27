@@ -198,13 +198,18 @@ jobs:
           script: |
             cd ~/tumbaland
             export COMPOSE_HTTP_TIMEOUT=300
+            export SERVICE_NAME="${{ github.event.inputs.service }}"
 
             # Ensure infrastructure network exists
             docker network ls | grep -q tumbanet || docker network create tumbanet
 
             # Backup current state before deployment
-            echo "Creating backup of current ${{ github.event.inputs.service }} state..."
-            docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} ps -q ${{ github.event.inputs.service }} | xargs -r docker inspect > ${{ github.event.inputs.service }}_backup_$(date +%Y%m%d_%H%M%S).json 2>/dev/null || true
+            echo "Creating backup of current $SERVICE_NAME state..."
+            if [ "$SERVICE_NAME" = "consul" ]; then
+              docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} ps -q | xargs -r docker inspect > ${{ github.event.inputs.service }}_backup_$(date +%Y%m%d_%H%M%S).json 2>/dev/null || true
+            else
+              docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} ps -q ${{ github.event.inputs.service }} | xargs -r docker inspect > ${{ github.event.inputs.service }}_backup_$(date +%Y%m%d_%H%M%S).json 2>/dev/null || true
+            fi
 
             # Pull latest image (only if we built one)
             if [ "${{ steps.dockerfile_check.outputs.dockerfile_exists }}" = "true" ]; then
@@ -212,26 +217,37 @@ jobs:
             fi
 
             # Deploy with health check
-            echo "Deploying ${{ github.event.inputs.service }}..."
-            docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} up -d ${{ github.event.inputs.service }}
+            echo "Deploying $SERVICE_NAME..."
+            # For consul, deploy all services since it has multiple containers
+            if [ "$SERVICE_NAME" = "consul" ]; then
+              docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} up -d
+              SERVICE_TO_CHECK="consul-server"
+            else
+              docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} up -d ${{ github.event.inputs.service }}
+              SERVICE_TO_CHECK="${{ github.event.inputs.service }}"
+            fi
 
             # Wait for service to be healthy
-            echo "Waiting for ${{ github.event.inputs.service }} to be healthy..."
+            echo "Waiting for $SERVICE_NAME to be healthy..."
             timeout=300
             while [ $timeout -gt 0 ]; do
-              if docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} ps ${{ github.event.inputs.service }} | grep -q "healthy\|running"; then
-                echo "✅ ${{ github.event.inputs.service }} is healthy"
+              if docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} ps $SERVICE_TO_CHECK | grep -q "healthy\|running"; then
+                echo "✅ $SERVICE_NAME is healthy"
                 break
               fi
-              echo "Waiting for ${{ github.event.inputs.service }} to be healthy... ($timeout seconds remaining)"
+              echo "Waiting for $SERVICE_NAME to be healthy... ($timeout seconds remaining)"
               sleep 10
               timeout=$((timeout - 10))
             done
 
             if [ $timeout -le 0 ]; then
-              echo "❌ ${{ github.event.inputs.service }} failed to become healthy within 5 minutes"
+              echo "❌ $SERVICE_NAME failed to become healthy within 5 minutes"
               echo "Rolling back..."
-              docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} down ${{ github.event.inputs.service }}
+              if [ "$SERVICE_NAME" = "consul" ]; then
+                docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} down
+              else
+                docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} down ${{ github.event.inputs.service }}
+              fi
               exit 1
             fi
 
