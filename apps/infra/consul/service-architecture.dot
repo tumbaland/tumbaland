@@ -1,0 +1,98 @@
+digraph ServiceArchitecture {
+    rankdir=TB;
+    node [shape=box, style=filled, fontname="Arial"];
+
+    // Define colors for different service types
+    node [fillcolor="#E8F4FD"]; // Backend - light blue
+    node [fillcolor="#FFF2CC"]; // Frontend - light yellow
+    node [fillcolor="#D5E8D4"]; // Infrastructure - light green
+
+    // Legend
+    subgraph cluster_legend {
+        label="Legend";
+        style=filled;
+        fillcolor="#F5F5F5";
+
+        Backend [fillcolor="#E8F4FD", label="Backend Services"];
+        Frontend [fillcolor="#FFF2CC", label="Frontend Services"];
+        Infrastructure [fillcolor="#D5E8D4", label="Infrastructure"];
+    }
+
+    "account-front" [fillcolor="#FFF2CC", label="account-front\nPort: 80\nAddr: account-front"];
+
+    "album-front" [fillcolor="#FFF2CC", label="album-front\nPort: 80\nAddr: album-front"];
+
+    "album-service" [fillcolor="#E8F4FD", label="album-service\nPort: 4002\nAddr: album-service"];
+
+    "auth-front" [fillcolor="#FFF2CC", label="auth-front\nPort: 80\nAddr: auth-front"];
+
+    "auth-service" [fillcolor="#E8F4FD", label="auth-service\nPort: 5001\nAddr: auth-service"];
+
+    "file-service" [fillcolor="#E8F4FD", label="file-service\nPort: 5002\nAddr: file-service"];
+
+    "finance-front" [fillcolor="#FFF2CC", label="finance-front\nPort: 80\nAddr: finance-front"];
+
+    "finance-service" [fillcolor="#E8F4FD", label="finance-service\nPort: 4003\nAddr: finance-service"];
+
+    "group-front" [fillcolor="#FFF2CC", label="group-front\nPort: 80\nAddr: group-front"];
+
+    "group-service" [fillcolor="#E8F4FD", label="group-service\nPort: 5006\nAddr: group-service"];
+
+    "payment-front" [fillcolor="#FFF2CC", label="payment-front\nPort: 80\nAddr: payment-front"];
+
+    "payment-service" [fillcolor="#E8F4FD", label="payment-service\nPort: 5005\nAddr: payment-service"];
+
+    "public-service" [fillcolor="#E8F4FD", label="public-service\nPort: 4000\nAddr: public-service"];
+
+    "relationship-front" [fillcolor="#FFF2CC", label="relationship-front\nPort: 80\nAddr: relationship-front"];
+
+    "relationship-service" [fillcolor="#E8F4FD", label="relationship-service\nPort: 4001\nAddr: relationship-service"];
+
+    "shell-front" [fillcolor="#FFF2CC", label="shell-front\nPort: 80\nAddr: shell-front"];
+
+    "tumbaland-proxy" [fillcolor="#D5E8D4", label="tumbaland-proxy\nPort: 80\nAddr: tumbaland-proxy"];
+
+    // Service relationships (simplified)
+    // Frontend services typically depend on backend services
+    "auth-front" -> "auth-service";
+    "album-front" -> "album-service";
+    "album-front" -> "file-service";
+    "account-front" -> "auth-service";
+    "finance-front" -> "finance-service";
+    "group-front" -> "group-service";
+    "payment-front" -> "payment-service";
+    "relationship-front" -> "relationship-service";
+
+    // Backend service dependencies
+    "album-service" -> "file-service";
+    "album-service" -> "auth-service";
+    "finance-service" -> "auth-service";
+    "group-service" -> "auth-service";
+    "payment-service" -> "auth-service";
+    "relationship-service" -> "auth-service";
+
+    // All services depend on infrastructure
+    "auth-service" -> "tumbaland-proxy" [style=dashed, color=gray];
+    "album-service" -> "tumbaland-proxy" [style=dashed, color=gray];
+    "file-service" -> "tumbaland-proxy" [style=dashed, color=gray];
+    "finance-service" -> "tumbaland-proxy" [style=dashed, color=gray];
+    "group-service" -> "tumbaland-proxy" [style=dashed, color=gray];
+    "payment-service" -> "tumbaland-proxy" [style=dashed, color=gray];
+    "public-service" -> "tumbaland-proxy" [style=dashed, color=gray];
+    "relationship-service" -> "tumbaland-proxy" [style=dashed, color=gray];
+
+    // Frontend services connect through proxy
+    "shell-front" -> "tumbaland-proxy" [style=dashed, color=gray];
+    "auth-front" -> "tumbaland-proxy" [style=dashed, color=gray];
+    "album-front" -> "tumbaland-proxy" [style=dashed, color=gray];
+    "account-front" -> "tumbaland-proxy" [style=dashed, color=gray];
+    "finance-front" -> "tumbaland-proxy" [style=dashed, color=gray];
+    "group-front" -> "tumbaland-proxy" [style=dashed, color=gray];
+    "payment-front" -> "tumbaland-proxy" [style=dashed, color=gray];
+    "relationship-front" -> "tumbaland-proxy" [style=dashed, color=gray];
+
+    // Group services by type
+    {rank=same; "auth-service"; "album-service"; "file-service"; "finance-service"; "group-service"; "payment-service"; "public-service"; "relationship-service"}
+    {rank=same; "shell-front"; "auth-front"; "album-front"; "account-front"; "finance-front"; "group-front"; "payment-front"; "relationship-front"}
+    {rank=same; "tumbaland-proxy"}
+}

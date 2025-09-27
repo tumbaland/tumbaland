@@ -50,33 +50,6 @@ services:
       - tumbanet
     # This client runs without exposing ports, used for service registration
 
-  service-registrator:
-    image: curlimages/curl:latest
-    container_name: tumbaland-service-registrator
-    restart: "no"  # Run once and exit
-    depends_on:
-      - consul-server
-    volumes:
-      - ./services:/services:ro
-      - ./register-services.sh:/register-services.sh:ro
-    command: >
-      /bin/bash -c "
-      sleep 30;
-      echo '🔍 Starting service registration...';
-      if [ -n \"$CONSUL_ACL_TOKEN\" ]; then
-        echo 'ACL Token found, registering test service...';
-        curl -s -X PUT -H \"X-Consul-Token: $CONSUL_ACL_TOKEN\" -d '{\"service\":{\"name\":\"test-service\",\"port\":8080}}' http://consul-server:8500/v1/agent/service/register;
-        echo '✅ Registration complete';
-      else
-        echo '❌ No ACL token set';
-      fi
-      "
-    networks:
-      - tumbanet
-    environment:
-      - CONSUL_HTTP_ADDR=http://consul-server:8500
-      - CONSUL_ACL_TOKEN=${CONSUL_ACL_MASTER_TOKEN}
-
 networks:
   tumbanet:
     external: true
