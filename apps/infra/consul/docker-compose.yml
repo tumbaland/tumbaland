@@ -59,20 +59,18 @@ services:
     volumes:
       - ./services:/services:ro
       - ./register-services.sh:/register-services.sh:ro
-    command: ["/bin/bash", "-c", "
-      sleep 30 && \
-      echo '🔍 Starting Tumbaland service registration...' && \
-      echo \"ACL Token: ${CONSUL_ACL_TOKEN:+set}\" && \
-      if [ -n \"$CONSUL_ACL_TOKEN\" ]; then \
-        curl -s -X PUT \
-          -H \"X-Consul-Token: $CONSUL_ACL_TOKEN\" \
-          -d '{\"service\": {\"name\": \"test-service\", \"port\": 8080, \"address\": \"test\"}}' \
-          http://consul-server:8500/v1/agent/service/register; \
-      else \
-        echo '❌ No ACL token set'; \
-      fi && \
-      echo '✅ Registration attempt complete'
-    "]
+    command: >
+      /bin/bash -c "
+      sleep 30;
+      echo '🔍 Starting service registration...';
+      if [ -n \"$CONSUL_ACL_TOKEN\" ]; then
+        echo 'ACL Token found, registering test service...';
+        curl -s -X PUT -H \"X-Consul-Token: $CONSUL_ACL_TOKEN\" -d '{\"service\":{\"name\":\"test-service\",\"port\":8080}}' http://consul-server:8500/v1/agent/service/register;
+        echo '✅ Registration complete';
+      else
+        echo '❌ No ACL token set';
+      fi
+      "
     networks:
       - tumbanet
     environment:
