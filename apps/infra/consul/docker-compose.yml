@@ -59,7 +59,7 @@ services:
     volumes:
       - ./services:/services:ro
       - ./register-services.sh:/register-services.sh:ro
-    command: ["/bin/sh", "-c", "sleep 30 && chmod +x /register-services.sh && /register-services.sh"]
+    command: ["/bin/bash", "-c", "sleep 30 && bash /register-services.sh"]
     networks:
       - tumbanet
     environment:
