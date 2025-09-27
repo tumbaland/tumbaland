@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.156](https://github.com/toomastahves/tumbaland/compare/v0.0.155...v0.0.156) (2025-09-27)
+
+
+### Features
+
+* setup consul directories ([0be19fe](https://github.com/toomastahves/tumbaland/commit/0be19fe3a50999bba22aabb010d12763d715d0ce))
+
 ### [0.0.155](https://github.com/toomastahves/tumbaland/compare/v0.0.154...v0.0.155) (2025-09-27)
 
 
