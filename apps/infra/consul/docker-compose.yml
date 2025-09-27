@@ -59,7 +59,15 @@ services:
     volumes:
       - ./services:/services:ro
       - ./register-services.sh:/register-services.sh:ro
-    command: ["/bin/bash", "-c", "sleep 30 && bash /register-services.sh"]
+    command: ["/bin/bash", "-c", "
+      sleep 30 && \
+      echo '🔍 Starting Tumbaland service registration...' && \
+      curl -s -X PUT \
+        -H 'X-Consul-Token: '${CONSUL_ACL_TOKEN} \
+        -d '{\"service\": {\"name\": \"test-service\", \"port\": 8080, \"address\": \"test\"}}' \
+        http://consul-server:8500/v1/agent/service/register && \
+      echo '✅ Test service registered'
+    "]
     networks:
       - tumbanet
     environment:
