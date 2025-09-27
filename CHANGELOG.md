@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.163](https://github.com/toomastahves/tumbaland/compare/v0.0.162...v0.0.163) (2025-09-27)
+
+
+### Features
+
+* setup health endpoints ([dba4d22](https://github.com/toomastahves/tumbaland/commit/dba4d22fc8a0014cc6e173e9c7fc241ceb065dd8))
+
 ### [0.0.162](https://github.com/toomastahves/tumbaland/compare/v0.0.161...v0.0.162) (2025-09-27)
 
 
