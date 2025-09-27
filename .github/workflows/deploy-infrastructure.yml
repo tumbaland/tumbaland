@@ -279,12 +279,3 @@ jobs:
 
             echo "🧹 Cleaning up old images..."
             docker image prune -f
-
-      - name: Notify deployment status
-        if: always()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          text: "Infrastructure service ${{ github.event.inputs.service }} deployment ${{ job.status == 'success' && 'succeeded' || 'failed' }}"
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
