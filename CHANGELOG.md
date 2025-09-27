@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.155](https://github.com/toomastahves/tumbaland/compare/v0.0.154...v0.0.155) (2025-09-27)
+
+
+### Bug Fixes
+
+* deploy consul ([2864bc6](https://github.com/toomastahves/tumbaland/commit/2864bc6c71c3d31c41447a89d917ee1670fb35a3))
+
 ### [0.0.154](https://github.com/toomastahves/tumbaland/compare/v0.0.153...v0.0.154) (2025-09-27)
 
 
