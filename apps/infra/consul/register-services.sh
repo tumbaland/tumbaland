@@ -7,10 +7,12 @@ set -e
 # Configuration
 CONSUL_HTTP_ADDR="${CONSUL_HTTP_ADDR:-http://localhost:8500}"
 SERVICES_DIR="$(dirname "$0")/services"
+CONSUL_ACL_TOKEN="${CONSUL_ACL_TOKEN:-}"
 
 echo "🔍 Starting Tumbaland service registration with Consul..."
 echo "📍 Consul Address: $CONSUL_HTTP_ADDR"
 echo "📁 Services Directory: $SERVICES_DIR"
+echo "🔑 ACL Token: ${CONSUL_ACL_TOKEN:+set}"
 
 # Check if Consul is running
 if ! curl -s "$CONSUL_HTTP_ADDR/v1/status/leader" > /dev/null; then
@@ -29,7 +31,13 @@ register_service() {
 
     echo "📝 Registering service: $service_name"
 
-    if curl -s -X PUT -d @"$service_file" "$CONSUL_HTTP_ADDR/v1/agent/service/register"; then
+    local curl_cmd="curl -s -X PUT"
+    if [ -n "$CONSUL_ACL_TOKEN" ]; then
+        curl_cmd="$curl_cmd -H \"X-Consul-Token: $CONSUL_ACL_TOKEN\""
+    fi
+    curl_cmd="$curl_cmd -d @\"$service_file\" \"$CONSUL_HTTP_ADDR/v1/agent/service/register\""
+
+    if eval "$curl_cmd"; then
         echo "✅ Successfully registered: $service_name"
     else
         echo "❌ Failed to register: $service_name"
@@ -41,7 +49,13 @@ register_service() {
 check_service() {
     local service_name="$1"
 
-    if curl -s "$CONSUL_HTTP_ADDR/v1/catalog/service/$service_name" | grep -q '"ServiceName"'; then
+    local curl_cmd="curl -s"
+    if [ -n "$CONSUL_ACL_TOKEN" ]; then
+        curl_cmd="$curl_cmd -H \"X-Consul-Token: $CONSUL_ACL_TOKEN\""
+    fi
+    curl_cmd="$curl_cmd \"$CONSUL_HTTP_ADDR/v1/catalog/service/$service_name\""
+
+    if eval "$curl_cmd" | grep -q '"ServiceName"'; then
         echo "✅ Service $service_name is registered"
         return 0
     else

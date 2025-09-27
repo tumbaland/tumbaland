@@ -59,11 +59,12 @@ services:
     volumes:
       - ./services:/services:ro
       - ./register-services.sh:/register-services.sh:ro
-    command: ["/bin/sh", "-c", "sleep 30 && /register-services.sh"]
+    command: ["/bin/sh", "-c", "sleep 30 && chmod +x /register-services.sh && /register-services.sh"]
     networks:
       - tumbanet
     environment:
       - CONSUL_HTTP_ADDR=http://consul-server:8500
+      - CONSUL_ACL_TOKEN=${CONSUL_ACL_MASTER_TOKEN}
 
 networks:
   tumbanet:
