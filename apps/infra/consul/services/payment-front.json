@@ -5,7 +5,7 @@
     "port": 80,
     "address": "payment-front",
     "check": {
-      "tcp": "payment-front:80",
+      "http": "http://payment-front/health",
       "interval": "30s",
       "timeout": "5s",
       "deregister_critical_service_after": "5m"

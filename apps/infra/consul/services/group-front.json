@@ -5,7 +5,7 @@
     "port": 80,
     "address": "group-front",
     "check": {
-      "tcp": "group-front:80",
+      "http": "http://group-front/health",
       "interval": "30s",
       "timeout": "5s",
       "deregister_critical_service_after": "5m"

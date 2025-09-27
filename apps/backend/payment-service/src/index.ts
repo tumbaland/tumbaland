@@ -9,6 +9,7 @@ import subscriptionRoutes from './routes/subscriptionRoutes';
 import paymentRoutes from './routes/paymentRoutes';
 import { stripeWebhook } from './controllers/stripeController';
 import path from 'path';
+import { healthCheck } from './controllers/healthController';
 
 dotenv.config();
 
@@ -40,9 +41,8 @@ app.use('/api/payments', paymentRoutes);
 // Serve OpenAPI docs as static files
 app.use('/api/docs', express.static(path.join(__dirname, '../docs')));
 
-app.get('/health', (req: Request, res: Response) => {
-  res.json({ status: 'ok', service: 'payment-service', timestamp: new Date().toISOString() });
-});
+// Health check endpoint
+app.get('/health', healthCheck);
 
 app.use((err: Error, _req: Request, res: Response, _next: any) => {
   console.error('Unhandled error', err);

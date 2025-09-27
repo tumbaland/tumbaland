@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import todoRoutes from './routes/todoRoutes';
 import { loadTodos } from './services/todoService';
+import { healthCheck } from './controllers/healthController';
 
 // Load environment variables
 dotenv.config();
@@ -26,15 +27,8 @@ app.use('/api/todo', todoRoutes);
 // Serve OpenAPI docs as static files
 app.use('/api/docs', express.static(path.join(__dirname, '../docs')));
 
-// Basic health check route
-app.get('/health', (req: Request, res: Response) => {
-  res.json({
-    status: 'ok',
-    service: 'album-service',
-    timestamp: new Date().toISOString(),
-    mongodb: 'connected'
-  });
-});
+// Health check endpoint
+app.get('/health', healthCheck);
 
 // Error handler
 app.use((error: Error, req: Request, res: Response, next: any) => {

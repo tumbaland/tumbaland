@@ -1,4 +1,4 @@
-import express, { Request, Response, RequestHandler } from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import mongoose from 'mongoose';
@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { authenticateToken } from './middleware/authMiddleware';
 import groupRoutes from './routes/groupRoutes';
+import { healthCheck } from './controllers/healthController';
 
 dotenv.config();
 
@@ -17,8 +18,8 @@ app.use(morgan('dev'));
 const MONGODB_URI = process.env.MONGODB_URI || '';
 mongoose.connect(MONGODB_URI).then(() => console.log('[group-service] Mongo connected')).catch(err => console.error('Mongo error', err));
 
-const healthHandler: RequestHandler = (_req: Request, res: Response) => { res.json({ ok: true }); };
-app.get('/api/health', healthHandler);
+// Health check endpoint
+app.get('/health', healthCheck);
 
 app.use('/api', authenticateToken);
 app.use('/api/groups', groupRoutes);

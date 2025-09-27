@@ -6,6 +6,7 @@ const cookieParser = require('cookie-parser');
 import authRoutes from './routes/authRoutes';
 import { connectDb } from './config/db';
 import path from 'path';
+import { healthCheck } from './controllers/healthController';
 
 // Load environment variables
 dotenv.config();
@@ -46,15 +47,8 @@ app.get('/docs', (req: Request, res: Response) => {
   res.redirect('/api/docs/index.html');
 });
 
-// Basic health check route
-app.get('/health', (req: Request, res: Response) => {
-  res.json({
-    status: 'ok',
-    service: 'auth-service',
-    timestamp: new Date().toISOString(),
-    version: '1.0.0'
-  });
-});
+// Health check endpoint
+app.get('/health', healthCheck);
 
 // Error handler
 app.use((error: Error, req: Request, res: Response, next: any) => {

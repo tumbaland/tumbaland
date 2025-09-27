@@ -6,6 +6,7 @@ import morgan from 'morgan';
 import path from 'path';
 import fileRoutes from './routes/fileRoutes';
 import { ensureStorageDirs } from './config/localStorage';
+import { healthCheck } from './controllers/healthController';
 
 const app = express();
 const PORT = process.env.PORT || 5002;
@@ -67,9 +68,7 @@ app.get('/docs', (req: Request, res: Response) => {
 });
 
 // Health check endpoint
-app.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({ status: 'OK', message: 'File service is running' });
-});
+app.get('/health', healthCheck);
 
 // Error handling middleware
 app.use((error: any, req: Request, res: Response, next: NextFunction) => {

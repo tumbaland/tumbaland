@@ -7,6 +7,7 @@ import { connectDB } from './config/database';
 import activityRoutes from './routes/activities';
 import activityTypeRoutes from './routes/activityTypes';
 import statisticsRoutes from './routes/statistics';
+import { healthCheck } from './controllers/healthController';
 
 // Load environment variables
 dotenv.config();
@@ -30,15 +31,8 @@ app.use('/api/statistics', statisticsRoutes);
 // Serve OpenAPI docs as static files
 app.use('/api/docs', express.static(path.join(__dirname, '../docs')));
 
-// Basic health check route
-app.get('/health', (req: Request, res: Response) => {
-  res.json({
-    status: 'ok',
-    service: 'relationship-back',
-    timestamp: new Date().toISOString(),
-    mongodb: 'connected'
-  });
-});
+// Health check endpoint
+app.get('/health', healthCheck);
 
 // Error handler
 app.use((error: Error, req: Request, res: Response, next: any) => {
