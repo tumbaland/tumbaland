@@ -203,6 +203,15 @@ jobs:
             # Ensure infrastructure network exists
             docker network ls | grep -q tumbanet || docker network create tumbanet
 
+            # Create necessary directories for the service
+            if [ "$SERVICE_NAME" = "consul" ]; then
+              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/data
+              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/client-data
+              # Ensure proper permissions for Consul data directories
+              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/data
+              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/client-data
+            fi
+
             # Backup current state before deployment
             echo "Creating backup of current $SERVICE_NAME state..."
             if [ "$SERVICE_NAME" = "consul" ]; then
