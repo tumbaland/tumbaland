@@ -19,7 +19,7 @@ services:
     volumes:
       - ./server.json:/consul/config/server.json:ro
       - ./data:/consul/data
-    command: consul agent -server -bootstrap-expect=1 -ui -client=0.0.0.0 -config-dir=/consul/config
+    command: consul agent -server -bootstrap-expect=1 -ui -client=0.0.0.0 -data-dir=/consul/data -config-file=/consul/config/server.json
     networks:
       - tumbanet
     healthcheck:
@@ -45,7 +45,7 @@ services:
     volumes:
       - ./client.json:/consul/config/client.json:ro
       - ./client-data:/consul/data
-    command: consul agent -join=consul-server -config-dir=/consul/config
+    command: consul agent -join=consul-server -data-dir=/consul/data -config-file=/consul/config/client.json
     networks:
       - tumbanet
     # This client runs without exposing ports, used for service registration

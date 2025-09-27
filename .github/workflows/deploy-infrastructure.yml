@@ -167,6 +167,9 @@ jobs:
           echo "CONSUL_ENCRYPT_KEY=${{ secrets.CONSUL_ENCRYPT_KEY }}" >> .env
           echo "CONSUL_ACL_MASTER_TOKEN=${{ secrets.CONSUL_ACL_MASTER_TOKEN }}" >> .env
 
+          echo "✅ Generated .env file with contents:"
+          cat .env
+
           # HAProxy
           echo "HAPROXY_STATS_USER=${{ secrets.HAPROXY_STATS_USER }}" >> .env
           echo "HAPROXY_STATS_PASSWORD=${{ secrets.HAPROXY_STATS_PASSWORD }}" >> .env
@@ -205,11 +208,21 @@ jobs:
 
             # Create necessary directories for the service
             if [ "$SERVICE_NAME" = "consul" ]; then
+              echo "Creating Consul data and config directories..."
               mkdir -p ${{ steps.vars.outputs.deploy_dir }}/data
               mkdir -p ${{ steps.vars.outputs.deploy_dir }}/client-data
-              # Ensure proper permissions for Consul data directories
+              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/config
+              # Ensure proper permissions for Consul directories
               chmod 755 ${{ steps.vars.outputs.deploy_dir }}/data
               chmod 755 ${{ steps.vars.outputs.deploy_dir }}/client-data
+              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/config
+              echo "✅ Created directories:"
+              ls -la ${{ steps.vars.outputs.deploy_dir }}/data
+              ls -la ${{ steps.vars.outputs.deploy_dir }}/client-data
+              ls -la ${{ steps.vars.outputs.deploy_dir }}/config
+              echo "📄 Checking config files:"
+              ls -la ${{ steps.vars.outputs.deploy_dir }}/server.json
+              ls -la ${{ steps.vars.outputs.deploy_dir }}/client.json
             fi
 
             # Backup current state before deployment
@@ -229,8 +242,12 @@ jobs:
             echo "Deploying $SERVICE_NAME..."
             # For consul, deploy all services since it has multiple containers
             if [ "$SERVICE_NAME" = "consul" ]; then
+              echo "🚀 Starting Consul with command:"
+              echo "consul agent -server -bootstrap-expect=1 -ui -client=0.0.0.0 -data-dir=/consul/data -config-file=/consul/config/server.json"
               docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} up -d
               SERVICE_TO_CHECK="consul-server"
+              echo "📋 Checking Consul server logs..."
+              docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} logs consul-server --tail=20
             else
               docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} up -d ${{ github.event.inputs.service }}
               SERVICE_TO_CHECK="${{ github.event.inputs.service }}"
