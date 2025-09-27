@@ -1,4 +1,12 @@
 # Tumbalog
+### [0.0.159](https://github.com/toomastahves/tumbaland/compare/v0.0.158...v0.0.159) (2025-09-27)
+
+
+### Bug Fixes
+
+* consul permission ([ebb131a](https://github.com/toomastahves/tumbaland/commit/ebb131a340f60a862bf99b68f71c97fa25c11ef6))
+* consul startup ([e1f6468](https://github.com/toomastahves/tumbaland/commit/e1f6468c93cf920f93502332a21034859393f481))
+
 ### [0.0.158](https://github.com/toomastahves/tumbaland/compare/v0.0.157...v0.0.158) (2025-09-27)
 
 
