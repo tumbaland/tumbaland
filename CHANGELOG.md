@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.158](https://github.com/toomastahves/tumbaland/compare/v0.0.157...v0.0.158) (2025-09-27)
+
+
+### Features
+
+* remove slack ([f0f2fd7](https://github.com/toomastahves/tumbaland/commit/f0f2fd7c10c771bd66da78a40cf5ffaa44af9704))
+
 ### [0.0.157](https://github.com/toomastahves/tumbaland/compare/v0.0.156...v0.0.157) (2025-09-27)
 
 
