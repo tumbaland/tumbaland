@@ -22,6 +22,15 @@ export const errorHandler: ErrorRequestHandler = (
     correlationId: (req as any).correlationId
   });
 
+  // Add CORS headers to error responses
+  const origin = req.headers.origin;
+  if (origin && (origin.includes('localhost') || origin.includes('tumbaland.eu'))) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, x-correlation-id, x-session-id');
+  }
+
   // Don't leak error details in production
   const isDevelopment = process.env.NODE_ENV === 'development';
   const errorMessage = isDevelopment ? error.message : 'Something went wrong';
