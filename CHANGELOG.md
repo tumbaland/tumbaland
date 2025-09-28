@@ -1,4 +1,12 @@
 # Tumbalog
+### [0.0.168](https://github.com/toomastahves/tumbaland/compare/v0.0.167...v0.0.168) (2025-09-28)
+
+
+### Features
+
+* add metrics to core ([5a386c9](https://github.com/toomastahves/tumbaland/commit/5a386c9b33ddf9c7ffd3c75519494e5da87d21ec))
+* fix proxy dns cache ([78cd340](https://github.com/toomastahves/tumbaland/commit/78cd34098f193d91f592aa417493c8a9c2cafeea))
+
 ### [0.0.167](https://github.com/toomastahves/tumbaland/compare/v0.0.166...v0.0.167) (2025-09-28)
 
 
