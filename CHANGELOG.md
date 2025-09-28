@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.172](https://github.com/toomastahves/tumbaland/compare/v0.0.171...v0.0.172) (2025-09-28)
+
+
+### Features
+
+* remove wait ([f9e3a6a](https://github.com/toomastahves/tumbaland/commit/f9e3a6a592f658e95a1232e96c5d5a77df6f4725))
+
 ### [0.0.171](https://github.com/toomastahves/tumbaland/compare/v0.0.170...v0.0.171) (2025-09-28)
 
 
