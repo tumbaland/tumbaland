@@ -150,29 +150,30 @@ jobs:
       - name: Generate infrastructure .env file
         run: |
           # Core infrastructure secrets
-          echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" > .env
-          echo "REDIS_URL=${{ secrets.REDIS_URL }}" >> .env
-          echo "RABBITMQ_URI=${{ secrets.RABBITMQ_URI }}" >> .env
-          echo "MINIO_ACCESS_KEY=${{ secrets.MINIO_ACCESS_KEY }}" >> .env
-          echo "MINIO_SECRET_KEY=${{ secrets.MINIO_SECRET_KEY }}" >> .env
-          echo "VAULT_TOKEN=${{ secrets.VAULT_TOKEN }}" >> .env
+          echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" > .env.infra
+          echo "REDIS_URL=${{ secrets.REDIS_URL }}" >> .env.infra
+          echo "RABBITMQ_URI=${{ secrets.RABBITMQ_URI }}" >> .env.infra
+          echo "MINIO_ACCESS_KEY=${{ secrets.MINIO_ACCESS_KEY }}" >> .env.infra
+          echo "MINIO_SECRET_KEY=${{ secrets.MINIO_SECRET_KEY }}" >> .env.infra
+          echo "VAULT_TOKEN=${{ secrets.VAULT_TOKEN }}" >> .env.infra
+          echo "CLOUDFLARE_API_TOKEN=${{ secrets.CLOUDFLARE_API_TOKEN }}" >> .env.infra
 
           # Monitoring and logging
-          echo "PROMETHEUS_RETENTION_TIME=${{ vars.PROMETHEUS_RETENTION_TIME }}" >> .env
-          echo "ELASTICSEARCH_URI=${{ vars.ELASTICSEARCH_URI }}" >> .env
-          echo "KIBANA_URI=${{ vars.KIBANA_URI }}" >> .env
-          echo "JAEGER_ENDPOINT=${{ vars.JAEGER_ENDPOINT }}" >> .env
+          echo "PROMETHEUS_RETENTION_TIME=${{ vars.PROMETHEUS_RETENTION_TIME }}" >> .env.infra
+          echo "ELASTICSEARCH_URI=${{ vars.ELASTICSEARCH_URI }}" >> .env.infra
+          echo "KIBANA_URI=${{ vars.KIBANA_URI }}" >> .env.infra
+          echo "JAEGER_ENDPOINT=${{ vars.JAEGER_ENDPOINT }}" >> .env.infra
 
           # Consul specific
-          echo "CONSUL_ENCRYPT_KEY=${{ secrets.CONSUL_ENCRYPT_KEY }}" >> .env
-          echo "CONSUL_ACL_MASTER_TOKEN=${{ secrets.CONSUL_ACL_MASTER_TOKEN }}" >> .env
+          echo "CONSUL_ENCRYPT_KEY=${{ secrets.CONSUL_ENCRYPT_KEY }}" >> .env.infra
+          echo "CONSUL_ACL_MASTER_TOKEN=${{ secrets.CONSUL_ACL_MASTER_TOKEN }}" >> .env.infra
 
-          echo "✅ Generated .env file with contents:"
-          cat .env
+          echo "✅ Generated .env.infra file with contents:"
+          cat .env.infra
 
           # HAProxy
-          echo "HAPROXY_STATS_USER=${{ secrets.HAPROXY_STATS_USER }}" >> .env
-          echo "HAPROXY_STATS_PASSWORD=${{ secrets.HAPROXY_STATS_PASSWORD }}" >> .env
+          echo "HAPROXY_STATS_USER=${{ secrets.HAPROXY_STATS_USER }}" >> .env.infra
+          echo "HAPROXY_STATS_PASSWORD=${{ secrets.HAPROXY_STATS_PASSWORD }}" >> .env.infra
 
       - name: Copy .env file to server
         uses: appleboy/scp-action@v0.1.7
@@ -180,7 +181,7 @@ jobs:
           host: ${{ vars.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          source: .env
+          source: .env.infra
           target: ~/tumbaland/
 
       - name: Copy compose file to server
@@ -235,7 +236,7 @@ jobs:
 
             # Pull latest image (only if we built one)
             if [ "${{ steps.dockerfile_check.outputs.dockerfile_exists }}" = "true" ]; then
-              docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} pull ${{ github.event.inputs.service }}
+              docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} pull ${{ github.event.inputs.service }}
             fi
 
             # Deploy with health check
@@ -244,12 +245,12 @@ jobs:
             if [ "$SERVICE_NAME" = "consul" ]; then
               echo "🚀 Starting Consul with command:"
               echo "consul agent -server -bootstrap-expect=1 -ui -client=0.0.0.0 -data-dir=/consul/data -config-file=/consul/config/server.json"
-              docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} up -d
+              docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} up -d
               SERVICE_TO_CHECK="consul-server"
               echo "📋 Checking Consul server logs..."
-              docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} logs consul-server --tail=20
+              docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} logs consul-server --tail=20
             else
-              docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} up -d ${{ github.event.inputs.service }}
+              docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} up -d ${{ github.event.inputs.service }}
               SERVICE_TO_CHECK="${{ github.event.inputs.service }}"
             fi
 
@@ -257,7 +258,7 @@ jobs:
             echo "Waiting for $SERVICE_NAME to be healthy..."
             timeout=300
             while [ $timeout -gt 0 ]; do
-              if docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} ps $SERVICE_TO_CHECK | grep -q "healthy\|running"; then
+              if docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} ps $SERVICE_TO_CHECK | grep -q "healthy\|running"; then
                 echo "✅ $SERVICE_NAME is healthy"
                 break
               fi
@@ -270,9 +271,9 @@ jobs:
               echo "❌ $SERVICE_NAME failed to become healthy within 5 minutes"
               echo "Rolling back..."
               if [ "$SERVICE_NAME" = "consul" ]; then
-                docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} down
+                docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} down
               else
-                docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} down ${{ github.event.inputs.service }}
+                docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} down ${{ github.event.inputs.service }}
               fi
               exit 1
             fi
