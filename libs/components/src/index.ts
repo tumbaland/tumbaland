@@ -10,3 +10,16 @@ export type { ErrorPageProps } from './components/ErrorPage';
 export type { UnauthorizedPageProps } from './components/UnauthorizedPage';
 export type { LoginButtonProps } from './components/LoginButton';
 export type { NotificationsMenuProps } from './components/NotificationsMenu/NotificationsMenu';
+
+// Monitoring
+export {
+  initMonitoring,
+  captureException,
+  captureMessage,
+  setUser,
+  setTag,
+  recordMetric,
+  initWebVitals,
+  getLoggingCircuitState,
+  resetLoggingCircuit
+} from './monitoring';

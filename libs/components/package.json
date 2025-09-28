@@ -1,6 +1,6 @@
 {
   "name": "@tumbaland/components",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "author": "Tumbaland",
   "license": "MIT",
   "main": "dist/index.js",
@@ -16,7 +16,8 @@
     "storybook:prod": "storybook build"
   },
   "dependencies": {
-    "@mui/material": "^7.1.2"
+    "@mui/material": "^7.1.2",
+    "web-vitals": "^5.1.0"
   },
   "peerDependencies": {
     "react": "^19.1.0",
