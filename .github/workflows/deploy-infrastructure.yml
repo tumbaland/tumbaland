@@ -268,11 +268,7 @@ jobs:
               chmod 755 ${{ steps.vars.outputs.deploy_dir }}/filebeat/data
               chmod 755 ${{ steps.vars.outputs.deploy_dir }}/metricbeat/data
               chmod 755 ${{ steps.vars.outputs.deploy_dir }}/heartbeat/data
-              # Fix permissions for Beat config files (they run as root)
-              chmod 644 ${{ steps.vars.outputs.deploy_dir }}/filebeat/filebeat.yml
-              chmod 644 ${{ steps.vars.outputs.deploy_dir }}/metricbeat/metricbeat.yml
-              chmod 644 ${{ steps.vars.outputs.deploy_dir }}/heartbeat/heartbeat.yml
-              echo "✅ Created ELK directories and fixed permissions"
+              echo "✅ Created ELK directories"
             fi
 
             if [ "$SERVICE_NAME" = "prometheus" ]; then

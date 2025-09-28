@@ -53,7 +53,8 @@ services:
       - ./logstash/pipeline:/usr/share/logstash/pipeline
       - ./logstash/logs:/usr/share/logstash/logs
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
     networks:
       - tumbanet
     command: logstash -f /usr/share/logstash/pipeline/
@@ -81,7 +82,8 @@ services:
       - XPACK_SECURITY_ENABLED=true
       - XPACK_MONITORING_ENABLED=true
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
     networks:
       - tumbanet
     healthcheck:
@@ -110,14 +112,12 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./filebeat/data:/usr/share/filebeat/data
     environment:
-      - setup.kibana.host=kibana:5601
-      - setup.ilm.enabled=false
       - output.elasticsearch.hosts=["elasticsearch:9200"]
       - output.elasticsearch.username=elastic
       - output.elasticsearch.password=${ELASTIC_PASSWORD}
     depends_on:
-      - elasticsearch
-      - kibana
+      elasticsearch:
+        condition: service_healthy
     networks:
       - tumbanet
     deploy:
@@ -142,14 +142,12 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./metricbeat/data:/usr/share/metricbeat/data
     environment:
-      - setup.kibana.host=kibana:5601
-      - setup.dashboards.enabled=true
       - output.elasticsearch.hosts=["elasticsearch:9200"]
       - output.elasticsearch.username=elastic
       - output.elasticsearch.password=${ELASTIC_PASSWORD}
     depends_on:
-      - elasticsearch
-      - kibana
+      elasticsearch:
+        condition: service_healthy
     networks:
       - tumbanet
     deploy:
@@ -170,14 +168,12 @@ services:
       - ./heartbeat/heartbeat.yml:/usr/share/heartbeat/heartbeat.yml:ro
       - ./heartbeat/data:/usr/share/heartbeat/data
     environment:
-      - setup.kibana.host=kibana:5601
-      - setup.dashboards.enabled=true
       - output.elasticsearch.hosts=["elasticsearch:9200"]
       - output.elasticsearch.username=elastic
       - output.elasticsearch.password=${ELASTIC_PASSWORD}
     depends_on:
-      - elasticsearch
-      - kibana
+      elasticsearch:
+        condition: service_healthy
     networks:
       - tumbanet
     deploy:

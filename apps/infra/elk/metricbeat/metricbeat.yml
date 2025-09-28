@@ -16,9 +16,12 @@ metricbeat.modules:
     - core
     - diskio
     - socket
-    - service
     - users
   enabled: true
+  period: 10s
+  processes: ['.*']
+  # Disable service metricset that requires D-Bus
+  # - service
   period: 10s
   processes: ['.*']
   cpu.metrics: [percentages, normalized_percentages]
