@@ -19,7 +19,5 @@ export {
   setUser,
   setTag,
   recordMetric,
-  initWebVitals,
-  getLoggingCircuitState,
-  resetLoggingCircuit
+  initWebVitals
 } from './monitoring';
