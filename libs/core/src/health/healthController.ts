@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
+import { metricsHandler } from '../metrics';
 
 /**
  * Health check endpoint with database connectivity
@@ -36,3 +37,9 @@ export const healthCheck = async (req: Request, res: Response) => {
     });
   }
 };
+
+/**
+ * Prometheus metrics endpoint
+ * Exposes application metrics for monitoring
+ */
+export { metricsHandler };

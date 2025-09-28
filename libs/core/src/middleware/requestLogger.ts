@@ -1,5 +1,6 @@
 import morgan from 'morgan';
 import logger from '../logging/logger';
+import { metricsMiddleware } from '../metrics';
 
 /**
  * Morgan middleware configured to use Winston logger
@@ -12,6 +13,12 @@ export const requestLogger = morgan('combined', {
     }
   }
 });
+
+/**
+ * Combined middleware that includes both logging and metrics
+ * Use this instead of separate requestLogger and metricsMiddleware
+ */
+export const requestLoggerWithMetrics = [requestLogger, metricsMiddleware];
 
 /**
  * Simple request logger for development
