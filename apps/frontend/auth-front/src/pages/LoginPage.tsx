@@ -4,6 +4,7 @@ import { initializeGoogleSignIn } from '../authFlow';
 import LoggedInUser from '../components/LoggedInUser';
 import LoginPrompt from '../components/LoginPrompt';
 import { useConfig } from '../config/useConfig';
+import { getCorrelationId, getSessionId } from '@tumbaland/components';
 
 const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -16,7 +17,11 @@ const LoginPage: React.FC = () => {
     const checkExistingAuth = async () => {
       try {
         const response = await fetch(`${config.AUTH_SERVICE_URL}/auth/verify`, {
-          credentials: 'include'
+          credentials: 'include',
+          headers: {
+            'x-correlation-id': getCorrelationId(),
+            'x-session-id': getSessionId()
+          }
         });
         const data = await response.json();
         if (data.success && data.authenticated) {
@@ -52,7 +57,11 @@ const LoginPage: React.FC = () => {
     try {
       const response = await fetch(`${config.AUTH_SERVICE_URL}/auth/logout`, {
         method: 'POST',
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'x-correlation-id': getCorrelationId(),
+          'x-session-id': getSessionId()
+        }
       });
       if (response.ok) {
         setUser(null);

@@ -1,4 +1,5 @@
 import { getGlobalConfig } from '../config/ConfigProvider';
+import { getCorrelationId, getSessionId } from '@tumbaland/components';
 import { Plan, Subscription, Payment } from '../types';
 
 // Unified API response shapes we might encounter from the backend.
@@ -54,6 +55,8 @@ async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   // Merge headers, allowing caller overrides.
   const mergedHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
+    'x-correlation-id': getCorrelationId(),
+    'x-session-id': getSessionId(),
     ...(options.headers as Record<string, string> | undefined),
     ...(token ? { Authorization: `Bearer ${token}` } : {})
   };

@@ -9,12 +9,12 @@ import PortfolioOptimizer from '../pages/PortfolioOptimizer';
 const AppRoutes = () => {
   return (
     <Routes>
-      <Route path="/" element={<Dashboard />} />
-      <Route path="/records" element={<FinancialRecords />} />
-      <Route path="/tracked-tickers" element={<TrackedTickersPage />} />
-      <Route path="/user-portfolio" element={<UserPortfolioPage />} />
-      <Route path="/stock-growth-calculator" element={<StockGrowthCalculator />} />
-      <Route path="/portfolio-optimizer" element={<PortfolioOptimizer />} />
+      <Route path="" element={<Dashboard />} />
+      <Route path="records" element={<FinancialRecords />} />
+      <Route path="tracked-tickers" element={<TrackedTickersPage />} />
+      <Route path="user-portfolio" element={<UserPortfolioPage />} />
+      <Route path="stock-growth-calculator" element={<StockGrowthCalculator />} />
+      <Route path="portfolio-optimizer" element={<PortfolioOptimizer />} />
     </Routes>
   );
 };

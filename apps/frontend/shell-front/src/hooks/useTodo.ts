@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useConfig } from './useConfig';
+import { getCorrelationId, getSessionId } from '@tumbaland/components';
 
 export function useTodo() {
   const config = useConfig();
@@ -17,7 +18,12 @@ export function useTodo() {
     setError(null);
 
     try {
-      const res = await fetch(`${API_URL}/api/todo/random`);
+      const res = await fetch(`${API_URL}/api/todo/random`, {
+        headers: {
+          'x-correlation-id': getCorrelationId(),
+          'x-session-id': getSessionId()
+        }
+      });
 
       if (!res.ok) {
         throw new Error(`Failed to fetch todo: ${res.status}`);

@@ -1,5 +1,6 @@
 import { UpdateProfileRequest, UpdateProfileResponse } from '../types';
 import { getGlobalConfig } from '../config/ConfigProvider';
+import { getCorrelationId, getSessionId } from '@tumbaland/components';
 
 export const profileService = {
   // Update user profile
@@ -10,7 +11,9 @@ export const profileService = {
         method: 'PUT',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-correlation-id': getCorrelationId(),
+          'x-session-id': getSessionId()
         },
         body: JSON.stringify(profileData)
       });

@@ -6,18 +6,18 @@ import { ProtectedRoute } from '../components/ProtectedRoute';
 
 const AppRoutes = () => (
   <Routes>
-    <Route path="/" element={<Navigate to="/payments" replace />} />
-    <Route path="/payments/*" element={
+    <Route path="" element={<Navigate to="payments" replace />} />
+    <Route path="payments/*" element={
       <ProtectedRoute>
         <PaymentsPage />
       </ProtectedRoute>
     } />
-    <Route path="/subscription/checkout" element={
+    <Route path="subscription/checkout" element={
       <ProtectedRoute>
         <SubscriptionCheckoutPage />
       </ProtectedRoute>
     } />
-    <Route path="/terms" element={<TermsPage />} />
+    <Route path="terms" element={<TermsPage />} />
   </Routes>
 );
 

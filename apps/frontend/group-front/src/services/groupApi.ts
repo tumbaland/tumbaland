@@ -1,4 +1,5 @@
 import { getGlobalConfig } from '../config/ConfigProvider';
+import { getCorrelationId, getSessionId } from '@tumbaland/components';
 import type { Group, GroupMember } from '../types';
 
 export type GroupRole = GroupMember['role'];
@@ -9,6 +10,8 @@ async function api<T = any>(path: string, init: RequestInit = {}): Promise<T> {
 
   const mergedHeaders: Record<string, string> = {
     ...(init.headers as Record<string, string> | undefined),
+    'x-correlation-id': getCorrelationId(),
+    'x-session-id': getSessionId(),
     ...(token ? { Authorization: `Bearer ${token}` } : {})
   };
 

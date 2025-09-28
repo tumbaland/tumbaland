@@ -1,4 +1,5 @@
 import { getGlobalConfig } from './config/ConfigProvider';
+import { getCorrelationId, getSessionId } from '@tumbaland/components';
 
 declare global {
   interface Window {
@@ -15,7 +16,11 @@ function handleCredentialResponse(response: { credential: string }, redirectUri:
 
   fetch(`${config.AUTH_SERVICE_URL}/auth/validate`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 
+      'Content-Type': 'application/json',
+      'x-correlation-id': getCorrelationId(),
+      'x-session-id': getSessionId()
+    },
     body: JSON.stringify({ idToken }),
     credentials: 'include' // Include cookies in the request
   })

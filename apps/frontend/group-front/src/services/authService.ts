@@ -1,5 +1,6 @@
 import { AuthResponse, User } from '../types';
 import { getGlobalConfig } from '../config/ConfigProvider';
+import { getCorrelationId, getSessionId } from '@tumbaland/components';
 
 function getJwtTokenFromCookie(cookieName = 'access_token'): string | null {
   const match = document.cookie.match(new RegExp('(^| )' + cookieName + '=([^;]+)'));
@@ -19,7 +20,14 @@ export const authService = {
   async checkAuth(): Promise<AuthResponse> {
     try {
       const config = getGlobalConfig();
-      const response = await fetch(`${config.AUTH_SERVICE_URL}/auth/verify`, { credentials: 'include', headers: { 'Content-Type': 'application/json' } });
+      const response = await fetch(`${config.AUTH_SERVICE_URL}/auth/verify`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-correlation-id': getCorrelationId(),
+          'x-session-id': getSessionId()
+        }
+      });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       return { authenticated: data.success && data.authenticated, user: data.user || null };
@@ -36,7 +44,15 @@ export const authService = {
   async logout(): Promise<boolean> {
     try {
       const config = getGlobalConfig();
-      const response = await fetch(`${config.AUTH_SERVICE_URL}/auth/logout`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' } });
+      const response = await fetch(`${config.AUTH_SERVICE_URL}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-correlation-id': getCorrelationId(),
+          'x-session-id': getSessionId()
+        }
+      });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       if (data.success) { localStorage.removeItem('authToken'); window.location.reload(); }

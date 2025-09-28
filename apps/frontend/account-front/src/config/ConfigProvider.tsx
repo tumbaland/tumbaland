@@ -1,12 +1,13 @@
 import { useEffect, useState, ReactNode } from 'react';
 import { CssBaseline } from '@mui/material';
-import { Loader, ErrorPage } from '@tumbaland/components';
+import { Loader, ErrorPage, initMonitoring, initWebVitals } from '@tumbaland/components';
 import { authService } from '../services/authService';
 import React from 'react';
 
 export interface AppConfig {
   AUTH_SERVICE_URL?: string;
   AUTH_FRONT_URL?: string;
+  PUBLIC_API_URL?: string;
 }
 
 // Global configuration holder for non-React services
@@ -18,7 +19,8 @@ export const ConfigContext = React.createContext<AppConfig>({});
 function createDevConfig(): AppConfig {
   return {
     AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL,
-    AUTH_FRONT_URL: import.meta.env.VITE_AUTH_FRONT_URL
+    AUTH_FRONT_URL: import.meta.env.VITE_AUTH_FRONT_URL,
+    PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL
   };
 }
 
@@ -51,6 +53,15 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
       console.log('Using development configuration from environment variables:', devConfig);
       setConfig(devConfig);
       globalConfig = devConfig;
+            // Initialize local monitoring
+      initMonitoring(import.meta.env.MODE, {
+        service: 'account-front',
+        component: 'frontend',
+        elkUrl: devConfig.PUBLIC_API_URL ? `${devConfig.PUBLIC_API_URL}/logs` : undefined,
+        captureConsoleLevels: ['error', 'warn', 'info', 'debug'] // Capture all levels in development
+      });
+      
+      initWebVitals({ isDevelopment: true }).catch(console.error);
       authService.init();
       return;
     }
@@ -66,6 +77,15 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
         setConfig(loadedConfig);
         // Set global config for non-React services
         globalConfig = loadedConfig;
+                // Initialize local monitoring
+        initMonitoring('production', {
+          service: 'account-front',
+          component: 'frontend',
+          elkUrl: loadedConfig.PUBLIC_API_URL ? `${loadedConfig.PUBLIC_API_URL}/logs` : undefined,
+          captureConsoleLevels: ['error', 'warn'] // Only capture errors and warnings in production
+        });
+        
+        initWebVitals({ isDevelopment: false }).catch(console.error);
         // Initialize auth service
         authService.init();
       })

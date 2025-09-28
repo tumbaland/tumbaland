@@ -5,6 +5,7 @@
 
 import { User, AuthResponse } from '../types';
 import { getGlobalConfig } from '../config/ConfigProvider';
+import { getCorrelationId, getSessionId } from '@tumbaland/components';
 
 // Helper to read JWT token from cookie
 function getJwtTokenFromCookie(cookieName = 'access_token'): string | null {
@@ -44,7 +45,9 @@ export const authService = {
       const response = await fetch(`${config.AUTH_SERVICE_URL}/auth/verify`, {
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-correlation-id': getCorrelationId(),
+          'x-session-id': getSessionId()
         }
       });
 
@@ -79,7 +82,9 @@ export const authService = {
         method: 'POST',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-correlation-id': getCorrelationId(),
+          'x-session-id': getSessionId()
         }
       });
 

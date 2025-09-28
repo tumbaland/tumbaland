@@ -1,5 +1,6 @@
 import { useEffect, useState, ReactNode } from 'react';
 import { CssBaseline } from '@mui/material';
+import { Loader, ErrorPage, initMonitoring, initWebVitals } from '@tumbaland/components';
 import React from 'react';
 import { authService } from '../services/authService';
 
@@ -7,6 +8,7 @@ export interface AppConfig {
   PAYMENT_API_URL?: string;
   AUTH_SERVICE_URL?: string;
   AUTH_FRONT_URL?: string;
+  PUBLIC_API_URL?: string;
 }
 
 let globalConfig: AppConfig | null = null;
@@ -16,7 +18,8 @@ function createDevConfig(): AppConfig {
   return {
     PAYMENT_API_URL: import.meta.env.VITE_PAYMENT_API_URL,
     AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL,
-    AUTH_FRONT_URL: import.meta.env.VITE_AUTH_FRONT_URL
+    AUTH_FRONT_URL: import.meta.env.VITE_AUTH_FRONT_URL,
+    PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL
   };
 }
 
@@ -43,21 +46,39 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
     if (devConfig.PAYMENT_API_URL || devConfig.AUTH_SERVICE_URL || devConfig.AUTH_FRONT_URL) {
       setConfig(devConfig);
       globalConfig = devConfig;
+      // Initialize local monitoring
+      initMonitoring(import.meta.env.MODE, {
+        service: 'payment-front',
+        component: 'frontend',
+        elkUrl: devConfig.PUBLIC_API_URL ? `${devConfig.PUBLIC_API_URL}/logs` : undefined
+      });
+      initWebVitals({ isDevelopment: true }).catch(console.error);
       authService.init();
       return;
     }
 
     fetch('/config.json')
       .then((res) => { if (!res.ok) throw new Error('Config fetch failed'); return res.json(); })
-      .then((loaded) => { setConfig(loaded); globalConfig = loaded; authService.init(); })
+      .then((loaded) => { 
+        setConfig(loaded); 
+        globalConfig = loaded; 
+        // Initialize local monitoring
+        initMonitoring('production', {
+          service: 'payment-front',
+          component: 'frontend',
+          elkUrl: loaded.PUBLIC_API_URL ? `${loaded.PUBLIC_API_URL}/logs` : undefined
+        });
+        initWebVitals({ isDevelopment: false }).catch(console.error);
+        authService.init(); 
+      })
       .catch((err) => { console.error('Configuration load error:', err); setError(err.message); });
   }, []);
 
   if (error) {
-    return <div>Configuration error</div>;
+    return <ErrorPage />;
   }
   if (!config) {
-    return <div>Loading...</div>;
+    return <Loader />;
   }
   return (
     <ConfigContext.Provider value={config}>

@@ -1,6 +1,6 @@
 import { useEffect, useState, ReactNode } from 'react';
 import { CssBaseline } from '@mui/material';
-import { Loader, ErrorPage } from '@tumbaland/components';
+import { Loader, ErrorPage, initMonitoring, initWebVitals } from '@tumbaland/components';
 import HeartBrokenIcon from '@mui/icons-material/HeartBroken';
 import React from 'react';
 import { authService } from '../services/authService';
@@ -66,6 +66,13 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
       console.log('Using development configuration from environment variables:', devConfig);
       setConfig(devConfig);
       globalConfig = devConfig;
+      // Initialize local monitoring
+      initMonitoring(import.meta.env.MODE, {
+        service: 'shell-front',
+        component: 'frontend',
+        elkUrl: devConfig.PUBLIC_API_URL ? `${devConfig.PUBLIC_API_URL}/logs` : undefined
+      });
+      initWebVitals({ isDevelopment: true }).catch(console.error);
       authService.init(); // Initialize auth service
       return;
     }
@@ -81,6 +88,13 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
         setConfig(loadedConfig);
         // Set global config for non-React services
         globalConfig = loadedConfig;
+        // Initialize local monitoring
+        initMonitoring('production', {
+          service: 'shell-front',
+          component: 'frontend',
+          elkUrl: loadedConfig.PUBLIC_API_URL ? `${loadedConfig.PUBLIC_API_URL}/logs` : undefined
+        });
+        initWebVitals({ isDevelopment: false }).catch(console.error);
         authService.init(); // Initialize auth service
       })
       .catch((err) => {

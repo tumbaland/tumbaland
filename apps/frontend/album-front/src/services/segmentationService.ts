@@ -2,17 +2,9 @@
 import { photoService } from './photoService';
 import { getGlobalConfig, AppConfig } from '../config/ConfigProvider';
 
-// Get configuration with fallbacks
+// Get configuration from global config provider
 function getConfig(): AppConfig {
-  try {
-    return getGlobalConfig();
-  } catch {
-    // Fallback to environment variables if config not ready
-    return {
-      SEGMENTATION_API_URL: import.meta.env.VITE_SEGMENTATION_API_URL,
-      FILE_API_URL: import.meta.env.VITE_FILE_API_URL
-    };
-  }
+  return getGlobalConfig();
 }
 
 // Health check timeout (3 seconds)

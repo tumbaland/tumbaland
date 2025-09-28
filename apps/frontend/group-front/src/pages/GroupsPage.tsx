@@ -1,5 +1,4 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
 import { Box, Tabs, Tab } from '@mui/material';
 import GroupsTab from '../components/tabs/GroupsTab';
 
@@ -23,9 +22,7 @@ const GroupsPage: React.FC = () => {
         </Tabs>
       </Box>
       <Box sx={{ mt: 3 }}>
-        <Routes>
-          <Route path="/" element={<GroupsTab />} />
-        </Routes>
+        <GroupsTab />
       </Box>
     </Box>
   );

@@ -14,7 +14,7 @@ const AccountPage: React.FC = () => {
   };
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    const paths = ['/account/profile', '/account/security', '/account/data'];
+    const paths = ['profile', 'security', 'data'];
     window.history.pushState(null, '', paths[newValue]);
   };
 
@@ -27,8 +27,8 @@ const AccountPage: React.FC = () => {
       </Box>
       <Box sx={{ mt: 3 }}>
         <Routes>
-          <Route path="/" element={<Navigate to="/account/profile" replace />} />
-          <Route path="/profile" element={<ProfileTab />} />
+          <Route path="" element={<Navigate to="profile" replace />} />
+          <Route path="profile" element={<ProfileTab />} />
         </Routes>
       </Box>
     </Box>

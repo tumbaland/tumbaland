@@ -5,8 +5,8 @@ import AccountPage from '../pages/AccountPage';
 const AppRoutes = () => {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/account" replace />} />
-      <Route path="/account/*" element={
+      <Route path="" element={<Navigate to="account" replace />} />
+      <Route path="account/*" element={
         <ProtectedRoute>
           <AccountPage />
         </ProtectedRoute>

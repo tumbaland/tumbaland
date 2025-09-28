@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { TenantOption, TenantProvider, useTenantListener, useTenantContext } from './TenantProvider';
+import { getCorrelationId, getSessionId } from '@tumbaland/components';
 
 // Re-export for convenience
 export { TenantProvider, useTenantListener, useTenantContext, type TenantOption };
@@ -82,7 +83,9 @@ const fetchGroupsGlobally = async (groupApiUrl: string): Promise<TenantOption[]>
         
         const headers = {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken.trim()}`
+          'Authorization': `Bearer ${authToken.trim()}`,
+          'x-correlation-id': getCorrelationId(),
+          'x-session-id': getSessionId()
         };      console.log('Request headers:', headers);
       console.log(`Fetching groups from: ${groupApiUrl}/api/groups/mine`);
       

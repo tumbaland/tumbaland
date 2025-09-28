@@ -1,4 +1,5 @@
 import { getGlobalConfig } from './ConfigProvider';
+import { getCorrelationId, getSessionId } from '@tumbaland/components';
 
 // Base fetch wrapper with auth handling
 export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
@@ -9,6 +10,8 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      'x-correlation-id': getCorrelationId(),
+      'x-session-id': getSessionId(),
       ...options.headers,
       ...(token && { Authorization: `Bearer ${token}` })
     }

@@ -1,4 +1,5 @@
 import { getGlobalConfig } from './ConfigProvider';
+import { getCorrelationId, getSessionId } from '@tumbaland/components';
 
 // Helper to read JWT token from cookie
 function getJwtTokenFromCookie(cookieName = 'access_token'): string | null {
@@ -26,6 +27,8 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      'x-correlation-id': getCorrelationId(),
+      'x-session-id': getSessionId(),
       ...options.headers,
       ...(token && { Authorization: `Bearer ${token}` })
     }

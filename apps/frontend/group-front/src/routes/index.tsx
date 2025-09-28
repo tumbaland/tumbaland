@@ -5,12 +5,12 @@ import GroupsPage from '../pages/GroupsPage';
 
 const AppRoutes = () => (
   <Routes>
-    <Route path="/" element={
+    <Route path="" element={
       <ProtectedRoute>
         <GroupsPage />
       </ProtectedRoute>
     } />
-    <Route path="/groups/:id" element={
+    <Route path=":id" element={
       <ProtectedRoute>
         <GroupDetailsPage />
       </ProtectedRoute>

@@ -12,16 +12,16 @@ const PaymentsPage: React.FC = () => {
   // Determine active tab based on current path
   const getActiveTab = () => {
     const path = location.pathname;
-    if (path === '/payments' || path === '/payments/' || path === '/payments/plans') {
+    if (path === '/payments' || path === '/payments/' || path.endsWith('/payments/plans') || path.endsWith('/plans')) {
       return 0; // plans
     }
-    if (path === '/payments/subscriptions') return 1;
-    if (path === '/payments/history') return 2;
+    if (path.endsWith('/payments/subscriptions') || path.endsWith('/subscriptions')) return 1;
+    if (path.endsWith('/payments/history') || path.endsWith('/history')) return 2;
     return 0; // default to plans
   };
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    const paths = ['/payments/plans', '/payments/subscriptions', '/payments/history'];
+    const paths = ['plans', 'subscriptions', 'history'];
     navigate(paths[newValue], { replace: true });
   };
 

@@ -1,4 +1,5 @@
 import { getGlobalConfig } from '../config/ConfigProvider';
+import { getCorrelationId, getSessionId } from '@tumbaland/components';
 
 export interface Group {
   _id: string;
@@ -22,7 +23,9 @@ const getAuthToken = (): string => {
 const getHeaders = (): HeadersInit => {
   return {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${getAuthToken()}`
+    'Authorization': `Bearer ${getAuthToken()}`,
+    'x-correlation-id': getCorrelationId(),
+    'x-session-id': getSessionId()
   };
 };
 

@@ -1,11 +1,12 @@
 import { useEffect, useState, ReactNode } from 'react';
 import { CssBaseline } from '@mui/material';
-import { Loader, ErrorPage } from '@tumbaland/components';
+import { Loader, ErrorPage, initMonitoring, initWebVitals } from '@tumbaland/components';
 import React from 'react';
 
 export interface AppConfig {
   GOOGLE_CLIENT_ID?: string;
   AUTH_SERVICE_URL?: string;
+  PUBLIC_API_URL?: string;
 }
 
 // Global configuration holder for non-React services
@@ -17,7 +18,8 @@ export const ConfigContext = React.createContext<AppConfig>({});
 function createDevConfig(): AppConfig {
   return {
     GOOGLE_CLIENT_ID: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-    AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL
+    AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL,
+    PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL
   };
 }
 
@@ -50,6 +52,13 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
       console.log('Using development configuration from environment variables:', devConfig);
       setConfig(devConfig);
       globalConfig = devConfig;
+      // Initialize local monitoring
+      initMonitoring(import.meta.env.MODE, {
+        service: 'auth-front',
+        component: 'frontend',
+        elkUrl: devConfig.PUBLIC_API_URL ? `${devConfig.PUBLIC_API_URL}/logs` : undefined
+      });
+      initWebVitals({ isDevelopment: true }).catch(console.error);
       return;
     }
 
@@ -64,6 +73,13 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
         setConfig(loadedConfig);
         // Set global config for non-React services
         globalConfig = loadedConfig;
+        // Initialize local monitoring
+        initMonitoring('production', {
+          service: 'auth-front',
+          component: 'frontend',
+          elkUrl: loadedConfig.PUBLIC_API_URL ? `${loadedConfig.PUBLIC_API_URL}/logs` : undefined
+        });
+        initWebVitals({ isDevelopment: false }).catch(console.error);
       })
       .catch((err) => {
         console.error('Configuration load error:', err);

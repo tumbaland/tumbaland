@@ -6,9 +6,9 @@ import ActivityTypesPage from '../pages/ActivityTypesPage';
 const AppRoutes = () => {
   return (
     <Routes>
-      <Route path="/" element={<Dashboard />} />
-      <Route path="/activities" element={<Activities />} />
-      <Route path="/activity-types" element={<ActivityTypesPage />} />
+      <Route path="" element={<Dashboard />} />
+      <Route path="activities" element={<Activities />} />
+      <Route path="activity-types" element={<ActivityTypesPage />} />
     </Routes>
   );
 };
