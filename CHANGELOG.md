@@ -1,4 +1,12 @@
 # Tumbalog
+### [0.0.175](https://github.com/toomastahves/tumbaland/compare/v0.0.174...v0.0.175) (2025-09-28)
+
+
+### Features
+
+* fix recursive console errors ([bcbb286](https://github.com/toomastahves/tumbaland/commit/bcbb286c3f8c290fc84bbef520173c7e20a7605a))
+* setup backend logging and metrics ([fd644cd](https://github.com/toomastahves/tumbaland/commit/fd644cd66f050e01eba795218f4c6376218d3298))
+
 ### [0.0.174](https://github.com/toomastahves/tumbaland/compare/v0.0.173...v0.0.174) (2025-09-28)
 
 
