@@ -226,14 +226,6 @@ jobs:
               ls -la ${{ steps.vars.outputs.deploy_dir }}/client.json
             fi
 
-            # Backup current state before deployment
-            echo "Creating backup of current $SERVICE_NAME state..."
-            if [ "$SERVICE_NAME" = "consul" ]; then
-              docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} ps -q | xargs -r docker inspect > ${{ github.event.inputs.service }}_backup_$(date +%Y%m%d_%H%M%S).json 2>/dev/null || true
-            else
-              docker compose --env-file .env -f ${{ steps.vars.outputs.deploy_path }} ps -q ${{ github.event.inputs.service }} | xargs -r docker inspect > ${{ github.event.inputs.service }}_backup_$(date +%Y%m%d_%H%M%S).json 2>/dev/null || true
-            fi
-
             # Pull latest image (only if we built one)
             if [ "${{ steps.dockerfile_check.outputs.dockerfile_exists }}" = "true" ]; then
               docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} pull ${{ github.event.inputs.service }}
