@@ -2,16 +2,17 @@ import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import morgan from 'morgan';
 import path from 'path';
 import fileRoutes from './routes/fileRoutes';
 import { ensureStorageDirs } from './config/localStorage';
 import { healthCheck } from './controllers/healthController';
+import { logger, errorHandler, correlationMiddleware, requestLogger } from '@tumbaland/core';
 
 const app = express();
 const PORT = process.env.PORT || 5002;
 
 // Middleware
+app.use(correlationMiddleware);
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -34,7 +35,7 @@ app.use(
     exposedHeaders: ['Content-Type', 'Content-Length', 'ETag', 'Cache-Control']
   })
 );
-app.use(morgan('combined'));
+app.use(requestLogger);
 app.use(express.json());
 
 // Raw body parser for direct file uploads (before JSON parser)
@@ -70,26 +71,21 @@ app.get('/docs', (req: Request, res: Response) => {
 // Health check endpoint
 app.get('/health', healthCheck);
 
-// Error handling middleware
-app.use((error: any, req: Request, res: Response, next: NextFunction) => {
-  console.error('Error:', error);
-  res.status(error.status || 500).json({
-    error: {
-      message: error.message || 'Internal server error',
-      status: error.status || 500
-    }
-  });
-});
+// Error handler
+app.use(errorHandler);
 
 app.listen(PORT, async () => {
-  console.log(`File service running on port ${PORT}`);
+  logger.info('File service started successfully', { port: PORT });
 
   // Initialize storage directories
   try {
     await ensureStorageDirs();
-    console.log('Storage directories initialized');
+    logger.info('Storage directories initialized');
   } catch (error) {
-    console.error('Failed to initialize storage directories:', error);
+    logger.error('Failed to initialize storage directories', { 
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
   }
 });
 

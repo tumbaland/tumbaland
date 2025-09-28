@@ -1,6 +1,5 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import morgan from 'morgan';
 import dotenv from 'dotenv';
 import path from 'path';
 import { connectDB } from './config/database';
@@ -8,6 +7,7 @@ import activityRoutes from './routes/activities';
 import activityTypeRoutes from './routes/activityTypes';
 import statisticsRoutes from './routes/statistics';
 import { healthCheck } from './controllers/healthController';
+import { logger, errorHandler, correlationMiddleware, requestLogger } from '@tumbaland/core';
 
 // Load environment variables
 dotenv.config();
@@ -19,9 +19,10 @@ const PORT = process.env.PORT || 4001;
 connectDB();
 
 // Middleware
+app.use(correlationMiddleware);
 app.use(cors());
 app.use(express.json());
-app.use(morgan('dev'));
+app.use(requestLogger);
 
 // Routes
 app.use('/api/activities', activityRoutes);
@@ -35,18 +36,9 @@ app.use('/api/docs', express.static(path.join(__dirname, '../docs')));
 app.get('/health', healthCheck);
 
 // Error handler
-app.use((error: Error, req: Request, res: Response, next: any) => {
-  console.error('Unhandled error:', error);
-  res.status(500).json({
-    error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
-  });
-});
+app.use(errorHandler);
 
 // Start the server
-app.listen(PORT, () => {
-  console.log(`🚀 Relationship backend server is running on port ${PORT}`);
-  console.log(`📚 API docs: http://localhost:${PORT}/api/docs`);
-});
+app.listen(PORT, () => logger.info('Relationship service started successfully', { port: PORT }));
 
 export default app;

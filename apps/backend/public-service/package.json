@@ -12,16 +12,15 @@
     "lint": "eslint . --ext ts --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
+    "@tumbaland/core": "*",
     "dotenv": "^17.0.0",
     "express": "^5.1.0",
     "cors": "^2.8.5",
-    "morgan": "^1.10.0",
     "path": "^0.12.7"
   },
   "devDependencies": {
     "@types/express": "^5.0.2",
     "@types/cors": "^2.8.18",
-    "@types/morgan": "^1.9.9",
     "@types/node": "^24.0.7",
     "@types/jest": "^30.0.0",
     "typescript": "^5.8.3",

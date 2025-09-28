@@ -11,6 +11,7 @@
     "lint": "eslint . --ext ts --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
+    "@tumbaland/core": "*",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "data-uri-to-buffer": "^4.0.1",
@@ -21,7 +22,6 @@
     "google-auth-library": "^10.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.15.0",
-    "morgan": "^1.10.0",
     "node-fetch": "^3.3.2",
     "path": "^0.12.7"
   },
@@ -30,7 +30,6 @@
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/mongoose": "^5.11.96",
-    "@types/morgan": "^1.9.4",
     "@types/node": "^24.0.7",
     "nodemon": "^3.1.9",
     "ts-node": "^10.9.1",

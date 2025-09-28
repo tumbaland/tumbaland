@@ -1,6 +1,5 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-import morgan from 'morgan';
 import dotenv from 'dotenv';
 import path from 'path';
 import { connectDB } from './config/database';
@@ -10,6 +9,7 @@ import trackedSymbolsRoutes from './routes/trackedTicker';
 import userPortfolioRoutes from './routes/userPortfolio';
 import { startDailyPortfolioUpdate } from './services/portfolioScheduler.service';
 import { healthCheck } from './controllers/healthController';
+import { logger, errorHandler, correlationMiddleware, requestLogger } from '@tumbaland/core';
 
 // Load environment variables
 dotenv.config();
@@ -24,9 +24,10 @@ connectDB();
 startDailyPortfolioUpdate();
 
 // Middleware
+app.use(correlationMiddleware);
 app.use(cors());
 app.use(express.json());
-app.use(morgan('dev'));
+app.use(requestLogger);
 
 // Routes
 app.use('/api/finance-records', financeRecordsRoutes);
@@ -41,20 +42,9 @@ app.use('/api/docs', express.static(path.join(__dirname, '../docs')));
 app.get('/health', healthCheck);
 
 // Error handler
-app.use((error: Error, req: Request, res: Response, next: any) => {
-  console.error('Unhandled error:', error);
-  res.status(500).json({
-    error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
-  });
-});
+app.use(errorHandler);
 
 // Start the server
-app.listen(PORT, () => {
-  console.log(`🚀 Finance backend server is running on port ${PORT}`);
-  console.log(`📍 Health check: http://localhost:${PORT}/health`);
-  console.log(`📚 API docs: http://localhost:${PORT}/api-docs`);
-  console.log(`💰 Asset tracking: http://localhost:${PORT}/api/assets`);
-});
+app.listen(PORT, () => logger.info('Finance service started successfully', { port: PORT }));
 
 export default app;
