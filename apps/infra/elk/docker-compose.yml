@@ -9,7 +9,7 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=true
-      - xpack.monitoring.enabled=true
+      - xpack.monitoring.templates.enabled=true
       - xpack.graph.enabled=false
       - xpack.watcher.enabled=false
       - xpack.ml.enabled=false
@@ -80,7 +80,6 @@ services:
       - ELASTICSEARCH_USERNAME=elastic
       - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD}
       - XPACK_SECURITY_ENABLED=true
-      - XPACK_MONITORING_ENABLED=true
     depends_on:
       elasticsearch:
         condition: service_healthy
