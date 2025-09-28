@@ -19,5 +19,8 @@ export {
   setUser,
   setTag,
   recordMetric,
-  initWebVitals
+  initWebVitals,
+  generateCorrelationId,
+  getCorrelationId,
+  getSessionId
 } from './monitoring';

@@ -1,17 +1,22 @@
 // Utility functions for monitoring
 
-// Generate correlation ID using crypto.randomUUID() for better uniqueness
+// Generate correlation ID using crypto.randomUUID()
 export const generateCorrelationId = (): string => {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  // Fallback for older browsers
-  return 'frontend-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+  return crypto.randomUUID();
 };
 
-// Get correlation ID from server-set meta tag or generate fallback
+// Get or create a session ID (persistent across the user's session)
+let sessionId: string | null = null;
+export const getSessionId = (): string => {
+  if (!sessionId) {
+    sessionId = generateCorrelationId();
+  }
+  return sessionId;
+};
+
+// Get correlation ID from server-set meta tag or generate request-specific ID
 export const getCorrelationId = (): string => {
-  // Try to get from server-set meta tag first
+  // Try to get from server-set meta tag first (proxy-generated)
   if (typeof document !== 'undefined') {
     const metaTag = document.querySelector('meta[name="x-correlation-id"]');
     if (metaTag && metaTag.getAttribute('content')) {
@@ -19,31 +24,6 @@ export const getCorrelationId = (): string => {
     }
   }
 
-  // Fallback to session-based ID for client-side logging
-  return getSessionCorrelationId();
-};
-
-// Get or create a session correlation ID (fallback)
-let sessionCorrelationId: string | null = null;
-export const getSessionCorrelationId = (): string => {
-  if (!sessionCorrelationId) {
-    sessionCorrelationId = generateCorrelationId();
-  }
-  return sessionCorrelationId;
-};
-
-// Enhanced fetch with correlation ID headers
-export const fetchWithCorrelation = async (url: string, options: RequestInit = {}): Promise<Response> => {
-  const correlationId = getCorrelationId();
-  const headers = new Headers(options.headers);
-
-  // Add correlation ID if not already present
-  if (!headers.has('x-correlation-id')) {
-    headers.set('x-correlation-id', correlationId);
-  }
-
-  return fetch(url, {
-    ...options,
-    headers
-  });
+  // Fallback: generate per-request correlation ID
+  return generateCorrelationId();
 };

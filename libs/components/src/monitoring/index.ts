@@ -19,7 +19,7 @@ export { flushLogs } from './batch';
 export { initConsoleInterception } from './console';
 
 // Correlation ID utilities
-export { generateCorrelationId, getCorrelationId, getSessionCorrelationId, fetchWithCorrelation } from './utils';
+export { generateCorrelationId, getCorrelationId, getSessionId } from './utils';
 
 // Re-export types
 export type { MonitoringConfig } from './config';
