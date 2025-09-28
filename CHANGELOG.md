@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.185](https://github.com/toomastahves/tumbaland/compare/v0.0.184...v0.0.185) (2025-09-28)
+
+
+### Features
+
+* fix elk stack deplou ([4058baa](https://github.com/toomastahves/tumbaland/commit/4058baa183721aca434c1ace4462b219afb31342))
+
 ### [0.0.184](https://github.com/toomastahves/tumbaland/compare/v0.0.183...v0.0.184) (2025-09-28)
 
 
