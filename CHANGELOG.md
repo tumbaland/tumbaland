@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.171](https://github.com/toomastahves/tumbaland/compare/v0.0.170...v0.0.171) (2025-09-28)
+
+
+### Features
+
+* add health check to proxy ([629ea65](https://github.com/toomastahves/tumbaland/commit/629ea657fb1605d8dbb98dc851fc9f385fe9d549))
+
 ### [0.0.170](https://github.com/toomastahves/tumbaland/compare/v0.0.169...v0.0.170) (2025-09-28)
 
 
