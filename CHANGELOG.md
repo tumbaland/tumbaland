@@ -1,4 +1,21 @@
 # Tumbalog
+### [0.0.164](https://github.com/toomastahves/tumbaland/compare/v0.0.163...v0.0.164) (2025-09-28)
+
+
+### Features
+
+* add core library ([a41a4f3](https://github.com/toomastahves/tumbaland/commit/a41a4f3cfa57a1a1ea87ac8e652bcb7ca8ad57b6))
+* bump ([5e25d9d](https://github.com/toomastahves/tumbaland/commit/5e25d9dbbbfcd5e5dde32f5ee65e8a47b8f051fa))
+* export correlationMiddleware ([61a1fc2](https://github.com/toomastahves/tumbaland/commit/61a1fc29e7db79f9b1461ee61dc066461671bbee))
+* update correlationMiddleware ([58d65af](https://github.com/toomastahves/tumbaland/commit/58d65af7073fa6d94e13e58b857355a3c59835bb))
+* use core library for middleware ([4eebc75](https://github.com/toomastahves/tumbaland/commit/4eebc752268d18f6bef5790014e796d288666878))
+* use correlationMiddleware in errors ([e057469](https://github.com/toomastahves/tumbaland/commit/e057469314de973426003089748573e13f9c116c))
+
+
+### Chores
+
+* upgrade libraries ([50fb475](https://github.com/toomastahves/tumbaland/commit/50fb475400c34265ca50f1ece872b36228495a4f))
+
 ### [0.0.163](https://github.com/toomastahves/tumbaland/compare/v0.0.162...v0.0.163) (2025-09-27)
 
 
