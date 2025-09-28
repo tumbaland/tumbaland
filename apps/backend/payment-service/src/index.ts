@@ -9,7 +9,7 @@ import paymentRoutes from './routes/paymentRoutes';
 import { stripeWebhook } from './controllers/stripeController';
 import path from 'path';
 import { healthCheck } from './controllers/healthController';
-import { logger, errorHandler, correlationMiddleware, requestLogger } from '@tumbaland/core';
+import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware } from '@tumbaland/core';
 
 dotenv.config();
 
@@ -19,20 +19,22 @@ const PORT = process.env.PORT || 5005;
 connectDB();
 
 // Configure CORS with explicit origin whitelist (comma separated FRONTEND_ORIGIN)
-const allowedOrigins = (process.env.PAYMENT_URL || '').split(',').map(o => o.trim()).filter(Boolean);
+const allowedOrigins = (process.env.PAYMENT_URL || '').split(',').map((o: string) => o.trim()).filter(Boolean);
 app.use(correlationMiddleware);
+app.use(tracingMiddleware);
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
     logger.warn('Blocked CORS origin', { origin });
     return cb(new Error('Not allowed by CORS'));
   },
-  credentials: true
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id', 'x-session-id']
 }));
 // JSON parser applied after defining webhook route (so webhook keeps raw Buffer)
 app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), stripeWebhook);
 app.use(express.json());
-app.use(requestLogger);
+app.use(requestLoggerWithMetrics);
 app.use(cookieParser());
 
 app.use('/api/plans', planRoutes);
@@ -44,6 +46,9 @@ app.use('/api/docs', express.static(path.join(__dirname, '../docs')));
 
 // Health check endpoint
 app.get('/health', healthCheck);
+
+// Metrics endpoint for Prometheus
+app.get('/metrics', metricsHandler);
 
 // Error handler
 app.use(errorHandler);

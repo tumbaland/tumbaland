@@ -7,7 +7,7 @@ import albumRoutes from './routes/albumRoutes';
 import photoRoutes from './routes/photoRoutes';
 import collageRoutes from './collage/collageRoutes';
 import { healthCheck } from './controllers/healthController';
-import { logger, errorHandler, correlationMiddleware, requestLogger } from '@tumbaland/core';
+import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware } from '@tumbaland/core';
 
 // Load environment variables
 dotenv.config();
@@ -20,8 +20,11 @@ const PORT = process.env.PORT || 4002;
 
 // Middleware
 app.use(correlationMiddleware);
-app.use(requestLogger);
-app.use(cors());
+app.use(tracingMiddleware);
+app.use(requestLoggerWithMetrics);
+app.use(cors({
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id', 'x-session-id']
+}));
 app.use(express.json());
 
 // Routes
@@ -34,6 +37,9 @@ app.use('/api/docs', express.static(path.join(__dirname, '../docs')));
 
 // Health check endpoint
 app.get('/health', healthCheck);
+
+// Metrics endpoint for Prometheus
+app.get('/metrics', metricsHandler);
 
 // Error handler
 app.use(errorHandler);

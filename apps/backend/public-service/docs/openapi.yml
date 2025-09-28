@@ -4,7 +4,7 @@ info:
   version: 1.0.0
   description: Simple API for random todo recommendations
 servers:
-  - url: http://localhost:4000
+  - url: http://localhost:5003
 paths:
   /api/todo/random:
     get:

@@ -9,7 +9,7 @@ import trackedSymbolsRoutes from './routes/trackedTicker';
 import userPortfolioRoutes from './routes/userPortfolio';
 import { startDailyPortfolioUpdate } from './services/portfolioScheduler.service';
 import { healthCheck } from './controllers/healthController';
-import { logger, errorHandler, correlationMiddleware, requestLogger } from '@tumbaland/core';
+import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware } from '@tumbaland/core';
 
 // Load environment variables
 dotenv.config();
@@ -25,9 +25,11 @@ startDailyPortfolioUpdate();
 
 // Middleware
 app.use(correlationMiddleware);
-app.use(cors());
-app.use(express.json());
-app.use(requestLogger);
+app.use(tracingMiddleware);
+app.use(requestLoggerWithMetrics);
+app.use(cors({
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id', 'x-session-id']
+}));
 
 // Routes
 app.use('/api/finance-records', financeRecordsRoutes);
@@ -40,6 +42,9 @@ app.use('/api/docs', express.static(path.join(__dirname, '../docs')));
 
 // Health check endpoint
 app.get('/health', healthCheck);
+
+// Metrics endpoint for Prometheus
+app.get('/metrics', metricsHandler);
 
 // Error handler
 app.use(errorHandler);

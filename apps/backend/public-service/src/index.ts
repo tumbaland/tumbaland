@@ -12,11 +12,31 @@ import { logger, errorHandler, correlationMiddleware, requestLogger } from '@tum
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 5003;
 
 // Middleware
 app.use(correlationMiddleware);
-app.use(cors());
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow localhost origins for development
+    if (origin.match(/^https?:\/\/localhost(:\d+)?$/)) {
+      return callback(null, true);
+    }
+    
+    // Allow production domains
+    if (origin.match(/^https?:\/\/.*\.tumbaland\.eu$/)) {
+      return callback(null, true);
+    }
+    
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id', 'x-session-id']
+}));
 app.use(express.json());
 app.use(requestLogger);
 
@@ -27,8 +47,8 @@ loadTodos();
 app.use('/api/todo', todoRoutes);
 
 // Logging routes
-app.post('/api/logs', submitLogs);
-app.get('/api/logs/health', getLogsHealth);
+app.post('/logs', submitLogs);
+app.get('/logs/health', getLogsHealth);
 
 // Serve OpenAPI docs as static files
 app.use('/api/docs', express.static(path.join(__dirname, '../docs')));

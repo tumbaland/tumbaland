@@ -6,21 +6,26 @@ import path from 'path';
 import { authenticateToken } from './middleware/authMiddleware';
 import groupRoutes from './routes/groupRoutes';
 import { healthCheck } from './controllers/healthController';
-import { logger, errorHandler, correlationMiddleware, requestLogger } from '@tumbaland/core';
+import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware } from '@tumbaland/core';
 
 dotenv.config();
 
 const app = express();
 app.use(correlationMiddleware);
-app.use(cors());
-app.use(express.json());
-app.use(requestLogger);
+app.use(tracingMiddleware);
+app.use(requestLoggerWithMetrics);
+app.use(cors({
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id', 'x-session-id']
+}));
 
 const MONGODB_URI = process.env.MONGODB_URI || '';
 mongoose.connect(MONGODB_URI).then(() => logger.info('MongoDB connected')).catch(err => logger.error('MongoDB connection error', { error: err.message }));
 
 // Health check endpoint
 app.get('/health', healthCheck);
+
+// Metrics endpoint for Prometheus
+app.get('/metrics', metricsHandler);
 
 app.use('/api', authenticateToken);
 app.use('/api/groups', groupRoutes);

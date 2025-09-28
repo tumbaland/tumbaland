@@ -6,7 +6,7 @@ import authRoutes from './routes/authRoutes';
 import { connectDb } from './config/db';
 import path from 'path';
 import { healthCheck } from './controllers/healthController';
-import { logger, errorHandler, correlationMiddleware, requestLogger } from '@tumbaland/core';
+import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware } from '@tumbaland/core';
 
 // Load environment variables
 dotenv.config();
@@ -16,7 +16,8 @@ const PORT = process.env.PORT || 5001;
 
 // Middleware
 app.use(correlationMiddleware);
-app.use(requestLogger);
+app.use(tracingMiddleware);
+app.use(requestLoggerWithMetrics);
 app.use(express.json());
 app.use(cookieParser());
 app.use(
@@ -32,7 +33,7 @@ app.use(
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id', 'x-session-id'],
     exposedHeaders: ['Content-Type', 'Content-Length', 'ETag', 'Cache-Control']
   })
 );
@@ -50,6 +51,9 @@ app.get('/docs', (req: Request, res: Response) => {
 
 // Health check endpoint
 app.get('/health', healthCheck);
+
+// Metrics endpoint for Prometheus
+app.get('/metrics', metricsHandler);
 
 // Error handler
 app.use(errorHandler);
