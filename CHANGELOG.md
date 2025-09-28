@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.178](https://github.com/toomastahves/tumbaland/compare/v0.0.177...v0.0.178) (2025-09-28)
+
+
+### Features
+
+* prepare infra deployment ([13adf01](https://github.com/toomastahves/tumbaland/commit/13adf01b3e417c7ae73aa163ee8df20152ebf46e))
+
 ### [0.0.177](https://github.com/toomastahves/tumbaland/compare/v0.0.176...v0.0.177) (2025-09-28)
 
 
