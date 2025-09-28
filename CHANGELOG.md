@@ -1,4 +1,17 @@
 # Tumbalog
+### [0.0.177](https://github.com/toomastahves/tumbaland/compare/v0.0.176...v0.0.177) (2025-09-28)
+
+
+### Features
+
+* add cors headers on error ([f37fa9d](https://github.com/toomastahves/tumbaland/commit/f37fa9df1e88252f704c76c461b31c0bae4140fb))
+* update consol config ([8bc53bc](https://github.com/toomastahves/tumbaland/commit/8bc53bc6c2f76cd5ba8b4895d5e515a16f4c18bf))
+
+
+### Bug Fixes
+
+* cors issues ([da017c0](https://github.com/toomastahves/tumbaland/commit/da017c0df87603009cfc2c80f637ff581ed492d3))
+
 ### [0.0.176](https://github.com/toomastahves/tumbaland/compare/v0.0.175...v0.0.176) (2025-09-28)
 
 
