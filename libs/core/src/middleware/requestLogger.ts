@@ -1,0 +1,40 @@
+import morgan from 'morgan';
+import logger from '../logging/logger';
+
+/**
+ * Morgan middleware configured to use Winston logger
+ * Logs HTTP requests in structured format
+ */
+export const requestLogger = morgan('combined', {
+  stream: {
+    write: (message: string) => {
+      logger.http(message.trim());
+    }
+  }
+});
+
+/**
+ * Simple request logger for development
+ * Logs basic request info with correlation ID
+ */
+export const simpleRequestLogger = (req: any, res: any, next: any) => {
+  const start = Date.now();
+  const correlationId = req.correlationId || 'unknown';
+
+  logger.info(`→ ${req.method} ${req.url}`, {
+    correlationId,
+    ip: req.ip,
+    userAgent: req.get('User-Agent')
+  });
+
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    logger.info(`← ${req.method} ${req.url} ${res.statusCode} ${duration}ms`, {
+      correlationId,
+      statusCode: res.statusCode,
+      duration
+    });
+  });
+
+  next();
+};
