@@ -13,12 +13,12 @@ export const setUser = (
   const config = { ...getMonitoringConfig(), ...options };
 
   if (config.isDevelopment) {
-    const originalIsIntercepting = isInterceptingConsole;
-    (window as any).isInterceptingConsole = true;
+    const originalIsIntercepting = isInterceptingConsole();
+    (window as any)._monitoringInterceptingConsole = true;
     try {
       console.log('👤 User set:', user);
     } finally {
-      (window as any).isInterceptingConsole = originalIsIntercepting;
+      (window as any)._monitoringInterceptingConsole = originalIsIntercepting;
     }
   }
   // Could store in localStorage for persistence if needed
@@ -32,12 +32,12 @@ export const setTag = (
   const config = { ...getMonitoringConfig(), ...options };
 
   if (config.isDevelopment) {
-    const originalIsIntercepting = isInterceptingConsole;
-    (window as any).isInterceptingConsole = true;
+    const originalIsIntercepting = isInterceptingConsole();
+    (window as any)._monitoringInterceptingConsole = true;
     try {
       console.log(`🏷️ Tag set: ${key} = ${value}`);
     } finally {
-      (window as any).isInterceptingConsole = originalIsIntercepting;
+      (window as any)._monitoringInterceptingConsole = originalIsIntercepting;
     }
   }
   // Store tags locally if needed for context
@@ -53,12 +53,12 @@ export const startTransaction = (
 
   const startTime = Date.now();
   if (config.isDevelopment) {
-    const originalIsIntercepting = isInterceptingConsole;
-    (window as any).isInterceptingConsole = true;
+    const originalIsIntercepting = isInterceptingConsole();
+    (window as any)._monitoringInterceptingConsole = true;
     try {
       console.log(`⏱️ Transaction started: ${name} (${op})`);
     } finally {
-      (window as any).isInterceptingConsole = originalIsIntercepting;
+      (window as any)._monitoringInterceptingConsole = originalIsIntercepting;
     }
   }
 
@@ -67,12 +67,12 @@ export const startTransaction = (
       const duration = Date.now() - startTime;
       recordMetric(`${name}_duration`, duration, 'ms', { isDevelopment: config.isDevelopment });
       if (config.isDevelopment) {
-        const originalIsIntercepting = isInterceptingConsole;
-        (window as any).isInterceptingConsole = true;
+        const originalIsIntercepting = isInterceptingConsole();
+        (window as any)._monitoringInterceptingConsole = true;
         try {
           console.log(`✅ Transaction finished: ${name} (${duration}ms)`);
         } finally {
-          (window as any).isInterceptingConsole = originalIsIntercepting;
+          (window as any)._monitoringInterceptingConsole = originalIsIntercepting;
         }
       }
     }
@@ -92,13 +92,13 @@ export const recordMetric = (
 
   // Always log to console for development with better formatting
   if (config.isDevelopment) {
-    const originalIsIntercepting = isInterceptingConsole;
-    (window as any).isInterceptingConsole = true;
+    const originalIsIntercepting = isInterceptingConsole();
+    (window as any)._monitoringInterceptingConsole = true;
     try {
       const formattedValue = unit === 'ms' ? `${metricValue.toFixed(2)}ms` : `${metricValue}${unit}`;
       console.log(`📊 Performance: ${name} = ${formattedValue}`);
     } finally {
-      (window as any).isInterceptingConsole = originalIsIntercepting;
+      (window as any)._monitoringInterceptingConsole = originalIsIntercepting;
     }
   }
 
@@ -111,12 +111,12 @@ export const initWebVitals = async (options: { isDevelopment?: boolean } = {}) =
   const config = { ...getMonitoringConfig(), ...options };
 
   if (config.isDevelopment) {
-    const originalIsIntercepting = isInterceptingConsole;
-    (window as any).isInterceptingConsole = true;
+    const originalIsIntercepting = isInterceptingConsole();
+    (window as any)._monitoringInterceptingConsole = true;
     try {
       console.log('📊 Web Vitals monitoring initialized (development mode)');
     } finally {
-      (window as any).isInterceptingConsole = originalIsIntercepting;
+      (window as any)._monitoringInterceptingConsole = originalIsIntercepting;
     }
 
     try {
@@ -131,12 +131,12 @@ export const initWebVitals = async (options: { isDevelopment?: boolean } = {}) =
       webVitals.onTTFB((metric: any) => recordMetric('TTFB', metric, 'ms', { isDevelopment: config.isDevelopment }));
       // Note: FID is deprecated in web-vitals v5
     } catch (e) {
-      const originalIsIntercepting = isInterceptingConsole;
-      (window as any).isInterceptingConsole = true;
+      const originalIsIntercepting = isInterceptingConsole();
+      (window as any)._monitoringInterceptingConsole = true;
       try {
         console.warn('Web Vitals library not available - install web-vitals package');
       } finally {
-        (window as any).isInterceptingConsole = originalIsIntercepting;
+        (window as any)._monitoringInterceptingConsole = originalIsIntercepting;
       }
     }
   }

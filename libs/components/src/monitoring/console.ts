@@ -29,22 +29,23 @@ export const initConsoleInterception = (
       // Call original console method
       originalMethod.apply(console, args);
 
-      // Prevent recursive interception
-      if (isInterceptingConsole) return;
+      // Prevent recursive interception by checking the global flag
+      if (isInterceptingConsole()) return;
 
-      // Send to logging API
-      (window as any).isInterceptingConsole = true;
+      // Send to logging API with recursion protection
       try {
         const message = args.map(arg =>
           typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
         ).join(' ');
 
+        // Set interception flag to prevent recursion during capture
+        (window as any)._monitoringInterceptingConsole = true;
         captureMessageFn(message, level, {
           source: `console.${methodName}`,
           args: args
         });
       } finally {
-        (window as any).isInterceptingConsole = false;
+        (window as any)._monitoringInterceptingConsole = false;
       }
     };
   };

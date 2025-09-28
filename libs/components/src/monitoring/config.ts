@@ -15,7 +15,9 @@ let monitoringConfig: MonitoringConfig = {
 };
 
 // Flag to prevent recursive console interception
-export let isInterceptingConsole = false;
+export const isInterceptingConsole = (): boolean => {
+  return typeof window !== 'undefined' && (window as any)._monitoringInterceptingConsole === true;
+};
 
 // Get current monitoring configuration
 export const getMonitoringConfig = (): MonitoringConfig => monitoringConfig;

@@ -33,12 +33,12 @@ export const captureException = async (
 
   // Always log to console for development
   if (config.isDevelopment) {
-    const originalIsIntercepting = isInterceptingConsole;
-    (window as any).isInterceptingConsole = true;
+    const originalIsIntercepting = isInterceptingConsole();
+    (window as any)._monitoringInterceptingConsole = true;
     try {
       console.error('🚨 Frontend Error:', errorData);
     } finally {
-      (window as any).isInterceptingConsole = originalIsIntercepting;
+      (window as any)._monitoringInterceptingConsole = originalIsIntercepting;
     }
   }
 
@@ -76,13 +76,13 @@ export const captureMessage = async (
 
   // Always log to console for development
   if (config.isDevelopment) {
-    const originalIsIntercepting = isInterceptingConsole;
-    (window as any).isInterceptingConsole = true;
+    const originalIsIntercepting = isInterceptingConsole();
+    (window as any)._monitoringInterceptingConsole = true;
     try {
       const logLevel = level.toUpperCase();
       console.log(`[${logLevel}] ${message}`, context || '');
     } finally {
-      (window as any).isInterceptingConsole = originalIsIntercepting;
+      (window as any)._monitoringInterceptingConsole = originalIsIntercepting;
     }
   }
 
