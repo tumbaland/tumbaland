@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.174](https://github.com/toomastahves/tumbaland/compare/v0.0.173...v0.0.174) (2025-09-28)
+
+
+### Features
+
+* add logging endpoint ([6f344de](https://github.com/toomastahves/tumbaland/commit/6f344debe0dd8fbdf8586757c040c77b2a887a1b))
+
 ### [0.0.173](https://github.com/toomastahves/tumbaland/compare/v0.0.172...v0.0.173) (2025-09-28)
 
 
