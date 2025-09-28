@@ -194,6 +194,16 @@ jobs:
           source: ${{ steps.vars.outputs.deploy_dir }}/
           target: ~/tumbaland/
 
+      - name: Copy Grafana config directory to server
+        if: github.event.inputs.service == 'grafana'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ vars.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: ${{ steps.vars.outputs.deploy_dir }}/
+          target: ~/tumbaland/
+
       - name: SSH and deploy infrastructure service on server
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -287,17 +297,27 @@ jobs:
             elif [ "$SERVICE_NAME" = "elk" ]; then
               echo "🚀 Starting ELK stack..."
               cd ${{ steps.vars.outputs.deploy_dir }}
-              docker compose --env-file ../../.env.infra -f docker-compose.yml up -d
+              docker compose --env-file ~/tumbaland/.env.infra -f docker-compose.yml up -d
               SERVICE_TO_CHECK="elasticsearch"
               echo "📋 Checking Elasticsearch logs..."
-              docker compose --env-file ../../.env.infra -f docker-compose.yml logs elasticsearch --tail=20
+              docker compose --env-file ~/tumbaland/.env.infra -f docker-compose.yml logs elasticsearch --tail=20
               cd ~/tumbaland
             elif [ "$SERVICE_NAME" = "prometheus" ]; then
               echo "🚀 Starting Prometheus stack..."
-              docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} up -d
+              cd ${{ steps.vars.outputs.deploy_dir }}
+              docker compose --env-file ~/tumbaland/.env.infra -f docker-compose.yml up -d
               SERVICE_TO_CHECK="prometheus"
               echo "📋 Checking Prometheus logs..."
-              docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} logs prometheus --tail=20
+              docker compose --env-file ~/tumbaland/.env.infra -f docker-compose.yml logs prometheus --tail=20
+              cd ~/tumbaland
+            elif [ "$SERVICE_NAME" = "grafana" ]; then
+              echo "🚀 Starting Grafana..."
+              cd ${{ steps.vars.outputs.deploy_dir }}
+              docker compose --env-file ~/tumbaland/.env.infra -f docker-compose.yml up -d
+              SERVICE_TO_CHECK="grafana"
+              echo "📋 Checking Grafana logs..."
+              docker compose --env-file ~/tumbaland/.env.infra -f docker-compose.yml logs grafana --tail=20
+              cd ~/tumbaland
             else
               docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} up -d ${{ github.event.inputs.service }}
               SERVICE_TO_CHECK="${{ github.event.inputs.service }}"
