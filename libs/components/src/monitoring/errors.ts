@@ -2,7 +2,7 @@
 
 import { getMonitoringConfig, isInterceptingConsole } from './config';
 import { queueLog } from './batch';
-import { generateCorrelationId } from './utils';
+import { getCorrelationId, getSessionId } from './utils';
 
 // Error tracking with local ELK logging
 export const captureException = async (
@@ -27,7 +27,8 @@ export const captureException = async (
     userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
     url: typeof window !== 'undefined' ? window.location.href : undefined,
     context: context || {},
-    correlationId: generateCorrelationId()
+    correlationId: getCorrelationId(),
+    sessionId: getSessionId()
   };
 
   // Always log to console for development
@@ -69,7 +70,8 @@ export const captureMessage = async (
     url: typeof window !== 'undefined' ? window.location.href : undefined,
     userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
     context: context || {},
-    correlationId: generateCorrelationId()
+    correlationId: getCorrelationId(),
+    sessionId: getSessionId()
   };
 
   // Always log to console for development
