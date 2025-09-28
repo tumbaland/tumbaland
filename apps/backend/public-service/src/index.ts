@@ -5,6 +5,7 @@ import path from 'path';
 import todoRoutes from './routes/todoRoutes';
 import { loadTodos } from './services/todoService';
 import { healthCheck } from './controllers/healthController';
+import { submitLogs, getLogsHealth } from './controllers/logController';
 import { logger, errorHandler, correlationMiddleware, requestLogger } from '@tumbaland/core';
 
 // Load environment variables
@@ -24,6 +25,10 @@ loadTodos();
 
 // Routes
 app.use('/api/todo', todoRoutes);
+
+// Logging routes
+app.post('/api/logs', submitLogs);
+app.get('/api/logs/health', getLogsHealth);
 
 // Serve OpenAPI docs as static files
 app.use('/api/docs', express.static(path.join(__dirname, '../docs')));
