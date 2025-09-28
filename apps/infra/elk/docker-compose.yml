@@ -188,3 +188,7 @@ services:
         reservations:
           memory: 128m
           cpus: '0.1'
+
+networks:
+  tumbanet:
+    external: true
