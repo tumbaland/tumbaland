@@ -184,6 +184,16 @@ jobs:
           source: ${{ steps.vars.outputs.deploy_path }}
           target: ~/tumbaland/
 
+      - name: Copy ELK config directory to server
+        if: github.event.inputs.service == 'elk'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ vars.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: ${{ steps.vars.outputs.deploy_dir }}/
+          target: ~/tumbaland/
+
       - name: SSH and deploy infrastructure service on server
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -276,10 +286,12 @@ jobs:
               docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} logs consul-server --tail=20
             elif [ "$SERVICE_NAME" = "elk" ]; then
               echo "🚀 Starting ELK stack..."
-              docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} up -d
+              cd ${{ steps.vars.outputs.deploy_dir }}
+              docker compose --env-file ../../.env.infra -f docker-compose.yml up -d
               SERVICE_TO_CHECK="elasticsearch"
               echo "📋 Checking Elasticsearch logs..."
-              docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} logs elasticsearch --tail=20
+              docker compose --env-file ../../.env.infra -f docker-compose.yml logs elasticsearch --tail=20
+              cd ~/tumbaland
             elif [ "$SERVICE_NAME" = "prometheus" ]; then
               echo "🚀 Starting Prometheus stack..."
               docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} up -d
