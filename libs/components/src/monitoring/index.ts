@@ -18,5 +18,8 @@ export { flushLogs } from './batch';
 // Console interception (for advanced usage)
 export { initConsoleInterception } from './console';
 
+// Correlation ID utilities
+export { generateCorrelationId, getCorrelationId, getSessionCorrelationId, fetchWithCorrelation } from './utils';
+
 // Re-export types
 export type { MonitoringConfig } from './config';
