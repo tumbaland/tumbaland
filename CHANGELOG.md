@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.176](https://github.com/toomastahves/tumbaland/compare/v0.0.175...v0.0.176) (2025-09-28)
+
+
+### Features
+
+* change public api port ([49122a2](https://github.com/toomastahves/tumbaland/commit/49122a2369037db7468f1bcf199f7c2c9d7694fb))
+
 ### [0.0.175](https://github.com/toomastahves/tumbaland/compare/v0.0.174...v0.0.175) (2025-09-28)
 
 
