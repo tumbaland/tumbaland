@@ -6,9 +6,9 @@
     "address": "tumbaland-proxy",
     "check": {
       "tcp": "tumbaland-proxy:80",
-      "interval": "30s",
+      "interval": "60s",
       "timeout": "5s",
-      "deregister_critical_service_after": "5m"
+      "deregister_critical_service_after": "10m"
     },
     "meta": {
       "version": "1.0",

@@ -22,9 +22,16 @@ services:
     command: consul agent -server -bootstrap-expect=1 -ui -client=0.0.0.0 -data-dir=/consul/data -config-file=/consul/config/server.json
     networks:
       - tumbanet
+    # Memory optimization for Raspberry Pi
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
     healthcheck:
       test: ["CMD", "consul", "info"]
-      interval: 30s
+      interval: 60s
       timeout: 10s
       retries: 5
       start_period: 60s
@@ -48,7 +55,13 @@ services:
     command: consul agent -join=consul-server -data-dir=/consul/data -config-file=/consul/config/client.json
     networks:
       - tumbanet
-    # This client runs without exposing ports, used for service registration
+    # Memory optimization for Raspberry Pi
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
 
 networks:
   tumbanet:

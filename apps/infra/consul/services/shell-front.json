@@ -6,9 +6,9 @@
     "address": "shell-front",
     "check": {
       "http": "http://shell-front/health",
-      "interval": "30s",
+      "interval": "60s",
       "timeout": "5s",
-      "deregister_critical_service_after": "5m"
+      "deregister_critical_service_after": "10m"
     },
     "meta": {
       "version": "1.0",
