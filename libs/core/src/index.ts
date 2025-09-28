@@ -18,5 +18,5 @@ export { requestLogger } from './middleware/requestLogger';
 export type { UserPayload } from './types/auth';
 
 // Utils
-export { generateCorrelationId } from './utils/correlation';
+export { generateCorrelationId, correlationMiddleware } from './utils/correlation';
 export { createApiResponse } from './utils/response';
