@@ -1,4 +1,17 @@
 # Tumbalog
+### [0.0.165](https://github.com/toomastahves/tumbaland/compare/v0.0.164...v0.0.165) (2025-09-28)
+
+
+### Features
+
+* add morgan as dependency ([64c8fb2](https://github.com/toomastahves/tumbaland/commit/64c8fb231977ec270b84f1a280cfe2f77842de54))
+* bump core ([f52fe9b](https://github.com/toomastahves/tumbaland/commit/f52fe9b412961a2b45a41c9e27ebdb271d486928))
+
+
+### Chores
+
+* bump core ([421db2d](https://github.com/toomastahves/tumbaland/commit/421db2d9dc86faf8fe2832d88be16e6ade8bd21d))
+
 ### [0.0.164](https://github.com/toomastahves/tumbaland/compare/v0.0.163...v0.0.164) (2025-09-28)
 
 
