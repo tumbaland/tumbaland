@@ -8,35 +8,17 @@ import path from 'path';
  */
 export const healthCheck = async (req: Request, res: Response) => {
   try {
-    // Check file system access (storage directories)
-    const storageDir = path.join(process.cwd(), 'storage');
-    const cacheDir = path.join(process.cwd(), 'cache');
-    const credentialsDir = path.join(process.cwd(), 'credentials');
+    // Check file system access using the same paths as localStorage config
+    const storageDir = process.env.NODE_ENV === 'production' ? '/storage' : path.join(__dirname, '../../storage');
 
     let isStorageHealthy = true;
     const storageChecks = {
-      storage: false,
-      cache: false,
-      credentials: false
+      storage: false
     };
 
     try {
       await fs.promises.access(storageDir, fs.constants.W_OK);
       storageChecks.storage = true;
-    } catch {
-      isStorageHealthy = false;
-    }
-
-    try {
-      await fs.promises.access(cacheDir, fs.constants.W_OK);
-      storageChecks.cache = true;
-    } catch {
-      isStorageHealthy = false;
-    }
-
-    try {
-      await fs.promises.access(credentialsDir, fs.constants.W_OK);
-      storageChecks.credentials = true;
     } catch {
       isStorageHealthy = false;
     }
