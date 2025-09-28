@@ -3,7 +3,7 @@ import path from 'path';
 import { promises as fsPromises } from 'fs';
 
 // Local storage configuration
-const STORAGE_DIR = '/storage';
+const STORAGE_DIR = process.env.NODE_ENV === 'production' ? '/storage' : path.join(__dirname, '../../storage');
 
 // Ensure storage directory exists
 export const ensureStorageDirs = async (): Promise<void> => {
