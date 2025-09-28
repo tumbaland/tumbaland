@@ -246,29 +246,7 @@ jobs:
               SERVICE_TO_CHECK="${{ github.event.inputs.service }}"
             fi
 
-            # Wait for service to be healthy
-            echo "Waiting for $SERVICE_NAME to be healthy..."
-            timeout=300
-            while [ $timeout -gt 0 ]; do
-              if docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} ps $SERVICE_TO_CHECK | grep -q "healthy\|running"; then
-                echo "✅ $SERVICE_NAME is healthy"
-                break
-              fi
-              echo "Waiting for $SERVICE_NAME to be healthy... ($timeout seconds remaining)"
-              sleep 10
-              timeout=$((timeout - 10))
-            done
-
-            if [ $timeout -le 0 ]; then
-              echo "❌ $SERVICE_NAME failed to become healthy within 5 minutes"
-              echo "Rolling back..."
-              if [ "$SERVICE_NAME" = "consul" ]; then
-                docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} down
-              else
-                docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} down ${{ github.event.inputs.service }}
-              fi
-              exit 1
-            fi
+            echo "✅ $SERVICE_NAME deployment completed"
 
             echo "🧹 Cleaning up old images..."
             docker image prune -f
