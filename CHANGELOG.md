@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.182](https://github.com/toomastahves/tumbaland/compare/v0.0.181...v0.0.182) (2025-09-28)
+
+
+### Bug Fixes
+
+* elk permissions ([87317c7](https://github.com/toomastahves/tumbaland/commit/87317c76c6bd14357ebb7cbed72b309e8f93d969))
+
 ### [0.0.181](https://github.com/toomastahves/tumbaland/compare/v0.0.180...v0.0.181) (2025-09-28)
 
 
