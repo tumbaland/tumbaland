@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   rabbitmq:
     image: rabbitmq:3.12-management-alpine
@@ -8,16 +6,22 @@ services:
     ports:
       - "5672:5672"   # AMQP port
       - "15672:15672" # Management UI port
+      - "15692:15692" # Prometheus metrics port
     environment:
-      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-admin}
+      - RABBITMQ_DEFAULT_USER=admin
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:-secure_password_123}
-      - RABBITMQ_DEFAULT_VHOST=${RABBITMQ_VHOST:-tumbaland}
+      - RABBITMQ_DEFAULT_VHOST=tumbaland
+      # Enable Prometheus plugin
+      - RABBITMQ_PLUGINS_DIR=/opt/rabbitmq/plugins
+      - RABBITMQ_ENABLED_PLUGINS_FILE=/etc/rabbitmq/enabled_plugins
     volumes:
       - ./data:/var/lib/rabbitmq
       - ./logs:/var/log/rabbitmq
       - ./conf:/etc/rabbitmq
+      # Enable Prometheus plugin
+      - ./enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
     networks:
-      - tumbaland-network
+      - tumbanet
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 30s
@@ -26,6 +30,5 @@ services:
       start_period: 60s
 
 networks:
-  tumbaland-network:
-    driver: bridge
-    name: tumbaland-network
+  tumbanet:
+    external: true

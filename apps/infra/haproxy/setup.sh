@@ -37,10 +37,10 @@ if ! docker info > /dev/null 2>&1; then
     exit 1
 fi
 
-# Check if tumbaland-network exists
-if ! docker network ls | grep -q tumbaland-network; then
-    print_status "Creating tumbaland-network..."
-    docker network create tumbaland-network
+# Check if tumbanet exists
+if ! docker network ls | grep -q tumbanet; then
+    print_status "Creating tumbanet..."
+    docker network create tumbanet
 fi
 
 # Create necessary directories

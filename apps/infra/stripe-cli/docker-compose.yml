@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     env_file:
       - .env.stripe
-    command: listen --forward-to ${FORWARD_TO:-host.docker.internal:5005}/api/stripe/webhook
+    command: listen --forward-to payment-service:5005/api/stripe/webhook
     networks:
       - tumbanet
     # Optional: mount a volume to persist login/session (not needed if using API key)

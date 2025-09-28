@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   haproxy:
     image: haproxy:2.8
@@ -15,7 +13,7 @@ services:
       - ./lua:/usr/local/etc/haproxy/lua:ro
       - ./ssl:/usr/local/etc/haproxy/ssl:ro
     networks:
-      - tumbaland-network
+      - tumbanet
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8404/stats || exit 1"]
       interval: 30s
@@ -35,6 +33,5 @@ volumes:
   haproxy_logs:
 
 networks:
-  tumbaland-network:
+  tumbanet:
     external: true
-    name: tumbaland-network

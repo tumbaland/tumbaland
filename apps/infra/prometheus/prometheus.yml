@@ -29,6 +29,9 @@ scrape_configs:
     static_configs:
       - targets: ['elasticsearch:9200']
     metrics_path: '/_prometheus/metrics'
+    basic_auth:
+      username: elastic
+      password: ${PROMETHEUS_ELASTIC_PASSWORD}
 
   - job_name: 'rabbitmq'
     static_configs:
@@ -46,49 +49,49 @@ scrape_configs:
   # Tumbaland Services
   - job_name: 'album-service'
     static_configs:
-      - targets: ['album-service:3000']
+      - targets: ['album-service:4002']
     metrics_path: '/metrics'
     scrape_interval: 10s
 
   - job_name: 'auth-service'
     static_configs:
-      - targets: ['auth-service:3000']
+      - targets: ['auth-service:5001']
     metrics_path: '/metrics'
     scrape_interval: 10s
 
   - job_name: 'file-service'
     static_configs:
-      - targets: ['file-service:3000']
+      - targets: ['file-service:5002']
     metrics_path: '/metrics'
     scrape_interval: 10s
 
   - job_name: 'finance-service'
     static_configs:
-      - targets: ['finance-service:3000']
+      - targets: ['finance-service:4003']
     metrics_path: '/metrics'
     scrape_interval: 10s
 
   - job_name: 'group-service'
     static_configs:
-      - targets: ['group-service:3000']
+      - targets: ['group-service:5006']
     metrics_path: '/metrics'
     scrape_interval: 10s
 
   - job_name: 'payment-service'
     static_configs:
-      - targets: ['payment-service:3000']
+      - targets: ['payment-service:5005']
     metrics_path: '/metrics'
     scrape_interval: 10s
 
   - job_name: 'relationship-service'
     static_configs:
-      - targets: ['relationship-service:3000']
+      - targets: ['relationship-service:4001']
     metrics_path: '/metrics'
     scrape_interval: 10s
 
   - job_name: 'public-service'
     static_configs:
-      - targets: ['public-service:3000']
+      - targets: ['public-service:5003']
     metrics_path: '/metrics'
     scrape_interval: 10s
 

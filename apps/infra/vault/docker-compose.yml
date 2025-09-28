@@ -16,7 +16,7 @@ services:
       - vault_config:/vault/config
       - ./vault.json:/vault/config/vault.json:ro
     networks:
-      - tumbaland-network
+      - tumbanet
     healthcheck:
       test: ["CMD", "vault", "status"]
       interval: 30s
@@ -34,5 +34,5 @@ volumes:
     driver: local
 
 networks:
-  tumbaland-network:
+  tumbanet:
     external: true

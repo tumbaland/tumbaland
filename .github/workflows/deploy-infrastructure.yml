@@ -18,6 +18,7 @@ on:
           - prometheus
           - alertmanager
           - jaeger
+          - grafana
           - minio
           - vault
           - haproxy
@@ -87,6 +88,12 @@ jobs:
               DEPLOYPATH=apps/infra/jaeger/docker-compose.yml
               DEPLOYDIR=apps/infra/jaeger
               ;;
+            grafana)
+              CONTEXT=./apps/infra/grafana
+              DOCKERFILE=./apps/infra/grafana/Dockerfile
+              DEPLOYPATH=apps/infra/grafana/docker-compose.yml
+              DEPLOYDIR=apps/infra/grafana
+              ;;
             minio)
               CONTEXT=./apps/infra/minio
               DOCKERFILE=./apps/infra/minio/Dockerfile
@@ -150,30 +157,14 @@ jobs:
       - name: Generate infrastructure .env file
         run: |
           # Core infrastructure secrets
-          echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" > .env.infra
-          echo "REDIS_URL=${{ secrets.REDIS_URL }}" >> .env.infra
-          echo "RABBITMQ_URI=${{ secrets.RABBITMQ_URI }}" >> .env.infra
-          echo "MINIO_ACCESS_KEY=${{ secrets.MINIO_ACCESS_KEY }}" >> .env.infra
-          echo "MINIO_SECRET_KEY=${{ secrets.MINIO_SECRET_KEY }}" >> .env.infra
-          echo "VAULT_TOKEN=${{ secrets.VAULT_TOKEN }}" >> .env.infra
-          echo "CLOUDFLARE_API_TOKEN=${{ secrets.CLOUDFLARE_API_TOKEN }}" >> .env.infra
-
-          # Monitoring and logging
-          echo "PROMETHEUS_RETENTION_TIME=${{ vars.PROMETHEUS_RETENTION_TIME }}" >> .env.infra
-          echo "ELASTICSEARCH_URI=${{ vars.ELASTICSEARCH_URI }}" >> .env.infra
-          echo "KIBANA_URI=${{ vars.KIBANA_URI }}" >> .env.infra
-          echo "JAEGER_ENDPOINT=${{ vars.JAEGER_ENDPOINT }}" >> .env.infra
-
-          # Consul specific
+          echo "CLOUDFLARE_API_TOKEN=${{ secrets.CLOUDFLARE_API_TOKEN }}" > .env.infra
+          echo "GRAFANA_PASSWORD=${{ secrets.GRAFANA_PASSWORD }}" >> .env.infra
+          echo "ELASTIC_PASSWORD=${{ secrets.ELASTIC_PASSWORD }}" >> .env.infra
           echo "CONSUL_ENCRYPT_KEY=${{ secrets.CONSUL_ENCRYPT_KEY }}" >> .env.infra
           echo "CONSUL_ACL_MASTER_TOKEN=${{ secrets.CONSUL_ACL_MASTER_TOKEN }}" >> .env.infra
 
           echo "✅ Generated .env.infra file with contents:"
           cat .env.infra
-
-          # HAProxy
-          echo "HAPROXY_STATS_USER=${{ secrets.HAPROXY_STATS_USER }}" >> .env.infra
-          echo "HAPROXY_STATS_PASSWORD=${{ secrets.HAPROXY_STATS_PASSWORD }}" >> .env.infra
 
       - name: Copy .env file to server
         uses: appleboy/scp-action@v0.1.7
@@ -226,6 +217,48 @@ jobs:
               ls -la ${{ steps.vars.outputs.deploy_dir }}/client.json
             fi
 
+            if [ "$SERVICE_NAME" = "grafana" ]; then
+              echo "Creating Grafana data and config directories..."
+              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/data
+              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/provisioning
+              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/dashboards
+              # Ensure proper permissions for Grafana directories
+              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/data
+              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/provisioning
+              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/dashboards
+              echo "✅ Created Grafana directories"
+            fi
+
+            if [ "$SERVICE_NAME" = "elk" ]; then
+              echo "Creating ELK data and config directories..."
+              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/elasticsearch/data
+              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/elasticsearch/logs
+              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/logstash/config
+              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/logstash/pipeline
+              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/logstash/logs
+              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/filebeat/data
+              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/metricbeat/data
+              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/heartbeat/data
+              # Ensure proper permissions for ELK directories
+              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/elasticsearch/data
+              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/elasticsearch/logs
+              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/logstash/config
+              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/logstash/pipeline
+              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/logstash/logs
+              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/filebeat/data
+              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/metricbeat/data
+              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/heartbeat/data
+              echo "✅ Created ELK directories"
+            fi
+
+            if [ "$SERVICE_NAME" = "prometheus" ]; then
+              echo "Creating Prometheus data directory..."
+              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/data
+              # Ensure proper permissions for Prometheus directory
+              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/data
+              echo "✅ Created Prometheus directory"
+            fi
+
             # Pull latest image (only if we built one)
             if [ "${{ steps.dockerfile_check.outputs.dockerfile_exists }}" = "true" ]; then
               docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} pull ${{ github.event.inputs.service }}
@@ -233,7 +266,7 @@ jobs:
 
             # Deploy with health check
             echo "Deploying $SERVICE_NAME..."
-            # For consul, deploy all services since it has multiple containers
+            # For services with multiple containers, deploy all
             if [ "$SERVICE_NAME" = "consul" ]; then
               echo "🚀 Starting Consul with command:"
               echo "consul agent -server -bootstrap-expect=1 -ui -client=0.0.0.0 -data-dir=/consul/data -config-file=/consul/config/server.json"
@@ -241,6 +274,18 @@ jobs:
               SERVICE_TO_CHECK="consul-server"
               echo "📋 Checking Consul server logs..."
               docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} logs consul-server --tail=20
+            elif [ "$SERVICE_NAME" = "elk" ]; then
+              echo "🚀 Starting ELK stack..."
+              docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} up -d
+              SERVICE_TO_CHECK="elasticsearch"
+              echo "📋 Checking Elasticsearch logs..."
+              docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} logs elasticsearch --tail=20
+            elif [ "$SERVICE_NAME" = "prometheus" ]; then
+              echo "🚀 Starting Prometheus stack..."
+              docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} up -d
+              SERVICE_TO_CHECK="prometheus"
+              echo "📋 Checking Prometheus logs..."
+              docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} logs prometheus --tail=20
             else
               docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} up -d ${{ github.event.inputs.service }}
               SERVICE_TO_CHECK="${{ github.event.inputs.service }}"

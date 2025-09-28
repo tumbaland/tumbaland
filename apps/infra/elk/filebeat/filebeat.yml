@@ -16,24 +16,33 @@ filebeat.inputs:
       fields: ["message"]
       target: ""
       overwrite_keys: true
+      add_error_key: true
   - add_fields:
       target: "tumbaland"
       fields:
         environment: "development"
         platform: "docker"
-
-# Elasticsearch output (alternative to Logstash)
-# output.elasticsearch:
-#   hosts: ["elasticsearch:9200"]
-#   username: "elastic"
-#   password: "${ELK_ELASTIC_PASSWORD:-elastic_password_123}"
-#   index: "filebeat-%{+yyyy.MM.dd}"
+  # Drop health check logs to reduce noise
+  - drop_event:
+      when:
+        contains:
+          message: "GET /health"
+  # Drop metrics endpoint logs
+  - drop_event:
+      when:
+        contains:
+          message: "GET /metrics"
 
 # Logstash output
 output.logstash:
   hosts: ["logstash:5044"]
   ssl:
     enabled: false
+  # Load balancing
+  loadbalance: true
+  # Retry configuration
+  max_retries: 3
+  bulk_max_size: 2048
 
 # Logging configuration
 logging:

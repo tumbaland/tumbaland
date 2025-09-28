@@ -16,7 +16,7 @@ services:
     depends_on:
       - elasticsearch
     networks:
-      - tumbaland-network
+      - tumbanet
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:14268/"]
       interval: 30s
@@ -39,7 +39,7 @@ services:
       - elasticsearch
       - jaeger-collector
     networks:
-      - tumbaland-network
+      - tumbanet
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:16687/health"]
       interval: 30s
@@ -62,7 +62,7 @@ services:
     depends_on:
       - jaeger-collector
     networks:
-      - tumbaland-network
+      - tumbanet
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:14271/"]
       interval: 30s
@@ -75,5 +75,5 @@ volumes:
     driver: local
 
 networks:
-  tumbaland-network:
+  tumbanet:
     external: true

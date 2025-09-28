@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   mongodb:
     image: mongo:7.0
@@ -9,14 +7,14 @@ services:
       - "27017:27017"
     environment:
       # MongoDB root credentials
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-password123}
 
       # Database name (optional - MongoDB will create if needed)
-      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-tumbaland}
+      MONGO_INITDB_DATABASE: tumbaland
 
       # Timezone
-      TZ: ${TZ:-UTC}
+      TZ: UTC
     volumes:
       # Persistent data storage
       - ./data:/data/db
@@ -27,7 +25,7 @@ services:
       # Optional: Initialization scripts
       # - ./init-scripts:/docker-entrypoint-initdb.d
     networks:
-      - tumbaland-network
+      - tumbanet
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -48,18 +46,45 @@ services:
     ports:
       - "8081:8081"
     environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_ROOT_USERNAME:-admin}
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
       ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_ROOT_PASSWORD:-password123}
       ME_CONFIG_MONGODB_SERVER: mongodb
       ME_CONFIG_MONGODB_PORT: 27017
-      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USERNAME:-admin}
+      ME_CONFIG_BASICAUTH_USERNAME: admin
       ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD:-express123}
     depends_on:
       - mongodb
     networks:
-      - tumbaland-network
+      - tumbanet
+
+  # MongoDB Exporter for Prometheus monitoring
+  mongodb-exporter:
+    image: percona/mongodb_exporter:0.39
+    container_name: tumbaland-mongodb-exporter
+    restart: unless-stopped
+    ports:
+      - "9216:9216"
+    environment:
+      - MONGODB_URI=mongodb://admin:${MONGO_ROOT_PASSWORD:-password123}@mongodb:27017/admin?ssl=false
+    networks:
+      - tumbanet
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9216/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      - mongodb
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: '0.1'
+        reservations:
+          memory: 64m
+          cpus: '0.05'
 
 networks:
-  tumbaland-network:
-    driver: bridge
-    name: tumbaland-network
+  tumbanet:
+    external: true

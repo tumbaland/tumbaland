@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   prometheus:
     image: prom/prometheus:latest
@@ -11,35 +9,31 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ../alertmanager/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
       - ./data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--storage.tsdb.retention.time=200h'
-      - '--web.enable-lifecycle'
-    networks:
-      - tumbaland-network
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: tumbaland-grafana
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-secure_grafana_password_123}
-      - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel
-    volumes:
-      - ./grafana/data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
-      - ./grafana/dashboards:/var/lib/grafana/dashboards
-    depends_on:
-      - prometheus
+      - PROMETHEUS_CONFIG_FILE=/etc/prometheus/prometheus.yml
+      - PROMETHEUS_STORAGE_PATH=/prometheus
+      - PROMETHEUS_WEB_CONSOLE_LIBRARIES_PATH=/etc/prometheus/console_libraries
+      - PROMETHEUS_WEB_CONSOLE_TEMPLATES_PATH=/etc/prometheus/consoles
+      - PROMETHEUS_RETENTION_TIME=200h
+      - PROMETHEUS_WEB_ENABLE_LIFECYCLE=true
+      - PROMETHEUS_ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+    command:
+      - '--config.file=${PROMETHEUS_CONFIG_FILE}'
+      - '--storage.tsdb.path=${PROMETHEUS_STORAGE_PATH}'
+      - '--web.console.libraries=${PROMETHEUS_WEB_CONSOLE_LIBRARIES_PATH}'
+      - '--web.console.templates=${PROMETHEUS_WEB_CONSOLE_TEMPLATES_PATH}'
+      - '--storage.tsdb.retention.time=${PROMETHEUS_RETENTION_TIME}'
+      - '--web.enable-lifecycle=${PROMETHEUS_WEB_ENABLE_LIFECYCLE}'
     networks:
-      - tumbaland-network
+      - tumbanet
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: '0.5'
+        reservations:
+          memory: 256m
+          cpus: '0.25'
 
   node-exporter:
     image: prom/node-exporter:latest
@@ -57,7 +51,15 @@ services:
       - '--path.sysfs=/host/sys'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
     networks:
-      - tumbaland-network
+      - tumbanet
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: '0.1'
+        reservations:
+          memory: 64m
+          cpus: '0.05'
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
@@ -75,7 +77,15 @@ services:
       - /dev/kmsg
     privileged: true
     networks:
-      - tumbaland-network
+      - tumbanet
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: '0.25'
+        reservations:
+          memory: 128m
+          cpus: '0.1'
 
   alertmanager:
     image: prom/alertmanager:latest
@@ -91,15 +101,22 @@ services:
       - '--storage.path=/alertmanager'
       - '--web.listen-address=:9093'
     networks:
-      - tumbaland-network
+      - tumbanet
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9093/-/healthy"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: '0.1'
+        reservations:
+          memory: 64m
+          cpus: '0.05'
 
 networks:
-  tumbaland-network:
-    driver: bridge
-    name: tumbaland-network
+  tumbanet:
+    external: true

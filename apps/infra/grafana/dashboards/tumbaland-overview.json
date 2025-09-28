@@ -1,0 +1,185 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Tumbaland Services Overview",
+    "tags": ["tumbaland", "overview"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Service Health Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "up{job=~\"album-service|auth-service|file-service|finance-service|group-service|payment-service|relationship-service|public-service\"}",
+            "legendFormat": "{{job}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "options": {
+                  "0": {
+                    "text": "DOWN",
+                    "color": "red"
+                  },
+                  "1": {
+                    "text": "UP",
+                    "color": "green"
+                  }
+                },
+                "type": "value"
+              }
+            ]
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "HTTP Request Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[5m])",
+            "legendFormat": "{{job}} - {{method}} {{route}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "HTTP Request Duration (95th percentile)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "{{job}} - {{method}} {{route}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 4,
+        "title": "HTTP Error Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{status_code=~\"5..\"}[5m]) / rate(http_requests_total[5m]) * 100",
+            "legendFormat": "{{job}} error rate",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        }
+      },
+      {
+        "id": 5,
+        "title": "Active Connections",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "active_connections",
+            "legendFormat": "{{job}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 16
+        }
+      },
+      {
+        "id": 6,
+        "title": "Database Query Duration",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(database_query_duration_seconds_bucket[5m]))",
+            "legendFormat": "{{job}} - {{operation}} {{collection}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 16
+        }
+      },
+      {
+        "id": 7,
+        "title": "Business Metrics",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(albums_created_total[5m])",
+            "legendFormat": "Albums created",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(files_uploaded_total[5m])",
+            "legendFormat": "Files uploaded",
+            "refId": "B"
+          },
+          {
+            "expr": "rate(users_registered_total[5m])",
+            "legendFormat": "Users registered",
+            "refId": "C"
+          },
+          {
+            "expr": "rate(payments_processed_total[5m])",
+            "legendFormat": "Payments processed",
+            "refId": "D"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 24
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "templating": {
+      "list": []
+    },
+    "annotations": {
+      "list": []
+    },
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 0,
+    "links": []
+  }
+}
