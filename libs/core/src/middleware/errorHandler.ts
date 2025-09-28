@@ -1,16 +1,16 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
 import logger from '../logging/logger';
 
 /**
  * Global error handler middleware
  * Logs errors and returns appropriate responses
  */
-export function errorHandler(
+export const errorHandler: ErrorRequestHandler = (
   error: Error,
   req: Request,
   res: Response,
   next: NextFunction
-): void {
+): void => {
   // Log the error
   logger.error('Unhandled error:', {
     error: error.message,
@@ -18,7 +18,8 @@ export function errorHandler(
     url: req.url,
     method: req.method,
     ip: req.ip,
-    userAgent: req.get('User-Agent')
+    userAgent: req.get('User-Agent'),
+    correlationId: (req as any).correlationId
   });
 
   // Don't leak error details in production
@@ -31,4 +32,4 @@ export function errorHandler(
     message: errorMessage,
     ...(isDevelopment && { stack: error.stack })
   });
-}
+};
