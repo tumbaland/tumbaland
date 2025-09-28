@@ -1,3 +1,27 @@
+# ELK Stack Docker Compose Configuration
+#
+# IMPORTANT SETUP NOTES:
+# 1. Create the required users in Elasticsearch before starting the stack:
+#    - kibanaland (for Kibana internal auth): roles: ["kibana_system"]
+#    - kibana_admin (for web UI access): roles: ["kibana_admin", "monitoring_user"]
+#
+# 2. Authentication in Elasticsearch 8.x:
+#    - Kibana CANNOT use the "elastic" superuser account
+#    - Use dedicated users with appropriate roles
+#    - Beats can use the elastic user safely
+#
+# 3. Environment Variables Required (.env file):
+#    - ELASTIC_PASSWORD: Password for the elastic user
+#    - KIBANA_SYSTEM_PASSWORD: Password for kibana_system_user
+#
+# 4. ARM64/Raspberry Pi Notes:
+#    - BEAT_DISABLE_DBUS=true prevents D-Bus connectivity issues
+#    - Ensure sufficient memory allocation
+#
+# Web UI Access:
+# - Kibana: http://localhost:5601 (login with kibana_admin credentials)
+# - Elasticsearch: http://localhost:9200 (API access only)
+
 services:
   elasticsearch:
     image: elasticsearch:8.11.0
@@ -23,11 +47,12 @@ services:
     networks:
       - tumbanet
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      # Health check must authenticate with elastic user since security is enabled
+      test: ["CMD-SHELL", "curl -f -u elastic:${ELASTIC_PASSWORD} http://localhost:9200/_cluster/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 60s
+      start_period: 120s
     deploy:
       resources:
         limits:
@@ -74,11 +99,17 @@ services:
     ports:
       - "5601:5601"
     environment:
+      # Elasticsearch connection
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
       - SERVER_NAME=tumbaland-kibana
       - SERVER_HOST=0.0.0.0
-      - ELASTICSEARCH_USERNAME=elastic
-      - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD}
+
+      # IMPORTANT: In Elasticsearch 8.x, Kibana CANNOT use the "elastic" superuser account
+      # for authentication. Use a dedicated user with kibana_system role instead.
+      # The elastic user should only be used by Beats and other services, not Kibana.
+      - ELASTICSEARCH_USERNAME=kibanaland
+      - ELASTICSEARCH_PASSWORD=${KIBANA_SYSTEM_PASSWORD}
+
       - XPACK_SECURITY_ENABLED=true
     depends_on:
       elasticsearch:
@@ -86,11 +117,13 @@ services:
     networks:
       - tumbanet
     healthcheck:
+      # Health check uses anonymous access to /api/status endpoint
+      # Kibana's internal authentication to Elasticsearch is separate from web UI authentication
       test: ["CMD-SHELL", "curl -f http://localhost:5601/api/status || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 60s
+      start_period: 120s
     deploy:
       resources:
         limits:
@@ -104,13 +137,15 @@ services:
     image: elastic/filebeat:8.11.0
     container_name: tumbaland-filebeat
     restart: unless-stopped
-    user: root
+    user: root  # Required for accessing Docker socket and container logs
+    command: ["filebeat", "-e", "--strict.perms=false"]  # Disable strict permissions for containerized deployment
     volumes:
       - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./filebeat/data:/usr/share/filebeat/data
     environment:
+      # Beats can safely use the elastic user for authentication
       - output.elasticsearch.hosts=["elasticsearch:9200"]
       - output.elasticsearch.username=elastic
       - output.elasticsearch.password=${ELASTIC_PASSWORD}
@@ -133,6 +168,7 @@ services:
     container_name: tumbaland-metricbeat
     restart: unless-stopped
     user: root
+    command: ["metricbeat", "-e", "--strict.perms=false"]
     volumes:
       - ./metricbeat/metricbeat.yml:/usr/share/metricbeat/metricbeat.yml:ro
       - /proc:/hostfs/proc:ro
@@ -141,6 +177,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./metricbeat/data:/usr/share/metricbeat/data
     environment:
+      # Disable D-Bus dependent metricsets for ARM64/Raspberry Pi compatibility
+      - BEAT_DISABLE_DBUS=true
       - output.elasticsearch.hosts=["elasticsearch:9200"]
       - output.elasticsearch.username=elastic
       - output.elasticsearch.password=${ELASTIC_PASSWORD}
@@ -163,6 +201,7 @@ services:
     container_name: tumbaland-heartbeat
     restart: unless-stopped
     user: root
+    command: ["heartbeat", "-e", "--strict.perms=false"]
     volumes:
       - ./heartbeat/heartbeat.yml:/usr/share/heartbeat/heartbeat.yml:ro
       - ./heartbeat/data:/usr/share/heartbeat/data

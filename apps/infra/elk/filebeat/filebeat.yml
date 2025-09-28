@@ -61,15 +61,15 @@ monitoring:
   elasticsearch:
     hosts: ["elasticsearch:9200"]
     username: "elastic"
-    password: "${ELK_ELASTIC_PASSWORD:-elastic_password_123}"
+    password: "${ELASTIC_PASSWORD}"
 
-# Setup for Kibana dashboards
-setup:
-  dashboards:
-    enabled: true
-  kibana:
-    host: "kibana:5601"
-    username: "elastic"
-    password: "${ELK_ELASTIC_PASSWORD:-elastic_password_123}"
-  ilm:
-    enabled: false
+# Setup for Kibana dashboards - disabled to avoid startup dependency
+# setup:
+#   dashboards:
+#     enabled: true
+#   kibana:
+#     host: "kibana:5601"
+#     username: "kibana_admin"
+#     password: "admin_password_123"
+#   ilm:
+#     enabled: false
