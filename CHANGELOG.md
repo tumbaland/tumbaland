@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.166](https://github.com/toomastahves/tumbaland/compare/v0.0.165...v0.0.166) (2025-09-28)
+
+
+### Bug Fixes
+
+* upate path for local env ([6b21954](https://github.com/toomastahves/tumbaland/commit/6b219548d3b53987cf270acb2054ae81bfcc032f))
+
 ### [0.0.165](https://github.com/toomastahves/tumbaland/compare/v0.0.164...v0.0.165) (2025-09-28)
 
 
