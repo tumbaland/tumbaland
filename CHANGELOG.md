@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.167](https://github.com/toomastahves/tumbaland/compare/v0.0.166...v0.0.167) (2025-09-28)
+
+
+### Features
+
+* improve consul memory usage ([a0f75cd](https://github.com/toomastahves/tumbaland/commit/a0f75cdce8fd927c33c0555d5279285a67c6eebd))
+
 ### [0.0.166](https://github.com/toomastahves/tumbaland/compare/v0.0.165...v0.0.166) (2025-09-28)
 
 
