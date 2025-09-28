@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.169](https://github.com/toomastahves/tumbaland/compare/v0.0.168...v0.0.169) (2025-09-28)
+
+
+### Features
+
+* seperate env vars ([57fde7a](https://github.com/toomastahves/tumbaland/commit/57fde7a48cf18eb22b2e180c2c9c1c4adbf78767))
+
 ### [0.0.168](https://github.com/toomastahves/tumbaland/compare/v0.0.167...v0.0.168) (2025-09-28)
 
 
