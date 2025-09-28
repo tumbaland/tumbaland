@@ -1,4 +1,26 @@
 # Tumbalog
+### [0.0.173](https://github.com/toomastahves/tumbaland/compare/v0.0.172...v0.0.173) (2025-09-28)
+
+
+### Features
+
+* create correlation id and session id ([70e5683](https://github.com/toomastahves/tumbaland/commit/70e5683bfcd03cbd83082415695decf4f4dbe76b))
+* create monitoring package ([fd13ee7](https://github.com/toomastahves/tumbaland/commit/fd13ee7beaabc213eb2ea0dd29673cd1a2e73226))
+* remove circuit breaker in monitoring ([fc32367](https://github.com/toomastahves/tumbaland/commit/fc32367e2078b1ca4e16b734ae13633b24496092))
+* set session id ([578b34c](https://github.com/toomastahves/tumbaland/commit/578b34c22cadbbdfa2cc10ae1dff33445783d5e2))
+* setup correlation id ([22dc743](https://github.com/toomastahves/tumbaland/commit/22dc743dca333eb589b95e83aed0d0ad50d672cf))
+* use monitoring in front apps ([1fea98f](https://github.com/toomastahves/tumbaland/commit/1fea98fcf33da51f81ce0aee1c7efbd0847a6088))
+
+
+### Bug Fixes
+
+* health for file service ([1d1206c](https://github.com/toomastahves/tumbaland/commit/1d1206c2a5a729b0d41f4a6db6ce2c328f711d1a))
+
+
+### Chores
+
+* update lock file ([08a20a7](https://github.com/toomastahves/tumbaland/commit/08a20a7901b3859d3bcabd0f79b8c3df5d4bc0c4))
+
 ### [0.0.172](https://github.com/toomastahves/tumbaland/compare/v0.0.171...v0.0.172) (2025-09-28)
 
 
