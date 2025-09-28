@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.170](https://github.com/toomastahves/tumbaland/compare/v0.0.169...v0.0.170) (2025-09-28)
+
+
+### Features
+
+* fix env ([fca4745](https://github.com/toomastahves/tumbaland/commit/fca4745052e18bc399b7d1fb8e8b1be71094da26))
+
 ### [0.0.169](https://github.com/toomastahves/tumbaland/compare/v0.0.168...v0.0.169) (2025-09-28)
 
 
