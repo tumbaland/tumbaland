@@ -1,0 +1,27 @@
+filebeat.inputs:
+- type: filestream
+  id: docker-logs
+  paths:
+    - '/var/lib/docker/containers/*/*.log'
+  parsers:
+  - container: {}
+  processors:
+  - add_docker_metadata:
+      host: "unix:///var/run/docker.sock"
+  - script:
+      lang: "javascript"
+      source: >
+        function process(event) {
+          event.Put("index", "tumbaland");
+        }
+  - drop_fields:
+      fields: ["agent", "ecs", "host", "input", "stream"]
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]
+  username: "elastic"
+  password: "${ELASTIC_PASSWORD}"
+  index: "%{[index]}-%{[agent.version]}"
+
+setup.ilm.enabled: false
+setup.template.enabled: false

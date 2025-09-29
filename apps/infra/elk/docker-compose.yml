@@ -1,30 +1,6 @@
-# ELK Stack Docker Compose Configuration
-#
-# IMPORTANT SETUP NOTES:
-# 1. Create the required users in Elasticsearch before starting the stack:
-#    - kibanaland (for Kibana internal auth): roles: ["kibana_system"]
-#    - kibana_admin (for web UI access): roles: ["kibana_admin", "monitoring_user"]
-#
-# 2. Authentication in Elasticsearch 8.x:
-#    - Kibana CANNOT use the "elastic" superuser account
-#    - Use dedicated users with appropriate roles
-#    - Beats can use the elastic user safely
-#
-# 3. Environment Variables Required (.env file):
-#    - ELASTIC_PASSWORD: Password for the elastic user
-#    - KIBANA_SYSTEM_PASSWORD: Password for kibana_system_user
-#
-# 4. ARM64/Raspberry Pi Notes:
-#    - BEAT_DISABLE_DBUS=true prevents D-Bus connectivity issues
-#    - Ensure sufficient memory allocation
-#
-# Web UI Access:
-# - Kibana: http://localhost:5601 (login with kibana_admin credentials)
-# - Elasticsearch: http://localhost:9200 (API access only)
-
 services:
   elasticsearch:
-    image: elasticsearch:8.11.0
+    image: elasticsearch:9.1.4
     container_name: tumbaland-elasticsearch
     restart: unless-stopped
     ports:
@@ -42,8 +18,8 @@ services:
       - path.data=/usr/share/elasticsearch/data
       - path.logs=/usr/share/elasticsearch/logs
     volumes:
-      - ./elasticsearch/data:/usr/share/elasticsearch/data
-      - ./elasticsearch/logs:/usr/share/elasticsearch/logs
+      - elasticsearch_data:/usr/share/elasticsearch/data
+      - elasticsearch_logs:/usr/share/elasticsearch/logs
     networks:
       - tumbanet
     healthcheck:
@@ -53,47 +29,9 @@ services:
       timeout: 10s
       retries: 5
       start_period: 120s
-    deploy:
-      resources:
-        limits:
-          memory: 1g
-          cpus: '1.0'
-        reservations:
-          memory: 512m
-          cpus: '0.5'
-
-  logstash:
-    image: logstash:8.11.0
-    container_name: tumbaland-logstash
-    restart: unless-stopped
-    ports:
-      - "5044:5044"  # Beats input
-      - "5000:5000"  # TCP input
-      - "8080:8080"  # HTTP input for frontend logs
-      - "9600:9600"  # Monitoring API
-    environment:
-      - LS_JAVA_OPTS=-Xmx256m -Xms256m
-    volumes:
-      - ./logstash/config:/usr/share/logstash/config
-      - ./logstash/pipeline:/usr/share/logstash/pipeline
-      - ./logstash/logs:/usr/share/logstash/logs
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-    networks:
-      - tumbanet
-    command: logstash -f /usr/share/logstash/pipeline/
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-          cpus: '0.5'
-        reservations:
-          memory: 256m
-          cpus: '0.25'
 
   kibana:
-    image: kibana:8.11.0
+    image: kibana:9.1.4
     container_name: tumbaland-kibana
     restart: unless-stopped
     ports:
@@ -111,6 +49,12 @@ services:
       - ELASTICSEARCH_PASSWORD=${KIBANA_SYSTEM_PASSWORD}
 
       - XPACK_SECURITY_ENABLED=true
+      
+      # Enable Uptime feature
+      - XPACK_UPTIME_ENABLED=true
+
+      # Required for encrypted saved objects
+      - ELASTIC_ENCRYPTIONKEY=${ELASTIC_ENCRYPTIONKEY}
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -124,105 +68,33 @@ services:
       timeout: 10s
       retries: 5
       start_period: 120s
-    deploy:
-      resources:
-        limits:
-          memory: 512m
-          cpus: '0.5'
-        reservations:
-          memory: 256m
-          cpus: '0.25'
 
   filebeat:
-    image: elastic/filebeat:8.11.0
+    image: docker.elastic.co/beats/filebeat:9.1.4
     container_name: tumbaland-filebeat
     restart: unless-stopped
-    user: root  # Required for accessing Docker socket and container logs
-    command: ["filebeat", "-e", "--strict.perms=false"]  # Disable strict permissions for containerized deployment
+    user: root
+    entrypoint: ["/bin/bash", "/usr/share/filebeat/entrypoint.sh"]
     volumes:
-      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./filebeat/data:/usr/share/filebeat/data
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:rw
+      - ./entrypoint.sh:/usr/share/filebeat/entrypoint.sh:ro
     environment:
-      # Beats can safely use the elastic user for authentication
-      - output.elasticsearch.hosts=["elasticsearch:9200"]
-      - output.elasticsearch.username=elastic
-      - output.elasticsearch.password=${ELASTIC_PASSWORD}
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=elastic
+      - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD}
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
     depends_on:
       elasticsearch:
         condition: service_healthy
     networks:
       - tumbanet
-    deploy:
-      resources:
-        limits:
-          memory: 256m
-          cpus: '0.25'
-        reservations:
-          memory: 128m
-          cpus: '0.1'
-
-  metricbeat:
-    image: elastic/metricbeat:8.11.0
-    container_name: tumbaland-metricbeat
-    restart: unless-stopped
-    user: root
-    command: ["metricbeat", "-e", "--strict.perms=false"]
-    volumes:
-      - ./metricbeat/metricbeat.yml:/usr/share/metricbeat/metricbeat.yml:ro
-      - /proc:/hostfs/proc:ro
-      - /sys/fs/cgroup:/hostfs/sys/fs/cgroup:ro
-      - /:/hostfs:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./metricbeat/data:/usr/share/metricbeat/data
-    environment:
-      # Disable D-Bus dependent metricsets for ARM64/Raspberry Pi compatibility
-      - BEAT_DISABLE_DBUS=true
-      - output.elasticsearch.hosts=["elasticsearch:9200"]
-      - output.elasticsearch.username=elastic
-      - output.elasticsearch.password=${ELASTIC_PASSWORD}
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-    networks:
-      - tumbanet
-    deploy:
-      resources:
-        limits:
-          memory: 256m
-          cpus: '0.25'
-        reservations:
-          memory: 128m
-          cpus: '0.1'
-
-  heartbeat:
-    image: elastic/heartbeat:8.11.0
-    container_name: tumbaland-heartbeat
-    restart: unless-stopped
-    user: root
-    command: ["heartbeat", "-e", "--strict.perms=false"]
-    volumes:
-      - ./heartbeat/heartbeat.yml:/usr/share/heartbeat/heartbeat.yml:ro
-      - ./heartbeat/data:/usr/share/heartbeat/data
-    environment:
-      - output.elasticsearch.hosts=["elasticsearch:9200"]
-      - output.elasticsearch.username=elastic
-      - output.elasticsearch.password=${ELASTIC_PASSWORD}
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-    networks:
-      - tumbanet
-    deploy:
-      resources:
-        limits:
-          memory: 256m
-          cpus: '0.25'
-        reservations:
-          memory: 128m
-          cpus: '0.1'
 
 networks:
   tumbanet:
     external: true
+
+volumes:
+  elasticsearch_data:
+  elasticsearch_logs:
