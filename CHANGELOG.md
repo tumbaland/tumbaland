@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.191](https://github.com/toomastahves/tumbaland/compare/v0.0.190...v0.0.191) (2025-09-29)
+
+
+### Features
+
+* optimize album queries ([cf9d62d](https://github.com/toomastahves/tumbaland/commit/cf9d62d756ed1b5a797f43b6df7624fd52443729))
+
 ### [0.0.190](https://github.com/toomastahves/tumbaland/compare/v0.0.189...v0.0.190) (2025-09-29)
 
 ### [0.0.189](https://github.com/toomastahves/tumbaland/compare/v0.0.188...v0.0.189) (2025-09-29)
