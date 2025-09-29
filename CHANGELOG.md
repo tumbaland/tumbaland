@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.195](https://github.com/toomastahves/tumbaland/compare/v0.0.194...v0.0.195) (2025-09-29)
+
+
+### Features
+
+* use react query in album front ([521b78c](https://github.com/toomastahves/tumbaland/commit/521b78cf7306cefa8704bf209107179714afc7b6))
+
 ### [0.0.194](https://github.com/toomastahves/tumbaland/compare/v0.0.193...v0.0.194) (2025-09-29)
 
 
