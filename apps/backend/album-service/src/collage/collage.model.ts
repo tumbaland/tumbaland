@@ -51,4 +51,8 @@ const CollageSchema = new Schema<ICollage>(
   { timestamps: true }
 );
 
+// Add indexes for performance
+CollageSchema.index({ albumIds: 1 }); // Index for filtering by album
+CollageSchema.index({ createdAt: -1 }); // Index for sorting by creation date
+
 export const CollageModel = mongoose.model<ICollage>('Collage', CollageSchema);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -40,6 +40,7 @@ import { Album } from '../types';
 const AlbumsPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const tenantGroupId = useTenantFilter(); // Get groupId from tenant context
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newAlbum, setNewAlbum] = useState({
@@ -59,6 +60,15 @@ const AlbumsPage: React.FC = () => {
   const [albumToDelete, setAlbumToDelete] = useState<Album | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Debounce search term to prevent excessive API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const {
     albums,
     loading,
@@ -68,7 +78,7 @@ const AlbumsPage: React.FC = () => {
     deleteAlbum,
     fetchAlbums
   } = useAlbums({
-    search: searchTerm || undefined,
+    search: debouncedSearchTerm || undefined,
     groupId: tenantGroupId, // Pass groupId only if present (group context), undefined for personal
     limit: 20
   });

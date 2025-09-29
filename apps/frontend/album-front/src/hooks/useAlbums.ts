@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Album } from '../types';
 import { albumService } from '../services/albumService';
 
@@ -13,11 +13,14 @@ export const useAlbums = (params?: { page?: number; limit?: number; search?: str
     pages: 0
   });
 
-  const fetchAlbums = async () => {
+  // Memoize params to prevent unnecessary re-renders
+  const memoizedParams = useMemo(() => params, [params?.page, params?.limit, params?.search, params?.isPublic, params?.groupId]);
+
+  const fetchAlbums = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await albumService.getAlbums(params);
+      const response = await albumService.getAlbums(memoizedParams);
       setAlbums(response.data.albums || []);
       setPagination(response.data.pagination);
     } catch (err) {
@@ -25,11 +28,11 @@ export const useAlbums = (params?: { page?: number; limit?: number; search?: str
     } finally {
       setLoading(false);
     }
-  };
+  }, [memoizedParams]);
 
   useEffect(() => {
     fetchAlbums();
-  }, [params?.page, params?.limit, params?.search, params?.isPublic, params?.groupId]);
+  }, [fetchAlbums]);
 
   const createAlbum = async (albumData: {
     name: string;

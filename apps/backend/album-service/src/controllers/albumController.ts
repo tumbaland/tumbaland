@@ -178,9 +178,61 @@ export const getAlbumById = async (req: Request, res: Response): Promise<void> =
     const { id } = req.params;
     const user = (req as any).user;
 
-    const album = await Album.findById(id);
+    // Use aggregation to get album with photo count and cover photo in one query
+    const aggregationPipeline: any[] = [
+      { $match: { _id: id } },
+      {
+        $lookup: {
+          from: 'photos',
+          let: { albumId: '$_id', coverPhotoId: '$coverPhotoId' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [
+                    { $eq: ['$albumId', '$$albumId'] },
+                    { $eq: ['$_id', '$$coverPhotoId'] }
+                  ]
+                }
+              }
+            }
+          ],
+          as: 'relatedPhotos'
+        }
+      },
+      {
+        $addFields: {
+          photoCount: {
+            $size: {
+              $filter: {
+                input: '$relatedPhotos',
+                cond: { $eq: ['$$this.albumId', '$_id'] }
+              }
+            }
+          },
+          coverPhotoDoc: {
+            $arrayElemAt: [
+              {
+                $filter: {
+                  input: '$relatedPhotos',
+                  cond: { $eq: ['$$this._id', '$coverPhotoId'] }
+                }
+              },
+              0
+            ]
+          }
+        }
+      },
+      {
+        $project: {
+          relatedPhotos: 0
+        }
+      }
+    ];
 
-    if (!album) {
+    const albumResult = await (Album as any).aggregate(aggregationPipeline);
+
+    if (!albumResult || albumResult.length === 0) {
       res.status(404).json({
         success: false,
         message: 'Album not found'
@@ -188,17 +240,19 @@ export const getAlbumById = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
+    const albumData = albumResult[0];
+
     // Check if user can access this album
     const userGroups = (req as any).userGroups || [];
     const hasAccess = canAccessResource(
       user.id,
-      album.userId,
-      album.groupId,
+      albumData.userId,
+      albumData.groupId,
       userGroups,
-      album.isPublic
+      albumData.isPublic
     );
 
-    if (!hasAccess && !album.isPublic) {
+    if (!hasAccess && !albumData.isPublic) {
       res.status(403).json({
         success: false,
         message: 'Access denied'
@@ -206,28 +260,27 @@ export const getAlbumById = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    const photoCount = await Photo.countDocuments({ albumId: id });
+    // Process cover photo signed URL if exists
     let coverPhoto = null;
-    if (album.coverPhotoId) {
+    if (albumData.coverPhotoDoc) {
       try {
-        const coverPhotoDoc = await Photo.findById(album.coverPhotoId);
-        if (coverPhotoDoc) {
-          const fileUrl = await getSignedUrl(coverPhotoDoc.fileId);
-          coverPhoto = {
-            ...coverPhotoDoc.toObject(),
-            signedUrl: fileUrl
-          };
-        }
+        const fileUrl = await getSignedUrl(albumData.coverPhotoDoc.fileId);
+        coverPhoto = {
+          ...albumData.coverPhotoDoc,
+          signedUrl: fileUrl
+        };
       } catch (error) {
         console.error(`Failed to get cover photo for album ${id}:`, error);
       }
     }
 
+    // Remove the coverPhotoDoc field and add coverPhoto
+    const { coverPhotoDoc, ...albumResponse } = albumData;
+
     res.json({
       success: true,
       data: {
-        ...album.toObject(),
-        photoCount,
+        ...albumResponse,
         coverPhoto
       }
     });

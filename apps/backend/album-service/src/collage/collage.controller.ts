@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import * as collageService from './collage.service';
 import { canAccessResource } from '../utils/permissionUtils';
+import Album from '../models/Album';
+import { getSignedUrl } from '../services/fileService';
+import mongoose from 'mongoose';
 
 export const createCollage = async (req: Request, res: Response) => {
   try {
@@ -34,30 +37,50 @@ export const updateCollage = async (req: Request, res: Response) => {
   }
 };
 
-import Photo from '../models/Photo';
-import Album from '../models/Album';
-import { getSignedUrl } from '../services/fileService';
-
 export const getCollageById = async (req: Request, res: Response): Promise<void> => {
   try {
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
-    
+
     const collage = await collageService.getCollageById(req.params.id, user.id, userGroups);
     if (!collage) {
       res.status(404).json({ error: 'Collage not found' });
       return;
     }
 
-    // Verify user has access to all albums before fetching photos
-    const albums = await Album.find({ _id: { $in: collage.albumIds } });
-    if (albums.length !== collage.albumIds.length) {
-      res.status(404).json({ error: 'One or more albums not found' });
-      return;
-    }
+    // Use aggregation to check album access and fetch photos in one query
+    const aggregationPipeline: any[] = [
+      { $match: { _id: { $in: collage.albumIds.map(id => new mongoose.Types.ObjectId(id)) } } },
+      {
+        $lookup: {
+          from: 'photos',
+          localField: '_id',
+          foreignField: 'albumId',
+          as: 'photos'
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          userId: 1,
+          groupId: 1,
+          isPublic: 1,
+          photos: {
+            _id: 1,
+            filename: 1,
+            fileId: 1,
+            createdAt: 1,
+            title: 1,
+            description: 1
+          }
+        }
+      }
+    ];
 
-    // Check access to all albums
-    for (const album of albums) {
+    const albumsWithPhotos = await (Album as any).aggregate(aggregationPipeline);
+
+    // Check access permissions for all albums
+    for (const album of albumsWithPhotos) {
       const hasAlbumAccess = canAccessResource(
         user.id,
         album.userId || '',
@@ -72,18 +95,19 @@ export const getCollageById = async (req: Request, res: Response): Promise<void>
       }
     }
 
-    // Fetch all photos for all albums
-    const photos = await Photo.find({ albumId: { $in: collage.albumIds } }).sort({ createdAt: -1 });
+    // Flatten all photos and get signed URLs in parallel
+    const allPhotos = albumsWithPhotos.flatMap((album: any) => album.photos);
     const photosWithUrls = await Promise.all(
-      photos.map(async (photo) => {
+      allPhotos.map(async (photo: any) => {
         try {
           const signedUrl = await getSignedUrl(photo.fileId);
-          return { ...photo.toObject(), signedUrl };
+          return { ...photo, signedUrl };
         } catch (e) {
-          return photo.toObject();
+          return photo;
         }
       })
     );
+
     res.json({ collage, albumPhotos: photosWithUrls });
   } catch (error) {
     if ((error as Error).message === 'ACCESS_DENIED') {
