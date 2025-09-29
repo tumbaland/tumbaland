@@ -50,14 +50,14 @@ export const getAlbums = async (req: Request, res: Response): Promise<void> => {
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
 
-    let query: any = {};
+    let matchQuery: any = {};
     
     // Build base query
     if (search) {
-      query.$text = { $search: search as string };
+      matchQuery.$text = { $search: search as string };
     }
     if (isPublic !== undefined) {
-      query.isPublic = isPublic === 'true';
+      matchQuery.isPublic = isPublic === 'true';
     }
 
     // Apply permission filtering
@@ -70,52 +70,91 @@ export const getAlbums = async (req: Request, res: Response): Promise<void> => {
         });
         return;
       }
-      query.groupId = groupId as string;
+      matchQuery.groupId = groupId as string;
     } else {
       // No groupId specified: show only personal albums (no group)
-      query.userId = user.id;
-      query.groupId = { $exists: false };
+      matchQuery.userId = user.id;
+      matchQuery.groupId = { $exists: false };
     }
 
-    const albums = await Album.find(query)
-      .sort({ updatedAt: -1 })
-      .limit(Number(limit))
-      .skip((Number(page) - 1) * Number(limit));
+    const skip = (Number(page) - 1) * Number(limit);
 
-    const total = await Album.countDocuments(query);
+    // Use aggregation pipeline to get albums with photo counts in one query
+    const aggregationPipeline: any[] = [
+      { $match: matchQuery },
+      {
+        $lookup: {
+          from: 'photos',
+          localField: '_id',
+          foreignField: 'albumId',
+          as: 'photos'
+        }
+      },
+      {
+        $addFields: {
+          photoCount: { $size: '$photos' }
+        }
+      },
+      {
+        $project: {
+          photos: 0 // Remove the photos array from result
+        }
+      },
+      { $sort: { updatedAt: -1 as -1 } },
+      { $skip: skip },
+      { $limit: Number(limit) }
+    ];
 
-    // Get photo count and cover photo data for each album
-    const albumsWithCounts = await Promise.all(
-      albums.map(async (album) => {
-        const photoCount = await Photo.countDocuments({ albumId: album._id });
-        let coverPhoto = null;
-        if (album.coverPhotoId) {
-          try {
-            const coverPhotoDoc = await Photo.findById(album.coverPhotoId);
-            if (coverPhotoDoc) {
-              const fileUrl = await getSignedUrl(coverPhotoDoc.fileId);
-              coverPhoto = {
+    // Get total count for pagination
+    const totalPipeline: any[] = [
+      { $match: matchQuery },
+      { $count: 'total' }
+    ];
+
+    const [albumsResult, totalResult] = await Promise.all([
+      (Album as any).aggregate(aggregationPipeline),
+      (Album as any).aggregate(totalPipeline)
+    ]);
+
+    const total = totalResult[0]?.total || 0;
+
+    // Process cover photos in parallel (batch the signed URL requests)
+    const coverPhotoPromises = (albumsResult as any[])
+      .filter((album: any) => album.coverPhotoId)
+      .map(async (album: any) => {
+        try {
+          const coverPhotoDoc = await Photo.findById(album.coverPhotoId);
+          if (coverPhotoDoc) {
+            const fileUrl = await getSignedUrl(coverPhotoDoc.fileId);
+            return {
+              albumId: album._id,
+              coverPhoto: {
                 ...coverPhotoDoc.toObject(),
                 signedUrl: fileUrl
-              };
-            }
-          } catch (error) {
-            console.error(`Failed to get cover photo for album ${album._id}:`, error);
+              }
+            };
           }
+        } catch (error) {
+          console.error(`Failed to get cover photo for album ${album._id}:`, error);
         }
+        return null;
+      });
 
-        return {
-          ...album.toObject(),
-          photoCount,
-          coverPhoto
-        };
-      })
+    const coverPhotos = await Promise.all(coverPhotoPromises);
+    const coverPhotoMap = new Map(
+      coverPhotos.filter(Boolean).map((cp: any) => [cp!.albumId.toString(), cp!.coverPhoto])
     );
+
+    // Combine albums with cover photos
+    const albumsWithCovers = (albumsResult as any[]).map((album: any) => ({
+      ...album,
+      coverPhoto: coverPhotoMap.get(album._id.toString()) || null
+    }));
 
     res.json({
       success: true,
       data: {
-        albums: albumsWithCounts,
+        albums: albumsWithCovers,
         pagination: {
           page: Number(page),
           limit: Number(limit),

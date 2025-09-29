@@ -164,7 +164,6 @@ const PhotoSchema: Schema = new Schema(
 
 // Indexes for performance
 PhotoSchema.index({ albumId: 1, createdAt: -1 });
-PhotoSchema.index({ fileId: 1 });
 PhotoSchema.index({ title: 'text', description: 'text', tags: 'text' });
 
 export default mongoose.model<IPhoto>('Photo', PhotoSchema);

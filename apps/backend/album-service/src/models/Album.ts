@@ -57,4 +57,7 @@ const AlbumSchema: Schema = new Schema(
 // Index for searching
 AlbumSchema.index({ name: 'text', description: 'text', tags: 'text' });
 
+// Index for sorting by updatedAt (critical for performance)
+AlbumSchema.index({ updatedAt: -1 });
+
 export default mongoose.model<IAlbum>('Album', AlbumSchema);
