@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, TableContainer, Table, TableHead, TableBody, TableRow, TableCell, Paper, Chip, Avatar } from '@mui/material';
+import { Box, Typography, TableContainer, Table, TableHead, TableBody, TableRow, TableCell, Paper, Chip } from '@mui/material';
 import { paymentApi } from '../services/paymentApi';
 import { Payment } from '../types';
 import { Loader } from '@tumbaland/components';

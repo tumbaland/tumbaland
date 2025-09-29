@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Card, CardActions, CardContent, Button, Typography, Divider, Chip, Avatar } from '@mui/material';
+import { Box, Card, CardActions, CardContent, Button, Typography, Divider, Avatar } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { paymentApi } from '../services/paymentApi';
 import { Plan, Subscription } from '../types';
