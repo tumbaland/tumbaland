@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.193](https://github.com/toomastahves/tumbaland/compare/v0.0.192...v0.0.193) (2025-09-29)
+
+
+### Features
+
+* fix album details ([615e7f6](https://github.com/toomastahves/tumbaland/commit/615e7f67a686bbf5ba42226be5432dc57f46f2cf))
+
 ### [0.0.192](https://github.com/toomastahves/tumbaland/compare/v0.0.191...v0.0.192) (2025-09-29)
 
 
