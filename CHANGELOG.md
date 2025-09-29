@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.187](https://github.com/toomastahves/tumbaland/compare/v0.0.186...v0.0.187) (2025-09-29)
+
+
+### Features
+
+* upgrade design style ([e53d8c8](https://github.com/toomastahves/tumbaland/commit/e53d8c8daf909ec7a7e32f35a56ce683ab393ade))
+
 ### [0.0.186](https://github.com/toomastahves/tumbaland/compare/v0.0.185...v0.0.186) (2025-09-29)
 
 
