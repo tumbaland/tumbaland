@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
 import Album from '../models/Album';
 import Photo from '../models/Photo';
-import { deleteFile, getFileUrl, getSignedUrl } from '../services/fileService';
-import { buildAccessQuery, canAccessResource } from '../utils/permissionUtils';
+import { deleteFile, getSignedUrl } from '../services/fileService';
+import { canAccessResource } from '../utils/permissionUtils';
+import mongoose from 'mongoose';
 
 // Create a new album
 export const createAlbum = async (req: Request, res: Response): Promise<void> => {
@@ -180,7 +181,7 @@ export const getAlbumById = async (req: Request, res: Response): Promise<void> =
 
     // Use aggregation to get album with photo count and cover photo in one query
     const aggregationPipeline: any[] = [
-      { $match: { _id: id } },
+      { $match: { _id: new mongoose.Types.ObjectId(id) } },
       {
         $lookup: {
           from: 'photos',
