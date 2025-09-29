@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.189](https://github.com/toomastahves/tumbaland/compare/v0.0.188...v0.0.189) (2025-09-29)
+
+
+### Features
+
+* improve front cache ([978262f](https://github.com/toomastahves/tumbaland/commit/978262fb53116ce4c3f18f47d90aa5dd8e310926))
+
 ### [0.0.188](https://github.com/toomastahves/tumbaland/compare/v0.0.187...v0.0.188) (2025-09-29)
 
 
