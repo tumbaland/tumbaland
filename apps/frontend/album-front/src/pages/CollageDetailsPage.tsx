@@ -17,7 +17,7 @@ import CollageMenu from '../components/collage/CollageMenu';
 import CollageLayout from '../components/collage/CollageLayout';
 import CollagePhotoEditModal from '../components/collage/CollagePhotoEditModal';
 import { Collage } from '../types/collage';
-import { useCollage } from '../hooks/useCollage';
+import { useCollageDetails, useCollageMutations } from '../hooks/useCollage';
 
 interface CanvasPhoto {
   id: string;
@@ -41,12 +41,15 @@ const CollageDetailsPage: React.FC = () => {
   const searchParams = new URLSearchParams(location.search);
   const mode = searchParams.get('mode') || 'edit';
   const isViewMode = mode === 'view';
-  const { getCollage, updateCollage } = useCollage();
+  const collageQuery = useCollageDetails(id);
+  const { updateCollage } = useCollageMutations();
+  const isLoading = collageQuery.isPending;
+  const loadError = collageQuery.error ? 'Failed to load collage' : null;
   const [collage, setCollage] = useState<Collage | null>(null);
   const [albumPhotos, setAlbumPhotos] = useState<AlbumPhoto[]>([]);
   const [canvasPhotos, setCanvasPhotos] = useState<CanvasPhoto[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const displayError = error || loadError;
   const [saving, setSaving] = useState(false);
   const [backgroundColor, setBackgroundColor] = useState<string>('#111');
   const [photoTransparencyMode, setPhotoTransparencyMode] = useState<boolean>(true);
@@ -212,6 +215,7 @@ const CollageDetailsPage: React.FC = () => {
         },
         albumIds: collage.albumIds
       });
+      await collageQuery.refetch();
     } catch (e) {
       setError('Failed to save collage');
     } finally {
@@ -220,89 +224,73 @@ const CollageDetailsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!id) return;
-    setLoading(true);
-    // Fetch collage and album photos (backend returns both)
-    getCollage(id)
-      .then((data: any) => {
-        if (data && data.collage) {
-          setCollage(data.collage);
-          setAlbumPhotos(data.albumPhotos || []);
-          // Load initial canvas photos from config if present
-          if (data.collage.config?.photos) {
-            setCanvasPhotos(
-              data.collage.config.photos.map((p: any, idx: number) => {
-                // Find album photo with matching fileId
-                let albumPhoto = (data.albumPhotos || []).find((ap: any) => ap.fileId === p.filename);
-                return {
-                  id: p.filename + '-' + idx,
-                  fileId: p.filename, // Store the fileId for saving
-                  src: albumPhoto ? albumPhoto.signedUrl : p.filename, // fallback to filename if not found
-                  x: p.position?.left || 100,
-                  y: p.position?.top || 100,
-                  width: p.width || 120,
-                  height: p.height || 120,
-                  rotation: p.rotation || 0,
-                  transparentBackground: p.transparentBackground,
-                  showBorder: p.frameVisible ?? true,
-                  caption: p.caption || ''
-                };
-              })
-            );
-          }
-          // Load text boxes from config if present
-          if (data.collage.config?.texts) {
-            setCanvasTexts(
-              data.collage.config.texts.map((t: any) => ({
-                id: t.id,
-                text: t.text,
-                x: t.x,
-                y: t.y,
-                width: t.width,
-                height: t.height
-              }))
-            );
-          } else {
-            setCanvasTexts([]);
-          }
-          // Load background color from config if present
-          if (data.collage.config?.backgroundColor) {
-            setBackgroundColor(data.collage.config.backgroundColor);
-          } else {
-            setBackgroundColor('#111');
-          }
-          // Load photo transparency mode from config if present
-          if (data.collage.config?.photoTransparencyMode !== undefined) {
-            setPhotoTransparencyMode(data.collage.config.photoTransparencyMode);
-          } else {
-            setPhotoTransparencyMode(true); // default to transparent mode
-          }
-          // Load border color from config if present
-          if (data.collage.config?.borderColor) {
-            setBorderColor(data.collage.config.borderColor);
-          } else {
-            setBorderColor('#fff'); // default to white borders
-          }
-          // Load viewport from config if present, else use browser size
-          if (
-            data.collage.config?.viewport &&
-            data.collage.config.viewport.width &&
-            data.collage.config.viewport.height
-          ) {
-            setViewport({
-              width: data.collage.config.viewport.width,
-              height: data.collage.config.viewport.height
-            });
-          } else if (typeof window !== 'undefined') {
-            setViewport({ width: window.innerWidth, height: window.innerHeight });
-          } else {
-            setViewport({ width: 1200, height: 800 });
-          }
-        }
-      })
-      .catch(() => setError('Failed to load collage'))
-      .finally(() => setLoading(false));
-  }, [id, getCollage]);
+    const data = collageQuery.data;
+    if (!data || !data.collage) {
+      return;
+    }
+
+  const fetchedCollage = data.collage;
+  const fetchedAlbumPhotos = (data.albumPhotos || []) as AlbumPhoto[];
+
+    setCollage(fetchedCollage);
+    setAlbumPhotos(fetchedAlbumPhotos);
+
+    if (fetchedCollage.config?.photos) {
+      setCanvasPhotos(
+        fetchedCollage.config.photos.map((p: any, idx: number) => {
+          const albumPhoto = fetchedAlbumPhotos.find((ap: any) => ap.fileId === p.filename);
+          return {
+            id: p.filename + '-' + idx,
+            fileId: p.filename,
+            src: albumPhoto ? albumPhoto.signedUrl : p.filename,
+            x: p.position?.left || 100,
+            y: p.position?.top || 100,
+            width: p.width || 120,
+            height: p.height || 120,
+            rotation: p.rotation || 0,
+            transparentBackground: p.transparentBackground,
+            showBorder: p.frameVisible ?? true,
+            caption: p.caption || ''
+          };
+        })
+      );
+    } else {
+      setCanvasPhotos([]);
+    }
+
+    if (fetchedCollage.config?.texts) {
+      setCanvasTexts(
+        fetchedCollage.config.texts.map((t: any) => ({
+          id: t.id,
+          text: t.text,
+          x: t.x,
+          y: t.y,
+          width: t.width,
+          height: t.height
+        }))
+      );
+    } else {
+      setCanvasTexts([]);
+    }
+
+    setBackgroundColor(fetchedCollage.config?.backgroundColor ?? '#111');
+    setPhotoTransparencyMode(
+      fetchedCollage.config?.photoTransparencyMode !== undefined
+        ? fetchedCollage.config.photoTransparencyMode
+        : true
+    );
+    setBorderColor(fetchedCollage.config?.borderColor ?? '#fff');
+
+    if (fetchedCollage.config?.viewport?.width && fetchedCollage.config.viewport?.height) {
+      setViewport({ width: fetchedCollage.config.viewport.width, height: fetchedCollage.config.viewport.height });
+    } else if (typeof window !== 'undefined') {
+      setViewport({ width: window.innerWidth, height: window.innerHeight });
+    } else {
+      setViewport({ width: 1200, height: 800 });
+    }
+
+    setError(null);
+  }, [collageQuery.data]);
 
   // Add photo from album to canvas
   const handleAddPhoto = (photo: AlbumPhoto) => {
@@ -415,7 +403,7 @@ const CollageDetailsPage: React.FC = () => {
         <Box sx={{ position: 'absolute', top: 16, right: 24, zIndex: 20 }}>
           <CollageMenu
             onSave={handleSave}
-            disabled={saving || loading || !collage}
+            disabled={saving || collageQuery.isFetching || !collage}
             backgroundColor={backgroundColor}
             onBackgroundColorChange={setBackgroundColor}
             onAddTextBox={handleAddTextBox}
@@ -426,12 +414,12 @@ const CollageDetailsPage: React.FC = () => {
           />
         </Box>
       )}
-      {loading ? (
+      {isLoading ? (
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
           <CircularProgress />
         </Box>
-      ) : error ? (
-        <Typography color="error">{error}</Typography>
+      ) : displayError ? (
+        <Typography color="error">{displayError}</Typography>
       ) : collage ? (
         <Box sx={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
           {/* Sidebar: Album Photos (hide in view mode) */}

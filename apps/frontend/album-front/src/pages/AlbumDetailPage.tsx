@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Box,
   Container,
@@ -19,23 +20,33 @@ import AlbumFloatingActionButton from '../components/AlbumFloatingActionButton';
 import FileUpload from '../components/FileUpload';
 import ConfirmDialog from '../components/ConfirmDialog';
 import EditPhotoDialog from '../components/EditPhotoDialog';
-import { Album, Photo } from '../types';
+import { Photo } from '../types';
 
 const AlbumDetailPage: React.FC = () => {
   const { albumId } = useParams<{ albumId: string }>();
   const navigate = useNavigate();
-  const [album, setAlbum] = useState<Album | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
-  const [loadingAlbum, setLoadingAlbum] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [photoToEdit, setPhotoToEdit] = useState<Photo | null>(null);
+  const queryClient = useQueryClient();
+  const albumQuery = useQuery({
+    queryKey: ['album', albumId],
+    queryFn: () => albumService.getAlbumById(albumId as string).then((res) => res.data),
+    enabled: Boolean(albumId)
+  });
+  const album = albumQuery.data ?? null;
+  const loadingAlbum = albumQuery.isPending;
+  const albumError = albumQuery.error
+    ? albumQuery.error instanceof Error
+      ? albumQuery.error.message
+      : 'Failed to load album'
+    : null;
 
   const {
     photos,
@@ -61,21 +72,6 @@ const AlbumDetailPage: React.FC = () => {
     handleClosePhotoViewer
   } = usePhotoViewer(photos);
 
-  useEffect(() => {
-    const fetchAlbum = async () => {
-      if (!albumId) return;
-      try {
-        setLoadingAlbum(true);
-        const response = await albumService.getAlbumById(albumId);
-        setAlbum(response.data);
-      } catch (err) {
-        setError('Failed to load album');
-      } finally {
-        setLoadingAlbum(false);
-      }
-    };
-    fetchAlbum();
-  }, [albumId]);
 
   const handleDeletePhoto = async (photo: Photo) => {
     setPhotoToDelete(photo);
@@ -126,7 +122,8 @@ const AlbumDetailPage: React.FC = () => {
 
     try {
       const response = await albumService.setCoverPhoto(albumId, photo._id);
-      setAlbum(response.data);
+      queryClient.setQueryData(['album', albumId], response.data);
+      queryClient.invalidateQueries({ queryKey: ['albums'] });
       // Show success message
       alert('Cover photo updated successfully!');
     } catch (err) {
@@ -140,6 +137,10 @@ const AlbumDetailPage: React.FC = () => {
 
   const handleUploadComplete = () => {
     fetchPhotos();
+    if (albumId) {
+      queryClient.invalidateQueries({ queryKey: ['album', albumId] });
+    }
+    queryClient.invalidateQueries({ queryKey: ['albums'] });
   };
 
   // Reset to first page when search changes
@@ -164,10 +165,10 @@ const AlbumDetailPage: React.FC = () => {
     );
   }
 
-  if (error || !album) {
+  if (albumError || !album) {
     return (
       <Container maxWidth="xl" sx={{ py: 4 }}>
-        <Alert severity="error">{error || 'Album not found'}</Alert>
+        <Alert severity="error">{albumError || 'Album not found'}</Alert>
         <Button onClick={() => navigate('/albums')} sx={{ mt: 2 }}>
           Back to Albums
         </Button>

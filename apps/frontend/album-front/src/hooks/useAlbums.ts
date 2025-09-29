@@ -1,6 +1,26 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Album } from '../types';
+import { useMemo } from 'react';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Album, PaginatedResponse } from '../types';
 import { albumService } from '../services/albumService';
+
+const albumKeys = {
+  all: ['albums'] as const,
+  list: (params: Record<string, unknown>) => [...albumKeys.all, params] as const
+};
+
+const normalizeParams = (params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  isPublic?: boolean;
+  groupId?: string;
+  includeCover?: boolean;
+}) => {
+  if (!params) return {};
+  return Object.fromEntries(
+    Object.entries(params).filter(([, value]) => value !== undefined && value !== null)
+  );
+};
 
 export const useAlbums = (params?: {
   page?: number;
@@ -10,83 +30,74 @@ export const useAlbums = (params?: {
   groupId?: string;
   includeCover?: boolean;
 }) => {
-  const [albums, setAlbums] = useState<Album[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
-    total: 0,
-    pages: 0
-  });
+  const queryClient = useQueryClient();
 
-  // Memoize params to prevent unnecessary re-renders
   const memoizedParams = useMemo(
-    () => params,
+    () => normalizeParams(params),
     [params?.page, params?.limit, params?.search, params?.isPublic, params?.groupId, params?.includeCover]
   );
 
-  const fetchAlbums = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await albumService.getAlbums(memoizedParams);
-      setAlbums(response.data.albums || []);
-      setPagination(response.data.pagination);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch albums');
-    } finally {
-      setLoading(false);
-    }
-  }, [memoizedParams]);
+  const query = useQuery<PaginatedResponse<Album>, Error, PaginatedResponse<Album>['data']>({
+    queryKey: albumKeys.list(memoizedParams),
+    queryFn: () => albumService.getAlbums(memoizedParams),
+    select: (response) => response.data,
+    placeholderData: keepPreviousData
+  });
 
-  useEffect(() => {
-    fetchAlbums();
-  }, [fetchAlbums]);
-
-  const createAlbum = async (albumData: {
-    name: string;
-    description?: string;
-    isPublic?: boolean;
-    tags?: string[];
-    groupId?: string;
-  }) => {
-    try {
+  const createMutation = useMutation({
+    mutationFn: async (albumData: {
+      name: string;
+      description?: string;
+      isPublic?: boolean;
+      tags?: string[];
+      groupId?: string;
+    }) => {
       const response = await albumService.createAlbum(albumData);
-      await fetchAlbums(); // Refresh the list
       return response.data;
-    } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Failed to create album');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: albumKeys.all });
     }
-  };
+  });
 
-  const updateAlbum = async (id: string, albumData: Partial<Album>) => {
-    try {
-      const response = await albumService.updateAlbum(id, albumData);
-      await fetchAlbums(); // Refresh the list
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Album> }) => {
+      const response = await albumService.updateAlbum(id, data);
       return response.data;
-    } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Failed to update album');
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: albumKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['album', variables.id] });
     }
-  };
+  });
 
-  const deleteAlbum = async (id: string) => {
-    try {
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
       await albumService.deleteAlbum(id);
-      await fetchAlbums(); // Refresh the list
-    } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Failed to delete album');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: albumKeys.all });
     }
+  });
+
+  const pagination = query.data?.pagination ?? {
+    page: (memoizedParams.page as number) || 1,
+    limit: (memoizedParams.limit as number) || 10,
+    total: 0,
+    pages: 0
   };
+
+  const errorMessage = query.error instanceof Error ? query.error.message : null;
 
   return {
-    albums,
-    loading,
-    error,
+    albums: query.data?.albums || [],
+    loading: query.isPending,
+    isFetching: query.isFetching,
+    error: errorMessage,
     pagination,
-    fetchAlbums,
-    createAlbum,
-    updateAlbum,
-    deleteAlbum
+    fetchAlbums: query.refetch,
+    createAlbum: createMutation.mutateAsync,
+    updateAlbum: (id: string, data: Partial<Album>) => updateMutation.mutateAsync({ id, data }),
+    deleteAlbum: deleteMutation.mutateAsync
   };
 };

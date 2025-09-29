@@ -1,17 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Box, Typography, Button, CircularProgress, IconButton, Menu, MenuItem } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
-import { useCollage } from '../hooks/useCollage';
+import { useCollageList, useCollageMutations } from '../hooks/useCollage';
 import { Collage, CollageInput } from '../types/collage';
 import { CollageCreateModal } from '../components/collage/CollageCreateModal';
 import { CollageEditModal } from '../components/collage/CollageEditModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 
 const CollageListPage: React.FC = () => {
-  const { getCollages, createCollage, deleteCollage, updateCollage } = useCollage();
-  const [collages, setCollages] = useState<Collage[]>([]);
-  const [loading, setLoading] = useState(true);
+  const collageListQuery = useCollageList();
+  const { createCollage, deleteCollage, updateCollage } = useCollageMutations();
   const [deleting, setDeleting] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -20,25 +19,12 @@ const CollageListPage: React.FC = () => {
   const [menuCollage, setMenuCollage] = useState<Collage | null>(null);
   const [collageToDelete, setCollageToDelete] = useState<Collage | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  // Remove duplicate useCollage hook call
-
-  const fetchCollages = () => {
-    setLoading(true);
-    getCollages()
-      .then((data) => setCollages(data))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    fetchCollages();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const handleOpenModal = () => setModalOpen(true);
   const handleCloseModal = () => setModalOpen(false);
   const handleCreateCollage = async (input: CollageInput) => {
     await createCollage(input);
-    fetchCollages();
+    await collageListQuery.refetch();
   };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, collage: Collage) => {
@@ -61,7 +47,7 @@ const CollageListPage: React.FC = () => {
   const handleEditSave = async (input: CollageInput) => {
     if (selectedCollage) {
       await updateCollage(selectedCollage._id, input);
-      fetchCollages();
+      await collageListQuery.refetch();
       handleEditModalClose();
     }
   };
@@ -79,7 +65,7 @@ const CollageListPage: React.FC = () => {
         setDeleteDialogOpen(false);
         setCollageToDelete(null);
         setDeleting(false);
-        fetchCollages();
+        await collageListQuery.refetch();
       }
     }
   };
@@ -100,11 +86,11 @@ const CollageListPage: React.FC = () => {
         </Button>
       </Box>
       <CollageCreateModal open={modalOpen} onClose={handleCloseModal} onCreate={handleCreateCollage} />
-      {loading ? (
+      {collageListQuery.isPending ? (
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="40vh">
           <CircularProgress />
         </Box>
-      ) : collages.length === 0 ? (
+      ) : (collageListQuery.data?.length || 0) === 0 ? (
         <Typography variant="body1" color="text.secondary">
           No collages yet. Click "New Collage" to create your first one!
         </Typography>
@@ -121,7 +107,7 @@ const CollageListPage: React.FC = () => {
             gap: 3
           }}
         >
-          {collages.map((collage) => (
+          {collageListQuery.data?.map((collage) => (
             <Box key={collage._id}>
               <Box
                 sx={{

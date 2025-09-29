@@ -1,43 +1,65 @@
-import { useCallback } from 'react';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { collageService } from '../services/collageService';
 import { Collage, CollageInput } from '../types/collage';
 import { useTenantFilter } from '../components/tenant';
 
-export function useCollage() {
+const collageKeys = {
+  all: ['collages'] as const,
+  list: (albumId: string | null, groupId: string | null) => [...collageKeys.all, 'list', albumId, groupId] as const,
+  detail: (id?: string) => [...collageKeys.all, 'detail', id] as const
+};
+
+export const useCollageList = (options?: { albumId?: string; enabled?: boolean }) => {
   const tenantGroupId = useTenantFilter();
+  const albumId = options?.albumId ?? null;
+  const groupId = tenantGroupId ?? null;
 
-  const getCollages = useCallback(async (albumId?: string): Promise<Collage[]> => {
-    const res = await collageService.getCollages({ 
-      albumId, 
-      groupId: tenantGroupId // Pass groupId only if present (group context), undefined for personal
-    });
-    return res.collages;
-  }, [tenantGroupId]);
+  return useQuery<{ collages: Collage[] }, Error, Collage[]>({
+    queryKey: collageKeys.list(albumId, groupId),
+    queryFn: () => collageService.getCollages({ albumId: options?.albumId, groupId: tenantGroupId }),
+    select: (response) => response.collages,
+    placeholderData: keepPreviousData,
+    enabled: options?.enabled ?? true
+  });
+};
 
-  // Returns full response (collage and albumPhotos)
-  const getCollage = useCallback(async (id: string): Promise<any> => {
-    return collageService.getCollageById(id);
-  }, []);
+export const useCollageDetails = (collageId?: string) => {
+  return useQuery({
+    queryKey: collageKeys.detail(collageId),
+    queryFn: () => collageService.getCollageById(collageId as string),
+    enabled: Boolean(collageId)
+  });
+};
 
-  const createCollage = useCallback(async (input: CollageInput): Promise<Collage> => {
-    const res = await collageService.createCollage(input);
-    return res.collage;
-  }, []);
+export const useCollageMutations = () => {
+  const queryClient = useQueryClient();
 
-  const updateCollage = useCallback(async (id: string, input: CollageInput): Promise<Collage> => {
-    const res = await collageService.updateCollage(id, input);
-    return res.collage;
-  }, []);
+  const createMutation = useMutation({
+    mutationFn: (input: CollageInput) => collageService.createCollage(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: collageKeys.all });
+    }
+  });
 
-  const deleteCollage = useCallback(async (id: string): Promise<void> => {
-    await collageService.deleteCollage(id);
-  }, []);
+  const updateMutation = useMutation({
+    mutationFn: ({ id, input }: { id: string; input: CollageInput }) => collageService.updateCollage(id, input),
+    onSuccess: (_result, variables) => {
+      queryClient.invalidateQueries({ queryKey: collageKeys.all });
+      queryClient.invalidateQueries({ queryKey: collageKeys.detail(variables.id) });
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => collageService.deleteCollage(id),
+    onSuccess: (_result, id) => {
+      queryClient.invalidateQueries({ queryKey: collageKeys.all });
+      queryClient.invalidateQueries({ queryKey: collageKeys.detail(id) });
+    }
+  });
 
   return {
-    getCollages,
-    getCollage,
-    createCollage,
-    updateCollage,
-    deleteCollage
+    createCollage: createMutation.mutateAsync,
+    updateCollage: (id: string, input: CollageInput) => updateMutation.mutateAsync({ id, input }),
+    deleteCollage: deleteMutation.mutateAsync
   };
-}
+};

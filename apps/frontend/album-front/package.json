@@ -14,6 +14,7 @@
     "@emotion/styled": "^11.13.0",
     "@mui/icons-material": "^7.1.2",
     "@mui/material": "^7.1.2",
+    "@tanstack/react-query": "^5.90.2",
     "@tumbaland/components": "*",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

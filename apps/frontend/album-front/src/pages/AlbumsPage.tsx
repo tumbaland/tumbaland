@@ -18,7 +18,8 @@ import {
   Menu,
   MenuItem,
   ListItemIcon,
-  ListItemText
+  ListItemText,
+  LinearProgress
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -72,6 +73,7 @@ const AlbumsPage: React.FC = () => {
   const {
     albums,
     loading,
+    isFetching,
     error: albumsError,
     createAlbum,
     updateAlbum,
@@ -248,7 +250,7 @@ const AlbumsPage: React.FC = () => {
         />
         <IconButton
           onClick={() => fetchAlbums()}
-          disabled={loading}
+          disabled={loading || isFetching}
           color="primary"
           sx={{ flexShrink: 0 }}
           title="Refresh albums"
@@ -256,6 +258,10 @@ const AlbumsPage: React.FC = () => {
           <RefreshIcon />
         </IconButton>
       </Box>
+
+      {isFetching && !loading && (
+        <LinearProgress sx={{ mb: 4 }} />
+      )}
 
       {albumsError && (
         <Alert severity="error" sx={{ mb: 4 }}>
