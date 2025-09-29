@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.186](https://github.com/toomastahves/tumbaland/compare/v0.0.185...v0.0.186) (2025-09-29)
+
+
+### Features
+
+* setup elk ([be0bb9c](https://github.com/toomastahves/tumbaland/commit/be0bb9c6a7d0eae7fc164581fbb62de7e20761ce))
+
 ### [0.0.185](https://github.com/toomastahves/tumbaland/compare/v0.0.184...v0.0.185) (2025-09-28)
 
 
