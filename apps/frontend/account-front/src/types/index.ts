@@ -28,6 +28,7 @@ export interface User {
   lastName?: string;
   name: string;
   picture?: string;
+  username?: string;
 }
 
 export interface AuthResponse {

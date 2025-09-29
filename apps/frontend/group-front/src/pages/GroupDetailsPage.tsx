@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import {
   Box,
   Button,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -17,11 +16,10 @@ import {
   Stack,
   Divider,
   Alert,
-  List,
-  ListItem,
-  ListItemText,
   Avatar,
-  Menu
+  Menu,
+  Paper,
+  Fade
 } from '@mui/material';
 import {
   PersonAdd as PersonAddIcon,
@@ -29,7 +27,11 @@ import {
   MoreVert as MoreVertIcon,
   Person as PersonIcon,
   ArrowBack as ArrowBackIcon,
-  Edit as EditIcon
+  Edit as EditIcon,
+  Group as GroupIcon,
+  WorkspacePremium as WorkspacePremiumIcon,
+  AdminPanelSettings as AdminPanelSettingsIcon,
+  Email as EmailIcon
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { groupApi } from '../services/groupApi';
@@ -189,14 +191,6 @@ const GroupDetailsPage = () => {
     return member.email.toLowerCase() === currentUserEmail;
   };
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'owner': return 'error';
-      case 'admin': return 'warning';
-      default: return 'default';
-    }
-  };
-
   if (loading) return (
     <Box sx={{ p: 3, textAlign: 'center' }}>
       <Typography variant="h6" color="text.secondary">
@@ -217,184 +211,346 @@ const GroupDetailsPage = () => {
   );
 
   return (
-    <Box sx={{ p: 3, maxWidth: 800, mx: 'auto' }}>
-      {/* Header */}
-      <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 3 }}>
-        <IconButton onClick={() => navigate('/')} size="large">
-          <ArrowBackIcon />
-        </IconButton>
-        <Box sx={{ flexGrow: 1 }}>
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <Typography variant="h4" component="h1">
-              {group.name}
-            </Typography>
+    <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default' }}>
+      {/* Hero Header */}
+      <Paper
+        elevation={0}
+        sx={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          py: 2,
+          px: 3,
+          mb: 2,
+          borderRadius: 0
+        }}
+      >
+        <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+          <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 0 }}>
+            <IconButton onClick={() => navigate('/groups')} size="large" sx={{ color: 'white' }}>
+              <ArrowBackIcon />
+            </IconButton>
+            <Box sx={{ flexGrow: 1 }}>
+              <Stack direction="row" alignItems="center" spacing={2}>
+                <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 48, height: 48 }}>
+                  <GroupIcon sx={{ fontSize: 24 }} />
+                </Avatar>
+                <Box>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Typography variant="h5" component="h1" sx={{ fontWeight: 700 }}>
+                      {group.name}
+                    </Typography>
+                    {canManageMembers() && (
+                      <IconButton
+                        size="small"
+                        onClick={openEditGroup}
+                        sx={{ color: 'white', '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } }}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                    )}
+                  </Stack>
+                  <Typography variant="body2" sx={{ opacity: 0.9, mt: 0.5 }}>
+                    {group.members?.length || 0} members • Created {group.createdAt ? new Date(group.createdAt).toLocaleDateString() : 'recently'}
+                  </Typography>
+                </Box>
+              </Stack>
+            </Box>
             {canManageMembers() && (
-              <IconButton
-                size="small"
-                onClick={openEditGroup}
-                sx={{ color: 'text.secondary' }}
+              <Button
+                variant="contained"
+                size="medium"
+                startIcon={<PersonAddIcon />}
+                onClick={() => setAddMemberOpen(true)}
+                sx={{
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(255,255,255,0.3)',
+                    transform: 'translateY(-2px)'
+                  },
+                  transition: 'all 0.3s ease'
+                }}
               >
-                <EditIcon />
-              </IconButton>
+                Add Member
+              </Button>
             )}
           </Stack>
-          <Typography variant="body1" color="text.secondary">
-            {group.members?.length || 0} members
-          </Typography>
         </Box>
-        {canManageMembers() && (
-          <Button
-            variant="contained"
-            startIcon={<PersonAddIcon />}
-            onClick={() => setAddMemberOpen(true)}
-          >
-            Add Member
-          </Button>
+      </Paper>
+
+      <Box sx={{ maxWidth: 1200, mx: 'auto', px: 3, pb: 4 }}>
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+            {error}
+          </Alert>
         )}
-      </Stack>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
+        {/* Stats Section */}
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+            gap: 3,
+            mb: 4
+          }}
+        >
+          <Paper
+            sx={{
+              p: 3,
+              textAlign: 'center',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+              color: 'white',
+              borderRadius: 2
+            }}
+          >
+            <PersonIcon sx={{ fontSize: 40, mb: 1 }} />
+            <Typography variant="h4" sx={{ fontWeight: 700 }}>
+              {group.members?.length || 0}
+            </Typography>
+            <Typography variant="body2" sx={{ opacity: 0.9 }}>
+              Total Members
+            </Typography>
+          </Paper>
+          <Paper
+            sx={{
+              p: 3,
+              textAlign: 'center',
+              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+              color: 'white',
+              borderRadius: 2
+            }}
+          >
+            <AdminPanelSettingsIcon sx={{ fontSize: 40, mb: 1 }} />
+            <Typography variant="h4" sx={{ fontWeight: 700 }}>
+              {group.members?.filter(m => m.role === 'admin' || m.role === 'owner').length || 0}
+            </Typography>
+            <Typography variant="body2" sx={{ opacity: 0.9 }}>
+              Admins
+            </Typography>
+          </Paper>
+          <Paper
+            sx={{
+              p: 3,
+              textAlign: 'center',
+              background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+              color: 'white',
+              borderRadius: 2
+            }}
+          >
+            <WorkspacePremiumIcon sx={{ fontSize: 40, mb: 1 }} />
+            <Typography variant="h4" sx={{ fontWeight: 700 }}>
+              {group.members?.filter(m => m.role === 'owner').length || 0}
+            </Typography>
+            <Typography variant="body2" sx={{ opacity: 0.9 }}>
+              Owners
+            </Typography>
+          </Paper>
+        </Box>
 
-      {/* Members List */}
-      <Card>
-        <CardContent>
-          <Typography variant="h6" sx={{ mb: 2 }}>
-            Members
-          </Typography>
-          
-          <List>
-            {(group.members || []).map((member, index) => (
-              <ListItem
-                key={member.email}
-                divider={index < (group.members?.length || 0) - 1}
-                sx={{ px: 0 }}
+        {/* Members Section */}
+        <Typography variant="h5" gutterBottom sx={{ mb: 3, fontWeight: 600, color: 'text.primary' }}>
+          Team Members
+        </Typography>
+
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
+            gap: 3
+          }}
+        >
+          {(group.members || []).map((member, index) => (
+            <Fade in timeout={500 + index * 100} key={member.email}>
+              <Card
+                sx={{
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  borderRadius: 3,
+                  overflow: 'hidden',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: (theme) => theme.shadows[8]
+                  },
+                  position: 'relative'
+                }}
               >
-                <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
-                  <PersonIcon />
-                </Avatar>
-                <ListItemText
-                  primary={member.email}
-                  secondary={member.joinedAt ? `Joined ${new Date(member.joinedAt).toLocaleDateString()}` : 'Joined recently'}
-                />
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <Chip
-                    label={member.role}
-                    color={getRoleColor(member.role) as any}
-                    size="small"
-                  />
+                {/* Role-based gradient header */}
+                <Box
+                  sx={{
+                    height: 60,
+                    background: member.role === 'owner'
+                      ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                      : member.role === 'admin'
+                      ? 'linear-gradient(135deg, #764ba2 0%, #4facfe 100%)'
+                      : 'linear-gradient(135deg, #4facfe 0%, #667eea 100%)',
+                    position: 'relative'
+                  }}
+                >
                   {canRemoveMember(member) && (
                     <IconButton
                       size="small"
                       onClick={(e) => openMemberMenu(e, member)}
+                      sx={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        backgroundColor: 'rgba(255,255,255,0.2)',
+                        backdropFilter: 'blur(10px)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(255,255,255,0.3)'
+                        }
+                      }}
                     >
-                      <MoreVertIcon />
+                      <MoreVertIcon sx={{ color: 'white', fontSize: 16 }} />
                     </IconButton>
                   )}
-                </Stack>
-              </ListItem>
-            ))}
-          </List>
-        </CardContent>
-      </Card>
+                </Box>
 
-      {/* Member Menu */}
-      <Menu
-        anchorEl={memberMenuAnchorEl}
-        open={Boolean(memberMenuAnchorEl)}
-        onClose={closeMemberMenu}
-      >
-        {selectedMember && getUserRole() === 'owner' && selectedMember.role !== 'owner' && (
-          [
-            <MenuItem key="make-admin" onClick={() => selectedMember && handleUpdateRole(selectedMember, 'admin')}>
-              Make Admin
-            </MenuItem>,
-            <MenuItem key="make-member" onClick={() => selectedMember && handleUpdateRole(selectedMember, 'member')}>
-              Make Member
-            </MenuItem>,
-            <Divider key="divider" />
-          ]
-        )}
-        <MenuItem 
-          onClick={() => selectedMember && handleRemoveMember(selectedMember)}
-          sx={{ color: 'error.main' }}
+                <CardContent sx={{ flexGrow: 1, pt: 2, textAlign: 'center' }}>
+                  {/* Avatar positioned over gradient */}
+                  <Box sx={{ position: 'relative', mb: 2 }}>
+                    <Avatar
+                      sx={{
+                        bgcolor: member.role === 'owner' ? 'error.main' : member.role === 'admin' ? 'warning.main' : 'primary.main',
+                        width: 64,
+                        height: 64,
+                        border: '4px solid white',
+                        position: 'absolute',
+                        top: -32,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        boxShadow: 2
+                      }}
+                    >
+                      <PersonIcon sx={{ fontSize: 32 }} />
+                    </Avatar>
+                  </Box>
+
+                  {/* Member info */}
+                  <Box sx={{ mt: 3 }}>
+                    <Typography variant="h6" component="h3" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+                      {member.email.split('@')[0]}
+                    </Typography>
+
+                    <Stack direction="row" alignItems="center" justifyContent="center" spacing={1} sx={{ mb: 2 }}>
+                      <EmailIcon fontSize="small" color="action" />
+                      <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                        {member.email}
+                      </Typography>
+                    </Stack>
+
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 500 }}>
+                      {member.role}
+                    </Typography>
+
+                    <Typography variant="caption" color="text.secondary">
+                      Joined {member.joinedAt ? new Date(member.joinedAt).toLocaleDateString() : 'recently'}
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Fade>
+          ))}
+        </Box>
+
+        {/* Member Menu */}
+        <Menu
+          anchorEl={memberMenuAnchorEl}
+          open={Boolean(memberMenuAnchorEl)}
+          onClose={closeMemberMenu}
         >
-          <DeleteIcon sx={{ mr: 1 }} fontSize="small" />
-          Remove from Group
-        </MenuItem>
-      </Menu>
+          {selectedMember && getUserRole() === 'owner' && selectedMember.role !== 'owner' && (
+            [
+              <MenuItem key="make-admin" onClick={() => selectedMember && handleUpdateRole(selectedMember, 'admin')}>
+                Make Admin
+              </MenuItem>,
+              <MenuItem key="make-member" onClick={() => selectedMember && handleUpdateRole(selectedMember, 'member')}>
+                Make Member
+              </MenuItem>,
+              <Divider key="divider" />
+            ]
+          )}
+          <MenuItem 
+            onClick={() => selectedMember && handleRemoveMember(selectedMember)}
+            sx={{ color: 'error.main' }}
+          >
+            <DeleteIcon sx={{ mr: 1 }} fontSize="small" />
+            Remove from Group
+          </MenuItem>
+        </Menu>
 
-      {/* Add Member Dialog */}
-      <Dialog open={addMemberOpen} onClose={() => setAddMemberOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Member</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            label="Email Address"
-            fullWidth
-            variant="outlined"
-            value={memberEmail}
-            onChange={(e) => setMemberEmail(e.target.value)}
-            sx={{ mt: 2, mb: 2 }}
-            placeholder="Enter member's email address"
-            type="email"
-          />
-          
-          <Select
-            fullWidth
-            value={memberRole}
-            onChange={(e) => setMemberRole(e.target.value as any)}
-            displayEmpty
-          >
-            <MenuItem value="member">Member</MenuItem>
-            <MenuItem value="admin">Admin</MenuItem>
-            {getUserRole() === 'owner' && (
-              <MenuItem value="owner">Owner</MenuItem>
-            )}
-          </Select>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddMemberOpen(false)}>Cancel</Button>
-          <Button 
-            onClick={handleAddMember}
-            variant="contained"
-            disabled={!memberEmail.trim() || addMemberLoading}
-          >
-            {addMemberLoading ? 'Adding...' : 'Add Member'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        {/* Add Member Dialog */}
+        <Dialog open={addMemberOpen} onClose={() => setAddMemberOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>Add Member</DialogTitle>
+          <DialogContent>
+            <TextField
+              autoFocus
+              label="Email Address"
+              fullWidth
+              variant="outlined"
+              value={memberEmail}
+              onChange={(e) => setMemberEmail(e.target.value)}
+              sx={{ mt: 2, mb: 2 }}
+              placeholder="Enter member's email address"
+              type="email"
+            />
+            
+            <Select
+              fullWidth
+              value={memberRole}
+              onChange={(e) => setMemberRole(e.target.value as any)}
+              displayEmpty
+            >
+              <MenuItem value="member">Member</MenuItem>
+              <MenuItem value="admin">Admin</MenuItem>
+              {getUserRole() === 'owner' && (
+                <MenuItem value="owner">Owner</MenuItem>
+              )}
+            </Select>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setAddMemberOpen(false)}>Cancel</Button>
+            <Button 
+              onClick={handleAddMember}
+              variant="contained"
+              disabled={!memberEmail.trim() || addMemberLoading}
+            >
+              {addMemberLoading ? 'Adding...' : 'Add Member'}
+            </Button>
+          </DialogActions>
+        </Dialog>
 
-      {/* Edit Group Dialog */}
-      <Dialog open={editGroupOpen} onClose={() => setEditGroupOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Edit Group Name</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            label="Group Name"
-            fullWidth
-            variant="outlined"
-            value={editGroupName}
-            onChange={(e) => setEditGroupName(e.target.value)}
-            sx={{ mt: 2 }}
-            placeholder="Enter new group name"
-            onKeyPress={(e) => e.key === 'Enter' && handleEditGroup()}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditGroupOpen(false)}>Cancel</Button>
-          <Button 
-            onClick={handleEditGroup}
-            variant="contained"
-            disabled={!editGroupName.trim() || editGroupLoading}
-          >
-            {editGroupLoading ? 'Saving...' : 'Save Changes'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        {/* Edit Group Dialog */}
+        <Dialog open={editGroupOpen} onClose={() => setEditGroupOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>Edit Group Name</DialogTitle>
+          <DialogContent>
+            <TextField
+              autoFocus
+              label="Group Name"
+              fullWidth
+              variant="outlined"
+              value={editGroupName}
+              onChange={(e) => setEditGroupName(e.target.value)}
+              sx={{ mt: 2 }}
+              placeholder="Enter new group name"
+              onKeyPress={(e) => e.key === 'Enter' && handleEditGroup()}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEditGroupOpen(false)}>Cancel</Button>
+            <Button 
+              onClick={handleEditGroup}
+              variant="contained"
+              disabled={!editGroupName.trim() || editGroupLoading}
+            >
+              {editGroupLoading ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </Box>
     </Box>
   );
 };

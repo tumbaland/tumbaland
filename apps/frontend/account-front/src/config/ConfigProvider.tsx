@@ -1,5 +1,5 @@
 import { useEffect, useState, ReactNode } from 'react';
-import { CssBaseline } from '@mui/material';
+import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { Loader, ErrorPage, initMonitoring, initWebVitals } from '@tumbaland/components';
 import { authService } from '../services/authService';
 import React from 'react';
@@ -105,8 +105,16 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
 
   return (
     <ConfigContext.Provider value={config}>
-      <CssBaseline />
-      {children}
+      <ThemeProvider theme={createTheme({
+        palette: {
+          background: {
+            default: '#f7f7fa'
+          }
+        }
+      })}>
+        <CssBaseline />
+        {children}
+      </ThemeProvider>
     </ConfigContext.Provider>
   );
 }

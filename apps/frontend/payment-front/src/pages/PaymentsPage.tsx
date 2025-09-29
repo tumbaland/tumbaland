@@ -21,8 +21,8 @@ const PaymentsPage: React.FC = () => {
   };
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    const paths = ['plans', 'subscriptions', 'history'];
-    navigate(paths[newValue], { replace: true });
+    const paths = ['/payments/plans', '/payments/subscriptions', '/payments/history'];
+    navigate(paths[newValue]);
   };
 
   return (

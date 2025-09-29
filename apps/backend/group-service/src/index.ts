@@ -17,6 +17,7 @@ app.use(requestLoggerWithMetrics);
 app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id', 'x-session-id']
 }));
+app.use(express.json()); // Add body parser middleware
 
 const MONGODB_URI = process.env.MONGODB_URI || '';
 mongoose.connect(MONGODB_URI).then(() => logger.info('MongoDB connected')).catch(err => logger.error('MongoDB connection error', { error: err.message }));
