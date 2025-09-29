@@ -15,6 +15,7 @@ export const albumService = {
     search?: string;
     isPublic?: boolean;
     groupId?: string;
+    includeCover?: boolean;
   }): Promise<PaginatedResponse<Album>> {
     const response = await albumApi.get('/albums', { params });
     return response.data;

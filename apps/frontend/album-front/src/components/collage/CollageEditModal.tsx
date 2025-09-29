@@ -34,7 +34,8 @@ export const CollageEditModal: React.FC<CollageEditModalProps> = ({ open, onClos
   const [error, setError] = useState<string | null>(null);
   const tenantGroupId = useTenantFilter(); // Get groupId from tenant context
   const { albums, loading: albumsLoading, fetchAlbums } = useAlbums({
-    groupId: tenantGroupId // Pass groupId only if present (group context), undefined for personal
+    groupId: tenantGroupId, // Pass groupId only if present (group context), undefined for personal
+    includeCover: false
   });
 
   React.useEffect(() => {

@@ -1,7 +1,12 @@
 import { Request, Response } from 'express';
 import Album from '../models/Album';
 import Photo from '../models/Photo';
-import { deleteFile, getSignedUrl } from '../services/fileService';
+import {
+  deleteFile,
+  getSignedUrl,
+  getSignedUrlsBatch,
+  SignedUrlData
+} from '../services/fileService';
 import { canAccessResource } from '../utils/permissionUtils';
 import mongoose from 'mongoose';
 
@@ -47,7 +52,7 @@ export const createAlbum = async (req: Request, res: Response): Promise<void> =>
 // Get all albums
 export const getAlbums = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { page = 1, limit = 10, search, isPublic, groupId } = req.query;
+  const { page = 1, limit = 10, search, isPublic, groupId, includeCover } = req.query;
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
 
@@ -119,38 +124,58 @@ export const getAlbums = async (req: Request, res: Response): Promise<void> => {
 
     const total = totalResult[0]?.total || 0;
 
-    // Process cover photos in parallel (batch the signed URL requests)
-    const coverPhotoPromises = (albumsResult as any[])
-      .filter((album: any) => album.coverPhotoId)
-      .map(async (album: any) => {
+    const shouldIncludeCover = includeCover === undefined || includeCover === 'true' || includeCover === '1';
+
+    let albumsWithCovers = albumsResult as any[];
+
+    if (shouldIncludeCover) {
+      const coverPhotoIds = Array.from(
+        new Set(
+          (albumsResult as any[])
+            .filter((album: any) => album.coverPhotoId)
+            .map((album: any) => album.coverPhotoId.toString())
+        )
+      );
+
+      let coverPhotoMap = new Map<string, any>();
+      if (coverPhotoIds.length > 0) {
+        const coverPhotoDocs = await Photo.find({ _id: { $in: coverPhotoIds } });
+        const fileIds = coverPhotoDocs.map((photo) => photo.fileId);
+        let signedUrlMap: Record<string, SignedUrlData> = {};
+
         try {
-          const coverPhotoDoc = await Photo.findById(album.coverPhotoId);
-          if (coverPhotoDoc) {
-            const fileUrl = await getSignedUrl(coverPhotoDoc.fileId);
-            return {
-              albumId: album._id,
-              coverPhoto: {
-                ...coverPhotoDoc.toObject(),
-                signedUrl: fileUrl
-              }
-            };
-          }
+          signedUrlMap = await getSignedUrlsBatch(fileIds);
         } catch (error) {
-          console.error(`Failed to get cover photo for album ${album._id}:`, error);
+          console.error('Failed to fetch batch signed URLs for cover photos:', error);
         }
-        return null;
-      });
 
-    const coverPhotos = await Promise.all(coverPhotoPromises);
-    const coverPhotoMap = new Map(
-      coverPhotos.filter(Boolean).map((cp: any) => [cp!.albumId.toString(), cp!.coverPhoto])
-    );
+        coverPhotoMap = new Map(
+          coverPhotoDocs.map((photo) => {
+            const signedUrlData = signedUrlMap[photo.fileId];
+            return [
+              photo.id,
+              {
+                ...photo.toObject(),
+                signedUrl: signedUrlData?.signedUrl || null,
+                signedUrlExpiresAt: signedUrlData?.expiresAt || null,
+                signedUrlExpiresInMinutes: signedUrlData?.expiresInMinutes || null
+              }
+            ];
+          })
+        );
+      }
 
-    // Combine albums with cover photos
-    const albumsWithCovers = (albumsResult as any[]).map((album: any) => ({
-      ...album,
-      coverPhoto: coverPhotoMap.get(album._id.toString()) || null
-    }));
+      // Combine albums with cover photos
+      albumsWithCovers = (albumsResult as any[]).map((album: any) => ({
+        ...album,
+        coverPhoto: album.coverPhotoId ? coverPhotoMap.get(album.coverPhotoId.toString()) || null : null
+      }));
+    } else {
+      albumsWithCovers = (albumsResult as any[]).map((album: any) => ({
+        ...album,
+        coverPhoto: null
+      }));
+    }
 
     res.json({
       success: true,
@@ -265,11 +290,15 @@ export const getAlbumById = async (req: Request, res: Response): Promise<void> =
     let coverPhoto = null;
     if (albumData.coverPhotoDoc) {
       try {
-        const fileUrl = await getSignedUrl(albumData.coverPhotoDoc.fileId);
-        coverPhoto = {
-          ...albumData.coverPhotoDoc,
-          signedUrl: fileUrl
-        };
+        const signedUrlData = await getSignedUrl(albumData.coverPhotoDoc.fileId);
+        if (signedUrlData) {
+          coverPhoto = {
+            ...albumData.coverPhotoDoc,
+            signedUrl: signedUrlData.signedUrl,
+            signedUrlExpiresAt: signedUrlData.expiresAt,
+            signedUrlExpiresInMinutes: signedUrlData.expiresInMinutes
+          };
+        }
       } catch (error) {
         console.error(`Failed to get cover photo for album ${id}:`, error);
       }

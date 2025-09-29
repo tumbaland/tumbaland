@@ -27,6 +27,8 @@ export interface Photo {
   height?: number;
   tags: string[];
   signedUrl?: string;
+  signedUrlExpiresAt?: string;
+  signedUrlExpiresInMinutes?: number;
   metadata: {
     dateTaken?: string;
     location?: {

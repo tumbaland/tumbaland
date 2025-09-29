@@ -100,8 +100,16 @@ export const getCollageById = async (req: Request, res: Response): Promise<void>
     const photosWithUrls = await Promise.all(
       allPhotos.map(async (photo: any) => {
         try {
-          const signedUrl = await getSignedUrl(photo.fileId);
-          return { ...photo, signedUrl };
+          const signedUrlData = await getSignedUrl(photo.fileId);
+          if (!signedUrlData) {
+            return photo;
+          }
+          return {
+            ...photo,
+            signedUrl: signedUrlData.signedUrl,
+            signedUrlExpiresAt: signedUrlData.expiresAt,
+            signedUrlExpiresInMinutes: signedUrlData.expiresInMinutes
+          };
         } catch (e) {
           return photo;
         }

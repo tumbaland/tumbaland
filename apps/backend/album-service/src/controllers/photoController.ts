@@ -1,7 +1,14 @@
 import { Request, Response } from 'express';
 import Photo from '../models/Photo';
 import Album from '../models/Album';
-import { deleteFile, getFileUrl, getFileUploadSignedUrl, getSignedUrl } from '../services/fileService';
+import {
+  deleteFile,
+  getFileUrl,
+  getFileUploadSignedUrl,
+  getSignedUrl,
+  getSignedUrlsBatch,
+  SignedUrlData
+} from '../services/fileService';
 
 // Create a new photo record (after file upload)
 export const createPhoto = async (req: Request, res: Response): Promise<void> => {
@@ -116,21 +123,32 @@ export const getPhotosByAlbum = async (req: Request, res: Response): Promise<voi
     }
 
     const photos = await photosQuery;
-    const total = await Photo.countDocuments(query); // Get signed URLs for photos
-    const photosWithUrls = await Promise.all(
-      photos.map(async (photo) => {
-        try {
-          const signedUrl = await getSignedUrl(photo.fileId);
-          return {
-            ...photo.toObject(),
-            signedUrl
-          };
-        } catch (error) {
-          console.error(`Failed to get signed URL for photo ${photo._id}:`, error);
-          return photo.toObject();
-        }
-      })
-    );
+    const total = await Photo.countDocuments(query);
+
+    const fileIds = photos.map((photo) => photo.fileId);
+    let signedUrlMap: Record<string, SignedUrlData> = {};
+
+    try {
+      signedUrlMap = await getSignedUrlsBatch(fileIds);
+    } catch (error) {
+      console.error('Failed to fetch batch signed URLs for album photos:', error);
+    }
+
+    const photosWithUrls = photos.map((photo) => {
+      const signedUrlData = signedUrlMap[photo.fileId];
+      const photoObj = photo.toObject();
+
+      if (!signedUrlData) {
+        return photoObj;
+      }
+
+      return {
+        ...photoObj,
+        signedUrl: signedUrlData.signedUrl,
+        signedUrlExpiresAt: signedUrlData.expiresAt,
+        signedUrlExpiresInMinutes: signedUrlData.expiresInMinutes
+      };
+    });
     res.json({
       success: true,
       data: {
@@ -167,12 +185,18 @@ export const getPhotoById = async (req: Request, res: Response): Promise<void> =
       return;
     }
     try {
-      const signedUrl = await getSignedUrl(photo.fileId);
+      const signedUrlData = await getSignedUrl(photo.fileId);
       res.json({
         success: true,
         data: {
           ...photo.toObject(),
-          signedUrl
+          ...(signedUrlData
+            ? {
+                signedUrl: signedUrlData.signedUrl,
+                signedUrlExpiresAt: signedUrlData.expiresAt,
+                signedUrlExpiresInMinutes: signedUrlData.expiresInMinutes
+              }
+            : {})
         }
       });
     } catch (error) {

@@ -2,7 +2,14 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Album } from '../types';
 import { albumService } from '../services/albumService';
 
-export const useAlbums = (params?: { page?: number; limit?: number; search?: string; isPublic?: boolean; groupId?: string }) => {
+export const useAlbums = (params?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  isPublic?: boolean;
+  groupId?: string;
+  includeCover?: boolean;
+}) => {
   const [albums, setAlbums] = useState<Album[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -14,7 +21,10 @@ export const useAlbums = (params?: { page?: number; limit?: number; search?: str
   });
 
   // Memoize params to prevent unnecessary re-renders
-  const memoizedParams = useMemo(() => params, [params?.page, params?.limit, params?.search, params?.isPublic, params?.groupId]);
+  const memoizedParams = useMemo(
+    () => params,
+    [params?.page, params?.limit, params?.search, params?.isPublic, params?.groupId, params?.includeCover]
+  );
 
   const fetchAlbums = useCallback(async () => {
     try {

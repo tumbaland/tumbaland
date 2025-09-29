@@ -30,20 +30,105 @@ export const getFileMetadata = async (fileId: string): Promise<FileMetadata> => 
   }
 };
 
-export const getSignedUrl = async (fileId: string): Promise<string> => {
+export interface SignedUrlData {
+  signedUrl: string;
+  expiresAt: string;
+  expiresInMinutes: number;
+}
+
+export const getSignedUrl = async (fileId: string): Promise<SignedUrlData | null> => {
   try {
     const FILE_API_URL = process.env.FILE_API_URL;
     const response = await fetch(`${FILE_API_URL}/api/signed-url/${fileId}`);
+
+    if (response.status === 404) {
+      return null;
+    }
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
     const data = await response.json();
-    return data.data.signedUrl;
+    return {
+      signedUrl: data.data.signedUrl,
+      expiresAt: data.data.expiresAt,
+      expiresInMinutes: data.data.expiresInMinutes
+    };
   } catch (error) {
     console.error('Error getting signed URL:', error);
     throw new Error('Failed to get signed URL');
+  }
+};
+
+export const getSignedUrlsBatch = async (
+  fileIds: string[],
+  expiresInMinutes: number = 60
+): Promise<Record<string, SignedUrlData>> => {
+  const uniqueFileIds = Array.from(new Set(fileIds.filter(Boolean)));
+  if (uniqueFileIds.length === 0) {
+    return {};
+  }
+
+  const fallbackFetch = async (): Promise<Record<string, SignedUrlData>> => {
+    const result: Record<string, SignedUrlData> = {};
+    await Promise.all(
+      uniqueFileIds.map(async (fileId) => {
+        try {
+          const data = await getSignedUrl(fileId);
+          if (data) {
+            result[fileId] = data;
+          }
+        } catch (error) {
+          console.warn(`Fallback signed URL fetch failed for file ${fileId}:`, error);
+        }
+      })
+    );
+    return result;
+  };
+
+  try {
+    const FILE_API_URL = process.env.FILE_API_URL;
+    const response = await fetch(`${FILE_API_URL}/api/signed-url/batch`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        fileIds: uniqueFileIds,
+        expiresInMinutes
+      })
+    });
+
+    if (response.status === 404) {
+      console.warn('Batch signed URL endpoint not found. Falling back to individual requests.');
+      return fallbackFetch();
+    }
+
+    if (!response.ok) {
+      console.warn(
+        `Batch signed URL request failed with status ${response.status}. Falling back to individual requests.`
+      );
+      return fallbackFetch();
+    }
+
+    const data = await response.json();
+    const result: Record<string, SignedUrlData> = {};
+
+    (data.data || []).forEach((entry: any) => {
+      if (entry?.fileId && entry?.signedUrl) {
+        result[entry.fileId] = {
+          signedUrl: entry.signedUrl,
+          expiresAt: entry.expiresAt,
+          expiresInMinutes: entry.expiresInMinutes
+        };
+      }
+    });
+
+    return result;
+  } catch (error) {
+    console.warn('Error getting batch signed URLs, falling back to individual requests:', error);
+    return fallbackFetch();
   }
 };
 

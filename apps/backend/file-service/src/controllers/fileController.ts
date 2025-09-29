@@ -13,7 +13,8 @@ import {
   UploadSignedUrlResponse,
   FileMetadataResponse,
   ListFilesResponseWrapper,
-  DeleteFileResponse
+  DeleteFileResponse,
+  BatchSignedUrlsResponse
 } from '../types';
 
 // Validation schemas
@@ -204,14 +205,17 @@ export const getSignedUrl = async (req: Request, res: Response, next: NextFuncti
       return;
     }
 
-    const signedUrl = await fileService.getSignedUrl(req.params.fileId, expirationMinutes);
+    const { signedUrl, expiresAt, expiresInMinutes } = await fileService.getSignedUrl(
+      req.params.fileId,
+      expirationMinutes
+    );
     res.status(200).json({
       success: true,
       data: {
         signedUrl,
         fileId: req.params.fileId,
-        expiresInMinutes: expirationMinutes,
-        expiresAt: new Date(Date.now() + expirationMinutes * 60 * 1000).toISOString()
+        expiresInMinutes,
+        expiresAt
       }
     } as SignedUrlResponse);
   } catch (error) {
@@ -224,6 +228,47 @@ export const getSignedUrl = async (req: Request, res: Response, next: NextFuncti
       } as ApiError);
       return;
     }
+    next(error);
+  }
+};
+
+export const getSignedUrlsBatch = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const schema = Joi.object({
+      fileIds: Joi.array().items(Joi.string().required()).min(1).required(),
+      expiresInMinutes: Joi.number().integer().min(1).max(1440).optional()
+    });
+
+    const { error } = schema.validate(req.body);
+    if (error) {
+      res.status(400).json({
+        error: {
+          message: error.details[0].message,
+          status: 400
+        }
+      } as ApiError);
+      return;
+    }
+
+    const { fileIds, expiresInMinutes = 60 } = req.body;
+    const { urls, errors } = await fileService.getSignedUrlsBatch(fileIds, expiresInMinutes);
+
+    const responsePayload: BatchSignedUrlsResponse = {
+      success: true,
+      data: Object.entries(urls).map(([fileId, value]) => ({
+        fileId,
+        signedUrl: value.signedUrl,
+        expiresAt: value.expiresAt,
+        expiresInMinutes: value.expiresInMinutes
+      }))
+    };
+
+    if (errors.length > 0) {
+      responsePayload.errors = errors;
+    }
+
+    res.status(200).json(responsePayload);
+  } catch (error) {
     next(error);
   }
 };

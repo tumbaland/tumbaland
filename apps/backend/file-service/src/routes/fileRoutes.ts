@@ -30,6 +30,7 @@ router.options('/serve/:fileId', (req, res) => {
 
 // Get signed URL for file access
 router.get('/signed-url/:fileId', fileController.getSignedUrl as any);
+router.post('/signed-url/batch', fileController.getSignedUrlsBatch as any);
 
 // Download file
 router.get('/download/:fileId', fileController.downloadFile as any);

@@ -161,7 +161,10 @@ export const listFiles = async (prefix: string = '', limit: number = 100): Promi
 };
 
 // Generate signed URL for secure file access (using our custom implementation)
-export const getSignedUrl = async (fileId: string, expirationMinutes: number = 60): Promise<string> => {
+export const getSignedUrl = async (
+  fileId: string,
+  expirationMinutes: number = 60
+): Promise<{ signedUrl: string; expiresInMinutes: number; expiresAt: string }> => {
   try {
     // Check if file exists by querying album service
     const albumMetadata = await getMetadataFromAlbumService(fileId);
@@ -169,10 +172,50 @@ export const getSignedUrl = async (fileId: string, expirationMinutes: number = 6
       throw new Error('File not found');
     }
 
-    return signedUrlService.generateFileAccessUrl(fileId, 'read', expirationMinutes);
+    const signedUrl = signedUrlService.generateFileAccessUrl(fileId, 'read', expirationMinutes);
+    const expiresAt = new Date(Date.now() + expirationMinutes * 60 * 1000).toISOString();
+
+    return {
+      signedUrl,
+      expiresInMinutes: expirationMinutes,
+      expiresAt
+    };
   } catch (error) {
     throw new Error(`Failed to generate signed URL: ${(error as Error).message}`);
   }
+};
+
+export const getSignedUrlsBatch = async (
+  fileIds: string[],
+  expirationMinutes: number = 60
+): Promise<{
+  urls: Record<string, { signedUrl: string; expiresAt: string; expiresInMinutes: number }>;
+  errors: Array<{ fileId: string; message: string }>;
+}> => {
+  const uniqueFileIds = Array.from(new Set(fileIds.filter(Boolean)));
+  const urls: Record<string, { signedUrl: string; expiresAt: string; expiresInMinutes: number }> = {};
+  const errors: Array<{ fileId: string; message: string }> = [];
+
+  if (uniqueFileIds.length === 0) {
+    return { urls, errors };
+  }
+
+  await Promise.all(
+    uniqueFileIds.map(async (fileId) => {
+      try {
+        const { signedUrl, expiresAt, expiresInMinutes } = await getSignedUrl(fileId, expirationMinutes);
+        urls[fileId] = {
+          signedUrl,
+          expiresAt,
+          expiresInMinutes
+        };
+      } catch (error) {
+        errors.push({ fileId, message: (error as Error).message });
+      }
+    })
+  );
+
+  return { urls, errors };
 };
 
 // Generate upload signed URL for direct upload from client (using our custom implementation)

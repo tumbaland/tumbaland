@@ -71,6 +71,27 @@ export interface SignedUrlResponse {
   };
 }
 
+export interface BatchSignedUrlEntry {
+  fileId: string;
+  signedUrl: string;
+  expiresInMinutes: number;
+  expiresAt: string;
+}
+
+export interface BatchSignedUrlsResponse {
+  success: true;
+  data: BatchSignedUrlEntry[];
+  errors?: Array<{
+    fileId: string;
+    message: string;
+  }>;
+}
+
+export interface BatchSignedUrlsRequest {
+  fileIds: string[];
+  expiresInMinutes?: number;
+}
+
 export interface UploadSignedUrlResponse {
   success: true;
   data: {
