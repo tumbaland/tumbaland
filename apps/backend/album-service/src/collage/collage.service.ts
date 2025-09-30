@@ -84,7 +84,7 @@ export const getCollageList = async (
   
   // Add album filter if provided
   if (albumId) {
-    filter.albumIds = albumId; // Updated: filter by albumIds array containing the albumId
+    filter.albumIds = { $in: [albumId] };
   }
 
   // Apply permission filtering
