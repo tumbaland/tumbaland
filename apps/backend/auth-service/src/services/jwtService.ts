@@ -9,6 +9,8 @@ export interface UserPayload {
   picture?: string;
   roles?: string[];
   isApproved?: boolean;
+  groups?: string[];
+  tokenVersion?: number;
 }
 
 export const generateJWT = (user: UserPayload): string => {

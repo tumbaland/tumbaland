@@ -38,8 +38,18 @@ export const authService = {
     syncJwtToken();
   },
 
-  // Check authentication status
+  // Check authentication status (cached to prevent multiple calls)
+  _authCache: null as AuthResponse | null,
+  _authCacheTime: 0,
+  _authCacheTimeout: 5 * 60 * 1000, // 5 minutes
+
   async checkAuth(): Promise<AuthResponse> {
+    // Return cached result if still valid
+    const now = Date.now();
+    if (this._authCache && (now - this._authCacheTime) < this._authCacheTimeout) {
+      return this._authCache;
+    }
+
     try {
       const config = getGlobalConfig();
       const response = await fetch(`${config.AUTH_SERVICE_URL}/auth/verify`, {
@@ -56,14 +66,55 @@ export const authService = {
       }
 
       const data = await response.json();
-      return {
+      const result: AuthResponse = {
         authenticated: data.success && data.authenticated,
         user: data.user || null
       };
+
+      // Cache the result
+      this._authCache = result;
+      this._authCacheTime = now;
+
+      return result;
     } catch (error) {
       console.error('Auth check failed:', error);
-      return { authenticated: false, user: null };
+      const result: AuthResponse = { authenticated: false, user: null };
+      
+      // Cache failed result for shorter time
+      this._authCache = result;
+      this._authCacheTime = now;
+      
+      return result;
     }
+  },
+
+  // Get current user from JWT token (no API call needed)
+  getCurrentUserFromToken(): User | null {
+    try {
+      const token = this.getToken();
+      if (!token) return null;
+      
+      // Decode JWT to get user data
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (payload && payload.email) {
+        return {
+          id: payload.id,
+          email: payload.email,
+          name: payload.name,
+          picture: payload.picture
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to decode JWT token:', error);
+      return null;
+    }
+  },
+
+  // Clear auth cache (useful after logout or token changes)
+  clearAuthCache(): void {
+    this._authCache = null;
+    this._authCacheTime = 0;
   },
 
   // Redirect to login page
@@ -94,8 +145,9 @@ export const authService = {
 
       const data = await response.json();
       if (data.success) {
-        // Clear local storage auth token
+        // Clear local storage auth token and cache
         localStorage.removeItem('authToken');
+        this.clearAuthCache();
         window.location.reload(); // Refresh the page after logout
       }
       return data.success;
@@ -105,8 +157,15 @@ export const authService = {
     }
   },
 
-  // Get current user info
+  // Get current user info (uses JWT decoding first)
   async getCurrentUser(): Promise<User | null> {
+    // Try to get user from JWT token first
+    const tokenUser = this.getCurrentUserFromToken();
+    if (tokenUser) {
+      return tokenUser;
+    }
+    
+    // Fallback to API call
     const authResult = await this.checkAuth();
     return authResult.user;
   },

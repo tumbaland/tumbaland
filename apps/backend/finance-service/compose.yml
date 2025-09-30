@@ -14,7 +14,6 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY}
       - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN}
-      - GROUP_API_URL=${GROUP_API_URL}
     init: true
     networks:
       - tumbanet

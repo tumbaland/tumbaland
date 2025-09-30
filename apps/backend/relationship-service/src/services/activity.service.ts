@@ -254,12 +254,16 @@ export const getRecentActivities = async (limit: number = 10): Promise<IActivity
 };
 
 // Get unique activity types
-export const getActivityTypes = async (userId?: string, groupId?: string): Promise<any[]> => {
+export const getActivityTypes = async (userId?: string, groupId?: string, userGroupIds: string[] = []): Promise<any[]> => {
   try {
     const ActivityType = (await import('../models/ActivityType')).ActivityType;
     const query: any = { isActive: true };
 
     if (groupId) {
+      // Check if user has access to the specific group
+      if (!userGroupIds.includes(groupId)) {
+        throw new Error('ACCESS_DENIED');
+      }
       query.$or = [
         { groupId },
         { userId, groupId: { $exists: false } }

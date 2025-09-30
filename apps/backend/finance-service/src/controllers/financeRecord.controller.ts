@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import * as financeRecordService from '../services/financeRecord.service';
-import { canAccessResource } from '../middleware/groupPermissionMiddleware';
 
 // Get all finance records
 export const getFinanceRecords = async (req: Request, res: Response) => {

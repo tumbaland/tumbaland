@@ -6,13 +6,11 @@ import {
   updateFinanceRecord
 } from '../controllers/financeRecord.controller';
 import { authenticateToken } from '../middleware/authMiddleware';
-import { attachUserGroups } from '../middleware/userGroupsMiddleware';
 
 const router = Router();
 
-// Apply authentication and group middleware to all routes
+// Apply authentication middleware (groups are now extracted from JWT)
 router.use(authenticateToken);
-router.use(attachUserGroups);
 
 router.get('/', getFinanceRecords);
 router.post('/', createFinanceRecord);

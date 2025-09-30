@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { validateToken, logout, verifyAuth } from '../controllers/authController';
+import { validateToken, logout, verifyAuth, refreshToken, invalidateUserTokens } from '../controllers/authController';
 import { getProfile, updateProfile } from '../controllers/profileController';
 import { authenticateToken, requireRole, requireApproved } from '../middleware/authMiddleware';
 import { User } from '../models/User';
@@ -8,6 +8,9 @@ const router = Router();
 
 // Login route (public) – must remain public so user can obtain token
 router.post('/validate', validateToken);
+
+// Refresh token route (protected)
+router.post('/refresh', authenticateToken, requireApproved, refreshToken);
 
 // Protected logout
 router.post('/logout', authenticateToken, requireApproved, logout);
@@ -18,6 +21,9 @@ router.put('/profile', authenticateToken, requireApproved, updateProfile);
 
 // Verify route now fully protected
 router.get('/verify', authenticateToken, requireApproved, verifyAuth);
+
+// Internal service endpoints for token management
+router.post('/internal/invalidate-tokens', invalidateUserTokens);
 
 // Admin utilities (manual authorization): mark user approved
 router.post('/admin/approve', authenticateToken, requireApproved, requireRole('admin'), (req: Request, res: Response): void => {

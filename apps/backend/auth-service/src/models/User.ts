@@ -8,6 +8,7 @@ export interface IUser extends Document {
   roles: string[];
   isApproved: boolean; // automatic approval for new users
   lastLoginAt?: Date;
+  tokenVersion: number; // for token invalidation
   createdAt: Date;
   updatedAt: Date;
 }
@@ -20,7 +21,8 @@ const UserSchema = new Schema<IUser>(
     signupMethod: { type: String, required: true },
     roles: { type: [String], default: [] },
     isApproved: { type: Boolean, default: true },
-    lastLoginAt: { type: Date }
+    lastLoginAt: { type: Date },
+    tokenVersion: { type: Number, default: 1 }
   },
   { timestamps: true }
 );

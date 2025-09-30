@@ -23,6 +23,44 @@ function syncJwtToken(): void {
 }
 
 export const authService = {
+  // Cache for auth responses
+  _authCache: {
+    data: null as AuthResponse | null,
+    timestamp: 0
+  },
+
+  // Cache TTL in milliseconds (5 minutes)
+  CACHE_TTL: 5 * 60 * 1000,
+
+  // Decode JWT token and extract user data
+  getCurrentUserFromToken(): User | null {
+    try {
+      const token = this.getToken();
+      if (!token) return null;
+
+      // Decode JWT payload (base64url decode)
+      const payload = token.split('.')[1];
+      if (!payload) return null;
+
+      const decodedPayload = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+
+      // Check if token is expired
+      if (decodedPayload.exp && Date.now() >= decodedPayload.exp * 1000) {
+        return null;
+      }
+
+      // Extract user data from JWT payload
+      return {
+        id: decodedPayload.sub || decodedPayload.id,
+        email: decodedPayload.email,
+        name: decodedPayload.name || decodedPayload.preferred_username,
+        picture: decodedPayload.picture
+      };
+    } catch (error) {
+      console.error('Failed to decode JWT token:', error);
+      return null;
+    }
+  },
   // Initialize auth service (sync JWT from cookie)
   init(): void {
     syncJwtToken();
@@ -38,8 +76,14 @@ export const authService = {
     syncJwtToken();
   },
 
-  // Check authentication status
+  // Check authentication status with caching
   async checkAuth(): Promise<AuthResponse> {
+    // Check cache first
+    const now = Date.now();
+    if (this._authCache.data && (now - this._authCache.timestamp) < this.CACHE_TTL) {
+      return this._authCache.data;
+    }
+
     try {
       const config = getGlobalConfig();
       const response = await fetch(`${config.AUTH_SERVICE_URL}/auth/verify`, {
@@ -56,13 +100,29 @@ export const authService = {
       }
 
       const data = await response.json();
-      return {
+      const authResponse: AuthResponse = {
         authenticated: data.success && data.authenticated,
         user: data.user || null
       };
+
+      // Cache the response
+      this._authCache = {
+        data: authResponse,
+        timestamp: now
+      };
+
+      return authResponse;
     } catch (error) {
       console.error('Auth check failed:', error);
-      return { authenticated: false, user: null };
+      const errorResponse: AuthResponse = { authenticated: false, user: null };
+
+      // Cache error responses for a shorter time (1 minute)
+      this._authCache = {
+        data: errorResponse,
+        timestamp: now
+      };
+
+      return errorResponse;
     }
   },
 
@@ -72,6 +132,14 @@ export const authService = {
     const currentUrl = returnUrl || window.location.href;
     const loginUrl = `${config.AUTH_FRONT_URL}?redirect_uri=${encodeURIComponent(currentUrl)}`;
     window.location.href = loginUrl;
+  },
+
+  // Clear auth cache
+  clearAuthCache(): void {
+    this._authCache = {
+      data: null,
+      timestamp: 0
+    };
   },
 
   // Logout user
@@ -94,8 +162,9 @@ export const authService = {
 
       const data = await response.json();
       if (data.success) {
-        // Clear local storage auth token
+        // Clear local storage auth token and cache
         localStorage.removeItem('authToken');
+        this.clearAuthCache();
         window.location.reload(); // Refresh the page after logout
       }
       return data.success;

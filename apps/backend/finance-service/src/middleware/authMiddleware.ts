@@ -6,6 +6,7 @@ export interface UserPayload {
   email: string;
   name: string;
   picture?: string;
+  groups?: string[];
 }
 
 export function authenticateToken(req: Request, res: Response, next: NextFunction): void {
@@ -19,6 +20,8 @@ export function authenticateToken(req: Request, res: Response, next: NextFunctio
     }
     const user = jwt.verify(token, JWT_SECRET) as UserPayload;
     (req as any).user = user;
+    // Extract groups from JWT and attach to request
+    (req as any).userGroups = user.groups || [];
     next();
   } catch (error) {
     res.status(401).json({ success: false, message: 'Invalid or expired token' });

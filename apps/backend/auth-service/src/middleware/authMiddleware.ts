@@ -19,24 +19,24 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
       return;
     }
     const decoded = verifyJWT(token);
+
+    // Check if token version is valid
+    const dbUser = await User.findOne({ email: decoded.email.toLowerCase() });
+    if (!dbUser) {
+      res.status(401).json({ success: false, message: 'User not found' });
+      return;
+    }
+
+    // If token version doesn't match, token is invalid
+    if (decoded.tokenVersion && decoded.tokenVersion !== dbUser.tokenVersion) {
+      res.status(401).json({ success: false, message: 'Token has been invalidated' });
+      return;
+    }
+
     req.user = decoded;
 
-    // Upsert user record
-    const dbUser = await User.findOneAndUpdate(
-      { email: decoded.email.toLowerCase() },
-      {
-        $setOnInsert: {
-          email: decoded.email.toLowerCase(),
-          signupMethod: 'google',
-          roles: []
-        },
-        $set: { lastLoginAt: new Date() }
-      },
-      { new: true, upsert: true }
-    );
-
-  // attach db user (if needed elsewhere)
-  (req as any).dbUser = dbUser;
+    // attach db user (if needed elsewhere)
+    (req as any).dbUser = dbUser;
     next();
   } catch (error) {
     console.error('Token verification failed:', (error as Error)?.message);

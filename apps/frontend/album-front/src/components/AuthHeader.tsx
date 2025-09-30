@@ -50,11 +50,21 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const { authenticated, user } = await authService.checkAuth();
-        setIsAuthenticated(authenticated);
-        setUser(user);
+        // First try to get user from JWT token to avoid API call
+        const tokenUser = authService.getCurrentUserFromToken();
+        if (tokenUser) {
+          setIsAuthenticated(true);
+          setUser(tokenUser);
+        } else {
+          // Fall back to API call if JWT parsing fails
+          const { authenticated, user } = await authService.checkAuth();
+          setIsAuthenticated(authenticated);
+          setUser(user);
+        }
       } catch (error) {
         console.error('Auth check failed:', error);
+        setIsAuthenticated(false);
+        setUser(null);
       } finally {
         setIsLoading(false);
       }

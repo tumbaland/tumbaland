@@ -3,7 +3,39 @@ import { InternalServiceRequest } from '../middleware/internalServiceAuth';
 import * as svc from '../services/groupService';
 import { GroupRole } from '../models/Group';
 
-const userEmail = (req: InternalServiceRequest) => {
+// Helper function to invalidate user tokens when membership changes
+const invalidateUserTokens = async (userEmails: string[]): Promise<void> => {
+  const authServiceUrl = process.env.AUTH_API_URL;
+  const internalToken = process.env.INTERNAL_SERVICE_TOKEN;
+
+  if (!authServiceUrl || !internalToken) {
+    console.warn('Auth service not configured for token invalidation');
+    return;
+  }
+
+  // Invalidate tokens for affected users by incrementing their token version
+  for (const email of userEmails) {
+    try {
+      const invalidateResponse = await fetch(`${authServiceUrl}/api/auth/internal/invalidate-tokens`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-internal-token': internalToken,
+          'x-service-id': 'group-service'
+        },
+        body: JSON.stringify({ email })
+      });
+
+      if (invalidateResponse.ok) {
+        console.log(`Successfully invalidated tokens for user: ${email}`);
+      } else {
+        console.error(`Failed to invalidate tokens for ${email}: ${invalidateResponse.status}`);
+      }
+    } catch (error) {
+      console.error(`Failed to invalidate tokens for ${email}:`, error);
+    }
+  }
+};const userEmail = (req: InternalServiceRequest) => {
   // For internal service requests, extract email from request body or params
   if (req.isInternalService) {
     return req.body?.userEmail || req.query?.userEmail || req.params?.userEmail;
@@ -141,6 +173,10 @@ export const addMember = async (req: Request, res: Response) => {
     const { email, role } = req.body as { email: string; role?: GroupRole };
     if (!email) return res.status(400).json({ success: false, message: 'email required' });
     const group = await svc.addMember(req.params.id, userEmail(req), email, role);
+    
+    // Invalidate tokens for the added user
+    await invalidateUserTokens([email]);
+    
     res.status(201).json({ success: true, data: group });
   } catch (e: any) {
     if (e.message === 'NOT_FOUND') return res.status(404).json({ success: false, message: 'not found' });
@@ -158,6 +194,10 @@ export const updateRole = async (req: Request, res: Response) => {
       req.params.memberEmail,
       (req.body as any).role
     );
+    
+    // Invalidate tokens for the user whose role changed
+    await invalidateUserTokens([req.params.memberEmail]);
+    
     res.json({ success: true, data: group });
   } catch (e: any) {
     if (e.message === 'NOT_FOUND') return res.status(404).json({ success: false, message: 'not found' });
@@ -170,6 +210,10 @@ export const updateRole = async (req: Request, res: Response) => {
 export const removeMember = async (req: Request, res: Response) => {
   try {
     const group = await svc.removeMember(req.params.id, userEmail(req), req.params.memberEmail);
+    
+    // Invalidate tokens for the removed user
+    await invalidateUserTokens([req.params.memberEmail]);
+    
     res.json({ success: true, data: group });
   } catch (e: any) {
     if (e.message === 'NOT_FOUND') return res.status(404).json({ success: false, message: 'not found' });

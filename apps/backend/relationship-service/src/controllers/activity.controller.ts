@@ -74,7 +74,6 @@ export const getActivities = async (req: Request, res: Response): Promise<void> 
 
     // Debug logging
     console.log('🔍 Debug getActivities:');
-    console.log('  User from JWT:', JSON.stringify(user, null, 2));
     console.log('  User ID:', user.id);
     console.log('  User Groups:', userGroups);
 
@@ -283,7 +282,7 @@ export const getActivityTypes = async (req: Request, res: Response): Promise<voi
     const userGroups = (req as any).userGroups || [];
     const { groupId } = req.query;
 
-    const types = await ActivityService.getActivityTypes(user.id, groupId as string);
+    const types = await ActivityService.getActivityTypes(user.id, groupId as string, userGroups);
 
     res.json({
       success: true,
@@ -303,8 +302,8 @@ export const getRecentActivitiesSummary = async (req: Request, res: Response): P
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
 
-    // Get available activity types
-    const activityTypes = await ActivityService.getActivityTypes(user.id, groupId as string);
+    // Get available activity types (service layer will handle permission checks)
+    const activityTypes = await ActivityService.getActivityTypes(user.id, groupId as string, userGroups);
     const categories = activityTypes.map((type: any) => type.slug);
 
     const timelines = [

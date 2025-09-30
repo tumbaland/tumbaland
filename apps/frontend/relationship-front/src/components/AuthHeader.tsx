@@ -25,12 +25,15 @@ import { useConfig } from '../hooks/useConfig';
 import { NotificationsMenu } from '@tumbaland/components';
 import { LoginButton } from '@tumbaland/components';
 
-interface AuthHeaderProps {}
+interface AuthHeaderProps {
+  user?: User | null;
+  isAuthenticated?: boolean;
+}
 
-const AuthHeader: React.FC<AuthHeaderProps> = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+const AuthHeader: React.FC<AuthHeaderProps> = ({ user: propUser, isAuthenticated: propIsAuthenticated }) => {
+  const [user, setUser] = useState<User | null>(propUser || null);
+  const [isAuthenticated, setIsAuthenticated] = useState(propIsAuthenticated || false);
+  const [isLoading, setIsLoading] = useState(!propUser && !propIsAuthenticated);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationAnchorEl, setNotificationAnchorEl] = useState<null | HTMLElement>(null);
   const config = useConfig();
@@ -47,7 +50,25 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
     isAuthenticated && config.GROUP_API_URL ? user?.email : undefined
   );
 
+  // Get user data from JWT token instead of API call
   useEffect(() => {
+    if (propUser !== undefined && propIsAuthenticated !== undefined) {
+      setUser(propUser);
+      setIsAuthenticated(propIsAuthenticated);
+      setIsLoading(false);
+      return;
+    }
+
+    // Try to get user from JWT token first
+    const tokenUser = authService.getCurrentUserFromToken();
+    if (tokenUser) {
+      setUser(tokenUser);
+      setIsAuthenticated(true);
+      setIsLoading(false);
+      return;
+    }
+
+    // Fallback to API call if token decode fails
     const checkAuth = async () => {
       try {
         const { authenticated, user } = await authService.checkAuth();
@@ -61,7 +82,7 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
     };
 
     checkAuth();
-  }, []);
+  }, [propUser, propIsAuthenticated]);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);

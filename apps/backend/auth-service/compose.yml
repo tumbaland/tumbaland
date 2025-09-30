@@ -15,6 +15,8 @@ services:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - COOKIE_DOMAIN=${COOKIE_DOMAIN}
       - CORS_ORIGIN=${CORS_ORIGIN}
+      - GROUP_API_URL=${GROUP_API_URL}
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN}
     init: true
     networks:
       - tumbanet
