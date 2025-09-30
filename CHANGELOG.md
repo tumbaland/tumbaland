@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.200](https://github.com/toomastahves/tumbaland/compare/v0.0.199...v0.0.200) (2025-09-30)
+
+
+### Features
+
+* use react query in finance front ([0da760e](https://github.com/toomastahves/tumbaland/commit/0da760ec40f4440c4a8ab22fc3d5116c6a0a02b0))
+
 ### [0.0.199](https://github.com/toomastahves/tumbaland/compare/v0.0.198...v0.0.199) (2025-09-30)
 
 
