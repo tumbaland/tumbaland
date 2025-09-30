@@ -1,18 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Card, CardContent, Typography, Chip, CircularProgress, Alert } from '@mui/material';
+import React, { useMemo } from 'react';
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Chip,
+  CircularProgress,
+  Alert
+} from '@mui/material';
 import {
   TrendingUp,
   TrendingDown,
-  AccountBalance,
-  Savings,
-  PieChart,
-  MonetizationOn,
-  Diamond
+  AccountBalance
 } from '@mui/icons-material';
-import { getFinanceRecords } from '../services/financeRecordService';
 import { useTenantFilter } from '../components/tenant';
-import PortfolioChart from '../components/PortfolioChart';
+import { useFinanceRecords } from '../hooks/useFinance';
 import AssetDonutChart from '../components/AssetDonutChart';
+import AssetPerformanceChart from '../components/AssetPerformanceChart';
 
 interface FinanceRecord {
   _id: string;
@@ -27,60 +31,30 @@ interface FinanceRecord {
   gold: number;
 }
 
-interface PortfolioSummary {
-  totalValue: number;
-  totalGains: number;
-  gainsPercentage: number;
-  breakdown: {
-    secondPillar: number;
-    thirdPillar: number;
-    etfPortfolio: number;
-    cash: number;
-    gold: number;
-  };
-}
-
 const Dashboard: React.FC = () => {
-  const [records, setRecords] = useState<FinanceRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [portfolioSummary, setPortfolioSummary] = useState<PortfolioSummary | null>(null);
   const tenantGroupId = useTenantFilter(); // Get groupId from tenant context
 
-  useEffect(() => {
-    fetchRecords();
-  }, [tenantGroupId]); // Re-fetch when tenant context changes
+  // React Query hook for finance records
+  const { data: records = [], isLoading, error } = useFinanceRecords(tenantGroupId);
 
-  const fetchRecords = async () => {
-    try {
-      setLoading(true);
-      const response = await getFinanceRecords({ groupId: tenantGroupId });
-      const sortedRecords = response.sort(
-        (a: FinanceRecord, b: FinanceRecord) => new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
-      setRecords(sortedRecords);
+  // Sort records for the chart (most recent first)
+  const sortedRecords = useMemo(() => {
+    return [...records].sort(
+      (a: FinanceRecord, b: FinanceRecord) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  }, [records]);
 
-      if (sortedRecords.length > 0) {
-        calculatePortfolioSummary(sortedRecords);
-      }
-    } catch (err) {
-      setError('Failed to fetch finance records');
-      console.error('Error fetching records:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Calculate portfolio summary using useMemo for performance
+  const portfolioSummary = useMemo(() => {
+    if (!sortedRecords || sortedRecords.length === 0) return null;
 
-  const calculatePortfolioSummary = (records: FinanceRecord[]) => {
-    if (records.length === 0) return;
-
-    const latest = records[0];
+    const latest = sortedRecords[0];
     const totalValue = latest.secondPillar + latest.thirdPillar + latest.etfPortfolio + latest.cash + latest.gold;
     const totalGains = latest.secondPillarGain + latest.thirdPillarGain + latest.etfGain;
     const totalInvested = totalValue - totalGains;
     const gainsPercentage = totalInvested > 0 ? (totalGains / totalInvested) * 100 : 0;
 
-    setPortfolioSummary({
+    return {
       totalValue,
       totalGains,
       gainsPercentage,
@@ -91,8 +65,8 @@ const Dashboard: React.FC = () => {
         cash: latest.cash,
         gold: latest.gold
       }
-    });
-  };
+    };
+  }, [sortedRecords]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('et-EE', {
@@ -103,11 +77,7 @@ const Dashboard: React.FC = () => {
     }).format(amount);
   };
 
-  const getPercentageOfTotal = (value: number, total: number) => {
-    return total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
         <CircularProgress />
@@ -118,246 +88,140 @@ const Dashboard: React.FC = () => {
   if (error) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="error">{error}</Alert>
+        <Alert severity="error">{error.message || 'Failed to fetch finance records'}</Alert>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom sx={{ mb: 4, fontWeight: 'bold' }}>
-        Finance Dashboard
-      </Typography>
+    <Box sx={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+      py: { xs: 2, md: 4 },
+      px: { xs: 2, md: 4 }
+    }}>
+      {/* Header */}
+      <Box sx={{ mb: { xs: 1, md: 2 } }}>
+        <Typography
+          variant="h6"
+          sx={{
+            fontWeight: 600,
+            color: '#2c3e50',
+            textAlign: { xs: 'center', md: 'left' }
+          }}
+        >
+          Finance
+        </Typography>
+      </Box>
 
       {portfolioSummary && (
         <>
-          {/* Portfolio Overview Cards */}
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
-              gap: 3,
-              mb: 4
-            }}
-          >
-            {/* Total Portfolio Value */}
+          {/* Key Metrics Card */}
+          <Box sx={{ mb: { xs: 3, md: 4 } }}>
             <Card
               sx={{
                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white'
+                color: 'white',
+                borderRadius: 3,
+                boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
+                transition: 'transform 0.2s',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: '0 12px 40px rgba(102, 126, 234, 0.4)'
+                }
               }}
             >
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <AccountBalance sx={{ mr: 2, fontSize: 32 }} />
-                  <Typography variant="h6">Total Portfolio Value</Typography>
+              <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                  <AccountBalance sx={{ mr: 2, fontSize: { xs: 32, md: 36 } }} />
+                  <Box>
+                    <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.875rem' }}>
+                      Total Portfolio
+                    </Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                      Value & Performance
+                    </Typography>
+                  </Box>
                 </Box>
-                <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                  {formatCurrency(portfolioSummary.totalValue)}
-                </Typography>
-              </CardContent>
-            </Card>
-            {/* Total Gains */}
-            <Card
-              sx={{
-                background:
-                  portfolioSummary.totalGains >= 0
-                    ? 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)'
-                    : 'linear-gradient(135deg, #fd746c 0%, #ff9068 100%)',
-                color: 'white'
-              }}
-            >
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  {portfolioSummary.totalGains >= 0 ? (
-                    <TrendingUp sx={{ mr: 2, fontSize: 32 }} />
-                  ) : (
-                    <TrendingDown sx={{ mr: 2, fontSize: 32 }} />
-                  )}
-                  <Typography variant="h6">Total Gains</Typography>
+
+                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 2, sm: 4 }, alignItems: 'center' }}>
+                  {/* Total Value */}
+                  <Box sx={{ textAlign: { xs: 'center', sm: 'left' }, flex: 1 }}>
+                    <Typography variant="h3" sx={{ fontWeight: 700, mb: 1, fontSize: { xs: '2rem', md: '2.5rem' } }}>
+                      {formatCurrency(portfolioSummary.totalValue)}
+                    </Typography>
+                  </Box>
+
+                  {/* Gains */}
+                  <Box sx={{ textAlign: { xs: 'center', sm: 'right' }, flex: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'center', sm: 'flex-end' }, mb: 1 }}>
+                      {portfolioSummary.totalGains >= 0 ? (
+                        <TrendingUp sx={{ mr: 1, fontSize: 24 }} />
+                      ) : (
+                        <TrendingDown sx={{ mr: 1, fontSize: 24 }} />
+                      )}
+                      <Typography variant="h4" sx={{ fontWeight: 700, fontSize: { xs: '1.5rem', md: '2rem' } }}>
+                        {formatCurrency(portfolioSummary.totalGains)}
+                      </Typography>
+                    </Box>
+                    <Chip
+                      label={`${portfolioSummary.gainsPercentage >= 0 ? '+' : ''}${portfolioSummary.gainsPercentage.toFixed(2)}%`}
+                      sx={{
+                        bgcolor: 'rgba(255,255,255,0.2)',
+                        color: 'white',
+                        fontWeight: 600,
+                        fontSize: '0.875rem',
+                        px: 2,
+                        py: 0.5
+                      }}
+                    />
+                  </Box>
                 </Box>
-                <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                  {formatCurrency(portfolioSummary.totalGains)}
-                </Typography>
-                <Chip
-                  label={`${portfolioSummary.gainsPercentage >= 0 ? '+' : ''}${portfolioSummary.gainsPercentage.toFixed(2)}%`}
-                  sx={{ mt: 1, bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }}
-                />
-              </CardContent>
-            </Card>
-            {/* Asset Classes */}
-            <Card
-              sx={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white'
-              }}
-            >
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <PieChart sx={{ mr: 2, fontSize: 32 }} />
-                  <Typography variant="h6">Asset Classes</Typography>
-                </Box>
-                <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                  5
-                </Typography>
-                <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                  Different asset types
-                </Typography>
               </CardContent>
             </Card>
           </Box>
 
-          {/* Portfolio Breakdown */}
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
-              gap: 3,
-              mb: 4
-            }}
-          >
-            {/* Breakdown Cards */}
-            <Card sx={{ width: '100%', maxWidth: 400 }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-                  <PieChart sx={{ mr: 1 }} />
-                  Portfolio Breakdown
-                </Typography>
-                <Box
+          {/* Charts Section */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 3, md: 4 } }}>
+            {/* Donut Chart */}
+            <Card
+              sx={{
+                borderRadius: 3,
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                background: 'rgba(255,255,255,0.95)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.2)'
+              }}
+            >
+              <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+                <Typography
+                  variant="h6"
+                  gutterBottom
                   sx={{
-                    display: 'grid',
-                    gridTemplateColumns: { xs: '1fr 1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' },
-                    gap: 1.5,
-                    mt: 2,
-                    justifyContent: 'center'
+                    fontWeight: 600,
+                    color: '#2c3e50',
+                    textAlign: 'center',
+                    mb: 2
                   }}
                 >
-                  {[
-                    {
-                      label: 'Second Pillar',
-                      value: portfolioSummary.breakdown.secondPillar,
-                      icon: <Savings />,
-                      color: '#667eea'
-                    },
-                    {
-                      label: 'Third Pillar',
-                      value: portfolioSummary.breakdown.thirdPillar,
-                      icon: <AccountBalance />,
-                      color: '#764ba2'
-                    },
-                    {
-                      label: 'ETF Portfolio',
-                      value: portfolioSummary.breakdown.etfPortfolio,
-                      icon: <TrendingUp />,
-                      color: '#11998e'
-                    },
-                    {
-                      label: 'Cash',
-                      value: portfolioSummary.breakdown.cash,
-                      icon: <MonetizationOn />,
-                      color: '#38ef7d'
-                    },
-                    {
-                      label: 'Gold',
-                      value: portfolioSummary.breakdown.gold,
-                      icon: <Diamond />,
-                      color: '#ffd700'
-                    }
-                  ].map((item) => (
-                    <Box
-                      key={item.label}
-                      sx={{
-                        width: 120,
-                        maxWidth: '100%',
-                        aspectRatio: '1 / 1',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        mb: 0,
-                        p: 1,
-                        bgcolor: 'grey.50',
-                        borderRadius: 2,
-                        boxShadow: 1,
-                        gap: 0.5
-                      }}
-                    >
-                      <Box sx={{ color: item.color, mb: 0.5 }}>{item.icon}</Box>
-                      <Typography variant="body2" sx={{ fontWeight: 'medium', fontSize: '0.95rem' }}>
-                        {item.label}
-                      </Typography>
-                      <Typography variant="subtitle1" sx={{ color: item.color, fontWeight: 'bold', fontSize: '1rem' }}>
-                        {formatCurrency(item.value)}
-                      </Typography>
-                      <Chip
-                        label={`${getPercentageOfTotal(item.value, portfolioSummary.totalValue)}%`}
-                        size="small"
-                        sx={{ bgcolor: item.color, color: 'white', fontSize: '0.75rem' }}
-                      />
-                    </Box>
-                  ))}
-                </Box>
-              </CardContent>
-            </Card>
-            {/* Donut Chart */}
-            <AssetDonutChart data={portfolioSummary.breakdown} totalValue={portfolioSummary.totalValue} />
-            {/* Performance Summary */}
-            <Card sx={{ width: '100%', maxWidth: 400 }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-                  <TrendingUp sx={{ mr: 1 }} />
-                  Performance Summary
+                  Asset Allocation
                 </Typography>
-                <Box sx={{ mt: 2 }}>
-                  {records.length > 0 &&
-                    [
-                      {
-                        label: 'Second Pillar Gain',
-                        value: records[0].secondPillarGain,
-                        color: '#667eea'
-                      },
-                      {
-                        label: 'Third Pillar Gain',
-                        value: records[0].thirdPillarGain,
-                        color: '#764ba2'
-                      },
-                      { label: 'ETF Gain', value: records[0].etfGain, color: '#11998e' }
-                    ].map((item) => (
-                      <Box
-                        key={item.label}
-                        sx={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          mb: 2,
-                          p: 2,
-                          bgcolor: 'grey.50',
-                          borderRadius: 1
-                        }}
-                      >
-                        <Typography variant="body1" sx={{ fontWeight: 'medium' }}>
-                          {item.label}
-                        </Typography>
-                        <Typography
-                          variant="h6"
-                          sx={{
-                            color: item.value >= 0 ? 'success.main' : 'error.main',
-                            fontWeight: 'bold'
-                          }}
-                        >
-                          {item.value >= 0 ? '+' : ''}
-                          {formatCurrency(item.value)}
-                        </Typography>
-                      </Box>
-                    ))}
+                <Box sx={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  minHeight: 300
+                }}>
+                  <AssetDonutChart
+                    data={portfolioSummary.breakdown}
+                    totalValue={portfolioSummary.totalValue}
+                  />
                 </Box>
               </CardContent>
             </Card>
-          </Box>
 
-          {/* Portfolio Trends Chart */}
-          <Box sx={{ mt: 4 }}>
-            <PortfolioChart records={records} />
+            {/* Asset Performance Chart */}
+            <AssetPerformanceChart records={sortedRecords} />
           </Box>
         </>
       )}

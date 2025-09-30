@@ -1,11 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import {
-  getTrackedTickers,
-  addTrackedTicker,
-  updateTrackedTicker,
-  deleteTrackedTicker,
-  TrackedTicker
-} from '../services/trackedTickerService';
 import { useTenantFilter } from '../components/tenant';
 import {
   Box,
@@ -24,11 +17,20 @@ import {
   DialogContent,
   DialogActions,
   IconButton,
-  Tooltip
+  Tooltip,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 import ConfirmationModal from '../components/ConfirmationModal';
 import TickerHistoryModal from '../components/TickerHistoryModal';
+import {
+  useTrackedTickers,
+  useCreateTrackedTicker,
+  useUpdateTrackedTicker,
+  useDeleteTrackedTicker
+} from '../hooks/useFinance';
+import { TrackedTicker } from '../services/trackedTickerService';
 
 const defaultForm: Omit<TrackedTicker, '_id' | 'dateAdded'> = {
   ticker: '',
@@ -38,32 +40,68 @@ const defaultForm: Omit<TrackedTicker, '_id' | 'dateAdded'> = {
 };
 
 const TrackedTickersPage: React.FC = () => {
-  const [tickers, setTickers] = useState<TrackedTicker[]>([]);
+  // Get the current tenant's group ID
+  const tenantGroupId = useTenantFilter();
+
+  // React Query hooks
+  const { data: tickers = [], isLoading } = useTrackedTickers(tenantGroupId);
+  const createMutation = useCreateTrackedTicker();
+  const updateMutation = useUpdateTrackedTicker();
+  const deleteMutation = useDeleteTrackedTicker();
+
+  // UI state
   const [form, setForm] = useState(defaultForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
-  
-  // Get the current tenant's group ID
-  const tenantGroupId = useTenantFilter();
 
-  const fetchTickers = async () => {
-    try {
-      const data = await getTrackedTickers(tenantGroupId);
-      setTickers(Array.isArray(data) ? data : []);
-    } catch {
-      setTickers([]);
-      setError('Failed to load tickers');
+  // Success/Error notifications
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error';
+  }>({ open: false, message: '', severity: 'success' });
+
+  // Handle mutation success/error
+  useEffect(() => {
+    if (createMutation.isSuccess) {
+      setSnackbar({ open: true, message: 'Ticker added successfully', severity: 'success' });
+      createMutation.reset();
+      handleCloseDialog();
     }
-  };
+    if (createMutation.isError) {
+      setSnackbar({ open: true, message: 'Failed to add ticker', severity: 'error' });
+      createMutation.reset();
+    }
+  }, [createMutation.isSuccess, createMutation.isError]);
 
   useEffect(() => {
-    fetchTickers();
-  }, []);
+    if (updateMutation.isSuccess) {
+      setSnackbar({ open: true, message: 'Ticker updated successfully', severity: 'success' });
+      updateMutation.reset();
+      handleCloseDialog();
+    }
+    if (updateMutation.isError) {
+      setSnackbar({ open: true, message: 'Failed to update ticker', severity: 'error' });
+      updateMutation.reset();
+    }
+  }, [updateMutation.isSuccess, updateMutation.isError]);
+
+  useEffect(() => {
+    if (deleteMutation.isSuccess) {
+      setSnackbar({ open: true, message: 'Ticker deleted successfully', severity: 'success' });
+      deleteMutation.reset();
+      setConfirmOpen(false);
+      setPendingDeleteId(null);
+    }
+    if (deleteMutation.isError) {
+      setSnackbar({ open: true, message: 'Failed to delete ticker', severity: 'error' });
+      deleteMutation.reset();
+    }
+  }, [deleteMutation.isSuccess, deleteMutation.isError]);
 
   const handleOpenDialog = (ticker?: TrackedTicker) => {
     if (ticker) {
@@ -85,7 +123,6 @@ const TrackedTickersPage: React.FC = () => {
     setDialogOpen(false);
     setForm(defaultForm);
     setEditingId(null);
-    setError(null);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,16 +132,10 @@ const TrackedTickersPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      if (editingId) {
-        await updateTrackedTicker(editingId, form);
-      } else {
-        await addTrackedTicker(form);
-      }
-      fetchTickers();
-      handleCloseDialog();
-    } catch {
-      setError('Failed to save ticker');
+    if (editingId) {
+      await updateMutation.mutateAsync({ id: editingId, data: form });
+    } else {
+      await createMutation.mutateAsync(form);
     }
   };
 
@@ -115,15 +146,7 @@ const TrackedTickersPage: React.FC = () => {
 
   const handleConfirmDelete = async () => {
     if (!pendingDeleteId) return;
-    try {
-      await deleteTrackedTicker(pendingDeleteId);
-      fetchTickers();
-    } catch {
-      setError('Failed to delete ticker');
-    } finally {
-      setConfirmOpen(false);
-      setPendingDeleteId(null);
-    }
+    await deleteMutation.mutateAsync(pendingDeleteId);
   };
 
   const handleOpenHistory = (ticker: string) => {
@@ -196,37 +219,47 @@ const TrackedTickersPage: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {tickers.map((t, idx) => (
-              <TableRow
-                key={t._id || t.ticker || idx}
-                hover
-                style={{ cursor: 'pointer' }}
-                onClick={() => handleOpenHistory(t.ticker)}
-              >
-                <TableCell>{t.ticker}</TableCell>
-                <TableCell>{t.displayName}</TableCell>
-                <TableCell>{formatDate(t.dateAdded)}</TableCell>
-                <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                  <Tooltip title="Edit">
-                    <IconButton color="primary" onClick={() => handleOpenDialog(t)}>
-                      <EditIcon />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Delete">
-                    <IconButton
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(t._id ?? '');
-                      }}
-                      color="error"
-                      disabled={!t._id}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Tooltip>
-                </TableCell>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={4}>Loading...</TableCell>
               </TableRow>
-            ))}
+            ) : tickers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4}>No tracked tickers found.</TableCell>
+              </TableRow>
+            ) : (
+              tickers.map((t, idx) => (
+                <TableRow
+                  key={t._id || t.ticker || idx}
+                  hover
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => handleOpenHistory(t.ticker)}
+                >
+                  <TableCell>{t.ticker}</TableCell>
+                  <TableCell>{t.displayName}</TableCell>
+                  <TableCell>{formatDate(t.dateAdded)}</TableCell>
+                  <TableCell align="center" onClick={(e) => e.stopPropagation()}>
+                    <Tooltip title="Edit">
+                      <IconButton color="primary" onClick={() => handleOpenDialog(t)}>
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete">
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(t._id ?? '');
+                        }}
+                        color="error"
+                        disabled={!t._id}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </TableContainer>
@@ -252,7 +285,6 @@ const TrackedTickersPage: React.FC = () => {
               fullWidth
               required
             />
-            {error && <Typography color="error">{error}</Typography>}
           </DialogContent>
           <DialogActions>
             <Button onClick={handleCloseDialog}>Cancel</Button>
@@ -276,6 +308,20 @@ const TrackedTickersPage: React.FC = () => {
         }}
       />
       <TickerHistoryModal open={historyModalOpen} onClose={handleCloseHistory} ticker={selectedTicker || ''} />
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

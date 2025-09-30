@@ -1,11 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import {
-  getUserPortfolios,
-  addUserPortfolio,
-  updateUserPortfolio,
-  deleteUserPortfolio,
-  UserPortfolio
-} from '../services/userPortfolioService';
 import { useTenantFilter } from '../components/tenant';
 import {
   Box,
@@ -24,12 +17,21 @@ import {
   DialogContent,
   DialogActions,
   IconButton,
-  Tooltip,
   TableFooter,
-  TableSortLabel
+  TableSortLabel,
+  Tooltip,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 import ConfirmationModal from '../components/ConfirmationModal';
+import {
+  useUserPortfolios,
+  useCreateUserPortfolio,
+  useUpdateUserPortfolio,
+  useDeleteUserPortfolio
+} from '../hooks/useFinance';
+import { UserPortfolio } from '../services/userPortfolioService';
 
 const defaultForm: Omit<UserPortfolio, '_id'> = {
   ticker: '',
@@ -38,32 +40,68 @@ const defaultForm: Omit<UserPortfolio, '_id'> = {
 };
 
 const UserPortfolioPage: React.FC = () => {
-  const [portfolios, setPortfolios] = useState<UserPortfolio[]>([]);
+  // Get the current tenant's group ID
+  const tenantGroupId = useTenantFilter();
+
+  // React Query hooks
+  const { data: portfolios = [], isLoading } = useUserPortfolios(tenantGroupId);
+  const createMutation = useCreateUserPortfolio();
+  const updateMutation = useUpdateUserPortfolio();
+  const deleteMutation = useDeleteUserPortfolio();
+
+  // UI state
   const [form, setForm] = useState(defaultForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [orderBy, setOrderBy] = useState<keyof UserPortfolio>('ticker');
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
-  // Get the current tenant's group ID
-  const tenantGroupId = useTenantFilter();
+  // Success/Error notifications
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error';
+  }>({ open: false, message: '', severity: 'success' });
 
-  const fetchPortfolios = async () => {
-    try {
-      const data = await getUserPortfolios(tenantGroupId);
-      setPortfolios(Array.isArray(data) ? data : []);
-    } catch {
-      setPortfolios([]);
-      setError('Failed to load portfolio');
+  // Handle mutation success/error
+  useEffect(() => {
+    if (createMutation.isSuccess) {
+      setSnackbar({ open: true, message: 'Portfolio entry created successfully', severity: 'success' });
+      createMutation.reset();
+      handleCloseDialog();
     }
-  };
+    if (createMutation.isError) {
+      setSnackbar({ open: true, message: 'Failed to create portfolio entry', severity: 'error' });
+      createMutation.reset();
+    }
+  }, [createMutation.isSuccess, createMutation.isError]);
 
   useEffect(() => {
-    fetchPortfolios();
-  }, []);
+    if (updateMutation.isSuccess) {
+      setSnackbar({ open: true, message: 'Portfolio entry updated successfully', severity: 'success' });
+      updateMutation.reset();
+      handleCloseDialog();
+    }
+    if (updateMutation.isError) {
+      setSnackbar({ open: true, message: 'Failed to update portfolio entry', severity: 'error' });
+      updateMutation.reset();
+    }
+  }, [updateMutation.isSuccess, updateMutation.isError]);
+
+  useEffect(() => {
+    if (deleteMutation.isSuccess) {
+      setSnackbar({ open: true, message: 'Portfolio entry deleted successfully', severity: 'success' });
+      deleteMutation.reset();
+      setConfirmOpen(false);
+      setPendingDeleteId(null);
+    }
+    if (deleteMutation.isError) {
+      setSnackbar({ open: true, message: 'Failed to delete portfolio entry', severity: 'error' });
+      deleteMutation.reset();
+    }
+  }, [deleteMutation.isSuccess, deleteMutation.isError]);
 
   const handleOpenDialog = (portfolio?: UserPortfolio) => {
     if (portfolio) {
@@ -84,7 +122,6 @@ const UserPortfolioPage: React.FC = () => {
     setDialogOpen(false);
     setForm(defaultForm);
     setEditingId(null);
-    setError(null);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,16 +134,10 @@ const UserPortfolioPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      if (editingId) {
-        await updateUserPortfolio(editingId, form);
-      } else {
-        await addUserPortfolio(form);
-      }
-      fetchPortfolios();
-      handleCloseDialog();
-    } catch {
-      setError('Failed to save portfolio entry');
+    if (editingId) {
+      await updateMutation.mutateAsync({ id: editingId, data: form });
+    } else {
+      await createMutation.mutateAsync(form);
     }
   };
 
@@ -117,15 +148,7 @@ const UserPortfolioPage: React.FC = () => {
 
   const handleConfirmDelete = async () => {
     if (!pendingDeleteId) return;
-    try {
-      await deleteUserPortfolio(pendingDeleteId);
-      fetchPortfolios();
-    } catch {
-      setError('Failed to delete portfolio entry');
-    } finally {
-      setConfirmOpen(false);
-      setPendingDeleteId(null);
-    }
+    await deleteMutation.mutateAsync(pendingDeleteId);
   };
 
   const handleSort = (property: keyof UserPortfolio) => {
@@ -262,37 +285,47 @@ const UserPortfolioPage: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {sortedPortfolios.map((p, idx) => (
-              <TableRow key={p._id || p.ticker || idx}>
-                <TableCell>{p.ticker}</TableCell>
-                <TableCell>{p.quantity}</TableCell>
-                <TableCell>{p.avgBuyPrice}</TableCell>
-                <TableCell>{p.latestPrice !== undefined ? p.latestPrice.toFixed(2) : '-'}</TableCell>
-                <TableCell>{p.athPrice !== undefined ? p.athPrice.toFixed(2) : '-'}</TableCell>
-                <TableCell>{p.currentValue !== undefined ? p.currentValue.toFixed(2) : '-'}</TableCell>
-                <TableCell>{p.valueIncrease !== undefined ? p.valueIncrease.toFixed(2) : '-'}</TableCell>
-                <TableCell>{p.percentIncrease !== undefined ? p.percentIncrease.toFixed(2) + '%' : '-'}</TableCell>
-                <TableCell align="center">
-                  <Tooltip title="Edit">
-                    <IconButton color="primary" onClick={() => handleOpenDialog(p)}>
-                      <EditIcon />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Delete">
-                    <IconButton
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(p._id ?? '');
-                      }}
-                      color="error"
-                      disabled={!p._id || typeof p._id !== 'string' || p._id === ''}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Tooltip>
-                </TableCell>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={9}>Loading...</TableCell>
               </TableRow>
-            ))}
+            ) : portfolios.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9}>No portfolio entries found.</TableCell>
+              </TableRow>
+            ) : (
+              sortedPortfolios.map((p, idx) => (
+                <TableRow key={p._id || p.ticker || idx}>
+                  <TableCell>{p.ticker}</TableCell>
+                  <TableCell>{p.quantity}</TableCell>
+                  <TableCell>{p.avgBuyPrice}</TableCell>
+                  <TableCell>{p.latestPrice !== undefined ? p.latestPrice.toFixed(2) : '-'}</TableCell>
+                  <TableCell>{p.athPrice !== undefined ? p.athPrice.toFixed(2) : '-'}</TableCell>
+                  <TableCell>{p.currentValue !== undefined ? p.currentValue.toFixed(2) : '-'}</TableCell>
+                  <TableCell>{p.valueIncrease !== undefined ? p.valueIncrease.toFixed(2) : '-'}</TableCell>
+                  <TableCell>{p.percentIncrease !== undefined ? p.percentIncrease.toFixed(2) + '%' : '-'}</TableCell>
+                  <TableCell align="center">
+                    <Tooltip title="Edit">
+                      <IconButton color="primary" onClick={() => handleOpenDialog(p)}>
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete">
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(p._id ?? '');
+                        }}
+                        color="error"
+                        disabled={!p._id || typeof p._id !== 'string' || p._id === ''}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
           <TableFooter>
             <TableRow>
@@ -357,7 +390,6 @@ const UserPortfolioPage: React.FC = () => {
               fullWidth
               required
             />
-            {error && <Typography color="error">{error}</Typography>}
           </DialogContent>
           <DialogActions>
             <Button onClick={handleCloseDialog}>Cancel</Button>
@@ -380,6 +412,20 @@ const UserPortfolioPage: React.FC = () => {
           setPendingDeleteId(null);
         }}
       />
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

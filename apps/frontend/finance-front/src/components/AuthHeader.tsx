@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -18,22 +18,27 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { AccountCircle, Logout, Person, Groups, Payment } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '../services/authService';
-import { User } from '../types';
 import { navigationItems } from '../config/navigation';
 import { TenantSelector, useTenant } from './tenant';
 import { useConfig } from '../hooks/useConfig';
 import { NotificationsMenu } from '@tumbaland/components';
 import { LoginButton } from '@tumbaland/components';
+import { useCurrentUser, useLogout } from '../hooks/useAuth';
 
 interface AuthHeaderProps {}
 
 const AuthHeader: React.FC<AuthHeaderProps> = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationAnchorEl, setNotificationAnchorEl] = useState<null | HTMLElement>(null);
   const config = useConfig();
+
+  // Use React Query for user data
+  const { data: user, isLoading: userLoading } = useCurrentUser();
+  const logoutMutation = useLogout();
+
+  // Determine auth state
+  const isAuthenticated = !!user;
+  const isLoading = userLoading;
 
   // Tenant management - only call when we have valid config and authenticated user
   const {
@@ -46,32 +51,6 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
     config.GROUP_API_URL || '', 
     isAuthenticated && config.GROUP_API_URL ? user?.email : undefined
   );
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        // First try to get user from JWT token to avoid API call
-        const tokenUser = authService.getCurrentUserFromToken();
-        if (tokenUser) {
-          setIsAuthenticated(true);
-          setUser(tokenUser);
-        } else {
-          // Fall back to API call if JWT parsing fails
-          const { authenticated, user } = await authService.checkAuth();
-          setIsAuthenticated(authenticated);
-          setUser(user);
-        }
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        setIsAuthenticated(false);
-        setUser(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, []);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -94,10 +73,9 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
   };
 
   const handleLogout = async () => {
-    setIsLoading(true);
-    await authService.logout();
+    await logoutMutation.mutateAsync();
     handleMenuClose();
-    // The logout service will refresh the page, so no need to update state
+    // The logout mutation will clear the cache and redirect
   };
 
   const renderAuthSection = () => {

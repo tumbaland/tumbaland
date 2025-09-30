@@ -10,22 +10,31 @@ import {
   TableHead,
   TableRow,
   Button,
-  TableSortLabel
+  TableSortLabel,
+  Alert,
+  Snackbar
 } from '@mui/material';
 import { Add, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { useTenantFilter } from '../components/tenant';
-import {
-  getFinanceRecords,
-  createFinanceRecord,
-  deleteFinanceRecord,
-  updateFinanceRecord
-} from '../services/financeRecordService';
 import FinanceRecordModal from '../components/FinanceRecordModal';
+import {
+  useFinanceRecords,
+  useCreateFinanceRecord,
+  useUpdateFinanceRecord,
+  useDeleteFinanceRecord
+} from '../hooks/useFinance';
 
 const FinancialRecords: React.FC = () => {
-  const [records, setRecords] = useState<any[]>([]);
   const tenantGroupId = useTenantFilter(); // Get groupId from tenant context
+
+  // React Query hooks
+  const { data: records = [], isLoading: loading, error } = useFinanceRecords(tenantGroupId);
+  const createMutation = useCreateFinanceRecord();
+  const updateMutation = useUpdateFinanceRecord();
+  const deleteMutation = useDeleteFinanceRecord();
+
+  // UI state
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -53,47 +62,75 @@ const FinancialRecords: React.FC = () => {
     gold: '',
     groupId: undefined as string | undefined
   });
-  const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<string>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  // Date filtering state
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [quickRange, setQuickRange] = useState<string>(''); // e.g. '1M', '6M', '1Y'
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchRecords();
-  }, [tenantGroupId]); // Re-fetch when tenant context changes
+  // Success/Error notifications
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error';
+  }>({ open: false, message: '', severity: 'success' });
 
-  const fetchRecords = async () => {
-    setLoading(true);
-    try {
-      const data = await getFinanceRecords({ groupId: tenantGroupId });
-      setRecords(data);
-      // Initialize date filters if unset
-      if (data && data.length) {
-        const dates = data.map((r: any) => new Date(r.date)).filter((d: Date) => !isNaN(d.getTime()));
-        if (dates.length) {
-          const max = new Date(Math.max(...dates.map((d: Date) => d.getTime())));
-          const min = new Date(Math.min(...dates.map((d: Date) => d.getTime())));
-          const iso = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-          if (!endDate) setEndDate(iso(max));
-          if (!startDate) {
-            // default to last 6 months but not before earliest
-            const sixMonthsAgo = new Date(max);
-            sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-            const start = sixMonthsAgo < min ? min : sixMonthsAgo;
-            setStartDate(iso(start));
-            setQuickRange('6M');
-          }
+  // Initialize date filters when records load
+  useEffect(() => {
+    if (records && records.length) {
+      const dates = records.map((r: any) => new Date(r.date)).filter((d: Date) => !isNaN(d.getTime()));
+      if (dates.length) {
+        const max = new Date(Math.max(...dates.map((d: Date) => d.getTime())));
+        const min = new Date(Math.min(...dates.map((d: Date) => d.getTime())));
+        const iso = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+        if (!endDate) setEndDate(iso(max));
+        if (!startDate) {
+          // default to last 6 months but not before earliest
+          const sixMonthsAgo = new Date(max);
+          sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+          const start = sixMonthsAgo < min ? min : sixMonthsAgo;
+          setStartDate(iso(start));
+          setQuickRange('6M');
         }
       }
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [records, startDate, endDate]);
+
+  // Handle mutation success/error
+  useEffect(() => {
+    if (createMutation.isSuccess) {
+      setSnackbar({ open: true, message: 'Record created successfully', severity: 'success' });
+      createMutation.reset();
+    }
+    if (createMutation.isError) {
+      setSnackbar({ open: true, message: 'Failed to create record', severity: 'error' });
+      createMutation.reset();
+    }
+  }, [createMutation.isSuccess, createMutation.isError]);
+
+  useEffect(() => {
+    if (updateMutation.isSuccess) {
+      setSnackbar({ open: true, message: 'Record updated successfully', severity: 'success' });
+      updateMutation.reset();
+    }
+    if (updateMutation.isError) {
+      setSnackbar({ open: true, message: 'Failed to update record', severity: 'error' });
+      updateMutation.reset();
+    }
+  }, [updateMutation.isSuccess, updateMutation.isError]);
+
+  useEffect(() => {
+    if (deleteMutation.isSuccess) {
+      setSnackbar({ open: true, message: 'Record deleted successfully', severity: 'success' });
+      deleteMutation.reset();
+    }
+    if (deleteMutation.isError) {
+      setSnackbar({ open: true, message: 'Failed to delete record', severity: 'error' });
+      deleteMutation.reset();
+    }
+  }, [deleteMutation.isSuccess, deleteMutation.isError]);
 
   // Helper to format date for table display (DD.MM.YYYY)
   function formatDate(date: string | Date) {
@@ -161,9 +198,8 @@ const FinancialRecords: React.FC = () => {
       gold: Number(form.gold),
       groupId: tenantGroupId // Use tenant context for groupId
     };
-    await createFinanceRecord(payload);
-    handleCreateClose();
-    fetchRecords();
+    await createMutation.mutateAsync(payload);
+    setCreateOpen(false);
   };
   const handleEditSubmit = async (form: any) => {
     if (!editId) return;
@@ -178,9 +214,8 @@ const FinancialRecords: React.FC = () => {
       cash: Number(form.cash),
       gold: Number(form.gold)
     };
-    await updateFinanceRecord(editId, payload);
-    handleEditClose();
-    fetchRecords();
+    await updateMutation.mutateAsync({ id: editId, data: payload });
+    setEditOpen(false);
   };
 
   // Replace handleDelete with confirmation logic
@@ -191,10 +226,9 @@ const FinancialRecords: React.FC = () => {
 
   const handleDeleteConfirm = async () => {
     if (deleteId) {
-      await deleteFinanceRecord(deleteId);
+      await deleteMutation.mutateAsync(deleteId);
       setDeleteConfirmOpen(false);
       setDeleteId(null);
-      fetchRecords();
     }
   };
 
@@ -283,7 +317,7 @@ const FinancialRecords: React.FC = () => {
     if (!startDate && !endDate) return records;
     const startTs = startDate ? new Date(startDate).getTime() : -Infinity;
     const endTs = endDate ? new Date(endDate).getTime() + 24*60*60*1000 - 1 : Infinity; // inclusive end day
-    return records.filter(r => {
+    return records.filter((r: any) => {
       const ts = new Date(r.date).getTime();
       return !isNaN(ts) && ts >= startTs && ts <= endTs;
     });
@@ -312,9 +346,9 @@ const FinancialRecords: React.FC = () => {
     if (!effectiveEnd) {
       // Derive latest record date as baseline if endDate was cleared via reset
       const maxDate = records
-        .map(r => new Date(r.date))
-        .filter(d => !isNaN(d.getTime()))
-        .sort((a, b) => b.getTime() - a.getTime())[0];
+        .map((r: any) => new Date(r.date))
+        .filter((d: Date) => !isNaN(d.getTime()))
+        .sort((a: Date, b: Date) => b.getTime() - a.getTime())[0];
       if (!maxDate) return; // no records
       effectiveEnd = iso(maxDate);
       setEndDate(effectiveEnd);
@@ -626,6 +660,36 @@ const FinancialRecords: React.FC = () => {
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
       />
+
+      {/* Error display */}
+      {error && (
+        <Snackbar
+          open={true}
+          autoHideDuration={6000}
+          onClose={() => {}} // Error persists until page reload
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
+          <Alert severity="error" sx={{ width: '100%' }}>
+            Failed to load finance records. Please try refreshing the page.
+          </Alert>
+        </Snackbar>
+      )}
+
+      {/* Success/Error notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
