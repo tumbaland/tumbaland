@@ -52,9 +52,10 @@ export const createAlbum = async (req: Request, res: Response): Promise<void> =>
 // Get all albums
 export const getAlbums = async (req: Request, res: Response): Promise<void> => {
   try {
-  const { page = 1, limit = 10, search, isPublic, groupId, includeCover } = req.query;
+    const { page = 1, limit = 10, search, isPublic, groupId, includeCover } = req.query;
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
+    const groupServiceError = (req as any).groupServiceError;
 
     let matchQuery: any = {};
     
@@ -70,6 +71,13 @@ export const getAlbums = async (req: Request, res: Response): Promise<void> => {
     if (groupId) {
       // If groupId is specified, filter by group (user must be member)
       if (!userGroups.includes(groupId as string)) {
+        if (groupServiceError) {
+          res.status(503).json({
+            success: false,
+            message: 'Group service temporarily unavailable. Please try again.'
+          });
+          return;
+        }
         res.status(403).json({
           success: false,
           message: 'Access denied: Not a member of this group'
