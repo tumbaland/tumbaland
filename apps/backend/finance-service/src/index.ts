@@ -27,6 +27,7 @@ startDailyPortfolioUpdate();
 app.use(correlationMiddleware);
 app.use(tracingMiddleware);
 app.use(requestLoggerWithMetrics);
+app.use(express.json()); // Parse JSON request bodies
 app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id', 'x-session-id']
 }));

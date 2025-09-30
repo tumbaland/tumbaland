@@ -50,7 +50,8 @@ const FinancialRecords: React.FC = () => {
     etfPortfolio: '',
     etfGain: '',
     cash: '',
-    gold: ''
+    gold: '',
+    groupId: undefined as string | undefined
   });
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<string>('date');
@@ -124,7 +125,7 @@ const FinancialRecords: React.FC = () => {
       etfGain: '',
       cash: '',
       gold: '',
-      groupId: undefined
+      groupId: tenantGroupId // Prefill with active tenant
     });
     setCreateOpen(true);
   };
@@ -140,7 +141,8 @@ const FinancialRecords: React.FC = () => {
       etfPortfolio: record.etfPortfolio?.toString() || '',
       etfGain: record.etfGain?.toString() || '',
       cash: record.cash?.toString() || '',
-      gold: record.gold?.toString() || ''
+      gold: record.gold?.toString() || '',
+      groupId: record.groupId
     });
     setEditOpen(true);
   };
