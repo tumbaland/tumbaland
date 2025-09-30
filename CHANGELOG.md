@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.199](https://github.com/toomastahves/tumbaland/compare/v0.0.198...v0.0.199) (2025-09-30)
+
+
+### Bug Fixes
+
+* slow collage endpoint ([03c6bef](https://github.com/toomastahves/tumbaland/commit/03c6bef84eeb7ad2e6be5b56034eaae5ca68dc7f))
+
 ### [0.0.198](https://github.com/toomastahves/tumbaland/compare/v0.0.197...v0.0.198) (2025-09-30)
 
 
