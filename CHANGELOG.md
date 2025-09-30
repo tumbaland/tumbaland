@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.196](https://github.com/toomastahves/tumbaland/compare/v0.0.195...v0.0.196) (2025-09-30)
+
+
+### Features
+
+* add group error handling ([f9c36a6](https://github.com/toomastahves/tumbaland/commit/f9c36a6b0248ce86ba807b517837fc011ef1daab))
+
 ### [0.0.195](https://github.com/toomastahves/tumbaland/compare/v0.0.194...v0.0.195) (2025-09-29)
 
 
