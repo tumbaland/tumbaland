@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.197](https://github.com/toomastahves/tumbaland/compare/v0.0.196...v0.0.197) (2025-09-30)
+
+
+### Bug Fixes
+
+* finance record creation ([013b9a2](https://github.com/toomastahves/tumbaland/commit/013b9a2718cc48f610ad3bf178b588a102356c1d))
+
 ### [0.0.196](https://github.com/toomastahves/tumbaland/compare/v0.0.195...v0.0.196) (2025-09-30)
 
 
