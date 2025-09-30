@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.198](https://github.com/toomastahves/tumbaland/compare/v0.0.197...v0.0.198) (2025-09-30)
+
+
+### Features
+
+* optimize groups and auth requests ([e5c1449](https://github.com/toomastahves/tumbaland/commit/e5c1449f52bec010e2b8eb628f7fd1db9a5f10bf))
+
 ### [0.0.197](https://github.com/toomastahves/tumbaland/compare/v0.0.196...v0.0.197) (2025-09-30)
 
 
