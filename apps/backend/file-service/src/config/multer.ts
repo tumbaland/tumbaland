@@ -12,6 +12,14 @@ const fileFilter = (req: any, file: any, cb: any) => {
     'image/png',
     'image/gif',
     'image/webp',
+    'video/mp4',
+    'video/avi',
+    'video/mov',
+    'video/wmv',
+    'video/flv',
+    'video/webm',
+    'video/mkv',
+    'video/3gp',
     'application/pdf',
     'text/plain',
     'application/msword',
@@ -23,7 +31,7 @@ const fileFilter = (req: any, file: any, cb: any) => {
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only images, PDFs, and documents are allowed.'), false);
+    cb(new Error('Invalid file type. Only images, videos, PDFs, and documents are allowed.'), false);
   }
 };
 
