@@ -67,6 +67,13 @@ const SegmentationView: React.FC<SegmentationViewNewProps> = ({ photo, formatDat
   // Run segmentation analysis
   const runAnalysis = async () => {
     if (!photo) return;
+    
+    // Only allow segmentation on image files
+    if (!photo.mimetype.startsWith('image/')) {
+      setAnalysisError('Segmentation is only available for image files.');
+      return;
+    }
+    
     setIsAnalyzing(true);
     setAnalysisError(null);
     setDetailedResults(undefined);

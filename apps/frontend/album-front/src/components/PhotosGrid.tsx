@@ -74,7 +74,7 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
             startIcon={<CloudUploadIcon />} 
             onClick={onUploadPhotos}
           >
-            Upload Photos
+            Upload Media
           </Button>
         )}
       </Box>

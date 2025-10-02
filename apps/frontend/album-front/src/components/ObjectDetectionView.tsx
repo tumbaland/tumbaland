@@ -63,6 +63,13 @@ const ObjectDetectionView: React.FC<ObjectDetectionViewNewProps> = ({ photo, for
   // Run object detection analysis
   const runAnalysis = async () => {
     if (!photo) return;
+    
+    // Only allow object detection on image files
+    if (!photo.mimetype.startsWith('image/')) {
+      setAnalysisError('Object detection is only available for image files.');
+      return;
+    }
+    
     setIsAnalyzing(true);
     setAnalysisError(null);
     setDetailedResults(undefined);

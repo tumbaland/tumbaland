@@ -47,16 +47,18 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
         id: `${Date.now()}-${Math.random()}`
       }));
 
-      // Filter for image files only
-      const imageFiles = newFiles.filter((item) => item.file.type.startsWith('image/'));
+      // Filter for image and video files only
+      const mediaFiles = newFiles.filter((item) => 
+        item.file.type.startsWith('image/') || item.file.type.startsWith('video/')
+      );
 
-      if (imageFiles.length !== newFiles.length) {
-        setError('Only image files are allowed');
+      if (mediaFiles.length !== newFiles.length) {
+        setError('Only image and video files are allowed');
       } else {
         setError(null);
       }
 
-      setFiles((prev) => [...prev, ...imageFiles]);
+      setFiles((prev) => [...prev, ...mediaFiles]);
     }
   };
   const removeFile = (fileId: string) => {
@@ -136,15 +138,17 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
       id: `${Date.now()}-${Math.random()}`
     }));
 
-    const imageFiles = droppedFiles.filter((item) => item.file.type.startsWith('image/'));
+    const mediaFiles = droppedFiles.filter((item) => 
+      item.file.type.startsWith('image/') || item.file.type.startsWith('video/')
+    );
 
-    if (imageFiles.length !== droppedFiles.length) {
-      setError('Only image files are allowed');
+    if (mediaFiles.length !== droppedFiles.length) {
+      setError('Only image and video files are allowed');
     } else {
       setError(null);
     }
 
-    setFiles((prev) => [...prev, ...imageFiles]);
+    setFiles((prev) => [...prev, ...mediaFiles]);
   };
 
   const handleDragOver = (event: React.DragEvent) => {
@@ -153,7 +157,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <DialogTitle>Upload Photos</DialogTitle>
+      <DialogTitle>Upload Photos and Videos</DialogTitle>
       <DialogContent>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -179,16 +183,16 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
         >
           <PhotoLibraryIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
           <Typography variant="h6" gutterBottom>
-            Drop images here or click to select
+            Drop images and videos here or click to select
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Supports: JPG, PNG, GIF, WebP
+            Supports: JPG, PNG, GIF, WebP, MP4, MOV, AVI, and more
           </Typography>
           <input
             id="file-input"
             type="file"
             multiple
-            accept="image/*"
+            accept="image/*,video/*"
             style={{ display: 'none' }}
             onChange={handleFileSelect}
           />
@@ -253,7 +257,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
           disabled={files.length === 0 || uploading}
           startIcon={<CloudUploadIcon />}
         >
-          Upload {files.length} {files.length === 1 ? 'Photo' : 'Photos'}
+          Upload {files.length} {files.length === 1 ? 'File' : 'Files'}
         </Button>
       </DialogActions>
     </Dialog>

@@ -179,54 +179,71 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
           </Typography>
         </Box>
 
-        {/* Photo Image */}
-        <Box
-          component="img"
-          src={selectedPhoto.signedUrl}
-          alt={selectedPhoto.title || selectedPhoto.originalName}
-          onLoad={(e) => {
-            const img = e.currentTarget as HTMLImageElement;
-            setImgDimensions({ width: img.naturalWidth, height: img.naturalHeight });
-          }}
-          sx={{
-            maxWidth:
-              isMobile && imgDimensions && imgDimensions.width > imgDimensions.height && isPortrait
-                ? '100vh'
-                : '90vw',
-            maxHeight:
-              isMobile && imgDimensions && imgDimensions.width > imgDimensions.height && isPortrait
-                ? '100vw'
-                : '90vh',
-            objectFit: 'contain',
-            cursor: 'pointer',
-            userSelect: 'none',
-            margin: 'auto',
-            display: 'block',
-            width: 'auto',
-            height: 'auto',
-            zIndex: 2,
-            boxShadow: 3,
-            borderRadius: 2,
-            background: 'black',
-            transform:
-              isMobile && imgDimensions && imgDimensions.width > imgDimensions.height && isPortrait
-                ? 'rotate(90deg)'
-                : 'none',
-            transition: 'transform 0.3s'
-          }}
-          onClick={(e) => {
-            e.stopPropagation();
-            const rect = e.currentTarget.getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
-            const imageWidth = rect.width;
-            // Click on left third = previous, right third = next, middle = close
-            if (clickX < imageWidth / 3 && selectedPhotoIndex > 0) {
-              onPrevious();
-            } else if (clickX > (2 * imageWidth) / 3 && selectedPhotoIndex < photos.length - 1) {
-              onNext();
-            }
-          }}
-        />
+        {/* Photo/Video Display */}
+        {selectedPhoto.mimetype.startsWith('video/') ? (
+          <Box
+            component="video"
+            src={selectedPhoto.signedUrl}
+            controls
+            sx={{
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              objectFit: 'contain',
+              zIndex: 2,
+              boxShadow: 3,
+              borderRadius: 2,
+              background: 'black'
+            }}
+          />
+        ) : (
+          <Box
+            component="img"
+            src={selectedPhoto.signedUrl}
+            alt={selectedPhoto.title || selectedPhoto.originalName}
+            onLoad={(e) => {
+              const img = e.currentTarget as HTMLImageElement;
+              setImgDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+            }}
+            sx={{
+              maxWidth:
+                isMobile && imgDimensions && imgDimensions.width > imgDimensions.height && isPortrait
+                  ? '100vh'
+                  : '90vw',
+              maxHeight:
+                isMobile && imgDimensions && imgDimensions.width > imgDimensions.height && isPortrait
+                  ? '100vw'
+                  : '90vh',
+              objectFit: 'contain',
+              cursor: 'pointer',
+              userSelect: 'none',
+              margin: 'auto',
+              display: 'block',
+              width: 'auto',
+              height: 'auto',
+              zIndex: 2,
+              boxShadow: 3,
+              borderRadius: 2,
+              background: 'black',
+              transform:
+                isMobile && imgDimensions && imgDimensions.width > imgDimensions.height && isPortrait
+                  ? 'rotate(90deg)'
+                  : 'none',
+              transition: 'transform 0.3s'
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              const rect = e.currentTarget.getBoundingClientRect();
+              const clickX = e.clientX - rect.left;
+              const imageWidth = rect.width;
+              // Click on left third = previous, right third = next, middle = close
+              if (clickX < imageWidth / 3 && selectedPhotoIndex > 0) {
+                onPrevious();
+              } else if (clickX > (2 * imageWidth) / 3 && selectedPhotoIndex < photos.length - 1) {
+                onNext();
+              }
+            }}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

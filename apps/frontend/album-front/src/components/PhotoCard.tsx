@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardMedia, CardContent, Typography, IconButton, Box, Menu, MenuItem, Chip } from '@mui/material';
-import { MoreVert as MoreVertIcon, Image as ImageIcon, Star as StarIcon } from '@mui/icons-material';
+import { MoreVert as MoreVertIcon, Image as ImageIcon, Star as StarIcon, Videocam as VideocamIcon } from '@mui/icons-material';
 import { Photo } from '../types';
 
 interface PhotoCardProps {
@@ -79,19 +79,36 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
     >
       <Box sx={{ position: 'relative', width: '100%', aspectRatio: '1 / 1' }}>
         {photo.signedUrl ? (
-          <CardMedia
-            component="img"
-            image={photo.signedUrl}
-            alt={photo.title || photo.originalName}
-            sx={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover'
-            }}
-          />
+          photo.mimetype.startsWith('video/') ? (
+            <Box
+              component="video"
+              src={photo.signedUrl}
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover'
+              }}
+              muted
+              preload="metadata"
+            />
+          ) : (
+            <CardMedia
+              component="img"
+              image={photo.signedUrl}
+              alt={photo.title || photo.originalName}
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover'
+              }}
+            />
+          )
         ) : (
           <Box
             sx={{
@@ -106,7 +123,27 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
               bgcolor: 'grey.200'
             }}
           >
-            <ImageIcon sx={{ fontSize: 60, color: 'grey.400' }} />
+            {photo.mimetype.startsWith('video/') ? (
+              <VideocamIcon sx={{ fontSize: 60, color: 'grey.400' }} />
+            ) : (
+              <ImageIcon sx={{ fontSize: 60, color: 'grey.400' }} />
+            )}
+          </Box>
+        )}
+        {photo.mimetype.startsWith('video/') && photo.signedUrl && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              bgcolor: 'rgba(0, 0, 0, 0.5)',
+              borderRadius: '50%',
+              p: 1,
+              zIndex: 1
+            }}
+          >
+            <VideocamIcon sx={{ fontSize: 24, color: 'white' }} />
           </Box>
         )}
         {isCoverPhoto && (

@@ -65,7 +65,7 @@ const AlbumHeader: React.FC<AlbumHeaderProps> = ({
           startIcon={<CloudUploadIcon />} 
           onClick={onUploadPhotos}
         >
-          Upload Photos
+          Upload Media
         </Button>
       </Box>
     </>

@@ -12,7 +12,7 @@ const AlbumFloatingActionButton: React.FC<AlbumFloatingActionButtonProps> = ({
   return (
     <Fab
       color="primary"
-      aria-label="upload photos"
+      aria-label="upload media"
       sx={{
         position: 'fixed',
         bottom: 16,
