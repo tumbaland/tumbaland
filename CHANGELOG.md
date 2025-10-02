@@ -1,4 +1,12 @@
 # Tumbalog
+### [0.0.201](https://github.com/toomastahves/tumbaland/compare/v0.0.200...v0.0.201) (2025-10-02)
+
+
+### Features
+
+* allow video upload ([2fd40f4](https://github.com/toomastahves/tumbaland/commit/2fd40f437e48467061deab8cf455bf514411c452))
+* remove unused file ([ce91f01](https://github.com/toomastahves/tumbaland/commit/ce91f01a0e564fe632ee206bcc87e9acd199534a))
+
 ### [0.0.200](https://github.com/toomastahves/tumbaland/compare/v0.0.199...v0.0.200) (2025-09-30)
 
 
