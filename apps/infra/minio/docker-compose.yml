@@ -36,9 +36,9 @@ services:
       MINIO_ALBUM_SERVICE_PASSWORD: ${MINIO_ALBUM_SERVICE_PASSWORD}
     volumes:
       - ./init:/init
-      - ./entrypoint.sh:/tmp/entrypoint.sh
+      - ./entrypoint.sh:/entrypoint.sh
     entrypoint: ["sh"]
-    command: ["/tmp/entrypoint.sh"]
+    command: ["/entrypoint.sh"]
     networks:
       - tumbanet
     restart: "no"
