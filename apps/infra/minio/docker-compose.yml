@@ -1,64 +1,48 @@
+version: '3.8'
+
 services:
   minio:
     image: minio/minio:latest
-    container_name: tumbaland-minio
-    ports:
-      - "9000:9000"  # MinIO API
-      - "9001:9001"  # MinIO Console (Web UI)
-    environment:
-      # Root credentials
-      MINIO_ROOT_USER: tumbaland_admin
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-secure_password_123}
-
-      # Server configuration
-      MINIO_SERVER_URL: http://minio:9000
-      MINIO_BROWSER_REDIRECT_URL: http://minio:9001
-
-      # Domain configuration (for production)
-      # MINIO_DOMAIN: ${MINIO_DOMAIN}
-    volumes:
-      # Data volumes - mount external drives here for production
-      - ./data:/data
-
-      # Optional: SSL certificates
-      # - ./certs:/etc/minio/certs
-    command: server /data --console-address ":9001"
+    container_name: tumbaland_minio
     restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: tumbaland_admin
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_REGION: eu-east-1
+      MINIO_BROWSER: "on"
+    volumes:
+      - ./data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - tumbanet
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
       timeout: 20s
       retries: 3
-    networks:
-      - tumbanet
 
-  # Optional: MinIO Client container for administration
-  minio-client:
+  minio-init:
     image: minio/mc:latest
-    container_name: tumbaland-minio-client
+    container_name: tumbaland_minio_init
     depends_on:
-      - minio
+      minio:
+        condition: service_healthy
     environment:
-      MC_HOST_tumbaland: http://tumbaland_admin:${MINIO_ROOT_PASSWORD:-secure_password_123}@minio:9000
+      MINIO_ROOT_USER: tumbaland_admin
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      ALBUM_SERVICE_PASSWORD: ${ALBUM_SERVICE_PASSWORD}
+      ADMIN_USER_PASSWORD: ${ADMIN_USER_PASSWORD}
     volumes:
-      - ./scripts:/scripts
-    command: >
-      sh -c "
-        echo 'Waiting for MinIO to be ready...';
-        sleep 10;
-        echo 'Setting up MinIO...';
-        mc alias set tumbaland http://minio:9000 tumbaland_admin ${MINIO_ROOT_PASSWORD:-secure_password_123};
-        echo 'Creating buckets...';
-        mc mb tumbaland/photos --ignore-existing;
-        mc mb tumbaland/thumbnails --ignore-existing;
-        mc mb tumbaland/temp --ignore-existing;
-        echo 'Setting bucket policies...';
-        mc policy set public tumbaland/thumbnails;
-        echo 'MinIO setup complete!';
-        tail -f /dev/null
-      "
+      - ./init:/init
+      - ./entrypoint.sh:/entrypoint.sh
+    entrypoint: ["sh"]
+    command: ["/entrypoint.sh"]
     networks:
       - tumbanet
+    restart: "no"
 
 networks:
   tumbanet:

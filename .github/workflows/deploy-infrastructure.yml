@@ -12,16 +12,7 @@ on:
         options:
           - consul
           - tumbaland-proxy
-          - mongodb
-          - redis
-          - rabbitmq
-          - prometheus
-          - alertmanager
-          - jaeger
-          - grafana
           - minio
-          - vault
-          - haproxy
           - elk
 
 # Ensure only one infrastructure deployment runs at a time
@@ -52,65 +43,11 @@ jobs:
               DEPLOYPATH=apps/infra/tumbaland-proxy/compose.yml
               DEPLOYDIR=apps/infra/tumbaland-proxy
               ;;
-            mongodb)
-              CONTEXT=./apps/infra/mongodb
-              DOCKERFILE=./apps/infra/mongodb/Dockerfile
-              DEPLOYPATH=apps/infra/mongodb/docker-compose.yml
-              DEPLOYDIR=apps/infra/mongodb
-              ;;
-            redis)
-              CONTEXT=./apps/infra/redis
-              DOCKERFILE=./apps/infra/redis/Dockerfile
-              DEPLOYPATH=apps/infra/redis/docker-compose.yml
-              DEPLOYDIR=apps/infra/redis
-              ;;
-            rabbitmq)
-              CONTEXT=./apps/infra/rabbitmq
-              DOCKERFILE=./apps/infra/rabbitmq/Dockerfile
-              DEPLOYPATH=apps/infra/rabbitmq/docker-compose.yml
-              DEPLOYDIR=apps/infra/rabbitmq
-              ;;
-            prometheus)
-              CONTEXT=./apps/infra/prometheus
-              DOCKERFILE=./apps/infra/prometheus/Dockerfile
-              DEPLOYPATH=apps/infra/prometheus/docker-compose.yml
-              DEPLOYDIR=apps/infra/prometheus
-              ;;
-            alertmanager)
-              CONTEXT=./apps/infra/alertmanager
-              DOCKERFILE=./apps/infra/alertmanager/Dockerfile
-              DEPLOYPATH=apps/infra/alertmanager/docker-compose.yml
-              DEPLOYDIR=apps/infra/alertmanager
-              ;;
-            jaeger)
-              CONTEXT=./apps/infra/jaeger
-              DOCKERFILE=./apps/infra/jaeger/Dockerfile
-              DEPLOYPATH=apps/infra/jaeger/docker-compose.yml
-              DEPLOYDIR=apps/infra/jaeger
-              ;;
-            grafana)
-              CONTEXT=./apps/infra/grafana
-              DOCKERFILE=./apps/infra/grafana/Dockerfile
-              DEPLOYPATH=apps/infra/grafana/docker-compose.yml
-              DEPLOYDIR=apps/infra/grafana
-              ;;
             minio)
               CONTEXT=./apps/infra/minio
               DOCKERFILE=./apps/infra/minio/Dockerfile
               DEPLOYPATH=apps/infra/minio/docker-compose.yml
               DEPLOYDIR=apps/infra/minio
-              ;;
-            vault)
-              CONTEXT=./apps/infra/vault
-              DOCKERFILE=./apps/infra/vault/Dockerfile
-              DEPLOYPATH=apps/infra/vault/docker-compose.yml
-              DEPLOYDIR=apps/infra/vault
-              ;;
-            haproxy)
-              CONTEXT=./apps/infra/haproxy
-              DOCKERFILE=./apps/infra/haproxy/Dockerfile
-              DEPLOYPATH=apps/infra/haproxy/docker-compose.yml
-              DEPLOYDIR=apps/infra/haproxy
               ;;
             elk)
               CONTEXT=./apps/infra/elk
@@ -164,6 +101,8 @@ jobs:
           echo "ELASTIC_ENCRYPTIONKEY=${{ secrets.ELASTIC_ENCRYPTIONKEY }}" >> .env.infra
           echo "CONSUL_ENCRYPT_KEY=${{ secrets.CONSUL_ENCRYPT_KEY }}" >> .env.infra
           echo "CONSUL_ACL_MASTER_TOKEN=${{ secrets.CONSUL_ACL_MASTER_TOKEN }}" >> .env.infra
+          echo "MINIO_ROOT_USER=${{ secrets.MINIO_ROOT_USER }}" >> .env.infra
+          echo "MINIO_ROOT_PASSWORD=${{ secrets.MINIO_ROOT_PASSWORD }}" >> .env.infra
 
           echo "✅ Generated .env.infra file with contents:"
           cat .env.infra
@@ -186,26 +125,6 @@ jobs:
           source: ${{ steps.vars.outputs.deploy_path }}
           target: ~/tumbaland/
 
-      - name: Copy ELK config directory to server
-        if: github.event.inputs.service == 'elk'
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ vars.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          source: ${{ steps.vars.outputs.deploy_dir }}/
-          target: ~/tumbaland/
-
-      - name: Copy Grafana config directory to server
-        if: github.event.inputs.service == 'grafana'
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ vars.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          source: ${{ steps.vars.outputs.deploy_dir }}/
-          target: ~/tumbaland/
-
       - name: SSH and deploy infrastructure service on server
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -215,117 +134,6 @@ jobs:
           script: |
             cd ~/tumbaland
             export COMPOSE_HTTP_TIMEOUT=300
-            export SERVICE_NAME="${{ github.event.inputs.service }}"
-
-            # Ensure infrastructure network exists
             docker network ls | grep -q tumbanet || docker network create tumbanet
-
-            # Create necessary directories for the service
-            if [ "$SERVICE_NAME" = "consul" ]; then
-              echo "Creating Consul data and config directories..."
-              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/data
-              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/client-data
-              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/config
-              # Ensure proper permissions for Consul directories
-              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/data
-              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/client-data
-              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/config
-              echo "✅ Created directories:"
-              ls -la ${{ steps.vars.outputs.deploy_dir }}/data
-              ls -la ${{ steps.vars.outputs.deploy_dir }}/client-data
-              ls -la ${{ steps.vars.outputs.deploy_dir }}/config
-              echo "📄 Checking config files:"
-              ls -la ${{ steps.vars.outputs.deploy_dir }}/server.json
-              ls -la ${{ steps.vars.outputs.deploy_dir }}/client.json
-            fi
-
-            if [ "$SERVICE_NAME" = "grafana" ]; then
-              echo "Creating Grafana data and config directories..."
-              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/data
-              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/provisioning
-              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/dashboards
-              # Ensure proper permissions for Grafana directories
-              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/data
-              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/provisioning
-              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/dashboards
-              echo "✅ Created Grafana directories"
-            fi
-
-            if [ "$SERVICE_NAME" = "elk" ]; then
-              echo "Creating ELK data and config directories..."
-              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/elasticsearch/data
-              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/elasticsearch/logs
-              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/logstash/config
-              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/logstash/pipeline
-              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/logstash/logs
-              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/filebeat/data
-              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/metricbeat/data
-              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/heartbeat/data
-              # Ensure proper permissions for ELK directories
-              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/elasticsearch/data
-              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/elasticsearch/logs
-              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/logstash/config
-              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/logstash/pipeline
-              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/logstash/logs
-              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/filebeat/data
-              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/metricbeat/data
-              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/heartbeat/data
-              echo "✅ Created ELK directories"
-            fi
-
-            if [ "$SERVICE_NAME" = "prometheus" ]; then
-              echo "Creating Prometheus data directory..."
-              mkdir -p ${{ steps.vars.outputs.deploy_dir }}/data
-              # Ensure proper permissions for Prometheus directory
-              chmod 755 ${{ steps.vars.outputs.deploy_dir }}/data
-              echo "✅ Created Prometheus directory"
-            fi
-
-            # Pull latest image (only if we built one)
-            if [ "${{ steps.dockerfile_check.outputs.dockerfile_exists }}" = "true" ]; then
-              docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} pull ${{ github.event.inputs.service }}
-            fi
-
-            # Deploy with health check
-            echo "Deploying $SERVICE_NAME..."
-            # For services with multiple containers, deploy all
-            if [ "$SERVICE_NAME" = "consul" ]; then
-              echo "🚀 Starting Consul with command:"
-              echo "consul agent -server -bootstrap-expect=1 -ui -client=0.0.0.0 -data-dir=/consul/data -config-file=/consul/config/server.json"
-              docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} up -d
-              SERVICE_TO_CHECK="consul-server"
-              echo "📋 Checking Consul server logs..."
-              docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} logs consul-server --tail=20
-            elif [ "$SERVICE_NAME" = "elk" ]; then
-              echo "🚀 Starting ELK stack..."
-              cd ${{ steps.vars.outputs.deploy_dir }}
-              docker compose --env-file ~/tumbaland/.env.infra -f docker-compose.yml up -d
-              SERVICE_TO_CHECK="elasticsearch"
-              echo "📋 Checking Elasticsearch logs..."
-              docker compose --env-file ~/tumbaland/.env.infra -f docker-compose.yml logs elasticsearch --tail=20
-              cd ~/tumbaland
-            elif [ "$SERVICE_NAME" = "prometheus" ]; then
-              echo "🚀 Starting Prometheus stack..."
-              cd ${{ steps.vars.outputs.deploy_dir }}
-              docker compose --env-file ~/tumbaland/.env.infra -f docker-compose.yml up -d
-              SERVICE_TO_CHECK="prometheus"
-              echo "📋 Checking Prometheus logs..."
-              docker compose --env-file ~/tumbaland/.env.infra -f docker-compose.yml logs prometheus --tail=20
-              cd ~/tumbaland
-            elif [ "$SERVICE_NAME" = "grafana" ]; then
-              echo "🚀 Starting Grafana..."
-              cd ${{ steps.vars.outputs.deploy_dir }}
-              docker compose --env-file ~/tumbaland/.env.infra -f docker-compose.yml up -d
-              SERVICE_TO_CHECK="grafana"
-              echo "📋 Checking Grafana logs..."
-              docker compose --env-file ~/tumbaland/.env.infra -f docker-compose.yml logs grafana --tail=20
-              cd ~/tumbaland
-            else
-              docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} up -d ${{ github.event.inputs.service }}
-              SERVICE_TO_CHECK="${{ github.event.inputs.service }}"
-            fi
-
-            echo "✅ $SERVICE_NAME deployment completed"
-
-            echo "🧹 Cleaning up old images..."
-            docker image prune -f
+            docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} pull
+            docker compose --env-file .env.infra -f ${{ steps.vars.outputs.deploy_path }} up -d
