@@ -1,4 +1,12 @@
 # Tumbalog
+### [0.0.203](https://github.com/toomastahves/tumbaland/compare/v0.0.202...v0.0.203) (2025-10-03)
+
+
+### Features
+
+* configure prod minio ([80fb14e](https://github.com/toomastahves/tumbaland/commit/80fb14eb1ddea2e9c20b894cc0097d26c9c9a494))
+* update variables ([63f1cb9](https://github.com/toomastahves/tumbaland/commit/63f1cb9c19d4576ff66159908dbdbe88aebdfe60))
+
 ### [0.0.202](https://github.com/toomastahves/tumbaland/compare/v0.0.201...v0.0.202) (2025-10-02)
 
 
