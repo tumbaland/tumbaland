@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.204](https://github.com/toomastahves/tumbaland/compare/v0.0.203...v0.0.204) (2025-10-03)
+
+
+### Bug Fixes
+
+* entrypoint ([e74a135](https://github.com/toomastahves/tumbaland/commit/e74a1357c682226eee6376b0fd9291ea58d08ea7))
+
 ### [0.0.203](https://github.com/toomastahves/tumbaland/compare/v0.0.202...v0.0.203) (2025-10-03)
 
 
