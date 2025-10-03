@@ -133,6 +133,26 @@ jobs:
           source: ${{ steps.vars.outputs.deploy_path }}
           target: ~/tumbaland/
 
+      - name: Copy MinIO initialization files
+        if: github.event.inputs.service == 'minio'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ vars.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: ${{ steps.vars.outputs.deploy_dir }}/entrypoint.sh
+          target: ~/tumbaland/${{ steps.vars.outputs.deploy_dir }}/
+
+      - name: Copy MinIO init directory
+        if: github.event.inputs.service == 'minio'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ vars.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: ${{ steps.vars.outputs.deploy_dir }}/init/
+          target: ~/tumbaland/${{ steps.vars.outputs.deploy_dir }}/
+
       - name: SSH and deploy infrastructure service on server
         uses: appleboy/ssh-action@v1.0.3
         with:
