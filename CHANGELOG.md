@@ -1,4 +1,12 @@
 # Tumbalog
+### [0.0.207](https://github.com/toomastahves/tumbaland/compare/v0.0.206...v0.0.207) (2025-10-03)
+
+
+### Bug Fixes
+
+* minio deploy ([fa759ce](https://github.com/toomastahves/tumbaland/commit/fa759ce148790bb3cce13563be0320e3a9404524))
+* minio entry ([c4cd4db](https://github.com/toomastahves/tumbaland/commit/c4cd4dbda330865fa5b529cbba7770479684a65e))
+
 ### [0.0.206](https://github.com/toomastahves/tumbaland/compare/v0.0.205...v0.0.206) (2025-10-03)
 
 
