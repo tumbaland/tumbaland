@@ -37,8 +37,7 @@ services:
     volumes:
       - ./init:/init
       - ./entrypoint.sh:/entrypoint.sh
-    entrypoint: ["sh"]
-    command: ["/entrypoint.sh"]
+    entrypoint: ["./entrypoint.sh"]
     networks:
       - tumbanet
     restart: "no"
