@@ -33,8 +33,7 @@ services:
     environment:
       MINIO_ROOT_USER: tumbaland_admin
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-      ALBUM_SERVICE_PASSWORD: ${ALBUM_SERVICE_PASSWORD}
-      ADMIN_USER_PASSWORD: ${ADMIN_USER_PASSWORD}
+      MINIO_ALBUM_SERVICE_PASSWORD: ${MINIO_ALBUM_SERVICE_PASSWORD}
     volumes:
       - ./init:/init
       - ./entrypoint.sh:/entrypoint.sh

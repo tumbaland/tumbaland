@@ -19,18 +19,12 @@ mc mb myminio/album --ignore-existing
 echo "🔐 Setting up users..."
 
 # Create service users
-mc admin user add myminio album-service "${ALBUM_SERVICE_PASSWORD}" || echo "Album service user may already exist"
-mc admin user add myminio admin-user "${ADMIN_USER_PASSWORD}" || echo "Admin user may already exist"
+mc admin user add myminio album-service "${MINIO_ALBUM_SERVICE_PASSWORD}" || echo "Album service user may already exist"
 
 # Create and attach policies
 if [ -f "/init/album-service-policy.json" ]; then
     mc admin policy create myminio album-service-policy /init/album-service-policy.json || echo "Album policy may already exist"
     mc admin policy attach myminio album-service-policy --user album-service
-fi
-
-if [ -f "/init/admin-policy.json" ]; then
-    mc admin policy create myminio admin-policy /init/admin-policy.json || echo "Admin policy may already exist"
-    mc admin policy attach myminio admin-policy --user admin-user
 fi
 
 echo "✅ MinIO initialization complete!"
