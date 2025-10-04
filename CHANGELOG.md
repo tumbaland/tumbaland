@@ -1,4 +1,16 @@
 # Tumbalog
+### [0.0.208](https://github.com/toomastahves/tumbaland/compare/v0.0.207...v0.0.208) (2025-10-04)
+
+
+### Features
+
+* remove version ([a931903](https://github.com/toomastahves/tumbaland/commit/a931903bba78285755d9d5a1a099d42748b48d14))
+
+
+### Bug Fixes
+
+* add minio url ([8ecac90](https://github.com/toomastahves/tumbaland/commit/8ecac90dca7463b5e586a06bd4a53d5203923572))
+
 ### [0.0.207](https://github.com/toomastahves/tumbaland/compare/v0.0.206...v0.0.207) (2025-10-03)
 
 
