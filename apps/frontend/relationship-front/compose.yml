@@ -15,6 +15,7 @@ services:
       PUBLIC_API_URL: ${PUBLIC_API_URL}
     ports:
       - '3001:80'
+    init: true
     networks:
       - tumbanet
 
