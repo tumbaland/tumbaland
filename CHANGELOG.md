@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.215](https://github.com/toomastahves/tumbaland/compare/v0.0.214...v0.0.215) (2025-10-04)
+
+
+### Features
+
+* fix env vars ([302033d](https://github.com/toomastahves/tumbaland/commit/302033d9db458c9d05febe7962748e2c2ec5d80d))
+
 ### [0.0.214](https://github.com/toomastahves/tumbaland/compare/v0.0.213...v0.0.214) (2025-10-04)
 
 
