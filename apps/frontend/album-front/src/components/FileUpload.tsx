@@ -86,17 +86,17 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
       for (const fileItem of files) {
         const file = fileItem.file;
         try {
-          // Get signed URL for upload
+          // Get signed URL for upload from album service (MinIO)
           const signedUrlResponse = await photoService.getUploadSignedUrl(file.name, file.type, albumId);
 
-          // Upload file to signed URL
+          // Upload file directly to MinIO
           await photoService.uploadFileToSignedUrl(signedUrlResponse.data.uploadUrl, file);
 
-          // Create photo record
+          // Create photo record in album service with minioFileId
           await photoService.createPhoto({
-            filename: signedUrlResponse.data.fileId,
+            filename: file.name,
             originalName: file.name,
-            fileId: signedUrlResponse.data.fileId,
+            minioFileId: signedUrlResponse.data.minioFileId,
             albumId: albumId,
             mimetype: file.type,
             size: file.size

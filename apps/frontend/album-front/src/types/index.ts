@@ -17,7 +17,8 @@ export interface Photo {
   _id: string;
   filename: string;
   originalName: string;
-  fileId: string;
+  minioFileId?: string;
+  minioThumbnailFileId?: string;
   albumId: string;
   title?: string;
   description?: string;
@@ -29,6 +30,10 @@ export interface Photo {
   signedUrl?: string;
   signedUrlExpiresAt?: string;
   signedUrlExpiresInMinutes?: number;
+  thumbnailSignedUrl?: string; // Add thumbnail signed URL
+  thumbnailSignedUrlExpiresAt?: string;
+  thumbnailSignedUrlExpiresInMinutes?: number;
+  thumbnailUrl?: string; // Add thumbnail URL for efficient grid loading
   metadata: {
     dateTaken?: string;
     location?: {
@@ -77,7 +82,7 @@ export interface CreateAlbumData {
 export interface CreatePhotoData {
   filename: string;
   originalName: string;
-  fileId: string;
+  minioFileId: string;
   albumId: string;
   title?: string;
   description?: string;
@@ -113,7 +118,7 @@ export interface PaginatedResponse<T> {
 
 export interface UploadSignedUrlResponse {
   uploadUrl: string;
-  fileId: string;
+  minioFileId: string;
   albumId: string;
 }
 

@@ -3,20 +3,24 @@ import Photo from '../models/Photo';
 import Album from '../models/Album';
 import {
   deleteFile,
-  getFileUrl,
-  getFileUploadSignedUrl,
+  deleteFolder,
   getSignedUrl,
-  getSignedUrlsBatch,
+  getPhotoSignedUrl,
+  getPhotoSignedUrlsBatch,
+  getUploadSignedUrl,
+  generateFileId,
+  generateThumbnailFileIdFromFileId,
+  getFileFolder,
   SignedUrlData
-} from '../services/fileService';
-
-// Create a new photo record (after file upload)
+} from '../services/minioService';
+import { generateThumbnailFromBuffer, isSupportedImageFormat } from '../services/thumbnailService';
 export const createPhoto = async (req: Request, res: Response): Promise<void> => {
   try {
     const {
       filename,
       originalName,
-      fileId,
+      fileId, // Accept both fileId and minioFileId for backward compatibility
+      minioFileId,
       albumId,
       title,
       description,
@@ -28,11 +32,14 @@ export const createPhoto = async (req: Request, res: Response): Promise<void> =>
       metadata = {}
     } = req.body;
 
+    // Use minioFileId if provided, otherwise use fileId (for backward compatibility)
+    const actualMinioFileId = minioFileId || fileId;
+
     // Validate required fields
-    if (!filename || !originalName || !fileId || !albumId || !mimetype || !size) {
+    if (!filename || !originalName || !actualMinioFileId || !albumId || !mimetype || !size) {
       res.status(400).json({
         success: false,
-        message: 'Missing required fields: filename, originalName, fileId, albumId, mimetype, size'
+        message: 'Missing required fields: filename, originalName, minioFileId (or fileId), albumId, mimetype, size'
       });
       return;
     }
@@ -47,12 +54,12 @@ export const createPhoto = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    // Check if photo with this fileId already exists
-    const existingPhoto = await Photo.findOne({ fileId });
+    // Check if photo with this minioFileId already exists
+    const existingPhoto = await Photo.findOne({ minioFileId: actualMinioFileId });
     if (existingPhoto) {
       res.status(409).json({
         success: false,
-        message: 'Photo with this file ID already exists'
+        message: 'Photo with this MinIO file ID already exists'
       });
       return;
     }
@@ -60,7 +67,7 @@ export const createPhoto = async (req: Request, res: Response): Promise<void> =>
     const photo = new Photo({
       filename,
       originalName,
-      fileId,
+      minioFileId: actualMinioFileId,
       albumId,
       title: title?.trim(),
       description: description?.trim(),
@@ -73,6 +80,27 @@ export const createPhoto = async (req: Request, res: Response): Promise<void> =>
     });
 
     const savedPhoto = await photo.save();
+
+    // Generate thumbnail asynchronously for supported image formats (don't block photo creation)
+    if (isSupportedImageFormat(mimetype)) {
+      try {
+        // Get the uploaded file from MinIO to generate thumbnail
+        // Note: This is a simplified approach. In production, you might want to
+        // generate thumbnails during upload or use a queue system
+        setImmediate(async () => {
+          try {
+            // For now, we'll generate thumbnail from the fileId
+            // In a real implementation, you'd need to download the file from MinIO
+            // or generate thumbnail before upload
+            console.log(`Thumbnail generation queued for photo ${savedPhoto._id}`);
+          } catch (error) {
+            console.error('Failed to queue thumbnail generation:', error);
+          }
+        });
+      } catch (error) {
+        console.error('Failed to initiate thumbnail generation:', error);
+      }
+    }
 
     // If this is the first photo in the album and no cover is set, make it the cover
     if (!album.coverPhotoId) {
@@ -125,29 +153,60 @@ export const getPhotosByAlbum = async (req: Request, res: Response): Promise<voi
     const photos = await photosQuery;
     const total = await Photo.countDocuments(query);
 
-    const fileIds = photos.map((photo) => photo.fileId);
+    const fileIds = photos.map((photo) => photo.minioFileId).filter(Boolean);
     let signedUrlMap: Record<string, SignedUrlData> = {};
 
     try {
-      signedUrlMap = await getSignedUrlsBatch(fileIds);
+      signedUrlMap = await getPhotoSignedUrlsBatch(photos, false, 60);
     } catch (error) {
       console.error('Failed to fetch batch signed URLs for album photos:', error);
     }
 
+    // Get thumbnail URLs for photos that have thumbnails
+    const photosWithThumbnails = photos.filter((photo) => photo.minioThumbnailFileId);
+    let thumbnailSignedUrlMap: Record<string, SignedUrlData> = {};
+
+    if (photosWithThumbnails.length > 0) {
+      try {
+        thumbnailSignedUrlMap = await getPhotoSignedUrlsBatch(photosWithThumbnails, true, 60);
+      } catch (error) {
+        console.error('Failed to fetch batch signed URLs for thumbnails:', error);
+      }
+    }
+
     const photosWithUrls = photos.map((photo) => {
-      const signedUrlData = signedUrlMap[photo.fileId];
+      const signedUrlData = signedUrlMap[photo.minioFileId || ''];
       const photoObj = photo.toObject();
 
-      if (!signedUrlData) {
-        return photoObj;
+      const result: any = { ...photoObj };
+
+      if (signedUrlData) {
+        result.signedUrl = signedUrlData.signedUrl;
+        result.signedUrlExpiresAt = signedUrlData.expiresAt;
+        result.signedUrlExpiresInMinutes = signedUrlData.expiresInMinutes;
       }
 
-      return {
-        ...photoObj,
-        signedUrl: signedUrlData.signedUrl,
-        signedUrlExpiresAt: signedUrlData.expiresAt,
-        signedUrlExpiresInMinutes: signedUrlData.expiresInMinutes
-      };
+      // For photos with minioThumbnailFileId, try to get thumbnail signed URL
+      if (photo.minioThumbnailFileId) {
+        const thumbnailSignedUrlData = thumbnailSignedUrlMap[photo.minioFileId || ''];
+        if (thumbnailSignedUrlData) {
+          result.thumbnailSignedUrl = thumbnailSignedUrlData.signedUrl;
+          result.thumbnailSignedUrlExpiresAt = thumbnailSignedUrlData.expiresAt;
+          result.thumbnailSignedUrlExpiresInMinutes = thumbnailSignedUrlData.expiresInMinutes;
+        }
+      } else {
+        // For photos without thumbnails (GIFs, videos), use original as thumbnail
+        if (signedUrlData) {
+          result.thumbnailSignedUrl = signedUrlData.signedUrl;
+          result.thumbnailSignedUrlExpiresAt = signedUrlData.expiresAt;
+          result.thumbnailSignedUrlExpiresInMinutes = signedUrlData.expiresInMinutes;
+        }
+      }
+
+      // Explicitly include thumbnail photo IDs for frontend
+      result.minioThumbnailFileId = photo.minioThumbnailFileId;
+
+      return result;
     });
     res.json({
       success: true,
@@ -185,19 +244,34 @@ export const getPhotoById = async (req: Request, res: Response): Promise<void> =
       return;
     }
     try {
-      const signedUrlData = await getSignedUrl(photo.fileId);
+      const signedUrlData = await getPhotoSignedUrl(photo, false, 60);
+      const result: any = {
+        ...photo.toObject()
+      };
+
+      if (signedUrlData) {
+        result.signedUrl = signedUrlData.signedUrl;
+        result.signedUrlExpiresAt = signedUrlData.expiresAt;
+        result.signedUrlExpiresInMinutes = signedUrlData.expiresInMinutes;
+      }
+
+      // Add thumbnail URL if available
+      if (photo.minioThumbnailFileId) {
+        try {
+          const thumbnailSignedUrlData = await getPhotoSignedUrl(photo, true, 60);
+          if (thumbnailSignedUrlData) {
+            result.thumbnailSignedUrl = thumbnailSignedUrlData.signedUrl;
+            result.thumbnailSignedUrlExpiresAt = thumbnailSignedUrlData.expiresAt;
+            result.thumbnailSignedUrlExpiresInMinutes = thumbnailSignedUrlData.expiresInMinutes;
+          }
+        } catch (error) {
+          console.error('Failed to get thumbnail signed URL:', error);
+        }
+      }
+
       res.json({
         success: true,
-        data: {
-          ...photo.toObject(),
-          ...(signedUrlData
-            ? {
-                signedUrl: signedUrlData.signedUrl,
-                signedUrlExpiresAt: signedUrlData.expiresAt,
-                signedUrlExpiresInMinutes: signedUrlData.expiresInMinutes
-              }
-            : {})
-        }
+        data: result
       });
     } catch (error) {
       console.error('Failed to get signed URL:', error);
@@ -263,11 +337,17 @@ export const deletePhoto = async (req: Request, res: Response): Promise<void> =>
         message: 'Photo not found'
       });
       return;
-    } // Delete file from file service
+    }
+
+    // Delete file from MinIO
     try {
-      await deleteFile(photo.fileId);
+      // Delete the entire folder containing the photo and its thumbnail
+      if (photo.minioFileId) {
+        const folderPath = getFileFolder(photo.minioFileId);
+        await deleteFolder(folderPath);
+      }
     } catch (error) {
-      console.error(`Failed to delete file ${photo.fileId}:`, error);
+      console.error(`Failed to delete folder for photo ${photo.minioFileId}:`, error);
     }
 
     // Check if this photo is the cover photo of any album
@@ -303,6 +383,7 @@ export const deletePhoto = async (req: Request, res: Response): Promise<void> =>
 export const getUploadSignedUrlRequest = async (req: Request, res: Response): Promise<void> => {
   try {
     const { filename, mimetype, albumId } = req.body;
+    const userId = (req as any).user?.id; // From auth middleware
 
     if (!filename || !mimetype || !albumId) {
       res.status(400).json({
@@ -320,15 +401,21 @@ export const getUploadSignedUrlRequest = async (req: Request, res: Response): Pr
         message: 'Album not found'
       });
       return;
-    } // Get upload signed URL from file service
-    const { url, fileId } = await getFileUploadSignedUrl(filename, mimetype);
+    }
+
+    // Generate secure file ID (user-scoped for organization)
+    const fileId = generateFileId(userId, albumId, filename, album.groupId);
+
+    // Get upload URL directly from MinIO
+    const uploadUrl = await getUploadSignedUrl(fileId, mimetype, 15);
 
     res.json({
       success: true,
       data: {
-        uploadUrl: url,
-        fileId,
-        albumId
+        uploadUrl,
+        minioFileId: fileId,
+        albumId,
+        expiresInMinutes: 15 // URL expires in 15 minutes
       }
     });
   } catch (error) {
@@ -472,12 +559,12 @@ export const getPhotosForAIAnalysis = async (req: Request, res: Response): Promi
   }
 };
 
-// Get photo by fileId (for file service integration)
+// Get photo by minioFileId (for file service integration)
 export const getPhotoByFileId = async (req: Request, res: Response): Promise<void> => {
   try {
     const { fileId } = req.params;
 
-    const photo = await Photo.findOne({ fileId });
+    const photo = await Photo.findOne({ minioFileId: fileId });
 
     if (!photo) {
       res.status(404).json({
@@ -492,7 +579,7 @@ export const getPhotoByFileId = async (req: Request, res: Response): Promise<voi
       data: photo
     });
   } catch (error) {
-    console.error('Error fetching photo by fileId:', error);
+    console.error('Error fetching photo by minioFileId:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch photo'

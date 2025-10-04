@@ -12,8 +12,13 @@ services:
       - NODE_ENV=production
       - MONGODB_URI=${MONGODB_URI}
       - JWT_SECRET=${JWT_SECRET}
-      - FILE_API_URL=${FILE_API_URL}
       - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN}
+      # MinIO configuration (Album Service - Direct access to album buckets)
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=tumbaland_admin
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD}
+      - MINIO_BUCKET=album
     init: true
     networks:
       - tumbanet

@@ -78,7 +78,6 @@ cat >> "$OUTPUT_FILE" << 'EOF'
     // Frontend services typically depend on backend services
     "auth-front" -> "auth-service";
     "album-front" -> "album-service";
-    "album-front" -> "file-service";
     "account-front" -> "auth-service";
     "finance-front" -> "finance-service";
     "group-front" -> "group-service";
@@ -86,7 +85,6 @@ cat >> "$OUTPUT_FILE" << 'EOF'
     "relationship-front" -> "relationship-service";
 
     // Backend service dependencies
-    "album-service" -> "file-service";
     "album-service" -> "auth-service";
     "finance-service" -> "auth-service";
     "group-service" -> "auth-service";
@@ -96,7 +94,6 @@ cat >> "$OUTPUT_FILE" << 'EOF'
     // All services depend on infrastructure
     "auth-service" -> "tumbaland-proxy" [style=dashed, color=gray];
     "album-service" -> "tumbaland-proxy" [style=dashed, color=gray];
-    "file-service" -> "tumbaland-proxy" [style=dashed, color=gray];
     "finance-service" -> "tumbaland-proxy" [style=dashed, color=gray];
     "group-service" -> "tumbaland-proxy" [style=dashed, color=gray];
     "payment-service" -> "tumbaland-proxy" [style=dashed, color=gray];
@@ -114,7 +111,7 @@ cat >> "$OUTPUT_FILE" << 'EOF'
     "relationship-front" -> "tumbaland-proxy" [style=dashed, color=gray];
 
     // Group services by type
-    {rank=same; "auth-service"; "album-service"; "file-service"; "finance-service"; "group-service"; "payment-service"; "public-service"; "relationship-service"}
+    {rank=same; "auth-service"; "album-service"; "finance-service"; "group-service"; "payment-service"; "public-service"; "relationship-service"}
     {rank=same; "shell-front"; "auth-front"; "album-front"; "account-front"; "finance-front"; "group-front"; "payment-front"; "relationship-front"}
     {rank=same; "tumbaland-proxy"}
 }

@@ -11,7 +11,7 @@
         "type": "stat",
         "targets": [
           {
-            "expr": "up{job=~\"album-service|auth-service|file-service|finance-service|group-service|payment-service|relationship-service|public-service\"}",
+            "expr": "up{job=~\"album-service|auth-service|finance-service|group-service|payment-service|relationship-service|public-service\"}",
             "legendFormat": "{{job}}",
             "refId": "A"
           }

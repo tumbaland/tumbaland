@@ -20,7 +20,6 @@ on:
           - group-front
           - album-service
           - auth-service
-          - file-service
           - finance-service
           - public-service
           - relationship-service
@@ -103,12 +102,6 @@ jobs:
               DEPLOYPATH=apps/backend/auth-service/compose.yml
               DEPLOYDIR=apps/backend/auth-service
               ;;
-            file-service)
-              CONTEXT=./apps/backend/file-service
-              DOCKERFILE=./apps/backend/file-service/Dockerfile
-              DEPLOYPATH=apps/backend/file-service/compose.yml
-              DEPLOYDIR=apps/backend/file-service
-              ;;
             finance-service)
               CONTEXT=./apps/backend/finance-service
               DOCKERFILE=./apps/backend/finance-service/Dockerfile
@@ -175,7 +168,6 @@ jobs:
           echo "GOOGLE_CLOUD_BUCKET_NAME=${{ vars.GOOGLE_CLOUD_BUCKET_NAME }}" >> .env.app
           echo "CORS_ORIGIN=${{ vars.CORS_ORIGIN }}" >> .env.app
           echo "ALPHA_VANTAGE_API_KEY=${{ secrets.ALPHA_VANTAGE_API_KEY }}" >> .env.app
-          echo "FILE_API_URL=${{ vars.FILE_API_URL }}" >> .env.app
           echo "GROUP_API_URL=${{ vars.GROUP_API_URL }}" >> .env.app
           echo "GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}" >> .env.app
           echo "ALBUM_API_URL=${{ vars.ALBUM_API_URL }}" >> .env.app
@@ -200,6 +192,7 @@ jobs:
           echo "CLOUDFLARE_API_TOKEN=${{ secrets.CLOUDFLARE_API_TOKEN }}" >> .env.app
           echo "FILE_ACCESS_SECRET=${{ secrets.FILE_ACCESS_SECRET }}" >> .env.app
           echo "LOGSTASH_HTTP_URL=${{ vars.LOGSTASH_HTTP_URL }}" >> .env.app
+          echo "MINIO_ROOT_PASSWORD=${{ secrets.MINIO_ROOT_PASSWORD }}" >> .env.app
 
       - name: Copy .env file to server
         uses: appleboy/scp-action@v0.1.7

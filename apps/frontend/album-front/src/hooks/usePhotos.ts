@@ -36,7 +36,7 @@ export const usePhotos = (
 
   const query = useQuery<PaginatedResponse<Photo>, Error, PaginatedResponse<Photo>['data']>({
     queryKey: photoKeys.list(albumId, memoizedParams),
-    queryFn: () => photoService.getPhotosByAlbum(albumId, memoizedParams),
+    queryFn: () => photoService.loadPhotosWithThumbnails(albumId, memoizedParams),
     select: (response) => response.data,
     enabled: Boolean(albumId),
     placeholderData: keepPreviousData

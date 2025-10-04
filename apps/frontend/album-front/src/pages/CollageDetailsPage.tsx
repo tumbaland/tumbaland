@@ -171,13 +171,13 @@ const CollageDetailsPage: React.FC = () => {
     try {
       const photos = canvasPhotos.map((p, idx) => {
         // Use stored fileId, or extract from URL as fallback
-        const fileId = p.fileId || (p.src.includes('/serve/') 
+        const photoId = p.fileId || (p.src.includes('/serve/') 
           ? p.src.split('/serve/')[1]?.split('?')[0] 
           : '');
         
         return {
-          fileId,
-          filename: fileId, // Keep filename for backward compatibility
+          photoId, // Use photoId for the collage config
+          filename: photoId, // Keep filename for backward compatibility
           position: { left: p.x, top: p.y },
           width: p.width,
           height: p.height,
@@ -238,10 +238,10 @@ const CollageDetailsPage: React.FC = () => {
     if (fetchedCollage.config?.photos) {
       setCanvasPhotos(
         fetchedCollage.config.photos.map((p: any, idx: number) => {
-          const albumPhoto = fetchedAlbumPhotos.find((ap: any) => ap.fileId === p.filename);
+          const albumPhoto = fetchedAlbumPhotos.find((ap: any) => ap._id === p.photoId);
           return {
-            id: p.filename + '-' + idx,
-            fileId: p.filename,
+            id: p.photoId + '-' + idx,
+            fileId: p.photoId,
             src: albumPhoto ? albumPhoto.signedUrl : p.filename,
             x: p.position?.left || 100,
             y: p.position?.top || 100,
@@ -298,7 +298,7 @@ const CollageDetailsPage: React.FC = () => {
       ...prev,
       {
         id: photo._id + '-' + Date.now(),
-        fileId: photo._id, // Store the photo's fileId for saving
+        fileId: photo._id, // Store the photo's database ID for saving
         src: photo.signedUrl,
         x: 100 + Math.random() * 200,
         y: 100 + Math.random() * 200,

@@ -9,6 +9,7 @@ export interface CollageConfig {
   };
   theme: string;
   photos: Array<{
+    photoId: string; // Reference to photo database ID
     filename: string;
     caption: string;
     position: {

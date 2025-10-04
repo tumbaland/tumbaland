@@ -98,9 +98,11 @@ const fetchPhotoFile = async (photoId: string): Promise<Blob> => {
 
     const photo = photoResponse.data;
     
-    // Use the file service URL pattern from backend
-    const FILE_API_URL = getConfig().FILE_API_URL;
-    const fileUrl = `${FILE_API_URL}/api/serve/${photo.fileId}`;
+    // Use the signed URL provided by the album service
+    const fileUrl = photo.signedUrl;
+    if (!fileUrl) {
+      throw new Error('No signed URL available for photo');
+    }
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout

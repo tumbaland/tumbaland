@@ -78,7 +78,38 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
       onClick={() => onView(photo)}
     >
       <Box sx={{ position: 'relative', width: '100%', aspectRatio: '1 / 1' }}>
-        {photo.signedUrl ? (
+        {photo.thumbnailUrl ? (
+          photo.mimetype.startsWith('video/') ? (
+            <Box
+              component="video"
+              src={photo.thumbnailUrl}
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover'
+              }}
+              muted
+              preload="metadata"
+            />
+          ) : (
+            <CardMedia
+              component="img"
+              image={photo.thumbnailUrl}
+              alt={photo.title || photo.originalName}
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover'
+              }}
+            />
+          )
+        ) : photo.signedUrl ? (
           photo.mimetype.startsWith('video/') ? (
             <Box
               component="video"
@@ -130,7 +161,7 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
             )}
           </Box>
         )}
-        {photo.mimetype.startsWith('video/') && photo.signedUrl && (
+        {photo.mimetype.startsWith('video/') && (photo.thumbnailUrl || photo.signedUrl) && (
           <Box
             sx={{
               position: 'absolute',

@@ -4,9 +4,10 @@ import Photo from '../models/Photo';
 import {
   deleteFile,
   getSignedUrl,
-  getSignedUrlsBatch,
+  getPhotoSignedUrl,
+  getPhotoSignedUrlsBatch,
   SignedUrlData
-} from '../services/fileService';
+} from '../services/minioService';
 import { canAccessResource } from '../utils/permissionUtils';
 import mongoose from 'mongoose';
 
@@ -148,25 +149,38 @@ export const getAlbums = async (req: Request, res: Response): Promise<void> => {
       let coverPhotoMap = new Map<string, any>();
       if (coverPhotoIds.length > 0) {
         const coverPhotoDocs = await Photo.find({ _id: { $in: coverPhotoIds } });
-        const fileIds = coverPhotoDocs.map((photo) => photo.fileId);
+        const fileIds = coverPhotoDocs.map((photo) => photo.minioFileId).filter(Boolean);
         let signedUrlMap: Record<string, SignedUrlData> = {};
+        let thumbnailSignedUrlMap: Record<string, SignedUrlData> = {};
 
         try {
-          signedUrlMap = await getSignedUrlsBatch(fileIds);
+          signedUrlMap = await getPhotoSignedUrlsBatch(coverPhotoDocs, false, 60);
+          thumbnailSignedUrlMap = await getPhotoSignedUrlsBatch(coverPhotoDocs, true, 60);
         } catch (error) {
           console.error('Failed to fetch batch signed URLs for cover photos:', error);
         }
 
         coverPhotoMap = new Map(
           coverPhotoDocs.map((photo) => {
-            const signedUrlData = signedUrlMap[photo.fileId];
+            const signedUrlData = signedUrlMap[photo.minioFileId || ''];
+            const thumbnailSignedUrlData = thumbnailSignedUrlMap[photo.minioFileId || ''];
+            
+            // For GIFs, don't use thumbnails - show original instead
+            const isGif = photo.mimetype === 'image/gif';
+            const effectiveThumbnailSignedUrl = isGif ? null : thumbnailSignedUrlData?.signedUrl || null;
+            const effectiveThumbnailExpiresAt = isGif ? null : thumbnailSignedUrlData?.expiresAt || null;
+            const effectiveThumbnailExpiresInMinutes = isGif ? null : thumbnailSignedUrlData?.expiresInMinutes || null;
+            
             return [
               photo.id,
               {
                 ...photo.toObject(),
                 signedUrl: signedUrlData?.signedUrl || null,
                 signedUrlExpiresAt: signedUrlData?.expiresAt || null,
-                signedUrlExpiresInMinutes: signedUrlData?.expiresInMinutes || null
+                signedUrlExpiresInMinutes: signedUrlData?.expiresInMinutes || null,
+                thumbnailSignedUrl: effectiveThumbnailSignedUrl,
+                thumbnailSignedUrlExpiresAt: effectiveThumbnailExpiresAt,
+                thumbnailSignedUrlExpiresInMinutes: effectiveThumbnailExpiresInMinutes
               }
             ];
           })
@@ -298,13 +312,32 @@ export const getAlbumById = async (req: Request, res: Response): Promise<void> =
     let coverPhoto = null;
     if (albumData.coverPhotoDoc) {
       try {
-        const signedUrlData = await getSignedUrl(albumData.coverPhotoDoc.fileId);
+        const signedUrlData = await getPhotoSignedUrl(
+          albumData.coverPhotoDoc,
+          false,
+          60
+        );
+        const thumbnailSignedUrlData = await getPhotoSignedUrl(
+          albumData.coverPhotoDoc,
+          true,
+          60
+        );
+
         if (signedUrlData) {
+          // For GIFs, don't use thumbnails - show original instead
+          const isGif = albumData.coverPhotoDoc.mimetype === 'image/gif';
+          const effectiveThumbnailSignedUrl = isGif ? null : thumbnailSignedUrlData?.signedUrl || null;
+          const effectiveThumbnailExpiresAt = isGif ? null : thumbnailSignedUrlData?.expiresAt || null;
+          const effectiveThumbnailExpiresInMinutes = isGif ? null : thumbnailSignedUrlData?.expiresInMinutes || null;
+
           coverPhoto = {
             ...albumData.coverPhotoDoc,
             signedUrl: signedUrlData.signedUrl,
             signedUrlExpiresAt: signedUrlData.expiresAt,
-            signedUrlExpiresInMinutes: signedUrlData.expiresInMinutes
+            signedUrlExpiresInMinutes: signedUrlData.expiresInMinutes,
+            thumbnailSignedUrl: effectiveThumbnailSignedUrl,
+            thumbnailSignedUrlExpiresAt: effectiveThumbnailExpiresAt,
+            thumbnailSignedUrlExpiresInMinutes: effectiveThumbnailExpiresInMinutes
           };
         }
       } catch (error) {
@@ -415,9 +448,11 @@ export const deleteAlbum = async (req: Request, res: Response): Promise<void> =>
     const photos = await Photo.find({ albumId: id }); // Delete all photos and associated files
     for (const photo of photos) {
       try {
-        await deleteFile(photo.fileId);
+        if (photo.minioFileId) {
+          await deleteFile(photo.minioFileId);
+        }
       } catch (error) {
-        console.error(`Failed to delete file ${photo.fileId}:`, error);
+        console.error(`Failed to delete file ${photo.minioFileId}:`, error);
       }
     }
 

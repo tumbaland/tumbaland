@@ -3,7 +3,8 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IPhoto extends Document {
   filename: string;
   originalName: string;
-  fileId: string; // Reference to file-service file ID
+  minioFileId?: string; // MinIO storage path for original file (legacy)
+  minioThumbnailFileId?: string; // MinIO storage path for thumbnail (legacy)
   albumId: string;
   title?: string;
   description?: string;
@@ -59,10 +60,13 @@ const PhotoSchema: Schema = new Schema(
       type: String,
       required: true
     },
-    fileId: {
+    minioFileId: {
       type: String,
-      required: true,
-      unique: true
+      required: false
+    },
+    minioThumbnailFileId: {
+      type: String,
+      required: false
     },
     albumId: {
       type: Schema.Types.ObjectId,

@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import * as collageService from './collage.service';
 import { canAccessResource } from '../utils/permissionUtils';
 import Album from '../models/Album';
-import { getSignedUrl } from '../services/fileService';
+import { getPhotoSignedUrl } from '../services/minioService';
 import mongoose from 'mongoose';
 
 export const createCollage = async (req: Request, res: Response) => {
@@ -48,7 +48,10 @@ export const getCollageById = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Use aggregation to check album access and fetch photos in one query
+    // Get photo IDs from collage config
+    const photoIdsInCollage = collage.config?.photos?.map(p => p.photoId).filter(Boolean) || [];
+    
+    // Use aggregation to check album access and fetch only photos in the collage
     const aggregationPipeline: any[] = [
       { $match: { _id: { $in: collage.albumIds.map(id => new mongoose.Types.ObjectId(id)) } } },
       {
@@ -66,9 +69,26 @@ export const getCollageById = async (req: Request, res: Response): Promise<void>
           groupId: 1,
           isPublic: 1,
           photos: {
+            $filter: {
+              input: '$photos',
+              as: 'photo',
+              cond: { $in: ['$$photo._id', photoIdsInCollage.map(id => new mongoose.Types.ObjectId(id))] }
+            }
+          }
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          userId: 1,
+          groupId: 1,
+          isPublic: 1,
+          photos: {
             _id: 1,
             filename: 1,
-            fileId: 1,
+            minioFileId: 1,
+            minioThumbnailFileId: 1,
+            mimetype: 1,
             createdAt: 1,
             title: 1,
             description: 1
@@ -100,15 +120,17 @@ export const getCollageById = async (req: Request, res: Response): Promise<void>
     const photosWithUrls = await Promise.all(
       allPhotos.map(async (photo: any) => {
         try {
-          const signedUrlData = await getSignedUrl(photo.fileId);
-          if (!signedUrlData) {
-            return photo;
-          }
+          const signedUrlData = await getPhotoSignedUrl(photo, false, 60);
+          const thumbnailSignedUrlData = await getPhotoSignedUrl(photo, true, 60);
+
           return {
             ...photo,
-            signedUrl: signedUrlData.signedUrl,
-            signedUrlExpiresAt: signedUrlData.expiresAt,
-            signedUrlExpiresInMinutes: signedUrlData.expiresInMinutes
+            signedUrl: signedUrlData?.signedUrl || '',
+            signedUrlExpiresAt: signedUrlData?.expiresAt,
+            signedUrlExpiresInMinutes: signedUrlData?.expiresInMinutes,
+            thumbnailSignedUrl: thumbnailSignedUrlData?.signedUrl || '',
+            thumbnailSignedUrlExpiresAt: thumbnailSignedUrlData?.expiresAt,
+            thumbnailSignedUrlExpiresInMinutes: thumbnailSignedUrlData?.expiresInMinutes
           };
         } catch (e) {
           return photo;

@@ -5,6 +5,7 @@ export interface AlbumPhoto {
   _id: string;
   filename: string;
   signedUrl: string;
+  thumbnailSignedUrl?: string;
   title?: string;
   width?: number;
   height?: number;
@@ -55,7 +56,7 @@ const AlbumPhotoList: React.FC<AlbumPhotoListProps> = ({ photos, onPhotoClick })
           >
             <ListItemButton onClick={() => onPhotoClick(photo)}>
               <ListItemAvatar>
-                <Avatar src={photo.signedUrl} variant="rounded" />
+                <Avatar src={photo.thumbnailSignedUrl || photo.signedUrl} variant="rounded" />
               </ListItemAvatar>
             </ListItemButton>
           </ListItem>
@@ -82,7 +83,7 @@ const AlbumPhotoList: React.FC<AlbumPhotoListProps> = ({ photos, onPhotoClick })
             }}
           >
             <img
-              src={hoveredPhoto.signedUrl}
+              src={hoveredPhoto.thumbnailSignedUrl || hoveredPhoto.signedUrl}
               alt={hoveredPhoto.filename}
               style={{
                 maxWidth: 240,

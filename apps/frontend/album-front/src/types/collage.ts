@@ -13,6 +13,7 @@ export interface CollageConfig {
   viewport: { width: number; height: number };
   theme: string;
   photos: Array<{
+    photoId: string;
     filename: string;
     caption?: string;
     position: { left: number; top: number };

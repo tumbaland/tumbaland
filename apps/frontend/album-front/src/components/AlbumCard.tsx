@@ -51,10 +51,10 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete, 
       onClick={() => onView(album)}
     >
       <Box sx={{ position: 'relative', width: '100%', pt: '100%' /* 1:1 aspect ratio */ }}>
-        {album.coverPhoto?.signedUrl ? (
+        {album.coverPhoto?.thumbnailSignedUrl || album.coverPhoto?.signedUrl ? (
           <CardMedia
             component="img"
-            image={album.coverPhoto.signedUrl}
+            image={album.coverPhoto.thumbnailSignedUrl || album.coverPhoto.signedUrl}
             alt={album.name}
             sx={{
               position: 'absolute',
@@ -82,7 +82,7 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete, 
             <PhotoLibraryIcon sx={{ fontSize: 60, color: 'grey.400' }} />
           </Box>
         )}
-        {album.coverPhoto?.signedUrl && (
+        {(album.coverPhoto?.thumbnailSignedUrl || album.coverPhoto?.signedUrl) && (
           <Box
             sx={{
               position: 'absolute',
