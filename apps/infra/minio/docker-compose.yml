@@ -11,9 +11,12 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       MINIO_REGION: eu-east-1
       MINIO_BROWSER: "on"
+      MINIO_SERVER_URL: ${MINIO_SERVER_URL}
+      MINIO_BROWSER_REDIRECT_URL: ${MINIO_BROWSER_REDIRECT_URL}
+      MINIO_DOMAIN: ${MINIO_DOMAIN}
     volumes:
       - ./data:/data
-    command: server /data --console-address ":9001"
+    command: server /data
     networks:
       - tumbanet
     healthcheck:
