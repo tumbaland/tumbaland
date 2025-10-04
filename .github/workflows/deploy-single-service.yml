@@ -193,6 +193,11 @@ jobs:
           echo "FILE_ACCESS_SECRET=${{ secrets.FILE_ACCESS_SECRET }}" >> .env.app
           echo "LOGSTASH_HTTP_URL=${{ vars.LOGSTASH_HTTP_URL }}" >> .env.app
           echo "MINIO_ROOT_PASSWORD=${{ secrets.MINIO_ROOT_PASSWORD }}" >> .env.app
+          echo "MINIO_ENDPOINT=minio-api.tumbaland.eu" >> .env.app
+          echo "MINIO_PORT=443" >> .env.app
+          echo "MINIO_USE_SSL=true" >> .env.app
+          echo "MINIO_ACCESS_KEY=${{ vars.MINIO_ACCESS_KEY }}" >> .env.app
+          echo "MINIO_SECRET_KEY=${{ secrets.MINIO_SECRET_KEY }}" >> .env.app
 
       - name: Copy .env file to server
         uses: appleboy/scp-action@v0.1.7
