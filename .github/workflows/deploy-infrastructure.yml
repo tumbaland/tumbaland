@@ -95,8 +95,6 @@ jobs:
         run: |
           # Core infrastructure secrets
           echo "CLOUDFLARE_API_TOKEN=${{ secrets.CLOUDFLARE_API_TOKEN }}" > .env.infra
-          echo "GRAFANA_PASSWORD=${{ secrets.GRAFANA_PASSWORD }}" >> .env.infra
-          echo "GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}" >> .env.infra
           echo "ELASTIC_PASSWORD=${{ secrets.ELASTIC_PASSWORD }}" >> .env.infra
           echo "KIBANA_SYSTEM_PASSWORD=${{ secrets.KIBANA_SYSTEM_PASSWORD }}" >> .env.infra
           echo "KIBANA_ADMIN_PASSWORD=${{ secrets.KIBANA_ADMIN_PASSWORD }}" >> .env.infra
@@ -104,13 +102,11 @@ jobs:
           echo "XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${{ secrets.XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY }}" >> .env.infra
           echo "CONSUL_ENCRYPT_KEY=${{ secrets.CONSUL_ENCRYPT_KEY }}" >> .env.infra
           echo "CONSUL_ACL_MASTER_TOKEN=${{ secrets.CONSUL_ACL_MASTER_TOKEN }}" >> .env.infra
-          echo "VAULT_DEV_ROOT_TOKEN_ID=${{ secrets.VAULT_DEV_ROOT_TOKEN_ID }}" >> .env.infra
           echo "MINIO_ROOT_USER=${{ secrets.MINIO_ROOT_USER }}" >> .env.infra
           echo "MINIO_ROOT_PASSWORD=${{ secrets.MINIO_ROOT_PASSWORD }}" >> .env.infra
           echo "MINIO_ALBUM_SERVICE_PASSWORD=${{ secrets.MINIO_ALBUM_SERVICE_PASSWORD }}" >> .env.infra
           echo "MINIO_SERVER_URL=${{ vars.MINIO_SERVER_URL }}" >> .env.infra
           echo "MINIO_BROWSER_REDIRECT_URL=${{ vars.MINIO_BROWSER_REDIRECT_URL }}" >> .env.infra
-          echo "MINIO_DOMAIN=${{ vars.MINIO_DOMAIN }}" >> .env.infra
 
           echo "✅ Generated .env.infra file with contents:"
           cat .env.infra
