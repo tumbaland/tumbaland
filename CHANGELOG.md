@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.209](https://github.com/toomastahves/tumbaland/compare/v0.0.208...v0.0.209) (2025-10-04)
+
+
+### Bug Fixes
+
+* minio proxy ([d8468ee](https://github.com/toomastahves/tumbaland/commit/d8468ee16f9792c97f070d16293b02cf29d6d57f))
+
 ### [0.0.208](https://github.com/toomastahves/tumbaland/compare/v0.0.207...v0.0.208) (2025-10-04)
 
 
