@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.212](https://github.com/toomastahves/tumbaland/compare/v0.0.211...v0.0.212) (2025-10-04)
+
+
+### Features
+
+* set upload limits ([5208e33](https://github.com/toomastahves/tumbaland/commit/5208e339bffa041196f0feaf72c21617a5e9423a))
+
 ### [0.0.211](https://github.com/toomastahves/tumbaland/compare/v0.0.210...v0.0.211) (2025-10-04)
 
 
