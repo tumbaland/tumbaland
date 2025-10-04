@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.216](https://github.com/toomastahves/tumbaland/compare/v0.0.215...v0.0.216) (2025-10-04)
+
+
+### Bug Fixes
+
+* album service deploy ([2aeec83](https://github.com/toomastahves/tumbaland/commit/2aeec839bf67fa6acf3f5efe8697444b8cfe5225))
+
 ### [0.0.215](https://github.com/toomastahves/tumbaland/compare/v0.0.214...v0.0.215) (2025-10-04)
 
 
