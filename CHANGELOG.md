@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.214](https://github.com/toomastahves/tumbaland/compare/v0.0.213...v0.0.214) (2025-10-04)
+
+
+### Features
+
+* use minio for album ([4c80cbb](https://github.com/toomastahves/tumbaland/commit/4c80cbb346747adc45e8624db09712f10bcc2127))
+
 ### [0.0.213](https://github.com/toomastahves/tumbaland/compare/v0.0.212...v0.0.213) (2025-10-04)
 
 
