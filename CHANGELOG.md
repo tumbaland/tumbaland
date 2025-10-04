@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.213](https://github.com/toomastahves/tumbaland/compare/v0.0.212...v0.0.213) (2025-10-04)
+
+
+### Bug Fixes
+
+* ws for minio ([7f18e23](https://github.com/toomastahves/tumbaland/commit/7f18e23dcba2b50487aa75840db38634fa166287))
+
 ### [0.0.212](https://github.com/toomastahves/tumbaland/compare/v0.0.211...v0.0.212) (2025-10-04)
 
 
