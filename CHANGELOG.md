@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.218](https://github.com/toomastahves/tumbaland/compare/v0.0.217...v0.0.218) (2025-10-05)
+
+
+### Bug Fixes
+
+* rabbit pw ([c445464](https://github.com/toomastahves/tumbaland/commit/c44546494d829fe599258117903631d47e13c0a4))
+
 ### [0.0.217](https://github.com/toomastahves/tumbaland/compare/v0.0.216...v0.0.217) (2025-10-05)
 
 
