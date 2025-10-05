@@ -14,6 +14,7 @@ on:
           - tumbaland-proxy
           - minio
           - elk
+          - rabbitmq
 
 # Ensure only one infrastructure deployment runs at a time
 concurrency:
@@ -54,6 +55,12 @@ jobs:
               DOCKERFILE=./apps/infra/elk/Dockerfile
               DEPLOYPATH=apps/infra/elk/docker-compose.yml
               DEPLOYDIR=apps/infra/elk
+              ;;
+            rabbitmq)
+              CONTEXT=./apps/infra/rabbitmq
+              DOCKERFILE=./apps/infra/rabbitmq/Dockerfile
+              DEPLOYPATH=apps/infra/rabbitmq/docker-compose.yml
+              DEPLOYDIR=apps/infra/rabbitmq
               ;;
           esac
           echo "context=$CONTEXT" >> $GITHUB_OUTPUT
@@ -107,6 +114,8 @@ jobs:
           echo "MINIO_ALBUM_SERVICE_PASSWORD=${{ secrets.MINIO_ALBUM_SERVICE_PASSWORD }}" >> .env.infra
           echo "MINIO_SERVER_URL=${{ vars.MINIO_SERVER_URL }}" >> .env.infra
           echo "MINIO_BROWSER_REDIRECT_URL=${{ vars.MINIO_BROWSER_REDIRECT_URL }}" >> .env.infra
+          echo "RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}" >> .env.infra
+          echo "RABBITMQ_URL=amqp://admin:\${RABBITMQ_PASSWORD}@rabbitmq:5672/tumbaland" >> .env.infra
 
           echo "✅ Generated .env.infra file with contents:"
           cat .env.infra

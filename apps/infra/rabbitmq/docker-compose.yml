@@ -1,25 +1,22 @@
 services:
   rabbitmq:
-    image: rabbitmq:3.12-management-alpine
+    image: rabbitmq:4.1.4-management-alpine
     container_name: tumbaland-rabbitmq
     restart: unless-stopped
+    init: true
     ports:
       - "5672:5672"   # AMQP port
       - "15672:15672" # Management UI port
       - "15692:15692" # Prometheus metrics port
     environment:
       - RABBITMQ_DEFAULT_USER=admin
-      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:-secure_password_123}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
       - RABBITMQ_DEFAULT_VHOST=tumbaland
-      # Enable Prometheus plugin
-      - RABBITMQ_PLUGINS_DIR=/opt/rabbitmq/plugins
-      - RABBITMQ_ENABLED_PLUGINS_FILE=/etc/rabbitmq/enabled_plugins
     volumes:
-      - ./data:/var/lib/rabbitmq
-      - ./logs:/var/log/rabbitmq
-      - ./conf:/etc/rabbitmq
-      # Enable Prometheus plugin
-      - ./enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_config:/etc/rabbitmq
+    tmpfs:
+      - /var/log/rabbitmq  # Use tmpfs for logs to avoid permission issues
     networks:
       - tumbanet
     healthcheck:
@@ -28,7 +25,18 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
 
 networks:
   tumbanet:
     external: true
+
+volumes:
+  rabbitmq_data:
+    driver: local
+  rabbitmq_config:
+    driver: local
