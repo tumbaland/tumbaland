@@ -1,4 +1,12 @@
 # Tumbalog
+### [0.0.217](https://github.com/toomastahves/tumbaland/compare/v0.0.216...v0.0.217) (2025-10-05)
+
+
+### Features
+
+* add init true ([9eb3c1b](https://github.com/toomastahves/tumbaland/commit/9eb3c1b44af2741421ee1f41d1e04fb29a57759e))
+* setup rabbit deploy ([da78a92](https://github.com/toomastahves/tumbaland/commit/da78a92b28bb5460409f2a667e0f3620c438fd4f))
+
 ### [0.0.216](https://github.com/toomastahves/tumbaland/compare/v0.0.215...v0.0.216) (2025-10-04)
 
 
