@@ -115,7 +115,7 @@ jobs:
           echo "MINIO_SERVER_URL=${{ vars.MINIO_SERVER_URL }}" >> .env.infra
           echo "MINIO_BROWSER_REDIRECT_URL=${{ vars.MINIO_BROWSER_REDIRECT_URL }}" >> .env.infra
           echo "RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}" >> .env.infra
-          echo "RABBITMQ_URL=amqp://admin:\${RABBITMQ_PASSWORD}@rabbitmq:5672/tumbaland" >> .env.infra
+          RABBITMQ_PASSWORD="${{ secrets.RABBITMQ_PASSWORD }}" && echo "RABBITMQ_URL=amqp://admin:$RABBITMQ_PASSWORD@rabbitmq:5672/tumbaland" >> .env.infra
 
           echo "✅ Generated .env.infra file with contents:"
           cat .env.infra
