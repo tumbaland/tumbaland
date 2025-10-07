@@ -55,13 +55,15 @@ export const createPhoto = async (req: Request, res: Response): Promise<void> =>
     }
 
     // Check if photo with this minioFileId already exists
-    const existingPhoto = await Photo.findOne({ minioFileId: actualMinioFileId });
-    if (existingPhoto) {
-      res.status(409).json({
-        success: false,
-        message: 'Photo with this MinIO file ID already exists'
-      });
-      return;
+    if (actualMinioFileId) {
+      const existingPhoto = await Photo.findOne({ minioFileId: actualMinioFileId });
+      if (existingPhoto) {
+        res.status(409).json({
+          success: false,
+          message: 'Photo with this MinIO file ID already exists'
+        });
+        return;
+      }
     }
 
     const photo = new Photo({
