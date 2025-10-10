@@ -33,7 +33,7 @@ export const getActivityTypes = async (
     limit?: number;
     page?: number;
   } = {}
-): Promise<{ types: IActivityType[]; total: number; page: number; totalPages: number }> => {
+): Promise<{ types: any; total: number; page: number; totalPages: number }> => {
   try {
     const {
       userId,
@@ -100,7 +100,7 @@ export const getActivityTypes = async (
     const totalPages = Math.ceil(total / limit);
 
     return {
-      types: types as IActivityType[],
+      types,
       total,
       page,
       totalPages

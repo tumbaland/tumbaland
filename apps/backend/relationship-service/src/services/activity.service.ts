@@ -119,14 +119,14 @@ export const getActivities = async (
 
     // Execute queries
     const [activities, total] = await Promise.all([
-      Activity.find(query).populate('activity.typeId').sort(sortObj).skip(skip).limit(limit).lean(),
+      Activity.find(query).populate('activity.typeId').sort(sortObj).skip(skip).limit(limit),
       Activity.countDocuments(query)
     ]);
 
     const totalPages = Math.ceil(total / limit);
 
     return {
-      activities: activities as IActivity[],
+      activities,
       total,
       page,
       totalPages
