@@ -1,4 +1,17 @@
 # Tumbalog
+### [0.0.219](https://github.com/toomastahves/tumbaland/compare/v0.0.218...v0.0.219) (2025-10-13)
+
+
+### Features
+
+* add validation ([20e1e94](https://github.com/toomastahves/tumbaland/commit/20e1e949d435772ad3c6d948de0325ccbc442e30))
+* init vision service and front ([fa1f216](https://github.com/toomastahves/tumbaland/commit/fa1f2167f871d1dbab35973e53231b5ccf8b2276))
+
+
+### Bug Fixes
+
+* various issues ([726da54](https://github.com/toomastahves/tumbaland/commit/726da5498f38c9d32bba7516c7dee9a185eff186))
+
 ### [0.0.218](https://github.com/toomastahves/tumbaland/compare/v0.0.217...v0.0.218) (2025-10-05)
 
 
