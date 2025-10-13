@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.220](https://github.com/toomastahves/tumbaland/compare/v0.0.219...v0.0.220) (2025-10-13)
+
+
+### Features
+
+* remove pagination ([d2b6f9d](https://github.com/toomastahves/tumbaland/commit/d2b6f9daaf9e4e1d3d19b86cb14f5ab8749611d7))
+
 ### [0.0.219](https://github.com/toomastahves/tumbaland/compare/v0.0.218...v0.0.219) (2025-10-13)
 
 
