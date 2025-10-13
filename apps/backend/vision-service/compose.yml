@@ -1,0 +1,22 @@
+services:
+  vision-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: toomastahves/vision-service:latest
+    restart: unless-stopped
+    ports:
+      - "4010:4010"
+    environment:
+      - PORT=4010
+      - MONGODB_URI=${MONGODB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - NODE_ENV=production
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN}
+    init: true
+    networks:
+      - tumbaland-network
+
+networks:
+  tumbaland-network:
+    external: true

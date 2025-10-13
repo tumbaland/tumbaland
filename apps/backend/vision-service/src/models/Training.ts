@@ -1,0 +1,72 @@
+import mongoose, { Document, Schema } from 'mongoose';
+
+export interface ITraining extends Document {
+  uuid: string;
+  name: string;
+  description?: string;
+  datasetId?: string;
+  configuration: any;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  startTime?: Date;
+  endTime?: Date;
+  metadata?: any;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const TrainingSchema: Schema = new Schema(
+  {
+    uuid: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 200
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: 1000
+    },
+    datasetId: {
+      type: String,
+      index: true
+    },
+    configuration: {
+      type: Schema.Types.Mixed,
+      required: true
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'running', 'completed', 'failed'],
+      default: 'pending',
+      index: true
+    },
+    startTime: {
+      type: Date
+    },
+    endTime: {
+      type: Date
+    },
+    metadata: {
+      type: Schema.Types.Mixed
+    }
+  },
+  {
+    timestamps: true
+  }
+);
+
+// Index for searching
+TrainingSchema.index({ name: 'text', description: 'text' });
+
+// Index for sorting
+TrainingSchema.index({ createdAt: -1 });
+TrainingSchema.index({ updatedAt: -1 });
+
+export default mongoose.model<ITraining>('training', TrainingSchema);
