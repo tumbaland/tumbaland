@@ -1,9 +1,7 @@
 import React from 'react';
-import { Table, TableBody, TableCell, TableHead, TableRow, Chip, TableSortLabel, Typography } from '@mui/material';
+import { Table, TableBody, TableCell, TableHead, TableRow, Chip, TableSortLabel, Typography, Box, Select, MenuItem } from '@mui/material';
 import EditActivityModal from '../components/EditActivityModal';
 import DeleteActivityButton from '../components/DeleteActivityButton';
-
-import { TablePagination } from '@mui/material';
 
 interface ActivitiesTableProps {
   activities: any[];
@@ -12,10 +10,7 @@ interface ActivitiesTableProps {
   handleSort: (field: string) => void;
   formatDate: (date: Date | string) => string;
   refetch: () => void;
-  pagination: { total: number };
   rowsPerPage: number;
-  page: number;
-  onPageChange: (_event: unknown, newPage: number) => void;
   onRowsPerPageChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
@@ -26,10 +21,7 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
   handleSort,
   formatDate,
   refetch,
-  pagination,
   rowsPerPage,
-  page,
-  onPageChange,
   onRowsPerPageChange
 }) => {
   return (
@@ -138,32 +130,30 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
           )}
         </TableBody>
       </Table>
-      <TablePagination
-        rowsPerPageOptions={[10, 100, 1000, { label: 'All', value: -1 }]}
-        component="div"
-        count={pagination.total}
-        rowsPerPage={rowsPerPage === 10000 ? -1 : rowsPerPage}
-        page={rowsPerPage === 10000 ? 0 : page}
-        onPageChange={onPageChange}
-        onRowsPerPageChange={onRowsPerPageChange}
-        sx={{
-          '.MuiTablePagination-toolbar': {
-            minHeight: { xs: 32, sm: 52 },
-            px: { xs: 0.5, sm: 2 },
-            justifyContent: { xs: 'flex-start', sm: 'flex-end' },
-            display: 'flex'
-          },
-          '.MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows': {
-            fontSize: { xs: '0.72rem', sm: '0.95rem' }
-          },
-          '.MuiTablePagination-select': {
-            fontSize: { xs: '0.72rem', sm: '0.95rem' }
-          },
-          '.MuiTablePagination-actions': {
-            mx: { xs: 0, sm: 1 }
-          }
-        }}
-      />
+      
+      {/* Simple page size selector */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', p: 2, gap: 2 }}>
+        <Typography variant="body2" sx={{ fontSize: { xs: '0.72rem', sm: '0.95rem' } }}>
+          Show:
+        </Typography>
+        <Select
+          value={rowsPerPage === 10000 ? -1 : rowsPerPage}
+          onChange={(event) => {
+            const syntheticEvent = {
+              target: { value: event.target.value.toString() }
+            } as React.ChangeEvent<HTMLInputElement>;
+            onRowsPerPageChange(syntheticEvent);
+          }}
+          size="small"
+          sx={{ fontSize: { xs: '0.72rem', sm: '0.95rem' }, minWidth: 80 }}
+        >
+          <MenuItem value={10}>10</MenuItem>
+          <MenuItem value={25}>25</MenuItem>
+          <MenuItem value={50}>50</MenuItem>
+          <MenuItem value={100}>100</MenuItem>
+          <MenuItem value={-1}>All</MenuItem>
+        </Select>
+      </Box>
     </>
   );
 };
