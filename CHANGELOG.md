@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.221](https://github.com/toomastahves/tumbaland/compare/v0.0.220...v0.0.221) (2025-10-20)
+
+
+### Features
+
+* add last user activity ([ae839e1](https://github.com/toomastahves/tumbaland/commit/ae839e1e68437f433abc18545f791d5238e7d0bd))
+
 ### [0.0.220](https://github.com/toomastahves/tumbaland/compare/v0.0.219...v0.0.220) (2025-10-13)
 
 
