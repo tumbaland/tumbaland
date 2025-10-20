@@ -2,6 +2,7 @@ export interface GroupMember {
   email: string;
   role: 'owner' | 'admin' | 'member';
   joinedAt?: string;
+  lastActivity?: string;
 }
 
 export interface Group {

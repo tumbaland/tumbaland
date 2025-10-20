@@ -224,7 +224,14 @@ export const removeMember = async (req: Request, res: Response) => {
 
 export const membership = async (req: Request, res: Response) => {
   try {
-    const result = await svc.checkMembership(req.params.id, userEmail(req));
+    const email = userEmail(req);
+    const result = await svc.checkMembership(req.params.id, email);
+    
+    // Update last activity for this user
+    if (result.member) {
+      await svc.updateMemberActivity(req.params.id, email);
+    }
+    
     res.json({ success: true, ...result });
   } catch (e: any) {
     if (e.message === 'NOT_FOUND') return res.status(404).json({ success: false, message: 'not found' });

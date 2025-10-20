@@ -31,12 +31,31 @@ import {
   Group as GroupIcon,
   WorkspacePremium as WorkspacePremiumIcon,
   AdminPanelSettings as AdminPanelSettingsIcon,
-  Email as EmailIcon
+  Email as EmailIcon,
+  AccessTime as AccessTimeIcon
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { groupApi } from '../services/groupApi';
 import { authService } from '../services/authService';
 import { Group, GroupMember } from '../types';
+
+const formatLastActivity = (lastActivity?: string): string => {
+  if (!lastActivity) return 'Never';
+  
+  const now = new Date();
+  const activityDate = new Date(lastActivity);
+  const diffMs = now.getTime() - activityDate.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 30) return `${diffDays}d ago`;
+  
+  return activityDate.toLocaleDateString();
+};
 
 const GroupDetailsPage = () => {
   const { id } = useParams();
@@ -449,6 +468,15 @@ const GroupDetailsPage = () => {
                     <Typography variant="caption" color="text.secondary">
                       Joined {member.joinedAt ? new Date(member.joinedAt).toLocaleDateString() : 'recently'}
                     </Typography>
+                    
+                    <Divider sx={{ my: 1.5 }} />
+                    
+                    <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.5}>
+                      <AccessTimeIcon fontSize="small" color="action" />
+                      <Typography variant="caption" color="text.secondary">
+                        Active {formatLastActivity(member.lastActivity)}
+                      </Typography>
+                    </Stack>
                   </Box>
                 </CardContent>
               </Card>

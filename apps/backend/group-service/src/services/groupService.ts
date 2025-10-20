@@ -1,5 +1,13 @@
 import { Group, IGroup, GroupRole } from '../models/Group';
 
+export async function updateMemberActivity(groupId: string, memberEmail: string): Promise<void> {
+  const normalizedEmail = memberEmail.toLowerCase();
+  await Group.updateOne(
+    { _id: groupId, 'members.email': normalizedEmail },
+    { $set: { 'members.$.lastActivity': new Date() } }
+  );
+}
+
 export async function createGroup(creatorEmail: string, name: string): Promise<IGroup> {
   const group = await Group.create({
     name: String(name).trim(),

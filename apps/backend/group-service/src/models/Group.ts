@@ -6,6 +6,7 @@ export interface IGroupMember {
   email: string;
   role: GroupRole;
   joinedAt: Date;
+  lastActivity?: Date;
 }
 
 export interface IGroupInvite {
@@ -32,7 +33,8 @@ const GroupSchema = new Schema<IGroup>({
   members: [{
     email: { type: String, required: true, lowercase: true, index: true },
     role: { type: String, enum: ['owner','admin','member'], required: true },
-    joinedAt: { type: Date, default: Date.now }
+    joinedAt: { type: Date, default: Date.now },
+    lastActivity: { type: Date, default: null }
   }],
   invites: [{
     email: { type: String, required: true, lowercase: true },
