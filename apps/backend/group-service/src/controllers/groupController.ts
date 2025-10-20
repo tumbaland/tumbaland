@@ -72,6 +72,12 @@ export const listMine = async (req: InternalServiceRequest, res: Response) => {
       });
     }
     const groups = await svc.listMyGroups(email);
+    
+    // Update last activity for this user in each group
+    for (const group of groups) {
+      await svc.updateMemberActivity((group as any)._id.toString(), email);
+    }
+    
     res.json({ success: true, data: groups });
   } catch (e: any) {
     res.status(500).json({ success: false, message: e.message });
@@ -226,12 +232,6 @@ export const membership = async (req: Request, res: Response) => {
   try {
     const email = userEmail(req);
     const result = await svc.checkMembership(req.params.id, email);
-    
-    // Update last activity for this user
-    if (result.member) {
-      await svc.updateMemberActivity(req.params.id, email);
-    }
-    
     res.json({ success: true, ...result });
   } catch (e: any) {
     if (e.message === 'NOT_FOUND') return res.status(404).json({ success: false, message: 'not found' });
