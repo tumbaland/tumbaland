@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.224](https://github.com/toomastahves/tumbaland/compare/v0.0.223...v0.0.224) (2025-10-21)
+
+
+### Bug Fixes
+
+* set vision front port to 3012 ([7bd7a98](https://github.com/toomastahves/tumbaland/commit/7bd7a98c09e324b9004c188f33c3e8faf8a4bff2))
+
 ### [0.0.223](https://github.com/toomastahves/tumbaland/compare/v0.0.222...v0.0.223) (2025-10-21)
 
 
