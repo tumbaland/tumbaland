@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.226](https://github.com/toomastahves/tumbaland/compare/v0.0.225...v0.0.226) (2025-10-21)
+
+
+### Bug Fixes
+
+* add vision api url to deployment ([82c34b0](https://github.com/toomastahves/tumbaland/commit/82c34b07a49cde744e32453dea5422cf55f32e22))
+
 ### [0.0.225](https://github.com/toomastahves/tumbaland/compare/v0.0.224...v0.0.225) (2025-10-21)
 
 
