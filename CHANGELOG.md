@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.225](https://github.com/toomastahves/tumbaland/compare/v0.0.224...v0.0.225) (2025-10-21)
+
+
+### Bug Fixes
+
+* proxy vision service port ([fb47120](https://github.com/toomastahves/tumbaland/commit/fb471203c5f3eb5037e18e604581426e13efe38b))
+
 ### [0.0.224](https://github.com/toomastahves/tumbaland/compare/v0.0.223...v0.0.224) (2025-10-21)
 
 
