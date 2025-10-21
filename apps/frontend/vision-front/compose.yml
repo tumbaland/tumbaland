@@ -12,7 +12,7 @@ services:
       PUBLIC_API_URL: ${PUBLIC_API_URL}
       SHELL_FRONT_URL: ${SHELL_FRONT_URL}
     ports:
-      - '3010:80'
+      - '3012:80'
     init: true
     networks:
       - tumbanet

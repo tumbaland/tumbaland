@@ -32,7 +32,7 @@ Frontend application for managing ML training datasets, configurations, and visu
    npm run dev
    ```
 
-   The app will be available at `http://localhost:3010`
+   The app will be available at `http://localhost:3012`
 
 ### Production
 
@@ -60,7 +60,7 @@ npm run dev
 
 ## Available Scripts
 
-- `npm run dev` - Start development server (port 3010)
+- `npm run dev` - Start development server (port 3012)
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
 - `npm run lint` - Run ESLint
@@ -111,7 +111,7 @@ Build and run with Docker:
 docker build -t vision-front .
 
 # Run container
-docker run -p 3010:80 vision-front
+docker run -p 3012:80 vision-front
 ```
 
 Or use Docker Compose:
