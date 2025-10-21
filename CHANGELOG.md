@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.223](https://github.com/toomastahves/tumbaland/compare/v0.0.222...v0.0.223) (2025-10-21)
+
+
+### Features
+
+* prepare vision service and front for deployment ([3eb8fd5](https://github.com/toomastahves/tumbaland/commit/3eb8fd5956f8845a0089ea8b165f34df7ca856bd))
+
 ### [0.0.222](https://github.com/toomastahves/tumbaland/compare/v0.0.221...v0.0.222) (2025-10-20)
 
 
