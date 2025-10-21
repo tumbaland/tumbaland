@@ -8,5 +8,5 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm i --only=production
 COPY --from=builder /app/dist ./dist
-EXPOSE 4001
+EXPOSE 4010
 CMD ["node", "dist/index.js"]

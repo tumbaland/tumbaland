@@ -3,14 +3,20 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    ports:
-      - "3010:80"
-    environment:
-      - NODE_ENV=production
-    networks:
-      - tumbaland
+    image: toomastahves/vision-front:latest
     restart: unless-stopped
+    environment:
+      VISION_API_URL: ${VISION_API_URL}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+      AUTH_FRONT_URL: ${AUTH_FRONT_URL}
+      PUBLIC_API_URL: ${PUBLIC_API_URL}
+      SHELL_FRONT_URL: ${SHELL_FRONT_URL}
+    ports:
+      - '3010:80'
+    init: true
+    networks:
+      - tumbanet
 
 networks:
-  tumbaland:
+  tumbanet:
     external: true

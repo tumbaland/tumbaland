@@ -19,7 +19,7 @@ export const ConfigContext = React.createContext<AppConfig>({});
 // Helper function to create config from environment variables
 function createDevConfig(): AppConfig {
   return {
-    VISION_API_URL: import.meta.env.VITE_VISION_API_URL || 'http://localhost:4010',
+    VISION_API_URL: import.meta.env.VITE_VISION_API_URL,
     AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL,
     AUTH_FRONT_URL: import.meta.env.VITE_AUTH_FRONT_URL,
     PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL,

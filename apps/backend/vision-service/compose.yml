@@ -15,8 +15,8 @@ services:
       - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN}
     init: true
     networks:
-      - tumbaland-network
+      - tumbanet
 
 networks:
-  tumbaland-network:
+  tumbanet:
     external: true
