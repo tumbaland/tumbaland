@@ -51,7 +51,8 @@ export const getCollageById = async (req: Request, res: Response): Promise<void>
     // Get photo IDs from collage config
     const photoIdsInCollage = collage.config?.photos?.map(p => p.photoId).filter(Boolean) || [];
     
-    // Use aggregation to check album access and fetch only photos in the collage
+    // Use aggregation to check album access and fetch photos
+    // If collage has photos, show all photos from albums; if empty, still show all available photos
     const aggregationPipeline: any[] = [
       { $match: { _id: { $in: collage.albumIds.map(id => new mongoose.Types.ObjectId(id)) } } },
       {
@@ -69,29 +70,20 @@ export const getCollageById = async (req: Request, res: Response): Promise<void>
           groupId: 1,
           isPublic: 1,
           photos: {
-            $filter: {
+            $map: {
               input: '$photos',
               as: 'photo',
-              cond: { $in: ['$$photo._id', photoIdsInCollage.map(id => new mongoose.Types.ObjectId(id))] }
+              in: {
+                _id: '$$photo._id',
+                filename: '$$photo.filename',
+                minioFileId: '$$photo.minioFileId',
+                minioThumbnailFileId: '$$photo.minioThumbnailFileId',
+                mimetype: '$$photo.mimetype',
+                createdAt: '$$photo.createdAt',
+                title: '$$photo.title',
+                description: '$$photo.description'
+              }
             }
-          }
-        }
-      },
-      {
-        $project: {
-          _id: 1,
-          userId: 1,
-          groupId: 1,
-          isPublic: 1,
-          photos: {
-            _id: 1,
-            filename: 1,
-            minioFileId: 1,
-            minioThumbnailFileId: 1,
-            mimetype: 1,
-            createdAt: 1,
-            title: 1,
-            description: 1
           }
         }
       }

@@ -9,8 +9,8 @@ import {
   getPhotoSignedUrlsBatch,
   getUploadSignedUrl,
   generateFileId,
-  generateThumbnailFileIdFromFileId,
   getFileFolder,
+  getFile,
   SignedUrlData
 } from '../services/minioService';
 import { generateThumbnailFromBuffer, isSupportedImageFormat } from '../services/thumbnailService';
@@ -86,17 +86,30 @@ export const createPhoto = async (req: Request, res: Response): Promise<void> =>
     // Generate thumbnail asynchronously for supported image formats (don't block photo creation)
     if (isSupportedImageFormat(mimetype)) {
       try {
-        // Get the uploaded file from MinIO to generate thumbnail
-        // Note: This is a simplified approach. In production, you might want to
-        // generate thumbnails during upload or use a queue system
+        // Generate thumbnail from the uploaded file
         setImmediate(async () => {
           try {
-            // For now, we'll generate thumbnail from the fileId
-            // In a real implementation, you'd need to download the file from MinIO
-            // or generate thumbnail before upload
-            console.log(`Thumbnail generation queued for photo ${savedPhoto._id}`);
+            // Download the original file from MinIO
+            const imageBuffer = await getFile(actualMinioFileId);
+            const userId = (req as any).user?.id;
+            
+            // Generate thumbnail from the buffer
+            const thumbnailResult = await generateThumbnailFromBuffer(
+              imageBuffer,
+              originalName,
+              userId,
+              albumId,
+              album.groupId
+            );
+            
+            // Update photo with thumbnail file ID returned from generation
+            await Photo.findByIdAndUpdate(savedPhoto._id, {
+              minioThumbnailFileId: thumbnailResult.thumbnailFileId
+            });
+            
+            console.log(`Thumbnail generated successfully for photo ${savedPhoto._id}`);
           } catch (error) {
-            console.error('Failed to queue thumbnail generation:', error);
+            console.error('Failed to generate thumbnail:', error);
           }
         });
       } catch (error) {

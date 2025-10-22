@@ -20,6 +20,16 @@ const AlbumPhotoList: React.FC<AlbumPhotoListProps> = ({ photos, onPhotoClick })
   const [hoveredPhoto, setHoveredPhoto] = useState<AlbumPhoto | null>(null);
   const [overlayPos, setOverlayPos] = useState<{ top: number; left: number } | null>(null);
 
+  // Determine the image URL to use for a photo (prefer thumbnail for sidebar)
+  const getThumbnailUrl = (photo: AlbumPhoto): string => {
+    return photo.thumbnailSignedUrl || photo.signedUrl || '';
+  };
+
+  // Determine the image URL for the overlay preview (use full size)
+  const getPreviewUrl = (photo: AlbumPhoto): string => {
+    return photo.signedUrl || photo.thumbnailSignedUrl || '';
+  };
+
   const handleMouseEnter = (e: React.MouseEvent, photo: AlbumPhoto) => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const overlayHeight = 260; // match maxHeight below
@@ -56,7 +66,7 @@ const AlbumPhotoList: React.FC<AlbumPhotoListProps> = ({ photos, onPhotoClick })
           >
             <ListItemButton onClick={() => onPhotoClick(photo)}>
               <ListItemAvatar>
-                <Avatar src={photo.thumbnailSignedUrl || photo.signedUrl} variant="rounded" />
+                <Avatar src={getThumbnailUrl(photo)} variant="rounded" />
               </ListItemAvatar>
             </ListItemButton>
           </ListItem>
@@ -83,7 +93,7 @@ const AlbumPhotoList: React.FC<AlbumPhotoListProps> = ({ photos, onPhotoClick })
             }}
           >
             <img
-              src={hoveredPhoto.thumbnailSignedUrl || hoveredPhoto.signedUrl}
+              src={getPreviewUrl(hoveredPhoto)}
               alt={hoveredPhoto.filename}
               style={{
                 maxWidth: 240,
