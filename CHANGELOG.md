@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.227](https://github.com/toomastahves/tumbaland/compare/v0.0.226...v0.0.227) (2025-10-22)
+
+
+### Bug Fixes
+
+* collage thumbnails ([2ad568e](https://github.com/toomastahves/tumbaland/commit/2ad568efb874db4c2d741fbba796bb9491872c2f))
+
 ### [0.0.226](https://github.com/toomastahves/tumbaland/compare/v0.0.225...v0.0.226) (2025-10-21)
 
 
