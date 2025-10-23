@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.228](https://github.com/toomastahves/tumbaland/compare/v0.0.227...v0.0.228) (2025-10-23)
+
+
+### Features
+
+* use vision apps in practice ([5da12ab](https://github.com/toomastahves/tumbaland/commit/5da12ab467b5d3c1e0e0653ca537a90749dd8d4d))
+
 ### [0.0.227](https://github.com/toomastahves/tumbaland/compare/v0.0.226...v0.0.227) (2025-10-22)
 
 
