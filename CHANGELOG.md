@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.231](https://github.com/toomastahves/tumbaland/compare/v0.0.230...v0.0.231) (2025-10-23)
+
+
+### Bug Fixes
+
+* serve docs ([347be4e](https://github.com/toomastahves/tumbaland/commit/347be4e77ae9eac20eb7776a8603955e5a0e283d))
+
 ### [0.0.230](https://github.com/toomastahves/tumbaland/compare/v0.0.229...v0.0.230) (2025-10-23)
 
 
