@@ -11,11 +11,11 @@ import {
 
 const router = express.Router();
 
-// Training routes
+// Training routes - more specific routes first!
+router.get('/uuid/:uuid', getTrainingByUuid);
+router.get('/:id/epochs', getTrainingWithEpochs);
 router.get('/', getTrainings);
 router.get('/:id', getTrainingById);
-router.get('/:id/epochs', getTrainingWithEpochs);
-router.get('/uuid/:uuid', getTrainingByUuid);
 router.post('/', createTraining);
 router.put('/:id', updateTraining);
 router.delete('/:id', deleteTraining);

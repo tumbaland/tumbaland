@@ -6,6 +6,8 @@ import connectDB from './config/database';
 import datasetRoutes from './routes/datasetRoutes';
 import trainingRoutes from './routes/trainingRoutes';
 import epochRoutes from './routes/epochRoutes';
+import configRoutes from './routes/configRoutes';
+import analysisRoutes from './routes/analysisRoutes';
 import { healthCheck } from './controllers/healthController';
 import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware } from '@tumbaland/core';
 
@@ -31,6 +33,8 @@ app.use(express.json({ limit: '50mb' })); // Increased limit for large training 
 app.use('/api/datasets', datasetRoutes);
 app.use('/api/trainings', trainingRoutes);
 app.use('/api/epochs', epochRoutes);
+app.use('/api/configs', configRoutes);
+app.use('/api/analysis', analysisRoutes);
 
 // Serve OpenAPI docs as static files
 app.use('/api/docs', express.static(path.join(__dirname, '../docs')));

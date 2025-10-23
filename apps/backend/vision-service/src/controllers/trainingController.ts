@@ -59,9 +59,11 @@ export const getTrainings = async (req: Request, res: Response): Promise<void> =
     });
   } catch (error) {
     console.error('Error fetching trainings:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch trainings';
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch trainings'
+      message: 'Failed to fetch trainings',
+      error: errorMessage
     });
   }
 };
@@ -87,9 +89,11 @@ export const getTrainingById = async (req: Request, res: Response): Promise<void
     });
   } catch (error) {
     console.error('Error fetching training:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch training';
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch training'
+      message: 'Failed to fetch training',
+      error: errorMessage
     });
   }
 };
@@ -115,9 +119,11 @@ export const getTrainingByUuid = async (req: Request, res: Response): Promise<vo
     });
   } catch (error) {
     console.error('Error fetching training:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch training';
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch training'
+      message: 'Failed to fetch training',
+      error: errorMessage
     });
   }
 };
@@ -153,9 +159,11 @@ export const getTrainingWithEpochs = async (req: Request, res: Response): Promis
     });
   } catch (error) {
     console.error('Error fetching training with epochs:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch training with epochs';
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch training with epochs'
+      message: 'Failed to fetch training with epochs',
+      error: errorMessage
     });
   }
 };
@@ -166,8 +174,8 @@ export const createTraining = async (req: Request, res: Response): Promise<void>
     const { 
       name, 
       description, 
-      datasetId, 
-      configuration, 
+      datasetId,
+      configId, 
       status = 'pending',
       startTime,
       endTime,
@@ -182,14 +190,6 @@ export const createTraining = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    if (!configuration) {
-      res.status(400).json({
-        success: false,
-        message: 'Configuration is required'
-      });
-      return;
-    }
-
     // Generate UUID if not provided
     const uuid = req.body.uuid || uuidv4();
 
@@ -198,7 +198,7 @@ export const createTraining = async (req: Request, res: Response): Promise<void>
       name: name.trim(),
       description: description?.trim(),
       datasetId,
-      configuration,
+      configId,
       status,
       startTime,
       endTime,
@@ -214,9 +214,11 @@ export const createTraining = async (req: Request, res: Response): Promise<void>
     });
   } catch (error) {
     console.error('Error creating training:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to create training';
     res.status(500).json({
       success: false,
-      message: 'Failed to create training'
+      message: 'Failed to create training',
+      error: errorMessage
     });
   }
 };
@@ -228,13 +230,22 @@ export const updateTraining = async (req: Request, res: Response): Promise<void>
     const { 
       name, 
       description, 
-      datasetId, 
-      configuration, 
+      datasetId,
+      configId, 
       status,
       startTime,
       endTime,
       metadata 
     } = req.body;
+
+    // Validate ID format
+    if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid training ID format'
+      });
+      return;
+    }
 
     const training = await Training.findById(id);
 
@@ -250,7 +261,7 @@ export const updateTraining = async (req: Request, res: Response): Promise<void>
     if (name !== undefined) training.name = name.trim();
     if (description !== undefined) training.description = description?.trim();
     if (datasetId !== undefined) training.datasetId = datasetId;
-    if (configuration !== undefined) training.configuration = configuration;
+    if (configId !== undefined) training.configId = configId;
     if (status !== undefined) training.status = status;
     if (startTime !== undefined) training.startTime = startTime;
     if (endTime !== undefined) training.endTime = endTime;
@@ -265,9 +276,11 @@ export const updateTraining = async (req: Request, res: Response): Promise<void>
     });
   } catch (error) {
     console.error('Error updating training:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to update training';
     res.status(500).json({
       success: false,
-      message: 'Failed to update training'
+      message: 'Failed to update training',
+      error: errorMessage
     });
   }
 };
@@ -276,6 +289,15 @@ export const updateTraining = async (req: Request, res: Response): Promise<void>
 export const deleteTraining = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+
+    // Validate ID format
+    if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid training ID format'
+      });
+      return;
+    }
 
     const training = await Training.findById(id);
 
@@ -299,9 +321,11 @@ export const deleteTraining = async (req: Request, res: Response): Promise<void>
     });
   } catch (error) {
     console.error('Error deleting training:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to delete training';
     res.status(500).json({
       success: false,
-      message: 'Failed to delete training'
+      message: 'Failed to delete training',
+      error: errorMessage
     });
   }
 };

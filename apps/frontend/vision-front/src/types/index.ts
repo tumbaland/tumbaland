@@ -1,47 +1,3 @@
-// Dataset Types
-export interface Dataset {
-  _id: string;
-  uuid: string;
-  name: string;
-  description?: string;
-  timestamp: string;
-  dataset_info?: {
-    path?: string;
-    total_frames?: number;
-    frame_list_file?: string;
-    [key: string]: any;
-  };
-  annotations?: {
-    total_frames?: number;
-    total_pixels?: number;
-    class_distribution?: Record<string, {
-      class_id?: number;
-      pixel_count?: number;
-      percentage?: number;
-      [key: string]: any;
-    }>;
-    [key: string]: any;
-  };
-  camera?: {
-    total_images?: number;
-    mean_rgb?: number[];
-    std_rgb?: number[];
-    normalized_mean_rgb?: number[];
-    normalized_std_rgb?: number[];
-    [key: string]: any;
-  };
-  lidar?: {
-    total_files?: number;
-    total_points?: number;
-    lidar_mean?: number[];
-    lidar_std?: number[];
-    [key: string]: any;
-  };
-  metadata?: Record<string, any>;
-  createdAt: string;
-  updatedAt: string;
-}
-
 // Training Types
 export interface Training {
   _id: string;
@@ -50,7 +6,7 @@ export interface Training {
   name: string;
   description?: string;
   datasetId?: string;
-  configuration: Record<string, any>;
+  configId?: string;
   status: 'pending' | 'running' | 'completed' | 'failed';
   startTime?: string;
   endTime?: string;
@@ -92,6 +48,18 @@ export interface Epoch {
   results: EpochResults;
   learning_rate?: number;
   epoch_time?: number;
+  metadata?: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Config Types
+export interface Config {
+  _id: string;
+  config_uuid: string;
+  summary: string;
+  config_data: Record<string, any>;
+  config_name?: string;
   metadata?: Record<string, any>;
   createdAt: string;
   updatedAt: string;
@@ -143,7 +111,7 @@ export interface CreateTrainingData {
   name: string;
   description?: string;
   datasetId?: string;
-  configuration: Record<string, any>;
+  configId?: string;
   status?: 'pending' | 'running' | 'completed' | 'failed';
   startTime?: string;
   endTime?: string;
@@ -159,5 +127,13 @@ export interface CreateEpochData {
   results: EpochResults;
   learning_rate?: number;
   epoch_time?: number;
+  metadata?: Record<string, any>;
+}
+
+export interface CreateConfigData {
+  trainingId?: string;
+  summary: string;
+  config_data: Record<string, any>;
+  config_name?: string;
   metadata?: Record<string, any>;
 }

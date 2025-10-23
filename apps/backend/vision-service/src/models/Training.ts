@@ -5,7 +5,7 @@ export interface ITraining extends Document {
   name: string;
   description?: string;
   datasetId?: string;
-  configuration: any;
+  configId?: string;
   status: 'pending' | 'running' | 'completed' | 'failed';
   startTime?: Date;
   endTime?: Date;
@@ -37,9 +37,9 @@ const TrainingSchema: Schema = new Schema(
       type: String,
       index: true
     },
-    configuration: {
-      type: Schema.Types.Mixed,
-      required: true
+    configId: {
+      type: String,
+      index: true
     },
     status: {
       type: String,

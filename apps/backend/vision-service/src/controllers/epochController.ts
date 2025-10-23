@@ -285,6 +285,116 @@ export const deleteEpoch = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
+// Create epoch from JSON file (accepts training_uuid and looks up trainingId, or accepts trainingId directly)
+export const createEpochFromJson = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const {
+      trainingId,
+      training_uuid,
+      epoch_uuid,
+      epoch,
+      timestamp,
+      results,
+      learning_rate,
+      epoch_time,
+      metadata
+    } = req.body;
+
+    let training;
+    let trainId: string;
+    let trainUuid: string;
+
+    // If trainingId is provided, look it up by ID
+    if (trainingId) {
+      training = await Training.findById(trainingId);
+      if (!training) {
+        res.status(404).json({
+          success: false,
+          message: `Training not found with id: ${trainingId}`
+        });
+        return;
+      }
+      trainId = trainingId;
+      trainUuid = (training as any).uuid;
+    } 
+    // Otherwise, training_uuid must be provided
+    else if (training_uuid) {
+      training = await Training.findOne({ uuid: training_uuid });
+      if (!training) {
+        res.status(404).json({
+          success: false,
+          message: `Training not found with uuid: ${training_uuid}`
+        });
+        return;
+      }
+      trainId = (training as any)._id.toString();
+      trainUuid = training_uuid;
+    }
+    // Neither provided
+    else {
+      res.status(400).json({
+        success: false,
+        message: 'Either trainingId or training_uuid is required'
+      });
+      return;
+    }
+
+    if (epoch === undefined || epoch === null) {
+      res.status(400).json({
+        success: false,
+        message: 'Epoch number is required'
+      });
+      return;
+    }
+
+    if (!results) {
+      res.status(400).json({
+        success: false,
+        message: 'Results are required'
+      });
+      return;
+    }
+
+    // Check if epoch already exists
+    if (epoch_uuid) {
+      const existingEpoch = await Epoch.findOne({ epoch_uuid });
+      if (existingEpoch) {
+        res.status(409).json({
+          success: false,
+          message: `Epoch with uuid ${epoch_uuid} already exists`
+        });
+        return;
+      }
+    }
+
+    const epochData = new Epoch({
+      trainingId: trainId,
+      training_uuid: trainUuid,
+      epoch_uuid: epoch_uuid || uuidv4(),
+      epoch,
+      timestamp: timestamp || new Date(),
+      results,
+      learning_rate,
+      epoch_time,
+      metadata
+    });
+
+    const savedEpoch = await epochData.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Epoch created successfully',
+      data: savedEpoch
+    });
+  } catch (error) {
+    console.error('Error creating epoch from JSON:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create epoch'
+    });
+  }
+};
+
 // Batch create epochs
 export const createEpochsBatch = async (req: Request, res: Response): Promise<void> => {
   try {

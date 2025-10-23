@@ -36,6 +36,15 @@ export const epochService = {
     return response.data;
   },
 
+  // Upload epoch from JSON file
+  async uploadEpoch(epochData: any, trainingId?: string): Promise<ApiResponse<Epoch>> {
+    const payload = trainingId 
+      ? { ...epochData, trainingId }
+      : epochData;
+    const response = await visionApi.post('/epochs/upload', payload);
+    return response.data;
+  },
+
   // Create multiple epochs (batch)
   async createEpochsBatch(epochs: CreateEpochData[]): Promise<ApiResponse<Epoch[]>> {
     const response = await visionApi.post('/epochs/batch', { epochs });
@@ -46,6 +55,29 @@ export const epochService = {
   async updateEpoch(id: string, epochData: Partial<CreateEpochData>): Promise<ApiResponse<Epoch>> {
     const response = await visionApi.put(`/epochs/${id}`, epochData);
     return response.data;
+  },
+
+  // Upload or update epoch (smart method)
+  async uploadOrUpdateEpoch(epochData: any, trainingId?: string): Promise<ApiResponse<Epoch>> {
+    const payload = trainingId 
+      ? { ...epochData, trainingId }
+      : epochData;
+
+    // Check if epoch has an ID
+    const epochId = payload._id || payload.epoch_uuid;
+
+    if (epochId) {
+      // Try to update first
+      try {
+        return await this.updateEpoch(epochId, payload);
+      } catch (updateErr) {
+        // If update fails (epoch not found), create new
+        return await this.uploadEpoch(payload, trainingId);
+      }
+    } else {
+      // No ID, create new epoch
+      return await this.uploadEpoch(payload, trainingId);
+    }
   },
 
   // Delete epoch

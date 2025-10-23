@@ -35,21 +35,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button
               color="inherit"
-              onClick={() => navigate('/datasets')}
-              sx={{
-                fontWeight: isActive('/datasets') ? 700 : 500,
-                textTransform: 'none',
-                background: 'none',
-                borderRadius: 2,
-                px: 2,
-                color: isActive('/datasets') ? 'primary.main' : '#222',
-                '&:hover': { background: 'rgba(0,0,0,0.04)' }
-              }}
-            >
-              Datasets
-            </Button>
-            <Button
-              color="inherit"
               onClick={() => navigate('/trainings')}
               sx={{
                 fontWeight: isActive('/trainings') ? 700 : 500,
@@ -62,6 +47,36 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               }}
             >
               Trainings
+            </Button>
+            <Button
+              color="inherit"
+              onClick={() => navigate('/configs')}
+              sx={{
+                fontWeight: isActive('/configs') ? 700 : 500,
+                textTransform: 'none',
+                background: 'none',
+                borderRadius: 2,
+                px: 2,
+                color: isActive('/configs') ? 'primary.main' : '#222',
+                '&:hover': { background: 'rgba(0,0,0,0.04)' }
+              }}
+            >
+              Configs
+            </Button>
+            <Button
+              color="inherit"
+              onClick={() => navigate('/analysis')}
+              sx={{
+                fontWeight: isActive('/analysis') ? 700 : 500,
+                textTransform: 'none',
+                background: 'none',
+                borderRadius: 2,
+                px: 2,
+                color: isActive('/analysis') ? 'primary.main' : '#222',
+                '&:hover': { background: 'rgba(0,0,0,0.04)' }
+              }}
+            >
+              Analysis
             </Button>
           </Box>
         </Toolbar>
