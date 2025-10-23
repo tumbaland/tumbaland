@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.230](https://github.com/toomastahves/tumbaland/compare/v0.0.229...v0.0.230) (2025-10-23)
+
+
+### Bug Fixes
+
+* remove uuid ([b60a490](https://github.com/toomastahves/tumbaland/commit/b60a490019749d9c8202707198a33e745a67986d))
+
 ### [0.0.229](https://github.com/toomastahves/tumbaland/compare/v0.0.228...v0.0.229) (2025-10-23)
 
 
