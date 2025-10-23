@@ -8,7 +8,7 @@ import AnalysisPage from '../pages/AnalysisPage';
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/analysis" replace />} />
+      <Route path="/" element={<Navigate to="/trainings" replace />} />
       <Route path="/trainings" element={<TrainingsPage />} />
       <Route path="/trainings/:id" element={<TrainingDetailPage />} />
       <Route path="/epochs" element={<EpochsPage />} />
