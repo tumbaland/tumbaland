@@ -16,7 +16,6 @@ import {
   Add as AddIcon
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
-import { v4 as uuidv4 } from 'uuid';
 import { trainingService } from '../services/trainingService';
 import { configService } from '../services/configService';
 import { getAllAnalyses, type DatasetAnalysis } from '../services/analysisService';
@@ -132,9 +131,7 @@ const TrainingsPage: React.FC = () => {
         setCreateSuccess('Training updated successfully!');
       } else {
         // Create new training
-        const trainingUuid = uuidv4();
         await trainingService.createTraining({
-          uuid: trainingUuid,
           name: trainingName.trim(),
           description: trainingDescription.trim() || undefined,
           datasetId: selectedDatasetId || undefined,
