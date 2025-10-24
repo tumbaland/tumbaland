@@ -329,3 +329,113 @@ export const deleteTraining = async (req: Request, res: Response): Promise<void>
     });
   }
 };
+
+// Compare trainings
+export const compareTrainings = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { trainingIds } = req.body;
+
+    if (!trainingIds || !Array.isArray(trainingIds) || trainingIds.length === 0) {
+      res.status(400).json({
+        success: false,
+        message: 'Training IDs array is required'
+      });
+      return;
+    }
+
+    if (trainingIds.length > 10) {
+      res.status(400).json({
+        success: false,
+        message: 'Maximum 10 trainings can be compared at once'
+      });
+      return;
+    }
+
+    // Fetch trainings and their epochs
+    const trainings = await Training.find({ _id: { $in: trainingIds } });
+    const epochs = await Epoch.find({ trainingId: { $in: trainingIds } })
+      .sort({ trainingId: 1, epoch: 1 });
+
+    // Group epochs by training ID
+    const epochsByTraining: Record<string, any[]> = epochs.reduce((acc, epoch) => {
+      const trainingId = epoch.trainingId.toString();
+      if (!acc[trainingId]) {
+        acc[trainingId] = [];
+      }
+      acc[trainingId].push(epoch);
+      return acc;
+    }, {} as Record<string, any[]>);
+
+    // Calculate comparison data for each training
+    const comparisonData = trainings.map(training => {
+      const trainingId = (training._id as any).toString();
+      const trainingEpochs = epochsByTraining[trainingId] || [];
+      const lastEpoch = trainingEpochs.length > 0 ? trainingEpochs[trainingEpochs.length - 1] : null;
+
+      // Calculate training metrics
+      const totalTime = trainingEpochs.reduce((sum: number, epoch: any) => sum + (epoch.epoch_time || 0), 0);
+      const avgEpochTime = trainingEpochs.length > 0 ? totalTime / trainingEpochs.length : 0;
+
+      // Calculate costs (using the same rates as frontend)
+      const CPU_RATE_PER_HOUR = 0.006;
+      const GPU_RATE_PER_HOUR = 0.20;
+      const totalHours = totalTime / 3600;
+      const cpuCost = totalHours * CPU_RATE_PER_HOUR;
+      const gpuCost = totalHours * GPU_RATE_PER_HOUR;
+      const totalCost = cpuCost + gpuCost;
+
+      return {
+        training: {
+          _id: training._id,
+          name: training.name,
+          description: training.description,
+          status: training.status,
+          createdAt: training.createdAt,
+          updatedAt: training.updatedAt
+        },
+        metrics: {
+          totalEpochs: trainingEpochs.length,
+          totalTime,
+          avgEpochTime,
+          maxEpochTime: trainingEpochs.length > 0 ? Math.max(...trainingEpochs.map((e: any) => e.epoch_time || 0)) : 0,
+          cost: {
+            totalHours,
+            cpuCost,
+            gpuCost,
+            totalCost
+          }
+        },
+        lastEpoch: lastEpoch ? {
+          epoch: lastEpoch.epoch,
+          results: lastEpoch.results,
+          timestamp: lastEpoch.timestamp
+        } : null,
+        epochs: trainingEpochs.map((epoch: any) => ({
+          epoch: epoch.epoch,
+          results: epoch.results,
+          epoch_time: epoch.epoch_time,
+          timestamp: epoch.timestamp
+        }))
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        comparison: comparisonData,
+        summary: {
+          totalTrainings: trainings.length,
+          trainingsWithEpochs: comparisonData.filter(c => c.epochs.length > 0).length
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error comparing trainings:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to compare trainings';
+    res.status(500).json({
+      success: false,
+      message: 'Failed to compare trainings',
+      error: errorMessage
+    });
+  }
+};

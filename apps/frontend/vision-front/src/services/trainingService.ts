@@ -7,6 +7,49 @@ import {
   PaginatedResponse
 } from '../types';
 
+// Training comparison types
+export interface TrainingComparison {
+  training: {
+    _id: string;
+    name: string;
+    description?: string;
+    status: Training['status'];
+    createdAt: string;
+    updatedAt: string;
+  };
+  metrics: {
+    totalEpochs: number;
+    totalTime: number;
+    avgEpochTime: number;
+    maxEpochTime: number;
+    cost: {
+      totalHours: number;
+      cpuCost: number;
+      gpuCost: number;
+      totalCost: number;
+    };
+  };
+  lastEpoch: {
+    epoch: number;
+    results: any;
+    timestamp: string;
+  } | null;
+  epochs: Array<{
+    epoch: number;
+    results: any;
+    epoch_time?: number;
+    timestamp: string;
+  }>;
+}
+
+export interface TrainingComparisonResponse {
+  comparison: TrainingComparison[];
+  summary: {
+    totalTrainings: number;
+    trainingsWithEpochs: number;
+  };
+}
+
 export const trainingService = {
   // Get all trainings
   async getTrainings(params?: {
@@ -40,6 +83,12 @@ export const trainingService = {
     order?: 'asc' | 'desc';
   }): Promise<ApiResponse<TrainingWithEpochs>> {
     const response = await visionApi.get(`/trainings/${id}/epochs`, { params });
+    return response.data;
+  },
+
+  // Compare multiple trainings
+  async compareTrainings(trainingIds: string[]): Promise<ApiResponse<TrainingComparisonResponse>> {
+    const response = await visionApi.post('/trainings/compare', { trainingIds });
     return response.data;
   },
 

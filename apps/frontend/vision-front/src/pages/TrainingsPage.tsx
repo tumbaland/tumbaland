@@ -14,9 +14,11 @@ import {
 import {
   Refresh as RefreshIcon,
   Add as AddIcon,
-  DeleteOutline as DeleteOutlineIcon
+  DeleteOutline as DeleteOutlineIcon,
+  Compare as CompareIcon
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { trainingService } from '../services/trainingService';
 import { configService } from '../services/configService';
 import { getAllAnalyses, type DatasetAnalysis } from '../services/analysisService';
@@ -26,6 +28,7 @@ import TrainingFilters from '../components/TrainingFilters';
 import TrainingFormDialog from '../components/TrainingFormDialog';
 
 const TrainingsPage: React.FC = () => {
+  const navigate = useNavigate();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
@@ -247,6 +250,14 @@ const TrainingsPage: React.FC = () => {
     }
   };
 
+  // Handle compare selected
+  const handleCompareSelected = () => {
+    const selectedIds = Array.from(selectedTrainingIds);
+    if (selectedIds.length > 1) {
+      navigate(`/trainings/compare?ids=${selectedIds.join(',')}`);
+    }
+  };
+
   // Handle delete selected
   const handleDeleteSelected = async () => {
     try {
@@ -309,6 +320,16 @@ const TrainingsPage: React.FC = () => {
           <Typography variant="body2" color="text.secondary">
             {selectedTrainingIds.size} training(s) selected
           </Typography>
+          {selectedTrainingIds.size > 1 && (
+            <Button
+              variant="contained"
+              startIcon={<CompareIcon />}
+              onClick={handleCompareSelected}
+              color="primary"
+            >
+              Compare
+            </Button>
+          )}
           <Button
             variant="outlined"
             color="error"

@@ -6,7 +6,8 @@ import {
   getTrainingWithEpochs,
   createTraining,
   updateTraining,
-  deleteTraining
+  deleteTraining,
+  compareTrainings
 } from '../controllers/trainingController';
 
 const router = express.Router();
@@ -19,5 +20,6 @@ router.get('/:id', getTrainingById);
 router.post('/', createTraining);
 router.put('/:id', updateTraining);
 router.delete('/:id', deleteTraining);
+router.post('/compare', compareTrainings);
 
 export default router;

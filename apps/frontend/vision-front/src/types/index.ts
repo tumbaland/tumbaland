@@ -137,3 +137,46 @@ export interface CreateConfigData {
   config_name?: string;
   metadata?: Record<string, any>;
 }
+
+// Training Comparison Types
+export interface TrainingComparison {
+  training: {
+    _id: string;
+    name: string;
+    description?: string;
+    status: Training['status'];
+    createdAt: string;
+    updatedAt: string;
+  };
+  metrics: {
+    totalEpochs: number;
+    totalTime: number;
+    avgEpochTime: number;
+    maxEpochTime: number;
+    cost: {
+      totalHours: number;
+      cpuCost: number;
+      gpuCost: number;
+      totalCost: number;
+    };
+  };
+  lastEpoch: {
+    epoch: number;
+    results: EpochResults;
+    timestamp: string;
+  } | null;
+  epochs: Array<{
+    epoch: number;
+    results: EpochResults;
+    epoch_time?: number;
+    timestamp: string;
+  }>;
+}
+
+export interface TrainingComparisonResponse {
+  comparison: TrainingComparison[];
+  summary: {
+    totalTrainings: number;
+    trainingsWithEpochs: number;
+  };
+}
