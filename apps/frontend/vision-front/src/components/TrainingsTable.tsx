@@ -13,7 +13,8 @@ import {
   Box,
   Chip,
   IconButton,
-  Tooltip
+  Tooltip,
+  Checkbox
 } from '@mui/material';
 import {
   Visibility as VisibilityIcon,
@@ -35,6 +36,9 @@ interface TrainingsTableProps {
   onDelete: (trainingId: string) => void;
   hasFilters: boolean;
   searchTerm: string;
+  selectedTrainingIds: Set<string>;
+  onSelectTraining: (trainingId: string) => void;
+  onSelectAll: () => void;
 }
 
 const getStatusColor = (status: Training['status']): 'success' | 'error' | 'default' | 'warning' => {
@@ -67,7 +71,10 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
   onEdit,
   onDelete,
   hasFilters,
-  searchTerm
+  searchTerm,
+  selectedTrainingIds,
+  onSelectTraining,
+  onSelectAll
 }) => {
   const navigate = useNavigate();
 
@@ -97,9 +104,18 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
         <Table>
           <TableHead>
             <TableRow>
+              <TableCell padding="checkbox" sx={{ fontWeight: 'bold' }}>
+                <Checkbox
+                  indeterminate={
+                    selectedTrainingIds.size > 0 && selectedTrainingIds.size < trainings.length
+                  }
+                  checked={trainings.length > 0 && selectedTrainingIds.size === trainings.length}
+                  onChange={onSelectAll}
+                  disabled={trainings.length === 0}
+                />
+              </TableCell>
               <TableCell><strong>Name</strong></TableCell>
               <TableCell><strong>Description</strong></TableCell>
-              <TableCell><strong>Dataset</strong></TableCell>
               <TableCell align="center"><strong>Status</strong></TableCell>
               <TableCell><strong>Created</strong></TableCell>
               <TableCell><strong>Updated</strong></TableCell>
@@ -111,9 +127,22 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
               <TableRow
                 key={training._id}
                 hover
-                sx={{ cursor: 'pointer' }}
+                selected={selectedTrainingIds.has(training._id)}
+                sx={{
+                  cursor: 'pointer',
+                  backgroundColor: selectedTrainingIds.has(training._id)
+                    ? 'rgba(25, 118, 210, 0.08)'
+                    : 'inherit'
+                }}
                 onClick={() => navigate(`/trainings/${training._id}`)}
               >
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    checked={selectedTrainingIds.has(training._id)}
+                    onChange={() => onSelectTraining(training._id)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </TableCell>
                 <TableCell>
                   <Typography variant="body2" fontWeight={600}>
                     {training.name}
@@ -122,11 +151,6 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
                 <TableCell>
                   <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 250 }}>
                     {training.description || '-'}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2" color="text.secondary">
-                    {training.datasetId || '-'}
                   </Typography>
                 </TableCell>
                 <TableCell align="center">

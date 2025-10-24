@@ -13,7 +13,8 @@ import {
 } from '@mui/material';
 import {
   Refresh as RefreshIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  DeleteOutline as DeleteOutlineIcon
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { trainingService } from '../services/trainingService';
@@ -46,6 +47,8 @@ const TrainingsPage: React.FC = () => {
   const [editingTrainingId, setEditingTrainingId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTrainingId, setDeleteTrainingId] = useState<string | null>(null);
+  const [selectedTrainingIds, setSelectedTrainingIds] = useState<Set<string>>(new Set());
+  const [deleteMultipleDialogOpen, setDeleteMultipleDialogOpen] = useState(false);
 
   // Debounce search
   React.useEffect(() => {
@@ -141,15 +144,14 @@ const TrainingsPage: React.FC = () => {
         setCreateSuccess(`Training "${trainingName}" created successfully!`);
       }
 
+      // Close modal immediately and refresh
+      setCreateModalOpen(false);
+      setEditingTrainingId(null);
       setTrainingName('');
       setTrainingDescription('');
       setSelectedDatasetId('');
       setSelectedConfigId('');
-      setTimeout(() => {
-        setCreateModalOpen(false);
-        setEditingTrainingId(null);
-        refetch();
-      }, 1000);
+      refetch();
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Failed to save training');
     } finally {
@@ -225,6 +227,49 @@ const TrainingsPage: React.FC = () => {
     }
   };
 
+  // Handle checkbox change
+  const handleSelectTraining = (trainingId: string) => {
+    const newSelected = new Set(selectedTrainingIds);
+    if (newSelected.has(trainingId)) {
+      newSelected.delete(trainingId);
+    } else {
+      newSelected.add(trainingId);
+    }
+    setSelectedTrainingIds(newSelected);
+  };
+
+  // Handle select all
+  const handleSelectAll = () => {
+    if (selectedTrainingIds.size === trainings.length) {
+      setSelectedTrainingIds(new Set());
+    } else {
+      setSelectedTrainingIds(new Set(trainings.map(t => t._id)));
+    }
+  };
+
+  // Handle delete selected
+  const handleDeleteSelected = async () => {
+    try {
+      setCreating(true);
+      const trainingsToDelete = Array.from(selectedTrainingIds);
+      
+      for (const trainingId of trainingsToDelete) {
+        await trainingService.deleteTraining(trainingId);
+      }
+      
+      setCreateSuccess(`${trainingsToDelete.length} training(s) deleted successfully!`);
+      setDeleteMultipleDialogOpen(false);
+      setSelectedTrainingIds(new Set());
+      setTimeout(() => {
+        refetch();
+      }, 500);
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'Failed to delete trainings');
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
@@ -258,6 +303,24 @@ const TrainingsPage: React.FC = () => {
         </Alert>
       )}
 
+      {/* Bulk Delete UI */}
+      {selectedTrainingIds.size > 0 && (
+        <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            {selectedTrainingIds.size} training(s) selected
+          </Typography>
+          <Button
+            variant="outlined"
+            color="error"
+            size="small"
+            startIcon={<DeleteOutlineIcon />}
+            onClick={() => setDeleteMultipleDialogOpen(true)}
+          >
+            Delete Selected
+          </Button>
+        </Box>
+      )}
+
       <TrainingsTable
         trainings={trainings}
         isLoading={isLoading}
@@ -270,6 +333,9 @@ const TrainingsPage: React.FC = () => {
         onDelete={handleDeleteClick}
         hasFilters={statusFilter !== 'all'}
         searchTerm={searchTerm}
+        selectedTrainingIds={selectedTrainingIds}
+        onSelectTraining={handleSelectTraining}
+        onSelectAll={handleSelectAll}
       />
 
       {/* Create/Edit Training Modal */}
@@ -312,6 +378,32 @@ const TrainingsPage: React.FC = () => {
           </Button>
           <Button
             onClick={handleConfirmDelete}
+            color="error"
+            variant="contained"
+            disabled={creating}
+          >
+            {creating ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Multiple Confirmation Dialog */}
+      <Dialog
+        open={deleteMultipleDialogOpen}
+        onClose={() => setDeleteMultipleDialogOpen(false)}
+      >
+        <DialogTitle>Delete Selected Trainings</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete {selectedTrainingIds.size} training(s)? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteMultipleDialogOpen(false)} disabled={creating}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeleteSelected}
             color="error"
             variant="contained"
             disabled={creating}

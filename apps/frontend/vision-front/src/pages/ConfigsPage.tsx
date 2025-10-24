@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Box,
+  Container,
+  Typography,
   Button,
   Table,
   TableBody,
@@ -15,17 +17,19 @@ import {
   DialogActions,
   Alert,
   CircularProgress,
-  Typography,
   IconButton,
   Chip,
-  Stack,
-  Checkbox
+  Checkbox,
+  TextField,
+  Tooltip
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
   CloudUpload as CloudUploadIcon,
-  DeleteOutline as DeleteOutlineIcon
+  DeleteOutline as DeleteOutlineIcon,
+  Edit as EditIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { configService } from '../services/configService';
 import { Config } from '../types';
@@ -45,6 +49,9 @@ const ConfigsPage = () => {
   const [selectedConfig, setSelectedConfig] = useState<Config | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteConfigId, setDeleteConfigId] = useState<string | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingConfig, setEditingConfig] = useState<Config | null>(null);
+  const [editConfigName, setEditConfigName] = useState('');
 
   // File input refs
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -53,6 +60,11 @@ const ConfigsPage = () => {
   useEffect(() => {
     loadConfigs();
   }, []);
+
+  // Format date helper
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString();
+  };
 
   // Load configs
   const loadConfigs = async () => {
@@ -130,6 +142,35 @@ const ConfigsPage = () => {
   const handleViewDetails = (config: Config) => {
     setSelectedConfig(config);
     setDetailsDialogOpen(true);
+  };
+
+  // Handle edit click
+  const handleEditClick = (config: Config) => {
+    setEditingConfig(config);
+    setEditConfigName(config.config_name || '');
+    setEditDialogOpen(true);
+  };
+
+  // Handle edit save
+  const handleEditSave = async () => {
+    if (!editingConfig) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      await configService.updateConfig(editingConfig._id, {
+        config_name: editConfigName.trim() || undefined
+      });
+      setSuccess('Config name updated successfully!');
+      setEditDialogOpen(false);
+      setEditingConfig(null);
+      setEditConfigName('');
+      await loadConfigs();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update config name');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle delete click
@@ -228,34 +269,39 @@ const ConfigsPage = () => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }}>
-        Configs Library
-      </Typography>
+    <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+        <Typography variant="h4" component="h1">
+          Configs Library
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="contained"
+            startIcon={<CloudUploadIcon />}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+          >
+            {uploading ? 'Uploading...' : 'Upload Configs'}
+          </Button>
+          <IconButton onClick={() => loadConfigs()} disabled={loading}>
+            <RefreshIcon />
+          </IconButton>
+        </Box>
+      </Box>
 
       <Typography variant="body2" sx={{ mb: 3, color: 'text.secondary' }}>
         Manage training configurations. Configs are independent and can be selected when creating trainings.
       </Typography>
 
-      {/* File Upload */}
-      <Box sx={{ mb: 3 }}>
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept=".json"
-          onChange={handleFileChange}
-          style={{ display: 'none' }}
-        />
-        <Button
-          variant="contained"
-          startIcon={<CloudUploadIcon />}
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-        >
-          {uploading ? 'Uploading...' : 'Upload Config Files'}
-        </Button>
-      </Box>
+      {/* File Input (hidden) */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept=".json"
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
+      />
 
       {/* Messages */}
       {success && (
@@ -294,7 +340,7 @@ const ConfigsPage = () => {
           )}
           <TableContainer component={Paper}>
             <Table>
-              <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
+              <TableHead>
                 <TableRow>
                   <TableCell padding="checkbox" sx={{ fontWeight: 'bold' }}>
                     <Checkbox
@@ -308,7 +354,6 @@ const ConfigsPage = () => {
                   </TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Config Name</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Summary</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>UUID</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Created</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', textAlign: 'center' }}>Actions</TableCell>
                 </TableRow>
@@ -316,7 +361,7 @@ const ConfigsPage = () => {
               <TableBody>
                 {configs.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} sx={{ textAlign: 'center', py: 3 }}>
+                    <TableCell colSpan={5} sx={{ textAlign: 'center', py: 3 }}>
                       No configs uploaded yet
                     </TableCell>
                   </TableRow>
@@ -342,32 +387,46 @@ const ConfigsPage = () => {
                       <TableCell>
                         <Chip label={config.summary} variant="outlined" size="small" />
                       </TableCell>
-                      <TableCell sx={{ fontSize: '0.8rem', fontFamily: 'monospace' }}>
-                        {config.config_uuid.substring(0, 8)}...
-                      </TableCell>
                       <TableCell>
-                        {new Date(config.createdAt).toLocaleDateString()} {new Date(config.createdAt).toLocaleTimeString()}
+                        {formatDate(config.createdAt)}
                       </TableCell>
                       <TableCell sx={{ textAlign: 'center' }}>
-                        <Stack direction="row" spacing={1} justifyContent="center">
+                        <Tooltip title="View config details">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewDetails(config);
+                            }}
+                          >
+                            <VisibilityIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Edit config name">
                           <IconButton
                             size="small"
                             color="primary"
-                            onClick={() => handleViewDetails(config)}
-                            title="View Details"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditClick(config);
+                            }}
                           >
-                            <VisibilityIcon />
+                            <EditIcon fontSize="small" />
                           </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete config">
                           <IconButton
                             size="small"
                             color="error"
-                            onClick={() => handleDeleteClick(config._id)}
-                            title="Delete"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick(config._id);
+                            }}
                             disabled={loading}
                           >
-                            <DeleteIcon />
+                            <DeleteIcon fontSize="small" />
                           </IconButton>
-                        </Stack>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   ))
@@ -433,6 +492,76 @@ const ConfigsPage = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Edit Config Name Dialog */}
+      <Dialog
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Edit Config</DialogTitle>
+        <DialogContent sx={{ maxHeight: '70vh', overflowY: 'auto' }}>
+          {editingConfig && (
+            <Box sx={{ py: 2 }}>
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                  Config Name:
+                </Typography>
+                <TextField
+                  autoFocus
+                  margin="dense"
+                  label="Config Name"
+                  fullWidth
+                  variant="outlined"
+                  value={editConfigName}
+                  onChange={(e) => setEditConfigName(e.target.value)}
+                  placeholder="Enter config name..."
+                  disabled={loading}
+                />
+              </Box>
+
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                  Config UUID:
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{ fontFamily: 'monospace', mb: 2 }}
+                >
+                  {editingConfig.config_uuid}
+                </Typography>
+
+                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                  Summary:
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  {editingConfig.summary}
+                </Typography>
+              </Box>
+
+              <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                Config Data:
+              </Typography>
+              <Paper sx={{ p: 2, backgroundColor: '#f9f9f9', overflow: 'auto', maxHeight: '300px' }}>
+                {formatConfigData(editingConfig.config_data)}
+              </Paper>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditDialogOpen(false)} disabled={loading}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleEditSave}
+            variant="contained"
+            disabled={loading || !editConfigName.trim()}
+          >
+            {loading ? 'Saving...' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
         <DialogTitle>Delete Config</DialogTitle>
@@ -479,7 +608,7 @@ const ConfigsPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </Container>
   );
 };
 
