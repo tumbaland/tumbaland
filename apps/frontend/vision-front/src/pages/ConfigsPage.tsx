@@ -121,7 +121,7 @@ const ConfigsPage = () => {
       }
 
       if (successCount > 0) {
-        setSuccess(`${successCount} config(s) uploaded successfully!`);
+        setSuccess(`Upload finished - ${successCount} config(s) processed`);
         await loadConfigs();
       }
 
@@ -277,7 +277,7 @@ const ConfigsPage = () => {
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
             variant="contained"
-            startIcon={<CloudUploadIcon />}
+            startIcon={uploading ? <CircularProgress size={20} color="inherit" /> : <CloudUploadIcon />}
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
           >

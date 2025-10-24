@@ -6,9 +6,6 @@ import {
   Container,
   Typography,
   Paper,
-  Card,
-  CardContent,
-  Chip,
   CircularProgress,
   Alert,
   Divider,
@@ -39,9 +36,10 @@ import { LineChart } from '@mui/x-charts';
 import { trainingService } from '../services/trainingService';
 import { epochService } from '../services/epochService';
 import { configService } from '../services/configService';
-import { Training, Epoch } from '../types';
+import { Epoch } from '../types';
 import ClassIoUChart from '../components/ClassIoUChart';
 import TrainingTimeMetrics from '../components/TrainingTimeMetrics';
+import TrainingOverviewCard from '../components/TrainingOverviewCard';
 
 const TrainingDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -217,21 +215,6 @@ const TrainingDetailPage: React.FC = () => {
   // Utility functions
   const formatDate = (dateString: string) => new Date(dateString).toLocaleString();
 
-  const getStatusColor = (status: Training['status']): 'success' | 'error' | 'default' | 'warning' => {
-    switch (status) {
-      case 'completed':
-        return 'success';
-      case 'running':
-        return 'default';
-      case 'failed':
-        return 'error';
-      case 'pending':
-        return 'default';
-      default:
-        return 'default';
-    }
-  };
-
   // Loading and error states
   if (isLoading) {
     return (
@@ -289,98 +272,8 @@ const TrainingDetailPage: React.FC = () => {
       {/* Overview Tab */}
       {detailTab === 0 && (
         <Box display="flex" flexDirection="column" gap={3}>
-          {/* Training Info Card */}
-          <Card>
-            <CardContent>
-              <Box display="flex" justifyContent="space-between" alignItems="start" mb={2}>
-                <Box>
-                  <Typography variant="h5" gutterBottom>
-                    {training.name}
-                  </Typography>
-                  {training.description && (
-                    <Typography variant="body2" color="text.secondary" paragraph>
-                      {training.description}
-                    </Typography>
-                  )}
-                </Box>
-                <Chip
-                  label={training.status}
-                  color={getStatusColor(training.status)}
-                  sx={{ textTransform: 'capitalize' }}
-                />
-              </Box>
-
-              <Box display="grid" gridTemplateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={2}>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">Dataset ID</Typography>
-                  <Typography variant="body2" fontWeight={500}>{training.datasetId || '-'}</Typography>
-                </Box>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">Training UUID</Typography>
-                  <Typography variant="body2" fontWeight={500} sx={{ wordBreak: 'break-all' }}>
-                    {training.training_uuid || training.uuid || '-'}
-                  </Typography>
-                </Box>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">Created</Typography>
-                  <Typography variant="body2" fontWeight={500}>{formatDate(training.createdAt)}</Typography>
-                </Box>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">Last Updated</Typography>
-                  <Typography variant="body2" fontWeight={500}>{formatDate(training.updatedAt)}</Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-
-          {/* Epochs Summary */}
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>Epochs Summary</Typography>
-              <Divider sx={{ mb: 2 }} />
-              {epochs.length > 0 ? (
-                <Box>
-                  <Box mb={2}>
-                    <Typography variant="caption" color="text.secondary">Latest Epoch</Typography>
-                    <Typography variant="h4">{epochs[epochs.length - 1]?.epoch}</Typography>
-                  </Box>
-                  {lastEpoch && (
-                    <Box>
-                      <Typography variant="subtitle2" gutterBottom>Latest Metrics</Typography>
-                      <Box display="grid" gridTemplateColumns="1fr 1fr" gap={1}>
-                        <Box>
-                          <Typography variant="caption" color="text.secondary">Train Loss</Typography>
-                          <Typography variant="body2" fontWeight={500}>
-                            {lastEpoch.results?.train?.loss?.toFixed(4) || '-'}
-                          </Typography>
-                        </Box>
-                        <Box>
-                          <Typography variant="caption" color="text.secondary">Val Loss</Typography>
-                          <Typography variant="body2" fontWeight={500}>
-                            {lastEpoch.results?.val?.loss?.toFixed(4) || '-'}
-                          </Typography>
-                        </Box>
-                        <Box>
-                          <Typography variant="caption" color="text.secondary">Train mIoU</Typography>
-                          <Typography variant="body2" fontWeight={500}>
-                            {lastEpoch.results?.train?.mean_iou?.toFixed(4) || '-'}
-                          </Typography>
-                        </Box>
-                        <Box>
-                          <Typography variant="caption" color="text.secondary">Val mIoU</Typography>
-                          <Typography variant="body2" fontWeight={500}>
-                            {lastEpoch.results?.val?.mean_iou?.toFixed(4) || '-'}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </Box>
-                  )}
-                </Box>
-              ) : (
-                <Typography variant="body2" color="text.secondary">No epoch data available</Typography>
-              )}
-            </CardContent>
-          </Card>
+          {/* Training Overview Card */}
+          <TrainingOverviewCard training={training} epochs={epochs} />
 
           {/* Loss Chart */}
           {epochs.length > 0 && trainLoss.some(v => v !== undefined) && (
