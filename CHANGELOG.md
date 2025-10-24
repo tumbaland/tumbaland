@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.233](https://github.com/toomastahves/tumbaland/compare/v0.0.232...v0.0.233) (2025-10-24)
+
+
+### Features
+
+* improve ui ([66171e2](https://github.com/toomastahves/tumbaland/commit/66171e2d561b7721186b537eecb95baaf72cd812))
+
 ### [0.0.232](https://github.com/toomastahves/tumbaland/compare/v0.0.231...v0.0.232) (2025-10-24)
 
 
