@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.234](https://github.com/toomastahves/tumbaland/compare/v0.0.233...v0.0.234) (2025-10-24)
+
+
+### Features
+
+* add latex export ([2f4c6ab](https://github.com/toomastahves/tumbaland/commit/2f4c6abee46a0694c716d0fcb50b0c9e71ec525b))
+
 ### [0.0.233](https://github.com/toomastahves/tumbaland/compare/v0.0.232...v0.0.233) (2025-10-24)
 
 
