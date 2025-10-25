@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.236](https://github.com/toomastahves/tumbaland/compare/v0.0.235...v0.0.236) (2025-10-25)
+
+
+### Features
+
+* update style for analysis page ([8725cf7](https://github.com/toomastahves/tumbaland/commit/8725cf78ed8101200ea300237f538c3992a1e45e))
+
 ### [0.0.235](https://github.com/toomastahves/tumbaland/compare/v0.0.234...v0.0.235) (2025-10-25)
 
 
