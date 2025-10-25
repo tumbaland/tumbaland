@@ -215,6 +215,13 @@ const TrainingDetailPage: React.FC = () => {
   // Utility functions
   const formatDate = (dateString: string) => new Date(dateString).toLocaleString();
 
+  const formatNumber = (value: any, decimals: number = 4): string => {
+    if (typeof value === 'number' && !isNaN(value)) {
+      return value.toFixed(decimals);
+    }
+    return '-';
+  };
+
   // Loading and error states
   if (isLoading) {
     return (
@@ -411,10 +418,10 @@ const TrainingDetailPage: React.FC = () => {
                     {epochs.map((epoch) => (
                       <TableRow key={epoch._id} hover>
                         <TableCell>{epoch.epoch}</TableCell>
-                        <TableCell align="right">{epoch.results?.train?.loss?.toFixed(4) || '-'}</TableCell>
-                        <TableCell align="right">{epoch.results?.val?.loss?.toFixed(4) || '-'}</TableCell>
-                        <TableCell align="right">{epoch.results?.train?.mean_iou?.toFixed(4) || '-'}</TableCell>
-                        <TableCell align="right">{epoch.results?.val?.mean_iou?.toFixed(4) || '-'}</TableCell>
+                        <TableCell align="right">{formatNumber(epoch.results?.train?.loss)}</TableCell>
+                        <TableCell align="right">{formatNumber(epoch.results?.val?.loss)}</TableCell>
+                        <TableCell align="right">{formatNumber(epoch.results?.train?.mean_iou)}</TableCell>
+                        <TableCell align="right">{formatNumber(epoch.results?.val?.mean_iou)}</TableCell>
                         <TableCell align="right">{epoch.learning_rate?.toExponential(2) || '-'}</TableCell>
                         <TableCell align="right">{epoch.epoch_time?.toFixed(2) || '-'}</TableCell>
                         <TableCell align="center">
@@ -592,10 +599,10 @@ const TrainingDetailPage: React.FC = () => {
                   <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>Training Results</Typography>
                   <Box sx={{ pl: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
                     <Typography variant="body2">
-                      <strong>Loss:</strong> {selectedEpoch.results.train.loss?.toFixed(4)}
+                      <strong>Loss:</strong> {formatNumber(selectedEpoch.results.train.loss)}
                     </Typography>
                     <Typography variant="body2">
-                      <strong>mIoU:</strong> {selectedEpoch.results.train.mean_iou?.toFixed(4)}
+                      <strong>mIoU:</strong> {formatNumber(selectedEpoch.results.train.mean_iou)}
                     </Typography>
                   </Box>
                 </Box>
@@ -606,10 +613,10 @@ const TrainingDetailPage: React.FC = () => {
                   <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>Validation Results</Typography>
                   <Box sx={{ pl: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
                     <Typography variant="body2">
-                      <strong>Loss:</strong> {selectedEpoch.results.val.loss?.toFixed(4)}
+                      <strong>Loss:</strong> {formatNumber(selectedEpoch.results.val.loss)}
                     </Typography>
                     <Typography variant="body2">
-                      <strong>mIoU:</strong> {selectedEpoch.results.val.mean_iou?.toFixed(4)}
+                      <strong>mIoU:</strong> {formatNumber(selectedEpoch.results.val.mean_iou)}
                     </Typography>
                   </Box>
                 </Box>

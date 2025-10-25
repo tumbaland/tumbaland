@@ -56,6 +56,13 @@ const TrainingComparisonPage: React.FC = () => {
     return new Date(dateString).toLocaleString();
   };
 
+  const formatNumber = (value: any, decimals: number = 4): string => {
+    if (typeof value === 'number' && !isNaN(value)) {
+      return value.toFixed(decimals);
+    }
+    return 'N/A';
+  };
+
   const getStatusColor = (status: string): 'success' | 'error' | 'default' | 'warning' => {
     switch (status) {
       case 'completed':
@@ -129,7 +136,7 @@ const TrainingComparisonPage: React.FC = () => {
       latex += 'Train Loss ';
       comparisonData.forEach(comp => {
         const loss = comp.lastEpoch?.results?.train?.loss;
-        latex += `& ${loss !== undefined ? loss.toFixed(4) : 'N/A'} `;
+        latex += `& ${formatNumber(loss)} `;
       });
       latex += '\\\\ \\hline\n';
 
@@ -137,7 +144,7 @@ const TrainingComparisonPage: React.FC = () => {
       latex += 'Val Loss ';
       comparisonData.forEach(comp => {
         const loss = comp.lastEpoch?.results?.val?.loss;
-        latex += `& ${loss !== undefined ? loss.toFixed(4) : 'N/A'} `;
+        latex += `& ${formatNumber(loss)} `;
       });
       latex += '\\\\ \\hline\n';
 
@@ -145,7 +152,7 @@ const TrainingComparisonPage: React.FC = () => {
       latex += 'Train mIoU ';
       comparisonData.forEach(comp => {
         const miou = comp.lastEpoch?.results?.train?.mean_iou;
-        latex += `& ${miou !== undefined ? miou.toFixed(4) : 'N/A'} `;
+        latex += `& ${formatNumber(miou)} `;
       });
       latex += '\\\\ \\hline\n';
 
@@ -153,7 +160,7 @@ const TrainingComparisonPage: React.FC = () => {
       latex += 'Val mIoU ';
       comparisonData.forEach(comp => {
         const miou = comp.lastEpoch?.results?.val?.mean_iou;
-        latex += `& ${miou !== undefined ? miou.toFixed(4) : 'N/A'} `;
+        latex += `& ${formatNumber(miou)} `;
       });
       latex += '\\\\ \\hline\n';
 
@@ -227,19 +234,19 @@ const TrainingComparisonPage: React.FC = () => {
             const f1 = classMetrics?.f1;
 
             // IoU with bold formatting for max value
-            const iouText = iou !== undefined ? iou.toFixed(4) : 'N/A';
+            const iouText = formatNumber(iou);
             latex += `& ${iou === classMaxValues.iou && iou !== undefined ? `\\textbf{${iouText}}` : iouText} `;
 
             // Precision with bold formatting for max value
-            const precisionText = precision !== undefined ? precision.toFixed(4) : 'N/A';
+            const precisionText = formatNumber(precision);
             latex += `& ${precision === classMaxValues.precision && precision !== undefined ? `\\textbf{${precisionText}}` : precisionText} `;
 
             // Recall with bold formatting for max value
-            const recallText = recall !== undefined ? recall.toFixed(4) : 'N/A';
+            const recallText = formatNumber(recall);
             latex += `& ${recall === classMaxValues.recall && recall !== undefined ? `\\textbf{${recallText}}` : recallText} `;
 
             // F1 with bold formatting for max value
-            const f1Text = f1 !== undefined ? f1.toFixed(4) : 'N/A';
+            const f1Text = formatNumber(f1);
             latex += `& ${f1 === classMaxValues.f1 && f1 !== undefined ? `\\textbf{${f1Text}}` : f1Text} `;
           });
           latex += '\\\\ \\hline\n';
@@ -504,7 +511,7 @@ const TrainingComparisonPage: React.FC = () => {
                   <TableCell>Train Loss</TableCell>
                   {comparisonData.map((comp) => (
                     <TableCell key={comp.training._id} align="center">
-                      {comp.lastEpoch?.results?.train?.loss?.toFixed(4) || 'N/A'}
+                      {formatNumber(comp.lastEpoch?.results?.train?.loss)}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -512,7 +519,7 @@ const TrainingComparisonPage: React.FC = () => {
                   <TableCell>Validation Loss</TableCell>
                   {comparisonData.map((comp) => (
                     <TableCell key={comp.training._id} align="center">
-                      {comp.lastEpoch?.results?.val?.loss?.toFixed(4) || 'N/A'}
+                      {formatNumber(comp.lastEpoch?.results?.val?.loss)}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -520,7 +527,7 @@ const TrainingComparisonPage: React.FC = () => {
                   <TableCell>Train mIoU</TableCell>
                   {comparisonData.map((comp) => (
                     <TableCell key={comp.training._id} align="center">
-                      {comp.lastEpoch?.results?.train?.mean_iou?.toFixed(4) || 'N/A'}
+                      {formatNumber(comp.lastEpoch?.results?.train?.mean_iou)}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -528,7 +535,7 @@ const TrainingComparisonPage: React.FC = () => {
                   <TableCell>Validation mIoU</TableCell>
                   {comparisonData.map((comp) => (
                     <TableCell key={comp.training._id} align="center">
-                      {comp.lastEpoch?.results?.val?.mean_iou?.toFixed(4) || 'N/A'}
+                      {formatNumber(comp.lastEpoch?.results?.val?.mean_iou)}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -655,7 +662,7 @@ const TrainingComparisonPage: React.FC = () => {
                                         opacity: classMetrics.iou === maxValues.iou ? 1 : 0.8
                                       }}
                                     >
-                                      {classMetrics.iou.toFixed(4)}
+                                      {formatNumber(classMetrics.iou)}
                                     </Typography>
                                   ) : (
                                     <Typography variant="body2" color="text.secondary">
@@ -671,7 +678,7 @@ const TrainingComparisonPage: React.FC = () => {
                                         fontWeight: classMetrics.precision === maxValues.precision ? 700 : 'normal'
                                       }}
                                     >
-                                      {classMetrics.precision.toFixed(4)}
+                                      {formatNumber(classMetrics.precision)}
                                     </Typography>
                                   ) : (
                                     <Typography variant="body2" color="text.secondary">
@@ -687,7 +694,7 @@ const TrainingComparisonPage: React.FC = () => {
                                         fontWeight: classMetrics.recall === maxValues.recall ? 700 : 'normal'
                                       }}
                                     >
-                                      {classMetrics.recall.toFixed(4)}
+                                      {formatNumber(classMetrics.recall)}
                                     </Typography>
                                   ) : (
                                     <Typography variant="body2" color="text.secondary">
@@ -703,7 +710,7 @@ const TrainingComparisonPage: React.FC = () => {
                                         fontWeight: classMetrics.f1 === maxValues.f1 ? 700 : 'normal'
                                       }}
                                     >
-                                      {classMetrics.f1.toFixed(4)}
+                                      {formatNumber(classMetrics.f1)}
                                     </Typography>
                                   ) : (
                                     <Typography variant="body2" color="text.secondary">

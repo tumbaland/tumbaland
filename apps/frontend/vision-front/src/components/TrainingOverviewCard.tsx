@@ -28,6 +28,13 @@ const TrainingOverviewCard: React.FC<TrainingOverviewCardProps> = ({
     return `${(seconds / 86400).toFixed(1)}d`;
   };
 
+  const formatNumber = (value: any, decimals: number = 3): string => {
+    if (typeof value === 'number' && !isNaN(value)) {
+      return value.toFixed(decimals);
+    }
+    return 'N/A';
+  };
+
   const calculateTrainingCost = () => {
     if (!epochs.length) return null;
 
@@ -217,7 +224,7 @@ const TrainingOverviewCard: React.FC<TrainingOverviewCardProps> = ({
                       Train Loss
                     </Typography>
                     <Typography variant="h6" sx={{ fontWeight: 600, color: 'error.main' }}>
-                      {lastEpoch.results?.train?.loss?.toFixed(3) || 'N/A'}
+                      {formatNumber(lastEpoch.results?.train?.loss)}
                     </Typography>
                   </Paper>
                   <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'grey.50', borderRadius: 1 }}>
@@ -225,7 +232,7 @@ const TrainingOverviewCard: React.FC<TrainingOverviewCardProps> = ({
                       Val Loss
                     </Typography>
                     <Typography variant="h6" sx={{ fontWeight: 600, color: 'error.main' }}>
-                      {lastEpoch.results?.val?.loss?.toFixed(3) || 'N/A'}
+                      {formatNumber(lastEpoch.results?.val?.loss)}
                     </Typography>
                   </Paper>
                   <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'grey.50', borderRadius: 1 }}>
@@ -233,7 +240,7 @@ const TrainingOverviewCard: React.FC<TrainingOverviewCardProps> = ({
                       Train mIoU
                     </Typography>
                     <Typography variant="h6" sx={{ fontWeight: 600, color: 'success.main' }}>
-                      {lastEpoch.results?.train?.mean_iou?.toFixed(3) || 'N/A'}
+                      {formatNumber(lastEpoch.results?.train?.mean_iou)}
                     </Typography>
                   </Paper>
                   <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'grey.50', borderRadius: 1 }}>
@@ -241,7 +248,7 @@ const TrainingOverviewCard: React.FC<TrainingOverviewCardProps> = ({
                       Val mIoU
                     </Typography>
                     <Typography variant="h6" sx={{ fontWeight: 600, color: 'success.main' }}>
-                      {lastEpoch.results?.val?.mean_iou?.toFixed(3) || 'N/A'}
+                      {formatNumber(lastEpoch.results?.val?.mean_iou)}
                     </Typography>
                   </Paper>
                 </Box>

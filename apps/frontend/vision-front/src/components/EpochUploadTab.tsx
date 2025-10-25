@@ -183,6 +183,13 @@ export const EpochUploadTab: React.FC<EpochUploadTabProps> = ({
 
   const selectedTraining = trainings.find(t => t._id === selectedTrainingId);
 
+  const formatNumber = (value: any, decimals: number = 4): string => {
+    if (typeof value === 'number' && !isNaN(value)) {
+      return value.toFixed(decimals);
+    }
+    return '-';
+  };
+
   return (
     <Box sx={{ py: 2 }}>
       <Paper sx={{ p: 3 }}>
@@ -284,10 +291,10 @@ export const EpochUploadTab: React.FC<EpochUploadTabProps> = ({
                       return (
                         <TableRow key={epoch._id} hover>
                           <TableCell>{epoch.epoch}</TableCell>
-                          <TableCell align="right">{trainLoss?.toFixed(4) || '-'}</TableCell>
-                          <TableCell align="right">{valLoss?.toFixed(4) || '-'}</TableCell>
-                          <TableCell align="right">{trainMiou?.toFixed(4) || '-'}</TableCell>
-                          <TableCell align="right">{valMiou?.toFixed(4) || '-'}</TableCell>
+                          <TableCell align="right">{formatNumber(trainLoss)}</TableCell>
+                          <TableCell align="right">{formatNumber(valLoss)}</TableCell>
+                          <TableCell align="right">{formatNumber(trainMiou)}</TableCell>
+                          <TableCell align="right">{formatNumber(valMiou)}</TableCell>
                           <TableCell align="right">
                             {epoch.learning_rate ? epoch.learning_rate.toExponential(2) : '-'}
                           </TableCell>
@@ -348,10 +355,10 @@ export const EpochUploadTab: React.FC<EpochUploadTabProps> = ({
                   </Typography>
                   <Box sx={{ pl: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
                     <Typography variant="body2">
-                      <strong>Loss:</strong> {selectedEpoch.results.train.loss?.toFixed(4)}
+                      <strong>Loss:</strong> {formatNumber(selectedEpoch.results.train.loss)}
                     </Typography>
                     <Typography variant="body2">
-                      <strong>mIoU:</strong> {selectedEpoch.results.train.mean_iou?.toFixed(4)}
+                      <strong>mIoU:</strong> {formatNumber(selectedEpoch.results.train.mean_iou)}
                     </Typography>
                   </Box>
                 </Box>
@@ -364,10 +371,10 @@ export const EpochUploadTab: React.FC<EpochUploadTabProps> = ({
                   </Typography>
                   <Box sx={{ pl: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
                     <Typography variant="body2">
-                      <strong>Loss:</strong> {selectedEpoch.results.val.loss?.toFixed(4)}
+                      <strong>Loss:</strong> {formatNumber(selectedEpoch.results.val.loss)}
                     </Typography>
                     <Typography variant="body2">
-                      <strong>mIoU:</strong> {selectedEpoch.results.val.mean_iou?.toFixed(4)}
+                      <strong>mIoU:</strong> {formatNumber(selectedEpoch.results.val.mean_iou)}
                     </Typography>
                   </Box>
                 </Box>
