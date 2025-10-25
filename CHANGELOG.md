@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.235](https://github.com/toomastahves/tumbaland/compare/v0.0.234...v0.0.235) (2025-10-25)
+
+
+### Bug Fixes
+
+* number formats ([9a9a053](https://github.com/toomastahves/tumbaland/commit/9a9a053a4c7b25b9a0a09e9a96975771cd640cc2))
+
 ### [0.0.234](https://github.com/toomastahves/tumbaland/compare/v0.0.233...v0.0.234) (2025-10-24)
 
 
