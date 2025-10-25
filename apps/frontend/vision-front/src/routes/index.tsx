@@ -5,6 +5,7 @@ import TrainingComparisonPage from '../pages/TrainingComparisonPage';
 import EpochsPage from '../pages/EpochsPage';
 import ConfigsPage from '../pages/ConfigsPage';
 import AnalysisPage from '../pages/AnalysisPage';
+import DatasetComparisonPage from '../pages/DatasetComparisonPage';
 
 function AppRoutes() {
   return (
@@ -16,6 +17,7 @@ function AppRoutes() {
       <Route path="/epochs" element={<EpochsPage />} />
       <Route path="/configs" element={<ConfigsPage />} />
       <Route path="/analysis" element={<AnalysisPage />} />
+      <Route path="/analysis/compare" element={<DatasetComparisonPage />} />
     </Routes>
   );
 }

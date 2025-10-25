@@ -4,7 +4,8 @@ import {
   getAllAnalyses,
   getAnalysisById,
   getAnalysisByDataset,
-  deleteAnalysis
+  deleteAnalysis,
+  compareAnalyses
 } from '../controllers/analysisController';
 
 const router = express.Router();
@@ -23,5 +24,8 @@ router.get('/:id', getAnalysisById);
 
 // DELETE /analysis/:id - Delete analysis
 router.delete('/:id', deleteAnalysis);
+
+// POST /analysis/compare - Compare multiple analyses
+router.post('/compare', compareAnalyses);
 
 export default router;

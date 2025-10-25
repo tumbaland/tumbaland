@@ -15,11 +15,31 @@ import {
   CircularProgress,
   Box,
   Typography,
-  Alert
+  Alert,
+  Checkbox,
+  Tooltip,
+  IconButton
 } from '@mui/material';
+import {
+  Delete as DeleteIcon,
+  Visibility as VisibilityIcon,
+  Compare as CompareIcon
+} from '@mui/icons-material';
 import { getAllAnalyses, DatasetAnalysis, deleteAnalysis } from '../services/analysisService';
 
-export const AnalysisTable: React.FC = () => {
+interface AnalysisTableProps {
+  selectedAnalysisIds?: Set<string>;
+  onSelectAnalysis?: (analysisId: string) => void;
+  onSelectAll?: (allIds: string[]) => void;
+  onCompareSelected?: () => void;
+}
+
+export const AnalysisTable: React.FC<AnalysisTableProps> = ({
+  selectedAnalysisIds = new Set(),
+  onSelectAnalysis = () => {},
+  onSelectAll = () => {},
+  onCompareSelected = () => {}
+}) => {
   const [analyses, setAnalyses] = useState<DatasetAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -84,11 +104,29 @@ export const AnalysisTable: React.FC = () => {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5">Dataset Analyses</Typography>
-        <Button variant="contained" onClick={loadAnalyses}>
-          Refresh
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {selectedAnalysisIds.size > 1 && (
+            <Button
+              variant="contained"
+              startIcon={<CompareIcon />}
+              onClick={onCompareSelected}
+              color="primary"
+              size="small"
+            >
+              Compare
+            </Button>
+          )}
+        </Box>
       </Box>
+
+      {/* Bulk Selection UI */}
+      {selectedAnalysisIds.size > 0 && (
+        <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            {selectedAnalysisIds.size} analysis(es) selected
+          </Typography>
+        </Box>
+      )}
 
       {error && <Alert severity="error">{error}</Alert>}
 
@@ -96,6 +134,24 @@ export const AnalysisTable: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+              <TableCell padding="checkbox" sx={{ fontWeight: 'bold' }}>
+                <Checkbox
+                  indeterminate={
+                    selectedAnalysisIds.size > 0 && selectedAnalysisIds.size < analyses.length
+                  }
+                  checked={analyses.length > 0 && selectedAnalysisIds.size === analyses.length}
+                  onChange={() => {
+                    if (selectedAnalysisIds.size === analyses.length) {
+                      // Deselect all
+                      onSelectAll?.([]);
+                    } else {
+                      // Select all
+                      onSelectAll?.(analyses.map(a => a._id));
+                    }
+                  }}
+                  disabled={analyses.length === 0}
+                />
+              </TableCell>
               <TableCell>
                 <strong>Dataset</strong>
               </TableCell>
@@ -122,13 +178,28 @@ export const AnalysisTable: React.FC = () => {
           <TableBody>
             {analyses.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} align="center">
+                <TableCell colSpan={8} align="center">
                   No analyses found
                 </TableCell>
               </TableRow>
             ) : (
               analyses.map((analysis) => (
-                <TableRow key={analysis._id} hover>
+                <TableRow
+                  key={analysis._id}
+                  hover
+                  selected={selectedAnalysisIds.has(analysis._id)}
+                  sx={{
+                    backgroundColor: selectedAnalysisIds.has(analysis._id)
+                      ? 'rgba(25, 118, 210, 0.08)'
+                      : 'inherit'
+                  }}
+                >
+                  <TableCell padding="checkbox">
+                    <Checkbox
+                      checked={selectedAnalysisIds.has(analysis._id)}
+                      onChange={() => onSelectAnalysis(analysis._id)}
+                    />
+                  </TableCell>
                   <TableCell>{analysis.dataset}</TableCell>
                   <TableCell align="right">{analysis.total_frames.toLocaleString()}</TableCell>
                   <TableCell align="right">
@@ -140,22 +211,24 @@ export const AnalysisTable: React.FC = () => {
                   </TableCell>
                   <TableCell>{new Date(analysis.timestamp).toLocaleString()}</TableCell>
                   <TableCell align="center">
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      onClick={() => handleOpenDetails(analysis)}
-                      sx={{ mr: 1 }}
-                    >
-                      View
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      color="error"
-                      onClick={() => handleDeleteClick(analysis)}
-                    >
-                      Delete
-                    </Button>
+                    <Tooltip title="View analysis details">
+                      <IconButton
+                        size="small"
+                        onClick={() => handleOpenDetails(analysis)}
+                      >
+                        <VisibilityIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete analysis">
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleDeleteClick(analysis)}
+                        disabled={deleteLoading}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))

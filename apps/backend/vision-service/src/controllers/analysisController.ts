@@ -172,3 +172,82 @@ export const deleteAnalysis = async (req: Request, res: Response): Promise<void>
     });
   }
 };
+
+/**
+ * Compare multiple analyses
+ * POST /analysis/compare
+ */
+export const compareAnalyses = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { analysisIds } = req.body;
+
+    if (!analysisIds || !Array.isArray(analysisIds) || analysisIds.length === 0) {
+      res.status(400).json({
+        success: false,
+        message: 'Analysis IDs array is required'
+      });
+      return;
+    }
+
+    if (analysisIds.length > 10) {
+      res.status(400).json({
+        success: false,
+        message: 'Maximum 10 analyses can be compared at once'
+      });
+      return;
+    }
+
+    // Fetch analyses
+    const analyses = await DatasetAnalysis.find({ _id: { $in: analysisIds } })
+      .sort({ timestamp: -1 });
+
+    // Calculate comparison data for each analysis
+    const comparisonData = analyses.map(analysis => {
+      return {
+        analysis: {
+          _id: analysis._id,
+          dataset: analysis.dataset,
+          timestamp: analysis.timestamp,
+          createdAt: analysis.createdAt,
+          updatedAt: analysis.updatedAt
+        },
+        metrics: {
+          totalFrames: analysis.total_frames,
+          totalPixels: analysis.total_pixels,
+          totalClasses: analysis.total_classes,
+          imageDimensions: analysis.image_dimensions,
+          pixelsPerFrame: analysis.total_frames > 0 ? analysis.total_pixels / analysis.total_frames : 0,
+          classesPerFrame: analysis.total_frames > 0 ? analysis.total_classes / analysis.total_frames : 0
+        },
+        classAnalysis: analysis.class_analysis.map(cls => ({
+          name: cls.name,
+          classId: cls.class_id,
+          totalPixels: cls.total_pixels,
+          pixelPercentage: cls.pixel_percentage,
+          framesWithClass: cls.frames_with_class,
+          frameCoveragePercentage: cls.frame_coverage_percentage,
+          avgPixelsPerFrame: cls.avg_pixels_per_frame
+        }))
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        comparison: comparisonData,
+        summary: {
+          totalAnalyses: analyses.length,
+          datasets: [...new Set(analyses.map(a => a.dataset))]
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error comparing analyses:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to compare analyses';
+    res.status(500).json({
+      success: false,
+      message: 'Failed to compare analyses',
+      error: errorMessage
+    });
+  }
+};

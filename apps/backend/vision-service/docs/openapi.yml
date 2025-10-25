@@ -744,6 +744,115 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /trainings/compare:
+    post:
+      tags:
+        - Trainings
+      summary: Compare multiple trainings
+      description: Compare up to 10 trainings with their epochs, metrics, and cost analysis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - trainingIds
+              properties:
+                trainingIds:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of training IDs to compare (max 10)
+                  maxItems: 10
+      responses:
+        '200':
+          description: Successful comparison
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      comparison:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            training:
+                              $ref: '#/components/schemas/Training'
+                            metrics:
+                              type: object
+                              properties:
+                                totalEpochs:
+                                  type: integer
+                                totalTime:
+                                  type: number
+                                avgEpochTime:
+                                  type: number
+                                maxEpochTime:
+                                  type: number
+                                cost:
+                                  type: object
+                                  properties:
+                                    totalHours:
+                                      type: number
+                                    cpuCost:
+                                      type: number
+                                    gpuCost:
+                                      type: number
+                                    totalCost:
+                                      type: number
+                            lastEpoch:
+                              type: object
+                              nullable: true
+                              properties:
+                                epoch:
+                                  type: integer
+                                results:
+                                  type: object
+                                timestamp:
+                                  type: string
+                                  format: date-time
+                            epochs:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  epoch:
+                                    type: integer
+                                  results:
+                                    type: object
+                                  epoch_time:
+                                    type: number
+                                  timestamp:
+                                    type: string
+                                    format: date-time
+                      summary:
+                        type: object
+                        properties:
+                          totalTrainings:
+                            type: integer
+                          trainingsWithEpochs:
+                            type: integer
+        '400':
+          description: Invalid input or too many trainings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /trainings/{id}/epochs:
     get:
       tags:
@@ -1522,37 +1631,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-    post:
-      tags:
-        - Analysis
-      summary: Upload analysis
-      description: This endpoint is deprecated. Use /analysis/upload instead.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DatasetAnalysis'
-      responses:
-        '201':
-          description: Analysis created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/DatasetAnalysis'
-        '400':
-          description: Invalid input
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
   /analysis/upload:
     post:
       tags:
@@ -1674,15 +1752,50 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/DatasetAnalysis'
-        '404':
-          description: Dataset analyses not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '500':
           description: Server error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /health:
+    get:
+      summary: Health check
+      description: Check the health status of the vision service
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  service:
+                    type: string
+                    example: "vision-service"
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /metrics:
+    get:
+      summary: Prometheus metrics
+      description: Get Prometheus metrics for monitoring
+      responses:
+        '200':
+          description: Metrics data
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Prometheus metrics in text format
+        '500':
+          description: Error generating metrics
+          content:
+            text/plain:
+              schema:
+                type: string

@@ -15,6 +15,15 @@ export interface ImageDimensions {
   height: number;
 }
 
+export interface AnalysisResponse {
+  data: DatasetAnalysis[];
+  pagination: {
+    total: number;
+    limit: number;
+    skip: number;
+  };
+}
+
 export interface DatasetAnalysis {
   _id: string;
   timestamp: string;
@@ -28,12 +37,39 @@ export interface DatasetAnalysis {
   updatedAt: string;
 }
 
-export interface AnalysisResponse {
-  data: DatasetAnalysis[];
-  pagination?: {
-    total: number;
-    limit: number;
-    skip: number;
+export interface AnalysisComparisonResponse {
+  success: boolean;
+  data: {
+    comparison: Array<{
+      analysis: {
+        _id: string;
+        dataset: string;
+        timestamp: string;
+        createdAt: string;
+        updatedAt: string;
+      };
+      metrics: {
+        totalFrames: number;
+        totalPixels: number;
+        totalClasses: number;
+        imageDimensions: ImageDimensions;
+        pixelsPerFrame: number;
+        classesPerFrame: number;
+      };
+      classAnalysis: Array<{
+        name: string;
+        classId: number;
+        totalPixels: number;
+        pixelPercentage: number;
+        framesWithClass: number;
+        frameCoveragePercentage: number;
+        avgPixelsPerFrame: number;
+      }>;
+    }>;
+    summary: {
+      totalAnalyses: number;
+      datasets: string[];
+    };
   };
 }
 
@@ -70,7 +106,7 @@ export const getAllAnalyses = async (
   dataset?: string
 ): Promise<AnalysisResponse> => {
   const config = getGlobalConfig();
-  const apiUrl = config.VISION_API_URL || 'https://vision-api.tumbaland.eu';
+  const apiUrl = config.VISION_API_URL;
   
   const params = new URLSearchParams({ limit: String(limit), skip: String(skip) });
   if (dataset) {
@@ -161,4 +197,27 @@ export const deleteAnalysis = async (id: string): Promise<void> => {
     const error = await response.json();
     throw new Error(error.message || 'Failed to delete analysis');
   }
+};
+
+/**
+ * Compare multiple analyses
+ */
+export const compareAnalyses = async (analysisIds: string[]): Promise<AnalysisComparisonResponse> => {
+  const config = getGlobalConfig();
+  const apiUrl = config.VISION_API_URL || 'https://vision-api.tumbaland.eu';
+  
+  const response = await fetch(`${apiUrl}/api/analysis/compare`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ analysisIds })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to compare analyses');
+  }
+
+  return response.json();
 };
