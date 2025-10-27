@@ -15,7 +15,8 @@ import {
   Refresh as RefreshIcon,
   Add as AddIcon,
   DeleteOutline as DeleteOutlineIcon,
-  Compare as CompareIcon
+  Compare as CompareIcon,
+  Download as DownloadIcon
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -26,6 +27,7 @@ import { Training, Config } from '../types';
 import TrainingsTable from '../components/TrainingsTable';
 import TrainingFilters from '../components/TrainingFilters';
 import TrainingFormDialog from '../components/TrainingFormDialog';
+import { exportTrainingsToCSV } from '../utils/csvExport';
 
 const TrainingsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -142,6 +144,12 @@ const TrainingsPage: React.FC = () => {
   const trainings = data?.data?.trainings || [];
   const total = data?.data?.pagination?.total || 0;
   const stats = statsData?.data;
+
+  // CSV Export function
+  const exportToCSV = () => {
+    const selectedTrainings = trainings.filter(training => selectedTrainingIds.has(training._id));
+    exportTrainingsToCSV(selectedTrainings);
+  };
 
   const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage);
@@ -434,6 +442,14 @@ const TrainingsPage: React.FC = () => {
           <Typography variant="body2" color="text.secondary">
             {selectedTrainingIds.size} training(s) selected
           </Typography>
+          <Button
+            variant="outlined"
+            startIcon={<DownloadIcon />}
+            onClick={exportToCSV}
+            size="small"
+          >
+            Export CSV
+          </Button>
           {selectedTrainingIds.size > 1 && (
             <Button
               variant="contained"

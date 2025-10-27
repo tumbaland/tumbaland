@@ -62,7 +62,17 @@ const getStatusColor = (status: Training['status']): 'success' | 'error' | 'defa
 };
 
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleString();
+  const date = new Date(dateString);
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  const time = date.toLocaleTimeString('en-GB', { 
+    hour: '2-digit', 
+    minute: '2-digit', 
+    second: '2-digit',
+    hour12: false 
+  });
+  return `${day}.${month}.${year} ${time}`;
 };
 
 const formatDuration = (seconds: number) => {
