@@ -34,6 +34,8 @@ const TrainingsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'createdAt' | 'updatedAt' | 'status'>('updatedAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [trainingName, setTrainingName] = useState('');
   const [trainingDescription, setTrainingDescription] = useState('');
@@ -91,14 +93,14 @@ const TrainingsPage: React.FC = () => {
   }, [createModalOpen]);
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['trainings', page + 1, rowsPerPage, debouncedSearch, statusFilter],
+    queryKey: ['trainings', page + 1, rowsPerPage, debouncedSearch, statusFilter, sortBy, sortOrder],
     queryFn: () => trainingService.getTrainings({
       page: page + 1,
       limit: rowsPerPage,
       search: debouncedSearch || undefined,
       status: statusFilter !== 'all' ? statusFilter as Training['status'] : undefined,
-      sortBy: 'updatedAt',
-      order: 'desc'
+      sortBy,
+      order: sortOrder
     })
   });
 
@@ -112,6 +114,18 @@ const TrainingsPage: React.FC = () => {
   const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
+  };
+
+  const handleSort = (column: 'name' | 'createdAt' | 'updatedAt' | 'status') => {
+    if (sortBy === column) {
+      // Toggle sort order if same column
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new column and default to descending
+      setSortBy(column);
+      setSortOrder('desc');
+    }
+    setPage(0); // Reset to first page when sorting changes
   };
 
   const handleCreateTraining = async () => {
@@ -357,6 +371,9 @@ const TrainingsPage: React.FC = () => {
         selectedTrainingIds={selectedTrainingIds}
         onSelectTraining={handleSelectTraining}
         onSelectAll={handleSelectAll}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSort={handleSort}
       />
 
       {/* Create/Edit Training Modal */}

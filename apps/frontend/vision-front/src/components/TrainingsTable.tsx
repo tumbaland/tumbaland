@@ -19,7 +19,9 @@ import {
 import {
   Visibility as VisibilityIcon,
   Edit as EditIcon,
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  ArrowUpward as ArrowUpwardIcon,
+  ArrowDownward as ArrowDownwardIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { Training } from '../types';
@@ -39,6 +41,9 @@ interface TrainingsTableProps {
   selectedTrainingIds: Set<string>;
   onSelectTraining: (trainingId: string) => void;
   onSelectAll: () => void;
+  sortBy: 'name' | 'createdAt' | 'updatedAt' | 'status';
+  sortOrder: 'asc' | 'desc';
+  onSort: (column: 'name' | 'createdAt' | 'updatedAt' | 'status') => void;
 }
 
 const getStatusColor = (status: Training['status']): 'success' | 'error' | 'default' | 'warning' => {
@@ -60,6 +65,48 @@ const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleString();
 };
 
+interface SortableTableCellProps {
+  children: React.ReactNode;
+  column: 'name' | 'createdAt' | 'updatedAt' | 'status';
+  sortBy: 'name' | 'createdAt' | 'updatedAt' | 'status';
+  sortOrder: 'asc' | 'desc';
+  onSort: (column: 'name' | 'createdAt' | 'updatedAt' | 'status') => void;
+  align?: 'left' | 'center' | 'right';
+}
+
+const SortableTableCell: React.FC<SortableTableCellProps> = ({
+  children,
+  column,
+  sortBy,
+  sortOrder,
+  onSort,
+  align = 'left'
+}) => {
+  const isActive = sortBy === column;
+  
+  return (
+    <TableCell 
+      align={align} 
+      sx={{ 
+        fontWeight: 'bold',
+        cursor: 'pointer',
+        userSelect: 'none',
+        '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' }
+      }}
+      onClick={() => onSort(column)}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        {children}
+        {isActive && (
+          sortOrder === 'asc' ? 
+            <ArrowUpwardIcon fontSize="small" /> : 
+            <ArrowDownwardIcon fontSize="small" />
+        )}
+      </Box>
+    </TableCell>
+  );
+};
+
 export const TrainingsTable: React.FC<TrainingsTableProps> = ({
   trainings,
   isLoading,
@@ -74,7 +121,10 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
   searchTerm,
   selectedTrainingIds,
   onSelectTraining,
-  onSelectAll
+  onSelectAll,
+  sortBy,
+  sortOrder,
+  onSort
 }) => {
   const navigate = useNavigate();
 
@@ -114,11 +164,19 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
                   disabled={trainings.length === 0}
                 />
               </TableCell>
-              <TableCell><strong>Name</strong></TableCell>
+              <SortableTableCell column="name" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort}>
+                Name
+              </SortableTableCell>
               <TableCell><strong>Description</strong></TableCell>
-              <TableCell align="center"><strong>Status</strong></TableCell>
-              <TableCell><strong>Created</strong></TableCell>
-              <TableCell><strong>Updated</strong></TableCell>
+              <SortableTableCell column="status" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} align="center">
+                Status
+              </SortableTableCell>
+              <SortableTableCell column="createdAt" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort}>
+                Created
+              </SortableTableCell>
+              <SortableTableCell column="updatedAt" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort}>
+                Updated
+              </SortableTableCell>
               <TableCell align="center"><strong>Actions</strong></TableCell>
             </TableRow>
           </TableHead>
