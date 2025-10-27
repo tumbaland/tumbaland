@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.237](https://github.com/toomastahves/tumbaland/compare/v0.0.236...v0.0.237) (2025-10-27)
+
+
+### Features
+
+* add sorting ([1050cfc](https://github.com/toomastahves/tumbaland/commit/1050cfc8118905f0a53f203e8fb6c00561f29957))
+
 ### [0.0.236](https://github.com/toomastahves/tumbaland/compare/v0.0.235...v0.0.236) (2025-10-25)
 
 
