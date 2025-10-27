@@ -12,6 +12,7 @@ export const getTrainings = async (req: Request, res: Response): Promise<void> =
       search, 
       status, 
       datasetId,
+      tags,
       sortBy = 'updatedAt', 
       order = 'desc' 
     } = req.query;
@@ -33,19 +34,148 @@ export const getTrainings = async (req: Request, res: Response): Promise<void> =
       query.datasetId = datasetId;
     }
 
+    // Filter by tags
+    if (tags) {
+      const tagArray = Array.isArray(tags) ? tags : [tags];
+      query.tags = { $in: tagArray };
+    }
+
     const skip = (Number(page) - 1) * Number(limit);
     const sortOrder = order === 'desc' ? -1 : 1;
     const sortField = sortBy as string;
 
-    const [trainings, total] = await Promise.all([
-      Training.find(query)
-        .sort({ [sortField]: sortOrder })
-        .skip(skip)
-        .limit(Number(limit)),
-      Training.countDocuments(query)
-    ]);
+    // Handle sorting by metrics fields
+    let trainings: any[];
+    let total: number;
 
-    res.json({
+    // Cost calculation rates
+    const CPU_RATE_PER_HOUR = 0.006;
+    const GPU_RATE_PER_HOUR = 0.20;
+
+    if (['totalTime', 'cpuCost', 'gpuCost', 'totalCost'].includes(sortBy as string)) {
+      // For metrics-based sorting, we need to get all trainings and sort in memory
+      const allTrainings = await Training.find(query);
+      total = allTrainings.length;
+
+      // Get epochs for all trainings to calculate metrics
+      const trainingIds = allTrainings.map(t => t._id);
+      const epochs = await Epoch.find({ trainingId: { $in: trainingIds } });
+
+      // Group epochs by training ID and calculate metrics
+      const trainingMetrics = epochs.reduce((acc, epoch) => {
+        const trainingId = epoch.trainingId.toString();
+        if (!acc[trainingId]) {
+          acc[trainingId] = {
+            totalTime: 0,
+            epochCount: 0
+          };
+        }
+        acc[trainingId].totalTime += epoch.epoch_time || 0;
+        acc[trainingId].epochCount += 1;
+        return acc;
+      }, {} as Record<string, { totalTime: number; epochCount: number }>);
+
+      // Add metrics to trainings and sort
+      const trainingsWithMetrics = allTrainings.map(training => {
+        const trainingId = (training._id as any).toString();
+        const metrics = trainingMetrics[trainingId] || { totalTime: 0, epochCount: 0 };
+        const totalHours = metrics.totalTime / 3600;
+        const cpuCost = totalHours * CPU_RATE_PER_HOUR;
+        const gpuCost = totalHours * GPU_RATE_PER_HOUR;
+
+        return {
+          ...training.toObject(),
+          metrics: {
+            totalTime: metrics.totalTime,
+            epochCount: metrics.epochCount,
+            cpuCost,
+            gpuCost,
+            totalCost: cpuCost + gpuCost
+          }
+        };
+      });
+
+      // Sort by the requested metrics field
+      trainingsWithMetrics.sort((a, b) => {
+        let aValue: number, bValue: number;
+
+        switch (sortBy) {
+          case 'totalTime':
+            aValue = a.metrics?.totalTime || 0;
+            bValue = b.metrics?.totalTime || 0;
+            break;
+          case 'cpuCost':
+            aValue = a.metrics?.cpuCost || 0;
+            bValue = b.metrics?.cpuCost || 0;
+            break;
+          case 'gpuCost':
+            aValue = a.metrics?.gpuCost || 0;
+            bValue = b.metrics?.gpuCost || 0;
+            break;
+          case 'totalCost':
+            aValue = a.metrics?.totalCost || 0;
+            bValue = b.metrics?.totalCost || 0;
+            break;
+          default:
+            aValue = 0;
+            bValue = 0;
+        }
+
+        if (aValue < bValue) return sortOrder === 1 ? -1 : 1;
+        if (aValue > bValue) return sortOrder === 1 ? 1 : -1;
+        return 0;
+      });
+
+      // Apply pagination after sorting
+      trainings = trainingsWithMetrics.slice(skip, skip + Number(limit));
+    } else {
+      // Standard database sorting for non-metrics fields
+      [trainings, total] = await Promise.all([
+        Training.find(query)
+          .sort({ [sortField]: sortOrder })
+          .skip(skip)
+          .limit(Number(limit)),
+        Training.countDocuments(query)
+      ]);
+
+      // Get epochs for all trainings to calculate metrics
+      const trainingIds = trainings.map(t => t._id);
+      const epochs = await Epoch.find({ trainingId: { $in: trainingIds } });
+
+      // Group epochs by training ID and calculate metrics
+      const trainingMetrics = epochs.reduce((acc, epoch) => {
+        const trainingId = epoch.trainingId.toString();
+        if (!acc[trainingId]) {
+          acc[trainingId] = {
+            totalTime: 0,
+            epochCount: 0
+          };
+        }
+        acc[trainingId].totalTime += epoch.epoch_time || 0;
+        acc[trainingId].epochCount += 1;
+        return acc;
+      }, {} as Record<string, { totalTime: number; epochCount: number }>);
+
+      // Add metrics to trainings
+      trainings = trainings.map(training => {
+        const trainingId = (training._id as any).toString();
+        const metrics = trainingMetrics[trainingId] || { totalTime: 0, epochCount: 0 };
+        const totalHours = metrics.totalTime / 3600;
+        const cpuCost = totalHours * CPU_RATE_PER_HOUR;
+        const gpuCost = totalHours * GPU_RATE_PER_HOUR;
+
+        return {
+          ...training.toObject(),
+          metrics: {
+            totalTime: metrics.totalTime,
+            epochCount: metrics.epochCount,
+            cpuCost,
+            gpuCost,
+            totalCost: cpuCost + gpuCost
+          }
+        };
+      });
+    }    res.json({
       success: true,
       data: {
         trainings,
@@ -177,6 +307,7 @@ export const createTraining = async (req: Request, res: Response): Promise<void>
       datasetId,
       configId, 
       status = 'pending',
+      tags,
       startTime,
       endTime,
       metadata 
@@ -200,6 +331,7 @@ export const createTraining = async (req: Request, res: Response): Promise<void>
       datasetId,
       configId,
       status,
+      tags: tags ? (Array.isArray(tags) ? tags : [tags]) : [],
       startTime,
       endTime,
       metadata
@@ -233,6 +365,7 @@ export const updateTraining = async (req: Request, res: Response): Promise<void>
       datasetId,
       configId, 
       status,
+      tags,
       startTime,
       endTime,
       metadata 
@@ -263,6 +396,7 @@ export const updateTraining = async (req: Request, res: Response): Promise<void>
     if (datasetId !== undefined) training.datasetId = datasetId;
     if (configId !== undefined) training.configId = configId;
     if (status !== undefined) training.status = status;
+    if (tags !== undefined) training.tags = tags ? (Array.isArray(tags) ? tags : [tags]) : [];
     if (startTime !== undefined) training.startTime = startTime;
     if (endTime !== undefined) training.endTime = endTime;
     if (metadata !== undefined) training.metadata = metadata;
@@ -333,7 +467,7 @@ export const deleteTraining = async (req: Request, res: Response): Promise<void>
 // Get training statistics
 export const getTrainingStats = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { status, datasetId } = req.query;
+    const { status, datasetId, tags } = req.query;
 
     let query: any = {};
 
@@ -345,6 +479,12 @@ export const getTrainingStats = async (req: Request, res: Response): Promise<voi
     // Filter by dataset if provided
     if (datasetId) {
       query.datasetId = datasetId;
+    }
+
+    // Filter by tags if provided
+    if (tags) {
+      const tagArray = Array.isArray(tags) ? tags : [tags];
+      query.tags = { $in: tagArray };
     }
 
     // Get all trainings matching the filter

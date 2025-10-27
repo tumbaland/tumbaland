@@ -7,6 +7,7 @@ export interface ITraining extends Document {
   datasetId?: string;
   configId?: string;
   status: 'pending' | 'running' | 'completed' | 'failed';
+  tags?: string[];
   startTime?: Date;
   endTime?: Date;
   metadata?: any;
@@ -47,6 +48,11 @@ const TrainingSchema: Schema = new Schema(
       default: 'pending',
       index: true
     },
+    tags: [{
+      type: String,
+      trim: true,
+      maxlength: 50
+    }],
     startTime: {
       type: Date
     },

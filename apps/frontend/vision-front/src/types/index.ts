@@ -8,11 +8,19 @@ export interface Training {
   datasetId?: string;
   configId?: string;
   status: 'pending' | 'running' | 'completed' | 'failed';
+  tags?: string[];
   startTime?: string;
   endTime?: string;
   metadata?: Record<string, any>;
   createdAt: string;
   updatedAt: string;
+  metrics?: {
+    totalTime: number;
+    epochCount: number;
+    cpuCost: number;
+    gpuCost: number;
+    totalCost: number;
+  };
 }
 
 // Epoch Types
@@ -113,6 +121,7 @@ export interface CreateTrainingData {
   datasetId?: string;
   configId?: string;
   status?: 'pending' | 'running' | 'completed' | 'failed';
+  tags?: string[];
   startTime?: string;
   endTime?: string;
   metadata?: Record<string, any>;

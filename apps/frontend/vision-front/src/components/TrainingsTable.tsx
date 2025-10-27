@@ -41,9 +41,9 @@ interface TrainingsTableProps {
   selectedTrainingIds: Set<string>;
   onSelectTraining: (trainingId: string) => void;
   onSelectAll: () => void;
-  sortBy: 'name' | 'createdAt' | 'updatedAt' | 'status';
+  sortBy: 'name' | 'createdAt' | 'updatedAt' | 'status' | 'totalTime' | 'cpuCost' | 'gpuCost' | 'totalCost';
   sortOrder: 'asc' | 'desc';
-  onSort: (column: 'name' | 'createdAt' | 'updatedAt' | 'status') => void;
+  onSort: (column: 'name' | 'createdAt' | 'updatedAt' | 'status' | 'totalTime' | 'cpuCost' | 'gpuCost' | 'totalCost') => void;
 }
 
 const getStatusColor = (status: Training['status']): 'success' | 'error' | 'default' | 'warning' => {
@@ -65,12 +65,27 @@ const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleString();
 };
 
+const formatDuration = (seconds: number) => {
+  if (seconds === 0) return '0s';
+  
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  
+  const parts = [];
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  if (secs > 0 || parts.length === 0) parts.push(`${secs}s`);
+  
+  return parts.join(' ');
+};
+
 interface SortableTableCellProps {
   children: React.ReactNode;
-  column: 'name' | 'createdAt' | 'updatedAt' | 'status';
-  sortBy: 'name' | 'createdAt' | 'updatedAt' | 'status';
+  column: 'name' | 'createdAt' | 'updatedAt' | 'status' | 'totalTime' | 'cpuCost' | 'gpuCost' | 'totalCost';
+  sortBy: 'name' | 'createdAt' | 'updatedAt' | 'status' | 'totalTime' | 'cpuCost' | 'gpuCost' | 'totalCost';
   sortOrder: 'asc' | 'desc';
-  onSort: (column: 'name' | 'createdAt' | 'updatedAt' | 'status') => void;
+  onSort: (column: 'name' | 'createdAt' | 'updatedAt' | 'status' | 'totalTime' | 'cpuCost' | 'gpuCost' | 'totalCost') => void;
   align?: 'left' | 'center' | 'right';
 }
 
@@ -171,6 +186,18 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
               <SortableTableCell column="status" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} align="center">
                 Status
               </SortableTableCell>
+              <SortableTableCell column="totalTime" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} align="center">
+                Time
+              </SortableTableCell>
+              <SortableTableCell column="cpuCost" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} align="center">
+                CPU Cost
+              </SortableTableCell>
+              <SortableTableCell column="gpuCost" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} align="center">
+                GPU Cost
+              </SortableTableCell>
+              <SortableTableCell column="totalCost" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} align="center">
+                Total Cost
+              </SortableTableCell>
               <SortableTableCell column="createdAt" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort}>
                 Created
               </SortableTableCell>
@@ -202,9 +229,36 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
                   />
                 </TableCell>
                 <TableCell>
-                  <Typography variant="body2" fontWeight={600}>
-                    {training.name}
-                  </Typography>
+                  <Box>
+                    <Typography variant="body2" fontWeight={600}>
+                      {training.name}
+                    </Typography>
+                    {training.tags && training.tags.length > 0 && (
+                      <Box sx={{ mt: 0.5, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {training.tags.slice(0, 3).map((tag) => (
+                          <Chip
+                            key={tag}
+                            label={tag}
+                            size="small"
+                            variant="outlined"
+                            sx={{
+                              height: '18px',
+                              fontSize: '0.7rem',
+                              '& .MuiChip-label': {
+                                px: 0.5,
+                                py: 0
+                              }
+                            }}
+                          />
+                        ))}
+                        {training.tags.length > 3 && (
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                            +{training.tags.length - 3} more
+                          </Typography>
+                        )}
+                      </Box>
+                    )}
+                  </Box>
                 </TableCell>
                 <TableCell>
                   <Typography variant="body2" color="text.secondary" noWrap sx={{ maxWidth: 250 }}>
@@ -218,6 +272,26 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
                     size="small"
                     sx={{ textTransform: 'capitalize' }}
                   />
+                </TableCell>
+                <TableCell align="center">
+                  <Typography variant="body2" color="text.secondary">
+                    {training.metrics ? formatDuration(training.metrics.totalTime) : '-'}
+                  </Typography>
+                </TableCell>
+                <TableCell align="center">
+                  <Typography variant="body2" color="text.secondary">
+                    {training.metrics ? `€${training.metrics.cpuCost.toFixed(3)}` : '-'}
+                  </Typography>
+                </TableCell>
+                <TableCell align="center">
+                  <Typography variant="body2" color="text.secondary">
+                    {training.metrics ? `€${training.metrics.gpuCost.toFixed(3)}` : '-'}
+                  </Typography>
+                </TableCell>
+                <TableCell align="center">
+                  <Typography variant="body2" color="text.secondary">
+                    {training.metrics ? `€${training.metrics.totalCost.toFixed(3)}` : '-'}
+                  </Typography>
                 </TableCell>
                 <TableCell>
                   <Typography variant="body2" color="text.secondary">

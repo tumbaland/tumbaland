@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import { Config, Training } from '../types';
 import { DatasetAnalysis } from '../services/analysisService';
+import TagInput from './TagInput';
 
 interface TrainingFormDialogProps {
   open: boolean;
@@ -36,6 +37,9 @@ interface TrainingFormDialogProps {
   onDatasetChange: (value: string) => void;
   selectedStatus: Training['status'];
   onStatusChange: (value: Training['status']) => void;
+  trainingTags: string[];
+  onTagsChange: (tags: string[]) => void;
+  availableTags?: string[];
   configs: Config[];
   datasets: DatasetAnalysis[];
   error: string | null;
@@ -61,6 +65,9 @@ export const TrainingFormDialog: React.FC<TrainingFormDialogProps> = ({
   onDatasetChange,
   selectedStatus,
   onStatusChange,
+  trainingTags,
+  onTagsChange,
+  availableTags = [],
   configs,
   datasets,
   error,
@@ -171,6 +178,17 @@ export const TrainingFormDialog: React.FC<TrainingFormDialogProps> = ({
             <MenuItem value="failed">Failed</MenuItem>
           </Select>
         </FormControl>
+
+        <Box sx={{ mb: 2 }}>
+          <TagInput
+            tags={trainingTags}
+            onTagsChange={onTagsChange}
+            availableTags={availableTags}
+            label="Tags (Optional)"
+            placeholder="Add tags to categorize this training..."
+            maxTags={5}
+          />
+        </Box>
         <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mt: 2 }}>
           A unique UUID will be automatically generated for this training. You can select a dataset analysis and/or config. After creating, you can upload epoch JSON files to track training progress.
         </Typography>

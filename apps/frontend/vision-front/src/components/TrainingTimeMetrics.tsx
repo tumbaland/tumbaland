@@ -69,7 +69,7 @@ const TrainingTimeMetrics: React.FC<TrainingTimeMetricsProps> = ({ epochs }) => 
                   data: cumulativeTimes,
                   label: 'Cumulative Time',
                   color: '#ff9800',
-                  showMark: true,
+                  showMark: false,
                   valueFormatter: (value) => formatTime(value as number)
                 }]}
                 margin={{ top: 10, bottom: 40, left: 60, right: 10 }}

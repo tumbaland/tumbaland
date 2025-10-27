@@ -40,6 +40,9 @@ import { Epoch } from '../types';
 import ClassIoUChart from '../components/ClassIoUChart';
 import TrainingTimeMetrics from '../components/TrainingTimeMetrics';
 import TrainingOverviewCard from '../components/TrainingOverviewCard';
+import ClassPrecisionChart from '../components/ClassPrecisionChart';
+import ClassRecallChart from '../components/ClassRecallChart';
+import ClassF1Chart from '../components/ClassF1Chart';
 
 const TrainingDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -290,8 +293,8 @@ const TrainingDetailPage: React.FC = () => {
                 <LineChart
                   xAxis={[{ data: epochNumbers, label: 'Epoch' }]}
                   series={[
-                    { data: trainLoss, label: 'Train Loss', color: '#424242' },
-                    { data: valLoss, label: 'Val Loss', color: '#757575' }
+                    { data: trainLoss, label: 'Train Loss', color: '#424242', showMark: false },
+                    { data: valLoss, label: 'Val Loss', color: '#757575', showMark: false }
                   ]}
                   margin={{ top: 10, bottom: 40, left: 60, right: 10 }}
                 />
@@ -307,8 +310,8 @@ const TrainingDetailPage: React.FC = () => {
                 <LineChart
                   xAxis={[{ data: epochNumbers, label: 'Epoch' }]}
                   series={[
-                    { data: trainMeanIoU, label: 'Train mIoU', color: '#212121' },
-                    { data: valMeanIoU, label: 'Val mIoU', color: '#616161' }
+                    { data: trainMeanIoU, label: 'Train mIoU', color: '#212121', showMark: false },
+                    { data: valMeanIoU, label: 'Val mIoU', color: '#616161', showMark: false }
                   ]}
                   margin={{ top: 10, bottom: 40, left: 60, right: 10 }}
                 />
@@ -321,6 +324,15 @@ const TrainingDetailPage: React.FC = () => {
 
           {/* Class IoU Chart */}
           <ClassIoUChart epochs={epochs} />
+
+          {/* Class Precision Chart */}
+          <ClassPrecisionChart epochs={epochs} />
+
+          {/* Class Recall Chart */}
+          <ClassRecallChart epochs={epochs} />
+
+          {/* Class F1 Chart */}
+          <ClassF1Chart epochs={epochs} />
 
           {/* Per-Class Metrics Table */}
           {Object.keys(classMetrics).length > 0 && (

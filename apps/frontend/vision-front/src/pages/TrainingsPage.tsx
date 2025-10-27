@@ -34,7 +34,7 @@ const TrainingsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'name' | 'createdAt' | 'updatedAt' | 'status'>('updatedAt');
+  const [sortBy, setSortBy] = useState<'name' | 'createdAt' | 'updatedAt' | 'status' | 'totalTime' | 'cpuCost' | 'gpuCost' | 'totalCost'>('updatedAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [trainingName, setTrainingName] = useState('');
@@ -42,6 +42,7 @@ const TrainingsPage: React.FC = () => {
   const [selectedDatasetId, setSelectedDatasetId] = useState('');
   const [selectedConfigId, setSelectedConfigId] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<Training['status']>('pending');
+  const [trainingTags, setTrainingTags] = useState<string[]>([]);
   const [datasets, setDatasets] = useState<DatasetAnalysis[]>([]);
   const [configs, setConfigs] = useState<Config[]>([]);
   const [loadingDatasets, setLoadingDatasets] = useState(false);
@@ -54,6 +55,8 @@ const TrainingsPage: React.FC = () => {
   const [deleteTrainingId, setDeleteTrainingId] = useState<string | null>(null);
   const [selectedTrainingIds, setSelectedTrainingIds] = useState<Set<string>>(new Set());
   const [deleteMultipleDialogOpen, setDeleteMultipleDialogOpen] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
 
   // Debounce search
   React.useEffect(() => {
@@ -93,14 +96,15 @@ const TrainingsPage: React.FC = () => {
   }, [createModalOpen]);
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['trainings', page + 1, rowsPerPage, debouncedSearch, statusFilter, sortBy, sortOrder],
+    queryKey: ['trainings', page + 1, rowsPerPage, debouncedSearch, statusFilter, sortBy, sortOrder, selectedTags],
     queryFn: () => trainingService.getTrainings({
       page: page + 1,
       limit: rowsPerPage,
       search: debouncedSearch || undefined,
       status: statusFilter !== 'all' ? statusFilter as Training['status'] : undefined,
       sortBy,
-      order: sortOrder
+      order: sortOrder,
+      tags: selectedTags.length > 0 ? selectedTags : undefined
     })
   });
 
@@ -110,6 +114,30 @@ const TrainingsPage: React.FC = () => {
       status: statusFilter !== 'all' ? statusFilter as Training['status'] : undefined
     })
   });
+
+  // Load available tags
+  const loadTags = React.useCallback(async () => {
+    try {
+      const allTrainings = await trainingService.getTrainings({
+        page: 1,
+        limit: 1000 // Get a large number to collect all tags
+      });
+      const tags = new Set<string>();
+      allTrainings.data.trainings.forEach((training: Training) => {
+        if (training.tags) {
+          training.tags.forEach(tag => tags.add(tag));
+        }
+      });
+      setAvailableTags(Array.from(tags).sort());
+    } catch (err) {
+      console.error('Failed to load tags:', err);
+      setAvailableTags([]);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    loadTags();
+  }, [loadTags]);
 
   const trainings = data?.data?.trainings || [];
   const total = data?.data?.pagination?.total || 0;
@@ -124,7 +152,7 @@ const TrainingsPage: React.FC = () => {
     setPage(0);
   };
 
-  const handleSort = (column: 'name' | 'createdAt' | 'updatedAt' | 'status') => {
+  const handleSort = (column: 'name' | 'createdAt' | 'updatedAt' | 'status' | 'totalTime' | 'cpuCost' | 'gpuCost' | 'totalCost') => {
     if (sortBy === column) {
       // Toggle sort order if same column
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -155,6 +183,7 @@ const TrainingsPage: React.FC = () => {
           datasetId: selectedDatasetId || undefined,
           configId: selectedConfigId || undefined,
           status: selectedStatus,
+          tags: trainingTags,
         });
         setCreateSuccess('Training updated successfully!');
       } else {
@@ -164,7 +193,8 @@ const TrainingsPage: React.FC = () => {
           description: trainingDescription.trim() || undefined,
           datasetId: selectedDatasetId || undefined,
           configId: selectedConfigId || undefined,
-          status: selectedStatus
+          status: selectedStatus,
+          tags: trainingTags,
         });
         setCreateSuccess(`Training "${trainingName}" created successfully!`);
       }
@@ -177,6 +207,8 @@ const TrainingsPage: React.FC = () => {
       setSelectedDatasetId('');
       setSelectedConfigId('');
       refetch();
+      // Refresh available tags to include any new tags that were added
+      loadTags();
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Failed to save training');
     } finally {
@@ -192,6 +224,7 @@ const TrainingsPage: React.FC = () => {
       setSelectedDatasetId('');
       setSelectedConfigId('');
       setSelectedStatus('pending');
+      setTrainingTags([]);
       setCreateError(null);
       setCreateSuccess(null);
       setEditingTrainingId(null);
@@ -219,6 +252,7 @@ const TrainingsPage: React.FC = () => {
       setSelectedDatasetId(training.datasetId || '');
       setSelectedConfigId(training.configId || '');
       setSelectedStatus(training.status);
+      setTrainingTags(training.tags || []);
       setCreateModalOpen(true);
     } catch (err) {
       console.error('Failed to load data for editing:', err);
@@ -244,6 +278,8 @@ const TrainingsPage: React.FC = () => {
       setDeleteTrainingId(null);
       setTimeout(() => {
         refetch();
+        // Refresh available tags in case some tags are no longer used
+        loadTags();
       }, 500);
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Failed to delete training');
@@ -295,6 +331,8 @@ const TrainingsPage: React.FC = () => {
       setSelectedTrainingIds(new Set());
       setTimeout(() => {
         refetch();
+        // Refresh available tags in case some tags are no longer used
+        loadTags();
       }, 500);
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Failed to delete trainings');
@@ -328,6 +366,9 @@ const TrainingsPage: React.FC = () => {
         onSearchChange={setSearchTerm}
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
+        selectedTags={selectedTags}
+        onTagsChange={setSelectedTags}
+        availableTags={availableTags}
       />
 
       {/* Training Statistics */}
@@ -453,6 +494,9 @@ const TrainingsPage: React.FC = () => {
         onDatasetChange={setSelectedDatasetId}
         selectedStatus={selectedStatus}
         onStatusChange={setSelectedStatus}
+        trainingTags={trainingTags}
+        onTagsChange={setTrainingTags}
+        availableTags={availableTags}
         configs={configs}
         datasets={datasets}
         error={createError}

@@ -70,6 +70,7 @@ export const trainingService = {
     search?: string;
     status?: 'pending' | 'running' | 'completed' | 'failed';
     datasetId?: string;
+    tags?: string[];
     sortBy?: string;
     order?: 'asc' | 'desc';
   }): Promise<PaginatedResponse<Training>> {
@@ -102,6 +103,7 @@ export const trainingService = {
   async getTrainingStats(params?: {
     status?: 'pending' | 'running' | 'completed' | 'failed';
     datasetId?: string;
+    tags?: string[];
   }): Promise<ApiResponse<TrainingStats>> {
     const response = await visionApi.get('/trainings/stats', { params });
     return response.data;

@@ -110,7 +110,8 @@ const ClassIoUChart: React.FC<ClassIoUChartProps> = ({ epochs }) => {
       return {
         data: classIoUData,
         label: className,
-        color: colors[index % colors.length]
+        color: colors[index % colors.length],
+        showMark: false,
       };
     });
   };
