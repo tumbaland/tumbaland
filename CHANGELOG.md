@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.240](https://github.com/toomastahves/tumbaland/compare/v0.0.239...v0.0.240) (2025-10-27)
+
+
+### Features
+
+* add export to trainings table ([79f664f](https://github.com/toomastahves/tumbaland/commit/79f664fa53f5d2e1c725223643d7f0a9bf8e28aa))
+
 ### [0.0.239](https://github.com/toomastahves/tumbaland/compare/v0.0.238...v0.0.239) (2025-10-27)
 
 
