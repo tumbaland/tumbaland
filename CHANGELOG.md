@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.238](https://github.com/toomastahves/tumbaland/compare/v0.0.237...v0.0.238) (2025-10-27)
+
+
+### Features
+
+* clean up graph, show stats ([401933a](https://github.com/toomastahves/tumbaland/commit/401933a775890ca0222d57058459ee5d3a6ecc32))
+
 ### [0.0.237](https://github.com/toomastahves/tumbaland/compare/v0.0.236...v0.0.237) (2025-10-27)
 
 
