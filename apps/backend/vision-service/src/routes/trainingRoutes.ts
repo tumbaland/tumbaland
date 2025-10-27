@@ -7,6 +7,7 @@ import {
   createTraining,
   updateTraining,
   deleteTraining,
+  getTrainingStats,
   compareTrainings
 } from '../controllers/trainingController';
 
@@ -15,6 +16,7 @@ const router = express.Router();
 // Training routes - more specific routes first!
 router.get('/uuid/:uuid', getTrainingByUuid);
 router.get('/:id/epochs', getTrainingWithEpochs);
+router.get('/stats', getTrainingStats);
 router.get('/', getTrainings);
 router.get('/:id', getTrainingById);
 router.post('/', createTraining);

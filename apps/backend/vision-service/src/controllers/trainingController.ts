@@ -330,6 +330,90 @@ export const deleteTraining = async (req: Request, res: Response): Promise<void>
   }
 };
 
+// Get training statistics
+export const getTrainingStats = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { status, datasetId } = req.query;
+
+    let query: any = {};
+
+    // Filter by status if provided
+    if (status) {
+      query.status = status;
+    }
+
+    // Filter by dataset if provided
+    if (datasetId) {
+      query.datasetId = datasetId;
+    }
+
+    // Get all trainings matching the filter
+    const trainings = await Training.find(query);
+
+    // Get all epochs for these trainings
+    const trainingIds = trainings.map(t => t._id);
+    const epochs = await Epoch.find({ trainingId: { $in: trainingIds } });
+
+    // Group epochs by training ID
+    const epochsByTraining: Record<string, any[]> = epochs.reduce((acc, epoch) => {
+      const trainingId = epoch.trainingId.toString();
+      if (!acc[trainingId]) {
+        acc[trainingId] = [];
+      }
+      acc[trainingId].push(epoch);
+      return acc;
+    }, {} as Record<string, any[]>);
+
+    // Calculate aggregate statistics
+    let totalTime = 0;
+    let totalCpuCost = 0;
+    let totalGpuCost = 0;
+    let totalCost = 0;
+    const CPU_RATE_PER_HOUR = 0.006;
+    const GPU_RATE_PER_HOUR = 0.20;
+
+    trainings.forEach(training => {
+      const trainingId = (training._id as any).toString();
+      const trainingEpochs = epochsByTraining[trainingId] || [];
+
+      // Sum up epoch times for this training
+      const trainingTime = trainingEpochs.reduce((sum: number, epoch: any) => sum + (epoch.epoch_time || 0), 0);
+      totalTime += trainingTime;
+
+      // Calculate cost for this training
+      const totalHours = trainingTime / 3600;
+      const cpuCost = totalHours * CPU_RATE_PER_HOUR;
+      const gpuCost = totalHours * GPU_RATE_PER_HOUR;
+      totalCpuCost += cpuCost;
+      totalGpuCost += gpuCost;
+      totalCost += (cpuCost + gpuCost);
+    });
+
+    res.json({
+      success: true,
+      data: {
+        totalTrainings: trainings.length,
+        totalTime,
+        totalCpuCost,
+        totalGpuCost,
+        totalCost,
+        filters: {
+          status: status || null,
+          datasetId: datasetId || null
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching training stats:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch training stats';
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch training stats',
+      error: errorMessage
+    });
+  }
+};
+
 // Compare trainings
 export const compareTrainings = async (req: Request, res: Response): Promise<void> => {
   try {

@@ -53,10 +53,11 @@ const ClassIoUChart: React.FC<ClassIoUChartProps> = ({ epochs }) => {
     return null;
   }
 
-  // Build chart data for each class
-  const epochNumbers = epochs.map(e => e.epoch);
+  // Separate classes into regular and _2d groups
   const classesArray = Array.from(allClasses).sort();
-  
+  const regularClasses = classesArray.filter(className => !className.endsWith('_2d'));
+  const twoDClasses = classesArray.filter(className => className.endsWith('_2d'));
+
   // Color palette for classes
   const colors = [
     '#1976d2', // blue
@@ -71,70 +72,110 @@ const ClassIoUChart: React.FC<ClassIoUChartProps> = ({ epochs }) => {
     '#6a1b9a'  // deep purple
   ];
 
-  const series = classesArray.map((className, index) => {
-    const classIoUData = epochs.map(epoch => {
-      // Try validation results first
-      let valResults = epoch.results?.val as Record<string, any> || {};
-      let iouValue = valResults[className]?.iou;
+  const epochNumbers = epochs.map(e => e.epoch);
 
-      // Try training results if val doesn't have it
-      if (iouValue === undefined) {
-        const trainResults = epoch.results?.train as Record<string, any> || {};
-        iouValue = trainResults[className]?.iou;
-      }
+  // Helper function to create chart series for a class group
+  const createChartSeries = (classList: string[]) => {
+    return classList.map((className, index) => {
+      const classIoUData = epochs.map(epoch => {
+        // Try validation results first
+        let valResults = epoch.results?.val as Record<string, any> || {};
+        let iouValue = valResults[className]?.iou;
 
-      // Try per_class structures
-      if (iouValue === undefined) {
-        let perClass = epoch.results?.val?.per_class as Record<string, any> || {};
-        iouValue = perClass[className]?.iou;
-      }
+        // Try training results if val doesn't have it
+        if (iouValue === undefined) {
+          const trainResults = epoch.results?.train as Record<string, any> || {};
+          iouValue = trainResults[className]?.iou;
+        }
 
-      if (iouValue === undefined) {
-        let perClass = epoch.results?.train?.per_class as Record<string, any> || {};
-        iouValue = perClass[className]?.iou;
-      }
+        // Try per_class structures
+        if (iouValue === undefined) {
+          let perClass = epoch.results?.val?.per_class as Record<string, any> || {};
+          iouValue = perClass[className]?.iou;
+        }
 
-      if (iouValue === undefined) {
-        let perClass = epoch.results?.metrics?.per_class as Record<string, any> || {};
-        iouValue = perClass[className]?.iou;
-      }
+        if (iouValue === undefined) {
+          let perClass = epoch.results?.train?.per_class as Record<string, any> || {};
+          iouValue = perClass[className]?.iou;
+        }
 
-      return iouValue ?? null;
+        if (iouValue === undefined) {
+          let perClass = epoch.results?.metrics?.per_class as Record<string, any> || {};
+          iouValue = perClass[className]?.iou;
+        }
+
+        return iouValue ?? null;
+      });
+
+      return {
+        data: classIoUData,
+        label: className,
+        color: colors[index % colors.length]
+      };
     });
+  };
 
-    return {
-      data: classIoUData,
-      label: className,
-      color: colors[index % colors.length]
-    };
-  });
+  // Create series for both groups
+  const regularSeries = createChartSeries(regularClasses);
+  const twoDSeries = createChartSeries(twoDClasses);
 
-  const hasData = series.some(s => s.data.some(v => v !== null && v !== 0));
+  // Check if we have data for each group
+  const hasRegularData = regularSeries.some(s => s.data.some(v => v !== null && v !== 0));
+  const hasTwoDData = twoDSeries.some(s => s.data.some(v => v !== null && v !== 0));
 
-  if (!hasData) {
+  // If no data at all, return null
+  if (!hasRegularData && !hasTwoDData) {
     return null;
   }
 
   return (
-    <Paper sx={{ p: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        Class IoU Over Epochs
-      </Typography>
-      <Box sx={{ width: '100%', height: 400 }}>
-        <LineChart
-          xAxis={[{ data: epochNumbers, label: 'Epoch' }]}
-          series={series}
-          margin={{ top: 10, bottom: 40, left: 60, right: 10 }}
-          slotProps={{
-            legend: {
-              direction: 'column' as const,
-              position: { vertical: 'top' as const, horizontal: 'right' as const },
-              padding: 10
-            }
-          }}
-        />
-      </Box>
-    </Paper>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {/* Regular Classes Chart */}
+      {hasRegularData && (
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Class IoU Over Epochs
+          </Typography>
+          <Box sx={{ width: '100%', height: 400 }}>
+            <LineChart
+              xAxis={[{ data: epochNumbers, label: 'Epoch' }]}
+              series={regularSeries}
+              margin={{ top: 10, bottom: 40, left: 60, right: 10 }}
+              slotProps={{
+                legend: {
+                  direction: 'column' as const,
+                  position: { vertical: 'top' as const, horizontal: 'right' as const },
+                  padding: 10
+                }
+              }}
+            />
+          </Box>
+        </Paper>
+      )}
+
+      {/* 2D Classes Chart */}
+      {hasTwoDData && (
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Class IoU Over Epochs (2D)
+          </Typography>
+          <Box sx={{ width: '100%', height: 400 }}>
+            <LineChart
+              xAxis={[{ data: epochNumbers, label: 'Epoch' }]}
+              series={twoDSeries}
+              margin={{ top: 10, bottom: 40, left: 60, right: 10 }}
+              slotProps={{
+                legend: {
+                  direction: 'column' as const,
+                  position: { vertical: 'top' as const, horizontal: 'right' as const },
+                  padding: 10
+                }
+              }}
+            />
+          </Box>
+        </Paper>
+      )}
+    </Box>
   );
 };
 

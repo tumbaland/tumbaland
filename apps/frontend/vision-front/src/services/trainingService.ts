@@ -50,6 +50,18 @@ export interface TrainingComparisonResponse {
   };
 }
 
+export interface TrainingStats {
+  totalTrainings: number;
+  totalTime: number;
+  totalCpuCost: number;
+  totalGpuCost: number;
+  totalCost: number;
+  filters: {
+    status: string | null;
+    datasetId: string | null;
+  };
+}
+
 export const trainingService = {
   // Get all trainings
   async getTrainings(params?: {
@@ -83,6 +95,15 @@ export const trainingService = {
     order?: 'asc' | 'desc';
   }): Promise<ApiResponse<TrainingWithEpochs>> {
     const response = await visionApi.get(`/trainings/${id}/epochs`, { params });
+    return response.data;
+  },
+
+  // Get training statistics
+  async getTrainingStats(params?: {
+    status?: 'pending' | 'running' | 'completed' | 'failed';
+    datasetId?: string;
+  }): Promise<ApiResponse<TrainingStats>> {
+    const response = await visionApi.get('/trainings/stats', { params });
     return response.data;
   },
 

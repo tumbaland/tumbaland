@@ -4,7 +4,7 @@ info:
   description: |
     Vision Service API for managing machine learning datasets, trainings, epochs, configurations, and analyses.
     This service handles the storage and retrieval of vision-based training data and model configurations.
-  version: 1.0.0
+  version: 1.1.0
   contact:
     name: API Support
   license:
@@ -517,27 +517,83 @@ paths:
     get:
       tags:
         - Trainings
-      summary: Get all trainings
+      summary: Get all trainings with pagination and filtering
+      description: Retrieve a list of trainings with pagination, search, filtering, and sorting support
       parameters:
-        - name: skip
+        - name: page
           in: query
+          description: Page number (1-based)
           schema:
             type: integer
-            default: 0
+            default: 1
+            minimum: 1
         - name: limit
           in: query
+          description: Number of items per page
           schema:
             type: integer
-            default: 50
+            default: 10
+            minimum: 1
+            maximum: 100
+        - name: search
+          in: query
+          description: Search term for training name or description
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Filter by training status
+          schema:
+            type: string
+            enum: [pending, running, completed, failed]
+        - name: datasetId
+          in: query
+          description: Filter by dataset ID
+          schema:
+            type: string
+        - name: sortBy
+          in: query
+          description: Sort field
+          schema:
+            type: string
+            enum: [name, createdAt, updatedAt, status]
+            default: updatedAt
+        - name: order
+          in: query
+          description: Sort order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
       responses:
         '200':
           description: Successful response
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Training'
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      trainings:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Training'
+                      pagination:
+                        type: object
+                        properties:
+                          page:
+                            type: integer
+                          limit:
+                            type: integer
+                          total:
+                            type: integer
+                          pages:
+                            type: integer
         '500':
           description: Server error
           content:
@@ -802,12 +858,16 @@ paths:
                                   properties:
                                     totalHours:
                                       type: number
+                                      description: Total training hours
                                     cpuCost:
                                       type: number
+                                      description: CPU cost in euros
                                     gpuCost:
                                       type: number
+                                      description: GPU cost in euros
                                     totalCost:
                                       type: number
+                                      description: Total cost (CPU + GPU) in euros
                             lastEpoch:
                               type: object
                               nullable: true
@@ -846,6 +906,74 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /trainings/stats:
+    get:
+      tags:
+        - Trainings
+      summary: Get training statistics
+      description: Get aggregate statistics for trainings including total time and cost breakdown
+      parameters:
+        - name: status
+          in: query
+          description: Filter by training status
+          schema:
+            type: string
+            enum: [pending, running, completed, failed]
+        - name: datasetId
+          in: query
+          description: Filter by dataset ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      totalTrainings:
+                        type: integer
+                        description: Total number of trainings
+                        example: 25
+                      totalTime:
+                        type: number
+                        description: Total training time in seconds
+                        example: 36000
+                      totalCpuCost:
+                        type: number
+                        description: Total CPU cost in euros
+                        example: 0.60
+                      totalGpuCost:
+                        type: number
+                        description: Total GPU cost in euros
+                        example: 20.00
+                      totalCost:
+                        type: number
+                        description: Total cost (CPU + GPU) in euros
+                        example: 20.60
+                      filters:
+                        type: object
+                        properties:
+                          status:
+                            type: string
+                            nullable: true
+                          datasetId:
+                            type: string
+                            nullable: true
         '500':
           description: Server error
           content:

@@ -104,8 +104,16 @@ const TrainingsPage: React.FC = () => {
     })
   });
 
+  const { data: statsData } = useQuery({
+    queryKey: ['training-stats', statusFilter],
+    queryFn: () => trainingService.getTrainingStats({
+      status: statusFilter !== 'all' ? statusFilter as Training['status'] : undefined
+    })
+  });
+
   const trainings = data?.data?.trainings || [];
   const total = data?.data?.pagination?.total || 0;
+  const stats = statsData?.data;
 
   const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage);
@@ -321,6 +329,57 @@ const TrainingsPage: React.FC = () => {
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
       />
+
+      {/* Training Statistics */}
+      {stats && (
+        <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: 1, borderColor: 'divider' }}>
+          <Typography variant="h6" gutterBottom>
+            Training Statistics
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+            <Box>
+              <Typography variant="body2" color="text.secondary">
+                Total Trainings
+              </Typography>
+              <Typography variant="h6">
+                {stats.totalTrainings}
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="body2" color="text.secondary">
+                Total Time
+              </Typography>
+              <Typography variant="h6">
+                {Math.round(stats.totalTime / 3600 * 10) / 10}h
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="body2" color="text.secondary">
+                CPU Cost
+              </Typography>
+              <Typography variant="h6">
+                €{stats.totalCpuCost.toFixed(2)}
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="body2" color="text.secondary">
+                GPU Cost
+              </Typography>
+              <Typography variant="h6">
+                €{stats.totalGpuCost.toFixed(2)}
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="body2" color="text.secondary">
+                Total Cost
+              </Typography>
+              <Typography variant="h6">
+                €{stats.totalCost.toFixed(2)}
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
+      )}
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
