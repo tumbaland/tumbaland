@@ -2,12 +2,14 @@ import React from 'react';
 import { Paper, Typography, Box } from '@mui/material';
 import { LineChart } from '@mui/x-charts';
 import { Epoch } from '../types';
+import ChartComments from './ChartComments';
 
 interface ClassPrecisionChartProps {
   epochs: Epoch[];
+  trainingId?: string;
 }
 
-const ClassPrecisionChart: React.FC<ClassPrecisionChartProps> = ({ epochs }) => {
+const ClassPrecisionChart: React.FC<ClassPrecisionChartProps> = ({ epochs, trainingId }) => {
   if (epochs.length === 0) {
     return null;
   }
@@ -136,7 +138,7 @@ const ClassPrecisionChart: React.FC<ClassPrecisionChartProps> = ({ epochs }) => 
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       {/* Regular Classes Chart */}
       {hasRegularData && (
-        <Paper sx={{ p: 3 }}>
+        <Paper sx={{ p: 3, position: 'relative' }}>
           <Typography variant="h6" gutterBottom>
             Class Precision Over Epochs
           </Typography>
@@ -154,12 +156,13 @@ const ClassPrecisionChart: React.FC<ClassPrecisionChartProps> = ({ epochs }) => 
               }}
             />
           </Box>
+          {trainingId && <ChartComments trainingId={trainingId} section="class_precision_chart" />}
         </Paper>
       )}
 
       {/* 2D Classes Chart */}
       {hasTwoDData && (
-        <Paper sx={{ p: 3 }}>
+        <Paper sx={{ p: 3, position: 'relative' }}>
           <Typography variant="h6" gutterBottom>
             Class Precision Over Epochs (2D)
           </Typography>
@@ -177,6 +180,7 @@ const ClassPrecisionChart: React.FC<ClassPrecisionChartProps> = ({ epochs }) => 
               }}
             />
           </Box>
+          {trainingId && <ChartComments trainingId={trainingId} section="class_precision_2d_chart" />}
         </Paper>
       )}
     </Box>

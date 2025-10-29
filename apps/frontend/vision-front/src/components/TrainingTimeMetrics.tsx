@@ -2,12 +2,14 @@ import React from 'react';
 import { Paper, Typography, Box } from '@mui/material';
 import { BarChart, LineChart } from '@mui/x-charts';
 import { Epoch } from '../types';
+import ChartComments from './ChartComments';
 
 interface TrainingTimeMetricsProps {
   epochs: Epoch[];
+  trainingId?: string;
 }
 
-const TrainingTimeMetrics: React.FC<TrainingTimeMetricsProps> = ({ epochs }) => {
+const TrainingTimeMetrics: React.FC<TrainingTimeMetricsProps> = ({ epochs, trainingId }) => {
   if (epochs.length === 0) {
     return null;
   }
@@ -39,7 +41,7 @@ const TrainingTimeMetrics: React.FC<TrainingTimeMetricsProps> = ({ epochs }) => 
       {hasTimeData && (
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
           {/* Per-Epoch Time Chart */}
-          <Paper sx={{ p: 3 }}>
+          <Paper sx={{ p: 3, position: 'relative' }}>
             <Typography variant="h6" gutterBottom>
               Time Spent Per Epoch
             </Typography>
@@ -55,10 +57,11 @@ const TrainingTimeMetrics: React.FC<TrainingTimeMetricsProps> = ({ epochs }) => 
                 margin={{ top: 10, bottom: 40, left: 60, right: 10 }}
               />
             </Box>
+            {trainingId && <ChartComments trainingId={trainingId} section="time_per_epoch_chart" />}
           </Paper>
 
           {/* Cumulative Time Chart */}
-          <Paper sx={{ p: 3 }}>
+          <Paper sx={{ p: 3, position: 'relative' }}>
             <Typography variant="h6" gutterBottom>
               Cumulative Training Time
             </Typography>
@@ -75,6 +78,7 @@ const TrainingTimeMetrics: React.FC<TrainingTimeMetricsProps> = ({ epochs }) => 
                 margin={{ top: 10, bottom: 40, left: 60, right: 10 }}
               />
             </Box>
+            {trainingId && <ChartComments trainingId={trainingId} section="cumulative_time_chart" />}
           </Paper>
         </Box>
       )}

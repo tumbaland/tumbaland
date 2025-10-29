@@ -2,12 +2,14 @@ import React from 'react';
 import { Paper, Typography, Box } from '@mui/material';
 import { LineChart } from '@mui/x-charts';
 import { Epoch } from '../types';
+import ChartComments from './ChartComments';
 
 interface ClassF1ChartProps {
   epochs: Epoch[];
+  trainingId?: string;
 }
 
-const ClassF1Chart: React.FC<ClassF1ChartProps> = ({ epochs }) => {
+const ClassF1Chart: React.FC<ClassF1ChartProps> = ({ epochs, trainingId }) => {
   if (epochs.length === 0) {
     return null;
   }
@@ -136,7 +138,7 @@ const ClassF1Chart: React.FC<ClassF1ChartProps> = ({ epochs }) => {
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       {/* Regular Classes Chart */}
       {hasRegularData && (
-        <Paper sx={{ p: 3 }}>
+        <Paper sx={{ p: 3, position: 'relative' }}>
           <Typography variant="h6" gutterBottom>
             Class F1 Score Over Epochs
           </Typography>
@@ -154,12 +156,13 @@ const ClassF1Chart: React.FC<ClassF1ChartProps> = ({ epochs }) => {
               }}
             />
           </Box>
+          {trainingId && <ChartComments trainingId={trainingId} section="class_f1_chart" />}
         </Paper>
       )}
 
       {/* 2D Classes Chart */}
       {hasTwoDData && (
-        <Paper sx={{ p: 3 }}>
+        <Paper sx={{ p: 3, position: 'relative' }}>
           <Typography variant="h6" gutterBottom>
             Class F1 Score Over Epochs (2D)
           </Typography>
@@ -177,6 +180,7 @@ const ClassF1Chart: React.FC<ClassF1ChartProps> = ({ epochs }) => {
               }}
             />
           </Box>
+          {trainingId && <ChartComments trainingId={trainingId} section="class_f1_2d_chart" />}
         </Paper>
       )}
     </Box>

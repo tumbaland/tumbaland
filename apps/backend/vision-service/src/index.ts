@@ -8,6 +8,7 @@ import trainingRoutes from './routes/trainingRoutes';
 import epochRoutes from './routes/epochRoutes';
 import configRoutes from './routes/configRoutes';
 import analysisRoutes from './routes/analysisRoutes';
+import commentRoutes from './routes/commentRoutes';
 import { healthCheck } from './controllers/healthController';
 import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware } from '@tumbaland/core';
 
@@ -25,6 +26,9 @@ app.use(correlationMiddleware);
 app.use(tracingMiddleware);
 app.use(requestLoggerWithMetrics);
 app.use(cors({
+  origin: true, // Allow all origins in development
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id', 'x-session-id']
 }));
 app.use(express.json({ limit: '50mb' })); // Increased limit for large training data
@@ -35,6 +39,7 @@ app.use('/api/trainings', trainingRoutes);
 app.use('/api/epochs', epochRoutes);
 app.use('/api/configs', configRoutes);
 app.use('/api/analysis', analysisRoutes);
+app.use('/api/comments', commentRoutes);
 
 // Serve OpenAPI docs as static files
 app.use('/api/docs', express.static(path.join(__dirname, '../docs')));

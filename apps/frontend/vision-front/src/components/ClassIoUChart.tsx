@@ -2,12 +2,14 @@ import React from 'react';
 import { Paper, Typography, Box } from '@mui/material';
 import { LineChart } from '@mui/x-charts';
 import { Epoch } from '../types';
+import ChartComments from './ChartComments';
 
 interface ClassIoUChartProps {
   epochs: Epoch[];
+  trainingId?: string;
 }
 
-const ClassIoUChart: React.FC<ClassIoUChartProps> = ({ epochs }) => {
+const ClassIoUChart: React.FC<ClassIoUChartProps> = ({ epochs, trainingId }) => {
   if (epochs.length === 0) {
     return null;
   }
@@ -133,7 +135,7 @@ const ClassIoUChart: React.FC<ClassIoUChartProps> = ({ epochs }) => {
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       {/* Regular Classes Chart */}
       {hasRegularData && (
-        <Paper sx={{ p: 3 }}>
+        <Paper sx={{ p: 3, position: 'relative' }}>
           <Typography variant="h6" gutterBottom>
             Class IoU Over Epochs
           </Typography>
@@ -151,12 +153,13 @@ const ClassIoUChart: React.FC<ClassIoUChartProps> = ({ epochs }) => {
               }}
             />
           </Box>
+          {trainingId && <ChartComments trainingId={trainingId} section="class_iou_chart" />}
         </Paper>
       )}
 
       {/* 2D Classes Chart */}
       {hasTwoDData && (
-        <Paper sx={{ p: 3 }}>
+        <Paper sx={{ p: 3, position: 'relative' }}>
           <Typography variant="h6" gutterBottom>
             Class IoU Over Epochs (2D)
           </Typography>
@@ -174,6 +177,7 @@ const ClassIoUChart: React.FC<ClassIoUChartProps> = ({ epochs }) => {
               }}
             />
           </Box>
+          {trainingId && <ChartComments trainingId={trainingId} section="class_iou_2d_chart" />}
         </Paper>
       )}
     </Box>

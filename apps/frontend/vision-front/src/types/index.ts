@@ -147,45 +147,28 @@ export interface CreateConfigData {
   metadata?: Record<string, any>;
 }
 
-// Training Comparison Types
-export interface TrainingComparison {
-  training: {
-    _id: string;
-    name: string;
-    description?: string;
-    status: Training['status'];
-    createdAt: string;
-    updatedAt: string;
-  };
-  metrics: {
-    totalEpochs: number;
-    totalTime: number;
-    avgEpochTime: number;
-    maxEpochTime: number;
-    cost: {
-      totalHours: number;
-      cpuCost: number;
-      gpuCost: number;
-      totalCost: number;
-    };
-  };
-  lastEpoch: {
-    epoch: number;
-    results: EpochResults;
-    timestamp: string;
-  } | null;
-  epochs: Array<{
-    epoch: number;
-    results: EpochResults;
-    epoch_time?: number;
-    timestamp: string;
-  }>;
+// Comment Types
+export interface Comment {
+  _id: string;
+  name: string;
+  comment: string;
+  trainingId: string;
+  section?: string; // e.g., 'iou_chart', 'loss_chart', 'precision_chart', etc.
+  parentId?: string;
+  replies?: Comment[];
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface TrainingComparisonResponse {
-  comparison: TrainingComparison[];
-  summary: {
-    totalTrainings: number;
-    trainingsWithEpochs: number;
-  };
+export interface CreateCommentData {
+  name: string;
+  comment: string;
+  trainingId: string;
+  section?: string;
+  parentId?: string;
+}
+
+export interface UpdateCommentData {
+  name?: string;
+  comment?: string;
 }

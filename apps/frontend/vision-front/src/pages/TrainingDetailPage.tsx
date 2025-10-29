@@ -44,6 +44,7 @@ import TrainingOverviewCard from '../components/TrainingOverviewCard';
 import ClassPrecisionChart from '../components/ClassPrecisionChart';
 import ClassRecallChart from '../components/ClassRecallChart';
 import ClassF1Chart from '../components/ClassF1Chart';
+import ChartComments from '../components/ChartComments';
 
 const TrainingDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -302,7 +303,7 @@ const TrainingDetailPage: React.FC = () => {
 
           {/* Loss Chart */}
           {epochs.length > 0 && trainLoss.some(v => v !== undefined) && (
-            <Paper sx={{ p: 3 }}>
+            <Paper sx={{ p: 3, position: 'relative' }}>
               <Typography variant="h6" gutterBottom>Loss Over Epochs</Typography>
               <Box sx={{ width: '100%', height: 350 }}>
                 <LineChart
@@ -314,12 +315,13 @@ const TrainingDetailPage: React.FC = () => {
                   margin={{ top: 10, bottom: 40, left: 60, right: 10 }}
                 />
               </Box>
+              <ChartComments trainingId={id!} section="loss_chart" />
             </Paper>
           )}
 
           {/* Mean IoU Chart */}
           {epochs.length > 0 && trainMeanIoU.some(v => v !== undefined) && (
-            <Paper sx={{ p: 3 }}>
+            <Paper sx={{ p: 3, position: 'relative' }}>
               <Typography variant="h6" gutterBottom>Mean IoU Over Epochs</Typography>
               <Box sx={{ width: '100%', height: 350 }}>
                 <LineChart
@@ -331,23 +333,24 @@ const TrainingDetailPage: React.FC = () => {
                   margin={{ top: 10, bottom: 40, left: 60, right: 10 }}
                 />
               </Box>
+              <ChartComments trainingId={id!} section="iou_chart" />
             </Paper>
           )}
 
           {/* Training Time Metrics */}
-          <TrainingTimeMetrics epochs={epochs} />
+          <TrainingTimeMetrics epochs={epochs} trainingId={id} />
 
           {/* Class IoU Chart */}
-          <ClassIoUChart epochs={epochs} />
+          <ClassIoUChart epochs={epochs} trainingId={id} />
 
           {/* Class Precision Chart */}
-          <ClassPrecisionChart epochs={epochs} />
+          <ClassPrecisionChart epochs={epochs} trainingId={id} />
 
           {/* Class Recall Chart */}
-          <ClassRecallChart epochs={epochs} />
+          <ClassRecallChart epochs={epochs} trainingId={id} />
 
           {/* Class F1 Chart */}
-          <ClassF1Chart epochs={epochs} />
+          <ClassF1Chart epochs={epochs} trainingId={id} />
 
           {/* Per-Class Metrics Table */}
           {Object.keys(classMetrics).length > 0 && (
