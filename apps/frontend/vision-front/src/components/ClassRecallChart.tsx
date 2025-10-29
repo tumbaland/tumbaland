@@ -56,8 +56,10 @@ const ClassRecallChart: React.FC<ClassRecallChartProps> = ({ epochs }) => {
     return null;
   }
 
-  // Sort classes
+  // Separate classes into regular and _2d groups
   const classesArray = Array.from(allClasses).sort();
+  const regularClasses = classesArray.filter(className => !className.endsWith('_2d'));
+  const twoDClasses = classesArray.filter(className => className.endsWith('_2d'));
 
   // Color palette for classes
   const colors = [
@@ -117,37 +119,67 @@ const ClassRecallChart: React.FC<ClassRecallChartProps> = ({ epochs }) => {
     });
   };
 
-  // Create series for all classes
-  const series = createChartSeries(classesArray);
+  // Create series for both groups
+  const regularSeries = createChartSeries(regularClasses);
+  const twoDSeries = createChartSeries(twoDClasses);
 
-  // Check if we have data
-  const hasData = series.some(s => s.data.some(v => v !== null && v !== 0));
+  // Check if we have data for each group
+  const hasRegularData = regularSeries.some(s => s.data.some(v => v !== null && v !== 0));
+  const hasTwoDData = twoDSeries.some(s => s.data.some(v => v !== null && v !== 0));
 
   // If no data at all, return null
-  if (!hasData) {
+  if (!hasRegularData && !hasTwoDData) {
     return null;
   }
 
   return (
-    <Paper sx={{ p: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        Class Recall Over Epochs
-      </Typography>
-      <Box sx={{ width: '100%', height: 400 }}>
-        <LineChart
-          xAxis={[{ data: epochNumbers, label: 'Epoch' }]}
-          series={series}
-          margin={{ top: 10, bottom: 40, left: 60, right: 10 }}
-          slotProps={{
-            legend: {
-              direction: 'column' as const,
-              position: { vertical: 'top' as const, horizontal: 'right' as const },
-              padding: 10
-            }
-          }}
-        />
-      </Box>
-    </Paper>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+      {/* Regular Classes Chart */}
+      {hasRegularData && (
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Class Recall Over Epochs
+          </Typography>
+          <Box sx={{ width: '100%', height: 400 }}>
+            <LineChart
+              xAxis={[{ data: epochNumbers, label: 'Epoch' }]}
+              series={regularSeries}
+              margin={{ top: 10, bottom: 40, left: 60, right: 10 }}
+              slotProps={{
+                legend: {
+                  direction: 'column' as const,
+                  position: { vertical: 'top' as const, horizontal: 'right' as const },
+                  padding: 10
+                }
+              }}
+            />
+          </Box>
+        </Paper>
+      )}
+
+      {/* 2D Classes Chart */}
+      {hasTwoDData && (
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Class Recall Over Epochs (2D)
+          </Typography>
+          <Box sx={{ width: '100%', height: 400 }}>
+            <LineChart
+              xAxis={[{ data: epochNumbers, label: 'Epoch' }]}
+              series={twoDSeries}
+              margin={{ top: 10, bottom: 40, left: 60, right: 10 }}
+              slotProps={{
+                legend: {
+                  direction: 'column' as const,
+                  position: { vertical: 'top' as const, horizontal: 'right' as const },
+                  padding: 10
+                }
+              }}
+            />
+          </Box>
+        </Paper>
+      )}
+    </Box>
   );
 };
 

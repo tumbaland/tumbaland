@@ -359,7 +359,19 @@ const TrainingsPage: React.FC = () => {
           <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => setCreateModalOpen(true)}
+            onClick={() => {
+              // Reset form state for new training creation
+              setTrainingName('');
+              setTrainingDescription('');
+              setSelectedDatasetId('');
+              setSelectedConfigId('');
+              setSelectedStatus('pending');
+              setTrainingTags([]);
+              setCreateError(null);
+              setCreateSuccess(null);
+              setEditingTrainingId(null);
+              setCreateModalOpen(true);
+            }}
           >
             Create Training
           </Button>

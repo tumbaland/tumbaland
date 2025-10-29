@@ -27,7 +27,8 @@ import {
   CloudUpload as CloudUploadIcon,
   Delete as DeleteIcon,
   Info as InfoIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import { epochService } from '../services/epochService';
 import { Epoch, Training } from '../types';
@@ -53,6 +54,11 @@ export const EpochUploadTab: React.FC<EpochUploadTabProps> = ({
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Epoch | null>(null);
+  const [uploadResultsOpen, setUploadResultsOpen] = useState(false);
+  const [uploadResults, setUploadResults] = useState<{
+    successful: string[];
+    failed: string[];
+  }>({ successful: [], failed: [] });
 
   // Load epochs when training changes
   React.useEffect(() => {
@@ -94,9 +100,8 @@ export const EpochUploadTab: React.FC<EpochUploadTabProps> = ({
       setUploadError(null);
       setUploadSuccess(null);
 
-      let successCount = 0;
-      let failureCount = 0;
-      const errors: string[] = [];
+      const successfulFiles: string[] = [];
+      const failedFiles: string[] = [];
 
       // Process each file
       for (let i = 0; i < files.length; i++) {
@@ -104,8 +109,7 @@ export const EpochUploadTab: React.FC<EpochUploadTabProps> = ({
 
         // Validate file is JSON
         if (!file.name.endsWith('.json')) {
-          errors.push(`${file.name}: Invalid file type (must be .json)`);
-          failureCount++;
+          failedFiles.push(file.name);
           continue;
         }
 
@@ -116,21 +120,25 @@ export const EpochUploadTab: React.FC<EpochUploadTabProps> = ({
 
           // Upload to API with current training ID
           await epochService.uploadEpoch(epochData, selectedTrainingId);
-          successCount++;
+          successfulFiles.push(file.name);
         } catch (err) {
-          const message = err instanceof Error ? err.message : 'Unknown error';
-          errors.push(`${file.name}: ${message}`);
-          failureCount++;
+          failedFiles.push(file.name);
         }
       }
 
-      // Build success/error message
-      if (successCount > 0) {
-        setUploadSuccess(`${successCount} epoch file(s) uploaded successfully!`);
+      // Set results for modal
+      setUploadResults({
+        successful: successfulFiles,
+        failed: failedFiles
+      });
+
+      // Build success/error message with counts only
+      if (successfulFiles.length > 0) {
+        setUploadSuccess(`${successfulFiles.length} epoch file(s) uploaded successfully!`);
       }
 
-      if (errors.length > 0) {
-        setUploadError(`Failed to upload ${failureCount} file(s): ${errors.join('; ')}`);
+      if (failedFiles.length > 0) {
+        setUploadError(`Failed to upload ${failedFiles.length} file(s).`);
       }
 
       loadEpochs();
@@ -241,13 +249,41 @@ export const EpochUploadTab: React.FC<EpochUploadTabProps> = ({
         </Box>
 
         {uploadError && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert 
+            severity="error" 
+            sx={{ mb: 2 }}
+            action={
+              uploadResults.failed.length > 0 ? (
+                <IconButton
+                  size="small"
+                  onClick={() => setUploadResultsOpen(true)}
+                  sx={{ color: 'inherit' }}
+                >
+                  <VisibilityIcon fontSize="small" />
+                </IconButton>
+              ) : undefined
+            }
+          >
             {uploadError}
           </Alert>
         )}
 
         {uploadSuccess && (
-          <Alert severity="success" sx={{ mb: 2 }}>
+          <Alert 
+            severity="success" 
+            sx={{ mb: 2 }}
+            action={
+              uploadResults.successful.length > 0 ? (
+                <IconButton
+                  size="small"
+                  onClick={() => setUploadResultsOpen(true)}
+                  sx={{ color: 'inherit' }}
+                >
+                  <VisibilityIcon fontSize="small" />
+                </IconButton>
+              ) : undefined
+            }
+          >
             {uploadSuccess}
           </Alert>
         )}
@@ -400,6 +436,70 @@ export const EpochUploadTab: React.FC<EpochUploadTabProps> = ({
           <Button onClick={handleConfirmDelete} color="error" variant="contained" disabled={loading}>
             Delete
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Upload Results Modal */}
+      <Dialog 
+        open={uploadResultsOpen} 
+        onClose={() => setUploadResultsOpen(false)} 
+        maxWidth="md" 
+        fullWidth
+      >
+        <DialogTitle>Upload Results</DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Box sx={{ display: 'grid', gap: 3 }}>
+            {uploadResults.successful.length > 0 && (
+              <Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, color: 'success.main' }}>
+                  Successfully Uploaded ({uploadResults.successful.length})
+                </Typography>
+                <Box 
+                  sx={{ 
+                    maxHeight: 200, 
+                    overflow: 'auto', 
+                    border: 1, 
+                    borderColor: 'success.light', 
+                    borderRadius: 1, 
+                    p: 1 
+                  }}
+                >
+                  {uploadResults.successful.map((file, index) => (
+                    <Typography key={index} variant="body2" sx={{ color: 'success.main' }}>
+                      • {file}
+                    </Typography>
+                  ))}
+                </Box>
+              </Box>
+            )}
+
+            {uploadResults.failed.length > 0 && (
+              <Box>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1, color: 'error.main' }}>
+                  Failed to Upload ({uploadResults.failed.length})
+                </Typography>
+                <Box 
+                  sx={{ 
+                    maxHeight: 200, 
+                    overflow: 'auto', 
+                    border: 1, 
+                    borderColor: 'error.light', 
+                    borderRadius: 1, 
+                    p: 1 
+                  }}
+                >
+                  {uploadResults.failed.map((file, index) => (
+                    <Typography key={index} variant="body2" sx={{ color: 'error.main' }}>
+                      • {file}
+                    </Typography>
+                  ))}
+                </Box>
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUploadResultsOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
     </Box>

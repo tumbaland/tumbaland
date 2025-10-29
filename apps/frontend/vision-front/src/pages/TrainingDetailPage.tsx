@@ -30,7 +30,8 @@ import {
   Refresh as RefreshIcon,
   Delete as DeleteIcon,
   Info as InfoIcon,
-  CloudUpload as CloudUploadIcon
+  CloudUpload as CloudUploadIcon,
+  Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import { LineChart } from '@mui/x-charts';
 import { trainingService } from '../services/trainingService';
@@ -59,6 +60,11 @@ const TrainingDetailPage: React.FC = () => {
   const [deleteTarget, setDeleteTarget] = useState<Epoch | null>(null);
   const [config, setConfig] = useState<any>(null);
   const [configLoading, setConfigLoading] = useState(false);
+  const [uploadResultsOpen, setUploadResultsOpen] = useState(false);
+  const [uploadResults, setUploadResults] = useState<{
+    successful: Array<{ name: string; operation: string }>;
+    failed: Array<{ name: string; error: string }>;
+  }>({ successful: [], failed: [] });
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['training', id],
@@ -106,13 +112,16 @@ const TrainingDetailPage: React.FC = () => {
       let successCount = 0;
       let failureCount = 0;
       const errors: string[] = [];
-      const operations: string[] = [];
+      const successfulFiles: Array<{ name: string; operation: string }> = [];
+      const failedFiles: Array<{ name: string; error: string }> = [];
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
 
         if (!file.name.endsWith('.json')) {
-          errors.push(`${file.name}: Invalid file type (must be .json)`);
+          const error = 'Invalid file type (must be .json)';
+          errors.push(`${file.name}: ${error}`);
+          failedFiles.push({ name: file.name, error });
           failureCount++;
           continue;
         }
@@ -150,22 +159,28 @@ const TrainingDetailPage: React.FC = () => {
             operation = 'created';
           }
 
-          operations.push(`${file.name} (${operation})`);
+          successfulFiles.push({ name: file.name, operation });
           successCount++;
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Unknown error';
           errors.push(`${file.name}: ${message}`);
+          failedFiles.push({ name: file.name, error: message });
           failureCount++;
         }
       }
 
+      // Store results for modal
+      setUploadResults({
+        successful: successfulFiles,
+        failed: failedFiles
+      });
+
       if (successCount > 0) {
-        const operationsList = operations.join(', ');
-        setUploadSuccess(`${successCount} epoch file(s) processed successfully: ${operationsList}`);
+        setUploadSuccess(`${successCount} epoch file(s) processed successfully`);
       }
 
       if (errors.length > 0) {
-        setUploadError(`Failed to process ${failureCount} file(s): ${errors.join('; ')}`);
+        setUploadError(`Failed to process ${failureCount} file(s)`);
       }
 
       refetch();
@@ -381,8 +396,40 @@ const TrainingDetailPage: React.FC = () => {
               <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>
                 Upload Epoch JSON Files
               </Typography>
-              {uploadError && <Alert severity="error" sx={{ mb: 2 }}>{uploadError}</Alert>}
-              {uploadSuccess && <Alert severity="success" sx={{ mb: 2 }}>{uploadSuccess}</Alert>}
+              {uploadError && (
+                <Alert 
+                  severity="error" 
+                  sx={{ mb: 2 }}
+                  action={
+                    <IconButton
+                      size="small"
+                      color="inherit"
+                      onClick={() => setUploadResultsOpen(true)}
+                    >
+                      <VisibilityIcon fontSize="small" />
+                    </IconButton>
+                  }
+                >
+                  {uploadError}
+                </Alert>
+              )}
+              {uploadSuccess && (
+                <Alert 
+                  severity="success" 
+                  sx={{ mb: 2 }}
+                  action={
+                    <IconButton
+                      size="small"
+                      color="inherit"
+                      onClick={() => setUploadResultsOpen(true)}
+                    >
+                      <VisibilityIcon fontSize="small" />
+                    </IconButton>
+                  }
+                >
+                  {uploadSuccess}
+                </Alert>
+              )}
               <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                 <input
                   ref={fileInputRef}
@@ -654,6 +701,55 @@ const TrainingDetailPage: React.FC = () => {
           <Button onClick={handleConfirmDelete} color="error" variant="contained" disabled={uploading}>
             Delete
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Upload Results Modal */}
+      <Dialog open={uploadResultsOpen} onClose={() => setUploadResultsOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Upload Results</DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {/* Successful Files */}
+            {uploadResults.successful.length > 0 && (
+              <Box>
+                <Typography variant="h6" color="success.main" gutterBottom>
+                  Successfully Processed ({uploadResults.successful.length})
+                </Typography>
+                <Box sx={{ maxHeight: 200, overflowY: 'auto', border: 1, borderColor: 'success.light', borderRadius: 1, p: 1 }}>
+                  {uploadResults.successful.map((file, index) => (
+                    <Typography key={index} variant="body2" sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>{file.name}</span>
+                      <span style={{ color: 'green', fontWeight: 'bold' }}>({file.operation})</span>
+                    </Typography>
+                  ))}
+                </Box>
+              </Box>
+            )}
+
+            {/* Failed Files */}
+            {uploadResults.failed.length > 0 && (
+              <Box>
+                <Typography variant="h6" color="error.main" gutterBottom>
+                  Failed to Process ({uploadResults.failed.length})
+                </Typography>
+                <Box sx={{ maxHeight: 200, overflowY: 'auto', border: 1, borderColor: 'error.light', borderRadius: 1, p: 1 }}>
+                  {uploadResults.failed.map((file, index) => (
+                    <Box key={index} sx={{ mb: 1 }}>
+                      <Typography variant="body2" fontWeight="bold">
+                        {file.name}
+                      </Typography>
+                      <Typography variant="body2" color="error.main" sx={{ ml: 2 }}>
+                        {file.error}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUploadResultsOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
     </Container>
