@@ -12,7 +12,7 @@ export interface NavigationItem {
 export const navigationItems: Omit<NavigationItem, 'onClick'>[] = [
   {
     label: 'Dashboard',
-    path: '/',
+    path: '/dashboard',
     icon: DashboardIcon
   },
   {

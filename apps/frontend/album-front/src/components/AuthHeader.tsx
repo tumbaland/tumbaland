@@ -245,14 +245,7 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
                   let bestMatch = null;
                   let bestLength = -1;
                   for (const item of navigationItems) {
-                    if (item.path === '/' && location.pathname === '/' && bestLength < 1) {
-                      bestMatch = item;
-                      bestLength = 1;
-                    } else if (
-                      item.path !== '/' &&
-                      location.pathname.startsWith(item.path) &&
-                      item.path.length > bestLength
-                    ) {
+                    if (location.pathname.startsWith(item.path) && item.path.length > bestLength) {
                       bestMatch = item;
                       bestLength = item.path.length;
                     }
@@ -292,7 +285,7 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
             >
               {navigationItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = location.pathname === item.path;
+                const isActive = location.pathname.startsWith(item.path);
                 return (
                   <MenuItem
                     key={item.path}
@@ -318,7 +311,7 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
           }}>
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
               {navigationItems.map((item) => {
-                const isActive = location.pathname === item.path;
+                const isActive = location.pathname.startsWith(item.path);
                 const buttonSx = {
                   fontWeight: isActive ? 700 : 500,
                   textTransform: 'none',
