@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.244](https://github.com/toomastahves/tumbaland/compare/v0.0.243...v0.0.244) (2025-10-30)
+
+
+### Features
+
+* update line chart ([456086f](https://github.com/toomastahves/tumbaland/commit/456086f2b5059d1725711708ba3a19478da8bd31))
+
 ### [0.0.243](https://github.com/toomastahves/tumbaland/compare/v0.0.242...v0.0.243) (2025-10-30)
 
 
