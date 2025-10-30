@@ -4,19 +4,16 @@ import {
   Card,
   CardContent,
   Typography,
-  Chip,
   CircularProgress,
   Alert
 } from '@mui/material';
-import {
-  TrendingUp,
-  TrendingDown,
-  AccountBalance
-} from '@mui/icons-material';
+import { AccountBalance } from '@mui/icons-material';
 import { useTenantFilter } from '../components/tenant';
 import { useFinanceRecords } from '../hooks/useFinance';
-import AssetDonutChart from '../components/AssetDonutChart';
-import AssetPerformanceChart from '../components/AssetPerformanceChart';
+import FinancialKPIs from '../components/FinancialKPIs';
+import PortfolioValueChart from '../components/PortfolioValueChart';
+import AssetAllocationChart from '../components/AssetAllocationChart';
+import PerformanceChart from '../components/PerformanceChart';
 
 interface FinanceRecord {
   _id: string;
@@ -32,50 +29,72 @@ interface FinanceRecord {
 }
 
 const Dashboard: React.FC = () => {
-  const tenantGroupId = useTenantFilter(); // Get groupId from tenant context
+  const tenantGroupId = useTenantFilter();
 
   // React Query hook for finance records
   const { data: records = [], isLoading, error } = useFinanceRecords(tenantGroupId);
 
-  // Sort records for the chart (most recent first)
+  // Sort records for chronological display
   const sortedRecords = useMemo(() => {
     return [...records].sort(
-      (a: FinanceRecord, b: FinanceRecord) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      (a: FinanceRecord, b: FinanceRecord) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
   }, [records]);
 
-  // Calculate portfolio summary using useMemo for performance
+  // Calculate portfolio summary
   const portfolioSummary = useMemo(() => {
     if (!sortedRecords || sortedRecords.length === 0) return null;
 
-    const latest = sortedRecords[0];
+    const latest = sortedRecords[sortedRecords.length - 1];
+    const previous = sortedRecords.length > 1 ? sortedRecords[sortedRecords.length - 2] : null;
+
     const totalValue = latest.secondPillar + latest.thirdPillar + latest.etfPortfolio + latest.cash + latest.gold;
     const totalGains = latest.secondPillarGain + latest.thirdPillarGain + latest.etfGain;
     const totalInvested = totalValue - totalGains;
+
+    const previousValue = previous
+      ? previous.secondPillar + previous.thirdPillar + previous.etfPortfolio + previous.cash + previous.gold
+      : totalValue;
+    const monthlyChange = totalValue - previousValue;
+    const monthlyChangePercent = previousValue > 0 ? (monthlyChange / previousValue) * 100 : 0;
+
     const gainsPercentage = totalInvested > 0 ? (totalGains / totalInvested) * 100 : 0;
 
     return {
       totalValue,
       totalGains,
       gainsPercentage,
+      monthlyChange,
+      monthlyChangePercent,
       breakdown: {
         secondPillar: latest.secondPillar,
         thirdPillar: latest.thirdPillar,
         etfPortfolio: latest.etfPortfolio,
         cash: latest.cash,
         gold: latest.gold
+      },
+      gains: {
+        secondPillar: latest.secondPillarGain,
+        thirdPillar: latest.thirdPillarGain,
+        etfPortfolio: latest.etfGain
       }
     };
   }, [sortedRecords]);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('et-EE', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
+  // Prepare performance data for BarChart
+  const performanceData = useMemo(() => {
+    if (!portfolioSummary) return { categories: [], gains: [], colors: [] };
+
+    const categories = ['Second Pillar', 'Third Pillar', 'ETF Portfolio'];
+    const gains = [
+      portfolioSummary.gains.secondPillar,
+      portfolioSummary.gains.thirdPillar,
+      portfolioSummary.gains.etfPortfolio
+    ];
+    const colors = ['#667eea', '#764ba2', '#11998e'];
+
+    return { categories, gains, colors };
+  }, [portfolioSummary]);
 
   if (isLoading) {
     return (
@@ -96,134 +115,88 @@ const Dashboard: React.FC = () => {
   return (
     <Box sx={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+      background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
       py: { xs: 2, md: 4 },
       px: { xs: 2, md: 4 }
     }}>
       {/* Header */}
-      <Box sx={{ mb: { xs: 1, md: 2 } }}>
+      <Box sx={{ mb: { xs: 3, md: 4 } }}>
         <Typography
-          variant="h6"
+          variant="h4"
           sx={{
-            fontWeight: 600,
-            color: '#2c3e50',
+            fontWeight: 700,
+            color: '#1e293b',
+            textAlign: { xs: 'center', md: 'left' },
+            mb: 1
+          }}
+        >
+          Financial Dashboard
+        </Typography>
+        <Typography
+          variant="body1"
+          sx={{
+            color: '#64748b',
             textAlign: { xs: 'center', md: 'left' }
           }}
         >
-          Finance
+          Track your investment portfolio performance and asset allocation
         </Typography>
       </Box>
 
       {portfolioSummary && (
         <>
-          {/* Key Metrics Card */}
+          {/* Key Metrics Cards */}
+          <FinancialKPIs
+            data={{
+              totalValue: portfolioSummary.totalValue,
+              totalGains: portfolioSummary.totalGains,
+              gainsPercentage: portfolioSummary.gainsPercentage,
+              monthlyChange: portfolioSummary.monthlyChange,
+              monthlyChangePercent: portfolioSummary.monthlyChangePercent
+            }}
+          />
+
+          {/* Portfolio Timeline - Full Width */}
           <Box sx={{ mb: { xs: 3, md: 4 } }}>
-            <Card
-              sx={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: 'white',
-                borderRadius: 3,
-                boxShadow: '0 8px 32px rgba(102, 126, 234, 0.3)',
-                transition: 'transform 0.2s',
-                '&:hover': {
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 12px 40px rgba(102, 126, 234, 0.4)'
-                }
-              }}
-            >
-              <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                  <AccountBalance sx={{ mr: 2, fontSize: { xs: 32, md: 36 } }} />
-                  <Box>
-                    <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.875rem' }}>
-                      Total Portfolio
-                    </Typography>
-                    <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                      Value & Performance
-                    </Typography>
-                  </Box>
-                </Box>
-
-                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 2, sm: 4 }, alignItems: 'center' }}>
-                  {/* Total Value */}
-                  <Box sx={{ textAlign: { xs: 'center', sm: 'left' }, flex: 1 }}>
-                    <Typography variant="h3" sx={{ fontWeight: 700, mb: 1, fontSize: { xs: '2rem', md: '2.5rem' } }}>
-                      {formatCurrency(portfolioSummary.totalValue)}
-                    </Typography>
-                  </Box>
-
-                  {/* Gains */}
-                  <Box sx={{ textAlign: { xs: 'center', sm: 'right' }, flex: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'center', sm: 'flex-end' }, mb: 1 }}>
-                      {portfolioSummary.totalGains >= 0 ? (
-                        <TrendingUp sx={{ mr: 1, fontSize: 24 }} />
-                      ) : (
-                        <TrendingDown sx={{ mr: 1, fontSize: 24 }} />
-                      )}
-                      <Typography variant="h4" sx={{ fontWeight: 700, fontSize: { xs: '1.5rem', md: '2rem' } }}>
-                        {formatCurrency(portfolioSummary.totalGains)}
-                      </Typography>
-                    </Box>
-                    <Chip
-                      label={`${portfolioSummary.gainsPercentage >= 0 ? '+' : ''}${portfolioSummary.gainsPercentage.toFixed(2)}%`}
-                      sx={{
-                        bgcolor: 'rgba(255,255,255,0.2)',
-                        color: 'white',
-                        fontWeight: 600,
-                        fontSize: '0.875rem',
-                        px: 2,
-                        py: 0.5
-                      }}
-                    />
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
+            <PortfolioValueChart records={sortedRecords} />
           </Box>
 
-          {/* Charts Section */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 3, md: 4 } }}>
-            {/* Donut Chart */}
-            <Card
-              sx={{
-                borderRadius: 3,
-                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                background: 'rgba(255,255,255,0.95)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255,255,255,0.2)'
-              }}
-            >
-              <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-                <Typography
-                  variant="h6"
-                  gutterBottom
-                  sx={{
-                    fontWeight: 600,
-                    color: '#2c3e50',
-                    textAlign: 'center',
-                    mb: 2
-                  }}
-                >
-                  Asset Allocation
-                </Typography>
-                <Box sx={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  minHeight: 300
-                }}>
-                  <AssetDonutChart
-                    data={portfolioSummary.breakdown}
-                    totalValue={portfolioSummary.totalValue}
-                  />
-                </Box>
-              </CardContent>
-            </Card>
+          {/* Asset Allocation and Performance Charts */}
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: { xs: 3, md: 4 } }}>
+            {/* Asset Allocation */}
+            <AssetAllocationChart
+              data={portfolioSummary.breakdown}
+              totalValue={portfolioSummary.totalValue}
+            />
 
-            {/* Asset Performance Chart */}
-            <AssetPerformanceChart records={sortedRecords} />
+            {/* Performance by Asset */}
+            <PerformanceChart data={performanceData} />
           </Box>
         </>
+      )}
+
+      {!portfolioSummary && !isLoading && (
+        <Card
+          sx={{
+            borderRadius: 3,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+            background: 'rgba(255,255,255,0.95)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            textAlign: 'center',
+            py: 6
+          }}
+        >
+          <CardContent>
+            <AccountBalance sx={{ fontSize: 64, color: '#cbd5e1', mb: 2 }} />
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              No Financial Data Available
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Add your first finance record to see your portfolio dashboard
+            </Typography>
+          </CardContent>
+        </Card>
       )}
     </Box>
   );
