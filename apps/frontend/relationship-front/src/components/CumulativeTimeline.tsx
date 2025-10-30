@@ -263,7 +263,7 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
                 showMark: false
               };
             })}
-            height={height - 130}
+            height={height - 80}
             margin={{ 
               top: 10, 
               right: 15, 
@@ -276,7 +276,7 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
         {/* Summary stats */}
         <Box
           sx={{
-            mt: isMobile ? 4 : 6,
+            mt: isMobile ? 14 : 8,
             display: 'flex',
             justifyContent: 'space-around',
             pt: isMobile ? 1 : 2,
