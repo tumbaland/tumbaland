@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.246](https://github.com/toomastahves/tumbaland/compare/v0.0.245...v0.0.246) (2025-10-30)
+
+
+### Features
+
+* add dasboard to albums, rework collage list ([85dcaf7](https://github.com/toomastahves/tumbaland/commit/85dcaf77d633097d0506a42351ca437cfb611ae7))
+
 ### [0.0.245](https://github.com/toomastahves/tumbaland/compare/v0.0.244...v0.0.245) (2025-10-30)
 
 
