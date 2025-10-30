@@ -1,7 +1,27 @@
-import React, { useState } from 'react';
-import { Box, Typography, Button, CircularProgress, IconButton, Menu, MenuItem } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
+import React, { useState, useMemo } from 'react';
+import {
+  Box,
+  Typography,
+  Button,
+  CircularProgress,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  IconButton,
+  Chip,
+  TableSortLabel
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Visibility as ViewIcon,
+  Delete as DeleteIcon,
+  PhotoLibrary as PhotoLibraryIcon
+} from '@mui/icons-material';
 import { useCollageList, useCollageMutations } from '../hooks/useCollage';
 import { Collage, CollageInput } from '../types/collage';
 import { CollageCreateModal } from '../components/collage/CollageCreateModal';
@@ -15,30 +35,68 @@ const CollageListPage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedCollage, setSelectedCollage] = useState<Collage | null>(null);
-  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
-  const [menuCollage, setMenuCollage] = useState<Collage | null>(null);
   const [collageToDelete, setCollageToDelete] = useState<Collage | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // Sorting state
+  const [sortBy, setSortBy] = useState<'title' | 'createdAt' | 'updatedAt'>('updatedAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  // Sorting logic
+  const sortedCollages = useMemo(() => {
+    if (!collageListQuery.data) return [];
+    
+    return [...collageListQuery.data].sort((a, b) => {
+      let aValue: string | number;
+      let bValue: string | number;
+      
+      switch (sortBy) {
+        case 'title':
+          aValue = a.title.toLowerCase();
+          bValue = b.title.toLowerCase();
+          break;
+        case 'createdAt':
+          aValue = new Date(a.createdAt).getTime();
+          bValue = new Date(b.createdAt).getTime();
+          break;
+        case 'updatedAt':
+          aValue = new Date(a.updatedAt).getTime();
+          bValue = new Date(b.updatedAt).getTime();
+          break;
+        default:
+          return 0;
+      }
+      
+      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [collageListQuery.data, sortBy, sortOrder]);
+
+  // Date formatting function
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+    return `${day}.${month}.${year} ${hours}:${minutes}:${seconds}`;
+  };
+
+  // Sort handler
+  const handleSort = (property: 'title' | 'createdAt' | 'updatedAt') => {
+    const isAsc = sortBy === property && sortOrder === 'asc';
+    setSortOrder(isAsc ? 'desc' : 'asc');
+    setSortBy(property);
+  };
 
   const handleOpenModal = () => setModalOpen(true);
   const handleCloseModal = () => setModalOpen(false);
   const handleCreateCollage = async (input: CollageInput) => {
     await createCollage(input);
     await collageListQuery.refetch();
-  };
-
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, collage: Collage) => {
-    setMenuAnchorEl(event.currentTarget);
-    setMenuCollage(collage);
-  };
-  const handleMenuClose = () => {
-    setMenuAnchorEl(null);
-    setMenuCollage(null);
-  };
-  const handleEditClick = () => {
-    setSelectedCollage(menuCollage);
-    setEditModalOpen(true);
-    handleMenuClose();
   };
   const handleEditModalClose = () => {
     setEditModalOpen(false);
@@ -50,11 +108,6 @@ const CollageListPage: React.FC = () => {
       await collageListQuery.refetch();
       handleEditModalClose();
     }
-  };
-  const handleDeleteClick = () => {
-    setCollageToDelete(menuCollage);
-    setDeleteDialogOpen(true);
-    handleMenuClose();
   };
   const handleDeleteConfirm = async () => {
     if (collageToDelete) {
@@ -90,105 +143,177 @@ const CollageListPage: React.FC = () => {
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="40vh">
           <CircularProgress />
         </Box>
-      ) : (collageListQuery.data?.length || 0) === 0 ? (
-        <Typography variant="body1" color="text.secondary">
-          No collages yet. Click "New Collage" to create your first one!
-        </Typography>
-      ) : (
+      ) : (sortedCollages.length || 0) === 0 ? (
         <Box
           sx={{
-            display: 'grid',
-            gridTemplateColumns: {
-              xs: '1fr',
-              sm: '1fr 1fr',
-              md: '1fr 1fr 1fr',
-              lg: '1fr 1fr 1fr 1fr'
-            },
-            gap: 3
+            textAlign: 'center',
+            py: 8,
+            px: 3
           }}
         >
-          {collageListQuery.data?.map((collage) => (
-            <Box key={collage._id}>
-              <Box
-                sx={{
-                  position: 'relative',
-                  bgcolor: 'background.paper',
-                  borderRadius: 3,
-                  boxShadow: 2,
-                  p: 3,
-                  minHeight: 120,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  alignItems: 'flex-start',
-                  transition: 'box-shadow 0.2s, background 0.2s',
-                  cursor: 'pointer',
-                  '&:hover': {
-                    boxShadow: 6,
-                    bgcolor: 'grey.50'
-                  }
-                }}
-                onClick={() => window.open(`/collage/${collage._id}?mode=edit`, '_blank')}
-              >
-                <IconButton
-                  aria-label="more"
-                  aria-controls="collage-menu"
-                  aria-haspopup="true"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleMenuOpen(e, collage);
-                  }}
-                  sx={{ position: 'absolute', top: 8, right: 8, zIndex: 2 }}
-                >
-                  <MoreVertIcon />
-                </IconButton>
-                <Typography variant="h6" fontWeight={700} sx={{ mb: 0.5, maxWidth: '90%' }} noWrap>
-                  {collage.title}
-                </Typography>
-                {collage.config?.title?.subtitle && (
-                  <Typography variant="body2" color="text.secondary" sx={{ maxWidth: '90%' }} noWrap>
-                    {collage.config.title.subtitle}
-                  </Typography>
-                )}
-                <Typography variant="caption" color="text.disabled" sx={{ mt: 1 }}>
-                  {collage._id}
-                </Typography>
-              </Box>
-            </Box>
-          ))}
-          <Menu id="collage-menu" anchorEl={menuAnchorEl} open={Boolean(menuAnchorEl)} onClose={handleMenuClose}>
-            <MenuItem
-              onClick={() => {
-                if (menuCollage) window.open(`/collage/${menuCollage._id}?mode=view`, '_blank');
-                handleMenuClose();
-              }}
-            >
-              View
-            </MenuItem>
-            <MenuItem onClick={handleEditClick}>Edit</MenuItem>
-            <MenuItem onClick={handleDeleteClick}>Delete</MenuItem>
-          </Menu>
-          {selectedCollage && (
-            <CollageEditModal
-              open={editModalOpen}
-              onClose={handleEditModalClose}
-              onSave={handleEditSave}
-              initialData={selectedCollage}
-            />
-          )}
-          <ConfirmDialog
-            open={deleteDialogOpen}
-            onClose={handleDeleteCancel}
-            onConfirm={handleDeleteConfirm}
-            title="Delete Collage"
-            message={collageToDelete ? `Are you sure you want to delete "${collageToDelete.title}"?` : ''}
-            confirmText="Delete Collage"
-            cancelText="Cancel"
-            variant="danger"
-            loading={deleting}
-          />
+          <PhotoLibraryIcon sx={{ fontSize: 64, color: 'grey.400', mb: 2 }} />
+          <Typography variant="h6" color="text.secondary" gutterBottom>
+            No collages yet
+          </Typography>
+          <Typography variant="body2" color="text.secondary" mb={3}>
+            Create your first collage to get started
+          </Typography>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenModal}>
+            Create Collage
+          </Button>
         </Box>
+      ) : (
+        <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: 2 }}>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ bgcolor: 'grey.50' }}>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                  <TableSortLabel
+                    active={sortBy === 'title'}
+                    direction={sortBy === 'title' ? sortOrder : 'asc'}
+                    onClick={() => handleSort('title')}
+                  >
+                    Name
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Description</TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                  <TableSortLabel
+                    active={sortBy === 'createdAt'}
+                    direction={sortBy === 'createdAt' ? sortOrder : 'asc'}
+                    onClick={() => handleSort('createdAt')}
+                  >
+                    Created At
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                  <TableSortLabel
+                    active={sortBy === 'updatedAt'}
+                    direction={sortBy === 'updatedAt' ? sortOrder : 'asc'}
+                    onClick={() => handleSort('updatedAt')}
+                  >
+                    Updated At
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', width: 120 }} align="center">
+                  Actions
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {sortedCollages.map((collage) => (
+                <TableRow
+                  key={collage._id}
+                  sx={{
+                    '&:hover': { bgcolor: 'grey.50' },
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => window.open(`/collage/${collage._id}?mode=edit`, '_blank')}
+                >
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <PhotoLibraryIcon sx={{ color: 'primary.main' }} />
+                      <Box>
+                        <Typography variant="body1" fontWeight={500}>
+                          {collage.title}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          ID: {collage._id.slice(-8)}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary">
+                      {collage.config?.title?.subtitle || 'No description'}
+                    </Typography>
+                    {collage.config?.photos && (
+                      <Chip
+                        label={`${collage.config.photos.length} photos`}
+                        size="small"
+                        variant="outlined"
+                        sx={{ mt: 0.5, fontSize: '0.7rem' }}
+                      />
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary">
+                      {formatDate(collage.createdAt)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary">
+                      {formatDate(collage.updatedAt)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(`/collage/${collage._id}?mode=view`, '_blank');
+                        }}
+                        sx={{ color: 'primary.main' }}
+                        title="View collage"
+                      >
+                        <ViewIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedCollage(collage);
+                          setEditModalOpen(true);
+                        }}
+                        sx={{ color: 'success.main' }}
+                        title="Edit collage"
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCollageToDelete(collage);
+                          setDeleteDialogOpen(true);
+                        }}
+                        sx={{ color: 'error.main' }}
+                        title="Delete collage"
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
+
+      {/* Edit Modal */}
+      {selectedCollage && (
+        <CollageEditModal
+          open={editModalOpen}
+          onClose={handleEditModalClose}
+          onSave={handleEditSave}
+          initialData={selectedCollage}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Collage"
+        message={collageToDelete ? `Are you sure you want to delete "${collageToDelete.title}"? This action cannot be undone.` : ''}
+        confirmText="Delete Collage"
+        cancelText="Cancel"
+        variant="danger"
+        loading={deleting}
+      />
     </Box>
   );
 };

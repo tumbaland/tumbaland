@@ -1,5 +1,5 @@
 import { albumApi } from '../config/albumApi';
-import { Album, CreateAlbumData, ApiResponse, PaginatedResponse } from '../types';
+import { Album, CreateAlbumData, ApiResponse, PaginatedResponse, AlbumStatistics } from '../types';
 
 export const albumService = {
   // Create a new album
@@ -18,13 +18,13 @@ export const albumService = {
     includeCover?: boolean;
   }): Promise<PaginatedResponse<Album>> {
     const response = await albumApi.get('/albums', { params });
-    return response.data;
+    return response.data.data;
   },
 
   // Get album by ID
-  async getAlbumById(id: string): Promise<ApiResponse<Album>> {
+  async getAlbumById(id: string): Promise<Album> {
     const response = await albumApi.get(`/albums/${id}`);
-    return response.data;
+    return response.data.data;
   },
 
   // Update album
@@ -70,5 +70,14 @@ export const albumService = {
       processingTime: analysis.processingTime
     });
     return response.data;
+  },
+
+  // Get album statistics for dashboard
+  async getAlbumStatistics(params?: {
+    groupId?: string;
+    tenantId?: string;
+  }): Promise<AlbumStatistics> {
+    const response = await albumApi.get('/statistics', { params });
+    return response.data.data;
   }
 };

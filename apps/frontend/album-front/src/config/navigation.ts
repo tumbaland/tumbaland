@@ -1,5 +1,6 @@
 import PhotoAlbumIcon from '@mui/icons-material/PhotoAlbum';
 import GridOnIcon from '@mui/icons-material/GridOn';
+import DashboardIcon from '@mui/icons-material/Dashboard';
 
 export interface NavigationItem {
   label: string;
@@ -9,6 +10,11 @@ export interface NavigationItem {
 }
 
 export const navigationItems: Omit<NavigationItem, 'onClick'>[] = [
+  {
+    label: 'Dashboard',
+    path: '/',
+    icon: DashboardIcon
+  },
   {
     label: 'Albums',
     path: '/albums',

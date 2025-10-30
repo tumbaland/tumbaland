@@ -5,6 +5,7 @@ import path from 'path';
 import connectDB from './config/database';
 import albumRoutes from './routes/albumRoutes';
 import photoRoutes from './routes/photoRoutes';
+import statisticsRoutes from './routes/statisticsRoutes';
 import collageRoutes from './collage/collageRoutes';
 import { healthCheck } from './controllers/healthController';
 import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware } from '@tumbaland/core';
@@ -30,6 +31,7 @@ app.use(express.json());
 // Routes
 app.use('/api/albums', albumRoutes);
 app.use('/api/photos', photoRoutes);
+app.use('/api/statistics', statisticsRoutes);
 app.use('/api/collages', collageRoutes);
 
 // Serve OpenAPI docs as static files

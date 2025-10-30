@@ -91,16 +91,11 @@ export class AIServiceError extends Error {
 const fetchPhotoFile = async (photoId: string): Promise<Blob> => {
   try {
     // Get photo details to get fileId
-    const photoResponse = await photoService.getPhotoById(photoId);
-    if (!photoResponse.success || !photoResponse.data) {
-      throw new Error('Photo not found');
-    }
-
-    const photo = photoResponse.data;
+    const photo = await photoService.getPhotoById(photoId);
     
     // Use the signed URL provided by the album service
-    const fileUrl = photo.signedUrl;
-    if (!fileUrl) {
+    const signedUrl = photo.signedUrl;
+    if (!signedUrl) {
       throw new Error('No signed URL available for photo');
     }
     
@@ -108,7 +103,7 @@ const fetchPhotoFile = async (photoId: string): Promise<Blob> => {
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
     
     try {
-      const response = await fetch(fileUrl, {
+      const response = await fetch(signedUrl, {
         signal: controller.signal
       });
       
@@ -236,12 +231,7 @@ export const objectDetectionService = {
       }
 
       // Fetch the photo file
-      const photoResponse = await photoService.getPhotoById(photoId);
-      if (!photoResponse.success || !photoResponse.data) {
-        throw new AIServiceError('Photo not found', 'object-detection');
-      }
-
-      const photo = photoResponse.data;
+      const photo = await photoService.getPhotoById(photoId);
       const fileBlob = await fetchPhotoFile(photoId);
 
       // Prepare form data

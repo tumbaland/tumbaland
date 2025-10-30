@@ -1,11 +1,11 @@
 import { albumApi } from '../config/albumApi';
-import { Photo, CreatePhotoData, ApiResponse, PaginatedResponse } from '../types';
+import { Photo, CreatePhotoData, PaginatedResponse } from '../types';
 
 export const photoService = {
   // Create a new photo record
-  async createPhoto(photoData: CreatePhotoData): Promise<ApiResponse<Photo>> {
+  async createPhoto(photoData: CreatePhotoData): Promise<Photo> {
     const response = await albumApi.post('/photos', photoData);
-    return response.data;
+    return response.data.data;
   },
 
   // Get photos by album
@@ -18,28 +18,28 @@ export const photoService = {
     }
   ): Promise<PaginatedResponse<Photo>> {
     const response = await albumApi.get(`/photos/album/${albumId}`, { params });
-    return response.data;
+    return response.data.data;
   },
 
   // Get photo by ID
-  async getPhotoById(id: string): Promise<ApiResponse<Photo>> {
+  async getPhotoById(id: string): Promise<Photo> {
     const response = await albumApi.get(`/photos/${id}`);
-    return response.data;
+    return response.data.data;
   },
 
   // Update photo
   async updatePhoto(
     id: string,
     photoData: Partial<Pick<Photo, 'title' | 'description' | 'tags' | 'metadata'>>
-  ): Promise<ApiResponse<Photo>> {
+  ): Promise<Photo> {
     const response = await albumApi.put(`/photos/${id}`, photoData);
-    return response.data;
+    return response.data.data;
   },
 
   // Delete photo
-  async deletePhoto(id: string): Promise<ApiResponse<void>> {
+  async deletePhoto(id: string): Promise<void> {
     const response = await albumApi.delete(`/photos/${id}`);
-    return response.data;
+    return response.data.data;
   },
 
   // Get upload signed URL from album service (MinIO)
@@ -47,13 +47,13 @@ export const photoService = {
     filename: string,
     mimetype: string,
     albumId: string
-  ): Promise<ApiResponse<{ uploadUrl: string; minioFileId: string; albumId: string; expiresInMinutes: number }>> {
+  ): Promise<{ uploadUrl: string; minioFileId: string; albumId: string; expiresInMinutes: number }> {
     const response = await albumApi.post('/photos/upload-url', {
       filename,
       mimetype,
       albumId
     });
-    return response.data;
+    return response.data.data;
   },
 
   // Upload file to signed URL
@@ -78,9 +78,9 @@ export const photoService = {
       segmentationType?: 'prompted' | 'automatic';
       processingTime: number;
     }
-  ): Promise<ApiResponse<Photo>> {
+  ): Promise<Photo> {
     const response = await albumApi.put(`/photos/${photoId}/ai-analysis`, analysisData);
-    return response.data;
+    return response.data.data;
   },
 
   // Utility: Load photos with signed URLs (album service now provides them directly)
@@ -94,7 +94,7 @@ export const photoService = {
   ): Promise<PaginatedResponse<Photo & { thumbnailUrl?: string; fileUrl?: string }>> {
     // Get photos from album service - it now includes signed URLs directly
     const photosResponse = await this.getPhotosByAlbum(albumId, params);
-    const photos = photosResponse.data.photos || [];
+    const photos = photosResponse.photos || [];
 
     // The album service already provides signed URLs, so we just need to map them
     const photosWithUrls = photos.map(photo => ({
@@ -105,10 +105,7 @@ export const photoService = {
 
     return {
       ...photosResponse,
-      data: {
-        ...photosResponse.data,
-        photos: photosWithUrls
-      }
+      photos: photosWithUrls
     };
   },
 };

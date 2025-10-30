@@ -37,10 +37,9 @@ export const useAlbums = (params?: {
     [params?.page, params?.limit, params?.search, params?.isPublic, params?.groupId, params?.includeCover]
   );
 
-  const query = useQuery<PaginatedResponse<Album>, Error, PaginatedResponse<Album>['data']>({
+  const query = useQuery<PaginatedResponse<Album>>({
     queryKey: albumKeys.list(memoizedParams),
     queryFn: () => albumService.getAlbums(memoizedParams),
-    select: (response) => response.data,
     placeholderData: keepPreviousData
   });
 

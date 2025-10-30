@@ -101,19 +101,51 @@ export interface PaginationInfo {
   pages: number;
 }
 
+export interface PaginatedResponse<T> {
+  albums?: T[];
+  photos?: T[];
+  pagination: PaginationInfo;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   message?: string;
   data: T;
 }
 
-export interface PaginatedResponse<T> {
-  success: boolean;
-  data: {
-    albums?: T[];
-    photos?: T[];
-    pagination: PaginationInfo;
+export interface AlbumStatistics {
+  overview: {
+    totalAlbums: number;
+    totalPhotos: number;
+    totalStorage: number;
+    averagePhotoSize: number;
   };
+  timeSeries: {
+    albumsCreated: Array<{
+      date: string;
+      count: number;
+    }>;
+    photosUploaded: Array<{
+      date: string;
+      count: number;
+    }>;
+  };
+  tags: Array<{
+    tag: string;
+    count: number;
+  }>;
+  aiAnalysis: {
+    totalPhotos: number;
+    analyzedPhotos: number;
+    analysisRate: number;
+    totalDetections: number;
+    totalMasks: number;
+  };
+  groups: Array<{
+    groupId: string;
+    albumCount: number;
+    photoCount: number;
+  }>;
 }
 
 export interface UploadSignedUrlResponse {

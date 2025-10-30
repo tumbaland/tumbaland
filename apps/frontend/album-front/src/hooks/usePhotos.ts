@@ -34,18 +34,16 @@ export const usePhotos = (
     [params?.page, params?.limit, params?.search]
   );
 
-  const query = useQuery<PaginatedResponse<Photo>, Error, PaginatedResponse<Photo>['data']>({
+  const query = useQuery<PaginatedResponse<Photo>>({
     queryKey: photoKeys.list(albumId, memoizedParams),
     queryFn: () => photoService.loadPhotosWithThumbnails(albumId, memoizedParams),
-    select: (response) => response.data,
     enabled: Boolean(albumId),
     placeholderData: keepPreviousData
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<Photo> }) => {
-      const response = await photoService.updatePhoto(id, data);
-      return response.data;
+      return await photoService.updatePhoto(id, data);
     },
     onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: photoKeys.album(albumId) });

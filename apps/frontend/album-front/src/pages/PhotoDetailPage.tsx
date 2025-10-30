@@ -49,7 +49,7 @@ const PhotoDetailPage: React.FC = () => {
     if (!photoId) return;
     try {
       const photoResponse = await photoService.getPhotoById(photoId);
-      setPhoto(photoResponse.data);
+      setPhoto(photoResponse);
     } catch (err) {
       setError('Failed to reload photo after analysis');
     }
@@ -74,8 +74,8 @@ const PhotoDetailPage: React.FC = () => {
           photoService.getPhotoById(photoId),
           albumService.getAlbumById(albumId)
         ]);
-        setPhoto(photoResponse.data);
-        setAlbum(albumResponse.data);
+        setPhoto(photoResponse);
+        setAlbum(albumResponse);
       } catch (err) {
         setError('Failed to load photo details');
         console.error('Error fetching photo details:', err);
@@ -110,7 +110,7 @@ const PhotoDetailPage: React.FC = () => {
   const handleSaveEdit = async (photoId: string, data: { title?: string; description?: string }) => {
     try {
       const response = await photoService.updatePhoto(photoId, data);
-      setPhoto(response.data);
+      setPhoto(response);
       setShowEditDialog(false);
     } catch (err) {
       console.error('Failed to update photo:', err);

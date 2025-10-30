@@ -37,7 +37,7 @@ const AlbumDetailPage: React.FC = () => {
   const queryClient = useQueryClient();
   const albumQuery = useQuery({
     queryKey: ['album', albumId],
-    queryFn: () => albumService.getAlbumById(albumId as string).then((res) => res.data),
+    queryFn: () => albumService.getAlbumById(albumId as string),
     enabled: Boolean(albumId)
   });
   const album = albumQuery.data ?? null;
