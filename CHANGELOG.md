@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.247](https://github.com/toomastahves/tumbaland/compare/v0.0.246...v0.0.247) (2025-10-30)
+
+
+### Features
+
+* set active tab ([cbb2b3e](https://github.com/toomastahves/tumbaland/commit/cbb2b3e5e8c80a817ad8b5ec045ba9ba796951dc))
+
 ### [0.0.246](https://github.com/toomastahves/tumbaland/compare/v0.0.245...v0.0.246) (2025-10-30)
 
 
