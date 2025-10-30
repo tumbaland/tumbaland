@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.245](https://github.com/toomastahves/tumbaland/compare/v0.0.244...v0.0.245) (2025-10-30)
+
+
+### Features
+
+* update finance dashboard ([5592785](https://github.com/toomastahves/tumbaland/commit/55927854b5ef6c9e9f72f9c7351a0a8b787b48a9))
+
 ### [0.0.244](https://github.com/toomastahves/tumbaland/compare/v0.0.243...v0.0.244) (2025-10-30)
 
 
