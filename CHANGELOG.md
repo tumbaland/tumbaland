@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.243](https://github.com/toomastahves/tumbaland/compare/v0.0.242...v0.0.243) (2025-10-30)
+
+
+### Features
+
+* use x charts in relationships ([0642cb6](https://github.com/toomastahves/tumbaland/commit/0642cb6c666edc502500aab2325b043ee8bac347))
+
 ### [0.0.242](https://github.com/toomastahves/tumbaland/compare/v0.0.241...v0.0.242) (2025-10-29)
 
 
