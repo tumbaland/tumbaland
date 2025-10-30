@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Card,
@@ -10,14 +10,22 @@ import {
   Select,
   MenuItem,
   InputLabel,
-  ToggleButton,
-  ToggleButtonGroup,
-  Chip
+  Chip,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
+import { LineChart } from '@mui/x-charts/LineChart';
 import { getCumulativeTimelineData, CumulativeTimelineData } from '../api/statistics';
 import { getActivityTypes } from '../api/activityTypes';
 import { ActivityType } from '../api/types';
 import { useTenantFilter } from './tenant';
+interface ProcessedCumulativeTimelineData extends CumulativeTimelineData {
+  cumulativeByType?: {
+    activityTypeSlug: string;
+    cumulativeActivities: number;
+    cumulativeHours: number;
+  }[];
+}
 
 interface CumulativeTimelineProps {
   title?: string;
@@ -34,11 +42,11 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | undefined>(year);
-  const [viewMode, setViewMode] = useState<'activities' | 'hours'>('activities');
   const [selectedLines, setSelectedLines] = useState<string[]>([]);
-  const [containerWidth, setContainerWidth] = useState<number>(800); // Start with reasonable default
   const [activityTypes, setActivityTypes] = useState<ActivityType[]>([]);
-  const containerRef = useRef<HTMLDivElement>(null);
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   // Get the current tenant's group ID
   const tenantGroupId = useTenantFilter();
@@ -70,86 +78,41 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
     }
   };
 
-  // Update container width on resize
-  useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        const newWidth = containerRef.current.offsetWidth - 32; // Account for padding
-        if (newWidth > 0) {
-          setContainerWidth(newWidth);
-        }
-      }
-    };
-
-    // Initial width measurement
-    updateWidth();
-
-    // Use ResizeObserver for better responsiveness
-    const resizeObserver = new ResizeObserver(() => {
-      updateWidth();
-    });
-
-    if (containerRef.current) {
-      resizeObserver.observe(containerRef.current);
-    }
-
-    window.addEventListener('resize', updateWidth);
-
-    return () => {
-      window.removeEventListener('resize', updateWidth);
-      resizeObserver.disconnect();
-    };
-  }, [data]); // Run when data changes to ensure proper measurement
-
   useEffect(() => {
     fetchData();
-  }, [selectedYear, tenantGroupId]); // Calculate chart dimensions and scaling
-  const chartHeight = height - 160; // Leave space for controls and stats
-  const chartWidth = containerWidth; // Use container width
-  const padding = 40;
-  const plotHeight = chartHeight - padding * 2;
+  }, [selectedYear, tenantGroupId]);
 
-  // Get cumulative values for each activity type
-  const getActivityLineData = (activityType: string) => {
-    return data.map((item) => {
-      if (activityType === 'total') {
-        return viewMode === 'activities' ? item.cumulativeActivities : item.cumulativeHours;
-      }
-      return item.activityBreakdown[activityType]?.cumulativeCount || 0;
+  // Calculate cumulative data per activity type
+  const processedData: ProcessedCumulativeTimelineData[] = React.useMemo(() => {
+    if (!data.length || !activityTypes.length) return data as ProcessedCumulativeTimelineData[];
+
+    const cumulativeMap = new Map<string, number>();
+
+    return data.map(item => {
+      const processedItem: ProcessedCumulativeTimelineData = { ...item };
+
+      // Calculate cumulative for each activity type
+      activityTypes.forEach(activityType => {
+        const slug = activityType.slug;
+        const dailyCount = item.activityBreakdown[slug]?.dailyCount || 0;
+        const currentCumulative = cumulativeMap.get(slug) || 0;
+        const newCumulative = currentCumulative + dailyCount;
+        cumulativeMap.set(slug, newCumulative);
+
+        // Add cumulative data to the item
+        if (!processedItem.cumulativeByType) {
+          processedItem.cumulativeByType = [];
+        }
+        processedItem.cumulativeByType.push({
+          activityTypeSlug: slug,
+          cumulativeActivities: newCumulative,
+          cumulativeHours: newCumulative * 0.5 // Assuming average 30 minutes per activity, adjust as needed
+        });
+      });
+
+      return processedItem;
     });
-  };
-
-  // Get max values for scaling based on selected lines
-  const getMaxValueForSelectedLines = () => {
-    if (selectedLines.length === 0) return 1;
-
-    let maxValue = 0;
-
-    selectedLines.forEach((activityType) => {
-      const values = getActivityLineData(activityType);
-      const lineMax = Math.max(...values);
-      maxValue = Math.max(maxValue, lineMax);
-    });
-
-    return Math.max(maxValue, 1); // Ensure minimum of 1
-  };
-
-  const maxValue = getMaxValueForSelectedLines();
-  // Create SVG path for a line
-  const createPath = (values: number[]) => {
-    if (values.length === 0) return '';
-
-    const svgWidth = Math.max(chartWidth, 600);
-    const svgPlotWidth = svgWidth - padding * 2;
-
-    const points = values.map((value, index) => {
-      const x = padding + (index / (values.length - 1)) * svgPlotWidth;
-      const y = padding + plotHeight - (value / maxValue) * plotHeight;
-      return `${x},${y}`;
-    });
-
-    return `M ${points.join(' L ')}`;
-  };
+  }, [data, activityTypes]);
 
   // Toggle line visibility
   const toggleLine = (activityType: string) => {
@@ -208,17 +171,6 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
           <Typography variant="h6">{title}</Typography>
 
           <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
-            {/* View Mode Toggle */}
-            <ToggleButtonGroup
-              value={viewMode}
-              exclusive
-              onChange={(_, newMode) => newMode && setViewMode(newMode)}
-              size="small"
-            >
-              <ToggleButton value="activities">Activities</ToggleButton>
-              <ToggleButton value="hours">Hours</ToggleButton>
-            </ToggleButtonGroup>
-
             {/* Year Selector */}
             <FormControl size="small" sx={{ minWidth: 120 }}>
               <InputLabel>Year</InputLabel>
@@ -272,181 +224,90 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
             }}
           />
         </Box>{' '}
-        {/* Chart Container */}
-        <Box sx={{ width: '100%', pb: 2 }} ref={containerRef}>
-          <Box sx={{ width: '100%' }}>
-            <svg
-              width="100%"
-              height={chartHeight}
-              viewBox={`0 0 ${Math.max(chartWidth, 600)} ${chartHeight}`}
-              style={{ border: '1px solid #e0e0e0' }}
-            >
-              {' '}
-              {/* Grid lines */}
-              {[0.25, 0.5, 0.75, 1].map((ratio, index) => {
-                const svgWidth = Math.max(chartWidth, 600);
-                const svgPlotWidth = svgWidth - padding * 2;
-
-                return (
-                  <g key={index}>
-                    <line
-                      x1={padding}
-                      y1={padding + plotHeight * (1 - ratio)}
-                      x2={padding + svgPlotWidth}
-                      y2={padding + plotHeight * (1 - ratio)}
-                      stroke="#f0f0f0"
-                      strokeWidth="1"
-                    />
-                    <text
-                      x={padding - 5}
-                      y={padding + plotHeight * (1 - ratio) + 4}
-                      fontSize="10"
-                      fill="#666"
-                      textAnchor="end"
-                    >
-                      {Math.round(maxValue * ratio)}
-                    </text>
-                  </g>
-                );
-              })}
-              {/* Y-axis */}
-              <line
-                x1={padding}
-                y1={padding}
-                x2={padding}
-                y2={padding + plotHeight}
-                stroke="#e0e0e0"
-                strokeWidth="2"
-              />{' '}
-              {/* X-axis */}
-              <line
-                x1={padding}
-                y1={padding + plotHeight}
-                x2={padding + Math.max(chartWidth, 600) - padding * 2}
-                y2={padding + plotHeight}
-                stroke="#e0e0e0"
-                strokeWidth="2"
-              />
-              {/* Activity Lines */}
-              {selectedLines.map((activityType) => {
-                const values = getActivityLineData(activityType);
-                const path = createPath(values);
-                const activityTypeData = activityTypes.find(type => type.slug === activityType);
-                const color = activityType === 'total' ? '#1976d2' : (activityTypeData?.color || '#9e9e9e');
-
-                return (
-                  <path
-                    key={activityType}
-                    d={path}
-                    fill="none"
-                    stroke={color}
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                );
-              })}{' '}
-              {/* Data points */}
-              {selectedLines.map((activityType) => {
-                const values = getActivityLineData(activityType);
-                const activityTypeData = activityTypes.find(type => type.slug === activityType);
-                const color = activityType === 'total' ? '#1976d2' : (activityTypeData?.color || '#9e9e9e');
-                const svgWidth = Math.max(chartWidth, 600);
-                const svgPlotWidth = svgWidth - padding * 2;
-
-                return values.map((value, index) => {
-                  const x = padding + (index / (values.length - 1)) * svgPlotWidth;
-                  const y = padding + plotHeight - (value / maxValue) * plotHeight;
-
-                  return (
-                    <circle
-                      key={`${activityType}-${index}`}
-                      cx={x}
-                      cy={y}
-                      r="3"
-                      fill={color}
-                      stroke="white"
-                      strokeWidth="1"
-                    >
-                      <title>
-                        {`${data[index].date}: ${value} ${viewMode === 'activities' ? 'activities' : 'hours'}`}
-                      </title>
-                    </circle>
-                  );
-                });
-              })}{' '}
-              {/* Date labels (show every nth date to avoid overcrowding) */}
-              {data
-                .filter((_, index) => index % Math.ceil(data.length / 10) === 0)
-                .map((item, index) => {
-                  const originalIndex = index * Math.ceil(data.length / 10);
-                  const svgWidth = Math.max(chartWidth, 600);
-                  const svgPlotWidth = svgWidth - padding * 2;
-                  const x = padding + (originalIndex / (data.length - 1)) * svgPlotWidth;
-
-                  return (
-                    <text
-                      key={item.date}
-                      x={x}
-                      y={padding + plotHeight + 15}
-                      fontSize="10"
-                      fill="#666"
-                      textAnchor="middle"
-                      transform={`rotate(-45, ${x}, ${padding + plotHeight + 15})`}
-                    >
-                      {new Date(item.date).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric'
-                      })}
-                    </text>
-                  );
-                })}
-            </svg>
-          </Box>
+        <Box sx={{ width: '100%', height: height - 100 }}>
+          <LineChart
+            xAxis={[{
+              data: processedData.map(item => {
+                const date = new Date(item.date);
+                return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+              }),
+              scaleType: 'point',
+              tickLabelInterval: (_, index) => {
+                const totalPoints = processedData.length;
+                // Show labels at: start, 25%, 50%, 75%, and end
+                const keyIndices = [0, Math.floor(totalPoints * 0.25), Math.floor(totalPoints * 0.5), Math.floor(totalPoints * 0.75), totalPoints - 1];
+                return keyIndices.includes(index);
+              }
+            }]}
+            yAxis={[{
+              label: isMobile ? undefined : 'Cumulative Activities'
+            }]}
+            series={selectedLines.map(lineSlug => {
+              const activityType = activityTypes.find(type => type.slug === lineSlug);
+              if (lineSlug === 'total') {
+                return {
+                  data: processedData.map(item => item.cumulativeActivities),
+                  label: 'Total',
+                  color: '#1976d2',
+                  showMark: false
+                };
+              }
+              // For activity type specific lines, we need to access the cumulative data for that type
+              return {
+                data: processedData.map(item => {
+                  const typeData = item.cumulativeByType?.find((type: any) => type.activityTypeSlug === lineSlug);
+                  return typeData?.cumulativeActivities || 0;
+                }),
+                label: activityType?.name || lineSlug,
+                color: activityType?.color || '#9e9e9e',
+                showMark: false
+              };
+            })}
+            height={height - 130}
+            margin={{ 
+              top: 10, 
+              right: 15, 
+              bottom: 10, 
+              left: isMobile ? 15 : 50 
+            }}
+            disableAxisListener
+          />
         </Box>
         {/* Summary stats */}
         <Box
           sx={{
-            mt: 2,
+            mt: isMobile ? 4 : 6,
             display: 'flex',
             justifyContent: 'space-around',
-            pt: 2,
+            pt: isMobile ? 1 : 2,
             borderTop: '1px solid #e0e0e0',
             flexWrap: 'wrap',
-            gap: 2
+            gap: isMobile ? 1 : 2
           }}
         >
           <Box textAlign="center">
-            <Typography variant="h6" color="primary">
-              {data.length > 0 ? data[data.length - 1].cumulativeActivities : 0}
+            <Typography variant={isMobile ? "body1" : "h6"} color="primary" sx={{ fontSize: isMobile ? '1rem' : undefined }}>
+              {processedData.length > 0 ? processedData[processedData.length - 1].cumulativeActivities : 0}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: isMobile ? '0.7rem' : undefined }}>
               Total Activities
             </Typography>
           </Box>
           <Box textAlign="center">
-            <Typography variant="h6" color="primary">
-              {data.length > 0 ? Math.round(data[data.length - 1].cumulativeHours) : 0}
+            <Typography variant={isMobile ? "body1" : "h6"} color="primary" sx={{ fontSize: isMobile ? '1rem' : undefined }}>
+              {processedData.length}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Total Hours
-            </Typography>
-          </Box>
-          <Box textAlign="center">
-            <Typography variant="h6" color="primary">
-              {data.length}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: isMobile ? '0.7rem' : undefined }}>
               Active Days
             </Typography>
           </Box>
           <Box textAlign="center">
-            <Typography variant="h6" color="primary">
-              {data.length > 0
-                ? Math.round(data.reduce((sum, item) => sum + item.dailyActivities, 0) / data.length)
+            <Typography variant={isMobile ? "body1" : "h6"} color="primary" sx={{ fontSize: isMobile ? '1rem' : undefined }}>
+              {processedData.length > 0
+                ? Math.round(processedData.reduce((sum, item) => sum + item.dailyActivities, 0) / processedData.length)
                 : 0}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: isMobile ? '0.7rem' : undefined }}>
               Avg Per Day
             </Typography>
           </Box>

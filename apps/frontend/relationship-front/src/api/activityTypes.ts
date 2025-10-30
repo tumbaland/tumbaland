@@ -37,9 +37,6 @@ export const getActivityTypes = async (filters?: GetActivityTypesFilters): Promi
     params.groupId = filters.groupId;
   }
 
-  console.log('API call params:', params);
-  console.log('Filters received:', filters);
-
   const response = await apiClient.get('/activity-types', { params });
 
   // Transform backend response to match frontend type

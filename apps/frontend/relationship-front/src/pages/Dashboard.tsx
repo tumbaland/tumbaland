@@ -3,8 +3,8 @@ import { Box } from '@mui/material';
 import StatsCards from '../components/StatsCards';
 import RecentActivitiesCards from '../components/RecentActivitiesCards';
 import HoursBarChart from '../components/HoursBarChart';
-import MonthlyStackedBarChart from '../components/MonthlyStackedBarChart';
-import ActivityStackedBarChart from '../components/ActivityStackedBarChart';
+import TotalHoursChart from '../components/TotalHoursChart';
+import TotalDaysChart from '../components/TotalDaysChart';
 import WeeklyHeatmap from '../components/WeeklyHeatmap';
 import CumulativeTimeline from '../components/CumulativeTimeline';
 
@@ -17,16 +17,16 @@ const Dashboard: React.FC = () => {
         <HoursBarChart />
       </Box>
       <Box sx={{ mb: 4, width: '100%' }}>
-        <MonthlyStackedBarChart />
+        <TotalHoursChart />
       </Box>
       <Box sx={{ mb: 4, width: '100%' }}>
-        <ActivityStackedBarChart height={500} />
-      </Box>
-      <Box sx={{ mb: 4, width: '100%' }}>
-        <WeeklyHeatmap />
+        <TotalDaysChart />
       </Box>
       <Box sx={{ mb: 4, width: '100%' }}>
         <CumulativeTimeline height={400} />
+      </Box>
+      <Box sx={{ mb: 4, width: '100%', display: { xs: 'none', sm: 'block' } }}>
+        <WeeklyHeatmap />
       </Box>
     </Box>
   );
