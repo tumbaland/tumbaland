@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.250](https://github.com/toomastahves/tumbaland/compare/v0.0.249...v0.0.250) (2025-11-01)
+
+
+### Features
+
+* make finance front mobile friendly ([fe33aa5](https://github.com/toomastahves/tumbaland/commit/fe33aa58f6ca4d5133b36ba5c179f3eabe8e531e))
+
 ### [0.0.249](https://github.com/toomastahves/tumbaland/compare/v0.0.248...v0.0.249) (2025-11-01)
 
 
