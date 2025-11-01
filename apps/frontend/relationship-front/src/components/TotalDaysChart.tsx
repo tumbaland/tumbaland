@@ -14,7 +14,7 @@ import {
   useTheme,
   useMediaQuery
 } from '@mui/material';
-import { BarChart } from '@mui/x-charts/BarChart';
+import { BarChart } from '@mui/x-charts';
 import { getMonthlyStatistics, MonthlyStatisticsData } from '../api/statistics';
 import { useTenantFilter } from './tenant';
 

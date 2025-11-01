@@ -14,7 +14,7 @@ import {
   useTheme,
   useMediaQuery
 } from '@mui/material';
-import { LineChart } from '@mui/x-charts/LineChart';
+import { LineChart } from '@mui/x-charts';
 import { getCumulativeTimelineData, CumulativeTimelineData } from '../api/statistics';
 import { getActivityTypes } from '../api/activityTypes';
 import { ActivityType } from '../api/types';
