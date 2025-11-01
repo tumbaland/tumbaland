@@ -155,31 +155,44 @@ const AssetClassPage: React.FC = () => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1">
+    <Box sx={{ p: { xs: 1, sm: 2, md: 3 } }}>
+      <Box sx={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        mb: { xs: 2, sm: 2.5, md: 3 },
+        flexWrap: 'wrap',
+        gap: { xs: 1, sm: 1.5, md: 2 },
+        minHeight: { xs: 'auto', sm: 56, md: 64 }
+      }}>
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{
+            fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2.125rem', lg: '2.25rem' },
+            flex: { xs: '1 1 100%', sm: '0 1 auto' },
+            minWidth: 0,
+            mr: { xs: 0, sm: 2 }
+          }}
+        >
           Asset Classes
         </Typography>
-        <Button variant="contained" startIcon={<Add />} sx={{ bgcolor: 'primary.main' }} onClick={handleCreateOpen}>
+        <Button
+          variant="contained"
+          startIcon={<Add />}
+          sx={{
+            bgcolor: 'primary.main',
+            fontSize: { xs: '0.8125rem', sm: '0.875rem', md: '0.9375rem' },
+            px: { xs: 1.5, sm: 2, md: 2.5 },
+            flex: { xs: '1 1 100%', sm: '0 0 auto' },
+            minWidth: { xs: '100%', sm: 'auto' },
+            whiteSpace: 'nowrap'
+          }}
+          onClick={handleCreateOpen}
+        >
           Add Asset Class
         </Button>
       </Box>
-
-      {/* Filters */}
-      <Paper sx={{ p: 2, mb: 2 }} variant="outlined">
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', mb: 2 }}>
-          {/* Show current tenant context */}
-          {tenantGroupId ? (
-            <Typography variant="body2" color="primary">
-              Showing asset classes for selected group
-            </Typography>
-          ) : (
-            <Typography variant="body2" color="primary">
-              Showing personal asset classes
-            </Typography>
-          )}
-        </Box>
-      </Paper>
 
       <AssetClassModal
         open={createOpen}
@@ -198,20 +211,40 @@ const AssetClassPage: React.FC = () => {
         title="Edit Asset Class"
       />
 
-      <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-        <TableContainer>
+      <Paper sx={{ width: '100%' }}>
+        <TableContainer
+          sx={{
+            overflowX: 'auto',
+            maxWidth: '100%',
+            '&::-webkit-scrollbar': {
+              height: '6px',
+            },
+            '&::-webkit-scrollbar-track': {
+              backgroundColor: 'rgba(0,0,0,0.1)',
+              borderRadius: '3px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(0,0,0,0.3)',
+              borderRadius: '3px',
+              '&:hover': {
+                backgroundColor: 'rgba(0,0,0,0.5)',
+              },
+            },
+          }}
+        >
           <Table
             stickyHeader
             size="small"
             sx={{
-              minWidth: 500,
-              fontSize: { xs: '0.72rem', sm: '0.95rem' },
+              minWidth: { xs: 320, sm: 450, md: 550, lg: 650 },
+              width: '100%',
+              fontSize: { xs: '0.68rem', sm: '0.875rem', md: '0.9375rem', lg: '1rem' },
               '& th, & td': {
-                px: { xs: 0.5, sm: 1 },
-                py: { xs: 0.5, sm: 0.8 },
-                fontSize: { xs: '0.72rem', sm: '0.95rem' },
+                px: { xs: 0.125, sm: 0.5, md: 1, lg: 1.5 },
+                py: { xs: 0.375, sm: 0.75, md: 0.875, lg: 1 },
+                fontSize: { xs: '0.68rem', sm: '0.875rem', md: '0.9375rem', lg: '1rem' },
                 whiteSpace: { xs: 'nowrap', sm: 'normal' },
-                maxWidth: { xs: 80, sm: 'none' },
+                maxWidth: { xs: 60, sm: 'none' },
                 overflow: 'hidden',
                 textOverflow: 'ellipsis'
               }
@@ -219,16 +252,16 @@ const AssetClassPage: React.FC = () => {
           >
             <TableHead>
               <TableRow>
-                <TableCell sx={{ minWidth: 120 }}>
+                <TableCell sx={{ minWidth: { xs: 80, sm: 100, md: 120 }, width: { xs: 80, sm: 100, md: 120 } }}>
                   <span style={{ fontSize: '0.78em' }}>Name</span>
                 </TableCell>
-                <TableCell sx={{ minWidth: 80 }}>
+                <TableCell sx={{ minWidth: { xs: 70, sm: 80, md: 90 }, width: { xs: 70, sm: 80, md: 90 } }}>
                   <span style={{ fontSize: '0.78em' }}>Color</span>
                 </TableCell>
-                <TableCell sx={{ minWidth: 200 }}>
+                <TableCell sx={{ minWidth: { xs: 120, sm: 180, md: 220 }, width: { xs: 120, sm: 180, md: 220 } }}>
                   <span style={{ fontSize: '0.78em' }}>Description</span>
                 </TableCell>
-                <TableCell align="center" sx={{ minWidth: 60 }}>
+                <TableCell align="center" sx={{ minWidth: { xs: 60, sm: 70, md: 80 }, width: { xs: 60, sm: 70, md: 80 } }}>
                   <span style={{ fontSize: '0.78em' }}>Actions</span>
                 </TableCell>
               </TableRow>
@@ -245,31 +278,33 @@ const AssetClassPage: React.FC = () => {
               ) : (
                 assetClasses.map((assetClass: AssetClass) => (
                   <TableRow key={assetClass._id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                    <TableCell>{assetClass.name}</TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <TableCell sx={{ width: { xs: 80, sm: 100, md: 120 } }}>{assetClass.name}</TableCell>
+                    <TableCell sx={{ width: { xs: 70, sm: 80, md: 90 } }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
                         <Box
                           sx={{
-                            width: 20,
-                            height: 20,
+                            width: { xs: 16, sm: 20 },
+                            height: { xs: 16, sm: 20 },
                             borderRadius: '50%',
                             backgroundColor: assetClass.color || '#667eea',
                             border: '1px solid #ccc'
                           }}
                         />
-                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                        <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: { xs: '0.6875rem', sm: '0.75rem' } }}>
                           {assetClass.color || '#667eea'}
                         </Typography>
                       </Box>
                     </TableCell>
-                    <TableCell>{assetClass.description || '-'}</TableCell>
-                    <TableCell align="center">
-                      <Button color="primary" size="small" onClick={() => handleEditOpen(assetClass)}>
-                        <EditIcon />
-                      </Button>
-                      <Button color="error" size="small" onClick={() => handleDeleteClick(assetClass._id)}>
-                        <DeleteIcon />
-                      </Button>
+                    <TableCell sx={{ width: { xs: 120, sm: 180, md: 220 } }}>{assetClass.description || '-'}</TableCell>
+                    <TableCell align="center" sx={{ width: { xs: 60, sm: 70, md: 80 } }}>
+                      <Box sx={{ display: 'flex', gap: { xs: 0.125, sm: 0.5 }, justifyContent: 'center' }}>
+                        <Button color="primary" size="small" onClick={() => handleEditOpen(assetClass)} sx={{ minWidth: 'auto', p: { xs: 0.25, sm: 0.5 } }}>
+                          <EditIcon fontSize="small" />
+                        </Button>
+                        <Button color="error" size="small" onClick={() => handleDeleteClick(assetClass._id)} sx={{ minWidth: 'auto', p: { xs: 0.25, sm: 0.5 } }}>
+                          <DeleteIcon fontSize="small" />
+                        </Button>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))

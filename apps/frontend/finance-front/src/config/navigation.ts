@@ -20,12 +20,12 @@ export const navigationItems: Omit<NavigationItem, 'onClick'>[] = [
     icon: DashboardIcon
   },
   {
-    label: 'Allocations',
+    label: 'Allocation',
     path: '/asset-allocations',
     icon: AssessmentIcon
   },
   {
-    label: 'Assets',
+    label: 'Asset',
     path: '/asset-classes',
     icon: CategoryIcon
   },

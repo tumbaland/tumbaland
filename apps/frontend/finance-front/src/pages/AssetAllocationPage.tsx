@@ -426,63 +426,51 @@ const AssetAllocationPage: React.FC = () => {
       </Box>
 
       {/* Filters */}
-      <Paper sx={{ p: { xs: 1.5, sm: 2, md: 2.5 }, mb: 2 }} variant="outlined">
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 1.5, sm: 2, md: 2.5 }, alignItems: 'center', mb: 2 }}>
-          {/* Show current tenant context */}
-          {tenantGroupId ? (
-            <Typography variant="body2" color="primary" sx={{ width: { xs: '100%', sm: 'auto' }, textAlign: { xs: 'center', sm: 'left' } }}>
-              Showing allocations for selected group
-            </Typography>
-          ) : (
-            <Typography variant="body2" color="primary" sx={{ width: { xs: '100%', sm: 'auto' }, textAlign: { xs: 'center', sm: 'left' } }}>
-              Showing personal allocations
-            </Typography>
-          )}
-        </Box>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 1.5, sm: 2, md: 2.5, lg: 3 }, alignItems: 'center' }}>
-          <Box sx={{ position: 'relative', minWidth: { xs: '100%', sm: '140px', md: '160px', lg: '180px' }, flex: { xs: '1 1 100%', sm: '0 0 auto' } }}>
+      <Paper sx={{ p: { xs: 1, sm: 1.5, md: 2 }, mb: 2 }} variant="outlined">
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 1, sm: 1.5, md: 2, lg: 2.5 }, alignItems: 'center' }}>
+          <Box sx={{ position: 'relative', minWidth: { xs: '100%', sm: '120px', md: '140px', lg: '160px' }, flex: { xs: '1 1 100%', sm: '0 0 auto' } }}>
             <Box component="span" sx={{ position: 'absolute', top: 4, left: 8, fontSize: { xs: 10, sm: 11 }, fontWeight: 600, letterSpacing: 0.5, color: 'text.secondary', pointerEvents: 'none', textTransform: 'uppercase' }}>From</Box>
             <input
               type="date"
               aria-label="Start date"
               value={startDate}
               onChange={e => { setStartDate(e.target.value); clearQuickRange(); }}
-              style={{ padding: '20px 8px 6px', borderRadius: 6, border: '1px solid #ccc', fontSize: 14, width: '100%', minWidth: 120 }}
+              style={{ padding: '20px 8px 6px', borderRadius: 6, border: '1px solid #ccc', fontSize: 14, width: '100%', minWidth: 100 }}
             />
           </Box>
-          <Box sx={{ position: 'relative', minWidth: { xs: '100%', sm: '140px', md: '160px', lg: '180px' }, flex: { xs: '1 1 100%', sm: '0 0 auto' } }}>
+          <Box sx={{ position: 'relative', minWidth: { xs: '100%', sm: '120px', md: '140px', lg: '160px' }, flex: { xs: '1 1 100%', sm: '0 0 auto' } }}>
             <Box component="span" sx={{ position: 'absolute', top: 4, left: 8, fontSize: { xs: 10, sm: 11 }, fontWeight: 600, letterSpacing: 0.5, color: 'text.secondary', pointerEvents: 'none', textTransform: 'uppercase' }}>To</Box>
             <input
               type="date"
               aria-label="End date"
               value={endDate}
               onChange={e => { setEndDate(e.target.value); }}
-              style={{ padding: '20px 8px 6px', borderRadius: 6, border: '1px solid #ccc', fontSize: 14, width: '100%', minWidth: 120 }}
+              style={{ padding: '20px 8px 6px', borderRadius: 6, border: '1px solid #ccc', fontSize: 14, width: '100%', minWidth: 100 }}
             />
           </Box>
-          <Box sx={{
+                    <Box sx={{
             display: 'flex',
-            gap: { xs: 0.5, sm: 1, md: 1.5 },
+            gap: { xs: 0.25, sm: 0.5, md: 1 },
             flexWrap: 'wrap',
             width: { xs: '100%', sm: 'auto' },
             justifyContent: { xs: 'center', sm: 'flex-start' },
             flex: { xs: '1 1 100%', sm: '0 0 auto' },
             order: { xs: -1, sm: 0 }
           }}>
-            <Button size="small" variant={quickRange === '1M' ? 'contained' : 'outlined'} onClick={() => applyQuickRange('1M')} sx={{ fontSize: { xs: '0.75rem', sm: '0.8125rem' }, px: { xs: 1, sm: 1.5 }, minWidth: { xs: 'auto', sm: 60 } }}>Last 1M</Button>
-            <Button size="small" variant={quickRange === '6M' ? 'contained' : 'outlined'} onClick={() => applyQuickRange('6M')} sx={{ fontSize: { xs: '0.75rem', sm: '0.8125rem' }, px: { xs: 1, sm: 1.5 }, minWidth: { xs: 'auto', sm: 60 } }}>Last 6M</Button>
-            <Button size="small" variant={quickRange === 'YTD' ? 'contained' : 'outlined'} onClick={() => applyQuickRange('YTD')} sx={{ fontSize: { xs: '0.75rem', sm: '0.8125rem' }, px: { xs: 1, sm: 1.5 }, minWidth: { xs: 'auto', sm: 60 } }}>YTD</Button>
-            <Button size="small" variant={quickRange === '1Y' ? 'contained' : 'outlined'} onClick={() => applyQuickRange('1Y')} sx={{ fontSize: { xs: '0.75rem', sm: '0.8125rem' }, px: { xs: 1, sm: 1.5 }, minWidth: { xs: 'auto', sm: 60 } }}>Last 1Y</Button>
-            <Button size="small" variant={quickRange === '2Y' ? 'contained' : 'outlined'} onClick={() => applyQuickRange('2Y')} sx={{ fontSize: { xs: '0.75rem', sm: '0.8125rem' }, px: { xs: 1, sm: 1.5 }, minWidth: { xs: 'auto', sm: 60 } }}>Last 2Y</Button>
-            <Button size="small" variant={quickRange === '3Y' ? 'contained' : 'outlined'} onClick={() => applyQuickRange('3Y')} sx={{ fontSize: { xs: '0.75rem', sm: '0.8125rem' }, px: { xs: 1, sm: 1.5 }, minWidth: { xs: 'auto', sm: 60 } }}>Last 3Y</Button>
-            <Button size="small" onClick={() => { setStartDate(''); setEndDate(''); clearQuickRange(); }} disabled={!startDate && !endDate} sx={{ fontSize: { xs: '0.75rem', sm: '0.8125rem' }, px: { xs: 1, sm: 1.5 }, minWidth: { xs: 'auto', sm: 60 } }}>Reset</Button>
+            <Button size="small" variant={quickRange === '1M' ? 'contained' : 'outlined'} onClick={() => applyQuickRange('1M')} sx={{ fontSize: { xs: '0.6875rem', sm: '0.75rem' }, px: { xs: 0.75, sm: 1 }, py: { xs: 0.25, sm: 0.5 }, minWidth: { xs: 'auto', sm: 50 }, minHeight: { xs: 28, sm: 32 } }}>1M</Button>
+            <Button size="small" variant={quickRange === '6M' ? 'contained' : 'outlined'} onClick={() => applyQuickRange('6M')} sx={{ fontSize: { xs: '0.6875rem', sm: '0.75rem' }, px: { xs: 0.75, sm: 1 }, py: { xs: 0.25, sm: 0.5 }, minWidth: { xs: 'auto', sm: 50 }, minHeight: { xs: 28, sm: 32 } }}>6M</Button>
+            <Button size="small" variant={quickRange === 'YTD' ? 'contained' : 'outlined'} onClick={() => applyQuickRange('YTD')} sx={{ fontSize: { xs: '0.6875rem', sm: '0.75rem' }, px: { xs: 0.75, sm: 1 }, py: { xs: 0.25, sm: 0.5 }, minWidth: { xs: 'auto', sm: 50 }, minHeight: { xs: 28, sm: 32 } }}>YTD</Button>
+            <Button size="small" variant={quickRange === '1Y' ? 'contained' : 'outlined'} onClick={() => applyQuickRange('1Y')} sx={{ fontSize: { xs: '0.6875rem', sm: '0.75rem' }, px: { xs: 0.75, sm: 1 }, py: { xs: 0.25, sm: 0.5 }, minWidth: { xs: 'auto', sm: 50 }, minHeight: { xs: 28, sm: 32 } }}>1Y</Button>
+            <Button size="small" variant={quickRange === '2Y' ? 'contained' : 'outlined'} onClick={() => applyQuickRange('2Y')} sx={{ fontSize: { xs: '0.6875rem', sm: '0.75rem' }, px: { xs: 0.75, sm: 1 }, py: { xs: 0.25, sm: 0.5 }, minWidth: { xs: 'auto', sm: 50 }, minHeight: { xs: 28, sm: 32 } }}>2Y</Button>
+            <Button size="small" variant={quickRange === '3Y' ? 'contained' : 'outlined'} onClick={() => applyQuickRange('3Y')} sx={{ fontSize: { xs: '0.6875rem', sm: '0.75rem' }, px: { xs: 0.75, sm: 1 }, py: { xs: 0.25, sm: 0.5 }, minWidth: { xs: 'auto', sm: 50 }, minHeight: { xs: 28, sm: 32 } }}>3Y</Button>
+            <Button size="small" onClick={() => { setStartDate(''); setEndDate(''); clearQuickRange(); }} disabled={!startDate && !endDate} sx={{ fontSize: { xs: '0.6875rem', sm: '0.75rem' }, px: { xs: 0.75, sm: 1 }, py: { xs: 0.25, sm: 0.5 }, minWidth: { xs: 'auto', sm: 50 }, minHeight: { xs: 28, sm: 32 } }}>Reset</Button>
           </Box>
           {quickRange && (
             <Typography variant="caption" color="text.secondary" sx={{ width: { xs: '100%', sm: 'auto' }, textAlign: { xs: 'center', sm: 'left' }, fontSize: { xs: '0.75rem', sm: '0.8125rem' }, flex: { xs: '1 1 100%', sm: '0 0 auto' }, order: { xs: -2, sm: 0 } }}>Quick range active: {quickRange}</Typography>
           )}
           <TextField
             size="small"
-            placeholder="Search asset classes..."
+            placeholder="Search..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             InputProps={{
@@ -493,10 +481,13 @@ const AssetAllocationPage: React.FC = () => {
               ),
             }}
             sx={{
-              minWidth: { xs: '100%', sm: 200, md: 250, lg: 300 },
+              minWidth: { xs: '100%', sm: 180, md: 220, lg: 260 },
               flex: { xs: '1 1 100%', sm: '0 0 auto' },
-              maxWidth: { xs: '100%', sm: 300, md: 350, lg: 400 },
-              order: { xs: -3, sm: 0 }
+              maxWidth: { xs: '100%', sm: 250, md: 300, lg: 350 },
+              order: { xs: -3, sm: 0 },
+              '& .MuiInputBase-root': {
+                fontSize: { xs: '0.8125rem', sm: '0.875rem' }
+              }
             }}
           />
           <Box sx={{ flexGrow: 1, minWidth: { xs: 0, sm: 20, md: 40 } }} />
@@ -550,20 +541,40 @@ const AssetAllocationPage: React.FC = () => {
         assetClasses={assetClasses}
       />
 
-      <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-        <TableContainer sx={{ overflowX: { xs: 'auto', md: 'visible' } }}>
+      <Paper sx={{ width: '100%' }}>
+        <TableContainer
+          sx={{
+            overflowX: 'auto',
+            maxWidth: '100%',
+            '&::-webkit-scrollbar': {
+              height: '6px',
+            },
+            '&::-webkit-scrollbar-track': {
+              backgroundColor: 'rgba(0,0,0,0.1)',
+              borderRadius: '3px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(0,0,0,0.3)',
+              borderRadius: '3px',
+              '&:hover': {
+                backgroundColor: 'rgba(0,0,0,0.5)',
+              },
+            },
+          }}
+        >
           <Table
             stickyHeader
             size="small"
             sx={{
-              minWidth: { xs: 450, sm: 500, md: 600, lg: 700 },
-              fontSize: { xs: '0.72rem', sm: '0.875rem', md: '0.9375rem', lg: '1rem' },
+              minWidth: { xs: 340, sm: 500, md: 600, lg: 700 },
+              width: '100%',
+              fontSize: { xs: '0.68rem', sm: '0.875rem', md: '0.9375rem', lg: '1rem' },
               '& th, & td': {
-                px: { xs: 0.25, sm: 0.5, md: 1, lg: 1.5 },
-                py: { xs: 0.5, sm: 0.75, md: 0.875, lg: 1 },
-                fontSize: { xs: '0.72rem', sm: '0.875rem', md: '0.9375rem', lg: '1rem' },
+                px: { xs: 0.125, sm: 0.5, md: 1, lg: 1.5 },
+                py: { xs: 0.375, sm: 0.75, md: 0.875, lg: 1 },
+                fontSize: { xs: '0.68rem', sm: '0.875rem', md: '0.9375rem', lg: '1rem' },
                 whiteSpace: { xs: 'nowrap', sm: 'normal' },
-                maxWidth: { xs: 70, sm: 'none' },
+                maxWidth: { xs: 60, sm: 'none' },
                 overflow: 'hidden',
                 textOverflow: 'ellipsis'
               }
@@ -571,10 +582,10 @@ const AssetAllocationPage: React.FC = () => {
           >
             <TableHead>
               <TableRow>
-                <TableCell align="center" sx={{ minWidth: { xs: 40, sm: 45, md: 50 }, width: { xs: 40, sm: 45, md: 50 } }}>
+                <TableCell align="center" sx={{ minWidth: { xs: 30, sm: 45, md: 50 }, width: { xs: 30, sm: 45, md: 50 } }}>
                   <span style={{ fontSize: '0.78em' }}></span>
                 </TableCell>
-                <TableCell align="center" sx={{ minWidth: { xs: 70, sm: 75, md: 85, lg: 95 }, width: { xs: 70, sm: 75, md: 85, lg: 95 } }}>
+                <TableCell align="center" sx={{ minWidth: { xs: 40, sm: 75, md: 85, lg: 95 }, width: { xs: 50, sm: 75, md: 85, lg: 95 } }}>
                   <TableSortLabel
                     active={sortBy === 'date'}
                     direction={sortBy === 'date' ? sortOrder : 'asc'}
@@ -583,7 +594,7 @@ const AssetAllocationPage: React.FC = () => {
                     <span style={{ fontSize: '0.78em' }}>Date</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell align="right" sx={{ minWidth: { xs: 80, sm: 90, md: 105, lg: 120 }, width: { xs: 80, sm: 90, md: 105, lg: 120 } }}>
+                <TableCell align="right" sx={{ minWidth: { xs: 45, sm: 90, md: 105, lg: 120 }, width: { xs: 65, sm: 90, md: 105, lg: 120 } }}>
                   <TableSortLabel
                     active={sortBy === 'totalValue'}
                     direction={sortBy === 'totalValue' ? sortOrder : 'asc'}
@@ -592,7 +603,7 @@ const AssetAllocationPage: React.FC = () => {
                     <span style={{ fontSize: '0.78em' }}>Total Value</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell align="right" sx={{ minWidth: { xs: 70, sm: 80, md: 95, lg: 110 }, width: { xs: 70, sm: 80, md: 95, lg: 110 } }}>
+                <TableCell align="right" sx={{ minWidth: { xs: 45, sm: 90, md: 105, lg: 120 }, width: { xs: 65, sm: 90, md: 105, lg: 120 } }}>
                   <TableSortLabel
                     active={sortBy === 'totalGain'}
                     direction={sortBy === 'totalGain' ? sortOrder : 'asc'}
@@ -601,7 +612,7 @@ const AssetAllocationPage: React.FC = () => {
                     <span style={{ fontSize: '0.78em' }}>Gain</span>
                   </TableSortLabel>
                 </TableCell>
-                <TableCell align="right" sx={{ minWidth: { xs: 70, sm: 80, md: 95, lg: 110 }, width: { xs: 70, sm: 80, md: 95, lg: 110 } }}>
+                <TableCell align="right" sx={{ minWidth: { xs: 45, sm: 90, md: 105, lg: 120 }, width: { xs: 65, sm: 90, md: 105, lg: 120 } }}>
                   <TableSortLabel
                     active={sortBy === 'change'}
                     direction={sortBy === 'change' ? sortOrder : 'asc'}
@@ -635,25 +646,25 @@ const AssetAllocationPage: React.FC = () => {
                     <React.Fragment key={dateKey}>
                       {/* Main row with totals */}
                       <TableRow sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                        <TableCell sx={{ width: { xs: 40, sm: 45, md: 50 } }}>
+                        <TableCell sx={{ width: { xs: 30, sm: 45, md: 50 } }}>
                           <IconButton
                             size="small"
                             onClick={() => handleRowExpand(dateKey)}
-                            sx={{ p: { xs: 0.25, sm: 0.5 } }}
+                            sx={{ p: { xs: 0.125, sm: 0.5 } }}
                           >
                             {isExpanded ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
                           </IconButton>
                         </TableCell>
-                        <TableCell align="center" sx={{ width: { xs: 70, sm: 75, md: 85, lg: 95 } }}>
+                        <TableCell align="center" sx={{ width: { xs: 50, sm: 75, md: 85, lg: 95 } }}>
                           {formatDate(group.date)}
                         </TableCell>
-                        <TableCell align="right" sx={{ width: { xs: 80, sm: 90, md: 105, lg: 120 } }}>
+                        <TableCell align="right" sx={{ width: { xs: 65, sm: 90, md: 105, lg: 120 } }}>
                           {formatNumber(group.totalValue)}
                         </TableCell>
-                        <TableCell align="right" sx={{ color: group.totalGain >= 0 ? 'success.main' : 'error.main', width: { xs: 70, sm: 80, md: 95, lg: 110 } }}>
+                        <TableCell align="right" sx={{ color: group.totalGain >= 0 ? 'success.main' : 'error.main', width: { xs: 65, sm: 90, md: 105, lg: 120 } }}>
                           {formatNumber(group.totalGain)}
                         </TableCell>
-                        <TableCell align="right" sx={{ color: change !== null && change >= 0 ? 'success.main' : change !== null && change < 0 ? 'error.main' : 'text.secondary', width: { xs: 70, sm: 80, md: 95, lg: 110 } }}>
+                        <TableCell align="right" sx={{ color: change !== null && change >= 0 ? 'success.main' : change !== null && change < 0 ? 'error.main' : 'text.secondary', width: { xs: 65, sm: 90, md: 105, lg: 120 } }}>
                           {change !== null ? (change >= 0 ? '+' : '') + formatNumber(change) : '-'}
                         </TableCell>
                       </TableRow>
@@ -666,29 +677,29 @@ const AssetAllocationPage: React.FC = () => {
                               <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', fontSize: { xs: '0.8125rem', sm: '0.875rem', md: '0.9375rem' } }}>
                                 Individual Allocations:
                               </Typography>
-                              <Table size="small" sx={{ minWidth: { xs: 350, sm: 400, md: 'auto' } }}>
+                              <Table size="small" sx={{ minWidth: { xs: 280, sm: 400, md: 'auto' } }}>
                                 <TableHead>
                                   <TableRow>
-                                    <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' }, py: 0.5, minWidth: { xs: 80, sm: 90, md: 'auto' } }}>Asset Class</TableCell>
-                                    <TableCell align="right" sx={{ fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' }, py: 0.5, minWidth: { xs: 60, sm: 70, md: 'auto' } }}>Value</TableCell>
-                                    <TableCell align="right" sx={{ fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' }, py: 0.5, minWidth: { xs: 50, sm: 60, md: 'auto' } }}>Gain</TableCell>
-                                    <TableCell align="center" sx={{ fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' }, py: 0.5, minWidth: { xs: 60, sm: 70, md: 'auto' } }}>Actions</TableCell>
+                                    <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.8125rem', md: '0.875rem' }, py: 0.5, minWidth: { xs: 70, sm: 90, md: 'auto' }, px: { xs: 0.5, sm: 1 } }}>Asset Class</TableCell>
+                                    <TableCell align="right" sx={{ fontSize: { xs: '0.7rem', sm: '0.8125rem', md: '0.875rem' }, py: 0.5, minWidth: { xs: 50, sm: 70, md: 'auto' }, px: { xs: 0.5, sm: 1 } }}>Value</TableCell>
+                                    <TableCell align="right" sx={{ fontSize: { xs: '0.7rem', sm: '0.8125rem', md: '0.875rem' }, py: 0.5, minWidth: { xs: 40, sm: 60, md: 'auto' }, px: { xs: 0.5, sm: 1 } }}>Gain</TableCell>
+                                    <TableCell align="center" sx={{ fontSize: { xs: '0.7rem', sm: '0.8125rem', md: '0.875rem' }, py: 0.5, minWidth: { xs: 50, sm: 70, md: 'auto' }, px: { xs: 0.5, sm: 1 } }}>Actions</TableCell>
                                   </TableRow>
                                 </TableHead>
                                 <TableBody>
                                   {[...group.allocations].sort((a, b) => (b.totalValue || 0) - (a.totalValue || 0)).map((allocation: AssetAllocation) => (
                                     <TableRow key={allocation._id} sx={{ backgroundColor: 'grey.50' }}>
-                                      <TableCell sx={{ fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' }, py: 0.5 }}>
+                                      <TableCell sx={{ fontSize: { xs: '0.7rem', sm: '0.8125rem', md: '0.875rem' }, py: 0.5, px: { xs: 0.5, sm: 1 } }}>
                                         {getAssetClassName(allocation)}
                                       </TableCell>
-                                      <TableCell align="right" sx={{ fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' }, py: 0.5 }}>
+                                      <TableCell align="right" sx={{ fontSize: { xs: '0.7rem', sm: '0.8125rem', md: '0.875rem' }, py: 0.5, px: { xs: 0.5, sm: 1 } }}>
                                         {formatNumber(allocation.totalValue)}
                                       </TableCell>
-                                      <TableCell align="right" sx={{ fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' }, py: 0.5, color: (allocation.gain || 0) >= 0 ? 'success.main' : 'error.main' }}>
+                                      <TableCell align="right" sx={{ fontSize: { xs: '0.7rem', sm: '0.8125rem', md: '0.875rem' }, py: 0.5, px: { xs: 0.5, sm: 1 }, color: (allocation.gain || 0) >= 0 ? 'success.main' : 'error.main' }}>
                                         {formatNumber(allocation.gain)}
                                       </TableCell>
-                                      <TableCell align="center" sx={{ fontSize: { xs: '0.75rem', sm: '0.8125rem', md: '0.875rem' }, py: 0.5 }}>
-                                        <Box sx={{ display: 'flex', gap: { xs: 0.25, sm: 0.5 }, justifyContent: 'center' }}>
+                                      <TableCell align="center" sx={{ fontSize: { xs: '0.7rem', sm: '0.8125rem', md: '0.875rem' }, py: 0.5, px: { xs: 0.5, sm: 1 } }}>
+                                        <Box sx={{ display: 'flex', gap: { xs: 0.125, sm: 0.5 }, justifyContent: 'center' }}>
                                           <Button color="primary" size="small" onClick={() => handleEditOpen(allocation)} sx={{ minWidth: 'auto', p: { xs: 0.25, sm: 0.5 } }}>
                                             <EditIcon fontSize="small" />
                                           </Button>
