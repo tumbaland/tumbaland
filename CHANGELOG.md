@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.249](https://github.com/toomastahves/tumbaland/compare/v0.0.248...v0.0.249) (2025-11-01)
+
+
+### Features
+
+* rework finance service and front ([ff1f531](https://github.com/toomastahves/tumbaland/commit/ff1f5313322b09adffc41d00b17fb3b1898357e4))
+
 ### [0.0.248](https://github.com/toomastahves/tumbaland/compare/v0.0.247...v0.0.248) (2025-11-01)
 
 
