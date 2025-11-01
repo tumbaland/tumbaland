@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.252](https://github.com/toomastahves/tumbaland/compare/v0.0.251...v0.0.252) (2025-11-01)
+
+
+### Bug Fixes
+
+* finance front issues ([ba0c54d](https://github.com/toomastahves/tumbaland/commit/ba0c54da25001dc75eed17dde26c2586905055e1))
+
 ### [0.0.251](https://github.com/toomastahves/tumbaland/compare/v0.0.250...v0.0.251) (2025-11-01)
 
 
