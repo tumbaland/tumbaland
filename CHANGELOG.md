@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.248](https://github.com/toomastahves/tumbaland/compare/v0.0.247...v0.0.248) (2025-11-01)
+
+
+### Bug Fixes
+
+* import path ([72bbaa5](https://github.com/toomastahves/tumbaland/commit/72bbaa59cdfa04f829baf03000e209ae00d97eb5))
+
 ### [0.0.247](https://github.com/toomastahves/tumbaland/compare/v0.0.246...v0.0.247) (2025-10-30)
 
 
