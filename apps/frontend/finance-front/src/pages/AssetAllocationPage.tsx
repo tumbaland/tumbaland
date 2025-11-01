@@ -20,6 +20,7 @@ import {
 } from '@mui/material';
 import { Add, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
 import ConfirmationModal from '../components/ConfirmationModal';
+import { parseNumberWithCommas } from '../utils/numberUtils';
 import { useTenantFilter } from '../components/tenant';
 import AssetAllocationModal from '../components/AssetAllocationModal';
 import {
@@ -102,23 +103,47 @@ const AssetAllocationPage: React.FC = () => {
     if (createMutation.isSuccess) {
       setSnackbar({ open: true, message: 'Asset allocation created successfully', severity: 'success' });
       createMutation.reset();
+
+      // Check if we need to update the end date filter to include the new allocation
+      if (createMutation.data) {
+        const newAllocationDate = new Date(createMutation.data.date);
+        const currentEndDate = endDate ? new Date(endDate) : null;
+
+        if (!currentEndDate || newAllocationDate > currentEndDate) {
+          const iso = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+          setEndDate(iso(newAllocationDate));
+          clearQuickRange();
+        }
+      }
     }
     if (createMutation.isError) {
       setSnackbar({ open: true, message: 'Failed to create asset allocation', severity: 'error' });
       createMutation.reset();
     }
-  }, [createMutation.isSuccess, createMutation.isError]);
+  }, [createMutation.isSuccess, createMutation.isError, createMutation.data, endDate]);
 
   useEffect(() => {
     if (updateMutation.isSuccess) {
       setSnackbar({ open: true, message: 'Asset allocation updated successfully', severity: 'success' });
       updateMutation.reset();
+
+      // Check if we need to update the end date filter to include the updated allocation
+      if (updateMutation.data) {
+        const updatedAllocationDate = new Date(updateMutation.data.date);
+        const currentEndDate = endDate ? new Date(endDate) : null;
+
+        if (!currentEndDate || updatedAllocationDate > currentEndDate) {
+          const iso = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+          setEndDate(iso(updatedAllocationDate));
+          clearQuickRange();
+        }
+      }
     }
     if (updateMutation.isError) {
       setSnackbar({ open: true, message: 'Failed to update asset allocation', severity: 'error' });
       updateMutation.reset();
     }
-  }, [updateMutation.isSuccess, updateMutation.isError]);
+  }, [updateMutation.isSuccess, updateMutation.isError, updateMutation.data, endDate]);
 
   useEffect(() => {
     if (deleteMutation.isSuccess) {
@@ -177,8 +202,8 @@ const AssetAllocationPage: React.FC = () => {
   const handleCreateSubmit = async (form: any) => {
     const payload = {
       ...form,
-      totalValue: Number(form.totalValue),
-      gain: Number(form.gain),
+      totalValue: parseNumberWithCommas(form.totalValue),
+      gain: form.gain === '' || form.gain === undefined || form.gain === null ? 0 : parseNumberWithCommas(form.gain),
       groupId: tenantGroupId // Use tenant context for groupId
     };
     await createMutation.mutateAsync(payload);
@@ -188,8 +213,8 @@ const AssetAllocationPage: React.FC = () => {
     if (!editId) return;
     const payload = {
       ...form,
-      totalValue: Number(form.totalValue),
-      gain: Number(form.gain)
+      totalValue: parseNumberWithCommas(form.totalValue),
+      gain: form.gain === '' || form.gain === undefined || form.gain === null ? 0 : parseNumberWithCommas(form.gain)
     };
     await updateMutation.mutateAsync({ id: editId, data: payload });
     setEditOpen(false);

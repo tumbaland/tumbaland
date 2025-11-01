@@ -27,6 +27,7 @@ export const useCreateAssetAllocation = () => {
     mutationFn: createAssetAllocation,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['assetAllocations'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -38,6 +39,7 @@ export const useUpdateAssetAllocation = () => {
       updateAssetAllocation(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['assetAllocations'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
@@ -48,6 +50,7 @@ export const useDeleteAssetAllocation = () => {
     mutationFn: deleteAssetAllocation,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['assetAllocations'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };
