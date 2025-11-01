@@ -8,31 +8,28 @@ import {
 import { PieChart as PieChartIcon } from '@mui/icons-material';
 import { PieChart } from '@mui/x-charts';
 
-interface AssetAllocationData {
-  secondPillar: number;
-  thirdPillar: number;
-  etfPortfolio: number;
-  cash: number;
-  gold: number;
+interface AssetAllocationItem {
+  assetClass: string;
+  percentage: number;
+  value: number;
 }
 
 interface AssetAllocationChartProps {
-  data: AssetAllocationData;
+  data: AssetAllocationItem[];
   totalValue: number;
 }
 
 const AssetAllocationChart: React.FC<AssetAllocationChartProps> = ({ data, totalValue }) => {
   // Prepare asset allocation data for PieChart
   const assetAllocationData = React.useMemo(() => {
-    const assets = [
-      { id: 'secondPillar', label: 'Second Pillar', value: data.secondPillar, color: '#3b82f6' },
-      { id: 'thirdPillar', label: 'Third Pillar', value: data.thirdPillar, color: '#1d4ed8' },
-      { id: 'etfPortfolio', label: 'ETF Portfolio', value: data.etfPortfolio, color: '#ef4444' },
-      { id: 'cash', label: 'Cash', value: data.cash, color: '#22c55e' },
-      { id: 'gold', label: 'Gold', value: data.gold, color: '#eab308' }
-    ].filter(asset => asset.value > 0);
+    const colors = ['#3b82f6', '#ef4444', '#22c55e', '#eab308', '#a855f7', '#06b6d4', '#f59e0b', '#ec4899'];
 
-    return assets;
+    return data.map((item, index) => ({
+      id: item.assetClass,
+      label: item.assetClass,
+      value: item.value,
+      color: colors[index % colors.length]
+    })).filter(asset => asset.value > 0);
   }, [data]);
 
   const formatCurrency = (amount: number) => {

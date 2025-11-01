@@ -30,7 +30,7 @@ import {
   useCreateUserPortfolio,
   useUpdateUserPortfolio,
   useDeleteUserPortfolio
-} from '../hooks/useFinance';
+} from '../hooks/useUserPortfolio';
 import { UserPortfolio } from '../services/userPortfolioService';
 
 const defaultForm: Omit<UserPortfolio, '_id'> = {

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   Box,
   Card,
@@ -9,92 +9,15 @@ import {
 } from '@mui/material';
 import { AccountBalance } from '@mui/icons-material';
 import { useTenantFilter } from '../components/tenant';
-import { useFinanceRecords } from '../hooks/useFinance';
+import { useDashboard } from '../hooks/useDashboard';
 import FinancialKPIs from '../components/FinancialKPIs';
 import PortfolioValueChart from '../components/PortfolioValueChart';
-import AssetAllocationChart from '../components/AssetAllocationChart';
-import PerformanceChart from '../components/PerformanceChart';
-
-interface FinanceRecord {
-  _id: string;
-  date: string;
-  secondPillar: number;
-  secondPillarGain: number;
-  thirdPillar: number;
-  thirdPillarGain: number;
-  etfPortfolio: number;
-  etfGain: number;
-  cash: number;
-  gold: number;
-}
 
 const Dashboard: React.FC = () => {
   const tenantGroupId = useTenantFilter();
 
-  // React Query hook for finance records
-  const { data: records = [], isLoading, error } = useFinanceRecords(tenantGroupId);
-
-  // Sort records for chronological display
-  const sortedRecords = useMemo(() => {
-    return [...records].sort(
-      (a: FinanceRecord, b: FinanceRecord) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-  }, [records]);
-
-  // Calculate portfolio summary
-  const portfolioSummary = useMemo(() => {
-    if (!sortedRecords || sortedRecords.length === 0) return null;
-
-    const latest = sortedRecords[sortedRecords.length - 1];
-    const previous = sortedRecords.length > 1 ? sortedRecords[sortedRecords.length - 2] : null;
-
-    const totalValue = latest.secondPillar + latest.thirdPillar + latest.etfPortfolio + latest.cash + latest.gold;
-    const totalGains = latest.secondPillarGain + latest.thirdPillarGain + latest.etfGain;
-    const totalInvested = totalValue - totalGains;
-
-    const previousValue = previous
-      ? previous.secondPillar + previous.thirdPillar + previous.etfPortfolio + previous.cash + previous.gold
-      : totalValue;
-    const monthlyChange = totalValue - previousValue;
-    const monthlyChangePercent = previousValue > 0 ? (monthlyChange / previousValue) * 100 : 0;
-
-    const gainsPercentage = totalInvested > 0 ? (totalGains / totalInvested) * 100 : 0;
-
-    return {
-      totalValue,
-      totalGains,
-      gainsPercentage,
-      monthlyChange,
-      monthlyChangePercent,
-      breakdown: {
-        secondPillar: latest.secondPillar,
-        thirdPillar: latest.thirdPillar,
-        etfPortfolio: latest.etfPortfolio,
-        cash: latest.cash,
-        gold: latest.gold
-      },
-      gains: {
-        secondPillar: latest.secondPillarGain,
-        thirdPillar: latest.thirdPillarGain,
-        etfPortfolio: latest.etfGain
-      }
-    };
-  }, [sortedRecords]);
-
-  // Prepare performance data for BarChart
-  const performanceData = useMemo(() => {
-    if (!portfolioSummary) return { categories: [], gains: [], colors: [] };
-
-    const categories = ['Second Pillar', 'Third Pillar', 'ETF Portfolio'];
-    const gains = [
-      portfolioSummary.gains.secondPillar,
-      portfolioSummary.gains.thirdPillar,
-      portfolioSummary.gains.etfPortfolio
-    ];
-    const colors = ['#667eea', '#764ba2', '#11998e'];
-
-    return { categories, gains, colors };
-  }, [portfolioSummary]);
+  // Use new dashboard hook
+  const { data: dashboardData, isLoading, error } = useDashboard(tenantGroupId);
 
   if (isLoading) {
     return (
@@ -107,7 +30,7 @@ const Dashboard: React.FC = () => {
   if (error) {
     return (
       <Box sx={{ p: 3 }}>
-        <Alert severity="error">{error.message || 'Failed to fetch finance records'}</Alert>
+        <Alert severity="error">{error.message || 'Failed to fetch dashboard data'}</Alert>
       </Box>
     );
   }
@@ -143,39 +66,33 @@ const Dashboard: React.FC = () => {
         </Typography>
       </Box>
 
-      {portfolioSummary && (
+      {dashboardData && (
         <>
           {/* Key Metrics Cards */}
           <FinancialKPIs
             data={{
-              totalValue: portfolioSummary.totalValue,
-              totalGains: portfolioSummary.totalGains,
-              gainsPercentage: portfolioSummary.gainsPercentage,
-              monthlyChange: portfolioSummary.monthlyChange,
-              monthlyChangePercent: portfolioSummary.monthlyChangePercent
+              totalValue: dashboardData.kpis.totalPortfolioValue,
+              totalGains: dashboardData.kpis.totalGains,
+              gainsPercentage: dashboardData.kpis.totalGainsPercentage,
+              monthlyChange: dashboardData.kpis.monthlyChange,
+              monthlyChangePercent: dashboardData.kpis.monthlyChangePercentage
             }}
           />
 
           {/* Portfolio Timeline - Full Width */}
           <Box sx={{ mb: { xs: 3, md: 4 } }}>
-            <PortfolioValueChart records={sortedRecords} />
-          </Box>
-
-          {/* Asset Allocation and Performance Charts */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: { xs: 3, md: 4 } }}>
-            {/* Asset Allocation */}
-            <AssetAllocationChart
-              data={portfolioSummary.breakdown}
-              totalValue={portfolioSummary.totalValue}
+            <PortfolioValueChart
+              records={dashboardData.portfolioHistory}
+              assetColors={dashboardData.assetAllocation.reduce((acc, allocation) => {
+                acc[allocation.assetClass] = allocation.color || '#667eea';
+                return acc;
+              }, {} as { [key: string]: string })}
             />
-
-            {/* Performance by Asset */}
-            <PerformanceChart data={performanceData} />
           </Box>
         </>
       )}
 
-      {!portfolioSummary && !isLoading && (
+      {!dashboardData && !isLoading && (
         <Card
           sx={{
             borderRadius: 3,
@@ -190,10 +107,10 @@ const Dashboard: React.FC = () => {
           <CardContent>
             <AccountBalance sx={{ fontSize: 64, color: '#cbd5e1', mb: 2 }} />
             <Typography variant="h6" color="text.secondary" gutterBottom>
-              No Financial Data Available
+              No Portfolio Data Available
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Add your first finance record to see your portfolio dashboard
+              Add your first portfolio holdings to see your dashboard
             </Typography>
           </CardContent>
         </Card>

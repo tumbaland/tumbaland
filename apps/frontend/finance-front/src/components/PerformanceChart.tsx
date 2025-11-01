@@ -96,7 +96,7 @@ const PerformanceChart: React.FC<PerformanceChartProps> = ({ data }) => {
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
           <BarChartIcon sx={{ mr: 2, color: '#764ba2' }} />
           <Typography variant="h6" sx={{ fontWeight: 600, color: '#1e293b' }}>
-            Investment Gains by Asset
+            Top Performing Assets (%)
           </Typography>
         </Box>
         <Box sx={{ width: '100%', height: 300 }}>
@@ -106,13 +106,13 @@ const PerformanceChart: React.FC<PerformanceChartProps> = ({ data }) => {
               scaleType: 'band'
             }]}
             xAxis={[{
-              label: isMobile ? '' : 'Gains (€)',
+              label: isMobile ? '' : 'Performance (%)',
               labelStyle: { textAnchor: 'middle' },
               tickNumber: 5
             }]}
             series={[{
               data: sortedData.gains,
-              valueFormatter: (value) => `${value?.toLocaleString('et-EE', { style: 'currency', currency: 'EUR' })}`
+              valueFormatter: (value) => `${value?.toFixed(1)}%`
             }]}
             colors={sortedData.colors}
             slotProps={{
@@ -135,7 +135,7 @@ const PerformanceChart: React.FC<PerformanceChartProps> = ({ data }) => {
         </Box>
         <Box sx={{ textAlign: 'center', mt: 2 }}>
           <Typography variant="body2" color="text.secondary">
-            Total Gains: {sortedData.totalGains?.toLocaleString('et-EE', { style: 'currency', currency: 'EUR' }) || '€0'}
+            Top {sortedData.categories.length} performing assets
           </Typography>
         </Box>
       </CardContent>

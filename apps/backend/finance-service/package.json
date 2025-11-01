@@ -8,7 +8,10 @@
     "dev": "nodemon --exec ts-node src/index.ts",
     "build": "tsc",
     "test": "jest",
-    "lint": "eslint . --ext ts --report-unused-disable-directives --max-warnings 0"
+    "lint": "eslint . --ext ts --report-unused-disable-directives --max-warnings 0",
+    "migrate:export-records": "node scripts/migration/export-finance-records.js",
+    "migrate:export-classes": "node scripts/migration/export-asset-classes.js",
+    "migrate:run": "node scripts/migration/migrate-to-asset-allocations.js"
   },
   "dependencies": {
     "@tumbaland/core": "*",

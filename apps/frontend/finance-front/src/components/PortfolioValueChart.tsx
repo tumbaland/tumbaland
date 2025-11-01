@@ -17,21 +17,21 @@ import {
 import { Timeline } from '@mui/icons-material';
 import { LineChart } from '@mui/x-charts';
 
-interface FinanceRecord {
-  _id: string;
+interface PortfolioHistoryData {
   date: string;
-  secondPillar: number;
-  thirdPillar: number;
-  etfPortfolio: number;
-  cash: number;
-  gold: number;
+  totalValue: number;
+  totalInvested: number;
+  assetBreakdown?: {
+    [assetClass: string]: number;
+  };
 }
 
 interface PortfolioValueChartProps {
-  records: FinanceRecord[];
+  records: PortfolioHistoryData[];
+  assetColors?: { [assetClass: string]: string };
 }
 
-const PortfolioValueChart: React.FC<PortfolioValueChartProps> = ({ records }) => {
+const PortfolioValueChart: React.FC<PortfolioValueChartProps> = ({ records, assetColors = {} }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [timePeriod, setTimePeriod] = useState<string>('2');
@@ -59,68 +59,52 @@ const PortfolioValueChart: React.FC<PortfolioValueChartProps> = ({ records }) =>
       })
     );
 
+    // Collect all unique asset classes
+    const allAssetClasses = new Set<string>();
+    filteredRecords.forEach(record => {
+      if (record.assetBreakdown) {
+        Object.keys(record.assetBreakdown).forEach(assetClass => {
+          allAssetClasses.add(assetClass);
+        });
+      }
+    });
+
+    const assetClasses = Array.from(allAssetClasses);
+
+    // Create series for each asset class plus total
     const series = [
       {
-        id: 'total',
+        id: 'totalValue',
         label: 'Total Portfolio',
-        data: filteredRecords.map(record =>
-          record.secondPillar + record.thirdPillar + record.etfPortfolio + record.cash + record.gold
-        ),
+        data: useLogScale
+          ? filteredRecords.map(record => record.totalValue === 0 ? 0.01 : record.totalValue)
+          : filteredRecords.map(record => record.totalValue),
         color: '#000000',
         showMark: false,
         curve: 'monotoneX' as const
-      },
-      {
-        id: 'secondPillar',
-        label: 'Second Pillar',
-        data: filteredRecords.map(record => record.secondPillar),
-        color: '#3b82f6',
-        showMark: false,
-        curve: 'monotoneX' as const
-      },
-      {
-        id: 'thirdPillar',
-        label: 'Third Pillar',
-        data: filteredRecords.map(record => record.thirdPillar),
-        color: '#1d4ed8',
-        showMark: false,
-        curve: 'monotoneX' as const
-      },
-      {
-        id: 'etfPortfolio',
-        label: 'ETF Portfolio',
-        data: filteredRecords.map(record => record.etfPortfolio),
-        color: '#ef4444',
-        showMark: false,
-        curve: 'monotoneX' as const
-      },
-      {
-        id: 'cash',
-        label: 'Cash',
-        data: filteredRecords.map(record => record.cash),
-        color: '#22c55e',
-        showMark: false,
-        curve: 'monotoneX' as const
-      },
-      {
-        id: 'gold',
-        label: 'Gold',
-        data: filteredRecords.map(record => record.gold),
-        color: '#eab308',
-        showMark: false,
-        curve: 'monotoneX' as const
       }
-    ].filter(series => {
-      // For log scale, only include series with all positive values
-      if (useLogScale) {
-        return series.data.every(value => value > 0);
-      }
-      // For linear scale, include series with at least one non-zero value
-      return series.data.some(value => value > 0);
+    ];
+
+    // Add series for each asset class
+    assetClasses.forEach((assetClass) => {
+      const rawData = filteredRecords.map(record => record.assetBreakdown?.[assetClass] || 0);
+      // For log scale, replace zeros with a very small positive value to avoid log(0) issues
+      const processedData = useLogScale
+        ? rawData.map(value => value === 0 ? 0.01 : value)
+        : rawData;
+
+      series.push({
+        id: assetClass,
+        label: assetClass,
+        data: processedData,
+        color: assetColors[assetClass] || '#667eea', // Use asset class color or fallback
+        showMark: false,
+        curve: 'monotoneX' as const
+      });
     });
 
     return { dates, series };
-  }, [filteredRecords, useLogScale]);
+  }, [filteredRecords]);
 
   const handleTimePeriodChange = (event: SelectChangeEvent<string>) => {
     setTimePeriod(event.target.value);

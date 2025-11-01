@@ -29,7 +29,7 @@ import {
   useCreateTrackedTicker,
   useUpdateTrackedTicker,
   useDeleteTrackedTicker
-} from '../hooks/useFinance';
+} from '../hooks/useTrackedTicker';
 import { TrackedTicker } from '../services/trackedTickerService';
 
 const defaultForm: Omit<TrackedTicker, '_id' | 'dateAdded'> = {

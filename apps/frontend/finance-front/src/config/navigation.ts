@@ -1,9 +1,10 @@
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import CalculateIcon from '@mui/icons-material/Calculate';
 import TuneIcon from '@mui/icons-material/Tune';
+import CategoryIcon from '@mui/icons-material/Category';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 
 export interface NavigationItem {
   label: string;
@@ -19,9 +20,14 @@ export const navigationItems: Omit<NavigationItem, 'onClick'>[] = [
     icon: DashboardIcon
   },
   {
-    label: 'Records',
-    path: '/records',
-    icon: ReceiptLongIcon
+    label: 'Allocations',
+    path: '/asset-allocations',
+    icon: AssessmentIcon
+  },
+  {
+    label: 'Assets',
+    path: '/asset-classes',
+    icon: CategoryIcon
   },
   {
     label: 'Tickers',
