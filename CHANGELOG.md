@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.251](https://github.com/toomastahves/tumbaland/compare/v0.0.250...v0.0.251) (2025-11-01)
+
+
+### Features
+
+* relationship and album mobile friendly ([88885d4](https://github.com/toomastahves/tumbaland/commit/88885d4f97d9af1e1e0227b426399370e7af91fc))
+
 ### [0.0.250](https://github.com/toomastahves/tumbaland/compare/v0.0.249...v0.0.250) (2025-11-01)
 
 
