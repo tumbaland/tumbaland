@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -17,13 +17,11 @@ import {
   TextField,
   Alert,
   CircularProgress,
-  Chip,
   Tooltip,
   FormControl,
   Paper
 } from '@mui/material';
 import {
-  Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon
 } from '@mui/icons-material';
@@ -59,33 +57,14 @@ const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ group
     groupId: groupId // Initialize with the current groupId prop
   });
 
-  // Auto-generate slug from name
-  useEffect(() => {
-    if (formData.name && !editingType) {
-      const generatedSlug = formData.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-      setFormData((prev) => ({ ...prev, slug: generatedSlug }));
-    }
-  }, [formData.name, editingType]);
-
-  // Load activity types when component mounts or groupId changes
-  useEffect(() => {
-    loadActivityTypes();
-  }, [groupId]);
-
-  // Also load on component mount (in case groupId doesn't change but component remounts)
-  useEffect(() => {
-    loadActivityTypes();
-  }, []);
-
   const loadActivityTypes = async () => {
     try {
       setLoading(true);
-      console.log('Loading activity types with groupId:', groupId);
       const response = await getActivityTypes({ groupId });
-      console.log('Activity types response:', response);
       setActivityTypes(response.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load activity types:', error);
+      alert('Failed to load activity types: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -98,7 +77,7 @@ const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ group
       slug: '',
       description: '',
       color: '',
-      groupId: groupId // Use the current groupId prop
+      groupId: groupId // Initialize with the current groupId prop
     });
     setErrors([]);
     setDialogOpen(true);
@@ -165,6 +144,22 @@ const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ group
     }
   };
 
+  useEffect(() => {
+    loadActivityTypes();
+  }, [groupId]);
+
+  useEffect(() => {
+    const handleOpenCreateDialog = () => {
+      handleCreate();
+    };
+
+    window.addEventListener('openCreateActivityTypeDialog', handleOpenCreateDialog);
+
+    return () => {
+      window.removeEventListener('openCreateActivityTypeDialog', handleOpenCreateDialog);
+    };
+  }, []);
+
   if (loading && activityTypes.length === 0) {
     return (
       <Box display="flex" justifyContent="center" p={4}>
@@ -175,77 +170,102 @@ const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ group
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h5" component="h2">
-          Activity Types Management
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleCreate}
-          size="small"
-        >
-          Add Activity Type
-        </Button>
-      </Box>
-      <Box sx={{ overflowX: 'auto', maxWidth: '100%' }}>
+      <Box
+        sx={{
+          overflowX: 'auto',
+          maxWidth: '100%',
+          '&::-webkit-scrollbar': {
+            height: '6px',
+          },
+          '&::-webkit-scrollbar-track': {
+            backgroundColor: 'rgba(0,0,0,0.1)',
+            borderRadius: '3px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: 'rgba(0,0,0,0.3)',
+            borderRadius: '3px',
+            '&:hover': {
+              backgroundColor: 'rgba(0,0,0,0.5)',
+            },
+          },
+        }}
+      >
         <TableContainer component={Paper}>
-          <Table size="small" sx={{ minWidth: 600 }} aria-label="activity types table">
+          <Table
+            size="small"
+            sx={{
+              minWidth: { xs: 320, sm: 450, md: 550, lg: 650 },
+              width: '100%',
+              fontSize: { xs: '0.68rem', sm: '0.875rem', md: '0.9375rem', lg: '1rem' },
+              '& th, & td': {
+                px: { xs: 0.125, sm: 0.5, md: 1, lg: 1.5 },
+                py: { xs: 0.375, sm: 0.75, md: 0.875, lg: 1 },
+                fontSize: { xs: '0.68rem', sm: '0.875rem', md: '0.9375rem', lg: '1rem' },
+                whiteSpace: { xs: 'nowrap', sm: 'normal' },
+                maxWidth: { xs: 60, sm: 'none' },
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }
+            }}
+            aria-label="activity types table"
+          >
           <TableHead>
             <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Slug</TableCell>
-              <TableCell>Description</TableCell>
-              <TableCell>Color</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Actions</TableCell>
+              <TableCell sx={{ minWidth: { xs: 80, sm: 100, md: 120 }, width: { xs: 80, sm: 100, md: 120 } }}>
+                <span style={{ fontSize: '0.78em' }}>Name</span>
+              </TableCell>
+              <TableCell sx={{ minWidth: { xs: 100, sm: 140, md: 180 }, width: { xs: 100, sm: 140, md: 180 } }}>
+                <span style={{ fontSize: '0.78em' }}>Description</span>
+              </TableCell>
+              <TableCell sx={{ minWidth: { xs: 70, sm: 90, md: 110 }, width: { xs: 70, sm: 90, md: 110 } }}>
+                <span style={{ fontSize: '0.78em' }}>Color</span>
+              </TableCell>
+              <TableCell align="center" sx={{ minWidth: { xs: 60, sm: 70, md: 80 }, width: { xs: 60, sm: 70, md: 80 } }}>
+                <span style={{ fontSize: '0.78em' }}>Actions</span>
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {activityTypes.map((type) => (
               <TableRow key={type._id}>
-                <TableCell>{type.name}</TableCell>
-                <TableCell>{type.slug}</TableCell>
-                <TableCell>{type.description || '-'}</TableCell>
-                <TableCell>
+                <TableCell sx={{ width: { xs: 80, sm: 100, md: 120 } }}>{type.name}</TableCell>
+                <TableCell sx={{ width: { xs: 100, sm: 140, md: 180 } }}>{type.description || '-'}</TableCell>
+                <TableCell sx={{ width: { xs: 70, sm: 90, md: 110 } }}>
                   {type.color ? (
                     <Box display="flex" alignItems="center" gap={1}>
                       <Box
                         sx={{
-                          width: 20,
-                          height: 20,
+                          width: { xs: 16, sm: 20 },
+                          height: { xs: 16, sm: 20 },
                           borderRadius: '50%',
                           backgroundColor: type.color
                         }}
                       />
-                      {type.color}
+                      <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: { xs: '0.6875rem', sm: '0.75rem' } }}>
+                        {type.color}
+                      </Typography>
                     </Box>
                   ) : (
                     '-'
                   )}
                 </TableCell>
-                <TableCell>
-                  <Chip
-                    label={type.isActive ? 'Active' : 'Inactive'}
-                    color={type.isActive ? 'success' : 'default'}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Tooltip title="Edit">
-                    <IconButton onClick={() => handleEdit(type)} size="small">
-                      <EditIcon />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Delete">
-                    <IconButton
-                      onClick={() => handleDelete(type._id)}
-                      size="small"
-                      color="error"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Tooltip>
+                <TableCell align="center" sx={{ width: { xs: 60, sm: 70, md: 80 } }}>
+                  <Box sx={{ display: 'flex', gap: { xs: 0.125, sm: 0.5 }, justifyContent: 'center' }}>
+                    <Tooltip title="Edit">
+                      <IconButton onClick={() => handleEdit(type)} size="small">
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete">
+                      <IconButton
+                        onClick={() => handleDelete(type._id)}
+                        size="small"
+                        color="error"
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
                 </TableCell>
               </TableRow>
             ))}

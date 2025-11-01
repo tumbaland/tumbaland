@@ -91,7 +91,7 @@ const Activities: React.FC = () => {
     );
   }
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 3, overflowX: 'hidden' }}>
       <Box
         sx={{
           display: 'flex',
@@ -118,7 +118,21 @@ const Activities: React.FC = () => {
         sx={{
           width: '100%',
           overflowX: 'auto',
-          boxShadow: { xs: 'none', sm: undefined }
+          boxShadow: { xs: 'none', sm: undefined },
+          '&::-webkit-scrollbar': {
+            height: '6px',
+          },
+          '&::-webkit-scrollbar-track': {
+            backgroundColor: 'rgba(0,0,0,0.1)',
+            borderRadius: '3px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: 'rgba(0,0,0,0.3)',
+            borderRadius: '3px',
+            '&:hover': {
+              backgroundColor: 'rgba(0,0,0,0.5)',
+            },
+          },
         }}
       >
         <ActivitiesTable

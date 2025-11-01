@@ -225,6 +225,35 @@ const ActivitiesFilter: React.FC<ActivitiesFilterProps> = React.memo(({
             onChange={(e) => handleFilterChange('activityType', e.target.value)}
             label="Activity Type"
             disabled={loadingTypes}
+            MenuProps={{
+              PaperProps: {
+                sx: {
+                  maxHeight: 300,
+                  '&::-webkit-scrollbar': {
+                    width: '6px',
+                  },
+                  '&::-webkit-scrollbar-track': {
+                    backgroundColor: 'rgba(0,0,0,0.1)',
+                    borderRadius: '3px',
+                  },
+                  '&::-webkit-scrollbar-thumb': {
+                    backgroundColor: 'rgba(0,0,0,0.3)',
+                    borderRadius: '3px',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0,0,0,0.5)',
+                    },
+                  },
+                },
+              },
+              anchorOrigin: {
+                vertical: 'bottom',
+                horizontal: 'left',
+              },
+              transformOrigin: {
+                vertical: 'top',
+                horizontal: 'left',
+              },
+            }}
           >
             <MenuItem value="">
               <em>All Types</em>

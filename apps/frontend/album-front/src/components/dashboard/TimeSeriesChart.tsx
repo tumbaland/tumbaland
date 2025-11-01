@@ -3,7 +3,9 @@ import {
   Card,
   CardContent,
   Typography,
-  Box
+  Box,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import { Timeline } from '@mui/icons-material';
 import { LineChart } from '@mui/x-charts';
@@ -19,6 +21,9 @@ interface TimeSeriesChartProps {
 }
 
 const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({ albumsData, photosData }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   // Combine and sort dates
   const allDates = [...new Set([...albumsData.map(d => d.date), ...photosData.map(d => d.date)])].sort();
 
@@ -70,30 +75,39 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({ albumsData, photosDat
             Activity Over Time
           </Typography>
         </Box>
-        <Box sx={{ width: '100%', height: 300 }}>
+        <Box sx={{ width: '100%', height: 300, px: { xs: 0, sm: 1, md: 2 } }}>
           <LineChart
             xAxis={[{
               data: allDates,
               scaleType: 'point',
               tickLabelInterval: (_, index) => {
                 const totalPoints = allDates.length;
-                // Show labels at: start, 25%, 50%, 75%, and end
-                const keyIndices = [0, Math.floor(totalPoints * 0.25), Math.floor(totalPoints * 0.5), Math.floor(totalPoints * 0.75), totalPoints - 1];
-                return keyIndices.includes(index);
+                if (isMobile) {
+                  // Mobile: show only start and end
+                  return index === 0 || index === totalPoints - 1;
+                } else {
+                  // Desktop: show start, 25%, 50%, 75%, and end
+                  const keyIndices = [0, Math.floor(totalPoints * 0.25), Math.floor(totalPoints * 0.5), Math.floor(totalPoints * 0.75), totalPoints - 1];
+                  return keyIndices.includes(index);
+                }
+              },
+              valueFormatter: (value) => {
+                // Format dates as MM/YY for shorter display
+                const date = new Date(value);
+                return `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getFullYear()).slice(-2)}`;
               }
             }]}
             yAxis={[{
-              label: 'Count',
-              labelStyle: { textAnchor: 'middle' },
               scaleType: 'linear'
             }]}
             series={series}
             height={300}
+            width={undefined}
             margin={{
-              top: 20,
-              right: 30,
-              bottom: 60,
-              left: 60
+              top: 10,
+              right: 20,
+              bottom: 40,
+              left: 10
             }}
             grid={{ horizontal: true, vertical: false }}
           />

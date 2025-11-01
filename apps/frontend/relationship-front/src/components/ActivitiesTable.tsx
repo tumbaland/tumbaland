@@ -30,14 +30,15 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
         stickyHeader
         size="small"
         sx={{
-          minWidth: 500,
-          fontSize: { xs: '0.72rem', sm: '0.95rem' },
+          minWidth: { xs: 320, sm: 450, md: 550, lg: 650 },
+          width: '100%',
+          fontSize: { xs: '0.68rem', sm: '0.875rem', md: '0.9375rem', lg: '1rem' },
           '& th, & td': {
-            px: { xs: 0.5, sm: 1 },
-            py: { xs: 0.5, sm: 0.8 },
-            fontSize: { xs: '0.72rem', sm: '0.95rem' },
+            px: { xs: 0.125, sm: 0.5, md: 1, lg: 1.5 },
+            py: { xs: 0.375, sm: 0.75, md: 0.875, lg: 1 },
+            fontSize: { xs: '0.68rem', sm: '0.875rem', md: '0.9375rem', lg: '1rem' },
             whiteSpace: { xs: 'nowrap', sm: 'normal' },
-            maxWidth: { xs: 80, sm: 'none' },
+            maxWidth: { xs: 60, sm: 'none' },
             overflow: 'hidden',
             textOverflow: 'ellipsis'
           }
@@ -45,7 +46,7 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
       >
         <TableHead>
           <TableRow>
-            <TableCell sx={{ minWidth: 60 }}>
+            <TableCell sx={{ minWidth: { xs: 70, sm: 80, md: 90 }, width: { xs: 70, sm: 80, md: 90 } }}>
               <TableSortLabel
                 active={sortBy === 'date'}
                 direction={sortBy === 'date' ? sortOrder : 'asc'}
@@ -54,7 +55,7 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
                 <span style={{ fontSize: '0.78em' }}>Date</span>
               </TableSortLabel>
             </TableCell>
-            <TableCell sx={{ minWidth: 50, maxWidth: 70, width: 60 }}>
+            <TableCell sx={{ minWidth: { xs: 60, sm: 70, md: 80 }, width: { xs: 60, sm: 70, md: 80 } }}>
               <TableSortLabel
                 active={sortBy === 'activity'}
                 direction={sortBy === 'activity' ? sortOrder : 'asc'}
@@ -63,7 +64,7 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
                 <span style={{ fontSize: '0.78em' }}>Activity</span>
               </TableSortLabel>
             </TableCell>
-            <TableCell align="right" sx={{ minWidth: 60 }}>
+            <TableCell align="right" sx={{ minWidth: { xs: 50, sm: 60, md: 70 }, width: { xs: 50, sm: 60, md: 70 } }}>
               <TableSortLabel
                 active={sortBy === 'hours'}
                 direction={sortBy === 'hours' ? sortOrder : 'asc'}
@@ -72,7 +73,7 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
                 <span style={{ fontSize: '0.78em' }}>Duration</span>
               </TableSortLabel>
             </TableCell>
-            <TableCell sx={{ minWidth: 140, maxWidth: 220, width: 180 }}>
+            <TableCell sx={{ minWidth: { xs: 100, sm: 140, md: 180 }, width: { xs: 100, sm: 140, md: 180 } }}>
               <TableSortLabel
                 active={sortBy === 'description'}
                 direction={sortBy === 'description' ? sortOrder : 'asc'}
@@ -81,7 +82,7 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
                 <span style={{ fontSize: '0.78em' }}>Description</span>
               </TableSortLabel>
             </TableCell>
-            <TableCell align="center" sx={{ minWidth: 60 }}>
+            <TableCell align="center" sx={{ minWidth: { xs: 60, sm: 70, md: 80 }, width: { xs: 60, sm: 70, md: 80 } }}>
               <span style={{ fontSize: '0.78em' }}>Actions</span>
             </TableCell>
           </TableRow>
@@ -98,8 +99,8 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
           ) : (
             activities.map((activity) => (
               <TableRow key={activity._id || activity.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                <TableCell>{formatDate(activity.date)}</TableCell>
-                <TableCell>
+                <TableCell sx={{ width: { xs: 70, sm: 80, md: 90 } }}>{formatDate(activity.date)}</TableCell>
+                <TableCell sx={{ width: { xs: 60, sm: 70, md: 80 } }}>
                   <Chip
                     label={activity.activity.typeId?.name || 'Unknown Type'}
                     sx={{
@@ -111,19 +112,19 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
                     size="small"
                   />
                 </TableCell>
-                <TableCell align="right">{activity.hours || '-'}</TableCell>
+                <TableCell align="right" sx={{ width: { xs: 50, sm: 60, md: 70 } }}>{activity.hours || '-'}</TableCell>
                 <TableCell
                   sx={{
-                    maxWidth: { xs: 140, sm: 220 },
-                    minWidth: { xs: 100, sm: 140 },
-                    width: { xs: 120, sm: 180 }
+                    width: { xs: 100, sm: 140, md: 180 }
                   }}
                 >
                   {activity.activity.description}
                 </TableCell>
-                <TableCell align="center">
-                  <EditActivityModal activity={activity} onActivityUpdated={refetch} />
-                  <DeleteActivityButton activityId={activity._id || activity.id || ''} onDeleted={refetch} />
+                <TableCell align="center" sx={{ width: { xs: 60, sm: 70, md: 80 } }}>
+                  <Box sx={{ display: 'flex', gap: { xs: 0.125, sm: 0.5 }, justifyContent: 'center' }}>
+                    <EditActivityModal activity={activity} onActivityUpdated={refetch} />
+                    <DeleteActivityButton activityId={activity._id || activity.id || ''} onDeleted={refetch} />
+                  </Box>
                 </TableCell>
               </TableRow>
             ))
