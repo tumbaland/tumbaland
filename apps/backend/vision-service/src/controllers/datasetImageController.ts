@@ -8,7 +8,6 @@ import {
   getPhotoSignedUrlsBatch,
   getUploadSignedUrl,
   generateFileId,
-  getFileFolder,
   SignedUrlData
 } from '../services/minioService';
 import { logger } from '@tumbaland/core';
@@ -318,16 +317,30 @@ export const deleteImage = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    // Delete file from MinIO
+    // Delete files from MinIO (both original and thumbnail if exists)
     try {
-      const folderPath = getFileFolder(image.minioFileId);
-      await deleteFile(folderPath);
+      // Delete original file
+      await deleteFile(image.minioFileId);
+      logger.info(`Deleted original file from MinIO: ${image.minioFileId}`);
+
+      // Delete thumbnail file if it exists
+      if (image.minioThumbnailFileId) {
+        await deleteFile(image.minioThumbnailFileId);
+        logger.info(`Deleted thumbnail file from MinIO: ${image.minioThumbnailFileId}`);
+      }
     } catch (error) {
-      logger.error(`Failed to delete file for dataset image ${image.minioFileId}:`, error);
+      logger.error(`Failed to delete files for dataset image ${image.minioFileId}:`, error);
+      // Continue with database deletion even if MinIO deletion fails
     }
 
-    // Delete the image record
+    // Delete the image record from database
     await DatasetImage.findByIdAndDelete(id);
+
+    logger.info(`Dataset image deleted: ${id}`, {
+      datasetId: image.datasetId,
+      minioFileId: image.minioFileId,
+      hadThumbnail: !!image.minioThumbnailFileId
+    });
 
     res.json({
       success: true,
@@ -346,7 +359,9 @@ export const deleteImage = async (req: Request, res: Response): Promise<void> =>
 export const getUploadSignedUrlRequest = async (req: Request, res: Response): Promise<void> => {
   try {
     const { filename, mimetype, datasetId } = req.body;
-    const userId = (req as any).user?.id;
+    const userId = (req as any).user?.id || 'anonymous'; // Default to 'anonymous' if no user
+
+    logger.info('Getting upload signed URL', { filename, mimetype, datasetId, userId });
 
     if (!filename || !mimetype || !datasetId) {
       res.status(400).json({
@@ -361,9 +376,11 @@ export const getUploadSignedUrlRequest = async (req: Request, res: Response): Pr
 
     // Generate secure file ID
     const fileId = generateFileId(userId, datasetId, filename, 'vision'); // Using 'vision' as groupId
+    logger.info('Generated file ID', { fileId });
 
     // Get upload URL directly from MinIO
     const uploadUrl = await getUploadSignedUrl(fileId, mimetype, 15);
+    logger.info('Generated upload URL successfully');
 
     res.json({
       success: true,

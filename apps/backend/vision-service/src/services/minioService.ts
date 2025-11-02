@@ -42,12 +42,12 @@ export interface FileUploadResult {
 /**
  * Generate a secure file ID for storage with organized folder structure
  */
-export const generateFileId = (userId: string, albumId: string, originalFilename: string, groupId?: string): string => {
+export const generateFileId = (userId: string | undefined, albumId: string, originalFilename: string, groupId?: string): string => {
   const timestamp = Date.now();
   const random = Math.random().toString(36).substring(2, 15);
   const extension = originalFilename.split('.').pop();
   // Create organized path: groupId/albumId/fileId/original.extension
-  const topLevelId = groupId || userId;
+  const topLevelId = groupId || userId || 'anonymous';
   const fileId = `${timestamp}-${random}`;
   return `${topLevelId}/${albumId}/${fileId}/original.${extension}`;
 };
@@ -55,11 +55,11 @@ export const generateFileId = (userId: string, albumId: string, originalFilename
 /**
  * Generate a thumbnail file ID for storage with organized folder structure
  */
-export const generateThumbnailFileId = (userId: string, albumId: string, originalFilename: string, groupId?: string): string => {
+export const generateThumbnailFileId = (userId: string | undefined, albumId: string, originalFilename: string, groupId?: string): string => {
   const timestamp = Date.now();
   const random = Math.random().toString(36).substring(2, 15);
   // Create organized path: groupId/albumId/fileId/thumbnail.jpg
-  const topLevelId = groupId || userId;
+  const topLevelId = groupId || userId || 'anonymous';
   const fileId = `${timestamp}-${random}`;
   return `${topLevelId}/${albumId}/${fileId}/thumbnail.jpg`;
 };
@@ -231,7 +231,19 @@ export const getUploadSignedUrl = async (
 ): Promise<string> => {
   const bucketName = getBucketName();
 
+  logger.info(`Generating upload URL for ${fileId} in bucket ${bucketName}`);
+
   try {
+    // Check if bucket exists first
+    const bucketExists = await getMinioClient().bucketExists(bucketName);
+    logger.info(`Bucket ${bucketName} exists: ${bucketExists}`);
+
+    if (!bucketExists) {
+      logger.info(`Creating bucket: ${bucketName}`);
+      await getMinioClient().makeBucket(bucketName, 'us-east-1');
+      logger.info(`Created bucket: ${bucketName}`);
+    }
+
     const expiresInSeconds = expiresInMinutes * 60;
     const signedUrl = await getMinioClient().presignedPutObject(
       bucketName,

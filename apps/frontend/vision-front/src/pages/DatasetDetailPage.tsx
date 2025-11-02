@@ -13,12 +13,18 @@ import {
   Card,
   CardContent,
   CardMedia,
-  Chip
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  IconButton
 } from '@mui/material';
-import { CloudUpload as CloudUploadIcon, ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon } from '@mui/icons-material';
+import { CloudUpload as CloudUploadIcon, ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon, Close as CloseIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getAnalysisById, updateAnalysis } from '../services/analysisService';
-import { getImagesByDataset, DatasetImage } from '../services/datasetImageService';
+import { getAnalysisById, updateAnalysis, deleteAnalysis } from '../services/analysisService';
+import { getImagesByDataset, DatasetImage, deleteDatasetImage } from '../services/datasetImageService';
 import FileUpload from '../components/FileUpload';
 
 const DatasetDetailPage: React.FC = () => {
@@ -32,6 +38,11 @@ const DatasetDetailPage: React.FC = () => {
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [jsonSuccess, setJsonSuccess] = useState<string | null>(null);
   const [jsonExpanded, setJsonExpanded] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<DatasetImage | null>(null);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deletingImageId, setDeletingImageId] = useState<string | null>(null);
 
   const { data: analysis, isLoading, error } = useQuery({
     queryKey: ['analysis', id],
@@ -60,15 +71,9 @@ const DatasetDetailPage: React.FC = () => {
     fileInputRef.current?.click();
   };
 
-  const handleJsonFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-
-    const file = files[0];
-    if (!file.name.endsWith('.json')) {
-      setJsonError('Please select a JSON file');
-      return;
-    }
+    const handleJsonFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
     try {
       setUploadingJson(true);
@@ -98,6 +103,54 @@ const DatasetDetailPage: React.FC = () => {
       setJsonError(err instanceof Error ? err.message : 'Failed to upload JSON data');
     } finally {
       setUploadingJson(false);
+    }
+  };
+
+  const handleImageClick = (image: DatasetImage) => {
+    setSelectedImage(image);
+    setImageModalOpen(true);
+  };
+
+  const handleCloseImageModal = () => {
+    setImageModalOpen(false);
+    setSelectedImage(null);
+  };
+
+  const handleDeleteClick = () => {
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!id) return;
+
+    try {
+      setDeleting(true);
+      await deleteAnalysis(id);
+      navigate('/analysis');
+    } catch (err) {
+      console.error('Failed to delete analysis:', err);
+      // You might want to show an error message here
+    } finally {
+      setDeleting(false);
+      setDeleteDialogOpen(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteDialogOpen(false);
+  };
+
+  const handleDeleteImage = async (imageId: string) => {
+    try {
+      setDeletingImageId(imageId);
+      await deleteDatasetImage(imageId);
+      // Refresh the images list
+      queryClient.invalidateQueries({ queryKey: ['datasetImages', id] });
+    } catch (err) {
+      console.error('Failed to delete image:', err);
+      // You might want to show an error message here
+    } finally {
+      setDeletingImageId(null);
     }
   };
 
@@ -140,6 +193,14 @@ const DatasetDetailPage: React.FC = () => {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<DeleteIcon />}
+            onClick={handleDeleteClick}
+          >
+            Delete
+          </Button>
           <Button
             variant="outlined"
             onClick={() => navigate('/analysis')}
@@ -280,13 +341,43 @@ const DatasetDetailPage: React.FC = () => {
                 >
                   {images.map((image: DatasetImage) => (
                     <Card key={image._id} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                      <CardMedia
-                        component="img"
-                        height="200"
-                        image={image.thumbnailSignedUrl || image.signedUrl}
-                        alt={image.title || image.originalName}
-                        sx={{ objectFit: 'cover' }}
-                      />
+                      <Box sx={{ position: 'relative' }}>
+                        <CardMedia
+                          component="img"
+                          height="200"
+                          image={image.thumbnailSignedUrl || image.signedUrl}
+                          alt={image.title || image.originalName}
+                          sx={{ objectFit: 'cover', cursor: 'pointer' }}
+                          onClick={() => handleImageClick(image)}
+                        />
+                        <IconButton
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteImage(image._id);
+                          }}
+                          disabled={deletingImageId === image._id}
+                          sx={{
+                            position: 'absolute',
+                            top: 8,
+                            right: 8,
+                            bgcolor: 'rgba(244, 67, 54, 0.8)',
+                            color: 'white',
+                            '&:hover': {
+                              bgcolor: 'rgba(211, 47, 47, 0.9)',
+                            },
+                            '&:disabled': {
+                              bgcolor: 'rgba(244, 67, 54, 0.4)',
+                            },
+                          }}
+                          size="small"
+                        >
+                          {deletingImageId === image._id ? (
+                            <CircularProgress size={16} color="inherit" />
+                          ) : (
+                            <DeleteIcon fontSize="small" />
+                          )}
+                        </IconButton>
+                      </Box>
                       <CardContent sx={{ flexGrow: 1 }}>
                         <Typography variant="subtitle2" noWrap>
                           {image.title || image.originalName}
@@ -321,6 +412,77 @@ const DatasetDetailPage: React.FC = () => {
         onClose={() => setShowUploadDialog(false)}
         onUploadComplete={handleUploadComplete}
       />
+
+      {/* Image Modal */}
+      <Dialog
+        open={imageModalOpen}
+        onClose={handleCloseImageModal}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogContent sx={{ p: 0, position: 'relative' }}>
+          <IconButton
+            onClick={handleCloseImageModal}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              bgcolor: 'rgba(0, 0, 0, 0.5)',
+              color: 'white',
+              '&:hover': {
+                bgcolor: 'rgba(0, 0, 0, 0.7)',
+              },
+              zIndex: 1,
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+          {selectedImage && (
+            <Box
+              component="img"
+              src={selectedImage.signedUrl}
+              alt={selectedImage.title || selectedImage.originalName}
+              sx={{
+                width: '100%',
+                height: 'auto',
+                maxHeight: '80vh',
+                objectFit: 'contain',
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleDeleteCancel}
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-description"
+      >
+        <DialogTitle id="delete-dialog-title">
+          Delete Dataset Analysis
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="delete-dialog-description">
+            Are you sure you want to delete the dataset analysis "{analysis?.dataset}"? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteCancel} disabled={deleting}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDeleteConfirm}
+            color="error"
+            variant="contained"
+            disabled={deleting}
+            startIcon={deleting ? <CircularProgress size={20} color="inherit" /> : <DeleteIcon />}
+          >
+            {deleting ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
