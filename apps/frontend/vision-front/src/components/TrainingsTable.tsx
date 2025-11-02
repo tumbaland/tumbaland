@@ -41,9 +41,9 @@ interface TrainingsTableProps {
   selectedTrainingIds: Set<string>;
   onSelectTraining: (trainingId: string) => void;
   onSelectAll: () => void;
-  sortBy: 'name' | 'createdAt' | 'updatedAt' | 'status' | 'totalTime' | 'cpuCost' | 'gpuCost' | 'totalCost';
+  sortBy: 'name' | 'createdAt' | 'updatedAt' | 'status' | 'totalTime' | 'cpuCost' | 'gpuCost' | 'totalCost' | 'epochCount';
   sortOrder: 'asc' | 'desc';
-  onSort: (column: 'name' | 'createdAt' | 'updatedAt' | 'status' | 'totalTime' | 'cpuCost' | 'gpuCost' | 'totalCost') => void;
+  onSort: (column: 'name' | 'createdAt' | 'updatedAt' | 'status' | 'totalTime' | 'cpuCost' | 'gpuCost' | 'totalCost' | 'epochCount') => void;
 }
 
 const getStatusColor = (status: Training['status']): 'success' | 'error' | 'default' | 'warning' => {
@@ -92,10 +92,10 @@ const formatDuration = (seconds: number) => {
 
 interface SortableTableCellProps {
   children: React.ReactNode;
-  column: 'name' | 'createdAt' | 'updatedAt' | 'status' | 'totalTime' | 'cpuCost' | 'gpuCost' | 'totalCost';
-  sortBy: 'name' | 'createdAt' | 'updatedAt' | 'status' | 'totalTime' | 'cpuCost' | 'gpuCost' | 'totalCost';
+  column: 'name' | 'createdAt' | 'updatedAt' | 'status' | 'totalTime' | 'cpuCost' | 'gpuCost' | 'totalCost' | 'epochCount';
+  sortBy: 'name' | 'createdAt' | 'updatedAt' | 'status' | 'totalTime' | 'cpuCost' | 'gpuCost' | 'totalCost' | 'epochCount';
   sortOrder: 'asc' | 'desc';
-  onSort: (column: 'name' | 'createdAt' | 'updatedAt' | 'status' | 'totalTime' | 'cpuCost' | 'gpuCost' | 'totalCost') => void;
+  onSort: (column: 'name' | 'createdAt' | 'updatedAt' | 'status' | 'totalTime' | 'cpuCost' | 'gpuCost' | 'totalCost' | 'epochCount') => void;
   align?: 'left' | 'center' | 'right';
 }
 
@@ -196,6 +196,9 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
               <SortableTableCell column="status" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} align="center">
                 Status
               </SortableTableCell>
+              <SortableTableCell column="epochCount" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} align="center">
+                Epochs
+              </SortableTableCell>
               <SortableTableCell column="totalTime" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort} align="center">
                 Time
               </SortableTableCell>
@@ -282,6 +285,11 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
                     size="small"
                     sx={{ textTransform: 'capitalize' }}
                   />
+                </TableCell>
+                <TableCell align="center">
+                  <Typography variant="body2" color="text.secondary">
+                    {training.metrics ? training.metrics.epochCount : 0}
+                  </Typography>
                 </TableCell>
                 <TableCell align="center">
                   <Typography variant="body2" color="text.secondary">

@@ -52,7 +52,7 @@ export const getTrainings = async (req: Request, res: Response): Promise<void> =
     const CPU_RATE_PER_HOUR = 0.006;
     const GPU_RATE_PER_HOUR = 0.20;
 
-    if (['totalTime', 'cpuCost', 'gpuCost', 'totalCost'].includes(sortBy as string)) {
+    if (['totalTime', 'cpuCost', 'gpuCost', 'totalCost', 'epochCount'].includes(sortBy as string)) {
       // For metrics-based sorting, we need to get all trainings and sort in memory
       const allTrainings = await Training.find(query);
       total = allTrainings.length;
@@ -115,6 +115,10 @@ export const getTrainings = async (req: Request, res: Response): Promise<void> =
           case 'totalCost':
             aValue = a.metrics?.totalCost || 0;
             bValue = b.metrics?.totalCost || 0;
+            break;
+          case 'epochCount':
+            aValue = a.metrics?.epochCount || 0;
+            bValue = b.metrics?.epochCount || 0;
             break;
           default:
             aValue = 0;

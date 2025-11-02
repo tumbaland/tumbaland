@@ -196,6 +196,9 @@ export const createEpoch = async (req: Request, res: Response): Promise<void> =>
 
     const savedEpoch = await epochData.save();
 
+    // Update training's updatedAt timestamp
+    await Training.findByIdAndUpdate(trainingId, { updatedAt: new Date() });
+
     res.status(201).json({
       success: true,
       message: 'Epoch created successfully',
@@ -381,6 +384,9 @@ export const createEpochFromJson = async (req: Request, res: Response): Promise<
 
     const savedEpoch = await epochData.save();
 
+    // Update training's updatedAt timestamp
+    await Training.findByIdAndUpdate(trainId, { updatedAt: new Date() });
+
     res.status(201).json({
       success: true,
       message: 'Epoch created successfully',
@@ -422,6 +428,13 @@ export const createEpochsBatch = async (req: Request, res: Response): Promise<vo
     });
 
     const savedEpochs = await Epoch.insertMany(preparedEpochs);
+
+    // Update updatedAt timestamp for all unique trainings
+    const uniqueTrainingIds = [...new Set(preparedEpochs.map(epoch => epoch.trainingId))];
+    await Training.updateMany(
+      { _id: { $in: uniqueTrainingIds } },
+      { updatedAt: new Date() }
+    );
 
     res.status(201).json({
       success: true,

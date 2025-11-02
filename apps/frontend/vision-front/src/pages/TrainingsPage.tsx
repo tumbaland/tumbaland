@@ -36,7 +36,7 @@ const TrainingsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'name' | 'createdAt' | 'updatedAt' | 'status' | 'totalTime' | 'cpuCost' | 'gpuCost' | 'totalCost'>('updatedAt');
+  const [sortBy, setSortBy] = useState<'name' | 'createdAt' | 'updatedAt' | 'status' | 'totalTime' | 'cpuCost' | 'gpuCost' | 'totalCost' | 'epochCount'>('updatedAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [trainingName, setTrainingName] = useState('');
@@ -160,7 +160,7 @@ const TrainingsPage: React.FC = () => {
     setPage(0);
   };
 
-  const handleSort = (column: 'name' | 'createdAt' | 'updatedAt' | 'status' | 'totalTime' | 'cpuCost' | 'gpuCost' | 'totalCost') => {
+  const handleSort = (column: 'name' | 'createdAt' | 'updatedAt' | 'status' | 'totalTime' | 'cpuCost' | 'gpuCost' | 'totalCost' | 'epochCount') => {
     if (sortBy === column) {
       // Toggle sort order if same column
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
