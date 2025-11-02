@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.253](https://github.com/toomastahves/tumbaland/compare/v0.0.252...v0.0.253) (2025-11-02)
+
+
+### Features
+
+* add minio integration ([2e5d023](https://github.com/toomastahves/tumbaland/commit/2e5d023f60fd96bc1b8d1b26aaf4cf79fd3206c2))
+
 ### [0.0.252](https://github.com/toomastahves/tumbaland/compare/v0.0.251...v0.0.252) (2025-11-01)
 
 
