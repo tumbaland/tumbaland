@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.254](https://github.com/toomastahves/tumbaland/compare/v0.0.253...v0.0.254) (2025-11-02)
+
+
+### Bug Fixes
+
+* file upload ([870774e](https://github.com/toomastahves/tumbaland/commit/870774ef8ea1b8a2d6470bffac04f44bc8e4f303))
+
 ### [0.0.253](https://github.com/toomastahves/tumbaland/compare/v0.0.252...v0.0.253) (2025-11-02)
 
 
