@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.256](https://github.com/toomastahves/tumbaland/compare/v0.0.255...v0.0.256) (2025-11-02)
+
+
+### Features
+
+* update training and show epochs ([20fe3c4](https://github.com/toomastahves/tumbaland/commit/20fe3c427ddb5a2efa2833485b6698b6cdacf43f))
+
 ### [0.0.255](https://github.com/toomastahves/tumbaland/compare/v0.0.254...v0.0.255) (2025-11-02)
 
 
