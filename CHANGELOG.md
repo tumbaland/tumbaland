@@ -1,4 +1,12 @@
 # Tumbalog
+### [0.0.255](https://github.com/toomastahves/tumbaland/compare/v0.0.254...v0.0.255) (2025-11-02)
+
+
+### Features
+
+* add vision to sidemenu ([5afbae6](https://github.com/toomastahves/tumbaland/commit/5afbae6b630f781ea70366fcb626760c0f1d8173))
+* update docs ([a45633a](https://github.com/toomastahves/tumbaland/commit/a45633af65085df4da323ad5073ade862f3e3b93))
+
 ### [0.0.254](https://github.com/toomastahves/tumbaland/compare/v0.0.253...v0.0.254) (2025-11-02)
 
 
