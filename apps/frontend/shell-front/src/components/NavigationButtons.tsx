@@ -26,9 +26,9 @@ export function NavigationButtons({
 
   const isActiveRoute = (route: string) => currentRoute === route;
 
-  const handleNavigation = (route: string) => {
-    navigate(route);
-    onRouteChange?.(route);
+  const handleNavigation = (item: NavigationItem) => {
+    navigate(item.route);
+    onRouteChange?.(item.route);
   };
 
   if (variant === 'icons') {
@@ -42,7 +42,7 @@ export function NavigationButtons({
               key={item.key}
               aria-label={item.label}
               color={isActiveRoute(item.route) ? 'primary' : 'inherit'}
-              onClick={() => handleNavigation(item.route)}
+              onClick={() => handleNavigation(item)}
               size="large"
             >
               <IconComponent />
@@ -62,7 +62,7 @@ export function NavigationButtons({
           <Button
             key={item.key}
             color={isActiveRoute(item.route) ? 'primary' : 'inherit'}
-            onClick={() => handleNavigation(item.route)}
+            onClick={() => handleNavigation(item)}
             startIcon={<IconComponent />}
             sx={{ textTransform: 'none' }}
           >

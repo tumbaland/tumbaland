@@ -11,6 +11,7 @@ import IconButton from '@mui/material/IconButton';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import { APPS } from '../config/apps';
+import { AppConfigItem } from '../config/apps';
 
 interface SideMenuProps {
   currentRoute?: string;
@@ -22,8 +23,12 @@ export function SideMenu({ currentRoute }: SideMenuProps) {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const handleAppClick = (route: string) => {
-    navigate(route);
+  const handleAppClick = (app: AppConfigItem) => {
+    if (app.external) {
+      window.open(app.route, '_blank');
+    } else {
+      navigate(app.route);
+    }
     if (isMobile) setMobileOpen(false);
   };
 
@@ -58,7 +63,7 @@ export function SideMenu({ currentRoute }: SideMenuProps) {
             <Tooltip key={app.name} title={app.name} placement="right" arrow>
               <ListItem disablePadding>
                 <ListItemButton
-                  onClick={() => handleAppClick(app.route)}
+                  onClick={() => handleAppClick(app)}
                   sx={{
                     justifyContent: 'center',
                     minHeight: 56,
@@ -151,7 +156,7 @@ export function SideMenu({ currentRoute }: SideMenuProps) {
                     <ListItemButton
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleAppClick(app.route);
+                        handleAppClick(app);
                       }}
                       sx={{
                         justifyContent: 'center',
