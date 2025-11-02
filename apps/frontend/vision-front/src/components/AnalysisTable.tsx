@@ -18,14 +18,19 @@ import {
   Alert,
   Checkbox,
   Tooltip,
-  IconButton
+  IconButton,
+  TextField
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
-  Compare as CompareIcon
+  Compare as CompareIcon,
+  Edit as EditIcon,
+  ArrowUpward as ArrowUpwardIcon,
+  ArrowDownward as ArrowDownwardIcon
 } from '@mui/icons-material';
-import { getAllAnalyses, DatasetAnalysis, deleteAnalysis } from '../services/analysisService';
+import { useNavigate } from 'react-router-dom';
+import { getAllAnalyses, DatasetAnalysis, deleteAnalysis, updateAnalysis } from '../services/analysisService';
 
 interface AnalysisTableProps {
   selectedAnalysisIds?: Set<string>;
@@ -40,12 +45,18 @@ export const AnalysisTable: React.FC<AnalysisTableProps> = ({
   onSelectAll = () => {},
   onCompareSelected = () => {}
 }) => {
+  const navigate = useNavigate();
   const [analyses, setAnalyses] = useState<DatasetAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedAnalysis, setSelectedAnalysis] = useState<DatasetAnalysis | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [newDatasetName, setNewDatasetName] = useState('');
+  const [sortField, setSortField] = useState<'dataset' | 'createdAt' | 'updatedAt'>('createdAt');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     loadAnalyses();
@@ -62,14 +73,6 @@ export const AnalysisTable: React.FC<AnalysisTableProps> = ({
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleOpenDetails = (analysis: DatasetAnalysis) => {
-    setSelectedAnalysis(analysis);
-  };
-
-  const handleCloseDetails = () => {
-    setSelectedAnalysis(null);
   };
 
   const handleDeleteClick = (analysis: DatasetAnalysis) => {
@@ -96,6 +99,88 @@ export const AnalysisTable: React.FC<AnalysisTableProps> = ({
   const handleCancelDelete = () => {
     setDeleteConfirmOpen(false);
   };
+
+  const handleEditClick = (analysis: DatasetAnalysis) => {
+    setSelectedAnalysis(analysis);
+    setNewDatasetName(analysis.dataset);
+    setEditDialogOpen(true);
+  };
+
+  const handleEditConfirm = async () => {
+    if (!selectedAnalysis || !newDatasetName.trim()) return;
+
+    try {
+      setEditLoading(true);
+      await updateAnalysis(selectedAnalysis._id, {
+        dataset: newDatasetName.trim(),
+        data: selectedAnalysis.data
+      });
+      
+      // Update the local state
+      setAnalyses(analyses.map(a => 
+        a._id === selectedAnalysis._id 
+          ? { ...a, dataset: newDatasetName.trim() }
+          : a
+      ));
+      
+      setEditDialogOpen(false);
+      setSelectedAnalysis(null);
+      setNewDatasetName('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update analysis');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleEditCancel = () => {
+    setEditDialogOpen(false);
+    setSelectedAnalysis(null);
+    setNewDatasetName('');
+  };
+
+  const handleSort = (field: 'dataset' | 'createdAt' | 'updatedAt') => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New field, default to ascending except for dates which default to descending
+      setSortField(field);
+      setSortDirection(field === 'createdAt' || field === 'updatedAt' ? 'desc' : 'asc');
+    }
+  };
+
+  const sortedAnalyses = React.useMemo(() => {
+    return [...analyses].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortField) {
+        case 'dataset':
+          aValue = a.dataset.toLowerCase();
+          bValue = b.dataset.toLowerCase();
+          break;
+        case 'createdAt':
+          aValue = new Date(a.createdAt).getTime();
+          bValue = new Date(b.createdAt).getTime();
+          break;
+        case 'updatedAt':
+          aValue = new Date(a.updatedAt).getTime();
+          bValue = new Date(b.updatedAt).getTime();
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) {
+        return sortDirection === 'asc' ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortDirection === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+  }, [analyses, sortField, sortDirection]);
 
   if (loading) {
     return <CircularProgress />;
@@ -137,38 +222,44 @@ export const AnalysisTable: React.FC<AnalysisTableProps> = ({
               <TableCell padding="checkbox" sx={{ fontWeight: 'bold' }}>
                 <Checkbox
                   indeterminate={
-                    selectedAnalysisIds.size > 0 && selectedAnalysisIds.size < analyses.length
+                    selectedAnalysisIds.size > 0 && selectedAnalysisIds.size < sortedAnalyses.length
                   }
-                  checked={analyses.length > 0 && selectedAnalysisIds.size === analyses.length}
+                  checked={sortedAnalyses.length > 0 && selectedAnalysisIds.size === sortedAnalyses.length}
                   onChange={() => {
-                    if (selectedAnalysisIds.size === analyses.length) {
+                    if (selectedAnalysisIds.size === sortedAnalyses.length) {
                       // Deselect all
                       onSelectAll?.([]);
                     } else {
                       // Select all
-                      onSelectAll?.(analyses.map(a => a._id));
+                      onSelectAll?.(sortedAnalyses.map(a => a._id));
                     }
                   }}
-                  disabled={analyses.length === 0}
+                  disabled={sortedAnalyses.length === 0}
                 />
               </TableCell>
-              <TableCell>
-                <strong>Dataset</strong>
+              <TableCell sx={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('dataset')}>
+                <Box sx={{ display: 'flex', alignItems: 'center', fontWeight: 'bold' }}>
+                  Dataset
+                  {sortField === 'dataset' && (
+                    sortDirection === 'asc' ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />
+                  )}
+                </Box>
               </TableCell>
-              <TableCell align="right">
-                <strong>Frames</strong>
+              <TableCell sx={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('createdAt')}>
+                <Box sx={{ display: 'flex', alignItems: 'center', fontWeight: 'bold' }}>
+                  Created At
+                  {sortField === 'createdAt' && (
+                    sortDirection === 'asc' ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />
+                  )}
+                </Box>
               </TableCell>
-              <TableCell align="right">
-                <strong>Total Pixels</strong>
-              </TableCell>
-              <TableCell align="right">
-                <strong>Classes</strong>
-              </TableCell>
-              <TableCell>
-                <strong>Dimensions</strong>
-              </TableCell>
-              <TableCell>
-                <strong>Timestamp</strong>
+              <TableCell sx={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => handleSort('updatedAt')}>
+                <Box sx={{ display: 'flex', alignItems: 'center', fontWeight: 'bold' }}>
+                  Updated At
+                  {sortField === 'updatedAt' && (
+                    sortDirection === 'asc' ? <ArrowUpwardIcon fontSize="small" /> : <ArrowDownwardIcon fontSize="small" />
+                  )}
+                </Box>
               </TableCell>
               <TableCell align="center">
                 <strong>Actions</strong>
@@ -176,14 +267,14 @@ export const AnalysisTable: React.FC<AnalysisTableProps> = ({
             </TableRow>
           </TableHead>
           <TableBody>
-            {analyses.length === 0 ? (
+            {sortedAnalyses.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} align="center">
+                <TableCell colSpan={5} align="center">
                   No analyses found
                 </TableCell>
               </TableRow>
             ) : (
-              analyses.map((analysis) => (
+              sortedAnalyses.map((analysis) => (
                 <TableRow
                   key={analysis._id}
                   hover
@@ -201,20 +292,22 @@ export const AnalysisTable: React.FC<AnalysisTableProps> = ({
                     />
                   </TableCell>
                   <TableCell>{analysis.dataset}</TableCell>
-                  <TableCell align="right">{analysis.total_frames.toLocaleString()}</TableCell>
-                  <TableCell align="right">
-                    {(analysis.total_pixels / 1000000).toFixed(2)}M
-                  </TableCell>
-                  <TableCell align="right">{analysis.total_classes}</TableCell>
-                  <TableCell>
-                    {analysis.image_dimensions.width}x{analysis.image_dimensions.height}
-                  </TableCell>
-                  <TableCell>{new Date(analysis.timestamp).toLocaleString()}</TableCell>
+                  <TableCell>{new Date(analysis.createdAt).toLocaleString()}</TableCell>
+                  <TableCell>{new Date(analysis.updatedAt).toLocaleString()}</TableCell>
                   <TableCell align="center">
+                    <Tooltip title="Edit dataset name">
+                      <IconButton
+                        size="small"
+                        onClick={() => handleEditClick(analysis)}
+                        disabled={deleteLoading}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                     <Tooltip title="View analysis details">
                       <IconButton
                         size="small"
-                        onClick={() => handleOpenDetails(analysis)}
+                        onClick={() => navigate(`/analysis/${analysis._id}`)}
                       >
                         <VisibilityIcon fontSize="small" />
                       </IconButton>
@@ -237,83 +330,6 @@ export const AnalysisTable: React.FC<AnalysisTableProps> = ({
         </Table>
       </TableContainer>
 
-      {/* Details Dialog */}
-      <Dialog open={!!selectedAnalysis && !deleteConfirmOpen} onClose={handleCloseDetails} maxWidth="lg" fullWidth>
-        <DialogTitle>Analysis Details - {selectedAnalysis?.dataset}</DialogTitle>
-        <DialogContent>
-          {selectedAnalysis && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Overview
-              </Typography>
-              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, mb: 3 }}>
-                <Box>
-                  <Typography color="textSecondary">Frames:</Typography>
-                  <Typography variant="h6">{selectedAnalysis.total_frames.toLocaleString()}</Typography>
-                </Box>
-                <Box>
-                  <Typography color="textSecondary">Total Pixels:</Typography>
-                  <Typography variant="h6">
-                    {(selectedAnalysis.total_pixels / 1000000).toFixed(2)}M
-                  </Typography>
-                </Box>
-                <Box>
-                  <Typography color="textSecondary">Classes:</Typography>
-                  <Typography variant="h6">{selectedAnalysis.total_classes}</Typography>
-                </Box>
-                <Box>
-                  <Typography color="textSecondary">Dimensions:</Typography>
-                  <Typography variant="h6">
-                    {selectedAnalysis.image_dimensions.width}x{selectedAnalysis.image_dimensions.height}
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Class Analysis
-              </Typography>
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                      <TableCell>
-                        <strong>Class Name</strong>
-                      </TableCell>
-                      <TableCell align="right">
-                        <strong>Pixels</strong>
-                      </TableCell>
-                      <TableCell align="right">
-                        <strong>% of Total</strong>
-                      </TableCell>
-                      <TableCell align="right">
-                        <strong>Frames</strong>
-                      </TableCell>
-                      <TableCell align="right">
-                        <strong>Frame Coverage</strong>
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {selectedAnalysis.class_analysis.map((cls) => (
-                      <TableRow key={cls.class_id}>
-                        <TableCell>{cls.name}</TableCell>
-                        <TableCell align="right">{cls.total_pixels.toLocaleString()}</TableCell>
-                        <TableCell align="right">{cls.pixel_percentage.toFixed(4)}%</TableCell>
-                        <TableCell align="right">{cls.frames_with_class.toLocaleString()}</TableCell>
-                        <TableCell align="right">{cls.frame_coverage_percentage.toFixed(2)}%</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDetails}>Close</Button>
-        </DialogActions>
-      </Dialog>
-
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmOpen} onClose={handleCancelDelete}>
         <DialogTitle>Delete Analysis</DialogTitle>
@@ -329,6 +345,35 @@ export const AnalysisTable: React.FC<AnalysisTableProps> = ({
             disabled={deleteLoading}
           >
             {deleteLoading ? <CircularProgress size={24} /> : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Dataset Name Dialog */}
+      <Dialog open={editDialogOpen} onClose={handleEditCancel} maxWidth="sm" fullWidth>
+        <DialogTitle>Edit Dataset Name</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Dataset Name"
+            fullWidth
+            variant="outlined"
+            value={newDatasetName}
+            onChange={(e) => setNewDatasetName(e.target.value)}
+            disabled={editLoading}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleEditCancel} disabled={editLoading}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleEditConfirm}
+            variant="contained"
+            disabled={editLoading || !newDatasetName.trim()}
+          >
+            {editLoading ? <CircularProgress size={24} /> : 'Update'}
           </Button>
         </DialogActions>
       </Dialog>

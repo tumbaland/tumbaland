@@ -9,6 +9,7 @@ import epochRoutes from './routes/epochRoutes';
 import configRoutes from './routes/configRoutes';
 import analysisRoutes from './routes/analysisRoutes';
 import commentRoutes from './routes/commentRoutes';
+import datasetImageRoutes from './routes/datasetImageRoutes';
 import { healthCheck } from './controllers/healthController';
 import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware } from '@tumbaland/core';
 
@@ -40,6 +41,7 @@ app.use('/api/epochs', epochRoutes);
 app.use('/api/configs', configRoutes);
 app.use('/api/analysis', analysisRoutes);
 app.use('/api/comments', commentRoutes);
+app.use('/api/dataset-images', datasetImageRoutes);
 
 // Serve OpenAPI docs as static files
 app.use('/api/docs', express.static(path.join(__dirname, '../docs')));

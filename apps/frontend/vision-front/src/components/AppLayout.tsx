@@ -76,7 +76,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 '&:hover': { background: 'rgba(0,0,0,0.04)' }
               }}
             >
-              Analysis
+              Datasets
             </Button>
           </Box>
         </Toolbar>

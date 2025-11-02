@@ -159,7 +159,7 @@ export const TrainingFormDialog: React.FC<TrainingFormDialogProps> = ({
             </MenuItem>
             {datasets.map((dataset: DatasetAnalysis) => (
               <MenuItem key={dataset._id} value={dataset._id}>
-                {dataset.dataset} ({dataset.total_frames} frames, {dataset.total_classes} classes)
+                {dataset.dataset} ({dataset.data?.total_frames || 0} frames, {dataset.data?.total_classes || 0} classes)
               </MenuItem>
             ))}
           </Select>

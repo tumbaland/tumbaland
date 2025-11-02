@@ -11,29 +11,23 @@ export const uploadAnalysis = async (req: Request, res: Response): Promise<void>
     const analysisData = req.body;
 
     // Validate required fields
-    if (!analysisData.dataset || !analysisData.timestamp) {
+    if (!analysisData.dataset) {
       res.status(400).json({
-        error: 'Missing required fields: dataset, timestamp'
+        error: 'Missing required field: dataset'
       });
       return;
     }
 
     // Create new analysis record
     const analysis = new DatasetAnalysis({
-      timestamp: new Date(analysisData.timestamp),
       dataset: analysisData.dataset,
-      total_frames: analysisData.total_frames,
-      total_pixels: analysisData.total_pixels,
-      total_classes: analysisData.total_classes,
-      image_dimensions: analysisData.image_dimensions,
-      class_analysis: analysisData.class_analysis
+      data: analysisData.data || {} // Allow empty data initially
     });
 
     await analysis.save();
 
     logger.info(`Dataset analysis uploaded: ${analysisData.dataset}`, {
-      id: analysis._id,
-      frames: analysisData.total_frames
+      id: analysis._id
     });
 
     res.status(201).json({
@@ -106,6 +100,56 @@ export const getAnalysisById = async (req: Request, res: Response): Promise<void
     logger.error('Failed to fetch analysis:', error);
     res.status(500).json({
       error: 'Failed to fetch analysis',
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
+};
+
+/**
+ * Update analysis by ID
+ * PUT /analysis/:id
+ */
+export const updateAnalysis = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    // Validate required fields
+    if (!updateData.dataset) {
+      res.status(400).json({
+        error: 'Missing required field: dataset'
+      });
+      return;
+    }
+
+    const analysis = await DatasetAnalysis.findByIdAndUpdate(
+      id,
+      {
+        dataset: updateData.dataset,
+        data: updateData.data || {}
+      },
+      { new: true }
+    );
+
+    if (!analysis) {
+      res.status(404).json({
+        error: 'Analysis not found'
+      });
+      return;
+    }
+
+    logger.info(`Dataset analysis updated: ${analysis._id}`, {
+      dataset: analysis.dataset
+    });
+
+    res.json({
+      message: 'Analysis updated successfully',
+      data: analysis
+    });
+  } catch (error) {
+    logger.error('Failed to update analysis:', error);
+    res.status(500).json({
+      error: 'Failed to update analysis',
       message: error instanceof Error ? error.message : String(error)
     });
   }
@@ -207,27 +251,10 @@ export const compareAnalyses = async (req: Request, res: Response): Promise<void
         analysis: {
           _id: analysis._id,
           dataset: analysis.dataset,
-          timestamp: analysis.timestamp,
           createdAt: analysis.createdAt,
           updatedAt: analysis.updatedAt
         },
-        metrics: {
-          totalFrames: analysis.total_frames,
-          totalPixels: analysis.total_pixels,
-          totalClasses: analysis.total_classes,
-          imageDimensions: analysis.image_dimensions,
-          pixelsPerFrame: analysis.total_frames > 0 ? analysis.total_pixels / analysis.total_frames : 0,
-          classesPerFrame: analysis.total_frames > 0 ? analysis.total_classes / analysis.total_frames : 0
-        },
-        classAnalysis: analysis.class_analysis.map(cls => ({
-          name: cls.name,
-          classId: cls.class_id,
-          totalPixels: cls.total_pixels,
-          pixelPercentage: cls.pixel_percentage,
-          framesWithClass: cls.frames_with_class,
-          frameCoveragePercentage: cls.frame_coverage_percentage,
-          avgPixelsPerFrame: cls.avg_pixels_per_frame
-        }))
+        data: analysis.data
       };
     });
 

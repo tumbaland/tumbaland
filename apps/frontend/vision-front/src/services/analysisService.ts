@@ -1,20 +1,5 @@
 import { getGlobalConfig } from '../config/ConfigProvider';
 
-export interface ClassAnalysis {
-  name: string;
-  class_id: number;
-  total_pixels: number;
-  pixel_percentage: number;
-  frames_with_class: number;
-  frame_coverage_percentage: number;
-  avg_pixels_per_frame: number;
-}
-
-export interface ImageDimensions {
-  width: number;
-  height: number;
-}
-
 export interface AnalysisResponse {
   data: DatasetAnalysis[];
   pagination: {
@@ -26,13 +11,8 @@ export interface AnalysisResponse {
 
 export interface DatasetAnalysis {
   _id: string;
-  timestamp: string;
   dataset: string;
-  total_frames: number;
-  total_pixels: number;
-  total_classes: number;
-  image_dimensions: ImageDimensions;
-  class_analysis: ClassAnalysis[];
+  data: any; // Dynamic JSON structure
   createdAt: string;
   updatedAt: string;
 }
@@ -44,27 +24,10 @@ export interface AnalysisComparisonResponse {
       analysis: {
         _id: string;
         dataset: string;
-        timestamp: string;
         createdAt: string;
         updatedAt: string;
       };
-      metrics: {
-        totalFrames: number;
-        totalPixels: number;
-        totalClasses: number;
-        imageDimensions: ImageDimensions;
-        pixelsPerFrame: number;
-        classesPerFrame: number;
-      };
-      classAnalysis: Array<{
-        name: string;
-        classId: number;
-        totalPixels: number;
-        pixelPercentage: number;
-        framesWithClass: number;
-        frameCoveragePercentage: number;
-        avgPixelsPerFrame: number;
-      }>;
+      data: any; // Dynamic JSON data
     }>;
     summary: {
       totalAnalyses: number;
@@ -91,6 +54,30 @@ export const uploadAnalysis = async (analysisData: any): Promise<DatasetAnalysis
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.message || 'Failed to upload analysis');
+  }
+
+  const data = await response.json();
+  return data.data;
+};
+
+/**
+ * Create new dataset analysis (without data initially)
+ */
+export const createAnalysis = async (datasetName: string): Promise<DatasetAnalysis> => {
+  const config = getGlobalConfig();
+  const apiUrl = config.VISION_API_URL || 'https://vision-api.tumbaland.eu';
+  
+  const response = await fetch(`${apiUrl}/api/analysis/upload`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ dataset: datasetName })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to create analysis');
   }
 
   const data = await response.json();
@@ -173,6 +160,30 @@ export const getAnalysisById = async (id: string): Promise<DatasetAnalysis> => {
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.message || 'Failed to fetch analysis');
+  }
+
+  const data = await response.json();
+  return data.data;
+};
+
+/**
+ * Update analysis by ID
+ */
+export const updateAnalysis = async (id: string, analysisData: any): Promise<DatasetAnalysis> => {
+  const config = getGlobalConfig();
+  const apiUrl = config.VISION_API_URL || 'https://vision-api.tumbaland.eu';
+  
+  const response = await fetch(`${apiUrl}/api/analysis/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(analysisData)
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to update analysis');
   }
 
   const data = await response.json();

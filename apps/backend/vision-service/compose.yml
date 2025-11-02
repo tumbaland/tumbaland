@@ -13,6 +13,13 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - NODE_ENV=production
       - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN}
+      # MinIO configuration (Album Service - Direct access to album buckets)
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_PORT=443
+      - MINIO_USE_SSL=true
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET=vision
     init: true
     networks:
       - tumbanet

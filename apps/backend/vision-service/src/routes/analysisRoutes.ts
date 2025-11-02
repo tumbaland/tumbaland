@@ -3,6 +3,7 @@ import {
   uploadAnalysis,
   getAllAnalyses,
   getAnalysisById,
+  updateAnalysis,
   getAnalysisByDataset,
   deleteAnalysis,
   compareAnalyses
@@ -21,6 +22,9 @@ router.get('/dataset/:name', getAnalysisByDataset);
 
 // GET /analysis/:id - Get analysis by ID
 router.get('/:id', getAnalysisById);
+
+// PUT /analysis/:id - Update analysis
+router.put('/:id', updateAnalysis);
 
 // DELETE /analysis/:id - Delete analysis
 router.delete('/:id', deleteAnalysis);
