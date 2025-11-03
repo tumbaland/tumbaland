@@ -1,289 +1,1634 @@
 openapi: 3.0.3
 info:
   title: Album Service API
+  description: API for managing photo albums, photos, collages, and related operations
   version: 1.0.0
-  description: API documentation for the Album Service
+  contact:
+    name: Tumbaland Team
 servers:
-  - url: /api
-tags:
-  - name: Collage
-    description: Operations related to collages
-  - name: Album
-    description: Operations related to albums
-  - name: Photo
-    description: Operations related to photos
-paths:
-  /collages:
-    get:
-      tags:
-        - Collage
-      summary: Get all collages
-      responses:
-        '200':
-          description: List of collages
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  collages:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Collage'
-    post:
-      tags:
-        - Collage
-      summary: Create a new collage
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CollageInput'
-      responses:
-        '201':
-          description: Collage created
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  collage:
-                    $ref: '#/components/schemas/Collage'
-  /collages/{id}:
-    get:
-      tags:
-        - Collage
-      summary: Get collage by ID
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Collage details
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  collage:
-                    $ref: '#/components/schemas/Collage'
-    put:
-      tags:
-        - Collage
-      summary: Update collage by ID
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CollageInput'
-      responses:
-        '200':
-          description: Collage updated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  collage:
-                    $ref: '#/components/schemas/Collage'
-    delete:
-      tags:
-        - Collage
-      summary: Delete collage by ID
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: Collage deleted
-  /albums:
-    get:
-      tags:
-        - Album
-      summary: Get all albums
-      responses:
-        '200':
-          description: List of albums
-    post:
-      tags:
-        - Album
-      summary: Create a new album
-      responses:
-        '201':
-          description: Album created
-  /albums/{id}:
-    get:
-      tags:
-        - Album
-      summary: Get album by ID
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Album details
-    put:
-      tags:
-        - Album
-      summary: Update album by ID
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Album updated
-    delete:
-      tags:
-        - Album
-      summary: Delete album by ID
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: Album deleted
-  /photos:
-    get:
-      tags:
-        - Photo
-      summary: Get all photos
-      responses:
-        '200':
-          description: List of photos
-    post:
-      tags:
-        - Photo
-      summary: Upload a new photo
-      responses:
-        '201':
-          description: Photo uploaded
-  /photos/{id}:
-    get:
-      tags:
-        - Photo
-      summary: Get photo by ID
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Photo details
-    delete:
-      tags:
-        - Photo
-      summary: Delete photo by ID
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: Photo deleted
+  - url: http://localhost:4002/api
+    description: Development server
+  - url: https://album-api.tumbaland.eu/api
+    description: Production server
+
 components:
   schemas:
-    CollageConfig:
+    Error:
       type: object
       properties:
-        version:
+        success:
+          type: boolean
+          example: false
+        message:
           type: string
-        date:
+          example: "Error description"
+      required:
+        - success
+        - message
+
+    Album:
+      type: object
+      properties:
+        _id:
           type: string
-        viewport:
-          type: object
-          properties:
-            width:
-              type: integer
-            height:
-              type: integer
-        theme:
+          example: "507f1f77bcf86cd799439011"
+        name:
           type: string
-        photos:
+          example: "Summer Vacation 2023"
+        description:
+          type: string
+          example: "Photos from our summer vacation in Italy"
+        coverPhotoId:
+          type: string
+          example: "507f1f77bcf86cd799439012"
+        isPublic:
+          type: boolean
+          example: false
+        tags:
           type: array
           items:
-            type: object
-            properties:
-              filename:
-                type: string
-              caption:
-                type: string
-              position:
+            type: string
+          example: ["vacation", "italy", "summer"]
+        userId:
+          type: string
+          example: "user-123"
+        groupId:
+          type: string
+          example: "group-456"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - name
+        - userId
+
+    Photo:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        filename:
+          type: string
+          example: "IMG_1234.jpg"
+        originalName:
+          type: string
+          example: "original_image.jpg"
+        minioFileId:
+          type: string
+          example: "album/user-123/507f1f77bcf86cd799439011/original.jpg"
+        minioThumbnailFileId:
+          type: string
+          example: "album/user-123/507f1f77bcf86cd799439011/thumbnail.jpg"
+        albumId:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        title:
+          type: string
+          example: "Colosseum at sunset"
+        description:
+          type: string
+          example: "Beautiful view of the Colosseum during golden hour"
+        mimetype:
+          type: string
+          example: "image/jpeg"
+        size:
+          type: integer
+          example: 2048576
+        width:
+          type: integer
+          example: 1920
+        height:
+          type: integer
+          example: 1080
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["colosseum", "sunset", "rome"]
+        metadata:
+          type: object
+          properties:
+            dateTaken:
+              type: string
+              format: date-time
+              example: "2023-07-15T19:30:00.000Z"
+            location:
+              type: object
+              properties:
+                latitude:
+                  type: number
+                  example: 41.8902
+                longitude:
+                  type: number
+                  example: 12.4922
+                address:
+                  type: string
+                  example: "Rome, Italy"
+            camera:
+              type: object
+              properties:
+                make:
+                  type: string
+                  example: "Canon"
+                model:
+                  type: string
+                  example: "EOS R5"
+                settings:
+                  type: object
+                  properties:
+                    iso:
+                      type: integer
+                      example: 100
+                    aperture:
+                      type: string
+                      example: "f/2.8"
+                    shutterSpeed:
+                      type: string
+                      example: "1/250"
+                    focalLength:
+                      type: string
+                      example: "50mm"
+        aiAnalysis:
+          type: object
+          properties:
+            objectDetection:
+              type: object
+              properties:
+                jobId:
+                  type: string
+                  example: "job-123"
+                analyzedAt:
+                  type: string
+                  format: date-time
+                totalDetections:
+                  type: integer
+                  example: 5
+                processingTime:
+                  type: number
+                  example: 2.5
+            segmentation:
+              type: object
+              properties:
+                jobId:
+                  type: string
+                  example: "seg-job-456"
+                analyzedAt:
+                  type: string
+                  format: date-time
+                totalMasks:
+                  type: integer
+                  example: 3
+                segmentationType:
+                  type: string
+                  enum: ["prompted", "automatic"]
+                  example: "automatic"
+                processingTime:
+                  type: number
+                  example: 1.8
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - filename
+        - originalName
+        - albumId
+        - mimetype
+        - size
+
+    Collage:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        title:
+          type: string
+          example: "Summer Memories Collage"
+        config:
+          type: object
+          description: "Collage configuration with layout and photo positions"
+          properties:
+            version:
+              type: string
+              example: "1.0"
+            date:
+              type: string
+              example: "2023-08-01"
+            viewport:
+              type: object
+              properties:
+                width:
+                  type: integer
+                  example: 1920
+                height:
+                  type: integer
+                  example: 1080
+            theme:
+              type: string
+              example: "classic"
+            photos:
+              type: array
+              items:
                 type: object
                 properties:
-                  left:
+                  photoId:
+                    type: string
+                    example: "507f1f77bcf86cd799439012"
+                  filename:
+                    type: string
+                    example: "IMG_1234.jpg"
+                  caption:
+                    type: string
+                    example: "Beautiful sunset"
+                  position:
+                    type: object
+                    properties:
+                      left:
+                        type: number
+                        example: 100
+                      top:
+                        type: number
+                        example: 200
+                  width:
                     type: integer
-                  top:
+                    example: 400
+                  height:
                     type: integer
-              width:
-                type: integer
-              height:
-                type: integer
-              rotation:
-                type: number
-              frameVisible:
-                type: boolean
-              scaleX:
+                    example: 300
+                  rotation:
+                    type: number
+                    example: 0
+                  frameVisible:
+                    type: boolean
+                    example: true
+                  scaleX:
+                    type: string
+                    example: "1"
+                  scaleY:
+                    type: string
+                    example: "1"
+            textSections:
+              type: array
+              items:
+                type: object
+            title:
+              type: object
+              properties:
+                text:
+                  type: string
+                  example: "Summer 2023"
+                subtitle:
+                  type: string
+                  example: "Memories to cherish"
+            albumIds:
+              type: array
+              items:
                 type: string
-              scaleY:
-                type: string
-        textSections:
+              example: ["507f1f77bcf86cd799439011"]
+        albumIds:
           type: array
           items:
-            type: object
-        title:
-          type: object
-          properties:
-            text:
-              type: string
-            subtitle:
-              type: string
-    CollageInput:
-      type: object
+            type: string
+          example: ["507f1f77bcf86cd799439011"]
+        userId:
+          type: string
+          example: "user-123"
+        groupId:
+          type: string
+          example: "group-456"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
       required:
         - title
         - config
+        - albumIds
+
+    # Request/Response schemas
+    AlbumCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Summer Vacation 2023"
+        description:
+          type: string
+          example: "Photos from our summer vacation in Italy"
+        isPublic:
+          type: boolean
+          example: false
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["vacation", "italy", "summer"]
+        groupId:
+          type: string
+          example: "group-456"
+      required:
+        - name
+
+    AlbumUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Updated Album Name"
+        description:
+          type: string
+          example: "Updated description"
+        isPublic:
+          type: boolean
+          example: true
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["updated", "vacation", "italy"]
+
+    PhotoCreateRequest:
+      type: object
+      properties:
+        filename:
+          type: string
+          example: "IMG_1234.jpg"
+        originalName:
+          type: string
+          example: "original_image.jpg"
+        minioFileId:
+          type: string
+          example: "album/user-123/507f1f77bcf86cd799439011/original.jpg"
+        albumId:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        title:
+          type: string
+          example: "Colosseum at sunset"
+        description:
+          type: string
+          example: "Beautiful view of the Colosseum during golden hour"
+        mimetype:
+          type: string
+          example: "image/jpeg"
+        size:
+          type: integer
+          example: 2048576
+        width:
+          type: integer
+          example: 1920
+        height:
+          type: integer
+          example: 1080
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["colosseum", "sunset", "rome"]
+        metadata:
+          type: object
+      required:
+        - filename
+        - originalName
+        - albumId
+        - mimetype
+        - size
+
+    PhotoUpdateRequest:
+      type: object
       properties:
         title:
           type: string
-        config:
-          $ref: '#/components/schemas/CollageConfig'
-        ownerId:
+          example: "Updated photo title"
+        description:
           type: string
-    Collage:
-      allOf:
-        - $ref: '#/components/schemas/CollageInput'
-        - type: object
+          example: "Updated description"
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["updated", "colosseum", "rome"]
+        metadata:
+          type: object
+
+    PhotoAIAnalysisUpdateRequest:
+      type: object
+      properties:
+        objectDetection:
+          type: object
           properties:
-            id:
+            jobId:
               type: string
-            createdAt:
+              example: "job-123"
+            analyzedAt:
               type: string
-            updatedAt:
+              format: date-time
+            totalDetections:
+              type: integer
+              example: 5
+            processingTime:
+              type: number
+              example: 2.5
+        segmentation:
+          type: object
+          properties:
+            jobId:
               type: string
+              example: "seg-job-456"
+            analyzedAt:
+              type: string
+              format: date-time
+            totalMasks:
+              type: integer
+              example: 3
+            segmentationType:
+              type: string
+              enum: ["prompted", "automatic"]
+              example: "automatic"
+            processingTime:
+              type: number
+              example: 1.8
+
+    UploadSignedUrlRequest:
+      type: object
+      properties:
+        filename:
+          type: string
+          example: "IMG_1234.jpg"
+        mimetype:
+          type: string
+          example: "image/jpeg"
+        albumId:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+      required:
+        - filename
+        - mimetype
+        - albumId
+
+    UploadSignedUrlResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            uploadUrl:
+              type: string
+              example: "https://minio.example.com/album/user-123/..."
+            minioFileId:
+              type: string
+              example: "album/user-123/507f1f77bcf86cd799439011/original.jpg"
+            albumId:
+              type: string
+              example: "507f1f77bcf86cd799439011"
+            expiresInMinutes:
+              type: integer
+              example: 15
+      required:
+        - success
+        - data
+
+    CollageCreateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          example: "Summer Memories Collage"
+        config:
+          type: object
+          description: "Collage configuration"
+        albumIds:
+          type: array
+          items:
+            type: string
+          example: ["507f1f77bcf86cd799439011"]
+      required:
+        - title
+        - albumIds
+
+    CollageUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          example: "Updated Collage Title"
+        config:
+          type: object
+          description: "Updated collage configuration"
+
+    AlbumsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            albums:
+              type: array
+              items:
+                $ref: '#/components/schemas/Album'
+            pagination:
+              type: object
+              properties:
+                page:
+                  type: integer
+                  example: 1
+                limit:
+                  type: integer
+                  example: 50
+                total:
+                  type: integer
+                  example: 100
+                pages:
+                  type: integer
+                  example: 2
+      required:
+        - success
+        - data
+
+    PhotosResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            photos:
+              type: array
+              items:
+                $ref: '#/components/schemas/Photo'
+            pagination:
+              type: object
+              properties:
+                page:
+                  type: integer
+                  example: 1
+                limit:
+                  type: integer
+                  example: 50
+                total:
+                  type: integer
+                  example: 100
+                pages:
+                  type: integer
+                  example: 2
+      required:
+        - success
+        - data
+
+    CollagesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            collages:
+              type: array
+              items:
+                $ref: '#/components/schemas/Collage'
+            pagination:
+              type: object
+              properties:
+                page:
+                  type: integer
+                  example: 1
+                limit:
+                  type: integer
+                  example: 50
+                total:
+                  type: integer
+                  example: 100
+                pages:
+                  type: integer
+                  example: 2
+      required:
+        - success
+        - data
+
+    StatisticsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            totalAlbums:
+              type: integer
+              example: 25
+            totalPhotos:
+              type: integer
+              example: 1250
+            totalCollages:
+              type: integer
+              example: 8
+            totalStorageUsed:
+              type: integer
+              example: 5242880000
+            albumsByMonth:
+              type: object
+              description: "Monthly album creation statistics"
+            photosByMonth:
+              type: object
+              description: "Monthly photo upload statistics"
+            storageByAlbum:
+              type: array
+              items:
+                type: object
+                properties:
+                  albumId:
+                    type: string
+                  albumName:
+                    type: string
+                  storageUsed:
+                    type: integer
+      required:
+        - success
+        - data
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Operation completed successfully"
+        data:
+          type: object
+          description: "Response data (varies by endpoint)"
+      required:
+        - success
+        - message
+
+paths:
+  # Album Endpoints
+  /albums:
+    get:
+      summary: Get all albums
+      description: Retrieve all albums for the authenticated user with pagination and filtering
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+          description: Number of albums per page
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search query for album name, description, or tags
+        - name: groupId
+          in: query
+          schema:
+            type: string
+          description: Filter by group ID
+      responses:
+        '200':
+          description: Albums retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlbumsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+    post:
+      summary: Create album
+      description: Create a new album
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlbumCreateRequest'
+      responses:
+        '201':
+          description: Album created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+  /albums/{id}:
+    get:
+      summary: Get album by ID
+      description: Retrieve a specific album by its ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Album ID
+      responses:
+        '200':
+          description: Album retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Album not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+    put:
+      summary: Update album
+      description: Update an existing album
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Album ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlbumUpdateRequest'
+      responses:
+        '200':
+          description: Album updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Album not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+    delete:
+      summary: Delete album
+      description: Delete an album by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Album ID
+      responses:
+        '200':
+          description: Album deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Album not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+  /albums/{id}/cover:
+    put:
+      summary: Set album cover photo
+      description: Set a photo as the cover photo for an album
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Album ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                photoId:
+                  type: string
+                  example: "507f1f77bcf86cd799439012"
+              required:
+                - photoId
+      responses:
+        '200':
+          description: Cover photo set successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Album or photo not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+    delete:
+      summary: Remove album cover photo
+      description: Remove the cover photo from an album
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Album ID
+      responses:
+        '200':
+          description: Cover photo removed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Album not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+  # Photo Endpoints
+  /photos:
+    post:
+      summary: Create photo
+      description: Create a new photo record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhotoCreateRequest'
+      responses:
+        '201':
+          description: Photo created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+  /photos/album/{albumId}:
+    get:
+      summary: Get photos by album
+      description: Retrieve all photos for a specific album
+      parameters:
+        - name: albumId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Album ID
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+          description: Number of photos per page
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search query for photo title, description, or tags
+      responses:
+        '200':
+          description: Photos retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhotosResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Album not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+  /photos/album/{albumId}/ai-analysis:
+    get:
+      summary: Get photos for AI analysis
+      description: Retrieve photos from an album that need AI analysis or have been analyzed
+      parameters:
+        - name: albumId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Album ID
+        - name: analyzed
+          in: query
+          schema:
+            type: boolean
+          description: Filter by analysis status (true for analyzed, false for not analyzed)
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+          description: Number of photos per page
+      responses:
+        '200':
+          description: Photos retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhotosResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Album not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+  /photos/{id}:
+    get:
+      summary: Get photo by ID
+      description: Retrieve a specific photo by its ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Photo ID
+      responses:
+        '200':
+          description: Photo retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Photo not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+    put:
+      summary: Update photo
+      description: Update photo metadata
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Photo ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhotoUpdateRequest'
+      responses:
+        '200':
+          description: Photo updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Photo not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+    delete:
+      summary: Delete photo
+      description: Delete a photo and its files from storage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Photo ID
+      responses:
+        '200':
+          description: Photo deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Photo not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+  /photos/{id}/ai-analysis:
+    put:
+      summary: Update photo AI analysis
+      description: Update AI analysis results for a photo
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Photo ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhotoAIAnalysisUpdateRequest'
+      responses:
+        '200':
+          description: AI analysis updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Photo not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+  /photos/by-file/{fileId}:
+    get:
+      summary: Get photo by file ID
+      description: Retrieve a photo by its MinIO file ID (public endpoint for file service)
+      parameters:
+        - name: fileId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: MinIO file ID
+      responses:
+        '200':
+          description: Photo retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Photo not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /photos/upload-url:
+    post:
+      summary: Get upload signed URL
+      description: Generate a signed URL for direct client upload to MinIO
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UploadSignedUrlRequest'
+      responses:
+        '200':
+          description: Upload URL generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadSignedUrlResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+  # Collage Endpoints
+  /collages:
+    get:
+      summary: Get collages
+      description: Retrieve collages with optional filtering by album
+      parameters:
+        - name: albumId
+          in: query
+          schema:
+            type: string
+          description: Filter by album ID
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+          description: Number of collages per page
+      responses:
+        '200':
+          description: Collages retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollagesResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+    post:
+      summary: Create collage
+      description: Create a new collage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollageCreateRequest'
+      responses:
+        '201':
+          description: Collage created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+  /collages/{id}:
+    get:
+      summary: Get collage by ID
+      description: Retrieve a specific collage by its ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Collage ID
+      responses:
+        '200':
+          description: Collage retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Collage not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+    put:
+      summary: Update collage
+      description: Update an existing collage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Collage ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollageUpdateRequest'
+      responses:
+        '200':
+          description: Collage updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Collage not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+    delete:
+      summary: Delete collage
+      description: Delete a collage by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Collage ID
+      responses:
+        '200':
+          description: Collage deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Collage not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+  # Statistics Endpoints
+  /statistics:
+    get:
+      summary: Get album statistics
+      description: Retrieve aggregated statistics for albums, photos, and collages
+      responses:
+        '200':
+          description: Statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatisticsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
