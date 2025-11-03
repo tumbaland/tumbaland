@@ -23,7 +23,6 @@ import {
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
-  Visibility as VisibilityIcon,
   Compare as CompareIcon,
   Edit as EditIcon,
   ArrowUpward as ArrowUpwardIcon,
@@ -282,8 +281,10 @@ export const AnalysisTable: React.FC<AnalysisTableProps> = ({
                   sx={{
                     backgroundColor: selectedAnalysisIds.has(analysis._id)
                       ? 'rgba(25, 118, 210, 0.08)'
-                      : 'inherit'
+                      : 'inherit',
+                    cursor: 'pointer'
                   }}
+                  onClick={() => navigate(`/analysis/${analysis._id}`)}
                 >
                   <TableCell padding="checkbox">
                     <Checkbox
@@ -298,25 +299,23 @@ export const AnalysisTable: React.FC<AnalysisTableProps> = ({
                     <Tooltip title="Edit dataset name">
                       <IconButton
                         size="small"
-                        onClick={() => handleEditClick(analysis)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditClick(analysis);
+                        }}
                         disabled={deleteLoading}
                       >
                         <EditIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="View analysis details">
-                      <IconButton
-                        size="small"
-                        onClick={() => navigate(`/analysis/${analysis._id}`)}
-                      >
-                        <VisibilityIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="Delete analysis">
                       <IconButton
                         size="small"
                         color="error"
-                        onClick={() => handleDeleteClick(analysis)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteClick(analysis);
+                        }}
                         disabled={deleteLoading}
                       >
                         <DeleteIcon fontSize="small" />

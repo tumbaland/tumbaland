@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -13,17 +13,30 @@ import {
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
-  Alert
+  Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
   Delete as DeleteIcon,
   PhotoLibrary as PhotoLibraryIcon
 } from '@mui/icons-material';
-import { getUploadSignedUrl, uploadFileToSignedUrl, createDatasetImage } from '../services/datasetImageService';
+import { getUploadSignedUrl, uploadFileToSignedUrl, createDatasetImage, getCategoriesByDataset, ImageCategory } from '../services/datasetImageService';
 
 interface FileUploadProps {
   datasetId: string;
+  categoryId?: string;
+  open: boolean;
+  onClose: () => void;
+  onUploadComplete: () => void;
+}
+
+interface FileUploadProps {
+  datasetId: string;
+  categoryId?: string;
   open: boolean;
   onClose: () => void;
   onUploadComplete: () => void;
@@ -34,11 +47,21 @@ interface FileWithId {
   id: string;
 }
 
-const FileUpload: React.FC<FileUploadProps> = ({ datasetId, open, onClose, onUploadComplete }) => {
+const FileUpload: React.FC<FileUploadProps> = ({ datasetId, categoryId, open, onClose, onUploadComplete }) => {
   const [files, setFiles] = useState<FileWithId[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>(categoryId || '');
+  const [categories, setCategories] = useState<ImageCategory[]>([]);
+
+  // Load categories when dialog opens
+  useEffect(() => {
+    if (open) {
+      getCategoriesByDataset(datasetId).then(setCategories).catch(console.error);
+      setSelectedCategory(categoryId || '');
+    }
+  }, [open, datasetId, categoryId]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -91,14 +114,15 @@ const FileUpload: React.FC<FileUploadProps> = ({ datasetId, open, onClose, onUpl
           const signedUrlResponse = await getUploadSignedUrl({
             filename: file.name,
             mimetype: file.type,
-            datasetId
+            datasetId,
+            ...(selectedCategory && { categoryId: selectedCategory })
           });
 
           // Upload file directly to MinIO
           await uploadFileToSignedUrl(signedUrlResponse.uploadUrl, file);
 
           // Create dataset image record in vision service with minioFileId
-          await createDatasetImage({
+          const imageData: any = {
             filename: file.name,
             originalName: file.name,
             minioFileId: signedUrlResponse.minioFileId,
@@ -108,7 +132,13 @@ const FileUpload: React.FC<FileUploadProps> = ({ datasetId, open, onClose, onUpl
             // TODO: Extract image dimensions
             // width: undefined,
             // height: undefined,
-          });
+          };
+
+          if (selectedCategory) {
+            imageData.categoryId = selectedCategory;
+          }
+
+          await createDatasetImage(imageData);
 
           completed++;
           setUploadProgress((completed / files.length) * 100);
@@ -133,6 +163,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ datasetId, open, onClose, onUpl
       setFiles([]);
       setError(null);
       setUploadProgress(0);
+      setSelectedCategory(categoryId || '');
       onClose();
     }
   };
@@ -165,6 +196,34 @@ const FileUpload: React.FC<FileUploadProps> = ({ datasetId, open, onClose, onUpl
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>Upload Example Images</DialogTitle>
       <DialogContent>
+        <FormControl fullWidth sx={{ mb: 2 }}>
+          <InputLabel>Category (Optional)</InputLabel>
+          <Select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            label="Category (Optional)"
+          >
+            <MenuItem value="">
+              <em>No Category</em>
+            </MenuItem>
+            {categories.map((category) => (
+              <MenuItem key={category._id} value={category._id}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Box
+                    sx={{
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      backgroundColor: category.color || '#1976d2',
+                      mr: 1
+                    }}
+                  />
+                  {category.name}
+                </Box>
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}

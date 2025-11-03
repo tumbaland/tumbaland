@@ -6,6 +6,7 @@ export interface IDatasetImage extends Document {
   minioFileId: string; // MinIO storage path for original file
   minioThumbnailFileId?: string; // MinIO storage path for thumbnail
   datasetId: string; // Reference to dataset analysis
+  categoryId: string; // Reference to ImageCategory
   title?: string;
   description?: string;
   mimetype: string;
@@ -13,6 +14,7 @@ export interface IDatasetImage extends Document {
   width?: number;
   height?: number;
   tags: string[];
+  labels: string[]; // User quality labels like 'good_annotations', 'bad_annotations'
   metadata: any;
   createdAt: Date;
   updatedAt: Date;
@@ -41,6 +43,11 @@ const DatasetImageSchema: Schema = new Schema(
       ref: 'training_dataset', // Reference to Dataset model
       required: true
     },
+    categoryId: {
+      type: Schema.Types.ObjectId,
+      ref: 'ImageCategory',
+      required: true
+    },
     title: {
       type: String,
       trim: true,
@@ -67,6 +74,12 @@ const DatasetImageSchema: Schema = new Schema(
         trim: true
       }
     ],
+    labels: [
+      {
+        type: String,
+        trim: true
+      }
+    ],
     metadata: {
       type: Schema.Types.Mixed
     }
@@ -77,7 +90,8 @@ const DatasetImageSchema: Schema = new Schema(
 );
 
 // Indexes for performance
-DatasetImageSchema.index({ datasetId: 1, createdAt: -1 });
+DatasetImageSchema.index({ datasetId: 1, categoryId: 1, createdAt: -1 });
+DatasetImageSchema.index({ datasetId: 1, labels: 1 });
 DatasetImageSchema.index({ title: 'text', description: 'text', tags: 'text' });
 
 export default mongoose.model<IDatasetImage>('DatasetImage', DatasetImageSchema);

@@ -1,7 +1,11 @@
 import express from 'express';
 import {
   createDatasetImage,
+  getAllImages,
   getImagesByDataset,
+  getImagesByCategory,
+  getImageLabelsStats,
+  exportImagesByLabels,
   getImageById,
   updateImage,
   deleteImage,
@@ -11,7 +15,11 @@ import {
 const router = express.Router();
 
 // Dataset image routes
+router.get('/', getAllImages);
 router.get('/dataset/:datasetId', getImagesByDataset);
+router.get('/dataset/:datasetId/category/:categoryId', getImagesByCategory);
+router.get('/dataset/:datasetId/labels/stats', getImageLabelsStats);
+router.get('/dataset/:datasetId/export/csv', exportImagesByLabels);
 router.get('/:id', getImageById);
 router.post('/', createDatasetImage);
 router.put('/:id', updateImage);

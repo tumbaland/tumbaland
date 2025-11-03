@@ -7,6 +7,7 @@ import ConfigsPage from '../pages/ConfigsPage';
 import AnalysisPage from '../pages/AnalysisPage';
 import DatasetComparisonPage from '../pages/DatasetComparisonPage';
 import DatasetDetailPage from '../pages/DatasetDetailPage';
+import ImageLabelingPage from '../pages/ImageLabelingPage';
 
 function AppRoutes() {
   return (
@@ -20,6 +21,7 @@ function AppRoutes() {
       <Route path="/analysis" element={<AnalysisPage />} />
       <Route path="/analysis/:id" element={<DatasetDetailPage />} />
       <Route path="/analysis/compare" element={<DatasetComparisonPage />} />
+      <Route path="/image-labeling" element={<ImageLabelingPage />} />
     </Routes>
   );
 }

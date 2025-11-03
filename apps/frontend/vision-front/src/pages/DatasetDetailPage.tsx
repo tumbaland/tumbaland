@@ -19,12 +19,42 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  IconButton
+  IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
-import { CloudUpload as CloudUploadIcon, ExpandMore as ExpandMoreIcon, ExpandLess as ExpandLessIcon, Close as CloseIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import {
+  CloudUpload as CloudUploadIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  Close as CloseIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  ArrowBack as ArrowBackIcon,
+  ArrowForward as ArrowForwardIcon
+} from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getAnalysisById, updateAnalysis, deleteAnalysis } from '../services/analysisService';
-import { getImagesByDataset, DatasetImage, deleteDatasetImage } from '../services/datasetImageService';
+import {
+  DatasetImage,
+  deleteDatasetImage,
+  updateDatasetImage,
+  getCategoriesByDataset,
+  ImageCategory,
+  createImageCategory,
+  updateImageCategory,
+  deleteImageCategory,
+  getAllImages
+} from '../services/datasetImageService';
 import FileUpload from '../components/FileUpload';
 
 const DatasetDetailPage: React.FC = () => {
@@ -33,7 +63,6 @@ const DatasetDetailPage: React.FC = () => {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState(0);
-  const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [uploadingJson, setUploadingJson] = useState(false);
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [jsonSuccess, setJsonSuccess] = useState<string | null>(null);
@@ -43,6 +72,28 @@ const DatasetDetailPage: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deletingImageId, setDeletingImageId] = useState<string | null>(null);
+  // Category management state
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<ImageCategory | null>(null);
+  const [categoryForm, setCategoryForm] = useState({
+    name: '',
+    description: '',
+    color: '#1976d2'
+  });
+  const [categoryAlert, setCategoryAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  // File upload state
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  // Image editing state
+  const [editingImage, setEditingImage] = useState<DatasetImage | null>(null);
+  const [editImageModalOpen, setEditImageModalOpen] = useState(false);
+  const [selectedCategoryForEdit, setSelectedCategoryForEdit] = useState<string>('');
+  const [selectedTagsForEdit, setSelectedTagsForEdit] = useState<string>('');
+  // Image filtering state
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('');
+  const [selectedTagFilter, setSelectedTagFilter] = useState<string>('');
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(50);
 
   const { data: analysis, isLoading, error } = useQuery({
     queryKey: ['analysis', id],
@@ -50,21 +101,67 @@ const DatasetDetailPage: React.FC = () => {
     enabled: Boolean(id)
   });
 
-  const { data: imagesData, isLoading: imagesLoading } = useQuery({
-    queryKey: ['datasetImages', id],
-    queryFn: () => getImagesByDataset(id!, 1, 50),
-    enabled: Boolean(id)
+  const { data: imagesData, isLoading: imagesLoading, error: imagesError } = useQuery({
+    queryKey: ['datasetImages', id, selectedCategoryFilter, selectedTagFilter, currentPage, pageSize],
+    queryFn: async () => {
+      // First, get all images to calculate total count (without pagination)
+      const allResponse = await getAllImages(1, undefined, undefined, selectedTagFilter || undefined);
+
+      // Filter images by datasetId client-side
+      const datasetImages = allResponse.data.images.filter((image: DatasetImage) => image.datasetId === id);
+
+      // Apply category filter if selected
+      let filteredImages = datasetImages;
+      if (selectedCategoryFilter) {
+        filteredImages = datasetImages.filter((image: DatasetImage) => image.categoryId === selectedCategoryFilter);
+      }
+
+      // Calculate total count
+      const totalCount = filteredImages.length;
+
+      // Apply pagination to the filtered results
+      const startIndex = (currentPage - 1) * pageSize;
+      const endIndex = startIndex + pageSize;
+      const paginatedImages = filteredImages.slice(startIndex, endIndex);
+
+      // Calculate pagination info
+      const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
+
+      return {
+        data: {
+          images: paginatedImages,
+          pagination: {
+            page: currentPage,
+            limit: pageSize,
+            total: totalCount,
+            pages: totalPages
+          }
+        }
+      };
+    },
+    enabled: Boolean(id),
+    retry: false, // Don't retry on error
+  });
+
+  const { data: categoriesData, isLoading: categoriesQueryLoading, error: categoriesError } = useQuery({
+    queryKey: ['datasetCategories', id],
+    queryFn: () => getCategoriesByDataset(id!),
+    enabled: Boolean(id),
+    retry: false, // Don't retry on error
   });
 
   const images = imagesData?.data?.images || [];
+  const pagination = imagesData?.data?.pagination || { page: 1, limit: 50, total: 0, pages: 1 };
+  const datasetCategories = categoriesData || [];
+
+  // Debug logging
+  React.useEffect(() => {
+    console.log('Pagination data:', pagination);
+    console.log('Images count:', images.length);
+  }, [pagination, images.length]);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
-  };
-
-  const handleUploadComplete = () => {
-    // Invalidate and refetch images
-    queryClient.invalidateQueries({ queryKey: ['datasetImages', id] });
   };
 
   const handleJsonFileClick = () => {
@@ -154,6 +251,157 @@ const DatasetDetailPage: React.FC = () => {
     }
   };
 
+  // Category management functions
+  const showCategoryAlert = (type: 'success' | 'error', message: string) => {
+    setCategoryAlert({ type, message });
+    setTimeout(() => setCategoryAlert(null), 5000);
+  };
+
+  const handleCreateCategory = async () => {
+    if (!categoryForm.name.trim()) {
+      showCategoryAlert('error', 'Category name is required');
+      return;
+    }
+
+    try {
+      await createImageCategory({
+        name: categoryForm.name.trim(),
+        description: categoryForm.description.trim(),
+        datasetId: id!,
+        color: categoryForm.color
+      });
+      showCategoryAlert('success', 'Category created successfully');
+      setCategoryModalOpen(false);
+      setCategoryForm({ name: '', description: '', color: '#1976d2' });
+      // Refresh categories
+      queryClient.invalidateQueries({ queryKey: ['datasetCategories', id] });
+    } catch (error) {
+      showCategoryAlert('error', 'Failed to create category');
+    }
+  };
+
+  const handleUpdateCategory = async () => {
+    if (!editingCategory || !categoryForm.name.trim()) {
+      showCategoryAlert('error', 'Category name is required');
+      return;
+    }
+
+    try {
+      await updateImageCategory(editingCategory._id, {
+        name: categoryForm.name.trim(),
+        description: categoryForm.description.trim(),
+        color: categoryForm.color
+      });
+      showCategoryAlert('success', 'Category updated successfully');
+      setCategoryModalOpen(false);
+      setEditingCategory(null);
+      setCategoryForm({ name: '', description: '', color: '#1976d2' });
+      // Refresh categories
+      queryClient.invalidateQueries({ queryKey: ['datasetCategories', id] });
+    } catch (error) {
+      showCategoryAlert('error', 'Failed to update category');
+    }
+  };
+
+  const handleDeleteCategory = async (categoryId: string) => {
+    if (!confirm('Are you sure you want to delete this category?')) return;
+
+    try {
+      await deleteImageCategory(categoryId);
+      showCategoryAlert('success', 'Category deleted successfully');
+      // Refresh categories
+      queryClient.invalidateQueries({ queryKey: ['datasetCategories', id] });
+    } catch (error) {
+      showCategoryAlert('error', 'Failed to delete category');
+    }
+  };
+
+  const openEditCategoryModal = (category: ImageCategory) => {
+    setEditingCategory(category);
+    setCategoryForm({
+      name: category.name,
+      description: category.description || '',
+      color: category.color || '#1976d2'
+    });
+    setCategoryModalOpen(true);
+  };
+
+  const handleCloseCategoryModal = () => {
+    setCategoryModalOpen(false);
+    setEditingCategory(null);
+    setCategoryForm({ name: '', description: '', color: '#1976d2' });
+  };
+
+  // Image editing functions
+  const handleEditImageCategory = (image: DatasetImage) => {
+    setEditingImage(image);
+    setSelectedCategoryForEdit(image.categoryId || '');
+    setSelectedTagsForEdit(image.tags.join(', '));
+    setEditImageModalOpen(true);
+  };
+
+  const handleSaveImageCategory = async () => {
+    if (!editingImage) return;
+
+    try {
+      // Parse tags from comma-separated string
+      const tags = selectedTagsForEdit
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0);
+
+      // Update the image with new category and tags
+      await updateDatasetImage(editingImage._id, {
+        categoryId: selectedCategoryForEdit || undefined,
+        tags: tags
+      });
+      showCategoryAlert('success', 'Image updated successfully');
+      setEditImageModalOpen(false);
+      setEditingImage(null);
+      setSelectedCategoryForEdit('');
+      setSelectedTagsForEdit('');
+      // Refresh images
+      queryClient.invalidateQueries({ queryKey: ['datasetImages', id] });
+    } catch (error) {
+      showCategoryAlert('error', 'Failed to update image');
+    }
+  };
+
+  const handleCloseEditImageModal = () => {
+    setEditImageModalOpen(false);
+    setEditingImage(null);
+    setSelectedCategoryForEdit('');
+    setSelectedTagsForEdit('');
+  };
+
+  const handleUploadComplete = () => {
+    // Refresh images after upload
+    queryClient.invalidateQueries({ queryKey: ['datasetImages', id] });
+  };
+
+  // Pagination handlers
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < pagination.pages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); // Reset to first page when page size changes
+  };
+
+  // Reset to page 1 when category filter or tag filter changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategoryFilter, selectedTagFilter]);
+
   if (isLoading) {
     return (
       <Container maxWidth="xl" sx={{ py: 4, textAlign: 'center' }}>
@@ -213,8 +461,9 @@ const DatasetDetailPage: React.FC = () => {
       {/* Tabs */}
       <Paper sx={{ mb: 4 }}>
         <Tabs value={activeTab} onChange={handleTabChange} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tab label="Dataset Description" />
-          <Tab label="Example Images" />
+          <Tab label="Description" />
+          <Tab label="Categories" />
+          <Tab label="Images" />
         </Tabs>
 
         {/* Tab Panels */}
@@ -295,19 +544,175 @@ const DatasetDetailPage: React.FC = () => {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Box>
                   <Typography variant="h6">
-                    Example Images ({images.length})
+                    Categories ({datasetCategories.length})
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                    Sample images from the dataset analysis.
+                    Manage image categories for this dataset.
+                  </Typography>
+                </Box>
+              </Box>
+
+              {categoryAlert && (
+                <Alert severity={categoryAlert.type} sx={{ mb: 2 }}>
+                  {categoryAlert.message}
+                </Alert>
+              )}
+
+              {categoriesQueryLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress />
+                </Box>
+              ) : categoriesError ? (
+                <Box sx={{ textAlign: 'center', py: 8 }}>
+                  <Typography variant="h6" color="text.secondary">
+                    Categories not available
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    This analysis dataset doesn't have associated categories in the image management system.
+                  </Typography>
+                </Box>
+              ) : datasetCategories.length === 0 ? (
+                <Box sx={{ textAlign: 'center', py: 8 }}>
+                  <Typography variant="h6" color="text.secondary">
+                    No categories found
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    Create your first category to organize images for this dataset.
+                  </Typography>
+                </Box>
+              ) : (
+                <TableContainer component={Paper}>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Name</TableCell>
+                        <TableCell>Description</TableCell>
+                        <TableCell>Color</TableCell>
+                        <TableCell>Created</TableCell>
+                        <TableCell>Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {datasetCategories.map((category) => (
+                        <TableRow key={category._id} hover>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                              <Box
+                                sx={{
+                                  width: 16,
+                                  height: 16,
+                                  borderRadius: '50%',
+                                  backgroundColor: category.color || '#1976d2',
+                                  mr: 1
+                                }}
+                              />
+                              <Typography variant="body1" fontWeight="medium">
+                                {category.name}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" color="text.secondary">
+                              {category.description || 'No description'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              size="small"
+                              sx={{
+                                backgroundColor: category.color || '#1976d2',
+                                color: 'white'
+                              }}
+                              label={category.color || '#1976d2'}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" color="text.secondary">
+                              {new Date(category.createdAt).toLocaleDateString()}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <IconButton
+                              size="small"
+                              onClick={() => openEditCategoryModal(category)}
+                              color="primary"
+                            >
+                              <EditIcon />
+                            </IconButton>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDeleteCategory(category._id)}
+                              color="error"
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </Box>
+          )}
+
+          {activeTab === 2 && (
+            <Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Box>
+                  <Typography variant="h6">
+                    Images ({pagination.total.toLocaleString()})
                   </Typography>
                 </Box>
                 <Button
                   variant="contained"
                   startIcon={<CloudUploadIcon />}
-                  onClick={() => setShowUploadDialog(true)}
+                  onClick={() => setUploadDialogOpen(true)}
                 >
                   Upload Images
                 </Button>
+              </Box>
+
+              {/* Category Filter */}
+              <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <FormControl size="small" sx={{ minWidth: 200 }}>
+                  <InputLabel>Filter by Category</InputLabel>
+                  <Select
+                    value={selectedCategoryFilter}
+                    onChange={(e) => setSelectedCategoryFilter(e.target.value as string)}
+                    label="Filter by Category"
+                  >
+                    <MenuItem value="">
+                      <em>All Categories</em>
+                    </MenuItem>
+                    {datasetCategories.map((category) => (
+                      <MenuItem key={category._id} value={category._id}>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Box
+                            sx={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: '50%',
+                              backgroundColor: category.color || '#1976d2',
+                              mr: 1
+                            }}
+                          />
+                          {category.name}
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <TextField
+                  size="small"
+                  label="Filter by Tags"
+                  value={selectedTagFilter}
+                  onChange={(e) => setSelectedTagFilter(e.target.value)}
+                  placeholder="Enter tags to filter..."
+                  sx={{ minWidth: 200 }}
+                  helperText="Separate multiple tags with spaces"
+                />
               </Box>
 
               {imagesLoading ? (
@@ -315,6 +720,16 @@ const DatasetDetailPage: React.FC = () => {
                   <CircularProgress />
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
                     Loading images...
+                  </Typography>
+                </Box>
+              ) : imagesError ? (
+                <Box sx={{ textAlign: 'center', py: 8 }}>
+                  <Typography variant="h6" color="text.secondary">
+                    Images not available
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    This analysis dataset doesn't have associated images in the image management system. 
+                    Upload images separately to enable image labeling and categorization.
                   </Typography>
                 </Box>
               ) : images.length === 0 ? (
@@ -350,6 +765,25 @@ const DatasetDetailPage: React.FC = () => {
                           sx={{ objectFit: 'cover', cursor: 'pointer' }}
                           onClick={() => handleImageClick(image)}
                         />
+                        <IconButton
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditImageCategory(image);
+                          }}
+                          sx={{
+                            position: 'absolute',
+                            top: 8,
+                            left: 8,
+                            bgcolor: 'rgba(25, 118, 210, 0.8)',
+                            color: 'white',
+                            '&:hover': {
+                              bgcolor: 'rgba(21, 101, 192, 0.9)',
+                            },
+                          }}
+                          size="small"
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
                         <IconButton
                           onClick={(e) => {
                             e.stopPropagation();
@@ -400,18 +834,54 @@ const DatasetDetailPage: React.FC = () => {
                   ))}
                 </Box>
               )}
+
+              {/* Pagination */}
+              {images.length > 0 && !imagesError && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 4, gap: 2, flexWrap: 'wrap' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Show:
+                    </Typography>
+                    <Select
+                      size="small"
+                      value={pageSize}
+                      onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                      sx={{ minWidth: 80 }}
+                    >
+                      <MenuItem value={10}>10</MenuItem>
+                      <MenuItem value={25}>25</MenuItem>
+                      <MenuItem value={50}>50</MenuItem>
+                      <MenuItem value={100}>100</MenuItem>
+                    </Select>
+                  </Box>
+
+                  <Button
+                    variant="outlined"
+                    onClick={handlePreviousPage}
+                    disabled={currentPage <= 1}
+                    startIcon={<ArrowBackIcon />}
+                  >
+                    Previous
+                  </Button>
+
+                  <Typography variant="body2" color="text.secondary">
+                    Page {pagination.page} of {pagination.pages} (Total: {pagination.total.toLocaleString()} images)
+                  </Typography>
+
+                  <Button
+                    variant="outlined"
+                    onClick={handleNextPage}
+                    disabled={currentPage >= pagination.pages}
+                    endIcon={<ArrowForwardIcon />}
+                  >
+                    Next
+                  </Button>
+                </Box>
+              )}
             </Box>
           )}
         </Box>
       </Paper>
-
-      {/* Upload Dialog */}
-      <FileUpload
-        datasetId={id!}
-        open={showUploadDialog}
-        onClose={() => setShowUploadDialog(false)}
-        onUploadComplete={handleUploadComplete}
-      />
 
       {/* Image Modal */}
       <Dialog
@@ -480,6 +950,108 @@ const DatasetDetailPage: React.FC = () => {
             startIcon={deleting ? <CircularProgress size={20} color="inherit" /> : <DeleteIcon />}
           >
             {deleting ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Category Modal */}
+      <Dialog open={categoryModalOpen} onClose={handleCloseCategoryModal} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          {editingCategory ? 'Edit Category' : 'Create New Category'}
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            label="Category Name"
+            value={categoryForm.name}
+            onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+            sx={{ mt: 2 }}
+            required
+            helperText="Enter a unique name for this category"
+          />
+          <TextField
+            fullWidth
+            label="Description"
+            value={categoryForm.description}
+            onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
+            sx={{ mt: 2 }}
+            multiline
+            rows={3}
+            helperText="Optional description for this category"
+          />
+          <TextField
+            fullWidth
+            label="Color"
+            type="color"
+            value={categoryForm.color}
+            onChange={(e) => setCategoryForm({ ...categoryForm, color: e.target.value })}
+            sx={{ mt: 2 }}
+            helperText="Choose a color to visually identify this category"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseCategoryModal}>Cancel</Button>
+          <Button
+            onClick={editingCategory ? handleUpdateCategory : handleCreateCategory}
+            variant="contained"
+            disabled={!categoryForm.name.trim()}
+          >
+            {editingCategory ? 'Update' : 'Create'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* File Upload Dialog */}
+      <FileUpload
+        datasetId={id!}
+        open={uploadDialogOpen}
+        onClose={() => setUploadDialogOpen(false)}
+        onUploadComplete={handleUploadComplete}
+      />
+
+      {/* Edit Image Category Modal */}
+      <Dialog open={editImageModalOpen} onClose={handleCloseEditImageModal} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          Edit Image
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Update the category and tags for this image.
+          </Typography>
+          <TextField
+            select
+            fullWidth
+            label="Category"
+            value={selectedCategoryForEdit}
+            onChange={(e) => setSelectedCategoryForEdit(e.target.value)}
+            SelectProps={{
+              native: true,
+            }}
+            sx={{ mb: 2 }}
+          >
+            <option value="">No Category</option>
+            {datasetCategories.map((category) => (
+              <option key={category._id} value={category._id}>
+                {category.name}
+              </option>
+            ))}
+          </TextField>
+          <TextField
+            fullWidth
+            label="Tags"
+            value={selectedTagsForEdit}
+            onChange={(e) => setSelectedTagsForEdit(e.target.value)}
+            helperText="Enter tags separated by commas (e.g., cat, animal, pet)"
+            placeholder="tag1, tag2, tag3"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseEditImageModal}>Cancel</Button>
+          <Button
+            onClick={handleSaveImageCategory}
+            variant="contained"
+          >
+            Save
           </Button>
         </DialogActions>
       </Dialog>

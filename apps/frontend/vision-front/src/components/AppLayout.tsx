@@ -78,6 +78,21 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             >
               Datasets
             </Button>
+            <Button
+              color="inherit"
+              onClick={() => navigate('/image-labeling')}
+              sx={{
+                fontWeight: isActive('/image-labeling') ? 700 : 500,
+                textTransform: 'none',
+                background: 'none',
+                borderRadius: 2,
+                px: 2,
+                color: isActive('/image-labeling') ? 'primary.main' : '#222',
+                '&:hover': { background: 'rgba(0,0,0,0.04)' }
+              }}
+            >
+              Image Labeling
+            </Button>
           </Box>
         </Toolbar>
       </AppBar>
@@ -98,7 +113,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       >
         <Container maxWidth="xl">
           <Typography variant="body2" color="text.secondary" align="center">
-            Vision ML Training Dashboard © 2025
+
           </Typography>
         </Container>
       </Box>

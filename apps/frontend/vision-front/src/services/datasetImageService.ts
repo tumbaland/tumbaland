@@ -7,6 +7,7 @@ export interface DatasetImage {
   minioFileId: string;
   minioThumbnailFileId?: string;
   datasetId: string;
+  categoryId: string;
   title?: string;
   description?: string;
   mimetype: string;
@@ -14,6 +15,7 @@ export interface DatasetImage {
   width?: number;
   height?: number;
   tags: string[];
+  labels: string[];
   metadata: any;
   signedUrl?: string;
   signedUrlExpiresAt?: string;
@@ -39,13 +41,47 @@ export interface DatasetImagesResponse {
 }
 
 /**
+ * Get all images
+ */
+export const getAllImages = async (
+  page: number = 1,
+  limit?: number,
+  search?: string,
+  tags?: string
+): Promise<DatasetImagesResponse> => {
+  const config = getGlobalConfig();
+  const apiUrl = config.VISION_API_URL || 'http://localhost:4010';
+
+  const params = new URLSearchParams({ page: String(page) });
+  if (limit) params.append('limit', String(limit));
+  if (search) params.append('search', search);
+  if (tags) params.append('tags', tags);
+
+  const response = await fetch(`${apiUrl}/api/dataset-images?${params.toString()}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch images');
+  }
+
+  return response.json();
+};
+
+/**
  * Get images by dataset ID
  */
 export const getImagesByDataset = async (
   datasetId: string,
   page: number = 1,
   limit?: number,
-  search?: string
+  search?: string,
+  categoryId?: string,
+  tags?: string
 ): Promise<DatasetImagesResponse> => {
   const config = getGlobalConfig();
   const apiUrl = config.VISION_API_URL || 'https://vision-api.tumbaland.eu';
@@ -53,6 +89,8 @@ export const getImagesByDataset = async (
   const params = new URLSearchParams({ page: String(page) });
   if (limit) params.append('limit', String(limit));
   if (search) params.append('search', search);
+  if (categoryId) params.append('categoryId', categoryId);
+  if (tags) params.append('tags', tags);
 
   const response = await fetch(`${apiUrl}/api/dataset-images/dataset/${datasetId}?${params.toString()}`, {
     method: 'GET',
@@ -64,6 +102,40 @@ export const getImagesByDataset = async (
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.message || 'Failed to fetch dataset images');
+  }
+
+  return response.json();
+};
+
+/**
+ * Get images by dataset and category ID
+ */
+export const getImagesByCategory = async (
+  datasetId: string,
+  categoryId: string,
+  page: number = 1,
+  limit?: number,
+  search?: string,
+  labels?: string[]
+): Promise<DatasetImagesResponse> => {
+  const config = getGlobalConfig();
+  const apiUrl = config.VISION_API_URL || 'https://vision-api.tumbaland.eu';
+
+  const params = new URLSearchParams({ page: String(page) });
+  if (limit) params.append('limit', String(limit));
+  if (search) params.append('search', search);
+  if (labels && labels.length > 0) params.append('labels', labels.join(','));
+
+  const response = await fetch(`${apiUrl}/api/dataset-images/dataset/${datasetId}/category/${categoryId}?${params.toString()}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch dataset images by category');
   }
 
   return response.json();
@@ -100,6 +172,7 @@ export const createDatasetImage = async (imageData: {
   originalName: string;
   minioFileId: string;
   datasetId: string;
+  categoryId?: string;
   title?: string;
   description?: string;
   mimetype: string;
@@ -107,6 +180,7 @@ export const createDatasetImage = async (imageData: {
   width?: number;
   height?: number;
   tags?: string[];
+  labels?: string[];
   metadata?: any;
 }): Promise<DatasetImage> => {
   const config = getGlobalConfig();
@@ -138,6 +212,8 @@ export const updateDatasetImage = async (
     title?: string;
     description?: string;
     tags?: string[];
+    labels?: string[];
+    categoryId?: string;
     metadata?: any;
   }
 ): Promise<DatasetImage> => {
@@ -188,10 +264,12 @@ export const getUploadSignedUrl = async (data: {
   filename: string;
   mimetype: string;
   datasetId: string;
+  categoryId?: string;
 }): Promise<{
   uploadUrl: string;
   minioFileId: string;
   datasetId: string;
+  categoryId?: string;
   expiresInMinutes: number;
 }> => {
   const config = getGlobalConfig();
@@ -228,5 +306,165 @@ export const uploadFileToSignedUrl = async (signedUrl: string, file: File): Prom
 
   if (!response.ok) {
     throw new Error('Failed to upload file to signed URL');
+  }
+};
+
+// Image Category interfaces and functions
+export interface ImageCategory {
+  _id: string;
+  name: string;
+  description?: string;
+  datasetId: string;
+  color?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Get categories by dataset ID
+ */
+export const getCategoriesByDataset = async (datasetId: string): Promise<ImageCategory[]> => {
+  const config = getGlobalConfig();
+  const apiUrl = config.VISION_API_URL || 'https://vision-api.tumbaland.eu';
+
+  const response = await fetch(`${apiUrl}/api/image-categories/dataset/${datasetId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch image categories');
+  }
+
+  const data = await response.json();
+  return data.data;
+};
+
+/**
+ * Get all categories
+ */
+export const getAllCategories = async (): Promise<ImageCategory[]> => {
+  const config = getGlobalConfig();
+  const apiUrl = config.VISION_API_URL || 'https://vision-api.tumbaland.eu';
+
+  const response = await fetch(`${apiUrl}/api/image-categories`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch image categories');
+  }
+
+  const data = await response.json();
+  return data.data;
+};
+
+/**
+ * Get category by ID
+ */
+export const getCategoryById = async (id: string): Promise<ImageCategory> => {
+  const config = getGlobalConfig();
+  const apiUrl = config.VISION_API_URL || 'https://vision-api.tumbaland.eu';
+
+  const response = await fetch(`${apiUrl}/api/image-categories/${id}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch image category');
+  }
+
+  const data = await response.json();
+  return data.data;
+};
+
+/**
+ * Create image category
+ */
+export const createImageCategory = async (categoryData: {
+  name: string;
+  description?: string;
+  datasetId: string;
+  color?: string;
+}): Promise<ImageCategory> => {
+  const config = getGlobalConfig();
+  const apiUrl = config.VISION_API_URL || 'https://vision-api.tumbaland.eu';
+
+  const response = await fetch(`${apiUrl}/api/image-categories`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(categoryData)
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to create image category');
+  }
+
+  const data = await response.json();
+  return data.data;
+};
+
+/**
+ * Update image category
+ */
+export const updateImageCategory = async (
+  id: string,
+  updateData: {
+    name?: string;
+    description?: string;
+    color?: string;
+  }
+): Promise<ImageCategory> => {
+  const config = getGlobalConfig();
+  const apiUrl = config.VISION_API_URL || 'https://vision-api.tumbaland.eu';
+
+  const response = await fetch(`${apiUrl}/api/image-categories/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(updateData)
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to update image category');
+  }
+
+  const data = await response.json();
+  return data.data;
+};
+
+/**
+ * Delete image category
+ */
+export const deleteImageCategory = async (id: string): Promise<void> => {
+  const config = getGlobalConfig();
+  const apiUrl = config.VISION_API_URL || 'https://vision-api.tumbaland.eu';
+
+  const response = await fetch(`${apiUrl}/api/image-categories/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to delete image category');
   }
 };
