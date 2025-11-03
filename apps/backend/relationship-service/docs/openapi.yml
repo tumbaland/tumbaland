@@ -1,203 +1,1837 @@
 openapi: 3.0.3
 info:
   title: Relationship Service API
+  description: API for managing social relationship activities, activity types, and relationship statistics
   version: 1.0.0
-  description: API documentation for the Relationship Service
-servers:
-  - url: /api
-paths:
-  /activities:
-    get:
-      summary: Get all activities
-      tags: [Activities]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: List of activities
-    post:
-      summary: Create a new activity
-      tags: [Activities]
-      security:
-        - bearerAuth: []
-      responses:
-        '201':
-          description: Activity created
-  /activities/recent:
-    get:
-      summary: Get recent activities
-      tags: [Activities]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Recent activities
-  /activities/stats:
-    get:
-      summary: Get activity stats
-      tags: [Activities]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Activity stats
-  /activities/date-range:
-    get:
-      summary: Get activities by date range
-      tags: [Activities]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Activities in date range
-  /activities/types:
-    get:
-      summary: Get activity types
-      tags: [Activities]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Activity types
-  /activities/{id}:
-    get:
-      summary: Get activity by ID
-      tags: [Activities]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Activity details
-    put:
-      summary: Update activity by ID
-      tags: [Activities]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Activity updated
-    delete:
-      summary: Delete activity by ID
-      tags: [Activities]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: Activity deleted
-  /statistics:
-    get:
-      summary: Get relationship statistics
-      tags: [Statistics]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: timeframe
-          schema:
-            type: string
-            enum: [week, month, quarter, year, all]
-            default: all
-      responses:
-        '200':
-          description: Statistics data
-  /statistics/monthly-hours:
-    get:
-      summary: Get monthly hours statistics
-      tags: [Statistics]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: year
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Monthly hours data
-  /statistics/monthly-stats:
-    get:
-      summary: Get monthly statistics (days breakdown)
-      tags: [Statistics]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: year
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Monthly statistics data
-  /statistics/monthly-activity-breakdown:
-    get:
-      summary: Get monthly activity breakdown statistics
-      tags: [Statistics]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: year
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Monthly activity breakdown data
-  /statistics/weekly-heatmap:
-    get:
-      summary: Get weekly heatmap data
-      tags: [Statistics]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: year
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Weekly heatmap data
-  /statistics/cumulative-timeline:
-    get:
-      summary: Get cumulative timeline data
-      tags: [Statistics]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: query
-          name: year
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Cumulative timeline data
-
+  contact:
+    name: Tumbaland Team
 tags:
+  - name: Health
+    description: Health check and monitoring endpoints
   - name: Activities
-    description: Endpoints for managing activities
+    description: Activity management and retrieval endpoints
+  - name: Activity Types
+    description: Activity type management endpoints
   - name: Statistics
-    description: Endpoints for retrieving statistics
+    description: Relationship statistics and analytics endpoints
+servers:
+  - url: http://localhost:4001
+    description: Development server
+  - url: https://relationship-api.tumbaland.eu
+    description: Production server
 
 components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Activity not found"
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          description: "Response data (varies by endpoint)"
+        message:
+          type: string
+          nullable: true
+          example: "Activity deleted successfully"
+      required:
+        - success
+
+    ActivityType:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        name:
+          type: string
+          example: "Date Night"
+        slug:
+          type: string
+          example: "date-night"
+        description:
+          type: string
+          nullable: true
+          example: "Romantic evening activities"
+        color:
+          type: string
+          nullable: true
+          example: "#FF5733"
+        icon:
+          type: string
+          nullable: true
+          example: "heart"
+        isActive:
+          type: boolean
+          default: true
+          example: true
+        sortOrder:
+          type: integer
+          default: 0
+          example: 1
+        userId:
+          type: string
+          example: "user123"
+        groupId:
+          type: string
+          nullable: true
+          example: "group456"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - name
+        - slug
+        - isActive
+        - sortOrder
+        - userId
+
+    Activity:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        date:
+          type: string
+          format: date
+          example: "2024-11-03"
+        hours:
+          type: integer
+          nullable: true
+          minimum: 0
+          example: 2
+        activity:
+          type: object
+          properties:
+            typeId:
+              type: string
+              example: "507f1f77bcf86cd799439011"
+            description:
+              type: string
+              nullable: true
+              example: "Dinner at Italian restaurant"
+          required:
+            - typeId
+        userId:
+          type: string
+          example: "user123"
+        groupId:
+          type: string
+          nullable: true
+          example: "group456"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - date
+        - activity
+        - userId
+
+    ActivityWithType:
+      allOf:
+        - $ref: '#/components/schemas/Activity'
+        - type: object
+          properties:
+            activity:
+              type: object
+              properties:
+                typeId:
+                  $ref: '#/components/schemas/ActivityType'
+                description:
+                  type: string
+                  nullable: true
+              required:
+                - typeId
+
+    ActivityStats:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "date-night"
+        name:
+          type: string
+          example: "Date Night"
+        count:
+          type: integer
+          example: 15
+        totalHours:
+          type: integer
+          example: 45
+        avgHours:
+          type: number
+          example: 3.0
+      required:
+        - _id
+        - name
+        - count
+        - totalHours
+        - avgHours
+
+    RelationshipStatistics:
+      type: object
+      properties:
+        totalActivities:
+          type: integer
+          example: 150
+        totalHours:
+          type: integer
+          example: 450
+        averageHoursPerActivity:
+          type: number
+          example: 3.0
+        mostActiveDay:
+          type: string
+          example: "Saturday"
+        activityBreakdown:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityStats'
+        recentActivity:
+          $ref: '#/components/schemas/ActivityWithType'
+          nullable: true
+        timeframe:
+          type: string
+          example: "all"
+      required:
+        - totalActivities
+        - totalHours
+        - averageHoursPerActivity
+        - activityBreakdown
+
+    MonthlyHoursData:
+      type: object
+      properties:
+        month:
+          type: string
+          example: "2024-11"
+        totalHours:
+          type: integer
+          example: 45
+        activityCount:
+          type: integer
+          example: 12
+        averageHours:
+          type: number
+          example: 3.75
+      required:
+        - month
+        - totalHours
+        - activityCount
+        - averageHours
+
+    MonthlyStatisticsData:
+      type: object
+      properties:
+        month:
+          type: string
+          example: "2024-11"
+        days:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+                example: "2024-11-03"
+              hours:
+                type: integer
+                example: 4
+              activities:
+                type: integer
+                example: 2
+            required:
+              - date
+              - hours
+              - activities
+        totalHours:
+          type: integer
+          example: 45
+        totalActivities:
+          type: integer
+          example: 12
+      required:
+        - month
+        - days
+        - totalHours
+        - totalActivities
+
+    MonthlyActivityBreakdown:
+      type: object
+      properties:
+        month:
+          type: string
+          example: "2024-11"
+        activities:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                example: "date-night"
+              name:
+                type: string
+                example: "Date Night"
+              hours:
+                type: integer
+                example: 12
+              count:
+                type: integer
+                example: 4
+            required:
+              - type
+              - name
+              - hours
+              - count
+        totalHours:
+          type: integer
+          example: 45
+        totalActivities:
+          type: integer
+          example: 12
+      required:
+        - month
+        - activities
+        - totalHours
+        - totalActivities
+
+    WeeklyHeatmapData:
+      type: object
+      properties:
+        year:
+          type: integer
+          example: 2024
+        weeks:
+          type: array
+          items:
+            type: object
+            properties:
+              week:
+                type: integer
+                example: 45
+              days:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    day:
+                      type: integer
+                      minimum: 0
+                      maximum: 6
+                      example: 1
+                    date:
+                      type: string
+                      format: date
+                      example: "2024-11-05"
+                    hours:
+                      type: integer
+                      example: 4
+                    activities:
+                      type: integer
+                      example: 2
+                  required:
+                    - day
+                    - date
+                    - hours
+                    - activities
+              required:
+                - week
+                - days
+            required:
+              - week
+              - days
+      required:
+        - year
+        - weeks
+
+    CumulativeTimelineData:
+      type: object
+      properties:
+        year:
+          type: integer
+          example: 2024
+        months:
+          type: array
+          items:
+            type: object
+            properties:
+              month:
+                type: string
+                example: "2024-11"
+              cumulativeHours:
+                type: integer
+                example: 450
+              cumulativeActivities:
+                type: integer
+                example: 150
+              monthlyHours:
+                type: integer
+                example: 45
+              monthlyActivities:
+                type: integer
+                example: 12
+            required:
+              - month
+              - cumulativeHours
+              - cumulativeActivities
+              - monthlyHours
+              - monthlyActivities
+      required:
+        - year
+        - months
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: ["ok", "error"]
+          example: "ok"
+        service:
+          type: string
+          example: "relationship-service"
+        type:
+          type: string
+          example: "backend"
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+          example: "1.0.0"
+        description:
+          type: string
+          example: "Social relationship management service"
+        dependencies:
+          type: object
+          properties:
+            mongodb:
+              type: string
+              enum: ["connected", "disconnected"]
+              example: "connected"
+        error:
+          type: string
+          nullable: true
+          example: null
+      required:
+        - status
+        - service
+        - type
+        - timestamp
+        - version
+        - description
+        - dependencies
+
+    # Response schemas
+    ActivitiesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            activities:
+              type: array
+              items:
+                $ref: '#/components/schemas/ActivityWithType'
+            pagination:
+              type: object
+              properties:
+                page:
+                  type: integer
+                  example: 1
+                limit:
+                  type: integer
+                  example: 20
+                total:
+                  type: integer
+                  example: 150
+                totalPages:
+                  type: integer
+                  example: 8
+              required:
+                - page
+                - limit
+                - total
+                - totalPages
+          required:
+            - activities
+            - pagination
+      required:
+        - success
+        - data
+
+    ActivityResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/ActivityWithType'
+      required:
+        - success
+        - data
+
+    ActivityTypesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            types:
+              type: array
+              items:
+                $ref: '#/components/schemas/ActivityType'
+            pagination:
+              type: object
+              properties:
+                page:
+                  type: integer
+                  example: 1
+                limit:
+                  type: integer
+                  example: 50
+                total:
+                  type: integer
+                  example: 25
+                totalPages:
+                  type: integer
+                  example: 1
+              required:
+                - page
+                - limit
+                - total
+                - totalPages
+          required:
+            - types
+            - pagination
+      required:
+        - success
+        - data
+
+    ActivityTypeResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/ActivityType'
+      required:
+        - success
+        - data
+
+    ActivityStatsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityStats'
+      required:
+        - success
+        - data
+
+    StatisticsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/RelationshipStatistics'
+        timeframe:
+          type: string
+          example: "all"
+        generatedAt:
+          type: string
+          format: date-time
+      required:
+        - success
+        - data
+        - timeframe
+        - generatedAt
+
+    MonthlyHoursResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonthlyHoursData'
+        generatedAt:
+          type: string
+          format: date-time
+      required:
+        - success
+        - data
+        - generatedAt
+
+    MonthlyStatisticsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonthlyStatisticsData'
+        generatedAt:
+          type: string
+          format: date-time
+      required:
+        - success
+        - data
+        - generatedAt
+
+    MonthlyActivityBreakdownResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonthlyActivityBreakdown'
+        generatedAt:
+          type: string
+          format: date-time
+      required:
+        - success
+        - data
+        - generatedAt
+
+    WeeklyHeatmapResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/WeeklyHeatmapData'
+        generatedAt:
+          type: string
+          format: date-time
+      required:
+        - success
+       
+        - generatedAt
+
+    CumulativeTimelineResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/CumulativeTimelineData'
+        generatedAt:
+          type: string
+          format: date-time
+      required:
+        - success
+        - data
+        - generatedAt
+
+    RecentActivitiesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityWithType'
+      required:
+        - success
+        - data
+
+    RecentActivitiesSummaryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          description: "Activity summary organized by category and timeline"
+          example:
+            "date-night":
+              "1months":
+                label: "Last Month"
+                activities: []
+              "3months":
+                label: "Last 3 Months"
+                activities: []
+              "12months":
+                label: "Last Year"
+                activities: []
+      required:
+        - success
+        - data
+
+    # Request schemas
+    CreateActivityRequest:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          example: "2024-11-03"
+        hours:
+          type: integer
+          minimum: 0
+          example: 2
+        activity:
+          type: object
+          properties:
+            typeId:
+              type: string
+              example: "507f1f77bcf86cd799439011"
+            description:
+              type: string
+              example: "Dinner at Italian restaurant"
+          required:
+            - typeId
+        groupId:
+          type: string
+          example: "group456"
+      required:
+        - date
+        - activity
+
+    UpdateActivityRequest:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          example: "2024-11-03"
+        hours:
+          type: integer
+          minimum: 0
+          example: 3
+        activity:
+          type: object
+          properties:
+            typeId:
+              type: string
+              example: "507f1f77bcf86cd799439011"
+            description:
+              type: string
+              example: "Updated description"
+          required:
+            - typeId
+        groupId:
+          type: string
+          example: "group456"
+
+    CreateActivityTypeRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Date Night"
+        slug:
+          type: string
+          example: "date-night"
+        description:
+          type: string
+          example: "Romantic evening activities"
+        color:
+          type: string
+          example: "#FF5733"
+        icon:
+          type: string
+          example: "heart"
+        groupId:
+          type: string
+          example: "group456"
+      required:
+        - name
+
+    UpdateActivityTypeRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Updated Date Night"
+        description:
+          type: string
+          example: "Updated romantic evening activities"
+        color:
+          type: string
+          example: "#FF5733"
+        icon:
+          type: string
+          example: "heart"
+        isActive:
+          type: boolean
+          example: true
+        sortOrder:
+          type: integer
+          example: 2
+
+    ReorderActivityTypesRequest:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+            example: "507f1f77bcf86cd799439011"
+          sortOrder:
+            type: integer
+            example: 1
+        required:
+          - id
+          - sortOrder
+
+paths:
+  # Health check endpoint
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: |
+        Returns the health status of the relationship service including database connectivity.
+        Used for monitoring and load balancer health checks.
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  # Activity Management Endpoints
+  /api/activities:
+    post:
+      tags:
+        - Activities
+      summary: Create a new activity
+      description: |
+        Creates a new relationship activity for the authenticated user.
+        The activity type must be accessible to the user (personal or group-shared).
+        Hours are optional and must be non-negative integers.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateActivityRequest'
+      responses:
+        '201':
+          description: Activity created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityResponse'
+        '400':
+          description: Bad request - missing required fields or invalid data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+    get:
+      tags:
+        - Activities
+      summary: List activities
+      description: |
+        Retrieves activities for the authenticated user with optional filtering.
+        Supports pagination, date range filtering, activity type filtering, and sorting.
+        Only returns activities the user has access to (personal or group-shared).
+      parameters:
+        - name: activityType
+          in: query
+          schema:
+            type: string
+          description: Filter by activity type slug
+          example: "date-night"
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter activities from this date (inclusive)
+          example: "2024-01-01"
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter activities until this date (inclusive)
+          example: "2024-12-31"
+        - name: description
+          in: query
+          schema:
+            type: string
+          description: Filter by activity description (partial match)
+          example: "dinner"
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of activities per page
+          example: 20
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+          example: 1
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: ["date", "createdAt", "hours"]
+            default: "date"
+          description: Field to sort by
+          example: "date"
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: ["asc", "desc"]
+            default: "desc"
+          description: Sort order
+          example: "desc"
+        - name: groupId
+          in: query
+          schema:
+            type: string
+          description: Filter by specific group ID
+          example: "group456"
+      responses:
+        '200':
+          description: Activities retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivitiesResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  /api/activities/recent:
+    get:
+      tags:
+        - Activities
+      summary: Get recent activities
+      description: |
+        Retrieves the most recent activities for the authenticated user.
+        Returns activities sorted by creation date (newest first).
+        Only includes activities the user has access to.
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+          description: Number of recent activities to retrieve
+          example: 10
+      responses:
+        '200':
+          description: Recent activities retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecentActivitiesResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  /api/activities/recent-summary:
+    get:
+      tags:
+        - Activities
+      summary: Get recent activities summary
+      description: |
+        Retrieves a summary of recent activities organized by category and time periods.
+        Groups activities by type and shows activity counts for different time ranges.
+        Useful for dashboard views and activity tracking.
+      parameters:
+        - name: groupId
+          in: query
+          schema:
+            type: string
+          description: Filter by specific group ID
+          example: "group456"
+      responses:
+        '200':
+          description: Recent activities summary retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecentActivitiesSummaryResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  /api/activities/stats:
+    get:
+      tags:
+        - Activities
+      summary: Get activity statistics
+      description: |
+        Retrieves aggregated statistics for activities grouped by activity type.
+        Shows count, total hours, and average hours for each activity type.
+        Only includes activities the user has access to.
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter statistics from this date
+          example: "2024-01-01"
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter statistics until this date
+          example: "2024-12-31"
+      responses:
+        '200':
+          description: Activity statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityStatsResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  /api/activities/date-range:
+    get:
+      tags:
+        - Activities
+      summary: Get activities by date range
+      description: |
+        Retrieves activities within a specific date range.
+        Both startDate and endDate are required.
+        Returns activities sorted by date.
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: Start date for the range (inclusive)
+          example: "2024-11-01"
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          description: End date for the range (inclusive)
+          example: "2024-11-30"
+      responses:
+        '200':
+          description: Activities retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivitiesResponse'
+        '400':
+          description: Bad request - missing startDate or endDate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  /api/activities/types:
+    get:
+      tags:
+        - Activities
+      summary: Get available activity types
+      description: |
+        Retrieves activity types available to the authenticated user.
+        Includes personal activity types and those shared within user's groups.
+        Only returns active activity types.
+      parameters:
+        - name: groupId
+          in: query
+          schema:
+            type: string
+          description: Filter by specific group ID (optional)
+          example: "group456"
+      responses:
+        '200':
+          description: Activity types retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityTypesResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  /api/activities/{id}:
+    get:
+      tags:
+        - Activities
+      summary: Get activity by ID
+      description: |
+        Retrieves a specific activity by its ID.
+        User must have access to the activity (owner or group member).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Activity ID
+          example: "507f1f77bcf86cd799439011"
+      responses:
+        '200':
+          description: Activity retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityResponse'
+        '404':
+          description: Activity not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+    put:
+      tags:
+        - Activities
+      summary: Update activity
+      description: |
+        Updates an existing activity.
+        User must be the owner of the activity.
+        All fields are optional in the update request.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Activity ID
+          example: "507f1f77bcf86cd799439011"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateActivityRequest'
+      responses:
+        '200':
+          description: Activity updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityResponse'
+        '400':
+          description: Bad request - invalid data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Activity not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+    delete:
+      tags:
+        - Activities
+      summary: Delete activity
+      description: |
+        Deletes an activity permanently.
+        User must be the owner of the activity.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Activity ID
+          example: "507f1f77bcf86cd799439011"
+      responses:
+        '200':
+          description: Activity deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Activity not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  # Activity Type Management Endpoints
+  /api/activity-types:
+    post:
+      tags:
+        - Activity Types
+      summary: Create activity type
+      description: |
+        Creates a new activity type for the authenticated user.
+        If groupId is provided, creates a group-shared activity type.
+        Otherwise, creates a personal activity type.
+        Slug is auto-generated from name if not provided.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateActivityTypeRequest'
+      responses:
+        '201':
+          description: Activity type created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityTypeResponse'
+        '400':
+          description: Bad request - missing name or invalid data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+    get:
+      tags:
+        - Activity Types
+      summary: List activity types
+      description: |
+        Retrieves activity types accessible to the authenticated user.
+        Includes personal types and group-shared types.
+        Supports pagination and filtering by active status.
+      parameters:
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: Filter by active status
+          example: true
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+          description: Number of types per page
+          example: 50
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+          example: 1
+        - name: groupId
+          in: query
+          schema:
+            type: string
+          description: Filter by specific group ID
+          example: "group456"
+      responses:
+        '200':
+          description: Activity types retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityTypesResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  /api/activity-types/{id}:
+    get:
+      tags:
+        - Activity Types
+      summary: Get activity type by ID
+      description: |
+        Retrieves a specific activity type by its ID.
+        User must have access to the activity type.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Activity type ID
+          example: "507f1f77bcf86cd799439011"
+      responses:
+        '200':
+          description: Activity type retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityTypeResponse'
+        '404':
+          description: Activity type not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+    put:
+      tags:
+        - Activity Types
+      summary: Update activity type
+      description: |
+        Updates an existing activity type.
+        User must be the owner of the activity type.
+        All fields are optional in the update request.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Activity type ID
+          example: "507f1f77bcf86cd799439011"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateActivityTypeRequest'
+      responses:
+        '200':
+          description: Activity type updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityTypeResponse'
+        '400':
+          description: Bad request - invalid data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Activity type not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+    delete:
+      tags:
+        - Activity Types
+      summary: Delete activity type
+      description: |
+        Deletes an activity type permanently.
+        User must be the owner of the activity type.
+        This will not delete associated activities.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Activity type ID
+          example: "507f1f77bcf86cd799439011"
+      responses:
+        '200':
+          description: Activity type deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Activity type not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  /api/activity-types/reorder:
+    post:
+      tags:
+        - Activity Types
+      summary: Reorder activity types
+      description: |
+        Updates the sort order of multiple activity types.
+        User must own all the activity types being reordered.
+        Used for customizing the display order in UI.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderActivityTypesRequest'
+      responses:
+        '200':
+          description: Activity types reordered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request - invalid data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  # Statistics Endpoints
+  /api/statistics:
+    get:
+      tags:
+        - Statistics
+      summary: Get relationship statistics
+      description: |
+        Retrieves comprehensive relationship statistics for the authenticated user.
+        Includes activity counts, hours, breakdowns by type, and recent activity.
+        Supports different timeframes for analysis.
+      parameters:
+        - name: timeframe
+          in: query
+          schema:
+            type: string
+            enum: ["week", "month", "quarter", "year", "all"]
+            default: "all"
+          description: Time period for statistics
+          example: "month"
+        - name: groupId
+          in: query
+          schema:
+            type: string
+          description: Filter by specific group ID
+          example: "group456"
+      responses:
+        '200':
+          description: Statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatisticsResponse'
+        '400':
+          description: Bad request - invalid timeframe
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  /api/statistics/monthly-hours:
+    get:
+      tags:
+        - Statistics
+      summary: Get monthly hours statistics
+      description: |
+        Retrieves monthly aggregated hours data for relationship activities.
+        Shows total hours and activity counts per month.
+        Useful for trend analysis and year-over-year comparisons.
+      parameters:
+        - name: year
+          in: query
+          schema:
+            type: integer
+            minimum: 2000
+          description: Specific year to filter by (defaults to current year)
+          example: 2024
+        - name: groupId
+          in: query
+          schema:
+            type: string
+          description: Filter by specific group ID
+          example: "group456"
+      responses:
+        '200':
+          description: Monthly hours data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonthlyHoursResponse'
+        '400':
+          description: Bad request - invalid year
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  /api/statistics/monthly-stats:
+    get:
+      tags:
+        - Statistics
+      summary: Get monthly statistics breakdown
+      description: |
+        Retrieves detailed monthly statistics with day-by-day breakdown.
+        Shows activity counts and hours for each day in each month.
+        Useful for calendar views and detailed monthly analysis.
+      parameters:
+        - name: year
+          in: query
+          schema:
+            type: integer
+            minimum: 2000
+          description: Specific year to filter by (defaults to current year)
+          example: 2024
+        - name: groupId
+          in: query
+          schema:
+            type: string
+          description: Filter by specific group ID
+          example: "group456"
+      responses:
+        '200':
+          description: Monthly statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonthlyStatisticsResponse'
+        '400':
+          description: Bad request - invalid year
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  /api/statistics/monthly-activity-breakdown:
+    get:
+      tags:
+        - Statistics
+      summary: Get monthly activity breakdown
+      description: |
+        Retrieves monthly statistics broken down by activity type.
+        Shows hours and activity counts for each type within each month.
+        Useful for understanding activity patterns and preferences.
+      parameters:
+        - name: year
+          in: query
+          schema:
+            type: integer
+            minimum: 2000
+          description: Specific year to filter by (defaults to current year)
+          example: 2024
+        - name: groupId
+          in: query
+          schema:
+            type: string
+          description: Filter by specific group ID
+          example: "group456"
+      responses:
+        '200':
+          description: Monthly activity breakdown retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonthlyActivityBreakdownResponse'
+        '400':
+          description: Bad request - invalid year
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  /api/statistics/weekly-heatmap:
+    get:
+      tags:
+        - Statistics
+      summary: Get weekly activity heatmap
+      description: |
+        Retrieves activity data formatted for weekly heatmap visualization.
+        Shows activity levels for each day of each week in the year.
+        Perfect for GitHub-style contribution heatmaps.
+      parameters:
+        - name: year
+          in: query
+          schema:
+            type: integer
+            minimum: 2000
+          description: Specific year to filter by (defaults to current year)
+          example: 2024
+        - name: groupId
+          in: query
+          schema:
+            type: string
+          description: Filter by specific group ID
+          example: "group456"
+      responses:
+        '200':
+          description: Weekly heatmap data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeeklyHeatmapResponse'
+        '400':
+          description: Bad request - invalid year
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  /api/statistics/cumulative-timeline:
+    get:
+      tags:
+        - Statistics
+      summary: Get cumulative timeline data
+      description: |
+        Retrieves cumulative statistics over time showing progression.
+        Includes both monthly and cumulative totals for activities and hours.
+        Useful for tracking relationship growth and milestones.
+      parameters:
+        - name: year
+          in: query
+          schema:
+            type: integer
+            minimum: 2000
+          description: Specific year to filter by (defaults to current year)
+          example: 2024
+        - name: groupId
+          in: query
+          schema:
+            type: string
+          description: Filter by specific group ID
+          example: "group456"
+      responses:
+        '200':
+          description: Cumulative timeline data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CumulativeTimelineResponse'
+        '400':
+          description: Bad request - invalid year
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []

@@ -37,12 +37,12 @@ app.use(express.json());
 app.use(requestLoggerWithMetrics);
 app.use(cookieParser());
 
+// Serve OpenAPI docs as static files (before route mounting)
+app.use('/api/docs', express.static(path.join(__dirname, '../docs')));
+
 app.use('/api/plans', planRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/payments', paymentRoutes);
-
-// Serve OpenAPI docs as static files
-app.use('/api/docs', express.static(path.join(__dirname, '../docs')));
 
 // Health check endpoint
 app.get('/health', healthCheck);

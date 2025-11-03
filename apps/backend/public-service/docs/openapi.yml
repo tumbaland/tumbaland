@@ -1,28 +1,271 @@
 openapi: 3.0.3
 info:
   title: Public Service API
+  description: API for public endpoints including random todos, logging, and health checks
   version: 1.0.0
-  description: Simple API for random todo recommendations
+  contact:
+    name: Tumbaland Team
 servers:
   - url: http://localhost:5003
+    description: Development server
+  - url: https://public-api.tumbaland.eu
+    description: Production server
+
+tags:
+  - name: Health
+    description: Service health monitoring
+  - name: Todo
+    description: Random todo/activity suggestions
+  - name: Logs
+    description: Frontend logging and monitoring
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "No todos available"
+      required:
+        - error
+
+    TodoResponse:
+      type: object
+      properties:
+        todo:
+          type: string
+          example: "Explore Tallinn Old Town (UNESCO World Heritage Site)"
+      required:
+        - todo
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: ["ok", "error"]
+          example: "ok"
+        service:
+          type: string
+          example: "public-service"
+        type:
+          type: string
+          example: "backend"
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+          example: "1.0.0"
+        description:
+          type: string
+          example: "Public API endpoints service"
+        error:
+          type: string
+          nullable: true
+          example: null
+      required:
+        - status
+        - service
+        - type
+        - timestamp
+        - version
+        - description
+
+    LogEntry:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-11-03T10:30:00.000Z"
+        level:
+          type: string
+          enum: ["debug", "info", "warn", "error"]
+          example: "info"
+        service:
+          type: string
+          example: "frontend-app"
+        component:
+          type: string
+          example: "user-interface"
+        message:
+          type: string
+          example: "User clicked login button"
+        userId:
+          type: string
+          nullable: true
+          example: "user123"
+        sessionId:
+          type: string
+          nullable: true
+          example: "session456"
+        correlationId:
+          type: string
+          nullable: true
+          example: "corr789"
+        metadata:
+          type: object
+          nullable: true
+          description: "Additional log metadata"
+      required:
+        - level
+        - service
+        - message
+
+    LogSubmissionRequest:
+      type: array
+      items:
+        $ref: '#/components/schemas/LogEntry'
+      description: "Array of log entries to submit (can also be a single log entry object)"
+
+    LogSubmissionResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "logged"
+        count:
+          type: integer
+          minimum: 0
+          example: 5
+        message:
+          type: string
+          example: "Successfully processed 5 log entries"
+      required:
+        - status
+        - count
+        - message
+
+    LogHealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: ["healthy", "unhealthy"]
+          example: "healthy"
+        service:
+          type: string
+          example: "log-controller"
+        timestamp:
+          type: string
+          format: date-time
+        message:
+          type: string
+          example: "Logging pipeline is operational"
+        error:
+          type: string
+          nullable: true
+          example: null
+      required:
+        - status
+        - service
+        - timestamp
+        - message
+
 paths:
-  /api/todo/random:
+  # Health check endpoint
+  /health:
     get:
-      summary: Get a random todo
-      description: Returns a random todo recommendation from the list
+      tags:
+        - Health
+      summary: Health check
+      description: |
+        Returns the health status of the public service.
+        Used for monitoring and load balancer health checks.
       responses:
         '200':
-          description: A random todo
+          description: Service is healthy
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  todo:
-                    type: string
-                    example: 'Take a SUP yoga class on Lake Viljandi or Lake Harku'
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  # Todo endpoints
+  /api/todo/random:
+    get:
+      tags:
+        - Todo
+      summary: Get random todo
+      description: |
+        Returns a random todo item from the curated list of things to do in Estonia.
+        The todos are loaded from a JSON file and include activities like visiting museums,
+        trying local food, outdoor activities, and cultural experiences.
+      responses:
+        '200':
+          description: Random todo retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodoResponse'
         '500':
-          description: No todos available
+          description: No todos available or internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Logging endpoints
+  /logs:
+    post:
+      tags:
+        - Logs
+      summary: Submit frontend logs
+      description: |
+        Accepts log entries from frontend applications and forwards them to the centralized logging pipeline.
+        Supports both single log entries and arrays of log entries for batch processing.
+        Logs are written to stdout for collection by log aggregation systems like Filebeat.
+        Each log entry is enriched with service identification and forwarded metadata.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/LogEntry'
+                - $ref: '#/components/schemas/LogSubmissionRequest'
+            examples:
+              single:
+                summary: Single log entry
+                value:
+                  timestamp: "2024-11-03T10:30:00.000Z"
+                  level: "info"
+                  service: "frontend-app"
+                  component: "user-interface"
+                  message: "User clicked login button"
+                  userId: "user123"
+                  sessionId: "session456"
+              batch:
+                summary: Batch log entries
+                value:
+                  - timestamp: "2024-11-03T10:30:00.000Z"
+                    level: "info"
+                    service: "frontend-app"
+                    component: "user-interface"
+                    message: "User clicked login button"
+                  - timestamp: "2024-11-03T10:30:05.000Z"
+                    level: "error"
+                    service: "frontend-app"
+                    component: "api-client"
+                    message: "Failed to fetch user data"
+                    userId: "user123"
+                    correlationId: "corr789"
+      responses:
+        '200':
+          description: Logs processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogSubmissionResponse'
+        '500':
+          description: Failed to process log submission
           content:
             application/json:
               schema:
@@ -30,4 +273,30 @@ paths:
                 properties:
                   error:
                     type: string
-                    example: No todos available
+                    example: "Failed to process log submission"
+                  message:
+                    type: string
+                    example: "An error occurred while processing the log entries"
+
+  /logs/health:
+    get:
+      tags:
+        - Logs
+      summary: Logging system health check
+      description: |
+        Health check endpoint for the logging system.
+        Verifies that the logging pipeline is functioning correctly by writing a test log entry.
+        Used to monitor the logging infrastructure and ensure logs are being processed.
+      responses:
+        '200':
+          description: Logging pipeline is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogHealthResponse'
+        '503':
+          description: Logging pipeline is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogHealthResponse'

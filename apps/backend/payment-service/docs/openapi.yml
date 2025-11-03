@@ -1,384 +1,968 @@
 openapi: 3.0.3
 info:
   title: Payment Service API
+  description: API for payment processing, subscription management, and plan administration
   version: 1.0.0
-  description: API documentation for the Payment Service (plans, subscriptions, one-time payments)
+  contact:
+    name: Tumbaland Team
 servers:
-  - url: /api
-paths:
-  /plans:
-    get:
-      summary: List active plans
-      tags: [Plans]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Active plans
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success: { type: boolean }
-                  plans:
-                    type: array
-                    items: { $ref: '#/components/schemas/Plan' }
-    post:
-      summary: Create a plan
-      description: |
-        Create a single plan (plan object). Admin only (role guard TBD).
-        For inserting multiple plans in one request, use POST /plans/bulk.
-      tags: [Plans]
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PlanCreate'
-      responses:
-        '201':
-          description: Plan created
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success: { type: boolean }
-                  plan: { $ref: '#/components/schemas/Plan' }
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
-        '409':
-          description: Duplicate code
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
-  /plans/bulk:
-    post:
-      summary: Bulk create plans
-      description: Insert multiple plans at once (array of PlanCreate). Admin only (role guard TBD).
-      tags: [Plans]
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: array
-              items: { $ref: '#/components/schemas/PlanCreate' }
-            example:
-              - name: Starter
-                code: starter
-                description: Free tier with basic tools
-                priceMonthlyCents: 0
-                features:
-                  - public_content
-                  - uploads_daily_5
-                  - optimizer_basic
-                  - payments_history
-                  - support_email
-              - name: Pro
-                code: pro
-                description: Advanced investing & unlimited uploads
-                priceMonthlyCents: 900
-                priceYearlyCents: 9000
-                features:
-                  - uploads_unlimited
-                  - optimizer_advanced
-                  - mc_sim_normal_t
-                  - subscription_dashboard
-                  - support_priority
-                  - early_access
-              - name: Elite
-                code: elite
-                description: Full analytics + custom simulations
-                priceMonthlyCents: 1900
-                priceYearlyCents: 19000
-                features:
-                  - all_pro
-                  - mc_custom_distributions
-                  - historical_extended
-                  - export_data
-                  - analytics_panel
-                  - feedback_channel
-                  - sla_24h
-      responses:
-        '201':
-          description: Plans created
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success: { type: boolean }
-                  plans:
-                    type: array
-                    items: { $ref: '#/components/schemas/Plan' }
-              example:
-                success: true
-                plans:
-                  - _id: "673000000000000000000001"
-                    name: Starter
-                    code: starter
-                    description: Free tier with basic tools
-                    priceMonthlyCents: 0
-                    features: [public_content, uploads_daily_5, optimizer_basic, payments_history, support_email]
-                    isActive: true
-                    createdAt: 2025-08-11T12:00:00.000Z
-                    updatedAt: 2025-08-11T12:00:00.000Z
-                  - _id: "673000000000000000000002"
-                    name: Pro
-                    code: pro
-                    description: Advanced investing & unlimited uploads
-                    priceMonthlyCents: 900
-                    priceYearlyCents: 9000
-                    features: [uploads_unlimited, optimizer_advanced, mc_sim_normal_t, subscription_dashboard, support_priority, early_access]
-                    isActive: true
-                    createdAt: 2025-08-11T12:00:00.000Z
-                    updatedAt: 2025-08-11T12:00:00.000Z
-                  - _id: "673000000000000000000003"
-                    name: Elite
-                    code: elite
-                    description: Full analytics + custom simulations
-                    priceMonthlyCents: 1900
-                    priceYearlyCents: 19000
-                    features: [all_pro, mc_custom_distributions, historical_extended, export_data, analytics_panel, feedback_channel, sla_24h]
-                    isActive: true
-                    createdAt: 2025-08-11T12:00:00.000Z
-                    updatedAt: 2025-08-11T12:00:00.000Z
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
-        '409':
-          description: One or more codes already exist
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
-  /subscriptions/me:
-    get:
-      summary: Get my subscription
-      tags: [Subscriptions]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Current subscription (if any)
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success: { type: boolean }
-                  subscription: { $ref: '#/components/schemas/Subscription' }
-  /subscriptions/checkout-session:
-    post:
-      summary: Create a Stripe Checkout Session for a plan
-      description: |
-        Creates (or reuses) an incomplete subscription document then creates a Stripe Checkout Session.
-        Returns a session id and redirect URL. For free plans (priceMonthlyCents = 0) no session is created; subscription activates immediately.
-      tags: [Subscriptions]
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [ planCode ]
-              properties:
-                planCode: { type: string }
-                successUrl: { type: string }
-                cancelUrl: { type: string }
-      responses:
-        '201':
-          description: Session created or free plan activated
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - type: object
-                    properties:
-                      success: { type: boolean }
-                      sessionId: { type: string }
-                      url: { type: string }
-                  - type: object
-                    properties:
-                      success: { type: boolean }
-                      free: { type: boolean, example: true }
-                      subscription: { $ref: '#/components/schemas/Subscription' }
-        '400':
-          description: Missing or invalid data
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Error' }
-  /subscriptions/checkout-session/{id}:
-    get:
-      summary: Get status of a Checkout Session
-      tags: [Subscriptions]
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: { type: string }
-      responses:
-        '200':
-          description: Session status
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success: { type: boolean }
-                  status: { type: string }
-                  payment_status: { type: string }
-                  subscription: { $ref: '#/components/schemas/Subscription' }
-  /subscriptions/cancel:
-    post:
-      summary: Cancel current subscription
-      tags: [Subscriptions]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Subscription canceled
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success: { type: boolean }
-                  subscription: { $ref: '#/components/schemas/Subscription' }
-  /payments/one-time:
-    post:
-      summary: Create one-time payment (placeholder implementation)
-      tags: [Payments]
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [ amountCents ]
-              properties:
-                amountCents: { type: integer, minimum: 50 }
-                currency: { type: string, default: eur }
-      responses:
-        '201':
-          description: Payment created
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success: { type: boolean }
-                  payment: { $ref: '#/components/schemas/Payment' }
-  /payments/mine:
-    get:
-      summary: List my payments
-      tags: [Payments]
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Payments list
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success: { type: boolean }
-                  payments:
-                    type: array
-                    items: { $ref: '#/components/schemas/Payment' }
+  - url: http://localhost:5005
+    description: Development server
+  - url: https://payment-api.tumbaland.eu
+    description: Production server
+
+tags:
+  - name: Health
+    description: Service health monitoring
+  - name: Plans
+    description: Subscription plan management operations
+  - name: Subscriptions
+    description: User subscription management and lifecycle
+  - name: Payments
+    description: Payment processing and history
+  - name: Webhooks
+    description: External webhook handling (Stripe)
 
 components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "Error description"
+      required:
+        - success
+        - message
+
+    Payment:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        userEmail:
+          type: string
+          format: email
+          example: "user@example.com"
+        amountCents:
+          type: integer
+          minimum: 0
+          example: 2999
+        currency:
+          type: string
+          default: "eur"
+          example: "eur"
+        type:
+          type: string
+          enum: ["subscription", "one_time"]
+          example: "one_time"
+        status:
+          type: string
+          enum: ["succeeded", "pending", "failed", "refunded"]
+          example: "succeeded"
+        stripePaymentIntentId:
+          type: string
+          nullable: true
+          example: "pi_1234567890"
+        stripeChargeId:
+          type: string
+          nullable: true
+          example: "ch_1234567890"
+        metadata:
+          type: object
+          nullable: true
+          description: "Additional payment metadata"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - userEmail
+        - amountCents
+        - type
+        - status
+
+    Plan:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        name:
+          type: string
+          example: "Pro Plan"
+        code:
+          type: string
+          example: "pro"
+        description:
+          type: string
+          nullable: true
+          example: "Professional plan with advanced features"
+        priceMonthlyCents:
+          type: integer
+          minimum: 0
+          example: 2999
+        priceYearlyCents:
+          type: integer
+          nullable: true
+          minimum: 0
+          example: 29990
+        features:
+          type: array
+          items:
+            type: string
+          example: ["Unlimited albums", "Advanced analytics", "Priority support"]
+        isActive:
+          type: boolean
+          default: true
+          example: true
+        stripePriceId:
+          type: string
+          nullable: true
+          example: "price_1234567890"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - name
+        - code
+        - priceMonthlyCents
+        - features
+        - isActive
+
+    Subscription:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        userEmail:
+          type: string
+          format: email
+          example: "user@example.com"
+        planCode:
+          type: string
+          example: "pro"
+        plan:
+          $ref: '#/components/schemas/Plan'
+        status:
+          type: string
+          enum: ["active", "past_due", "canceled", "incomplete"]
+          example: "active"
+        renewsAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-12-01T00:00:00.000Z"
+        cancelAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-12-01T00:00:00.000Z"
+        canceledAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-11-15T10:30:00.000Z"
+        stripeCustomerId:
+          type: string
+          nullable: true
+          example: "cus_1234567890"
+        stripeSubscriptionId:
+          type: string
+          nullable: true
+          example: "sub_1234567890"
+        latestInvoiceId:
+          type: string
+          nullable: true
+          example: "in_1234567890"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - userEmail
+        - planCode
+        - plan
+        - status
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: ["ok", "error"]
+          example: "ok"
+        service:
+          type: string
+          example: "payment-service"
+        type:
+          type: string
+          example: "backend"
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+          example: "1.0.0"
+        description:
+          type: string
+          example: "Payment processing and subscription management service"
+        dependencies:
+          type: object
+          properties:
+            mongodb:
+              type: string
+              enum: ["connected", "disconnected"]
+              example: "connected"
+        error:
+          type: string
+          nullable: true
+          example: null
+      required:
+        - status
+        - service
+        - type
+        - timestamp
+        - version
+        - description
+        - dependencies
+
+    # Response schemas
+    PaymentsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payment'
+      required:
+        - success
+        - payments
+
+    PaymentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        payment:
+          $ref: '#/components/schemas/Payment'
+      required:
+        - success
+        - payment
+
+    PlansResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        plans:
+          type: array
+          items:
+            $ref: '#/components/schemas/Plan'
+      required:
+        - success
+        - plans
+
+    PlanResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        plan:
+          $ref: '#/components/schemas/Plan'
+      required:
+        - success
+        - plan
+
+    PlansBulkResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        plans:
+          type: array
+          items:
+            $ref: '#/components/schemas/Plan'
+      required:
+        - success
+        - plans
+
+    SubscriptionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        subscription:
+          $ref: '#/components/schemas/Subscription'
+          nullable: true
+      required:
+        - success
+
+    SubscriptionsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        subscriptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Subscription'
+      required:
+        - success
+        - subscriptions
+
+    CheckoutSessionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        sessionId:
+          type: string
+          example: "cs_test_1234567890"
+        url:
+          type: string
+          format: uri
+          example: "https://checkout.stripe.com/c/pay/cs_test_1234567890"
+        free:
+          type: boolean
+          nullable: true
+          example: false
+        subscription:
+          $ref: '#/components/schemas/Subscription'
+          nullable: true
+      required:
+        - success
+
+    CheckoutSessionStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        status:
+          type: string
+          example: "complete"
+        payment_status:
+          type: string
+          example: "paid"
+        subscription:
+          $ref: '#/components/schemas/Subscription'
+          nullable: true
+      required:
+        - success
+        - status
+        - payment_status
+
+    StripeWebhookResponse:
+      type: object
+      properties:
+        received:
+          type: boolean
+          example: true
+        duplicate:
+          type: boolean
+          nullable: true
+          example: false
+      required:
+        - received
+
+    # Request schemas
+    CreateOneTimePaymentRequest:
+      type: object
+      properties:
+        amountCents:
+          type: integer
+          minimum: 50
+          example: 2999
+        currency:
+          type: string
+          default: "eur"
+          example: "eur"
+      required:
+        - amountCents
+
+    CreatePlanRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Pro Plan"
+        code:
+          type: string
+          example: "pro"
+        description:
+          type: string
+          example: "Professional plan with advanced features"
+        priceMonthlyCents:
+          type: integer
+          minimum: 0
+          example: 2999
+        priceYearlyCents:
+          type: integer
+          minimum: 0
+          example: 29990
+        features:
+          type: array
+          items:
+            type: string
+          example: ["Unlimited albums", "Advanced analytics", "Priority support"]
+      required:
+        - name
+        - code
+        - priceMonthlyCents
+
+    CreatePlansBulkRequest:
+      type: array
+      items:
+        $ref: '#/components/schemas/CreatePlanRequest'
+
+    UpdateStripePricesRequest:
+      type: object
+      properties:
+        stripePriceId:
+          type: string
+          example: "price_1234567890"
+      required:
+        - stripePriceId
+
+    CreateCheckoutSessionRequest:
+      type: object
+      properties:
+        planCode:
+          type: string
+          example: "pro"
+        successUrl:
+          type: string
+          format: uri
+          example: "https://app.tumbaland.eu/subscription/success"
+        cancelUrl:
+          type: string
+          format: uri
+          example: "https://app.tumbaland.eu/subscription/cancel"
+      required:
+        - planCode
+
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-  schemas:
-    Plan:
-      type: object
-      properties:
-        _id: { type: string }
-        name: { type: string }
-        code: { type: string }
-        description: { type: string }
-        priceMonthlyCents: { type: integer }
-        priceYearlyCents: { type: integer }
-        features:
-          type: array
-          items: { type: string }
-        isActive: { type: boolean }
-  stripePriceId: { type: string, description: 'Stripe recurring price id used for checkout' }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
-    PlanCreate:
-      type: object
-      required: [ name, code, priceMonthlyCents ]
-      properties:
-        name: { type: string }
-        code: { type: string }
-        description: { type: string }
-        priceMonthlyCents: { type: integer, minimum: 0 }
-        priceYearlyCents: { type: integer, minimum: 0 }
-        features:
-          type: array
-          items: { type: string }
-    Subscription:
-      type: object
-      properties:
-        _id: { type: string }
-        userEmail: { type: string }
-        planCode: { type: string }
-        status: { type: string, enum: [active, past_due, canceled, incomplete] }
-        renewsAt: { type: string, format: date-time }
-        cancelAt: { type: string, format: date-time }
-        canceledAt: { type: string, format: date-time }
-        stripeCustomerId: { type: string }
-        stripeSubscriptionId: { type: string }
-        latestInvoiceId: { type: string }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
-    Payment:
-      type: object
-      properties:
-        _id: { type: string }
-        userEmail: { type: string }
-        amountCents: { type: integer }
-        currency: { type: string }
-        type: { type: string, enum: [subscription, one_time] }
-        status: { type: string, enum: [succeeded, pending, failed, refunded] }
-        stripePaymentIntentId: { type: string }
-        stripeChargeId: { type: string }
-        metadata: { type: object }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
-    Error:
-      type: object
-      properties:
-        success: { type: boolean, example: false }
-        message: { type: string }
-      required: [success, message]
+      description: JWT token obtained from auth service
+    internalAuth:
+      type: apiKey
+      in: header
+      name: x-internal-token
+      description: Internal service token for inter-service communication
+    stripeWebhookAuth:
+      type: apiKey
+      in: header
+      name: stripe-signature
+      description: Stripe webhook signature for webhook validation
 
-tags:
-  - name: Plans
-    description: Manage subscription plans
-  - name: Subscriptions
-    description: Subscription lifecycle endpoints
-  - name: Payments
-    description: One-time payment endpoints
+paths:
+  # Health check endpoint
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: |
+        Returns the health status of the payment service including database connectivity.
+        Used for monitoring and load balancer health checks.
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  # Plan Management Endpoints
+  /api/plans:
+    get:
+      tags:
+        - Plans
+      summary: List active plans
+      description: |
+        Retrieves all active plans sorted by monthly price.
+        Used to display available subscription options to users.
+      responses:
+        '200':
+          description: Plans retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlansResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+    post:
+      tags:
+        - Plans
+      summary: Create a new plan
+      description: |
+        Creates a new subscription plan.
+        Requires admin privileges.
+        Supports both single plan creation and bulk creation via array payload.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/CreatePlanRequest'
+                - $ref: '#/components/schemas/CreatePlansBulkRequest'
+      responses:
+        '201':
+          description: Plan(s) created successfully
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/PlanResponse'
+                  - $ref: '#/components/schemas/PlansBulkResponse'
+        '400':
+          description: Bad request - invalid plan data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict - plan code already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  /api/plans/bulk:
+    post:
+      tags:
+        - Plans
+      summary: Create multiple plans
+      description: |
+        Creates multiple subscription plans in a single request.
+        Requires admin privileges.
+        Validates all plans before creating any to ensure atomicity.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePlansBulkRequest'
+      responses:
+        '201':
+          description: Plans created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlansBulkResponse'
+        '400':
+          description: Bad request - invalid plan data or duplicate codes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict - one or more plan codes already exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  /api/plans/{code}/stripe-prices:
+    patch:
+      tags:
+        - Plans
+      summary: Update Stripe price ID for a plan
+      description: |
+        Updates the Stripe price ID associated with a plan.
+        Requires admin privileges.
+        Used when creating new prices in Stripe for existing plans.
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Plan code
+          example: "pro"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStripePricesRequest'
+      responses:
+        '200':
+          description: Plan updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanResponse'
+        '400':
+          description: Bad request - invalid stripePriceId
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Plan not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  # Subscription Management Endpoints
+  /api/subscriptions/me:
+    get:
+      tags:
+        - Subscriptions
+      summary: Get user's current subscription
+      description: |
+        Retrieves the user's best active subscription based on price and status.
+        Returns the highest-priced active/past_due/incomplete subscription.
+        Returns null if no active subscriptions exist.
+      responses:
+        '200':
+          description: Subscription retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  /api/subscriptions/mine:
+    get:
+      tags:
+        - Subscriptions
+      summary: List user's subscriptions
+      description: |
+        Retrieves all subscriptions for the authenticated user, including canceled ones.
+        Sorted by creation date (newest first).
+      responses:
+        '200':
+          description: Subscriptions retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionsResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  /api/subscriptions/cancel:
+    post:
+      tags:
+        - Subscriptions
+      summary: Cancel user's subscription
+      description: |
+        Cancels the user's active subscription.
+        For Stripe-managed subscriptions, requests cancellation at period end.
+        For incomplete subscriptions, marks as canceled locally.
+        Automatically handles downgrades to free plans.
+      responses:
+        '200':
+          description: Subscription canceled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  subscription:
+                    $ref: '#/components/schemas/Subscription'
+                  stripe:
+                    type: object
+                    nullable: true
+                    properties:
+                      id:
+                        type: string
+                        example: "sub_1234567890"
+                      cancel_at_period_end:
+                        type: boolean
+                        example: true
+                  warning:
+                    type: string
+                    nullable: true
+                    example: "stripe_cancel_failed_local_only"
+        '404':
+          description: No cancellable subscription found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  /api/subscriptions/checkout-session:
+    post:
+      tags:
+        - Subscriptions
+      summary: Create Stripe checkout session
+      description: |
+        Creates a Stripe checkout session for subscription purchase.
+        For free plans (price 0), activates subscription immediately without Stripe.
+        Handles plan upgrades/downgrades automatically.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCheckoutSessionRequest'
+      responses:
+        '201':
+          description: Checkout session created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutSessionResponse'
+        '400':
+          description: Bad request - invalid planCode or missing stripePriceId
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Plan not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  /api/subscriptions/checkout-session/{id}:
+    get:
+      tags:
+        - Subscriptions
+      summary: Get checkout session status
+      description: |
+        Retrieves the status of a Stripe checkout session.
+        Includes payment status and related subscription information.
+        Auto-heals incomplete subscriptions if payment was successful.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Stripe checkout session ID
+          example: "cs_test_1234567890"
+      responses:
+        '200':
+          description: Session status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutSessionStatusResponse'
+        '400':
+          description: Bad request - missing session ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  # Payment Endpoints
+  /api/payments/one-time:
+    post:
+      tags:
+        - Payments
+      summary: Create one-time payment
+      description: |
+        Creates a one-time payment record.
+        Minimum amount is 50 cents (5000 in cents).
+        Payment is marked as succeeded immediately (simplified implementation).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOneTimePaymentRequest'
+      responses:
+        '201':
+          description: Payment created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '400':
+          description: Bad request - invalid amount
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  /api/payments/mine:
+    get:
+      tags:
+        - Payments
+      summary: List user's payments
+      description: |
+        Retrieves all payments for the authenticated user.
+        Sorted by creation date (newest first), limited to 50 records.
+      responses:
+        '200':
+          description: Payments retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentsResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  # Stripe Webhook Endpoint
+  /api/stripe/webhook:
+    post:
+      tags:
+        - Webhooks
+      summary: Stripe webhook handler
+      description: |
+        Handles Stripe webhook events for payment processing.
+        Processes events like checkout completion, payment success/failure, and subscription changes.
+        Requires valid Stripe signature for security.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: "Stripe webhook event payload"
+      responses:
+        '200':
+          description: Webhook processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StripeWebhookResponse'
+        '400':
+          description: Bad request - invalid signature or malformed payload
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Webhook Error: Invalid signature"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - stripeWebhookAuth: []

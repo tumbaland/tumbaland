@@ -13,6 +13,24 @@ servers:
   - url: https://api.tumbaland.com/finance
     description: Production server
 
+tags:
+  - name: Health
+    description: Service health monitoring
+  - name: Monitoring
+    description: Service metrics and monitoring
+  - name: Asset Classes
+    description: Asset class management operations
+  - name: Asset Allocations
+    description: Asset allocation tracking and management
+  - name: Ticker Price History
+    description: Historical price data for financial instruments
+  - name: Tracked Tickers
+    description: Management of tracked financial instruments
+  - name: User Portfolio
+    description: User portfolio holdings and positions
+  - name: Dashboard
+    description: Financial dashboard and analytics
+
 security:
   - bearerAuth: []
 

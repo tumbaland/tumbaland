@@ -28,11 +28,11 @@ app.get('/health', healthCheck);
 // Metrics endpoint for Prometheus
 app.get('/metrics', metricsHandler);
 
+// Serve OpenAPI docs as static files (before auth middleware)
+app.use('/api/docs', express.static(path.join(__dirname, '../docs')));
+
 app.use('/api', authenticateToken);
 app.use('/api/groups', groupRoutes);
-
-// Serve OpenAPI docs as static files
-app.use('/api/docs', express.static(path.join(__dirname, '../docs')));
 
 // Error handler
 app.use(errorHandler);
