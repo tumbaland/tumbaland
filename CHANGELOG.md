@@ -1,4 +1,12 @@
 # Tumbalog
+### [0.0.259](https://github.com/toomastahves/tumbaland/compare/v0.0.258...v0.0.259) (2025-11-03)
+
+
+### Features
+
+* add album service docs ([0c17db1](https://github.com/toomastahves/tumbaland/commit/0c17db1bda8993bf14b8bf32dfc91414583e2938))
+* add auth service docs ([cc817e0](https://github.com/toomastahves/tumbaland/commit/cc817e0ce2e96f5d670a0f099cb2639898e80f70))
+
 ### [0.0.258](https://github.com/toomastahves/tumbaland/compare/v0.0.257...v0.0.258) (2025-11-03)
 
 
