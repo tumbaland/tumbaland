@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.262](https://github.com/toomastahves/tumbaland/compare/v0.0.261...v0.0.262) (2025-11-03)
+
+
+### Bug Fixes
+
+* optimize query ([7f82c4c](https://github.com/toomastahves/tumbaland/commit/7f82c4c40ef14bfa85b2eb1ce013ea4672b6d92b))
+
 ### [0.0.261](https://github.com/toomastahves/tumbaland/compare/v0.0.260...v0.0.261) (2025-11-03)
 
 ### [0.0.260](https://github.com/toomastahves/tumbaland/compare/v0.0.259...v0.0.260) (2025-11-03)
