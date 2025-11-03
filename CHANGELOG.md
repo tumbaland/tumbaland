@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.263](https://github.com/toomastahves/tumbaland/compare/v0.0.262...v0.0.263) (2025-11-03)
+
+
+### Features
+
+* add stats ([4861a42](https://github.com/toomastahves/tumbaland/commit/4861a42860f62a2afc1aa7d8da280a17aeda1740))
+
 ### [0.0.262](https://github.com/toomastahves/tumbaland/compare/v0.0.261...v0.0.262) (2025-11-03)
 
 
