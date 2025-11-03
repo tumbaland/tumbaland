@@ -53,7 +53,7 @@ import {
   createImageCategory,
   updateImageCategory,
   deleteImageCategory,
-  getAllImages
+  getImagesByDataset
 } from '../services/datasetImageService';
 import FileUpload from '../components/FileUpload';
 
@@ -104,40 +104,16 @@ const DatasetDetailPage: React.FC = () => {
   const { data: imagesData, isLoading: imagesLoading, error: imagesError } = useQuery({
     queryKey: ['datasetImages', id, selectedCategoryFilter, selectedTagFilter, currentPage, pageSize],
     queryFn: async () => {
-      // First, get all images to calculate total count (without pagination)
-      const allResponse = await getAllImages(1, undefined, undefined, selectedTagFilter || undefined);
-
-      // Filter images by datasetId client-side
-      const datasetImages = allResponse.data.images.filter((image: DatasetImage) => image.datasetId === id);
-
-      // Apply category filter if selected
-      let filteredImages = datasetImages;
-      if (selectedCategoryFilter) {
-        filteredImages = datasetImages.filter((image: DatasetImage) => image.categoryId === selectedCategoryFilter);
-      }
-
-      // Calculate total count
-      const totalCount = filteredImages.length;
-
-      // Apply pagination to the filtered results
-      const startIndex = (currentPage - 1) * pageSize;
-      const endIndex = startIndex + pageSize;
-      const paginatedImages = filteredImages.slice(startIndex, endIndex);
-
-      // Calculate pagination info
-      const totalPages = pageSize ? Math.ceil(totalCount / pageSize) : 1;
-
-      return {
-        data: {
-          images: paginatedImages,
-          pagination: {
-            page: currentPage,
-            limit: pageSize,
-            total: totalCount,
-            pages: totalPages
-          }
-        }
-      };
+      // Use getImagesByDataset for efficient server-side filtering
+      const response = await getImagesByDataset(
+        id!,
+        currentPage,
+        pageSize,
+        undefined, // search
+        selectedCategoryFilter || undefined, // categoryId
+        selectedTagFilter || undefined // tags
+      );
+      return response;
     },
     enabled: Boolean(id),
     retry: false, // Don't retry on error

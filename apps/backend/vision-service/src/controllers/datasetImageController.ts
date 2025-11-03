@@ -225,30 +225,14 @@ export const createDatasetImage = async (req: Request, res: Response): Promise<v
   }
 };
 
-// Get images by dataset
+// Get images by dataset (simplified - doesn't require dataset to exist)
 export const getImagesByDataset = async (req: Request, res: Response): Promise<void> => {
   try {
     const { datasetId } = req.params;
     const { page = 1, limit, search, categoryId, tags } = req.query;
 
-    // First, find the dataset by uuid, name, or ObjectId
-    const dataset = await Dataset.findOne({
-      $or: [
-        { uuid: datasetId },
-        { name: datasetId },
-        { _id: mongoose.Types.ObjectId.isValid(datasetId) ? datasetId : null }
-      ].filter(condition => condition !== null)
-    });
+    const query: any = { datasetId };
 
-    if (!dataset) {
-      res.status(404).json({
-        success: false,
-        message: `Dataset '${datasetId}' not found`
-      });
-      return;
-    }
-
-    const query: any = { datasetId: dataset._id };
     if (search) {
       query.$text = { $search: search as string };
     }
