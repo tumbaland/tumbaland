@@ -21,8 +21,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <AppBar 
-        position="static" 
+      <AppBar
+        position="static"
         elevation={0}
         sx={{
           background: 'transparent',

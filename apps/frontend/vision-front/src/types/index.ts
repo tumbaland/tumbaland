@@ -172,3 +172,46 @@ export interface UpdateCommentData {
   name?: string;
   comment?: string;
 }
+
+// Test Result Types
+export interface TestResultMetrics {
+  iou: number;
+  precision: number;
+  recall: number;
+  f1_score: number;
+  average_precision: number;
+}
+
+export interface TestResultCondition {
+  pedestrian: TestResultMetrics;
+  sign: TestResultMetrics;
+  cyclist: TestResultMetrics;
+  [className: string]: TestResultMetrics;
+}
+
+export interface TestResultData {
+  day_fair: TestResultCondition;
+  night_fair: TestResultCondition;
+  day_rain: TestResultCondition;
+  night_rain: TestResultCondition;
+  [condition: string]: TestResultCondition;
+}
+
+export interface TestResult {
+  _id: string;
+  timestamp: string;
+  epoch: number;
+  epoch_uuid: string;
+  test_uuid: string;
+  test_results: TestResultData;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateTestResultData {
+  timestamp?: string;
+  epoch: number;
+  epoch_uuid: string;
+  test_uuid?: string;
+  test_results: TestResultData;
+}

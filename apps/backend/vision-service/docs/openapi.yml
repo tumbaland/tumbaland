@@ -332,6 +332,55 @@ components:
         - userId
         - comment
 
+    TestResult:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2023-01-01T00:00:00.000Z"
+        epoch:
+          type: integer
+          example: 10
+        epoch_uuid:
+          type: string
+          example: "epoch-uuid-123"
+        test_uuid:
+          type: string
+          example: "test-uuid-456"
+        test_results:
+          type: object
+          description: "Test results data with metrics per condition and class"
+          example:
+            "condition1":
+              "class1":
+                iou: 0.85
+                precision: 0.92
+                recall: 0.88
+                f1_score: 0.90
+                average_precision: 0.87
+              "class2":
+                iou: 0.78
+                precision: 0.85
+                recall: 0.82
+                f1_score: 0.83
+                average_precision: 0.80
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - timestamp
+        - epoch
+        - epoch_uuid
+        - test_uuid
+        - test_results
+
     # Request/Response schemas
     DatasetImageCreateRequest:
       type: object
@@ -570,6 +619,101 @@ components:
       required:
         - success
         - message
+
+    # Test Result Request/Response schemas
+    TestResultCreateRequest:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          example: "2023-01-01T00:00:00.000Z"
+        epoch:
+          type: integer
+          example: 10
+        epoch_uuid:
+          type: string
+          example: "epoch-uuid-123"
+        test_uuid:
+          type: string
+          example: "test-uuid-456"
+        test_results:
+          type: object
+          description: "Test results data"
+      required:
+        - epoch
+        - epoch_uuid
+        - test_results
+
+    TestResultUpdateRequest:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          example: "2023-01-01T00:00:00.000Z"
+        epoch:
+          type: integer
+          example: 10
+        epoch_uuid:
+          type: string
+          example: "epoch-uuid-123"
+        test_results:
+          type: object
+          description: "Updated test results data"
+
+    TestResultsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            testResults:
+              type: array
+              items:
+                $ref: '#/components/schemas/TestResult'
+            pagination:
+              type: object
+              properties:
+                page:
+                  type: integer
+                  example: 1
+                limit:
+                  type: integer
+                  example: 50
+                total:
+                  type: integer
+                  example: 100
+                pages:
+                  type: integer
+                  example: 2
+            total:
+              type: integer
+              example: 100
+      required:
+        - success
+        - data
+
+    TestResultEpochsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            epochs:
+              type: array
+              items:
+                type: integer
+              example: [1, 2, 5, 10, 15, 20]
+      required:
+        - success
+        - data
 
 paths:
   # Dataset Analysis Endpoints
@@ -2454,6 +2598,324 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Test Result Endpoints
+  /test-results:
+    get:
+      summary: Get all test results
+      description: Retrieve all test results with optional pagination, filtering, and sorting
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          description: Number of test results per page
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            default: timestamp
+            enum: [timestamp, epoch]
+          description: Field to sort by
+        - name: order
+          in: query
+          schema:
+            type: string
+            default: desc
+            enum: [asc, desc]
+          description: Sort order
+        - name: epoch
+          in: query
+          schema:
+            type: integer
+          description: Filter by epoch number
+      responses:
+        '200':
+          description: Test results retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestResultsResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Create test result
+      description: Create a new test result
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestResultCreateRequest'
+      responses:
+        '201':
+          description: Test result created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Test result with this test_uuid already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /test-results/upload:
+    post:
+      summary: Create test result from JSON
+      description: Upload test result data from JSON file (accepts the full JSON structure)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: "Test result data in JSON format"
+      responses:
+        '201':
+          description: Test result created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Test result with this test_uuid already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /test-results/epochs:
+    get:
+      summary: Get test result epochs
+      description: Retrieve all unique epoch numbers that have test results
+      responses:
+        '200':
+          description: Test result epochs retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestResultEpochsResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /test-results/{id}:
+    get:
+      summary: Get test result by ID
+      description: Retrieve a specific test result by its ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Test result ID
+      responses:
+        '200':
+          description: Test result retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Test result not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update test result
+      description: Update an existing test result
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Test result ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestResultUpdateRequest'
+      responses:
+        '200':
+          description: Test result updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Test result not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete test result
+      description: Delete a test result by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Test result ID
+      responses:
+        '200':
+          description: Test result deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Test result not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /test-results/test/{testUuid}:
+    get:
+      summary: Get test result by test UUID
+      description: Retrieve a specific test result by its test UUID
+      parameters:
+        - name: testUuid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Test UUID
+      responses:
+        '200':
+          description: Test result retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Test result not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /test-results/epoch/{epochUuid}:
+    get:
+      summary: Get test results by epoch UUID
+      description: Retrieve all test results for a specific epoch UUID
+      parameters:
+        - name: epochUuid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Epoch UUID
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+          description: Number of test results per page
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            default: timestamp
+            enum: [timestamp]
+          description: Field to sort by
+        - name: order
+          in: query
+          schema:
+            type: string
+            default: desc
+            enum: [asc, desc]
+          description: Sort order
+      responses:
+        '200':
+          description: Test results retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestResultsResponse'
         '500':
           description: Internal server error
           content:
