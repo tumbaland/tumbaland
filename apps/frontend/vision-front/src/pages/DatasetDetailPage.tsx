@@ -30,7 +30,8 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Autocomplete
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
@@ -90,7 +91,7 @@ const DatasetDetailPage: React.FC = () => {
   const [selectedTagsForEdit, setSelectedTagsForEdit] = useState<string>('');
   // Image filtering state
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('');
-  const [selectedTagFilter, setSelectedTagFilter] = useState<string>('');
+  const [selectedTagFilter, setSelectedTagFilter] = useState<string[]>([]);
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(50);
@@ -111,7 +112,7 @@ const DatasetDetailPage: React.FC = () => {
         pageSize,
         undefined, // search
         selectedCategoryFilter || undefined, // categoryId
-        selectedTagFilter || undefined // tags
+        selectedTagFilter.length > 0 ? selectedTagFilter.join(' ') : undefined // tags as space-separated string
       );
       return response;
     },
@@ -126,9 +127,69 @@ const DatasetDetailPage: React.FC = () => {
     retry: false, // Don't retry on error
   });
 
+  // Get available tags for this dataset
+  const { data: availableTagsData } = useQuery({
+    queryKey: ['datasetTags', id],
+    queryFn: async () => {
+      // Get a sample of images to extract available tags
+      const response = await getImagesByDataset(id!, 1, 1000); // Get up to 1000 images to sample tags
+      const allTags = new Set<string>();
+      response.data.images.forEach((image: DatasetImage) => {
+        image.tags.forEach(tag => allTags.add(tag));
+      });
+      return Array.from(allTags).sort();
+    },
+    enabled: Boolean(id),
+    retry: false,
+  });
+
+  // Get image labeling metrics
+  const { data: labelingMetrics } = useQuery({
+    queryKey: ['datasetLabelingMetrics', id],
+    queryFn: async () => {
+      // Get all images to calculate metrics (remove limit to get all images)
+      const response = await getImagesByDataset(id!, 1, undefined); // No limit to get all images
+      const images = response.data.images;
+      
+      let goodCount = 0;
+      let badCount = 0;
+      let unlabeledCount = 0;
+      
+      images.forEach((image: DatasetImage) => {
+        const hasGoodLabel = image.tags.some(tag => 
+          tag.toLowerCase().includes('good') || tag === 'good_annotations'
+        );
+        const hasBadLabel = image.tags.some(tag => 
+          tag.toLowerCase().includes('bad') || tag === 'bad_annotations'
+        );
+        
+        if (hasGoodLabel) {
+          goodCount++;
+        } else if (hasBadLabel) {
+          badCount++;
+        } else {
+          unlabeledCount++;
+        }
+      });
+      
+      return {
+        total: images.length,
+        good: goodCount,
+        bad: badCount,
+        unlabeled: unlabeledCount,
+        goodPercentage: images.length > 0 ? Math.round((goodCount / images.length) * 100) : 0,
+        badPercentage: images.length > 0 ? Math.round((badCount / images.length) * 100) : 0,
+        unlabeledPercentage: images.length > 0 ? Math.round((unlabeledCount / images.length) * 100) : 0
+      };
+    },
+    enabled: Boolean(id),
+    retry: false,
+  });
+
   const images = imagesData?.data?.images || [];
   const pagination = imagesData?.data?.pagination || { page: 1, limit: 50, total: 0, pages: 1 };
   const datasetCategories = categoriesData || [];
+  const availableTags = availableTagsData || [];
 
   // Debug logging
   React.useEffect(() => {
@@ -634,6 +695,77 @@ const DatasetDetailPage: React.FC = () => {
 
           {activeTab === 2 && (
             <Box>
+              {/* Labeling Metrics */}
+              {labelingMetrics && (
+                <Paper sx={{ p: 3, mb: 3, backgroundColor: '#f8f9fa' }}>
+                  <Typography variant="h6" sx={{ mb: 2 }}>
+                    Labeling Progress
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                    <Box sx={{ textAlign: 'center', minWidth: 120 }}>
+                      <Typography variant="h4" color="success.main" fontWeight="bold">
+                        {labelingMetrics.good}
+                      </Typography>
+                      <Typography variant="body2" color="success.main">
+                        Good ({labelingMetrics.goodPercentage}%)
+                      </Typography>
+                    </Box>
+                    <Box sx={{ textAlign: 'center', minWidth: 120 }}>
+                      <Typography variant="h4" color="error.main" fontWeight="bold">
+                        {labelingMetrics.bad}
+                      </Typography>
+                      <Typography variant="body2" color="error.main">
+                        Bad ({labelingMetrics.badPercentage}%)
+                      </Typography>
+                    </Box>
+                    <Box sx={{ textAlign: 'center', minWidth: 120 }}>
+                      <Typography variant="h4" color="warning.main" fontWeight="bold">
+                        {labelingMetrics.unlabeled}
+                      </Typography>
+                      <Typography variant="body2" color="warning.main">
+                        Unlabeled ({labelingMetrics.unlabeledPercentage}%)
+                      </Typography>
+                    </Box>
+                    <Box sx={{ textAlign: 'center', minWidth: 120 }}>
+                      <Typography variant="h4" color="primary.main" fontWeight="bold">
+                        {labelingMetrics.total}
+                      </Typography>
+                      <Typography variant="body2" color="primary.main">
+                        Total Images
+                      </Typography>
+                    </Box>
+                  </Box>
+                  
+                  {/* Progress Bar */}
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      Labeling Completion: {labelingMetrics.good + labelingMetrics.bad} / {labelingMetrics.total} 
+                      ({Math.round(((labelingMetrics.good + labelingMetrics.bad) / labelingMetrics.total) * 100)}%)
+                    </Typography>
+                    <Box sx={{ display: 'flex', height: 8, borderRadius: 4, overflow: 'hidden' }}>
+                      <Box 
+                        sx={{ 
+                          backgroundColor: 'success.main', 
+                          width: `${(labelingMetrics.good / labelingMetrics.total) * 100}%` 
+                        }} 
+                      />
+                      <Box 
+                        sx={{ 
+                          backgroundColor: 'error.main', 
+                          width: `${(labelingMetrics.bad / labelingMetrics.total) * 100}%` 
+                        }} 
+                      />
+                      <Box 
+                        sx={{ 
+                          backgroundColor: 'warning.main', 
+                          width: `${(labelingMetrics.unlabeled / labelingMetrics.total) * 100}%` 
+                        }} 
+                      />
+                    </Box>
+                  </Box>
+                </Paper>
+              )}
+
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Box>
                   <Typography variant="h6">
@@ -680,14 +812,32 @@ const DatasetDetailPage: React.FC = () => {
                   </Select>
                 </FormControl>
 
-                <TextField
+                <Autocomplete
+                  multiple
                   size="small"
-                  label="Filter by Tags"
+                  options={availableTags}
                   value={selectedTagFilter}
-                  onChange={(e) => setSelectedTagFilter(e.target.value)}
-                  placeholder="Enter tags to filter..."
+                  onChange={(_, newValue) => setSelectedTagFilter(newValue)}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Filter by Tags"
+                      placeholder="Select tags..."
+                      sx={{ minWidth: 200 }}
+                      helperText="Select one or more tags to filter images"
+                    />
+                  )}
+                  renderTags={(value, getTagProps) =>
+                    value.map((option, index) => (
+                      <Chip
+                        {...getTagProps({ index })}
+                        key={option}
+                        label={option}
+                        size="small"
+                      />
+                    ))
+                  }
                   sx={{ minWidth: 200 }}
-                  helperText="Separate multiple tags with spaces"
                 />
               </Box>
 
@@ -730,84 +880,120 @@ const DatasetDetailPage: React.FC = () => {
                     gap: 2
                   }}
                 >
-                  {images.map((image: DatasetImage) => (
-                    <Card key={image._id} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                      <Box sx={{ position: 'relative' }}>
-                        <CardMedia
-                          component="img"
-                          height="200"
-                          image={image.thumbnailSignedUrl || image.signedUrl}
-                          alt={image.title || image.originalName}
-                          sx={{ objectFit: 'cover', cursor: 'pointer' }}
-                          onClick={() => handleImageClick(image)}
-                        />
-                        <IconButton
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditImageCategory(image);
-                          }}
-                          sx={{
-                            position: 'absolute',
-                            top: 8,
-                            left: 8,
-                            bgcolor: 'rgba(25, 118, 210, 0.8)',
-                            color: 'white',
-                            '&:hover': {
-                              bgcolor: 'rgba(21, 101, 192, 0.9)',
-                            },
-                          }}
-                          size="small"
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteImage(image._id);
-                          }}
-                          disabled={deletingImageId === image._id}
-                          sx={{
-                            position: 'absolute',
-                            top: 8,
-                            right: 8,
-                            bgcolor: 'rgba(244, 67, 54, 0.8)',
-                            color: 'white',
-                            '&:hover': {
-                              bgcolor: 'rgba(211, 47, 47, 0.9)',
-                            },
-                            '&:disabled': {
-                              bgcolor: 'rgba(244, 67, 54, 0.4)',
-                            },
-                          }}
-                          size="small"
-                        >
-                          {deletingImageId === image._id ? (
-                            <CircularProgress size={16} color="inherit" />
-                          ) : (
-                            <DeleteIcon fontSize="small" />
-                          )}
-                        </IconButton>
-                      </Box>
-                      <CardContent sx={{ flexGrow: 1 }}>
-                        <Typography variant="subtitle2" noWrap>
-                          {image.title || image.originalName}
-                        </Typography>
-                        {image.description && (
-                          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                            {image.description}
-                          </Typography>
-                        )}
-                        <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                          {image.tags.slice(0, 2).map((tag, index) => (
-                            <Chip key={index} label={tag} size="small" variant="outlined" />
-                          ))}
-                          {image.tags.length > 2 && (
-                            <Chip label={`+${image.tags.length - 2}`} size="small" variant="outlined" />
-                          )}
+                  {images.map((image: DatasetImage) => {
+                    const hasGoodLabel = image.tags.some(tag => 
+                      tag.toLowerCase().includes('good') || tag === 'good_annotations'
+                    );
+                    const hasBadLabel = image.tags.some(tag => 
+                      tag.toLowerCase().includes('bad') || tag === 'bad_annotations'
+                    );
+                    
+                    let statusColor = 'warning.main'; // unlabeled
+                    let statusText = 'Unlabeled';
+                    
+                    if (hasGoodLabel) {
+                      statusColor = 'success.main';
+                      statusText = 'Good';
+                    } else if (hasBadLabel) {
+                      statusColor = 'error.main';
+                      statusText = 'Bad';
+                    }
+                    
+                    return (
+                      <Card key={image._id} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <Box sx={{ position: 'relative' }}>
+                          <CardMedia
+                            component="img"
+                            height="200"
+                            image={image.thumbnailSignedUrl || image.signedUrl}
+                            alt={image.title || image.originalName}
+                            sx={{ objectFit: 'cover', cursor: 'pointer' }}
+                            onClick={() => handleImageClick(image)}
+                          />
+                          
+                          {/* Status indicator */}
+                          <Chip
+                            label={statusText}
+                            size="small"
+                            sx={{
+                              position: 'absolute',
+                              top: 8,
+                              right: 50, // Leave space for action buttons
+                              backgroundColor: statusColor,
+                              color: 'white',
+                              fontSize: '0.7rem',
+                              height: 20
+                            }}
+                          />
+                          
+                          <IconButton
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditImageCategory(image);
+                            }}
+                            sx={{
+                              position: 'absolute',
+                              top: 8,
+                              left: 8,
+                              bgcolor: 'rgba(25, 118, 210, 0.8)',
+                              color: 'white',
+                              '&:hover': {
+                                bgcolor: 'rgba(21, 101, 192, 0.9)',
+                              },
+                            }}
+                            size="small"
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteImage(image._id);
+                            }}
+                            disabled={deletingImageId === image._id}
+                            sx={{
+                              position: 'absolute',
+                              top: 8,
+                              right: 8,
+                              bgcolor: 'rgba(244, 67, 54, 0.8)',
+                              color: 'white',
+                              '&:hover': {
+                                bgcolor: 'rgba(211, 47, 47, 0.9)',
+                              },
+                              '&:disabled': {
+                                bgcolor: 'rgba(244, 67, 54, 0.4)',
+                              },
+                            }}
+                            size="small"
+                          >
+                            {deletingImageId === image._id ? (
+                              <CircularProgress size={16} color="inherit" />
+                            ) : (
+                              <DeleteIcon fontSize="small" />
+                            )}
+                          </IconButton>
                         </Box>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        <CardContent sx={{ flexGrow: 1 }}>
+                          <Typography variant="subtitle2" noWrap>
+                            {image.title || image.originalName}
+                          </Typography>
+                          {image.description && (
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                              {image.description}
+                            </Typography>
+                          )}
+                          <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {image.tags.slice(0, 2).map((tag, index) => (
+                              <Chip key={index} label={tag} size="small" variant="outlined" />
+                            ))}
+                            {image.tags.length > 2 && (
+                              <Chip label={`+${image.tags.length - 2}`} size="small" variant="outlined" />
+                            )}
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </Box>
               )}
 

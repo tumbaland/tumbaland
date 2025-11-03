@@ -18,6 +18,7 @@ import {
   ThumbDown as ThumbDownIcon,
   PlayArrow as PlayArrowIcon
 } from '@mui/icons-material';
+import { useQuery } from '@tanstack/react-query';
 import {
   DatasetImage,
   getAllImages,
@@ -32,6 +33,48 @@ const ImageLabelingPage: React.FC = () => {
   const [alert, setAlert] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [setupMode, setSetupMode] = useState(true);
   const [imageLimit, setImageLimit] = useState(100);
+
+  // Get overall labeling metrics
+  const { data: labelingMetrics } = useQuery({
+    queryKey: ['overallLabelingMetrics'],
+    queryFn: async () => {
+      // Get all images to calculate metrics
+      const response = await getAllImages(1, undefined); // No limit to get all images
+      const images = response.data.images;
+      
+      let goodCount = 0;
+      let badCount = 0;
+      let unlabeledCount = 0;
+      
+      images.forEach((image: DatasetImage) => {
+        const hasGoodLabel = image.tags.some(tag => 
+          tag.toLowerCase().includes('good') || tag === 'good_annotations'
+        );
+        const hasBadLabel = image.tags.some(tag => 
+          tag.toLowerCase().includes('bad') || tag === 'bad_annotations'
+        );
+        
+        if (hasGoodLabel) {
+          goodCount++;
+        } else if (hasBadLabel) {
+          badCount++;
+        } else {
+          unlabeledCount++;
+        }
+      });
+      
+      return {
+        total: images.length,
+        good: goodCount,
+        bad: badCount,
+        unlabeled: unlabeledCount,
+        goodPercentage: images.length > 0 ? Math.round((goodCount / images.length) * 100) : 0,
+        badPercentage: images.length > 0 ? Math.round((badCount / images.length) * 100) : 0,
+        unlabeledPercentage: images.length > 0 ? Math.round((unlabeledCount / images.length) * 100) : 0
+      };
+    },
+    retry: false,
+  });
 
   const startLabeling = async () => {
     if (imageLimit < 1) {
@@ -144,37 +187,115 @@ const ImageLabelingPage: React.FC = () => {
   // Setup Mode
   if (setupMode) {
     return (
-      <Container maxWidth="sm">
-        <Box sx={{ py: 8, textAlign: 'center' }}>
-          <Paper elevation={2} sx={{ p: 4, mb: 3 }}>
-            <TextField
-              fullWidth
-              type="number"
-              label="Number of images to label"
-              value={imageLimit}
-              onChange={(e) => setImageLimit(Math.max(1, Number(e.target.value) || 1))}
-              inputProps={{ min: 1 }}
-              sx={{ mb: 3 }}
-            />
-
-            <Button
-              variant="contained"
-              size="large"
-              startIcon={<PlayArrowIcon />}
-              onClick={startLabeling}
-              disabled={loading || imageLimit < 1}
-              fullWidth
-              sx={{ py: 2 }}
-            >
-              {loading ? 'Loading Images...' : `Start Labeling`}
-            </Button>
-          </Paper>
-
-          {alert && (
-            <Alert severity={alert.type} sx={{ mb: 3 }}>
-              {alert.message}
-            </Alert>
+      <Container maxWidth="md">
+        <Box sx={{ py: 4 }}>
+          {/* Labeling Progress Overview */}
+          {labelingMetrics && (
+            <Paper sx={{ p: 3, mb: 4, backgroundColor: '#f8f9fa' }}>
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                Overall Labeling Progress
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', mb: 2 }}>
+                <Box sx={{ textAlign: 'center', minWidth: 120 }}>
+                  <Typography variant="h4" color="success.main" fontWeight="bold">
+                    {labelingMetrics.good.toLocaleString()}
+                  </Typography>
+                  <Typography variant="body2" color="success.main">
+                    Good ({labelingMetrics.goodPercentage}%)
+                  </Typography>
+                </Box>
+                <Box sx={{ textAlign: 'center', minWidth: 120 }}>
+                  <Typography variant="h4" color="error.main" fontWeight="bold">
+                    {labelingMetrics.bad.toLocaleString()}
+                  </Typography>
+                  <Typography variant="body2" color="error.main">
+                    Bad ({labelingMetrics.badPercentage}%)
+                  </Typography>
+                </Box>
+                <Box sx={{ textAlign: 'center', minWidth: 120 }}>
+                  <Typography variant="h4" color="warning.main" fontWeight="bold">
+                    {labelingMetrics.unlabeled.toLocaleString()}
+                  </Typography>
+                  <Typography variant="body2" color="warning.main">
+                    Unlabeled ({labelingMetrics.unlabeledPercentage}%)
+                  </Typography>
+                </Box>
+                <Box sx={{ textAlign: 'center', minWidth: 120 }}>
+                  <Typography variant="h4" color="primary.main" fontWeight="bold">
+                    {labelingMetrics.total.toLocaleString()}
+                  </Typography>
+                  <Typography variant="body2" color="primary.main">
+                    Total Images
+                  </Typography>
+                </Box>
+              </Box>
+              
+              {/* Progress Bar */}
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Labeling Completion: {labelingMetrics.good + labelingMetrics.bad} / {labelingMetrics.total} 
+                  ({Math.round(((labelingMetrics.good + labelingMetrics.bad) / labelingMetrics.total) * 100)}%)
+                </Typography>
+                <Box sx={{ display: 'flex', height: 8, borderRadius: 4, overflow: 'hidden' }}>
+                  <Box 
+                    sx={{ 
+                      backgroundColor: 'success.main', 
+                      width: `${(labelingMetrics.good / labelingMetrics.total) * 100}%` 
+                    }} 
+                  />
+                  <Box 
+                    sx={{ 
+                      backgroundColor: 'error.main', 
+                      width: `${(labelingMetrics.bad / labelingMetrics.total) * 100}%` 
+                    }} 
+                  />
+                  <Box 
+                    sx={{ 
+                      backgroundColor: 'warning.main', 
+                      width: `${(labelingMetrics.unlabeled / labelingMetrics.total) * 100}%` 
+                    }} 
+                  />
+                </Box>
+              </Box>
+            </Paper>
           )}
+
+          <Box sx={{ textAlign: 'center' }}>
+            <Paper elevation={2} sx={{ p: 4, mb: 3, maxWidth: 400, mx: 'auto' }}>
+              <Typography variant="h5" sx={{ mb: 3 }}>
+                Image Labeling Setup
+              </Typography>
+              
+              <TextField
+                fullWidth
+                type="number"
+                label="Number of images to label"
+                value={imageLimit}
+                onChange={(e) => setImageLimit(Math.max(1, Number(e.target.value) || 1))}
+                inputProps={{ min: 1 }}
+                sx={{ mb: 3 }}
+                helperText="Maximum number of unlabeled images to load for this session"
+              />
+
+              <Button
+                variant="contained"
+                size="large"
+                startIcon={<PlayArrowIcon />}
+                onClick={startLabeling}
+                disabled={loading || imageLimit < 1}
+                fullWidth
+                sx={{ py: 2 }}
+              >
+                {loading ? 'Loading Images...' : `Start Labeling`}
+              </Button>
+            </Paper>
+
+            {alert && (
+              <Alert severity={alert.type} sx={{ mb: 3, maxWidth: 400, mx: 'auto' }}>
+                {alert.message}
+              </Alert>
+            )}
+          </Box>
         </Box>
       </Container>
     );
