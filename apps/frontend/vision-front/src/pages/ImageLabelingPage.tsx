@@ -367,7 +367,7 @@ const ImageLabelingPage: React.FC = () => {
       </Box>
 
       {/* Image Area - Takes remaining space but leaves room for buttons */}
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, maxHeight: 'calc(100vh - 200px)' }}>
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, maxHeight: 'calc(90vh - 140px)' }}>
         <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', px: 2, pb: 1, minHeight: 0 }}>
           <Card sx={{ width: '100%', height: '100%', boxShadow: 'none', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             <CardMedia
@@ -376,7 +376,7 @@ const ImageLabelingPage: React.FC = () => {
               image={currentImage.signedUrl || currentImage.thumbnailSignedUrl}
               alt={currentImage.title || currentImage.originalName}
             />
-            <CardContent sx={{ pb: 0.5, pt: 0.5, flexShrink: 0 }}>
+            <CardContent sx={{ pb: 0.5, pt: 0.5, flexShrink: 0, minHeight: 60 }}>
               <Typography variant="h6" align="center" sx={{ fontSize: '1rem', mb: 0.25 }}>
                 {currentImage.title || currentImage.originalName}
               </Typography>
@@ -385,7 +385,7 @@ const ImageLabelingPage: React.FC = () => {
                   {currentImage.description}
                 </Typography>
               )}
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.25 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.25, minHeight: 24 }}>
                 {currentImage.tags.map((tag) => (
                   <Typography key={tag} variant="caption" sx={{
                     mx: 0.3,
@@ -406,8 +406,8 @@ const ImageLabelingPage: React.FC = () => {
       </Box>
 
       {/* Labeling Buttons - Fixed at bottom, always visible */}
-      <Box sx={{ flexShrink: 0, backgroundColor: 'background.paper' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 4, mb: labeling ? 0.5 : 0 }}>
+      <Box sx={{ flexShrink: 0, backgroundColor: 'background.paper', py: 1, borderTop: '1px solid rgba(0,0,0,0.1)' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 4, mb: 0.5, position: 'relative' }}>
           <Button
             variant="contained"
             color="success"
@@ -439,6 +439,24 @@ const ImageLabelingPage: React.FC = () => {
           >
             Bad
           </Button>
+          
+          {/* Loading overlay when labeling */}
+          {labeling && (
+            <Box sx={{ 
+              position: 'absolute', 
+              top: 0, 
+              left: 0, 
+              right: 0, 
+              bottom: 0, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              backgroundColor: 'rgba(255, 255, 255, 0.8)',
+              borderRadius: 1
+            }}>
+              <CircularProgress size={24} />
+            </Box>
+          )}
         </Box>
       </Box>
     </Box>
