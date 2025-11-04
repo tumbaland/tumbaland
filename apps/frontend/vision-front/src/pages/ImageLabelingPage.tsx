@@ -22,7 +22,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   DatasetImage,
   getAllImages,
-  updateDatasetImage
+  updateDatasetImage,
+  getLabelingStats
 } from '../services/datasetImageService';
 
 const ImageLabelingPage: React.FC = () => {
@@ -40,40 +41,8 @@ const ImageLabelingPage: React.FC = () => {
   const { data: labelingMetrics, isLoading: metricsLoading } = useQuery({
     queryKey: ['overallLabelingMetrics'],
     queryFn: async () => {
-      // Get all images to calculate metrics
-      const response = await getAllImages(1, undefined); // No limit to get all images
-      const images = response.data.images;
-      
-      let goodCount = 0;
-      let badCount = 0;
-      let unlabeledCount = 0;
-      
-      images.forEach((image: DatasetImage) => {
-        const hasGoodLabel = image.tags.some(tag => 
-          tag.toLowerCase().includes('good') || tag === 'good_annotations'
-        );
-        const hasBadLabel = image.tags.some(tag => 
-          tag.toLowerCase().includes('bad') || tag === 'bad_annotations'
-        );
-        
-        if (hasGoodLabel) {
-          goodCount++;
-        } else if (hasBadLabel) {
-          badCount++;
-        } else {
-          unlabeledCount++;
-        }
-      });
-      
-      return {
-        total: images.length,
-        good: goodCount,
-        bad: badCount,
-        unlabeled: unlabeledCount,
-        goodPercentage: images.length > 0 ? Math.round((goodCount / images.length) * 100) : 0,
-        badPercentage: images.length > 0 ? Math.round((badCount / images.length) * 100) : 0,
-        unlabeledPercentage: images.length > 0 ? Math.round((unlabeledCount / images.length) * 100) : 0
-      };
+      // Use efficient aggregation endpoint instead of loading all images
+      return await getLabelingStats();
     },
     retry: false,
   });

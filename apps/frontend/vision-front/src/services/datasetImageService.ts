@@ -309,6 +309,37 @@ export const uploadFileToSignedUrl = async (signedUrl: string, file: File): Prom
   }
 };
 
+/**
+ * Get labeling statistics for all images (efficient aggregation)
+ */
+export const getLabelingStats = async (): Promise<{
+  total: number;
+  good: number;
+  bad: number;
+  unlabeled: number;
+  goodPercentage: number;
+  badPercentage: number;
+  unlabeledPercentage: number;
+}> => {
+  const config = getGlobalConfig();
+  const apiUrl = config.VISION_API_URL || 'https://vision-api.tumbaland.eu';
+
+  const response = await fetch(`${apiUrl}/api/dataset-images/labeling-stats`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch labeling statistics');
+  }
+
+  const data = await response.json();
+  return data.data;
+};
+
 // Image Category interfaces and functions
 export interface ImageCategory {
   _id: string;

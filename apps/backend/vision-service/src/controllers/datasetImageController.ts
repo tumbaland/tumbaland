@@ -16,7 +16,7 @@ import { logger } from '@tumbaland/core';
 // Get all images
 export const getAllImages = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { page = 1, limit, search, tags } = req.query;
+    const { page = 1, limit = 50, search, tags } = req.query; // Default limit of 50
 
     const query: any = {};
     if (search) {
@@ -29,7 +29,7 @@ export const getAllImages = async (req: Request, res: Response): Promise<void> =
       }
     }
 
-    const limitNum = limit ? Number(limit) : undefined;
+    const limitNum = Math.min(Number(limit), 1000000); // Cap at 1M for large datasets
     const pageNum = Number(page);
 
     let imagesQuery = DatasetImage.find(query).sort({ createdAt: -1 });
@@ -488,44 +488,46 @@ export const getImagesByCategory = async (req: Request, res: Response): Promise<
   }
 };
 
-// Get image labels statistics for a dataset
-export const getImageLabelsStats = async (req: Request, res: Response): Promise<void> => {
+// Get labeling statistics for all images (efficient aggregation)
+export const getLabelingStats = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { datasetId } = req.params;
+    // Get total count first
+    const total = await DatasetImage.countDocuments();
 
-    // First, find the dataset by uuid, name, or ObjectId
-    const dataset = await Dataset.findOne({
-      $or: [
-        { uuid: datasetId },
-        { name: datasetId },
-        { _id: mongoose.Types.ObjectId.isValid(datasetId) ? datasetId : null }
-      ].filter(condition => condition !== null)
+    // Get counts for each tag type - use $in for exact matches
+    const goodCount = await DatasetImage.countDocuments({
+      tags: { $in: ['good'] }
     });
 
-    if (!dataset) {
-      res.status(404).json({
-        success: false,
-        message: `Dataset '${datasetId}' not found`
-      });
-      return;
-    }
+    const badCount = await DatasetImage.countDocuments({
+      tags: { $in: ['bad'] }
+    });
 
-    const stats = await DatasetImage.aggregate([
-      { $match: { datasetId: dataset._id } },
-      { $unwind: '$labels' },
-      { $group: { _id: '$labels', count: { $sum: 1 } } },
-      { $sort: { count: -1 } }
-    ]);
+    const unlabeledCount = await DatasetImage.countDocuments({
+      $or: [
+        { tags: { $exists: false } },
+        { tags: { $size: 0 } },
+        { tags: null }
+      ]
+    });
 
     res.json({
       success: true,
-      data: stats
+      data: {
+        total,
+        good: goodCount,
+        bad: badCount,
+        unlabeled: unlabeledCount,
+        goodPercentage: total > 0 ? Math.round((goodCount / total) * 100) : 0,
+        badPercentage: total > 0 ? Math.round((badCount / total) * 100) : 0,
+        unlabeledPercentage: total > 0 ? Math.round((unlabeledCount / total) * 100) : 0
+      }
     });
   } catch (error) {
-    logger.error('Error fetching image labels statistics:', error);
+    logger.error('Error fetching labeling statistics:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch image labels statistics'
+      message: 'Failed to fetch labeling statistics'
     });
   }
 };
