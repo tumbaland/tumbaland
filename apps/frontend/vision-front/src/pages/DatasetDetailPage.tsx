@@ -146,49 +146,6 @@ const DatasetDetailPage: React.FC = () => {
     retry: false,
   });
 
-  // Get image labeling metrics
-  const { data: labelingMetrics } = useQuery({
-    queryKey: ['datasetLabelingMetrics', id],
-    queryFn: async () => {
-      // Get all images to calculate metrics (remove limit to get all images)
-      const response = await getImagesByDataset(id!, 1, undefined); // No limit to get all images
-      const images = response.data.images;
-      
-      let goodCount = 0;
-      let badCount = 0;
-      let unlabeledCount = 0;
-      
-      images.forEach((image: DatasetImage) => {
-        const hasGoodLabel = image.tags.some(tag => 
-          tag.toLowerCase().includes('good') || tag === 'good_annotations'
-        );
-        const hasBadLabel = image.tags.some(tag => 
-          tag.toLowerCase().includes('bad') || tag === 'bad_annotations'
-        );
-        
-        if (hasGoodLabel) {
-          goodCount++;
-        } else if (hasBadLabel) {
-          badCount++;
-        } else {
-          unlabeledCount++;
-        }
-      });
-      
-      return {
-        total: images.length,
-        good: goodCount,
-        bad: badCount,
-        unlabeled: unlabeledCount,
-        goodPercentage: images.length > 0 ? Math.round((goodCount / images.length) * 100) : 0,
-        badPercentage: images.length > 0 ? Math.round((badCount / images.length) * 100) : 0,
-        unlabeledPercentage: images.length > 0 ? Math.round((unlabeledCount / images.length) * 100) : 0
-      };
-    },
-    enabled: Boolean(id),
-    retry: false,
-  });
-
   const images = imagesData?.data?.images || [];
   const pagination = imagesData?.data?.pagination || { page: 1, limit: 50, total: 0, pages: 1 };
   const datasetCategories = categoriesData || [];
@@ -745,77 +702,6 @@ const DatasetDetailPage: React.FC = () => {
 
           {activeTab === 2 && (
             <Box>
-              {/* Labeling Metrics */}
-              {labelingMetrics && (
-                <Paper sx={{ p: 3, mb: 3, backgroundColor: '#f8f9fa' }}>
-                  <Typography variant="h6" sx={{ mb: 2 }}>
-                    Labeling Progress
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-                    <Box sx={{ textAlign: 'center', minWidth: 120 }}>
-                      <Typography variant="h4" color="success.main" fontWeight="bold">
-                        {labelingMetrics.good}
-                      </Typography>
-                      <Typography variant="body2" color="success.main">
-                        Good ({labelingMetrics.goodPercentage}%)
-                      </Typography>
-                    </Box>
-                    <Box sx={{ textAlign: 'center', minWidth: 120 }}>
-                      <Typography variant="h4" color="error.main" fontWeight="bold">
-                        {labelingMetrics.bad}
-                      </Typography>
-                      <Typography variant="body2" color="error.main">
-                        Bad ({labelingMetrics.badPercentage}%)
-                      </Typography>
-                    </Box>
-                    <Box sx={{ textAlign: 'center', minWidth: 120 }}>
-                      <Typography variant="h4" color="warning.main" fontWeight="bold">
-                        {labelingMetrics.unlabeled}
-                      </Typography>
-                      <Typography variant="body2" color="warning.main">
-                        Unlabeled ({labelingMetrics.unlabeledPercentage}%)
-                      </Typography>
-                    </Box>
-                    <Box sx={{ textAlign: 'center', minWidth: 120 }}>
-                      <Typography variant="h4" color="primary.main" fontWeight="bold">
-                        {labelingMetrics.total}
-                      </Typography>
-                      <Typography variant="body2" color="primary.main">
-                        Total Images
-                      </Typography>
-                    </Box>
-                  </Box>
-                  
-                  {/* Progress Bar */}
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                      Labeling Completion: {labelingMetrics.good + labelingMetrics.bad} / {labelingMetrics.total} 
-                      ({Math.round(((labelingMetrics.good + labelingMetrics.bad) / labelingMetrics.total) * 100)}%)
-                    </Typography>
-                    <Box sx={{ display: 'flex', height: 8, borderRadius: 4, overflow: 'hidden' }}>
-                      <Box 
-                        sx={{ 
-                          backgroundColor: 'success.main', 
-                          width: `${(labelingMetrics.good / labelingMetrics.total) * 100}%` 
-                        }} 
-                      />
-                      <Box 
-                        sx={{ 
-                          backgroundColor: 'error.main', 
-                          width: `${(labelingMetrics.bad / labelingMetrics.total) * 100}%` 
-                        }} 
-                      />
-                      <Box 
-                        sx={{ 
-                          backgroundColor: 'warning.main', 
-                          width: `${(labelingMetrics.unlabeled / labelingMetrics.total) * 100}%` 
-                        }} 
-                      />
-                    </Box>
-                  </Box>
-                </Paper>
-              )}
-
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Box>
                   <Typography variant="h6">

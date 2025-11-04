@@ -10,7 +10,8 @@ import {
   deleteImage,
   getUploadSignedUrlRequest,
   exportImageNames,
-  getLabelingStats
+  getLabelingStats,
+  getAllImageStats
 } from '../controllers/datasetImageController';
 
 const router = express.Router();

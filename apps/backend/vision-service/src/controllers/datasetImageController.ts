@@ -488,39 +488,177 @@ export const getImagesByCategory = async (req: Request, res: Response): Promise<
   }
 };
 
-// Get labeling statistics for all images (efficient aggregation)
-export const getLabelingStats = async (req: Request, res: Response): Promise<void> => {
+// Get comprehensive image statistics across all datasets
+export const getAllImageStats = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Get total count first
-    const total = await DatasetImage.countDocuments();
+    // Basic counts
+    const totalImages = await DatasetImage.countDocuments();
+    const totalSize = await DatasetImage.aggregate([
+      { $group: { _id: null, total: { $sum: '$size' } } }
+    ]);
 
-    // Get counts for each tag type - use $in for exact matches
-    const goodCount = await DatasetImage.countDocuments({
-      tags: { $in: ['good'] }
-    });
+    // Dataset breakdown
+    const datasetStats = await DatasetImage.aggregate([
+      {
+        $group: {
+          _id: '$datasetId',
+          count: { $sum: 1 },
+          totalSize: { $sum: '$size' },
+          good: {
+            $sum: {
+              $cond: [{ $in: ['good', { $ifNull: ['$tags', []] }] }, 1, 0]
+            }
+          },
+          bad: {
+            $sum: {
+              $cond: [{ $in: ['bad', { $ifNull: ['$tags', []] }] }, 1, 0]
+            }
+          },
+          unlabeled: {
+            $sum: {
+              $cond: [
+                { $or: [{ $eq: ['$tags', null] }, { $eq: [{ $size: { $ifNull: ['$tags', []] } }, 0] }] },
+                1,
+                0
+              ]
+            }
+          }
+        }
+      },
+      { $sort: { count: -1 } }
+    ]);
 
-    const badCount = await DatasetImage.countDocuments({
-      tags: { $in: ['bad'] }
-    });
+    // Tag distribution
+    const tagStats = await DatasetImage.aggregate([
+      { $unwind: { path: '$tags', preserveNullAndEmptyArrays: false } },
+      { $group: { _id: '$tags', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 20 }
+    ]);
 
-    const unlabeledCount = await DatasetImage.countDocuments({
-      $or: [
-        { tags: { $exists: false } },
-        { tags: { $size: 0 } },
-        { tags: null }
-      ]
-    });
+    // Category breakdown
+    const categoryStats = await DatasetImage.aggregate([
+      {
+        $group: {
+          _id: '$categoryId',
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $lookup: {
+          from: 'imagecategories',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'category'
+        }
+      },
+      { $unwind: { path: '$category', preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          count: 1,
+          name: { $ifNull: ['$category.name', 'Unknown'] }
+        }
+      },
+      { $sort: { count: -1 } }
+    ]);
+
+    // File type distribution
+    const fileTypeStats = await DatasetImage.aggregate([
+      {
+        $group: {
+          _id: '$mimetype',
+          count: { $sum: 1 },
+          totalSize: { $sum: '$size' }
+        }
+      },
+      { $sort: { count: -1 } }
+    ]);
 
     res.json({
       success: true,
       data: {
-        total,
-        good: goodCount,
-        bad: badCount,
-        unlabeled: unlabeledCount,
-        goodPercentage: total > 0 ? Math.round((goodCount / total) * 100) : 0,
-        badPercentage: total > 0 ? Math.round((badCount / total) * 100) : 0,
-        unlabeledPercentage: total > 0 ? Math.round((unlabeledCount / total) * 100) : 0
+        overview: {
+          totalImages,
+          totalSize: totalSize[0]?.total || 0,
+          averageSize: totalImages > 0 ? Math.round((totalSize[0]?.total || 0) / totalImages) : 0
+        },
+        datasets: datasetStats,
+        tags: tagStats,
+        categories: categoryStats,
+        fileTypes: fileTypeStats,
+        lastUpdated: new Date()
+      }
+    });
+  } catch (error) {
+    logger.error('Error fetching comprehensive image statistics:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch comprehensive image statistics'
+    });
+  }
+};
+
+// Get labeling statistics (comprehensive for all datasets or specific dataset)
+export const getLabelingStats = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { datasetId } = req.params;
+
+    let matchStage = {};
+    if (datasetId) {
+      // Note: We don't validate dataset existence here since datasetId can be any string identifier
+      // (e.g., dataset name like "zod", "waymo", etc.) similar to getImagesByDataset
+      matchStage = { datasetId };
+    }
+
+    // Get comprehensive labeling statistics
+    const stats = await DatasetImage.aggregate([
+      ...(Object.keys(matchStage).length > 0 ? [{ $match: matchStage }] : []),
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+          good: {
+            $sum: {
+              $cond: [{ $in: ['good', { $ifNull: ['$tags', []] }] }, 1, 0]
+            }
+          },
+          bad: {
+            $sum: {
+              $cond: [{ $in: ['bad', { $ifNull: ['$tags', []] }] }, 1, 0]
+            }
+          },
+          unlabeled: {
+            $sum: {
+              $cond: [
+                { $or: [{ $eq: ['$tags', null] }, { $eq: [{ $size: { $ifNull: ['$tags', []] } }, 0] }] },
+                1,
+                0
+              ]
+            }
+          }
+        }
+      }
+    ]);
+
+    const result = stats[0] || { total: 0, good: 0, bad: 0, unlabeled: 0 };
+
+    // Calculate percentages
+    const total = result.total;
+    const goodPercentage = total > 0 ? Math.round((result.good / total) * 100) : 0;
+    const badPercentage = total > 0 ? Math.round((result.bad / total) * 100) : 0;
+    const unlabeledPercentage = total > 0 ? Math.round((result.unlabeled / total) * 100) : 0;
+
+    res.json({
+      success: true,
+      data: {
+        total: result.total,
+        good: result.good,
+        bad: result.bad,
+        unlabeled: result.unlabeled,
+        goodPercentage,
+        badPercentage,
+        unlabeledPercentage,
+        lastUpdated: new Date()
       }
     });
   } catch (error) {
@@ -528,6 +666,38 @@ export const getLabelingStats = async (req: Request, res: Response): Promise<voi
     res.status(500).json({
       success: false,
       message: 'Failed to fetch labeling statistics'
+    });
+  }
+};
+
+// Get simple labeling statistics for a specific dataset (total, good, bad counts only)
+export const getSimpleLabelingStats = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { datasetId } = req.params;
+
+    // Note: We don't validate dataset existence here since datasetId can be any string identifier
+    // (e.g., dataset name like "zod", "waymo", etc.) similar to getImagesByDataset
+
+    // Use Promise.all for parallel execution of count queries
+    const [total, good, bad] = await Promise.all([
+      DatasetImage.countDocuments({ datasetId }),
+      DatasetImage.countDocuments({ datasetId, tags: { $in: ['good'] } }),
+      DatasetImage.countDocuments({ datasetId, tags: { $in: ['bad'] } })
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        total,
+        good,
+        bad
+      }
+    });
+  } catch (error) {
+    logger.error('Error fetching simple labeling statistics:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch simple labeling statistics'
     });
   }
 };
