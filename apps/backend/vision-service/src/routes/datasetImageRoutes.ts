@@ -9,7 +9,8 @@ import {
   getImageById,
   updateImage,
   deleteImage,
-  getUploadSignedUrlRequest
+  getUploadSignedUrlRequest,
+  exportImageNames
 } from '../controllers/datasetImageController';
 
 const router = express.Router();
@@ -20,6 +21,7 @@ router.get('/dataset/:datasetId', getImagesByDataset);
 router.get('/dataset/:datasetId/category/:categoryId', getImagesByCategory);
 router.get('/dataset/:datasetId/labels/stats', getImageLabelsStats);
 router.get('/dataset/:datasetId/export/csv', exportImagesByLabels);
+router.get('/export-names/:datasetId', exportImageNames);
 router.get('/:id', getImageById);
 router.post('/', createDatasetImage);
 router.put('/:id', updateImage);

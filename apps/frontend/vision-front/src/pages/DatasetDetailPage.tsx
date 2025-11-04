@@ -56,6 +56,7 @@ import {
   deleteImageCategory,
   getImagesByDataset
 } from '../services/datasetImageService';
+import { getGlobalConfig } from '../config/ConfigProvider';
 import FileUpload from '../components/FileUpload';
 
 const DatasetDetailPage: React.FC = () => {
@@ -95,6 +96,8 @@ const DatasetDetailPage: React.FC = () => {
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(50);
+  // Export state
+  const [exporting, setExporting] = useState<'good' | 'bad' | 'all' | null>(null);
 
   const { data: analysis, isLoading, error } = useQuery({
     queryKey: ['analysis', id],
@@ -439,6 +442,52 @@ const DatasetDetailPage: React.FC = () => {
     setCurrentPage(1);
   }, [selectedCategoryFilter, selectedTagFilter]);
 
+  // Export handler
+  const handleExportImages = async (filter: 'good' | 'bad' | 'all') => {
+    if (!id) return;
+
+    try {
+      setExporting(filter);
+
+      const config = getGlobalConfig();
+      const apiUrl = config.VISION_API_URL || 'http://localhost:4010';
+
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (filter !== 'all') {
+        params.append('tag', filter);
+      }
+
+      const response = await fetch(`${apiUrl}/api/dataset-images/export-names/${id}?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to export images');
+      }
+
+      // Create blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `images_${filter}_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+    } catch (error) {
+      console.error('Export failed:', error);
+      showCategoryAlert('error', 'Failed to export images');
+    } finally {
+      setExporting(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <Container maxWidth="xl" sx={{ py: 4, textAlign: 'center' }}>
@@ -501,6 +550,7 @@ const DatasetDetailPage: React.FC = () => {
           <Tab label="Description" />
           <Tab label="Categories" />
           <Tab label="Images" />
+          <Tab label="Export" />
         </Tabs>
 
         {/* Tab Panels */}
@@ -1040,6 +1090,61 @@ const DatasetDetailPage: React.FC = () => {
                   </Button>
                 </Box>
               )}
+            </Box>
+          )}
+
+          {activeTab === 3 && (
+            <Box>
+              <Typography variant="h6" sx={{ mb: 3 }}>
+                Export Images
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Download a CSV file containing image names filtered by quality tags.
+              </Typography>
+
+              <Paper sx={{ p: 3, maxWidth: 500 }}>
+                <Typography variant="subtitle1" sx={{ mb: 2 }}>
+                  Filter Options
+                </Typography>
+
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    onClick={() => handleExportImages('good')}
+                    disabled={exporting !== null}
+                    startIcon={exporting === 'good' ? <CircularProgress size={20} color="inherit" /> : null}
+                    sx={{ justifyContent: 'flex-start' }}
+                  >
+                    {exporting === 'good' ? 'Exporting Good Images...' : 'Export Good Images'}
+                  </Button>
+
+                  <Button
+                    variant="contained"
+                    color="error"
+                    onClick={() => handleExportImages('bad')}
+                    disabled={exporting !== null}
+                    startIcon={exporting === 'bad' ? <CircularProgress size={20} color="inherit" /> : null}
+                    sx={{ justifyContent: 'flex-start' }}
+                  >
+                    {exporting === 'bad' ? 'Exporting Bad Images...' : 'Export Bad Images'}
+                  </Button>
+
+                  <Button
+                    variant="outlined"
+                    onClick={() => handleExportImages('all')}
+                    disabled={exporting !== null}
+                    startIcon={exporting === 'all' ? <CircularProgress size={20} color="inherit" /> : null}
+                    sx={{ justifyContent: 'flex-start' }}
+                  >
+                    {exporting === 'all' ? 'Exporting All Images...' : 'Export All Images'}
+                  </Button>
+                </Box>
+
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                  CSV format: One image name per line, simple text format.
+                </Typography>
+              </Paper>
             </Box>
           )}
         </Box>

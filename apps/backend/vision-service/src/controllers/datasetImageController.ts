@@ -798,3 +798,53 @@ export const getUploadSignedUrlRequest = async (req: Request, res: Response): Pr
     });
   }
 };
+
+// Export image names as CSV
+export const exportImageNames = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { datasetId } = req.params;
+    const { tag } = req.query;
+
+    if (!datasetId) {
+      res.status(400).json({
+        success: false,
+        message: 'Dataset ID is required'
+      });
+      return;
+    }
+
+    // Build query
+    const query: any = { datasetId };
+
+    // Filter by tag if specified
+    if (tag && tag !== 'all') {
+      if (tag === 'good') {
+        query.tags = { $regex: /good/i };
+      } else if (tag === 'bad') {
+        query.tags = { $regex: /bad/i };
+      }
+    }
+
+    // Get all matching images
+    const images = await DatasetImage.find(query).sort({ createdAt: -1 });
+
+    // Set CSV headers
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="images_${tag || 'all'}_${new Date().toISOString().split('T')[0]}.csv"`);
+
+    // Generate CSV content - just image names, one per line
+    let csv = '';
+    images.forEach((image) => {
+      const imageName = image.title || image.originalName || image.filename;
+      csv += `${imageName}\n`;
+    });
+
+    res.send(csv);
+  } catch (error) {
+    logger.error('Error exporting image names:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to export image names'
+    });
+  }
+};
