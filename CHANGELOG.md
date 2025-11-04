@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.268](https://github.com/toomastahves/tumbaland/compare/v0.0.267...v0.0.268) (2025-11-04)
+
+
+### Features
+
+* optimize stats ([8c84f6b](https://github.com/toomastahves/tumbaland/commit/8c84f6be90eebced696a62fb510c986bdfa82586))
+
 ### [0.0.267](https://github.com/toomastahves/tumbaland/compare/v0.0.266...v0.0.267) (2025-11-04)
 
 
