@@ -16,7 +16,7 @@ import { logger } from '@tumbaland/core';
 // Get all images
 export const getAllImages = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { page = 1, limit = 50, search, tags } = req.query; // Default limit of 50
+    const { page = 1, limit = 50, search, tags, random } = req.query; // Default limit of 50
 
     const query: any = {};
     if (search) {
@@ -32,13 +32,34 @@ export const getAllImages = async (req: Request, res: Response): Promise<void> =
     const limitNum = Math.min(Number(limit), 1000000); // Cap at 1M for large datasets
     const pageNum = Number(page);
 
-    let imagesQuery = DatasetImage.find(query).sort({ createdAt: -1 });
+    let images: any[];
 
-    if (limitNum && limitNum > 0) {
-      imagesQuery = imagesQuery.limit(limitNum).skip((pageNum - 1) * limitNum);
+    if (random === 'true' && limitNum > 0) {
+      // Use MongoDB $sample for randomization - returns raw documents
+      const pipeline = [
+        { $match: query },
+        { $sample: { size: limitNum } }
+      ];
+
+      const rawImages = await DatasetImage.aggregate(pipeline);
+      // Convert raw aggregation results to have the same structure as Mongoose documents
+      images = rawImages.map(doc => ({
+        ...doc,
+        toObject: () => doc,
+        minioFileId: doc.minioFileId,
+        minioThumbnailFileId: doc.minioThumbnailFileId
+      }));
+    } else {
+      // Standard pagination with sorting
+      let imagesQuery = DatasetImage.find(query).sort({ createdAt: -1 });
+
+      if (limitNum && limitNum > 0) {
+        imagesQuery = imagesQuery.limit(limitNum).skip((pageNum - 1) * limitNum);
+      }
+
+      images = await imagesQuery;
     }
 
-    const images = await imagesQuery;
     const total = await DatasetImage.countDocuments(query);
 
     // If no images found, return empty array

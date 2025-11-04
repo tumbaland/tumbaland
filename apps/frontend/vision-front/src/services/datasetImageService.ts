@@ -47,7 +47,8 @@ export const getAllImages = async (
   page: number = 1,
   limit?: number,
   search?: string,
-  tags?: string
+  tags?: string,
+  random?: boolean
 ): Promise<DatasetImagesResponse> => {
   const config = getGlobalConfig();
   const apiUrl = config.VISION_API_URL || 'http://localhost:4010';
@@ -56,6 +57,7 @@ export const getAllImages = async (
   if (limit) params.append('limit', String(limit));
   if (search) params.append('search', search);
   if (tags) params.append('tags', tags);
+  if (random) params.append('random', 'true');
 
   const response = await fetch(`${apiUrl}/api/dataset-images?${params.toString()}`, {
     method: 'GET',

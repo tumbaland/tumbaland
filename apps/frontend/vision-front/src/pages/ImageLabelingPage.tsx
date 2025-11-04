@@ -59,7 +59,7 @@ const ImageLabelingPage: React.FC = () => {
     try {
       // Try to load all images first
       console.log('Loading all images...');
-      const response = await getAllImages(1, 1000);
+      const response = await getAllImages(1, 1000, undefined, undefined, true); // Enable randomization
       console.log('getAllImages response:', response);
       
       if (response.success && response.data.images) {
@@ -73,9 +73,9 @@ const ImageLabelingPage: React.FC = () => {
         console.log('Unlabeled images found:', unlabeledImages.length);
         
         if (unlabeledImages.length > 0) {
-          // Take only the requested number of images
+          // Since we already randomized at the database level, just take the first N
           const selectedImages = unlabeledImages.slice(0, imageLimit);
-          console.log('Selected images for labeling:', selectedImages.length);
+          console.log('Selected images for labeling (database-randomized):', selectedImages.length);
           
           setImages(selectedImages);
           setCurrentImageIndex(0);
@@ -256,7 +256,7 @@ const ImageLabelingPage: React.FC = () => {
                 onChange={(e) => setImageLimit(Math.max(1, Number(e.target.value) || 1))}
                 inputProps={{ min: 1 }}
                 sx={{ mb: 3 }}
-                helperText="Maximum number of unlabeled images to load for this session"
+                helperText="Maximum number of unlabeled images to load for this session (randomly selected from database for optimal diversity)"
               />
 
               <Button
