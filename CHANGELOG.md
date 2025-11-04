@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.266](https://github.com/toomastahves/tumbaland/compare/v0.0.265...v0.0.266) (2025-11-04)
+
+
+### Features
+
+* update layout ([bda2074](https://github.com/toomastahves/tumbaland/commit/bda20746d81d6e791448d60a4af4bcde6dc2ea05))
+
 ### [0.0.265](https://github.com/toomastahves/tumbaland/compare/v0.0.264...v0.0.265) (2025-11-04)
 
 
