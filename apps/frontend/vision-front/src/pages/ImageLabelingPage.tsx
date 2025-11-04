@@ -18,7 +18,7 @@ import {
   ThumbDown as ThumbDownIcon,
   PlayArrow as PlayArrowIcon
 } from '@mui/icons-material';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   DatasetImage,
   getAllImages,
@@ -34,8 +34,10 @@ const ImageLabelingPage: React.FC = () => {
   const [setupMode, setSetupMode] = useState(true);
   const [imageLimit, setImageLimit] = useState(100);
 
+  const queryClient = useQueryClient();
+
   // Get overall labeling metrics
-  const { data: labelingMetrics } = useQuery({
+  const { data: labelingMetrics, isLoading: metricsLoading } = useQuery({
     queryKey: ['overallLabelingMetrics'],
     queryFn: async () => {
       // Get all images to calculate metrics
@@ -156,7 +158,8 @@ const ImageLabelingPage: React.FC = () => {
       if (currentImageIndex < images.length - 1) {
         setCurrentImageIndex(currentImageIndex + 1);
       } else {
-        showAlert('success', `All ${images.length} images have been labeled!`);
+        // Session completed - return to setup mode to see stats and start new session
+        resetLabeling();
       }
     } catch (error) {
       showAlert('error', 'Failed to save label');
@@ -170,7 +173,8 @@ const ImageLabelingPage: React.FC = () => {
     if (currentImageIndex < images.length - 1) {
       setCurrentImageIndex(currentImageIndex + 1);
     } else {
-      showAlert('success', `All ${images.length} images have been reviewed!`);
+      // Session completed - return to setup mode to see stats and start new session
+      resetLabeling();
     }
   };
 
@@ -179,6 +183,8 @@ const ImageLabelingPage: React.FC = () => {
     setImages([]);
     setCurrentImageIndex(0);
     setAlert(null);
+    // Refresh statistics when returning to setup mode
+    queryClient.invalidateQueries({ queryKey: ['overallLabelingMetrics'] });
   };
 
   const currentImage = images[currentImageIndex];
@@ -190,7 +196,14 @@ const ImageLabelingPage: React.FC = () => {
       <Container maxWidth="md">
         <Box sx={{ py: 4 }}>
           {/* Labeling Progress Overview */}
-          {labelingMetrics && (
+          {metricsLoading ? (
+            <Paper sx={{ p: 3, mb: 4, backgroundColor: '#f8f9fa' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 2 }}>
+                <CircularProgress size={24} sx={{ mr: 2 }} />
+                <Typography variant="body1">Loading statistics...</Typography>
+              </Box>
+            </Paper>
+          ) : labelingMetrics ? (
             <Paper sx={{ p: 3, mb: 4, backgroundColor: '#f8f9fa' }}>
               <Typography variant="h6" sx={{ mb: 2 }}>
                 Overall Labeling Progress
@@ -258,7 +271,7 @@ const ImageLabelingPage: React.FC = () => {
                 </Box>
               </Box>
             </Paper>
-          )}
+          ) : null}
 
           <Box sx={{ textAlign: 'center' }}>
             <Paper elevation={2} sx={{ p: 4, mb: 3, maxWidth: 400, mx: 'auto' }}>
@@ -336,32 +349,25 @@ const ImageLabelingPage: React.FC = () => {
 
   // Labeling interface
   return (
-    <Box sx={{ width: '100vw', height: '100vh', p: 0, m: 0, overflow: 'hidden' }}>
-      <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, px: 2, pt: 1 }}>
-          <div></div>
-          <Button variant="outlined" onClick={resetLabeling} size="small">
-            Change Settings
-          </Button>
-        </Box>
+    <Box sx={{ width: '100vw', height: '90vh', p: 0, m: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      {/* Header - Fixed height */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 0.5, flexShrink: 0, minHeight: 40 }}>
+        <div></div>
+        <Button variant="outlined" onClick={resetLabeling} size="small">
+          Change Settings
+        </Button>
+      </Box>
 
-        {alert && (
-          <Box sx={{ px: 2, mb: 1 }}>
-            <Alert severity={alert.type}>
-              {alert.message}
-            </Alert>
-          </Box>
-        )}
+      {/* Progress Bar - Fixed height */}
+      <Box sx={{ px: 2, pb: 0.5, flexShrink: 0 }}>
+        <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 0.25 }}>
+          Progress: {currentImageIndex + 1} of {images.length} images
+        </Typography>
+        <LinearProgress variant="determinate" value={progress} sx={{ height: 6, borderRadius: 3 }} />
+      </Box>
 
-        {/* Progress Bar */}
-        <Box sx={{ px: 2, mb: 1 }}>
-          <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 0.5 }}>
-            Progress: {currentImageIndex + 1} of {images.length} images
-          </Typography>
-          <LinearProgress variant="determinate" value={progress} sx={{ height: 6, borderRadius: 3 }} />
-        </Box>
-
-        {/* Current Image - Takes up most of the space */}
+      {/* Image Area - Takes remaining space but leaves room for buttons */}
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, maxHeight: 'calc(100vh - 200px)' }}>
         <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', px: 2, pb: 1, minHeight: 0 }}>
           <Card sx={{ width: '100%', height: '100%', boxShadow: 'none', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             <CardMedia
@@ -370,16 +376,16 @@ const ImageLabelingPage: React.FC = () => {
               image={currentImage.signedUrl || currentImage.thumbnailSignedUrl}
               alt={currentImage.title || currentImage.originalName}
             />
-            <CardContent sx={{ pb: 1, pt: 1 }}>
-              <Typography variant="h6" align="center" sx={{ fontSize: '1rem' }}>
+            <CardContent sx={{ pb: 0.5, pt: 0.5, flexShrink: 0 }}>
+              <Typography variant="h6" align="center" sx={{ fontSize: '1rem', mb: 0.25 }}>
                 {currentImage.title || currentImage.originalName}
               </Typography>
               {currentImage.description && (
-                <Typography variant="body2" color="text.secondary" align="center" sx={{ fontSize: '0.9rem' }}>
+                <Typography variant="body2" color="text.secondary" align="center" sx={{ fontSize: '0.9rem', mb: 0.25 }}>
                   {currentImage.description}
                 </Typography>
               )}
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.5 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.25 }}>
                 {currentImage.tags.map((tag) => (
                   <Typography key={tag} variant="caption" sx={{
                     mx: 0.3,
@@ -397,51 +403,42 @@ const ImageLabelingPage: React.FC = () => {
             </CardContent>
           </Card>
         </Box>
+      </Box>
 
-        {/* Labeling Buttons - Fixed at bottom */}
-        <Box sx={{ px: 2, pb: 2, pt: 1, flexShrink: 0 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
-            <Button
-              variant="contained"
-              color="success"
-              size="large"
-              startIcon={<ThumbUpIcon />}
-              onClick={() => handleLabel('good')}
-              disabled={labeling}
-              sx={{ minWidth: 120, py: 2, fontSize: '1rem' }}
-            >
-              Good
-            </Button>
-            <Button
-              variant="outlined"
-              size="large"
-              onClick={() => handleSkip()}
-              disabled={labeling}
-              sx={{ minWidth: 120, py: 2, fontSize: '1rem' }}
-            >
-              Skip
-            </Button>
-            <Button
-              variant="contained"
-              color="error"
-              size="large"
-              startIcon={<ThumbDownIcon />}
-              onClick={() => handleLabel('bad')}
-              disabled={labeling}
-              sx={{ minWidth: 120, py: 2, fontSize: '1rem' }}
-            >
-              Bad
-            </Button>
-          </Box>
-
-          {labeling && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
-              <CircularProgress size={20} />
-              <Typography variant="body2" sx={{ ml: 1 }}>
-                Saving label...
-              </Typography>
-            </Box>
-          )}
+      {/* Labeling Buttons - Fixed at bottom, always visible */}
+      <Box sx={{ flexShrink: 0, backgroundColor: 'background.paper' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 4, mb: labeling ? 0.5 : 0 }}>
+          <Button
+            variant="contained"
+            color="success"
+            size="large"
+            startIcon={<ThumbUpIcon />}
+            onClick={() => handleLabel('good')}
+            disabled={labeling}
+            sx={{ minWidth: 100, py: 1.5, fontSize: '0.9rem' }}
+          >
+            Good
+          </Button>
+          <Button
+            variant="outlined"
+            size="large"
+            onClick={() => handleSkip()}
+            disabled={labeling}
+            sx={{ minWidth: 100, py: 1.5, fontSize: '0.9rem' }}
+          >
+            Skip
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            size="large"
+            startIcon={<ThumbDownIcon />}
+            onClick={() => handleLabel('bad')}
+            disabled={labeling}
+            sx={{ minWidth: 100, py: 1.5, fontSize: '0.9rem' }}
+          >
+            Bad
+          </Button>
         </Box>
       </Box>
     </Box>
