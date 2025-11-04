@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.265](https://github.com/toomastahves/tumbaland/compare/v0.0.264...v0.0.265) (2025-11-04)
+
+
+### Features
+
+* add export ([54afc75](https://github.com/toomastahves/tumbaland/commit/54afc75ffbe6091cfe9a6406d1e21623ddf8fa68))
+
 ### [0.0.264](https://github.com/toomastahves/tumbaland/compare/v0.0.263...v0.0.264) (2025-11-04)
 
 
