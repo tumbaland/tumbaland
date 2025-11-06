@@ -94,6 +94,7 @@ DatasetImageSchema.index({ datasetId: 1, categoryId: 1, createdAt: -1 });
 DatasetImageSchema.index({ datasetId: 1, labels: 1 });
 DatasetImageSchema.index({ tags: 1 }); // Index for tag filtering
 DatasetImageSchema.index({ createdAt: -1 }); // Index for sorting by creation date
+DatasetImageSchema.index({ updatedAt: -1 }); // Index for sorting by update date
 DatasetImageSchema.index({ title: 'text', description: 'text', tags: 'text' });
 
 export default mongoose.model<IDatasetImage>('DatasetImage', DatasetImageSchema);

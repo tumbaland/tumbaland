@@ -115,7 +115,9 @@ const DatasetDetailPage: React.FC = () => {
         pageSize,
         undefined, // search
         selectedCategoryFilter || undefined, // categoryId
-        selectedTagFilter.length > 0 ? selectedTagFilter.join(' ') : undefined // tags as space-separated string
+        selectedTagFilter.length > 0 ? selectedTagFilter.join(' ') : undefined, // tags as space-separated string
+        'updatedAt', // sortBy
+        'desc' // sortOrder - most recently updated first
       );
       return response;
     },
@@ -135,7 +137,7 @@ const DatasetDetailPage: React.FC = () => {
     queryKey: ['datasetTags', id],
     queryFn: async () => {
       // Get a sample of images to extract available tags
-      const response = await getImagesByDataset(id!, 1, 1000); // Get up to 1000 images to sample tags
+      const response = await getImagesByDataset(id!, 1, 1000, undefined, undefined, undefined, 'updatedAt', 'desc'); // Get up to 1000 images to sample tags, sorted by updatedAt
       const allTags = new Set<string>();
       response.data.images.forEach((image: DatasetImage) => {
         image.tags.forEach(tag => allTags.add(tag));

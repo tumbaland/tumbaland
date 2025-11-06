@@ -83,7 +83,9 @@ export const getImagesByDataset = async (
   limit?: number,
   search?: string,
   categoryId?: string,
-  tags?: string
+  tags?: string,
+  sortBy?: 'updatedAt' | 'createdAt' | 'filename',
+  sortOrder?: 'asc' | 'desc'
 ): Promise<DatasetImagesResponse> => {
   const config = getGlobalConfig();
   const apiUrl = config.VISION_API_URL || 'https://vision-api.tumbaland.eu';
@@ -93,6 +95,8 @@ export const getImagesByDataset = async (
   if (search) params.append('search', search);
   if (categoryId) params.append('categoryId', categoryId);
   if (tags) params.append('tags', tags);
+  if (sortBy) params.append('sortBy', sortBy);
+  if (sortOrder) params.append('sortOrder', sortOrder);
 
   const response = await fetch(`${apiUrl}/api/dataset-images/dataset/${datasetId}?${params.toString()}`, {
     method: 'GET',

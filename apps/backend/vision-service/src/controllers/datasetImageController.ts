@@ -250,7 +250,7 @@ export const createDatasetImage = async (req: Request, res: Response): Promise<v
 export const getImagesByDataset = async (req: Request, res: Response): Promise<void> => {
   try {
     const { datasetId } = req.params;
-    const { page = 1, limit, search, categoryId, tags } = req.query;
+    const { page = 1, limit, search, categoryId, tags, sortBy = 'updatedAt', sortOrder = 'desc' } = req.query;
 
     const query: any = { datasetId };
 
@@ -270,7 +270,19 @@ export const getImagesByDataset = async (req: Request, res: Response): Promise<v
     const limitNum = limit ? Number(limit) : undefined;
     const pageNum = Number(page);
 
-    let imagesQuery = DatasetImage.find(query).sort({ createdAt: -1 });
+    // Build sort object
+    const sortOptions: any = {};
+    const validSortFields = ['createdAt', 'updatedAt', 'filename'];
+    const validSortOrders = ['asc', 'desc'];
+
+    if (validSortFields.includes(sortBy as string)) {
+      sortOptions[sortBy as string] = (sortOrder as string) === 'asc' ? 1 : -1;
+    } else {
+      // Default to updatedAt desc if invalid sortBy provided
+      sortOptions.updatedAt = -1;
+    }
+
+    let imagesQuery = DatasetImage.find(query).sort(sortOptions);
 
     if (limitNum && limitNum > 0) {
       imagesQuery = imagesQuery.limit(limitNum).skip((pageNum - 1) * limitNum);
