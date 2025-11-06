@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.270](https://github.com/toomastahves/tumbaland/compare/v0.0.269...v0.0.270) (2025-11-06)
+
+
+### Features
+
+* add epoch selection to vision front ([b32b8f7](https://github.com/toomastahves/tumbaland/commit/b32b8f792b6bd2d6204a38184a60bbfd14531772))
+
 ### [0.0.269](https://github.com/toomastahves/tumbaland/compare/v0.0.268...v0.0.269) (2025-11-04)
 
 
