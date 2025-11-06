@@ -38,13 +38,13 @@ const TrainingOverviewTab: React.FC<TrainingOverviewTabProps> = ({
       {/* Loss Chart */}
       {epochs.length > 0 && trainLoss.some(v => v !== undefined) && (
         <Paper sx={{ p: 3, position: 'relative' }}>
-          <Typography variant="h6" gutterBottom>Loss Over Epochs</Typography>
+          <Typography variant="h6" gutterBottom>Training and Validation Loss Over Epochs</Typography>
           <Box sx={{ width: '100%', height: 350 }}>
             <LineChart
               xAxis={[{ data: epochNumbers, label: 'Epoch' }]}
               series={[
-                { data: trainLoss, label: 'Train Loss', color: '#424242', showMark: false },
-                { data: valLoss, label: 'Val Loss', color: '#757575', showMark: false }
+                { data: trainLoss, label: 'Training Loss', color: '#1976d2', showMark: false },
+                { data: valLoss, label: 'Validation Loss', color: '#d32f2f', showMark: false }
               ]}
               margin={{ top: 10, bottom: 40, left: 60, right: 10 }}
             />
@@ -56,13 +56,13 @@ const TrainingOverviewTab: React.FC<TrainingOverviewTabProps> = ({
       {/* Mean IoU Chart */}
       {epochs.length > 0 && trainMeanIoU.some(v => v !== undefined) && (
         <Paper sx={{ p: 3, position: 'relative' }}>
-          <Typography variant="h6" gutterBottom>Mean IoU Over Epochs</Typography>
+          <Typography variant="h6" gutterBottom>Training and Validation Mean IoU Over Epochs</Typography>
           <Box sx={{ width: '100%', height: 350 }}>
             <LineChart
               xAxis={[{ data: epochNumbers, label: 'Epoch' }]}
               series={[
-                { data: trainMeanIoU, label: 'Train mIoU', color: '#212121', showMark: false },
-                { data: valMeanIoU, label: 'Val mIoU', color: '#616161', showMark: false }
+                { data: trainMeanIoU, label: 'Training mIoU', color: '#1976d2', showMark: false },
+                { data: valMeanIoU, label: 'Validation mIoU', color: '#d32f2f', showMark: false }
               ]}
               margin={{ top: 10, bottom: 40, left: 60, right: 10 }}
             />
@@ -90,7 +90,10 @@ const TrainingOverviewTab: React.FC<TrainingOverviewTabProps> = ({
       {Object.keys(classMetrics).length > 0 && (
         <Paper>
           <Box p={3}>
-            <Typography variant="h6" gutterBottom>Per-Class Metrics (Latest Epoch)</Typography>
+            <Typography variant="h6" gutterBottom>Per-Class Validation Metrics (Latest Epoch)</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              These metrics are calculated on the validation dataset and represent the model's performance on unseen data during training.
+            </Typography>
           </Box>
           <TableContainer>
             <Table>

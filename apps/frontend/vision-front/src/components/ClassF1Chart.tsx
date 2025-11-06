@@ -140,7 +140,7 @@ const ClassF1Chart: React.FC<ClassF1ChartProps> = ({ epochs, trainingId }) => {
       {hasRegularData && (
         <Paper sx={{ p: 3, position: 'relative' }}>
           <Typography variant="h6" gutterBottom>
-            Class F1 Score Over Epochs
+            Class F1 Score Over Epochs (Validation Data)
           </Typography>
           <Box sx={{ width: '100%', height: 400 }}>
             <LineChart
@@ -164,7 +164,7 @@ const ClassF1Chart: React.FC<ClassF1ChartProps> = ({ epochs, trainingId }) => {
       {hasTwoDData && (
         <Paper sx={{ p: 3, position: 'relative' }}>
           <Typography variant="h6" gutterBottom>
-            Class F1 Score Over Epochs (2D)
+            Class F1 Score Over Epochs (2D Validation Data)
           </Typography>
           <Box sx={{ width: '100%', height: 400 }}>
             <LineChart

@@ -140,7 +140,7 @@ const ClassRecallChart: React.FC<ClassRecallChartProps> = ({ epochs, trainingId 
       {hasRegularData && (
         <Paper sx={{ p: 3, position: 'relative' }}>
           <Typography variant="h6" gutterBottom>
-            Class Recall Over Epochs
+            Class Recall Over Epochs (Validation Data)
           </Typography>
           <Box sx={{ width: '100%', height: 400 }}>
             <LineChart
@@ -164,7 +164,7 @@ const ClassRecallChart: React.FC<ClassRecallChartProps> = ({ epochs, trainingId 
       {hasTwoDData && (
         <Paper sx={{ p: 3, position: 'relative' }}>
           <Typography variant="h6" gutterBottom>
-            Class Recall Over Epochs (2D)
+            Class Recall Over Epochs (2D Validation Data)
           </Typography>
           <Box sx={{ width: '100%', height: 400 }}>
             <LineChart

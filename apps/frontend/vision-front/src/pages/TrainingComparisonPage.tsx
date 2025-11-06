@@ -18,7 +18,11 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TableRow
+  TableRow,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import {
   Code as CodeIcon,
@@ -34,6 +38,9 @@ const TrainingComparisonPage: React.FC = () => {
   const [latexModalOpen, setLatexModalOpen] = useState(false);
   const [latexCode, setLatexCode] = useState('');
 
+  // State for selected epochs (defaults to last epoch)
+  const [selectedEpochs, setSelectedEpochs] = useState<Record<string, number>>({});
+
   // Get training IDs from URL params
   const trainingIds = searchParams.get('ids')?.split(',') || [];
 
@@ -44,6 +51,36 @@ const TrainingComparisonPage: React.FC = () => {
   });
 
   const comparisonData = data?.data?.comparison || [];
+
+  // Initialize selected epochs to last epoch when data loads
+  React.useEffect(() => {
+    if (comparisonData.length > 0) {
+      const initialSelectedEpochs: Record<string, number> = {};
+      comparisonData.forEach(comp => {
+        if (comp.lastEpoch) {
+          initialSelectedEpochs[comp.training._id] = comp.lastEpoch.epoch;
+        }
+      });
+      setSelectedEpochs(initialSelectedEpochs);
+    }
+  }, [comparisonData]);
+
+  // Handle epoch selection change
+  const handleEpochChange = (trainingId: string, epoch: number) => {
+    setSelectedEpochs(prev => ({
+      ...prev,
+      [trainingId]: epoch
+    }));
+  };
+
+  // Get selected epoch data for a training
+  const getSelectedEpochData = (trainingId: string) => {
+    const selectedEpoch = selectedEpochs[trainingId];
+    const trainingData = comparisonData.find(comp => comp.training._id === trainingId);
+    if (!trainingData || !selectedEpoch) return null;
+    
+    return trainingData.epochs.find(epoch => epoch.epoch === selectedEpoch) || null;
+  };
 
   const formatTime = (seconds: number) => {
     if (seconds < 60) return `${Math.round(seconds)}s`;
@@ -126,135 +163,143 @@ const TrainingComparisonPage: React.FC = () => {
     });
     latex += '\\\\ \\hline\n';
 
-    // Last Epoch Results (if available)
-    if (comparisonData.some(comp => comp.lastEpoch)) {
-      latex += '\\hline\n';
-      latex += '\\multicolumn{' + (comparisonData.length + 1) + '}{|c|}{Latest Epoch Results} \\\\\n';
-      latex += '\\hline\n';
-
-      // Train Loss
-      latex += 'Train Loss ';
-      comparisonData.forEach(comp => {
-        const loss = comp.lastEpoch?.results?.train?.loss;
-        latex += `& ${formatNumber(loss)} `;
-      });
-      latex += '\\\\ \\hline\n';
-
-      // Val Loss
-      latex += 'Val Loss ';
-      comparisonData.forEach(comp => {
-        const loss = comp.lastEpoch?.results?.val?.loss;
-        latex += `& ${formatNumber(loss)} `;
-      });
-      latex += '\\\\ \\hline\n';
-
-      // Train mIoU
-      latex += 'Train mIoU ';
-      comparisonData.forEach(comp => {
-        const miou = comp.lastEpoch?.results?.train?.mean_iou;
-        latex += `& ${formatNumber(miou)} `;
-      });
-      latex += '\\\\ \\hline\n';
-
-      // Val mIoU
-      latex += 'Val mIoU ';
-      comparisonData.forEach(comp => {
-        const miou = comp.lastEpoch?.results?.val?.mean_iou;
-        latex += `& ${formatNumber(miou)} `;
-      });
-      latex += '\\\\ \\hline\n';
-
-      // Per-class IoU metrics
-      const allClasses = new Set<string>();
-      comparisonData.forEach(comp => {
-        if (comp.lastEpoch?.results?.val) {
-          Object.keys(comp.lastEpoch.results.val).forEach(key => {
-            if (typeof comp.lastEpoch!.results.val![key] === 'object' &&
-                comp.lastEpoch!.results.val![key] !== null &&
-                key !== 'loss' && key !== 'mean_iou') {
-              allClasses.add(key);
-            }
-          });
-        }
-      });
-
-      const classNames = Array.from(allClasses).sort();
-      if (classNames.length > 0) {
+      // Last Epoch Results (if available)
+      if (comparisonData.some(comp => getSelectedEpochData(comp.training._id))) {
         latex += '\\hline\n';
-        latex += '\\multicolumn{' + (comparisonData.length * 4 + 1) + '}{|c|}{Per-Class Metrics (Validation)} \\\\\n';
+        latex += '\\multicolumn{' + (comparisonData.length + 1) + '}{|c|}{Selected Epoch Results} \\\\\n';
         latex += '\\hline\n';
 
-        // Header row with training names spanning 4 columns each
-        latex += 'Class ';
+        // Train Loss
+        latex += 'Train Loss ';
         comparisonData.forEach(comp => {
-          latex += `& \\multicolumn{4}{c|}{${comp.training.name.replace(/[&%$#_{}~^\\]/g, '\\$&')}} `;
+          const selectedEpochData = getSelectedEpochData(comp.training._id);
+          const loss = selectedEpochData?.results?.train?.loss;
+          latex += `& ${formatNumber(loss)} `;
         });
         latex += '\\\\ \\hline\n';
 
-        // Sub-header row with metric names
-        latex += ' ';
-        comparisonData.forEach(() => {
-          latex += '& IoU & Precision & Recall & F1 ';
+        // Val Loss
+        latex += 'Val Loss ';
+        comparisonData.forEach(comp => {
+          const selectedEpochData = getSelectedEpochData(comp.training._id);
+          const loss = selectedEpochData?.results?.val?.loss;
+          latex += `& ${formatNumber(loss)} `;
         });
         latex += '\\\\ \\hline\n';
 
-        // Data rows for each class
-        classNames.forEach(className => {
-          // Calculate max values for this class across all trainings
-          const classMaxValues = {
-            iou: Math.max(...comparisonData.map(comp => {
-              const valResults = comp.lastEpoch?.results?.val;
-              const classMetrics = valResults?.[className] as any;
-              return classMetrics?.iou ?? -Infinity;
-            })),
-            precision: Math.max(...comparisonData.map(comp => {
-              const valResults = comp.lastEpoch?.results?.val;
-              const classMetrics = valResults?.[className] as any;
-              return classMetrics?.precision ?? -Infinity;
-            })),
-            recall: Math.max(...comparisonData.map(comp => {
-              const valResults = comp.lastEpoch?.results?.val;
-              const classMetrics = valResults?.[className] as any;
-              return classMetrics?.recall ?? -Infinity;
-            })),
-            f1: Math.max(...comparisonData.map(comp => {
-              const valResults = comp.lastEpoch?.results?.val;
-              const classMetrics = valResults?.[className] as any;
-              return classMetrics?.f1 ?? -Infinity;
-            }))
-          };
+        // Train mIoU
+        latex += 'Train mIoU ';
+        comparisonData.forEach(comp => {
+          const selectedEpochData = getSelectedEpochData(comp.training._id);
+          const miou = selectedEpochData?.results?.train?.mean_iou;
+          latex += `& ${formatNumber(miou)} `;
+        });
+        latex += '\\\\ \\hline\n';
 
-          latex += `${className.charAt(0).toUpperCase() + className.slice(1)} `;
+        // Val mIoU
+        latex += 'Val mIoU ';
+        comparisonData.forEach(comp => {
+          const selectedEpochData = getSelectedEpochData(comp.training._id);
+          const miou = selectedEpochData?.results?.val?.mean_iou;
+          latex += `& ${formatNumber(miou)} `;
+        });
+        latex += '\\\\ \\hline\n';
+
+        // Per-class IoU metrics
+        const allClasses = new Set<string>();
+        comparisonData.forEach(comp => {
+          const selectedEpochData = getSelectedEpochData(comp.training._id);
+          if (selectedEpochData?.results?.val) {
+            Object.keys(selectedEpochData.results.val).forEach(key => {
+              if (typeof selectedEpochData.results.val![key] === 'object' &&
+                  selectedEpochData.results.val![key] !== null &&
+                  key !== 'loss' && key !== 'mean_iou') {
+                allClasses.add(key);
+              }
+            });
+          }
+        });
+
+        const classNames = Array.from(allClasses).sort();
+        if (classNames.length > 0) {
+          latex += '\\hline\n';
+          latex += '\\multicolumn{' + (comparisonData.length * 4 + 1) + '}{|c|}{Per-Class Metrics (Validation)} \\\\\n';
+          latex += '\\hline\n';
+
+          // Header row with training names spanning 4 columns each
+          latex += 'Class ';
           comparisonData.forEach(comp => {
-            const valResults = comp.lastEpoch?.results?.val;
-            const classMetrics = valResults?.[className] as any;
-            const iou = classMetrics?.iou;
-            const precision = classMetrics?.precision;
-            const recall = classMetrics?.recall;
-            const f1 = classMetrics?.f1;
-
-            // IoU with bold formatting for max value
-            const iouText = formatNumber(iou);
-            latex += `& ${iou === classMaxValues.iou && iou !== undefined ? `\\textbf{${iouText}}` : iouText} `;
-
-            // Precision with bold formatting for max value
-            const precisionText = formatNumber(precision);
-            latex += `& ${precision === classMaxValues.precision && precision !== undefined ? `\\textbf{${precisionText}}` : precisionText} `;
-
-            // Recall with bold formatting for max value
-            const recallText = formatNumber(recall);
-            latex += `& ${recall === classMaxValues.recall && recall !== undefined ? `\\textbf{${recallText}}` : recallText} `;
-
-            // F1 with bold formatting for max value
-            const f1Text = formatNumber(f1);
-            latex += `& ${f1 === classMaxValues.f1 && f1 !== undefined ? `\\textbf{${f1Text}}` : f1Text} `;
+            latex += `& \\multicolumn{4}{c|}{${comp.training.name.replace(/[&%$#_{}~^\\]/g, '\\$&')}} `;
           });
           latex += '\\\\ \\hline\n';
-        });
-      }
-    }
 
-    latex += '\\end{tabular}\n\\end{table}';
+          // Sub-header row with metric names
+          latex += ' ';
+          comparisonData.forEach(() => {
+            latex += '& IoU & Precision & Recall & F1 ';
+          });
+          latex += '\\\\ \\hline\n';
+
+          // Data rows for each class
+          classNames.forEach(className => {
+            // Calculate max values for this class across all trainings
+            const classMaxValues = {
+              iou: Math.max(...comparisonData.map(comp => {
+                const selectedEpochData = getSelectedEpochData(comp.training._id);
+                const valResults = selectedEpochData?.results?.val;
+                const classMetrics = valResults?.[className] as any;
+                return classMetrics?.iou ?? -Infinity;
+              })),
+              precision: Math.max(...comparisonData.map(comp => {
+                const selectedEpochData = getSelectedEpochData(comp.training._id);
+                const valResults = selectedEpochData?.results?.val;
+                const classMetrics = valResults?.[className] as any;
+                return classMetrics?.precision ?? -Infinity;
+              })),
+              recall: Math.max(...comparisonData.map(comp => {
+                const selectedEpochData = getSelectedEpochData(comp.training._id);
+                const valResults = selectedEpochData?.results?.val;
+                const classMetrics = valResults?.[className] as any;
+                return classMetrics?.recall ?? -Infinity;
+              })),
+              f1: Math.max(...comparisonData.map(comp => {
+                const selectedEpochData = getSelectedEpochData(comp.training._id);
+                const valResults = selectedEpochData?.results?.val;
+                const classMetrics = valResults?.[className] as any;
+                return classMetrics?.f1 ?? -Infinity;
+              }))
+            };
+
+            latex += `${className.charAt(0).toUpperCase() + className.slice(1)} `;
+            comparisonData.forEach(comp => {
+              const selectedEpochData = getSelectedEpochData(comp.training._id);
+              const valResults = selectedEpochData?.results?.val;
+              const classMetrics = valResults?.[className] as any;
+              const iou = classMetrics?.iou;
+              const precision = classMetrics?.precision;
+              const recall = classMetrics?.recall;
+              const f1 = classMetrics?.f1;
+
+              // IoU with bold formatting for max value
+              const iouText = formatNumber(iou);
+              latex += `& ${iou === classMaxValues.iou && iou !== undefined ? `\\textbf{${iouText}}` : iouText} `;
+
+              // Precision with bold formatting for max value
+              const precisionText = formatNumber(precision);
+              latex += `& ${precision === classMaxValues.precision && precision !== undefined ? `\\textbf{${precisionText}}` : precisionText} `;
+
+              // Recall with bold formatting for max value
+              const recallText = formatNumber(recall);
+              latex += `& ${recall === classMaxValues.recall && recall !== undefined ? `\\textbf{${recallText}}` : recallText} `;
+
+              // F1 with bold formatting for max value
+              const f1Text = formatNumber(f1);
+              latex += `& ${f1 === classMaxValues.f1 && f1 !== undefined ? `\\textbf{${f1Text}}` : f1Text} `;
+            });
+            latex += '\\\\ \\hline\n';
+          });
+        }
+      }    latex += '\\end{tabular}\n\\end{table}';
 
     return latex;
   };
@@ -338,52 +383,54 @@ const TrainingComparisonPage: React.FC = () => {
 
       {/* Training Overview Cards */}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr', lg: '1fr 1fr 1fr' }, gap: 3, mb: 4 }}>
-        {comparisonData.map((comparison) => (
-          <Box key={comparison.training._id} sx={{ minHeight: 200 }}>
-            <Paper sx={{ p: 3, height: '100%' }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                <Box sx={{ flex: 1, mr: 2 }}>
-                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
-                    {comparison.training.name}
-                  </Typography>
-                  {comparison.training.description && (
-                    <Typography variant="body2" color="text.secondary">
-                      {comparison.training.description}
+        {comparisonData.map((comparison) => {
+          return (
+            <Box key={comparison.training._id} sx={{ minHeight: 250 }}>
+              <Paper sx={{ p: 3, height: '100%' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                  <Box sx={{ flex: 1, mr: 2 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+                      {comparison.training.name}
                     </Typography>
-                  )}
+                    {comparison.training.description && (
+                      <Typography variant="body2" color="text.secondary">
+                        {comparison.training.description}
+                      </Typography>
+                    )}
+                  </Box>
+                  <Chip
+                    label={comparison.training.status}
+                    color={getStatusColor(comparison.training.status)}
+                    size="small"
+                  />
                 </Box>
-                <Chip
-                  label={comparison.training.status}
-                  color={getStatusColor(comparison.training.status)}
-                  size="small"
-                />
-              </Box>
 
-              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mb: 2 }}>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">Epochs</Typography>
-                  <Typography variant="h6">{comparison.metrics.totalEpochs}</Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mb: 2 }}>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Epochs</Typography>
+                    <Typography variant="h6">{comparison.metrics.totalEpochs}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Total Time</Typography>
+                    <Typography variant="body2">{formatTime(comparison.metrics.totalTime)}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Avg Time</Typography>
+                    <Typography variant="body2">{formatTime(comparison.metrics.avgEpochTime)}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">Cost</Typography>
+                    <Typography variant="body2">€{comparison.metrics.cost.totalCost.toFixed(2)}</Typography>
+                  </Box>
                 </Box>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">Total Time</Typography>
-                  <Typography variant="body2">{formatTime(comparison.metrics.totalTime)}</Typography>
-                </Box>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">Avg Time</Typography>
-                  <Typography variant="body2">{formatTime(comparison.metrics.avgEpochTime)}</Typography>
-                </Box>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">Cost</Typography>
-                  <Typography variant="body2">€{comparison.metrics.cost.totalCost.toFixed(2)}</Typography>
-                </Box>
-              </Box>
 
-              <Typography variant="caption" color="text.secondary">
-                Created: {formatDate(comparison.training.createdAt)}
-              </Typography>
-            </Paper>
-          </Box>
-        ))}
+                <Typography variant="caption" color="text.secondary">
+                  Created: {formatDate(comparison.training.createdAt)}
+                </Typography>
+              </Paper>
+            </Box>
+          );
+        })}
       </Box>
 
       {/* Detailed Comparison Table */}
@@ -481,63 +528,108 @@ const TrainingComparisonPage: React.FC = () => {
         </Paper>
       )}
 
-      {/* Latest Epoch Results */}
-      {comparisonData.some(comp => comp.lastEpoch) && (
+      {/* Selected Epoch Results */}
+      {comparisonData.some(comp => getSelectedEpochData(comp.training._id)) && (
         <Paper>
           <Box sx={{ p: 3, pb: 2 }}>
             <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-              Latest Epoch Performance
+              Selected Epoch Performance
             </Typography>
+            
+            {/* Epoch Selection Controls */}
+            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+              {comparisonData.map((comparison) => {
+                const selectedEpoch = selectedEpochs[comparison.training._id];
+                const availableEpochs = comparison.epochs.map(e => e.epoch).sort((a, b) => b - a); // Sort descending
+                
+                return (
+                  <Box key={comparison.training._id} sx={{ minWidth: 200 }}>
+                    <Typography variant="body2" sx={{ mb: 1, fontWeight: 600 }}>
+                      {comparison.training.name}
+                    </Typography>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Select Epoch</InputLabel>
+                      <Select
+                        value={selectedEpoch || ''}
+                        label="Select Epoch"
+                        onChange={(e) => handleEpochChange(comparison.training._id, Number(e.target.value))}
+                      >
+                        {availableEpochs.map((epoch) => (
+                          <MenuItem key={epoch} value={epoch}>
+                            Epoch {epoch}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Box>
+                );
+              })}
+            </Box>
           </Box>
           <TableContainer>
             <Table>
               <TableHead>
                 <TableRow>
                   <TableCell><strong>Metric</strong></TableCell>
-                  {comparisonData.map((comp) => (
-                    <TableCell key={comp.training._id} align="center">
-                      <strong>{comp.training.name}</strong>
-                      {comp.lastEpoch && (
-                        <Typography variant="caption" color="text.secondary" display="block">
-                          Epoch {comp.lastEpoch.epoch}
-                        </Typography>
-                      )}
-                    </TableCell>
-                  ))}
+                  {comparisonData.map((comp) => {
+                    const selectedEpochData = getSelectedEpochData(comp.training._id);
+                    return (
+                      <TableCell key={comp.training._id} align="center">
+                        <strong>{comp.training.name}</strong>
+                        {selectedEpochData && (
+                          <Typography variant="caption" color="text.secondary" display="block">
+                            Epoch {selectedEpochData.epoch}
+                          </Typography>
+                        )}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               </TableHead>
               <TableBody>
                 <TableRow>
                   <TableCell>Train Loss</TableCell>
-                  {comparisonData.map((comp) => (
-                    <TableCell key={comp.training._id} align="center">
-                      {formatNumber(comp.lastEpoch?.results?.train?.loss)}
-                    </TableCell>
-                  ))}
+                  {comparisonData.map((comp) => {
+                    const selectedEpochData = getSelectedEpochData(comp.training._id);
+                    return (
+                      <TableCell key={comp.training._id} align="center">
+                        {formatNumber(selectedEpochData?.results?.train?.loss)}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
                 <TableRow>
                   <TableCell>Validation Loss</TableCell>
-                  {comparisonData.map((comp) => (
-                    <TableCell key={comp.training._id} align="center">
-                      {formatNumber(comp.lastEpoch?.results?.val?.loss)}
-                    </TableCell>
-                  ))}
+                  {comparisonData.map((comp) => {
+                    const selectedEpochData = getSelectedEpochData(comp.training._id);
+                    return (
+                      <TableCell key={comp.training._id} align="center">
+                        {formatNumber(selectedEpochData?.results?.val?.loss)}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
                 <TableRow>
                   <TableCell>Train mIoU</TableCell>
-                  {comparisonData.map((comp) => (
-                    <TableCell key={comp.training._id} align="center">
-                      {formatNumber(comp.lastEpoch?.results?.train?.mean_iou)}
-                    </TableCell>
-                  ))}
+                  {comparisonData.map((comp) => {
+                    const selectedEpochData = getSelectedEpochData(comp.training._id);
+                    return (
+                      <TableCell key={comp.training._id} align="center">
+                        {formatNumber(selectedEpochData?.results?.train?.mean_iou)}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
                 <TableRow>
                   <TableCell>Validation mIoU</TableCell>
-                  {comparisonData.map((comp) => (
-                    <TableCell key={comp.training._id} align="center">
-                      {formatNumber(comp.lastEpoch?.results?.val?.mean_iou)}
-                    </TableCell>
-                  ))}
+                  {comparisonData.map((comp) => {
+                    const selectedEpochData = getSelectedEpochData(comp.training._id);
+                    return (
+                      <TableCell key={comp.training._id} align="center">
+                        {formatNumber(selectedEpochData?.results?.val?.mean_iou)}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               </TableBody>
             </Table>
@@ -546,11 +638,11 @@ const TrainingComparisonPage: React.FC = () => {
       )}
 
       {/* Per-Class IoU Comparison */}
-      {comparisonData.some(comp => comp.lastEpoch?.results?.val) && (
+      {comparisonData.some(comp => getSelectedEpochData(comp.training._id)?.results?.val) && (
         <Paper sx={{ mb: 4 }}>
           <Box sx={{ p: 3, pb: 2 }}>
             <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
-              Per-Class IoU Comparison (Latest Epoch)
+              Per-Class IoU Comparison (Selected Epochs)
             </Typography>
           </Box>
 
@@ -558,10 +650,11 @@ const TrainingComparisonPage: React.FC = () => {
           {(() => {
             const allClasses = new Set<string>();
             comparisonData.forEach(comp => {
-              if (comp.lastEpoch?.results?.val) {
-                Object.keys(comp.lastEpoch.results.val).forEach(key => {
-                  if (typeof comp.lastEpoch!.results.val![key] === 'object' &&
-                      comp.lastEpoch!.results.val![key] !== null &&
+              const selectedEpochData = getSelectedEpochData(comp.training._id);
+              if (selectedEpochData?.results?.val) {
+                Object.keys(selectedEpochData.results.val).forEach(key => {
+                  if (typeof selectedEpochData.results.val![key] === 'object' &&
+                      selectedEpochData.results.val![key] !== null &&
                       key !== 'loss' && key !== 'mean_iou') {
                     allClasses.add(key);
                   }
@@ -575,7 +668,7 @@ const TrainingComparisonPage: React.FC = () => {
               return (
                 <Box sx={{ p: 3, textAlign: 'center' }}>
                   <Typography variant="body2" color="text.secondary">
-                    No per-class metrics available
+                    No per-class metrics available for selected epochs
                   </Typography>
                 </Box>
               );
@@ -589,21 +682,24 @@ const TrainingComparisonPage: React.FC = () => {
                       <TableCell rowSpan={2} sx={{ borderBottom: '2px solid rgba(224, 224, 224, 1)' }}>
                         <strong>Class</strong>
                       </TableCell>
-                      {comparisonData.map((comp) => (
-                        <TableCell
-                          key={comp.training._id}
-                          colSpan={4}
-                          align="center"
-                          sx={{ borderBottom: '2px solid rgba(224, 224, 224, 1)' }}
-                        >
-                          <strong>{comp.training.name}</strong>
-                          {comp.lastEpoch && (
-                            <Typography variant="caption" color="text.secondary" display="block">
-                              Epoch {comp.lastEpoch.epoch}
-                            </Typography>
-                          )}
-                        </TableCell>
-                      ))}
+                      {comparisonData.map((comp) => {
+                        const selectedEpochData = getSelectedEpochData(comp.training._id);
+                        return (
+                          <TableCell
+                            key={comp.training._id}
+                            colSpan={4}
+                            align="center"
+                            sx={{ borderBottom: '2px solid rgba(224, 224, 224, 1)' }}
+                          >
+                            <strong>{comp.training.name}</strong>
+                            {selectedEpochData && (
+                              <Typography variant="caption" color="text.secondary" display="block">
+                                Epoch {selectedEpochData.epoch}
+                              </Typography>
+                            )}
+                          </TableCell>
+                        );
+                      })}
                     </TableRow>
                     <TableRow>
                       {comparisonData.map((comp) => (
@@ -621,22 +717,26 @@ const TrainingComparisonPage: React.FC = () => {
                       // Calculate max values for each metric across all trainings for this class
                       const maxValues = {
                         iou: Math.max(...comparisonData.map(comp => {
-                          const valResults = comp.lastEpoch?.results?.val;
+                          const selectedEpochData = getSelectedEpochData(comp.training._id);
+                          const valResults = selectedEpochData?.results?.val;
                           const classMetrics = valResults?.[className] as any;
                           return classMetrics?.iou ?? -Infinity;
                         })),
                         precision: Math.max(...comparisonData.map(comp => {
-                          const valResults = comp.lastEpoch?.results?.val;
+                          const selectedEpochData = getSelectedEpochData(comp.training._id);
+                          const valResults = selectedEpochData?.results?.val;
                           const classMetrics = valResults?.[className] as any;
                           return classMetrics?.precision ?? -Infinity;
                         })),
                         recall: Math.max(...comparisonData.map(comp => {
-                          const valResults = comp.lastEpoch?.results?.val;
+                          const selectedEpochData = getSelectedEpochData(comp.training._id);
+                          const valResults = selectedEpochData?.results?.val;
                           const classMetrics = valResults?.[className] as any;
                           return classMetrics?.recall ?? -Infinity;
                         })),
                         f1: Math.max(...comparisonData.map(comp => {
-                          const valResults = comp.lastEpoch?.results?.val;
+                          const selectedEpochData = getSelectedEpochData(comp.training._id);
+                          const valResults = selectedEpochData?.results?.val;
                           const classMetrics = valResults?.[className] as any;
                           return classMetrics?.f1 ?? -Infinity;
                         }))
@@ -648,7 +748,8 @@ const TrainingComparisonPage: React.FC = () => {
                             {className.charAt(0).toUpperCase() + className.slice(1)}
                           </TableCell>
                           {comparisonData.map((comp) => {
-                            const valResults = comp.lastEpoch?.results?.val;
+                            const selectedEpochData = getSelectedEpochData(comp.training._id);
+                            const valResults = selectedEpochData?.results?.val;
                             const classMetrics = valResults?.[className] as any;
 
                             return (

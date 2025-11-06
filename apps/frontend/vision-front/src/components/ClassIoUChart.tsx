@@ -137,7 +137,7 @@ const ClassIoUChart: React.FC<ClassIoUChartProps> = ({ epochs, trainingId }) => 
       {hasRegularData && (
         <Paper sx={{ p: 3, position: 'relative' }}>
           <Typography variant="h6" gutterBottom>
-            Class IoU Over Epochs
+            Class IoU Over Epochs (Validation Data)
           </Typography>
           <Box sx={{ width: '100%', height: 400 }}>
             <LineChart
@@ -161,7 +161,7 @@ const ClassIoUChart: React.FC<ClassIoUChartProps> = ({ epochs, trainingId }) => 
       {hasTwoDData && (
         <Paper sx={{ p: 3, position: 'relative' }}>
           <Typography variant="h6" gutterBottom>
-            Class IoU Over Epochs (2D)
+            Class IoU Over Epochs (2D Validation Data)
           </Typography>
           <Box sx={{ width: '100%', height: 400 }}>
             <LineChart

@@ -140,7 +140,7 @@ const ClassPrecisionChart: React.FC<ClassPrecisionChartProps> = ({ epochs, train
       {hasRegularData && (
         <Paper sx={{ p: 3, position: 'relative' }}>
           <Typography variant="h6" gutterBottom>
-            Class Precision Over Epochs
+            Class Precision Over Epochs (Validation Data)
           </Typography>
           <Box sx={{ width: '100%', height: 400 }}>
             <LineChart
@@ -164,7 +164,7 @@ const ClassPrecisionChart: React.FC<ClassPrecisionChartProps> = ({ epochs, train
       {hasTwoDData && (
         <Paper sx={{ p: 3, position: 'relative' }}>
           <Typography variant="h6" gutterBottom>
-            Class Precision Over Epochs (2D)
+            Class Precision Over Epochs (2D Validation Data)
           </Typography>
           <Box sx={{ width: '100%', height: 400 }}>
             <LineChart
