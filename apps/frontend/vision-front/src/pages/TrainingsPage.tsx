@@ -35,7 +35,6 @@ const TrainingsPage: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'name' | 'createdAt' | 'updatedAt' | 'status' | 'totalTime' | 'cpuCost' | 'gpuCost' | 'totalCost' | 'epochCount'>('updatedAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -98,12 +97,11 @@ const TrainingsPage: React.FC = () => {
   }, [createModalOpen]);
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['trainings', page + 1, rowsPerPage, debouncedSearch, statusFilter, sortBy, sortOrder, selectedTags],
+    queryKey: ['trainings', page + 1, rowsPerPage, debouncedSearch, sortBy, sortOrder, selectedTags],
     queryFn: () => trainingService.getTrainings({
       page: page + 1,
       limit: rowsPerPage,
       search: debouncedSearch || undefined,
-      status: statusFilter !== 'all' ? statusFilter as Training['status'] : undefined,
       sortBy,
       order: sortOrder,
       tags: selectedTags.length > 0 ? selectedTags : undefined
@@ -111,10 +109,8 @@ const TrainingsPage: React.FC = () => {
   });
 
   const { data: statsData } = useQuery({
-    queryKey: ['training-stats', statusFilter],
-    queryFn: () => trainingService.getTrainingStats({
-      status: statusFilter !== 'all' ? statusFilter as Training['status'] : undefined
-    })
+    queryKey: ['training-stats'],
+    queryFn: () => trainingService.getTrainingStats({})
   });
 
   // Load available tags
@@ -384,8 +380,6 @@ const TrainingsPage: React.FC = () => {
       <TrainingFilters
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        statusFilter={statusFilter}
-        onStatusFilterChange={setStatusFilter}
         selectedTags={selectedTags}
         onTagsChange={setSelectedTags}
         availableTags={availableTags}
@@ -494,7 +488,6 @@ const TrainingsPage: React.FC = () => {
         onRowsPerPageChange={handleChangeRowsPerPage}
         onEdit={handleEditTraining}
         onDelete={handleDeleteClick}
-        hasFilters={statusFilter !== 'all'}
         searchTerm={searchTerm}
         selectedTrainingIds={selectedTrainingIds}
         onSelectTraining={handleSelectTraining}

@@ -160,7 +160,7 @@ const TrainingTestResultsTab: React.FC<TrainingTestResultsTabProps> = ({
         </Box>
 
         {/* Epoch Selection */}
-        {availableTestEpochs.length > 0 && (
+        {availableTestEpochs.length > 0 && testResults.length > 0 && (
           <Box sx={{ mb: 3 }}>
             <FormControl fullWidth>
               <InputLabel>Select Epoch</InputLabel>

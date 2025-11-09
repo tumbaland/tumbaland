@@ -17,13 +17,12 @@ import {
   Checkbox
 } from '@mui/material';
 import {
-  Visibility as VisibilityIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   ArrowUpward as ArrowUpwardIcon,
   ArrowDownward as ArrowDownwardIcon
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Training } from '../types';
 
 interface TrainingsTableProps {
@@ -36,7 +35,6 @@ interface TrainingsTableProps {
   onRowsPerPageChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onEdit: (training: Training) => void;
   onDelete: (trainingId: string) => void;
-  hasFilters: boolean;
   searchTerm: string;
   selectedTrainingIds: Set<string>;
   onSelectTraining: (trainingId: string) => void;
@@ -142,7 +140,6 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
   onRowsPerPageChange,
   onEdit,
   onDelete,
-  hasFilters,
   searchTerm,
   selectedTrainingIds,
   onSelectTraining,
@@ -151,7 +148,6 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
   sortOrder,
   onSort
 }) => {
-  const navigate = useNavigate();
 
   if (isLoading) {
     return (
@@ -165,8 +161,8 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
     return (
       <Paper sx={{ p: 4, textAlign: 'center' }}>
         <Typography variant="h6" color="text.secondary">
-          {searchTerm || hasFilters
-            ? 'No trainings found matching your filters'
+          {searchTerm
+            ? 'No trainings found matching your search'
             : 'No training runs available'}
         </Typography>
       </Paper>
@@ -226,13 +222,16 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
                 key={training._id}
                 hover
                 selected={selectedTrainingIds.has(training._id)}
+                component={Link}
+                to={`/trainings/${training._id}`}
                 sx={{
                   cursor: 'pointer',
                   backgroundColor: selectedTrainingIds.has(training._id)
                     ? 'rgba(25, 118, 210, 0.08)'
-                    : 'inherit'
+                    : 'inherit',
+                  textDecoration: 'none',
+                  color: 'inherit'
                 }}
-                onClick={() => navigate(`/trainings/${training._id}`)}
               >
                 <TableCell padding="checkbox">
                   <Checkbox
@@ -322,41 +321,32 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
                   </Typography>
                 </TableCell>
                 <TableCell align="center">
-                  <Tooltip title="View training details">
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/trainings/${training._id}`);
-                      }}
-                    >
-                      <VisibilityIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Edit training">
-                    <IconButton
-                      size="small"
-                      color="primary"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEdit(training);
-                      }}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Delete training">
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete(training._id);
-                      }}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
+                  <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                    <Tooltip title="Edit training">
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(training);
+                        }}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete training">
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(training._id);
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
                 </TableCell>
               </TableRow>
             ))}

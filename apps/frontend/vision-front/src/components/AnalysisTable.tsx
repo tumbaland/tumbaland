@@ -28,7 +28,7 @@ import {
   ArrowUpward as ArrowUpwardIcon,
   ArrowDownward as ArrowDownwardIcon
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { getAllAnalyses, DatasetAnalysis, deleteAnalysis, updateAnalysis } from '../services/analysisService';
 
 interface AnalysisTableProps {
@@ -44,7 +44,6 @@ export const AnalysisTable: React.FC<AnalysisTableProps> = ({
   onSelectAll = () => {},
   onCompareSelected = () => {}
 }) => {
-  const navigate = useNavigate();
   const [analyses, setAnalyses] = useState<DatasetAnalysis[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -278,13 +277,16 @@ export const AnalysisTable: React.FC<AnalysisTableProps> = ({
                   key={analysis._id}
                   hover
                   selected={selectedAnalysisIds.has(analysis._id)}
+                  component={Link}
+                  to={`/analysis/${analysis._id}`}
                   sx={{
                     backgroundColor: selectedAnalysisIds.has(analysis._id)
                       ? 'rgba(25, 118, 210, 0.08)'
                       : 'inherit',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    textDecoration: 'none',
+                    color: 'inherit'
                   }}
-                  onClick={() => navigate(`/analysis/${analysis._id}`)}
                 >
                   <TableCell padding="checkbox">
                     <Checkbox

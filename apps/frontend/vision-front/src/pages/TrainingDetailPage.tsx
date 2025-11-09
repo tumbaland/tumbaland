@@ -95,9 +95,16 @@ const TrainingDetailPage: React.FC = () => {
 
       try {
         setTestResultsLoading(true);
-        // Get available epochs that have test results
+        // Get available epochs that have test results globally
         const epochsResponse = await testResultService.getTestResultEpochs();
-        const availableEpochs = epochsResponse.data.epochs || [];
+        const allTestResultEpochs = epochsResponse.data.epochs || [];
+
+        // Filter to only include epochs that belong to this training
+        const trainingEpochNumbers = epochs.map(e => e.epoch);
+        const availableEpochs = allTestResultEpochs.filter(epoch =>
+          trainingEpochNumbers.includes(epoch)
+        ).sort((a, b) => a - b);
+
         setAvailableTestEpochs(availableEpochs);
 
         // Auto-select epoch logic:
@@ -129,7 +136,7 @@ const TrainingDetailPage: React.FC = () => {
     };
 
     fetchTestResultsData();
-  }, [training]);
+  }, [training, epochs]);
 
   const loadTestResultsForEpoch = async (epoch: number) => {
     if (!training) return;

@@ -3,8 +3,6 @@ import {
   Box,
   TextField,
   InputAdornment,
-  ToggleButtonGroup,
-  ToggleButton,
   Autocomplete,
   Chip
 } from '@mui/material';
@@ -13,8 +11,6 @@ import { Search as SearchIcon } from '@mui/icons-material';
 interface TrainingFiltersProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
-  statusFilter: string;
-  onStatusFilterChange: (newStatus: string) => void;
   selectedTags: string[];
   onTagsChange: (tags: string[]) => void;
   availableTags: string[];
@@ -23,8 +19,6 @@ interface TrainingFiltersProps {
 export const TrainingFilters: React.FC<TrainingFiltersProps> = ({
   searchTerm,
   onSearchChange,
-  statusFilter,
-  onStatusFilterChange,
   selectedTags,
   onTagsChange,
   availableTags
@@ -64,24 +58,6 @@ export const TrainingFilters: React.FC<TrainingFiltersProps> = ({
         )}
         size="small"
       />
-
-      <ToggleButtonGroup
-        value={statusFilter}
-        exclusive
-        onChange={(_, newStatus) => {
-          if (newStatus !== null) {
-            onStatusFilterChange(newStatus);
-          }
-        }}
-        aria-label="status filter"
-        size="small"
-      >
-        <ToggleButton value="all">All</ToggleButton>
-        <ToggleButton value="pending">Pending</ToggleButton>
-        <ToggleButton value="running">Running</ToggleButton>
-        <ToggleButton value="completed">Completed</ToggleButton>
-        <ToggleButton value="failed">Failed</ToggleButton>
-      </ToggleButtonGroup>
     </Box>
   );
 };
