@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.273](https://github.com/toomastahves/tumbaland/compare/v0.0.272...v0.0.273) (2025-11-09)
+
+
+### Features
+
+* add edit and delete to training details ([9a36873](https://github.com/toomastahves/tumbaland/commit/9a36873863df95998ca69976f2a212f430d9caeb))
+
 ### [0.0.272](https://github.com/toomastahves/tumbaland/compare/v0.0.271...v0.0.272) (2025-11-09)
 
 
