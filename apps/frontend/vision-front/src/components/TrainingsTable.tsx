@@ -327,6 +327,7 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
                         size="small"
                         color="primary"
                         onClick={(e) => {
+                          e.preventDefault();
                           e.stopPropagation();
                           onEdit(training);
                         }}
@@ -339,6 +340,7 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
                         size="small"
                         color="error"
                         onClick={(e) => {
+                          e.preventDefault();
                           e.stopPropagation();
                           onDelete(training._id);
                         }}

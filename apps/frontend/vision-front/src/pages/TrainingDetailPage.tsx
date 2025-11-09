@@ -19,17 +19,21 @@ import {
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { trainingService } from '../services/trainingService';
 import { epochService } from '../services/epochService';
 import { configService } from '../services/configService';
 import { testResultService } from '../services/testResultService';
-import { Epoch, TestResult } from '../types';
+import { getAllAnalyses, type DatasetAnalysis } from '../services/analysisService';
+import { Epoch, TestResult, Config, Training } from '../types';
 import TrainingOverviewTab from '../components/TrainingOverviewTab';
 import TrainingEpochsTab from '../components/TrainingEpochsTab';
 import TrainingTestResultsTab from '../components/TrainingTestResultsTab';
 import TrainingConfigTab from '../components/TrainingConfigTab';
+import TrainingFormDialog from '../components/TrainingFormDialog';
 
 const TrainingDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -45,6 +49,19 @@ const TrainingDetailPage: React.FC = () => {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Epoch | null>(null);
+  const [trainingDeleteOpen, setTrainingDeleteOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editConfigId, setEditConfigId] = useState('');
+  const [editDatasetId, setEditDatasetId] = useState('');
+  const [editStatus, setEditStatus] = useState<Training['status']>('pending');
+  const [editTags, setEditTags] = useState<string[]>([]);
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const [editConfigs, setEditConfigs] = useState<Config[]>([]);
+  const [editDatasets, setEditDatasets] = useState<DatasetAnalysis[]>([]);
+  const [editLoadingConfigs, setEditLoadingConfigs] = useState(false);
+  const [editLoadingDatasets, setEditLoadingDatasets] = useState(false);
   const [config, setConfig] = useState<any>(null);
   const [configLoading, setConfigLoading] = useState(false);
   const [uploadResultsOpen, setUploadResultsOpen] = useState(false);
@@ -394,6 +411,112 @@ const TrainingDetailPage: React.FC = () => {
     }
   };
 
+  // Training edit handlers
+  const handleEditTraining = async () => {
+    if (!training) return;
+
+    try {
+      setEditLoadingConfigs(true);
+      setEditLoadingDatasets(true);
+
+      // Load configs and datasets
+      const [configsRes, analysisRes] = await Promise.all([
+        configService.getAllConfigs(),
+        getAllAnalyses(100, 0)
+      ]);
+
+      setEditConfigs(configsRes.data.configs || []);
+      setEditDatasets(analysisRes.data || []);
+
+      // Load available tags
+      const allTrainings = await trainingService.getTrainings({
+        page: 1,
+        limit: 1000
+      });
+      const tags = new Set<string>();
+      allTrainings.data.trainings.forEach((t: Training) => {
+        if (t.tags) {
+          t.tags.forEach(tag => tags.add(tag));
+        }
+      });
+      setAvailableTags(Array.from(tags).sort());
+
+      // Populate form with training data
+      setEditName(training.name);
+      setEditDescription(training.description || '');
+      setEditConfigId(training.configId || '');
+      setEditDatasetId(training.datasetId || '');
+      setEditStatus(training.status);
+      setEditTags(training.tags || []);
+      setEditDialogOpen(true);
+    } catch (err) {
+      console.error('Failed to load data for editing:', err);
+    } finally {
+      setEditLoadingConfigs(false);
+      setEditLoadingDatasets(false);
+    }
+  };
+
+  const handleEditConfirm = async () => {
+    if (!training || !editName.trim()) return;
+
+    try {
+      setUploading(true);
+      await trainingService.updateTraining(training._id, {
+        name: editName.trim(),
+        description: editDescription.trim(),
+        configId: editConfigId || undefined,
+        datasetId: editDatasetId || undefined,
+        status: editStatus,
+        tags: editTags,
+      });
+      setUploadSuccess('Training updated successfully');
+      refetch();
+      setEditDialogOpen(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update training';
+      setUploadError(message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleEditCancel = () => {
+    setEditDialogOpen(false);
+    setEditName('');
+    setEditDescription('');
+    setEditConfigId('');
+    setEditDatasetId('');
+    setEditStatus('pending');
+    setEditTags([]);
+  };
+
+  // Training delete handlers
+  const handleDeleteTraining = () => {
+    setTrainingDeleteOpen(true);
+  };
+
+  const handleConfirmDeleteTraining = async () => {
+    if (!training) return;
+
+    try {
+      setUploading(true);
+      await trainingService.deleteTraining(training._id);
+      setUploadSuccess('Training deleted successfully');
+      navigate('/trainings');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to delete training';
+      setUploadError(message);
+    } finally {
+      setUploading(false);
+      setTrainingDeleteOpen(false);
+    }
+  };
+
+  const handleCancelDeleteTraining = () => {
+    setTrainingDeleteOpen(false);
+  };
+
   // Generate LaTeX code from test results
   const generateLatexCode = (testResult: TestResult): string => {
     const conditions = [
@@ -480,9 +603,17 @@ Camera & ${cyclist ? cyclist.iou.toFixed(4) : '-'} & ${pedestrian ? pedestrian.i
             Training Details
           </Typography>
         </Box>
-        <IconButton onClick={() => refetch()} disabled={isLoading}>
-          <RefreshIcon />
-        </IconButton>
+        <Box display="flex" gap={1}>
+          <IconButton onClick={handleEditTraining} disabled={isLoading}>
+            <EditIcon />
+          </IconButton>
+          <IconButton onClick={handleDeleteTraining} disabled={isLoading}>
+            <DeleteIcon />
+          </IconButton>
+          <IconButton onClick={() => refetch()} disabled={isLoading}>
+            <RefreshIcon />
+          </IconButton>
+        </Box>
       </Box>
 
       {/* Tab Navigation */}
@@ -711,6 +842,56 @@ Camera & ${cyclist ? cyclist.iou.toFixed(4) : '-'} & ${pedestrian ? pedestrian.i
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setLatexModalOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Training Dialog */}
+      <TrainingFormDialog
+        open={editDialogOpen}
+        onClose={handleEditCancel}
+        onSubmit={handleEditConfirm}
+        isEditing={true}
+        isCreating={uploading}
+        isLoadingData={editLoadingConfigs || editLoadingDatasets}
+        trainingName={editName}
+        onNameChange={setEditName}
+        trainingDescription={editDescription}
+        onDescriptionChange={setEditDescription}
+        selectedConfigId={editConfigId}
+        onConfigChange={setEditConfigId}
+        selectedDatasetId={editDatasetId}
+        onDatasetChange={setEditDatasetId}
+        selectedStatus={editStatus}
+        onStatusChange={setEditStatus}
+        trainingTags={editTags}
+        onTagsChange={setEditTags}
+        availableTags={availableTags}
+        configs={editConfigs}
+        datasets={editDatasets}
+        error={uploadError}
+        success={uploadSuccess}
+        loadingConfigs={editLoadingConfigs}
+        loadingDatasets={editLoadingDatasets}
+      />
+
+      {/* Delete Training Confirmation Dialog */}
+      <Dialog open={trainingDeleteOpen} onClose={handleCancelDeleteTraining}>
+        <DialogTitle>Delete Training</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this training? This action cannot be undone and will also delete all associated epochs and test results.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelDeleteTraining}>Cancel</Button>
+          <Button
+            onClick={handleConfirmDeleteTraining}
+            color="error"
+            variant="contained"
+            disabled={uploading}
+          >
+            Delete
+          </Button>
         </DialogActions>
       </Dialog>
     </Container>
