@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.274](https://github.com/toomastahves/tumbaland/compare/v0.0.273...v0.0.274) (2025-11-14)
+
+
+### Features
+
+* add test results and image navigations ([0338e3a](https://github.com/toomastahves/tumbaland/commit/0338e3a5f557270fc71c7042046607419bdb071d))
+
 ### [0.0.273](https://github.com/toomastahves/tumbaland/compare/v0.0.272...v0.0.273) (2025-11-09)
 
 
