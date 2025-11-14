@@ -15,6 +15,7 @@ import { ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { compareAnalyses } from '../services/analysisService';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 export const DatasetComparisonPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -22,6 +23,9 @@ export const DatasetComparisonPage: React.FC = () => {
 
   // Get analysis IDs from URL params
   const analysisIds = searchParams.get('ids')?.split(',') || [];
+
+  // Set page title
+  usePageTitle('Dataset Comparison - Vision');
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['analysisComparison', analysisIds],

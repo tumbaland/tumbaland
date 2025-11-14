@@ -33,8 +33,11 @@ import {
 } from '@mui/icons-material';
 import { configService } from '../services/configService';
 import { Config } from '../types';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 const ConfigsPage = () => {
+  // Set page title
+  usePageTitle('Configurations - Vision');
   // State
   const [configs, setConfigs] = useState<Config[]>([]);
   const [loading, setLoading] = useState(false);

@@ -58,10 +58,12 @@ import {
 } from '../services/datasetImageService';
 import { getGlobalConfig } from '../config/ConfigProvider';
 import FileUpload from '../components/FileUpload';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 const DatasetDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState(0);
@@ -152,6 +154,9 @@ const DatasetDetailPage: React.FC = () => {
   const pagination = imagesData?.data?.pagination || { page: 1, limit: 50, total: 0, pages: 1 };
   const datasetCategories = categoriesData || [];
   const availableTags = availableTagsData || [];
+
+  // Set page title
+  usePageTitle(analysis ? `Dataset: ${analysis.dataset} - Vision` : 'Dataset Details - Vision');
 
   // Debug logging
   React.useEffect(() => {

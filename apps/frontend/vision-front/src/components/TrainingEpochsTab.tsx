@@ -21,7 +21,6 @@ import {
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
-  Info as InfoIcon,
   CloudUpload as CloudUploadIcon,
   Visibility as VisibilityIcon
 } from '@mui/icons-material';
@@ -32,8 +31,6 @@ interface TrainingEpochsTabProps {
   uploading: boolean;
   uploadError: string | null;
   uploadSuccess: string | null;
-  selectedEpoch: Epoch | null;
-  detailsOpen: boolean;
   deleteOpen: boolean;
   deleteTarget: Epoch | null;
   uploadResultsOpen: boolean;
@@ -42,10 +39,8 @@ interface TrainingEpochsTabProps {
     failed: Array<{ name: string; error: string }>;
   };
   onFileUpload: (files: FileList) => Promise<void>;
-  onViewDetails: (epoch: Epoch) => void;
   onDeleteClick: (epoch: Epoch) => void;
   onConfirmDelete: () => Promise<void>;
-  onSetDetailsOpen: (open: boolean) => void;
   onSetDeleteOpen: (open: boolean) => void;
   onSetUploadResultsOpen: (open: boolean) => void;
 }
@@ -55,17 +50,13 @@ const TrainingEpochsTab: React.FC<TrainingEpochsTabProps> = ({
   uploading,
   uploadError,
   uploadSuccess,
-  selectedEpoch,
-  detailsOpen,
   deleteOpen,
   deleteTarget,
   uploadResultsOpen,
   uploadResults,
   onFileUpload,
-  onViewDetails,
   onDeleteClick,
   onConfirmDelete,
-  onSetDetailsOpen,
   onSetDeleteOpen,
   onSetUploadResultsOpen
 }) => {
@@ -187,11 +178,6 @@ const TrainingEpochsTab: React.FC<TrainingEpochsTabProps> = ({
                     <TableCell align="right">{epoch.learning_rate?.toExponential(2) || '-'}</TableCell>
                     <TableCell align="right">{epoch.epoch_time?.toFixed(2) || '-'}</TableCell>
                     <TableCell align="center">
-                      <Tooltip title="View details">
-                        <IconButton size="small" onClick={() => onViewDetails(epoch)}>
-                          <InfoIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
                       <Tooltip title="Delete">
                         <IconButton size="small" onClick={() => onDeleteClick(epoch)}>
                           <DeleteIcon fontSize="small" />
@@ -205,65 +191,6 @@ const TrainingEpochsTab: React.FC<TrainingEpochsTabProps> = ({
           </TableContainer>
         )}
       </Box>
-
-      {/* Epoch Details Dialog */}
-      <Dialog open={detailsOpen} onClose={() => onSetDetailsOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Epoch Details - Epoch {selectedEpoch?.epoch}</DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
-          {selectedEpoch && (
-            <Box sx={{ display: 'grid', gap: 3 }}>
-              <Box>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>Overview</Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, pl: 2 }}>
-                  <Typography variant="body2">
-                    <strong>Epoch UUID:</strong> {selectedEpoch.epoch_uuid}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>Learning Rate:</strong> {selectedEpoch.learning_rate?.toExponential(2)}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>Epoch Time:</strong> {selectedEpoch.epoch_time?.toFixed(2)}s
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>Timestamp:</strong> {new Date(selectedEpoch.timestamp).toLocaleString()}
-                  </Typography>
-                </Box>
-              </Box>
-
-              {selectedEpoch.results?.train && (
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>Training Results</Typography>
-                  <Box sx={{ pl: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-                    <Typography variant="body2">
-                      <strong>Loss:</strong> {formatNumber(selectedEpoch.results.train.loss)}
-                    </Typography>
-                    <Typography variant="body2">
-                      <strong>mIoU:</strong> {formatNumber(selectedEpoch.results.train.mean_iou)}
-                    </Typography>
-                  </Box>
-                </Box>
-              )}
-
-              {selectedEpoch.results?.val && (
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>Validation Results</Typography>
-                  <Box sx={{ pl: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-                    <Typography variant="body2">
-                      <strong>Loss:</strong> {formatNumber(selectedEpoch.results.val.loss)}
-                    </Typography>
-                    <Typography variant="body2">
-                      <strong>mIoU:</strong> {formatNumber(selectedEpoch.results.val.mean_iou)}
-                    </Typography>
-                  </Box>
-                </Box>
-              )}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => onSetDetailsOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteOpen} onClose={() => onSetDeleteOpen(false)}>

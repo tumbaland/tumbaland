@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Box,
@@ -34,19 +34,26 @@ import TrainingEpochsTab from '../components/TrainingEpochsTab';
 import TrainingTestResultsTab from '../components/TrainingTestResultsTab';
 import TrainingConfigTab from '../components/TrainingConfigTab';
 import TrainingFormDialog from '../components/TrainingFormDialog';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 const TrainingDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const testResultFileInputRef = useRef<HTMLInputElement>(null);
 
-  const [detailTab, setDetailTab] = useState(0);
+  // Tab mapping
+  const tabNames = ['overview', 'epochs', 'test-results', 'config'];
+  const getTabIndex = (tabName: string) => tabNames.indexOf(tabName);
+  const getTabName = (index: number) => tabNames[index] || 'overview';
+
+  // Initialize tab from URL or default to 0
+  const initialTab = getTabIndex(searchParams.get('tab') || 'overview');
+  const [detailTab, setDetailTab] = useState(initialTab >= 0 ? initialTab : 0);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
-  const [selectedEpoch, setSelectedEpoch] = useState<Epoch | null>(null);
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Epoch | null>(null);
   const [trainingDeleteOpen, setTrainingDeleteOpen] = useState(false);
@@ -84,6 +91,9 @@ const TrainingDetailPage: React.FC = () => {
 
   const training = data?.data?.training;
   const epochs = data?.data?.epochs || [];
+
+  // Set page title
+  usePageTitle(training ? `${training.name} - Vision` : 'Training Details - Vision');
 
   // Fetch config when training data is available
   React.useEffect(() => {
@@ -174,6 +184,15 @@ const TrainingDetailPage: React.FC = () => {
     } finally {
       setTestResultsLoading(false);
     }
+  };
+
+  // Handle tab change with URL update
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setDetailTab(newValue);
+    // Update URL with tab parameter
+    const newSearchParams = new URLSearchParams(searchParams);
+    newSearchParams.set('tab', getTabName(newValue));
+    setSearchParams(newSearchParams, { replace: true });
   };
 
   // Handle epoch selection change
@@ -382,12 +401,7 @@ const TrainingDetailPage: React.FC = () => {
     }
   };
 
-  // Epoch details handlers
-  const handleViewDetails = (epoch: Epoch) => {
-    setSelectedEpoch(epoch);
-    setDetailsOpen(true);
-  };
-
+  // Epoch delete handlers
   const handleDeleteClick = (epoch: Epoch) => {
     setDeleteTarget(epoch);
     setDeleteOpen(true);
@@ -531,7 +545,7 @@ const TrainingDetailPage: React.FC = () => {
 \\caption{Performance comparison during various weather conditions.}
 \\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|}
 \\hline & \\multicolumn{3}{|c|}{IoU} & \\multicolumn{3}{|c|}{Precision} & \\multicolumn{3}{|c|}{Recall} \\\\
-\\hline & Cyclist & Pedestrian & Sign & Cyclist & Pedestrian & Sign & Cyclist & Pedestrian & Sign \\\\
+\\hline & Vehicle & Sign & Cyclist+Ped & Vehicle & Sign & Cyclist+Ped & Vehicle & Sign & Cyclist+Ped \\\\
 \\hline
 `;
 
@@ -539,13 +553,13 @@ const TrainingDetailPage: React.FC = () => {
       const conditionData = (testResult.test_results as any)[condition.key];
       if (!conditionData) return;
 
-      const cyclist = conditionData.cyclist;
-      const pedestrian = conditionData.pedestrian;
+      const vehicle = conditionData.vehicle;
       const sign = conditionData.sign;
+      const cyclistPedestrian = conditionData['cyclist + pedestrian'];
 
       latex += `\\multicolumn{10}{|c|}{${condition.label}} \\\\
 \\hline
-Camera & ${cyclist ? cyclist.iou.toFixed(4) : '-'} & ${pedestrian ? pedestrian.iou.toFixed(4) : '-'} & ${sign ? sign.iou.toFixed(4) : '-'} & ${cyclist ? cyclist.precision.toFixed(4) : '-'} & ${pedestrian ? pedestrian.precision.toFixed(4) : '-'} & ${sign ? sign.precision.toFixed(4) : '-'} & ${cyclist ? cyclist.recall.toFixed(4) : '-'} & ${pedestrian ? pedestrian.recall.toFixed(4) : '-'} & ${sign ? sign.recall.toFixed(4) : '-'} \\\\
+Camera & ${vehicle ? vehicle.iou.toFixed(4) : '-'} & ${sign ? sign.iou.toFixed(4) : '-'} & ${cyclistPedestrian ? cyclistPedestrian.iou.toFixed(4) : '-'} & ${vehicle ? vehicle.precision.toFixed(4) : '-'} & ${sign ? sign.precision.toFixed(4) : '-'} & ${cyclistPedestrian ? cyclistPedestrian.precision.toFixed(4) : '-'} & ${vehicle ? vehicle.recall.toFixed(4) : '-'} & ${sign ? sign.recall.toFixed(4) : '-'} & ${cyclistPedestrian ? cyclistPedestrian.recall.toFixed(4) : '-'} \\\\
 \\hline
 `;
     });
@@ -565,12 +579,6 @@ Camera & ${cyclist ? cyclist.iou.toFixed(4) : '-'} & ${pedestrian ? pedestrian.i
   };
 
   // Utility functions
-  const formatNumber = (value: any, decimals: number = 4): string => {
-    if (typeof value === 'number' && !isNaN(value)) {
-      return value.toFixed(decimals);
-    }
-    return '-';
-  };
 
   // Loading and error states
   if (isLoading) {
@@ -618,7 +626,7 @@ Camera & ${cyclist ? cyclist.iou.toFixed(4) : '-'} & ${pedestrian ? pedestrian.i
 
       {/* Tab Navigation */}
       <Paper sx={{ mb: 3 }}>
-        <Tabs value={detailTab} onChange={(_e: React.SyntheticEvent, v: number) => setDetailTab(v)}>
+        <Tabs value={detailTab} onChange={handleTabChange}>
           <Tab label="Overview" />
           <Tab label="Epochs" />
           <Tab label="Test Results" />
@@ -642,17 +650,13 @@ Camera & ${cyclist ? cyclist.iou.toFixed(4) : '-'} & ${pedestrian ? pedestrian.i
           uploading={uploading}
           uploadError={uploadError}
           uploadSuccess={uploadSuccess}
-          selectedEpoch={selectedEpoch}
-          detailsOpen={detailsOpen}
           deleteOpen={deleteOpen}
           deleteTarget={deleteTarget}
           uploadResultsOpen={uploadResultsOpen}
           uploadResults={uploadResults}
           onFileUpload={handleEpochFileUpload}
-          onViewDetails={handleViewDetails}
           onDeleteClick={handleDeleteClick}
           onConfirmDelete={handleConfirmDelete}
-          onSetDetailsOpen={setDetailsOpen}
           onSetDeleteOpen={setDeleteOpen}
           onSetUploadResultsOpen={setUploadResultsOpen}
         />
@@ -688,65 +692,6 @@ Camera & ${cyclist ? cyclist.iou.toFixed(4) : '-'} & ${pedestrian ? pedestrian.i
           training={training}
         />
       )}
-
-      {/* Epoch Details Dialog */}
-      <Dialog open={detailsOpen} onClose={() => setDetailsOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Epoch Details - Epoch {selectedEpoch?.epoch}</DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
-          {selectedEpoch && (
-            <Box sx={{ display: 'grid', gap: 3 }}>
-              <Box>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>Overview</Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, pl: 2 }}>
-                  <Typography variant="body2">
-                    <strong>Epoch UUID:</strong> {selectedEpoch.epoch_uuid}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>Learning Rate:</strong> {selectedEpoch.learning_rate?.toExponential(2)}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>Epoch Time:</strong> {selectedEpoch.epoch_time?.toFixed(2)}s
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>Timestamp:</strong> {new Date(selectedEpoch.timestamp).toLocaleString()}
-                  </Typography>
-                </Box>
-              </Box>
-
-              {selectedEpoch.results?.train && (
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>Training Results</Typography>
-                  <Box sx={{ pl: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-                    <Typography variant="body2">
-                      <strong>Loss:</strong> {formatNumber(selectedEpoch.results.train.loss)}
-                    </Typography>
-                    <Typography variant="body2">
-                      <strong>mIoU:</strong> {formatNumber(selectedEpoch.results.train.mean_iou)}
-                    </Typography>
-                  </Box>
-                </Box>
-              )}
-
-              {selectedEpoch.results?.val && (
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>Validation Results</Typography>
-                  <Box sx={{ pl: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-                    <Typography variant="body2">
-                      <strong>Loss:</strong> {formatNumber(selectedEpoch.results.val.loss)}
-                    </Typography>
-                    <Typography variant="body2">
-                      <strong>mIoU:</strong> {formatNumber(selectedEpoch.results.val.mean_iou)}
-                    </Typography>
-                  </Box>
-                </Box>
-              )}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDetailsOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)}>

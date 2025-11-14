@@ -16,7 +16,9 @@ import {
 import {
   ThumbUp as ThumbUpIcon,
   ThumbDown as ThumbDownIcon,
-  PlayArrow as PlayArrowIcon
+  PlayArrow as PlayArrowIcon,
+  NavigateBefore as NavigateBeforeIcon,
+  NavigateNext as NavigateNextIcon
 } from '@mui/icons-material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -25,8 +27,12 @@ import {
   updateDatasetImage,
   getLabelingStats
 } from '../services/datasetImageService';
+import { usePageTitle } from '../hooks/usePageTitle';
+import { useParams, useNavigate } from 'react-router-dom';
 
 const ImageLabelingPage: React.FC = () => {
+  const { imageId } = useParams<{ imageId?: string }>();
+  const navigate = useNavigate();
   const [images, setImages] = useState<DatasetImage[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -35,7 +41,13 @@ const ImageLabelingPage: React.FC = () => {
   const [setupMode, setSetupMode] = useState(true);
   const [imageLimit, setImageLimit] = useState(100);
 
+  // Session labeling state - tracks decisions for each image in current session
+  const [sessionLabels, setSessionLabels] = useState<Record<string, 'good' | 'bad' | 'skip'>>({});
+
   const queryClient = useQueryClient();
+
+  // Set page title
+  usePageTitle('Image Labeling - Vision');
 
   // Get overall labeling metrics
   const { data: labelingMetrics, isLoading: metricsLoading } = useQuery({
@@ -79,6 +91,8 @@ const ImageLabelingPage: React.FC = () => {
           
           setImages(selectedImages);
           setCurrentImageIndex(0);
+          // Navigate to the first image
+          navigate(`/image-labeling/${selectedImages[0]._id}`, { replace: true });
           return;
         }
       }
@@ -123,12 +137,17 @@ const ImageLabelingPage: React.FC = () => {
         img._id === image._id ? { ...img, tags: filteredTags } : img
       ));
 
-      // Move to next image or finish
+      // Update session labels (always update, allowing changes)
+      setSessionLabels(prev => ({
+        ...prev,
+        [image._id]: label
+      }));
+
+      // Auto-advance to next image
       if (currentImageIndex < images.length - 1) {
-        setCurrentImageIndex(currentImageIndex + 1);
-      } else {
-        // Session completed - return to setup mode to see stats and start new session
-        resetLabeling();
+        const newIndex = currentImageIndex + 1;
+        setCurrentImageIndex(newIndex);
+        navigate(`/image-labeling/${images[newIndex]._id}`, { replace: true });
       }
     } catch (error) {
       showAlert('error', 'Failed to save label');
@@ -138,12 +157,19 @@ const ImageLabelingPage: React.FC = () => {
   };
 
   const handleSkip = () => {
-    // Move to next image or finish
+    if (!currentImage) return;
+
+    // Update session labels to mark as skipped (always update, allowing changes)
+    setSessionLabels(prev => ({
+      ...prev,
+      [currentImage._id]: 'skip'
+    }));
+
+    // Move to next image
     if (currentImageIndex < images.length - 1) {
-      setCurrentImageIndex(currentImageIndex + 1);
-    } else {
-      // Session completed - return to setup mode to see stats and start new session
-      resetLabeling();
+      const newIndex = currentImageIndex + 1;
+      setCurrentImageIndex(newIndex);
+      navigate(`/image-labeling/${images[newIndex]._id}`, { replace: true });
     }
   };
 
@@ -151,13 +177,105 @@ const ImageLabelingPage: React.FC = () => {
     setSetupMode(true);
     setImages([]);
     setCurrentImageIndex(0);
+    setSessionLabels({});
     setAlert(null);
     // Refresh statistics when returning to setup mode
     queryClient.invalidateQueries({ queryKey: ['overallLabelingMetrics'] });
   };
 
+  // Navigation functions
+  const handlePrevious = () => {
+    if (currentImageIndex > 0) {
+      const newIndex = currentImageIndex - 1;
+      setCurrentImageIndex(newIndex);
+      navigate(`/image-labeling/${images[newIndex]._id}`, { replace: true });
+    }
+  };
+
+  const handleNext = () => {
+    if (currentImageIndex < images.length - 1) {
+      const newIndex = currentImageIndex + 1;
+      setCurrentImageIndex(newIndex);
+      navigate(`/image-labeling/${images[newIndex]._id}`, { replace: true });
+    }
+  };
+
   const currentImage = images[currentImageIndex];
-  const progress = images.length > 0 ? ((currentImageIndex + 1) / images.length) * 100 : 0;
+  const labeledCount = Object.keys(sessionLabels).length;
+  const sessionProgress = images.length > 0 ? (labeledCount / images.length) * 100 : 0;
+
+  // Handle URL parameter - set current image when imageId changes or images load
+  React.useEffect(() => {
+    if (images.length > 0) {
+      if (imageId) {
+        const imageIndex = images.findIndex(img => img._id === imageId);
+        if (imageIndex !== -1 && imageIndex !== currentImageIndex) {
+          setCurrentImageIndex(imageIndex);
+        }
+      } else if (!setupMode) {
+        // No imageId in URL but we have images and are in labeling mode - navigate to first image
+        navigate(`/image-labeling/${images[0]._id}`, { replace: true });
+      }
+    }
+  }, [imageId, images, currentImageIndex, setupMode, navigate]);
+
+  // Auto-start labeling when imageId is present in URL but no images are loaded
+  React.useEffect(() => {
+    if (imageId && setupMode && !loading && images.length === 0) {
+      // We have an imageId in URL but no images loaded - start labeling automatically
+      const autoStartLabeling = async () => {
+        setLoading(true);
+        setSetupMode(false);
+
+        const showAlertLocal = (type: 'success' | 'error' | 'info', message: string) => {
+          setAlert({ type, message });
+          setTimeout(() => setAlert(null), 3000);
+        };
+
+        try {
+          // Try to load all images first
+          console.log('Auto-loading all images for direct URL access...');
+          const response = await getAllImages(1, 1000, undefined, undefined, true); // Enable randomization
+          console.log('getAllImages response:', response);
+
+          if (response.success && response.data.images) {
+            const allImages = response.data.images;
+            console.log('Total images found:', allImages.length);
+
+            // Filter for unlabeled images (images with no tags)
+            const unlabeledImages = allImages.filter((image: DatasetImage) =>
+              !image.tags || image.tags.length === 0
+            );
+            console.log('Unlabeled images found:', unlabeledImages.length);
+
+            if (unlabeledImages.length > 0) {
+              // Since we already randomized at the database level, just take the first N
+              const selectedImages = unlabeledImages.slice(0, imageLimit);
+              console.log('Selected images for labeling (database-randomized):', selectedImages.length);
+
+              setImages(selectedImages);
+              // Don't set currentImageIndex here - let the other effect handle it
+              return;
+            }
+          }
+
+          // If getAllImages didn't work or returned no images, show a message
+          console.log('No images found via getAllImages, trying alternative approach...');
+          showAlertLocal('info', 'No unlabeled images found in the system. Please upload some images first.');
+          setSetupMode(true);
+
+        } catch (error) {
+          console.error('Error auto-loading images:', error);
+          showAlertLocal('error', 'Failed to load images for labeling. Please check that images exist in the system.');
+          setSetupMode(true);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      autoStartLabeling();
+    }
+  }, [imageId, setupMode, loading, images.length, imageLimit]);
 
   // Setup Mode
   if (setupMode) {
@@ -321,7 +439,26 @@ const ImageLabelingPage: React.FC = () => {
     <Box sx={{ width: '100vw', height: '90vh', p: 0, m: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       {/* Header - Fixed height */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 0.5, flexShrink: 0, minHeight: 40 }}>
-        <div></div>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<NavigateBeforeIcon />}
+            onClick={handlePrevious}
+            disabled={currentImageIndex === 0}
+          >
+            Previous
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            endIcon={<NavigateNextIcon />}
+            onClick={handleNext}
+            disabled={currentImageIndex === images.length - 1}
+          >
+            Next
+          </Button>
+        </Box>
         <Button variant="outlined" onClick={resetLabeling} size="small">
           Change Settings
         </Button>
@@ -330,9 +467,9 @@ const ImageLabelingPage: React.FC = () => {
       {/* Progress Bar - Fixed height */}
       <Box sx={{ px: 2, pb: 0.5, flexShrink: 0 }}>
         <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 0.25 }}>
-          Progress: {currentImageIndex + 1} of {images.length} images
+          Image {currentImageIndex + 1} of {images.length} • Labeled: {labeledCount} of {images.length}
         </Typography>
-        <LinearProgress variant="determinate" value={progress} sx={{ height: 6, borderRadius: 3 }} />
+        <LinearProgress variant="determinate" value={sessionProgress} sx={{ height: 6, borderRadius: 3 }} />
       </Box>
 
       {/* Image Area - Takes remaining space but leaves room for buttons */}
@@ -355,19 +492,25 @@ const ImageLabelingPage: React.FC = () => {
                 </Typography>
               )}
               <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.25, minHeight: 24 }}>
-                {currentImage.tags.map((tag) => (
-                  <Typography key={tag} variant="caption" sx={{
-                    mx: 0.3,
-                    px: 0.8,
-                    py: 0.3,
-                    bgcolor: tag === 'good' ? 'success.light' : tag === 'bad' ? 'error.light' : 'grey.300',
-                    borderRadius: 1,
-                    color: 'white',
-                    fontSize: '0.7rem'
-                  }}>
-                    {tag}
-                  </Typography>
-                ))}
+                {(() => {
+                  const sessionLabel = sessionLabels[currentImage?._id];
+                  if (sessionLabel) {
+                    return (
+                      <Typography key={sessionLabel} variant="caption" sx={{
+                        mx: 0.3,
+                        px: 0.8,
+                        py: 0.3,
+                        bgcolor: sessionLabel === 'good' ? 'success.light' : sessionLabel === 'bad' ? 'error.light' : 'grey.300',
+                        borderRadius: 1,
+                        color: 'white',
+                        fontSize: '0.7rem'
+                      }}>
+                        {sessionLabel === 'skip' ? 'Skipped' : sessionLabel}
+                      </Typography>
+                    );
+                  }
+                  return null;
+                })()}
               </Box>
             </CardContent>
           </Card>

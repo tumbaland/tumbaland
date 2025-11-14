@@ -22,6 +22,7 @@ function AppRoutes() {
       <Route path="/analysis/:id" element={<DatasetDetailPage />} />
       <Route path="/analysis/compare" element={<DatasetComparisonPage />} />
       <Route path="/image-labeling" element={<ImageLabelingPage />} />
+      <Route path="/image-labeling/:imageId" element={<ImageLabelingPage />} />
     </Routes>
   );
 }

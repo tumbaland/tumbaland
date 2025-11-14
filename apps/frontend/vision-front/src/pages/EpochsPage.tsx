@@ -33,10 +33,14 @@ import {
 import { useLocation } from 'react-router-dom';
 import { epochService } from '../services/epochService';
 import { trainingService } from '../services/trainingService';
+import { usePageTitle } from '../hooks/usePageTitle';
 import { Epoch, Training } from '../types';
 
 export const EpochsPage: React.FC = () => {
   const location = useLocation();
+
+  // Set page title
+  usePageTitle('Epochs - Vision');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);

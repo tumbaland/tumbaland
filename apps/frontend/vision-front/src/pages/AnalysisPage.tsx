@@ -12,9 +12,13 @@ import { Refresh as RefreshIcon, Add as AddIcon } from '@mui/icons-material';
 import { createAnalysis } from '../services/analysisService';
 import AnalysisTable from '../components/AnalysisTable';
 import CreateAnalysisModal from '../components/CreateAnalysisModal';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 export const AnalysisPage: React.FC = () => {
   const navigate = useNavigate();
+
+  // Set page title
+  usePageTitle('Analysis - Vision');
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedAnalysisIds, setSelectedAnalysisIds] = useState<Set<string>>(new Set());

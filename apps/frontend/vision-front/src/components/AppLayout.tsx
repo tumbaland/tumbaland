@@ -7,14 +7,13 @@ import {
   Container,
   Button
 } from '@mui/material';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
-  const navigate = useNavigate();
   const location = useLocation();
 
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
@@ -34,8 +33,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <Toolbar>
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Button
+              component={Link}
+              to="/trainings"
               color="inherit"
-              onClick={() => navigate('/trainings')}
               sx={{
                 fontWeight: isActive('/trainings') ? 700 : 500,
                 textTransform: 'none',
@@ -49,8 +49,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               Trainings
             </Button>
             <Button
+              component={Link}
+              to="/configs"
               color="inherit"
-              onClick={() => navigate('/configs')}
               sx={{
                 fontWeight: isActive('/configs') ? 700 : 500,
                 textTransform: 'none',
@@ -64,8 +65,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               Configs
             </Button>
             <Button
+              component={Link}
+              to="/analysis"
               color="inherit"
-              onClick={() => navigate('/analysis')}
               sx={{
                 fontWeight: isActive('/analysis') ? 700 : 500,
                 textTransform: 'none',
@@ -79,8 +81,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               Datasets
             </Button>
             <Button
+              component={Link}
+              to="/image-labeling"
               color="inherit"
-              onClick={() => navigate('/image-labeling')}
               sx={{
                 fontWeight: isActive('/image-labeling') ? 700 : 500,
                 textTransform: 'none',

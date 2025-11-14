@@ -28,9 +28,13 @@ import TrainingsTable from '../components/TrainingsTable';
 import TrainingFilters from '../components/TrainingFilters';
 import TrainingFormDialog from '../components/TrainingFormDialog';
 import { exportTrainingsToCSV } from '../utils/csvExport';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 const TrainingsPage: React.FC = () => {
   const navigate = useNavigate();
+
+  // Set page title
+  usePageTitle('Trainings - Vision');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');

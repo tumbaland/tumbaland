@@ -224,15 +224,15 @@ const TrainingTestResultsTab: React.FC<TrainingTestResultsTabProps> = ({
                         <TableCell colSpan={3} align="center"><strong>Recall</strong></TableCell>
                       </TableRow>
                       <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                        <TableCell align="center"><strong>Cyclist</strong></TableCell>
-                        <TableCell align="center"><strong>Pedestrian</strong></TableCell>
-                        <TableCell align="center" sx={{ borderRight: '2px solid #ddd' }}><strong>Sign</strong></TableCell>
-                        <TableCell align="center"><strong>Cyclist</strong></TableCell>
-                        <TableCell align="center"><strong>Pedestrian</strong></TableCell>
-                        <TableCell align="center" sx={{ borderRight: '2px solid #ddd' }}><strong>Sign</strong></TableCell>
-                        <TableCell align="center"><strong>Cyclist</strong></TableCell>
-                        <TableCell align="center"><strong>Pedestrian</strong></TableCell>
+                        <TableCell align="center"><strong>Vehicle</strong></TableCell>
                         <TableCell align="center"><strong>Sign</strong></TableCell>
+                        <TableCell align="center" sx={{ borderRight: '2px solid #ddd' }}><strong>Cyclist + Pedestrian</strong></TableCell>
+                        <TableCell align="center"><strong>Vehicle</strong></TableCell>
+                        <TableCell align="center"><strong>Sign</strong></TableCell>
+                        <TableCell align="center" sx={{ borderRight: '2px solid #ddd' }}><strong>Cyclist + Pedestrian</strong></TableCell>
+                        <TableCell align="center"><strong>Vehicle</strong></TableCell>
+                        <TableCell align="center"><strong>Sign</strong></TableCell>
+                        <TableCell align="center"><strong>Cyclist + Pedestrian</strong></TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -245,24 +245,24 @@ const TrainingTestResultsTab: React.FC<TrainingTestResultsTabProps> = ({
                         const conditionData = (testResult.test_results as any)[condition.key];
                         if (!conditionData) return null;
 
-                        const cyclist = conditionData.cyclist;
-                        const pedestrian = conditionData.pedestrian;
+                        const vehicle = conditionData.vehicle;
                         const sign = conditionData.sign;
+                        const cyclistPedestrian = conditionData['cyclist + pedestrian'];
 
                         return (
                           <TableRow key={condition.key}>
                             <TableCell sx={{ fontWeight: 'bold', borderRight: '2px solid #ddd' }}>
                               {condition.label}
                             </TableCell>
-                            <TableCell align="center">{cyclist ? formatNumber(cyclist.iou) : '-'}</TableCell>
-                            <TableCell align="center">{pedestrian ? formatNumber(pedestrian.iou) : '-'}</TableCell>
-                            <TableCell align="center" sx={{ borderRight: '2px solid #ddd' }}>{sign ? formatNumber(sign.iou) : '-'}</TableCell>
-                            <TableCell align="center">{cyclist ? formatNumber(cyclist.precision) : '-'}</TableCell>
-                            <TableCell align="center">{pedestrian ? formatNumber(pedestrian.precision) : '-'}</TableCell>
-                            <TableCell align="center" sx={{ borderRight: '2px solid #ddd' }}>{sign ? formatNumber(sign.precision) : '-'}</TableCell>
-                            <TableCell align="center">{cyclist ? formatNumber(cyclist.recall) : '-'}</TableCell>
-                            <TableCell align="center">{pedestrian ? formatNumber(pedestrian.recall) : '-'}</TableCell>
+                            <TableCell align="center">{vehicle ? formatNumber(vehicle.iou) : '-'}</TableCell>
+                            <TableCell align="center">{sign ? formatNumber(sign.iou) : '-'}</TableCell>
+                            <TableCell align="center" sx={{ borderRight: '2px solid #ddd' }}>{cyclistPedestrian ? formatNumber(cyclistPedestrian.iou) : '-'}</TableCell>
+                            <TableCell align="center">{vehicle ? formatNumber(vehicle.precision) : '-'}</TableCell>
+                            <TableCell align="center">{sign ? formatNumber(sign.precision) : '-'}</TableCell>
+                            <TableCell align="center" sx={{ borderRight: '2px solid #ddd' }}>{cyclistPedestrian ? formatNumber(cyclistPedestrian.precision) : '-'}</TableCell>
+                            <TableCell align="center">{vehicle ? formatNumber(vehicle.recall) : '-'}</TableCell>
                             <TableCell align="center">{sign ? formatNumber(sign.recall) : '-'}</TableCell>
+                            <TableCell align="center">{cyclistPedestrian ? formatNumber(cyclistPedestrian.recall) : '-'}</TableCell>
                           </TableRow>
                         );
                       })}
