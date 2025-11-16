@@ -96,6 +96,22 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             >
               Image Labeling
             </Button>
+            <Button
+              component={Link}
+              to="/test-results"
+              color="inherit"
+              sx={{
+                fontWeight: isActive('/test-results') ? 700 : 500,
+                textTransform: 'none',
+                background: 'none',
+                borderRadius: 2,
+                px: 2,
+                color: isActive('/test-results') ? 'primary.main' : '#222',
+                '&:hover': { background: 'rgba(0,0,0,0.04)' }
+              }}
+            >
+              Test Results
+            </Button>
           </Box>
         </Toolbar>
       </AppBar>

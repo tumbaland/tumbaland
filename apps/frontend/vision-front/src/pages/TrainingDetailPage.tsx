@@ -79,6 +79,7 @@ const TrainingDetailPage: React.FC = () => {
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [testResultsLoading, setTestResultsLoading] = useState(false);
   const [selectedTestEpoch, setSelectedTestEpoch] = useState<number | null>(null);
+  const [testResultsMap, setTestResultsMap] = useState<{ [epoch: number]: TestResult[] }>({});
   const [availableTestEpochs, setAvailableTestEpochs] = useState<number[]>([]);
   const [latexModalOpen, setLatexModalOpen] = useState(false);
   const [latexCode, setLatexCode] = useState('');
@@ -118,45 +119,62 @@ const TrainingDetailPage: React.FC = () => {
   // Load test results data
   React.useEffect(() => {
     const fetchTestResultsData = async () => {
-      if (!training) return;
+      if (!training) {
+        console.log('No training, skipping test results load');
+        return;
+      }
 
       try {
         setTestResultsLoading(true);
-        // Get available epochs that have test results globally
-        const epochsResponse = await testResultService.getTestResultEpochs();
-        const allTestResultEpochs = epochsResponse.data.epochs || [];
+        console.log('Fetching test results data for training:', training._id);
 
-        // Filter to only include epochs that belong to this training
-        const trainingEpochNumbers = epochs.map(e => e.epoch);
-        const availableEpochs = allTestResultEpochs.filter(epoch =>
-          trainingEpochNumbers.includes(epoch)
-        ).sort((a, b) => a - b);
+        // Get all test results for this training
+        const testResultsResponse = await testResultService.getTestResults({ 
+          training_uuid: training.uuid,
+          limit: 1000 
+        });
 
-        setAvailableTestEpochs(availableEpochs);
+        const trainingTestResults = testResultsResponse.data.testResults;
 
-        // Auto-select epoch logic:
-        // 1. If no epoch is selected and there are available epochs, select the first one
-        // 2. If an epoch is selected but it's not in the available epochs, select the first available one
-        // 3. Otherwise, keep the current selection
+        // Group test results by epoch number
+        const testResultsByEpoch: { [epoch: number]: TestResult[] } = {};
+        const epochsWithTestResults: number[] = [];
+
+        trainingTestResults.forEach(testResult => {
+          const epochNumber = testResult.epoch;
+          if (!testResultsByEpoch[epochNumber]) {
+            testResultsByEpoch[epochNumber] = [];
+            epochsWithTestResults.push(epochNumber);
+          }
+          testResultsByEpoch[epochNumber].push(testResult);
+        });
+
+        setAvailableTestEpochs(epochsWithTestResults.sort((a, b) => a - b));
+        setTestResultsMap(testResultsByEpoch);
+
+        // Auto-select epoch logic
         let epochToSelect = selectedTestEpoch;
 
-        if (!selectedTestEpoch && availableEpochs.length > 0) {
-          // No epoch selected, select the first one
-          epochToSelect = availableEpochs[0];
-        } else if (selectedTestEpoch && !availableEpochs.includes(selectedTestEpoch)) {
-          // Currently selected epoch is no longer available, select the first available one
-          epochToSelect = availableEpochs.length > 0 ? availableEpochs[0] : null;
+        if (!selectedTestEpoch && epochsWithTestResults.length > 0) {
+          // No epoch selected, select the first one with test results
+          epochToSelect = epochsWithTestResults[0];
+        } else if (selectedTestEpoch && !epochsWithTestResults.includes(selectedTestEpoch)) {
+          // Currently selected epoch doesn't have test results, select the first available one
+          epochToSelect = epochsWithTestResults.length > 0 ? epochsWithTestResults[0] : null;
         }
 
-        if (epochToSelect) {
+        if (epochToSelect && testResultsByEpoch[epochToSelect]) {
+          setTestResults(testResultsByEpoch[epochToSelect]);
           setSelectedTestEpoch(epochToSelect);
-          await loadTestResultsForEpoch(epochToSelect);
         } else {
           setTestResults([]);
+          setSelectedTestEpoch(null);
         }
       } catch (err) {
         console.error('Failed to fetch test results data:', err);
         setTestResults([]);
+        setAvailableTestEpochs([]);
+        setSelectedTestEpoch(null);
       } finally {
         setTestResultsLoading(false);
       }
@@ -165,26 +183,14 @@ const TrainingDetailPage: React.FC = () => {
     fetchTestResultsData();
   }, [training, epochs]);
 
-  const loadTestResultsForEpoch = async (epoch: number) => {
-    if (!training) return;
-
-    try {
-      setTestResultsLoading(true);
-      // Find the epoch UUID for this training and epoch number
-      const trainingEpoch = epochs.find(e => e.epoch === epoch);
-      if (trainingEpoch) {
-        const response = await testResultService.getTestResultsByEpochUuid(trainingEpoch.epoch_uuid);
-        setTestResults(response.data.testResults || []);
-      } else {
-        setTestResults([]);
-      }
-    } catch (err) {
-      console.error('Failed to load test results for epoch:', err);
+  // Update test results when selected epoch changes
+  React.useEffect(() => {
+    if (selectedTestEpoch && testResultsMap[selectedTestEpoch]) {
+      setTestResults(testResultsMap[selectedTestEpoch]);
+    } else {
       setTestResults([]);
-    } finally {
-      setTestResultsLoading(false);
     }
-  };
+  }, [selectedTestEpoch, testResultsMap]);
 
   // Handle tab change with URL update
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -196,9 +202,8 @@ const TrainingDetailPage: React.FC = () => {
   };
 
   // Handle epoch selection change
-  const handleTestEpochChange = async (epoch: number) => {
+  const handleTestEpochChange = (epoch: number) => {
     setSelectedTestEpoch(epoch);
-    await loadTestResultsForEpoch(epoch);
   };
 
   // File upload handler
@@ -373,12 +378,8 @@ const TrainingDetailPage: React.FC = () => {
 
       if (successCount > 0) {
         setUploadSuccess(`${successCount} test result file(s) uploaded successfully`);
-        // Refresh test results data
-        const epochsResponse = await testResultService.getTestResultEpochs();
-        setAvailableTestEpochs(epochsResponse.data.epochs || []);
-        if (selectedTestEpoch) {
-          await loadTestResultsForEpoch(selectedTestEpoch);
-        }
+        // Refresh test results data by refetching training data
+        refetch();
       }
 
       if (errors.length > 0) {

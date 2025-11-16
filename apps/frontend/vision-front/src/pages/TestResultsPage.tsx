@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -33,9 +34,11 @@ import {
   Upload as UploadIcon
 } from '@mui/icons-material';
 import { testResultService } from '../services/testResultService';
+import { epochService } from '../services/epochService';
 import { TestResult, TestResultData } from '../types';
 
 export const TestResultsPage: React.FC = () => {
+  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -44,8 +47,6 @@ export const TestResultsPage: React.FC = () => {
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [availableEpochs, setAvailableEpochs] = useState<number[]>([]);
   const [selectedEpoch, setSelectedEpoch] = useState<string | number>('');
-  const [selectedTestResult, setSelectedTestResult] = useState<TestResult | null>(null);
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TestResult | null>(null);
 
@@ -126,9 +127,17 @@ export const TestResultsPage: React.FC = () => {
     }
   };
 
-  const handleViewDetails = (testResult: TestResult) => {
-    setSelectedTestResult(testResult);
-    setDetailsOpen(true);
+  const handleViewDetails = async (testResult: TestResult) => {
+    try {
+      // Get the epoch to find the training ID
+      const epochResponse = await epochService.getEpochByUuid(testResult.epoch_uuid);
+      const trainingId = epochResponse.data.trainingId;
+      
+      // Navigate to the training details page with test results tab active
+      navigate(`/trainings/${trainingId}?tab=test-results`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to navigate to training details');
+    }
   };
 
   const handleDeleteClick = (testResult: TestResult) => {
@@ -338,97 +347,6 @@ export const TestResultsPage: React.FC = () => {
           )}
         </CardContent>
       </Card>
-
-      {/* Details Dialog */}
-      <Dialog open={detailsOpen} onClose={() => setDetailsOpen(false)} maxWidth="lg" fullWidth>
-        <DialogTitle>Test Result Details - Epoch {selectedTestResult?.epoch}</DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
-          {selectedTestResult && (
-            <Box sx={{ display: 'grid', gap: 3 }}>
-              {/* Overview */}
-              <Box>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-                  Overview
-                </Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, pl: 2 }}>
-                  <Typography variant="body2">
-                    <strong>Epoch:</strong> {selectedTestResult.epoch}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>Epoch UUID:</strong> {selectedTestResult.epoch_uuid}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>Test UUID:</strong> {selectedTestResult.test_uuid}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>Timestamp:</strong> {formatDate(selectedTestResult.timestamp)}
-                  </Typography>
-                </Box>
-              </Box>
-
-              {/* Test Results Table */}
-              <TableContainer component={Paper} sx={{ mb: 2 }}>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow sx={{ backgroundColor: '#f9f9f9' }}>
-                      <TableCell rowSpan={2} sx={{ borderRight: '2px solid #ddd' }}><strong>Condition</strong></TableCell>
-                      <TableCell colSpan={3} align="center" sx={{ borderRight: '2px solid #ddd' }}><strong>IoU</strong></TableCell>
-                      <TableCell colSpan={3} align="center" sx={{ borderRight: '2px solid #ddd' }}><strong>Precision</strong></TableCell>
-                      <TableCell colSpan={3} align="center"><strong>Recall</strong></TableCell>
-                    </TableRow>
-                    <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                      <TableCell align="center"><strong>Cyclist</strong></TableCell>
-                      <TableCell align="center"><strong>Pedestrian</strong></TableCell>
-                      <TableCell align="center" sx={{ borderRight: '2px solid #ddd' }}><strong>Sign</strong></TableCell>
-                      <TableCell align="center"><strong>Cyclist</strong></TableCell>
-                      <TableCell align="center"><strong>Pedestrian</strong></TableCell>
-                      <TableCell align="center" sx={{ borderRight: '2px solid #ddd' }}><strong>Sign</strong></TableCell>
-                      <TableCell align="center"><strong>Cyclist</strong></TableCell>
-                      <TableCell align="center"><strong>Pedestrian</strong></TableCell>
-                      <TableCell align="center"><strong>Sign</strong></TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {[
-                      { key: 'day_fair', label: 'Dry Day' },
-                      { key: 'day_rain', label: 'Rainy Day' },
-                      { key: 'night_fair', label: 'Dry Night' },
-                      { key: 'night_rain', label: 'Rainy Night' }
-                    ].map((cond) => {
-                      const conditionData = (selectedTestResult.test_results as any)[cond.key];
-                      if (!conditionData) return null;
-
-                      const cyclist = conditionData.cyclist;
-                      const pedestrian = conditionData.pedestrian;
-                      const sign = conditionData.sign;
-
-                      return (
-                        <TableRow key={cond.key}>
-                          <TableCell sx={{ fontWeight: 'bold', borderRight: '2px solid #ddd' }}>
-                            {cond.label}
-                          </TableCell>
-                          <TableCell align="center">{cyclist ? formatNumber(cyclist.iou) : '-'}</TableCell>
-                          <TableCell align="center">{pedestrian ? formatNumber(pedestrian.iou) : '-'}</TableCell>
-                          <TableCell align="center" sx={{ borderRight: '2px solid #ddd' }}>{sign ? formatNumber(sign.iou) : '-'}</TableCell>
-                          <TableCell align="center">{cyclist ? formatNumber(cyclist.precision) : '-'}</TableCell>
-                          <TableCell align="center">{pedestrian ? formatNumber(pedestrian.precision) : '-'}</TableCell>
-                          <TableCell align="center" sx={{ borderRight: '2px solid #ddd' }}>{sign ? formatNumber(sign.precision) : '-'}</TableCell>
-                          <TableCell align="center">{cyclist ? formatNumber(cyclist.recall) : '-'}</TableCell>
-                          <TableCell align="center">{pedestrian ? formatNumber(pedestrian.recall) : '-'}</TableCell>
-                          <TableCell align="center">{sign ? formatNumber(sign.recall) : '-'}</TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDetailsOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)}>

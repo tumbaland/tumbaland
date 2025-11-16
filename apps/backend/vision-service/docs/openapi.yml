@@ -199,34 +199,58 @@ components:
         uuid:
           type: string
           example: "training-uuid-123"
+        training_uuid:
+          type: string
+          description: "Alternative UUID field name"
+          example: "training-uuid-123"
         name:
           type: string
           example: "YOLOv5 Training Run"
         description:
           type: string
           example: "Training YOLOv5 on Waymo dataset"
-        model:
+        datasetId:
           type: string
-          example: "yolov5"
-        dataset:
+          example: "507f1f77bcf86cd799439011"
+        configId:
           type: string
-          example: "waymo"
+          example: "507f1f77bcf86cd799439012"
         status:
           type: string
           enum: ["pending", "running", "completed", "failed"]
           example: "completed"
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["yolov5", "waymo", "experiment"]
         startTime:
           type: string
           format: date-time
         endTime:
           type: string
           format: date-time
-        metrics:
-          type: object
-          description: "Training metrics"
         metadata:
           type: object
           description: "Additional metadata"
+        metrics:
+          type: object
+          properties:
+            totalTime:
+              type: number
+              example: 3600
+            epochCount:
+              type: number
+              example: 100
+            cpuCost:
+              type: number
+              example: 10.50
+            gpuCost:
+              type: number
+              example: 25.75
+            totalCost:
+              type: number
+              example: 36.25
         createdAt:
           type: string
           format: date-time
@@ -236,8 +260,6 @@ components:
       required:
         - uuid
         - name
-        - model
-        - dataset
         - status
 
     Epoch:
@@ -246,33 +268,46 @@ components:
         _id:
           type: string
           example: "507f1f77bcf86cd799439011"
-        uuid:
-          type: string
-          example: "epoch-uuid-123"
         trainingId:
           type: string
           example: "507f1f77bcf86cd799439011"
+        training_uuid:
+          type: string
+          example: "training-uuid-123"
+        epoch_uuid:
+          type: string
+          example: "epoch-uuid-123"
         epoch:
           type: integer
           example: 10
-        metrics:
+        timestamp:
+          type: string
+          format: date-time
+          example: "2023-01-01T00:00:00.000Z"
+        results:
           type: object
-          description: "Epoch metrics"
-        loss:
-          type: number
-          example: 0.123
-        accuracy:
-          type: number
-          example: 0.95
-        validation_loss:
-          type: number
-          example: 0.145
-        validation_accuracy:
-          type: number
-          example: 0.92
+          description: "Epoch training results with metrics per phase and class"
+          example:
+            train:
+              loss: 0.123
+              mean_iou: 0.85
+              vehicle:
+                iou: 0.90
+                precision: 0.92
+                recall: 0.88
+            val:
+              loss: 0.145
+              mean_iou: 0.82
+              vehicle:
+                iou: 0.87
+                precision: 0.89
+                recall: 0.85
         learning_rate:
           type: number
           example: 0.001
+        epoch_time:
+          type: number
+          example: 120.5
         metadata:
           type: object
           description: "Additional metadata"
@@ -284,7 +319,10 @@ components:
           format: date-time
       required:
         - trainingId
+        - training_uuid
+        - epoch_uuid
         - epoch
+        - results
 
     Config:
       type: object
@@ -292,18 +330,26 @@ components:
         _id:
           type: string
           example: "507f1f77bcf86cd799439011"
-        uuid:
+        config_uuid:
           type: string
           example: "config-uuid-123"
-        trainingId:
+        summary:
           type: string
-          example: "507f1f77bcf86cd799439011"
-        name:
-          type: string
-          example: "YOLOv5 Config"
-        config:
+          example: "YOLOv5 configuration for Waymo dataset"
+        config_data:
           type: object
-          description: "Configuration data"
+          description: "Configuration data (JSON structure)"
+          example:
+            model:
+              type: "yolov5"
+              size: "large"
+            training:
+              epochs: 100
+              batch_size: 16
+              learning_rate: 0.001
+        config_name:
+          type: string
+          example: "YOLOv5 Large Config"
         metadata:
           type: object
           description: "Additional metadata"
@@ -314,9 +360,9 @@ components:
           type: string
           format: date-time
       required:
-        - trainingId
-        - name
-        - config
+        - config_uuid
+        - summary
+        - config_data
 
     Comment:
       type: object
@@ -1543,31 +1589,32 @@ paths:
                 description:
                   type: string
                   example: "Training YOLOv5 on Waymo dataset"
-                model:
+                datasetId:
                   type: string
-                  example: "yolov5"
-                dataset:
+                  example: "507f1f77bcf86cd799439011"
+                configId:
                   type: string
-                  example: "waymo"
+                  example: "507f1f77bcf86cd799439012"
                 status:
                   type: string
                   enum: ["pending", "running", "completed", "failed"]
                   default: "pending"
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  example: ["yolov5", "waymo", "experiment"]
                 startTime:
                   type: string
                   format: date-time
                 endTime:
                   type: string
                   format: date-time
-                metrics:
-                  type: object
                 metadata:
                   type: object
               required:
                 - uuid
                 - name
-                - model
-                - dataset
       responses:
         '201':
           description: Training created successfully
@@ -1646,17 +1693,26 @@ paths:
                 description:
                   type: string
                   example: "Updated description"
+                datasetId:
+                  type: string
+                  example: "507f1f77bcf86cd799439011"
+                configId:
+                  type: string
+                  example: "507f1f77bcf86cd799439012"
                 status:
                   type: string
                   enum: ["pending", "running", "completed", "failed"]
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  example: ["updated", "experiment"]
                 startTime:
                   type: string
                   format: date-time
                 endTime:
                   type: string
                   format: date-time
-                metrics:
-                  type: object
                 metadata:
                   type: object
       responses:
@@ -2046,37 +2102,46 @@ paths:
             schema:
               type: object
               properties:
-                uuid:
-                  type: string
-                  example: "epoch-uuid-123"
                 trainingId:
                   type: string
                   example: "507f1f77bcf86cd799439011"
+                training_uuid:
+                  type: string
+                  example: "training-uuid-123"
+                epoch_uuid:
+                  type: string
+                  example: "epoch-uuid-123"
                 epoch:
                   type: integer
                   example: 10
-                metrics:
+                timestamp:
+                  type: string
+                  format: date-time
+                  example: "2023-01-01T00:00:00.000Z"
+                results:
                   type: object
-                loss:
-                  type: number
-                  example: 0.123
-                accuracy:
-                  type: number
-                  example: 0.95
-                validation_loss:
-                  type: number
-                  example: 0.145
-                validation_accuracy:
-                  type: number
-                  example: 0.92
+                  description: "Epoch training results"
+                  example:
+                    train:
+                      loss: 0.123
+                      mean_iou: 0.85
+                    val:
+                      loss: 0.145
+                      mean_iou: 0.82
                 learning_rate:
                   type: number
                   example: 0.001
+                epoch_time:
+                  type: number
+                  example: 120.5
                 metadata:
                   type: object
               required:
                 - trainingId
+                - training_uuid
+                - epoch_uuid
                 - epoch
+                - results
       responses:
         '201':
           description: Epoch created successfully
@@ -2244,24 +2309,31 @@ paths:
             schema:
               type: object
               properties:
-                uuid:
+                config_uuid:
                   type: string
                   example: "config-uuid-123"
-                trainingId:
+                summary:
                   type: string
-                  example: "507f1f77bcf86cd799439011"
-                name:
-                  type: string
-                  example: "YOLOv5 Config"
-                config:
+                  example: "YOLOv5 configuration for Waymo dataset"
+                config_data:
                   type: object
                   description: "Configuration data"
+                  example:
+                    model:
+                      type: "yolov5"
+                      size: "large"
+                    training:
+                      epochs: 100
+                      batch_size: 16
+                config_name:
+                  type: string
+                  example: "YOLOv5 Large Config"
                 metadata:
                   type: object
               required:
-                - trainingId
-                - name
-                - config
+                - config_uuid
+                - summary
+                - config_data
       responses:
         '201':
           description: Config created successfully
@@ -2727,7 +2799,7 @@ paths:
       tags:
         - Test Results
       summary: Get all test results
-      description: Retrieve all test results with optional pagination, filtering, and sorting
+      description: Retrieve all test results with optional pagination, filtering, and sorting. Supports filtering by training UUID (efficient for getting all test results for a training) or by specific epoch UUIDs.
       parameters:
         - name: page
           in: query
@@ -2759,6 +2831,16 @@ paths:
           schema:
             type: integer
           description: Filter by epoch number
+        - name: epoch_uuids
+          in: query
+          schema:
+            type: string
+          description: Filter by comma-separated epoch UUIDs
+        - name: training_uuid
+          in: query
+          schema:
+            type: string
+          description: Filter by training UUID (returns all test results for all epochs of the specified training)
       responses:
         '200':
           description: Test results retrieved successfully
