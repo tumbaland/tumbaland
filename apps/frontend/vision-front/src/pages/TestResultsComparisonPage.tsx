@@ -579,7 +579,7 @@ const TestResultsComparisonPage: React.FC = () => {
                   <Table size="small">
                     <TableHead>
                       <TableRow sx={{ bgcolor: 'grey.50' }}>
-                        <TableCell sx={{ fontWeight: 600, borderRight: '2px solid rgba(224, 224, 224, 1)' }}>
+                        <TableCell sx={{ fontWeight: 600, borderRight: '2px solid rgba(224, 224, 224, 1)', minWidth: 120 }}>
                           Test Result
                         </TableCell>
                         {classNames.map((className) => (
@@ -621,15 +621,13 @@ const TestResultsComparisonPage: React.FC = () => {
                     <TableBody>
                       {comparisonData.map((comp) => (
                         <TableRow key={comp.testResult._id} sx={{ '&:nth-of-type(odd)': { bgcolor: 'grey.25' } }}>
-                          <TableCell sx={{ fontWeight: 600, borderRight: '2px solid rgba(224, 224, 224, 1)' }}>
-                            <Box>
-                              <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                {comp.training?.name || 'Unknown Training'}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                Test {comp.testResult.test_uuid.slice(-8)} (Epoch {comp.testResult.epoch})
-                              </Typography>
-                            </Box>
+                          <TableCell sx={{ fontWeight: 600, borderRight: '2px solid rgba(224, 224, 224, 1)', minWidth: 150 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, display: 'inline' }}>
+                              {comp.training?.name || 'Unknown Training'}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'normal', display: 'inline', ml: 1 }}>
+                              Test {comp.testResult.test_uuid.slice(-8)} (Epoch {comp.testResult.epoch})
+                            </Typography>
                           </TableCell>
                           {classNames.map((className) => {
                             const conditionData = comp.test_results[condition];
