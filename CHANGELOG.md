@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.277](https://github.com/toomastahves/tumbaland/compare/v0.0.276...v0.0.277) (2025-11-17)
+
+
+### Features
+
+* add test result comparisons ([891eaac](https://github.com/toomastahves/tumbaland/commit/891eaaccea985f8f0a7f495db4b5e84d44e4fcfb))
+
 ### [0.0.276](https://github.com/toomastahves/tumbaland/compare/v0.0.275...v0.0.276) (2025-11-16)
 
 
