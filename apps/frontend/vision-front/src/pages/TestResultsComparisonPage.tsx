@@ -37,6 +37,7 @@ const TestResultsComparisonPage: React.FC = () => {
   usePageTitle('Test Results Comparison - Vision');
   const [latexModalOpen, setLatexModalOpen] = useState(false);
   const [latexCode, setLatexCode] = useState('');
+  const [latexTitle, setLatexTitle] = useState('');
 
   // Get test result IDs from URL params
   const testResultIds = searchParams.get('ids')?.split(',') || [];
@@ -169,11 +170,227 @@ const TestResultsComparisonPage: React.FC = () => {
     return latex;
   };
 
-  const handleGenerateLatex = () => {
-    const latex = generateLatexTable();
+  const generatePerformanceLatexTable = () => {
+    if (!comparisonData.length) return '';
+
+    let latex = `\\begin{table*}[ht]\n\\centering\n\\caption{Performance metrics comparison for test results.}\n`;
+
+    // Extract all unique class names
+    const allClasses = new Set<string>();
+    comparisonData.forEach(comp => {
+      Object.values(comp.test_results).forEach((conditionData: any) => {
+        if (conditionData) {
+          Object.keys(conditionData).forEach(className => {
+            allClasses.add(className);
+          });
+        }
+      });
+    });
+    const classNames = Array.from(allClasses).sort();
+
+    // Generate table for each condition
+    ['day_fair', 'night_fair', 'day_rain', 'night_rain'].forEach(condition => {
+      // Calculate max values for bold formatting
+      const maxValues: Record<string, { iou: number; precision: number; recall: number }> = {};
+      classNames.forEach(className => {
+        maxValues[className] = {
+          iou: Math.max(...comparisonData.map(comp => {
+            const conditionData = comp.test_results[condition];
+            const classMetrics = conditionData?.[className];
+            return classMetrics?.iou ?? -Infinity;
+          })),
+          precision: Math.max(...comparisonData.map(comp => {
+            const conditionData = comp.test_results[condition];
+            const classMetrics = conditionData?.[className];
+            return classMetrics?.precision ?? -Infinity;
+          })),
+          recall: Math.max(...comparisonData.map(comp => {
+            const conditionData = comp.test_results[condition];
+            const classMetrics = conditionData?.[className];
+            return classMetrics?.recall ?? -Infinity;
+          }))
+        };
+      });
+
+      latex += `\\begin{tabular}{|l|${'ccc|'.repeat(classNames.length)}}\n\\hline\n`;
+
+      // Header row with class names
+      latex += `& \\multicolumn{3}{c|}{${classNames.map(name => name.charAt(0).toUpperCase() + name.slice(1)).join('} & \\multicolumn{3}{c|}{')}} \\\\\n\\hline\n`;
+
+      // Sub-header row with metrics
+      latex += `Test Result & ${classNames.map(() => 'IoU & Precision & Recall').join(' & ')} \\\\\n\\hline\n`;
+
+      // Data rows
+      comparisonData.forEach(comp => {
+        const trainingName = comp.training?.name || 'Unknown';
+        const testId = `Test ${comp.testResult.test_uuid.slice(-8)} (Epoch ${comp.testResult.epoch})`;
+        latex += `${trainingName.replace(/[&%$#_{}~^\\]/g, '\\$&')} $\\rightarrow$ ${testId} & `;
+
+        classNames.forEach((className, classIndex) => {
+          const conditionData = comp.test_results[condition];
+          const classMetrics = conditionData?.[className];
+
+          const iou = classMetrics?.iou;
+          const precision = classMetrics?.precision;
+          const recall = classMetrics?.recall;
+
+          // IoU with bold formatting for max value
+          const iouText = iou !== undefined ? formatNumber(iou) : 'N/A';
+          latex += `${iou === maxValues[className].iou && iou !== undefined ? `\\textbf{${iouText}}` : iouText} & `;
+
+          // Precision with bold formatting for max value
+          const precisionText = precision !== undefined ? formatNumber(precision) : 'N/A';
+          latex += `${precision === maxValues[className].precision && precision !== undefined ? `\\textbf{${precisionText}}` : precisionText} & `;
+
+          // Recall with bold formatting for max value
+          const recallText = recall !== undefined ? formatNumber(recall) : 'N/A';
+          latex += `${recall === maxValues[className].recall && recall !== undefined ? `\\textbf{${recallText}}` : recallText}`;
+
+          // Add separator between classes (except for last class)
+          if (classIndex < classNames.length - 1) {
+            latex += ' & ';
+          }
+        });
+
+        latex += ' \\\\\n\\hline\n';
+      });
+
+      latex += `\\end{tabular}\n\\caption*{${condition.replace('_', ' ').toUpperCase()} conditions}\n\\vspace{1em}\n\n`;
+    });
+
+    latex += `\\label{table:performance_metrics_comparison}\n\\end{table*}`;
+
+    return latex;
+  };
+
+  const generatePerClassLatexTable = () => {
+    if (!comparisonData.length) return '';
+
+    let latex = `\\begin{table*}[ht]\n\\centering\n\\caption{Per-class metrics comparison for test results.}\n`;
+
+    // Extract all unique class names
+    const allClasses = new Set<string>();
+    comparisonData.forEach(comp => {
+      Object.values(comp.test_results).forEach((conditionData: any) => {
+        if (conditionData) {
+          Object.keys(conditionData).forEach(className => {
+            allClasses.add(className);
+          });
+        }
+      });
+    });
+    const classNames = Array.from(allClasses).sort();
+
+    // Generate table for each condition
+    ['day_fair', 'night_fair', 'day_rain', 'night_rain'].forEach(condition => {
+      // Calculate max values for bold formatting
+      const maxValues: Record<string, { iou: number; precision: number; recall: number; f1: number }> = {};
+      classNames.forEach(className => {
+        maxValues[className] = {
+          iou: Math.max(...comparisonData.map(comp => {
+            const conditionData = comp.test_results[condition];
+            const classMetrics = conditionData?.[className];
+            return classMetrics?.iou ?? -Infinity;
+          })),
+          precision: Math.max(...comparisonData.map(comp => {
+            const conditionData = comp.test_results[condition];
+            const classMetrics = conditionData?.[className];
+            return classMetrics?.precision ?? -Infinity;
+          })),
+          recall: Math.max(...comparisonData.map(comp => {
+            const conditionData = comp.test_results[condition];
+            const classMetrics = conditionData?.[className];
+            return classMetrics?.recall ?? -Infinity;
+          })),
+          f1: Math.max(...comparisonData.map(comp => {
+            const conditionData = comp.test_results[condition];
+            const classMetrics = conditionData?.[className];
+            return classMetrics?.f1_score ?? -Infinity;
+          }))
+        };
+      });
+
+      latex += `\\begin{tabular}{|l|${'cccc|'.repeat(comparisonData.length)}}\n\\hline\n`;
+
+      // Header row with condition and training names
+      latex += `${condition.replace('_', ' ').toUpperCase()} & ${comparisonData.map(comp => `\\multicolumn{4}{c|}{${(comp.training?.name || 'Unknown').replace(/[&%$#_{}~^\\]/g, '\\$&')}}`).join(' & ')} \\\\\n\\hline\n`;
+
+      // Sub-header row with metrics
+      latex += `Class & ${comparisonData.map(() => 'IoU & Precision & Recall & F1').join(' & ')} \\\\\n\\hline\n`;
+
+      // Data rows
+      classNames.forEach(className => {
+        latex += `${className.charAt(0).toUpperCase() + className.slice(1)} & `;
+
+        comparisonData.forEach((comp, compIndex) => {
+          const conditionData = comp.test_results[condition];
+          const classMetrics = conditionData?.[className];
+
+          const iou = classMetrics?.iou;
+          const precision = classMetrics?.precision;
+          const recall = classMetrics?.recall;
+          const f1 = classMetrics?.f1_score;
+
+          // IoU with bold formatting for max value
+          const iouText = iou !== undefined ? formatNumber(iou) : 'N/A';
+          latex += `${iou === maxValues[className].iou && iou !== undefined ? `\\textbf{${iouText}}` : iouText} & `;
+
+          // Precision with bold formatting for max value
+          const precisionText = precision !== undefined ? formatNumber(precision) : 'N/A';
+          latex += `${precision === maxValues[className].precision && precision !== undefined ? `\\textbf{${precisionText}}` : precisionText} & `;
+
+          // Recall with bold formatting for max value
+          const recallText = recall !== undefined ? formatNumber(recall) : 'N/A';
+          latex += `${recall === maxValues[className].recall && recall !== undefined ? `\\textbf{${recallText}}` : recallText} & `;
+
+          // F1 with bold formatting for max value
+          const f1Text = f1 !== undefined ? formatNumber(f1) : 'N/A';
+          latex += `${f1 === maxValues[className].f1 && f1 !== undefined ? `\\textbf{${f1Text}}` : f1Text}`;
+
+          // Add separator between trainings (except for last training)
+          if (compIndex < comparisonData.length - 1) {
+            latex += ' & ';
+          }
+        });
+
+        latex += ' \\\\\n\\hline\n';
+      });
+
+      latex += `\\end{tabular}\n\\vspace{1em}\n\n`;
+    });
+
+    latex += `\\label{table:per_class_metrics_comparison}\n\\end{table*}`;
+
+    return latex;
+  };
+
+  const handleGenerateLatex = (type: 'performance' | 'perClass' | 'all') => {
+    let latex = '';
+    let title = '';
+
+    switch (type) {
+      case 'performance':
+        latex = generatePerformanceLatexTable();
+        title = 'Performance Metrics LaTeX Table';
+        break;
+      case 'perClass':
+        latex = generatePerClassLatexTable();
+        title = 'Per-Class Metrics LaTeX Table';
+        break;
+      case 'all':
+      default:
+        latex = generateLatexTable();
+        title = 'LaTeX Table Code';
+        break;
+    }
+
     setLatexCode(latex);
+    setLatexTitle(title);
     setLatexModalOpen(true);
   };
+
+  const handleGeneratePerformanceLatex = () => handleGenerateLatex('performance');
+  const handleGeneratePerClassLatex = () => handleGenerateLatex('perClass');
 
   if (testResultIds.length === 0) {
     return (
@@ -229,14 +446,6 @@ const TestResultsComparisonPage: React.FC = () => {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            variant="outlined"
-            startIcon={<CodeIcon />}
-            onClick={handleGenerateLatex}
-            disabled={comparisonData.length === 0}
-          >
-            LaTeX Table
-          </Button>
           <Button
             variant="contained"
             onClick={() => navigate('/test-results')}
@@ -298,9 +507,20 @@ const TestResultsComparisonPage: React.FC = () => {
       {comparisonData.length > 0 && (
         <Paper sx={{ mb: 4 }}>
           <Box sx={{ p: 3, pb: 2 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-              Performance Metrics Comparison
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Performance Metrics Comparison
+              </Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<CodeIcon />}
+                onClick={handleGeneratePerformanceLatex}
+                disabled={comparisonData.length === 0}
+              >
+                LaTeX
+              </Button>
+            </Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
               Comparing test results across different conditions and classes
             </Typography>
@@ -355,134 +575,129 @@ const TestResultsComparisonPage: React.FC = () => {
               });
 
               return (
-                <Box key={condition} sx={{ mb: 4 }}>
-                  <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, ml: 2 }}>
-                    {condition.replace('_', ' ').toUpperCase()} Conditions
-                  </Typography>
-                  <TableContainer component={Paper} sx={{ mb: 3 }}>
-                    <Table>
-                      <TableHead>
-                        <TableRow sx={{ bgcolor: 'grey.50' }}>
-                          <TableCell sx={{ fontWeight: 600, borderRight: '2px solid rgba(224, 224, 224, 1)' }}>
-                            Test Result
+                <TableContainer key={condition} component={Paper} sx={{ mb: 3 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: 'grey.50' }}>
+                        <TableCell sx={{ fontWeight: 600, borderRight: '2px solid rgba(224, 224, 224, 1)' }}>
+                          Test Result
+                        </TableCell>
+                        {classNames.map((className) => (
+                          <TableCell
+                            key={className}
+                            colSpan={3}
+                            align="center"
+                            sx={{
+                              fontWeight: 600,
+                              borderRight: classNames.indexOf(className) < classNames.length - 1 ? '1px solid rgba(224, 224, 224, 1)' : 'none'
+                            }}
+                          >
+                            {className.charAt(0).toUpperCase() + className.slice(1)}
                           </TableCell>
-                          {classNames.map((className) => (
+                        ))}
+                      </TableRow>
+                      <TableRow sx={{ bgcolor: 'grey.100' }}>
+                        <TableCell sx={{ fontWeight: 600, borderRight: '2px solid rgba(224, 224, 224, 1)' }}>
+                          {condition.replace('_', ' ').toUpperCase()}
+                        </TableCell>
+                        {classNames.map((className) => (
+                          <React.Fragment key={className}>
+                            <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>IoU</TableCell>
+                            <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Precision</TableCell>
                             <TableCell
-                              key={className}
-                              colSpan={3}
                               align="center"
                               sx={{
                                 fontWeight: 600,
+                                fontSize: '0.875rem',
                                 borderRight: classNames.indexOf(className) < classNames.length - 1 ? '1px solid rgba(224, 224, 224, 1)' : 'none'
                               }}
                             >
-                              {className.charAt(0).toUpperCase() + className.slice(1)}
+                              Recall
                             </TableCell>
-                          ))}
-                        </TableRow>
-                        <TableRow sx={{ bgcolor: 'grey.100' }}>
-                          <TableCell sx={{ fontWeight: 600, borderRight: '2px solid rgba(224, 224, 224, 1)' }}>
-                            {condition.replace('_', ' ').toUpperCase()}
-                          </TableCell>
-                          {classNames.map((className) => (
-                            <React.Fragment key={className}>
-                              <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>IoU</TableCell>
-                              <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Precision</TableCell>
-                              <TableCell
-                                align="center"
-                                sx={{
-                                  fontWeight: 600,
-                                  fontSize: '0.875rem',
-                                  borderRight: classNames.indexOf(className) < classNames.length - 1 ? '1px solid rgba(224, 224, 224, 1)' : 'none'
-                                }}
-                              >
-                                Recall
-                              </TableCell>
-                            </React.Fragment>
-                          ))}
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {comparisonData.map((comp) => (
-                          <TableRow key={comp.testResult._id} sx={{ '&:nth-of-type(odd)': { bgcolor: 'grey.25' } }}>
-                            <TableCell sx={{ fontWeight: 600, borderRight: '2px solid rgba(224, 224, 224, 1)' }}>
-                              <Box>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                  {comp.training?.name || 'Unknown Training'}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  Test {comp.testResult.test_uuid.slice(-8)} (Epoch {comp.testResult.epoch})
-                                </Typography>
-                              </Box>
-                            </TableCell>
-                            {classNames.map((className) => {
-                              const conditionData = comp.test_results[condition];
-                              const classMetrics = conditionData?.[className];
-
-                              return (
-                                <React.Fragment key={className}>
-                                  <TableCell align="center">
-                                    {classMetrics?.iou !== undefined ? (
-                                      <Typography
-                                        variant="body2"
-                                        sx={{
-                                          fontWeight: classMetrics.iou === maxValues[className].iou ? 700 : 'normal'
-                                        }}
-                                      >
-                                        {formatNumber(classMetrics.iou)}
-                                      </Typography>
-                                    ) : (
-                                      <Typography variant="body2" color="text.secondary">
-                                        N/A
-                                      </Typography>
-                                    )}
-                                  </TableCell>
-                                  <TableCell align="center">
-                                    {classMetrics?.precision !== undefined ? (
-                                      <Typography
-                                        variant="body2"
-                                        sx={{
-                                          fontWeight: classMetrics.precision === maxValues[className].precision ? 700 : 'normal'
-                                        }}
-                                      >
-                                        {formatNumber(classMetrics.precision)}
-                                      </Typography>
-                                    ) : (
-                                      <Typography variant="body2" color="text.secondary">
-                                        N/A
-                                      </Typography>
-                                    )}
-                                  </TableCell>
-                                  <TableCell
-                                    align="center"
-                                    sx={{
-                                      borderRight: classNames.indexOf(className) < classNames.length - 1 ? '1px solid rgba(224, 224, 224, 1)' : 'none'
-                                    }}
-                                  >
-                                    {classMetrics?.recall !== undefined ? (
-                                      <Typography
-                                        variant="body2"
-                                        sx={{
-                                          fontWeight: classMetrics.recall === maxValues[className].recall ? 700 : 'normal'
-                                        }}
-                                      >
-                                        {formatNumber(classMetrics.recall)}
-                                      </Typography>
-                                    ) : (
-                                      <Typography variant="body2" color="text.secondary">
-                                        N/A
-                                      </Typography>
-                                    )}
-                                  </TableCell>
-                                </React.Fragment>
-                              );
-                            })}
-                          </TableRow>
+                          </React.Fragment>
                         ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </Box>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {comparisonData.map((comp) => (
+                        <TableRow key={comp.testResult._id} sx={{ '&:nth-of-type(odd)': { bgcolor: 'grey.25' } }}>
+                          <TableCell sx={{ fontWeight: 600, borderRight: '2px solid rgba(224, 224, 224, 1)' }}>
+                            <Box>
+                              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                {comp.training?.name || 'Unknown Training'}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                Test {comp.testResult.test_uuid.slice(-8)} (Epoch {comp.testResult.epoch})
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          {classNames.map((className) => {
+                            const conditionData = comp.test_results[condition];
+                            const classMetrics = conditionData?.[className];
+
+                            return (
+                              <React.Fragment key={className}>
+                                <TableCell align="center">
+                                  {classMetrics?.iou !== undefined ? (
+                                    <Typography
+                                      variant="body2"
+                                      sx={{
+                                        fontWeight: classMetrics.iou === maxValues[className].iou ? 700 : 'normal'
+                                      }}
+                                    >
+                                      {formatNumber(classMetrics.iou)}
+                                    </Typography>
+                                  ) : (
+                                    <Typography variant="body2" color="text.secondary">
+                                      N/A
+                                    </Typography>
+                                  )}
+                                </TableCell>
+                                <TableCell align="center">
+                                  {classMetrics?.precision !== undefined ? (
+                                    <Typography
+                                      variant="body2"
+                                      sx={{
+                                        fontWeight: classMetrics.precision === maxValues[className].precision ? 700 : 'normal'
+                                      }}
+                                    >
+                                      {formatNumber(classMetrics.precision)}
+                                    </Typography>
+                                  ) : (
+                                    <Typography variant="body2" color="text.secondary">
+                                      N/A
+                                    </Typography>
+                                  )}
+                                </TableCell>
+                                <TableCell
+                                  align="center"
+                                  sx={{
+                                    borderRight: classNames.indexOf(className) < classNames.length - 1 ? '1px solid rgba(224, 224, 224, 1)' : 'none'
+                                  }}
+                                >
+                                  {classMetrics?.recall !== undefined ? (
+                                    <Typography
+                                      variant="body2"
+                                      sx={{
+                                        fontWeight: classMetrics.recall === maxValues[className].recall ? 700 : 'normal'
+                                      }}
+                                    >
+                                      {formatNumber(classMetrics.recall)}
+                                    </Typography>
+                                  ) : (
+                                    <Typography variant="body2" color="text.secondary">
+                                      N/A
+                                    </Typography>
+                                  )}
+                                </TableCell>
+                              </React.Fragment>
+                            );
+                          })}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               );
             });
           })()}
@@ -491,14 +706,23 @@ const TestResultsComparisonPage: React.FC = () => {
 
       {/* Per-Class Comparison */}
       {comparisonData.length > 0 && (
-        <Paper sx={{ mb: 4 }}>
-          <Box sx={{ p: 3, pb: 2 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'text.primary' }}>
+      <Paper sx={{ mb: 4 }}>
+        <Box sx={{ p: 3, pb: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
               Per-Class Metrics Comparison
             </Typography>
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<CodeIcon />}
+              onClick={handleGeneratePerClassLatex}
+              disabled={comparisonData.length === 0}
+            >
+              LaTeX
+            </Button>
           </Box>
-
-          {/* Extract all unique class names from all test results */}
+        </Box>          {/* Extract all unique class names from all test results */}
           {(() => {
             const allClasses = new Set<string>();
             comparisonData.forEach(comp => {
@@ -529,11 +753,11 @@ const TestResultsComparisonPage: React.FC = () => {
                   {condition.replace('_', ' ')} - Per-Class Metrics
                 </Typography>
                 <TableContainer component={Paper} sx={{ mb: 3 }}>
-                  <Table>
+                  <Table size="small">
                     <TableHead>
                       <TableRow>
                         <TableCell sx={{ borderBottom: '2px solid rgba(224, 224, 224, 1)' }}>
-                          <strong>Class</strong>
+                          <strong>{condition.replace('_', ' ').toUpperCase()}</strong>
                         </TableCell>
                         {comparisonData.map((comp) => (
                           <TableCell
@@ -547,22 +771,22 @@ const TestResultsComparisonPage: React.FC = () => {
                                 {comp.training?.name || 'Unknown Training'}
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
-                                Test {comp.testResult.test_uuid.slice(-8)}
+                                Test {comp.testResult.test_uuid.slice(-8)} (Epoch {comp.testResult.epoch})
                               </Typography>
                             </Box>
                           </TableCell>
                         ))}
                       </TableRow>
                       <TableRow>
-                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', textTransform: 'capitalize' }}>
-                          {condition.replace('_', ' ')}
+                        <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                          Class
                         </TableCell>
                         {comparisonData.map((comp) => (
                           <React.Fragment key={comp.testResult._id}>
                             <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>IoU</TableCell>
                             <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Precision</TableCell>
                             <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Recall</TableCell>
-                            <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>F1</TableCell>
+                            <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', borderRight: '2px solid rgba(224, 224, 224, 1)' }}>F1</TableCell>
                           </React.Fragment>
                         ))}
                       </TableRow>
@@ -653,7 +877,7 @@ const TestResultsComparisonPage: React.FC = () => {
                                       </Typography>
                                     )}
                                   </TableCell>
-                                  <TableCell align="center">
+                                  <TableCell align="center" sx={{ borderRight: '2px solid rgba(224, 224, 224, 1)' }}>
                                     {classMetrics?.f1_score !== undefined ? (
                                       <Typography
                                         variant="body2"
@@ -692,7 +916,7 @@ const TestResultsComparisonPage: React.FC = () => {
         fullWidth
       >
         <DialogTitle>
-          LaTeX Table Code
+          {latexTitle}
           <IconButton
             onClick={() => setLatexModalOpen(false)}
             sx={{ position: 'absolute', right: 8, top: 8 }}
