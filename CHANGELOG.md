@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.281](https://github.com/toomastahves/tumbaland/compare/v0.0.280...v0.0.281) (2025-11-17)
+
+
+### Features
+
+* set default to 25 trainings per page ([23a7ea4](https://github.com/toomastahves/tumbaland/commit/23a7ea47df33bce5a7d8d2b8ccbe63a254610b6f))
+
 ### [0.0.280](https://github.com/toomastahves/tumbaland/compare/v0.0.279...v0.0.280) (2025-11-17)
 
 
