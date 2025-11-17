@@ -21,13 +21,16 @@ import {
   DialogContent,
   DialogActions,
   IconButton,
-  Tooltip
+  Tooltip,
+  Checkbox
 } from '@mui/material';
 import {
-  Delete as DeleteIcon
+  Delete as DeleteIcon,
+  Compare as CompareIcon
 } from '@mui/icons-material';
 import { testResultService } from '../services/testResultService';
 import { epochService } from '../services/epochService';
+import { trainingService } from '../services/trainingService';
 import { TestResult, TestResultData } from '../types';
 
 export const TestResultsPage: React.FC = () => {
@@ -36,8 +39,10 @@ export const TestResultsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
+  const [trainingInfo, setTrainingInfo] = useState<Record<string, { name: string; uuid: string }>>({});
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TestResult | null>(null);
+  const [selectedTestResults, setSelectedTestResults] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadTestResults();
@@ -48,7 +53,29 @@ export const TestResultsPage: React.FC = () => {
       setLoading(true);
       setError(null);
       const response = await testResultService.getTestResults();
-      setTestResults(response.data.testResults || []);
+      const testResultsData = response.data.testResults || [];
+      setTestResults(testResultsData);
+
+      // Fetch training information for each test result
+      const trainingInfoMap: Record<string, { name: string; uuid: string }> = {};
+      for (const testResult of testResultsData) {
+        try {
+          const epochResponse = await epochService.getEpochByUuid(testResult.epoch_uuid);
+          const trainingId = epochResponse.data.trainingId;
+          const trainingResponse = await trainingService.getTrainingById(trainingId);
+          trainingInfoMap[testResult._id] = {
+            name: trainingResponse.data.name,
+            uuid: trainingResponse.data.uuid
+          };
+        } catch (err) {
+          console.warn(`Failed to fetch training info for test result ${testResult._id}:`, err);
+          trainingInfoMap[testResult._id] = {
+            name: 'Unknown',
+            uuid: ''
+          };
+        }
+      }
+      setTrainingInfo(trainingInfoMap);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load test results');
     } finally {
@@ -114,6 +141,37 @@ export const TestResultsPage: React.FC = () => {
     return sum / conditions.length;
   };
 
+  const handleSelectTestResult = (testResultId: string, checked: boolean) => {
+    const newSelected = new Set(selectedTestResults);
+    if (checked) {
+      newSelected.add(testResultId);
+    } else {
+      newSelected.delete(testResultId);
+    }
+    setSelectedTestResults(newSelected);
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedTestResults(new Set(testResults.map(tr => tr._id)));
+    } else {
+      setSelectedTestResults(new Set());
+    }
+  };
+
+  const handleCompare = () => {
+    if (selectedTestResults.size < 2) {
+      setError('Please select at least 2 test results to compare');
+      return;
+    }
+    if (selectedTestResults.size > 10) {
+      setError('Maximum 10 test results can be compared at once');
+      return;
+    }
+    const ids = Array.from(selectedTestResults);
+    navigate(`/test-results/compare?ids=${ids.join(',')}`);
+  };
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Typography variant="h4" sx={{ mb: 4 }}>
@@ -135,9 +193,21 @@ export const TestResultsPage: React.FC = () => {
       {/* Test Results Table */}
       <Card>
         <CardContent>
-          <Typography variant="h6" sx={{ mb: 2 }}>
-            Test Results
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">
+              Test Results
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                variant="outlined"
+                startIcon={<CompareIcon />}
+                onClick={handleCompare}
+                disabled={selectedTestResults.size < 2}
+              >
+                Compare Selected ({selectedTestResults.size})
+              </Button>
+            </Box>
+          </Box>
 
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -152,6 +222,16 @@ export const TestResultsPage: React.FC = () => {
               <Table>
                 <TableHead>
                   <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        checked={selectedTestResults.size === testResults.length && testResults.length > 0}
+                        indeterminate={selectedTestResults.size > 0 && selectedTestResults.size < testResults.length}
+                        onChange={(e) => handleSelectAll(e.target.checked)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <strong>Training Name</strong>
+                    </TableCell>
                     <TableCell>
                       <strong>Epoch</strong>
                     </TableCell>
@@ -177,6 +257,7 @@ export const TestResultsPage: React.FC = () => {
                     const avgIou = getOverallAverage(testResult.test_results, 'iou');
                     const avgRecall = getOverallAverage(testResult.test_results, 'recall');
                     const avgF1 = getOverallAverage(testResult.test_results, 'f1_score');
+                    const training = trainingInfo[testResult._id];
 
                     return (
                       <TableRow 
@@ -185,6 +266,15 @@ export const TestResultsPage: React.FC = () => {
                         onClick={() => handleViewDetails(testResult)}
                         sx={{ cursor: 'pointer' }}
                       >
+                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedTestResults.has(testResult._id)}
+                            onChange={(e) => handleSelectTestResult(testResult._id, e.target.checked)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {training ? training.name : 'Loading...'}
+                        </TableCell>
                         <TableCell>
                           Epoch {testResult.epoch}
                         </TableCell>
@@ -194,7 +284,7 @@ export const TestResultsPage: React.FC = () => {
                         <TableCell align="center" sx={{ fontSize: '0.875rem' }}>
                           {formatDate(testResult.timestamp)}
                         </TableCell>
-                        <TableCell align="center">
+                        <TableCell align="center" onClick={(e) => e.stopPropagation()}>
                           <Tooltip title="Delete">
                             <IconButton size="small" onClick={() => handleDeleteClick(testResult)}>
                               <DeleteIcon fontSize="small" />

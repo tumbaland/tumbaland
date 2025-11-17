@@ -8,7 +8,8 @@ import {
   createTestResultFromJson,
   updateTestResult,
   deleteTestResult,
-  getTestResultEpochs
+  getTestResultEpochs,
+  compareTestResults
 } from '../controllers/testResultController';
 
 const router = express.Router();
@@ -21,6 +22,7 @@ router.get('/test/:testUuid', getTestResultByTestUuid);
 router.get('/epoch/:epochUuid', getTestResultsByEpochUuid);
 router.post('/', createTestResult);
 router.post('/upload', createTestResultFromJson);
+router.post('/compare', compareTestResults);
 router.put('/:id', updateTestResult);
 router.delete('/:id', deleteTestResult);
 

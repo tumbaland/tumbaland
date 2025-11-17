@@ -6,6 +6,40 @@ import {
   PaginatedResponse
 } from '../types';
 
+// Test result comparison types
+export interface TestResultComparison {
+  testResult: {
+    _id: string;
+    test_uuid: string;
+    epoch: number;
+    epoch_uuid: string;
+    timestamp: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  training: {
+    _id: string;
+    name: string;
+    uuid: string;
+    status: string;
+  } | null;
+  epoch: {
+    epoch: number;
+    epoch_time?: number;
+    results: any;
+  } | null;
+  test_results: any;
+}
+
+export interface TestResultComparisonResponse {
+  comparison: TestResultComparison[];
+  summary: {
+    totalTestResults: number;
+    conditions: string[];
+    classes: string[];
+  };
+}
+
 export const testResultService = {
   // Get all test results
   async getTestResults(params?: {
@@ -71,6 +105,12 @@ export const testResultService = {
   // Get unique epochs that have test results
   async getTestResultEpochs(): Promise<ApiResponse<{ epochs: number[] }>> {
     const response = await visionApi.get('/test-results/epochs');
+    return response.data;
+  },
+
+  // Compare multiple test results
+  async compareTestResults(testResultIds: string[]): Promise<ApiResponse<TestResultComparisonResponse>> {
+    const response = await visionApi.post('/test-results/compare', { testResultIds });
     return response.data;
   }
 };

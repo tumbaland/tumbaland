@@ -499,3 +499,96 @@ export const getTestResultEpochs = async (req: Request, res: Response): Promise<
     });
   }
 };
+
+// Compare test results
+export const compareTestResults = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { testResultIds } = req.body;
+
+    if (!testResultIds || !Array.isArray(testResultIds) || testResultIds.length === 0) {
+      res.status(400).json({
+        success: false,
+        message: 'Test result IDs array is required'
+      });
+      return;
+    }
+
+    if (testResultIds.length > 10) {
+      res.status(400).json({
+        success: false,
+        message: 'Maximum 10 test results can be compared at once'
+      });
+      return;
+    }
+
+    // Fetch test results
+    const testResults = await TestResult.find({ _id: { $in: testResultIds } });
+
+    // Get associated epochs and trainings for additional context
+    const epochUuids = testResults.map(tr => tr.epoch_uuid);
+    const epochs = await Epoch.find({ epoch_uuid: { $in: epochUuids } });
+    const trainingIds = epochs.map(e => e.trainingId);
+    const trainings = await Training.find({ _id: { $in: trainingIds } });
+
+    // Create lookup maps
+    const epochMap = epochs.reduce((acc, epoch) => {
+      acc[epoch.epoch_uuid] = epoch;
+      return acc;
+    }, {} as Record<string, any>);
+
+    const trainingMap = trainings.reduce((acc, training) => {
+      acc[(training._id as any).toString()] = training;
+      return acc;
+    }, {} as Record<string, any>);
+
+    // Calculate comparison data for each test result
+    const comparisonData = testResults.map(testResult => {
+      const epoch = epochMap[testResult.epoch_uuid];
+      const training = epoch ? trainingMap[epoch.trainingId.toString()] : null;
+
+      return {
+        testResult: {
+          _id: testResult._id,
+          test_uuid: testResult.test_uuid,
+          epoch: testResult.epoch,
+          epoch_uuid: testResult.epoch_uuid,
+          timestamp: testResult.timestamp,
+          createdAt: testResult.createdAt,
+          updatedAt: testResult.updatedAt
+        },
+        training: training ? {
+          _id: training._id,
+          name: training.name,
+          uuid: training.uuid,
+          status: training.status
+        } : null,
+        epoch: epoch ? {
+          epoch: epoch.epoch,
+          epoch_time: epoch.epoch_time,
+          results: epoch.results
+        } : null,
+        test_results: testResult.test_results
+      };
+    });
+
+    res.json({
+      success: true,
+      data: {
+        comparison: comparisonData,
+        summary: {
+          totalTestResults: testResults.length,
+          conditions: Object.keys(testResults[0]?.test_results || {}),
+          classes: Object.keys(testResults[0]?.test_results?.day_fair || {})
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error comparing test results:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to compare test results';
+    res.status(500).json({
+      success: false,
+      message: 'Failed to compare test results',
+      error: errorMessage
+    });
+  }
+};
