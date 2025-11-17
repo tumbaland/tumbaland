@@ -13,6 +13,7 @@ export interface ITraining extends Document {
   metadata?: any;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date;
 }
 
 const TrainingSchema: Schema = new Schema(
@@ -61,6 +62,9 @@ const TrainingSchema: Schema = new Schema(
     },
     metadata: {
       type: Schema.Types.Mixed
+    },
+    deletedAt: {
+      type: Date
     }
   },
   {

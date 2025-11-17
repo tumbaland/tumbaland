@@ -29,8 +29,6 @@ import {
   Compare as CompareIcon
 } from '@mui/icons-material';
 import { testResultService } from '../services/testResultService';
-import { epochService } from '../services/epochService';
-import { trainingService } from '../services/trainingService';
 import { TestResult, TestResultData } from '../types';
 
 export const TestResultsPage: React.FC = () => {
@@ -39,7 +37,6 @@ export const TestResultsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
-  const [trainingInfo, setTrainingInfo] = useState<Record<string, { name: string; uuid: string }>>({});
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TestResult | null>(null);
   const [selectedTestResults, setSelectedTestResults] = useState<Set<string>>(new Set());
@@ -55,27 +52,6 @@ export const TestResultsPage: React.FC = () => {
       const response = await testResultService.getTestResults();
       const testResultsData = response.data.testResults || [];
       setTestResults(testResultsData);
-
-      // Fetch training information for each test result
-      const trainingInfoMap: Record<string, { name: string; uuid: string }> = {};
-      for (const testResult of testResultsData) {
-        try {
-          const epochResponse = await epochService.getEpochByUuid(testResult.epoch_uuid);
-          const trainingId = epochResponse.data.trainingId;
-          const trainingResponse = await trainingService.getTrainingById(trainingId);
-          trainingInfoMap[testResult._id] = {
-            name: trainingResponse.data.name,
-            uuid: trainingResponse.data.uuid
-          };
-        } catch (err) {
-          console.warn(`Failed to fetch training info for test result ${testResult._id}:`, err);
-          trainingInfoMap[testResult._id] = {
-            name: 'Unknown',
-            uuid: ''
-          };
-        }
-      }
-      setTrainingInfo(trainingInfoMap);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load test results');
     } finally {
@@ -85,9 +61,12 @@ export const TestResultsPage: React.FC = () => {
 
   const handleViewDetails = async (testResult: TestResult) => {
     try {
-      // Get the epoch to find the training ID
-      const epochResponse = await epochService.getEpochByUuid(testResult.epoch_uuid);
-      const trainingId = epochResponse.data.trainingId;
+      // Get training ID from the embedded training info
+      const trainingId = testResult.training?._id;
+      if (!trainingId) {
+        setError('Training information not available for this test result');
+        return;
+      }
       
       // Navigate to the training details page with test results tab active
       navigate(`/trainings/${trainingId}?tab=test-results`);
@@ -257,7 +236,6 @@ export const TestResultsPage: React.FC = () => {
                     const avgIou = getOverallAverage(testResult.test_results, 'iou');
                     const avgRecall = getOverallAverage(testResult.test_results, 'recall');
                     const avgF1 = getOverallAverage(testResult.test_results, 'f1_score');
-                    const training = trainingInfo[testResult._id];
 
                     return (
                       <TableRow 
@@ -273,7 +251,7 @@ export const TestResultsPage: React.FC = () => {
                           />
                         </TableCell>
                         <TableCell>
-                          {training ? training.name : 'Loading...'}
+                          {testResult.training?.name || 'Unknown Training'}
                         </TableCell>
                         <TableCell>
                           Epoch {testResult.epoch}

@@ -12,7 +12,7 @@ export const getTestResults = async (req: Request, res: Response): Promise<void>
     const sortOrder = order === 'desc' ? -1 : 1;
     const sortField = sortBy as string;
 
-    let query = TestResult.find();
+    let query = TestResult.find({ deletedAt: null });
 
     // Filter by training_uuid if provided
     if (training_uuid) {
@@ -65,18 +65,18 @@ export const getTestResults = async (req: Request, res: Response): Promise<void>
       query = query.skip(skip).limit(Number(limit));
 
       // Build count query based on filters
-      let countQuery = {};
+      let countQuery: any = { deletedAt: null };
       if (training_uuid) {
-        const training = await Training.findOne({ uuid: training_uuid as string });
+        const training = await Training.findOne({ uuid: training_uuid as string, deletedAt: null });
         if (training) {
           const trainingEpochs = await Epoch.find({ trainingId: training._id }, 'epoch_uuid');
           const trainingEpochUuids = trainingEpochs.map(e => e.epoch_uuid);
-          countQuery = { epoch_uuid: { $in: trainingEpochUuids } };
+          countQuery.epoch_uuid = { $in: trainingEpochUuids };
         }
       } else if (epoch !== undefined) {
-        countQuery = { epoch: Number(epoch) };
+        countQuery.epoch = Number(epoch);
       } else if (epoch_uuids) {
-        countQuery = { epoch_uuid: { $in: (epoch_uuids as string).split(',').map(uuid => uuid.trim()) } };
+        countQuery.epoch_uuid = { $in: (epoch_uuids as string).split(',').map(uuid => uuid.trim()) };
       }
 
       const [testResults, total] = await Promise.all([
@@ -84,10 +84,47 @@ export const getTestResults = async (req: Request, res: Response): Promise<void>
         TestResult.countDocuments(countQuery)
       ]);
 
+      // Get training information for the test results
+      const epochUuids = testResults.map(tr => tr.epoch_uuid);
+      const epochs = await Epoch.find({ epoch_uuid: { $in: epochUuids } });
+      const trainingIds = epochs.map(e => e.trainingId);
+      const trainings = await Training.find({ _id: { $in: trainingIds }, deletedAt: null });
+
+      // Create lookup maps
+      const epochMap = epochs.reduce((acc, epoch) => {
+        acc[epoch.epoch_uuid] = epoch;
+        return acc;
+      }, {} as Record<string, any>);
+
+      const trainingMap = trainings.reduce((acc, training) => {
+        acc[(training._id as any).toString()] = training;
+        return acc;
+      }, {} as Record<string, any>);
+
+      // Add training info to test results
+      const testResultsWithTraining = testResults.map(testResult => {
+        const epoch = epochMap[testResult.epoch_uuid];
+        const training = epoch ? trainingMap[epoch.trainingId.toString()] : null;
+
+        return {
+          ...testResult.toObject(),
+          training: training ? {
+            _id: training._id,
+            name: training.name,
+            uuid: training.uuid,
+            status: training.status
+          } : null,
+          epoch_info: epoch ? {
+            epoch: epoch.epoch,
+            epoch_time: epoch.epoch_time
+          } : null
+        };
+      });
+
       res.json({
         success: true,
         data: {
-          testResults,
+          testResults: testResultsWithTraining,
           pagination: {
             page: Number(page),
             limit: Number(limit),
@@ -100,10 +137,47 @@ export const getTestResults = async (req: Request, res: Response): Promise<void>
       // Return all test results without pagination
       const testResults = await query;
 
+      // Get training information for the test results
+      const epochUuids = testResults.map(tr => tr.epoch_uuid);
+      const epochs = await Epoch.find({ epoch_uuid: { $in: epochUuids } });
+      const trainingIds = epochs.map(e => e.trainingId);
+      const trainings = await Training.find({ _id: { $in: trainingIds }, deletedAt: null });
+
+      // Create lookup maps
+      const epochMap = epochs.reduce((acc, epoch) => {
+        acc[epoch.epoch_uuid] = epoch;
+        return acc;
+      }, {} as Record<string, any>);
+
+      const trainingMap = trainings.reduce((acc, training) => {
+        acc[(training._id as any).toString()] = training;
+        return acc;
+      }, {} as Record<string, any>);
+
+      // Add training info to test results
+      const testResultsWithTraining = testResults.map(testResult => {
+        const epoch = epochMap[testResult.epoch_uuid];
+        const training = epoch ? trainingMap[epoch.trainingId.toString()] : null;
+
+        return {
+          ...testResult.toObject(),
+          training: training ? {
+            _id: training._id,
+            name: training.name,
+            uuid: training.uuid,
+            status: training.status
+          } : null,
+          epoch_info: epoch ? {
+            epoch: epoch.epoch,
+            epoch_time: epoch.epoch_time
+          } : null
+        };
+      });
+
       res.json({
         success: true,
         data: {
-          testResults,
+          testResults: testResultsWithTraining,
           total: testResults.length
         }
       });
@@ -122,7 +196,7 @@ export const getTestResultById = async (req: Request, res: Response): Promise<vo
   try {
     const { id } = req.params;
 
-    const testResult = await TestResult.findById(id);
+    const testResult = await TestResult.findOne({ _id: id, deletedAt: null });
 
     if (!testResult) {
       res.status(404).json({
@@ -150,7 +224,7 @@ export const getTestResultByTestUuid = async (req: Request, res: Response): Prom
   try {
     const { testUuid } = req.params;
 
-    const testResult = await TestResult.findOne({ test_uuid: testUuid });
+    const testResult = await TestResult.findOne({ test_uuid: testUuid, deletedAt: null });
 
     if (!testResult) {
       res.status(404).json({
@@ -182,7 +256,7 @@ export const getTestResultsByEpochUuid = async (req: Request, res: Response): Pr
     const sortOrder = order === 'desc' ? -1 : 1;
     const sortField = sortBy as string;
 
-    let query = TestResult.find({ epoch_uuid: epochUuid }).sort({ [sortField]: sortOrder });
+    let query = TestResult.find({ epoch_uuid: epochUuid, deletedAt: null }).sort({ [sortField]: sortOrder });
 
     // If pagination is provided
     if (page && limit) {
@@ -191,13 +265,49 @@ export const getTestResultsByEpochUuid = async (req: Request, res: Response): Pr
 
       const [testResults, total] = await Promise.all([
         query,
-        TestResult.countDocuments({ epoch_uuid: epochUuid })
+        TestResult.countDocuments({ epoch_uuid: epochUuid, deletedAt: null })
       ]);
+
+      // Get training information for the test results
+      const epochs = await Epoch.find({ epoch_uuid: epochUuid });
+      const trainingIds = epochs.map(e => e.trainingId);
+      const trainings = await Training.find({ _id: { $in: trainingIds }, deletedAt: null });
+
+      // Create lookup maps
+      const epochMap = epochs.reduce((acc, epoch) => {
+        acc[epoch.epoch_uuid] = epoch;
+        return acc;
+      }, {} as Record<string, any>);
+
+      const trainingMap = trainings.reduce((acc, training) => {
+        acc[(training._id as any).toString()] = training;
+        return acc;
+      }, {} as Record<string, any>);
+
+      // Add training info to test results
+      const testResultsWithTraining = testResults.map(testResult => {
+        const epoch = epochMap[testResult.epoch_uuid];
+        const training = epoch ? trainingMap[epoch.trainingId.toString()] : null;
+
+        return {
+          ...testResult.toObject(),
+          training: training ? {
+            _id: training._id,
+            name: training.name,
+            uuid: training.uuid,
+            status: training.status
+          } : null,
+          epoch_info: epoch ? {
+            epoch: epoch.epoch,
+            epoch_time: epoch.epoch_time
+          } : null
+        };
+      });
 
       res.json({
         success: true,
         data: {
-          testResults,
+          testResults: testResultsWithTraining,
           pagination: {
             page: Number(page),
             limit: Number(limit),
@@ -210,10 +320,46 @@ export const getTestResultsByEpochUuid = async (req: Request, res: Response): Pr
       // Return all test results without pagination
       const testResults = await query;
 
+      // Get training information for the test results
+      const epochs = await Epoch.find({ epoch_uuid: epochUuid });
+      const trainingIds = epochs.map(e => e.trainingId);
+      const trainings = await Training.find({ _id: { $in: trainingIds }, deletedAt: null });
+
+      // Create lookup maps
+      const epochMap = epochs.reduce((acc, epoch) => {
+        acc[epoch.epoch_uuid] = epoch;
+        return acc;
+      }, {} as Record<string, any>);
+
+      const trainingMap = trainings.reduce((acc, training) => {
+        acc[(training._id as any).toString()] = training;
+        return acc;
+      }, {} as Record<string, any>);
+
+      // Add training info to test results
+      const testResultsWithTraining = testResults.map(testResult => {
+        const epoch = epochMap[testResult.epoch_uuid];
+        const training = epoch ? trainingMap[epoch.trainingId.toString()] : null;
+
+        return {
+          ...testResult.toObject(),
+          training: training ? {
+            _id: training._id,
+            name: training.name,
+            uuid: training.uuid,
+            status: training.status
+          } : null,
+          epoch_info: epoch ? {
+            epoch: epoch.epoch,
+            epoch_time: epoch.epoch_time
+          } : null
+        };
+      });
+
       res.json({
         success: true,
         data: {
-          testResults,
+          testResults: testResultsWithTraining,
           total: testResults.length
         }
       });
@@ -403,7 +549,7 @@ export const updateTestResult = async (req: Request, res: Response): Promise<voi
       test_results
     } = req.body;
 
-    const testResult = await TestResult.findById(id);
+    const testResult = await TestResult.findOne({ _id: id, deletedAt: null });
 
     if (!testResult) {
       res.status(404).json({
@@ -455,7 +601,7 @@ export const deleteTestResult = async (req: Request, res: Response): Promise<voi
   try {
     const { id } = req.params;
 
-    const testResult = await TestResult.findById(id);
+    const testResult = await TestResult.findOne({ _id: id, deletedAt: null });
 
     if (!testResult) {
       res.status(404).json({
@@ -465,7 +611,8 @@ export const deleteTestResult = async (req: Request, res: Response): Promise<voi
       return;
     }
 
-    await TestResult.findByIdAndDelete(id);
+    testResult.deletedAt = new Date();
+    await testResult.save();
 
     res.json({
       success: true,
@@ -522,13 +669,13 @@ export const compareTestResults = async (req: Request, res: Response): Promise<v
     }
 
     // Fetch test results
-    const testResults = await TestResult.find({ _id: { $in: testResultIds } });
+    const testResults = await TestResult.find({ _id: { $in: testResultIds }, deletedAt: null });
 
     // Get associated epochs and trainings for additional context
     const epochUuids = testResults.map(tr => tr.epoch_uuid);
     const epochs = await Epoch.find({ epoch_uuid: { $in: epochUuids } });
     const trainingIds = epochs.map(e => e.trainingId);
-    const trainings = await Training.find({ _id: { $in: trainingIds } });
+    const trainings = await Training.find({ _id: { $in: trainingIds }, deletedAt: null });
 
     // Create lookup maps
     const epochMap = epochs.reduce((acc, epoch) => {

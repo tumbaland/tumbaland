@@ -12,6 +12,7 @@ export interface IDataset extends Document {
   metadata?: any;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date;
 }
 
 const DatasetSchema: Schema = new Schema(
@@ -51,6 +52,9 @@ const DatasetSchema: Schema = new Schema(
     },
     metadata: {
       type: Schema.Types.Mixed
+    },
+    deletedAt: {
+      type: Date
     }
   },
   {

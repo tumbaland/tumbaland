@@ -17,7 +17,7 @@ export const getTrainings = async (req: Request, res: Response): Promise<void> =
       order = 'desc' 
     } = req.query;
 
-    let query: any = {};
+    let query: any = { deletedAt: null };
 
     // Search functionality
     if (search) {
@@ -207,7 +207,7 @@ export const getTrainingById = async (req: Request, res: Response): Promise<void
   try {
     const { id } = req.params;
 
-    const training = await Training.findById(id);
+    const training = await Training.findOne({ _id: id, deletedAt: null });
 
     if (!training) {
       res.status(404).json({
@@ -237,7 +237,7 @@ export const getTrainingByUuid = async (req: Request, res: Response): Promise<vo
   try {
     const { uuid } = req.params;
 
-    const training = await Training.findOne({ uuid });
+    const training = await Training.findOne({ uuid, deletedAt: null });
 
     if (!training) {
       res.status(404).json({
@@ -268,7 +268,7 @@ export const getTrainingWithEpochs = async (req: Request, res: Response): Promis
     const { id } = req.params;
     const { sortBy = 'epoch', order = 'asc' } = req.query;
 
-    const training = await Training.findById(id);
+    const training = await Training.findOne({ _id: id, deletedAt: null });
 
     if (!training) {
       res.status(404).json({
@@ -384,7 +384,7 @@ export const updateTraining = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    const training = await Training.findById(id);
+    const training = await Training.findOne({ _id: id, deletedAt: null });
 
     if (!training) {
       res.status(404).json({
@@ -437,7 +437,7 @@ export const deleteTraining = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    const training = await Training.findById(id);
+    const training = await Training.findOne({ _id: id, deletedAt: null });
 
     if (!training) {
       res.status(404).json({
@@ -447,15 +447,12 @@ export const deleteTraining = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Delete all associated epochs
-    await Epoch.deleteMany({ trainingId: id });
-
-    // Delete the training
-    await Training.findByIdAndDelete(id);
+    training.deletedAt = new Date();
+    await training.save();
 
     res.json({
       success: true,
-      message: 'Training and all associated epochs deleted successfully'
+      message: 'Training deleted successfully'
     });
   } catch (error) {
     console.error('Error deleting training:', error);
@@ -473,7 +470,7 @@ export const getTrainingStats = async (req: Request, res: Response): Promise<voi
   try {
     const { status, datasetId, tags } = req.query;
 
-    let query: any = {};
+    let query: any = { deletedAt: null };
 
     // Filter by status if provided
     if (status) {
@@ -580,7 +577,7 @@ export const compareTrainings = async (req: Request, res: Response): Promise<voi
     }
 
     // Fetch trainings and their epochs
-    const trainings = await Training.find({ _id: { $in: trainingIds } });
+    const trainings = await Training.find({ _id: { $in: trainingIds }, deletedAt: null });
     const epochs = await Epoch.find({ trainingId: { $in: trainingIds } })
       .sort({ trainingId: 1, epoch: 1 });
 

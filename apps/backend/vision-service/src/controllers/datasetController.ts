@@ -7,7 +7,7 @@ export const getDatasets = async (req: Request, res: Response): Promise<void> =>
   try {
     const { page = 1, limit = 10, search, sortBy = 'updatedAt', order = 'desc' } = req.query;
 
-    let query: any = {};
+    let query: any = { deletedAt: null };
 
     // Search functionality
     if (search) {
@@ -52,7 +52,7 @@ export const getDatasetById = async (req: Request, res: Response): Promise<void>
   try {
     const { id } = req.params;
 
-    const dataset = await Dataset.findById(id);
+    const dataset = await Dataset.findOne({ _id: id, deletedAt: null });
 
     if (!dataset) {
       res.status(404).json({
@@ -80,7 +80,7 @@ export const getDatasetByUuid = async (req: Request, res: Response): Promise<voi
   try {
     const { uuid } = req.params;
 
-    const dataset = await Dataset.findOne({ uuid });
+    const dataset = await Dataset.findOne({ uuid, deletedAt: null });
 
     if (!dataset) {
       res.status(404).json({
@@ -153,7 +153,7 @@ export const updateDataset = async (req: Request, res: Response): Promise<void> 
     const { id } = req.params;
     const { name, description, timestamp, dataset_info, annotations, camera, lidar, metadata } = req.body;
 
-    const dataset = await Dataset.findById(id);
+    const dataset = await Dataset.findOne({ _id: id, deletedAt: null });
 
     if (!dataset) {
       res.status(404).json({
@@ -194,7 +194,7 @@ export const deleteDataset = async (req: Request, res: Response): Promise<void> 
   try {
     const { id } = req.params;
 
-    const dataset = await Dataset.findById(id);
+    const dataset = await Dataset.findOne({ _id: id, deletedAt: null });
 
     if (!dataset) {
       res.status(404).json({
@@ -204,7 +204,8 @@ export const deleteDataset = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    await Dataset.findByIdAndDelete(id);
+    dataset.deletedAt = new Date();
+    await dataset.save();
 
     res.json({
       success: true,

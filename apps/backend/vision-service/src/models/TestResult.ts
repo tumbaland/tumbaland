@@ -18,6 +18,7 @@ export interface ITestResult extends Document {
   };
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date;
 }
 
 const TestResultSchema: Schema = new Schema(
@@ -46,6 +47,9 @@ const TestResultSchema: Schema = new Schema(
     test_results: {
       type: Schema.Types.Mixed,
       required: true
+    },
+    deletedAt: {
+      type: Date
     }
   },
   {

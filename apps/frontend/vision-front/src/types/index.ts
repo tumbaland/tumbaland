@@ -206,6 +206,16 @@ export interface TestResult {
   test_results: TestResultData;
   createdAt: string;
   updatedAt: string;
+  training?: {
+    _id: string;
+    name: string;
+    uuid: string;
+    status: string;
+  };
+  epoch_info?: {
+    epoch: number;
+    epoch_time: number;
+  };
 }
 
 export interface CreateTestResultData {
