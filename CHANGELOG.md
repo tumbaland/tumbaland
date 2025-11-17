@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.279](https://github.com/toomastahves/tumbaland/compare/v0.0.278...v0.0.279) (2025-11-17)
+
+
+### Features
+
+* make table compact ([36400e0](https://github.com/toomastahves/tumbaland/commit/36400e063c60be250b86643f4d9b9da38e3a0be8))
+
 ### [0.0.278](https://github.com/toomastahves/tumbaland/compare/v0.0.277...v0.0.278) (2025-11-17)
 
 
