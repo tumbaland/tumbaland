@@ -29,7 +29,7 @@ import {
   Compare as CompareIcon
 } from '@mui/icons-material';
 import { testResultService } from '../services/testResultService';
-import { TestResult, TestResultData } from '../types';
+import { TestResult, TestResultData, TestResultMetrics } from '../types';
 
 export const TestResultsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -108,13 +108,32 @@ export const TestResultsPage: React.FC = () => {
     return '-';
   };
 
-  const getAverageMetric = (conditionData: TestResultData[string], metric: keyof TestResultData[string][string]): number => {
-    const classes = Object.values(conditionData);
-    const sum = classes.reduce((acc, classData) => acc + classData[metric], 0);
-    return sum / classes.length;
+  const getAverageMetric = (conditionData: TestResultData[string], metric: keyof TestResultMetrics): number => {
+    const classNames: string[] = ['vehicle', 'sign', 'human', 'cyclist + pedestrian'];
+    const validClasses = classNames.filter(className => {
+      const classData = (conditionData as any)[className];
+      return classData && typeof classData === 'object' && metric in classData;
+    });
+
+    if (validClasses.length === 0) return 0;
+
+    const sum = validClasses.reduce((acc, className) => {
+      const classData = (conditionData as any)[className] as TestResultMetrics;
+      return acc + (classData[metric] || 0);
+    }, 0);
+
+    return sum / validClasses.length;
   };
 
-  const getOverallAverage = (testResults: TestResultData, metric: keyof TestResultData[string][string]): number => {
+  const getOverallAverageInferenceTime = (testResults: TestResultData): number => {
+    const conditions = Object.values(testResults);
+    const inferenceTimes = conditions.map(condition => condition.inference_time?.avg_per_sample_ms).filter(time => time !== undefined);
+    if (inferenceTimes.length === 0) return 0;
+    const sum = inferenceTimes.reduce((acc, time) => acc + time, 0);
+    return sum / inferenceTimes.length;
+  };
+
+  const getOverallAverage = (testResults: TestResultData, metric: keyof TestResultMetrics): number => {
     const conditions = Object.values(testResults);
     const sum = conditions.reduce((acc, condition) => acc + getAverageMetric(condition, metric), 0);
     return sum / conditions.length;
@@ -220,6 +239,9 @@ export const TestResultsPage: React.FC = () => {
                     <TableCell align="right">
                       <strong>Avg F1</strong>
                     </TableCell>
+                    <TableCell align="right">
+                      <strong>Avg Inference Time (ms)</strong>
+                    </TableCell>
                     <TableCell align="center">
                       <strong>Timestamp</strong>
                     </TableCell>
@@ -233,6 +255,7 @@ export const TestResultsPage: React.FC = () => {
                     const avgIou = getOverallAverage(testResult.test_results, 'iou');
                     const avgRecall = getOverallAverage(testResult.test_results, 'recall');
                     const avgF1 = getOverallAverage(testResult.test_results, 'f1_score');
+                    const avgInferenceTime = getOverallAverageInferenceTime(testResult.test_results);
 
                     return (
                       <TableRow 
@@ -256,6 +279,7 @@ export const TestResultsPage: React.FC = () => {
                         <TableCell align="right">{formatNumber(avgIou)}</TableCell>
                         <TableCell align="right">{formatNumber(avgRecall)}</TableCell>
                         <TableCell align="right">{formatNumber(avgF1)}</TableCell>
+                        <TableCell align="right">{formatNumber(avgInferenceTime, 2)}</TableCell>
                         <TableCell align="center" sx={{ fontSize: '0.875rem' }}>
                           {formatDate(testResult.timestamp)}
                         </TableCell>

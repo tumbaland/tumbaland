@@ -44,6 +44,12 @@ const ClassIoUOverEpochsChart: React.FC<ClassIoUOverEpochsChartProps> = ({ epoch
               label: 'Cyclist + Pedestrian IoU',
               color: '#f57c00',
               showMark: false
+            },
+            {
+              data: epochs.map(epoch => epoch.results?.val_standard?.human?.iou ?? null),
+              label: 'Human IoU',
+              color: '#388e3c',
+              showMark: false
             }
           ]}
           margin={{ top: 10, bottom: 40, left: 60, right: 10 }}

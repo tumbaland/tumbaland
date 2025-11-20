@@ -34,6 +34,7 @@ import TrainingEpochsTab from '../components/TrainingEpochsTab';
 import TrainingTestResultsTab from '../components/TrainingTestResultsTab';
 import TrainingConfigTab from '../components/TrainingConfigTab';
 import TrainingVisualizationsTab from '../components/TrainingVisualizationsTab';
+import TrainingSystemInfoTab from '../components/TrainingSystemInfoTab';
 import TrainingFormDialog from '../components/TrainingFormDialog';
 import { usePageTitle } from '../hooks/usePageTitle';
 
@@ -45,7 +46,7 @@ const TrainingDetailPage: React.FC = () => {
   const testResultFileInputRef = useRef<HTMLInputElement>(null);
 
   // Tab mapping
-  const tabNames = ['overview', 'epochs', 'test-results', 'visualizations', 'config'];
+  const tabNames = ['overview', 'epochs', 'test-results', 'visualizations', 'system-info', 'config'];
   const getTabIndex = (tabName: string) => tabNames.indexOf(tabName);
   const getTabName = (index: number) => tabNames[index] || 'overview';
 
@@ -545,9 +546,9 @@ const TrainingDetailPage: React.FC = () => {
     let latex = `\\begin{table*}[ht]
 \\centering
 \\caption{Performance comparison during various weather conditions.}
-\\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|}
-\\hline & \\multicolumn{3}{|c|}{IoU} & \\multicolumn{3}{|c|}{Precision} & \\multicolumn{3}{|c|}{Recall} \\\\
-\\hline & Vehicle & Sign & Cyclist+Ped & Vehicle & Sign & Cyclist+Ped & Vehicle & Sign & Cyclist+Ped \\\\
+\\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+\\hline & \\multicolumn{4}{|c|}{IoU} & \\multicolumn{4}{|c|}{Precision} & \\multicolumn{4}{|c|}{Recall} & \\multicolumn{3}{|c|}{Inference Time} \\\\
+\\hline & Vehicle & Sign & Cyclist+Ped & Human & Vehicle & Sign & Cyclist+Ped & Human & Vehicle & Sign & Cyclist+Ped & Human & Avg (ms) & FPS & Total (s) \\\\
 \\hline
 `;
 
@@ -558,10 +559,12 @@ const TrainingDetailPage: React.FC = () => {
       const vehicle = conditionData.vehicle;
       const sign = conditionData.sign;
       const cyclistPedestrian = conditionData['cyclist + pedestrian'];
+      const human = conditionData.human;
+      const inferenceTime = conditionData.inference_time;
 
-      latex += `\\multicolumn{10}{|c|}{${condition.label}} \\\\
+      latex += `\\multicolumn{15}{|c|}{${condition.label}} \\\\
 \\hline
-Camera & ${vehicle ? vehicle.iou.toFixed(4) : '-'} & ${sign ? sign.iou.toFixed(4) : '-'} & ${cyclistPedestrian ? cyclistPedestrian.iou.toFixed(4) : '-'} & ${vehicle ? vehicle.precision.toFixed(4) : '-'} & ${sign ? sign.precision.toFixed(4) : '-'} & ${cyclistPedestrian ? cyclistPedestrian.precision.toFixed(4) : '-'} & ${vehicle ? vehicle.recall.toFixed(4) : '-'} & ${sign ? sign.recall.toFixed(4) : '-'} & ${cyclistPedestrian ? cyclistPedestrian.recall.toFixed(4) : '-'} \\\\
+Camera & ${vehicle ? vehicle.iou.toFixed(4) : '-'} & ${sign ? sign.iou.toFixed(4) : '-'} & ${cyclistPedestrian ? cyclistPedestrian.iou.toFixed(4) : '-'} & ${human ? human.iou.toFixed(4) : '-'} & ${vehicle ? vehicle.precision.toFixed(4) : '-'} & ${sign ? sign.precision.toFixed(4) : '-'} & ${cyclistPedestrian ? cyclistPedestrian.precision.toFixed(4) : '-'} & ${human ? human.precision.toFixed(4) : '-'} & ${vehicle ? vehicle.recall.toFixed(4) : '-'} & ${sign ? sign.recall.toFixed(4) : '-'} & ${cyclistPedestrian ? cyclistPedestrian.recall.toFixed(4) : '-'} & ${human ? human.recall.toFixed(4) : '-'} & ${inferenceTime ? inferenceTime.avg_per_sample_ms.toFixed(2) : '-'} & ${inferenceTime ? inferenceTime.throughput_fps.toFixed(1) : '-'} & ${inferenceTime ? inferenceTime.total_seconds.toFixed(1) : '-'} \\\\
 \\hline
 `;
     });
@@ -633,6 +636,7 @@ Camera & ${vehicle ? vehicle.iou.toFixed(4) : '-'} & ${sign ? sign.iou.toFixed(4
           <Tab label="Epochs" />
           <Tab label="Test Results" />
           <Tab label="Visualizations" />
+          <Tab label="System Info" />
           <Tab label="Config" />
         </Tabs>
       </Paper>
@@ -695,8 +699,15 @@ Camera & ${vehicle ? vehicle.iou.toFixed(4) : '-'} & ${sign ? sign.iou.toFixed(4
         />
       )}
 
-      {/* Config Tab */}
+      {/* System Info Tab */}
       {detailTab === 4 && (
+        <TrainingSystemInfoTab
+          epochs={epochs}
+        />
+      )}
+
+      {/* Config Tab */}
+      {detailTab === 5 && (
         <TrainingConfigTab
           config={config}
           configLoading={configLoading}

@@ -46,6 +46,44 @@ export interface EpochResults {
   [key: string]: any;
 }
 
+// System Info Types
+export interface SystemInfo {
+  cpu: {
+    percent: number;
+    count: number;
+    physical_count: number;
+  };
+  memory: {
+    percent: number;
+    used: number;
+    total: number;
+  };
+  process: {
+    cpu_percent: number;
+    memory_gb: number;
+    threads: number;
+  };
+  gpu: {
+    utilization: number;
+    memory: {
+      used: number;
+      total: number;
+      reserved: number;
+    };
+    temperature: number;
+    power: {
+      current: number;
+      limit: number;
+    };
+    clocks: {
+      graphics_mhz: number;
+      memory_mhz: number;
+      video_mhz: number;
+    };
+    fan_speed_percent: number;
+  };
+}
+
 export interface Epoch {
   _id: string;
   trainingId: string;
@@ -56,6 +94,7 @@ export interface Epoch {
   results: EpochResults;
   learning_rate?: number;
   epoch_time?: number;
+  system_info?: SystemInfo;
   metadata?: Record<string, any>;
   createdAt: string;
   updatedAt: string;
@@ -182,11 +221,23 @@ export interface TestResultMetrics {
   average_precision: number;
 }
 
+export interface InferenceTimeMetrics {
+  total_seconds: number;
+  samples: number;
+  batches: number;
+  avg_per_sample_ms: number;
+  avg_per_batch_ms: number;
+  throughput_fps: number;
+}
+
 export interface TestResultCondition {
   pedestrian: TestResultMetrics;
   sign: TestResultMetrics;
   cyclist: TestResultMetrics;
-  [className: string]: TestResultMetrics;
+  vehicle: TestResultMetrics;
+  human: TestResultMetrics;
+  inference_time: InferenceTimeMetrics;
+  [className: string]: TestResultMetrics | InferenceTimeMetrics;
 }
 
 export interface TestResultData {

@@ -91,6 +91,14 @@ const TrainingTestResultsTab: React.FC<TrainingTestResultsTabProps> = ({
     return '-';
   };
 
+  // Check if Cyclist + Pedestrian data exists in any test result
+  const hasCyclistPedestrianData = testResults.some(testResult => {
+    return ['day_fair', 'day_rain', 'night_fair', 'night_rain'].some(condition => {
+      const conditionData = (testResult.test_results as any)[condition];
+      return conditionData && conditionData['cyclist + pedestrian'];
+    });
+  });
+
   return (
     <Paper>
       <Box p={3}>
@@ -219,20 +227,23 @@ const TrainingTestResultsTab: React.FC<TrainingTestResultsTabProps> = ({
                     <TableHead>
                       <TableRow sx={{ backgroundColor: '#f9f9f9' }}>
                         <TableCell rowSpan={2} sx={{ borderRight: '2px solid #ddd' }}><strong>Condition</strong></TableCell>
-                        <TableCell colSpan={3} align="center" sx={{ borderRight: '2px solid #ddd' }}><strong>IoU</strong></TableCell>
-                        <TableCell colSpan={3} align="center" sx={{ borderRight: '2px solid #ddd' }}><strong>Precision</strong></TableCell>
-                        <TableCell colSpan={3} align="center"><strong>Recall</strong></TableCell>
+                        <TableCell colSpan={4} align="center" sx={{ borderRight: '2px solid #ddd' }}><strong>IoU</strong></TableCell>
+                        <TableCell colSpan={hasCyclistPedestrianData ? 4 : 3} align="center" sx={{ borderRight: '2px solid #ddd' }}><strong>Precision</strong></TableCell>
+                        <TableCell colSpan={hasCyclistPedestrianData ? 4 : 3} align="center"><strong>Recall</strong></TableCell>
                       </TableRow>
                       <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
                         <TableCell align="center"><strong>Vehicle</strong></TableCell>
                         <TableCell align="center"><strong>Sign</strong></TableCell>
-                        <TableCell align="center" sx={{ borderRight: '2px solid #ddd' }}><strong>Cyclist + Pedestrian</strong></TableCell>
+                        {hasCyclistPedestrianData && <TableCell align="center"><strong>Cyclist + Pedestrian</strong></TableCell>}
+                        <TableCell align="center" sx={{ borderRight: '2px solid #ddd' }}><strong>Human</strong></TableCell>
                         <TableCell align="center"><strong>Vehicle</strong></TableCell>
                         <TableCell align="center"><strong>Sign</strong></TableCell>
-                        <TableCell align="center" sx={{ borderRight: '2px solid #ddd' }}><strong>Cyclist + Pedestrian</strong></TableCell>
+                        {hasCyclistPedestrianData && <TableCell align="center"><strong>Cyclist + Pedestrian</strong></TableCell>}
+                        <TableCell align="center" sx={{ borderRight: '2px solid #ddd' }}><strong>Human</strong></TableCell>
                         <TableCell align="center"><strong>Vehicle</strong></TableCell>
                         <TableCell align="center"><strong>Sign</strong></TableCell>
-                        <TableCell align="center"><strong>Cyclist + Pedestrian</strong></TableCell>
+                        {hasCyclistPedestrianData && <TableCell align="center"><strong>Cyclist + Pedestrian</strong></TableCell>}
+                        <TableCell align="center"><strong>Human</strong></TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -248,6 +259,7 @@ const TrainingTestResultsTab: React.FC<TrainingTestResultsTabProps> = ({
                         const vehicle = conditionData.vehicle;
                         const sign = conditionData.sign;
                         const cyclistPedestrian = conditionData['cyclist + pedestrian'];
+                        const human = conditionData.human;
 
                         return (
                           <TableRow key={condition.key}>
@@ -256,24 +268,74 @@ const TrainingTestResultsTab: React.FC<TrainingTestResultsTabProps> = ({
                             </TableCell>
                             <TableCell align="center">{vehicle ? formatNumber(vehicle.iou) : '-'}</TableCell>
                             <TableCell align="center">{sign ? formatNumber(sign.iou) : '-'}</TableCell>
-                            <TableCell align="center" sx={{ borderRight: '2px solid #ddd' }}>{cyclistPedestrian ? formatNumber(cyclistPedestrian.iou) : '-'}</TableCell>
+                            {hasCyclistPedestrianData && <TableCell align="center">{cyclistPedestrian ? formatNumber(cyclistPedestrian.iou) : '-'}</TableCell>}
+                            <TableCell align="center" sx={{ borderRight: '2px solid #ddd' }}>{human ? formatNumber(human.iou) : '-'}</TableCell>
                             <TableCell align="center">{vehicle ? formatNumber(vehicle.precision) : '-'}</TableCell>
                             <TableCell align="center">{sign ? formatNumber(sign.precision) : '-'}</TableCell>
-                            <TableCell align="center" sx={{ borderRight: '2px solid #ddd' }}>{cyclistPedestrian ? formatNumber(cyclistPedestrian.precision) : '-'}</TableCell>
+                            {hasCyclistPedestrianData && <TableCell align="center">{cyclistPedestrian ? formatNumber(cyclistPedestrian.precision) : '-'}</TableCell>}
+                            <TableCell align="center" sx={{ borderRight: '2px solid #ddd' }}>{human ? formatNumber(human.precision) : '-'}</TableCell>
                             <TableCell align="center">{vehicle ? formatNumber(vehicle.recall) : '-'}</TableCell>
                             <TableCell align="center">{sign ? formatNumber(sign.recall) : '-'}</TableCell>
-                            <TableCell align="center">{cyclistPedestrian ? formatNumber(cyclistPedestrian.recall) : '-'}</TableCell>
+                            {hasCyclistPedestrianData && <TableCell align="center">{cyclistPedestrian ? formatNumber(cyclistPedestrian.recall) : '-'}</TableCell>}
+                            <TableCell align="center">{human ? formatNumber(human.recall) : '-'}</TableCell>
                           </TableRow>
                         );
                       })}
                     </TableBody>
                   </Table>
                 </TableContainer>
+
+                {/* Inference Time Card */}
+                <Paper sx={{ p: 2, mb: 2 }}>
+                  <Typography variant="h6" gutterBottom>Inference Time Performance</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Model inference performance metrics across different weather conditions.
+                  </Typography>
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                          <TableCell><strong>Condition</strong></TableCell>
+                          <TableCell align="right"><strong>Avg per Sample (ms)</strong></TableCell>
+                          <TableCell align="right"><strong>Throughput (FPS)</strong></TableCell>
+                          <TableCell align="right"><strong>Total Time (s)</strong></TableCell>
+                          <TableCell align="right"><strong>Samples</strong></TableCell>
+                          <TableCell align="right"><strong>Batches</strong></TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {[
+                          { key: 'day_fair', label: 'Dry Day' },
+                          { key: 'day_rain', label: 'Rainy Day' },
+                          { key: 'night_fair', label: 'Dry Night' },
+                          { key: 'night_rain', label: 'Rainy Night' }
+                        ].map((condition) => {
+                          const conditionData = (testResult.test_results as any)[condition.key];
+                          if (!conditionData) return null;
+
+                          const inferenceTime = conditionData.inference_time;
+
+                          return (
+                            <TableRow key={condition.key}>
+                              <TableCell sx={{ fontWeight: 'bold' }}>
+                                {condition.label}
+                              </TableCell>
+                              <TableCell align="right">{inferenceTime ? formatNumber(inferenceTime.avg_per_sample_ms, 2) : '-'}</TableCell>
+                              <TableCell align="right">{inferenceTime ? formatNumber(inferenceTime.throughput_fps, 1) : '-'}</TableCell>
+                              <TableCell align="right">{inferenceTime ? formatNumber(inferenceTime.total_seconds, 1) : '-'}</TableCell>
+                              <TableCell align="right">{inferenceTime ? inferenceTime.samples : '-'}</TableCell>
+                              <TableCell align="right">{inferenceTime ? inferenceTime.batches : '-'}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Paper>
               </Box>
             ))}
           </Box>
         )}
-      </Box>
 
       {/* Upload Results Modal */}
       <Dialog open={uploadResultsOpen} onClose={() => onSetUploadResultsOpen(false)} maxWidth="md" fullWidth>
@@ -355,6 +417,7 @@ const TrainingTestResultsTab: React.FC<TrainingTestResultsTabProps> = ({
           <Button onClick={() => onSetLatexModalOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
+    </Box>
     </Paper>
   );
 };
