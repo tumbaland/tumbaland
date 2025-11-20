@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.283](https://github.com/toomastahves/tumbaland/compare/v0.0.282...v0.0.283) (2025-11-20)
+
+
+### Features
+
+* add modified iou chart ([f6643b8](https://github.com/toomastahves/tumbaland/commit/f6643b8e5bd9caad2fa4b8af9af7a1a9fca22710))
+
 ### [0.0.282](https://github.com/toomastahves/tumbaland/compare/v0.0.281...v0.0.282) (2025-11-20)
 
 
