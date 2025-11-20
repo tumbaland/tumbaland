@@ -238,24 +238,36 @@ export const getVisualizationsByTraining = async (req: Request, res: Response) =
       .skip(skip)
       .limit(Number(limit));
 
+    // If getting all visualizations, fetch all epochs at once for efficiency
+    let allEpochs: any[] = [];
+    if (epochUuids.length === 0 && visualizations.length > 0) {
+      const uniqueEpochUuids = [...new Set(visualizations.map(v => v.epoch_uuid))];
+      allEpochs = await Epoch.find({ epoch_uuid: { $in: uniqueEpochUuids } })
+        .select('epoch_uuid epoch training_uuid');
+    }
+
     // Generate signed URLs and add epoch info
     const visualizationsWithUrls = await Promise.all(
       visualizations.map(async (viz) => {
-        // Find epoch info if we have epochs loaded
+        // Find epoch info
         let epochNumber: number | undefined;
+        let trainingUuid: string | undefined;
+        
         if (epochs.length > 0) {
           const epoch = epochs.find(e => e.epoch_uuid === viz.epoch_uuid);
           epochNumber = epoch?.epoch;
-        } else if (epochUuids.length === 0) {
-          // If no training_uuid filter, fetch epoch info individually
-          const epoch = await Epoch.findOne({ epoch_uuid: viz.epoch_uuid }).select('epoch');
+          trainingUuid = epoch?.training_uuid;
+        } else if (allEpochs.length > 0) {
+          const epoch = allEpochs.find(e => e.epoch_uuid === viz.epoch_uuid);
           epochNumber = epoch?.epoch;
+          trainingUuid = epoch?.training_uuid;
         }
 
         const signedUrlData = await getSignedUrl(viz.minioFileId, 60);
         return {
           ...viz.toObject(),
           epoch: epochNumber,
+          training_uuid: trainingUuid,
           signedUrl: signedUrlData?.signedUrl,
           urlExpiresAt: signedUrlData?.expiresAt
         };

@@ -826,6 +826,10 @@ components:
           type: integer
           example: 10
           description: "Epoch number (populated when fetching)"
+        training_uuid:
+          type: string
+          example: "training-uuid-789"
+          description: "Training UUID (populated when fetching all visualizations)"
         createdAt:
           type: string
           format: date-time

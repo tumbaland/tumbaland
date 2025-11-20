@@ -16,148 +16,159 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   IconButton,
-  Tooltip,
-  Checkbox,
   Chip,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem
+  Collapse
 } from '@mui/material';
 import {
-  Delete as DeleteIcon,
-  Compare as CompareIcon,
-  Visibility as VisibilityIcon
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon
 } from '@mui/icons-material';
 import { visualizationService } from '../services/visualizationService';
-import { Visualization } from '../types';
+import { trainingService } from '../services/trainingService';
+import { Visualization, Training } from '../types';
 import { usePageTitle } from '../hooks/usePageTitle';
+
+interface TrainingWithVisualizations {
+  training: Training;
+  visualizations: Visualization[];
+  visualizationsByType: Map<string, Visualization[]>;
+}
 
 export const VisualizationsPage: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [visualizations, setVisualizations] = useState<Visualization[]>([]);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<Visualization | null>(null);
-  const [selectedVisualizations, setSelectedVisualizations] = useState<Set<string>>(new Set());
-  const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [types, setTypes] = useState<string[]>([]);
-  const [imageDialogOpen, setImageDialogOpen] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<Visualization | null>(null);
+  const [trainings, setTrainings] = useState<TrainingWithVisualizations[]>([]);
+  const [expandedTrainings, setExpandedTrainings] = useState<Set<string>>(new Set());
+  const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [selectedTrainings, setSelectedTrainings] = useState<Set<string>>(new Set());
+  const [compareMode, setCompareMode] = useState(false);
 
   usePageTitle('Visualizations - Vision');
 
   useEffect(() => {
-    loadVisualizations();
-    loadTypes();
-  }, [typeFilter]);
+    loadTrainingsWithVisualizations();
+  }, []);
 
-  const loadVisualizations = async () => {
+  const loadTrainingsWithVisualizations = async () => {
     try {
       setLoading(true);
       setError(null);
-      
-      // Get visualizations across all trainings
-      const response = await visualizationService.getVisualizationsByTraining(
-        '', // Empty training_uuid to get all
-        {
-          type: typeFilter !== 'all' ? typeFilter : undefined,
+
+      // Make two parallel requests instead of N+1 requests
+      const [trainingsResponse, visualizationsResponse] = await Promise.all([
+        trainingService.getTrainings({
+          page: 1,
           limit: 1000
-        }
-      );
+        }),
+        visualizationService.getVisualizationsByTraining(
+          '', // Empty to get all visualizations
+          {
+            limit: 10000
+          }
+        )
+      ]);
+
+      const allTrainings = trainingsResponse.data.trainings || [];
+      const allVisualizations = visualizationsResponse.data.visualizations || [];
+
+      // Group visualizations by training_uuid (from epoch data)
+      const visualizationsByTraining = new Map<string, Visualization[]>();
       
-      const visualizationsData = response.data.visualizations || [];
-      setVisualizations(visualizationsData);
+      // We need to get epoch data to link visualizations to trainings
+      // For now, let's group by the training info if available in the visualization
+      // If not, we'll need to fetch epoch data
+      allVisualizations.forEach(viz => {
+        // Try to find training from epoch_uuid
+        // Since we have the epoch data in the visualization response, we can use it
+        // Note: This requires backend to include training_uuid in the response
+        const trainingUuid = (viz as any).training_uuid || (viz as any).training?.uuid;
+        if (trainingUuid) {
+          const existing = visualizationsByTraining.get(trainingUuid) || [];
+          existing.push(viz);
+          visualizationsByTraining.set(trainingUuid, existing);
+        }
+      });
+
+      // Build trainings with visualizations
+      const trainingsWithViz: TrainingWithVisualizations[] = [];
+      
+      for (const training of allTrainings) {
+        const trainingUuid = training.uuid || training.training_uuid || '';
+        const visualizations = visualizationsByTraining.get(trainingUuid) || [];
+        
+        if (visualizations.length > 0) {
+          // Group visualizations by type
+          const visualizationsByType = new Map<string, Visualization[]>();
+          visualizations.forEach(viz => {
+            const existing = visualizationsByType.get(viz.type) || [];
+            existing.push(viz);
+            visualizationsByType.set(viz.type, existing);
+          });
+
+          trainingsWithViz.push({
+            training,
+            visualizations,
+            visualizationsByType
+          });
+        }
+      }
+
+      setTrainings(trainingsWithViz);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load visualizations');
+      setError(err instanceof Error ? err.message : 'Failed to load trainings and visualizations');
     } finally {
       setLoading(false);
     }
   };
 
-  const loadTypes = async () => {
-    try {
-      const response = await visualizationService.getVisualizationTypes({});
-      setTypes(response.data.types || []);
-    } catch (err) {
-      console.error('Failed to load visualization types:', err);
+
+
+  const toggleTraining = (trainingId: string) => {
+    const newExpanded = new Set(expandedTrainings);
+    if (newExpanded.has(trainingId)) {
+      newExpanded.delete(trainingId);
+    } else {
+      newExpanded.add(trainingId);
     }
-  };
-
-  const handleViewImage = (visualization: Visualization) => {
-    setSelectedImage(visualization);
-    setImageDialogOpen(true);
-  };
-
-  const handleDeleteClick = (visualization: Visualization) => {
-    setDeleteTarget(visualization);
-    setDeleteOpen(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!deleteTarget) return;
-
-    try {
-      setLoading(true);
-      await visualizationService.deleteVisualization(deleteTarget.visualization_uuid);
-      setSuccess('Visualization deleted successfully');
-      loadVisualizations();
-      loadTypes();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete visualization');
-    } finally {
-      setLoading(false);
-      setDeleteOpen(false);
-      setDeleteTarget(null);
-    }
+    setExpandedTrainings(newExpanded);
   };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
   };
 
-  const handleSelectVisualization = (visualizationId: string, checked: boolean) => {
-    const newSelected = new Set(selectedVisualizations);
-    if (checked) {
-      newSelected.add(visualizationId);
+  const handleToggleTrainingSelection = (trainingId: string) => {
+    const newSelected = new Set(selectedTrainings);
+    if (newSelected.has(trainingId)) {
+      newSelected.delete(trainingId);
     } else {
-      newSelected.delete(visualizationId);
+      newSelected.add(trainingId);
     }
-    setSelectedVisualizations(newSelected);
+    setSelectedTrainings(newSelected);
   };
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedVisualizations(new Set(visualizations.map(v => v.visualization_uuid)));
-    } else {
-      setSelectedVisualizations(new Set());
+  const handleCompareToggle = () => {
+    if (compareMode) {
+      setSelectedTrainings(new Set());
     }
+    setCompareMode(!compareMode);
   };
 
-  const handleCompare = () => {
-    if (selectedVisualizations.size < 2) {
-      setError('Please select at least 2 visualizations to compare');
+  const handleViewComparison = () => {
+    if (selectedTrainings.size < 2) {
+      setError('Please select at least 2 trainings to compare');
       return;
     }
-    if (selectedVisualizations.size > 4) {
-      setError('Maximum 4 visualizations can be compared at once');
-      return;
-    }
-    const ids = Array.from(selectedVisualizations);
-    navigate(`/visualizations/compare?ids=${ids.join(',')}`);
+    const ids = Array.from(selectedTrainings);
+    navigate(`/visualizations/compare-trainings?ids=${ids.join(',')}`);
   };
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       <Typography variant="h4" sx={{ mb: 4 }}>
-        Visualizations
+        Training Visualizations Comparison
       </Typography>
 
       {error && (
@@ -166,181 +177,228 @@ export const VisualizationsPage: React.FC = () => {
         </Alert>
       )}
 
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
-          {success}
-        </Alert>
-      )}
-
-      {/* Visualizations Table */}
-      <Card>
+      {/* Filter Controls */}
+      <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <FormControl size="small" sx={{ minWidth: 150 }}>
-                <InputLabel>Type Filter</InputLabel>
-                <Select
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
-                  label="Type Filter"
-                >
-                  <MenuItem value="all">All Types</MenuItem>
-                  {types.map(type => (
-                    <MenuItem key={type} value={type}>{type}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
+            <Typography variant="body2" color="text.secondary">
+              {compareMode 
+                ? 'Select trainings to compare visualizations' 
+                : 'Expand trainings to view and compare visualizations'}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              {compareMode && selectedTrainings.size > 0 && (
+                <>
+                  <Typography variant="body2" color="primary" fontWeight={600}>
+                    {selectedTrainings.size} selected
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    onClick={handleViewComparison}
+                    size="small"
+                    disabled={selectedTrainings.size < 2}
+                  >
+                    View Comparison
+                  </Button>
+                </>
+              )}
               <Button
-                variant="outlined"
-                startIcon={<CompareIcon />}
-                onClick={handleCompare}
-                disabled={selectedVisualizations.size < 2}
+                variant={compareMode ? 'outlined' : 'outlined'}
+                onClick={handleCompareToggle}
+                size="small"
               >
-                Compare Selected ({selectedVisualizations.size})
+                {compareMode ? 'Cancel' : 'Compare Trainings'}
               </Button>
             </Box>
           </Box>
-
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : visualizations.length === 0 ? (
-            <Typography color="textSecondary">
-              No visualizations found
-            </Typography>
-          ) : (
-            <TableContainer component={Paper}>
-              <Table>
-                <TableHead>
-                  <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                    <TableCell padding="checkbox">
-                      <Checkbox
-                        checked={selectedVisualizations.size === visualizations.length && visualizations.length > 0}
-                        indeterminate={selectedVisualizations.size > 0 && selectedVisualizations.size < visualizations.length}
-                        onChange={(e) => handleSelectAll(e.target.checked)}
-                      />
-                    </TableCell>
-                    <TableCell><strong>Filename</strong></TableCell>
-                    <TableCell><strong>Type</strong></TableCell>
-                    <TableCell><strong>Epoch</strong></TableCell>
-                    <TableCell align="center"><strong>Uploaded</strong></TableCell>
-                    <TableCell align="center"><strong>Actions</strong></TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {visualizations.map((visualization) => (
-                    <TableRow 
-                      key={visualization.visualization_uuid}
-                      hover 
-                      sx={{ cursor: 'pointer' }}
-                    >
-                      <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={selectedVisualizations.has(visualization.visualization_uuid)}
-                          onChange={(e) => handleSelectVisualization(visualization.visualization_uuid, e.target.checked)}
-                        />
-                      </TableCell>
-                      <TableCell onClick={() => handleViewImage(visualization)}>
-                        {visualization.filename}
-                      </TableCell>
-                      <TableCell>
-                        <Chip label={visualization.type} size="small" color="primary" variant="outlined" />
-                      </TableCell>
-                      <TableCell>
-                        {visualization.epoch !== undefined ? `Epoch ${visualization.epoch}` : '-'}
-                      </TableCell>
-                      <TableCell align="center" sx={{ fontSize: '0.875rem' }}>
-                        {formatDate(visualization.uploadedAt)}
-                      </TableCell>
-                      <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                        <Tooltip title="View Image">
-                          <IconButton size="small" onClick={() => handleViewImage(visualization)}>
-                            <VisibilityIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete">
-                          <IconButton size="small" onClick={() => handleDeleteClick(visualization)}>
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
         </CardContent>
       </Card>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteOpen} onClose={() => setDeleteOpen(false)}>
-        <DialogTitle>Delete Visualization</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to delete this visualization? This action cannot be undone.
-          </Typography>
-          {deleteTarget && (
-            <Typography variant="body2" sx={{ mt: 1, fontFamily: 'monospace' }}>
-              File: {deleteTarget.filename}
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+          <CircularProgress />
+        </Box>
+      ) : trainings.length === 0 ? (
+        <Card>
+          <CardContent>
+            <Typography color="textSecondary" align="center" sx={{ py: 4 }}>
+              No trainings with visualizations found
             </Typography>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteOpen(false)}>Cancel</Button>
-          <Button onClick={handleConfirmDelete} color="error" variant="contained">
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
+          </CardContent>
+        </Card>
+      ) : (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {trainings.map((trainingWithViz) => {
+            const isExpanded = expandedTrainings.has(trainingWithViz.training._id);
+            const isSelected = selectedTrainings.has(trainingWithViz.training._id);
+            const availableTypes = Array.from(trainingWithViz.visualizationsByType.keys());
 
-      {/* Image View Dialog */}
-      <Dialog open={imageDialogOpen} onClose={() => setImageDialogOpen(false)} maxWidth="lg" fullWidth>
-        <DialogTitle>
-          {selectedImage?.filename}
-          <IconButton
-            onClick={() => setImageDialogOpen(false)}
-            sx={{ position: 'absolute', right: 8, top: 8 }}
-          >
-            ✕
-          </IconButton>
-        </DialogTitle>
-        <DialogContent>
-          {selectedImage && (
-            <Box>
-              <Box
-                component="img"
-                src={selectedImage.signedUrl || ''}
-                alt={selectedImage.filename}
+            return (
+              <Card 
+                key={trainingWithViz.training._id}
                 sx={{
-                  width: '100%',
-                  height: 'auto',
-                  maxHeight: '70vh',
-                  objectFit: 'contain',
-                  bgcolor: 'grey.100'
+                  border: isSelected ? '2px solid' : '1px solid',
+                  borderColor: isSelected ? 'primary.main' : 'divider'
                 }}
-              />
-              <Box mt={2}>
-                <Typography variant="body2">
-                  <strong>Type:</strong> {selectedImage.type}
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Epoch:</strong> {selectedImage.epoch}
-                </Typography>
-                <Typography variant="body2">
-                  <strong>Uploaded:</strong> {formatDate(selectedImage.uploadedAt)}
-                </Typography>
-              </Box>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setImageDialogOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
+              >
+                <CardContent>
+                  {/* Training Header */}
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      p: 1,
+                      borderRadius: 1,
+                      mb: isExpanded ? 2 : 0
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      {compareMode && (
+                        <Chip
+                          label={isSelected ? '✓' : '○'}
+                          size="small"
+                          color={isSelected ? 'primary' : 'default'}
+                          onClick={() => handleToggleTrainingSelection(trainingWithViz.training._id)}
+                          sx={{ cursor: 'pointer', minWidth: '32px' }}
+                        />
+                      )}
+                      <IconButton 
+                        size="small" 
+                        onClick={() => !compareMode && toggleTraining(trainingWithViz.training._id)}
+                        disabled={compareMode}
+                      >
+                        {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                      </IconButton>
+                      <Box 
+                        sx={{ cursor: compareMode ? 'pointer' : 'default' }}
+                        onClick={() => compareMode && handleToggleTrainingSelection(trainingWithViz.training._id)}
+                      >
+                        <Typography variant="h6">
+                          {trainingWithViz.training.name}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {trainingWithViz.visualizations.length} visualizations across {availableTypes.length} types
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      {availableTypes.map(type => (
+                        <Chip key={type} label={type} size="small" variant="outlined" />
+                      ))}
+                    </Box>
+                  </Box>
+
+                  {/* Expanded Visualizations */}
+                  <Collapse in={isExpanded}>
+                    <Box>
+                      {/* Type Selector */}
+                      <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        {availableTypes.map(type => (
+                          <Button
+                            key={type}
+                            size="small"
+                            variant={selectedType === type ? 'contained' : 'outlined'}
+                            onClick={() => setSelectedType(selectedType === type ? null : type)}
+                          >
+                            {type}
+                          </Button>
+                        ))}
+                      </Box>
+
+                      {/* Visualization Grid - Side by Side */}
+                      {selectedType && trainingWithViz.visualizationsByType.get(selectedType) && (
+                        <Box>
+                          <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
+                            {selectedType} - Comparison View
+                          </Typography>
+                          <Box
+                            sx={{
+                              display: 'grid',
+                              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                              gap: 2
+                            }}
+                          >
+                            {trainingWithViz.visualizationsByType.get(selectedType)!
+                              .sort((a, b) => (a.epoch || 0) - (b.epoch || 0))
+                              .map((viz) => (
+                                <Card key={viz.visualization_uuid} variant="outlined">
+                                  <CardContent>
+                                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                                      Epoch {viz.epoch}
+                                    </Typography>
+                                    <Box
+                                      component="img"
+                                      src={viz.signedUrl || ''}
+                                      alt={viz.filename}
+                                      sx={{
+                                        width: '100%',
+                                        height: 'auto',
+                                        maxHeight: '400px',
+                                        objectFit: 'contain',
+                                        bgcolor: 'grey.100',
+                                        borderRadius: 1,
+                                        cursor: 'pointer'
+                                      }}
+                                      onClick={() => window.open(viz.signedUrl, '_blank')}
+                                    />
+                                    <Typography variant="caption" display="block" sx={{ mt: 1 }} color="text.secondary">
+                                      {viz.filename}
+                                    </Typography>
+                                    <Typography variant="caption" display="block" color="text.secondary">
+                                      {formatDate(viz.uploadedAt)}
+                                    </Typography>
+                                  </CardContent>
+                                </Card>
+                              ))}
+                          </Box>
+                        </Box>
+                      )}
+
+                      {/* Show all types overview when none selected */}
+                      {!selectedType && (
+                        <Box>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                            Select a visualization type above to view side-by-side comparison
+                          </Typography>
+                          <TableContainer component={Paper} variant="outlined">
+                            <Table size="small">
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell><strong>Type</strong></TableCell>
+                                  <TableCell><strong>Count</strong></TableCell>
+                                  <TableCell><strong>Epochs</strong></TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {availableTypes.map(type => {
+                                  const vizOfType = trainingWithViz.visualizationsByType.get(type)!;
+                                  const epochs = [...new Set(vizOfType.map(v => v.epoch))].sort((a, b) => (a || 0) - (b || 0));
+                                  return (
+                                    <TableRow key={type} hover>
+                                      <TableCell>
+                                        <Chip label={type} size="small" color="primary" variant="outlined" />
+                                      </TableCell>
+                                      <TableCell>{vizOfType.length}</TableCell>
+                                      <TableCell>
+                                        {epochs.map(e => `Epoch ${e}`).join(', ')}
+                                      </TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                              </TableBody>
+                            </Table>
+                          </TableContainer>
+                        </Box>
+                      )}
+                    </Box>
+                  </Collapse>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </Box>
+      )}
     </Container>
   );
 };

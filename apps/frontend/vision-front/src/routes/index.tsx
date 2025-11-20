@@ -12,6 +12,7 @@ import TestResultsPage from '../pages/TestResultsPage';
 import TestResultsComparisonPage from '../pages/TestResultsComparisonPage';
 import VisualizationsPage from '../pages/VisualizationsPage';
 import VisualizationsComparisonPage from '../pages/VisualizationsComparisonPage';
+import TrainingVisualizationsComparisonPage from '../pages/TrainingVisualizationsComparisonPage';
 
 function AppRoutes() {
   return (
@@ -31,6 +32,7 @@ function AppRoutes() {
       <Route path="/test-results/compare" element={<TestResultsComparisonPage />} />
       <Route path="/visualizations" element={<VisualizationsPage />} />
       <Route path="/visualizations/compare" element={<VisualizationsComparisonPage />} />
+      <Route path="/visualizations/compare-trainings" element={<TrainingVisualizationsComparisonPage />} />
     </Routes>
   );
 }
