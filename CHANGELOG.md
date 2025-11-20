@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.286](https://github.com/toomastahves/tumbaland/compare/v0.0.285...v0.0.286) (2025-11-20)
+
+
+### Features
+
+* add iou explanation ([fd395ec](https://github.com/toomastahves/tumbaland/commit/fd395ece80edf307bc261825e1c813f380aa0674))
+
 ### [0.0.285](https://github.com/toomastahves/tumbaland/compare/v0.0.284...v0.0.285) (2025-11-20)
 
 
