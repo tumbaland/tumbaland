@@ -137,7 +137,10 @@ const ClassIoUChart: React.FC<ClassIoUChartProps> = ({ epochs, trainingId }) => 
       {hasRegularData && (
         <Paper sx={{ p: 3, position: 'relative' }}>
           <Typography variant="h6" gutterBottom>
-            Modified IoU Over Epochs (Validation Data)
+            IoU Over Epochs (Validation Data)
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Per-class Intersection over Union (IoU) metrics tracked across training epochs. Background class is ignored and excluded from calculations.
           </Typography>
           <Box sx={{ width: '100%', height: 400 }}>
             <LineChart
@@ -162,6 +165,9 @@ const ClassIoUChart: React.FC<ClassIoUChartProps> = ({ epochs, trainingId }) => 
         <Paper sx={{ p: 3, position: 'relative' }}>
           <Typography variant="h6" gutterBottom>
             Class IoU Over Epochs (2D Validation Data)
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Per-class Intersection over Union (IoU) metrics for 2D projections tracked across training epochs. Background class is ignored and excluded from calculations.
           </Typography>
           <Box sx={{ width: '100%', height: 400 }}>
             <LineChart

@@ -26,8 +26,6 @@ const TrainingOverviewTab: React.FC<TrainingOverviewTabProps> = ({
   const lastEpoch = epochs[epochs.length - 1];
   const classMetrics = lastEpoch?.results?.metrics?.per_class || {};
   const epochNumbers = epochs.map(e => e.epoch);
-  const trainMeanIoU = epochs.map(e => e.results?.train?.mean_iou ?? null);
-  const valMeanIoU = epochs.map(e => e.results?.val?.mean_iou ?? null);
   const trainStandardIoU = epochs.map(e => e.results?.train_standard?.mean_iou ?? null);
   const valStandardIoU = epochs.map(e => e.results?.val_standard?.mean_iou ?? null);
 
@@ -37,21 +35,18 @@ const TrainingOverviewTab: React.FC<TrainingOverviewTabProps> = ({
       <TrainingOverviewCard training={training} epochs={epochs} />
 
       {/* Mean IoU Chart */}
-      {epochs.length > 0 && (trainMeanIoU.some(v => v !== undefined) || valMeanIoU.some(v => v !== undefined) || trainStandardIoU.some(v => v !== null) || valStandardIoU.some(v => v !== null)) && (
+      {epochs.length > 0 && (trainStandardIoU.some(v => v !== null) || valStandardIoU.some(v => v !== null)) && (
         <Paper sx={{ p: 3, position: 'relative' }}>
-          <Typography variant="h6" gutterBottom>Standard Training IoU and Modified IoU Over Epochs</Typography>
+          <Typography variant="h6" gutterBottom>Standard Training IoU Over Epochs</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Comparison of standard IoU (official evaluation protocol) and modified IoU (training metrics) over epochs.
-            Standard IoU uses the official evaluation method, while modified IoU may use different preprocessing or metrics.
+            Standard IoU metrics using the official evaluation protocol over training epochs.
           </Typography>
           <Box sx={{ width: '100%', height: 350 }}>
             <LineChart
               xAxis={[{ data: epochNumbers, label: 'Epoch' }]}
               series={[
-                { data: trainStandardIoU, label: 'Training Standard IoU', color: '#1976d2', showMark: false },
-                { data: valStandardIoU, label: 'Validation Standard IoU', color: '#2e7d32', showMark: false },
-                { data: trainMeanIoU, label: 'Training Modified IoU', color: '#d32f2f', showMark: false },
-                { data: valMeanIoU, label: 'Validation Modified IoU', color: '#f57c00', showMark: false }
+                { data: trainStandardIoU, label: 'Training IoU', color: '#1976d2', showMark: false },
+                { data: valStandardIoU, label: 'Validation IoU', color: '#2e7d32', showMark: false }
               ]}
               margin={{ top: 10, bottom: 40, left: 60, right: 10 }}
             />
