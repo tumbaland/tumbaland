@@ -1,4 +1,12 @@
 # Tumbalog
+### [0.0.287](https://github.com/toomastahves/tumbaland/compare/v0.0.286...v0.0.287) (2025-11-20)
+
+
+### Features
+
+* add system info and human class ([52bcf6b](https://github.com/toomastahves/tumbaland/commit/52bcf6be16e8f193c2f47b4cf1b524056db4df2f))
+* add sytstem info ([bebfe63](https://github.com/toomastahves/tumbaland/commit/bebfe6371fc35d3827b9e5709bf7243baa1f7c34))
+
 ### [0.0.286](https://github.com/toomastahves/tumbaland/compare/v0.0.285...v0.0.286) (2025-11-20)
 
 
