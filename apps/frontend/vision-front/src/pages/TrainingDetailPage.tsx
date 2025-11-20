@@ -33,6 +33,8 @@ import TrainingOverviewTab from '../components/TrainingOverviewTab';
 import TrainingEpochsTab from '../components/TrainingEpochsTab';
 import TrainingTestResultsTab from '../components/TrainingTestResultsTab';
 import TrainingConfigTab from '../components/TrainingConfigTab';
+import TrainingOtherMetricsTab from '../components/TrainingOtherMetricsTab';
+import TrainingHardwareTab from '../components/TrainingHardwareTab';
 import TrainingFormDialog from '../components/TrainingFormDialog';
 import { usePageTitle } from '../hooks/usePageTitle';
 
@@ -44,7 +46,7 @@ const TrainingDetailPage: React.FC = () => {
   const testResultFileInputRef = useRef<HTMLInputElement>(null);
 
   // Tab mapping
-  const tabNames = ['overview', 'epochs', 'test-results', 'config'];
+  const tabNames = ['overview', 'epochs', 'test-results', 'config', 'other-metrics', 'hardware'];
   const getTabIndex = (tabName: string) => tabNames.indexOf(tabName);
   const getTabName = (index: number) => tabNames[index] || 'overview';
 
@@ -632,6 +634,8 @@ Camera & ${vehicle ? vehicle.iou.toFixed(4) : '-'} & ${sign ? sign.iou.toFixed(4
           <Tab label="Epochs" />
           <Tab label="Test Results" />
           <Tab label="Config" />
+          <Tab label="Other Metrics" />
+          <Tab label="Hardware" />
         </Tabs>
       </Paper>
 
@@ -691,6 +695,20 @@ Camera & ${vehicle ? vehicle.iou.toFixed(4) : '-'} & ${sign ? sign.iou.toFixed(4
           config={config}
           configLoading={configLoading}
           training={training}
+        />
+      )}
+
+      {/* Other Metrics Tab */}
+      {detailTab === 4 && (
+        <TrainingOtherMetricsTab
+          epochs={epochs}
+        />
+      )}
+
+      {/* Hardware Tab */}
+      {detailTab === 5 && (
+        <TrainingHardwareTab
+          epochs={epochs}
         />
       )}
 
