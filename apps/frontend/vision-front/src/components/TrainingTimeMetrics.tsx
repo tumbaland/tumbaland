@@ -1,15 +1,24 @@
 import React from 'react';
 import { Paper, Typography, Box } from '@mui/material';
 import { BarChart, LineChart } from '@mui/x-charts';
-import { Epoch } from '../types';
+import { Epoch, Comment } from '../types';
 import ChartComments from './ChartComments';
 
 interface TrainingTimeMetricsProps {
   epochs: Epoch[];
   trainingId?: string;
+  comments?: Comment[];
+  commentsLoading?: boolean;
+  onCommentsRefetch?: () => void;
 }
 
-const TrainingTimeMetrics: React.FC<TrainingTimeMetricsProps> = ({ epochs, trainingId }) => {
+const TrainingTimeMetrics: React.FC<TrainingTimeMetricsProps> = ({ 
+  epochs, 
+  trainingId, 
+  comments, 
+  commentsLoading, 
+  onCommentsRefetch 
+}) => {
   if (epochs.length === 0) {
     return null;
   }
@@ -57,7 +66,15 @@ const TrainingTimeMetrics: React.FC<TrainingTimeMetricsProps> = ({ epochs, train
                 margin={{ top: 10, bottom: 40, left: 60, right: 10 }}
               />
             </Box>
-            {trainingId && <ChartComments trainingId={trainingId} section="time_per_epoch_chart" />}
+            {trainingId && (
+              <ChartComments 
+                trainingId={trainingId} 
+                section="time_per_epoch_chart" 
+                comments={comments}
+                commentsLoading={commentsLoading}
+                onCommentsRefetch={onCommentsRefetch}
+              />
+            )}
           </Paper>
 
           {/* Cumulative Time Chart */}
@@ -78,7 +95,15 @@ const TrainingTimeMetrics: React.FC<TrainingTimeMetricsProps> = ({ epochs, train
                 margin={{ top: 10, bottom: 40, left: 60, right: 10 }}
               />
             </Box>
-            {trainingId && <ChartComments trainingId={trainingId} section="cumulative_time_chart" />}
+            {trainingId && (
+              <ChartComments 
+                trainingId={trainingId} 
+                section="cumulative_time_chart" 
+                comments={comments}
+                commentsLoading={commentsLoading}
+                onCommentsRefetch={onCommentsRefetch}
+              />
+            )}
           </Paper>
         </Box>
       )}

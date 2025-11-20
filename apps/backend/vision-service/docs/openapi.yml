@@ -289,21 +289,194 @@ components:
         results:
           type: object
           description: "Epoch training results with metrics per phase and class"
-          example:
+          properties:
             train:
-              loss: 0.123
-              mean_iou: 0.85
-              vehicle:
-                iou: 0.90
-                precision: 0.92
-                recall: 0.88
+              type: object
+              properties:
+                loss:
+                  type: number
+                  example: 0.123
+                mean_iou:
+                  type: number
+                  example: 0.85
+                vehicle:
+                  type: object
+                  properties:
+                    iou:
+                      type: number
+                      example: 0.90
+                    precision:
+                      type: number
+                      example: 0.92
+                    recall:
+                      type: number
+                      example: 0.88
+                    f1:
+                      type: number
+                      example: 0.90
+                sign:
+                  type: object
+                  properties:
+                    iou:
+                      type: number
+                      example: 0.80
+                    precision:
+                      type: number
+                      example: 0.85
+                    recall:
+                      type: number
+                      example: 0.82
+                    f1:
+                      type: number
+                      example: 0.83
+                human:
+                  type: object
+                  properties:
+                    iou:
+                      type: number
+                      example: 0.75
+                    precision:
+                      type: number
+                      example: 0.80
+                    recall:
+                      type: number
+                      example: 0.78
+                    f1:
+                      type: number
+                      example: 0.79
+                loss:
+                  type: number
+                  example: 0.123
+                mean_iou:
+                  type: number
+                  example: 0.85
             val:
-              loss: 0.145
-              mean_iou: 0.82
-              vehicle:
-                iou: 0.87
-                precision: 0.89
-                recall: 0.85
+              type: object
+              properties:
+                loss:
+                  type: number
+                  example: 0.145
+                mean_iou:
+                  type: number
+                  example: 0.82
+                vehicle:
+                  type: object
+                  properties:
+                    iou:
+                      type: number
+                      example: 0.87
+                    precision:
+                      type: number
+                      example: 0.89
+                    recall:
+                      type: number
+                      example: 0.85
+                    f1:
+                      type: number
+                      example: 0.87
+                sign:
+                  type: object
+                  properties:
+                    iou:
+                      type: number
+                      example: 0.78
+                    precision:
+                      type: number
+                      example: 0.82
+                    recall:
+                      type: number
+                      example: 0.80
+                    f1:
+                      type: number
+                      example: 0.81
+                human:
+                  type: object
+                  properties:
+                    iou:
+                      type: number
+                      example: 0.72
+                    precision:
+                      type: number
+                      example: 0.75
+                    recall:
+                      type: number
+                      example: 0.78
+                    f1:
+                      type: number
+                      example: 0.76
+                loss:
+                  type: number
+                  example: 0.145
+                mean_iou:
+                  type: number
+                  example: 0.82
+            system_info:
+              type: object
+              description: "System information and hardware details"
+              properties:
+                cpu_percent:
+                  type: number
+                  example: 3.0
+                cpu_count:
+                  type: integer
+                  example: 20
+                cpu_count_physical:
+                  type: integer
+                  example: 14
+                memory_percent:
+                  type: number
+                  example: 68.8
+                memory_used_gb:
+                  type: number
+                  example: 21.41
+                memory_max_gb:
+                  type: number
+                  example: 31.11
+                process:
+                  type: object
+                  properties:
+                    cpu_percent:
+                      type: number
+                      example: 0.0
+                    memory_gb:
+                      type: number
+                      example: 3.6
+                    threads:
+                      type: integer
+                      example: 46
+                gpu:
+                  type: object
+                  properties:
+                    gpu_0:
+                      type: object
+                      properties:
+                        memory_used_gb:
+                          type: number
+                          example: 1.86
+                        memory_max_gb:
+                          type: number
+                          example: 15.44
+                        memory_reserved_gb:
+                          type: number
+                          example: 10.74
+                        memory_utilization_percent:
+                          type: number
+                          example: 12.07
+                        gpu_utilization_percent:
+                          type: number
+                          example: 10.0
+                        temperature_celsius:
+                          type: number
+                          example: 76.0
+                        power_watts:
+                          type: number
+                          example: 226.7
+                        power_limit_watts:
+                          type: number
+                          example: 300.0
+                        fan_speed_percent:
+                          type: number
+                          example: 91.0
         learning_rate:
           type: number
           example: 0.001
@@ -2200,6 +2373,59 @@ paths:
                   example: 0.001
                 metadata:
                   type: object
+                results:
+                  type: object
+                  description: "Epoch training results with metrics per phase and class"
+                  properties:
+                    train:
+                      type: object
+                      properties:
+                        loss:
+                          type: number
+                          example: 0.123
+                        mean_iou:
+                          type: number
+                          example: 0.85
+                    val:
+                      type: object
+                      properties:
+                        loss:
+                          type: number
+                          example: 0.145
+                        mean_iou:
+                          type: number
+                          example: 0.82
+                    system_info:
+                      type: object
+                      description: "System information and hardware details"
+                      properties:
+                        cpu_percent:
+                          type: number
+                          example: 3.0
+                        memory_percent:
+                          type: number
+                          example: 68.8
+                        gpu:
+                          type: object
+                          properties:
+                            gpu_0:
+                              type: object
+                              properties:
+                                memory_utilization_percent:
+                                  type: number
+                                  example: 12.07
+                                gpu_utilization_percent:
+                                  type: number
+                                  example: 10.0
+                                temperature_celsius:
+                                  type: number
+                                  example: 76.0
+                                power_watts:
+                                  type: number
+                                  example: 226.7
+                                fan_speed_percent:
+                                  type: number
+                                  example: 91.0
       responses:
         '200':
           description: Epoch updated successfully
@@ -2324,6 +2550,16 @@ paths:
                     val:
                       loss: 0.145
                       mean_iou: 0.82
+                    system_info:
+                      cpu_percent: 3.0
+                      memory_percent: 68.8
+                      gpu:
+                        gpu_0:
+                          memory_utilization_percent: 12.07
+                          gpu_utilization_percent: 10.0
+                          temperature_celsius: 76.0
+                          power_watts: 226.7
+                          fan_speed_percent: 91.0
                 learning_rate:
                   type: number
                   example: 0.001
@@ -2417,6 +2653,12 @@ paths:
                         type: integer
                       metrics:
                         type: object
+                      results:
+                        type: object
+                        properties:
+                          system_info:
+                            type: object
+                            description: "System information and hardware details"
                       loss:
                         type: number
                       accuracy:

@@ -20,23 +20,33 @@ interface ChartCommentsProps {
   trainingId: string;
   section: string; // e.g., 'iou_chart', 'loss_chart', 'precision_chart', etc.
   position?: 'top-right' | 'bottom-right' | 'inline';
+  comments?: Comment[]; // Optional: pass comments directly to avoid multiple requests
+  commentsLoading?: boolean; // Optional: loading state for comments
+  onCommentsRefetch?: () => void; // Optional: callback to refetch comments
 }
 
 const ChartComments: React.FC<ChartCommentsProps> = ({
   trainingId,
   section,
-  position = 'top-right'
+  position = 'top-right',
+  comments: passedComments,
+  commentsLoading: passedCommentsLoading,
+  onCommentsRefetch
 }) => {
   const [showComments, setShowComments] = useState(false);
   const [showAddComment, setShowAddComment] = useState(false);
 
+  // Use passed comments if available, otherwise fetch them
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['comments', trainingId, section],
     queryFn: () => commentService.getCommentsByTraining(trainingId, section),
-    enabled: !!trainingId
+    enabled: !!trainingId && !passedComments // Only fetch if comments not passed
   });
 
-  const comments = data?.data?.comments || [];
+  // Use passed comments or fetched comments
+  const allComments = passedComments || data?.data?.comments || [];
+  const sectionComments = allComments.filter(comment => comment.section === section);
+  const isLoadingComments = passedCommentsLoading !== undefined ? passedCommentsLoading : isLoading;
   
   // Recursively count all comments including replies
   const countTotalComments = (comments: any[]): number => {
@@ -49,12 +59,16 @@ const ChartComments: React.FC<ChartCommentsProps> = ({
     }, 0);
   };
   
-  const commentCount = countTotalComments(comments);
+  const commentCount = countTotalComments(sectionComments);
 
   const handleCommentAdded = () => {
     // Refetch the comments query after a short delay to ensure DB write is complete
     setTimeout(() => {
-      refetch();
+      if (onCommentsRefetch) {
+        onCommentsRefetch();
+      } else {
+        refetch();
+      }
     }, 500);
     // Hide the add comment form after adding a comment
     setShowAddComment(false);
@@ -62,7 +76,11 @@ const ChartComments: React.FC<ChartCommentsProps> = ({
 
   const handleCommentUpdated = () => {
     // Refetch the comments query
-    refetch();
+    if (onCommentsRefetch) {
+      onCommentsRefetch();
+    } else {
+      refetch();
+    }
   };
 
   const handleOpenComments = () => {
@@ -149,7 +167,7 @@ const ChartComments: React.FC<ChartCommentsProps> = ({
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           {/* Comments List */}
           <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
-            {isLoading ? (
+            {isLoadingComments ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                 <CircularProgress />
               </Box>
@@ -157,7 +175,7 @@ const ChartComments: React.FC<ChartCommentsProps> = ({
               <Alert severity="error">
                 {error instanceof Error ? error.message : 'Failed to load comments'}
               </Alert>
-            ) : comments.length === 0 ? (
+            ) : sectionComments.length === 0 ? (
               <Box sx={{ textAlign: 'center', py: 4 }}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                   No comments yet. Be the first to comment on this chart.
@@ -174,7 +192,7 @@ const ChartComments: React.FC<ChartCommentsProps> = ({
               </Box>
             ) : (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {comments.map((comment: Comment) => (
+                {sectionComments.map((comment: Comment) => (
                   <CommentItem
                     key={comment._id}
                     comment={comment}
@@ -200,7 +218,7 @@ const ChartComments: React.FC<ChartCommentsProps> = ({
           )}
 
           {/* Add Comment Toggle Button */}
-          {!showAddComment && comments.length > 0 && (
+          {!showAddComment && sectionComments.length > 0 && (
             <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
               <Button
                 fullWidth

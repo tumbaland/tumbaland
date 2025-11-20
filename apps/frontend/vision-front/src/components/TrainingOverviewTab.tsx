@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Paper, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import { LineChart } from '@mui/x-charts';
-import { Training, Epoch } from '../types';
+import { Training, Epoch, Comment } from '../types';
 import ClassIoUChart from '../components/ClassIoUChart';
 import TrainingTimeMetrics from '../components/TrainingTimeMetrics';
 import TrainingOverviewCard from '../components/TrainingOverviewCard';
@@ -15,12 +15,18 @@ interface TrainingOverviewTabProps {
   training: Training;
   epochs: Epoch[];
   trainingId: string;
+  comments: Comment[];
+  commentsLoading: boolean;
+  onCommentsRefetch?: () => void;
 }
 
 const TrainingOverviewTab: React.FC<TrainingOverviewTabProps> = ({
   training,
   epochs,
-  trainingId
+  trainingId,
+  comments,
+  commentsLoading,
+  onCommentsRefetch
 }) => {
   // Calculate chart data
   const lastEpoch = epochs[epochs.length - 1];
@@ -51,28 +57,70 @@ const TrainingOverviewTab: React.FC<TrainingOverviewTabProps> = ({
               margin={{ top: 10, bottom: 40, left: 60, right: 10 }}
             />
           </Box>
-          <ChartComments trainingId={trainingId} section="combined_iou_chart" />
+          <ChartComments 
+            trainingId={trainingId} 
+            section="combined_iou_chart" 
+            comments={comments}
+            commentsLoading={commentsLoading}
+            onCommentsRefetch={onCommentsRefetch}
+          />
         </Paper>
       )}
 
       {/* Training Time Metrics */}
-      <TrainingTimeMetrics epochs={epochs} trainingId={trainingId} />
+      <TrainingTimeMetrics 
+        epochs={epochs} 
+        trainingId={trainingId} 
+        comments={comments}
+        commentsLoading={commentsLoading}
+        onCommentsRefetch={onCommentsRefetch}
+      />
 
       {/* Class IoU Chart */}
-      <ClassIoUChart epochs={epochs} trainingId={trainingId} />
+      <ClassIoUChart 
+        epochs={epochs} 
+        trainingId={trainingId} 
+        comments={comments}
+        commentsLoading={commentsLoading}
+        onCommentsRefetch={onCommentsRefetch}
+      />
 
 
       {/* Class IoU Over Epochs Chart */}
-      <ClassIoUOverEpochsChart epochs={epochs} trainingId={trainingId} />
+      <ClassIoUOverEpochsChart 
+        epochs={epochs} 
+        trainingId={trainingId} 
+        comments={comments}
+        commentsLoading={commentsLoading}
+        onCommentsRefetch={onCommentsRefetch}
+      />
 
       {/* Class Precision Chart */}
-      <ClassPrecisionChart epochs={epochs} trainingId={trainingId} />
+      <ClassPrecisionChart 
+        epochs={epochs} 
+        trainingId={trainingId} 
+        comments={comments}
+        commentsLoading={commentsLoading}
+        onCommentsRefetch={onCommentsRefetch}
+      />
 
       {/* Class Recall Chart */}
-      <ClassRecallChart epochs={epochs} trainingId={trainingId} />
+      <ClassRecallChart 
+        epochs={epochs} 
+        trainingId={trainingId} 
+        comments={comments}
+        commentsLoading={commentsLoading}
+        onCommentsRefetch={onCommentsRefetch}
+      />
 
       {/* Class F1 Chart */}
-      <ClassF1Chart epochs={epochs} trainingId={trainingId} />
+      <ClassF1Chart 
+        epochs={epochs} 
+        trainingId={trainingId} 
+        comments={comments}
+        commentsLoading={commentsLoading}
+        onCommentsRefetch={onCommentsRefetch}
+      />
 
       {/* Per-Class Metrics Table */}
       {Object.keys(classMetrics).length > 0 && (

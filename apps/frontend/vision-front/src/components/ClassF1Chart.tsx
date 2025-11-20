@@ -1,15 +1,24 @@
 import React from 'react';
 import { Paper, Typography, Box } from '@mui/material';
 import { LineChart } from '@mui/x-charts';
-import { Epoch } from '../types';
+import { Epoch, Comment } from '../types';
 import ChartComments from './ChartComments';
 
 interface ClassF1ChartProps {
   epochs: Epoch[];
   trainingId?: string;
+  comments?: Comment[];
+  commentsLoading?: boolean;
+  onCommentsRefetch?: () => void;
 }
 
-const ClassF1Chart: React.FC<ClassF1ChartProps> = ({ epochs, trainingId }) => {
+const ClassF1Chart: React.FC<ClassF1ChartProps> = ({ 
+  epochs, 
+  trainingId, 
+  comments, 
+  commentsLoading, 
+  onCommentsRefetch 
+}) => {
   if (epochs.length === 0) {
     return null;
   }
@@ -156,7 +165,15 @@ const ClassF1Chart: React.FC<ClassF1ChartProps> = ({ epochs, trainingId }) => {
               }}
             />
           </Box>
-          {trainingId && <ChartComments trainingId={trainingId} section="class_f1_chart" />}
+          {trainingId && (
+            <ChartComments 
+              trainingId={trainingId} 
+              section="class_f1_chart" 
+              comments={comments}
+              commentsLoading={commentsLoading}
+              onCommentsRefetch={onCommentsRefetch}
+            />
+          )}
         </Paper>
       )}
 
@@ -180,7 +197,15 @@ const ClassF1Chart: React.FC<ClassF1ChartProps> = ({ epochs, trainingId }) => {
               }}
             />
           </Box>
-          {trainingId && <ChartComments trainingId={trainingId} section="class_f1_2d_chart" />}
+          {trainingId && (
+            <ChartComments 
+              trainingId={trainingId} 
+              section="class_f1_2d_chart" 
+              comments={comments}
+              commentsLoading={commentsLoading}
+              onCommentsRefetch={onCommentsRefetch}
+            />
+          )}
         </Paper>
       )}
     </Box>

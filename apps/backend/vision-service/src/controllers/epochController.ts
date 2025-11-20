@@ -134,6 +134,7 @@ export const createEpoch = async (req: Request, res: Response): Promise<void> =>
       results,
       learning_rate,
       epoch_time,
+      system_info,
       metadata
     } = req.body;
 
@@ -191,6 +192,7 @@ export const createEpoch = async (req: Request, res: Response): Promise<void> =>
       results,
       learning_rate,
       epoch_time,
+      system_info,
       metadata
     });
 

@@ -27,8 +27,9 @@ import { trainingService } from '../services/trainingService';
 import { epochService } from '../services/epochService';
 import { configService } from '../services/configService';
 import { testResultService } from '../services/testResultService';
+import { commentService } from '../services/commentService';
 import { getAllAnalyses, type DatasetAnalysis } from '../services/analysisService';
-import { Epoch, TestResult, Config, Training } from '../types';
+import { Epoch, TestResult, Config, Training, Comment } from '../types';
 import TrainingOverviewTab from '../components/TrainingOverviewTab';
 import TrainingEpochsTab from '../components/TrainingEpochsTab';
 import TrainingTestResultsTab from '../components/TrainingTestResultsTab';
@@ -85,6 +86,8 @@ const TrainingDetailPage: React.FC = () => {
   const [availableTestEpochs, setAvailableTestEpochs] = useState<number[]>([]);
   const [latexModalOpen, setLatexModalOpen] = useState(false);
   const [latexCode, setLatexCode] = useState('');
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['training', id],
@@ -193,6 +196,50 @@ const TrainingDetailPage: React.FC = () => {
       setTestResults([]);
     }
   }, [selectedTestEpoch, testResultsMap]);
+
+  // Load comments data
+  React.useEffect(() => {
+    const fetchCommentsData = async () => {
+      if (!training) {
+        console.log('No training, skipping comments load');
+        return;
+      }
+
+      try {
+        setCommentsLoading(true);
+        console.log('Fetching comments data for training:', training._id);
+
+        // Get all comments for this training
+        const commentsResponse = await commentService.getCommentsByTraining(training._id, undefined, { limit: 1000 });
+        const trainingComments = commentsResponse.data.comments || [];
+
+        setComments(trainingComments);
+      } catch (err) {
+        console.error('Failed to fetch comments data:', err);
+        setComments([]);
+      } finally {
+        setCommentsLoading(false);
+      }
+    };
+
+    fetchCommentsData();
+  }, [training]);
+
+  // Function to refetch comments
+  const handleCommentsRefetch = async () => {
+    if (!training) return;
+
+    try {
+      setCommentsLoading(true);
+      const commentsResponse = await commentService.getCommentsByTraining(training._id, undefined, { limit: 1000 });
+      const trainingComments = commentsResponse.data.comments || [];
+      setComments(trainingComments);
+    } catch (err) {
+      console.error('Failed to refetch comments:', err);
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
 
   // Handle tab change with URL update
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -647,6 +694,9 @@ Camera & ${vehicle ? vehicle.iou.toFixed(4) : '-'} & ${sign ? sign.iou.toFixed(4
           training={training}
           epochs={epochs}
           trainingId={id!}
+          comments={comments}
+          commentsLoading={commentsLoading}
+          onCommentsRefetch={handleCommentsRefetch}
         />
       )}
 

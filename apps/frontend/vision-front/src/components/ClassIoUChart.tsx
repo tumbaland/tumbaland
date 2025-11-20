@@ -1,15 +1,24 @@
 import React from 'react';
 import { Paper, Typography, Box } from '@mui/material';
 import { LineChart } from '@mui/x-charts';
-import { Epoch } from '../types';
+import { Epoch, Comment } from '../types';
 import ChartComments from './ChartComments';
 
 interface ClassIoUChartProps {
   epochs: Epoch[];
   trainingId?: string;
+  comments?: Comment[];
+  commentsLoading?: boolean;
+  onCommentsRefetch?: () => void;
 }
 
-const ClassIoUChart: React.FC<ClassIoUChartProps> = ({ epochs, trainingId }) => {
+const ClassIoUChart: React.FC<ClassIoUChartProps> = ({ 
+  epochs, 
+  trainingId, 
+  comments, 
+  commentsLoading, 
+  onCommentsRefetch 
+}) => {
   if (epochs.length === 0) {
     return null;
   }
@@ -156,7 +165,15 @@ const ClassIoUChart: React.FC<ClassIoUChartProps> = ({ epochs, trainingId }) => 
               }}
             />
           </Box>
-          {trainingId && <ChartComments trainingId={trainingId} section="class_iou_chart" />}
+          {trainingId && (
+            <ChartComments 
+              trainingId={trainingId} 
+              section="class_iou_chart" 
+              comments={comments}
+              commentsLoading={commentsLoading}
+              onCommentsRefetch={onCommentsRefetch}
+            />
+          )}
         </Paper>
       )}
 
@@ -183,7 +200,15 @@ const ClassIoUChart: React.FC<ClassIoUChartProps> = ({ epochs, trainingId }) => 
               }}
             />
           </Box>
-          {trainingId && <ChartComments trainingId={trainingId} section="class_iou_2d_chart" />}
+          {trainingId && (
+            <ChartComments 
+              trainingId={trainingId} 
+              section="class_iou_2d_chart" 
+              comments={comments}
+              commentsLoading={commentsLoading}
+              onCommentsRefetch={onCommentsRefetch}
+            />
+          )}
         </Paper>
       )}
     </Box>

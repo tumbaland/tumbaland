@@ -15,7 +15,7 @@ interface TrainingSystemInfoTabProps {
 
 const TrainingSystemInfoTab: React.FC<TrainingSystemInfoTabProps> = ({ epochs }) => {
   // Filter epochs that have system_info
-  const epochsWithSystemInfo = epochs.filter(epoch => epoch.system_info);
+  const epochsWithSystemInfo = epochs.filter(epoch => epoch.results?.system_info);
 
   if (epochsWithSystemInfo.length === 0) {
     return (
@@ -28,14 +28,16 @@ const TrainingSystemInfoTab: React.FC<TrainingSystemInfoTabProps> = ({ epochs })
   // Prepare data for charts
   const chartData = epochsWithSystemInfo.map(epoch => ({
     epoch: epoch.epoch,
-    cpuPercent: epoch.system_info?.cpu?.percent || 0,
-    memoryPercent: epoch.system_info?.memory?.percent || 0,
-    gpuUtilization: epoch.system_info?.gpu?.utilization || 0,
-    gpuMemoryUsed: epoch.system_info?.gpu?.memory?.used || 0,
-    gpuMemoryTotal: epoch.system_info?.gpu?.memory?.total || 0,
-    gpuTemperature: epoch.system_info?.gpu?.temperature || 0,
-    gpuPower: epoch.system_info?.gpu?.power?.current || 0,
-    gpuPowerLimit: epoch.system_info?.gpu?.power?.limit || 0,
+    memoryUsedGb: epoch.results?.system_info?.memory_used_gb || 0,
+    memoryMaxGb: epoch.results?.system_info?.memory_max_gb || 0,
+    gpuMemoryUsedGb: epoch.results?.system_info?.gpu?.gpu_0?.memory_used_gb || 0,
+    gpuMemoryMaxGb: epoch.results?.system_info?.gpu?.gpu_0?.memory_max_gb || 0,
+    gpuMemoryReservedGb: epoch.results?.system_info?.gpu?.gpu_0?.memory_reserved_gb || 0,
+    gpuTemperature: epoch.results?.system_info?.gpu?.gpu_0?.temperature_celsius || 0,
+    gpuPower: epoch.results?.system_info?.gpu?.gpu_0?.power_watts || 0,
+    gpuPowerLimit: epoch.results?.system_info?.gpu?.gpu_0?.power_limit_watts || 0,
+    gpuMemoryUtilization: epoch.results?.system_info?.gpu?.gpu_0?.memory_utilization_percent || 0,
+    gpuFanSpeed: epoch.results?.system_info?.gpu?.gpu_0?.fan_speed_percent || 0,
   }));
 
   const epochNumbers = chartData.map(d => d.epoch);
@@ -50,66 +52,27 @@ const TrainingSystemInfoTab: React.FC<TrainingSystemInfoTabProps> = ({ epochs })
       </Typography>
 
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', gap: 3 }}>
-        {/* CPU Usage */}
+        {/* Memory Usage GB */}
         <Box>
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                CPU Usage (%)
+                Memory Usage (GB)
               </Typography>
               <LineChart
                 xAxis={[{ data: epochNumbers, label: 'Epoch' }]}
                 series={[
                   {
-                    data: chartData.map(d => d.cpuPercent),
-                    label: 'CPU %',
-                    color: '#1976d2',
+                    data: chartData.map(d => d.memoryUsedGb),
+                    label: 'Used (GB)',
+                    color: '#4caf50',
+                    showMark: false
                   },
-                ]}
-                height={300}
-                margin={{ left: 70, right: 30, top: 30, bottom: 50 }}
-              />
-            </CardContent>
-          </Card>
-        </Box>
-
-        {/* Memory Usage */}
-        <Box>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Memory Usage (%)
-              </Typography>
-              <LineChart
-                xAxis={[{ data: epochNumbers, label: 'Epoch' }]}
-                series={[
                   {
-                    data: chartData.map(d => d.memoryPercent),
-                    label: 'Memory %',
-                    color: '#2e7d32',
-                  },
-                ]}
-                height={300}
-                margin={{ left: 70, right: 30, top: 30, bottom: 50 }}
-              />
-            </CardContent>
-          </Card>
-        </Box>
-
-        {/* GPU Utilization */}
-        <Box>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                GPU Utilization (%)
-              </Typography>
-              <LineChart
-                xAxis={[{ data: epochNumbers, label: 'Epoch' }]}
-                series={[
-                  {
-                    data: chartData.map(d => d.gpuUtilization),
-                    label: 'GPU %',
-                    color: '#ed6c02',
+                    data: chartData.map(d => d.memoryMaxGb),
+                    label: 'Max (GB)',
+                    color: '#81c784',
+                    showMark: false
                   },
                 ]}
                 height={300}
@@ -130,37 +93,22 @@ const TrainingSystemInfoTab: React.FC<TrainingSystemInfoTabProps> = ({ epochs })
                 xAxis={[{ data: epochNumbers, label: 'Epoch' }]}
                 series={[
                   {
-                    data: chartData.map(d => d.gpuMemoryUsed / (1024**3)), // Convert to GB
+                    data: chartData.map(d => d.gpuMemoryUsedGb),
                     label: 'Used (GB)',
                     color: '#9c27b0',
+                    showMark: false
                   },
                   {
-                    data: chartData.map(d => d.gpuMemoryTotal / (1024**3)), // Convert to GB
-                    label: 'Total (GB)',
+                    data: chartData.map(d => d.gpuMemoryReservedGb),
+                    label: 'Reserved (GB)',
                     color: '#607d8b',
+                    showMark: false
                   },
-                ]}
-                height={300}
-                margin={{ left: 70, right: 30, top: 30, bottom: 50 }}
-              />
-            </CardContent>
-          </Card>
-        </Box>
-
-        {/* GPU Temperature */}
-        <Box>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                GPU Temperature (°C)
-              </Typography>
-              <LineChart
-                xAxis={[{ data: epochNumbers, label: 'Epoch' }]}
-                series={[
                   {
-                    data: chartData.map(d => d.gpuTemperature),
-                    label: 'Temperature (°C)',
-                    color: '#d32f2f',
+                    data: chartData.map(d => d.gpuMemoryMaxGb),
+                    label: 'Max (GB)',
+                    color: '#4caf50',
+                    showMark: false
                   },
                 ]}
                 height={300}
@@ -175,20 +123,22 @@ const TrainingSystemInfoTab: React.FC<TrainingSystemInfoTabProps> = ({ epochs })
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                GPU Power Usage (W)
+                GPU Power (W)
               </Typography>
               <LineChart
                 xAxis={[{ data: epochNumbers, label: 'Epoch' }]}
                 series={[
                   {
                     data: chartData.map(d => d.gpuPower),
-                    label: 'Current (W)',
+                    label: 'Power (W)',
                     color: '#f57c00',
+                    showMark: false
                   },
                   {
                     data: chartData.map(d => d.gpuPowerLimit),
-                    label: 'Limit (W)',
+                    label: 'Power Limit (W)',
                     color: '#424242',
+                    showMark: false
                   },
                 ]}
                 height={300}
@@ -197,6 +147,31 @@ const TrainingSystemInfoTab: React.FC<TrainingSystemInfoTabProps> = ({ epochs })
             </CardContent>
           </Card>
         </Box>
+
+        {/* GPU Fan Speed */}
+        <Box>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                GPU Fan Speed (%)
+              </Typography>
+              <LineChart
+                xAxis={[{ data: epochNumbers, label: 'Epoch' }]}
+                series={[
+                  {
+                    data: chartData.map(d => d.gpuFanSpeed),
+                    label: 'Fan Speed %',
+                    color: '#00bcd4',
+                    showMark: false
+                  },
+                ]}
+                height={300}
+                margin={{ left: 70, right: 30, top: 30, bottom: 50 }}
+              />
+            </CardContent>
+          </Card>
+        </Box>
+
       </Box>
     </Box>
   );

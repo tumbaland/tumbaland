@@ -1,15 +1,24 @@
 import React from 'react';
 import { Box, Paper, Typography } from '@mui/material';
 import { LineChart } from '@mui/x-charts';
-import { Epoch } from '../types';
+import { Epoch, Comment } from '../types';
 import ChartComments from './ChartComments';
 
 interface ClassIoUOverEpochsChartProps {
   epochs: Epoch[];
   trainingId: string;
+  comments?: Comment[];
+  commentsLoading?: boolean;
+  onCommentsRefetch?: () => void;
 }
 
-const ClassIoUOverEpochsChart: React.FC<ClassIoUOverEpochsChartProps> = ({ epochs, trainingId }) => {
+const ClassIoUOverEpochsChart: React.FC<ClassIoUOverEpochsChartProps> = ({ 
+  epochs, 
+  trainingId, 
+  comments, 
+  commentsLoading, 
+  onCommentsRefetch 
+}) => {
   if (epochs.length === 0 || !epochs.some(epoch => epoch.results?.val_standard)) {
     return null;
   }
@@ -55,7 +64,13 @@ const ClassIoUOverEpochsChart: React.FC<ClassIoUOverEpochsChartProps> = ({ epoch
           margin={{ top: 10, bottom: 40, left: 60, right: 10 }}
         />
       </Box>
-      <ChartComments trainingId={trainingId} section="class_iou_standard_chart" />
+      <ChartComments 
+        trainingId={trainingId} 
+        section="class_iou_standard_chart" 
+        comments={comments}
+        commentsLoading={commentsLoading}
+        onCommentsRefetch={onCommentsRefetch}
+      />
     </Paper>
   );
 };
