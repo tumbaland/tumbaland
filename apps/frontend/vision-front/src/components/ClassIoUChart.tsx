@@ -137,7 +137,7 @@ const ClassIoUChart: React.FC<ClassIoUChartProps> = ({ epochs, trainingId }) => 
       {hasRegularData && (
         <Paper sx={{ p: 3, position: 'relative' }}>
           <Typography variant="h6" gutterBottom>
-            Class IoU Over Epochs (Validation Data)
+            Modified IoU Over Epochs (Validation Data)
           </Typography>
           <Box sx={{ width: '100%', height: 400 }}>
             <LineChart

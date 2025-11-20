@@ -8,6 +8,7 @@ import TrainingOverviewCard from '../components/TrainingOverviewCard';
 import ClassPrecisionChart from '../components/ClassPrecisionChart';
 import ClassRecallChart from '../components/ClassRecallChart';
 import ClassF1Chart from '../components/ClassF1Chart';
+import ClassIoUOverEpochsChart from '../components/ClassIoUOverEpochsChart';
 import ChartComments from '../components/ChartComments';
 
 interface TrainingOverviewTabProps {
@@ -25,49 +26,37 @@ const TrainingOverviewTab: React.FC<TrainingOverviewTabProps> = ({
   const lastEpoch = epochs[epochs.length - 1];
   const classMetrics = lastEpoch?.results?.metrics?.per_class || {};
   const epochNumbers = epochs.map(e => e.epoch);
-  const trainLoss = epochs.map(e => e.results?.train?.loss ?? null);
-  const valLoss = epochs.map(e => e.results?.val?.loss ?? null);
   const trainMeanIoU = epochs.map(e => e.results?.train?.mean_iou ?? null);
   const valMeanIoU = epochs.map(e => e.results?.val?.mean_iou ?? null);
+  const trainStandardIoU = epochs.map(e => e.results?.train_standard?.mean_iou ?? null);
+  const valStandardIoU = epochs.map(e => e.results?.val_standard?.mean_iou ?? null);
 
   return (
     <Box display="flex" flexDirection="column" gap={3}>
       {/* Training Overview Card */}
       <TrainingOverviewCard training={training} epochs={epochs} />
 
-      {/* Loss Chart */}
-      {epochs.length > 0 && trainLoss.some(v => v !== undefined) && (
-        <Paper sx={{ p: 3, position: 'relative' }}>
-          <Typography variant="h6" gutterBottom>Training and Validation Loss Over Epochs</Typography>
-          <Box sx={{ width: '100%', height: 350 }}>
-            <LineChart
-              xAxis={[{ data: epochNumbers, label: 'Epoch' }]}
-              series={[
-                { data: trainLoss, label: 'Training Loss', color: '#1976d2', showMark: false },
-                { data: valLoss, label: 'Validation Loss', color: '#d32f2f', showMark: false }
-              ]}
-              margin={{ top: 10, bottom: 40, left: 60, right: 10 }}
-            />
-          </Box>
-          <ChartComments trainingId={trainingId} section="loss_chart" />
-        </Paper>
-      )}
-
       {/* Mean IoU Chart */}
-      {epochs.length > 0 && trainMeanIoU.some(v => v !== undefined) && (
+      {epochs.length > 0 && (trainMeanIoU.some(v => v !== undefined) || valMeanIoU.some(v => v !== undefined) || trainStandardIoU.some(v => v !== null) || valStandardIoU.some(v => v !== null)) && (
         <Paper sx={{ p: 3, position: 'relative' }}>
-          <Typography variant="h6" gutterBottom>Training and Validation Mean IoU Over Epochs</Typography>
+          <Typography variant="h6" gutterBottom>Standard Training IoU and Modified IoU Over Epochs</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Comparison of standard IoU (official evaluation protocol) and modified IoU (training metrics) over epochs.
+            Standard IoU uses the official evaluation method, while modified IoU may use different preprocessing or metrics.
+          </Typography>
           <Box sx={{ width: '100%', height: 350 }}>
             <LineChart
               xAxis={[{ data: epochNumbers, label: 'Epoch' }]}
               series={[
-                { data: trainMeanIoU, label: 'Training mIoU', color: '#1976d2', showMark: false },
-                { data: valMeanIoU, label: 'Validation mIoU', color: '#d32f2f', showMark: false }
+                { data: trainStandardIoU, label: 'Training Standard IoU', color: '#1976d2', showMark: false },
+                { data: valStandardIoU, label: 'Validation Standard IoU', color: '#2e7d32', showMark: false },
+                { data: trainMeanIoU, label: 'Training Modified IoU', color: '#d32f2f', showMark: false },
+                { data: valMeanIoU, label: 'Validation Modified IoU', color: '#f57c00', showMark: false }
               ]}
               margin={{ top: 10, bottom: 40, left: 60, right: 10 }}
             />
           </Box>
-          <ChartComments trainingId={trainingId} section="iou_chart" />
+          <ChartComments trainingId={trainingId} section="combined_iou_chart" />
         </Paper>
       )}
 
@@ -76,6 +65,10 @@ const TrainingOverviewTab: React.FC<TrainingOverviewTabProps> = ({
 
       {/* Class IoU Chart */}
       <ClassIoUChart epochs={epochs} trainingId={trainingId} />
+
+
+      {/* Class IoU Over Epochs Chart */}
+      <ClassIoUOverEpochsChart epochs={epochs} trainingId={trainingId} />
 
       {/* Class Precision Chart */}
       <ClassPrecisionChart epochs={epochs} trainingId={trainingId} />

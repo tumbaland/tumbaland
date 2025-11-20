@@ -26,6 +26,11 @@ const TrainingOtherMetricsTab: React.FC<TrainingOtherMetricsTabProps> = ({ epoch
     return mathMetrics?.ece ?? null;
   });
 
+  const standardIouData = epochs.map(epoch => {
+    const valResults = epoch.results?.val as any;
+    return valResults?.standard_iou ?? null;
+  });
+
   const overallMarginData = epochs.map(epoch => {
     const mathMetrics = epoch.results?.val?.math_metrics as any;
     return mathMetrics?.overall_margin ?? null;
@@ -70,6 +75,7 @@ const TrainingOtherMetricsTab: React.FC<TrainingOtherMetricsTabProps> = ({ epoch
 
   // Check if we have any math_metrics data
   const hasMathMetrics = eceData.some(v => v !== null) ||
+                        standardIouData.some(v => v !== null) ||
                         overallMarginData.some(v => v !== null) ||
                         overallVarianceData.some(v => v !== null) ||
                         binAccuraciesData.some(arr => arr.length > 0) ||
@@ -107,6 +113,42 @@ const TrainingOtherMetricsTab: React.FC<TrainingOtherMetricsTabProps> = ({ epoch
                 data: eceData,
                 label: 'ECE',
                 color: '#1976d2',
+                showMark: false
+              }]}
+              margin={{ top: 10, bottom: 40, left: 60, right: 10 }}
+              slotProps={{
+                legend: {
+                  direction: 'row',
+                  position: { vertical: 'top', horizontal: 'middle' },
+                  padding: 0
+                }
+              }}
+            />
+          </Box>
+        </Paper>
+      )}
+
+      {/* Standard IoU Over Epochs */}
+      {standardIouData.some(v => v !== null) && (
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Standard IoU Over Epochs
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            <strong>Intersection over Union (IoU):</strong> Measures the overlap between predicted and ground truth segmentation masks.
+            Calculated as the area of intersection divided by the area of union. Values range from 0 (no overlap) to 1 (perfect overlap).<br/><br/>
+            <strong>Interpretation:</strong> Higher IoU values indicate better segmentation performance. 
+            IoU is more strict than pixel accuracy since it requires both precision and recall to be high.
+            Values above 0.8 are considered excellent, 0.5-0.8 are good, below 0.5 may need improvement.
+            This metric tracks how well your model's segmentation predictions match the ground truth over training.
+          </Typography>
+          <Box sx={{ width: '100%', height: 400 }}>
+            <LineChart
+              xAxis={[{ data: epochNumbers, label: 'Epoch' }]}
+              series={[{
+                data: standardIouData,
+                label: 'Standard IoU',
+                color: '#2e7d32',
                 showMark: false
               }]}
               margin={{ top: 10, bottom: 40, left: 60, right: 10 }}
