@@ -33,6 +33,7 @@ import TrainingOverviewTab from '../components/TrainingOverviewTab';
 import TrainingEpochsTab from '../components/TrainingEpochsTab';
 import TrainingTestResultsTab from '../components/TrainingTestResultsTab';
 import TrainingConfigTab from '../components/TrainingConfigTab';
+import TrainingVisualizationsTab from '../components/TrainingVisualizationsTab';
 import TrainingFormDialog from '../components/TrainingFormDialog';
 import { usePageTitle } from '../hooks/usePageTitle';
 
@@ -44,7 +45,7 @@ const TrainingDetailPage: React.FC = () => {
   const testResultFileInputRef = useRef<HTMLInputElement>(null);
 
   // Tab mapping
-  const tabNames = ['overview', 'epochs', 'test-results', 'config'];
+  const tabNames = ['overview', 'epochs', 'test-results', 'visualizations', 'config'];
   const getTabIndex = (tabName: string) => tabNames.indexOf(tabName);
   const getTabName = (index: number) => tabNames[index] || 'overview';
 
@@ -631,6 +632,7 @@ Camera & ${vehicle ? vehicle.iou.toFixed(4) : '-'} & ${sign ? sign.iou.toFixed(4
           <Tab label="Overview" />
           <Tab label="Epochs" />
           <Tab label="Test Results" />
+          <Tab label="Visualizations" />
           <Tab label="Config" />
         </Tabs>
       </Paper>
@@ -685,8 +687,16 @@ Camera & ${vehicle ? vehicle.iou.toFixed(4) : '-'} & ${sign ? sign.iou.toFixed(4
         />
       )}
 
-      {/* Config Tab */}
+      {/* Visualizations Tab */}
       {detailTab === 3 && (
+        <TrainingVisualizationsTab
+          training_uuid={training.uuid}
+          epochs={epochs.map(e => ({ epoch_uuid: e.epoch_uuid, epoch: e.epoch }))}
+        />
+      )}
+
+      {/* Config Tab */}
+      {detailTab === 4 && (
         <TrainingConfigTab
           config={config}
           configLoading={configLoading}

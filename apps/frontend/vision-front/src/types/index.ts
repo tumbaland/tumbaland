@@ -225,3 +225,46 @@ export interface CreateTestResultData {
   test_uuid?: string;
   test_results: TestResultData;
 }
+
+// Visualization Types
+export interface Visualization {
+  _id: string;
+  epoch_uuid: string;
+  visualization_uuid: string;
+  filename: string;
+  type: string;
+  minioFileId: string;
+  uploadedAt: string;
+  metadata?: Record<string, any>;
+  signedUrl?: string;
+  urlExpiresAt?: string;
+  epoch?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateVisualizationData {
+  epoch_uuid: string;
+  visualization_uuid: string;
+  filename: string;
+  type: string;
+  minioFileId: string;
+  mimetype: string;
+  size: number;
+  metadata?: Record<string, any>;
+}
+
+export interface VisualizationUploadUrlRequest {
+  epoch_uuid: string;
+  filename: string;
+  type: string;
+  mimetype: string;
+}
+
+export interface VisualizationUploadUrlResponse {
+  uploadUrl: string;
+  visualization_uuid: string;
+  minioFileId: string;
+  epoch_uuid: string;
+  expiresInMinutes: number;
+}

@@ -22,7 +22,7 @@ import {
   ArrowUpward as ArrowUpwardIcon,
   ArrowDownward as ArrowDownwardIcon
 } from '@mui/icons-material';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Training } from '../types';
 
 interface TrainingsTableProps {
@@ -148,6 +148,11 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
   sortOrder,
   onSort
 }) => {
+  const navigate = useNavigate();
+
+  const handleRowClick = (trainingId: string) => {
+    navigate(`/trainings/${trainingId}`);
+  };
 
   if (isLoading) {
     return (
@@ -222,15 +227,12 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
                 key={training._id}
                 hover
                 selected={selectedTrainingIds.has(training._id)}
-                component={Link}
-                to={`/trainings/${training._id}`}
+                onClick={() => handleRowClick(training._id)}
                 sx={{
                   cursor: 'pointer',
                   backgroundColor: selectedTrainingIds.has(training._id)
                     ? 'rgba(25, 118, 210, 0.08)'
-                    : 'inherit',
-                  textDecoration: 'none',
-                  color: 'inherit'
+                    : 'inherit'
                 }}
               >
                 <TableCell padding="checkbox">

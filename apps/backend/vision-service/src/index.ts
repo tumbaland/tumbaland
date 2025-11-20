@@ -12,6 +12,7 @@ import commentRoutes from './routes/commentRoutes';
 import datasetImageRoutes from './routes/datasetImageRoutes';
 import imageCategoryRoutes from './routes/imageCategoryRoutes';
 import testResultRoutes from './routes/testResultRoutes';
+import visualizationRoutes from './routes/visualizationRoutes';
 import { healthCheck } from './controllers/healthController';
 import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware } from '@tumbaland/core';
 
@@ -46,6 +47,7 @@ app.use('/api/comments', commentRoutes);
 app.use('/api/dataset-images', datasetImageRoutes);
 app.use('/api/image-categories', imageCategoryRoutes);
 app.use('/api/test-results', testResultRoutes);
+app.use('/api/visualizations', visualizationRoutes);
 
 // Serve OpenAPI docs as static files
 app.use('/api/docs', express.static(path.join(__dirname, '../docs')));

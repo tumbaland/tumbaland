@@ -82,22 +82,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             </Button>
             <Button
               component={Link}
-              to="/image-labeling"
-              color="inherit"
-              sx={{
-                fontWeight: isActive('/image-labeling') ? 700 : 500,
-                textTransform: 'none',
-                background: 'none',
-                borderRadius: 2,
-                px: 2,
-                color: isActive('/image-labeling') ? 'primary.main' : '#222',
-                '&:hover': { background: 'rgba(0,0,0,0.04)' }
-              }}
-            >
-              Image Labeling
-            </Button>
-            <Button
-              component={Link}
               to="/test-results"
               color="inherit"
               sx={{
@@ -111,6 +95,38 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               }}
             >
               Test Results
+            </Button>
+            <Button
+              component={Link}
+              to="/visualizations"
+              color="inherit"
+              sx={{
+                fontWeight: isActive('/visualizations') ? 700 : 500,
+                textTransform: 'none',
+                background: 'none',
+                borderRadius: 2,
+                px: 2,
+                color: isActive('/visualizations') ? 'primary.main' : '#222',
+                '&:hover': { background: 'rgba(0,0,0,0.04)' }
+              }}
+            >
+              Visualizations
+            </Button>
+            <Button
+              component={Link}
+              to="/image-labeling"
+              color="inherit"
+              sx={{
+                fontWeight: isActive('/image-labeling') ? 700 : 500,
+                textTransform: 'none',
+                background: 'none',
+                borderRadius: 2,
+                px: 2,
+                color: isActive('/image-labeling') ? 'primary.main' : '#222',
+                '&:hover': { background: 'rgba(0,0,0,0.04)' }
+              }}
+            >
+              Image Labeling
             </Button>
           </Box>
         </Toolbar>
