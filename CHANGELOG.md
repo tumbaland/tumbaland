@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.291](https://github.com/toomastahves/tumbaland/compare/v0.0.290...v0.0.291) (2025-11-21)
+
+
+### Features
+
+* add weather condition to labeling ([a9c6a82](https://github.com/toomastahves/tumbaland/commit/a9c6a828b62fa8c8bf81ca0358552a908f250c7c))
+
 ### [0.0.290](https://github.com/toomastahves/tumbaland/compare/v0.0.289...v0.0.290) (2025-11-21)
 
 
