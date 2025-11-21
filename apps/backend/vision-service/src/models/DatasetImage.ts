@@ -1,5 +1,9 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+// Weather condition types
+export const WEATHER_CONDITIONS = ['day_fair', 'night_fair', 'day_rain', 'night_rain', 'snow'] as const;
+export type WeatherCondition = typeof WEATHER_CONDITIONS[number];
+
 export interface IDatasetImage extends Document {
   filename: string;
   originalName: string;
@@ -15,6 +19,7 @@ export interface IDatasetImage extends Document {
   height?: number;
   tags: string[];
   labels: string[]; // User quality labels like 'good_annotations', 'bad_annotations'
+  weatherCondition?: WeatherCondition; // Weather condition
   metadata: any;
   createdAt: Date;
   updatedAt: Date;
@@ -80,6 +85,11 @@ const DatasetImageSchema: Schema = new Schema(
         trim: true
       }
     ],
+    weatherCondition: {
+      type: String,
+      enum: WEATHER_CONDITIONS,
+      required: false
+    },
     metadata: {
       type: Schema.Types.Mixed
     }
@@ -93,6 +103,7 @@ const DatasetImageSchema: Schema = new Schema(
 DatasetImageSchema.index({ datasetId: 1, categoryId: 1, createdAt: -1 });
 DatasetImageSchema.index({ datasetId: 1, labels: 1 });
 DatasetImageSchema.index({ tags: 1 }); // Index for tag filtering
+DatasetImageSchema.index({ weatherCondition: 1 }); // Index for weather condition filtering
 DatasetImageSchema.index({ createdAt: -1 }); // Index for sorting by creation date
 DatasetImageSchema.index({ updatedAt: -1 }); // Index for sorting by update date
 DatasetImageSchema.index({ title: 'text', description: 'text', tags: 'text' });

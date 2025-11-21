@@ -16,7 +16,7 @@ import { logger } from '@tumbaland/core';
 // Get all images
 export const getAllImages = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { page = 1, limit = 50, search, tags, random } = req.query; // Default limit of 50
+    const { page = 1, limit = 50, search, tags, random, weatherCondition } = req.query; // Default limit of 50
 
     const query: any = {};
     if (search) {
@@ -27,6 +27,9 @@ export const getAllImages = async (req: Request, res: Response): Promise<void> =
       if (tagsArray.length > 0) {
         query.tags = { $in: tagsArray };
       }
+    }
+    if (weatherCondition) {
+      query.weatherCondition = weatherCondition;
     }
 
     const limitNum = Math.min(Number(limit), 1000000); // Cap at 1M for large datasets
@@ -171,6 +174,7 @@ export const createDatasetImage = async (req: Request, res: Response): Promise<v
       height,
       tags = [],
       labels = [],
+      weatherCondition,
       metadata = {}
     } = req.body;
 
@@ -221,6 +225,7 @@ export const createDatasetImage = async (req: Request, res: Response): Promise<v
       height,
       tags: tags.map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0),
       labels: labels.map((label: string) => label.trim()).filter((label: string) => label.length > 0),
+      weatherCondition,
       metadata
     });
 
@@ -250,7 +255,7 @@ export const createDatasetImage = async (req: Request, res: Response): Promise<v
 export const getImagesByDataset = async (req: Request, res: Response): Promise<void> => {
   try {
     const { datasetId } = req.params;
-    const { page = 1, limit, search, categoryId, tags, sortBy = 'updatedAt', sortOrder = 'desc' } = req.query;
+    const { page = 1, limit, search, categoryId, tags, weatherCondition, sortBy = 'updatedAt', sortOrder = 'desc' } = req.query;
 
     const query: any = { datasetId };
 
@@ -265,6 +270,9 @@ export const getImagesByDataset = async (req: Request, res: Response): Promise<v
       if (tagsArray.length > 0) {
         query.tags = { $in: tagsArray };
       }
+    }
+    if (weatherCondition) {
+      query.weatherCondition = weatherCondition;
     }
 
     const limitNum = limit ? Number(limit) : undefined;
@@ -859,7 +867,7 @@ export const getImageById = async (req: Request, res: Response): Promise<void> =
 export const updateImage = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { title, description, tags, labels, categoryId, metadata } = req.body;
+    const { title, description, tags, labels, categoryId, weatherCondition, metadata } = req.body;
 
     const updateData: any = {};
     if (title !== undefined) updateData.title = title?.trim();
@@ -867,6 +875,7 @@ export const updateImage = async (req: Request, res: Response): Promise<void> =>
     if (tags) updateData.tags = tags.map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0);
     if (labels) updateData.labels = labels.map((label: string) => label.trim()).filter((label: string) => label.length > 0);
     if (categoryId !== undefined) updateData.categoryId = categoryId || null; // Allow null to remove category
+    if (weatherCondition !== undefined) updateData.weatherCondition = weatherCondition;
     if (metadata) updateData.metadata = metadata;
 
     const image = await DatasetImage.findByIdAndUpdate(id, updateData, { new: true });

@@ -11,7 +11,11 @@ import {
   Alert,
   Paper,
   LinearProgress,
-  TextField
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import {
   ThumbUp as ThumbUpIcon,
@@ -25,7 +29,8 @@ import {
   DatasetImage,
   getAllImages,
   updateDatasetImage,
-  getLabelingStats
+  getLabelingStats,
+  WeatherCondition
 } from '../services/datasetImageService';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -40,6 +45,18 @@ const ImageLabelingPage: React.FC = () => {
   const [alert, setAlert] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [setupMode, setSetupMode] = useState(true);
   const [imageLimit, setImageLimit] = useState(100);
+
+  // Weather condition options
+  const WEATHER_CONDITIONS: { value: WeatherCondition; label: string }[] = [
+    { value: 'day_fair', label: 'Day Fair' },
+    { value: 'night_fair', label: 'Night Fair' },
+    { value: 'day_rain', label: 'Day Rain' },
+    { value: 'night_rain', label: 'Night Rain' },
+    { value: 'snow', label: 'Snow' }
+  ];
+
+  // Weather filtering state
+  const [selectedWeatherFilter, setSelectedWeatherFilter] = useState<WeatherCondition | ''>('');
 
   // Session labeling state - tracks decisions for each image in current session
   const [sessionLabels, setSessionLabels] = useState<Record<string, 'good' | 'bad' | 'skip'>>({});
@@ -69,39 +86,38 @@ const ImageLabelingPage: React.FC = () => {
     setSetupMode(false);
 
     try {
-      // Try to load all images first
-      console.log('Loading all images...');
-      const response = await getAllImages(1, 1000, undefined, undefined, true); // Enable randomization
+      // Fetch images with backend filtering - single request
+      console.log('Fetching images with backend filtering...');
+      const response = await getAllImages(1, imageLimit, undefined, undefined, true, selectedWeatherFilter || undefined);
       console.log('getAllImages response:', response);
-      
+
       if (response.success && response.data.images) {
         const allImages = response.data.images;
         console.log('Total images found:', allImages.length);
-        
-        // Filter for unlabeled images (images with no tags)
-        const unlabeledImages = allImages.filter((image: DatasetImage) => 
+
+        // Filter for unlabeled images (images with no tags) - backend should have already done weather filtering
+        const unlabeledImages = allImages.filter((image: DatasetImage) =>
           !image.tags || image.tags.length === 0
         );
+
         console.log('Unlabeled images found:', unlabeledImages.length);
-        
+        console.log('Weather filter applied:', selectedWeatherFilter || 'none');
+
         if (unlabeledImages.length > 0) {
-          // Since we already randomized at the database level, just take the first N
-          const selectedImages = unlabeledImages.slice(0, imageLimit);
-          console.log('Selected images for labeling (database-randomized):', selectedImages.length);
-          
-          setImages(selectedImages);
+          // Use the filtered images directly
+          setImages(unlabeledImages);
           setCurrentImageIndex(0);
           // Navigate to the first image
-          navigate(`/image-labeling/${selectedImages[0]._id}`, { replace: true });
+          navigate(`/image-labeling/${unlabeledImages[0]._id}`, { replace: true });
           return;
         }
       }
-      
-      // If getAllImages didn't work or returned no images, show a message
-      console.log('No images found via getAllImages, trying alternative approach...');
-      showAlert('info', 'No unlabeled images found in the system. Please upload some images first.');
+
+      // If no images found, show a message
+      console.log('No images found');
+      showAlert('info', 'No unlabeled images found matching the selected criteria. Please check your filters or upload some images first.');
       setSetupMode(true);
-      
+
     } catch (error) {
       console.error('Error loading images:', error);
       showAlert('error', 'Failed to load images for labeling. Please check that images exist in the system.');
@@ -178,6 +194,7 @@ const ImageLabelingPage: React.FC = () => {
     setImages([]);
     setCurrentImageIndex(0);
     setSessionLabels({});
+    setSelectedWeatherFilter('');
     setAlert(null);
     // Refresh statistics when returning to setup mode
     queryClient.invalidateQueries({ queryKey: ['overallLabelingMetrics'] });
@@ -235,18 +252,20 @@ const ImageLabelingPage: React.FC = () => {
         try {
           // Try to load all images first
           console.log('Auto-loading all images for direct URL access...');
-          const response = await getAllImages(1, 1000, undefined, undefined, true); // Enable randomization
+          const response = await getAllImages(1, imageLimit, undefined, undefined, true, selectedWeatherFilter || undefined); // Enable randomization and weather filtering
           console.log('getAllImages response:', response);
 
           if (response.success && response.data.images) {
             const allImages = response.data.images;
             console.log('Total images found:', allImages.length);
 
-            // Filter for unlabeled images (images with no tags)
+            // Filter for unlabeled images (images with no tags) - backend should have already done weather filtering
             const unlabeledImages = allImages.filter((image: DatasetImage) =>
               !image.tags || image.tags.length === 0
             );
+
             console.log('Unlabeled images found:', unlabeledImages.length);
+            console.log('Weather filter applied:', selectedWeatherFilter || 'none');
 
             if (unlabeledImages.length > 0) {
               // Since we already randomized at the database level, just take the first N
@@ -376,6 +395,24 @@ const ImageLabelingPage: React.FC = () => {
                 sx={{ mb: 3 }}
                 helperText="Maximum number of unlabeled images to load for this session (randomly selected from database for optimal diversity)"
               />
+
+              <FormControl fullWidth sx={{ mb: 3 }}>
+                <InputLabel>Weather Condition (Optional)</InputLabel>
+                <Select
+                  value={selectedWeatherFilter}
+                  onChange={(e) => setSelectedWeatherFilter(e.target.value as WeatherCondition | '')}
+                  label="Weather Condition (Optional)"
+                >
+                  <MenuItem value="">
+                    <em>All Weather Conditions</em>
+                  </MenuItem>
+                  {WEATHER_CONDITIONS.map((condition) => (
+                    <MenuItem key={condition.value} value={condition.value}>
+                      {condition.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
               <Button
                 variant="contained"

@@ -47,6 +47,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getAnalysisById, updateAnalysis, deleteAnalysis } from '../services/analysisService';
 import {
   DatasetImage,
+  WeatherCondition,
   deleteDatasetImage,
   updateDatasetImage,
   getCategoriesByDataset,
@@ -59,6 +60,15 @@ import {
 import { getGlobalConfig } from '../config/ConfigProvider';
 import FileUpload from '../components/FileUpload';
 import { usePageTitle } from '../hooks/usePageTitle';
+
+// Weather condition options
+const WEATHER_CONDITIONS: { value: WeatherCondition; label: string }[] = [
+  { value: 'day_fair', label: 'Day Fair' },
+  { value: 'night_fair', label: 'Night Fair' },
+  { value: 'day_rain', label: 'Day Rain' },
+  { value: 'night_rain', label: 'Night Rain' },
+  { value: 'snow', label: 'Snow' }
+];
 
 const DatasetDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -92,9 +102,11 @@ const DatasetDetailPage: React.FC = () => {
   const [editImageModalOpen, setEditImageModalOpen] = useState(false);
   const [selectedCategoryForEdit, setSelectedCategoryForEdit] = useState<string>('');
   const [selectedTagsForEdit, setSelectedTagsForEdit] = useState<string>('');
+  const [selectedWeatherForEdit, setSelectedWeatherForEdit] = useState<WeatherCondition | ''>('');
   // Image filtering state
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('');
   const [selectedTagFilter, setSelectedTagFilter] = useState<string[]>([]);
+  const [selectedWeatherFilter, setSelectedWeatherFilter] = useState<WeatherCondition | ''>('');
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(50);
@@ -108,7 +120,7 @@ const DatasetDetailPage: React.FC = () => {
   });
 
   const { data: imagesData, isLoading: imagesLoading, error: imagesError } = useQuery({
-    queryKey: ['datasetImages', id, selectedCategoryFilter, selectedTagFilter, currentPage, pageSize],
+    queryKey: ['datasetImages', id, selectedCategoryFilter, selectedTagFilter, selectedWeatherFilter, currentPage, pageSize],
     queryFn: async () => {
       // Use getImagesByDataset for efficient server-side filtering
       const response = await getImagesByDataset(
@@ -118,6 +130,7 @@ const DatasetDetailPage: React.FC = () => {
         undefined, // search
         selectedCategoryFilter || undefined, // categoryId
         selectedTagFilter.length > 0 ? selectedTagFilter.join(' ') : undefined, // tags as space-separated string
+        selectedWeatherFilter || undefined, // weatherCondition
         'updatedAt', // sortBy
         'desc' // sortOrder - most recently updated first
       );
@@ -139,7 +152,7 @@ const DatasetDetailPage: React.FC = () => {
     queryKey: ['datasetTags', id],
     queryFn: async () => {
       // Get a sample of images to extract available tags
-      const response = await getImagesByDataset(id!, 1, 1000, undefined, undefined, undefined, 'updatedAt', 'desc'); // Get up to 1000 images to sample tags, sorted by updatedAt
+      const response = await getImagesByDataset(id!, 1, 1000, undefined, undefined, undefined, undefined, 'updatedAt', 'desc'); // Get up to 1000 images to sample tags, sorted by updatedAt
       const allTags = new Set<string>();
       response.data.images.forEach((image: DatasetImage) => {
         image.tags.forEach(tag => allTags.add(tag));
@@ -341,6 +354,7 @@ const DatasetDetailPage: React.FC = () => {
     setEditingImage(image);
     setSelectedCategoryForEdit(image.categoryId || '');
     setSelectedTagsForEdit(image.tags.join(', '));
+    setSelectedWeatherForEdit(image.weatherCondition || '');
     setEditImageModalOpen(true);
   };
 
@@ -357,13 +371,15 @@ const DatasetDetailPage: React.FC = () => {
       // Update the image with new category and tags
       await updateDatasetImage(editingImage._id, {
         categoryId: selectedCategoryForEdit || undefined,
-        tags: tags
+        tags: tags,
+        weatherCondition: selectedWeatherForEdit || undefined
       });
       showCategoryAlert('success', 'Image updated successfully');
       setEditImageModalOpen(false);
       setEditingImage(null);
       setSelectedCategoryForEdit('');
       setSelectedTagsForEdit('');
+      setSelectedWeatherForEdit('');
       // Refresh images
       queryClient.invalidateQueries({ queryKey: ['datasetImages', id] });
     } catch (error) {
@@ -376,6 +392,7 @@ const DatasetDetailPage: React.FC = () => {
     setEditingImage(null);
     setSelectedCategoryForEdit('');
     setSelectedTagsForEdit('');
+    setSelectedWeatherForEdit('');
   };
 
   const handleUploadComplete = () => {
@@ -404,7 +421,7 @@ const DatasetDetailPage: React.FC = () => {
   // Reset to page 1 when category filter or tag filter changes
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategoryFilter, selectedTagFilter]);
+  }, [selectedCategoryFilter, selectedTagFilter, selectedWeatherFilter]);
 
   // Export handler
   const handleExportImages = async (filter: 'good' | 'bad' | 'all') => {
@@ -750,6 +767,24 @@ const DatasetDetailPage: React.FC = () => {
                           />
                           {category.name}
                         </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <FormControl size="small" sx={{ minWidth: 200 }}>
+                  <InputLabel>Filter by Weather</InputLabel>
+                  <Select
+                    value={selectedWeatherFilter}
+                    onChange={(e) => setSelectedWeatherFilter(e.target.value as WeatherCondition | '')}
+                    label="Filter by Weather"
+                  >
+                    <MenuItem value="">
+                      <em>All Weather Conditions</em>
+                    </MenuItem>
+                    {WEATHER_CONDITIONS.map((condition) => (
+                      <MenuItem key={condition.value} value={condition.value}>
+                        {condition.label}
                       </MenuItem>
                     ))}
                   </Select>
@@ -1175,7 +1210,7 @@ const DatasetDetailPage: React.FC = () => {
         </DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Update the category and tags for this image.
+            Update the category, weather condition, and tags for this image.
           </Typography>
           <TextField
             select
@@ -1192,6 +1227,24 @@ const DatasetDetailPage: React.FC = () => {
             {datasetCategories.map((category) => (
               <option key={category._id} value={category._id}>
                 {category.name}
+              </option>
+            ))}
+          </TextField>
+          <TextField
+            select
+            fullWidth
+            label="Weather Condition"
+            value={selectedWeatherForEdit}
+            onChange={(e) => setSelectedWeatherForEdit(e.target.value as WeatherCondition | '')}
+            SelectProps={{
+              native: true,
+            }}
+            sx={{ mb: 2 }}
+          >
+            <option value="">No Weather Condition</option>
+            {WEATHER_CONDITIONS.map((condition) => (
+              <option key={condition.value} value={condition.value}>
+                {condition.label}
               </option>
             ))}
           </TextField>

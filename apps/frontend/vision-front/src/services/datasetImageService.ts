@@ -1,5 +1,7 @@
 import { getGlobalConfig } from '../config/ConfigProvider';
 
+export type WeatherCondition = 'day_fair' | 'night_fair' | 'day_rain' | 'night_rain' | 'snow';
+
 export interface DatasetImage {
   _id: string;
   filename: string;
@@ -16,6 +18,7 @@ export interface DatasetImage {
   height?: number;
   tags: string[];
   labels: string[];
+  weatherCondition?: WeatherCondition;
   metadata: any;
   signedUrl?: string;
   signedUrlExpiresAt?: string;
@@ -48,7 +51,8 @@ export const getAllImages = async (
   limit?: number,
   search?: string,
   tags?: string,
-  random?: boolean
+  random?: boolean,
+  weatherCondition?: WeatherCondition
 ): Promise<DatasetImagesResponse> => {
   const config = getGlobalConfig();
   const apiUrl = config.VISION_API_URL || 'http://localhost:4010';
@@ -58,6 +62,7 @@ export const getAllImages = async (
   if (search) params.append('search', search);
   if (tags) params.append('tags', tags);
   if (random) params.append('random', 'true');
+  if (weatherCondition) params.append('weatherCondition', weatherCondition);
 
   const response = await fetch(`${apiUrl}/api/dataset-images?${params.toString()}`, {
     method: 'GET',
@@ -84,6 +89,7 @@ export const getImagesByDataset = async (
   search?: string,
   categoryId?: string,
   tags?: string,
+  weatherCondition?: WeatherCondition,
   sortBy?: 'updatedAt' | 'createdAt' | 'filename',
   sortOrder?: 'asc' | 'desc'
 ): Promise<DatasetImagesResponse> => {
@@ -95,6 +101,7 @@ export const getImagesByDataset = async (
   if (search) params.append('search', search);
   if (categoryId) params.append('categoryId', categoryId);
   if (tags) params.append('tags', tags);
+  if (weatherCondition) params.append('weatherCondition', weatherCondition);
   if (sortBy) params.append('sortBy', sortBy);
   if (sortOrder) params.append('sortOrder', sortOrder);
 
@@ -187,6 +194,7 @@ export const createDatasetImage = async (imageData: {
   height?: number;
   tags?: string[];
   labels?: string[];
+  weatherCondition?: WeatherCondition;
   metadata?: any;
 }): Promise<DatasetImage> => {
   const config = getGlobalConfig();
@@ -220,6 +228,7 @@ export const updateDatasetImage = async (
     tags?: string[];
     labels?: string[];
     categoryId?: string;
+    weatherCondition?: WeatherCondition;
     metadata?: any;
   }
 ): Promise<DatasetImage> => {
