@@ -4,7 +4,6 @@ import {
   Typography,
   Box,
   Paper,
-  Chip,
   Button,
   Dialog,
   DialogTitle,
@@ -25,7 +24,7 @@ import {
   Close as CloseIcon
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { testResultService } from '../services/testResultService';
 import { usePageTitle } from '../hooks/usePageTitle';
 
@@ -50,30 +49,11 @@ const TestResultsComparisonPage: React.FC = () => {
 
   const comparisonData = data?.data?.comparison || [];
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
-  };
-
   const formatNumber = (value: any, decimals: number = 4): string => {
     if (typeof value === 'number' && !isNaN(value)) {
       return value.toFixed(decimals);
     }
     return 'N/A';
-  };
-
-  const getStatusColor = (status: string): 'success' | 'error' | 'default' | 'warning' => {
-    switch (status) {
-      case 'completed':
-        return 'success';
-      case 'running':
-        return 'default';
-      case 'failed':
-        return 'error';
-      case 'pending':
-        return 'default';
-      default:
-        return 'default';
-    }
   };
 
   const generateLatexTable = () => {
@@ -461,54 +441,6 @@ const TestResultsComparisonPage: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Test Results Overview Cards */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr', lg: '1fr 1fr 1fr' }, gap: 3, mb: 4 }}>
-        {comparisonData.map((comparison) => {
-          return (
-            <Box key={comparison.testResult._id} sx={{ minHeight: 200 }}>
-              <Paper sx={{ p: 3, height: '100%' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                  <Box sx={{ flex: 1, mr: 2 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
-                      Test {comparison.testResult.test_uuid.slice(-8)}
-                    </Typography>
-                    {comparison.training && (
-                      <Typography variant="body2" color="text.secondary">
-                        Training: {comparison.training.name}
-                      </Typography>
-                    )}
-                  </Box>
-                  {comparison.training && (
-                    <Chip
-                      label={comparison.training.status}
-                      color={getStatusColor(comparison.training.status)}
-                      size="small"
-                    />
-                  )}
-                </Box>
-
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mb: 2 }}>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Epoch</Typography>
-                    <Typography variant="h6">{comparison.testResult.epoch}</Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Test UUID</Typography>
-                    <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                      {comparison.testResult.test_uuid.slice(-8)}
-                    </Typography>
-                  </Box>
-                </Box>
-
-                <Typography variant="caption" color="text.secondary">
-                  Tested: {formatDate(comparison.testResult.timestamp)}
-                </Typography>
-              </Paper>
-            </Box>
-          );
-        })}
-      </Box>
-
       {/* Compact Performance Comparison Table */}
       {comparisonData.length > 0 && (
         <Paper sx={{ mb: 4 }}>
@@ -630,9 +562,14 @@ const TestResultsComparisonPage: React.FC = () => {
                       {comparisonData.map((comp) => (
                         <TableRow key={comp.testResult._id} sx={{ '&:nth-of-type(odd)': { bgcolor: 'grey.25' } }}>
                           <TableCell sx={{ fontWeight: 600, borderRight: '2px solid rgba(224, 224, 224, 1)', minWidth: 150 }}>
-                            <Typography variant="body2" sx={{ fontWeight: 600, display: 'inline' }}>
-                              {comp.training?.name || 'Unknown Training'}
-                            </Typography>
+                            <Link 
+                              to={`/trainings/${comp.training?._id}`}
+                              style={{ textDecoration: 'none', color: 'inherit' }}
+                            >
+                              <Typography variant="body2" sx={{ fontWeight: 600, display: 'inline' }}>
+                                {comp.training?.name || 'Unknown Training'}
+                              </Typography>
+                            </Link>
                             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 'normal', display: 'inline', ml: 1 }}>
                               Test {comp.testResult.test_uuid.slice(-8)} (Epoch {comp.testResult.epoch})
                             </Typography>
@@ -775,9 +712,14 @@ const TestResultsComparisonPage: React.FC = () => {
                             sx={{ borderBottom: '2px solid rgba(224, 224, 224, 1)' }}
                           >
                             <Box>
-                              <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                                {comp.training?.name || 'Unknown Training'}
-                              </Typography>
+                              <Link 
+                                to={`/trainings/${comp.training?._id}`}
+                                style={{ textDecoration: 'none', color: 'inherit' }}
+                              >
+                                <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                  {comp.training?.name || 'Unknown Training'}
+                                </Typography>
+                              </Link>
                               <Typography variant="caption" color="text.secondary">
                                 Test {comp.testResult.test_uuid.slice(-8)} (Epoch {comp.testResult.epoch})
                               </Typography>

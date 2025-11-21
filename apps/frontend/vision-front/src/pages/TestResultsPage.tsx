@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -56,22 +56,6 @@ export const TestResultsPage: React.FC = () => {
       setError(err instanceof Error ? err.message : 'Failed to load test results');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleViewDetails = async (testResult: TestResult) => {
-    try {
-      // Get training ID from the embedded training info
-      const trainingId = testResult.training?._id;
-      if (!trainingId) {
-        setError('Training information not available for this test result');
-        return;
-      }
-      
-      // Navigate to the training details page with test results tab active
-      navigate(`/trainings/${trainingId}?tab=test-results`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to navigate to training details');
     }
   };
 
@@ -258,39 +242,43 @@ export const TestResultsPage: React.FC = () => {
                     const avgInferenceTime = getOverallAverageInferenceTime(testResult.test_results);
 
                     return (
-                      <TableRow 
+                      <Link 
                         key={testResult._id} 
-                        hover 
-                        onClick={() => handleViewDetails(testResult)}
-                        sx={{ cursor: 'pointer' }}
+                        to={`/trainings/${testResult.training?._id}?tab=test-results`}
+                        style={{ display: 'contents', textDecoration: 'none', color: 'inherit' }}
                       >
-                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={selectedTestResults.has(testResult._id)}
-                            onChange={(e) => handleSelectTestResult(testResult._id, e.target.checked)}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          {testResult.training?.name || 'Unknown Training'}
-                        </TableCell>
-                        <TableCell>
-                          Epoch {testResult.epoch}
-                        </TableCell>
-                        <TableCell align="right">{formatNumber(avgIou)}</TableCell>
-                        <TableCell align="right">{formatNumber(avgRecall)}</TableCell>
-                        <TableCell align="right">{formatNumber(avgF1)}</TableCell>
-                        <TableCell align="right">{formatNumber(avgInferenceTime, 2)}</TableCell>
-                        <TableCell align="center" sx={{ fontSize: '0.875rem' }}>
-                          {formatDate(testResult.timestamp)}
-                        </TableCell>
-                        <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                          <Tooltip title="Delete">
-                            <IconButton size="small" onClick={() => handleDeleteClick(testResult)}>
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </TableCell>
-                      </TableRow>
+                        <TableRow 
+                          hover 
+                          sx={{ cursor: 'pointer' }}
+                        >
+                          <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={selectedTestResults.has(testResult._id)}
+                              onChange={(e) => handleSelectTestResult(testResult._id, e.target.checked)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {testResult.training?.name || 'Unknown Training'}
+                          </TableCell>
+                          <TableCell>
+                            Epoch {testResult.epoch}
+                          </TableCell>
+                          <TableCell align="right">{formatNumber(avgIou)}</TableCell>
+                          <TableCell align="right">{formatNumber(avgRecall)}</TableCell>
+                          <TableCell align="right">{formatNumber(avgF1)}</TableCell>
+                          <TableCell align="right">{formatNumber(avgInferenceTime, 2)}</TableCell>
+                          <TableCell align="center" sx={{ fontSize: '0.875rem' }}>
+                            {formatDate(testResult.timestamp)}
+                          </TableCell>
+                          <TableCell align="center" onClick={(e) => e.stopPropagation()}>
+                            <Tooltip title="Delete">
+                              <IconButton size="small" onClick={() => handleDeleteClick(testResult)}>
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </TableCell>
+                        </TableRow>
+                      </Link>
                     );
                   })}
                 </TableBody>

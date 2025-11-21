@@ -1050,7 +1050,7 @@ const DatasetDetailPage: React.FC = () => {
         maxWidth="lg"
         fullWidth
       >
-        <DialogContent sx={{ p: 0, position: 'relative' }}>
+        <DialogContent sx={{ p: 0, position: 'relative', height: '90vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <IconButton
             onClick={handleCloseImageModal}
             sx={{
@@ -1074,9 +1074,8 @@ const DatasetDetailPage: React.FC = () => {
               alt={selectedImage.title || selectedImage.originalName}
               sx={{
                 width: '100%',
-                height: 'auto',
-                maxHeight: '80vh',
-                objectFit: 'contain',
+                height: '100%',
+                objectFit: 'cover',
               }}
             />
           )}

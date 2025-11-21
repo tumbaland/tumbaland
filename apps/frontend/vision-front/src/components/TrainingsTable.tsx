@@ -22,7 +22,7 @@ import {
   ArrowUpward as ArrowUpwardIcon,
   ArrowDownward as ArrowDownwardIcon
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Training } from '../types';
 
 interface TrainingsTableProps {
@@ -148,12 +148,6 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
   sortOrder,
   onSort
 }) => {
-  const navigate = useNavigate();
-
-  const handleRowClick = (trainingId: string) => {
-    navigate(`/trainings/${trainingId}`);
-  };
-
   if (isLoading) {
     return (
       <Box display="flex" justifyContent="center" py={8}>
@@ -223,18 +217,17 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
           </TableHead>
           <TableBody>
             {trainings.map((training: Training) => (
-              <TableRow
-                key={training._id}
-                hover
-                selected={selectedTrainingIds.has(training._id)}
-                onClick={() => handleRowClick(training._id)}
-                sx={{
-                  cursor: 'pointer',
-                  backgroundColor: selectedTrainingIds.has(training._id)
-                    ? 'rgba(25, 118, 210, 0.08)'
-                    : 'inherit'
-                }}
-              >
+              <Link key={training._id} to={`/trainings/${training._id}`} style={{ display: 'contents', textDecoration: 'none', color: 'inherit' }}>
+                <TableRow
+                  hover
+                  selected={selectedTrainingIds.has(training._id)}
+                  sx={{
+                    cursor: 'pointer',
+                    backgroundColor: selectedTrainingIds.has(training._id)
+                      ? 'rgba(25, 118, 210, 0.08)'
+                      : 'inherit'
+                  }}
+                >
                 <TableCell padding="checkbox">
                   <Checkbox
                     checked={selectedTrainingIds.has(training._id)}
@@ -353,6 +346,7 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
                   </Box>
                 </TableCell>
               </TableRow>
+              </Link>
             ))}
           </TableBody>
         </Table>

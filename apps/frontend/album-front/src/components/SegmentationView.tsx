@@ -248,7 +248,7 @@ const SegmentationView: React.FC<SegmentationViewNewProps> = ({ photo, formatDat
                     }}
                     onClick={() => {
                       const imageUrl = segmentationService.getSegmentationVisualizationUrl(detailedResults.job_id);
-                      window.open(imageUrl, '_blank');
+                      window.open(imageUrl, '_self');
                     }}
                   />
                 ) : (
@@ -317,7 +317,7 @@ const SegmentationView: React.FC<SegmentationViewNewProps> = ({ photo, formatDat
                               }}
                               onClick={() => {
                                 const maskUrl = segmentationService.getSegmentationMaskUrl(detailedResults.job_id, mask.mask_file_path.split('/').pop() || '');
-                                window.open(maskUrl, '_blank');
+                                window.open(maskUrl, '_self');
                               }}
                             />
                           </Box>

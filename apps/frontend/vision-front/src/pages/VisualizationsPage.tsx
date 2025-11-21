@@ -18,11 +18,14 @@ import {
   Paper,
   IconButton,
   Chip,
-  Collapse
+  Collapse,
+  Dialog,
+  DialogContent
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon
+  ExpandLess as ExpandLessIcon,
+  Close as CloseIcon
 } from '@mui/icons-material';
 import { visualizationService } from '../services/visualizationService';
 import { trainingService } from '../services/trainingService';
@@ -44,6 +47,8 @@ export const VisualizationsPage: React.FC = () => {
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedTrainings, setSelectedTrainings] = useState<Set<string>>(new Set());
   const [compareMode, setCompareMode] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<Visualization | null>(null);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
 
   usePageTitle('Visualizations - Vision');
 
@@ -163,6 +168,16 @@ export const VisualizationsPage: React.FC = () => {
     }
     const ids = Array.from(selectedTrainings);
     navigate(`/visualizations/compare-trainings?ids=${ids.join(',')}`);
+  };
+
+  const handleImageClick = (image: Visualization) => {
+    setSelectedImage(image);
+    setImageModalOpen(true);
+  };
+
+  const handleCloseImageModal = () => {
+    setImageModalOpen(false);
+    setSelectedImage(null);
   };
 
   return (
@@ -340,7 +355,7 @@ export const VisualizationsPage: React.FC = () => {
                                         borderRadius: 1,
                                         cursor: 'pointer'
                                       }}
-                                      onClick={() => window.open(viz.signedUrl, '_blank')}
+                                      onClick={() => handleImageClick(viz)}
                                     />
                                     <Typography variant="caption" display="block" sx={{ mt: 1 }} color="text.secondary">
                                       {viz.filename}
@@ -399,6 +414,45 @@ export const VisualizationsPage: React.FC = () => {
           })}
         </Box>
       )}
+
+      {/* Image Modal */}
+      <Dialog
+        open={imageModalOpen}
+        onClose={handleCloseImageModal}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogContent sx={{ p: 0, position: 'relative', height: '90vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <IconButton
+            onClick={handleCloseImageModal}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              bgcolor: 'rgba(0, 0, 0, 0.5)',
+              color: 'white',
+              '&:hover': {
+                bgcolor: 'rgba(0, 0, 0, 0.7)',
+              },
+              zIndex: 1,
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+          {selectedImage && (
+            <Box
+              component="img"
+              src={selectedImage.signedUrl}
+              alt={selectedImage.filename}
+              sx={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Container>
   );
 };

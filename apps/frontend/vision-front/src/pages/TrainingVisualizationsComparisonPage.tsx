@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -8,8 +8,14 @@ import {
   CircularProgress,
   Alert,
   Typography,
-  Container
+  Container,
+  Dialog,
+  DialogContent,
+  IconButton
 } from '@mui/material';
+import {
+  Close as CloseIcon
+} from '@mui/icons-material';
 import { visualizationService } from '../services/visualizationService';
 import { trainingService } from '../services/trainingService';
 import { Visualization, Training } from '../types';
@@ -28,6 +34,8 @@ export const TrainingVisualizationsComparisonPage: React.FC = () => {
   const [trainings, setTrainings] = useState<TrainingWithVisualizations[]>([]);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [availableTypes, setAvailableTypes] = useState<string[]>([]);
+  const [selectedImage, setSelectedImage] = useState<Visualization | null>(null);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
 
   usePageTitle('Compare Training Visualizations - Vision');
 
@@ -127,6 +135,16 @@ export const TrainingVisualizationsComparisonPage: React.FC = () => {
     alert('Link copied to clipboard!');
   };
 
+  const handleImageClick = (image: Visualization) => {
+    setSelectedImage(image);
+    setImageModalOpen(true);
+  };
+
+  const handleCloseImageModal = () => {
+    setImageModalOpen(false);
+    setSelectedImage(null);
+  };
+
   if (loading) {
     return (
       <Container maxWidth="xl" sx={{ py: 4 }}>
@@ -174,9 +192,14 @@ export const TrainingVisualizationsComparisonPage: React.FC = () => {
                 {trainings.map((t) => (
                   <Card key={t.training._id} variant="outlined" sx={{ flex: '1 1 200px' }}>
                     <CardContent sx={{ p: 2 }}>
-                      <Typography variant="subtitle2" fontWeight={600}>
-                        {t.training.name}
-                      </Typography>
+                      <Link 
+                        to={`/trainings/${t.training._id}`}
+                        style={{ textDecoration: 'none', color: 'inherit' }}
+                      >
+                        <Typography variant="subtitle2" fontWeight={600}>
+                          {t.training.name}
+                        </Typography>
+                      </Link>
                       <Typography variant="caption" color="text.secondary">
                         {t.visualizations.length} visualizations
                       </Typography>
@@ -226,9 +249,14 @@ export const TrainingVisualizationsComparisonPage: React.FC = () => {
                     const vizForType = trainingData.visualizationsByType.get(selectedType) || [];
                     return (
                       <Box key={trainingData.training._id}>
-                        <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, textAlign: 'center', position: 'sticky', top: 0, bgcolor: 'background.paper', py: 1, zIndex: 1 }}>
-                          {trainingData.training.name}
-                        </Typography>
+                        <Link 
+                          to={`/trainings/${trainingData.training._id}`}
+                          style={{ textDecoration: 'none', color: 'inherit' }}
+                        >
+                          <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, textAlign: 'center', position: 'sticky', top: 0, bgcolor: 'background.paper', py: 1, zIndex: 1 }}>
+                            {trainingData.training.name}
+                          </Typography>
+                        </Link>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                           {vizForType.length > 0 ? (
                             vizForType
@@ -252,7 +280,7 @@ export const TrainingVisualizationsComparisonPage: React.FC = () => {
                                         borderRadius: 1,
                                         cursor: 'pointer'
                                       }}
-                                      onClick={() => window.open(viz.signedUrl, '_blank')}
+                                      onClick={() => handleImageClick(viz)}
                                     />
                                     <Typography variant="caption" display="block" sx={{ mt: 0.5 }} color="text.secondary">
                                       {formatDate(viz.uploadedAt)}
@@ -275,6 +303,45 @@ export const TrainingVisualizationsComparisonPage: React.FC = () => {
           )}
         </>
       )}
+
+      {/* Image Modal */}
+      <Dialog
+        open={imageModalOpen}
+        onClose={handleCloseImageModal}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogContent sx={{ p: 0, position: 'relative', height: '90vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <IconButton
+            onClick={handleCloseImageModal}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              bgcolor: 'rgba(0, 0, 0, 0.5)',
+              color: 'white',
+              '&:hover': {
+                bgcolor: 'rgba(0, 0, 0, 0.7)',
+              },
+              zIndex: 1,
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+          {selectedImage && (
+            <Box
+              component="img"
+              src={selectedImage.signedUrl}
+              alt={selectedImage.filename}
+              sx={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Container>
   );
 };

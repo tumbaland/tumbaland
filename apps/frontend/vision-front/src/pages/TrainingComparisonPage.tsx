@@ -29,7 +29,7 @@ import {
   Close as CloseIcon
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { trainingService } from '../services/trainingService';
 import { usePageTitle } from '../hooks/usePageTitle';
 
@@ -101,10 +101,6 @@ const TrainingComparisonPage: React.FC = () => {
     if (seconds < 3600) return `${(seconds / 60).toFixed(1)}m`;
     if (seconds < 86400) return `${(seconds / 3600).toFixed(1)}h`;
     return `${(seconds / 86400).toFixed(1)}d`;
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
   };
 
   const formatNumber = (value: any, decimals: number = 4): string => {
@@ -395,58 +391,6 @@ const TrainingComparisonPage: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Training Overview Cards */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr', lg: '1fr 1fr 1fr' }, gap: 3, mb: 4 }}>
-        {comparisonData.map((comparison) => {
-          return (
-            <Box key={comparison.training._id} sx={{ minHeight: 250 }}>
-              <Paper sx={{ p: 3, height: '100%' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                  <Box sx={{ flex: 1, mr: 2 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
-                      {comparison.training.name}
-                    </Typography>
-                    {comparison.training.description && (
-                      <Typography variant="body2" color="text.secondary">
-                        {comparison.training.description}
-                      </Typography>
-                    )}
-                  </Box>
-                  <Chip
-                    label={comparison.training.status}
-                    color={getStatusColor(comparison.training.status)}
-                    size="small"
-                  />
-                </Box>
-
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mb: 2 }}>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Epochs</Typography>
-                    <Typography variant="h6">{comparison.metrics.totalEpochs}</Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Total Time</Typography>
-                    <Typography variant="body2">{formatTime(comparison.metrics.totalTime)}</Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Avg Time</Typography>
-                    <Typography variant="body2">{formatTime(comparison.metrics.avgEpochTime)}</Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Cost</Typography>
-                    <Typography variant="body2">€{comparison.metrics.cost.totalCost.toFixed(2)}</Typography>
-                  </Box>
-                </Box>
-
-                <Typography variant="caption" color="text.secondary">
-                  Created: {formatDate(comparison.training.createdAt)}
-                </Typography>
-              </Paper>
-            </Box>
-          );
-        })}
-      </Box>
-
       {/* Detailed Comparison Table */}
       {comparisonData.length > 0 && (
         <Paper sx={{ mb: 4 }}>
@@ -462,7 +406,12 @@ const TrainingComparisonPage: React.FC = () => {
                   <TableCell><strong>Metric</strong></TableCell>
                   {comparisonData.map((comp) => (
                     <TableCell key={comp.training._id} align="center">
-                      <strong>{comp.training.name}</strong>
+                      <Link 
+                        to={`/trainings/${comp.training._id}`}
+                        style={{ textDecoration: 'none', color: 'inherit' }}
+                      >
+                        <strong>{comp.training.name}</strong>
+                      </Link>
                     </TableCell>
                   ))}
                 </TableRow>
@@ -616,12 +565,17 @@ const TrainingComparisonPage: React.FC = () => {
                     const selectedEpochData = getSelectedEpochData(comp.training._id);
                     return (
                       <TableCell key={comp.training._id} align="center">
-                        <strong>{comp.training.name}</strong>
-                        {selectedEpochData && (
-                          <Typography variant="caption" color="text.secondary" display="block">
-                            Epoch {selectedEpochData.epoch}
-                          </Typography>
-                        )}
+                        <Link 
+                          to={`/trainings/${comp.training._id}`}
+                          style={{ textDecoration: 'none', color: 'inherit' }}
+                        >
+                          <strong>{comp.training.name}</strong>
+                          {selectedEpochData && (
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              Epoch {selectedEpochData.epoch}
+                            </Typography>
+                          )}
+                        </Link>
                       </TableCell>
                     );
                   })}
@@ -732,12 +686,17 @@ const TrainingComparisonPage: React.FC = () => {
                             align="center"
                             sx={{ borderBottom: '2px solid rgba(224, 224, 224, 1)' }}
                           >
-                            <strong>{comp.training.name}</strong>
-                            {selectedEpochData && (
-                              <Typography variant="caption" color="text.secondary" display="block">
-                                Epoch {selectedEpochData.epoch}
-                              </Typography>
-                            )}
+                            <Link 
+                              to={`/trainings/${comp.training._id}`}
+                              style={{ textDecoration: 'none', color: 'inherit' }}
+                            >
+                              <strong>{comp.training.name}</strong>
+                              {selectedEpochData && (
+                                <Typography variant="caption" color="text.secondary" display="block">
+                                  Epoch {selectedEpochData.epoch}
+                                </Typography>
+                              )}
+                            </Link>
                           </TableCell>
                         );
                       })}

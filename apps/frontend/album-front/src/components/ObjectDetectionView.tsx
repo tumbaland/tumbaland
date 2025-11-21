@@ -242,7 +242,7 @@ const ObjectDetectionView: React.FC<ObjectDetectionViewNewProps> = ({ photo, for
                     onClick={() => {
                       if (detailedResults.visualization_path) {
                         const imageUrl = objectDetectionService.getVisualizationImageUrl(detailedResults.visualization_path);
-                        window.open(imageUrl, '_blank');
+                        window.open(imageUrl, '_self');
                       }
                     }}
                   />

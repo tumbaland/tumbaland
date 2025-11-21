@@ -182,7 +182,7 @@ const PhotoDetailPage: React.FC = () => {
           <Button variant="outlined" startIcon={<ShareIcon />} onClick={() => {}}>
             Share
           </Button>
-          <Button variant="outlined" startIcon={<DownloadIcon />} onClick={() => window.open(photo.signedUrl, '_blank')}>
+          <Button variant="outlined" startIcon={<DownloadIcon />} onClick={() => window.open(photo.signedUrl, '_self')}>
             Download
           </Button>
           <Button variant="outlined" startIcon={<EditIcon />} onClick={handleEdit}>
