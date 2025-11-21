@@ -56,14 +56,24 @@ const TrainingComparisonPage: React.FC = () => {
 
   const comparisonData = data?.data?.comparison || [];
 
-  // Initialize selected epochs to last epoch when data loads
+  // Initialize selected epochs to the epoch with best validation mIoU when data loads
   React.useEffect(() => {
     if (comparisonData.length > 0) {
       const initialSelectedEpochs: Record<string, number> = {};
       comparisonData.forEach(comp => {
-        if (comp.lastEpoch) {
-          initialSelectedEpochs[comp.training._id] = comp.lastEpoch.epoch;
-        }
+        // Find epoch with best validation mean IoU
+        let bestEpoch = comp.lastEpoch?.epoch || 0;
+        let bestVmIoU = -Infinity;
+
+        comp.epochs.forEach(epoch => {
+          const vmIoU = epoch.results?.val?.mean_iou;
+          if (vmIoU !== undefined && vmIoU > bestVmIoU) {
+            bestVmIoU = vmIoU;
+            bestEpoch = epoch.epoch;
+          }
+        });
+
+        initialSelectedEpochs[comp.training._id] = bestEpoch;
       });
       setSelectedEpochs(initialSelectedEpochs);
     }
@@ -525,6 +535,33 @@ const TrainingComparisonPage: React.FC = () => {
                       {comp.metrics.cost.gpuCost.toFixed(2)}
                     </TableCell>
                   ))}
+                </TableRow>
+                <TableRow>
+                  <TableCell>Best Validation mIoU</TableCell>
+                  {comparisonData.map((comp) => {
+                    const bestVmIoU = Math.max(...comp.epochs.map(epoch => epoch.results?.val?.mean_iou ?? -Infinity));
+                    return (
+                      <TableCell key={comp.training._id} align="center">
+                        {bestVmIoU !== -Infinity ? formatNumber(bestVmIoU) : 'N/A'}
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+                <TableRow>
+                  <TableCell>Top 5 Validation mIoU Average</TableCell>
+                  {comparisonData.map((comp) => {
+                    const vmIoUs = comp.epochs
+                      .map(epoch => epoch.results?.val?.mean_iou)
+                      .filter(vmIoU => vmIoU !== undefined)
+                      .sort((a, b) => (b ?? 0) - (a ?? 0))
+                      .slice(0, 5);
+                    const average = vmIoUs.length > 0 ? vmIoUs.reduce((sum, vmIoU) => sum + (vmIoU ?? 0), 0) / vmIoUs.length : undefined;
+                    return (
+                      <TableCell key={comp.training._id} align="center">
+                        {average !== undefined ? formatNumber(average) : 'N/A'}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               </TableBody>
             </Table>
