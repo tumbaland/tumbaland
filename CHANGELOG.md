@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.289](https://github.com/toomastahves/tumbaland/compare/v0.0.288...v0.0.289) (2025-11-21)
+
+
+### Features
+
+* select best epoch by default ([a5b2bfd](https://github.com/toomastahves/tumbaland/commit/a5b2bfdadabfc07070ffae67e02914180299ec88))
+
 ### [0.0.288](https://github.com/toomastahves/tumbaland/compare/v0.0.287...v0.0.288) (2025-11-21)
 
 
