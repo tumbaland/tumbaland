@@ -284,54 +284,6 @@ const TrainingTestResultsTab: React.FC<TrainingTestResultsTabProps> = ({
                     </TableBody>
                   </Table>
                 </TableContainer>
-
-                {/* Inference Time Card */}
-                <Paper sx={{ p: 2, mb: 2 }}>
-                  <Typography variant="h6" gutterBottom>Inference Time Performance</Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Model inference performance metrics across different weather conditions.
-                  </Typography>
-                  <TableContainer>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
-                          <TableCell><strong>Condition</strong></TableCell>
-                          <TableCell align="right"><strong>Avg per Sample (ms)</strong></TableCell>
-                          <TableCell align="right"><strong>Throughput (FPS)</strong></TableCell>
-                          <TableCell align="right"><strong>Total Time (s)</strong></TableCell>
-                          <TableCell align="right"><strong>Samples</strong></TableCell>
-                          <TableCell align="right"><strong>Batches</strong></TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {[
-                          { key: 'day_fair', label: 'Dry Day' },
-                          { key: 'day_rain', label: 'Rainy Day' },
-                          { key: 'night_fair', label: 'Dry Night' },
-                          { key: 'night_rain', label: 'Rainy Night' }
-                        ].map((condition) => {
-                          const conditionData = (testResult.test_results as any)[condition.key];
-                          if (!conditionData) return null;
-
-                          const inferenceTime = conditionData.inference_time;
-
-                          return (
-                            <TableRow key={condition.key}>
-                              <TableCell sx={{ fontWeight: 'bold' }}>
-                                {condition.label}
-                              </TableCell>
-                              <TableCell align="right">{inferenceTime ? formatNumber(inferenceTime.avg_per_sample_ms, 2) : '-'}</TableCell>
-                              <TableCell align="right">{inferenceTime ? formatNumber(inferenceTime.throughput_fps, 1) : '-'}</TableCell>
-                              <TableCell align="right">{inferenceTime ? formatNumber(inferenceTime.total_seconds, 1) : '-'}</TableCell>
-                              <TableCell align="right">{inferenceTime ? inferenceTime.samples : '-'}</TableCell>
-                              <TableCell align="right">{inferenceTime ? inferenceTime.batches : '-'}</TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </Paper>
               </Box>
             ))}
           </Box>

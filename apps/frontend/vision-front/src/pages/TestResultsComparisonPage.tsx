@@ -86,9 +86,11 @@ const TestResultsComparisonPage: React.FC = () => {
     const allClasses = new Set<string>();
     comparisonData.forEach(comp => {
       Object.values(comp.test_results).forEach((conditionData: any) => {
-        if (conditionData) {
+        if (conditionData && typeof conditionData === 'object') {
           Object.keys(conditionData).forEach(className => {
-            allClasses.add(className);
+            if (className !== 'inference_time') {
+              allClasses.add(className);
+            }
           });
         }
       });
@@ -179,9 +181,11 @@ const TestResultsComparisonPage: React.FC = () => {
     const allClasses = new Set<string>();
     comparisonData.forEach(comp => {
       Object.values(comp.test_results).forEach((conditionData: any) => {
-        if (conditionData) {
+        if (conditionData && typeof conditionData === 'object') {
           Object.keys(conditionData).forEach(className => {
-            allClasses.add(className);
+            if (className !== 'inference_time') {
+              allClasses.add(className);
+            }
           });
         }
       });
@@ -272,9 +276,11 @@ const TestResultsComparisonPage: React.FC = () => {
     const allClasses = new Set<string>();
     comparisonData.forEach(comp => {
       Object.values(comp.test_results).forEach((conditionData: any) => {
-        if (conditionData) {
+        if (conditionData && typeof conditionData === 'object') {
           Object.keys(conditionData).forEach(className => {
-            allClasses.add(className);
+            if (className !== 'inference_time') {
+              allClasses.add(className);
+            }
           });
         }
       });
@@ -531,9 +537,11 @@ const TestResultsComparisonPage: React.FC = () => {
             const allClasses = new Set<string>();
             comparisonData.forEach(comp => {
               Object.values(comp.test_results).forEach((conditionData: any) => {
-                if (conditionData) {
+                if (conditionData && typeof conditionData === 'object') {
                   Object.keys(conditionData).forEach(className => {
-                    allClasses.add(className);
+                    if (className !== 'inference_time') {
+                      allClasses.add(className);
+                    }
                   });
                 }
               });
@@ -725,9 +733,11 @@ const TestResultsComparisonPage: React.FC = () => {
             const allClasses = new Set<string>();
             comparisonData.forEach(comp => {
               Object.values(comp.test_results).forEach((conditionData: any) => {
-                if (conditionData) {
+                if (conditionData && typeof conditionData === 'object') {
                   Object.keys(conditionData).forEach(className => {
-                    allClasses.add(className);
+                    if (className !== 'inference_time') {
+                      allClasses.add(className);
+                    }
                   });
                 }
               });

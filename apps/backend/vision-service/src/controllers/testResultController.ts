@@ -693,6 +693,19 @@ export const compareTestResults = async (req: Request, res: Response): Promise<v
       const epoch = epochMap[testResult.epoch_uuid];
       const training = epoch ? trainingMap[epoch.trainingId.toString()] : null;
 
+      // Filter out inference_time from test_results before sending to frontend
+      const filteredTestResults: any = {};
+      Object.keys(testResult.test_results).forEach(condition => {
+        if (condition !== 'inference_time') {
+          filteredTestResults[condition] = {};
+          Object.keys(testResult.test_results[condition]).forEach(className => {
+            if (className !== 'inference_time' && !className.startsWith('mean_')) {
+              filteredTestResults[condition][className] = testResult.test_results[condition][className];
+            }
+          });
+        }
+      });
+
       return {
         testResult: {
           _id: testResult._id,
@@ -714,7 +727,7 @@ export const compareTestResults = async (req: Request, res: Response): Promise<v
           epoch_time: epoch.epoch_time,
           results: epoch.results
         } : null,
-        test_results: testResult.test_results
+        test_results: filteredTestResults
       };
     });
 
@@ -724,8 +737,22 @@ export const compareTestResults = async (req: Request, res: Response): Promise<v
         comparison: comparisonData,
         summary: {
           totalTestResults: testResults.length,
-          conditions: Object.keys(testResults[0]?.test_results || {}),
-          classes: Object.keys(testResults[0]?.test_results?.day_fair || {})
+          conditions: Object.keys(testResults[0]?.test_results || {}).filter(condition => condition !== 'inference_time'),
+          classes: (() => {
+            const allClasses = new Set<string>();
+            comparisonData.forEach(comp => {
+              Object.values(comp.test_results).forEach((conditionData: any) => {
+                if (conditionData && typeof conditionData === 'object') {
+                  Object.keys(conditionData).forEach(className => {
+                    if (className !== 'inference_time' && !className.startsWith('mean_')) {
+                      allClasses.add(className);
+                    }
+                  });
+                }
+              });
+            });
+            return Array.from(allClasses).sort();
+          })()
         }
       }
     });
