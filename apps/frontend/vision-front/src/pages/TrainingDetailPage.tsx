@@ -745,7 +745,7 @@ Camera & ${vehicle ? vehicle.iou.toFixed(4) : '-'} & ${sign ? sign.iou.toFixed(4
       {detailTab === 3 && (
         <TrainingVisualizationsTab
           training_uuid={training.uuid}
-          epochs={epochs.map(e => ({ epoch_uuid: e.epoch_uuid, epoch: e.epoch }))}
+          epochs={epochs}
         />
       )}
 

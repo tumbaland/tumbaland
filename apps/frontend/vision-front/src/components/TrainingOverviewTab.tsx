@@ -10,6 +10,8 @@ import ClassRecallChart from '../components/ClassRecallChart';
 import ClassF1Chart from '../components/ClassF1Chart';
 import ClassIoUOverEpochsChart from '../components/ClassIoUOverEpochsChart';
 import ChartComments from '../components/ChartComments';
+import LossChart from '../components/LossChart';
+import MIoUChart from '../components/MIoUChart';
 
 interface TrainingOverviewTabProps {
   training: Training;
@@ -39,6 +41,17 @@ const TrainingOverviewTab: React.FC<TrainingOverviewTabProps> = ({
     <Box display="flex" flexDirection="column" gap={3}>
       {/* Training Overview Card */}
       <TrainingOverviewCard training={training} epochs={epochs} />
+
+      {/* Training Metrics Charts */}
+      <Paper sx={{ p: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          Training Metrics
+        </Typography>
+        <Box display="flex" flexDirection="column" gap={4}>
+          <LossChart epochs={epochs} />
+          <MIoUChart epochs={epochs} />
+        </Box>
+      </Paper>
 
       {/* Mean IoU Chart */}
       {epochs.length > 0 && (trainStandardIoU.some(v => v !== null) || valStandardIoU.some(v => v !== null)) && (

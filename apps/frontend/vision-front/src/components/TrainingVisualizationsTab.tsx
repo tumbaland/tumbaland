@@ -29,11 +29,11 @@ import {
   Close as CloseIcon
 } from '@mui/icons-material';
 import { visualizationService } from '../services/visualizationService';
-import { Visualization } from '../types';
+import { Visualization, Epoch } from '../types';
 
 interface TrainingVisualizationsTabProps {
   training_uuid: string;
-  epochs: Array<{ epoch_uuid: string; epoch: number }>;
+  epochs: Epoch[];
 }
 
 const TrainingVisualizationsTab: React.FC<TrainingVisualizationsTabProps> = ({
