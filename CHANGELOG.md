@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.297](https://github.com/toomastahves/tumbaland/compare/v0.0.296...v0.0.297) (2025-11-22)
+
+
+### Features
+
+* add snow weather ([7f8e5f0](https://github.com/toomastahves/tumbaland/commit/7f8e5f0ebb3c1d72936e1cfbf02e639e0a37f89b))
+
 ### [0.0.296](https://github.com/toomastahves/tumbaland/compare/v0.0.295...v0.0.296) (2025-11-22)
 
 
