@@ -9,7 +9,7 @@ export const getTrainings = async (req: Request, res: Response): Promise<void> =
   try {
     const { 
       page = 1, 
-      limit = 10, 
+      limit = 30, 
       search, 
       status, 
       datasetId,
@@ -584,10 +584,10 @@ export const compareTrainings = async (req: Request, res: Response): Promise<voi
       return;
     }
 
-    if (trainingIds.length > 10) {
+    if (trainingIds.length > 30) {
       res.status(400).json({
         success: false,
-        message: 'Maximum 10 trainings can be compared at once'
+        message: 'Maximum 30 trainings can be compared at once'
       });
       return;
     }
