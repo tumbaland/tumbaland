@@ -244,12 +244,12 @@ export const TestResultsPage: React.FC = () => {
                     return (
                       <Link 
                         key={testResult._id} 
-                        to={`/trainings/${testResult.training?._id}?tab=test-results`}
-                        style={{ display: 'contents', textDecoration: 'none', color: 'inherit' }}
+                        to={testResult.training ? `/trainings/${testResult.training._id}?tab=test-results` : '#'}
+                        style={{ display: 'contents', textDecoration: 'none', color: 'inherit', cursor: testResult.training ? 'pointer' : 'default' }}
                       >
                         <TableRow 
                           hover 
-                          sx={{ cursor: 'pointer' }}
+                          sx={{ cursor: testResult.training ? 'pointer' : 'default' }}
                         >
                           <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
                             <Checkbox

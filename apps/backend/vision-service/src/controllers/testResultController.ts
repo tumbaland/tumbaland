@@ -86,7 +86,7 @@ export const getTestResults = async (req: Request, res: Response): Promise<void>
 
       // Get training information for the test results
       const epochUuids = testResults.map(tr => tr.epoch_uuid);
-      const epochs = await Epoch.find({ epoch_uuid: { $in: epochUuids } });
+      const epochs = await Epoch.find({ epoch_uuid: { $in: epochUuids }, deletedAt: null });
       const trainingIds = epochs.map(e => e.trainingId);
       const trainings = await Training.find({ _id: { $in: trainingIds }, deletedAt: null });
 
@@ -101,8 +101,19 @@ export const getTestResults = async (req: Request, res: Response): Promise<void>
         return acc;
       }, {} as Record<string, any>);
 
+      // Filter test results to only include those with valid epochs and trainings
+      const validEpochUuids = new Set(epochs.map(e => e.epoch_uuid));
+      const validTrainingIds = new Set(trainings.map(t => (t._id as any).toString()));
+      
+      const filteredTestResults = testResults.filter(testResult => {
+        const epoch = epochMap[testResult.epoch_uuid];
+        if (!epoch) return false;
+        const training = trainingMap[epoch.trainingId.toString()];
+        return training !== undefined;
+      });
+
       // Add training info to test results
-      const testResultsWithTraining = testResults.map(testResult => {
+      const testResultsWithTraining = filteredTestResults.map(testResult => {
         const epoch = epochMap[testResult.epoch_uuid];
         const training = epoch ? trainingMap[epoch.trainingId.toString()] : null;
 
@@ -121,6 +132,9 @@ export const getTestResults = async (req: Request, res: Response): Promise<void>
         };
       });
 
+      // Update total count to reflect filtered results
+      const actualTotal = filteredTestResults.length;
+
       res.json({
         success: true,
         data: {
@@ -128,8 +142,8 @@ export const getTestResults = async (req: Request, res: Response): Promise<void>
           pagination: {
             page: Number(page),
             limit: Number(limit),
-            total,
-            pages: Math.ceil(total / Number(limit))
+            total: actualTotal,
+            pages: Math.ceil(actualTotal / Number(limit))
           }
         }
       });
@@ -139,7 +153,7 @@ export const getTestResults = async (req: Request, res: Response): Promise<void>
 
       // Get training information for the test results
       const epochUuids = testResults.map(tr => tr.epoch_uuid);
-      const epochs = await Epoch.find({ epoch_uuid: { $in: epochUuids } });
+      const epochs = await Epoch.find({ epoch_uuid: { $in: epochUuids }, deletedAt: null });
       const trainingIds = epochs.map(e => e.trainingId);
       const trainings = await Training.find({ _id: { $in: trainingIds }, deletedAt: null });
 
@@ -154,8 +168,16 @@ export const getTestResults = async (req: Request, res: Response): Promise<void>
         return acc;
       }, {} as Record<string, any>);
 
+      // Filter test results to only include those with valid epochs and trainings
+      const filteredTestResults = testResults.filter(testResult => {
+        const epoch = epochMap[testResult.epoch_uuid];
+        if (!epoch) return false;
+        const training = trainingMap[epoch.trainingId.toString()];
+        return training !== undefined;
+      });
+
       // Add training info to test results
-      const testResultsWithTraining = testResults.map(testResult => {
+      const testResultsWithTraining = filteredTestResults.map(testResult => {
         const epoch = epochMap[testResult.epoch_uuid];
         const training = epoch ? trainingMap[epoch.trainingId.toString()] : null;
 
@@ -178,7 +200,7 @@ export const getTestResults = async (req: Request, res: Response): Promise<void>
         success: true,
         data: {
           testResults: testResultsWithTraining,
-          total: testResults.length
+          total: filteredTestResults.length
         }
       });
     }
@@ -269,7 +291,7 @@ export const getTestResultsByEpochUuid = async (req: Request, res: Response): Pr
       ]);
 
       // Get training information for the test results
-      const epochs = await Epoch.find({ epoch_uuid: epochUuid });
+      const epochs = await Epoch.find({ epoch_uuid: epochUuid, deletedAt: null });
       const trainingIds = epochs.map(e => e.trainingId);
       const trainings = await Training.find({ _id: { $in: trainingIds }, deletedAt: null });
 
@@ -284,8 +306,16 @@ export const getTestResultsByEpochUuid = async (req: Request, res: Response): Pr
         return acc;
       }, {} as Record<string, any>);
 
+      // Filter test results to only include those with valid epochs and trainings
+      const filteredTestResults = testResults.filter(testResult => {
+        const epoch = epochMap[testResult.epoch_uuid];
+        if (!epoch) return false;
+        const training = trainingMap[epoch.trainingId.toString()];
+        return training !== undefined;
+      });
+
       // Add training info to test results
-      const testResultsWithTraining = testResults.map(testResult => {
+      const testResultsWithTraining = filteredTestResults.map(testResult => {
         const epoch = epochMap[testResult.epoch_uuid];
         const training = epoch ? trainingMap[epoch.trainingId.toString()] : null;
 
@@ -303,6 +333,9 @@ export const getTestResultsByEpochUuid = async (req: Request, res: Response): Pr
           } : null
         };
       });
+
+      // Update total count to reflect filtered results
+      const actualTotal = filteredTestResults.length;
 
       res.json({
         success: true,
@@ -311,8 +344,8 @@ export const getTestResultsByEpochUuid = async (req: Request, res: Response): Pr
           pagination: {
             page: Number(page),
             limit: Number(limit),
-            total,
-            pages: Math.ceil(total / Number(limit))
+            total: actualTotal,
+            pages: Math.ceil(actualTotal / Number(limit))
           }
         }
       });
@@ -321,7 +354,7 @@ export const getTestResultsByEpochUuid = async (req: Request, res: Response): Pr
       const testResults = await query;
 
       // Get training information for the test results
-      const epochs = await Epoch.find({ epoch_uuid: epochUuid });
+      const epochs = await Epoch.find({ epoch_uuid: epochUuid, deletedAt: null });
       const trainingIds = epochs.map(e => e.trainingId);
       const trainings = await Training.find({ _id: { $in: trainingIds }, deletedAt: null });
 
@@ -336,8 +369,16 @@ export const getTestResultsByEpochUuid = async (req: Request, res: Response): Pr
         return acc;
       }, {} as Record<string, any>);
 
+      // Filter test results to only include those with valid epochs and trainings
+      const filteredTestResults = testResults.filter(testResult => {
+        const epoch = epochMap[testResult.epoch_uuid];
+        if (!epoch) return false;
+        const training = trainingMap[epoch.trainingId.toString()];
+        return training !== undefined;
+      });
+
       // Add training info to test results
-      const testResultsWithTraining = testResults.map(testResult => {
+      const testResultsWithTraining = filteredTestResults.map(testResult => {
         const epoch = epochMap[testResult.epoch_uuid];
         const training = epoch ? trainingMap[epoch.trainingId.toString()] : null;
 
@@ -360,7 +401,7 @@ export const getTestResultsByEpochUuid = async (req: Request, res: Response): Pr
         success: true,
         data: {
           testResults: testResultsWithTraining,
-          total: testResults.length
+          total: filteredTestResults.length
         }
       });
     }
@@ -673,7 +714,7 @@ export const compareTestResults = async (req: Request, res: Response): Promise<v
 
     // Get associated epochs and trainings for additional context
     const epochUuids = testResults.map(tr => tr.epoch_uuid);
-    const epochs = await Epoch.find({ epoch_uuid: { $in: epochUuids } });
+    const epochs = await Epoch.find({ epoch_uuid: { $in: epochUuids }, deletedAt: null });
     const trainingIds = epochs.map(e => e.trainingId);
     const trainings = await Training.find({ _id: { $in: trainingIds }, deletedAt: null });
 

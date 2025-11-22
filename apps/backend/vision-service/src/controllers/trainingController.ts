@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import Training from '../models/Training';
 import Epoch from '../models/Epoch';
+import TestResult from '../models/TestResult';
 
 // Get all trainings
 export const getTrainings = async (req: Request, res: Response): Promise<void> => {
@@ -447,12 +448,27 @@ export const deleteTraining = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    training.deletedAt = new Date();
+    const now = new Date();
+    
+    // Mark training as deleted
+    training.deletedAt = now;
     await training.save();
+
+    // Mark all epochs of this training as deleted
+    await Epoch.updateMany({ trainingId: id }, { deletedAt: now });
+
+    // Get all epoch UUIDs for this training to mark test results as deleted
+    const trainingEpochs = await Epoch.find({ trainingId: id }, 'epoch_uuid');
+    const epochUuids = trainingEpochs.map(e => e.epoch_uuid);
+
+    if (epochUuids.length > 0) {
+      // Mark all test results for these epochs as deleted
+      await TestResult.updateMany({ epoch_uuid: { $in: epochUuids } }, { deletedAt: now });
+    }
 
     res.json({
       success: true,
-      message: 'Training deleted successfully'
+      message: 'Training and associated data deleted successfully'
     });
   } catch (error) {
     console.error('Error deleting training:', error);

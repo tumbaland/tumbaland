@@ -12,6 +12,7 @@ export interface IEpoch extends Document {
   metadata?: any;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date;
 }
 
 const EpochSchema: Schema = new Schema(
@@ -53,6 +54,9 @@ const EpochSchema: Schema = new Schema(
     },
     metadata: {
       type: Schema.Types.Mixed
+    },
+    deletedAt: {
+      type: Date
     }
   },
   {
