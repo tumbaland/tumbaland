@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.294](https://github.com/toomastahves/tumbaland/compare/v0.0.293...v0.0.294) (2025-11-22)
+
+
+### Features
+
+* add average precision visualizations ([37e5705](https://github.com/toomastahves/tumbaland/commit/37e5705fca77e06259e7b9785232ce09d2f6f563))
+
 ### [0.0.293](https://github.com/toomastahves/tumbaland/compare/v0.0.292...v0.0.293) (2025-11-22)
 
 
