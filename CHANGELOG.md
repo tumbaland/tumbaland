@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.292](https://github.com/toomastahves/tumbaland/compare/v0.0.291...v0.0.292) (2025-11-22)
+
+
+### Features
+
+* filter out deleted trainings ([887fa8f](https://github.com/toomastahves/tumbaland/commit/887fa8fbba2157c73ee28a4c620c7ad7536202ec))
+
 ### [0.0.291](https://github.com/toomastahves/tumbaland/compare/v0.0.290...v0.0.291) (2025-11-21)
 
 
