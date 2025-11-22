@@ -44,6 +44,8 @@ const TrainingVisualizationsTab: React.FC<TrainingVisualizationsTabProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string>('all');
+  const [selectedEpochFilter, setSelectedEpochFilter] = useState<string>('all');
+  const [selectedImageName, setSelectedImageName] = useState<string>('');
   const [types, setTypes] = useState<string[]>([]);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [selectedEpoch, setSelectedEpoch] = useState<string>('');
@@ -69,7 +71,22 @@ const TrainingVisualizationsTab: React.FC<TrainingVisualizationsTabProps> = ({
         }
       );
 
-      setVisualizations(response.data.visualizations || []);
+      let visualizations = response.data.visualizations || [];
+
+      // Apply client-side filters
+      if (selectedEpochFilter !== 'all') {
+        const epochNum = parseInt(selectedEpochFilter);
+        visualizations = visualizations.filter(viz => viz.epoch === epochNum);
+      }
+
+      if (selectedImageName.trim()) {
+        const searchTerm = selectedImageName.toLowerCase().trim();
+        visualizations = visualizations.filter(viz =>
+          viz.filename.toLowerCase().includes(searchTerm)
+        );
+      }
+
+      setVisualizations(visualizations);
     } catch (err) {
       console.error('Failed to load visualizations:', err);
       setError('Failed to load visualizations');
@@ -91,7 +108,7 @@ const TrainingVisualizationsTab: React.FC<TrainingVisualizationsTabProps> = ({
   useEffect(() => {
     loadVisualizations();
     loadTypes();
-  }, [training_uuid, selectedType]);
+  }, [training_uuid, selectedType, selectedEpochFilter, selectedImageName]);
 
   // Handle file selection
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,6 +214,31 @@ const TrainingVisualizationsTab: React.FC<TrainingVisualizationsTabProps> = ({
                 ))}
               </Select>
             </FormControl>
+
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <InputLabel>Filter by Epoch</InputLabel>
+              <Select
+                value={selectedEpochFilter}
+                onChange={(e) => setSelectedEpochFilter(e.target.value)}
+                label="Filter by Epoch"
+              >
+                <MenuItem value="all">All Epochs</MenuItem>
+                {epochs.map(epoch => (
+                  <MenuItem key={epoch.epoch_uuid} value={epoch.epoch.toString()}>
+                    Epoch {epoch.epoch}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <TextField
+              size="small"
+              label="Filter by Image Name"
+              value={selectedImageName}
+              onChange={(e) => setSelectedImageName(e.target.value)}
+              placeholder="Enter image name..."
+              sx={{ minWidth: 200 }}
+            />
             
             {selectedForCompare.length > 0 && (
               <Chip
