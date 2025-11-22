@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.293](https://github.com/toomastahves/tumbaland/compare/v0.0.292...v0.0.293) (2025-11-22)
+
+
+### Features
+
+* add miou and loss charts ([dc2a55a](https://github.com/toomastahves/tumbaland/commit/dc2a55a8ff1abdc7e57ff27a22105bcdd89c4f84))
+
 ### [0.0.292](https://github.com/toomastahves/tumbaland/compare/v0.0.291...v0.0.292) (2025-11-22)
 
 
