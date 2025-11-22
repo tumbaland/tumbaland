@@ -8,6 +8,7 @@ import TrainingOverviewCard from '../components/TrainingOverviewCard';
 import ClassPrecisionChart from '../components/ClassPrecisionChart';
 import ClassRecallChart from '../components/ClassRecallChart';
 import ClassF1Chart from '../components/ClassF1Chart';
+import ClassAPChart from '../components/ClassAPChart';
 import ClassIoUOverEpochsChart from '../components/ClassIoUOverEpochsChart';
 import ChartComments from '../components/ChartComments';
 import LossChart from '../components/LossChart';
@@ -128,6 +129,15 @@ const TrainingOverviewTab: React.FC<TrainingOverviewTabProps> = ({
 
       {/* Class F1 Chart */}
       <ClassF1Chart 
+        epochs={epochs} 
+        trainingId={trainingId} 
+        comments={comments}
+        commentsLoading={commentsLoading}
+        onCommentsRefetch={onCommentsRefetch}
+      />
+
+      {/* Class AP Chart */}
+      <ClassAPChart 
         epochs={epochs} 
         trainingId={trainingId} 
         comments={comments}

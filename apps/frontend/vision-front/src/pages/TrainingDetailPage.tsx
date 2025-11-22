@@ -593,9 +593,9 @@ const TrainingDetailPage: React.FC = () => {
     let latex = `\\begin{table*}[ht]
 \\centering
 \\caption{Performance comparison during various weather conditions.}
-\\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
-\\hline & \\multicolumn{4}{|c|}{IoU} & \\multicolumn{4}{|c|}{Precision} & \\multicolumn{4}{|c|}{Recall} & \\multicolumn{3}{|c|}{Inference Time} \\\\
-\\hline & Vehicle & Sign & Cyclist+Ped & Human & Vehicle & Sign & Cyclist+Ped & Human & Vehicle & Sign & Cyclist+Ped & Human & Avg (ms) & FPS & Total (s) \\\\
+\\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+\\hline & \\multicolumn{4}{|c|}{IoU} & \\multicolumn{4}{|c|}{Precision} & \\multicolumn{4}{|c|}{Recall} & \\multicolumn{4}{|c|}{AP} & \\multicolumn{3}{|c|}{Inference Time} \\\\
+\\hline & Vehicle & Sign & Cyclist+Ped & Human & Vehicle & Sign & Cyclist+Ped & Human & Vehicle & Sign & Cyclist+Ped & Human & Vehicle & Sign & Cyclist+Ped & Human & Avg (ms) & FPS & Total (s) \\\\
 \\hline
 `;
 
@@ -609,9 +609,9 @@ const TrainingDetailPage: React.FC = () => {
       const human = conditionData.human;
       const inferenceTime = conditionData.inference_time;
 
-      latex += `\\multicolumn{15}{|c|}{${condition.label}} \\\\
+      latex += `\\multicolumn{19}{|c|}{${condition.label}} \\\\
 \\hline
-Camera & ${vehicle ? vehicle.iou.toFixed(4) : '-'} & ${sign ? sign.iou.toFixed(4) : '-'} & ${cyclistPedestrian ? cyclistPedestrian.iou.toFixed(4) : '-'} & ${human ? human.iou.toFixed(4) : '-'} & ${vehicle ? vehicle.precision.toFixed(4) : '-'} & ${sign ? sign.precision.toFixed(4) : '-'} & ${cyclistPedestrian ? cyclistPedestrian.precision.toFixed(4) : '-'} & ${human ? human.precision.toFixed(4) : '-'} & ${vehicle ? vehicle.recall.toFixed(4) : '-'} & ${sign ? sign.recall.toFixed(4) : '-'} & ${cyclistPedestrian ? cyclistPedestrian.recall.toFixed(4) : '-'} & ${human ? human.recall.toFixed(4) : '-'} & ${inferenceTime ? inferenceTime.avg_per_sample_ms.toFixed(2) : '-'} & ${inferenceTime ? inferenceTime.throughput_fps.toFixed(1) : '-'} & ${inferenceTime ? inferenceTime.total_seconds.toFixed(1) : '-'} \\\\
+Camera & ${vehicle ? vehicle.iou.toFixed(4) : '-'} & ${sign ? sign.iou.toFixed(4) : '-'} & ${cyclistPedestrian ? cyclistPedestrian.iou.toFixed(4) : '-'} & ${human ? human.iou.toFixed(4) : '-'} & ${vehicle ? vehicle.precision.toFixed(4) : '-'} & ${sign ? sign.precision.toFixed(4) : '-'} & ${cyclistPedestrian ? cyclistPedestrian.precision.toFixed(4) : '-'} & ${human ? human.precision.toFixed(4) : '-'} & ${vehicle ? vehicle.recall.toFixed(4) : '-'} & ${sign ? sign.recall.toFixed(4) : '-'} & ${cyclistPedestrian ? cyclistPedestrian.recall.toFixed(4) : '-'} & ${human ? human.recall.toFixed(4) : '-'} & ${vehicle ? vehicle.ap.toFixed(4) : '-'} & ${sign ? sign.ap.toFixed(4) : '-'} & ${cyclistPedestrian ? cyclistPedestrian.ap.toFixed(4) : '-'} & ${human ? human.ap.toFixed(4) : '-'} & ${inferenceTime ? inferenceTime.avg_per_sample_ms.toFixed(2) : '-'} & ${inferenceTime ? inferenceTime.throughput_fps.toFixed(1) : '-'} & ${inferenceTime ? inferenceTime.total_seconds.toFixed(1) : '-'} \\\\
 \\hline
 `;
     });

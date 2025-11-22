@@ -227,11 +227,16 @@ const TrainingTestResultsTab: React.FC<TrainingTestResultsTabProps> = ({
                     <TableHead>
                       <TableRow sx={{ backgroundColor: '#f9f9f9' }}>
                         <TableCell rowSpan={2} sx={{ borderRight: '2px solid #ddd' }}><strong>Condition</strong></TableCell>
-                        <TableCell colSpan={4} align="center" sx={{ borderRight: '2px solid #ddd' }}><strong>IoU</strong></TableCell>
+                        <TableCell colSpan={hasCyclistPedestrianData ? 4 : 3} align="center" sx={{ borderRight: '2px solid #ddd' }}><strong>IoU</strong></TableCell>
                         <TableCell colSpan={hasCyclistPedestrianData ? 4 : 3} align="center" sx={{ borderRight: '2px solid #ddd' }}><strong>Precision</strong></TableCell>
-                        <TableCell colSpan={hasCyclistPedestrianData ? 4 : 3} align="center"><strong>Recall</strong></TableCell>
+                        <TableCell colSpan={hasCyclistPedestrianData ? 4 : 3} align="center" sx={{ borderRight: '2px solid #ddd' }}><strong>Recall</strong></TableCell>
+                        <TableCell colSpan={hasCyclistPedestrianData ? 4 : 3} align="center"><strong>AP</strong></TableCell>
                       </TableRow>
                       <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                        <TableCell align="center"><strong>Vehicle</strong></TableCell>
+                        <TableCell align="center"><strong>Sign</strong></TableCell>
+                        {hasCyclistPedestrianData && <TableCell align="center"><strong>Cyclist + Pedestrian</strong></TableCell>}
+                        <TableCell align="center" sx={{ borderRight: '2px solid #ddd' }}><strong>Human</strong></TableCell>
                         <TableCell align="center"><strong>Vehicle</strong></TableCell>
                         <TableCell align="center"><strong>Sign</strong></TableCell>
                         {hasCyclistPedestrianData && <TableCell align="center"><strong>Cyclist + Pedestrian</strong></TableCell>}
@@ -277,7 +282,11 @@ const TrainingTestResultsTab: React.FC<TrainingTestResultsTabProps> = ({
                             <TableCell align="center">{vehicle ? formatNumber(vehicle.recall) : '-'}</TableCell>
                             <TableCell align="center">{sign ? formatNumber(sign.recall) : '-'}</TableCell>
                             {hasCyclistPedestrianData && <TableCell align="center">{cyclistPedestrian ? formatNumber(cyclistPedestrian.recall) : '-'}</TableCell>}
-                            <TableCell align="center">{human ? formatNumber(human.recall) : '-'}</TableCell>
+                            <TableCell align="center" sx={{ borderRight: '2px solid #ddd' }}>{human ? formatNumber(human.recall) : '-'}</TableCell>
+                            <TableCell align="center">{vehicle ? formatNumber(vehicle.ap) : '-'}</TableCell>
+                            <TableCell align="center">{sign ? formatNumber(sign.ap) : '-'}</TableCell>
+                            {hasCyclistPedestrianData && <TableCell align="center">{cyclistPedestrian ? formatNumber(cyclistPedestrian.ap) : '-'}</TableCell>}
+                            <TableCell align="center">{human ? formatNumber(human.ap) : '-'}</TableCell>
                           </TableRow>
                         );
                       })}
