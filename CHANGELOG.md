@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.295](https://github.com/toomastahves/tumbaland/compare/v0.0.294...v0.0.295) (2025-11-22)
+
+
+### Features
+
+* add visual filters ([3f981c3](https://github.com/toomastahves/tumbaland/commit/3f981c362b0afb9e5c4a42c11815c99ed1d7d0d9))
+
 ### [0.0.294](https://github.com/toomastahves/tumbaland/compare/v0.0.293...v0.0.294) (2025-11-22)
 
 
