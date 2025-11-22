@@ -284,6 +284,7 @@ export interface TestResultData {
   night_fair: TestResultCondition;
   day_rain: TestResultCondition;
   night_rain: TestResultCondition;
+  snow: TestResultCondition;
   [condition: string]: TestResultCondition;
 }
 

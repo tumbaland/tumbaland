@@ -93,7 +93,7 @@ const TrainingTestResultsTab: React.FC<TrainingTestResultsTabProps> = ({
 
   // Check if Cyclist + Pedestrian data exists in any test result
   const hasCyclistPedestrianData = testResults.some(testResult => {
-    return ['day_fair', 'day_rain', 'night_fair', 'night_rain'].some(condition => {
+    return ['day_fair', 'day_rain', 'night_fair', 'night_rain', 'snow'].some(condition => {
       const conditionData = (testResult.test_results as any)[condition];
       return conditionData && conditionData['cyclist + pedestrian'];
     });
@@ -255,6 +255,7 @@ const TrainingTestResultsTab: React.FC<TrainingTestResultsTabProps> = ({
                       {[
                         { key: 'day_fair', label: 'Dry Day' },
                         { key: 'day_rain', label: 'Rainy Day' },
+                        { key: 'snow', label: 'Snow' },
                         { key: 'night_fair', label: 'Dry Night' },
                         { key: 'night_rain', label: 'Rainy Night' }
                       ].map((condition) => {

@@ -586,6 +586,7 @@ const TrainingDetailPage: React.FC = () => {
     const conditions = [
       { key: 'day_fair', label: 'Dry day' },
       { key: 'day_rain', label: 'Rainy day' },
+      { key: 'snow', label: 'Snow' },
       { key: 'night_fair', label: 'Dry night' },
       { key: 'night_rain', label: 'Rainy night' }
     ];

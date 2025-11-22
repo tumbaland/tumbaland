@@ -78,7 +78,7 @@ const TestResultsComparisonPage: React.FC = () => {
     const classNames = Array.from(allClasses).sort();
 
     // Generate table for each condition
-    ['day_fair', 'night_fair', 'day_rain', 'night_rain'].forEach(condition => {
+    ['day_fair', 'night_fair', 'day_rain', 'night_rain', 'snow'].forEach(condition => {
       // Calculate max values for bold formatting
       const maxValues: Record<string, { iou: number; precision: number; recall: number }> = {};
       classNames.forEach(className => {
@@ -173,7 +173,7 @@ const TestResultsComparisonPage: React.FC = () => {
     const classNames = Array.from(allClasses).sort();
 
     // Generate table for each condition
-    ['day_fair', 'night_fair', 'day_rain', 'night_rain'].forEach(condition => {
+    ['day_fair', 'night_fair', 'day_rain', 'night_rain', 'snow'].forEach(condition => {
       // Calculate max values for bold formatting
       const maxValues: Record<string, { iou: number; precision: number; recall: number }> = {};
       classNames.forEach(className => {
@@ -268,7 +268,7 @@ const TestResultsComparisonPage: React.FC = () => {
     const classNames = Array.from(allClasses).sort();
 
     // Generate table for each condition
-    ['day_fair', 'night_fair', 'day_rain', 'night_rain'].forEach(condition => {
+    ['day_fair', 'night_fair', 'day_rain', 'night_rain', 'snow'].forEach(condition => {
       // Calculate max values for bold formatting
       const maxValues: Record<string, { iou: number; precision: number; recall: number; f1: number }> = {};
       classNames.forEach(className => {
@@ -491,7 +491,7 @@ const TestResultsComparisonPage: React.FC = () => {
               );
             }
 
-            return ['day_fair', 'night_fair', 'day_rain', 'night_rain'].map(condition => {
+            return ['day_fair', 'night_fair', 'day_rain', 'night_rain', 'snow'].map(condition => {
               // Calculate max values for each metric and class across all test results for this condition
               const maxValues: Record<string, { iou: number; precision: number; recall: number }> = {};
               classNames.forEach(className => {
@@ -692,7 +692,7 @@ const TestResultsComparisonPage: React.FC = () => {
               );
             }
 
-            return ['day_fair', 'night_fair', 'day_rain', 'night_rain'].map(condition => (
+            return ['day_fair', 'night_fair', 'day_rain', 'night_rain', 'snow'].map(condition => (
               <Box key={condition} sx={{ mb: 4 }}>
                 <Typography variant="h6" sx={{ mb: 2, textTransform: 'capitalize', ml: 2 }}>
                   {condition.replace('_', ' ')} - Per-Class Metrics
