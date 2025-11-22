@@ -37,8 +37,18 @@ export const getTrainings = async (req: Request, res: Response): Promise<void> =
 
     // Filter by tags
     if (tags) {
-      const tagArray = Array.isArray(tags) ? tags : [tags];
-      query.tags = { $in: tagArray };
+      let tagArray: string[];
+      if (Array.isArray(tags)) {
+        tagArray = tags as string[];
+      } else {
+        // Split comma-separated string into array
+        tagArray = (tags as string).split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+      }
+      if (tagArray.length === 1) {
+        query.tags = { $in: tagArray };
+      } else {
+        query.tags = { $all: tagArray };
+      }
     }
 
     const skip = (Number(page) - 1) * Number(limit);
@@ -500,8 +510,18 @@ export const getTrainingStats = async (req: Request, res: Response): Promise<voi
 
     // Filter by tags if provided
     if (tags) {
-      const tagArray = Array.isArray(tags) ? tags : [tags];
-      query.tags = { $in: tagArray };
+      let tagArray: string[];
+      if (Array.isArray(tags)) {
+        tagArray = tags as string[];
+      } else {
+        // Split comma-separated string into array
+        tagArray = (tags as string).split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+      }
+      if (tagArray.length === 1) {
+        query.tags = { $in: tagArray };
+      } else {
+        query.tags = { $all: tagArray };
+      }
     }
 
     // Get all trainings matching the filter

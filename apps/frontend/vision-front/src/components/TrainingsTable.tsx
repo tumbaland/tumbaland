@@ -242,7 +242,7 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
                     </Typography>
                     {training.tags && training.tags.length > 0 && (
                       <Box sx={{ mt: 0.5, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                        {training.tags.slice(0, 3).map((tag) => (
+                        {training.tags.map((tag) => (
                           <Chip
                             key={tag}
                             label={tag}
@@ -258,11 +258,6 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
                             }}
                           />
                         ))}
-                        {training.tags.length > 3 && (
-                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                            +{training.tags.length - 3} more
-                          </Typography>
-                        )}
                       </Box>
                     )}
                   </Box>

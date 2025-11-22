@@ -9,7 +9,8 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Chip
 } from '@mui/material';
 import {
   Refresh as RefreshIcon,
@@ -19,7 +20,7 @@ import {
   Download as DownloadIcon
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { trainingService } from '../services/trainingService';
 import { configService } from '../services/configService';
 import { getAllAnalyses, type DatasetAnalysis } from '../services/analysisService';
@@ -32,6 +33,7 @@ import { usePageTitle } from '../hooks/usePageTitle';
 
 const TrainingsPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Set page title
   usePageTitle('Trainings - Vision');
@@ -62,6 +64,26 @@ const TrainingsPage: React.FC = () => {
   const [deleteMultipleDialogOpen, setDeleteMultipleDialogOpen] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
+
+  // Initialize selectedTags from URL parameters
+  React.useEffect(() => {
+    const tagsParam = searchParams.get('tags');
+    if (tagsParam) {
+      const tags = tagsParam.split(',').filter(tag => tag.trim().length > 0);
+      setSelectedTags(tags);
+    }
+  }, [searchParams]);
+
+  // Update URL parameters when selectedTags changes
+  React.useEffect(() => {
+    const newSearchParams = new URLSearchParams(searchParams);
+    if (selectedTags.length > 0) {
+      newSearchParams.set('tags', selectedTags.join(','));
+    } else {
+      newSearchParams.delete('tags');
+    }
+    setSearchParams(newSearchParams, { replace: true });
+  }, [selectedTags, searchParams, setSearchParams]);
 
   // Debounce search
   React.useEffect(() => {
@@ -113,8 +135,10 @@ const TrainingsPage: React.FC = () => {
   });
 
   const { data: statsData } = useQuery({
-    queryKey: ['training-stats'],
-    queryFn: () => trainingService.getTrainingStats({})
+    queryKey: ['training-stats', selectedTags],
+    queryFn: () => trainingService.getTrainingStats({
+      tags: selectedTags.length > 0 ? selectedTags : undefined
+    })
   });
 
   // Load available tags
@@ -392,9 +416,39 @@ const TrainingsPage: React.FC = () => {
       {/* Training Statistics */}
       {stats && (
         <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: 1, borderColor: 'divider' }}>
-          <Typography variant="h6" gutterBottom>
-            Training Statistics
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+            <Typography variant="h6">
+              Training Statistics
+            </Typography>
+            {selectedTags.length > 0 && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  (filtered by tags:
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                  {selectedTags.map((tag) => (
+                    <Chip
+                      key={tag}
+                      label={tag}
+                      size="small"
+                      variant="outlined"
+                      sx={{
+                        height: '20px',
+                        fontSize: '0.7rem',
+                        '& .MuiChip-label': {
+                          px: 0.5,
+                          py: 0
+                        }
+                      }}
+                    />
+                  ))}
+                </Box>
+                <Typography variant="body2" color="text.secondary">
+                  )
+                </Typography>
+              </Box>
+            )}
+          </Box>
           <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
             <Box>
               <Typography variant="body2" color="text.secondary">
