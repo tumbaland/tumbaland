@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.296](https://github.com/toomastahves/tumbaland/compare/v0.0.295...v0.0.296) (2025-11-22)
+
+
+### Features
+
+* allow upto 30 comparisons ([12e760a](https://github.com/toomastahves/tumbaland/commit/12e760aa62a84ba824aab539259e6825b3a8e114))
+
 ### [0.0.295](https://github.com/toomastahves/tumbaland/compare/v0.0.294...v0.0.295) (2025-11-22)
 
 
