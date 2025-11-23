@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Box,
   Paper,
@@ -26,7 +26,8 @@ import {
 import {
   CloudUpload as CloudUploadIcon,
   Visibility as VisibilityIcon,
-  Code as CodeIcon
+  Code as CodeIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { TestResult } from '../types';
 
@@ -50,6 +51,7 @@ interface TrainingTestResultsTabProps {
   onLatexExport: (testResult: TestResult) => void;
   onSetUploadResultsOpen: (open: boolean) => void;
   onSetLatexModalOpen: (open: boolean) => void;
+  onDeleteTestResult?: (testResultId: string) => void;
 }
 
 const TrainingTestResultsTab: React.FC<TrainingTestResultsTabProps> = ({
@@ -68,9 +70,12 @@ const TrainingTestResultsTab: React.FC<TrainingTestResultsTabProps> = ({
   onTestEpochChange,
   onLatexExport,
   onSetUploadResultsOpen,
-  onSetLatexModalOpen
+  onSetLatexModalOpen,
+  onDeleteTestResult
 }) => {
   const testResultFileInputRef = useRef<HTMLInputElement>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<TestResult | null>(null);
 
   const handleTestResultFileClick = () => {
     testResultFileInputRef.current?.click();
@@ -80,6 +85,19 @@ const TrainingTestResultsTab: React.FC<TrainingTestResultsTabProps> = ({
     const files = event.target.files;
     if (!files || files.length === 0) return;
     await onTestResultFileUpload(files);
+  };
+
+  const handleDeleteClick = (testResult: TestResult) => {
+    setDeleteTarget(testResult);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteTarget && onDeleteTestResult) {
+      onDeleteTestResult(deleteTarget._id);
+      setDeleteDialogOpen(false);
+      setDeleteTarget(null);
+    }
   };
 
   const formatDate = (dateString: string) => new Date(dateString).toLocaleString();
@@ -212,14 +230,26 @@ const TrainingTestResultsTab: React.FC<TrainingTestResultsTabProps> = ({
                       Test UUID: {testResult.test_uuid}
                     </Typography>
                   </Box>
-                  <Button
-                    variant="outlined"
-                    startIcon={<CodeIcon />}
-                    onClick={() => onLatexExport(testResult)}
-                    size="small"
-                  >
-                    Export LaTeX
-                  </Button>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<CodeIcon />}
+                      onClick={() => onLatexExport(testResult)}
+                      size="small"
+                    >
+                      Export LaTeX
+                    </Button>
+                    {onDeleteTestResult && (
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleDeleteClick(testResult)}
+                        sx={{ ml: 1 }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    )}
+                  </Box>
                 </Box>
 
                 <TableContainer component={Paper} sx={{ mb: 2 }}>
@@ -298,6 +328,32 @@ const TrainingTestResultsTab: React.FC<TrainingTestResultsTabProps> = ({
             ))}
           </Box>
         )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Delete Test Result</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this test result? This action cannot be undone.
+          </Typography>
+          {deleteTarget && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Test UUID: {deleteTarget.test_uuid}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleConfirmDelete}
+            color="error"
+            variant="contained"
+            disabled={uploading}
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Upload Results Modal */}
       <Dialog open={uploadResultsOpen} onClose={() => onSetUploadResultsOpen(false)} maxWidth="md" fullWidth>

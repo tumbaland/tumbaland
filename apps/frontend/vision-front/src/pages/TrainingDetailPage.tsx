@@ -631,6 +631,57 @@ Camera & ${vehicle ? vehicle.iou.toFixed(4) : '-'} & ${sign ? sign.iou.toFixed(4
     setLatexModalOpen(true);
   };
 
+  // Test result delete handlers
+  const handleDeleteTestResult = async (testResultId: string) => {
+    try {
+      setUploading(true);
+      await testResultService.deleteTestResult(testResultId);
+      setUploadSuccess('Test result deleted successfully');
+      
+      // Refresh test results data
+      if (training) {
+        const testResultsResponse = await testResultService.getTestResults({ 
+          training_uuid: training.uuid,
+          limit: 1000 
+        });
+        const trainingTestResults = testResultsResponse.data.testResults;
+
+        // Group test results by epoch number
+        const testResultsByEpoch: { [epoch: number]: TestResult[] } = {};
+        const epochsWithTestResults: number[] = [];
+
+        trainingTestResults.forEach(testResult => {
+          const epochNumber = testResult.epoch;
+          if (!testResultsByEpoch[epochNumber]) {
+            testResultsByEpoch[epochNumber] = [];
+            epochsWithTestResults.push(epochNumber);
+          }
+          testResultsByEpoch[epochNumber].push(testResult);
+        });
+
+        setAvailableTestEpochs(epochsWithTestResults.sort((a, b) => a - b));
+        setTestResultsMap(testResultsByEpoch);
+
+        // Update current test results if needed
+        if (selectedTestEpoch && testResultsByEpoch[selectedTestEpoch]) {
+          setTestResults(testResultsByEpoch[selectedTestEpoch]);
+        } else if (epochsWithTestResults.length > 0) {
+          const newEpoch = epochsWithTestResults[0];
+          setSelectedTestEpoch(newEpoch);
+          setTestResults(testResultsByEpoch[newEpoch] || []);
+        } else {
+          setTestResults([]);
+          setSelectedTestEpoch(null);
+        }
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to delete test result';
+      setUploadError(message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   // Utility functions
 
   // Loading and error states
@@ -739,6 +790,7 @@ Camera & ${vehicle ? vehicle.iou.toFixed(4) : '-'} & ${sign ? sign.iou.toFixed(4
           onLatexExport={handleLatexExport}
           onSetUploadResultsOpen={setUploadResultsOpen}
           onSetLatexModalOpen={setLatexModalOpen}
+          onDeleteTestResult={handleDeleteTestResult}
         />
       )}
 
