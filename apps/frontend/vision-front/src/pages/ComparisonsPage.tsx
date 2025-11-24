@@ -20,15 +20,20 @@ import {
   DialogActions,
   Button,
   Chip,
+  TextField,
+  Checkbox,
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
   Refresh as RefreshIcon,
   ArrowUpward as ArrowUpwardIcon,
   ArrowDownward as ArrowDownwardIcon,
+  Edit as EditIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
 import { Comparison } from '@/types';
 import { comparisonService } from '@/services/comparisonService';
+import { trainingService } from '@/services/trainingService';
 
 const ComparisonsPage: React.FC = () => {
   const [comparisons, setComparisons] = useState<Comparison[]>([]);
@@ -36,6 +41,14 @@ const ComparisonsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [comparisonToDelete, setComparisonToDelete] = useState<string | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [comparisonToEdit, setComparisonToEdit] = useState<Comparison | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editSelectedIds, setEditSelectedIds] = useState<string[]>([]);
+  const [updating, setUpdating] = useState(false);
+  const [trainingData, setTrainingData] = useState<Record<string, string>>({});
+  const [loadingTrainings, setLoadingTrainings] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'type' | 'createdAt' | 'itemCount'>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const navigate = useNavigate();
@@ -111,6 +124,88 @@ const ComparisonsPage: React.FC = () => {
   const handleCancelDelete = () => {
     setDeleteDialogOpen(false);
     setComparisonToDelete(null);
+  };
+
+  const handleEditComparison = async (comparison: Comparison) => {
+    setComparisonToEdit(comparison);
+    setEditName(comparison.name);
+    setEditDescription(comparison.description || '');
+    setEditSelectedIds(comparison.itemIds);
+    setEditDialogOpen(true);
+
+    // Fetch training data for the comparison items
+    if (comparison.type === 'trainings' && comparison.itemIds.length > 0) {
+      setLoadingTrainings(true);
+      try {
+        // For now, fetch all trainings and filter - could be optimized later
+        const response = await trainingService.getTrainings({
+          page: 1,
+          limit: 1000, // Large limit to get all trainings
+        });
+        
+        const trainings = response.data.trainings || [];
+        const trainingMap: Record<string, string> = {};
+        
+        trainings.forEach((training: any) => {
+          trainingMap[training._id] = training.name;
+        });
+        
+        setTrainingData(trainingMap);
+      } catch (error) {
+        console.error('Error fetching training data:', error);
+        // Fallback to showing IDs if fetching fails
+        const fallbackMap: Record<string, string> = {};
+        comparison.itemIds.forEach(id => {
+          fallbackMap[id] = id;
+        });
+        setTrainingData(fallbackMap);
+      } finally {
+        setLoadingTrainings(false);
+      }
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditDialogOpen(false);
+    setComparisonToEdit(null);
+    setEditName('');
+    setEditDescription('');
+    setEditSelectedIds([]);
+    setTrainingData({});
+  };
+
+  const handleUpdateComparison = async () => {
+    if (!comparisonToEdit || !editName.trim()) return;
+
+    try {
+      setUpdating(true);
+      await comparisonService.updateComparison(comparisonToEdit._id, {
+        name: editName.trim(),
+        description: editDescription.trim(),
+        itemIds: editSelectedIds,
+      });
+
+      loadComparisons();
+      setEditDialogOpen(false);
+      setComparisonToEdit(null);
+      setEditName('');
+      setEditDescription('');
+      setEditSelectedIds([]);
+      setTrainingData({});
+    } catch (error) {
+      console.error('Error updating comparison:', error);
+      setError('Failed to update comparison');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleEditTrainingIdToggle = (trainingId: string) => {
+    setEditSelectedIds(prev =>
+      prev.includes(trainingId)
+        ? prev.filter(id => id !== trainingId)
+        : [...prev, trainingId]
+    );
   };
 
   const handleViewComparison = (comparison: Comparison) => {
@@ -287,18 +382,31 @@ const ComparisonsPage: React.FC = () => {
                   {formatTimestamp(comparison.createdAt)}
                 </TableCell>
                 <TableCell>
-                  <Tooltip title="Delete">
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteComparison(comparison._id);
-                      }}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Tooltip>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Tooltip title="Edit">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditComparison(comparison);
+                        }}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete">
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteComparison(comparison._id);
+                        }}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
                 </TableCell>
               </TableRow>
             ))}
@@ -329,6 +437,99 @@ const ComparisonsPage: React.FC = () => {
           <Button onClick={handleCancelDelete}>Cancel</Button>
           <Button onClick={handleConfirmDelete} color="error" variant="contained">
             Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Comparison Modal */}
+      <Dialog
+        open={editDialogOpen}
+        onClose={() => !updating && handleCancelEdit()}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Edit Comparison
+          <IconButton
+            onClick={() => !updating && handleCancelEdit()}
+            sx={{ position: 'absolute', right: 8, top: 8 }}
+            disabled={updating}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <TextField
+              fullWidth
+              label="Comparison Name"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              sx={{ mb: 2 }}
+              disabled={updating}
+              required
+            />
+            <TextField
+              fullWidth
+              label="Description (optional)"
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              multiline
+              rows={3}
+              sx={{ mb: 3 }}
+              disabled={updating}
+            />
+            <Typography variant="subtitle2" sx={{ mb: 2 }}>
+              Select items to include in comparison ({editSelectedIds.length} selected):
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, maxHeight: 200, overflow: 'auto' }}>
+              {loadingTrainings ? (
+                <Box display="flex" justifyContent="center" py={2}>
+                  <CircularProgress size={20} />
+                  <Typography variant="body2" sx={{ ml: 1 }}>
+                    Loading training data...
+                  </Typography>
+                </Box>
+              ) : (
+                comparisonToEdit?.itemIds.map((itemId) => (
+                  <Box key={itemId} sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Checkbox
+                      checked={editSelectedIds.includes(itemId)}
+                      onChange={() => handleEditTrainingIdToggle(itemId)}
+                      disabled={updating}
+                      id={`edit-training-${itemId}`}
+                    />
+                    <label
+                      htmlFor={`edit-training-${itemId}`}
+                      style={{
+                        cursor: updating ? 'not-allowed' : 'pointer',
+                        opacity: updating ? 0.5 : 1,
+                        marginLeft: 8,
+                        fontSize: '0.875rem'
+                      }}
+                    >
+                      {trainingData[itemId] || itemId}
+                    </label>
+                  </Box>
+                ))
+              )}
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={handleCancelEdit}
+            disabled={updating}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleUpdateComparison}
+            disabled={updating || !editName.trim() || editSelectedIds.length === 0}
+            startIcon={updating ? <CircularProgress size={16} /> : <EditIcon />}
+          >
+            {updating ? 'Updating...' : 'Update Comparison'}
           </Button>
         </DialogActions>
       </Dialog>
