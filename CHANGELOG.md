@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.314](https://github.com/toomastahves/tumbaland/compare/v0.0.313...v0.0.314) (2025-11-24)
+
+
+### Features
+
+* add exclude tags ([600d6b7](https://github.com/toomastahves/tumbaland/commit/600d6b75a113a73e0f7a39283b4bb395f7f092f5))
+
 ### [0.0.313](https://github.com/toomastahves/tumbaland/compare/v0.0.312...v0.0.313) (2025-11-24)
 
 
