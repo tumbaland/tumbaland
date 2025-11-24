@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.309](https://github.com/toomastahves/tumbaland/compare/v0.0.308...v0.0.309) (2025-11-24)
+
+
+### Chores
+
+* remove json ([6b6658b](https://github.com/toomastahves/tumbaland/commit/6b6658b57eb663652ad9c1df31645873c2902d51))
+
 ### [0.0.308](https://github.com/toomastahves/tumbaland/compare/v0.0.307...v0.0.308) (2025-11-24)
 
 
