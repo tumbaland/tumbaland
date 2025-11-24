@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.305](https://github.com/toomastahves/tumbaland/compare/v0.0.304...v0.0.305) (2025-11-24)
+
+
+### Bug Fixes
+
+* training link ([11fb23b](https://github.com/toomastahves/tumbaland/commit/11fb23b45cd6884414332a3f468358df54fd9e4d))
+
 ### [0.0.304](https://github.com/toomastahves/tumbaland/compare/v0.0.303...v0.0.304) (2025-11-24)
 
 
