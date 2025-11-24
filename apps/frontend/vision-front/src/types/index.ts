@@ -317,6 +317,50 @@ export interface CreateTestResultData {
   test_results: TestResultData;
 }
 
+// Benchmark Types
+export interface BenchmarkResult {
+  model_name?: string;
+  parameters?: number;
+  flops?: number;
+  fps?: number;
+  memory_usage?: number;
+  input_size?: string;
+  precision?: string;
+  framework?: string;
+  device?: string;
+  batch_size?: number;
+  warmup_iterations?: number;
+  benchmark_iterations?: number;
+  metadata?: Record<string, any>;
+}
+
+export interface Benchmark {
+  _id: string;
+  training_uuid?: string;
+  timestamp: string;
+  system_info: SystemInfo;
+  results: BenchmarkResult[];
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+}
+
+export interface BenchmarkStats {
+  totalBenchmarks: number;
+  totalResults: number;
+  avgParameters: number;
+  avgFlops: number;
+  avgFps: number;
+  avgMemoryUsage: number;
+}
+
+export interface CreateBenchmarkData {
+  training_uuid?: string;
+  timestamp?: string;
+  system_info: SystemInfo;
+  results: BenchmarkResult[];
+}
+
 // Visualization Types
 export interface Visualization {
   _id: string;

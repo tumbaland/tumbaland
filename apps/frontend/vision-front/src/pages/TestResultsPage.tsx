@@ -242,43 +242,47 @@ export const TestResultsPage: React.FC = () => {
                     const avgInferenceTime = getOverallAverageInferenceTime(testResult.test_results);
 
                     return (
-                      <Link 
-                        key={testResult._id} 
-                        to={testResult.training ? `/trainings/${testResult.training._id}?tab=test-results` : '#'}
-                        style={{ display: 'contents', textDecoration: 'none', color: 'inherit', cursor: testResult.training ? 'pointer' : 'default' }}
+                      <TableRow 
+                        key={testResult._id}
+                        hover 
+                        sx={{ cursor: testResult.training ? 'pointer' : 'default' }}
                       >
-                        <TableRow 
-                          hover 
-                          sx={{ cursor: testResult.training ? 'pointer' : 'default' }}
-                        >
-                          <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              checked={selectedTestResults.has(testResult._id)}
-                              onChange={(e) => handleSelectTestResult(testResult._id, e.target.checked)}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            {testResult.training?.name || 'Unknown Training'}
-                          </TableCell>
-                          <TableCell>
-                            Epoch {testResult.epoch}
-                          </TableCell>
-                          <TableCell align="right">{formatNumber(avgIou)}</TableCell>
-                          <TableCell align="right">{formatNumber(avgRecall)}</TableCell>
-                          <TableCell align="right">{formatNumber(avgF1)}</TableCell>
-                          <TableCell align="right">{formatNumber(avgInferenceTime, 2)}</TableCell>
-                          <TableCell align="center" sx={{ fontSize: '0.875rem' }}>
-                            {formatDate(testResult.timestamp)}
-                          </TableCell>
-                          <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                            <Tooltip title="Delete">
-                              <IconButton size="small" onClick={() => handleDeleteClick(testResult)}>
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          </TableCell>
-                        </TableRow>
-                      </Link>
+                        <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedTestResults.has(testResult._id)}
+                            onChange={(e) => handleSelectTestResult(testResult._id, e.target.checked)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {testResult.training ? (
+                            <Link 
+                              to={`/trainings/${testResult.training._id}?tab=test-results`}
+                              style={{ textDecoration: 'none', color: 'inherit' }}
+                            >
+                              {testResult.training.name || 'Unknown Training'}
+                            </Link>
+                          ) : (
+                            'Unknown Training'
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          Epoch {testResult.epoch}
+                        </TableCell>
+                        <TableCell align="right">{formatNumber(avgIou)}</TableCell>
+                        <TableCell align="right">{formatNumber(avgRecall)}</TableCell>
+                        <TableCell align="right">{formatNumber(avgF1)}</TableCell>
+                        <TableCell align="right">{formatNumber(avgInferenceTime, 2)}</TableCell>
+                        <TableCell align="center" sx={{ fontSize: '0.875rem' }}>
+                          {formatDate(testResult.timestamp)}
+                        </TableCell>
+                        <TableCell align="center" onClick={(e) => e.stopPropagation()}>
+                          <Tooltip title="Delete">
+                            <IconButton size="small" onClick={() => handleDeleteClick(testResult)}>
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
                 </TableBody>

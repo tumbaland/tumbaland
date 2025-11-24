@@ -114,6 +114,22 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             </Button>
             <Button
               component={Link}
+              to="/benchmarks"
+              color="inherit"
+              sx={{
+                fontWeight: isActive('/benchmarks') ? 700 : 500,
+                textTransform: 'none',
+                background: 'none',
+                borderRadius: 2,
+                px: 2,
+                color: isActive('/benchmarks') ? 'primary.main' : '#222',
+                '&:hover': { background: 'rgba(0,0,0,0.04)' }
+              }}
+            >
+              Benchmarks
+            </Button>
+            <Button
+              component={Link}
               to="/image-labeling"
               color="inherit"
               sx={{

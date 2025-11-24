@@ -217,17 +217,18 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
           </TableHead>
           <TableBody>
             {trainings.map((training: Training) => (
-              <Link key={training._id} to={`/trainings/${training._id}`} style={{ display: 'contents', textDecoration: 'none', color: 'inherit' }}>
-                <TableRow
-                  hover
-                  selected={selectedTrainingIds.has(training._id)}
-                  sx={{
-                    cursor: 'pointer',
-                    backgroundColor: selectedTrainingIds.has(training._id)
-                      ? 'rgba(25, 118, 210, 0.08)'
-                      : 'inherit'
-                  }}
-                >
+              <TableRow
+                key={training._id}
+                hover
+                selected={selectedTrainingIds.has(training._id)}
+                sx={{
+                  cursor: 'pointer',
+                  backgroundColor: selectedTrainingIds.has(training._id)
+                    ? 'rgba(25, 118, 210, 0.08)'
+                    : 'inherit'
+                }}
+                onClick={() => window.open(`/trainings/${training._id}`, '_blank')}
+              >
                 <TableCell padding="checkbox">
                   <Checkbox
                     checked={selectedTrainingIds.has(training._id)}
@@ -237,9 +238,11 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
                 </TableCell>
                 <TableCell>
                   <Box>
-                    <Typography variant="body2" fontWeight={600}>
-                      {training.name}
-                    </Typography>
+                    <Link to={`/trainings/${training._id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <Typography variant="body2" fontWeight={600}>
+                        {training.name}
+                      </Typography>
+                    </Link>
                     {training.tags && training.tags.length > 0 && (
                       <Box sx={{ mt: 0.5, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                         {training.tags.map((tag) => (
@@ -341,7 +344,6 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
                   </Box>
                 </TableCell>
               </TableRow>
-              </Link>
             ))}
           </TableBody>
         </Table>
