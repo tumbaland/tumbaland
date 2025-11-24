@@ -161,15 +161,13 @@ export interface ApiResponse<T> {
 export interface PaginatedResponse<T> {
   success: boolean;
   data: {
-    [key: string]: T[];
-  } & {
-    pagination?: {
+    benchmarks: T[];
+    pagination: {
       page: number;
       limit: number;
       total: number;
       pages: number;
     };
-    total?: number;
   };
 }
 
@@ -337,6 +335,8 @@ export interface BenchmarkResult {
 export interface Benchmark {
   _id: string;
   training_uuid?: string;
+  epoch_uuid?: string;
+  epoch?: number;
   timestamp: string;
   system_info: SystemInfo;
   results: BenchmarkResult[];
@@ -356,6 +356,8 @@ export interface BenchmarkStats {
 
 export interface CreateBenchmarkData {
   training_uuid?: string;
+  epoch_uuid?: string;
+  epoch?: number;
   timestamp?: string;
   system_info: SystemInfo;
   results: BenchmarkResult[];

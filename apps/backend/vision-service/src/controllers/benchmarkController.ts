@@ -127,6 +127,8 @@ export const createBenchmark = async (req: Request, res: Response): Promise<void
 
     const benchmark = new Benchmark({
       training_uuid: benchmarkData.training_uuid,
+      epoch_uuid: benchmarkData.epoch_uuid,
+      epoch: benchmarkData.epoch,
       timestamp: new Date(benchmarkData.timestamp),
       system_info: benchmarkData.system_info,
       results: benchmarkData.results
@@ -193,6 +195,8 @@ export const uploadBenchmark = async (req: Request, res: Response): Promise<void
 
     const benchmark = new Benchmark({
       training_uuid: benchmarkData.training_uuid,
+      epoch_uuid: benchmarkData.epoch_uuid,
+      epoch: benchmarkData.epoch,
       timestamp: new Date(benchmarkData.timestamp),
       system_info: benchmarkData.system_info,
       results: benchmarkData.results
@@ -245,6 +249,8 @@ export const updateBenchmark = async (req: Request, res: Response): Promise<void
 
     // Update fields
     if (updateData.training_uuid !== undefined) benchmark.training_uuid = updateData.training_uuid;
+    if (updateData.epoch_uuid !== undefined) benchmark.epoch_uuid = updateData.epoch_uuid;
+    if (updateData.epoch !== undefined) benchmark.epoch = updateData.epoch;
     if (updateData.timestamp !== undefined) benchmark.timestamp = new Date(updateData.timestamp);
     if (updateData.system_info !== undefined) benchmark.system_info = updateData.system_info;
     if (updateData.results !== undefined) benchmark.results = updateData.results;

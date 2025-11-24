@@ -41,7 +41,7 @@ const BenchmarksPage: React.FC = () => {
         sortBy: 'timestamp',
         order: 'desc',
       });
-      setBenchmarks(response.data.data || []);
+      setBenchmarks(response.data.data.benchmarks || []);
       setError(null);
     } catch (err) {
       setError('Failed to load benchmarks');
@@ -126,6 +126,7 @@ const BenchmarksPage: React.FC = () => {
             <TableRow>
               <TableCell>Timestamp</TableCell>
               <TableCell>Model Count</TableCell>
+              <TableCell>Epoch</TableCell>
               <TableCell>Device</TableCell>
               <TableCell>Framework</TableCell>
               <TableCell>Avg FPS</TableCell>
@@ -157,22 +158,23 @@ const BenchmarksPage: React.FC = () => {
               const flopsG = firstResult?.flops ? (firstResult.flops / 1000000000).toFixed(2) : 'N/A';
 
               return (
-                <TableRow key={benchmark._id}>
-                  <TableCell>
-                    {benchmark.training_uuid ? (
-                      <Link 
-                        to={`/trainings/${benchmark.training_uuid}`}
-                        style={{ textDecoration: 'none', color: 'inherit' }}
-                      >
-                        {formatTimestamp(benchmark.timestamp)}
-                      </Link>
-                    ) : (
-                      formatTimestamp(benchmark.timestamp)
-                    )}
-                  </TableCell>
-                  <TableCell>{benchmark.results.length}</TableCell>
-                  <TableCell>{benchmark.results[0]?.device || 'N/A'}</TableCell>
-                  <TableCell>{benchmark.results[0]?.framework || 'N/A'}</TableCell>
+            <TableRow key={benchmark._id}>
+              <TableCell>
+                {benchmark.training_uuid ? (
+                  <Link 
+                    to={`/trainings/${benchmark.training_uuid}`}
+                    style={{ textDecoration: 'none', color: 'inherit' }}
+                  >
+                    {formatTimestamp(benchmark.timestamp)}
+                  </Link>
+                ) : (
+                  formatTimestamp(benchmark.timestamp)
+                )}
+              </TableCell>
+              <TableCell>{benchmark.results.length}</TableCell>
+              <TableCell>{benchmark.epoch || 'N/A'}</TableCell>
+              <TableCell>{benchmark.results[0]?.device || 'N/A'}</TableCell>
+              <TableCell>{benchmark.results[0]?.framework || 'N/A'}</TableCell>
                   <TableCell>{avgFps.toFixed(2)}</TableCell>
                   <TableCell>
                     {meanTime > 0 ? `${meanTime.toFixed(2)} ± ${stdTime.toFixed(2)}` : 'N/A'}

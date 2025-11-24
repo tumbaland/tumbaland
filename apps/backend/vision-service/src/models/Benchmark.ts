@@ -2,6 +2,8 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IBenchmark extends Document {
   training_uuid?: string;
+  epoch_uuid?: string;
+  epoch?: number;
   timestamp: Date;
   system_info: {
     cpu_count: number;
@@ -53,6 +55,14 @@ const BenchmarkSchema: Schema = new Schema(
   {
     training_uuid: {
       type: String,
+      index: true
+    },
+    epoch_uuid: {
+      type: String,
+      index: true
+    },
+    epoch: {
+      type: Number,
       index: true
     },
     timestamp: {
