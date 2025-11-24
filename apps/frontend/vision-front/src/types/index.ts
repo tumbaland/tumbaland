@@ -359,6 +359,8 @@ export interface TestResultMetrics {
   precision: number;
   recall: number;
   f1_score: number;
+  f1?: number; // Alternative field name used in some API responses
+  mean_f1?: number; // Alternative field name used in some API responses
   average_precision: number;
 }
 

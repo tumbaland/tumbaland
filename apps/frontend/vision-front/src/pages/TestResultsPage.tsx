@@ -96,14 +96,21 @@ export const TestResultsPage: React.FC = () => {
     const classNames: string[] = ['vehicle', 'sign', 'human', 'cyclist + pedestrian'];
     const validClasses = classNames.filter(className => {
       const classData = (conditionData as any)[className];
-      return classData && typeof classData === 'object' && metric in classData;
+      return classData && typeof classData === 'object' && (
+        metric in classData ||
+        (metric === 'f1_score' && ('f1' in classData || 'mean_f1' in classData))
+      );
     });
 
     if (validClasses.length === 0) return 0;
 
     const sum = validClasses.reduce((acc, className) => {
       const classData = (conditionData as any)[className] as TestResultMetrics;
-      return acc + (classData[metric] || 0);
+      // Handle different F1 field names: f1_score, f1, or mean_f1
+      const value = metric === 'f1_score' ?
+        (classData.f1_score || classData.f1 || classData.mean_f1) :
+        classData[metric];
+      return acc + (value || 0);
     }, 0);
 
     return sum / validClasses.length;

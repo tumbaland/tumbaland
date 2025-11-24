@@ -327,7 +327,7 @@ const TestResultsComparisonPage: React.FC = () => {
           f1: Math.max(...comparisonData.map(comp => {
             const conditionData = comp.test_results[condition];
             const classMetrics = conditionData?.[className];
-            const f1Value = classMetrics?.f1_score ?? classMetrics?.f1;
+            const f1Value = classMetrics?.f1_score ?? classMetrics?.f1 ?? classMetrics?.mean_f1;
             return (f1Value !== undefined && f1Value !== null && !isNaN(f1Value)) ? f1Value : -Infinity;
           })),
           ap: Math.max(...comparisonData.map(comp => {
@@ -358,7 +358,7 @@ const TestResultsComparisonPage: React.FC = () => {
           const precision = classMetrics?.precision;
           const recall = classMetrics?.recall;
           const ap = classMetrics?.ap;
-          const f1 = classMetrics?.f1_score ?? classMetrics?.f1;
+          const f1 = classMetrics?.f1_score ?? classMetrics?.f1 ?? classMetrics?.mean_f1;
 
           // IoU with bold formatting for max value
           const iouText = iou !== undefined ? formatNumber(iou) : 'N/A';
@@ -897,7 +897,7 @@ const TestResultsComparisonPage: React.FC = () => {
                           f1: Math.max(...comparisonData.map(comp => {
                             const conditionData = comp.test_results[condition];
                             const classMetrics = conditionData?.[className];
-                            const f1Value = classMetrics?.f1_score ?? classMetrics?.f1;
+                            const f1Value = classMetrics?.f1_score ?? classMetrics?.f1 ?? classMetrics?.mean_f1;
                             return (f1Value !== undefined && f1Value !== null && !isNaN(f1Value)) ? f1Value : -Infinity;
                           }))
                         };
@@ -980,7 +980,7 @@ const TestResultsComparisonPage: React.FC = () => {
                                   </TableCell>
                                   <TableCell align="center" sx={{ borderRight: '2px solid rgba(224, 224, 224, 1)' }}>
                                     {(() => {
-                                      const f1Value = classMetrics?.f1_score ?? classMetrics?.f1;
+                                      const f1Value = classMetrics?.f1_score ?? classMetrics?.f1 ?? classMetrics?.mean_f1;
                                       return f1Value !== undefined && f1Value !== null && !isNaN(f1Value) ? (
                                         <Typography
                                           variant="body2"
