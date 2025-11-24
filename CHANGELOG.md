@@ -1,4 +1,12 @@
 # Tumbalog
+### [0.0.301](https://github.com/toomastahves/tumbaland/compare/v0.0.300...v0.0.301) (2025-11-24)
+
+
+### Features
+
+* add epoch to benchmark ([ac1c2fa](https://github.com/toomastahves/tumbaland/commit/ac1c2fa9da5827cfbd1ef4121406936ee3c95487))
+* update docs ([7804f75](https://github.com/toomastahves/tumbaland/commit/7804f75507a1794c9a2afffc9a7a32be1e8f5fd8))
+
 ### [0.0.300](https://github.com/toomastahves/tumbaland/compare/v0.0.299...v0.0.300) (2025-11-24)
 
 
