@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.304](https://github.com/toomastahves/tumbaland/compare/v0.0.303...v0.0.304) (2025-11-24)
+
+
+### Features
+
+* multirow benchmarks ([64693ed](https://github.com/toomastahves/tumbaland/commit/64693ed85195b9186a0de28668bb337dbb9e9687))
+
 ### [0.0.303](https://github.com/toomastahves/tumbaland/compare/v0.0.302...v0.0.303) (2025-11-24)
 
 
