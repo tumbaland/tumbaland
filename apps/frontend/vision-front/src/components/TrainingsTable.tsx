@@ -239,7 +239,14 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
                 </TableCell>
                 <TableCell>
                   <Box>
-                    <Link to={`/trainings/${training._id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <Link 
+                      to={`/trainings/${training._id}`} 
+                      style={{ textDecoration: 'none', color: 'inherit' }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        navigate(`/trainings/${training._id}`);
+                      }}
+                    >
                       <Typography variant="body2" fontWeight={600}>
                         {training.name}
                       </Typography>
