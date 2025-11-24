@@ -38,7 +38,7 @@ const TrainingsPage: React.FC = () => {
   // Set page title
   usePageTitle('Trainings - Vision');
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [rowsPerPage, setRowsPerPage] = useState(100);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'createdAt' | 'updatedAt' | 'status' | 'totalTime' | 'cpuCost' | 'gpuCost' | 'totalCost' | 'epochCount'>('updatedAt');
@@ -97,6 +97,11 @@ const TrainingsPage: React.FC = () => {
     setSearchParams(newSearchParams, { replace: true });
   }, [selectedTags, excludedTags, searchParams, setSearchParams]);
 
+  // Reset to first page when exclude tags change
+  React.useEffect(() => {
+    setPage(0);
+  }, [excludedTags]);
+
   // Debounce search
   React.useEffect(() => {
     const timer = setTimeout(() => {
@@ -134,16 +139,36 @@ const TrainingsPage: React.FC = () => {
     }
   }, [createModalOpen]);
 
+  // Determine if we need to fetch all data for frontend filtering
+  const shouldFetchAll = excludedTags.length > 0;
+
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['trainings', page + 1, rowsPerPage, debouncedSearch, sortBy, sortOrder, selectedTags],
-    queryFn: () => trainingService.getTrainings({
-      page: page + 1,
-      limit: rowsPerPage,
-      search: debouncedSearch || undefined,
-      sortBy,
-      order: sortOrder,
-      tags: selectedTags.length > 0 ? selectedTags : undefined
-    })
+    queryKey: shouldFetchAll 
+      ? ['trainings-all', debouncedSearch, sortBy, sortOrder, selectedTags, excludedTags]
+      : ['trainings', page + 1, rowsPerPage, debouncedSearch, sortBy, sortOrder, selectedTags],
+    queryFn: () => {
+      if (shouldFetchAll) {
+        // Fetch all trainings for frontend filtering and pagination
+        return trainingService.getTrainings({
+          page: 1,
+          limit: 10000, // Large limit to get all trainings
+          search: debouncedSearch || undefined,
+          sortBy,
+          order: sortOrder,
+          tags: selectedTags.length > 0 ? selectedTags : undefined
+        });
+      } else {
+        // Normal paginated query
+        return trainingService.getTrainings({
+          page: page + 1,
+          limit: rowsPerPage,
+          search: debouncedSearch || undefined,
+          sortBy,
+          order: sortOrder,
+          tags: selectedTags.length > 0 ? selectedTags : undefined
+        });
+      }
+    }
   });
 
   const { data: statsData } = useQuery({
@@ -177,32 +202,43 @@ const TrainingsPage: React.FC = () => {
     loadTags();
   }, [loadTags]);
 
-  const trainings = data?.data?.trainings || [];
-  const total = data?.data?.pagination?.total || 0;
+  const allTrainings = data?.data?.trainings || [];
+  const backendTotal = data?.data?.pagination?.total || 0;
   const stats = statsData?.data;
 
   // Filter out trainings that have excluded tags
   const filteredTrainings = React.useMemo(() => {
+    let trainingsToFilter = allTrainings;
+    
+    // If we're fetching all data, we need to filter from the full dataset
+    // If we're using backend pagination, the data is already filtered by selectedTags
     if (excludedTags.length === 0) {
-      return trainings;
+      return shouldFetchAll ? allTrainings : trainingsToFilter;
     }
-    return trainings.filter((training: Training) => {
+    
+    return trainingsToFilter.filter((training: Training) => {
       if (!training.tags) return true;
       return !excludedTags.some(excludedTag => training.tags!.includes(excludedTag));
     });
-  }, [trainings, excludedTags]);
+  }, [allTrainings, excludedTags, shouldFetchAll]);
 
-  // Update total count for pagination when filtering
-  const filteredTotal = React.useMemo(() => {
-    if (excludedTags.length === 0) {
-      return total;
+  // Apply frontend pagination when fetching all data
+  const paginatedTrainings = React.useMemo(() => {
+    if (!shouldFetchAll) {
+      return filteredTrainings;
     }
-    // For simplicity, we'll use the filtered count, but this might not be accurate for pagination
-    // In a real implementation, you'd want to either:
-    // 1. Implement server-side exclude filtering, or
-    // 2. Fetch all data and handle pagination on frontend
-    return filteredTrainings.length;
-  }, [total, excludedTags.length, filteredTrainings.length]);
+    const startIndex = page * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    return filteredTrainings.slice(startIndex, endIndex);
+  }, [filteredTrainings, page, rowsPerPage, shouldFetchAll]);
+
+  // Calculate total count for pagination
+  const totalCount = React.useMemo(() => {
+    return shouldFetchAll ? filteredTrainings.length : backendTotal;
+  }, [shouldFetchAll, filteredTrainings.length, backendTotal]);
+
+  // Use paginated trainings for display
+  const displayTrainings = shouldFetchAll ? paginatedTrainings : filteredTrainings;
 
   // CSV Export function
   const exportToCSV = () => {
@@ -368,10 +404,10 @@ const TrainingsPage: React.FC = () => {
 
   // Handle select all
   const handleSelectAll = () => {
-    if (selectedTrainingIds.size === filteredTrainings.length) {
+    if (selectedTrainingIds.size === displayTrainings.length) {
       setSelectedTrainingIds(new Set());
     } else {
-      setSelectedTrainingIds(new Set(filteredTrainings.map((t: Training) => t._id)));
+      setSelectedTrainingIds(new Set(displayTrainings.map((t: Training) => t._id)));
     }
   };
 
@@ -574,11 +610,11 @@ const TrainingsPage: React.FC = () => {
       )}
 
       <TrainingsTable
-        trainings={filteredTrainings}
+        trainings={displayTrainings}
         isLoading={isLoading}
         page={page}
         rowsPerPage={rowsPerPage}
-        total={filteredTotal}
+        total={totalCount}
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
         onEdit={handleEditTraining}
