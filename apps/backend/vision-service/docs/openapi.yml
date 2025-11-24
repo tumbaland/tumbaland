@@ -32,6 +32,8 @@ tags:
     description: Training epoch visualization management
   - name: Benchmarks
     description: Model benchmark results and performance metrics
+  - name: Comparisons
+    description: Training/test/benchmark comparison management
 
 components:
   schemas:
@@ -1422,6 +1424,119 @@ components:
                 avg_cpu_percent: 12.3
                 avg_memory_percent: 65.7
                 avg_gpu_utilization: 45.2
+      required:
+        - success
+        - data
+
+    Comparison:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        name:
+          type: string
+          example: "YOLOv5 vs YOLOv8 Comparison"
+        description:
+          type: string
+          example: "Comparing YOLOv5 and YOLOv8 performance on Waymo dataset"
+        type:
+          type: string
+          enum: ["trainings", "tests", "benchmarks", "epochs"]
+          example: "trainings"
+        itemIds:
+          type: array
+          items:
+            type: string
+          example: ["507f1f77bcf86cd799439011", "507f1f77bcf86cd799439012"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - name
+        - type
+        - itemIds
+
+    ComparisonCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "YOLOv5 vs YOLOv8 Comparison"
+        description:
+          type: string
+          example: "Comparing YOLOv5 and YOLOv8 performance on Waymo dataset"
+        type:
+          type: string
+          enum: ["trainings", "tests", "benchmarks", "epochs"]
+          example: "trainings"
+        itemIds:
+          type: array
+          items:
+            type: string
+          example: ["507f1f77bcf86cd799439011", "507f1f77bcf86cd799439012"]
+      required:
+        - name
+        - type
+        - itemIds
+
+    ComparisonUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Updated Comparison Name"
+        description:
+          type: string
+          example: "Updated comparison description"
+        type:
+          type: string
+          enum: ["trainings", "tests", "benchmarks", "epochs"]
+          example: "trainings"
+        itemIds:
+          type: array
+          items:
+            type: string
+          example: ["507f1f77bcf86cd799439011", "507f1f77bcf86cd799439012", "507f1f77bcf86cd799439013"]
+      required:
+        - name
+        - type
+        - itemIds
+
+    ComparisonsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            comparisons:
+              type: array
+              items:
+                $ref: '#/components/schemas/Comparison'
+            pagination:
+              type: object
+              properties:
+                page:
+                  type: integer
+                  example: 1
+                limit:
+                  type: integer
+                  example: 50
+                total:
+                  type: integer
+                  example: 100
+                pages:
+                  type: integer
+                  example: 2
+            total:
+              type: integer
+              example: 100
       required:
         - success
         - data
@@ -4384,6 +4499,185 @@ paths:
                 $ref: '#/components/schemas/SuccessResponse'
         '404':
           description: Benchmark not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Comparison Endpoints
+  /comparisons:
+    get:
+      tags:
+        - Comparisons
+      summary: Get all comparisons
+      description: Retrieve all saved comparisons with pagination and filtering
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+          description: Number of comparisons per page
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search query for name or description
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: ["trainings", "tests", "benchmarks", "epochs"]
+          description: Filter by comparison type
+      responses:
+        '200':
+          description: Comparisons retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComparisonsResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags:
+        - Comparisons
+      summary: Create comparison
+      description: Create a new comparison
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComparisonCreateRequest'
+      responses:
+        '201':
+          description: Comparison created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /comparisons/{id}:
+    get:
+      tags:
+        - Comparisons
+      summary: Get comparison by ID
+      description: Retrieve a specific comparison by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Comparison ID
+      responses:
+        '200':
+          description: Comparison retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Comparison not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Comparisons
+      summary: Update comparison
+      description: Update an existing comparison
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Comparison ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComparisonUpdateRequest'
+      responses:
+        '200':
+          description: Comparison updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Comparison not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Comparisons
+      summary: Delete comparison
+      description: Delete a comparison by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Comparison ID
+      responses:
+        '200':
+          description: Comparison deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Comparison not found
           content:
             application/json:
               schema:
