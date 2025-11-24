@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.303](https://github.com/toomastahves/tumbaland/compare/v0.0.302...v0.0.303) (2025-11-24)
+
+
+### Features
+
+* open training in same tab ([8d87c3b](https://github.com/toomastahves/tumbaland/commit/8d87c3b7dbc7aa63ec39629a8f94dae5d3db9594))
+
 ### [0.0.302](https://github.com/toomastahves/tumbaland/compare/v0.0.301...v0.0.302) (2025-11-24)
 
 
