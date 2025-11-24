@@ -1157,6 +1157,15 @@ components:
         _id:
           type: string
           example: "507f1f77bcf86cd799439011"
+        training_uuid:
+          type: string
+          example: "training-uuid-123"
+        epoch_uuid:
+          type: string
+          example: "epoch-uuid-456"
+        epoch:
+          type: integer
+          example: 100
         timestamp:
           type: string
           format: date-time
@@ -1287,6 +1296,15 @@ components:
     BenchmarkCreateRequest:
       type: object
       properties:
+        training_uuid:
+          type: string
+          example: "training-uuid-123"
+        epoch_uuid:
+          type: string
+          example: "epoch-uuid-456"
+        epoch:
+          type: integer
+          example: 100
         timestamp:
           type: string
           format: date-time
@@ -1307,6 +1325,15 @@ components:
     BenchmarkUpdateRequest:
       type: object
       properties:
+        training_uuid:
+          type: string
+          example: "training-uuid-123"
+        epoch_uuid:
+          type: string
+          example: "epoch-uuid-456"
+        epoch:
+          type: integer
+          example: 100
         timestamp:
           type: string
           format: date-time
