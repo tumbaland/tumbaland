@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.317](https://github.com/toomastahves/tumbaland/compare/v0.0.316...v0.0.317) (2025-11-24)
+
+
+### Features
+
+* set correct f1 scores ([b43dbbc](https://github.com/toomastahves/tumbaland/commit/b43dbbc9f8d22b784eb500ce2692f429fe74210c))
+
 ### [0.0.316](https://github.com/toomastahves/tumbaland/compare/v0.0.315...v0.0.316) (2025-11-24)
 
 
