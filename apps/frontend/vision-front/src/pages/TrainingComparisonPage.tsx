@@ -22,15 +22,19 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  TextField,
+  Checkbox
 } from '@mui/material';
 import {
   Code as CodeIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  Save as SaveIcon
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { trainingService } from '../services/trainingService';
+import { comparisonService } from '../services/comparisonService';
 import { usePageTitle } from '../hooks/usePageTitle';
 
 const TrainingComparisonPage: React.FC = () => {
@@ -42,11 +46,26 @@ const TrainingComparisonPage: React.FC = () => {
   const [latexModalOpen, setLatexModalOpen] = useState(false);
   const [latexCode, setLatexCode] = useState('');
 
+  // State for save comparison modal
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [comparisonName, setComparisonName] = useState('');
+  const [comparisonDescription, setComparisonDescription] = useState('');
+  const [selectedTrainingIds, setSelectedTrainingIds] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+
   // State for selected epochs (defaults to last epoch)
   const [selectedEpochs, setSelectedEpochs] = useState<Record<string, number>>({});
 
   // Get training IDs from URL params
-  const trainingIds = searchParams.get('ids')?.split(',') || [];
+  const trainingIds = React.useMemo(() => 
+    searchParams.get('ids')?.split(',') || [], 
+    [searchParams]
+  );
+
+  // Update selected training IDs when trainingIds changes
+  React.useEffect(() => {
+    setSelectedTrainingIds(trainingIds);
+  }, [trainingIds]);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['trainingComparison', trainingIds],
@@ -320,6 +339,41 @@ const TrainingComparisonPage: React.FC = () => {
     setLatexModalOpen(true);
   };
 
+  const handleSaveComparison = async () => {
+    if (!comparisonName.trim()) return;
+
+    try {
+      setSaving(true);
+      await comparisonService.createComparison({
+        name: comparisonName.trim(),
+        description: comparisonDescription.trim(),
+        type: 'trainings',
+        itemIds: selectedTrainingIds,
+      });
+
+      // Reset form and close modal
+      setComparisonName('');
+      setComparisonDescription('');
+      setSelectedTrainingIds(trainingIds);
+      setSaveModalOpen(false);
+
+      // Could add a success notification here
+    } catch (error) {
+      console.error('Error saving comparison:', error);
+      // Could add an error notification here
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleTrainingIdToggle = (trainingId: string) => {
+    setSelectedTrainingIds(prev =>
+      prev.includes(trainingId)
+        ? prev.filter(id => id !== trainingId)
+        : [...prev, trainingId]
+    );
+  };
+
   if (trainingIds.length === 0) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -381,6 +435,21 @@ const TrainingComparisonPage: React.FC = () => {
             disabled={comparisonData.length === 0}
           >
             LaTeX Table
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<SaveIcon />}
+            onClick={() => {
+              setSaveModalOpen(true);
+              // Reset form when opening modal
+              setComparisonName('');
+              setComparisonDescription('');
+              setSelectedTrainingIds(trainingIds);
+            }}
+            disabled={comparisonData.length === 0}
+            color="secondary"
+          >
+            Save
           </Button>
           <Button
             variant="contained"
@@ -869,6 +938,93 @@ const TrainingComparisonPage: React.FC = () => {
             }}
           >
             Copy to Clipboard
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Save Comparison Modal */}
+      <Dialog
+        open={saveModalOpen}
+        onClose={() => !saving && setSaveModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Save Comparison
+          <IconButton
+            onClick={() => !saving && setSaveModalOpen(false)}
+            sx={{ position: 'absolute', right: 8, top: 8 }}
+            disabled={saving}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <TextField
+              fullWidth
+              label="Comparison Name"
+              value={comparisonName}
+              onChange={(e) => setComparisonName(e.target.value)}
+              sx={{ mb: 2 }}
+              disabled={saving}
+              required
+            />
+            <TextField
+              fullWidth
+              label="Description (optional)"
+              value={comparisonDescription}
+              onChange={(e) => setComparisonDescription(e.target.value)}
+              multiline
+              rows={3}
+              sx={{ mb: 3 }}
+              disabled={saving}
+            />
+            <Typography variant="subtitle2" sx={{ mb: 2 }}>
+              Select trainings to include in comparison:
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {comparisonData.length > 0 ? comparisonData.map((comp) => (
+                <Box key={comp.training._id} sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Checkbox
+                    checked={selectedTrainingIds.includes(comp.training._id)}
+                    onChange={() => handleTrainingIdToggle(comp.training._id)}
+                    disabled={saving}
+                    id={`training-${comp.training._id}`}
+                  />
+                  <label 
+                    htmlFor={`training-${comp.training._id}`}
+                    style={{ 
+                      cursor: saving ? 'not-allowed' : 'pointer',
+                      opacity: saving ? 0.5 : 1,
+                      marginLeft: 8
+                    }}
+                  >
+                    {comp.training.name}
+                  </label>
+                </Box>
+              )) : (
+                <Typography variant="body2" color="text.secondary">
+                  No training data available
+                </Typography>
+              )}
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setSaveModalOpen(false)}
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveComparison}
+            disabled={saving || !comparisonName.trim() || selectedTrainingIds.length === 0}
+            startIcon={saving ? <CircularProgress size={16} /> : <SaveIcon />}
+          >
+            {saving ? 'Saving...' : 'Save Comparison'}
           </Button>
         </DialogActions>
       </Dialog>

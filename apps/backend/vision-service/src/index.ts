@@ -14,6 +14,7 @@ import imageCategoryRoutes from './routes/imageCategoryRoutes';
 import testResultRoutes from './routes/testResultRoutes';
 import visualizationRoutes from './routes/visualizationRoutes';
 import benchmarkRoutes from './routes/benchmarkRoutes';
+import comparisonRoutes from './routes/comparisonRoutes';
 import { healthCheck } from './controllers/healthController';
 import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware } from '@tumbaland/core';
 
@@ -50,6 +51,7 @@ app.use('/api/image-categories', imageCategoryRoutes);
 app.use('/api/test-results', testResultRoutes);
 app.use('/api/visualizations', visualizationRoutes);
 app.use('/api/benchmarks', benchmarkRoutes);
+app.use('/api/comparisons', comparisonRoutes);
 
 // Serve OpenAPI docs as static files
 app.use('/api/docs', express.static(path.join(__dirname, '../docs')));

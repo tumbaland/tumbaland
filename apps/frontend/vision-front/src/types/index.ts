@@ -542,3 +542,46 @@ export interface VisualizationUploadUrlResponse {
   epoch_uuid: string;
   expiresInMinutes: number;
 }
+
+// Comparison Types
+export interface Comparison {
+  _id: string;
+  uuid: string;
+  name: string;
+  description?: string;
+  type: 'trainings' | 'tests' | 'benchmarks' | 'epochs';
+  itemIds: string[];
+  metadata?: any;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string;
+}
+
+export interface CreateComparisonData {
+  uuid?: string;
+  name: string;
+  description?: string;
+  type: 'trainings' | 'tests' | 'benchmarks' | 'epochs';
+  itemIds: string[];
+  metadata?: any;
+}
+
+export interface UpdateComparisonData {
+  name?: string;
+  description?: string;
+  type?: 'trainings' | 'tests' | 'benchmarks' | 'epochs';
+  itemIds?: string[];
+  metadata?: any;
+}
+
+export interface ComparisonsPaginatedResponse extends PaginatedResponse<Comparison> {
+  data: {
+    comparisons: Comparison[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      pages: number;
+    };
+  };
+}
