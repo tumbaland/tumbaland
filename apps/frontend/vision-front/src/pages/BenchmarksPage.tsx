@@ -195,10 +195,10 @@ const BenchmarksPage: React.FC = () => {
 
               // Calculate standard deviation for GPU and CPU times
               const stdTimeGpu = gpuResults.length > 0 
-                ? Math.sqrt(gpuResults.reduce((sum, result) => sum + Math.pow((result.mean_time_ms || 0) - meanTimeGpu, 2), 0) / gpuResults.length)
+                ? gpuResults.reduce((sum, result) => sum + (result.std_time_ms || 0), 0) / gpuResults.length
                 : 0;
               const stdTimeCpu = cpuResults.length > 0 
-                ? Math.sqrt(cpuResults.reduce((sum, result) => sum + Math.pow((result.mean_time_ms || 0) - meanTimeCpu, 2), 0) / cpuResults.length)
+                ? cpuResults.reduce((sum, result) => sum + (result.std_time_ms || 0), 0) / cpuResults.length
                 : 0;
 
               return (
