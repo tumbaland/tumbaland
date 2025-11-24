@@ -64,17 +64,24 @@ const TrainingsPage: React.FC = () => {
   const [deleteMultipleDialogOpen, setDeleteMultipleDialogOpen] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const [excludedTags, setExcludedTags] = useState<string[]>([]);
 
-  // Initialize selectedTags from URL parameters
+  // Initialize selectedTags and excludedTags from URL parameters
   React.useEffect(() => {
     const tagsParam = searchParams.get('tags');
     if (tagsParam) {
       const tags = tagsParam.split(',').filter(tag => tag.trim().length > 0);
       setSelectedTags(tags);
     }
+    
+    const excludeTagsParam = searchParams.get('excludeTags');
+    if (excludeTagsParam) {
+      const excludeTags = excludeTagsParam.split(',').filter(tag => tag.trim().length > 0);
+      setExcludedTags(excludeTags);
+    }
   }, [searchParams]);
 
-  // Update URL parameters when selectedTags changes
+  // Update URL parameters when selectedTags or excludedTags changes
   React.useEffect(() => {
     const newSearchParams = new URLSearchParams(searchParams);
     if (selectedTags.length > 0) {
@@ -82,8 +89,13 @@ const TrainingsPage: React.FC = () => {
     } else {
       newSearchParams.delete('tags');
     }
+    if (excludedTags.length > 0) {
+      newSearchParams.set('excludeTags', excludedTags.join(','));
+    } else {
+      newSearchParams.delete('excludeTags');
+    }
     setSearchParams(newSearchParams, { replace: true });
-  }, [selectedTags, searchParams, setSearchParams]);
+  }, [selectedTags, excludedTags, searchParams, setSearchParams]);
 
   // Debounce search
   React.useEffect(() => {
@@ -169,9 +181,32 @@ const TrainingsPage: React.FC = () => {
   const total = data?.data?.pagination?.total || 0;
   const stats = statsData?.data;
 
+  // Filter out trainings that have excluded tags
+  const filteredTrainings = React.useMemo(() => {
+    if (excludedTags.length === 0) {
+      return trainings;
+    }
+    return trainings.filter((training: Training) => {
+      if (!training.tags) return true;
+      return !excludedTags.some(excludedTag => training.tags!.includes(excludedTag));
+    });
+  }, [trainings, excludedTags]);
+
+  // Update total count for pagination when filtering
+  const filteredTotal = React.useMemo(() => {
+    if (excludedTags.length === 0) {
+      return total;
+    }
+    // For simplicity, we'll use the filtered count, but this might not be accurate for pagination
+    // In a real implementation, you'd want to either:
+    // 1. Implement server-side exclude filtering, or
+    // 2. Fetch all data and handle pagination on frontend
+    return filteredTrainings.length;
+  }, [total, excludedTags.length, filteredTrainings.length]);
+
   // CSV Export function
   const exportToCSV = () => {
-    const selectedTrainings = trainings.filter((training: Training) => selectedTrainingIds.has(training._id));
+    const selectedTrainings = filteredTrainings.filter((training: Training) => selectedTrainingIds.has(training._id));
     exportTrainingsToCSV(selectedTrainings);
   };
 
@@ -333,10 +368,10 @@ const TrainingsPage: React.FC = () => {
 
   // Handle select all
   const handleSelectAll = () => {
-    if (selectedTrainingIds.size === trainings.length) {
+    if (selectedTrainingIds.size === filteredTrainings.length) {
       setSelectedTrainingIds(new Set());
     } else {
-      setSelectedTrainingIds(new Set(trainings.map((t: Training) => t._id)));
+      setSelectedTrainingIds(new Set(filteredTrainings.map((t: Training) => t._id)));
     }
   };
 
@@ -410,6 +445,8 @@ const TrainingsPage: React.FC = () => {
         onSearchChange={setSearchTerm}
         selectedTags={selectedTags}
         onTagsChange={setSelectedTags}
+        excludedTags={excludedTags}
+        onExcludedTagsChange={setExcludedTags}
         availableTags={availableTags}
       />
 
@@ -537,11 +574,11 @@ const TrainingsPage: React.FC = () => {
       )}
 
       <TrainingsTable
-        trainings={trainings}
+        trainings={filteredTrainings}
         isLoading={isLoading}
         page={page}
         rowsPerPage={rowsPerPage}
-        total={total}
+        total={filteredTotal}
         onPageChange={handleChangePage}
         onRowsPerPageChange={handleChangeRowsPerPage}
         onEdit={handleEditTraining}

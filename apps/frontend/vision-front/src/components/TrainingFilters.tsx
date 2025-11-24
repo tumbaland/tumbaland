@@ -13,6 +13,8 @@ interface TrainingFiltersProps {
   onSearchChange: (value: string) => void;
   selectedTags: string[];
   onTagsChange: (tags: string[]) => void;
+  excludedTags: string[];
+  onExcludedTagsChange: (tags: string[]) => void;
   availableTags: string[];
 }
 
@@ -21,6 +23,8 @@ export const TrainingFilters: React.FC<TrainingFiltersProps> = ({
   onSearchChange,
   selectedTags,
   onTagsChange,
+  excludedTags,
+  onExcludedTagsChange,
   availableTags
 }) => {
   return (
@@ -53,6 +57,26 @@ export const TrainingFilters: React.FC<TrainingFiltersProps> = ({
           <TextField
             {...params}
             placeholder={selectedTags.length === 0 ? "Filter by tags..." : undefined}
+            sx={{ minWidth: 200 }}
+          />
+        )}
+        size="small"
+      />
+
+      <Autocomplete
+        multiple
+        options={availableTags}
+        value={excludedTags}
+        onChange={(_, newValue) => onExcludedTagsChange(newValue)}
+        renderTags={(value, getTagProps) =>
+          value.map((option, index) => (
+            <Chip {...getTagProps({ index })} key={option} label={option} size="small" color="error" />
+          ))
+        }
+        renderInput={(params) => (
+          <TextField
+            {...params}
+            placeholder={excludedTags.length === 0 ? "Hide by tags..." : undefined}
             sx={{ minWidth: 200 }}
           />
         )}
