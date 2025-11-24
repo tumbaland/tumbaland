@@ -22,7 +22,7 @@ import {
   ArrowUpward as ArrowUpwardIcon,
   ArrowDownward as ArrowDownwardIcon
 } from '@mui/icons-material';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Training } from '../types';
 
 interface TrainingsTableProps {
@@ -148,6 +148,7 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
   sortOrder,
   onSort
 }) => {
+  const navigate = useNavigate();
   if (isLoading) {
     return (
       <Box display="flex" justifyContent="center" py={8}>
@@ -227,7 +228,7 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
                     ? 'rgba(25, 118, 210, 0.08)'
                     : 'inherit'
                 }}
-                onClick={() => window.open(`/trainings/${training._id}`, '_blank')}
+                onClick={() => navigate(`/trainings/${training._id}`)}
               >
                 <TableCell padding="checkbox">
                   <Checkbox
