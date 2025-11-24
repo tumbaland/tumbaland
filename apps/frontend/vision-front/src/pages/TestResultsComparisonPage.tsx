@@ -96,7 +96,7 @@ const TestResultsComparisonPage: React.FC = () => {
     // Generate table for each condition
     ['day_fair', 'night_fair', 'day_rain', 'night_rain', 'snow'].forEach(condition => {
       // Calculate max values for bold formatting
-      const maxValues: Record<string, { iou: number; precision: number; recall: number }> = {};
+      const maxValues: Record<string, { iou: number; precision: number; recall: number; ap: number }> = {};
       classNames.forEach(className => {
         maxValues[className] = {
           iou: Math.max(...comparisonData.map(comp => {
@@ -113,17 +113,22 @@ const TestResultsComparisonPage: React.FC = () => {
             const conditionData = comp.test_results[condition];
             const classMetrics = conditionData?.[className];
             return classMetrics?.recall ?? -Infinity;
+          })),
+          ap: Math.max(...comparisonData.map(comp => {
+            const conditionData = comp.test_results[condition];
+            const classMetrics = conditionData?.[className];
+            return classMetrics?.ap ?? -Infinity;
           }))
         };
       });
 
-      latex += `\\begin{tabular}{|l|${'ccc|'.repeat(classNames.length)}}\n\\hline\n`;
+      latex += `\\begin{tabular}{|l|${'cccc|'.repeat(classNames.length)}}\n\\hline\n`;
 
       // Header row with class names
-      latex += `& \\multicolumn{3}{c|}{${classNames.map(name => name.charAt(0).toUpperCase() + name.slice(1)).join('} & \\multicolumn{3}{c|}{')}} \\\\\n\\hline\n`;
+      latex += `& \\multicolumn{4}{c|}{${classNames.map(name => name.charAt(0).toUpperCase() + name.slice(1)).join('} & \\multicolumn{4}{c|}{')}} \\\\\n\\hline\n`;
 
       // Sub-header row with metrics
-      latex += `Test Result & ${classNames.map(() => 'IoU & Precision & Recall').join(' & ')} \\\\\n\\hline\n`;
+      latex += `Test Result & ${classNames.map(() => 'IoU & Precision & Recall & AP').join(' & ')} \\\\\n\\hline\n`;
 
       // Data rows
       comparisonData.forEach(comp => {
@@ -138,6 +143,7 @@ const TestResultsComparisonPage: React.FC = () => {
           const iou = classMetrics?.iou;
           const precision = classMetrics?.precision;
           const recall = classMetrics?.recall;
+          const ap = classMetrics?.ap;
 
           // IoU with bold formatting for max value
           const iouText = iou !== undefined ? formatNumber(iou) : 'N/A';
@@ -149,7 +155,11 @@ const TestResultsComparisonPage: React.FC = () => {
 
           // Recall with bold formatting for max value
           const recallText = recall !== undefined ? formatNumber(recall) : 'N/A';
-          latex += `${recall === maxValues[className].recall && recall !== undefined ? `\\textbf{${recallText}}` : recallText}`;
+          latex += `${recall === maxValues[className].recall && recall !== undefined ? `\\textbf{${recallText}}` : recallText} & `;
+
+          // AP with bold formatting for max value
+          const apText = ap !== undefined ? formatNumber(ap) : 'N/A';
+          latex += `${ap === maxValues[className].ap && ap !== undefined ? `\\textbf{${apText}}` : apText}`;
 
           // Add separator between classes (except for last class)
           if (classIndex < classNames.length - 1) {
@@ -191,7 +201,7 @@ const TestResultsComparisonPage: React.FC = () => {
     // Generate table for each condition
     ['day_fair', 'night_fair', 'day_rain', 'night_rain', 'snow'].forEach(condition => {
       // Calculate max values for bold formatting
-      const maxValues: Record<string, { iou: number; precision: number; recall: number }> = {};
+      const maxValues: Record<string, { iou: number; precision: number; recall: number; ap: number }> = {};
       classNames.forEach(className => {
         maxValues[className] = {
           iou: Math.max(...comparisonData.map(comp => {
@@ -208,17 +218,22 @@ const TestResultsComparisonPage: React.FC = () => {
             const conditionData = comp.test_results[condition];
             const classMetrics = conditionData?.[className];
             return classMetrics?.recall ?? -Infinity;
+          })),
+          ap: Math.max(...comparisonData.map(comp => {
+            const conditionData = comp.test_results[condition];
+            const classMetrics = conditionData?.[className];
+            return classMetrics?.ap ?? -Infinity;
           }))
         };
       });
 
-      latex += `\\begin{tabular}{|l|${'ccc|'.repeat(classNames.length)}}\n\\hline\n`;
+      latex += `\\begin{tabular}{|l|${'cccc|'.repeat(classNames.length)}}\n\\hline\n`;
 
       // Header row with class names
-      latex += `& \\multicolumn{3}{c|}{${classNames.map(name => name.charAt(0).toUpperCase() + name.slice(1)).join('} & \\multicolumn{3}{c|}{')}} \\\\\n\\hline\n`;
+      latex += `& \\multicolumn{4}{c|}{${classNames.map(name => name.charAt(0).toUpperCase() + name.slice(1)).join('} & \\multicolumn{4}{c|}{')}} \\\\\n\\hline\n`;
 
       // Sub-header row with metrics
-      latex += `Test Result & ${classNames.map(() => 'IoU & Precision & Recall').join(' & ')} \\\\\n\\hline\n`;
+      latex += `Test Result & ${classNames.map(() => 'IoU & Precision & Recall & AP').join(' & ')} \\\\\n\\hline\n`;
 
       // Data rows
       comparisonData.forEach(comp => {
@@ -233,6 +248,7 @@ const TestResultsComparisonPage: React.FC = () => {
           const iou = classMetrics?.iou;
           const precision = classMetrics?.precision;
           const recall = classMetrics?.recall;
+          const ap = classMetrics?.ap;
 
           // IoU with bold formatting for max value
           const iouText = iou !== undefined ? formatNumber(iou) : 'N/A';
@@ -244,7 +260,11 @@ const TestResultsComparisonPage: React.FC = () => {
 
           // Recall with bold formatting for max value
           const recallText = recall !== undefined ? formatNumber(recall) : 'N/A';
-          latex += `${recall === maxValues[className].recall && recall !== undefined ? `\\textbf{${recallText}}` : recallText}`;
+          latex += `${recall === maxValues[className].recall && recall !== undefined ? `\\textbf{${recallText}}` : recallText} & `;
+
+          // AP with bold formatting for max value
+          const apText = ap !== undefined ? formatNumber(ap) : 'N/A';
+          latex += `${ap === maxValues[className].ap && ap !== undefined ? `\\textbf{${apText}}` : apText}`;
 
           // Add separator between classes (except for last class)
           if (classIndex < classNames.length - 1) {
@@ -286,7 +306,7 @@ const TestResultsComparisonPage: React.FC = () => {
     // Generate table for each condition
     ['day_fair', 'night_fair', 'day_rain', 'night_rain', 'snow'].forEach(condition => {
       // Calculate max values for bold formatting
-      const maxValues: Record<string, { iou: number; precision: number; recall: number; f1: number }> = {};
+      const maxValues: Record<string, { iou: number; precision: number; recall: number; f1: number; ap: number }> = {};
       classNames.forEach(className => {
         maxValues[className] = {
           iou: Math.max(...comparisonData.map(comp => {
@@ -308,17 +328,22 @@ const TestResultsComparisonPage: React.FC = () => {
             const conditionData = comp.test_results[condition];
             const classMetrics = conditionData?.[className];
             return classMetrics?.f1_score ?? -Infinity;
+          })),
+          ap: Math.max(...comparisonData.map(comp => {
+            const conditionData = comp.test_results[condition];
+            const classMetrics = conditionData?.[className];
+            return classMetrics?.ap ?? -Infinity;
           }))
         };
       });
 
-      latex += `\\begin{tabular}{|l|${'cccc|'.repeat(comparisonData.length)}}\n\\hline\n`;
+      latex += `\\begin{tabular}{|l|${'ccccc|'.repeat(comparisonData.length)}}\n\\hline\n`;
 
       // Header row with condition and training names
-      latex += `${condition.replace('_', ' ').toUpperCase()} & ${comparisonData.map(comp => `\\multicolumn{4}{c|}{${(comp.training?.name || 'Unknown').replace(/[&%$#_{}~^\\]/g, '\\$&')}}`).join(' & ')} \\\\\n\\hline\n`;
+      latex += `${condition.replace('_', ' ').toUpperCase()} & ${comparisonData.map(comp => `\\multicolumn{5}{c|}{${(comp.training?.name || 'Unknown').replace(/[&%$#_{}~^\\]/g, '\\$&')}}`).join(' & ')} \\\\\n\\hline\n`;
 
       // Sub-header row with metrics
-      latex += `Class & ${comparisonData.map(() => 'IoU & Precision & Recall & F1').join(' & ')} \\\\\n\\hline\n`;
+      latex += `Class & ${comparisonData.map(() => 'IoU & Precision & Recall & AP & F1').join(' & ')} \\\\\n\\hline\n`;
 
       // Data rows
       classNames.forEach(className => {
@@ -331,6 +356,7 @@ const TestResultsComparisonPage: React.FC = () => {
           const iou = classMetrics?.iou;
           const precision = classMetrics?.precision;
           const recall = classMetrics?.recall;
+          const ap = classMetrics?.ap;
           const f1 = classMetrics?.f1_score;
 
           // IoU with bold formatting for max value
@@ -344,6 +370,10 @@ const TestResultsComparisonPage: React.FC = () => {
           // Recall with bold formatting for max value
           const recallText = recall !== undefined ? formatNumber(recall) : 'N/A';
           latex += `${recall === maxValues[className].recall && recall !== undefined ? `\\textbf{${recallText}}` : recallText} & `;
+
+          // AP with bold formatting for max value
+          const apText = ap !== undefined ? formatNumber(ap) : 'N/A';
+          latex += `${ap === maxValues[className].ap && ap !== undefined ? `\\textbf{${apText}}` : apText} & `;
 
           // F1 with bold formatting for max value
           const f1Text = f1 !== undefined ? formatNumber(f1) : 'N/A';
@@ -568,7 +598,7 @@ const TestResultsComparisonPage: React.FC = () => {
 
             return ['day_fair', 'night_fair', 'day_rain', 'night_rain', 'snow'].map(condition => {
               // Calculate max values for each metric and class across all test results for this condition
-              const maxValues: Record<string, { iou: number; precision: number; recall: number }> = {};
+              const maxValues: Record<string, { iou: number; precision: number; recall: number; ap: number }> = {};
               classNames.forEach(className => {
                 maxValues[className] = {
                   iou: Math.max(...comparisonData.map(comp => {
@@ -585,6 +615,11 @@ const TestResultsComparisonPage: React.FC = () => {
                     const conditionData = comp.test_results[condition];
                     const classMetrics = conditionData?.[className];
                     return classMetrics?.recall ?? -Infinity;
+                  })),
+                  ap: Math.max(...comparisonData.map(comp => {
+                    const conditionData = comp.test_results[condition];
+                    const classMetrics = conditionData?.[className];
+                    return classMetrics?.ap ?? -Infinity;
                   }))
                 };
               });
@@ -600,7 +635,7 @@ const TestResultsComparisonPage: React.FC = () => {
                         {classNames.map((className) => (
                           <TableCell
                             key={className}
-                            colSpan={3}
+                            colSpan={4}
                             align="center"
                             sx={{
                               fontWeight: 600,
@@ -619,6 +654,7 @@ const TestResultsComparisonPage: React.FC = () => {
                           <React.Fragment key={className}>
                             <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>IoU</TableCell>
                             <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Precision</TableCell>
+                            <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Recall</TableCell>
                             <TableCell
                               align="center"
                               sx={{
@@ -627,7 +663,7 @@ const TestResultsComparisonPage: React.FC = () => {
                                 borderRight: classNames.indexOf(className) < classNames.length - 1 ? '1px solid rgba(224, 224, 224, 1)' : 'none'
                               }}
                             >
-                              Recall
+                              AP
                             </TableCell>
                           </React.Fragment>
                         ))}
@@ -687,12 +723,7 @@ const TestResultsComparisonPage: React.FC = () => {
                                     </Typography>
                                   )}
                                 </TableCell>
-                                <TableCell
-                                  align="center"
-                                  sx={{
-                                    borderRight: classNames.indexOf(className) < classNames.length - 1 ? '1px solid rgba(224, 224, 224, 1)' : 'none'
-                                  }}
-                                >
+                                <TableCell align="center">
                                   {classMetrics?.recall !== undefined ? (
                                     <Typography
                                       variant="body2"
@@ -701,6 +732,27 @@ const TestResultsComparisonPage: React.FC = () => {
                                       }}
                                     >
                                       {formatNumber(classMetrics.recall)}
+                                    </Typography>
+                                  ) : (
+                                    <Typography variant="body2" color="text.secondary">
+                                      N/A
+                                    </Typography>
+                                  )}
+                                </TableCell>
+                                <TableCell
+                                  align="center"
+                                  sx={{
+                                    borderRight: classNames.indexOf(className) < classNames.length - 1 ? '1px solid rgba(224, 224, 224, 1)' : 'none'
+                                  }}
+                                >
+                                  {classMetrics?.ap !== undefined ? (
+                                    <Typography
+                                      variant="body2"
+                                      sx={{
+                                        fontWeight: classMetrics.ap === maxValues[className].ap ? 700 : 'normal'
+                                      }}
+                                    >
+                                      {formatNumber(classMetrics.ap)}
                                     </Typography>
                                   ) : (
                                     <Typography variant="body2" color="text.secondary">
@@ -782,7 +834,7 @@ const TestResultsComparisonPage: React.FC = () => {
                         {comparisonData.map((comp) => (
                           <TableCell
                             key={comp.testResult._id}
-                            colSpan={4}
+                            colSpan={5}
                             align="center"
                             sx={{ borderBottom: '2px solid rgba(224, 224, 224, 1)' }}
                           >
@@ -811,6 +863,7 @@ const TestResultsComparisonPage: React.FC = () => {
                             <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>IoU</TableCell>
                             <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Precision</TableCell>
                             <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Recall</TableCell>
+                            <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>AP</TableCell>
                             <TableCell align="center" sx={{ fontWeight: 600, fontSize: '0.875rem', borderRight: '2px solid rgba(224, 224, 224, 1)' }}>F1</TableCell>
                           </React.Fragment>
                         ))}
@@ -834,6 +887,11 @@ const TestResultsComparisonPage: React.FC = () => {
                             const conditionData = comp.test_results[condition];
                             const classMetrics = conditionData?.[className];
                             return classMetrics?.recall ?? -Infinity;
+                          })),
+                          ap: Math.max(...comparisonData.map(comp => {
+                            const conditionData = comp.test_results[condition];
+                            const classMetrics = conditionData?.[className];
+                            return classMetrics?.ap ?? -Infinity;
                           })),
                           f1: Math.max(...comparisonData.map(comp => {
                             const conditionData = comp.test_results[condition];
@@ -895,6 +953,22 @@ const TestResultsComparisonPage: React.FC = () => {
                                         }}
                                       >
                                         {formatNumber(classMetrics.recall)}
+                                      </Typography>
+                                    ) : (
+                                      <Typography variant="body2" color="text.secondary">
+                                        N/A
+                                      </Typography>
+                                    )}
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    {classMetrics?.ap !== undefined ? (
+                                      <Typography
+                                        variant="body2"
+                                        sx={{
+                                          fontWeight: classMetrics.ap === maxValues.ap ? 700 : 'normal'
+                                        }}
+                                      >
+                                        {formatNumber(classMetrics.ap)}
                                       </Typography>
                                     ) : (
                                       <Typography variant="body2" color="text.secondary">
