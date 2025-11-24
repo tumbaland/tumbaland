@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -14,11 +14,19 @@ import {
   Tooltip,
   CircularProgress,
   Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Collapse,
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
   Refresh as RefreshIcon,
   BarChart as BarChartIcon,
+  KeyboardArrowDown as KeyboardArrowDownIcon,
+  KeyboardArrowUp as KeyboardArrowUpIcon,
 } from '@mui/icons-material';
 import { Benchmark } from '@/types';
 import { benchmarkService } from '@/services/benchmarkService';
@@ -27,6 +35,10 @@ const BenchmarksPage: React.FC = () => {
   const [benchmarks, setBenchmarks] = useState<Benchmark[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [benchmarkToDelete, setBenchmarkToDelete] = useState<string | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadBenchmarks();
@@ -51,15 +63,43 @@ const BenchmarksPage: React.FC = () => {
     }
   };
 
-  const handleDeleteBenchmark = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this benchmark?')) return;
+  const handleDeleteBenchmark = (id: string) => {
+    setBenchmarkToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!benchmarkToDelete) return;
 
     try {
-      await benchmarkService.deleteBenchmark(id);
+      await benchmarkService.deleteBenchmark(benchmarkToDelete);
       loadBenchmarks();
+      setDeleteDialogOpen(false);
+      setBenchmarkToDelete(null);
     } catch (err) {
       setError('Failed to delete benchmark');
       console.error('Error deleting benchmark:', err);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteDialogOpen(false);
+    setBenchmarkToDelete(null);
+  };
+
+  const toggleRowExpanded = (benchmarkId: string) => {
+    const newExpandedRows = new Set(expandedRows);
+    if (newExpandedRows.has(benchmarkId)) {
+      newExpandedRows.delete(benchmarkId);
+    } else {
+      newExpandedRows.add(benchmarkId);
+    }
+    setExpandedRows(newExpandedRows);
+  };
+
+  const handleRowClick = (benchmark: Benchmark) => {
+    if (benchmark.training_id) {
+      navigate(`/trainings/${benchmark.training_id}?tab=benchmarks`);
     }
   };
 
@@ -114,83 +154,71 @@ const BenchmarksPage: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow>
+              <TableCell></TableCell>
               <TableCell>Timestamp</TableCell>
-              <TableCell>Model Count</TableCell>
+              <TableCell>Training</TableCell>
               <TableCell>Epoch</TableCell>
-              <TableCell>Device</TableCell>
-              <TableCell>Framework</TableCell>
+              <TableCell>Models</TableCell>
               <TableCell>Avg FPS</TableCell>
-              <TableCell>Mean Time (ms)</TableCell>
-              <TableCell>GPU Memory (GB)</TableCell>
-              <TableCell>CPU Memory (GB)</TableCell>
+              <TableCell>Avg Memory (GB)</TableCell>
               <TableCell>Total Params (M)</TableCell>
-              <TableCell>Image Size</TableCell>
-              <TableCell>FLOPs (G)</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {benchmarks.map((benchmark) => 
-              benchmark.results.map((result, resultIndex) => {
-                // Calculate metrics for this specific result
-                const fps = result.fps || 0;
-                
-                // Get timing information from result data
-                const meanTime = result.mean_time_ms || (fps > 0 ? 1000 / fps : 0);
-                const stdTime = result.std_time_ms || 0;
-                
-                // Get memory values for this result - try multiple fields
-                const cpuMemory = (result.ram_memory_mean_mb || result.ram_memory_max_mb || result.baseline_ram_memory_mb || 0) / 1024; // Convert MB to GB
-                const gpuMemory = (result.gpu_memory_mean_mb || result.gpu_memory_max_mb || result.baseline_gpu_memory_mb || 0) / 1024; // Convert MB to GB
-                
-                // Debug memory values
-                console.log(`Result ${resultIndex} for benchmark ${benchmark._id}:`, {
-                  device: result.device,
-                  ram_memory_mean_mb: result.ram_memory_mean_mb,
-                  ram_memory_max_mb: result.ram_memory_max_mb,
-                  baseline_ram_memory_mb: result.baseline_ram_memory_mb,
-                  gpu_memory_mean_mb: result.gpu_memory_mean_mb,
-                  gpu_memory_max_mb: result.gpu_memory_max_mb,
-                  baseline_gpu_memory_mb: result.baseline_gpu_memory_mb,
-                  calculated_cpu_gb: cpuMemory,
-                  calculated_gpu_gb: gpuMemory
-                });
-                
-                // Model metrics from this result
-                const totalParamsM = result.total_parameters ? (result.total_parameters / 1000000).toFixed(2) : 'N/A';
-                const imageSize = result.image_size || 'N/A';
-                const flopsG = result.flops_giga ? result.flops_giga.toFixed(2) : 'N/A';
+            {benchmarks.map((benchmark) => {
+              const isExpanded = expandedRows.has(benchmark._id);
+              
+              // Calculate aggregated metrics for the benchmark
+              const totalModels = benchmark.results.length;
+              const avgFps = benchmark.results.reduce((sum, result) => sum + (result.fps || 0), 0) / totalModels;
+              const avgMemory = benchmark.results.reduce((sum, result) => {
+                const gpuMem = (result.gpu_memory_mean_mb || result.gpu_memory_max_mb || 0) / 1024;
+                const cpuMem = (result.ram_memory_mean_mb || result.ram_memory_max_mb || 0) / 1024;
+                return sum + Math.max(gpuMem, cpuMem); // Use the higher of GPU or CPU memory
+              }, 0) / totalModels;
+              
+              const totalParams = benchmark.results.reduce((sum, result) => sum + (result.total_parameters || 0), 0) / totalModels;
+              const totalParamsM = totalParams ? (totalParams / 1000000).toFixed(2) : 'N/A';
 
-                return (
-                  <TableRow key={`${benchmark._id}-${resultIndex}`}>
+              return (
+                <React.Fragment key={benchmark._id}>
+                  <TableRow 
+                    key={benchmark._id}
+                    onClick={() => handleRowClick(benchmark)}
+                    sx={{ 
+                      cursor: benchmark.training_id ? 'pointer' : 'default',
+                      '&:hover': { 
+                        backgroundColor: benchmark.training_id ? 'action.hover' : 'inherit' 
+                      }
+                    }}
+                  >
                     <TableCell>
-                      {benchmark.training_uuid ? (
-                        <Link 
-                          to={`/trainings/${benchmark.training_uuid}`}
-                          style={{ textDecoration: 'none', color: 'inherit' }}
-                        >
-                          {formatTimestamp(benchmark.timestamp)}
-                        </Link>
-                      ) : (
-                        formatTimestamp(benchmark.timestamp)
-                      )}
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleRowExpanded(benchmark._id);
+                        }}
+                      >
+                        {isExpanded ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+                      </IconButton>
                     </TableCell>
-                    <TableCell>{benchmark.results.length}</TableCell>
+                    <TableCell>
+                      {formatTimestamp(benchmark.timestamp)}
+                    </TableCell>
+                    <TableCell>{benchmark.training_uuid ? 'Linked' : 'Standalone'}</TableCell>
                     <TableCell>{benchmark.epoch || 'N/A'}</TableCell>
-                    <TableCell>{result.device || 'N/A'}</TableCell>
-                    <TableCell>{result.backbone || 'N/A'}</TableCell>
-                    <TableCell>{fps.toFixed(2)}</TableCell>
-                    <TableCell>
-                      {meanTime > 0 ? `${meanTime.toFixed(2)} ± ${stdTime.toFixed(2)}` : 'N/A'}
-                    </TableCell>
-                    <TableCell>{gpuMemory.toFixed(2)}</TableCell>
-                    <TableCell>{cpuMemory.toFixed(2)}</TableCell>
+                    <TableCell>{totalModels}</TableCell>
+                    <TableCell>{avgFps.toFixed(2)}</TableCell>
+                    <TableCell>{avgMemory.toFixed(2)}</TableCell>
                     <TableCell>{totalParamsM}</TableCell>
-                    <TableCell>{imageSize}</TableCell>
-                    <TableCell>{flopsG}</TableCell>
                     <TableCell>
                       <Tooltip title="View Details">
-                        <IconButton size="small">
+                        <IconButton 
+                          size="small"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <BarChartIcon />
                         </IconButton>
                       </Tooltip>
@@ -198,16 +226,70 @@ const BenchmarksPage: React.FC = () => {
                         <IconButton
                           size="small"
                           color="error"
-                          onClick={() => handleDeleteBenchmark(benchmark._id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteBenchmark(benchmark._id);
+                          }}
                         >
                           <DeleteIcon />
                         </IconButton>
                       </Tooltip>
                     </TableCell>
                   </TableRow>
-                );
-              })
-            )}
+                  <TableRow>
+                    <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={9}>
+                      <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                        <Box sx={{ margin: 1 }}>
+                          <Typography variant="h6" gutterBottom component="div">
+                            Benchmark Results Details
+                          </Typography>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow>
+                                <TableCell>Device</TableCell>
+                                <TableCell>Framework</TableCell>
+                                <TableCell>FPS</TableCell>
+                                <TableCell>Mean Time (ms)</TableCell>
+                                <TableCell>GPU Memory (GB)</TableCell>
+                                <TableCell>CPU Memory (GB)</TableCell>
+                                <TableCell>Image Size</TableCell>
+                                <TableCell>FLOPs (G)</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {benchmark.results.map((result, resultIndex) => {
+                                const fps = result.fps || 0;
+                                const meanTime = result.mean_time_ms || (fps > 0 ? 1000 / fps : 0);
+                                const stdTime = result.std_time_ms || 0;
+                                const cpuMemory = (result.ram_memory_mean_mb || result.ram_memory_max_mb || result.baseline_ram_memory_mb || 0) / 1024;
+                                const gpuMemory = (result.gpu_memory_mean_mb || result.gpu_memory_max_mb || result.baseline_gpu_memory_mb || 0) / 1024;
+                                const imageSize = result.image_size || 'N/A';
+                                const flopsG = result.flops_giga ? result.flops_giga.toFixed(2) : 'N/A';
+
+                                return (
+                                  <TableRow key={`${benchmark._id}-result-${resultIndex}`}>
+                                    <TableCell>{result.device || 'N/A'}</TableCell>
+                                    <TableCell>{result.backbone || 'N/A'}</TableCell>
+                                    <TableCell>{fps.toFixed(2)}</TableCell>
+                                    <TableCell>
+                                      {meanTime > 0 ? `${meanTime.toFixed(2)} ± ${stdTime.toFixed(2)}` : 'N/A'}
+                                    </TableCell>
+                                    <TableCell>{gpuMemory.toFixed(2)}</TableCell>
+                                    <TableCell>{cpuMemory.toFixed(2)}</TableCell>
+                                    <TableCell>{imageSize}</TableCell>
+                                    <TableCell>{flopsG}</TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </Box>
+                      </Collapse>
+                    </TableCell>
+                  </TableRow>
+                </React.Fragment>
+              );
+            })}
           </TableBody>
         </Table>
       </TableContainer>
@@ -222,6 +304,22 @@ const BenchmarksPage: React.FC = () => {
           </Typography>
         </Box>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={handleCancelDelete}>
+        <DialogTitle>Delete Benchmark</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this benchmark? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelDelete}>Cancel</Button>
+          <Button onClick={handleConfirmDelete} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

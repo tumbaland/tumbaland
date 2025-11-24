@@ -129,7 +129,7 @@ export const createBenchmark = async (req: Request, res: Response): Promise<void
     let training_id = null;
     if (benchmarkData.training_uuid) {
       try {
-        const training = await Training.findOne({ uuid: benchmarkData.training_uuid });
+        const training = await Training.findOne({ uuid: benchmarkData.training_uuid, deletedAt: null });
         if (training) {
           training_id = training._id;
         }
@@ -212,7 +212,7 @@ export const uploadBenchmark = async (req: Request, res: Response): Promise<void
     let training_id = null;
     if (benchmarkData.training_uuid) {
       try {
-        const training = await Training.findOne({ uuid: benchmarkData.training_uuid });
+        const training = await Training.findOne({ uuid: benchmarkData.training_uuid, deletedAt: null });
         if (training) {
           training_id = training._id;
         }
@@ -238,7 +238,7 @@ export const uploadBenchmark = async (req: Request, res: Response): Promise<void
     if (benchmarkData.training_uuid) {
       try {
         await Training.findOneAndUpdate(
-          { uuid: benchmarkData.training_uuid },
+          { uuid: benchmarkData.training_uuid, deletedAt: null },
           { updatedAt: new Date() }
         );
       } catch (updateError) {
@@ -280,7 +280,7 @@ export const updateBenchmark = async (req: Request, res: Response): Promise<void
     // Look up training_id if training_uuid is being updated
     if (updateData.training_uuid) {
       try {
-        const training = await Training.findOne({ uuid: updateData.training_uuid });
+        const training = await Training.findOne({ uuid: updateData.training_uuid, deletedAt: null });
         if (training) {
           updateData.training_id = training._id;
         }
@@ -315,12 +315,12 @@ export const updateBenchmark = async (req: Request, res: Response): Promise<void
   }
 };
 
-// Delete benchmark (soft delete)
+// Delete benchmark (hard delete)
 export const deleteBenchmark = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
 
-    const benchmark = await Benchmark.findOne({ _id: id, deletedAt: null });
+    const benchmark = await Benchmark.findByIdAndDelete(id);
 
     if (!benchmark) {
       res.status(404).json({
@@ -329,9 +329,6 @@ export const deleteBenchmark = async (req: Request, res: Response): Promise<void
       });
       return;
     }
-
-    benchmark.deletedAt = new Date();
-    await benchmark.save();
 
     res.json({
       success: true,

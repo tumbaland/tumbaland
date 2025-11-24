@@ -460,6 +460,7 @@ export interface BenchmarkResult {
 export interface Benchmark {
   _id: string;
   training_uuid?: string;
+  training_id?: string;
   epoch_uuid?: string;
   epoch?: number;
   timestamp: string;
