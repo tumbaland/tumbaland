@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.302](https://github.com/toomastahves/tumbaland/compare/v0.0.301...v0.0.302) (2025-11-24)
+
+
+### Features
+
+* benchmark fixes ([bc544c4](https://github.com/toomastahves/tumbaland/commit/bc544c4128d867ec2256b0e5fc5f8489c089da45))
+
 ### [0.0.301](https://github.com/toomastahves/tumbaland/compare/v0.0.300...v0.0.301) (2025-11-24)
 
 
