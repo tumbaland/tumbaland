@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.306](https://github.com/toomastahves/tumbaland/compare/v0.0.305...v0.0.306) (2025-11-24)
+
+
+### Features
+
+* save training id ([2545005](https://github.com/toomastahves/tumbaland/commit/2545005be5c00c9c9ef4dc0cdb871bb802437042))
+
 ### [0.0.305](https://github.com/toomastahves/tumbaland/compare/v0.0.304...v0.0.305) (2025-11-24)
 
 
