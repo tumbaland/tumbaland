@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.315](https://github.com/toomastahves/tumbaland/compare/v0.0.314...v0.0.315) (2025-11-24)
+
+
+### Features
+
+* increase page size ([3180ccf](https://github.com/toomastahves/tumbaland/commit/3180ccf9deb0296ba91181c6ab7b6554e6c7eff9))
+
 ### [0.0.314](https://github.com/toomastahves/tumbaland/compare/v0.0.313...v0.0.314) (2025-11-24)
 
 
