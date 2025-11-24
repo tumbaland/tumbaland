@@ -75,7 +75,7 @@ export const TrainingVisualizationsComparisonPage: React.FC = () => {
       const allVisualizations = allVisualizationsResponse.data.visualizations || [];
 
       // Filter to only selected trainings
-      const selectedTrainings = allTrainings.filter(t => 
+      const selectedTrainings = allTrainings.filter((t: Training) => 
         trainingIds.includes(t._id)
       );
 
@@ -90,14 +90,14 @@ export const TrainingVisualizationsComparisonPage: React.FC = () => {
 
       for (const training of selectedTrainings) {
         const trainingUuid = training.uuid || training.training_uuid || '';
-        const visualizations = allVisualizations.filter(viz => 
+        const visualizations = allVisualizations.filter((viz: Visualization) => 
           (viz as any).training_uuid === trainingUuid
         );
 
         if (visualizations.length > 0) {
           // Group visualizations by type
           const visualizationsByType = new Map<string, Visualization[]>();
-          visualizations.forEach(viz => {
+          visualizations.forEach((viz: Visualization) => {
             const existing = visualizationsByType.get(viz.type) || [];
             existing.push(viz);
             visualizationsByType.set(viz.type, existing);

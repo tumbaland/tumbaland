@@ -171,7 +171,7 @@ const TrainingsPage: React.FC = () => {
 
   // CSV Export function
   const exportToCSV = () => {
-    const selectedTrainings = trainings.filter(training => selectedTrainingIds.has(training._id));
+    const selectedTrainings = trainings.filter((training: Training) => selectedTrainingIds.has(training._id));
     exportTrainingsToCSV(selectedTrainings);
   };
 
@@ -336,7 +336,7 @@ const TrainingsPage: React.FC = () => {
     if (selectedTrainingIds.size === trainings.length) {
       setSelectedTrainingIds(new Set());
     } else {
-      setSelectedTrainingIds(new Set(trainings.map(t => t._id)));
+      setSelectedTrainingIds(new Set(trainings.map((t: Training) => t._id)));
     }
   };
 

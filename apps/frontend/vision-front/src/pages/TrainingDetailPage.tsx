@@ -146,7 +146,7 @@ const TrainingDetailPage: React.FC = () => {
         const testResultsByEpoch: { [epoch: number]: TestResult[] } = {};
         const epochsWithTestResults: number[] = [];
 
-        trainingTestResults.forEach(testResult => {
+        trainingTestResults.forEach((testResult: TestResult) => {
           const epochNumber = testResult.epoch;
           if (!testResultsByEpoch[epochNumber]) {
             testResultsByEpoch[epochNumber] = [];
@@ -651,7 +651,7 @@ Camera & ${vehicle ? vehicle.iou.toFixed(4) : '-'} & ${sign ? sign.iou.toFixed(4
         const testResultsByEpoch: { [epoch: number]: TestResult[] } = {};
         const epochsWithTestResults: number[] = [];
 
-        trainingTestResults.forEach(testResult => {
+        trainingTestResults.forEach((testResult: TestResult) => {
           const epochNumber = testResult.epoch;
           if (!testResultsByEpoch[epochNumber]) {
             testResultsByEpoch[epochNumber] = [];

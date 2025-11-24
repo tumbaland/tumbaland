@@ -161,7 +161,104 @@ export interface ApiResponse<T> {
 export interface PaginatedResponse<T> {
   success: boolean;
   data: {
-    benchmarks: T[];
+    [key: string]: T[] | any; // Allow any key for different data types
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      pages: number;
+    };
+  };
+}
+
+// Specific paginated response types for different endpoints
+export interface BenchmarksPaginatedResponse extends PaginatedResponse<Benchmark> {
+  data: {
+    benchmarks: Benchmark[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      pages: number;
+    };
+  };
+}
+
+export interface CommentsPaginatedResponse extends PaginatedResponse<Comment> {
+  data: {
+    comments: Comment[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      pages: number;
+    };
+  };
+}
+
+export interface EpochsPaginatedResponse extends PaginatedResponse<Epoch> {
+  data: {
+    epochs: Epoch[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      pages: number;
+    };
+  };
+}
+
+export interface ConfigsPaginatedResponse extends PaginatedResponse<Config> {
+  data: {
+    configs: Config[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      pages: number;
+    };
+  };
+}
+
+export interface TrainingsPaginatedResponse extends PaginatedResponse<Training> {
+  data: {
+    trainings: Training[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      pages: number;
+    };
+  };
+}
+
+export interface VisualizationsPaginatedResponse extends PaginatedResponse<Visualization> {
+  data: {
+    visualizations: Visualization[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      pages: number;
+    };
+  };
+}
+
+export interface TestResultsPaginatedResponse extends PaginatedResponse<TestResult> {
+  data: {
+    testResults: TestResult[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      pages: number;
+    };
+  };
+}
+
+export interface DatasetsPaginatedResponse extends PaginatedResponse<any> {
+  data: {
+    datasets: any[];
     pagination: {
       page: number;
       limit: number;
@@ -317,15 +414,43 @@ export interface CreateTestResultData {
 
 // Benchmark Types
 export interface BenchmarkResult {
+  config_path?: string;
+  modality?: string;
+  total_parameters?: number;
+  trainable_parameters?: number;
+  total_parameters_m?: number;
+  trainable_parameters_m?: number;
   model_name?: string;
+  backbone?: string;
+  dataset?: string;
+  image_size?: number;
+  pretrained?: boolean;
+  flops_available?: boolean;
+  total_flops?: number;
+  flops_giga?: number;
+  flops_method?: string;
+  mean_time_ms?: number;
+  std_time_ms?: number;
+  min_time_ms?: number;
+  max_time_ms?: number;
+  fps?: number;
+  num_runs?: number;
+  baseline_gpu_memory_mb?: number;
+  baseline_ram_memory_mb?: number;
+  ram_memory_mean_mb?: number;
+  ram_memory_std_mb?: number;
+  ram_memory_max_mb?: number;
+  gpu_memory_mean_mb?: number;
+  gpu_memory_std_mb?: number;
+  gpu_memory_max_mb?: number;
+  device?: string;
+  device_type?: string;
+  framework?: string;
   parameters?: number;
   flops?: number;
-  fps?: number;
   memory_usage?: number;
   input_size?: string;
   precision?: string;
-  framework?: string;
-  device?: string;
   batch_size?: number;
   warmup_iterations?: number;
   benchmark_iterations?: number;

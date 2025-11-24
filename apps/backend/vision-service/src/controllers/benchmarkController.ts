@@ -125,8 +125,23 @@ export const createBenchmark = async (req: Request, res: Response): Promise<void
       return;
     }
 
+    // Look up training_id if training_uuid is provided
+    let training_id = null;
+    if (benchmarkData.training_uuid) {
+      try {
+        const training = await Training.findOne({ uuid: benchmarkData.training_uuid });
+        if (training) {
+          training_id = training._id;
+        }
+      } catch (error) {
+        console.warn('Failed to find training for uuid:', benchmarkData.training_uuid, error);
+        // Don't fail the request if training lookup fails
+      }
+    }
+
     const benchmark = new Benchmark({
       training_uuid: benchmarkData.training_uuid,
+      training_id: training_id,
       epoch_uuid: benchmarkData.epoch_uuid,
       epoch: benchmarkData.epoch,
       timestamp: new Date(benchmarkData.timestamp),
@@ -193,8 +208,23 @@ export const uploadBenchmark = async (req: Request, res: Response): Promise<void
       return;
     }
 
+    // Look up training_id if training_uuid is provided
+    let training_id = null;
+    if (benchmarkData.training_uuid) {
+      try {
+        const training = await Training.findOne({ uuid: benchmarkData.training_uuid });
+        if (training) {
+          training_id = training._id;
+        }
+      } catch (error) {
+        console.warn('Failed to find training for uuid:', benchmarkData.training_uuid, error);
+        // Don't fail the request if training lookup fails
+      }
+    }
+
     const benchmark = new Benchmark({
       training_uuid: benchmarkData.training_uuid,
+      training_id: training_id,
       epoch_uuid: benchmarkData.epoch_uuid,
       epoch: benchmarkData.epoch,
       timestamp: new Date(benchmarkData.timestamp),
@@ -247,8 +277,22 @@ export const updateBenchmark = async (req: Request, res: Response): Promise<void
       return;
     }
 
+    // Look up training_id if training_uuid is being updated
+    if (updateData.training_uuid) {
+      try {
+        const training = await Training.findOne({ uuid: updateData.training_uuid });
+        if (training) {
+          updateData.training_id = training._id;
+        }
+      } catch (error) {
+        console.warn('Failed to find training for uuid:', updateData.training_uuid, error);
+        // Don't fail the request if training lookup fails
+      }
+    }
+
     // Update fields
     if (updateData.training_uuid !== undefined) benchmark.training_uuid = updateData.training_uuid;
+    if (updateData.training_id !== undefined) (benchmark as any).training_id = updateData.training_id;
     if (updateData.epoch_uuid !== undefined) benchmark.epoch_uuid = updateData.epoch_uuid;
     if (updateData.epoch !== undefined) benchmark.epoch = updateData.epoch;
     if (updateData.timestamp !== undefined) benchmark.timestamp = new Date(updateData.timestamp);

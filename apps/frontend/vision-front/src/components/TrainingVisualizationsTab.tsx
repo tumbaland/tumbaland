@@ -76,12 +76,12 @@ const TrainingVisualizationsTab: React.FC<TrainingVisualizationsTabProps> = ({
       // Apply client-side filters
       if (selectedEpochFilter !== 'all') {
         const epochNum = parseInt(selectedEpochFilter);
-        visualizations = visualizations.filter(viz => viz.epoch === epochNum);
+        visualizations = visualizations.filter((viz: Visualization) => viz.epoch === epochNum);
       }
 
       if (selectedImageName.trim()) {
         const searchTerm = selectedImageName.toLowerCase().trim();
-        visualizations = visualizations.filter(viz =>
+        visualizations = visualizations.filter((viz: Visualization) =>
           viz.filename.toLowerCase().includes(searchTerm)
         );
       }

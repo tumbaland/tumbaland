@@ -84,7 +84,7 @@ export const VisualizationsPage: React.FC = () => {
       // We need to get epoch data to link visualizations to trainings
       // For now, let's group by the training info if available in the visualization
       // If not, we'll need to fetch epoch data
-      allVisualizations.forEach(viz => {
+      allVisualizations.forEach((viz: Visualization) => {
         // Try to find training from epoch_uuid
         // Since we have the epoch data in the visualization response, we can use it
         // Note: This requires backend to include training_uuid in the response

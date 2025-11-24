@@ -45,7 +45,7 @@ const ChartComments: React.FC<ChartCommentsProps> = ({
 
   // Use passed comments or fetched comments
   const allComments = passedComments || data?.data?.comments || [];
-  const sectionComments = allComments.filter(comment => comment.section === section);
+  const sectionComments = allComments.filter((comment: Comment) => comment.section === section);
   const isLoadingComments = passedCommentsLoading !== undefined ? passedCommentsLoading : isLoading;
   
   // Recursively count all comments including replies

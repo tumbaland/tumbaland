@@ -3,7 +3,7 @@ import {
   Benchmark,
   CreateBenchmarkData,
   ApiResponse,
-  PaginatedResponse
+  BenchmarksPaginatedResponse
 } from '../types';
 
 // Benchmark statistics interface
@@ -24,7 +24,7 @@ export const benchmarkService = {
     training_uuid?: string;
     sortBy?: string;
     order?: 'asc' | 'desc';
-  }): Promise<PaginatedResponse<Benchmark>> {
+  }): Promise<BenchmarksPaginatedResponse> {
     const response = await visionApi.get('/benchmarks', { params });
     return response.data;
   },

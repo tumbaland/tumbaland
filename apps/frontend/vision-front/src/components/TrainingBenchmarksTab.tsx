@@ -55,7 +55,7 @@ const TrainingBenchmarksTab: React.FC<TrainingBenchmarksTabProps> = ({ training_
         sortBy: 'timestamp',
         order: 'desc',
       });
-      setBenchmarks(response.data.data || []);
+      setBenchmarks(response.data.benchmarks || []);
       setError(null);
     } catch (err) {
       setError('Failed to load benchmarks');

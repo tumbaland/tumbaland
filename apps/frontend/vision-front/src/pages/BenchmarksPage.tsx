@@ -20,7 +20,7 @@ import {
   Refresh as RefreshIcon,
   BarChart as BarChartIcon,
 } from '@mui/icons-material';
-import { Benchmark, BenchmarkResult } from '@/types';
+import { Benchmark } from '@/types';
 import { benchmarkService } from '@/services/benchmarkService';
 
 const BenchmarksPage: React.FC = () => {
@@ -41,11 +41,11 @@ const BenchmarksPage: React.FC = () => {
         sortBy: 'timestamp',
         order: 'desc',
       });
-      setBenchmarks(response.data.data.benchmarks || []);
+      setBenchmarks(response.data.benchmarks || []);
       setError(null);
     } catch (err) {
-      setError('Failed to load benchmarks');
       console.error('Error loading benchmarks:', err);
+      setError('Failed to load benchmarks');
     } finally {
       setLoading(false);
     }
@@ -74,16 +74,6 @@ const BenchmarksPage: React.FC = () => {
       second: '2-digit',
       hour12: false
     });
-  };
-
-  const calculateMeanAndStd = (values: number[]) => {
-    if (values.length === 0) return { mean: 0, std: 0 };
-    
-    const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
-    const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
-    const std = Math.sqrt(variance);
-    
-    return { mean, std };
   };
 
   if (loading && benchmarks.length === 0) {
@@ -140,69 +130,84 @@ const BenchmarksPage: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {benchmarks.map((benchmark) => {
-              const avgFps = benchmark.results.reduce((sum: number, r: BenchmarkResult) => sum + (r.fps || 0), 0) / benchmark.results.length;
-              
-              // Calculate mean time and std from FPS values
-              const fpsValues = benchmark.results.map(r => r.fps || 0).filter(fps => fps > 0);
-              const timeValues = fpsValues.map(fps => 1000 / fps); // Convert FPS to milliseconds
-              const { mean: meanTime, std: stdTime } = calculateMeanAndStd(timeValues);
-              
-              const gpuMemory = benchmark.system_info.gpu?.gpu_0?.memory_used_gb || 0;
-              const cpuMemory = benchmark.system_info.memory_used_gb || 0;
-              
-              // Model metrics from first result
-              const firstResult = benchmark.results[0];
-              const totalParamsM = firstResult?.parameters ? (firstResult.parameters / 1000000).toFixed(2) : 'N/A';
-              const imageSize = firstResult?.input_size || 'N/A';
-              const flopsG = firstResult?.flops ? (firstResult.flops / 1000000000).toFixed(2) : 'N/A';
+            {benchmarks.map((benchmark) => 
+              benchmark.results.map((result, resultIndex) => {
+                // Calculate metrics for this specific result
+                const fps = result.fps || 0;
+                
+                // Get timing information from result data
+                const meanTime = result.mean_time_ms || (fps > 0 ? 1000 / fps : 0);
+                const stdTime = result.std_time_ms || 0;
+                
+                // Get memory values for this result - try multiple fields
+                const cpuMemory = (result.ram_memory_mean_mb || result.ram_memory_max_mb || result.baseline_ram_memory_mb || 0) / 1024; // Convert MB to GB
+                const gpuMemory = (result.gpu_memory_mean_mb || result.gpu_memory_max_mb || result.baseline_gpu_memory_mb || 0) / 1024; // Convert MB to GB
+                
+                // Debug memory values
+                console.log(`Result ${resultIndex} for benchmark ${benchmark._id}:`, {
+                  device: result.device,
+                  ram_memory_mean_mb: result.ram_memory_mean_mb,
+                  ram_memory_max_mb: result.ram_memory_max_mb,
+                  baseline_ram_memory_mb: result.baseline_ram_memory_mb,
+                  gpu_memory_mean_mb: result.gpu_memory_mean_mb,
+                  gpu_memory_max_mb: result.gpu_memory_max_mb,
+                  baseline_gpu_memory_mb: result.baseline_gpu_memory_mb,
+                  calculated_cpu_gb: cpuMemory,
+                  calculated_gpu_gb: gpuMemory
+                });
+                
+                // Model metrics from this result
+                const totalParamsM = result.total_parameters ? (result.total_parameters / 1000000).toFixed(2) : 'N/A';
+                const imageSize = result.image_size || 'N/A';
+                const flopsG = result.flops_giga ? result.flops_giga.toFixed(2) : 'N/A';
 
-              return (
-            <TableRow key={benchmark._id}>
-              <TableCell>
-                {benchmark.training_uuid ? (
-                  <Link 
-                    to={`/trainings/${benchmark.training_uuid}`}
-                    style={{ textDecoration: 'none', color: 'inherit' }}
-                  >
-                    {formatTimestamp(benchmark.timestamp)}
-                  </Link>
-                ) : (
-                  formatTimestamp(benchmark.timestamp)
-                )}
-              </TableCell>
-              <TableCell>{benchmark.results.length}</TableCell>
-              <TableCell>{benchmark.epoch || 'N/A'}</TableCell>
-              <TableCell>{benchmark.results[0]?.device || 'N/A'}</TableCell>
-              <TableCell>{benchmark.results[0]?.framework || 'N/A'}</TableCell>
-                  <TableCell>{avgFps.toFixed(2)}</TableCell>
-                  <TableCell>
-                    {meanTime > 0 ? `${meanTime.toFixed(2)} ± ${stdTime.toFixed(2)}` : 'N/A'}
-                  </TableCell>
-                  <TableCell>{gpuMemory > 0 ? gpuMemory.toFixed(2) : 'N/A'}</TableCell>
-                  <TableCell>{cpuMemory > 0 ? cpuMemory.toFixed(2) : 'N/A'}</TableCell>
-                  <TableCell>{totalParamsM}</TableCell>
-                  <TableCell>{imageSize}</TableCell>
-                  <TableCell>{flopsG}</TableCell>
-                  <TableCell>
-                    <Tooltip title="View Details">
-                      <IconButton size="small">
-                        <BarChartIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete">
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => handleDeleteBenchmark(benchmark._id)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+                return (
+                  <TableRow key={`${benchmark._id}-${resultIndex}`}>
+                    <TableCell>
+                      {benchmark.training_uuid ? (
+                        <Link 
+                          to={`/trainings/${benchmark.training_uuid}`}
+                          style={{ textDecoration: 'none', color: 'inherit' }}
+                        >
+                          {formatTimestamp(benchmark.timestamp)}
+                        </Link>
+                      ) : (
+                        formatTimestamp(benchmark.timestamp)
+                      )}
+                    </TableCell>
+                    <TableCell>{benchmark.results.length}</TableCell>
+                    <TableCell>{benchmark.epoch || 'N/A'}</TableCell>
+                    <TableCell>{result.device || 'N/A'}</TableCell>
+                    <TableCell>{result.backbone || 'N/A'}</TableCell>
+                    <TableCell>{fps.toFixed(2)}</TableCell>
+                    <TableCell>
+                      {meanTime > 0 ? `${meanTime.toFixed(2)} ± ${stdTime.toFixed(2)}` : 'N/A'}
+                    </TableCell>
+                    <TableCell>{gpuMemory.toFixed(2)}</TableCell>
+                    <TableCell>{cpuMemory.toFixed(2)}</TableCell>
+                    <TableCell>{totalParamsM}</TableCell>
+                    <TableCell>{imageSize}</TableCell>
+                    <TableCell>{flopsG}</TableCell>
+                    <TableCell>
+                      <Tooltip title="View Details">
+                        <IconButton size="small">
+                          <BarChartIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleDeleteBenchmark(benchmark._id)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
           </TableBody>
         </Table>
       </TableContainer>
