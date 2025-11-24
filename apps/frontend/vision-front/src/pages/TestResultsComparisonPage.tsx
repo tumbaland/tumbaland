@@ -327,7 +327,8 @@ const TestResultsComparisonPage: React.FC = () => {
           f1: Math.max(...comparisonData.map(comp => {
             const conditionData = comp.test_results[condition];
             const classMetrics = conditionData?.[className];
-            return classMetrics?.f1_score ?? -Infinity;
+            const f1Value = classMetrics?.f1_score ?? classMetrics?.f1;
+            return (f1Value !== undefined && f1Value !== null && !isNaN(f1Value)) ? f1Value : -Infinity;
           })),
           ap: Math.max(...comparisonData.map(comp => {
             const conditionData = comp.test_results[condition];
@@ -357,7 +358,7 @@ const TestResultsComparisonPage: React.FC = () => {
           const precision = classMetrics?.precision;
           const recall = classMetrics?.recall;
           const ap = classMetrics?.ap;
-          const f1 = classMetrics?.f1_score;
+          const f1 = classMetrics?.f1_score ?? classMetrics?.f1;
 
           // IoU with bold formatting for max value
           const iouText = iou !== undefined ? formatNumber(iou) : 'N/A';
@@ -896,7 +897,8 @@ const TestResultsComparisonPage: React.FC = () => {
                           f1: Math.max(...comparisonData.map(comp => {
                             const conditionData = comp.test_results[condition];
                             const classMetrics = conditionData?.[className];
-                            return classMetrics?.f1_score ?? -Infinity;
+                            const f1Value = classMetrics?.f1_score ?? classMetrics?.f1;
+                            return (f1Value !== undefined && f1Value !== null && !isNaN(f1Value)) ? f1Value : -Infinity;
                           }))
                         };
 
@@ -977,20 +979,23 @@ const TestResultsComparisonPage: React.FC = () => {
                                     )}
                                   </TableCell>
                                   <TableCell align="center" sx={{ borderRight: '2px solid rgba(224, 224, 224, 1)' }}>
-                                    {classMetrics?.f1_score !== undefined ? (
-                                      <Typography
-                                        variant="body2"
-                                        sx={{
-                                          fontWeight: classMetrics.f1_score === maxValues.f1 ? 700 : 'normal'
-                                        }}
-                                      >
-                                        {formatNumber(classMetrics.f1_score)}
-                                      </Typography>
-                                    ) : (
-                                      <Typography variant="body2" color="text.secondary">
-                                        N/A
-                                      </Typography>
-                                    )}
+                                    {(() => {
+                                      const f1Value = classMetrics?.f1_score ?? classMetrics?.f1;
+                                      return f1Value !== undefined && f1Value !== null && !isNaN(f1Value) ? (
+                                        <Typography
+                                          variant="body2"
+                                          sx={{
+                                            fontWeight: f1Value === maxValues.f1 ? 700 : 'normal'
+                                          }}
+                                        >
+                                          {formatNumber(f1Value)}
+                                        </Typography>
+                                      ) : (
+                                        <Typography variant="body2" color="text.secondary">
+                                          N/A
+                                        </Typography>
+                                      );
+                                    })()}
                                   </TableCell>
                                 </React.Fragment>
                               );
