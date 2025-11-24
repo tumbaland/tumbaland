@@ -3,28 +3,24 @@ import {
   Box,
   Typography,
   Paper,
+  Card,
+  CardContent,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
   CircularProgress,
   Alert,
-  Chip,
   IconButton,
   Tooltip,
+  Chip,
+  Divider,
 } from '@mui/material';
 import {
-  Add as AddIcon,
   Delete as DeleteIcon,
-  Refresh as RefreshIcon,
+  Settings as SettingsIcon,
 } from '@mui/icons-material';
 import { Benchmark } from '../types';
 import { benchmarkService } from '../services/benchmarkService';
@@ -37,11 +33,6 @@ const TrainingBenchmarksTab: React.FC<TrainingBenchmarksTabProps> = ({ training_
   const [benchmarks, setBenchmarks] = useState<Benchmark[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-
-  // Dialog states
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [jsonInput, setJsonInput] = useState('');
 
   useEffect(() => {
     loadBenchmarks();
@@ -62,26 +53,6 @@ const TrainingBenchmarksTab: React.FC<TrainingBenchmarksTabProps> = ({ training_
       console.error('Error loading benchmarks:', err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleUploadBenchmark = async () => {
-    if (!jsonInput.trim()) return;
-
-    try {
-      setUploading(true);
-      const benchmarkData = JSON.parse(jsonInput);
-      // Ensure the benchmark is associated with this training
-      benchmarkData.training_uuid = training_uuid;
-      await benchmarkService.uploadBenchmark(benchmarkData);
-      setUploadDialogOpen(false);
-      setJsonInput('');
-      loadBenchmarks();
-    } catch (err) {
-      setError('Failed to upload benchmark. Please check the JSON format.');
-      console.error('Error uploading benchmark:', err);
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -110,14 +81,6 @@ const TrainingBenchmarksTab: React.FC<TrainingBenchmarksTabProps> = ({ training_
     });
   };
 
-  const formatNumber = (num: number | undefined) => {
-    if (num === undefined) return 'N/A';
-    if (num >= 1e9) return `${(num / 1e9).toFixed(2)}B`;
-    if (num >= 1e6) return `${(num / 1e6).toFixed(2)}M`;
-    if (num >= 1e3) return `${(num / 1e3).toFixed(2)}K`;
-    return num.toFixed(2);
-  };
-
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -132,23 +95,6 @@ const TrainingBenchmarksTab: React.FC<TrainingBenchmarksTabProps> = ({ training_
         <Typography variant="h6" component="h2">
           Training Benchmarks
         </Typography>
-        <Box>
-          <Button
-            variant="outlined"
-            startIcon={<RefreshIcon />}
-            onClick={loadBenchmarks}
-            sx={{ mr: 1 }}
-          >
-            Refresh
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setUploadDialogOpen(true)}
-          >
-            Add Benchmark
-          </Button>
-        </Box>
       </Box>
 
       {error && (
@@ -167,122 +113,198 @@ const TrainingBenchmarksTab: React.FC<TrainingBenchmarksTabProps> = ({ training_
           </Typography>
         </Paper>
       ) : (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Timestamp</TableCell>
-                <TableCell>Model Name</TableCell>
-                <TableCell>Parameters</TableCell>
-                <TableCell>FLOPs</TableCell>
-                <TableCell>FPS</TableCell>
-                <TableCell>Memory (GB)</TableCell>
-                <TableCell>Device</TableCell>
-                <TableCell>Framework</TableCell>
-                <TableCell>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {benchmarks.map((benchmark) =>
-                benchmark.results.map((result: any, index: number) => (
-                  <TableRow key={`${benchmark._id}-${index}`}>
-                    {index === 0 && (
-                      <TableCell rowSpan={benchmark.results.length}>
-                        {formatTimestamp(benchmark.timestamp)}
-                      </TableCell>
-                    )}
-                    <TableCell>
-                      <Chip
-                        label={result.model_name || 'Unknown'}
+        <Box>
+          {benchmarks.map((benchmark) => {
+            // Group results by device type
+            const gpuResults = benchmark.results.filter(result =>
+              result.device_type === 'cuda' || result.device?.toLowerCase().includes('gpu') || result.device?.toLowerCase().includes('cuda')
+            );
+            const cpuResults = benchmark.results.filter(result =>
+              result.device_type === 'cpu' || result.device?.toLowerCase().includes('cpu')
+            );
+
+            // Get system info from benchmark
+            const benchmarkSystemInfo = benchmark.system_info;
+
+            return (
+              <Card key={benchmark._id} sx={{ mb: 3 }}>
+                <CardContent>
+                  {/* Header with timestamp and delete button */}
+                  <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                    <Typography variant="h6" component="h3">
+                      Benchmark - {formatTimestamp(benchmark.timestamp)}
+                    </Typography>
+                    <Tooltip title="Delete Benchmark">
+                      <IconButton
                         size="small"
+                        color="error"
+                        onClick={() => handleDeleteBenchmark(benchmark._id)}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+
+                  {/* System Information */}
+                  <Box mb={3}>
+                    <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                      <SettingsIcon sx={{ mr: 1 }} />
+                      System Information
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      <Chip
+                        label={`CPU Cores: ${benchmarkSystemInfo?.cpu_count || 'N/A'}`}
                         variant="outlined"
+                        size="small"
                       />
-                    </TableCell>
-                    <TableCell>{formatNumber(result.parameters)}</TableCell>
-                    <TableCell>{formatNumber(result.flops)}</TableCell>
-                    <TableCell>{result.fps?.toFixed(2) || 'N/A'}</TableCell>
-                    <TableCell>{result.memory_usage?.toFixed(2) || 'N/A'}</TableCell>
-                    <TableCell>{result.device || 'N/A'}</TableCell>
-                    <TableCell>{result.framework || 'N/A'}</TableCell>
-                    {index === 0 && (
-                      <TableCell rowSpan={benchmark.results.length}>
-                        <Tooltip title="Delete Benchmark">
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => handleDeleteBenchmark(benchmark._id)}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                      <Chip
+                        label={`Logical CPUs: ${benchmarkSystemInfo?.cpu_count_logical || 'N/A'}`}
+                        variant="outlined"
+                        size="small"
+                      />
+                      <Chip
+                        label={`Memory: ${benchmarkSystemInfo?.memory_total_gb ? benchmarkSystemInfo.memory_total_gb.toFixed(1) + ' GB' : 'N/A'}`}
+                        variant="outlined"
+                        size="small"
+                      />
+                      <Chip
+                        label={`GPU: ${benchmarkSystemInfo?.gpu_name || 'N/A'}`}
+                        variant="outlined"
+                        size="small"
+                        color="secondary"
+                      />
+                      <Chip
+                        label={`GPU Memory: ${benchmarkSystemInfo?.gpu_memory_total_gb ? benchmarkSystemInfo.gpu_memory_total_gb.toFixed(1) + ' GB' : 'N/A'}`}
+                        variant="outlined"
+                        size="small"
+                        color="secondary"
+                      />
+                      <Chip
+                        label={`GPU Driver: ${benchmarkSystemInfo?.gpu_driver || 'N/A'}`}
+                        variant="outlined"
+                        size="small"
+                        color="secondary"
+                      />
+                    </Box>
+                  </Box>
+
+                  <Divider sx={{ mb: 3 }} />
+
+                  {/* CPU vs GPU Comparison Table */}
+                  <TableContainer component={Paper}>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell><strong>Metric</strong></TableCell>
+                          <TableCell align="center"><strong>CPU</strong></TableCell>
+                          <TableCell align="center"><strong>GPU</strong></TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+
+                        {/* Parameters & FLOPs */}
+                        <TableRow>
+                          <TableCell>Trainable Parameters (M)</TableCell>
+                          <TableCell align="center">{cpuResults[0]?.trainable_parameters_m?.toFixed(2) || 'N/A'}</TableCell>
+                          <TableCell align="center">{gpuResults[0]?.trainable_parameters_m?.toFixed(2) || 'N/A'}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>FLOPs (G)</TableCell>
+                          <TableCell align="center">{cpuResults[0]?.flops_giga?.toFixed(2) || 'N/A'}</TableCell>
+                          <TableCell align="center">{gpuResults[0]?.flops_giga?.toFixed(2) || 'N/A'}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>FLOPs Method</TableCell>
+                          <TableCell align="center">{cpuResults[0]?.flops_method || 'N/A'}</TableCell>
+                          <TableCell align="center">{gpuResults[0]?.flops_method || 'N/A'}</TableCell>
+                        </TableRow>
+
+                        {/* Performance Metrics */}
+                        <TableRow>
+                          <TableCell>Mean Time (ms)</TableCell>
+                          <TableCell align="center">
+                            {cpuResults[0]?.mean_time_ms && cpuResults[0]?.std_time_ms
+                              ? `${cpuResults[0].mean_time_ms.toFixed(2)} ± ${cpuResults[0].std_time_ms.toFixed(2)}`
+                              : cpuResults[0]?.mean_time_ms?.toFixed(2) || 'N/A'}
+                          </TableCell>
+                          <TableCell align="center">
+                            {gpuResults[0]?.mean_time_ms && gpuResults[0]?.std_time_ms
+                              ? `${gpuResults[0].mean_time_ms.toFixed(2)} ± ${gpuResults[0].std_time_ms.toFixed(2)}`
+                              : gpuResults[0]?.mean_time_ms?.toFixed(2) || 'N/A'}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>Min Time (ms)</TableCell>
+                          <TableCell align="center">{cpuResults[0]?.min_time_ms?.toFixed(2) || 'N/A'}</TableCell>
+                          <TableCell align="center">{gpuResults[0]?.min_time_ms?.toFixed(2) || 'N/A'}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>Max Time (ms)</TableCell>
+                          <TableCell align="center">{cpuResults[0]?.max_time_ms?.toFixed(2) || 'N/A'}</TableCell>
+                          <TableCell align="center">{gpuResults[0]?.max_time_ms?.toFixed(2) || 'N/A'}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>FPS</TableCell>
+                          <TableCell align="center">{cpuResults[0]?.fps?.toFixed(2) || 'N/A'}</TableCell>
+                          <TableCell align="center">{gpuResults[0]?.fps?.toFixed(2) || 'N/A'}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>Num Runs</TableCell>
+                          <TableCell align="center">{cpuResults[0]?.num_runs || 'N/A'}</TableCell>
+                          <TableCell align="center">{gpuResults[0]?.num_runs || 'N/A'}</TableCell>
+                        </TableRow>
+
+                        {/* Memory Usage */}
+                        <TableRow>
+                          <TableCell>Baseline GPU Memory</TableCell>
+                          <TableCell align="center">{cpuResults[0]?.baseline_gpu_memory_mb || 'N/A'}</TableCell>
+                          <TableCell align="center">{gpuResults[0]?.baseline_gpu_memory_mb || 'N/A'}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>Baseline RAM Memory</TableCell>
+                          <TableCell align="center">{cpuResults[0]?.baseline_ram_memory_mb || 'N/A'}</TableCell>
+                          <TableCell align="center">{gpuResults[0]?.baseline_ram_memory_mb || 'N/A'}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>GPU Memory Mean</TableCell>
+                          <TableCell align="center">{cpuResults[0]?.gpu_memory_mean_mb || 'N/A'}</TableCell>
+                          <TableCell align="center">{gpuResults[0]?.gpu_memory_mean_mb || 'N/A'}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>GPU Memory Std</TableCell>
+                          <TableCell align="center">{cpuResults[0]?.gpu_memory_std_mb || 'N/A'}</TableCell>
+                          <TableCell align="center">{gpuResults[0]?.gpu_memory_std_mb || 'N/A'}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>GPU Memory Max</TableCell>
+                          <TableCell align="center">{cpuResults[0]?.gpu_memory_max_mb || 'N/A'}</TableCell>
+                          <TableCell align="center">{gpuResults[0]?.gpu_memory_max_mb || 'N/A'}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>RAM Memory Mean</TableCell>
+                          <TableCell align="center">{cpuResults[0]?.ram_memory_mean_mb || 'N/A'}</TableCell>
+                          <TableCell align="center">{gpuResults[0]?.ram_memory_mean_mb || 'N/A'}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>RAM Memory Std</TableCell>
+                          <TableCell align="center">{cpuResults[0]?.ram_memory_std_mb || 'N/A'}</TableCell>
+                          <TableCell align="center">{gpuResults[0]?.ram_memory_std_mb || 'N/A'}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>RAM Memory Max</TableCell>
+                          <TableCell align="center">{cpuResults[0]?.ram_memory_max_mb || 'N/A'}</TableCell>
+                          <TableCell align="center">{gpuResults[0]?.ram_memory_max_mb || 'N/A'}</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </Box>
       )}
 
-      {/* Upload Dialog */}
-      <Dialog
-        open={uploadDialogOpen}
-        onClose={() => setUploadDialogOpen(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>Add Benchmark</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Benchmark JSON"
-            fullWidth
-            multiline
-            rows={20}
-            value={jsonInput}
-            onChange={(e) => setJsonInput(e.target.value)}
-            placeholder={`Paste your benchmark JSON here. The training_uuid will be automatically set.
-
-Example format:
-{
-  "timestamp": "2024-01-01T12:00:00Z",
-  "system_info": {
-    "cpu": "Intel i7",
-    "memory": "32GB",
-    "gpu": {
-      "gpu_0": {
-        "memory_max_gb": 8,
-        "gpu_utilization_percent": 85
-      }
-    }
-  },
-  "results": [
-    {
-      "model_name": "yolov8n",
-      "parameters": 3150000,
-      "flops": 8500000000,
-      "fps": 45.2,
-      "memory_usage": 2.1,
-      "device": "GPU",
-      "framework": "PyTorch"
-    }
-  ]
-}`}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setUploadDialogOpen(false)}>Cancel</Button>
-          <Button
-            onClick={handleUploadBenchmark}
-            variant="contained"
-            disabled={uploading || !jsonInput.trim()}
-          >
-            {uploading ? <CircularProgress size={20} /> : 'Add Benchmark'}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };

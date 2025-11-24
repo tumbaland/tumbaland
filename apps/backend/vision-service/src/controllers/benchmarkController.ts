@@ -34,10 +34,41 @@ export const getBenchmarks = async (req: Request, res: Response): Promise<void> 
       Benchmark.countDocuments(query)
     ]);
 
+    // Get unique training IDs from benchmarks
+    const trainingIds = [...new Set(
+      benchmarks
+        .map(b => b.training_id)
+        .filter(id => id != null)
+    )];
+
+    // Fetch training data if we have training IDs
+    let trainingMap = new Map();
+    if (trainingIds.length > 0) {
+      try {
+        const trainings = await Training.find({
+          _id: { $in: trainingIds },
+          deletedAt: null
+        }).select('name uuid');
+        
+        trainingMap = new Map(
+          trainings.map(training => [(training._id as any).toString(), training])
+        );
+      } catch (populateError) {
+        console.warn('Failed to fetch training data:', populateError);
+        // Continue without training data
+      }
+    }
+
+    // Add training data to benchmarks
+    const benchmarksWithTraining = benchmarks.map(benchmark => ({
+      ...benchmark.toObject(),
+      training_id: benchmark.training_id ? trainingMap.get(benchmark.training_id.toString()) || null : null
+    }));
+
     res.json({
       success: true,
       data: {
-        benchmarks,
+        benchmarks: benchmarksWithTraining,
         pagination: {
           page: Number(page),
           limit: Number(limit),

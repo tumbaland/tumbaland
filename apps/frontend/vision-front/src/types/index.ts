@@ -52,11 +52,13 @@ export interface SystemInfo {
   // CPU metrics
   cpu_percent?: number;
   cpu_count?: number;
+  cpu_count_logical?: number;
   cpu_count_physical?: number;
 
   // Memory metrics
   memory_percent?: number;
   memory_used_gb?: number;
+  memory_total_gb?: number;
   memory_max_gb?: number;
 
   // Process info
@@ -84,6 +86,11 @@ export interface SystemInfo {
       fan_speed_percent?: number;
     };
   };
+
+  // GPU direct fields
+  gpu_name?: string;
+  gpu_memory_total_gb?: number;
+  gpu_driver?: string;
 
   // Legacy hardware specs (strings)
   cpu?: string;
@@ -460,7 +467,11 @@ export interface BenchmarkResult {
 export interface Benchmark {
   _id: string;
   training_uuid?: string;
-  training_id?: string;
+  training_id?: string | {
+    _id: string;
+    name: string;
+    uuid: string;
+  };
   epoch_uuid?: string;
   epoch?: number;
   timestamp: string;

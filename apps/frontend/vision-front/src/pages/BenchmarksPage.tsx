@@ -24,7 +24,6 @@ import {
 import {
   Delete as DeleteIcon,
   Refresh as RefreshIcon,
-  BarChart as BarChartIcon,
   KeyboardArrowDown as KeyboardArrowDownIcon,
   KeyboardArrowUp as KeyboardArrowUpIcon,
 } from '@mui/icons-material';
@@ -98,8 +97,8 @@ const BenchmarksPage: React.FC = () => {
   };
 
   const handleRowClick = (benchmark: Benchmark) => {
-    if (benchmark.training_id) {
-      navigate(`/trainings/${benchmark.training_id}?tab=benchmarks`);
+    if (benchmark.training_id && typeof benchmark.training_id === 'object' && '_id' in benchmark.training_id) {
+      navigate(`/trainings/${(benchmark.training_id as any)._id}?tab=benchmarks`);
     }
   };
 
@@ -155,13 +154,13 @@ const BenchmarksPage: React.FC = () => {
           <TableHead>
             <TableRow>
               <TableCell></TableCell>
+              <TableCell>Training Name</TableCell>
+              <TableCell>Mean FPS</TableCell>
+              <TableCell>Parameters (M)</TableCell>
+              <TableCell>FLOPs (G)</TableCell>
+              <TableCell>Mean Time (ms) GPU</TableCell>
+              <TableCell>Mean Time (ms) CPU</TableCell>
               <TableCell>Timestamp</TableCell>
-              <TableCell>Training</TableCell>
-              <TableCell>Epoch</TableCell>
-              <TableCell>Models</TableCell>
-              <TableCell>Avg FPS</TableCell>
-              <TableCell>Avg Memory (GB)</TableCell>
-              <TableCell>Total Params (M)</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -172,14 +171,35 @@ const BenchmarksPage: React.FC = () => {
               // Calculate aggregated metrics for the benchmark
               const totalModels = benchmark.results.length;
               const avgFps = benchmark.results.reduce((sum, result) => sum + (result.fps || 0), 0) / totalModels;
-              const avgMemory = benchmark.results.reduce((sum, result) => {
-                const gpuMem = (result.gpu_memory_mean_mb || result.gpu_memory_max_mb || 0) / 1024;
-                const cpuMem = (result.ram_memory_mean_mb || result.ram_memory_max_mb || 0) / 1024;
-                return sum + Math.max(gpuMem, cpuMem); // Use the higher of GPU or CPU memory
-              }, 0) / totalModels;
               
               const totalParams = benchmark.results.reduce((sum, result) => sum + (result.total_parameters || 0), 0) / totalModels;
               const totalParamsM = totalParams ? (totalParams / 1000000).toFixed(2) : 'N/A';
+
+              const avgFlops = benchmark.results.reduce((sum, result) => sum + (result.flops_giga || 0), 0) / totalModels;
+              const avgFlopsG = avgFlops > 0 ? avgFlops.toFixed(2) : 'N/A';
+
+              // Calculate mean time for GPU and CPU separately
+              const gpuResults = benchmark.results.filter(result => 
+                result.device_type === 'cuda' || result.device?.toLowerCase().includes('gpu') || result.device?.toLowerCase().includes('cuda')
+              );
+              const cpuResults = benchmark.results.filter(result => 
+                result.device_type === 'cpu' || result.device?.toLowerCase().includes('cpu')
+              );
+
+              const meanTimeGpu = gpuResults.length > 0 
+                ? gpuResults.reduce((sum, result) => sum + (result.mean_time_ms || 0), 0) / gpuResults.length 
+                : 0;
+              const meanTimeCpu = cpuResults.length > 0 
+                ? cpuResults.reduce((sum, result) => sum + (result.mean_time_ms || 0), 0) / cpuResults.length 
+                : 0;
+
+              // Calculate standard deviation for GPU and CPU times
+              const stdTimeGpu = gpuResults.length > 0 
+                ? Math.sqrt(gpuResults.reduce((sum, result) => sum + Math.pow((result.mean_time_ms || 0) - meanTimeGpu, 2), 0) / gpuResults.length)
+                : 0;
+              const stdTimeCpu = cpuResults.length > 0 
+                ? Math.sqrt(cpuResults.reduce((sum, result) => sum + Math.pow((result.mean_time_ms || 0) - meanTimeCpu, 2), 0) / cpuResults.length)
+                : 0;
 
               return (
                 <React.Fragment key={benchmark._id}>
@@ -187,9 +207,9 @@ const BenchmarksPage: React.FC = () => {
                     key={benchmark._id}
                     onClick={() => handleRowClick(benchmark)}
                     sx={{ 
-                      cursor: benchmark.training_id ? 'pointer' : 'default',
+                      cursor: (benchmark.training_id && typeof benchmark.training_id === 'object' && '_id' in benchmark.training_id) ? 'pointer' : 'default',
                       '&:hover': { 
-                        backgroundColor: benchmark.training_id ? 'action.hover' : 'inherit' 
+                        backgroundColor: (benchmark.training_id && typeof benchmark.training_id === 'object' && '_id' in benchmark.training_id) ? 'action.hover' : 'inherit' 
                       }
                     }}
                   >
@@ -204,29 +224,16 @@ const BenchmarksPage: React.FC = () => {
                         {isExpanded ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
                       </IconButton>
                     </TableCell>
+                    <TableCell>{(benchmark.training_id && typeof benchmark.training_id === 'object' && 'name' in benchmark.training_id) ? benchmark.training_id.name : (benchmark.training_uuid ? 'Unknown Training' : 'Standalone')}</TableCell>
+                    <TableCell>{avgFps.toFixed(2)}</TableCell>
+                    <TableCell>{totalParamsM}</TableCell>
+                    <TableCell>{avgFlopsG}</TableCell>
+                    <TableCell>{meanTimeGpu > 0 ? `${meanTimeGpu.toFixed(2)} ± ${stdTimeGpu.toFixed(2)}` : 'N/A'}</TableCell>
+                    <TableCell>{meanTimeCpu > 0 ? `${meanTimeCpu.toFixed(2)} ± ${stdTimeCpu.toFixed(2)}` : 'N/A'}</TableCell>
                     <TableCell>
                       {formatTimestamp(benchmark.timestamp)}
                     </TableCell>
-                    <TableCell>{benchmark.training_uuid ? 'Linked' : 'Standalone'}</TableCell>
-                    <TableCell>{benchmark.epoch || 'N/A'}</TableCell>
-                    <TableCell>{totalModels}</TableCell>
-                    <TableCell>{avgFps.toFixed(2)}</TableCell>
-                    <TableCell>{avgMemory.toFixed(2)}</TableCell>
-                    <TableCell>{totalParamsM}</TableCell>
                     <TableCell>
-                      <Tooltip title="View Details">
-                        <IconButton 
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (benchmark.training_id) {
-                              navigate(`/trainings/${benchmark.training_id}?tab=benchmarks`);
-                            }
-                          }}
-                        >
-                          <BarChartIcon />
-                        </IconButton>
-                      </Tooltip>
                       <Tooltip title="Delete">
                         <IconButton
                           size="small"
@@ -242,7 +249,7 @@ const BenchmarksPage: React.FC = () => {
                     </TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={9}>
+                    <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
                       <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                         <Box sx={{ margin: 1 }}>
                           <Typography variant="h6" gutterBottom component="div">
