@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.313](https://github.com/toomastahves/tumbaland/compare/v0.0.312...v0.0.313) (2025-11-24)
+
+
+### Bug Fixes
+
+* benchmark std ([149533d](https://github.com/toomastahves/tumbaland/commit/149533dcf1b85620c393a01f62eeccb623126c5e))
+
 ### [0.0.312](https://github.com/toomastahves/tumbaland/compare/v0.0.311...v0.0.312) (2025-11-24)
 
 
