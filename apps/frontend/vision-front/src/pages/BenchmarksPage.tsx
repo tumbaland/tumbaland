@@ -217,7 +217,12 @@ const BenchmarksPage: React.FC = () => {
                       <Tooltip title="View Details">
                         <IconButton 
                           size="small"
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (benchmark.training_id) {
+                              navigate(`/trainings/${benchmark.training_id}?tab=benchmarks`);
+                            }
+                          }}
                         >
                           <BarChartIcon />
                         </IconButton>

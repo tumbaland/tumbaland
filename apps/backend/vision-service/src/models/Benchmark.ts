@@ -2,6 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IBenchmark extends Document {
   training_uuid?: string;
+  training_id?: mongoose.Types.ObjectId;
   epoch_uuid?: string;
   epoch?: number;
   timestamp: Date;
@@ -55,6 +56,11 @@ const BenchmarkSchema: Schema = new Schema(
   {
     training_uuid: {
       type: String,
+      index: true
+    },
+    training_id: {
+      type: Schema.Types.ObjectId,
+      ref: 'Training',
       index: true
     },
     epoch_uuid: {

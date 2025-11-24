@@ -292,7 +292,7 @@ export const updateBenchmark = async (req: Request, res: Response): Promise<void
 
     // Update fields
     if (updateData.training_uuid !== undefined) benchmark.training_uuid = updateData.training_uuid;
-    if (updateData.training_id !== undefined) (benchmark as any).training_id = updateData.training_id;
+    if (updateData.training_id !== undefined) benchmark.training_id = updateData.training_id;
     if (updateData.epoch_uuid !== undefined) benchmark.epoch_uuid = updateData.epoch_uuid;
     if (updateData.epoch !== undefined) benchmark.epoch = updateData.epoch;
     if (updateData.timestamp !== undefined) benchmark.timestamp = new Date(updateData.timestamp);
