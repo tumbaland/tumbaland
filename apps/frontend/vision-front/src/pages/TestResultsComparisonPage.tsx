@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Container,
   Typography,
@@ -17,15 +17,19 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TableRow
+  TableRow,
+  TextField,
+  Checkbox
 } from '@mui/material';
 import {
   Code as CodeIcon,
-  Close as CloseIcon
+  Close as CloseIcon,
+  Save as SaveIcon
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { testResultService } from '../services/testResultService';
+import { comparisonService } from '../services/comparisonService';
 import { usePageTitle } from '../hooks/usePageTitle';
 
 const TestResultsComparisonPage: React.FC = () => {
@@ -38,8 +42,20 @@ const TestResultsComparisonPage: React.FC = () => {
   const [latexCode, setLatexCode] = useState('');
   const [latexTitle, setLatexTitle] = useState('');
 
+  // State for save comparison modal
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [comparisonName, setComparisonName] = useState('');
+  const [comparisonDescription, setComparisonDescription] = useState('');
+  const [selectedTestResultIds, setSelectedTestResultIds] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+
   // Get test result IDs from URL params
-  const testResultIds = searchParams.get('ids')?.split(',') || [];
+  const testResultIds = useMemo(() => searchParams.get('ids')?.split(',') || [], [searchParams]);
+
+  // Update selected test result IDs when testResultIds changes
+  useEffect(() => {
+    setSelectedTestResultIds(testResultIds);
+  }, [testResultIds]);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['testResultsComparison', testResultIds],
@@ -378,6 +394,41 @@ const TestResultsComparisonPage: React.FC = () => {
   const handleGeneratePerformanceLatex = () => handleGenerateLatex('performance');
   const handleGeneratePerClassLatex = () => handleGenerateLatex('perClass');
 
+  const handleSaveComparison = async () => {
+    if (!comparisonName.trim()) return;
+
+    try {
+      setSaving(true);
+      await comparisonService.createComparison({
+        name: comparisonName.trim(),
+        description: comparisonDescription.trim(),
+        type: 'tests',
+        itemIds: selectedTestResultIds,
+      });
+
+      // Reset form and close modal
+      setComparisonName('');
+      setComparisonDescription('');
+      setSelectedTestResultIds(testResultIds);
+      setSaveModalOpen(false);
+
+      // Could add a success notification here
+    } catch (error) {
+      console.error('Error saving comparison:', error);
+      // Could add an error notification here
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleTestResultIdToggle = (testResultId: string) => {
+    setSelectedTestResultIds(prev =>
+      prev.includes(testResultId)
+        ? prev.filter(id => id !== testResultId)
+        : [...prev, testResultId]
+    );
+  };
+
   if (testResultIds.length === 0) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -432,6 +483,30 @@ const TestResultsComparisonPage: React.FC = () => {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<CodeIcon />}
+            onClick={handleGeneratePerformanceLatex}
+            disabled={comparisonData.length === 0}
+          >
+            LaTeX
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<SaveIcon />}
+            onClick={() => {
+              setSaveModalOpen(true);
+              // Reset form when opening modal
+              setComparisonName('');
+              setComparisonDescription('');
+              setSelectedTestResultIds(testResultIds);
+            }}
+            disabled={comparisonData.length === 0}
+            color="secondary"
+          >
+            Save
+          </Button>
           <Button
             variant="contained"
             onClick={() => navigate('/test-results')}
@@ -894,6 +969,93 @@ const TestResultsComparisonPage: React.FC = () => {
             }}
           >
             Copy to Clipboard
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Save Comparison Modal */}
+      <Dialog
+        open={saveModalOpen}
+        onClose={() => !saving && setSaveModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Save Comparison
+          <IconButton
+            onClick={() => !saving && setSaveModalOpen(false)}
+            sx={{ position: 'absolute', right: 8, top: 8 }}
+            disabled={saving}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <TextField
+              fullWidth
+              label="Comparison Name"
+              value={comparisonName}
+              onChange={(e) => setComparisonName(e.target.value)}
+              sx={{ mb: 2 }}
+              disabled={saving}
+              required
+            />
+            <TextField
+              fullWidth
+              label="Description (optional)"
+              value={comparisonDescription}
+              onChange={(e) => setComparisonDescription(e.target.value)}
+              multiline
+              rows={3}
+              sx={{ mb: 3 }}
+              disabled={saving}
+            />
+            <Typography variant="subtitle2" sx={{ mb: 2 }}>
+              Select test results to include in comparison:
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {comparisonData.length > 0 ? comparisonData.map((comp) => (
+                <Box key={comp.testResult._id} sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Checkbox
+                    checked={selectedTestResultIds.includes(comp.testResult._id)}
+                    onChange={() => handleTestResultIdToggle(comp.testResult._id)}
+                    disabled={saving}
+                    id={`test-result-${comp.testResult._id}`}
+                  />
+                  <label
+                    htmlFor={`test-result-${comp.testResult._id}`}
+                    style={{
+                      cursor: saving ? 'not-allowed' : 'pointer',
+                      opacity: saving ? 0.5 : 1,
+                      marginLeft: 8
+                    }}
+                  >
+                    {comp.training?.name || 'Unknown Training'} - Test {comp.testResult.test_uuid.slice(-8)} (Epoch {comp.testResult.epoch})
+                  </label>
+                </Box>
+              )) : (
+                <Typography variant="body2" color="text.secondary">
+                  No test result data available
+                </Typography>
+              )}
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setSaveModalOpen(false)}
+            disabled={saving}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSaveComparison}
+            disabled={saving || !comparisonName.trim() || selectedTestResultIds.length === 0}
+            startIcon={saving ? <CircularProgress size={16} /> : <SaveIcon />}
+          >
+            {saving ? 'Saving...' : 'Save Comparison'}
           </Button>
         </DialogActions>
       </Dialog>
