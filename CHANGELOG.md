@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.318](https://github.com/toomastahves/tumbaland/compare/v0.0.317...v0.0.318) (2025-11-26)
+
+
+### Features
+
+* up minio limits ([dee2bd5](https://github.com/toomastahves/tumbaland/commit/dee2bd50fb4fcebb03cf5e94e57da5b25f0cdfd8))
+
 ### [0.0.317](https://github.com/toomastahves/tumbaland/compare/v0.0.316...v0.0.317) (2025-11-24)
 
 
