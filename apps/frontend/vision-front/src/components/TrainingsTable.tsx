@@ -308,7 +308,7 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
                 </TableCell>
                 <TableCell align="center">
                   <Typography variant="body2" color="text.secondary">
-                    {training.metrics ? `€${training.metrics.totalCost.toFixed(3)}` : '-'}
+                    {training.metrics ? `€${((training.metrics.cpuCost || 0) + (training.metrics.gpuCost || 0)).toFixed(3)}` : '-'}
                   </Typography>
                 </TableCell>
                 <TableCell>

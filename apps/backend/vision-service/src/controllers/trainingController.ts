@@ -89,8 +89,7 @@ export const getTrainings = async (req: Request, res: Response): Promise<void> =
         {
           $addFields: {
             'metrics.cpuCost': { $multiply: [{ $divide: [{ $ifNull: ['$metrics.totalTime', 0] }, 3600] }, CPU_RATE_PER_HOUR] },
-            'metrics.gpuCost': { $multiply: [{ $divide: [{ $ifNull: ['$metrics.totalTime', 0] }, 3600] }, GPU_RATE_PER_HOUR] },
-            'metrics.totalCost': { $add: [{ $ifNull: ['$metrics.cpuCost', 0] }, { $ifNull: ['$metrics.gpuCost', 0] }] }
+            'metrics.gpuCost': { $multiply: [{ $divide: [{ $ifNull: ['$metrics.totalTime', 0] }, 3600] }, GPU_RATE_PER_HOUR] }
           }
         },
         {
