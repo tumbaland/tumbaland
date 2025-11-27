@@ -17,6 +17,8 @@ export interface Training {
   metrics?: {
     totalTime: number;
     epochCount: number;
+    maxEpoch: number;
+    lastEpochTimestamp: string | null;
     cpuCost: number;
     gpuCost: number;
     totalCost: number;

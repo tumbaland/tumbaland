@@ -68,9 +68,11 @@ export const getTrainings = async (req: Request, res: Response): Promise<void> =
         { $match: query },
         {
           $lookup: {
-            from: 'training_epochs',
-            localField: '_id',
-            foreignField: 'trainingId',
+            from: 'training_epoches',
+            let: { trainingId: '$_id' },
+            pipeline: [
+              { $match: { $expr: { $eq: ['$trainingId', { $toString: '$$trainingId' }] }, $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] } }
+            ],
             as: 'epochs'
           }
         },
@@ -78,7 +80,9 @@ export const getTrainings = async (req: Request, res: Response): Promise<void> =
           $addFields: {
             metrics: {
               totalTime: { $ifNull: [{ $sum: '$epochs.epoch_time' }, 0] },
-              epochCount: { $size: '$epochs' }
+              epochCount: { $size: '$epochs' },
+              maxEpoch: { $ifNull: [{ $max: '$epochs.epoch' }, 0] },
+              lastEpochTimestamp: { $ifNull: [{ $max: '$epochs.timestamp' }, null] }
             }
           }
         },
@@ -124,9 +128,11 @@ export const getTrainings = async (req: Request, res: Response): Promise<void> =
           { $match: { _id: { $in: trainingIds } } },
           {
             $lookup: {
-              from: 'training_epochs',
-              localField: '_id',
-              foreignField: 'trainingId',
+              from: 'training_epoches',
+              let: { trainingId: '$_id' },
+              pipeline: [
+                { $match: { $expr: { $eq: ['$trainingId', { $toString: '$$trainingId' }] }, $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] } }
+              ],
               as: 'epochs'
             }
           },
@@ -134,7 +140,9 @@ export const getTrainings = async (req: Request, res: Response): Promise<void> =
             $addFields: {
               metrics: {
                 totalTime: { $ifNull: [{ $sum: '$epochs.epoch_time' }, 0] },
-                epochCount: { $size: '$epochs' }
+                epochCount: { $size: '$epochs' },
+                maxEpoch: { $ifNull: [{ $max: '$epochs.epoch' }, 0] },
+                lastEpochTimestamp: { $ifNull: [{ $max: '$epochs.timestamp' }, null] }
               }
             }
           },
@@ -153,6 +161,11 @@ export const getTrainings = async (req: Request, res: Response): Promise<void> =
           }
         ]);
 
+        console.log('metricsAggregation length:', metricsAggregation.length);
+        if (metricsAggregation.length > 0) {
+          console.log('sample metrics:', metricsAggregation[0]);
+        }
+
         // Create a map of metrics by training ID
         const metricsMap = new Map();
         metricsAggregation.forEach(item => {
@@ -162,7 +175,7 @@ export const getTrainings = async (req: Request, res: Response): Promise<void> =
         // Add metrics to trainings
         trainings = trainings.map(training => ({
           ...training.toObject(),
-          metrics: metricsMap.get(training._id.toString()) || { totalTime: 0, epochCount: 0, cpuCost: 0, gpuCost: 0, totalCost: 0 }
+          metrics: metricsMap.get(training._id.toString()) || { totalTime: 0, epochCount: 0, maxEpoch: 0, lastEpochTimestamp: null, cpuCost: 0, gpuCost: 0, totalCost: 0 }
         }));
       }
     }    res.json({
@@ -267,7 +280,7 @@ export const getTrainingWithEpochs = async (req: Request, res: Response): Promis
     const sortOrder = order === 'desc' ? -1 : 1;
     const sortField = sortBy as string;
 
-    const epochs = await Epoch.find({ trainingId: id })
+    const epochs = await Epoch.find({ trainingId: id, deletedAt: null })
       .sort({ [sortField]: sortOrder });
 
     res.json({
@@ -471,16 +484,16 @@ export const getTrainingStats = async (req: Request, res: Response): Promise<voi
   try {
     const { status, datasetId, tags } = req.query;
 
-    let query: any = { deletedAt: null };
+    let matchQuery: any = { deletedAt: null };
 
     // Filter by status if provided
     if (status) {
-      query.status = status;
+      matchQuery.status = status;
     }
 
     // Filter by dataset if provided
     if (datasetId) {
-      query.datasetId = datasetId;
+      matchQuery.datasetId = datasetId;
     }
 
     // Filter by tags if provided
@@ -493,62 +506,77 @@ export const getTrainingStats = async (req: Request, res: Response): Promise<voi
         tagArray = (tags as string).split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
       }
       if (tagArray.length === 1) {
-        query.tags = { $in: tagArray };
+        matchQuery.tags = { $in: tagArray };
       } else {
-        query.tags = { $all: tagArray };
+        matchQuery.tags = { $all: tagArray };
       }
     }
 
-    // Get all trainings matching the filter
-    const trainings = await Training.find(query);
-
-    // Get all epochs for these trainings
-    const trainingIds = trainings.map(t => t._id);
-    const epochs = await Epoch.find({ trainingId: { $in: trainingIds } });
-
-    // Group epochs by training ID
-    const epochsByTraining: Record<string, any[]> = epochs.reduce((acc, epoch) => {
-      const trainingId = epoch.trainingId.toString();
-      if (!acc[trainingId]) {
-        acc[trainingId] = [];
-      }
-      acc[trainingId].push(epoch);
-      return acc;
-    }, {} as Record<string, any[]>);
-
-    // Calculate aggregate statistics
-    let totalTime = 0;
-    let totalCpuCost = 0;
-    let totalGpuCost = 0;
-    let totalCost = 0;
     const CPU_RATE_PER_HOUR = 0.006;
     const GPU_RATE_PER_HOUR = 0.20;
 
-    trainings.forEach(training => {
-      const trainingId = (training._id as any).toString();
-      const trainingEpochs = epochsByTraining[trainingId] || [];
+    // Use aggregation pipeline for better performance
+    const aggregationPipeline = [
+      // Match trainings based on filters
+      { $match: matchQuery },
+      // Lookup epochs for each training
+      {
+        $lookup: {
+          from: 'training_epoches',
+          let: { trainingId: '$_id' },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$trainingId', { $toString: '$$trainingId' }] }, $or: [{ deletedAt: null }, { deletedAt: { $exists: false } }] } }
+          ],
+          as: 'epochs'
+        }
+      },
+      // Add computed fields
+      {
+        $addFields: {
+          trainingTime: { $ifNull: [{ $sum: '$epochs.epoch_time' }, 0] },
+          epochCount: { $size: '$epochs' }
+        }
+      },
+      // Group to calculate totals
+      {
+        $group: {
+          _id: null,
+          totalTrainings: { $sum: 1 },
+          totalTime: { $sum: '$trainingTime' },
+          totalEpochs: { $sum: '$epochCount' }
+        }
+      },
+      // Calculate costs
+      {
+        $addFields: {
+          totalHours: { $divide: ['$totalTime', 3600] },
+          totalCpuCost: { $multiply: [{ $divide: ['$totalTime', 3600] }, CPU_RATE_PER_HOUR] },
+          totalGpuCost: { $multiply: [{ $divide: ['$totalTime', 3600] }, GPU_RATE_PER_HOUR] },
+          totalCost: { $add: [
+            { $multiply: [{ $divide: ['$totalTime', 3600] }, CPU_RATE_PER_HOUR] },
+            { $multiply: [{ $divide: ['$totalTime', 3600] }, GPU_RATE_PER_HOUR] }
+          ]}
+        }
+      }
+    ];
 
-      // Sum up epoch times for this training
-      const trainingTime = trainingEpochs.reduce((sum: number, epoch: any) => sum + (epoch.epoch_time || 0), 0);
-      totalTime += trainingTime;
-
-      // Calculate cost for this training
-      const totalHours = trainingTime / 3600;
-      const cpuCost = totalHours * CPU_RATE_PER_HOUR;
-      const gpuCost = totalHours * GPU_RATE_PER_HOUR;
-      totalCpuCost += cpuCost;
-      totalGpuCost += gpuCost;
-      totalCost += (cpuCost + gpuCost);
-    });
+    const result = await Training.aggregate(aggregationPipeline);
+    const stats = result[0] || {
+      totalTrainings: 0,
+      totalTime: 0,
+      totalCpuCost: 0,
+      totalGpuCost: 0,
+      totalCost: 0
+    };
 
     res.json({
       success: true,
       data: {
-        totalTrainings: trainings.length,
-        totalTime,
-        totalCpuCost,
-        totalGpuCost,
-        totalCost,
+        totalTrainings: stats.totalTrainings,
+        totalTime: stats.totalTime,
+        totalCpuCost: stats.totalCpuCost,
+        totalGpuCost: stats.totalGpuCost,
+        totalCost: stats.totalCost,
         filters: {
           status: status || null,
           datasetId: datasetId || null
@@ -589,7 +617,7 @@ export const compareTrainings = async (req: Request, res: Response): Promise<voi
 
     // Fetch trainings and their epochs
     const trainings = await Training.find({ _id: { $in: trainingIds }, deletedAt: null });
-    const epochs = await Epoch.find({ trainingId: { $in: trainingIds } })
+    const epochs = await Epoch.find({ trainingId: { $in: trainingIds }, deletedAt: null })
       .sort({ trainingId: 1, epoch: 1 });
 
     // Group epochs by training ID

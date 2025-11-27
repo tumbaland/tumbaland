@@ -288,7 +288,7 @@ export const TrainingsTable: React.FC<TrainingsTableProps> = ({
                 </TableCell>
                 <TableCell align="center">
                   <Typography variant="body2" color="text.secondary">
-                    {training.metrics ? training.metrics.epochCount : 0}
+                    {training.metrics ? training.metrics.maxEpoch || 0 : 0}
                   </Typography>
                 </TableCell>
                 <TableCell align="center">
