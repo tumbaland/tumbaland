@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.320](https://github.com/toomastahves/tumbaland/compare/v0.0.319...v0.0.320) (2025-11-27)
+
+
+### Features
+
+* fix optimizations ([c383236](https://github.com/toomastahves/tumbaland/commit/c38323667131c3443d834718d905e73cd914802b))
+
 ### [0.0.319](https://github.com/toomastahves/tumbaland/compare/v0.0.318...v0.0.319) (2025-11-27)
 
 
