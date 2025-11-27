@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.321](https://github.com/toomastahves/tumbaland/compare/v0.0.320...v0.0.321) (2025-11-27)
+
+
+### Bug Fixes
+
+* total cost ([8c6a2aa](https://github.com/toomastahves/tumbaland/commit/8c6a2aad8d8da86613b4bc1d9169f7cbc0679254))
+
 ### [0.0.320](https://github.com/toomastahves/tumbaland/compare/v0.0.319...v0.0.320) (2025-11-27)
 
 
