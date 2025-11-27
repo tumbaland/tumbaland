@@ -55,94 +55,58 @@ export const getTrainings = async (req: Request, res: Response): Promise<void> =
     const sortOrder = order === 'desc' ? -1 : 1;
     const sortField = sortBy as string;
 
-    // Handle sorting by metrics fields
-    let trainings: any[];
-    let total: number;
-
     // Cost calculation rates
     const CPU_RATE_PER_HOUR = 0.006;
     const GPU_RATE_PER_HOUR = 0.20;
 
+    let trainings: any[];
+    let total: number;
+
     if (['totalTime', 'cpuCost', 'gpuCost', 'totalCost', 'epochCount'].includes(sortBy as string)) {
-      // For metrics-based sorting, we need to get all trainings and sort in memory
-      const allTrainings = await Training.find(query);
-      total = allTrainings.length;
-
-      // Get epochs for all trainings to calculate metrics
-      const trainingIds = allTrainings.map(t => t._id);
-      const epochs = await Epoch.find({ trainingId: { $in: trainingIds } });
-
-      // Group epochs by training ID and calculate metrics
-      const trainingMetrics = epochs.reduce((acc, epoch) => {
-        const trainingId = epoch.trainingId.toString();
-        if (!acc[trainingId]) {
-          acc[trainingId] = {
-            totalTime: 0,
-            epochCount: 0
-          };
-        }
-        acc[trainingId].totalTime += epoch.epoch_time || 0;
-        acc[trainingId].epochCount += 1;
-        return acc;
-      }, {} as Record<string, { totalTime: number; epochCount: number }>);
-
-      // Add metrics to trainings and sort
-      const trainingsWithMetrics = allTrainings.map(training => {
-        const trainingId = (training._id as any).toString();
-        const metrics = trainingMetrics[trainingId] || { totalTime: 0, epochCount: 0 };
-        const totalHours = metrics.totalTime / 3600;
-        const cpuCost = totalHours * CPU_RATE_PER_HOUR;
-        const gpuCost = totalHours * GPU_RATE_PER_HOUR;
-
-        return {
-          ...training.toObject(),
-          metrics: {
-            totalTime: metrics.totalTime,
-            epochCount: metrics.epochCount,
-            cpuCost,
-            gpuCost,
-            totalCost: cpuCost + gpuCost
+      // For metrics-based sorting, use aggregation to get trainings with metrics
+      const aggregationPipeline = [
+        { $match: query },
+        {
+          $lookup: {
+            from: 'training_epochs',
+            localField: '_id',
+            foreignField: 'trainingId',
+            as: 'epochs'
           }
-        };
-      });
-
-      // Sort by the requested metrics field
-      trainingsWithMetrics.sort((a, b) => {
-        let aValue: number, bValue: number;
-
-        switch (sortBy) {
-          case 'totalTime':
-            aValue = a.metrics?.totalTime || 0;
-            bValue = b.metrics?.totalTime || 0;
-            break;
-          case 'cpuCost':
-            aValue = a.metrics?.cpuCost || 0;
-            bValue = b.metrics?.cpuCost || 0;
-            break;
-          case 'gpuCost':
-            aValue = a.metrics?.gpuCost || 0;
-            bValue = b.metrics?.gpuCost || 0;
-            break;
-          case 'totalCost':
-            aValue = a.metrics?.totalCost || 0;
-            bValue = b.metrics?.totalCost || 0;
-            break;
-          case 'epochCount':
-            aValue = a.metrics?.epochCount || 0;
-            bValue = b.metrics?.epochCount || 0;
-            break;
-          default:
-            aValue = 0;
-            bValue = 0;
+        },
+        {
+          $addFields: {
+            metrics: {
+              totalTime: { $ifNull: [{ $sum: '$epochs.epoch_time' }, 0] },
+              epochCount: { $size: '$epochs' }
+            }
+          }
+        },
+        {
+          $addFields: {
+            'metrics.cpuCost': { $multiply: [{ $divide: [{ $ifNull: ['$metrics.totalTime', 0] }, 3600] }, CPU_RATE_PER_HOUR] },
+            'metrics.gpuCost': { $multiply: [{ $divide: [{ $ifNull: ['$metrics.totalTime', 0] }, 3600] }, GPU_RATE_PER_HOUR] },
+            'metrics.totalCost': { $add: [{ $ifNull: ['$metrics.cpuCost', 0] }, { $ifNull: ['$metrics.gpuCost', 0] }] }
+          }
+        },
+        {
+          $sort: { [`metrics.${sortBy}`]: sortOrder as 1 | -1 }
+        },
+        {
+          $facet: {
+            totalCount: [{ $count: 'count' }],
+            trainings: [
+              { $skip: skip },
+              { $limit: Number(limit) },
+              { $project: { epochs: 0 } } // Remove epochs array from result
+            ]
+          }
         }
+      ];
 
-        if (aValue < bValue) return sortOrder === 1 ? -1 : 1;
-        if (aValue > bValue) return sortOrder === 1 ? 1 : -1;
-        return 0;
-      });
-
-      // Apply pagination after sorting
-      trainings = trainingsWithMetrics.slice(skip, skip + Number(limit));
+      const result = await Training.aggregate(aggregationPipeline);
+      total = result[0]?.totalCount[0]?.count || 0;
+      trainings = result[0]?.trainings || [];
     } else {
       // Standard database sorting for non-metrics fields
       [trainings, total] = await Promise.all([
@@ -153,43 +117,54 @@ export const getTrainings = async (req: Request, res: Response): Promise<void> =
         Training.countDocuments(query)
       ]);
 
-      // Get epochs for all trainings to calculate metrics
-      const trainingIds = trainings.map(t => t._id);
-      const epochs = await Epoch.find({ trainingId: { $in: trainingIds } });
-
-      // Group epochs by training ID and calculate metrics
-      const trainingMetrics = epochs.reduce((acc, epoch) => {
-        const trainingId = epoch.trainingId.toString();
-        if (!acc[trainingId]) {
-          acc[trainingId] = {
-            totalTime: 0,
-            epochCount: 0
-          };
-        }
-        acc[trainingId].totalTime += epoch.epoch_time || 0;
-        acc[trainingId].epochCount += 1;
-        return acc;
-      }, {} as Record<string, { totalTime: number; epochCount: number }>);
-
-      // Add metrics to trainings
-      trainings = trainings.map(training => {
-        const trainingId = (training._id as any).toString();
-        const metrics = trainingMetrics[trainingId] || { totalTime: 0, epochCount: 0 };
-        const totalHours = metrics.totalTime / 3600;
-        const cpuCost = totalHours * CPU_RATE_PER_HOUR;
-        const gpuCost = totalHours * GPU_RATE_PER_HOUR;
-
-        return {
-          ...training.toObject(),
-          metrics: {
-            totalTime: metrics.totalTime,
-            epochCount: metrics.epochCount,
-            cpuCost,
-            gpuCost,
-            totalCost: cpuCost + gpuCost
+      // Get metrics using aggregation for better performance
+      if (trainings.length > 0) {
+        const trainingIds = trainings.map(t => t._id);
+        const metricsAggregation = await Training.aggregate([
+          { $match: { _id: { $in: trainingIds } } },
+          {
+            $lookup: {
+              from: 'training_epochs',
+              localField: '_id',
+              foreignField: 'trainingId',
+              as: 'epochs'
+            }
+          },
+          {
+            $addFields: {
+              metrics: {
+                totalTime: { $ifNull: [{ $sum: '$epochs.epoch_time' }, 0] },
+                epochCount: { $size: '$epochs' }
+              }
+            }
+          },
+          {
+            $addFields: {
+              'metrics.cpuCost': { $multiply: [{ $divide: [{ $ifNull: ['$metrics.totalTime', 0] }, 3600] }, CPU_RATE_PER_HOUR] },
+              'metrics.gpuCost': { $multiply: [{ $divide: [{ $ifNull: ['$metrics.totalTime', 0] }, 3600] }, GPU_RATE_PER_HOUR] },
+              'metrics.totalCost': { $add: [{ $ifNull: ['$metrics.cpuCost', 0] }, { $ifNull: ['$metrics.gpuCost', 0] }] }
+            }
+          },
+          {
+            $project: {
+              _id: 1,
+              metrics: 1
+            }
           }
-        };
-      });
+        ]);
+
+        // Create a map of metrics by training ID
+        const metricsMap = new Map();
+        metricsAggregation.forEach(item => {
+          metricsMap.set(item._id.toString(), item.metrics);
+        });
+
+        // Add metrics to trainings
+        trainings = trainings.map(training => ({
+          ...training.toObject(),
+          metrics: metricsMap.get(training._id.toString()) || { totalTime: 0, epochCount: 0, cpuCost: 0, gpuCost: 0, totalCost: 0 }
+        }));
+      }
     }    res.json({
       success: true,
       data: {
