@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.319](https://github.com/toomastahves/tumbaland/compare/v0.0.318...v0.0.319) (2025-11-27)
+
+
+### Features
+
+* optimize trainings view ([f59295c](https://github.com/toomastahves/tumbaland/commit/f59295c762bc3c70fcbd3df228dbf1c1b9d161ec))
+
 ### [0.0.318](https://github.com/toomastahves/tumbaland/compare/v0.0.317...v0.0.318) (2025-11-26)
 
 
