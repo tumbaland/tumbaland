@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.322](https://github.com/toomastahves/tumbaland/compare/v0.0.321...v0.0.322) (2025-11-29)
+
+
+### Features
+
+* remove vision from proxy ([b1f9616](https://github.com/toomastahves/tumbaland/commit/b1f9616175922882a3d2ff00fbd9319207eab4b6))
+
 ### [0.0.321](https://github.com/toomastahves/tumbaland/compare/v0.0.320...v0.0.321) (2025-11-27)
 
 
