@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.324](https://github.com/toomastahves/tumbaland/compare/v0.0.323...v0.0.324) (2025-11-29)
+
+
+### Bug Fixes
+
+* visin proxy ([b08f112](https://github.com/toomastahves/tumbaland/commit/b08f112b2e57151437d33183ed321cdd5f04eda5))
+
 ### [0.0.323](https://github.com/toomastahves/tumbaland/compare/v0.0.322...v0.0.323) (2025-11-29)
 
 
