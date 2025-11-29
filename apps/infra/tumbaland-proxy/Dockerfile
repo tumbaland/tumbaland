@@ -4,7 +4,6 @@ FROM nginx:alpine
 RUN rm /etc/nginx/conf.d/default.conf
 
 # Copy custom configs
-COPY visin.conf /etc/nginx/nginx.conf
 COPY conf.d/ /etc/nginx/conf.d/
 
 RUN apk add --no-cache nano certbot openssl python3 py3-pip && \
