@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.326](https://github.com/toomastahves/tumbaland/compare/v0.0.325...v0.0.326) (2025-11-29)
+
+
+### Bug Fixes
+
+* proxy deploy ([4ec6c04](https://github.com/toomastahves/tumbaland/commit/4ec6c0483b5efadb023058e0b3c699bdc062471f))
+
 ### [0.0.325](https://github.com/toomastahves/tumbaland/compare/v0.0.324...v0.0.325) (2025-11-29)
 
 
