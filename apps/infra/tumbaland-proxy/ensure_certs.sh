@@ -16,5 +16,19 @@ if [ ! -f "$TARGET_DIR/fullchain.pem" ]; then
       -out "$TARGET_DIR/fullchain.pem" >/dev/null 2>&1 || echo "(warn) openssl failed for wildcard cert"
 fi
 
+# Generate temporary self-signed wildcard certificate for *.visin.eu
+# if visin certs are not present.
+
+VISIN_DIR="/etc/letsencrypt/live/visin-wildcard"
+
+if [ ! -f "$VISIN_DIR/fullchain.pem" ]; then
+    echo "[ensure_certs] Creating temporary self-signed wildcard cert for *.visin.eu"
+    mkdir -p "$VISIN_DIR"
+    openssl req -x509 -nodes -newkey rsa:2048 -days 7 \
+      -subj "/CN=*.visin.eu" \
+      -keyout "$VISIN_DIR/privkey.pem" \
+      -out "$VISIN_DIR/fullchain.pem" >/dev/null 2>&1 || echo "(warn) openssl failed for visin wildcard cert"
+fi
+
 echo "[ensure_certs] Wildcard placeholder cert check complete. Launching Nginx."
 exec "$@"
