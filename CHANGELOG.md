@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.327](https://github.com/toomastahves/tumbaland/compare/v0.0.326...v0.0.327) (2025-12-01)
+
+
+### Features
+
+* remove vision front and service ([ec81b1e](https://github.com/toomastahves/tumbaland/commit/ec81b1ead052b2d90117b6fddb1b803808a0ebf8))
+
 ### [0.0.326](https://github.com/toomastahves/tumbaland/compare/v0.0.325...v0.0.326) (2025-11-29)
 
 
