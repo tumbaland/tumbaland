@@ -6,7 +6,6 @@ import PaymentIcon from '@mui/icons-material/Payment';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import { AppConfig } from './ConfigProvider';
 import GroupsIcon from '@mui/icons-material/Groups';
-import VisibilityIcon from '@mui/icons-material/Visibility';
 
 export interface AppConfigItem {
   name: string;
@@ -44,13 +43,6 @@ export const APPS: AppConfigItem[] = [
     urlKey: 'FINANCE_FRONT_URL',
     icon: AttachMoneyIcon,
     color: '#22c55e'
-  },
-  {
-    name: 'Vision',
-    route: 'https://vision.tumbaland.eu',
-    icon: VisibilityIcon,
-    color: '#f59e0b',
-    external: true
   }
 ];
 

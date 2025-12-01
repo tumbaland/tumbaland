@@ -18,7 +18,6 @@ on:
           - account-front
           - payment-front
           - group-front
-          - vision-front
           - album-service
           - auth-service
           - finance-service
@@ -26,7 +25,6 @@ on:
           - relationship-service
           - payment-service
           - group-service
-          - vision-service
 
 # Ensure only one deployment runs at a time to prevent server overload
 concurrency:
@@ -92,12 +90,6 @@ jobs:
               DEPLOYPATH=apps/frontend/group-front/compose.yml
               DEPLOYDIR=apps/frontend/group-front
               ;;
-            vision-front)
-              CONTEXT=./apps/frontend/vision-front
-              DOCKERFILE=./apps/frontend/vision-front/Dockerfile
-              DEPLOYPATH=apps/frontend/vision-front/compose.yml
-              DEPLOYDIR=apps/frontend/vision-front
-              ;;
             album-service)
               CONTEXT=./apps/backend/album-service
               DOCKERFILE=./apps/backend/album-service/Dockerfile
@@ -139,12 +131,6 @@ jobs:
               DOCKERFILE=./apps/backend/group-service/Dockerfile
               DEPLOYPATH=apps/backend/group-service/compose.yml
               DEPLOYDIR=apps/backend/group-service
-              ;;
-            vision-service)
-              CONTEXT=./apps/backend/vision-service
-              DOCKERFILE=./apps/backend/vision-service/Dockerfile
-              DEPLOYPATH=apps/backend/vision-service/compose.yml
-              DEPLOYDIR=apps/backend/vision-service
               ;;
           esac
           echo "context=$CONTEXT" >> $GITHUB_OUTPUT
@@ -196,7 +182,6 @@ jobs:
           echo "OBJECT_DETECTION_API_URL=${{ vars.OBJECT_DETECTION_API_URL }}" >> .env.app
           echo "SEGMENTATION_API_URL=${{ vars.SEGMENTATION_API_URL }}" >> .env.app
           echo "PAYMENT_API_URL=${{ vars.PAYMENT_API_URL }}" >> .env.app
-          echo "VISION_API_URL=${{ vars.VISION_API_URL }}" >> .env.app
           echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" >> .env.app
           echo "STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}" >> .env.app
           echo "PAYMENT_FRONT_URL=${{ vars.PAYMENT_FRONT_URL }}" >> .env.app

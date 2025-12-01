@@ -1,1 +1,0 @@
-export { exportTrainingsToCSV } from './csvExport';
