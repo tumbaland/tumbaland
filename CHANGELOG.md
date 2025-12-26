@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.328](https://github.com/toomastahves/tumbaland/compare/v0.0.327...v0.0.328) (2025-12-26)
+
+
+### Features
+
+* refactor all front applications ([902b773](https://github.com/toomastahves/tumbaland/commit/902b77329e5e60920d4e7a80e3f17ba35b83b5a7))
+
 ### [0.0.327](https://github.com/toomastahves/tumbaland/compare/v0.0.326...v0.0.327) (2025-12-01)
 
 
