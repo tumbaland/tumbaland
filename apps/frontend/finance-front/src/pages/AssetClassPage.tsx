@@ -211,7 +211,7 @@ const AssetClassPage: React.FC = () => {
         title="Edit Asset Class"
       />
 
-      <Paper sx={{ width: '100%' }}>
+      <Paper elevation={0} sx={{ width: '100%', borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
         <TableContainer
           sx={{
             overflowX: 'auto',

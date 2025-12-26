@@ -156,11 +156,25 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <DialogTitle>Upload Photos and Videos</DialogTitle>
+    <Dialog 
+      open={open} 
+      onClose={handleClose} 
+      maxWidth="md" 
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 4,
+          background: 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+        }
+      }}
+    >
+      <DialogTitle sx={{ pb: 1, fontWeight: 700 }}>Upload Photos and Videos</DialogTitle>
       <DialogContent>
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
             {error}
           </Alert>
         )}
@@ -169,24 +183,32 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
           sx={{
             border: '2px dashed',
             borderColor: 'primary.main',
-            borderRadius: 2,
-            p: 4,
+            borderRadius: 3,
+            p: 6,
             textAlign: 'center',
-            bgcolor: 'grey.50',
+            bgcolor: 'rgba(99, 102, 241, 0.04)',
             cursor: 'pointer',
-            mb: 2,
-            '&:hover': { bgcolor: 'grey.100' }
+            mb: 3,
+            transition: 'all 0.2s ease',
+            '&:hover': { 
+              bgcolor: 'rgba(99, 102, 241, 0.08)',
+              borderColor: 'primary.dark',
+              transform: 'scale(1.01)'
+            }
           }}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onClick={() => document.getElementById('file-input')?.click()}
         >
-          <PhotoLibraryIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
-          <Typography variant="h6" gutterBottom>
-            Drop images and videos here or click to select
+          <PhotoLibraryIcon sx={{ fontSize: 64, color: 'primary.main', mb: 2, opacity: 0.8 }} />
+          <Typography variant="h6" gutterBottom fontWeight={600} color="primary.dark">
+            Drop images and videos here
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Supports: JPG, PNG, GIF, WebP, MP4, MOV, AVI, and more
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
+            or click to browse from your computer
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2, opacity: 0.7 }}>
+            Supports: JPG, PNG, GIF, WebP, MP4, MOV, AVI
           </Typography>
           <input
             id="file-input"
@@ -199,31 +221,43 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
         </Box>
 
         {uploading && (
-          <Box sx={{ mt: 2, mb: 2 }}>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              Uploading... {Math.round(uploadProgress)}%
-            </Typography>
-            <LinearProgress variant="determinate" value={uploadProgress} />
+          <Box sx={{ mt: 3, mb: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+              <Typography variant="body2" fontWeight={500}>Uploading...</Typography>
+              <Typography variant="body2" color="text.secondary">{Math.round(uploadProgress)}%</Typography>
+            </Box>
+            <LinearProgress 
+              variant="determinate" 
+              value={uploadProgress} 
+              sx={{ 
+                height: 8, 
+                borderRadius: 4,
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                '& .MuiLinearProgress-bar': {
+                  borderRadius: 4,
+                  background: 'linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%)'
+                }
+              }} 
+            />
           </Box>
         )}
 
         {files.length > 0 && (
-          <Box>
-            <Typography variant="subtitle1" sx={{ mb: 1 }}>
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.5 }}>
               Selected Files ({files.length})
             </Typography>
 
-            <List dense>
+            <List dense sx={{ maxHeight: 200, overflow: 'auto', bgcolor: 'rgba(255,255,255,0.5)', borderRadius: 2 }}>
               {files.map((fileItem) => (
-                <ListItem key={fileItem.id} divider sx={{ py: 0.5 }}>
+                <ListItem key={fileItem.id} divider sx={{ py: 1 }}>
                   <ListItemText
                     primary={
                       <Typography
                         variant="body2"
                         sx={{
-                          fontSize: '0.875rem',
-                          wordBreak: 'break-all',
-                          lineHeight: 1.2
+                          fontWeight: 500,
+                          wordBreak: 'break-all'
                         }}
                       >
                         {fileItem.file.name}
@@ -236,7 +270,13 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
                     }
                   />
                   <ListItemSecondaryAction>
-                    <IconButton edge="end" size="small" onClick={() => removeFile(fileItem.id)} disabled={uploading}>
+                    <IconButton 
+                      edge="end" 
+                      size="small" 
+                      onClick={() => removeFile(fileItem.id)} 
+                      disabled={uploading}
+                      sx={{ color: 'text.secondary', '&:hover': { color: 'error.main' } }}
+                    >
                       <DeleteIcon fontSize="small" />
                     </IconButton>
                   </ListItemSecondaryAction>
@@ -247,8 +287,12 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
         )}
       </DialogContent>
 
-      <DialogActions>
-        <Button onClick={handleClose} disabled={uploading}>
+      <DialogActions sx={{ p: 3, pt: 1 }}>
+        <Button 
+          onClick={handleClose} 
+          disabled={uploading}
+          sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, color: 'text.secondary' }}
+        >
           Cancel
         </Button>
         <Button
@@ -256,8 +300,22 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
           variant="contained"
           disabled={files.length === 0 || uploading}
           startIcon={<CloudUploadIcon />}
+          sx={{
+            borderRadius: 2,
+            textTransform: 'none',
+            fontWeight: 600,
+            px: 3,
+            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+            '&:hover': {
+              boxShadow: '0 6px 16px rgba(99, 102, 241, 0.4)'
+            },
+            '&.Mui-disabled': {
+              background: 'rgba(0, 0, 0, 0.12)'
+            }
+          }}
         >
-          Upload {files.length} {files.length === 1 ? 'File' : 'Files'}
+          Upload {files.length > 0 ? `${files.length} ${files.length === 1 ? 'File' : 'Files'}` : 'Files'}
         </Button>
       </DialogActions>
     </Dialog>

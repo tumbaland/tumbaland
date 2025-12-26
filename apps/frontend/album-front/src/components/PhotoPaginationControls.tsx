@@ -68,6 +68,12 @@ const PhotoPaginationControls: React.FC<PhotoPaginationControlsProps> = ({
             size="medium"
             showFirstButton
             showLastButton
+            siblingCount={0}
+            sx={{
+              '& .MuiPaginationItem-root': {
+                fontSize: { xs: '0.875rem', sm: '1rem' }
+              }
+            }}
           />
         )}
       </Box>
@@ -83,9 +89,15 @@ const PhotoPaginationControls: React.FC<PhotoPaginationControlsProps> = ({
           page={currentPage}
           onChange={onPageChange}
           color="primary"
-          size="large"
+          size="medium"
           showFirstButton
           showLastButton
+          siblingCount={0}
+          sx={{
+            '& .MuiPaginationItem-root': {
+              fontSize: { xs: '0.875rem', sm: '1rem' }
+            }
+          }}
         />
       </Box>
     );

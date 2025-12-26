@@ -174,7 +174,20 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
   const maxPrice = statsPrices.length > 0 ? Math.max(...statsPrices) : 1;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="md" 
+      fullWidth
+      PaperProps={{
+        elevation: 0,
+        sx: {
+          borderRadius: 3,
+          border: '1px solid',
+          borderColor: 'divider'
+        }
+      }}
+    >
       <DialogTitle sx={{ fontSize: { xs: 18, sm: 22 } }}>History for {ticker}</DialogTitle>
       <DialogContent sx={{ p: { xs: 1, sm: 3 } }}>
         {/* Date range pickers and apply button */}

@@ -11,7 +11,7 @@ import {
   Switch,
   FormControlLabel
 } from '@mui/material';
-import { Person, Email, Notifications, Security, Save, Cancel, DeleteForever } from '@mui/icons-material';
+import { Email, Save, DeleteForever } from '@mui/icons-material';
 import { authService } from '../../services/authService';
 import { profileService } from '../../services/profileService';
 import { User } from '../../types';
@@ -129,78 +129,53 @@ const ProfileTab: React.FC = () => {
   }
 
   return (
-    <Box sx={{ maxWidth: 1000, mx: 'auto', py: 2 }}>
-      {/* Hero Header */}
-      <Box
-        sx={{
-          textAlign: 'center',
-          mb: 3,
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          borderRadius: 3,
-          p: 3,
-          color: 'white'
+    <Box sx={{ maxWidth: 800, mx: 'auto', py: 2, px: 2 }}>
+      <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+        Account Settings
+      </Typography>
+
+      {message && (
+        <Alert severity={message.type} sx={{ mb: 3 }} onClose={() => setMessage(null)}>
+          {message.text}
+        </Alert>
+      )}
+
+      {/* Personal Information */}
+      <Paper 
+        elevation={0}
+        sx={{ 
+          p: { xs: 2, md: 3 }, 
+          mb: 3, 
+          borderRadius: 3, 
+          border: '1px solid', 
+          borderColor: 'divider' 
         }}
       >
-        <Person sx={{ fontSize: 48, mb: 1, opacity: 0.9 }} />
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
-          Account Settings
+        <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
+          Personal Information
         </Typography>
-        <Typography variant="body1" sx={{ opacity: 0.9 }}>
-          Manage your profile, account preferences, and security settings
-        </Typography>
-      </Box>
-
-      <Box sx={{ px: 2 }}>
-
-      {/* Profile Section */}
-      <Paper sx={{ borderRadius: 3, overflow: 'hidden', mb: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
-        <Box
-          sx={{
-            height: 80,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 48, height: 48 }}>
-            <Person sx={{ color: 'white' }} />
-          </Avatar>
-        </Box>
-
-        <Box sx={{ p: 3 }}>
-          <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 2, textAlign: 'center' }}>
-            Personal Information
-          </Typography>
-
-          {message && (
-            <Alert severity={message.type} sx={{ mb: 3 }} onClose={() => setMessage(null)}>
-              {message.text}
-            </Alert>
-          )}
-
-          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, mb: 3 }}>
-            <Box sx={{ flex: { xs: 1, md: '0 0 200px' }, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <Avatar
-                sx={{ width: 120, height: 120, mb: 2, border: '4px solid', borderColor: 'primary.light' }}
-                src={user?.picture || "/placeholder-avatar.jpg"}
-              />
-              <Typography variant="body2" color="text.secondary">
-                Profile Picture
-              </Typography>
-            </Box>
-
-            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 200 }}>
+            <Avatar
+              sx={{ width: 100, height: 100, mb: 2, border: '1px solid', borderColor: 'divider' }}
+              src={user?.picture || "/placeholder-avatar.jpg"}
+            />
+            <Button size="small" variant="outlined" sx={{ textTransform: 'none' }}>
+              Change Picture
+            </Button>
+          </Box>
+          
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
               <TextField
                 fullWidth
                 label="First Name"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 variant="outlined"
+                size="small"
                 disabled={saving}
-                InputProps={{
-                  startAdornment: <Person sx={{ mr: 1, color: 'action.active' }} />
-                }}
               />
               <TextField
                 fullWidth
@@ -208,161 +183,88 @@ const ProfileTab: React.FC = () => {
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 variant="outlined"
+                size="small"
                 disabled={saving}
-                InputProps={{
-                  startAdornment: <Person sx={{ mr: 1, color: 'action.active' }} />
-                }}
               />
             </Box>
-          </Box>
-        </Box>
-      </Paper>
-
-      {/* Account Management Section */}
-      <Paper sx={{ borderRadius: 3, overflow: 'hidden', mb: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
-        <Box
-          sx={{
-            height: 80,
-            background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 48, height: 48 }}>
-            <Security sx={{ color: 'white' }} />
-          </Avatar>
-        </Box>
-
-        <Box sx={{ p: 3 }}>
-          <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 2, textAlign: 'center' }}>
-            Account Management
-          </Typography>
-
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <TextField
               fullWidth
               label="Email Address"
               value={email}
               variant="outlined"
+              size="small"
               disabled
               InputProps={{
-                startAdornment: <Email sx={{ mr: 1, color: 'action.active' }} />
+                startAdornment: <Email sx={{ mr: 1, color: 'action.active', fontSize: 20 }} />
               }}
-              helperText="Changing your email could break your OAuth sign-in if it differs from your social media email."
+              helperText="Managed via your login provider"
             />
           </Box>
         </Box>
       </Paper>
 
-      {/* Email Notifications Section */}
-      <Paper sx={{ borderRadius: 3, overflow: 'hidden', mb: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
-        <Box
-          sx={{
-            height: 80,
-            background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 48, height: 48 }}>
-            <Notifications sx={{ color: 'white' }} />
-          </Avatar>
-        </Box>
-
-        <Box sx={{ p: 3 }}>
-          <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 2, textAlign: 'center' }}>
-            Email Notifications
-          </Typography>
-
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2, textAlign: 'center' }}>
-            Configure your account notification preferences
-          </Typography>
-
-          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={emailNotifications}
-                  onChange={(e) => setEmailNotifications(e.target.checked)}
-                  color="primary"
-                  size="medium"
-                />
-              }
-              label="Receive email notifications"
-              sx={{ '& .MuiFormControlLabel-label': { fontSize: '1rem' } }}
+      {/* Preferences */}
+      <Paper 
+        elevation={0}
+        sx={{ 
+          p: { xs: 2, md: 3 }, 
+          mb: 3, 
+          borderRadius: 3, 
+          border: '1px solid', 
+          borderColor: 'divider' 
+        }}
+      >
+        <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
+          Preferences
+        </Typography>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={emailNotifications}
+              onChange={(e) => setEmailNotifications(e.target.checked)}
+              color="primary"
             />
-          </Box>
-        </Box>
+          }
+          label="Receive email notifications about account activity"
+        />
       </Paper>
 
-      {/* Danger Area */}
-      <Paper sx={{ borderRadius: 3, overflow: 'hidden', mb: 3, boxShadow: '0 4px 20px rgba(0,0,0,0.08)', border: '2px solid', borderColor: 'error.main' }}>
-        <Box
-          sx={{
-            height: 80,
-            background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
+      {/* Danger Zone */}
+      <Paper 
+        elevation={0}
+        sx={{ 
+          p: { xs: 2, md: 3 }, 
+          mb: 3, 
+          borderRadius: 3, 
+          border: '1px solid', 
+          borderColor: 'error.light',
+          bgcolor: 'rgba(211, 47, 47, 0.04)'
+        }}
+      >
+        <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'error.main', mb: 1 }}>
+          Danger Zone
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Permanently delete your account and all of your content.
+        </Typography>
+        <Button
+          variant="outlined"
+          color="error"
+          startIcon={<DeleteForever />}
+          onClick={handleDeleteAccount}
+          size="small"
         >
-          <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 48, height: 48 }}>
-            <DeleteForever sx={{ color: 'white' }} />
-          </Avatar>
-        </Box>
-
-        <Box sx={{ p: 3 }}>
-          <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 2, textAlign: 'center', color: 'error.main' }}>
-            Danger Area
-          </Typography>
-
-          <Typography variant="body2" sx={{ mb: 3, textAlign: 'center', color: 'text.secondary' }}>
-            This action is irreversible and will permanently delete your account and all associated data.
-          </Typography>
-
-          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-            <Button
-              variant="contained"
-              color="error"
-              startIcon={<DeleteForever />}
-              onClick={handleDeleteAccount}
-              sx={{
-                px: 4,
-                py: 1.5,
-                borderRadius: 2,
-                fontWeight: 600,
-                '&:hover': {
-                  backgroundColor: 'error.dark'
-                }
-              }}
-            >
-              Delete Account
-            </Button>
-          </Box>
-        </Box>
+          Delete Account
+        </Button>
       </Paper>
 
-      {/* Save/Cancel Buttons */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3, mt: 2 }}>
+      {/* Actions */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
         <Button
           variant="outlined"
           onClick={handleCancel}
           disabled={saving || !hasChanges}
-          startIcon={<Cancel />}
-          sx={{
-            px: 4,
-            py: 1.5,
-            borderRadius: 2,
-            fontWeight: 600,
-            borderColor: 'grey.400',
-            color: 'text.primary',
-            '&:hover': {
-              borderColor: 'grey.600',
-              backgroundColor: 'grey.50'
-            }
-          }}
+          sx={{ width: { xs: '100%', sm: 'auto' } }}
         >
           Cancel
         </Button>
@@ -370,21 +272,11 @@ const ProfileTab: React.FC = () => {
           variant="contained"
           onClick={handleSave}
           disabled={saving || !hasChanges}
-          startIcon={saving ? <CircularProgress size={20} /> : <Save />}
-          sx={{
-            px: 4,
-            py: 1.5,
-            borderRadius: 2,
-            fontWeight: 600,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)'
-            }
-          }}
+          startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <Save />}
+          sx={{ width: { xs: '100%', sm: 'auto' } }}
         >
-          {saving ? 'Saving...' : 'Save Changes'}
+          Save Changes
         </Button>
-      </Box>
       </Box>
     </Box>
   );

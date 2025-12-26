@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { IconButton, Tooltip, CircularProgress } from '@mui/material';
+import { IconButton, Tooltip, CircularProgress, alpha } from '@mui/material';
 import { Delete } from '@mui/icons-material';
 import { deleteActivity } from '../api/activities';
 import ConfirmationModal from './ConfirmationModal';
@@ -50,7 +50,18 @@ const DeleteActivityButton: React.FC<DeleteActivityButtonProps> = ({ activityId,
   return (
     <>
       <Tooltip title="Delete activity">
-        <IconButton onClick={handleDeleteClick} disabled={disabled || isDeleting} color="error" size="small">
+        <IconButton 
+          onClick={handleDeleteClick} 
+          disabled={disabled || isDeleting} 
+          color="error" 
+          size="small"
+          sx={{
+            bgcolor: (theme) => alpha(theme.palette.error.main, 0.1),
+            '&:hover': {
+              bgcolor: (theme) => alpha(theme.palette.error.main, 0.2),
+            },
+          }}
+        >
           {isDeleting ? <CircularProgress size={20} /> : <Delete fontSize="small" />}
         </IconButton>
       </Tooltip>{' '}

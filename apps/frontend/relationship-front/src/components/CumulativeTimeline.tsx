@@ -122,9 +122,9 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
   };
   if (loading) {
     return (
-      <Card elevation={2}>
+      <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom>
+          <Typography variant="h6" gutterBottom fontWeight="bold">
             {title}
           </Typography>
           <Box display="flex" justifyContent="center" alignItems="center" height={height}>
@@ -137,9 +137,9 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
 
   if (error) {
     return (
-      <Card elevation={2}>
+      <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom>
+          <Typography variant="h6" gutterBottom fontWeight="bold">
             {title}
           </Typography>
           <Alert severity="error">{error}</Alert>
@@ -150,9 +150,9 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
 
   if (data.length === 0) {
     return (
-      <Card elevation={2}>
+      <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom>
+          <Typography variant="h6" gutterBottom fontWeight="bold">
             {title}
           </Typography>
           <Box display="flex" justifyContent="center" alignItems="center" height={height}>
@@ -164,11 +164,19 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
   }
 
   return (
-    <Card elevation={2}>
+    <Card 
+      elevation={0}
+      sx={{
+        height: '100%',
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 3
+      }}
+    >
       <CardContent>
         {/* Header Controls */}
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={2}>
-          <Typography variant="h6">{title}</Typography>
+          <Typography variant="h6" fontWeight="bold">{title}</Typography>
 
           <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
             {/* Year Selector */}
@@ -178,6 +186,7 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
                 value={selectedYear || 'all'}
                 label="Year"
                 onChange={(e) => setSelectedYear(e.target.value === 'all' ? undefined : Number(e.target.value))}
+                sx={{ borderRadius: 2 }}
               >
                 <MenuItem value="all">All Years</MenuItem>
                 {availableYears.map((yearOption) => (

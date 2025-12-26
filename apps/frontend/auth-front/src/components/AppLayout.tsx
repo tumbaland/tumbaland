@@ -8,8 +8,16 @@ interface AppLayoutProps {
 
 const AppLayout = ({ children }: AppLayoutProps) => {
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
-      <Container maxWidth="xl">{children}</Container>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        background: 'radial-gradient(circle at 50% 0%, #f0f4ff 0%, #e0e7ff 50%, #f8fafc 100%)',
+        fontFamily: '"Inter", "Roboto", sans-serif'
+      }}
+    >
+      <Container maxWidth="xl" sx={{ height: '100%', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+        {children}
+      </Container>
     </Box>
   );
 };

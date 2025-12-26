@@ -18,8 +18,9 @@ const PhotoSearchBar: React.FC<PhotoSearchBarProps> = ({
   onSearchChange
 }) => {
   return (
-    <Box mb={4}>
+    <Box mb={{ xs: 2, sm: 4 }}>
       <TextField
+        fullWidth
         placeholder="Search photos..."
         value={searchTerm}
         onChange={(e) => onSearchChange(e.target.value)}
@@ -30,7 +31,23 @@ const PhotoSearchBar: React.FC<PhotoSearchBarProps> = ({
             </InputAdornment>
           )
         }}
-        sx={{ maxWidth: 400 }}
+        sx={{ 
+          maxWidth: 400,
+          '& .MuiOutlinedInput-root': {
+            borderRadius: 3,
+            backgroundColor: 'rgba(255, 255, 255, 0.5)',
+            backdropFilter: 'blur(12px)',
+            '& fieldset': {
+              borderColor: 'rgba(255, 255, 255, 0.4)',
+            },
+            '&:hover fieldset': {
+              borderColor: 'rgba(99, 102, 241, 0.5)',
+            },
+            '&.Mui-focused fieldset': {
+              borderColor: '#6366f1',
+            }
+          }
+        }}
       />
     </Box>
   );

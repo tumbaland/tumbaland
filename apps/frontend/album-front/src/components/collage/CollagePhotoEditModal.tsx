@@ -9,7 +9,9 @@ import {
   Box,
   IconButton,
   FormControlLabel,
-  Switch
+  Switch,
+  Slider,
+  Typography
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 
@@ -34,6 +36,7 @@ interface CollagePhotoEditModalProps {
     caption?: string;
     transparentBackground?: boolean;
     showBorder?: boolean;
+    rotation?: number;
   }) => void;
   onDelete?: (photoId: string) => void;
   globalTransparencyMode: boolean;
@@ -48,12 +51,12 @@ const CollagePhotoEditModal: React.FC<CollagePhotoEditModalProps> = ({
   onSave,
   onDelete,
   globalTransparencyMode,
-  borderColor,
-  globalBackgroundColor
+  borderColor
 }) => {
   const [caption, setCaption] = useState('');
   const [transparentBackground, setTransparentBackground] = useState<boolean | undefined>(undefined);
   const [showBorder, setShowBorder] = useState<boolean>(true);
+  const [rotation, setRotation] = useState<number>(0);
 
   // Update local state when photo changes
   useEffect(() => {
@@ -61,10 +64,12 @@ const CollagePhotoEditModal: React.FC<CollagePhotoEditModalProps> = ({
       setCaption(photo.caption || '');
       setTransparentBackground(photo.transparentBackground);
       setShowBorder(photo.showBorder ?? true);
+      setRotation(photo.rotation || 0);
     } else {
       setCaption('');
       setTransparentBackground(undefined);
       setShowBorder(true);
+      setRotation(0);
     }
   }, [photo]);
 
@@ -74,7 +79,8 @@ const CollagePhotoEditModal: React.FC<CollagePhotoEditModalProps> = ({
     onSave(photo.id, {
       caption: caption.trim() || undefined,
       transparentBackground: transparentBackground,
-      showBorder: showBorder
+      showBorder: showBorder,
+      rotation: rotation
     });
     onClose();
   };
@@ -112,27 +118,59 @@ const CollagePhotoEditModal: React.FC<CollagePhotoEditModalProps> = ({
             <Box
               sx={{
                 width: '100%',
-                height: 200,
+                height: 240,
                 borderRadius: 1,
                 overflow: 'hidden',
                 mb: 3,
-                backgroundColor: effectiveTransparency ? globalBackgroundColor : '#f5f5f5',
-                border: showBorder ? `2px solid ${borderColor}` : 'none',
+                backgroundColor: '#f0f0f0',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 position: 'relative'
               }}
             >
-              <img
-                src={photo.src}
-                alt="collage photo"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'contain',
-                  borderRadius: 6
+              <Box
+                sx={{
+                  width: 160,
+                  height: 160,
+                  transform: `rotate(${rotation}deg)`,
+                  transition: 'transform 0.2s',
+                  bgcolor: effectiveTransparency ? 'transparent' : borderColor,
+                  boxShadow: effectiveTransparency ? 'none' : '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                  p: effectiveTransparency ? 0 : 1.5,
+                  display: 'flex',
+                  flexDirection: 'column'
                 }}
+              >
+                <img
+                  src={photo.src}
+                  alt="collage photo"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    borderRadius: 2
+                  }}
+                />
+              </Box>
+            </Box>
+
+            {/* Rotation Slider */}
+            <Box sx={{ mb: 3, px: 1 }}>
+              <Typography gutterBottom variant="body2" color="text.secondary">
+                Rotation: {rotation}°
+              </Typography>
+              <Slider
+                value={rotation}
+                onChange={(_, val) => setRotation(val as number)}
+                min={-180}
+                max={180}
+                valueLabelDisplay="auto"
+                marks={[
+                  { value: -180, label: '-180°' },
+                  { value: 0, label: '0°' },
+                  { value: 180, label: '180°' },
+                ]}
               />
             </Box>
 
@@ -149,40 +187,15 @@ const CollagePhotoEditModal: React.FC<CollagePhotoEditModalProps> = ({
               sx={{ mb: 2 }}
             />
 
-            {/* Transparency Toggle */}
-            {transparentBackground !== undefined ? (
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={transparentBackground}
-                    onChange={(e) => handleTransparencyToggle(e.target.checked)}
-                  />
-                }
-                label={`Transparent background`}
-                sx={{ mb: 1 }}
-              />
-            ) : (
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={false}
-                    onChange={() => handleTransparencyToggle(!globalTransparencyMode)}
-                  />
-                }
-                label={`Override transparency (currently ${globalTransparencyMode ? 'on' : 'off'})`}
-                sx={{ mb: 1 }}
-              />
-            )}
-
-            {/* Border Toggle */}
+            {/* Frame Toggle */}
             <FormControlLabel
               control={
                 <Switch
-                  checked={showBorder}
-                  onChange={(e) => setShowBorder(e.target.checked)}
+                  checked={!effectiveTransparency}
+                  onChange={(e) => handleTransparencyToggle(!e.target.checked)}
                 />
               }
-              label="Show border"
+              label="Show Frame"
               sx={{ mb: 1 }}
             />
           </Box>

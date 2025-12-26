@@ -71,9 +71,18 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        boxShadow: 3,
-        borderRadius: 2,
-        overflow: 'hidden'
+        boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+        borderRadius: 3,
+        overflow: 'hidden',
+        background: 'rgba(255, 255, 255, 0.7)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.5)',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        '&:hover': {
+          transform: 'translateY(-4px)',
+          boxShadow: '0 12px 24px rgba(0,0,0,0.1)'
+        }
       }}
       onClick={() => onView(photo)}
     >
@@ -216,8 +225,8 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
           </IconButton>
         )}
       </Box>
-      <CardContent sx={{ flexGrow: 1, p: 2 }}>
-        <Typography variant="subtitle2" component="h3" noWrap sx={{ fontWeight: 600 }}>
+      <CardContent sx={{ flexGrow: 1, p: { xs: 1.5, sm: 2 } }}>
+        <Typography variant="subtitle2" component="h3" noWrap sx={{ fontWeight: 600, fontSize: { xs: '0.875rem', sm: '1rem' } }}>
           {photo.title || photo.originalName}
         </Typography>
 
@@ -230,14 +239,15 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
               display: '-webkit-box',
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              fontSize: { xs: '0.75rem', sm: '0.875rem' }
             }}
           >
             {photo.description}
           </Typography>
         )}
 
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
           {formatFileSize(photo.size)}
           {photo.width && photo.height && ` • ${photo.width}×${photo.height}`}
         </Typography>

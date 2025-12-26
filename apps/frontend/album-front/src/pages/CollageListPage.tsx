@@ -1,320 +1,303 @@
 import React, { useState, useMemo } from 'react';
 import {
   Box,
+  Container,
   Typography,
   Button,
   CircularProgress,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  IconButton,
-  Chip,
-  TableSortLabel
+  TextField,
+  InputAdornment,
+  Alert,
+  LinearProgress,
+  Fab
 } from '@mui/material';
 import {
   Add as AddIcon,
-  Edit as EditIcon,
-  Visibility as ViewIcon,
-  Delete as DeleteIcon,
-  PhotoLibrary as PhotoLibraryIcon
+  Search as SearchIcon,
+  PhotoLibrary as PhotoLibraryIcon,
+  GridOn as GridOnIcon
 } from '@mui/icons-material';
 import { useCollageList, useCollageMutations } from '../hooks/useCollage';
 import { Collage, CollageInput } from '../types/collage';
 import { CollageCreateModal } from '../components/collage/CollageCreateModal';
 import { CollageEditModal } from '../components/collage/CollageEditModal';
 import ConfirmDialog from '../components/ConfirmDialog';
+import CollageCard from '../components/collage/CollageCard';
 
 const CollageListPage: React.FC = () => {
   const collageListQuery = useCollageList();
   const { createCollage, deleteCollage, updateCollage } = useCollageMutations();
-  const [deleting, setDeleting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedCollage, setSelectedCollage] = useState<Collage | null>(null);
   const [collageToDelete, setCollageToDelete] = useState<Collage | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
-  // Sorting state
-  const [sortBy, setSortBy] = useState<'title' | 'createdAt' | 'updatedAt'>('updatedAt');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-
-  // Sorting logic
-  const sortedCollages = useMemo(() => {
+  // Filter and Sort logic
+  const filteredCollages = useMemo(() => {
     if (!collageListQuery.data) return [];
     
-    return [...collageListQuery.data].sort((a, b) => {
-      let aValue: string | number;
-      let bValue: string | number;
-      
-      switch (sortBy) {
-        case 'title':
-          aValue = a.title.toLowerCase();
-          bValue = b.title.toLowerCase();
-          break;
-        case 'createdAt':
-          aValue = new Date(a.createdAt).getTime();
-          bValue = new Date(b.createdAt).getTime();
-          break;
-        case 'updatedAt':
-          aValue = new Date(a.updatedAt).getTime();
-          bValue = new Date(b.updatedAt).getTime();
-          break;
-        default:
-          return 0;
-      }
-      
-      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, [collageListQuery.data, sortBy, sortOrder]);
+    let result = [...collageListQuery.data];
 
-  // Date formatting function
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    const seconds = date.getSeconds().toString().padStart(2, '0');
-    return `${day}.${month}.${year} ${hours}:${minutes}:${seconds}`;
-  };
+    // Filter by search term
+    if (searchTerm) {
+      const lowerTerm = searchTerm.toLowerCase();
+      result = result.filter(collage => 
+        collage.title.toLowerCase().includes(lowerTerm) ||
+        collage.config?.title?.subtitle?.toLowerCase().includes(lowerTerm)
+      );
+    }
 
-  // Sort handler
-  const handleSort = (property: 'title' | 'createdAt' | 'updatedAt') => {
-    const isAsc = sortBy === property && sortOrder === 'asc';
-    setSortOrder(isAsc ? 'desc' : 'asc');
-    setSortBy(property);
-  };
+    // Sort by updatedAt desc
+    return result.sort((a, b) => 
+      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    );
+  }, [collageListQuery.data, searchTerm]);
 
   const handleOpenModal = () => setModalOpen(true);
   const handleCloseModal = () => setModalOpen(false);
+  
   const handleCreateCollage = async (input: CollageInput) => {
     await createCollage(input);
     await collageListQuery.refetch();
   };
-  const handleEditModalClose = () => {
-    setEditModalOpen(false);
-    setSelectedCollage(null);
+
+  const handleViewCollage = (collage: Collage) => {
+    window.open(`/collages/${collage._id}?mode=view`, '_blank');
   };
-  const handleEditSave = async (input: CollageInput) => {
-    if (selectedCollage) {
-      await updateCollage(selectedCollage._id, input);
-      await collageListQuery.refetch();
-      handleEditModalClose();
+
+  const handleEditCollage = (collage: Collage) => {
+    window.open(`/collages/${collage._id}?mode=edit`, '_blank');
+  };
+
+  const handleDeleteClick = (collage: Collage) => {
+    setCollageToDelete(collage);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!collageToDelete) return;
+    
+    setDeleting(true);
+    try {
+      await deleteCollage(collageToDelete._id);
+      setDeleteDialogOpen(false);
+      setCollageToDelete(null);
+    } catch (error) {
+      console.error('Failed to delete collage:', error);
+    } finally {
+      setDeleting(false);
     }
   };
-  const handleDeleteConfirm = async () => {
-    if (collageToDelete) {
-      setDeleting(true);
-      try {
-        await deleteCollage(collageToDelete._id);
-      } finally {
-        setDeleteDialogOpen(false);
-        setCollageToDelete(null);
-        setDeleting(false);
-        await collageListQuery.refetch();
-      }
-    }
-  };
-  const handleDeleteCancel = () => {
-    setDeleteDialogOpen(false);
-    setCollageToDelete(null);
-  };
+
+  if (collageListQuery.isLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
-    <Box sx={{ p: { xs: 1, sm: 3 }, maxWidth: 1200, mx: 'auto' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" fontWeight={700}>
-          Collages
-        </Typography>
-        <Box sx={{ flexGrow: 1 }} />
-        <Button variant="contained" color="primary" onClick={handleOpenModal} startIcon={<AddIcon />}>
-          New Collage
-        </Button>
-      </Box>
-      <CollageCreateModal open={modalOpen} onClose={handleCloseModal} onCreate={handleCreateCollage} />
-      {collageListQuery.isPending ? (
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="40vh">
-          <CircularProgress />
+    <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 4 }, px: { xs: 1, sm: 3 } }}>
+      {/* Header */}
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={{ xs: 2, sm: 4 }}
+        sx={{
+          flexDirection: { xs: 'column', sm: 'row' },
+          alignItems: { xs: 'stretch', sm: 'center' },
+          gap: { xs: 2, sm: 0 }
+        }}
+      >
+        <Box display="flex" alignItems="center">
+          <GridOnIcon sx={{ mr: 2, fontSize: 32, color: '#8b5cf6' }} />
+          <Typography 
+            variant="h4" 
+            component="h1" 
+            sx={{ 
+              fontWeight: 700,
+              background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+              backgroundClip: 'text',
+              textFillColor: 'transparent',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
+            }}
+          >
+            Collages
+          </Typography>
         </Box>
-      ) : (sortedCollages.length || 0) === 0 ? (
-        <Box
-          sx={{
-            textAlign: 'center',
-            py: 8,
-            px: 3
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={handleOpenModal}
+          sx={{ 
+            width: { xs: '100%', sm: 'auto' },
+            borderRadius: 3,
+            textTransform: 'none',
+            fontWeight: 600,
+            px: 3,
+            py: 1,
+            background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+            boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)',
+            '&:hover': {
+              boxShadow: '0 6px 16px rgba(139, 92, 246, 0.4)'
+            }
           }}
         >
-          <PhotoLibraryIcon sx={{ fontSize: 64, color: 'grey.400', mb: 2 }} />
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-            No collages yet
-          </Typography>
-          <Typography variant="body2" color="text.secondary" mb={3}>
-            Create your first collage to get started
-          </Typography>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenModal}>
-            Create Collage
-          </Button>
-        </Box>
-      ) : (
-        <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: 2 }}>
-          <Table>
-            <TableHead>
-              <TableRow sx={{ bgcolor: 'grey.50' }}>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
-                  <TableSortLabel
-                    active={sortBy === 'title'}
-                    direction={sortBy === 'title' ? sortOrder : 'asc'}
-                    onClick={() => handleSort('title')}
-                  >
-                    Name
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>Description</TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
-                  <TableSortLabel
-                    active={sortBy === 'createdAt'}
-                    direction={sortBy === 'createdAt' ? sortOrder : 'asc'}
-                    onClick={() => handleSort('createdAt')}
-                  >
-                    Created At
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
-                  <TableSortLabel
-                    active={sortBy === 'updatedAt'}
-                    direction={sortBy === 'updatedAt' ? sortOrder : 'asc'}
-                    onClick={() => handleSort('updatedAt')}
-                  >
-                    Updated At
-                  </TableSortLabel>
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', width: 120 }} align="center">
-                  Actions
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {sortedCollages.map((collage) => (
-                <TableRow
-                  key={collage._id}
-                  sx={{
-                    '&:hover': { bgcolor: 'grey.50' },
-                    cursor: 'pointer'
-                  }}
-                  onClick={() => window.open(`/collage/${collage._id}?mode=edit`, '_blank')}
-                >
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <PhotoLibraryIcon sx={{ color: 'primary.main' }} />
-                      <Box>
-                        <Typography variant="body1" fontWeight={500}>
-                          {collage.title}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          ID: {collage._id.slice(-8)}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" color="text.secondary">
-                      {collage.config?.title?.subtitle || 'No description'}
-                    </Typography>
-                    {collage.config?.photos && (
-                      <Chip
-                        label={`${collage.config.photos.length} photos`}
-                        size="small"
-                        variant="outlined"
-                        sx={{ mt: 0.5, fontSize: '0.7rem' }}
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" color="text.secondary">
-                      {formatDate(collage.createdAt)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" color="text.secondary">
-                      {formatDate(collage.updatedAt)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="center">
-                    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.open(`/collage/${collage._id}?mode=view`, '_blank');
-                        }}
-                        sx={{ color: 'primary.main' }}
-                        title="View collage"
-                      >
-                        <ViewIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedCollage(collage);
-                          setEditModalOpen(true);
-                        }}
-                        sx={{ color: 'success.main' }}
-                        title="Edit collage"
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setCollageToDelete(collage);
-                          setDeleteDialogOpen(true);
-                        }}
-                        sx={{ color: 'error.main' }}
-                        title="Delete collage"
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+          Create Collage
+        </Button>
+      </Box>
+
+      {/* Search Bar */}
+      <Box 
+        mb={{ xs: 2, sm: 4 }}
+        display="flex" 
+        gap={2} 
+        alignItems="center" 
+        flexWrap="wrap"
+        sx={{
+          background: 'rgba(255, 255, 255, 0.5)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          p: { xs: 1.5, sm: 2 },
+          borderRadius: 4,
+          border: '1px solid rgba(255, 255, 255, 0.4)',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
+        }}
+      >
+        <TextField
+          placeholder="Search collages..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon color="action" />
+              </InputAdornment>
+            ),
+            sx: {
+              borderRadius: 3,
+              backgroundColor: 'rgba(255, 255, 255, 0.5)',
+              '& fieldset': { border: 'none' },
+              '&:hover fieldset': { border: 'none' },
+              '&.Mui-focused fieldset': { border: 'none' }
+            }
+          }}
+          sx={{ maxWidth: 400, flex: 1, minWidth: 200 }}
+        />
+      </Box>
+
+      {collageListQuery.isFetching && !collageListQuery.isLoading && (
+        <LinearProgress sx={{ mb: 4 }} />
       )}
 
-      {/* Edit Modal */}
+      {collageListQuery.error && (
+        <Alert severity="error" sx={{ mb: 4 }}>
+          Failed to load collages
+        </Alert>
+      )}
+
+      {filteredCollages.length === 0 ? (
+        <Box textAlign="center" py={{ xs: 4, sm: 8 }}>
+          <PhotoLibraryIcon sx={{ fontSize: { xs: 48, sm: 64 }, color: 'grey.400', mb: 2 }} />
+          <Typography variant="h6" color="text.secondary" gutterBottom>
+            {searchTerm ? 'No collages found' : 'No collages yet'}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" mb={3}>
+            {searchTerm ? 'Try adjusting your search terms' : 'Create your first collage to get started'}
+          </Typography>
+          {!searchTerm && (
+            <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenModal}>
+              Create Collage
+            </Button>
+          )}
+        </Box>
+      ) : (
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: 'repeat(2, minmax(0, 1fr))',
+              sm: 'repeat(3, minmax(0, 1fr))',
+              md: 'repeat(4, minmax(0, 1fr))',
+              lg: 'repeat(5, minmax(0, 1fr))',
+              xl: 'repeat(6, minmax(0, 1fr))'
+            },
+            gap: { xs: 1.5, sm: 2, md: 3 }
+          }}
+        >
+          {filteredCollages.map((collage) => (
+            <CollageCard
+              key={collage._id}
+              collage={collage}
+              onView={handleViewCollage}
+              onEdit={handleEditCollage}
+              onDelete={handleDeleteClick}
+            />
+          ))}
+        </Box>
+      )}
+
+      {/* Create Modal */}
+      <CollageCreateModal
+        open={modalOpen}
+        onClose={handleCloseModal}
+        onCreate={handleCreateCollage}
+      />
+
+      {/* Edit Modal - Kept for future use if we want inline editing */}
       {selectedCollage && (
         <CollageEditModal
           open={editModalOpen}
-          onClose={handleEditModalClose}
-          onSave={handleEditSave}
+          onClose={() => {
+            setEditModalOpen(false);
+            setSelectedCollage(null);
+          }}
           initialData={selectedCollage}
+          onSave={async (data) => {
+            if (selectedCollage) {
+              await updateCollage(selectedCollage._id, data);
+              setEditModalOpen(false);
+              setSelectedCollage(null);
+            }
+          }}
         />
       )}
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation */}
       <ConfirmDialog
         open={deleteDialogOpen}
-        onClose={handleDeleteCancel}
-        onConfirm={handleDeleteConfirm}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={handleConfirmDelete}
         title="Delete Collage"
-        message={collageToDelete ? `Are you sure you want to delete "${collageToDelete.title}"? This action cannot be undone.` : ''}
-        confirmText="Delete Collage"
+        message={`Are you sure you want to delete "${collageToDelete?.title}"?`}
+        confirmText="Delete"
         cancelText="Cancel"
         variant="danger"
         loading={deleting}
       />
-    </Box>
+
+      {/* Floating Action Button for mobile */}
+      <Fab
+        color="primary"
+        aria-label="create collage"
+        sx={{
+          position: 'fixed',
+          bottom: 16,
+          right: 16,
+          display: { xs: 'flex', sm: 'none' },
+          background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+        }}
+        onClick={handleOpenModal}
+      >
+        <AddIcon />
+      </Fab>
+    </Container>
   );
 };
 

@@ -50,11 +50,25 @@ const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({ open, album, onClose,
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Edit Album</DialogTitle>
+    <Dialog 
+      open={open} 
+      onClose={onClose} 
+      maxWidth="sm" 
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 4,
+          background: 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+        }
+      }}
+    >
+      <DialogTitle sx={{ pb: 1, fontWeight: 700 }}>Edit Album</DialogTitle>
       <DialogContent>
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
             {error}
           </Alert>
         )}
@@ -66,7 +80,11 @@ const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({ open, album, onClose,
           variant="outlined"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          sx={{ mb: 2 }}
+          sx={{ 
+            mb: 2, 
+            mt: 2,
+            '& .MuiOutlinedInput-root': { borderRadius: 2 }
+          }}
         />
         <TextField
           margin="dense"
@@ -77,15 +95,37 @@ const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({ open, album, onClose,
           variant="outlined"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          sx={{ mb: 2 }}
+          sx={{ 
+            mb: 2,
+            '& .MuiOutlinedInput-root': { borderRadius: 2 }
+          }}
         />
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={saving}>
+      <DialogActions sx={{ p: 3, pt: 1 }}>
+        <Button 
+          onClick={onClose} 
+          disabled={saving}
+          sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, color: 'text.secondary' }}
+        >
           Cancel
         </Button>
-        <Button onClick={handleSave} variant="contained" disabled={saving}>
-          {saving ? <CircularProgress size={20} /> : 'Save'}
+        <Button 
+          onClick={handleSave} 
+          variant="contained" 
+          disabled={saving}
+          sx={{
+            borderRadius: 2,
+            textTransform: 'none',
+            fontWeight: 600,
+            px: 3,
+            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+            '&:hover': {
+              boxShadow: '0 6px 16px rgba(99, 102, 241, 0.4)'
+            }
+          }}
+        >
+          {saving ? <CircularProgress size={20} color="inherit" /> : 'Save Changes'}
         </Button>
       </DialogActions>
     </Dialog>

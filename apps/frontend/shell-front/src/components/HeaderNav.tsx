@@ -101,13 +101,16 @@ export function HeaderNav({ currentRoute }: HeaderNavProps) {
       <Box
         sx={{
           height: 56,
-          background: 'transparent',
+          background: 'rgba(255,255,255,0.6)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
           display: 'flex',
           alignItems: 'center',
           px: 2,
           zIndex: 1000,
           position: 'relative',
-          borderBottom: '1px solid rgba(0,0,0,0.1)'
+          borderBottom: '1px solid rgba(255,255,255,0.3)',
+          boxShadow: '0 1px 3px 0 rgba(0,0,0,0.05)'
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, pl: 5 }}>
@@ -147,7 +150,9 @@ export function HeaderNav({ currentRoute }: HeaderNavProps) {
     <Box
       sx={{
         height: 64,
-        background: 'transparent',
+        background: 'rgba(255,255,255,0.6)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
         display: 'flex',
         alignItems: 'center',
         px: 3,
@@ -155,7 +160,8 @@ export function HeaderNav({ currentRoute }: HeaderNavProps) {
         position: 'relative',
         marginLeft: '60px', // Account for fixed sidemenu width
         width: 'calc(100% - 60px)', // Ensure header spans remaining width
-        borderBottom: '1px solid rgba(0,0,0,0.1)'
+        borderBottom: '1px solid rgba(255,255,255,0.3)',
+        boxShadow: '0 1px 3px 0 rgba(0,0,0,0.05)'
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, gap: 1 }}>

@@ -64,8 +64,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({ albumsData, photosDat
         boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
         background: 'rgba(255,255,255,0.95)',
         backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255,255,255,0.2)',
-        height: '100%'
+        border: '1px solid rgba(255,255,255,0.2)'
       }}
     >
       <CardContent sx={{ p: 3 }}>

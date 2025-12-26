@@ -46,7 +46,17 @@ const AddActivityModal: React.FC<AddActivityModalProps> = ({
         variant="contained"
         startIcon={<Add />}
         onClick={handleOpenModal}
-        sx={{ bgcolor: 'primary.main' }}
+        sx={{ 
+          bgcolor: 'primary.main',
+          borderRadius: 2,
+          textTransform: 'none',
+          fontWeight: 600,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+          '&:hover': {
+            bgcolor: 'primary.dark',
+            boxShadow: '0 6px 16px rgba(0,0,0,0.15)',
+          }
+        }}
         {...buttonProps}
       >
         {buttonText}

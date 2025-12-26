@@ -184,13 +184,27 @@ const TrackedTickersPage: React.FC = () => {
           Add Ticker
         </Button>
       </Box>
-      <TableContainer component={Paper} sx={{ width: '100%' }}>
+      <TableContainer 
+        component={Paper} 
+        elevation={0}
+        sx={{ 
+          width: '100%',
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 3,
+          overflow: 'hidden'
+        }}
+      >
         <Table
           stickyHeader
           size="small"
           sx={{
             minWidth: 400,
             fontSize: { xs: '0.72rem', sm: '0.95rem' },
+            '& th': {
+              bgcolor: 'background.default',
+              fontWeight: 600
+            },
             '& th, & td': {
               px: { xs: 0.5, sm: 1 },
               py: { xs: 0.5, sm: 0.8 },
@@ -263,7 +277,20 @@ const TrackedTickersPage: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} fullWidth maxWidth="sm">
+      <Dialog 
+        open={dialogOpen} 
+        onClose={handleCloseDialog} 
+        fullWidth 
+        maxWidth="sm"
+        PaperProps={{
+          elevation: 0,
+          sx: {
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: 'divider'
+          }
+        }}
+      >
         <form onSubmit={handleSubmit}>
           <DialogTitle>{editingId ? 'Edit Ticker' : 'Add Ticker'}</DialogTitle>
           <DialogContent>

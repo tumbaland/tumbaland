@@ -12,7 +12,9 @@ import {
   MenuItem,
   SelectChangeEvent,
   IconButton,
-  Tooltip
+  Tooltip,
+  InputLabel,
+  alpha
 } from '@mui/material';
 import { ExpandMore, ExpandLess } from '@mui/icons-material';
 import { getRecentActivitiesSummary } from '../api/activities';
@@ -118,24 +120,50 @@ const RecentActivitiesCards: React.FC = () => {
 
   if (error) {
     return (
-      <Alert severity="error" sx={{ mb: 2 }}>
+      <Alert severity="error">
         {error}
       </Alert>
     );
   }
   return (
-    <Box sx={{ mb: 4 }}>
-      <Typography
-        variant="h5"
-        gutterBottom
+    <Box>
+      <Box
         sx={{
           mb: 3,
-          fontWeight: 600,
-          fontSize: { xs: '1.25rem', sm: '1.5rem' }
+          display: 'flex',
+          flexDirection: { xs: 'column', sm: 'row' },
+          justifyContent: 'space-between',
+          alignItems: { xs: 'stretch', sm: 'center' },
+          gap: 2
         }}
       >
-        Recent Activities by Category
-      </Typography>
+        <Typography
+          variant="h5"
+          component="h2"
+          sx={{
+            fontWeight: 'bold',
+            color: 'text.primary'
+          }}
+        >
+          Recent Activities by Category
+        </Typography>
+        <FormControl size="small" sx={{ minWidth: { xs: 120, sm: 200 }, width: { xs: '100%', sm: 'auto' } }}>
+          <InputLabel id="timeline-select-label">Timeline</InputLabel>
+          <Select
+            labelId="timeline-select-label"
+            value={selectedTimeline}
+            onChange={handleTimelineChange}
+            label="Timeline"
+            sx={{ borderRadius: 2, bgcolor: 'background.paper' }}
+          >
+            {timelineOptions.map((timeline) => (
+              <MenuItem key={timeline.months} value={timeline.months}>
+                {timeline.label}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
 
       <Box
         sx={{
@@ -145,7 +173,7 @@ const RecentActivitiesCards: React.FC = () => {
             sm: 'repeat(2, 1fr)',
             md: 'repeat(3, 1fr)'
           },
-          gap: { xs: 1, sm: 1.5 } // Reduced from xs: 1.5, sm: 2
+          gap: 3
         }}
       >
         {activityTypes.map((activityType) => {
@@ -154,64 +182,38 @@ const RecentActivitiesCards: React.FC = () => {
           return (
             <Card
               key={activityType._id}
+              elevation={0}
               sx={{
                 height: '100%',
-                border: `2px solid ${activityType.color || '#607d8b'}`,
-                borderRadius: 2,
+                border: '1px solid',
+                borderColor: alpha(activityType.color || '#607d8b', 0.3),
+                borderRadius: 3,
+                transition: 'transform 0.2s, box-shadow 0.2s',
                 '&:hover': {
-                  boxShadow: 6,
                   transform: 'translateY(-2px)',
-                  transition: 'all 0.2s ease-in-out'
+                  boxShadow: `0 4px 20px ${alpha(activityType.color || '#607d8b', 0.15)}`,
+                  borderColor: alpha(activityType.color || '#607d8b', 0.5)
                 }
               }}
             >
-              <CardContent sx={{ p: { xs: 1.25, sm: 1.5 } }}>
-                <Box display="flex" alignItems="center" justifyContent="space-between" mb={1.5}>
+              <CardContent sx={{ p: 2 }}>
+                <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
                   <Chip
                     label={activityType.name}
                     sx={{
-                      backgroundColor: activityType.color || '#607d8b',
-                      color: 'white',
+                      backgroundColor: alpha(activityType.color || '#607d8b', 0.1),
+                      color: activityType.color || '#607d8b',
                       fontWeight: 600,
-                      fontSize: { xs: '0.7rem', sm: '0.75rem' },
-                      height: { xs: 24, sm: 28 }
+                      border: '1px solid',
+                      borderColor: alpha(activityType.color || '#607d8b', 0.3)
                     }}
                   />
-                  <Box display="flex" alignItems="center" gap={0.5}>
-                    <FormControl size="small" sx={{ minWidth: 100 }}>
-                      <Select
-                        value={selectedTimeline}
-                        onChange={handleTimelineChange}
-                        sx={{
-                          fontSize: { xs: '0.65rem', sm: '0.7rem' },
-                          height: { xs: 28, sm: 32 },
-                          '& .MuiSelect-select': {
-                            py: { xs: 0.5, sm: 0.75 }
-                          }
-                        }}
-                      >
-                        {timelineOptions.map((timeline) => (
-                          <MenuItem
-                            key={timeline.months}
-                            value={timeline.months}
-                            sx={{ fontSize: { xs: '0.65rem', sm: '0.7rem' } }}
-                          >
-                            {timeline.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
+                  <Box display="flex" alignItems="center">
                     {activities.length > 0 ? (
                       <Tooltip title={expandedCards.has(activityType.slug) ? 'Show less' : 'Show all'}>
                         <IconButton
                           size="small"
                           onClick={() => toggleCardExpansion(activityType.slug)}
-                          sx={{
-                            p: 0.5,
-                            '& .MuiSvgIcon-root': {
-                              fontSize: { xs: '1rem', sm: '1.2rem' }
-                            }
-                          }}
                         >
                           {expandedCards.has(activityType.slug) ? <ExpandLess /> : <ExpandMore />}
                         </IconButton>

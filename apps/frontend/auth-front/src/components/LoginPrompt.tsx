@@ -18,6 +18,13 @@ const LoginPrompt: React.FC<LoginPromptProps> = ({ isLoading, initializationAtte
       </Box>
     ) : (
       <Box>
+        <Typography variant="h5" fontWeight={700} color="#1e293b" mb={1}>
+          Sign In
+        </Typography>
+        <Typography variant="body1" color="text.secondary" mb={4}>
+          Welcome back! Please sign in to continue.
+        </Typography>
+
         <Box
           id="google-signin-button"
           sx={{
@@ -25,18 +32,14 @@ const LoginPrompt: React.FC<LoginPromptProps> = ({ isLoading, initializationAtte
             justifyContent: 'center',
             alignItems: 'center',
             minHeight: 56,
-            border: '1px dashed #ddd',
             borderRadius: 2,
-            background: '#fafafa',
-            py: 2,
-            mb: 2
+            py: 1,
+            mb: 1
           }}
         >
           {initializationAttempted ? (
-            <Typography variant="body2" color="text.secondary">
-              ⏳ Loading Google Sign-In...
-              <br />
-              If the button doesn't appear, try refreshing the page.
+            <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', opacity: 0.7 }}>
+              Loading Google Sign-In...
             </Typography>
           ) : (
             <Typography variant="body2" color="text.secondary">
@@ -44,9 +47,7 @@ const LoginPrompt: React.FC<LoginPromptProps> = ({ isLoading, initializationAtte
             </Typography>
           )}
         </Box>
-        <Typography variant="body2" color="text.secondary" mt={2}>
-          Sign in to continue
-        </Typography>
+        
         {error && (
           <Typography variant="body2" color="error" mt={2}>
             {error}

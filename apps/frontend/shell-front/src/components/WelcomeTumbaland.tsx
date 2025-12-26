@@ -84,17 +84,28 @@ const WelcomeTumbaland = memo(function WelcomeTumbaland() {
   const showStars = !prefersReducedMotion && !isIOS;
   const starCount = isLowEndDevice ? 8 : 16;
   return (
-    <Box sx={{ position: 'relative', display: 'inline-block', mb: 2 }}>
+    <Box sx={{ position: 'relative', display: 'inline-block', mb: 4, mt: 2 }}>
       <Box
         sx={{
           textAlign: 'center',
-          fontFamily: '"Pacifico", cursive, Inter, sans-serif',
-          fontWeight: 800,
-          fontSize: 52,
-          color: '#ff1fae',
-          letterSpacing: 2,
+          fontFamily: '"Pacifico", cursive',
+          fontWeight: 400,
+          fontSize: { xs: 42, sm: 56, md: 64 },
+          background: 'linear-gradient(135deg, #ff1fae 0%, #8b5cf6 100%)',
+          backgroundClip: 'text',
+          textFillColor: 'transparent',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))',
+          letterSpacing: 1.5,
+          // Add padding to prevent the cursive font from being clipped
+          p: 2,
           zIndex: 1,
-          position: 'relative'
+          position: 'relative',
+          transition: 'transform 0.3s ease',
+          '&:hover': {
+            transform: 'scale(1.02)'
+          }
         }}
       >
         Welcome to Tumbaland

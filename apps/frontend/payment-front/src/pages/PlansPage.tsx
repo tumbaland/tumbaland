@@ -65,30 +65,21 @@ const PlansPage: React.FC = () => {
 
   return (
     <Box sx={{ maxWidth: 1200, mx: 'auto', py: 2 }}>
-      {/* Hero Header */}
-      <Box
-        sx={{
-          textAlign: 'center',
-          mb: 3,
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          borderRadius: 3,
-          p: 3,
-          color: 'white'
-        }}
-      >
-        <Star sx={{ fontSize: 48, mb: 1, opacity: 0.9 }} />
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
+      {/* Header */}
+      <Box sx={{ textAlign: 'center', mb: 4, px: 2 }}>
+        <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: 'text.primary' }}>
           Choose Your Plan
         </Typography>
-        <Typography variant="body1" sx={{ opacity: 0.9, maxWidth: 600, mx: 'auto' }}>
-          Pick the plan that matches your current stage. You can upgrade or downgrade anytime. Higher tiers unlock more capacity, privacy, monetization and performance.
+        <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
+          Pick the plan that matches your current stage. You can upgrade or downgrade anytime.
         </Typography>
       </Box>
+
       <Box
         sx={{
           display: 'grid',
           gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
-          gap: 2,
+          gap: 3,
           px: 2
         }}
       >
@@ -100,17 +91,18 @@ const PlansPage: React.FC = () => {
           return (
             <Card
               key={plan._id || plan.code}
+              elevation={0}
               sx={{
                 position: 'relative',
                 borderRadius: 3,
                 overflow: 'hidden',
-                transition: 'all 0.3s ease',
-                border: isCurrentPlan ? '2px solid #667eea' : '1px solid #e9ecef',
-                transform: isPopular ? 'scale(1.02)' : 'scale(1)',
+                transition: 'all 0.2s ease',
+                border: '1px solid',
+                borderColor: isCurrentPlan ? 'primary.main' : 'divider',
+                bgcolor: 'background.paper',
                 '&:hover': {
-                  transform: isPopular ? 'scale(1.04)' : 'scale(1.02)',
-                  boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
-                  borderColor: '#667eea'
+                  borderColor: 'primary.main',
+                  transform: 'translateY(-2px)'
                 }
               }}
             >
@@ -120,7 +112,7 @@ const PlansPage: React.FC = () => {
                     position: 'absolute',
                     top: 12,
                     right: 12,
-                    background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)',
+                    bgcolor: 'primary.main',
                     color: 'white',
                     px: 1,
                     py: 0.5,
@@ -134,57 +126,58 @@ const PlansPage: React.FC = () => {
                 </Box>
               )}
 
-              <Box
-                sx={{
-                  height: 80,
-                  background: alias === 'free' ? 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' :
-                             alias === 'pro' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' :
-                             'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                <Avatar sx={{ bgcolor: 'rgba(255,255,255,0.2)', width: 48, height: 48 }}>
-                  {alias === 'free' ? <Star sx={{ color: 'white' }} /> :
-                   alias === 'pro' ? <CheckCircle sx={{ color: 'white' }} /> :
-                   <SmartToy sx={{ color: 'white' }} />}
-                </Avatar>
-              </Box>
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                  <Avatar
+                    sx={{
+                      bgcolor: alias === 'free' ? 'grey.100' : alias === 'pro' ? 'primary.light' : 'secondary.light',
+                      color: alias === 'free' ? 'grey.700' : alias === 'pro' ? 'primary.main' : 'secondary.main',
+                      width: 48,
+                      height: 48
+                    }}
+                  >
+                    {alias === 'free' ? <Star /> : alias === 'pro' ? <CheckCircle /> : <SmartToy />}
+                  </Avatar>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
+                      {plan.name}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {alias === 'free' ? 'For starters' : alias === 'pro' ? 'For professionals' : 'For power users'}
+                    </Typography>
+                  </Box>
+                </Box>
 
-              <CardContent sx={{ p: 2 }}>
-                <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                  {plan.name}
+                <Typography variant="h4" sx={{ mb: 3, fontWeight: 700, color: 'text.primary' }}>
+                  {plan.priceMonthlyCents ? `${(plan.priceMonthlyCents / 100).toFixed(2)} €` : 'Free'}
+                  {(plan.priceMonthlyCents || 0) > 0 && <Typography component="span" variant="body2" color="text.secondary">/mo</Typography>}
                 </Typography>
-                <Typography variant="h4" sx={{ mb: 2, fontWeight: 700, color: 'primary.main' }}>
-                  {plan.priceMonthlyCents ? `${(plan.priceMonthlyCents / 100).toFixed(2)} €/mo` : 'Free'}
-                </Typography>
 
-                <Divider sx={{ my: 1.5 }} />
+                <Divider sx={{ my: 2 }} />
 
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                   {cardFeatureOrder.map(k => {
-                    const icon = k === 'uploads' ? <CloudUpload sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} /> :
-                               k === 'storage' ? <Storage sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} /> :
-                               k === 'privacy' ? <CheckCircle sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} /> :
-                               k === 'history' ? <History sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} /> :
-                               k === 'ai' ? <SmartToy sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} /> :
-                               <People sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />;
+                    const icon = k === 'uploads' ? <CloudUpload sx={{ fontSize: 18, color: 'text.secondary' }} /> :
+                               k === 'storage' ? <Storage sx={{ fontSize: 18, color: 'text.secondary' }} /> :
+                               k === 'privacy' ? <CheckCircle sx={{ fontSize: 18, color: 'text.secondary' }} /> :
+                               k === 'history' ? <History sx={{ fontSize: 18, color: 'text.secondary' }} /> :
+                               k === 'ai' ? <SmartToy sx={{ fontSize: 18, color: 'text.secondary' }} /> :
+                               <People sx={{ fontSize: 18, color: 'text.secondary' }} />;
 
                     return (
-                      <Box key={k} sx={{ display: 'flex', alignItems: 'center', fontSize: '0.875rem' }}>
+                      <Box key={k} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                         {icon}
-                        <Typography variant="body2" sx={{ flex: 1 }}>
-                          <strong>{matrixByKey[k].label}:</strong> {renderValue(k, alias)}
+                        <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+                          <Box component="span" sx={{ color: 'text.primary', fontWeight: 500 }}>{matrixByKey[k].label}:</Box> {renderValue(k, alias)}
                         </Typography>
                       </Box>
                     );
                   })}
 
                   {alias === 'elite' && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', fontSize: '0.875rem', mt: 1 }}>
-                      <Star sx={{ fontSize: 16, mr: 1, color: '#ff6b6b' }} />
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: '#ff6b6b' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 1 }}>
+                      <Star sx={{ fontSize: 18, color: 'warning.main' }} />
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'warning.main' }}>
                         Exclusive Award: TumbaBubu plush 🧸
                       </Typography>
                     </Box>
@@ -192,18 +185,18 @@ const PlansPage: React.FC = () => {
                 </Box>
               </CardContent>
 
-              <CardActions sx={{ p: 2, pt: 0 }}>
+              <CardActions sx={{ p: 3, pt: 0 }}>
                 {isCurrentPlan ? (
                   <Button
                     fullWidth
                     variant="outlined"
                     disabled
                     sx={{
-                      borderColor: '#667eea',
-                      color: '#667eea',
+                      borderColor: 'primary.main',
+                      color: 'primary.main',
                       '&.Mui-disabled': {
-                        borderColor: '#667eea',
-                        color: '#667eea'
+                        borderColor: 'primary.main',
+                        color: 'primary.main'
                       }
                     }}
                   >
@@ -214,7 +207,6 @@ const PlansPage: React.FC = () => {
                     fullWidth
                     variant="outlined"
                     onClick={() => navigate(`/subscription/checkout?plan=${encodeURIComponent(plan.code)}`)}
-                    sx={{ borderRadius: 2 }}
                   >
                     Switch to Free
                   </Button>
@@ -223,17 +215,7 @@ const PlansPage: React.FC = () => {
                     fullWidth
                     variant="contained"
                     onClick={() => navigate(`/subscription/checkout?plan=${encodeURIComponent(plan.code)}`)}
-                    sx={{
-                      borderRadius: 2,
-                      background: alias === 'free' ? 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' :
-                                 alias === 'pro' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' :
-                                 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-                      '&:hover': {
-                        background: alias === 'free' ? 'linear-gradient(135deg, #e84393 0%, #e17055 100%)' :
-                                   alias === 'pro' ? 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)' :
-                                   'linear-gradient(135deg, #3d9dfd 0%, #00d4ff 100%)'
-                      }
-                    }}
+                    color={alias === 'elite' ? 'secondary' : 'primary'}
                   >
                     {subscription ? 'Change Plan' : 'Get Started'}
                   </Button>

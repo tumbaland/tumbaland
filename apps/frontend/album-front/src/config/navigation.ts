@@ -21,8 +21,8 @@ export const navigationItems: Omit<NavigationItem, 'onClick'>[] = [
     icon: PhotoAlbumIcon
   },
   {
-    label: 'Collage',
-    path: '/collage',
+    label: 'Collages',
+    path: '/collages',
     icon: GridOnIcon
   }
 ];

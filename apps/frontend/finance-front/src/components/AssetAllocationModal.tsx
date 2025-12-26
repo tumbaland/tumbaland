@@ -23,7 +23,18 @@ const AssetAllocationModal: React.FC<{
   title: string;
   assetClasses: AssetClass[];
 }> = ({ open, onClose, onSubmit, form, setForm, title, assetClasses }) => (
-  <Dialog open={open} onClose={onClose}>
+  <Dialog 
+    open={open} 
+    onClose={onClose}
+    PaperProps={{
+      elevation: 0,
+      sx: {
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider'
+      }
+    }}
+  >
     <DialogTitle>{title}</DialogTitle>
     <DialogContent>
       <FormControl fullWidth margin="dense" required>

@@ -38,14 +38,18 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete, 
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        boxShadow: 3,
-        borderRadius: 2,
+        boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.1)',
+        borderRadius: 4,
         overflow: 'hidden',
         cursor: 'pointer',
-        transition: 'transform 0.2s, box-shadow 0.2s',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        background: 'rgba(255, 255, 255, 0.8)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        border: '1px solid rgba(255, 255, 255, 0.6)',
         '&:hover': {
-          transform: 'translateY(-2px)',
-          boxShadow: 4
+          transform: 'translateY(-6px)',
+          boxShadow: '0 20px 40px -5px rgba(0, 0, 0, 0.15)'
         }
       }}
       onClick={() => onView(album)}
@@ -98,8 +102,8 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete, 
         {editButton}
       </Box>
 
-      <CardContent sx={{ flexGrow: 1 }}>
-        <Typography gutterBottom variant="h6" component="div" noWrap>
+      <CardContent sx={{ flexGrow: 1, p: { xs: 1.5, sm: 2 } }}>
+        <Typography gutterBottom variant="h6" component="div" noWrap sx={{ fontSize: { xs: '0.9rem', sm: '1.1rem' }, fontWeight: 600 }}>
           {album.name}
         </Typography>
 
@@ -108,28 +112,29 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete, 
             variant="body2"
             color="text.secondary"
             sx={{
-              mt: 1,
+              mt: 0.5,
               display: '-webkit-box',
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              fontSize: { xs: '0.75rem', sm: '0.875rem' }
             }}
           >
             {album.description}
           </Typography>
         )}
 
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
           {album.photoCount} {album.photoCount === 1 ? 'photo' : 'photos'}
         </Typography>
 
         {album.tags && album.tags.length > 0 && (
           <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
             {album.tags.slice(0, 3).map((tag, index) => (
-              <Chip key={index} label={tag} size="small" variant="outlined" sx={{ fontSize: '0.75rem' }} />
+              <Chip key={index} label={tag} size="small" variant="outlined" sx={{ fontSize: '0.7rem', height: 20 }} />
             ))}
             {album.tags.length > 3 && (
-              <Chip label={`+${album.tags.length - 3}`} size="small" variant="outlined" sx={{ fontSize: '0.75rem' }} />
+              <Chip label={`+${album.tags.length - 3}`} size="small" variant="outlined" sx={{ fontSize: '0.7rem', height: 20 }} />
             )}
           </Box>
         )}

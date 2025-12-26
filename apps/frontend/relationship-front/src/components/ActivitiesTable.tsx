@@ -1,5 +1,22 @@
 import React from 'react';
-import { Table, TableBody, TableCell, TableHead, TableRow, Chip, TableSortLabel, Typography, Box, Select, MenuItem } from '@mui/material';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Chip,
+  TableSortLabel,
+  Typography,
+  Box,
+  Select,
+  MenuItem,
+  Paper,
+  useTheme,
+  alpha
+} from '@mui/material';
+import { Circle as CircleIcon } from '@mui/icons-material';
 import EditActivityModal from '../components/EditActivityModal';
 import DeleteActivityButton from '../components/DeleteActivityButton';
 
@@ -24,118 +41,143 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
   rowsPerPage,
   onRowsPerPageChange
 }) => {
+  const theme = useTheme();
+
   return (
-    <>
-      <Table
-        stickyHeader
-        size="small"
+    <Box>
+      <TableContainer
+        component={Paper}
+        elevation={0}
         sx={{
-          minWidth: { xs: 320, sm: 450, md: 550, lg: 650 },
-          width: '100%',
-          fontSize: { xs: '0.68rem', sm: '0.875rem', md: '0.9375rem', lg: '1rem' },
-          '& th, & td': {
-            px: { xs: 0.125, sm: 0.5, md: 1, lg: 1.5 },
-            py: { xs: 0.375, sm: 0.75, md: 0.875, lg: 1 },
-            fontSize: { xs: '0.68rem', sm: '0.875rem', md: '0.9375rem', lg: '1rem' },
-            whiteSpace: { xs: 'nowrap', sm: 'normal' },
-            maxWidth: { xs: 60, sm: 'none' },
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
-          }
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 2,
+          overflowX: 'auto',
+          width: '100%'
         }}
       >
-        <TableHead>
-          <TableRow>
-            <TableCell sx={{ minWidth: { xs: 70, sm: 80, md: 90 }, width: { xs: 70, sm: 80, md: 90 } }}>
-              <TableSortLabel
-                active={sortBy === 'date'}
-                direction={sortBy === 'date' ? sortOrder : 'asc'}
-                onClick={() => handleSort('date')}
-              >
-                <span style={{ fontSize: '0.78em' }}>Date</span>
-              </TableSortLabel>
-            </TableCell>
-            <TableCell sx={{ minWidth: { xs: 60, sm: 70, md: 80 }, width: { xs: 60, sm: 70, md: 80 } }}>
-              <TableSortLabel
-                active={sortBy === 'activity'}
-                direction={sortBy === 'activity' ? sortOrder : 'asc'}
-                onClick={() => handleSort('activity')}
-              >
-                <span style={{ fontSize: '0.78em' }}>Activity</span>
-              </TableSortLabel>
-            </TableCell>
-            <TableCell align="right" sx={{ minWidth: { xs: 50, sm: 60, md: 70 }, width: { xs: 50, sm: 60, md: 70 } }}>
-              <TableSortLabel
-                active={sortBy === 'hours'}
-                direction={sortBy === 'hours' ? sortOrder : 'asc'}
-                onClick={() => handleSort('hours')}
-              >
-                <span style={{ fontSize: '0.78em' }}>Duration</span>
-              </TableSortLabel>
-            </TableCell>
-            <TableCell sx={{ minWidth: { xs: 100, sm: 140, md: 180 }, width: { xs: 100, sm: 140, md: 180 } }}>
-              <TableSortLabel
-                active={sortBy === 'description'}
-                direction={sortBy === 'description' ? sortOrder : 'asc'}
-                onClick={() => handleSort('description')}
-              >
-                <span style={{ fontSize: '0.78em' }}>Description</span>
-              </TableSortLabel>
-            </TableCell>
-            <TableCell align="center" sx={{ minWidth: { xs: 60, sm: 70, md: 80 }, width: { xs: 60, sm: 70, md: 80 } }}>
-              <span style={{ fontSize: '0.78em' }}>Actions</span>
-            </TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {!activities || activities.length === 0 ? (
+        <Table
+          stickyHeader
+          sx={{ minWidth: { xs: 300, sm: 600 } }}
+          aria-label="activities table"
+        >
+          <TableHead sx={{ bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
             <TableRow>
-              <TableCell colSpan={5} align="center" sx={{ py: 2 }}>
-                <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.72rem', sm: '0.95rem' } }}>
-                  No activities yet. Click "Add Activity" to get started!
-                </Typography>
+              <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', px: { xs: 1, sm: 2 } }}>
+                <TableSortLabel
+                  active={sortBy === 'date'}
+                  direction={sortBy === 'date' ? sortOrder : 'asc'}
+                  onClick={() => handleSort('date')}
+                >
+                  Date
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', px: { xs: 1, sm: 2 } }}>
+                <TableSortLabel
+                  active={sortBy === 'activity'}
+                  direction={sortBy === 'activity' ? sortOrder : 'asc'}
+                  onClick={() => handleSort('activity')}
+                >
+                  Activity
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="right" sx={{ fontWeight: 600, whiteSpace: 'nowrap', px: { xs: 1, sm: 2 } }}>
+                <TableSortLabel
+                  active={sortBy === 'hours'}
+                  direction={sortBy === 'hours' ? sortOrder : 'asc'}
+                  onClick={() => handleSort('hours')}
+                >
+                  Duration
+                </TableSortLabel>
+              </TableCell>
+              <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap', display: { xs: 'none', md: 'table-cell' }, px: { xs: 1, sm: 2 } }}>
+                <TableSortLabel
+                  active={sortBy === 'description'}
+                  direction={sortBy === 'description' ? sortOrder : 'asc'}
+                  onClick={() => handleSort('description')}
+                >
+                  Description
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="center" sx={{ fontWeight: 600, whiteSpace: 'nowrap', px: { xs: 1, sm: 2 } }}>
+                Actions
               </TableCell>
             </TableRow>
-          ) : (
-            activities.map((activity) => (
-              <TableRow key={activity._id || activity.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                <TableCell sx={{ width: { xs: 70, sm: 80, md: 90 } }}>{formatDate(activity.date)}</TableCell>
-                <TableCell sx={{ width: { xs: 60, sm: 70, md: 80 } }}>
-                  <Chip
-                    label={activity.activity.typeId?.name || 'Unknown Type'}
-                    sx={{
-                      fontSize: { xs: '0.62rem', sm: '0.80rem' },
-                      height: { xs: 18, sm: 22 },
-                      backgroundColor: activity.activity.typeId?.color || '#9e9e9e',
-                      color: 'white'
-                    }}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell align="right" sx={{ width: { xs: 50, sm: 60, md: 70 } }}>{activity.hours || '-'}</TableCell>
-                <TableCell
-                  sx={{
-                    width: { xs: 100, sm: 140, md: 180 }
-                  }}
-                >
-                  {activity.activity.description}
-                </TableCell>
-                <TableCell align="center" sx={{ width: { xs: 60, sm: 70, md: 80 } }}>
-                  <Box sx={{ display: 'flex', gap: { xs: 0.125, sm: 0.5 }, justifyContent: 'center' }}>
-                    <EditActivityModal activity={activity} onActivityUpdated={refetch} />
-                    <DeleteActivityButton activityId={activity._id || activity.id || ''} onDeleted={refetch} />
-                  </Box>
+          </TableHead>
+          <TableBody>
+            {!activities || activities.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                  <Typography variant="body1" color="text.secondary">
+                    No activities yet. Click "Add Activity" to get started!
+                  </Typography>
                 </TableCell>
               </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
+            ) : (
+              activities.map((activity) => (
+                <TableRow 
+                  key={activity._id || activity.id} 
+                  hover
+                  sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                >
+                  <TableCell sx={{ whiteSpace: 'nowrap', px: { xs: 1, sm: 2 } }}>
+                    {formatDate(activity.date)}
+                  </TableCell>
+                  <TableCell sx={{ px: { xs: 1, sm: 2 } }}>
+                    <Chip
+                      icon={
+                        <CircleIcon 
+                          style={{ 
+                            fill: activity.activity.typeId?.color || '#9e9e9e', 
+                            fontSize: 12 
+                          }} 
+                        />
+                      }
+                      label={activity.activity.typeId?.name || 'Unknown Type'}
+                      size="small"
+                      variant="outlined"
+                      sx={{
+                        borderColor: alpha(activity.activity.typeId?.color || '#9e9e9e', 0.5),
+                        bgcolor: alpha(activity.activity.typeId?.color || '#9e9e9e', 0.05),
+                        fontFamily: 'monospace',
+                        fontWeight: 500,
+                        maxWidth: { xs: 100, sm: 'none' }
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell align="right" sx={{ px: { xs: 1, sm: 2 } }}>
+                    {activity.hours ? `${activity.hours}h` : '-'}
+                  </TableCell>
+                  <TableCell sx={{ maxWidth: 300, display: { xs: 'none', md: 'table-cell' }, px: { xs: 1, sm: 2 } }}>
+                    <Typography variant="body2" noWrap title={activity.activity.description}>
+                      {activity.activity.description || '-'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="center" sx={{ px: { xs: 1, sm: 2 } }}>
+                    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
+                      <EditActivityModal activity={activity} onActivityUpdated={refetch} />
+                      <DeleteActivityButton activityId={activity._id || activity.id || ''} onDeleted={refetch} />
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
       
-      {/* Simple page size selector */}
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', p: 2, gap: 2 }}>
-        <Typography variant="body2" sx={{ fontSize: { xs: '0.72rem', sm: '0.95rem' } }}>
-          Show:
+      {/* Pagination */}
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          justifyContent: 'flex-end', 
+          alignItems: 'center', 
+          pt: 2, 
+          gap: 2 
+        }}
+      >
+        <Typography variant="body2" color="text.secondary">
+          Rows per page:
         </Typography>
         <Select
           value={rowsPerPage === 10000 ? -1 : rowsPerPage}
@@ -146,7 +188,12 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
             onRowsPerPageChange(syntheticEvent);
           }}
           size="small"
-          sx={{ fontSize: { xs: '0.72rem', sm: '0.95rem' }, minWidth: 80 }}
+          variant="outlined"
+          sx={{ 
+            minWidth: 80,
+            height: 32,
+            fontSize: '0.875rem'
+          }}
         >
           <MenuItem value={10}>10</MenuItem>
           <MenuItem value={25}>25</MenuItem>
@@ -155,7 +202,7 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
           <MenuItem value={-1}>All</MenuItem>
         </Select>
       </Box>
-    </>
+    </Box>
   );
 };
 

@@ -23,7 +23,20 @@ const AssetClassModal: React.FC<{
   setForm: (f: any) => void;
   title: string;
 }> = ({ open, onClose, onSubmit, form, setForm, title }) => (
-  <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+  <Dialog 
+    open={open} 
+    onClose={onClose} 
+    maxWidth="sm" 
+    fullWidth
+    PaperProps={{
+      elevation: 0,
+      sx: {
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider'
+      }
+    }}
+  >
     <DialogTitle>{title}</DialogTitle>
     <DialogContent>
       <TextField

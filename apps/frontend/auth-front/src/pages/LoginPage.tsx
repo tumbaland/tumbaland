@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Card, CardContent, Typography, Divider, Alert } from '@mui/material';
+import { Box, Card, CardContent, Alert } from '@mui/material';
 import { initializeGoogleSignIn } from '../authFlow';
 import LoggedInUser from '../components/LoggedInUser';
 import LoginPrompt from '../components/LoginPrompt';
@@ -82,31 +82,55 @@ const LoginPage: React.FC = () => {
       sx={{
         minHeight: '100vh',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)',
-        fontFamily: 'Inter, Roboto, sans-serif'
+        fontFamily: 'Inter, Roboto, sans-serif',
+        py: 4
       }}
     >
-      <Card
+      <Box
         sx={{
-          p: { xs: 3, sm: 5 },
-          borderRadius: 5,
-          boxShadow: 8,
-          minWidth: 340,
-          maxWidth: 380,
-          width: '100%',
+          mb: 4,
           textAlign: 'center',
-          background: 'rgba(255,255,255,0.98)'
+          fontFamily: '"Pacifico", cursive',
+          fontSize: { xs: 36, sm: 48 },
+          background: 'linear-gradient(135deg, #ff1fae 0%, #8b5cf6 100%)',
+          backgroundClip: 'text',
+          textFillColor: 'transparent',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+          // Add padding to prevent the cursive font from being clipped
+          p: 2
         }}
       >
-        <CardContent>
-          <Typography variant="h4" fontWeight={700} color="primary.dark" mb={2}>
-            Tumbaland Login
-          </Typography>
-          <Divider sx={{ mb: 3, opacity: 0.15 }} />
+        Tumbaland
+      </Box>
+
+      <Card
+        sx={{
+          p: { xs: 4, sm: 6 },
+          borderRadius: 6,
+          boxShadow: '0 20px 60px -10px rgba(31, 38, 135, 0.25)',
+          minWidth: 340,
+          maxWidth: 420,
+          width: '100%',
+          textAlign: 'center',
+          background: 'rgba(255, 255, 255, 0.75)',
+          backdropFilter: 'blur(24px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+          border: '1px solid rgba(255, 255, 255, 0.8)',
+          transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+          '&:hover': {
+            transform: 'translateY(-4px)',
+            boxShadow: '0 25px 70px -10px rgba(31, 38, 135, 0.3)'
+          }
+        }}
+      >
+        <CardContent sx={{ p: 0, '&:last-child': { pb: 0 } }}>
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
               {error}
             </Alert>
           )}

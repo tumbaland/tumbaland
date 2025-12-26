@@ -60,12 +60,25 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
   // Empty state
   if (photos.length === 0) {
     return (
-      <Box textAlign="center" py={8}>
-        <CloudUploadIcon sx={{ fontSize: 64, color: 'grey.400', mb: 2 }} />
-        <Typography variant="h6" color="text.secondary" gutterBottom>
+      <Box 
+        textAlign="center" 
+        py={10}
+        sx={{
+          background: 'rgba(255, 255, 255, 0.4)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderRadius: 4,
+          border: '1px solid rgba(255, 255, 255, 0.4)',
+          mx: 'auto',
+          maxWidth: 600,
+          mt: 4
+        }}
+      >
+        <CloudUploadIcon sx={{ fontSize: 80, color: 'rgba(99, 102, 241, 0.3)', mb: 3 }} />
+        <Typography variant="h5" color="text.primary" gutterBottom fontWeight={600}>
           {searchTerm ? 'No photos found' : 'No photos yet'}
         </Typography>
-        <Typography variant="body2" color="text.secondary" mb={3}>
+        <Typography variant="body1" color="text.secondary" mb={4}>
           {searchTerm ? 'Try adjusting your search terms' : 'Upload your first photos to get started'}
         </Typography>
         {!searchTerm && (
@@ -73,6 +86,18 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
             variant="contained" 
             startIcon={<CloudUploadIcon />} 
             onClick={onUploadPhotos}
+            sx={{
+              borderRadius: 3,
+              textTransform: 'none',
+              fontWeight: 600,
+              px: 4,
+              py: 1.5,
+              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+              '&:hover': {
+                boxShadow: '0 6px 16px rgba(99, 102, 241, 0.4)'
+              }
+            }}
           >
             Upload Media
           </Button>
@@ -87,12 +112,13 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
       sx={{
         display: 'grid',
         gridTemplateColumns: {
-          xs: '1fr',
-          sm: '1fr 1fr',
-          md: '1fr 1fr 1fr',
-          lg: '1fr 1fr 1fr 1fr'
+          xs: 'repeat(2, minmax(0, 1fr))',
+          sm: 'repeat(3, minmax(0, 1fr))',
+          md: 'repeat(4, minmax(0, 1fr))',
+          lg: 'repeat(5, minmax(0, 1fr))',
+          xl: 'repeat(6, minmax(0, 1fr))'
         },
-        gap: 3
+        gap: { xs: 1.5, sm: 2, md: 3 }
       }}
     >
       {photos.map((photo) => (

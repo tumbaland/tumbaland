@@ -12,7 +12,10 @@ import {
   Select,
   MenuItem,
   IconButton,
-  InputAdornment
+  InputAdornment,
+  CircularProgress,
+  Alert,
+  Chip
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { CollageInput } from '../../types/collage';
@@ -32,7 +35,10 @@ const defaultConfig = {
   theme: 'default',
   photos: [],
   textSections: [],
-  title: { text: '', subtitle: '' }
+  title: { text: '', subtitle: '' },
+  backgroundColor: '#f1f5f9', // Slate-100
+  borderColor: '#ffffff',
+  photoTransparencyMode: false
 };
 
 export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, onClose, onCreate }) => {
@@ -48,6 +54,11 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
   });
 
   const handleCreate = async () => {
+    if (!title.trim()) {
+      setError('Title is required');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -86,29 +97,94 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
-      <DialogTitle>New Collage</DialogTitle>
+    <Dialog 
+      open={open} 
+      onClose={handleClose} 
+      maxWidth="sm" 
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 4,
+          background: 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+        }
+      }}
+    >
+      <DialogTitle sx={{ pb: 1, fontWeight: 700 }}>New Collage</DialogTitle>
       <DialogContent>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+            {error}
+          </Alert>
+        )}
+
+        <TextField
+          autoFocus
+          margin="dense"
+          label="Collage Title"
+          fullWidth
+          variant="outlined"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          sx={{ 
+            mb: 2, 
+            mt: 2,
+            '& .MuiOutlinedInput-root': { borderRadius: 2 }
+          }}
+        />
+
+        <TextField
+          margin="dense"
+          label="Subtitle / Description"
+          fullWidth
+          multiline
+          rows={2}
+          variant="outlined"
+          value={subtitle}
+          onChange={(e) => setSubtitle(e.target.value)}
+          sx={{ 
+            mb: 3,
+            '& .MuiOutlinedInput-root': { borderRadius: 2 }
+          }}
+        />
+
         <FormControl fullWidth margin="dense" disabled={albumsLoading || loading}>
-          <InputLabel id="album-select-label">Albums</InputLabel>
+          <InputLabel id="album-select-label">Source Albums</InputLabel>
           <Select
             labelId="album-select-label"
             multiple
             value={albumIds}
-            label="Albums"
+            label="Source Albums"
             onChange={(e) => setAlbumIds(e.target.value as string[])}
+            renderValue={(selected) => (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {selected.map((value) => {
+                  const album = albums.find(a => a._id === value);
+                  return (
+                    <Chip 
+                      key={value} 
+                      label={album?.name || value} 
+                      size="small"
+                      sx={{ borderRadius: 1 }}
+                    />
+                  );
+                })}
+              </Box>
+            )}
             endAdornment={
-              <InputAdornment position="end">
-                <IconButton
-                  onClick={handleRefreshAlbums}
-                  disabled={albumsLoading || loading}
+              <InputAdornment position="end" sx={{ mr: 2 }}>
+                <IconButton 
+                  onClick={handleRefreshAlbums} 
+                  disabled={albumsLoading}
                   size="small"
-                  sx={{ mr: 2 }}
                 >
                   <RefreshIcon fontSize="small" />
                 </IconButton>
               </InputAdornment>
             }
+            sx={{ borderRadius: 2 }}
           >
             {albums.map((album) => (
               <MenuItem key={album._id} value={album._id}>
@@ -117,35 +193,32 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
             ))}
           </Select>
         </FormControl>
-        <TextField
-          autoFocus
-          margin="dense"
-          label="Title"
-          fullWidth
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          disabled={loading}
-        />
-        <TextField
-          margin="dense"
-          label="Subtitle"
-          fullWidth
-          value={subtitle}
-          onChange={(e) => setSubtitle(e.target.value)}
-          disabled={loading}
-        />
-        {error && (
-          <Box color="error.main" mt={1}>
-            {error}
-          </Box>
-        )}
       </DialogContent>
-      <DialogActions>
-        <Button onClick={handleClose} disabled={loading}>
+      <DialogActions sx={{ p: 3, pt: 1 }}>
+        <Button 
+          onClick={handleClose} 
+          disabled={loading}
+          sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, color: 'text.secondary' }}
+        >
           Cancel
         </Button>
-        <Button onClick={handleCreate} variant="contained" color="primary" disabled={loading || !title || albumIds.length === 0}>
-          Create
+        <Button 
+          onClick={handleCreate} 
+          variant="contained" 
+          disabled={loading}
+          sx={{
+            borderRadius: 2,
+            textTransform: 'none',
+            fontWeight: 600,
+            px: 3,
+            background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+            boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)',
+            '&:hover': {
+              boxShadow: '0 6px 16px rgba(139, 92, 246, 0.4)'
+            }
+          }}
+        >
+          {loading ? <CircularProgress size={20} color="inherit" /> : 'Create Collage'}
         </Button>
       </DialogActions>
     </Dialog>

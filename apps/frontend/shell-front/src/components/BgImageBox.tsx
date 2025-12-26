@@ -13,11 +13,13 @@ const BgImageBox = memo(function BgImageBox() {
         height: '100%',
         objectFit: 'cover',
         zIndex: 0,
-        opacity: 0.55,
+        opacity: 0.4,
         pointerEvents: 'none',
         userSelect: 'none',
         // Enable hardware acceleration
-        transform: 'translate3d(0, 0, 0)'
+        transform: 'translate3d(0, 0, 0)',
+        maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.3) 100%)',
+        WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.3) 100%)'
       }}
     />
   );

@@ -9,11 +9,20 @@ import {
   Button,
   Paper,
   Chip,
-  Typography
+  Typography,
+  Collapse,
+  IconButton,
+  useTheme,
+  alpha,
+  InputAdornment
 } from '@mui/material';
 import {
   FilterList as FilterIcon,
-  Clear as ClearIcon
+  Clear as ClearIcon,
+  Search as SearchIcon,
+  Event as EventIcon,
+  Category as CategoryIcon,
+  ExpandMore as ExpandMoreIcon
 } from '@mui/icons-material';
 import { ActivityType } from '../api/types';
 import { getActivityTypes } from '../api/activityTypes';
@@ -37,10 +46,12 @@ const ActivitiesFilter: React.FC<ActivitiesFilterProps> = React.memo(({
   onFiltersChange,
   onClearFilters
 }) => {
+  const theme = useTheme();
   // Local state for description input to avoid immediate filtering
   const [localDescription, setLocalDescription] = useState(filters.description || '');
   const [activityTypes, setActivityTypes] = useState<ActivityType[]>([]);
   const [loadingTypes, setLoadingTypes] = useState(true);
+  const [expanded, setExpanded] = useState(true);
 
   // Get current tenant context for filtering
   const tenantGroupId = useTenantFilter();
@@ -172,11 +183,30 @@ const ActivitiesFilter: React.FC<ActivitiesFilterProps> = React.memo(({
   }, [filters, handleFilterChange]);
 
   return (
-    <Paper sx={{ p: 2, mb: 2 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: hasActiveFilters ? 2 : 1 }}>
+    <Paper 
+      elevation={0}
+      sx={{ 
+        mb: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 2,
+        overflow: 'hidden'
+      }}
+    >
+      <Box 
+        sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between', 
+          p: 2,
+          bgcolor: alpha(theme.palette.primary.main, 0.04),
+          cursor: 'pointer'
+        }}
+        onClick={() => setExpanded(!expanded)}
+      >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <FilterIcon color="action" />
-          <Typography variant="h6" component="span">
+          <FilterIcon color="primary" />
+          <Typography variant="subtitle1" fontWeight={600}>
             Filters
           </Typography>
           {hasActiveFilters && (
@@ -184,123 +214,143 @@ const ActivitiesFilter: React.FC<ActivitiesFilterProps> = React.memo(({
               label={getActiveFiltersCount()}
               size="small"
               color="primary"
-              sx={{ minWidth: 24, height: 24 }}
+              sx={{ height: 20, minWidth: 20, fontSize: '0.75rem' }}
             />
           )}
         </Box>
         
-        {hasActiveFilters && (
-          <Button
-            size="small"
-            startIcon={<ClearIcon />}
-            onClick={onClearFilters}
-            sx={{ minWidth: 'auto' }}
-          >
-            Clear All
-          </Button>
-        )}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {hasActiveFilters && (
+            <Button
+              size="small"
+              startIcon={<ClearIcon />}
+              onClick={(e) => {
+                e.stopPropagation();
+                onClearFilters();
+              }}
+              sx={{ minWidth: 'auto', mr: 1 }}
+            >
+              Clear
+            </Button>
+          )}
+          <IconButton size="small" sx={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+            <ExpandMoreIcon />
+          </IconButton>
+        </Box>
       </Box>
 
-      {hasActiveFilters && (
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-          {renderFilterChips()}
-        </Box>
-      )}
+      <Collapse in={expanded}>
+        <Box sx={{ p: 2 }}>
+          {hasActiveFilters && (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+              {renderFilterChips()}
+            </Box>
+          )}
 
-      <Box 
-        sx={{ 
-          display: 'grid',
-          gridTemplateColumns: { 
-            xs: '1fr', 
-            sm: '1fr 1fr', 
-            md: '1fr 1fr 1fr 1fr' 
-          },
-          gap: 2
-        }}
-      >
-        <FormControl fullWidth size="small">
-          <InputLabel>Activity Type</InputLabel>
-          <Select
-            value={filters.activityType || ''}
-            onChange={(e) => handleFilterChange('activityType', e.target.value)}
-            label="Activity Type"
-            disabled={loadingTypes}
-            MenuProps={{
-              PaperProps: {
-                sx: {
-                  maxHeight: 300,
-                  '&::-webkit-scrollbar': {
-                    width: '6px',
-                  },
-                  '&::-webkit-scrollbar-track': {
-                    backgroundColor: 'rgba(0,0,0,0.1)',
-                    borderRadius: '3px',
-                  },
-                  '&::-webkit-scrollbar-thumb': {
-                    backgroundColor: 'rgba(0,0,0,0.3)',
-                    borderRadius: '3px',
-                    '&:hover': {
-                      backgroundColor: 'rgba(0,0,0,0.5)',
-                    },
-                  },
-                },
+          <Box 
+            sx={{ 
+              display: 'grid',
+              gridTemplateColumns: { 
+                xs: '1fr', 
+                sm: '1fr 1fr', 
+                md: '1fr 1fr 1fr 1fr' 
               },
-              anchorOrigin: {
-                vertical: 'bottom',
-                horizontal: 'left',
-              },
-              transformOrigin: {
-                vertical: 'top',
-                horizontal: 'left',
-              },
+              gap: 2
             }}
           >
-            <MenuItem value="">
-              <em>All Types</em>
-            </MenuItem>
-            {activityTypes && activityTypes.map((type) => (
-              <MenuItem key={type._id} value={type.slug}>
-                {type.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+            <FormControl fullWidth size="small">
+              <InputLabel>Activity Type</InputLabel>
+              <Select
+                value={filters.activityType || ''}
+                onChange={(e) => handleFilterChange('activityType', e.target.value)}
+                label="Activity Type"
+                disabled={loadingTypes}
+                startAdornment={
+                  <InputAdornment position="start">
+                    <CategoryIcon fontSize="small" color="action" />
+                  </InputAdornment>
+                }
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      maxHeight: 300,
+                      borderRadius: 2,
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                      '&::-webkit-scrollbar': { width: '6px' },
+                      '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
+                      '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(0,0,0,0.1)', borderRadius: '3px' },
+                    },
+                  },
+                }}
+              >
+                <MenuItem value="">
+                  <em>All Types</em>
+                </MenuItem>
+                {activityTypes && activityTypes.map((type) => (
+                  <MenuItem key={type._id} value={type.slug}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: type.color }} />
+                      {type.name}
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-        <TextField
-          fullWidth
-          size="small"
-          label="Start Date"
-          type="date"
-          value={filters.startDate || ''}
-          onChange={(e) => handleFilterChange('startDate', e.target.value)}
-          InputLabelProps={{
-            shrink: true,
-          }}
-        />
+            <TextField
+              fullWidth
+              size="small"
+              label="Start Date"
+              type="date"
+              value={filters.startDate || ''}
+              onChange={(e) => handleFilterChange('startDate', e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <EventIcon fontSize="small" color="action" />
+                  </InputAdornment>
+                ),
+              }}
+            />
 
-        <TextField
-          fullWidth
-          size="small"
-          label="End Date"
-          type="date"
-          value={filters.endDate || ''}
-          onChange={(e) => handleFilterChange('endDate', e.target.value)}
-          InputLabelProps={{
-            shrink: true,
-          }}
-        />
+            <TextField
+              fullWidth
+              size="small"
+              label="End Date"
+              type="date"
+              value={filters.endDate || ''}
+              onChange={(e) => handleFilterChange('endDate', e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <EventIcon fontSize="small" color="action" />
+                  </InputAdornment>
+                ),
+              }}
+            />
 
-        <TextField
-          fullWidth
-          size="small"
-          label="Search Description"
-          value={localDescription}
-          onChange={handleDescriptionChange}
-          onKeyPress={handleDescriptionKeyPress}
-          onBlur={handleDescriptionBlur}
-          placeholder="Type to search descriptions..."
-        />
-      </Box>
+            <TextField
+              fullWidth
+              size="small"
+              label="Search Description"
+              value={localDescription}
+              onChange={handleDescriptionChange}
+              onKeyPress={handleDescriptionKeyPress}
+              onBlur={handleDescriptionBlur}
+              placeholder="Search..."
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" color="action" />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Box>
+        </Box>
+      </Collapse>
     </Paper>
   );
 });

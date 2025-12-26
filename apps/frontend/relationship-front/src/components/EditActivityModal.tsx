@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { IconButton } from '@mui/material';
+import { IconButton, alpha } from '@mui/material';
 import { Edit } from '@mui/icons-material';
 import { Activity, UpdateActivityRequest } from '../api/types';
 import { updateActivity } from '../api/activities';
@@ -39,8 +39,21 @@ const EditActivityModal: React.FC<EditActivityModalProps> = ({ activity, buttonP
 
   return (
     <>
-      <IconButton color="primary" onClick={handleOpenModal} size="small" {...buttonProps} aria-label="Edit Activity">
-        <Edit />
+      <IconButton 
+        color="primary" 
+        onClick={handleOpenModal} 
+        size="small" 
+        {...buttonProps} 
+        aria-label="Edit Activity"
+        sx={{
+          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
+          '&:hover': {
+            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.2),
+          },
+          ...buttonProps.sx
+        }}
+      >
+        <Edit fontSize="small" />
       </IconButton>
       <ActivityForm
         open={isFormOpen}

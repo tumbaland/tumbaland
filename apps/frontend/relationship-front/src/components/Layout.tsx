@@ -10,7 +10,7 @@ const Layout = ({ children }: LayoutProps) => {
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)',
+        background: 'radial-gradient(circle at 50% 0%, #f0f9ff 0%, #e0f2fe 50%, #ffffff 100%)',
         display: 'flex'
       }}
     >

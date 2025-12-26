@@ -69,9 +69,9 @@ const HoursBarChart: React.FC<BarChartProps> = ({ title = 'Activities per Month 
 
   if (loading) {
     return (
-      <Card elevation={2}>
+      <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom>
+          <Typography variant="h6" gutterBottom fontWeight="bold">
             {title}
           </Typography>
           <Box display="flex" justifyContent="center" alignItems="center" height={height}>
@@ -84,9 +84,9 @@ const HoursBarChart: React.FC<BarChartProps> = ({ title = 'Activities per Month 
 
   if (error) {
     return (
-      <Card elevation={2}>
+      <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom>
+          <Typography variant="h6" gutterBottom fontWeight="bold">
             {title}
           </Typography>
           <Alert severity="error">{error}</Alert>
@@ -97,9 +97,9 @@ const HoursBarChart: React.FC<BarChartProps> = ({ title = 'Activities per Month 
 
   if (data.length === 0) {
     return (
-      <Card elevation={2}>
+      <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom>
+          <Typography variant="h6" gutterBottom fontWeight="bold">
             {title}
           </Typography>
           <Box display="flex" justifyContent="center" alignItems="center" height={height}>
@@ -149,16 +149,25 @@ const HoursBarChart: React.FC<BarChartProps> = ({ title = 'Activities per Month 
   const peakActivities = Math.max(...data.map((d) => d.totalActivities));
 
   return (
-    <Card elevation={2}>
+    <Card 
+      elevation={0}
+      sx={{
+        height: '100%',
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 3
+      }}
+    >
       <CardContent>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h6">{title}</Typography>
+          <Typography variant="h6" fontWeight="bold">{title}</Typography>
           <FormControl size="small" sx={{ minWidth: 120 }}>
             <InputLabel>Year</InputLabel>
             <Select
               value={selectedYear || 'all'}
               label="Year"
               onChange={(e) => setSelectedYear(e.target.value === 'all' ? undefined : Number(e.target.value))}
+              sx={{ borderRadius: 2 }}
             >
               <MenuItem value="all">All Years</MenuItem>
               {availableYears.map((yearOption) => (

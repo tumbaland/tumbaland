@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Box, Switch } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
+import SettingsIcon from '@mui/icons-material/Settings';
 import SaveIcon from '@mui/icons-material/Save';
 import PaletteIcon from '@mui/icons-material/Palette';
 import TextFieldsIcon from '@mui/icons-material/TextFields';
 import OpacityIcon from '@mui/icons-material/Opacity';
 import BorderColorIcon from '@mui/icons-material/BorderColor';
+import { Tooltip } from '@mui/material';
 
 interface CollageMenuProps {
   onSave: () => void;
@@ -61,29 +62,53 @@ const CollageMenu: React.FC<CollageMenuProps> = ({
   const handleMenuClose = () => {
     setAnchorEl(null);
   };
-  const handleSave = () => {
-    onSave();
-    handleMenuClose();
-  };
 
   return (
-    <>
-      <IconButton color="primary" onClick={handleMenuOpen} disabled={disabled} size="large">
-        <AddIcon />
-      </IconButton>
-      <Menu anchorEl={anchorEl} open={open} onClose={handleMenuClose}>
-        <MenuItem onClick={handleSave} disabled={disabled}>
+    <Box display="flex" gap={1}>
+      <Tooltip title="Collage Settings">
+        <IconButton 
+          onClick={handleMenuOpen} 
+          disabled={disabled}
+          size="small"
+          sx={{ 
+            color: 'text.secondary',
+            opacity: 0.5,
+            '&:hover': { opacity: 1, bgcolor: 'rgba(255,255,255,0.2)' }
+          }}
+        >
+          <SettingsIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+
+      <Menu 
+        anchorEl={anchorEl} 
+        open={open} 
+        onClose={handleMenuClose}
+        PaperProps={{
+          sx: {
+            mt: 1.5,
+            borderRadius: 2,
+            minWidth: 250,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+          }
+        }}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+      >
+        <MenuItem onClick={() => { onSave(); handleMenuClose(); }} disabled={disabled}>
           <ListItemIcon>
             <SaveIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary="Save Collage" />
         </MenuItem>
+
         <MenuItem onClick={onAddTextBox} disabled={disabled}>
           <ListItemIcon>
             <TextFieldsIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary="Add Text Box" />
         </MenuItem>
+        
         <MenuItem disabled={disabled}>
           <ListItemIcon>
             <PaletteIcon fontSize="small" />
@@ -94,22 +119,40 @@ const CollageMenu: React.FC<CollageMenuProps> = ({
             type="color"
             value={color}
             onChange={handleColorChange}
-            sx={{ ml: 2, border: 0, background: 'none', width: 32, height: 32, p: 0, minWidth: 0 }}
+            sx={{ 
+              ml: 2, 
+              border: '1px solid #ddd', 
+              borderRadius: 1,
+              width: 32, 
+              height: 32, 
+              p: 0.5, 
+              cursor: 'pointer'
+            }}
           />
         </MenuItem>
+        
         <MenuItem disabled={disabled}>
           <ListItemIcon>
             <BorderColorIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText primary="Border Color" />
+          <ListItemText primary="Frame Color" />
           <Box
             component="input"
             type="color"
             value={border}
             onChange={handleBorderColorChange}
-            sx={{ ml: 2, border: 0, background: 'none', width: 32, height: 32, p: 0, minWidth: 0 }}
+            sx={{ 
+              ml: 2, 
+              border: '1px solid #ddd', 
+              borderRadius: 1,
+              width: 32, 
+              height: 32, 
+              p: 0.5, 
+              cursor: 'pointer'
+            }}
           />
         </MenuItem>
+        
         <MenuItem 
           onClick={() => onPhotoTransparencyModeChange && onPhotoTransparencyModeChange(!photoTransparencyMode)}
           disabled={disabled}
@@ -117,15 +160,15 @@ const CollageMenu: React.FC<CollageMenuProps> = ({
           <ListItemIcon>
             <OpacityIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText primary="Transparent Photo Backgrounds" />
+          <ListItemText primary="Photo Frames" />
           <Switch
-            checked={photoTransparencyMode}
+            checked={!photoTransparencyMode}
             size="small"
             sx={{ ml: 1 }}
           />
         </MenuItem>
       </Menu>
-    </>
+    </Box>
   );
 };
 

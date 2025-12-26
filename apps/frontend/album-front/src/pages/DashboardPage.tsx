@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
+  Container,
   Typography,
   CircularProgress,
-  Alert
+  Alert,
+  Button,
+  Stack
 } from '@mui/material';
-import { Dashboard as DashboardIcon } from '@mui/icons-material';
+import { 
+  Dashboard as DashboardIcon,
+  PhotoLibrary as PhotoLibraryIcon,
+  AutoAwesome as AutoAwesomeIcon
+} from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 import { albumService } from '../services/albumService';
 import { AlbumStatistics } from '../types';
 import { useTenantFilter } from '../components/tenant';
@@ -17,6 +25,7 @@ import AIAnalysisChart from '../components/dashboard/AIAnalysisChart';
 import GroupDistributionChart from '../components/dashboard/GroupDistributionChart';
 
 const DashboardPage: React.FC = () => {
+  const navigate = useNavigate();
   const selectedGroupId = useTenantFilter();
 
   const [statistics, setStatistics] = useState<AlbumStatistics | null>(null);
@@ -50,7 +59,7 @@ const DashboardPage: React.FC = () => {
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          minHeight: '400px'
+          minHeight: '60vh'
         }}
       >
         <CircularProgress />
@@ -60,28 +69,90 @@ const DashboardPage: React.FC = () => {
 
   if (error) {
     return (
-      <Box sx={{ p: 3 }}>
+      <Container maxWidth="xl" sx={{ py: 4 }}>
         <Alert severity="error">{error}</Alert>
-      </Box>
+      </Container>
     );
   }
 
   if (!statistics) {
     return (
-      <Box sx={{ p: 3 }}>
+      <Container maxWidth="xl" sx={{ py: 4 }}>
         <Alert severity="info">No statistics data available</Alert>
-      </Box>
+      </Container>
     );
   }
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 } }}>
-      {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
-        <DashboardIcon sx={{ mr: 2, color: '#667eea' }} />
-        <Typography variant="h4" sx={{ fontWeight: 600, color: '#1e293b' }}>
-          Dashboard
-        </Typography>
+    <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 4 }, px: { xs: 1, sm: 3 } }}>
+      {/* Header & Actions */}
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={{ xs: 3, sm: 5 }}
+        sx={{
+          flexDirection: { xs: 'column', sm: 'row' },
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          gap: { xs: 2, sm: 0 }
+        }}
+      >
+        <Box display="flex" alignItems="center">
+          <DashboardIcon sx={{ mr: 2, fontSize: 32, color: '#667eea' }} />
+          <Typography 
+            variant="h4" 
+            component="h1" 
+            sx={{ 
+              fontWeight: 700,
+              background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+              backgroundClip: 'text',
+              textFillColor: 'transparent',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
+            }}
+          >
+            Dashboard
+          </Typography>
+        </Box>
+
+        <Stack direction="row" spacing={2}>
+          <Button
+            variant="outlined"
+            startIcon={<PhotoLibraryIcon />}
+            onClick={() => navigate('/albums')}
+            sx={{
+              borderRadius: 3,
+              textTransform: 'none',
+              fontWeight: 600,
+              borderColor: '#667eea',
+              color: '#667eea',
+              '&:hover': {
+                borderColor: '#5a67d8',
+                backgroundColor: 'rgba(102, 126, 234, 0.04)'
+              }
+            }}
+          >
+            View Albums
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<AutoAwesomeIcon />}
+            onClick={() => navigate('/collages')}
+            sx={{
+              borderRadius: 3,
+              textTransform: 'none',
+              fontWeight: 600,
+              borderColor: '#8b5cf6',
+              color: '#8b5cf6',
+              '&:hover': {
+                borderColor: '#7c3aed',
+                backgroundColor: 'rgba(139, 92, 246, 0.04)'
+              }
+            }}
+          >
+            View Collages
+          </Button>
+        </Stack>
       </Box>
 
       {/* Statistics Overview Cards */}
@@ -96,7 +167,8 @@ const DashboardPage: React.FC = () => {
             lg: '2fr 1fr'
           },
           gap: 3,
-          mt: 2
+          mt: 2,
+          alignItems: 'start'
         }}
       >
         {/* Time Series Charts */}
@@ -139,7 +211,7 @@ const DashboardPage: React.FC = () => {
           <GroupDistributionChart groups={statistics.groups} />
         </Box>
       </Box>
-    </Box>
+    </Container>
   );
 };
 

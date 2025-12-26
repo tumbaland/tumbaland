@@ -10,8 +10,6 @@ import {
   Box,
   Alert,
   CircularProgress,
-  IconButton,
-  InputAdornment,
   Typography,
   FormControl
 } from '@mui/material';
@@ -211,14 +209,23 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
         onClose={handleClose}
         maxWidth="sm"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: '0 12px 40px rgba(0,0,0,0.12)',
+            overflow: 'hidden'
+          }
+        }}
       >
-        <DialogTitle>{title || (isEditMode ? 'Edit Activity' : 'Add New Activity')}</DialogTitle>
+        <DialogTitle sx={{ pb: 1, fontWeight: 600 }}>
+          {title || (isEditMode ? 'Edit Activity' : 'Add New Activity')}
+        </DialogTitle>
 
         <form onSubmit={handleSubmit}>
           <DialogContent>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 1 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 1 }}>
               {errors.length > 0 && (
-                <Alert severity="error">
+                <Alert severity="error" sx={{ borderRadius: 2 }}>
                   <ul style={{ margin: 0, paddingLeft: '20px' }}>
                     {errors.map((error, index) => (
                       <li key={index}>{error}</li>
@@ -227,32 +234,38 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
                 </Alert>
               )}
               {(activityTypes || []).length === 0 && !loadingTypes && (
-                <Alert severity="info">
+                <Alert severity="info" sx={{ borderRadius: 2 }}>
                   No activity types available. Create your first activity type below.
                 </Alert>
               )}
-              <TextField
-                label="Date"
-                type="date"
-                value={formData.date}
-                onChange={(e) => {
-                  setFormData((prev) => ({ ...prev, date: e.target.value }));
-                }}
-                fullWidth
-                required
-              />
-              <TextField
-                label="Duration (hours) - Optional"
-                type="number"
-                value={formData.hours === null ? '' : String(formData.hours)}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    hours: e.target.value === '' ? null : Number(e.target.value) || null
-                  }))
-                }
-                fullWidth
-              />
+              
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  label="Date"
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => {
+                    setFormData((prev) => ({ ...prev, date: e.target.value }));
+                  }}
+                  fullWidth
+                  required
+                  InputLabelProps={{ shrink: true }}
+                />
+                <TextField
+                  label="Duration (hours)"
+                  type="number"
+                  value={formData.hours === null ? '' : String(formData.hours)}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      hours: e.target.value === '' ? null : Number(e.target.value) || null
+                    }))
+                  }
+                  fullWidth
+                  placeholder="Optional"
+                />
+              </Box>
+
               <TextField
                 label="Activity Type"
                 select
@@ -266,27 +279,36 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
                 fullWidth
                 required
                 disabled={loadingTypes}
-                InputProps={{
-                  endAdornment: !loadingTypes && (
-                    <InputAdornment position="end">
-                      <IconButton
-                        size="small"
-                        onClick={() => setShowCreateType(true)}
-                        sx={{ mr: 1 }}
-                      >
-                        <AddIcon />
-                      </IconButton>
-                    </InputAdornment>
-                  )
+                SelectProps={{
+                  MenuProps: { PaperProps: { sx: { maxHeight: 300, borderRadius: 2 } } }
                 }}
               >
                 {(activityTypes || []).map((type) => (
                   <MenuItem key={type._id} value={type._id}>
-                    {type.name}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Box 
+                        sx={{ 
+                          width: 12, 
+                          height: 12, 
+                          borderRadius: '50%', 
+                          bgcolor: type.color || '#ccc' 
+                        }} 
+                      />
+                      {type.name}
+                    </Box>
                   </MenuItem>
                 ))}
                 {!loadingTypes && (
-                  <MenuItem onClick={() => setShowCreateType(true)}>
+                  <MenuItem 
+                    onClick={() => setShowCreateType(true)}
+                    sx={{ 
+                      borderTop: '1px solid', 
+                      borderColor: 'divider',
+                      color: 'primary.main',
+                      fontWeight: 500,
+                      mt: 1
+                    }}
+                  >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <AddIcon fontSize="small" />
                       Create new activity type
@@ -294,13 +316,15 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
                   </MenuItem>
                 )}
               </TextField>
+
               <TextField
-                label="Description - Optional"
+                label="Description"
                 multiline
                 rows={3}
                 value={formData.description}
                 onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                 fullWidth
+                placeholder="Optional details about the activity..."
                 inputProps={{ maxLength: 500 }}
                 helperText={`${formData.description.length}/500 characters`}
               />
@@ -315,15 +339,16 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
             </Box>
           </DialogContent>
 
-          <DialogActions>
-            <Button onClick={handleClose} disabled={loading}>
+          <DialogActions sx={{ px: 3, pb: 3 }}>
+            <Button onClick={handleClose} disabled={loading} color="inherit">
               Cancel
             </Button>
             <Button
               type="submit"
               variant="contained"
               disabled={loading || loadingTypes}
-              startIcon={loading ? <CircularProgress size={20} /> : null}
+              startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+              sx={{ px: 3 }}
             >
               {loading ? 'Saving...' : isEditMode ? 'Update' : 'Create'}
             </Button>
@@ -337,8 +362,15 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
         onClose={() => !creatingType && setShowCreateType(false)}
         maxWidth="sm"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: '0 12px 40px rgba(0,0,0,0.12)',
+            overflow: 'hidden'
+          }
+        }}
       >
-        <DialogTitle>Create New Activity Type</DialogTitle>
+        <DialogTitle sx={{ pb: 1, fontWeight: 600 }}>Create New Activity Type</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
             <TextField
@@ -350,13 +382,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
               disabled={creatingType}
               autoFocus
             />
-            <TextField
-              label="Slug"
-              value={newTypeSlug}
-              disabled
-              fullWidth
-              helperText="Auto-generated from name"
-            />
+            
             <TextField
               label="Description"
               value={newTypeDescription}
@@ -365,37 +391,43 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
               multiline
               rows={2}
               disabled={creatingType}
+              placeholder="Optional description"
             />
+            
             <FormControl fullWidth>
-              <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
-                Color
+              <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
+                Color Label
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <input
+                <Box
+                  component="input"
                   type="color"
                   value={newTypeColor}
                   onChange={(e) => setNewTypeColor(e.target.value)}
                   disabled={creatingType}
-                  style={{
-                    width: '60px',
-                    height: '40px',
-                    border: '2px solid #ccc',
-                    borderRadius: '4px',
+                  sx={{
+                    width: 60,
+                    height: 40,
+                    p: 0,
+                    border: 'none',
+                    borderRadius: 1,
                     cursor: 'pointer',
-                    background: 'none'
+                    '&::-webkit-color-swatch-wrapper': { p: 0 },
+                    '&::-webkit-color-swatch': { border: 'none', borderRadius: 4 }
                   }}
                 />
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                <Typography variant="body2" sx={{ fontFamily: 'monospace', color: 'text.secondary' }}>
                   {newTypeColor}
                 </Typography>
               </Box>
             </FormControl>
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
           <Button
             onClick={() => setShowCreateType(false)}
             disabled={creatingType}
+            color="inherit"
           >
             Cancel
           </Button>
@@ -403,7 +435,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
             onClick={handleCreateActivityType}
             variant="contained"
             disabled={creatingType || !newTypeName.trim()}
-            startIcon={creatingType ? <CircularProgress size={20} /> : null}
+            startIcon={creatingType ? <CircularProgress size={20} color="inherit" /> : null}
           >
             {creatingType ? 'Creating...' : 'Create'}
           </Button>

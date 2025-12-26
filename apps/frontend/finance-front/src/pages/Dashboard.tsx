@@ -38,7 +38,6 @@ const Dashboard: React.FC = () => {
   return (
     <Box sx={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
       py: { xs: 2, md: 4 },
       px: { xs: 2, md: 4 }
     }}>
@@ -94,12 +93,11 @@ const Dashboard: React.FC = () => {
 
       {!dashboardData && !isLoading && (
         <Card
+          elevation={0}
           sx={{
             borderRadius: 3,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-            background: 'rgba(255,255,255,0.95)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid rgba(255,255,255,0.2)',
+            border: '1px solid',
+            borderColor: 'divider',
             textAlign: 'center',
             py: 6
           }}

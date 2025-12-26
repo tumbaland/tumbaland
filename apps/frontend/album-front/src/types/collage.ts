@@ -41,6 +41,7 @@ export interface Collage {
   ownerId: string;
   createdAt: string;
   updatedAt: string;
+  thumbnail?: string;
 }
 
 export interface CollageInput {

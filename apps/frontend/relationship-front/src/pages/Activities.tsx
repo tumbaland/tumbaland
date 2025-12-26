@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Box, Typography, Paper, CircularProgress, Alert } from '@mui/material';
+import { Box, Typography, CircularProgress, Alert } from '@mui/material';
 import { useActivities } from '../hooks/useActivities';
 import AddActivityModal from '../components/AddActivityModal';
 import ActivitiesTable from '../components/ActivitiesTable';
@@ -7,7 +7,7 @@ import ActivitiesFilter, { ActivityFilters } from '../components/ActivitiesFilte
 import { useTenantFilter } from '../components/tenant';
 
 const Activities: React.FC = () => {
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
   const [sortBy, setSortBy] = useState<string>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
@@ -91,7 +91,7 @@ const Activities: React.FC = () => {
     );
   }
   return (
-    <Box sx={{ p: 3, overflowX: 'hidden' }}>
+    <Box sx={{ p: { xs: 2, sm: 3 }, overflowX: 'hidden' }}>
       <Box
         sx={{
           display: 'flex',
@@ -114,38 +114,16 @@ const Activities: React.FC = () => {
         onClearFilters={handleClearFilters}
       />
 
-      <Paper
-        sx={{
-          width: '100%',
-          overflowX: 'auto',
-          boxShadow: { xs: 'none', sm: undefined },
-          '&::-webkit-scrollbar': {
-            height: '6px',
-          },
-          '&::-webkit-scrollbar-track': {
-            backgroundColor: 'rgba(0,0,0,0.1)',
-            borderRadius: '3px',
-          },
-          '&::-webkit-scrollbar-thumb': {
-            backgroundColor: 'rgba(0,0,0,0.3)',
-            borderRadius: '3px',
-            '&:hover': {
-              backgroundColor: 'rgba(0,0,0,0.5)',
-            },
-          },
-        }}
-      >
-        <ActivitiesTable
-          activities={activities}
-          sortBy={sortBy}
-          sortOrder={sortOrder}
-          handleSort={handleSort}
-          formatDate={formatDate}
-          refetch={refetch}
-          rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={handleRowsPerPageChange}
-        />
-      </Paper>
+      <ActivitiesTable
+        activities={activities}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        handleSort={handleSort}
+        formatDate={formatDate}
+        refetch={refetch}
+        rowsPerPage={rowsPerPage}
+        onRowsPerPageChange={handleRowsPerPageChange}
+      />
     </Box>
   );
 };

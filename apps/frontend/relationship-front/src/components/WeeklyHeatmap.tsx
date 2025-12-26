@@ -130,16 +130,13 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({ title = 'Activity Heatmap
   if (loading) {
     return (
       <Card
-        elevation={2}
+        elevation={0}
         sx={{
-          maxWidth: { xs: '100vw', sm: 900 },
-          width: { xs: '100vw', sm: '100%' },
+          width: '100%',
           boxSizing: 'border-box',
-          mx: { xs: -2, sm: 'auto' }, // allow card to stretch edge-to-edge on mobile
-          px: { xs: 0, sm: 0 },
-          borderRadius: { xs: 0, sm: 2 },
-          // Remove box-shadow on mobile for a flatter look
-          boxShadow: { xs: 'none', sm: undefined }
+          borderRadius: 3,
+          border: '1px solid',
+          borderColor: 'divider'
         }}
       >
         <CardContent sx={{ px: { xs: 1, sm: 2 }, py: { xs: 1, sm: 2 } }}>
@@ -156,7 +153,7 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({ title = 'Activity Heatmap
 
   if (error) {
     return (
-      <Card elevation={2}>
+      <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
             {title}
@@ -170,14 +167,12 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({ title = 'Activity Heatmap
   const weeks = generateCalendarGrid();
 
   return (
-    <Card elevation={2}>
+    <Card elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
       <CardContent
         sx={{
           p: { xs: 1, sm: 2 },
           width: '100%',
-          maxWidth: { xs: '100vw', sm: 900 },
-          boxSizing: 'border-box',
-          mx: 'auto'
+          boxSizing: 'border-box'
         }}
       >
         <Box
@@ -214,9 +209,7 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({ title = 'Activity Heatmap
             overflowX: 'auto',
             pb: 2,
             display: 'flex',
-            justifyContent: { xs: 'flex-start', sm: 'center' },
-            width: '100%',
-            maxWidth: '100vw'
+            width: '100%'
           }}
         >
           <Box
@@ -225,7 +218,8 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({ title = 'Activity Heatmap
               gap: 1,
               minWidth: { xs: 'unset', sm: 800 },
               width: { xs: '100%', sm: 'auto' },
-              maxWidth: { xs: '100vw', sm: 900 }
+              maxWidth: { xs: '100%', sm: 900 },
+              mx: { xs: 0, sm: 'auto' }
             }}
           >
             {/* Day labels */}

@@ -177,7 +177,7 @@ const AlbumDetailPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
+    <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 4 }, px: { xs: 1, sm: 3 } }}>
       <AlbumHeader
         album={album}
         onNavigateBack={() => navigate('/albums')}

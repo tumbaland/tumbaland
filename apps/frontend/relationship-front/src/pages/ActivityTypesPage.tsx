@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Paper, Container, Button } from '@mui/material';
+import { Box, Typography, Container, Button } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import ActivityTypesManagement from '../components/ActivityTypesManagement';
 import { useTenantFilter } from '../components/tenant';
@@ -31,14 +31,23 @@ const ActivityTypesPage: React.FC = () => {
               const event = new CustomEvent('openCreateActivityTypeDialog');
               window.dispatchEvent(event);
             }}
+            sx={{ 
+              bgcolor: 'primary.main',
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 600,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              '&:hover': {
+                bgcolor: 'primary.dark',
+                boxShadow: '0 6px 16px rgba(0,0,0,0.15)',
+              }
+            }}
           >
             Add Activity Type
           </Button>
         </Box>
 
-        <Paper sx={{ p: 3 }}>
-          <ActivityTypesManagement groupId={groupId} />
-        </Paper>
+        <ActivityTypesManagement groupId={groupId} />
       </Box>
     </Container>
   );

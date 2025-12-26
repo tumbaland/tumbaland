@@ -11,7 +11,8 @@ import {
 import {
   Close as CloseIcon,
   NavigateBefore as NavigateBeforeIcon,
-  NavigateNext as NavigateNextIcon
+  NavigateNext as NavigateNextIcon,
+  Download as DownloadIcon
 } from '@mui/icons-material';
 import { Photo } from '../types';
 
@@ -66,6 +67,26 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
     };
   }, [open, onPrevious, onNext, onClose]);
 
+  const handleDownload = async () => {
+    if (!selectedPhoto || !selectedPhoto.signedUrl) return;
+    
+    try {
+      const response = await fetch(selectedPhoto.signedUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = selectedPhoto.originalName || `photo-${selectedPhoto._id}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download failed:', error);
+      window.open(selectedPhoto.signedUrl, '_blank');
+    }
+  };
+
   if (!selectedPhoto) return null;
 
   return (
@@ -73,6 +94,13 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
       open={open}
       onClose={onClose}
       fullScreen
+      PaperProps={{
+        sx: {
+          backgroundColor: 'transparent',
+          backgroundImage: 'none',
+          boxShadow: 'none'
+        }
+      }}
     >
       <DialogContent
         sx={{
@@ -96,10 +124,28 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
             left: 0,
             width: '100vw',
             height: '100vh',
-            bgcolor: 'rgba(0,0,0,0.5)',
+            bgcolor: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(5px)',
+            WebkitBackdropFilter: 'blur(5px)',
             zIndex: 1
           }}
         />
+
+        {/* Download Button */}
+        <IconButton
+          onClick={handleDownload}
+          sx={{
+            position: 'absolute',
+            top: 16,
+            right: 72,
+            color: 'white',
+            bgcolor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 3,
+            '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.7)' }
+          }}
+        >
+          <DownloadIcon />
+        </IconButton>
 
         {/* Close Button */}
         <IconButton
@@ -122,6 +168,7 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
           <IconButton
             onClick={onPrevious}
             sx={{
+              display: { xs: 'none', sm: 'flex' },
               position: 'absolute',
               left: 16,
               top: '50%',
@@ -143,6 +190,7 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
           <IconButton
             onClick={onNext}
             sx={{
+              display: { xs: 'none', sm: 'flex' },
               position: 'absolute',
               right: 16,
               top: '50%',

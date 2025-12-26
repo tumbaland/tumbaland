@@ -32,7 +32,13 @@ const TickerHistoryTable: React.FC<TickerHistoryTableProps> = ({ rows, onDeleteR
       <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>
         Price History
       </Typography>
-      <TableContainer sx={{ maxHeight: 240, borderRadius: 2, boxShadow: 1, overflowX: 'auto' }}>
+      <TableContainer sx={{ 
+        maxHeight: 240, 
+        borderRadius: 3, 
+        border: '1px solid',
+        borderColor: 'divider',
+        overflowX: 'auto' 
+      }}>
         <Table size="small" stickyHeader aria-label="price history table">
           <TableHead>
             <TableRow>

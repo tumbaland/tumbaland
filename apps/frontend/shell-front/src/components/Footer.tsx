@@ -16,15 +16,17 @@ const Footer: React.FC<FooterProps> = ({ isVisible }) => {
       sx={{
         width: { xs: '100%', sm: 'calc(100% - 60px)' }, // Account for sidebar width on desktop
         height: '32px',
-        backgroundColor: 'rgba(248, 250, 252)',
+        backgroundColor: 'rgba(255, 255, 255, 0.4)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        borderTop: '1px solid rgba(255, 255, 255, 0.3)',
         display: { xs: 'none', sm: 'flex' }, // Hide on extra small screens, show on small and up
         alignItems: 'center',
         justifyContent: 'space-between',
         px: { xs: 1.5, sm: 2 },
         position: 'relative',
         left: { xs: 0, sm: '60px' }, // Move footer to the right of sidebar on desktop
-        zIndex: 15,
-        WebkitBackdropFilter: 'blur(8px)'
+        zIndex: 15
       }}
     >
       {/* Left side - GitHub link */}

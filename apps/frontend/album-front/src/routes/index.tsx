@@ -14,8 +14,8 @@ const AppRoutes = () => {
       <Route path="albums" element={<AlbumsPage />} />
       <Route path="albums/:albumId" element={<AlbumDetailPage />} />
       <Route path="albums/:albumId/photos/:photoId" element={<PhotoDetailPage />} />
-      <Route path="collage" element={<CollageListPage />} />
-      <Route path="collage/:id" element={<CollageDetailsPage />} />
+      <Route path="collages" element={<CollageListPage />} />
+      <Route path="collages/:id" element={<CollageDetailsPage />} />
     </Routes>
   );
 };

@@ -48,11 +48,11 @@ export function SideMenu({ currentRoute }: SideMenuProps) {
         alignItems: 'center',
         pt: 9,
         zIndex: 1,
-        background: 'rgba(255,255,255,0.08)',
+        background: 'rgba(255,255,255,0.4)',
         backdropFilter: 'blur(12px) saturate(180%)',
         WebkitBackdropFilter: 'blur(12px) saturate(180%)',
-        borderRight: '1.5px solid rgba(255,255,255,0.18)',
-        boxShadow: '0 2px 8px 0 #6366f111'
+        borderRight: '1px solid rgba(255,255,255,0.3)',
+        boxShadow: '0 2px 8px 0 rgba(99, 102, 241, 0.05)'
       }}
     >
       <List sx={{ width: '100%', p: 0 }}>

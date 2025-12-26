@@ -40,10 +40,26 @@ export default function Layout({ children }: LayoutProps) {
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)',
-        fontFamily: 'Inter, sans-serif'
+        background: 'radial-gradient(circle at 50% 0%, #f0f4ff 0%, #e0e7ff 50%, #f8fafc 100%)',
+        fontFamily: '"Inter", "Roboto", sans-serif'
       }}
     >
+      <style>{`
+        ::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+          background: rgba(99, 102, 241, 0.2);
+          border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: rgba(99, 102, 241, 0.4);
+        }
+      `}</style>
       {/* Header Navigation for Account/Groups/Billing */}
       <HeaderNav currentRoute={location.pathname} />
 

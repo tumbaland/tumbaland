@@ -12,13 +12,14 @@ const AppLayout = ({ children }: AppLayoutProps) => {
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)',
-        display: 'flex'
+        background: 'radial-gradient(circle at 50% 0%, #f0f9ff 0%, #e0f2fe 50%, #ffffff 100%)',
+        display: 'flex',
+        fontFamily: '"Inter", "Roboto", sans-serif'
       }}
     >
       <Box sx={{ flex: 1 }}>
         <AuthHeader />
-        <Container maxWidth="xl">{children}</Container>
+        <Container maxWidth="xl" sx={{ py: 4 }}>{children}</Container>
       </Box>
     </Box>
   );
