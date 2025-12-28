@@ -9,7 +9,9 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  LinearProgress
+  LinearProgress,
+  Pagination,
+  Stack
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -40,11 +42,14 @@ const AlbumsPage: React.FC = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [albumToDelete, setAlbumToDelete] = useState<Album | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(20);
 
   // Debounce search term to prevent excessive API calls
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
+      setPage(1);
     }, 300);
 
     return () => clearTimeout(timer);
@@ -58,11 +63,13 @@ const AlbumsPage: React.FC = () => {
     createAlbum,
     updateAlbum,
     deleteAlbum,
-    fetchAlbums
+    fetchAlbums,
+    pagination
   } = useAlbums({
     search: debouncedSearchTerm || undefined,
     groupId: tenantGroupId,
-    limit: 20
+    limit,
+    page
   });
 
   const handleCreateAlbum = async (albumData: { name: string; description: string; tags: string[]; groupId?: string }) => {
@@ -176,12 +183,24 @@ const AlbumsPage: React.FC = () => {
           onCreateAlbum={() => setShowCreateDialog(true)}
         />
       ) : (
-        <AlbumsGrid
-          albums={albums}
-          onViewAlbum={handleViewAlbum}
-          onDeleteAlbum={handleDeleteAlbum}
-          onMenuOpen={handleMenuOpen}
-        />
+        <>
+          <AlbumsGrid
+            albums={albums}
+            onViewAlbum={handleViewAlbum}
+            onDeleteAlbum={handleDeleteAlbum}
+            onMenuOpen={handleMenuOpen}
+          />
+          <Stack spacing={2} alignItems="center" sx={{ mt: 4, mb: 2 }}>
+            <Pagination
+              count={pagination.pages}
+              page={page}
+              onChange={(_, value) => setPage(value)}
+              color="primary"
+              showFirstButton
+              showLastButton
+            />
+          </Stack>
+        </>
       )}
 
       {/* Options Menu */}
