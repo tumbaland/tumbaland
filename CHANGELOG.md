@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.329](https://github.com/toomastahves/tumbaland/compare/v0.0.328...v0.0.329) (2025-12-28)
+
+
+### Features
+
+* desktop friendly dashboard ([f30927d](https://github.com/toomastahves/tumbaland/commit/f30927d8d93412b0557b493b88e0039e0c2bf20a))
+
 ### [0.0.328](https://github.com/toomastahves/tumbaland/compare/v0.0.327...v0.0.328) (2025-12-26)
 
 
