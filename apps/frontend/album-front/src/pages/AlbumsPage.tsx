@@ -184,6 +184,16 @@ const AlbumsPage: React.FC = () => {
         />
       ) : (
         <>
+          <Stack spacing={2} alignItems="center" sx={{ mb: 4 }}>
+            <Pagination
+              count={pagination.pages}
+              page={page}
+              onChange={(_, value) => setPage(value)}
+              color="primary"
+              showFirstButton
+              showLastButton
+            />
+          </Stack>
           <AlbumsGrid
             albums={albums}
             onViewAlbum={handleViewAlbum}
