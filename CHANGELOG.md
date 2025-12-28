@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.331](https://github.com/toomastahves/tumbaland/compare/v0.0.330...v0.0.331) (2025-12-28)
+
+
+### Features
+
+* add pagination to albums ([18f92b4](https://github.com/toomastahves/tumbaland/commit/18f92b472db279859af96bc6bdca30db3d28b6a8))
+
 ### [0.0.330](https://github.com/toomastahves/tumbaland/compare/v0.0.329...v0.0.330) (2025-12-28)
 
 
