@@ -19,6 +19,7 @@ interface CollageCanvasProps {
   onPhotoDoubleClick: (idx: number) => void;
   setTextBoxes: React.Dispatch<React.SetStateAction<CanvasText[]>>;
   onTextBoxDoubleClick: (idx: number) => void;
+  onDrop?: (e: React.DragEvent) => void;
   collageConfigPhotos?: any[]; // For fallback captions
 }
 
@@ -38,6 +39,7 @@ const CollageCanvas: React.FC<CollageCanvasProps> = ({
   onPhotoDoubleClick,
   setTextBoxes,
   onTextBoxDoubleClick,
+  onDrop,
   collageConfigPhotos
 }) => {
   return (
@@ -55,6 +57,8 @@ const CollageCanvas: React.FC<CollageCanvasProps> = ({
         maxHeight: '100vh',
         margin: '0 auto'
       }}
+      onDrop={onDrop}
+      onDragOver={(e) => e.preventDefault()}
     >
       <Box
         sx={{

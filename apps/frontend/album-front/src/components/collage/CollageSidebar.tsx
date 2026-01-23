@@ -5,9 +5,10 @@ import AlbumPhotoList, { AlbumPhoto } from './AlbumPhotoList';
 interface CollageSidebarProps {
   albumPhotos: AlbumPhoto[];
   onPhotoClick: (photo: AlbumPhoto) => void;
+  onPhotoDragStart?: (photo: AlbumPhoto, e: React.DragEvent) => void;
 }
 
-const CollageSidebar: React.FC<CollageSidebarProps> = ({ albumPhotos, onPhotoClick }) => {
+const CollageSidebar: React.FC<CollageSidebarProps> = ({ albumPhotos, onPhotoClick, onPhotoDragStart }) => {
   return (
     <Box
       sx={{
@@ -19,7 +20,7 @@ const CollageSidebar: React.FC<CollageSidebarProps> = ({ albumPhotos, onPhotoCli
         overflowY: 'auto'
       }}
     >
-      <AlbumPhotoList photos={albumPhotos} onPhotoClick={onPhotoClick} />
+      <AlbumPhotoList photos={albumPhotos} onPhotoClick={onPhotoClick} onPhotoDragStart={onPhotoDragStart} />
     </Box>
   );
 };

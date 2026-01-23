@@ -14,9 +14,10 @@ export interface AlbumPhoto {
 interface AlbumPhotoListProps {
   photos: AlbumPhoto[];
   onPhotoClick: (photo: AlbumPhoto) => void;
+  onPhotoDragStart?: (photo: AlbumPhoto, e: React.DragEvent) => void;
 }
 
-const AlbumPhotoList: React.FC<AlbumPhotoListProps> = ({ photos, onPhotoClick }) => {
+const AlbumPhotoList: React.FC<AlbumPhotoListProps> = ({ photos, onPhotoClick, onPhotoDragStart }) => {
   const [hoveredPhoto, setHoveredPhoto] = useState<AlbumPhoto | null>(null);
   const [overlayPos, setOverlayPos] = useState<{ top: number; left: number } | null>(null);
 
@@ -64,7 +65,11 @@ const AlbumPhotoList: React.FC<AlbumPhotoListProps> = ({ photos, onPhotoClick })
             onMouseLeave={handleMouseLeave}
             sx={{ position: 'relative' }}
           >
-            <ListItemButton onClick={() => onPhotoClick(photo)}>
+            <ListItemButton 
+              onClick={() => onPhotoClick(photo)}
+              draggable={!!onPhotoDragStart}
+              onDragStart={(e) => onPhotoDragStart?.(photo, e)}
+            >
               <ListItemAvatar>
                 <Avatar src={getThumbnailUrl(photo)} variant="rounded" />
               </ListItemAvatar>

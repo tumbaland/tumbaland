@@ -124,7 +124,7 @@ export const getActivities = async (req: Request, res: Response): Promise<void> 
 export const getActivityById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const activity = await ActivityService.getActivityById(id);
+    const activity = await ActivityService.getActivityById(id as string);
 
     if (!activity) {
       res.status(404).json({
@@ -150,7 +150,7 @@ export const updateActivity = async (req: Request, res: Response): Promise<void>
     const { id } = req.params;
     const updateData = req.body;
 
-    const activity = await ActivityService.updateActivity(id, updateData);
+    const activity = await ActivityService.updateActivity(id as string, updateData);
 
     if (!activity) {
       res.status(404).json({
@@ -174,7 +174,7 @@ export const updateActivity = async (req: Request, res: Response): Promise<void>
 export const deleteActivity = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const deleted = await ActivityService.deleteActivity(id);
+    const deleted = await ActivityService.deleteActivity(id as string);
 
     if (!deleted) {
       res.status(404).json({

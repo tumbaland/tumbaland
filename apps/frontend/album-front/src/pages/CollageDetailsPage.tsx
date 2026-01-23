@@ -311,9 +311,43 @@ const CollageDetailsPage: React.FC = () => {
         height: photo.height || 120,
         rotation: 0,
         transparentBackground: photoTransparencyMode,
-        showBorder: true
+        showBorder: false
       }
     ]);
+  };
+
+  // Handle drag start from sidebar
+  const handlePhotoDragStart = (photo: AlbumPhoto, e: React.DragEvent) => {
+    e.dataTransfer.setData('application/json', JSON.stringify(photo));
+  };
+
+  // Handle drop on canvas
+  const handleCanvasDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    try {
+      const photo: AlbumPhoto = JSON.parse(e.dataTransfer.getData('application/json'));
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      setCanvasPhotos((prev) => [
+        ...prev,
+        {
+          id: photo._id + '-' + Date.now(),
+          fileId: photo._id,
+          src: photo.signedUrl,
+          x: x - (photo.width || 120) / 2, // Center the photo on the drop point
+          y: y - (photo.height || 120) / 2,
+          width: photo.width || 120,
+          height: photo.height || 120,
+          rotation: 0,
+          transparentBackground: photoTransparencyMode,
+          showBorder: false
+        }
+      ]);
+    } catch (error) {
+      console.error('Failed to parse dropped photo data:', error);
+    }
   };
 
   // Start drag or resize mode on click (disabled in view mode or when modal open)
@@ -342,9 +376,14 @@ const CollageDetailsPage: React.FC = () => {
         prev.map((p) => (p.id === dragPhotoId ? { ...p, x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y } : p))
       );
     };
+    const handleMouseUp = () => {
+      setDragPhotoId(null);
+    };
     window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [dragPhotoId, dragOffset, isViewMode, isModalOpen]);
 
@@ -404,7 +443,7 @@ const CollageDetailsPage: React.FC = () => {
         <Box sx={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
           {/* Sidebar: Album Photos (hide in view mode) */}
           {!isViewMode && (
-            <CollageSidebar albumPhotos={albumPhotos} onPhotoClick={handleAddPhoto} />
+            <CollageSidebar albumPhotos={albumPhotos} onPhotoClick={handleAddPhoto} onPhotoDragStart={handlePhotoDragStart} />
           )}
           
           {/* Canvas Area */}
@@ -429,6 +468,7 @@ const CollageDetailsPage: React.FC = () => {
             onPhotoDoubleClick={handlePhotoDoubleClick}
             setTextBoxes={isViewMode || isModalOpen ? () => {} : setCanvasTexts}
             onTextBoxDoubleClick={isViewMode || isModalOpen ? () => {} : handleTextBoxDoubleClick}
+            onDrop={isViewMode ? undefined : handleCanvasDrop}
             collageConfigPhotos={collage.config?.photos}
           />
 

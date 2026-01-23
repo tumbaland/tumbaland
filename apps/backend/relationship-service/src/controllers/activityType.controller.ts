@@ -92,7 +92,7 @@ export const getActivityTypes = async (req: Request, res: Response): Promise<voi
 export const getActivityTypeById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const activityType = await ActivityTypeService.getActivityTypeById(id);
+    const activityType = await ActivityTypeService.getActivityTypeById(id as string);
 
     if (!activityType) {
       res.status(404).json({
@@ -118,7 +118,7 @@ export const updateActivityType = async (req: Request, res: Response): Promise<v
     const { id } = req.params;
     const updateData = req.body;
 
-    const activityType = await ActivityTypeService.updateActivityType(id, updateData);
+    const activityType = await ActivityTypeService.updateActivityType(id as string, updateData);
 
     if (!activityType) {
       res.status(404).json({
@@ -142,7 +142,7 @@ export const updateActivityType = async (req: Request, res: Response): Promise<v
 export const deleteActivityType = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const deleted = await ActivityTypeService.deleteActivityType(id);
+    const deleted = await ActivityTypeService.deleteActivityType(id as string);
 
     if (!deleted) {
       res.status(404).json({
