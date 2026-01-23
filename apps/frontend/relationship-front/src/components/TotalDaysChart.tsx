@@ -29,7 +29,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 const COLORS = {
   madeLove: '#e91e63', // Pink for sex days
   justMeet: '#2196f3', // Blue for days met without sex
-  missYou: '#f5f5f5' // Light gray for days not met
+  missYou: '#90a4ae' // Blue-grey for days not met, dark enough for white text
 };
 
 const LEGEND_ITEMS = [
@@ -125,10 +125,11 @@ const TotalDaysChart: React.FC<TotalDaysChartProps> = ({ title = 'Monthly Days B
 
   // Create series for each category
   const madeLoveData = data.map((item) => item.daysWithSex);
-  const justMeetData = data.map((item) => item.daysMet - item.daysWithSex);
+  // Just Meet is (Days Met) - (Days with Sex) to ensure they sum up to Total Met Days without intersection
+  const justMeetData = data.map((item) => Math.max(0, item.daysMet - item.daysWithSex));
   const missYouData = data.map((item) => {
     const calendarDays = getDaysInMonth(item.year, parseInt(item.month));
-    return calendarDays - item.daysMet;
+    return Math.max(0, calendarDays - item.daysMet);
   });
 
   const series = [
@@ -153,10 +154,10 @@ const TotalDaysChart: React.FC<TotalDaysChartProps> = ({ title = 'Monthly Days B
   ];
 
   const totalMadeLove = data.reduce((sum, item) => sum + item.daysWithSex, 0);
-  const totalJustMeet = data.reduce((sum, item) => sum + (item.daysMet - item.daysWithSex), 0);
+  const totalJustMeet = data.reduce((sum, item) => sum + Math.max(0, item.daysMet - item.daysWithSex), 0);
   const totalMissYou = data.reduce((sum, item) => {
     const calendarDays = getDaysInMonth(item.year, parseInt(item.month));
-    return sum + (calendarDays - item.daysMet);
+    return sum + Math.max(0, calendarDays - item.daysMet);
   }, 0);
 
   return (
@@ -192,38 +193,66 @@ const TotalDaysChart: React.FC<TotalDaysChartProps> = ({ title = 'Monthly Days B
 
         {/* Legend */}
         <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
-          {LEGEND_ITEMS.map((item) => (
-            <Chip
-              key={item.key}
-              label={item.label}
-              size="small"
-              sx={{
-                backgroundColor: item.color,
-                color: item.key === 'missYou' ? '#666' : 'white',
-                '& .MuiChip-label': {
-                  fontSize: { xs: '0.65rem', sm: '0.75rem' }
-                },
-                minWidth: { xs: '60px', sm: 'auto' }
-              }}
-            />
-          ))}
+          {LEGEND_ITEMS.map((item) => {
+            const totals = {
+              madeLove: totalMadeLove,
+              justMeet: totalJustMeet,
+              missYou: totalMissYou
+            };
+            const count = totals[item.key as keyof typeof totals];
+
+            return (
+              <Chip
+                key={item.key}
+                label={`${item.label} (${count})`}
+                size="small"
+                sx={{
+                  backgroundColor: item.color,
+                  color: item.key === 'missYou' ? '#666' : 'white',
+                  '& .MuiChip-label': {
+                    fontSize: { xs: '0.65rem', sm: '0.75rem' }
+                  },
+                  minWidth: { xs: '60px', sm: 'auto' }
+                }}
+              />
+            );
+          })}
         </Box>
 
         <Box sx={{ width: '100%', height: height - 100 }}>
           <BarChart
-            xAxis={[{ scaleType: 'band', data: monthLabels }]}
+            xAxis={[{ 
+              scaleType: 'band', 
+              data: monthLabels,
+              tickLabelStyle: {
+                angle: 0,
+                textAnchor: 'middle',
+                fontSize: 12
+              },
+              valueFormatter: (value: string, context) => {
+                const parts = value.split(' ');
+                if (context.location === 'tick') {
+                  return (value === monthLabels[0] || parts[0] === 'Jan') ? parts[1] : '';
+                }
+                return value;
+              }
+            }]}
             yAxis={[{ 
               max: 31,
               ...(isMobile ? {} : { label: 'Days' }) // Only show label on non-mobile
             }]}
             series={series}
-            height={height - 130}
-            margin={{ 
-              top: 10, 
-              right: 15, // Reduced right margin
-              bottom: 10, // Further reduced bottom margin
-              left: isMobile ? 15 : 50 // Further reduced left margins
+            barLabel="value"
+            slotProps={{
+              barLabel: {
+                style: {
+                  fill: '#fff',
+                  fontSize: '10px',
+                  fontWeight: 'bold'
+                }
+              }
             }}
+            height={height - 130}
           />
         </Box>
 

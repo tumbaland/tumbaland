@@ -21,6 +21,7 @@ export interface MonthlyStatisticsData {
   totalDays: number;
   daysMet: number;
   daysWithSex: number;
+  daysTogether: number;
   daysNotMet: number;
 }
 
@@ -135,7 +136,7 @@ export const getRelationshipStatistics = async (
     };    // Get basic statistics
     const [totalStats, totalHoursStats, sexActivities] = await Promise.all([
       Activity.aggregate([
-        { $match: { ...baseQuery, 'activity.type': { $nin: [] } } },
+        { $match: baseQuery },
         {
           $group: {
             _id: null,
@@ -158,10 +159,19 @@ export const getRelationshipStatistics = async (
 
       // Sex activity days
       Activity.aggregate([
+        { $match: baseQuery },
+        {
+          $lookup: {
+            from: 'activity_types',
+            localField: 'activity.typeId',
+            foreignField: '_id',
+            as: 'activityType'
+          }
+        },
+        { $unwind: '$activityType' },
         {
           $match: {
-            ...baseQuery,
-            'activity.type': 'sex'
+            'activityType.slug': 'sex'
           }
         },
         {
@@ -282,90 +292,145 @@ export const getMonthlyStatistics = async (
   try {
     const { userId, userGroupIds = [], groupId, personalOnly } = filters;
     
-    // Build query conditions
-    const conditions: any = {};
+    // Build aggregation pipeline
+    const pipeline: any[] = [];
+    
+    // Build match conditions
+    const matchConditions: any = {};
 
     if (year) {
-      conditions.date = {
-        $gte: new Date(year, 0, 1),
-        $lt: new Date(year + 1, 0, 1)
+      const startDate = new Date(year, 0, 1);
+      const endDate = new Date(year + 1, 0, 1);
+      matchConditions.date = {
+        $gte: startDate,
+        $lt: endDate
       };
     }
 
     // Add access filtering
     if (groupId) {
-      // Filter by specific group
-      conditions.groupId = groupId;
+      matchConditions.groupId = groupId;
     } else if (personalOnly) {
-      // Personal context - show only items without groupId (personal items only)
-      conditions.userId = userId;
-      conditions.$or = [
+      matchConditions.userId = userId;
+      matchConditions.$or = [
         { groupId: null },
         { groupId: { $exists: false } }
       ];
     } else if (userId) {
-      // Use the old behavior for backward compatibility
       const accessQuery = buildAccessQuery(userId, userGroupIds, false);
-      Object.assign(conditions, accessQuery);
+      Object.assign(matchConditions, accessQuery);
     }
 
-    // Get all activities with populated activity types
-    const activities = await Activity.find(conditions).populate('activity.typeId').sort({ date: 1 });
+    pipeline.push({ $match: matchConditions });
 
-    // Group by year-month
-    const monthlyData = new Map<string, { daysMet: Set<string>; daysWithSex: Set<string> }>();
-
-    activities.forEach((activity) => {
-      const date = new Date(activity.date);
-      const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-      const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD format
-
-      if (!monthlyData.has(monthKey)) {
-        monthlyData.set(monthKey, {
-          daysMet: new Set<string>(),
-          daysWithSex: new Set<string>()
-        });
-      }
-
-      const data = monthlyData.get(monthKey)!;
-      data.daysMet.add(dateKey);
-
-      if ((activity.activity as any).typeId && (activity.activity as any).typeId.slug === 'sex') {
-        data.daysWithSex.add(dateKey);
+    // Lookup activity types
+    pipeline.push({
+      $lookup: {
+        from: 'activity_types',
+        localField: 'activity.typeId',
+        foreignField: '_id',
+        as: 'activityType'
       }
     });
 
-    // Convert to array format with proper calculations
-    const result: MonthlyStatisticsData[] = [];
+    pipeline.push({
+      $unwind: '$activityType'
+    });
 
-    for (const [monthKey, data] of monthlyData.entries()) {
-      const [yearStr, monthStr] = monthKey.split('-');
-      const year = parseInt(yearStr);
-      const month = parseInt(monthStr);
+    // Group by year-month and activity type to count activities
+    pipeline.push({
+      $group: {
+        _id: {
+          year: { $year: '$date' },
+          month: { $month: '$date' },
+          type: '$activityType.slug',
+          date: {
+            $dateToString: {
+              format: '%Y-%m-%d',
+              date: '$date'
+            }
+          }
+        }
+      }
+    });
 
-      // Calculate total days in month
+    // Group by year-month and type to count all activities and unique days
+    pipeline.push({
+      $group: {
+        _id: {
+          year: '$_id.year',
+          month: '$_id.month',
+          type: '$_id.type'
+        },
+        count: { $sum: 1 },
+        uniqueDays: { $addToSet: '$_id.date' }
+      }
+    });
+
+    // Group by year-month to aggregate all types
+    pipeline.push({
+      $group: {
+        _id: {
+          year: '$_id.year',
+          month: '$_id.month'
+        },
+        activities: {
+          $push: {
+            type: '$_id.type',
+            count: '$count',
+            uniqueDays: { $size: '$uniqueDays' }
+          }
+        }
+      }
+    });
+
+    pipeline.push({
+      $sort: {
+        '_id.year': 1,
+        '_id.month': 1
+      }
+    });
+
+    const result = await Activity.aggregate(pipeline);
+
+    // Transform result
+    const monthlyStats: MonthlyStatisticsData[] = result.map((item: any) => {
+      const year = item._id.year;
+      const month = item._id.month;
       const totalDays = new Date(year, month, 0).getDate();
-      const daysMet = data.daysMet.size;
-      const daysWithSex = data.daysWithSex.size;
-      const daysNotMet = totalDays - daysMet;
 
-      result.push({
-        month: monthStr,
+      let sexCount = 0;
+      let togetherCount = 0;
+      const allDays = new Set<string>();
+
+      item.activities.forEach((activity: any) => {
+        if (activity.type === 'sex') {
+          sexCount = activity.count;
+        }
+        if (activity.type === 'together') {
+          togetherCount = activity.count;
+        }
+      });
+
+      // Calculate unique days met (days with either sex or together)
+      // This requires another pass to get unique days across activities
+      const daysMet = Math.max(
+        item.activities.find((a: any) => a.type === 'sex')?.uniqueDays || 0,
+        item.activities.find((a: any) => a.type === 'together')?.uniqueDays || 0
+      );
+
+      return {
+        month: month.toString().padStart(2, '0'),
         year: year,
         totalDays: totalDays,
         daysMet: daysMet,
-        daysWithSex: daysWithSex,
-        daysNotMet: daysNotMet
-      });
-    }
-
-    // Sort by year and month
-    result.sort((a, b) => {
-      if (a.year !== b.year) return a.year - b.year;
-      return parseInt(a.month) - parseInt(b.month);
+        daysWithSex: sexCount,
+        daysTogether: togetherCount,
+        daysNotMet: totalDays - daysMet
+      };
     });
 
-    return result;
+    return monthlyStats;
   } catch (error) {
     console.error('Error calculating monthly statistics:', error);
     throw new Error('Failed to calculate monthly statistics');
@@ -693,21 +758,30 @@ export const getCumulativeTimelineData = async (
                 format: '%Y-%m-%d',
                 date: '$date'
               }
-            }
+            },
+            type: '$activityType.slug'
           },
+          count: { $sum: 1 },
+          hours: { $sum: '$hours' }
+        }
+      },
+      {
+        $group: {
+          _id: '$_id.date',
           activities: {
             $push: {
-              type: '$activityType.slug',
+              type: '$_id.type',
+              count: '$count',
               hours: '$hours'
             }
           },
-          dailyActivities: { $sum: 1 },
+          dailyActivities: { $sum: '$count' },
           dailyHours: { $sum: '$hours' }
         }
       },
       {
         $sort: {
-          '_id.date': 1
+          '_id': 1
         }
       }
     );
@@ -726,7 +800,7 @@ export const getCumulativeTimelineData = async (
       if (result.length === 0) {
         return []; // No data
       }
-      const dates = result.map(item => new Date(item._id.date)).sort((a, b) => a.getTime() - b.getTime());
+      const dates = result.map(item => new Date(item._id)).sort((a, b) => a.getTime() - b.getTime());
       startDate = dates[0];
       endDate = dates[dates.length - 1];
     }
@@ -734,7 +808,7 @@ export const getCumulativeTimelineData = async (
     // Create a map of activity data by date
     const activityDataByDate = new Map<string, any>();
     result.forEach((item: any) => {
-      activityDataByDate.set(item._id.date, item);
+      activityDataByDate.set(item._id, item);
     });
 
     // Generate all dates in the range and fill missing dates
@@ -757,20 +831,16 @@ export const getCumulativeTimelineData = async (
       const dailyActivityBreakdown: { [key: string]: number } = {};
 
       if (activityData) {
-        // Include all activities for this date
-        const allActivities = activityData.activities;
-        allActivities.forEach((activity: any) => {
-          if (!dailyActivityBreakdown[activity.type]) {
-            dailyActivityBreakdown[activity.type] = 0;
-          }
-          dailyActivityBreakdown[activity.type]++;
+        // Use pre-calculated counts from aggregation
+        activityData.activities.forEach((activity: any) => {
+          dailyActivityBreakdown[activity.type] = activity.count;
         });
 
-        // Update cumulative totals
-        cumulativeActivities += allActivities.length;
+        // Update cumulative totals using pre-calculated values
+        cumulativeActivities += activityData.dailyActivities || 0;
         cumulativeHours += activityData.dailyHours || 0;
 
-        // Update cumulative activity breakdown (include all types)
+        // Update cumulative activity breakdown
         Object.keys(dailyActivityBreakdown).forEach((type) => {
           if (!cumulativeActivityBreakdown[type]) {
             cumulativeActivityBreakdown[type] = 0;
@@ -779,7 +849,7 @@ export const getCumulativeTimelineData = async (
         });
       }
 
-      // Build activity breakdown object (always include all known activity types)
+      // Build activity breakdown object
       const activityBreakdown: { [key: string]: { dailyCount: number; cumulativeCount: number } } = {};
       Object.keys(cumulativeActivityBreakdown).forEach((type) => {
         activityBreakdown[type] = {
@@ -790,7 +860,7 @@ export const getCumulativeTimelineData = async (
 
       return {
         date: dateString,
-        dailyActivities: activityData ? activityData.activities.length : 0,
+        dailyActivities: Object.values(dailyActivityBreakdown).reduce((a, b) => a + b, 0),
         cumulativeActivities,
         dailyHours: activityData ? (activityData.dailyHours || 0) : 0,
         cumulativeHours,

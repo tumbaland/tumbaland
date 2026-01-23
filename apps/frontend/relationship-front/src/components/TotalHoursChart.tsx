@@ -143,22 +143,42 @@ const TotalHoursChart: React.FC<TotalHoursChartProps> = ({ title = 'Total Hours 
 
         <Box sx={{ width: '100%', height: height - 100 }}>
           <BarChart
-            xAxis={[{ scaleType: 'band', data: monthLabels }]}
+            xAxis={[{ 
+              scaleType: 'band', 
+              data: monthLabels,
+              tickLabelStyle: {
+                angle: 0,
+                textAnchor: 'middle',
+                fontSize: 12
+              },
+              valueFormatter: (value: string, context) => {
+                const parts = value.split(' ');
+                if (context.location === 'tick') {
+                  return (value === monthLabels[0] || parts[0] === 'Jan') ? parts[1] : '';
+                }
+                return value;
+              }
+            }]}
             yAxis={[{ 
               ...(isMobile ? {} : { label: 'Hours' }) // Only show label on non-mobile
             }]}
             series={[{
               data: hoursData,
               label: 'Total Hours',
-              color: '#1976d2'
+              color: '#1976d2',
+              valueFormatter: (value) => `${value} hours`
             }]}
-            height={height - 130}
-            margin={{ 
-              top: 10, 
-              right: 15, // Reduced right margin
-              bottom: 10, // Further reduced bottom margin
-              left: isMobile ? 15 : 50 // Further reduced left margins
+            barLabel={(item) => item.value?.toString()}
+            slotProps={{
+              barLabel: {
+                style: {
+                  fill: '#fff',
+                  fontSize: '10px',
+                  fontWeight: 'bold'
+                }
+              }
             }}
+            height={height - 130}
           />
         </Box>
 

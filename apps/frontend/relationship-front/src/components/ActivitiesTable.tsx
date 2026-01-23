@@ -14,9 +14,10 @@ import {
   MenuItem,
   Paper,
   useTheme,
-  alpha
+  alpha,
+  Button
 } from '@mui/material';
-import { Circle as CircleIcon } from '@mui/icons-material';
+import { Circle as CircleIcon, Download as DownloadIcon } from '@mui/icons-material';
 import EditActivityModal from '../components/EditActivityModal';
 import DeleteActivityButton from '../components/DeleteActivityButton';
 
@@ -43,8 +44,45 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
 }) => {
   const theme = useTheme();
 
+  const handleExportCSV = () => {
+    const headers = ['Date', 'Activity', 'Duration (Hours)', 'Description'];
+    const csvContent = [
+      headers.join(','),
+      ...activities.map(row => {
+        const date = formatDate(row.date);
+        const type = row.activity?.typeId?.name || '';
+        const hours = row.hours || 0;
+        const desc = (row.activity?.description || '').replace(/"/g, '""');
+        return `"${date}","${type}",${hours},"${desc}"`;
+      })
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'activities_export.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   return (
     <Box>
+      <Box display="flex" justifyContent="flex-end" mb={2}>
+        <Button
+          startIcon={<DownloadIcon />}
+          variant="outlined"
+          onClick={handleExportCSV}
+          disabled={!activities || activities.length === 0}
+          size="small"
+        >
+          Export CSV
+        </Button>
+      </Box>
       <TableContainer
         component={Paper}
         elevation={0}

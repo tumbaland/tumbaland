@@ -33,6 +33,7 @@ export interface MonthlyStatisticsData {
   totalDays: number;
   daysMet: number;
   daysWithSex: number;
+  daysTogether: number;
   daysNotMet: number;
 }
 

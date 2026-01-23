@@ -201,22 +201,24 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
         {/* Line Toggle Chips */}
         <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
           {activityTypes
-            .map((activityType) => (
-            <Chip
-              key={activityType._id}
-              label={activityType.name}
-              size="small"
-              clickable
-              onClick={() => toggleLine(activityType.slug)}
-              sx={{
-                backgroundColor: selectedLines.includes(activityType.slug) ? (activityType.color || '#9e9e9e') : '#e0e0e0',
-                color: selectedLines.includes(activityType.slug) ? 'white' : '#666',
-                '& .MuiChip-label': {
-                  fontSize: '0.75rem'
-                }
-              }}
-            />
-          ))}
+            .map((activityType) => {
+              return (
+                <Chip
+                  key={activityType._id}
+                  label={activityType.name}
+                  size="small"
+                  clickable
+                  onClick={() => toggleLine(activityType.slug)}
+                  sx={{
+                    backgroundColor: selectedLines.includes(activityType.slug) ? (activityType.color || '#9e9e9e') : '#e0e0e0',
+                    color: selectedLines.includes(activityType.slug) ? 'white' : '#666',
+                    '& .MuiChip-label': {
+                      fontSize: '0.75rem'
+                    }
+                  }}
+                />
+              );
+            })}
           {/* Total line toggle */}
           <Chip
             key="total"

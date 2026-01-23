@@ -117,7 +117,7 @@ const HoursBarChart: React.FC<BarChartProps> = ({ title = 'Activities per Month 
         Object.keys(month.activities)
       )
     )
-  );
+  ).filter(type => !['sex', 'together'].includes(type));
 
   // Prepare data for the chart - create arrays for each activity type
   const monthLabels = data.map((item) => `${MONTHS[parseInt(item.month) - 1]} ${item.year}`);
@@ -125,8 +125,19 @@ const HoursBarChart: React.FC<BarChartProps> = ({ title = 'Activities per Month 
   console.log('Raw data:', data);
   console.log('All activity types:', allActivityTypes);
 
+  // Recalculate totals based on filtered activities
+  const totalPerMonth = data.map(item => {
+    return allActivityTypes.reduce((sum, type) => {
+      return sum + (item.activities[type]?.count || 0);
+    }, 0);
+  });
+
+  const totalActivities = totalPerMonth.reduce((sum, val) => sum + val, 0);
+  const avgActivities = Math.round(totalActivities / data.length || 0);
+  const peakActivities = Math.max(...totalPerMonth, 0);
+
   // Create series for each activity type with direct data arrays
-  const series = allActivityTypes.map(activityType => {
+  const generatedSeries = allActivityTypes.map(activityType => {
     const activityTypeData = activityTypes.find(type => type.slug === activityType);
     const activityCounts = data.map((item) => {
       const activityData = item.activities[activityType];
@@ -141,12 +152,20 @@ const HoursBarChart: React.FC<BarChartProps> = ({ title = 'Activities per Month 
     };
   });
 
+  const series = [
+    ...generatedSeries,
+    {
+      data: data.map(() => 0),
+      label: 'Total',
+      stack: 'activities',
+      color: 'transparent',
+      id: 'total-series',
+      valueFormatter: () => '', // Hide value in tooltip
+    }
+  ];
+
   console.log('Month labels:', monthLabels);
   console.log('Series:', series);
-
-  const totalActivities = data.reduce((sum, item) => sum + item.totalActivities, 0);
-  const avgActivities = Math.round(totalActivities / data.length || 0);
-  const peakActivities = Math.max(...data.map((d) => d.totalActivities));
 
   return (
     <Card 
@@ -182,13 +201,13 @@ const HoursBarChart: React.FC<BarChartProps> = ({ title = 'Activities per Month 
         {/* Legend */}
         <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center' }}>
           {allActivityTypes
-            .filter(activityType => activityType !== 'sex') // Only exclude sex from legend
             .map((activityType) => {
             const activityTypeData = activityTypes.find(type => type.slug === activityType);
+            const totalCount = data.reduce((sum, month) => sum + (month.activities[activityType]?.count || 0), 0);
             return (
               <Chip
                 key={activityType}
-                label={activityTypeData?.name || activityType}
+                label={`${activityTypeData?.name || activityType} (${totalCount})`}
                 size="small"
                 sx={{
                   backgroundColor: activityTypeData?.color || '#9e9e9e',
@@ -205,18 +224,43 @@ const HoursBarChart: React.FC<BarChartProps> = ({ title = 'Activities per Month 
 
         <Box sx={{ width: '100%', height: height - 100 }}>
           <BarChart
-            xAxis={[{ scaleType: 'band', data: monthLabels }]}
+            xAxis={[{ 
+              scaleType: 'band', 
+              data: monthLabels,
+              tickLabelStyle: {
+                angle: 0,
+                textAnchor: 'middle',
+                fontSize: 12
+              },
+              valueFormatter: (value: string, context) => {
+                const parts = value.split(' ');
+                if (context.location === 'tick') {
+                  return (value === monthLabels[0] || parts[0] === 'Jan') ? parts[1] : '';
+                }
+                return value;
+              }
+            }]}
             yAxis={[{ 
               ...(isMobile ? {} : { label: 'Activities' }) // Only show label on non-mobile
             }]}
             series={series}
-            height={height - 130}
-            margin={{ 
-              top: 10, 
-              right: 15, // Reduced right margin
-              bottom: 10, // Further reduced bottom margin
-              left: isMobile ? 15 : 50 // Further reduced left margins
+            barLabel={(item) => {
+              if ((item.seriesId as any) === 'total-series') {
+                return totalPerMonth[item.dataIndex]?.toString();
+              }
+              return null;
             }}
+            slotProps={{
+              barLabel: {
+                style: {
+                  fill: '#ffffff',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  transform: 'translateY(-10px)'
+                }
+              }
+            }}
+            height={height - 130}
           />
         </Box>
 
