@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.333](https://github.com/toomastahves/tumbaland/compare/v0.0.332...v0.0.333) (2026-01-23)
+
+
+### Bug Fixes
+
+* collage maker ([4edeb19](https://github.com/toomastahves/tumbaland/commit/4edeb1997dd2d54040c022abb1987b8e30fb0993))
+
 ### [0.0.332](https://github.com/toomastahves/tumbaland/compare/v0.0.331...v0.0.332) (2026-01-23)
 
 
