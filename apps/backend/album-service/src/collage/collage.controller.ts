@@ -26,7 +26,7 @@ export const updateCollage = async (req: Request, res: Response) => {
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
     
-    const collage = await collageService.updateCollage(req.params.id, req.body, user.id, userGroups);
+    const collage = await collageService.updateCollage(req.params.id as string, req.body, user.id, userGroups);
     res.json({ collage });
   } catch (error) {
     if ((error as Error).message === 'ACCESS_DENIED') {
@@ -42,7 +42,7 @@ export const getCollageById = async (req: Request, res: Response): Promise<void>
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
 
-    const collage = await collageService.getCollageById(req.params.id, user.id, userGroups);
+    const collage = await collageService.getCollageById(req.params.id as string, user.id, userGroups);
     if (!collage) {
       res.status(404).json({ error: 'Collage not found' });
       return;
@@ -163,7 +163,7 @@ export const deleteCollage = async (req: Request, res: Response) => {
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
     
-    await collageService.deleteCollage(req.params.id, user.id, userGroups);
+    await collageService.deleteCollage(req.params.id as string, user.id, userGroups);
     res.status(204).send();
   } catch (error) {
     if ((error as Error).message === 'ACCESS_DENIED') {

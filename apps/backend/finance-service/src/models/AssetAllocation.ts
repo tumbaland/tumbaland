@@ -1,7 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IAssetAllocation extends Document {
-  _id: string;
   assetClassId: string; // Reference to AssetClass
   totalValue: number;
   gain: number;

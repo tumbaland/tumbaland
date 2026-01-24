@@ -228,7 +228,7 @@ export const getAlbumById = async (req: Request, res: Response): Promise<void> =
 
     // Use aggregation to get album with photo count and cover photo in one query
     const aggregationPipeline: any[] = [
-      { $match: { _id: new mongoose.Types.ObjectId(id) } },
+      { $match: { _id: new mongoose.Types.ObjectId(id as string) } },
       {
         $lookup: {
           from: 'photos',

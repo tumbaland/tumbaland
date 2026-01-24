@@ -1,7 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IUserPortfolio extends Document {
-  _id: string;
   symbol: string; // reference to TrackedSymbol.symbol
   quantity: number;
   avgBuyPrice: number;

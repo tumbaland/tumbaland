@@ -48,7 +48,7 @@ export const deleteAssetClass = async (req: Request, res: Response) => {
     const { id } = req.params;
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
-    await assetClassService.deleteAssetClass(id, user.id, userGroups);
+    await assetClassService.deleteAssetClass(id as string, user.id, userGroups);
     res.json({ success: true });
   } catch (err: any) {
     if (err.message === 'ACCESS_DENIED') {
@@ -67,7 +67,7 @@ export const updateAssetClass = async (req: Request, res: Response) => {
     const { id } = req.params;
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
-    const updated = await assetClassService.updateAssetClass(id, req.body, user.id, userGroups);
+    const updated = await assetClassService.updateAssetClass(id as string, req.body, user.id, userGroups);
     res.json(updated);
   } catch (err: any) {
     if (err.message === 'ACCESS_DENIED') {

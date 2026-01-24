@@ -1,7 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IAssetClass extends Document {
-  _id: string;
   name: string;
   description?: string;
   color?: string; // Default color for charts

@@ -28,7 +28,7 @@ export const getTrackedTickers = async (req: Request, res: Response<TrackedTicke
     }
     
     const response: TrackedTickerResponse[] = tickers.map((t) => ({
-      _id: (t._id as any).toString(),
+      _id: t._id.toString(),
       ticker: t.ticker,
       displayName: t.displayName,
       description: t.description,
@@ -61,7 +61,7 @@ export const addTrackedTicker = async (req: Request, res: Response<TrackedTicker
     }, user.id, userGroups);
     
     const response: TrackedTickerResponse = {
-      _id: created._id,
+      _id: created._id.toString(),
       ticker: created.ticker,
       displayName: created.displayName,
       description: created.description,
@@ -86,7 +86,7 @@ export const editTrackedTicker = async (req: Request, res: Response<TrackedTicke
     const { id } = req.params;
     const { ticker, displayName, description, isActive, groupId } = req.body;
     
-    const updated = await updateTrackedTicker(id, { 
+    const updated = await updateTrackedTicker(id as string, { 
       ticker, 
       displayName, 
       description, 
@@ -97,7 +97,7 @@ export const editTrackedTicker = async (req: Request, res: Response<TrackedTicke
     if (!updated) return res.status(404).json({ error: 'Tracked ticker not found' });
     
     const response: TrackedTickerResponse = {
-      _id: updated._id,
+      _id: updated._id.toString(),
       ticker: updated.ticker,
       displayName: updated.displayName,
       description: updated.description,
@@ -121,7 +121,7 @@ export const removeTrackedTicker = async (req: Request, res: Response<ErrorRespo
     const userGroups = (req as any).userGroups || [];
     const { id } = req.params;
     
-    await deleteTrackedTicker(id, user.id, userGroups);
+    await deleteTrackedTicker(id as string, user.id, userGroups);
     res.status(204).send();
   } catch (err) {
     if ((err as Error).message === 'ACCESS_DENIED') {

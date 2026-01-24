@@ -1,7 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ITickerPriceHistory extends Document {
-  _id: string;
   date: Date;
   ticker: string;
   price: number;

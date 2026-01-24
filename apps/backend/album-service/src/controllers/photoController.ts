@@ -119,7 +119,7 @@ export const createPhoto = async (req: Request, res: Response): Promise<void> =>
 
     // If this is the first photo in the album and no cover is set, make it the cover
     if (!album.coverPhotoId) {
-      album.coverPhotoId = (savedPhoto._id as string).toString();
+      album.coverPhotoId = savedPhoto._id.toString();
       await album.save();
     }
 
@@ -374,7 +374,7 @@ export const deletePhoto = async (req: Request, res: Response): Promise<void> =>
         _id: { $ne: photo._id }
       });
 
-      album.coverPhotoId = anotherPhoto ? (anotherPhoto._id as string).toString() : undefined;
+      album.coverPhotoId = anotherPhoto ? anotherPhoto._id.toString() : undefined;
       await album.save();
     }
 

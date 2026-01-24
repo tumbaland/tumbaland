@@ -1,7 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ITrackedTicker extends Document {
-  _id: string;
   ticker: string;
   displayName: string;
   description?: string;

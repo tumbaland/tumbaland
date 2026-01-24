@@ -48,7 +48,7 @@ export const deleteAssetAllocation = async (req: Request, res: Response) => {
     const { id } = req.params;
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
-    await assetAllocationService.deleteAssetAllocation(id, user.id, userGroups);
+    await assetAllocationService.deleteAssetAllocation(id as string, user.id, userGroups);
     res.json({ success: true });
   } catch (err: any) {
     if (err.message === 'ACCESS_DENIED') {
@@ -67,7 +67,7 @@ export const updateAssetAllocation = async (req: Request, res: Response) => {
     const { id } = req.params;
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
-    const updated = await assetAllocationService.updateAssetAllocation(id, req.body, user.id, userGroups);
+    const updated = await assetAllocationService.updateAssetAllocation(id as string, req.body, user.id, userGroups);
     res.json(updated);
   } catch (err: any) {
     if (err.message === 'ACCESS_DENIED') {

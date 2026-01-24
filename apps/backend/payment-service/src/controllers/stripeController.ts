@@ -170,7 +170,7 @@ export const getCheckoutSessionStatus = (req: Request, res: Response): void => {
     ensureStripe();
     const { id } = req.params;
     if (!id) { res.status(400).json({ success: false, message: 'id required' }); return; }
-    const session = await stripe.checkout.sessions.retrieve(id, { expand: ['subscription'] });
+    const session = await stripe.checkout.sessions.retrieve(id as string, { expand: ['subscription'] });
     const subscriptionId = session.metadata?.subscriptionId;
     let subscriptionDoc = null;
     if (subscriptionId) {

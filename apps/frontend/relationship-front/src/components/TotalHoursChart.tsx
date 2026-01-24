@@ -164,7 +164,7 @@ const TotalHoursChart: React.FC<TotalHoursChartProps> = ({ title = 'Total Hours 
             }]}
             series={[{
               data: hoursData,
-              label: 'Total Hours',
+              label: `Total Hours (${totalHours})`,
               color: '#1976d2',
               valueFormatter: (value) => `${value} hours`
             }]}

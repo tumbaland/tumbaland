@@ -91,7 +91,7 @@ export const editUserPortfolio = async (req: Request, res: Response<UserPortfoli
     const { id } = req.params;
     const { ticker, quantity, avgBuyPrice, buyDate, notes, groupId } = req.body;
     
-    const updated = await updateUserPortfolio(id, {
+    const updated = await updateUserPortfolio(id as string, {
       symbol: ticker,
       quantity,
       avgBuyPrice,
@@ -126,7 +126,7 @@ export const removeUserPortfolio = async (req: Request, res: Response<ErrorRespo
     const userGroups = (req as any).userGroups || [];
     const { id } = req.params;
     
-    await deleteUserPortfolio(id, user.id, userGroups);
+    await deleteUserPortfolio(id as string, user.id, userGroups);
     res.status(204).send();
   } catch (err) {
     if ((err as Error).message === 'ACCESS_DENIED') {

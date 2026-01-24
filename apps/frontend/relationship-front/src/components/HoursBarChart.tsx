@@ -156,7 +156,7 @@ const HoursBarChart: React.FC<BarChartProps> = ({ title = 'Activities per Month 
     ...generatedSeries,
     {
       data: data.map(() => 0),
-      label: 'Total',
+      label: `Total (${totalActivities})`,
       stack: 'activities',
       color: 'transparent',
       id: 'total-series',
