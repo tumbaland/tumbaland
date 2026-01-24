@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.334](https://github.com/toomastahves/tumbaland/compare/v0.0.333...v0.0.334) (2026-01-24)
+
+
+### Features
+
+* add totals to relationship dashboard ([7ca63f3](https://github.com/toomastahves/tumbaland/commit/7ca63f379b77d126857f5897057811b46170f2b8))
+
 ### [0.0.333](https://github.com/toomastahves/tumbaland/compare/v0.0.332...v0.0.333) (2026-01-23)
 
 
