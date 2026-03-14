@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.336](https://github.com/toomastahves/tumbaland/compare/v0.0.335...v0.0.336) (2026-03-14)
+
+
+### Features
+
+* change file service port to 5002 ([377b9b4](https://github.com/toomastahves/tumbaland/commit/377b9b413ca2f8be68a56ddf82dac08d6b349bd2))
+
 ### [0.0.335](https://github.com/toomastahves/tumbaland/compare/v0.0.334...v0.0.335) (2026-03-14)
 
 
