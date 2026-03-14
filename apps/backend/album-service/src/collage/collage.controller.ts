@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import * as collageService from './collage.service';
 import { canAccessResource } from '../utils/permissionUtils';
 import Album from '../models/Album';
-import { getPhotoSignedUrl } from '../services/minioService';
+import { getPhotoSignedUrl } from '../services/fileServiceClient';
 import mongoose from 'mongoose';
 
 export const createCollage = async (req: Request, res: Response) => {

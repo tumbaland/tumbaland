@@ -14,7 +14,3 @@ storybook-static
 # Cloudflare credentials (dynamically created)
 apps/infra/tumbaland-proxy/cloudflare.ini
 storage
-apps/infra/minio/data
-uploaded_files.txt
-link_minio_to_mongodb.js
-upload_direct_minio.js

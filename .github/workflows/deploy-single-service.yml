@@ -25,6 +25,7 @@ on:
           - relationship-service
           - payment-service
           - group-service
+          - file-service
 
 # Ensure only one deployment runs at a time to prevent server overload
 concurrency:
@@ -132,6 +133,12 @@ jobs:
               DEPLOYPATH=apps/backend/group-service/compose.yml
               DEPLOYDIR=apps/backend/group-service
               ;;
+            file-service)
+              CONTEXT=./apps/backend/file-service
+              DOCKERFILE=./apps/backend/file-service/Dockerfile
+              DEPLOYPATH=apps/backend/file-service/compose.yml
+              DEPLOYDIR=apps/backend/file-service
+              ;;
           esac
           echo "context=$CONTEXT" >> $GITHUB_OUTPUT
           echo "dockerfile=$DOCKERFILE" >> $GITHUB_OUTPUT
@@ -192,9 +199,10 @@ jobs:
           echo "CLOUDFLARE_API_TOKEN=${{ secrets.CLOUDFLARE_API_TOKEN }}" >> .env.app
           echo "FILE_ACCESS_SECRET=${{ secrets.FILE_ACCESS_SECRET }}" >> .env.app
           echo "LOGSTASH_HTTP_URL=${{ vars.LOGSTASH_HTTP_URL }}" >> .env.app
-          echo "MINIO_ENDPOINT=${{ vars.MINIO_ENDPOINT }}" >> .env.app
-          echo "MINIO_ACCESS_KEY=${{ vars.MINIO_ACCESS_KEY }}" >> .env.app
-          echo "MINIO_SECRET_KEY=${{ secrets.MINIO_SECRET_KEY }}" >> .env.app
+          echo "FILE_SERVICE_URL=${{ vars.FILE_SERVICE_URL }}" >> .env.app
+          echo "FILE_SERVICE_API_KEY=${{ secrets.FILE_SERVICE_API_KEY }}" >> .env.app
+          echo "FILE_SERVICE_HMAC_SECRET=${{ secrets.FILE_SERVICE_HMAC_SECRET }}" >> .env.app
+          echo "FILE_SERVICE_PUBLIC_URL=${{ vars.FILE_SERVICE_PUBLIC_URL }}" >> .env.app
 
       - name: Copy .env file to server
         uses: appleboy/scp-action@v0.1.7

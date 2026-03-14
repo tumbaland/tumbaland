@@ -1,7 +1,7 @@
 import sharp from 'sharp';
 import * as fs from 'fs';
 import * as path from 'path';
-import { uploadFile, generateThumbnailFileId } from './minioService';
+import { uploadFile, generateThumbnailFileId } from './fileServiceClient';
 import { logger } from '@tumbaland/core';
 
 export interface ThumbnailOptions {
@@ -57,7 +57,7 @@ export const generateThumbnailFromBuffer = async (
     // Get image metadata for the thumbnail
     const metadata = await sharp(thumbnailBuffer).metadata();
 
-    // Upload thumbnail to MinIO
+    // Upload thumbnail to file-service
     const uploadResult = await uploadFile(
       thumbnailBuffer,
       thumbnailFileId,

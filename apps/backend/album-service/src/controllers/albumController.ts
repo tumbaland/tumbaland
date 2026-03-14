@@ -7,7 +7,7 @@ import {
   getPhotoSignedUrl,
   getPhotoSignedUrlsBatch,
   SignedUrlData
-} from '../services/minioService';
+} from '../services/fileServiceClient';
 import { canAccessResource } from '../utils/permissionUtils';
 import mongoose from 'mongoose';
 
@@ -149,7 +149,6 @@ export const getAlbums = async (req: Request, res: Response): Promise<void> => {
       let coverPhotoMap = new Map<string, any>();
       if (coverPhotoIds.length > 0) {
         const coverPhotoDocs = await Photo.find({ _id: { $in: coverPhotoIds } });
-        const fileIds = coverPhotoDocs.map((photo) => photo.minioFileId).filter(Boolean);
         let signedUrlMap: Record<string, SignedUrlData> = {};
         let thumbnailSignedUrlMap: Record<string, SignedUrlData> = {};
 

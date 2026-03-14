@@ -12,7 +12,7 @@ import {
   getFileFolder,
   getFile,
   SignedUrlData
-} from '../services/minioService';
+} from '../services/fileServiceClient';
 import { generateThumbnailFromBuffer, isSupportedImageFormat } from '../services/thumbnailService';
 export const createPhoto = async (req: Request, res: Response): Promise<void> => {
   try {

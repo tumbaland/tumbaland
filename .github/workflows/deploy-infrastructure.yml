@@ -12,7 +12,6 @@ on:
         options:
           - consul
           - tumbaland-proxy
-          - minio
           - elk
           - rabbitmq
 
@@ -43,12 +42,6 @@ jobs:
               DOCKERFILE=./apps/infra/tumbaland-proxy/Dockerfile
               DEPLOYPATH=apps/infra/tumbaland-proxy/compose.yml
               DEPLOYDIR=apps/infra/tumbaland-proxy
-              ;;
-            minio)
-              CONTEXT=./apps/infra/minio
-              DOCKERFILE=./apps/infra/minio/Dockerfile
-              DEPLOYPATH=apps/infra/minio/docker-compose.yml
-              DEPLOYDIR=apps/infra/minio
               ;;
             elk)
               CONTEXT=./apps/infra/elk
@@ -109,11 +102,6 @@ jobs:
           echo "XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${{ secrets.XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY }}" >> .env.infra
           echo "CONSUL_ENCRYPT_KEY=${{ secrets.CONSUL_ENCRYPT_KEY }}" >> .env.infra
           echo "CONSUL_ACL_MASTER_TOKEN=${{ secrets.CONSUL_ACL_MASTER_TOKEN }}" >> .env.infra
-          echo "MINIO_ROOT_USER=${{ secrets.MINIO_ROOT_USER }}" >> .env.infra
-          echo "MINIO_ROOT_PASSWORD=${{ secrets.MINIO_ROOT_PASSWORD }}" >> .env.infra
-          echo "MINIO_ALBUM_SERVICE_PASSWORD=${{ secrets.MINIO_ALBUM_SERVICE_PASSWORD }}" >> .env.infra
-          echo "MINIO_SERVER_URL=${{ vars.MINIO_SERVER_URL }}" >> .env.infra
-          echo "MINIO_BROWSER_REDIRECT_URL=${{ vars.MINIO_BROWSER_REDIRECT_URL }}" >> .env.infra
           echo "RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}" >> .env.infra
           RABBITMQ_PASSWORD="${{ secrets.RABBITMQ_PASSWORD }}" && echo "RABBITMQ_URL=amqp://admin:$RABBITMQ_PASSWORD@rabbitmq:5672/tumbaland" >> .env.infra
 
@@ -136,26 +124,6 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           source: ${{ steps.vars.outputs.deploy_path }}
-          target: ~/tumbaland/
-
-      - name: Copy MinIO initialization files
-        if: github.event.inputs.service == 'minio'
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ vars.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          source: ${{ steps.vars.outputs.deploy_dir }}/entrypoint.sh
-          target: ~/tumbaland/
-
-      - name: Copy MinIO init directory
-        if: github.event.inputs.service == 'minio'
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ vars.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          source: ${{ steps.vars.outputs.deploy_dir }}/init/
           target: ~/tumbaland/
 
       - name: SSH and deploy infrastructure service on server

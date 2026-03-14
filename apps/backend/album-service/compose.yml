@@ -13,13 +13,9 @@ services:
       - MONGODB_URI=${MONGODB_URI}
       - JWT_SECRET=${JWT_SECRET}
       - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN}
-      # MinIO configuration (Album Service - Direct access to album buckets)
-      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
-      - MINIO_PORT=443
-      - MINIO_USE_SSL=true
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
-      - MINIO_BUCKET=album
+      # File service configuration
+      - FILE_SERVICE_URL=${FILE_SERVICE_URL}
+      - FILE_SERVICE_API_KEY=${FILE_SERVICE_API_KEY}
     init: true
     networks:
       - tumbanet
