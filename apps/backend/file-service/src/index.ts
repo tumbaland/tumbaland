@@ -23,7 +23,7 @@ for (const key of REQUIRED_ENV) {
 }
 
 const app = express();
-const PORT = process.env.PORT || 4010;
+const PORT = process.env.PORT || 5002;
 
 // Middleware
 app.use(correlationMiddleware);

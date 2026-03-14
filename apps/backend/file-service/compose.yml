@@ -6,9 +6,9 @@ services:
     image: toomastahves/file-service:latest
     restart: unless-stopped
     ports:
-      - '4010:4010'
+      - '5002:5002'
     environment:
-      - PORT=4010
+      - PORT=5002
       - NODE_ENV=production
       - FILE_SERVICE_API_KEY=${FILE_SERVICE_API_KEY}
       - FILE_SERVICE_HMAC_SECRET=${FILE_SERVICE_HMAC_SECRET}
@@ -20,7 +20,7 @@ services:
     networks:
       - tumbanet
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:4010/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:5002/health"]
       interval: 30s
       timeout: 10s
       retries: 3
