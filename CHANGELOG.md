@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.335](https://github.com/toomastahves/tumbaland/compare/v0.0.334...v0.0.335) (2026-03-14)
+
+
+### Features
+
+* remove minio, add file service ([8658df0](https://github.com/toomastahves/tumbaland/commit/8658df06732bee5df0f05d89292ea5aa898d98d1))
+
 ### [0.0.334](https://github.com/toomastahves/tumbaland/compare/v0.0.333...v0.0.334) (2026-01-24)
 
 
