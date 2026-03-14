@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.337](https://github.com/toomastahves/tumbaland/compare/v0.0.336...v0.0.337) (2026-03-14)
+
+
+### Bug Fixes
+
+* file service proxy port ([212dc2c](https://github.com/toomastahves/tumbaland/commit/212dc2c34d67d7c21d44a9d564f6ed03d3e9addd))
+
 ### [0.0.336](https://github.com/toomastahves/tumbaland/compare/v0.0.335...v0.0.336) (2026-03-14)
 
 
