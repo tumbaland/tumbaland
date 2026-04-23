@@ -4,7 +4,7 @@ import { List, ListItem, ListItemAvatar, Avatar, ListItemButton, Typography, Box
 export interface AlbumPhoto {
   _id: string;
   filename: string;
-  signedUrl: string;
+  signedUrl?: string;
   thumbnailSignedUrl?: string;
   title?: string;
   width?: number;
@@ -22,13 +22,13 @@ const AlbumPhotoList: React.FC<AlbumPhotoListProps> = ({ photos, onPhotoClick, o
   const [overlayPos, setOverlayPos] = useState<{ top: number; left: number } | null>(null);
 
   // Determine the image URL to use for a photo (prefer thumbnail for sidebar)
-  const getThumbnailUrl = (photo: AlbumPhoto): string => {
-    return photo.thumbnailSignedUrl || photo.signedUrl || '';
+  const getThumbnailUrl = (photo: AlbumPhoto): string | undefined => {
+    return photo.thumbnailSignedUrl || photo.signedUrl || undefined;
   };
 
   // Determine the image URL for the overlay preview (use full size)
-  const getPreviewUrl = (photo: AlbumPhoto): string => {
-    return photo.signedUrl || photo.thumbnailSignedUrl || '';
+  const getPreviewUrl = (photo: AlbumPhoto): string | undefined => {
+    return photo.signedUrl || photo.thumbnailSignedUrl || undefined;
   };
 
   const handleMouseEnter = (e: React.MouseEvent, photo: AlbumPhoto) => {

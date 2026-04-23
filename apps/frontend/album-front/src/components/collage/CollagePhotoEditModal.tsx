@@ -17,7 +17,7 @@ import { Close as CloseIcon } from '@mui/icons-material';
 
 interface CollagePhoto {
   id: string;
-  src: string;
+  src?: string;
   x: number;
   y: number;
   width: number;
@@ -142,16 +142,35 @@ const CollagePhotoEditModal: React.FC<CollagePhotoEditModalProps> = ({
                   flexDirection: 'column'
                 }}
               >
-                <img
-                  src={photo.src}
-                  alt="collage photo"
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    borderRadius: 2
-                  }}
-                />
+                {photo.src ? (
+                  <img
+                    src={photo.src}
+                    alt="collage photo"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      borderRadius: 2
+                    }}
+                  />
+                ) : (
+                  <Box
+                    sx={{
+                      width: '100%',
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: '#f5f5f5',
+                      color: '#616161',
+                      borderRadius: 2,
+                      p: 2,
+                      textAlign: 'center'
+                    }}
+                  >
+                    Image not available
+                  </Box>
+                )}
               </Box>
             </Box>
 

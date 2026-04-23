@@ -4,7 +4,7 @@ import { Box } from '@mui/material';
 export interface CanvasPhoto {
   id: string;
   fileId?: string;
-  src: string;
+  src?: string;
   x: number;
   y: number;
   width: number;
@@ -84,26 +84,46 @@ const CollageCanvasPhoto: React.FC<CollageCanvasPhotoProps> = ({
           position: 'relative'
         }}
       >
-        <img
-          src={photo.src}
-          alt="collage"
-          onMouseDown={isViewMode ? undefined : (e) => onMouseDown(e, photo)}
-          onDoubleClick={isViewMode ? undefined : onDoubleClick}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            borderRadius: 6,
-            cursor: isViewMode
-              ? 'default'
-              : isDragging
-                ? 'grabbing'
-                : isResizing
-                  ? 'nwse-resize'
-                  : 'pointer'
-          }}
-          draggable={false}
-        />
+        {photo.src ? (
+          <img
+            src={photo.src}
+            alt="collage"
+            onMouseDown={isViewMode ? undefined : (e) => onMouseDown(e, photo)}
+            onDoubleClick={isViewMode ? undefined : onDoubleClick}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              borderRadius: 6,
+              cursor: isViewMode
+                ? 'default'
+                : isDragging
+                  ? 'grabbing'
+                  : isResizing
+                    ? 'nwse-resize'
+                    : 'pointer'
+            }}
+            draggable={false}
+          />
+        ) : (
+          <Box
+            sx={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              bgcolor: '#e0e0e0',
+              color: '#616161',
+              borderRadius: 6,
+              fontSize: '0.85rem',
+              textAlign: 'center',
+              p: 1
+            }}
+          >
+            Image not available
+          </Box>
+        )}
         {/* Resize handle */}
         {!isViewMode && (
           <Box

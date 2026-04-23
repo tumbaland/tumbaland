@@ -117,15 +117,19 @@ export const getCollageById = async (req: Request, res: Response): Promise<void>
 
           return {
             ...photo,
-            signedUrl: signedUrlData?.signedUrl || '',
+            signedUrl: signedUrlData?.signedUrl,
             signedUrlExpiresAt: signedUrlData?.expiresAt,
             signedUrlExpiresInMinutes: signedUrlData?.expiresInMinutes,
-            thumbnailSignedUrl: thumbnailSignedUrlData?.signedUrl || '',
+            thumbnailSignedUrl: thumbnailSignedUrlData?.signedUrl,
             thumbnailSignedUrlExpiresAt: thumbnailSignedUrlData?.expiresAt,
             thumbnailSignedUrlExpiresInMinutes: thumbnailSignedUrlData?.expiresInMinutes
           };
         } catch (e) {
-          return photo;
+          return {
+            ...photo,
+            signedUrl: undefined,
+            thumbnailSignedUrl: undefined
+          };
         }
       })
     );

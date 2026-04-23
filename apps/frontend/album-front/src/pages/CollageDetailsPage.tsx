@@ -176,7 +176,7 @@ const CollageDetailsPage: React.FC = () => {
     try {
       const photos = canvasPhotos.map((p, idx) => {
         // Use stored fileId, or extract from URL as fallback
-        const photoId = p.fileId || (p.src.includes('/serve/') 
+        const photoId = p.fileId || (typeof p.src === 'string' && p.src.includes('/serve/') 
           ? p.src.split('/serve/')[1]?.split('?')[0] 
           : '');
         
@@ -247,7 +247,7 @@ const CollageDetailsPage: React.FC = () => {
           return {
             id: p.photoId + '-' + idx,
             fileId: p.photoId,
-            src: albumPhoto ? albumPhoto.signedUrl : p.filename,
+            src: albumPhoto?.signedUrl || p.filename || undefined,
             x: p.position?.left || 100,
             y: p.position?.top || 100,
             width: p.width || 120,
