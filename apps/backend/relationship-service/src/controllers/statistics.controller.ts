@@ -8,33 +8,30 @@ import {
   getCumulativeTimelineData
 } from '../services/statistics.service';
 
-// Get relationship statistics
+/**
+ * Get relationship statistics
+ */
 export const getStatistics = async (req: Request, res: Response): Promise<void> => {
   try {
     const { timeframe, groupId } = req.query;
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
 
-    // Validate timeframe parameter
     const validTimeframes = ['week', 'month', 'quarter', 'year', 'all'];
     const selectedTimeframe = (timeframe as string) || 'all';
     if (!validTimeframes.includes(selectedTimeframe)) {
       res.status(400).json({
-        error: 'Invalid timeframe',
-        message: 'Timeframe must be one of: week, month, quarter, year, all',
-        validTimeframes
+        success: false,
+        message: 'Invalid timeframe. Must be one of: week, month, quarter, year, all'
       });
       return;
     }
 
-    // Create filters object
     const filters: any = { userId: user.id };
     
     if (groupId) {
-      // Filter by specific group
       filters.groupId = groupId as string;
     } else {
-      // Personal context - show only items without groupId (personal items only)
       filters.userGroupIds = userGroups;
       filters.personalOnly = true;
     }
@@ -48,15 +45,16 @@ export const getStatistics = async (req: Request, res: Response): Promise<void> 
       generatedAt: new Date().toISOString()
     });
   } catch (error: any) {
-    console.error('Error fetching statistics:', error);
     res.status(500).json({
-      error: 'Failed to fetch statistics',
-      message: error.message
+      success: false,
+      message: error.message || 'Failed to fetch statistics'
     });
   }
 };
 
-// Get monthly hours statistics
+/**
+ * Get monthly hours statistics
+ */
 export const getMonthlyHoursData = async (req: Request, res: Response): Promise<void> => {
   try {
     const { year, groupId } = req.query;
@@ -64,23 +62,19 @@ export const getMonthlyHoursData = async (req: Request, res: Response): Promise<
     const userGroups = (req as any).userGroups || [];
     const selectedYear = year ? parseInt(year as string) : undefined;
 
-    // Validate year if provided
     if (year && (isNaN(selectedYear!) || selectedYear! < 2000 || selectedYear! > new Date().getFullYear() + 1)) {
       res.status(400).json({
-        error: 'Invalid year',
+        success: false,
         message: 'Year must be a valid number between 2000 and next year'
       });
       return;
     }
 
-    // Create filters object
     const filters: any = { userId: user.id };
     
     if (groupId) {
-      // Filter by specific group
       filters.groupId = groupId as string;
     } else {
-      // Personal context - show only items without groupId (personal items only)
       filters.userGroupIds = userGroups;
       filters.personalOnly = true;
     }
@@ -93,15 +87,16 @@ export const getMonthlyHoursData = async (req: Request, res: Response): Promise<
       generatedAt: new Date().toISOString()
     });
   } catch (error: any) {
-    console.error('Error fetching monthly hours:', error);
     res.status(500).json({
-      error: 'Failed to fetch monthly hours',
-      message: error.message
+      success: false,
+      message: error.message || 'Failed to fetch monthly hours'
     });
   }
 };
 
-// Get monthly statistics (days breakdown)
+/**
+ * Get monthly statistics (days breakdown)
+ */
 export const getMonthlyStatisticsData = async (req: Request, res: Response): Promise<void> => {
   try {
     const { year, groupId } = req.query;
@@ -109,23 +104,19 @@ export const getMonthlyStatisticsData = async (req: Request, res: Response): Pro
     const userGroups = (req as any).userGroups || [];
     const selectedYear = year ? parseInt(year as string) : undefined;
 
-    // Validate year if provided
     if (year && (isNaN(selectedYear!) || selectedYear! < 2000 || selectedYear! > new Date().getFullYear() + 1)) {
       res.status(400).json({
-        error: 'Invalid year',
+        success: false,
         message: 'Year must be a valid number between 2000 and next year'
       });
       return;
     }
 
-    // Create filters object
     const filters: any = { userId: user.id };
     
     if (groupId) {
-      // Filter by specific group
       filters.groupId = groupId as string;
     } else {
-      // Personal context - show only items without groupId (personal items only)
       filters.userGroupIds = userGroups;
       filters.personalOnly = true;
     }
@@ -138,15 +129,16 @@ export const getMonthlyStatisticsData = async (req: Request, res: Response): Pro
       generatedAt: new Date().toISOString()
     });
   } catch (error: any) {
-    console.error('Error fetching monthly statistics:', error);
     res.status(500).json({
-      error: 'Failed to fetch monthly statistics',
-      message: error.message
+      success: false,
+      message: error.message || 'Failed to fetch monthly statistics'
     });
   }
 };
 
-// Get monthly activity breakdown
+/**
+ * Get monthly activity breakdown
+ */
 export const getMonthlyActivityBreakdownData = async (req: Request, res: Response): Promise<void> => {
   try {
     const { year, groupId } = req.query;
@@ -154,23 +146,19 @@ export const getMonthlyActivityBreakdownData = async (req: Request, res: Respons
     const userGroups = (req as any).userGroups || [];
     const selectedYear = year ? parseInt(year as string) : undefined;
 
-    // Validate year if provided
     if (year && (isNaN(selectedYear!) || selectedYear! < 2000 || selectedYear! > new Date().getFullYear() + 1)) {
       res.status(400).json({
-        error: 'Invalid year',
+        success: false,
         message: 'Year must be a valid number between 2000 and next year'
       });
       return;
     }
 
-    // Create filters object
     const filters: any = { userId: user.id };
     
     if (groupId) {
-      // Filter by specific group
       filters.groupId = groupId as string;
     } else {
-      // Personal context - show only items without groupId (personal items only)
       filters.userGroupIds = userGroups;
       filters.personalOnly = true;
     }
@@ -183,15 +171,16 @@ export const getMonthlyActivityBreakdownData = async (req: Request, res: Respons
       generatedAt: new Date().toISOString()
     });
   } catch (error: any) {
-    console.error('Error fetching monthly activity breakdown:', error);
     res.status(500).json({
-      error: 'Failed to fetch monthly activity breakdown',
-      message: error.message
+      success: false,
+      message: error.message || 'Failed to fetch monthly activity breakdown'
     });
   }
 };
 
-// Get weekly heatmap data
+/**
+ * Get weekly heatmap data
+ */
 export const getWeeklyHeatmapDataController = async (req: Request, res: Response): Promise<void> => {
   try {
     const { year, groupId } = req.query;
@@ -199,23 +188,19 @@ export const getWeeklyHeatmapDataController = async (req: Request, res: Response
     const userGroups = (req as any).userGroups || [];
     const selectedYear = year ? parseInt(year as string) : undefined;
 
-    // Validate year if provided
     if (year && (isNaN(selectedYear!) || selectedYear! < 2000 || selectedYear! > new Date().getFullYear() + 1)) {
       res.status(400).json({
-        error: 'Invalid year',
+        success: false,
         message: 'Year must be a valid number between 2000 and next year'
       });
       return;
     }
 
-    // Create filters object
     const filters: any = { userId: user.id };
     
     if (groupId) {
-      // Filter by specific group
       filters.groupId = groupId as string;
     } else {
-      // Personal context - show only items without groupId (personal items only)
       filters.userGroupIds = userGroups;
       filters.personalOnly = true;
     }
@@ -228,15 +213,16 @@ export const getWeeklyHeatmapDataController = async (req: Request, res: Response
       generatedAt: new Date().toISOString()
     });
   } catch (error: any) {
-    console.error('Error fetching weekly heatmap data:', error);
     res.status(500).json({
-      error: 'Failed to fetch weekly heatmap data',
-      message: error.message
+      success: false,
+      message: error.message || 'Failed to fetch weekly heatmap data'
     });
   }
 };
 
-// Get cumulative timeline data
+/**
+ * Get cumulative timeline data
+ */
 export const getCumulativeTimelineDataController = async (req: Request, res: Response): Promise<void> => {
   try {
     const { year, groupId } = req.query;
@@ -244,23 +230,19 @@ export const getCumulativeTimelineDataController = async (req: Request, res: Res
     const userGroups = (req as any).userGroups || [];
     const selectedYear = year ? parseInt(year as string) : undefined;
 
-    // Validate year if provided
     if (year && (isNaN(selectedYear!) || selectedYear! < 2000 || selectedYear! > new Date().getFullYear() + 1)) {
       res.status(400).json({
-        error: 'Invalid year',
+        success: false,
         message: 'Year must be a valid number between 2000 and next year'
       });
       return;
     }
 
-    // Create filters object
     const filters: any = { userId: user.id };
     
     if (groupId) {
-      // Filter by specific group
       filters.groupId = groupId as string;
     } else {
-      // Personal context - show only items without groupId (personal items only)
       filters.userGroupIds = userGroups;
       filters.personalOnly = true;
     }
@@ -273,10 +255,9 @@ export const getCumulativeTimelineDataController = async (req: Request, res: Res
       generatedAt: new Date().toISOString()
     });
   } catch (error: any) {
-    console.error('Error fetching cumulative timeline data:', error);
     res.status(500).json({
-      error: 'Failed to fetch cumulative timeline data',
-      message: error.message
+      success: false,
+      message: error.message || 'Failed to fetch cumulative timeline data'
     });
   }
 };

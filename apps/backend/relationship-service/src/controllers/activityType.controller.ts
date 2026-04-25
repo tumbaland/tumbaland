@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
 import * as ActivityTypeService from '../services/activityType.service';
 
-// Create a new activity type
+/**
+ * Create a new activity type
+ */
 export const createActivityType = async (req: Request, res: Response): Promise<void> => {
   try {
     const user = (req as any).user;
@@ -13,7 +15,8 @@ export const createActivityType = async (req: Request, res: Response): Promise<v
     // Validate required fields
     if (!typeData.name) {
       res.status(400).json({
-        error: 'Missing required field: name is required'
+        success: false,
+        message: 'Missing required field: name is required'
       });
       return;
     }
@@ -26,23 +29,25 @@ export const createActivityType = async (req: Request, res: Response): Promise<v
     const activityType = await ActivityTypeService.createActivityType(typeData);
     res.status(201).json({
       success: true,
+      message: 'Activity type created successfully',
       data: activityType
     });
   } catch (error: any) {
-    res.status(400).json({
-      error: error.message
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to create activity type'
     });
   }
 };
 
-// Get all activity types
+/**
+ * Get all activity types
+ */
 export const getActivityTypes = async (req: Request, res: Response): Promise<void> => {
   try {
     const { isActive, limit, page, groupId } = req.query;
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
-
-    console.log('getActivityTypes request:', { isActive, limit, page, groupId, userId: user.id, userGroups });
 
     const filters: any = {};
 
@@ -52,21 +57,14 @@ export const getActivityTypes = async (req: Request, res: Response): Promise<voi
 
     // Handle groupId - check if it was provided in the request
     if (req.query && 'groupId' in req.query) {
-      // groupId parameter was explicitly provided
       const groupIdValue = groupId as string;
       filters.groupId = groupIdValue === '' || groupIdValue === 'null' ? null : groupIdValue;
     }
-    // If groupId parameter is not provided at all, filters.groupId remains undefined
 
-    // Add user context for permission filtering
     filters.userId = user.id;
     filters.userGroupIds = userGroups;
 
-    console.log('Calling service with filters:', filters);
-
     const result = await ActivityTypeService.getActivityTypes(filters);
-
-    console.log(`Returning ${result.types.length} activity types`);
 
     res.json({
       success: true,
@@ -81,14 +79,16 @@ export const getActivityTypes = async (req: Request, res: Response): Promise<voi
       }
     });
   } catch (error: any) {
-    console.error('getActivityTypes error:', error);
     res.status(500).json({
-      error: error.message
+      success: false,
+      message: error.message || 'Failed to fetch activity types'
     });
   }
 };
 
-// Get activity type by ID
+/**
+ * Get activity type by ID
+ */
 export const getActivityTypeById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
@@ -96,7 +96,8 @@ export const getActivityTypeById = async (req: Request, res: Response): Promise<
 
     if (!activityType) {
       res.status(404).json({
-        error: 'Activity type not found'
+        success: false,
+        message: 'Activity type not found'
       });
       return;
     }
@@ -107,12 +108,15 @@ export const getActivityTypeById = async (req: Request, res: Response): Promise<
     });
   } catch (error: any) {
     res.status(500).json({
-      error: error.message
+      success: false,
+      message: error.message || 'Failed to fetch activity type'
     });
   }
 };
 
-// Update activity type by ID
+/**
+ * Update activity type by ID
+ */
 export const updateActivityType = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
@@ -122,23 +126,28 @@ export const updateActivityType = async (req: Request, res: Response): Promise<v
 
     if (!activityType) {
       res.status(404).json({
-        error: 'Activity type not found'
+        success: false,
+        message: 'Activity type not found'
       });
       return;
     }
 
     res.json({
       success: true,
+      message: 'Activity type updated successfully',
       data: activityType
     });
   } catch (error: any) {
-    res.status(400).json({
-      error: error.message
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to update activity type'
     });
   }
 };
 
-// Delete activity type by ID
+/**
+ * Delete activity type by ID
+ */
 export const deleteActivityType = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
@@ -146,7 +155,8 @@ export const deleteActivityType = async (req: Request, res: Response): Promise<v
 
     if (!deleted) {
       res.status(404).json({
-        error: 'Activity type not found'
+        success: false,
+        message: 'Activity type not found'
       });
       return;
     }
@@ -157,12 +167,15 @@ export const deleteActivityType = async (req: Request, res: Response): Promise<v
     });
   } catch (error: any) {
     res.status(500).json({
-      error: error.message
+      success: false,
+      message: error.message || 'Failed to delete activity type'
     });
   }
 };
 
-// Reorder activity types
+/**
+ * Reorder activity types
+ */
 export const reorderActivityTypes = async (req: Request, res: Response): Promise<void> => {
   try {
     const user = (req as any).user;
@@ -170,7 +183,8 @@ export const reorderActivityTypes = async (req: Request, res: Response): Promise
 
     if (!Array.isArray(typeIds)) {
       res.status(400).json({
-        error: 'typeIds must be an array'
+        success: false,
+        message: 'typeIds must be an array'
       });
       return;
     }
@@ -183,7 +197,8 @@ export const reorderActivityTypes = async (req: Request, res: Response): Promise
     });
   } catch (error: any) {
     res.status(500).json({
-      error: error.message
+      success: false,
+      message: error.message || 'Failed to reorder activity types'
     });
   }
 };

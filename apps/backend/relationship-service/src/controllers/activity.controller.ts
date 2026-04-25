@@ -2,7 +2,9 @@ import { Request, Response } from 'express';
 import * as ActivityService from '../services/activity.service';
 import { IActivity } from '../models/Activity';
 
-// Create a new activity
+/**
+ * Create a new activity
+ */
 export const createActivity = async (req: Request, res: Response): Promise<void> => {
   try {
     const user = (req as any).user;
@@ -14,7 +16,8 @@ export const createActivity = async (req: Request, res: Response): Promise<void>
     // Validate required fields
     if (!activityData.date || !activityData.activity) {
       res.status(400).json({
-        error: 'Missing required fields: date and activity are required'
+        success: false,
+        message: 'Missing required fields: date and activity are required'
       });
       return;
     }
@@ -22,7 +25,8 @@ export const createActivity = async (req: Request, res: Response): Promise<void>
     // Validate activity object structure
     if (!activityData.activity.typeId) {
       res.status(400).json({
-        error: 'Activity object must contain typeId'
+        success: false,
+        message: 'Activity object must contain typeId'
       });
       return;
     }
@@ -40,7 +44,8 @@ export const createActivity = async (req: Request, res: Response): Promise<void>
 
     if (!activityType) {
       res.status(400).json({
-        error: 'Invalid or inaccessible activity type'
+        success: false,
+        message: 'Invalid or inaccessible activity type'
       });
       return;
     }
@@ -48,7 +53,8 @@ export const createActivity = async (req: Request, res: Response): Promise<void>
     // Validate hours if provided (must be non-negative)
     if (activityData.hours !== undefined && activityData.hours < 0) {
       res.status(400).json({
-        error: 'Hours must be a non-negative number'
+        success: false,
+        message: 'Hours must be a non-negative number'
       });
       return;
     }
@@ -56,29 +62,27 @@ export const createActivity = async (req: Request, res: Response): Promise<void>
     const activity = await ActivityService.createActivity(activityData);
     res.status(201).json({
       success: true,
+      message: 'Activity created successfully',
       data: activity
     });
   } catch (error: any) {
-    res.status(400).json({
-      error: error.message
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to create activity'
     });
   }
 };
 
-// Get all activities with filters
+/**
+ * Get all activities with filters
+ */
 export const getActivities = async (req: Request, res: Response): Promise<void> => {
   try {
     const { activityType, startDate, endDate, description, limit, page, sortBy, sortOrder, groupId } = req.query;
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
 
-    // Debug logging
-    console.log('🔍 Debug getActivities:');
-    console.log('  User ID:', user.id);
-    console.log('  User Groups:', userGroups);
-
     const filters: any = {};
-
     if (activityType) filters.activityType = activityType as string;
     if (startDate) filters.startDate = new Date(startDate as string);
     if (endDate) filters.endDate = new Date(endDate as string);
@@ -89,16 +93,10 @@ export const getActivities = async (req: Request, res: Response): Promise<void> 
     if (sortOrder) filters.sortOrder = sortOrder as 'asc' | 'desc';
     if (groupId) filters.groupId = groupId as string;
     
-    // Add user context for permission filtering
     filters.userId = user.id;
     filters.userGroupIds = userGroups;
 
     const result = await ActivityService.getActivities(filters);
-
-    console.log('  Result from service:', {
-      activitiesCount: result.activities.length,
-      total: result.total
-    });
 
     res.json({
       success: true,
@@ -113,14 +111,17 @@ export const getActivities = async (req: Request, res: Response): Promise<void> 
       }
     });
   } catch (error: any) {
-    console.error('❌ Error in getActivities:', error);
-    res.status(500).json({
-      error: error.message
+    const statusCode = error.message === 'ACCESS_DENIED' ? 403 : 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error.message || 'Failed to fetch activities'
     });
   }
 };
 
-// Get activity by ID
+/**
+ * Get activity by ID
+ */
 export const getActivityById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
@@ -128,7 +129,8 @@ export const getActivityById = async (req: Request, res: Response): Promise<void
 
     if (!activity) {
       res.status(404).json({
-        error: 'Activity not found'
+        success: false,
+        message: 'Activity not found'
       });
       return;
     }
@@ -139,12 +141,15 @@ export const getActivityById = async (req: Request, res: Response): Promise<void
     });
   } catch (error: any) {
     res.status(500).json({
-      error: error.message
+      success: false,
+      message: error.message || 'Failed to fetch activity'
     });
   }
 };
 
-// Update activity by ID
+/**
+ * Update activity by ID
+ */
 export const updateActivity = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
@@ -154,23 +159,28 @@ export const updateActivity = async (req: Request, res: Response): Promise<void>
 
     if (!activity) {
       res.status(404).json({
-        error: 'Activity not found'
+        success: false,
+        message: 'Activity not found'
       });
       return;
     }
 
     res.json({
       success: true,
+      message: 'Activity updated successfully',
       data: activity
     });
   } catch (error: any) {
-    res.status(400).json({
-      error: error.message
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to update activity'
     });
   }
 };
 
-// Delete activity by ID
+/**
+ * Delete activity by ID
+ */
 export const deleteActivity = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
@@ -178,7 +188,8 @@ export const deleteActivity = async (req: Request, res: Response): Promise<void>
 
     if (!deleted) {
       res.status(404).json({
-        error: 'Activity not found'
+        success: false,
+        message: 'Activity not found'
       });
       return;
     }
@@ -189,12 +200,15 @@ export const deleteActivity = async (req: Request, res: Response): Promise<void>
     });
   } catch (error: any) {
     res.status(500).json({
-      error: error.message
+      success: false,
+      message: error.message || 'Failed to delete activity'
     });
   }
 };
 
-// Get activity statistics
+/**
+ * Get activity statistics
+ */
 export const getActivityStats = async (req: Request, res: Response): Promise<void> => {
   try {
     const { startDate, endDate } = req.query;
@@ -211,19 +225,23 @@ export const getActivityStats = async (req: Request, res: Response): Promise<voi
     });
   } catch (error: any) {
     res.status(500).json({
-      error: error.message
+      success: false,
+      message: error.message || 'Failed to fetch statistics'
     });
   }
 };
 
-// Get activities by date range
+/**
+ * Get activities by date range
+ */
 export const getActivitiesByDateRange = async (req: Request, res: Response): Promise<void> => {
   try {
     const { startDate, endDate } = req.query;
 
     if (!startDate || !endDate) {
       res.status(400).json({
-        error: 'Both startDate and endDate are required'
+        success: false,
+        message: 'Both startDate and endDate are required'
       });
       return;
     }
@@ -239,12 +257,15 @@ export const getActivitiesByDateRange = async (req: Request, res: Response): Pro
     });
   } catch (error: any) {
     res.status(400).json({
-      error: error.message
+      success: false,
+      message: error.message || 'Failed to fetch activities by date range'
     });
   }
 };
 
-// Get recent activities
+/**
+ * Get recent activities
+ */
 export const getRecentActivities = async (req: Request, res: Response): Promise<void> => {
   try {
     const { limit } = req.query;
@@ -252,7 +273,6 @@ export const getRecentActivities = async (req: Request, res: Response): Promise<
     const userGroups = (req as any).userGroups || [];
     const limitNum = limit ? parseInt(limit as string) : 10;
 
-    // Use the regular getActivities function with proper filtering
     const filters = {
       limit: limitNum,
       page: 1,
@@ -270,12 +290,15 @@ export const getRecentActivities = async (req: Request, res: Response): Promise<
     });
   } catch (error: any) {
     res.status(500).json({
-      error: error.message
+      success: false,
+      message: error.message || 'Failed to fetch recent activities'
     });
   }
 };
 
-// Get activity types
+/**
+ * Get activity types
+ */
 export const getActivityTypes = async (req: Request, res: Response): Promise<void> => {
   try {
     const user = (req as any).user;
@@ -290,19 +313,21 @@ export const getActivityTypes = async (req: Request, res: Response): Promise<voi
     });
   } catch (error: any) {
     res.status(500).json({
-      error: error.message
+      success: false,
+      message: error.message || 'Failed to fetch activity types'
     });
   }
 };
 
-// Get recent activities summary by category and timeline
+/**
+ * Get recent activities summary by category and timeline
+ */
 export const getRecentActivitiesSummary = async (req: Request, res: Response): Promise<void> => {
   try {
     const { groupId } = req.query;
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
 
-    // Get available activity types (service layer will handle permission checks)
     const activityTypes = await ActivityService.getActivityTypes(user.id, groupId as string, userGroups);
     const categories = activityTypes.map((type: any) => type.slug);
 
@@ -322,20 +347,18 @@ export const getRecentActivitiesSummary = async (req: Request, res: Response): P
         const startDate = new Date();
         startDate.setMonth(startDate.getMonth() - timeline.months);
 
-        // Use the regular getActivities function with proper filtering
         const filters: any = {
           startDate,
           endDate,
           activityType: category,
-          limit: 1000, // Get all activities in the range
+          limit: 1000,
           page: 1,
           sortBy: 'date',
-          sortOrder: 'asc' as 'asc', // Oldest first
+          sortOrder: 'asc' as 'asc',
           userId: user.id,
           userGroupIds: userGroups
         };
 
-        // Add groupId filter if provided
         if (groupId) {
           filters.groupId = groupId as string;
         }
@@ -356,7 +379,8 @@ export const getRecentActivitiesSummary = async (req: Request, res: Response): P
     });
   } catch (error: any) {
     res.status(500).json({
-      error: error.message
+      success: false,
+      message: error.message || 'Failed to fetch activities summary'
     });
   }
 };
