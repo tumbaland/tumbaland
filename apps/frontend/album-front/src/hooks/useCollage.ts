@@ -14,10 +14,9 @@ export const useCollageList = (options?: { albumId?: string; enabled?: boolean }
   const albumId = options?.albumId ?? null;
   const groupId = tenantGroupId ?? null;
 
-  return useQuery<{ collages: Collage[] }, Error, Collage[]>({
+  return useQuery<Collage[], Error>({
     queryKey: collageKeys.list(albumId, groupId),
     queryFn: () => collageService.getCollages({ albumId: options?.albumId, groupId: tenantGroupId }),
-    select: (response) => response.collages,
     placeholderData: keepPreviousData,
     enabled: options?.enabled ?? true
   });

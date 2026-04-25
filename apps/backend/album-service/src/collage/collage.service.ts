@@ -1,6 +1,9 @@
 import { CollageInput } from './collage.types';
 import { CollageModel, ICollage } from './collage.model';
 import { buildAccessQuery, canAccessResource } from '../utils/permissionUtils';
+import Album from '../models/Album';
+import { getPhotoSignedUrl } from '../services/fileServiceClient';
+import mongoose from 'mongoose';
 
 export const createCollage = async (
   data: CollageInput, 
@@ -72,6 +75,105 @@ export const getCollageById = async (
   }
 
   return collage;
+};
+
+/**
+ * Get collage with all photos from its albums
+ */
+export const getCollageWithPhotos = async (
+  id: string,
+  userId: string,
+  userGroups: string[] = []
+): Promise<{ collage: ICollage; photos: any[] }> => {
+  const collage = await getCollageById(id, userId, userGroups);
+  
+  if (!collage) {
+    throw new Error('Collage not found');
+  }
+
+  // Use aggregation to fetch photos from all albums in the collage
+  const aggregationPipeline: any[] = [
+    { $match: { _id: { $in: collage.albumIds.map(id => new mongoose.Types.ObjectId(id)) } } },
+    {
+      $lookup: {
+        from: 'photos',
+        localField: '_id',
+        foreignField: 'albumId',
+        as: 'photos'
+      }
+    },
+    {
+      $project: {
+        _id: 1,
+        userId: 1,
+        groupId: 1,
+        isPublic: 1,
+        photos: {
+          $map: {
+            input: '$photos',
+            as: 'photo',
+            in: {
+              _id: '$$photo._id',
+              filename: '$$photo.filename',
+              minioFileId: '$$photo.minioFileId',
+              minioThumbnailFileId: '$$photo.minioThumbnailFileId',
+              mimetype: '$$photo.mimetype',
+              createdAt: '$$photo.createdAt',
+              title: '$$photo.title',
+              description: '$$photo.description'
+            }
+          }
+        }
+      }
+    }
+  ];
+
+  const albumsWithPhotos = await (Album as any).aggregate(aggregationPipeline);
+
+  // Check access permissions for all albums
+  for (const album of albumsWithPhotos) {
+    const hasAlbumAccess = canAccessResource(
+      userId,
+      album.userId || '',
+      album.groupId,
+      userGroups,
+      false // albums are not public
+    );
+
+    if (!hasAlbumAccess) {
+      throw new Error('Access denied to one or more albums');
+    }
+  }
+
+  // Flatten all photos and get signed URLs in parallel
+  const allPhotos = albumsWithPhotos.flatMap((album: any) => album.photos);
+  const photosWithUrls = await Promise.all(
+    allPhotos.map(async (photo: any) => {
+      try {
+        const signedUrlData = await getPhotoSignedUrl(photo, false, 60);
+        const thumbnailSignedUrlData = await getPhotoSignedUrl(photo, true, 60);
+
+        return {
+          ...photo,
+          signedUrl: signedUrlData?.signedUrl,
+          signedUrlExpiresAt: signedUrlData?.expiresAt,
+          signedUrlExpiresInMinutes: signedUrlData?.expiresInMinutes,
+          thumbnailSignedUrl: thumbnailSignedUrlData?.signedUrl,
+          thumbnailSignedUrlExpiresAt: thumbnailSignedUrlData?.expiresAt,
+          thumbnailSignedUrlExpiresInMinutes: thumbnailSignedUrlData?.expiresInMinutes
+        };
+      } catch (error) {
+        console.error('Failed to get signed URLs for photo:', error);
+        return {
+          ...photo,
+          signedUrl: undefined,
+          thumbnailSignedUrl: undefined
+        };
+      }
+    })
+  );
+
+  return { collage, photos: photosWithUrls };
 };
 
 export const getCollageList = async (
