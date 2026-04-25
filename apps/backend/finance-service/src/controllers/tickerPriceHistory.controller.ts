@@ -1,104 +1,107 @@
 import { Request, Response } from 'express';
-import TickerPriceHistory from '../models/TickerPriceHistory';
-import { fetchStockPrice, fetchAndSaveAllStockHistory } from '../services/alphaVantage.service';
+import * as tickerPriceService from '../services/tickerPriceHistory.service';
 
-// POST /api/ticker-price-history/fetch-all - fetch and save all historic prices for a ticker
-export const fetchAndSaveAllTickerHistory = async (req: Request, res: Response) => {
-  const { ticker } = req.body;
-  if (!ticker) {
-    res.status(400).json({ error: 'Missing ticker in request body' });
-    return;
-  }
+/**
+ * Get all ticker price history records
+ */
+export const getTickerPriceHistory = async (req: Request, res: Response): Promise<void> => {
   try {
-    const savedCount = await fetchAndSaveAllStockHistory(ticker);
-    res.status(200).json({ message: `Fetched and saved ${savedCount} records for ${ticker}` });
-  } catch (err) {
+    const records = await tickerPriceService.getTickerPriceHistory();
+
+    res.json({
+      success: true,
+      data: records
+    });
+  } catch (error: any) {
+    console.error('Error fetching ticker price history:', error);
     res.status(500).json({
-      error: 'Failed to fetch and save all ticker history',
-      details: err instanceof Error ? (err as Error).message : err
+      success: false,
+      message: error.message || 'Failed to fetch ticker price history'
     });
   }
 };
-import TrackedTicker from '../models/TrackedTicker';
-import { TickerPriceHistoryResponse, FetchAndSavePricesResponse } from '../types/tickerPriceHistory.types';
 
-// GET /api/ticker-price-history - get all ticker price history records
-export const getTickerPriceHistory = async (req: Request, res: Response<TickerPriceHistoryResponse[]>) => {
+/**
+ * Fetch and save latest ticker prices
+ */
+export const fetchAndSaveTickerPrices = async (req: Request, res: Response): Promise<void> => {
   try {
-    const records = await TickerPriceHistory.find().sort({ date: -1 });
-    const response: TickerPriceHistoryResponse[] = records
-      .map((r) => ({
-        _id: r._id?.toString(), // Add the MongoDB id to the response
-        date: r.date.toISOString(),
-        ticker: r.ticker,
-        price: r.price,
-        open: r.open,
-        high: r.high,
-        low: r.low,
-        volume: r.volume,
-        close: r.price // Add close price for frontend compatibility
-      }))
-      .sort((a, b) => {
-        // Sort by ticker ASC, then by date DESC
-        if (a.ticker < b.ticker) return -1;
-        if (a.ticker > b.ticker) return 1;
-        return b.date.localeCompare(a.date);
-      });
-    res.status(200).json(response);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch ticker price history' } as any);
+    const { ticker } = req.body;
+
+    const results = await tickerPriceService.fetchAndSaveTickerPrices(ticker);
+
+    res.json({
+      success: true,
+      message: 'Prices fetched and saved',
+      data: results
+    });
+  } catch (error: any) {
+    console.error('Error fetching ticker prices:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch and save ticker prices'
+    });
   }
 };
 
-// POST /api/ticker-price-history - fetch and save latest prices for all tracked tickers or a specific ticker
-export const fetchAndSaveTickerPrices = async (req: Request, res: Response<FetchAndSavePricesResponse>) => {
-  const results: TickerPriceHistoryResponse[] = [];
-  let tickers: string[] = [];
-  if (req.body && req.body.ticker) {
-    tickers = [req.body.ticker];
-  } else {
-    // Fetch all tracked tickers from DB
-    const trackedTickers = await TrackedTicker.find();
-    tickers = trackedTickers.map((t) => t.ticker);
-  }
-  for (const ticker of tickers) {
-    const priceData = await fetchStockPrice(ticker);
-    if (priceData) {
-      const today = new Date();
-      const record = await TickerPriceHistory.findOneAndUpdate(
-        { ticker, date: today.toISOString().slice(0, 10) },
-        {
-          ticker,
-          date: today,
-          price: priceData.close,
-          open: priceData.open,
-          high: priceData.high,
-          low: priceData.low,
-          volume: priceData.volume
-        },
-        { upsert: true, new: true }
-      );
-      results.push({
-        date: record.date.toISOString(),
-        ticker: record.ticker,
-        price: record.price,
-        open: record.open,
-        high: record.high,
-        low: record.low,
-        volume: record.volume
+/**
+ * Fetch and save all historic prices for a ticker
+ */
+export const fetchAndSaveAllTickerHistory = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { ticker } = req.body;
+
+    if (!ticker) {
+      res.status(400).json({
+        success: false,
+        message: 'Missing ticker in request body'
       });
+      return;
     }
+
+    const savedCount = await tickerPriceService.fetchAllTickerHistory(ticker);
+
+    res.json({
+      success: true,
+      message: `Fetched and saved ${savedCount} records for ${ticker}`,
+      data: { ticker, recordsCount: savedCount }
+    });
+  } catch (error: any) {
+    console.error('Error fetching all ticker history:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch and save all ticker history'
+    });
   }
-  res.status(200).json({ message: 'Prices fetched and saved', results });
 };
 
-// DELETE /api/ticker-price-history/:id - delete a price history record by id
-export const deleteTickerPriceHistory = async (req: Request, res: Response) => {
-  const { id } = req.params;
+/**
+ * Delete ticker price history record
+ */
+export const deleteTickerPriceHistory = async (req: Request, res: Response): Promise<void> => {
   try {
-    await TickerPriceHistory.findByIdAndDelete(id);
-    res.status(200).json({ id });
-  } catch (err) {
-    res.status(400).json({ error: 'Failed to delete price history record', id });
+    const { id } = req.params;
+
+    if (!id) {
+      res.status(400).json({
+        success: false,
+        message: 'Missing ID in request'
+      });
+      return;
+    }
+
+    await tickerPriceService.deleteTickerPriceRecord(id as string);
+
+    res.json({
+      success: true,
+      message: 'Price history record deleted successfully',
+      data: { id }
+    });
+  } catch (error: any) {
+    console.error('Error deleting ticker price history:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to delete ticker price history'
+    });
   }
 };

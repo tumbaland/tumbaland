@@ -43,5 +43,5 @@ const API_URL = '/dashboard';
 export const getDashboard = async (groupId?: string): Promise<DashboardData> => {
   const params = groupId ? { groupId } : {};
   const res = await financeApi.get(API_URL, { params });
-  return res.data;
+  return res.data.data;
 };

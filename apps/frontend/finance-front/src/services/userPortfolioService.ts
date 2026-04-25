@@ -23,17 +23,46 @@ export const getUserPortfolios = async (groupId?: string): Promise<UserPortfolio
   }
   const url = params.toString() ? `${API_URL}?${params.toString()}` : API_URL;
   const res = await financeApi.get(url);
-  return res.data;
+  // Map backend 'symbol' field to frontend 'ticker' field
+  return res.data.data.map((p: any) => ({
+    ...p,
+    ticker: p.symbol || p.ticker
+  }));
 };
 
 export const addUserPortfolio = async (data: Omit<UserPortfolio, '_id'>): Promise<UserPortfolio> => {
-  const res = await financeApi.post(API_URL, data);
-  return res.data;
+  // Map frontend 'ticker' field to backend 'symbol' field
+  const backendData = {
+    ...data,
+    symbol: data.ticker,
+    ticker: undefined
+  };
+  delete (backendData as any).ticker;
+  
+  const res = await financeApi.post(API_URL, backendData);
+  // Map backend 'symbol' field to frontend 'ticker' field
+  const portfolio = res.data.data;
+  return {
+    ...portfolio,
+    ticker: portfolio.symbol || portfolio.ticker
+  };
 };
 
 export const updateUserPortfolio = async (id: string, data: Partial<UserPortfolio>): Promise<UserPortfolio> => {
-  const res = await financeApi.put(`${API_URL}/${id}`, data);
-  return res.data;
+  // Map frontend 'ticker' field to backend 'symbol' field
+  const backendData = { ...data };
+  if ('ticker' in backendData) {
+    (backendData as any).symbol = backendData.ticker;
+    delete (backendData as any).ticker;
+  }
+  
+  const res = await financeApi.put(`${API_URL}/${id}`, backendData);
+  // Map backend 'symbol' field to frontend 'ticker' field
+  const portfolio = res.data.data;
+  return {
+    ...portfolio,
+    ticker: portfolio.symbol || portfolio.ticker
+  };
 };
 
 export const deleteUserPortfolio = async (id: string): Promise<void> => {

@@ -1,81 +1,140 @@
 import { Request, Response } from 'express';
 import * as assetClassService from '../services/assetClass.service';
 
-// Get all asset classes
-export const getAssetClasses = async (req: Request, res: Response) => {
+/**
+ * Get asset classes
+ */
+export const getAssetClasses = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { groupId } = req.query;
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
+    const { groupId } = req.query;
 
     let assetClasses;
     if (groupId) {
       // Get asset classes for specific group (user must be member)
+      if (!userGroups.includes(groupId as string)) {
+        res.status(403).json({
+          success: false,
+          message: 'Access denied'
+        });
+        return;
+      }
       assetClasses = await assetClassService.getAssetClassesByGroup(groupId as string, user.id, userGroups);
     } else {
       // No groupId specified: show only personal asset classes (no group)
       assetClasses = await assetClassService.getPersonalAssetClasses(user.id);
     }
 
-    res.json(assetClasses);
-  } catch (err: any) {
-    if (err.message === 'ACCESS_DENIED') {
-      res.status(403).json({ error: 'Access denied' });
-    } else {
-      res.status(500).json({ error: 'Failed to fetch asset classes' });
-    }
+    res.json({
+      success: true,
+      data: assetClasses
+    });
+  } catch (error: any) {
+    console.error('Error fetching asset classes:', error);
+    const statusCode = error.message === 'ACCESS_DENIED' ? 403 : 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error.message || 'Failed to fetch asset classes'
+    });
   }
 };
 
-// Add a new asset class
-export const createAssetClass = async (req: Request, res: Response) => {
+/**
+ * Create asset class
+ */
+export const createAssetClass = async (req: Request, res: Response): Promise<void> => {
   try {
     const user = (req as any).user;
+    const userGroups = (req as any).userGroups || [];
+
     const assetClassData = {
       ...req.body,
       userId: user.id
     };
+
     const assetClass = await assetClassService.createAssetClass(assetClassData);
-    res.status(201).json(assetClass);
-  } catch (err) {
-    res.status(400).json({ error: 'Failed to create asset class', details: err });
+
+    res.status(201).json({
+      success: true,
+      message: 'Asset class created successfully',
+      data: assetClass
+    });
+  } catch (error: any) {
+    console.error('Error creating asset class:', error);
+    const statusCode = error.message.includes('required') ? 400 : 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error.message || 'Failed to create asset class'
+    });
   }
 };
 
-// Delete an asset class
-export const deleteAssetClass = async (req: Request, res: Response) => {
+/**
+ * Update asset class
+ */
+export const updateAssetClass = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
-    await assetClassService.deleteAssetClass(id as string, user.id, userGroups);
-    res.json({ success: true });
-  } catch (err: any) {
-    if (err.message === 'ACCESS_DENIED') {
-      res.status(403).json({ error: 'Access denied' });
-    } else if (err.message === 'Asset class not found') {
-      res.status(404).json({ error: 'Asset class not found' });
-    } else {
-      res.status(400).json({ error: 'Failed to delete asset class', details: err });
-    }
-  }
-};
+    const { id } = req.params;
 
-// Update an asset class
-export const updateAssetClass = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
     const updated = await assetClassService.updateAssetClass(id as string, req.body, user.id, userGroups);
-    res.json(updated);
-  } catch (err: any) {
-    if (err.message === 'ACCESS_DENIED') {
-      res.status(403).json({ error: 'Access denied' });
-    } else if (err.message === 'Asset class not found') {
-      res.status(404).json({ error: 'Asset class not found' });
-    } else {
-      res.status(400).json({ error: 'Failed to update asset class', details: err });
+
+    if (!updated) {
+      res.status(404).json({
+        success: false,
+        message: 'Asset class not found'
+      });
+      return;
     }
+
+    res.json({
+      success: true,
+      message: 'Asset class updated successfully',
+      data: updated
+    });
+  } catch (error: any) {
+    console.error('Error updating asset class:', error);
+    const statusCode =
+      error.message === 'ACCESS_DENIED'
+        ? 403
+        : error.message.includes('not found')
+          ? 404
+          : 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error.message || 'Failed to update asset class'
+    });
+  }
+};
+
+/**
+ * Delete asset class
+ */
+export const deleteAssetClass = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const user = (req as any).user;
+    const userGroups = (req as any).userGroups || [];
+    const { id } = req.params;
+
+    await assetClassService.deleteAssetClass(id as string, user.id, userGroups);
+
+    res.json({
+      success: true,
+      message: 'Asset class deleted successfully'
+    });
+  } catch (error: any) {
+    console.error('Error deleting asset class:', error);
+    const statusCode =
+      error.message === 'ACCESS_DENIED'
+        ? 403
+        : error.message.includes('not found')
+          ? 404
+          : 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error.message || 'Failed to delete asset class'
+    });
   }
 };

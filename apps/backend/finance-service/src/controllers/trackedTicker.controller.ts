@@ -5,129 +5,136 @@ import {
   updateTrackedTicker,
   deleteTrackedTicker
 } from '../services/trackedTicker.service';
-import { TrackedTickerResponse, ErrorResponse } from '../types/trackedTicker.types';
-import { canAccessResource } from '../utils/permissionUtils';
 
-// GET /api/tracked-tickers
-export const getTrackedTickers = async (req: Request, res: Response<TrackedTickerResponse[] | ErrorResponse>) => {
+/**
+ * Get tracked tickers
+ */
+export const getTrackedTickers = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { groupId } = req.query;
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
-    
+    const { groupId } = req.query;
+
     let tickers;
     if (groupId) {
       // Get tickers for specific group (user must be member)
       if (!userGroups.includes(groupId as string)) {
-        return res.status(403).json({ error: 'Access denied' });
+        res.status(403).json({
+          success: false,
+          message: 'Access denied'
+        });
+        return;
       }
       tickers = await getAllTrackedTickers(user.id, [groupId as string]);
     } else {
       // No groupId specified: show only personal tickers (no group)
       tickers = await getAllTrackedTickers(user.id, []);
     }
-    
-    const response: TrackedTickerResponse[] = tickers.map((t) => ({
-      _id: t._id.toString(),
-      ticker: t.ticker,
-      displayName: t.displayName,
-      description: t.description,
-      dateAdded: t.dateAdded.toISOString(),
-      isActive: t.isActive
-    }));
-    res.status(200).json(response);
-  } catch (err) {
-    if ((err as Error).message === 'ACCESS_DENIED') {
-      res.status(403).json({ error: 'Access denied' });
-    } else {
-      res.status(500).json({ error: 'Failed to fetch tracked tickers' });
-    }
+
+    res.json({
+      success: true,
+      data: tickers
+    });
+  } catch (error: any) {
+    console.error('Error fetching tracked tickers:', error);
+    const statusCode = error.message === 'ACCESS_DENIED' ? 403 : 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error.message || 'Failed to fetch tracked tickers'
+    });
   }
 };
 
-// POST /api/tracked-tickers
-export const addTrackedTicker = async (req: Request, res: Response<TrackedTickerResponse | ErrorResponse>) => {
+/**
+ * Create tracked ticker
+ */
+export const addTrackedTicker = async (req: Request, res: Response): Promise<void> => {
   try {
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
-    const { ticker, displayName, description, isActive, groupId } = req.body;
-    
-    const created = await createTrackedTicker({ 
-      ticker, 
-      displayName, 
-      description, 
-      isActive,
-      groupId 
-    }, user.id, userGroups);
-    
-    const response: TrackedTickerResponse = {
-      _id: created._id.toString(),
-      ticker: created.ticker,
-      displayName: created.displayName,
-      description: created.description,
-      dateAdded: created.dateAdded.toISOString(),
-      isActive: created.isActive
-    };
-    res.status(201).json(response);
-  } catch (err) {
-    if ((err as Error).message === 'ACCESS_DENIED') {
-      res.status(403).json({ error: 'Access denied' });
-    } else {
-      res.status(500).json({ error: 'Failed to add tracked ticker' });
-    }
+
+    const created = await createTrackedTicker(req.body, user.id, userGroups);
+
+    res.status(201).json({
+      success: true,
+      message: 'Ticker added successfully',
+      data: created
+    });
+  } catch (error: any) {
+    console.error('Error adding tracked ticker:', error);
+    const statusCode =
+      error.message === 'ACCESS_DENIED'
+        ? 403
+        : error.message.includes('required')
+          ? 400
+          : 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error.message || 'Failed to add tracked ticker'
+    });
   }
 };
 
-// PUT /api/tracked-tickers/:id
-export const editTrackedTicker = async (req: Request, res: Response<TrackedTickerResponse | ErrorResponse>) => {
+/**
+ * Update tracked ticker
+ */
+export const editTrackedTicker = async (req: Request, res: Response): Promise<void> => {
   try {
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
     const { id } = req.params;
-    const { ticker, displayName, description, isActive, groupId } = req.body;
-    
-    const updated = await updateTrackedTicker(id as string, { 
-      ticker, 
-      displayName, 
-      description, 
-      isActive,
-      groupId 
-    }, user.id, userGroups);
-    
-    if (!updated) return res.status(404).json({ error: 'Tracked ticker not found' });
-    
-    const response: TrackedTickerResponse = {
-      _id: updated._id.toString(),
-      ticker: updated.ticker,
-      displayName: updated.displayName,
-      description: updated.description,
-      dateAdded: updated.dateAdded.toISOString(),
-      isActive: updated.isActive
-    };
-    res.status(200).json(response);
-  } catch (err) {
-    if ((err as Error).message === 'ACCESS_DENIED') {
-      res.status(403).json({ error: 'Access denied' });
-    } else {
-      res.status(400).json({ error: 'Failed to update tracked ticker' });
+
+    const updated = await updateTrackedTicker(id as string, req.body, user.id, userGroups);
+
+    if (!updated) {
+      res.status(404).json({
+        success: false,
+        message: 'Tracked ticker not found'
+      });
+      return;
     }
+
+    res.json({
+      success: true,
+      message: 'Ticker updated successfully',
+      data: updated
+    });
+  } catch (error: any) {
+    console.error('Error updating tracked ticker:', error);
+    const statusCode = error.message === 'ACCESS_DENIED' ? 403 : 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error.message || 'Failed to update tracked ticker'
+    });
   }
 };
 
-// DELETE /api/tracked-tickers/:id
-export const removeTrackedTicker = async (req: Request, res: Response<ErrorResponse>) => {
+/**
+ * Delete tracked ticker
+ */
+export const removeTrackedTicker = async (req: Request, res: Response): Promise<void> => {
   try {
     const user = (req as any).user;
     const userGroups = (req as any).userGroups || [];
     const { id } = req.params;
-    
+
     await deleteTrackedTicker(id as string, user.id, userGroups);
-    res.status(204).send();
-  } catch (err) {
-    if ((err as Error).message === 'ACCESS_DENIED') {
-      res.status(403).json({ error: 'Access denied' });
-    } else {
-      res.status(400).json({ error: 'Failed to delete tracked ticker' });
-    }
+
+    res.json({
+      success: true,
+      message: 'Ticker deleted successfully'
+    });
+  } catch (error: any) {
+    console.error('Error deleting tracked ticker:', error);
+    const statusCode =
+      error.message === 'ACCESS_DENIED'
+        ? 403
+        : error.message.includes('not found')
+          ? 404
+          : 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error.message || 'Failed to delete tracked ticker'
+    });
   }
 };
