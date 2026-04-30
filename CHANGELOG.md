@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.342](https://github.com/toomastahves/tumbaland/compare/v0.0.341...v0.0.342) (2026-04-30)
+
+
+### Features
+
+* remove cloudflare ([e62b770](https://github.com/toomastahves/tumbaland/commit/e62b770ecfde0a23c86c7d5f37e440da0ca5827b))
+
 ### [0.0.341](https://github.com/toomastahves/tumbaland/compare/v0.0.340...v0.0.341) (2026-04-30)
 
 
