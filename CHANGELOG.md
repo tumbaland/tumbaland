@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.341](https://github.com/toomastahves/tumbaland/compare/v0.0.340...v0.0.341) (2026-04-30)
+
+
+### Bug Fixes
+
+* dns records ([3a26dbf](https://github.com/toomastahves/tumbaland/commit/3a26dbf7dbdb71f8dc5d9a799d9e0f0c2ef9ef9e))
+
 ### [0.0.340](https://github.com/toomastahves/tumbaland/compare/v0.0.339...v0.0.340) (2026-04-30)
 
 
