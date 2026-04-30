@@ -10,6 +10,7 @@ on:
         required: true
         type: choice
         options:
+          - cron
           - consul
           - tumbaland-proxy
           - elk
@@ -55,6 +56,12 @@ jobs:
               DEPLOYPATH=apps/infra/rabbitmq/docker-compose.yml
               DEPLOYDIR=apps/infra/rabbitmq
               ;;
+            cron)
+              CONTEXT=./apps/infra/cron
+              DOCKERFILE="" 
+              DEPLOYPATH=apps/infra/cron/compose.yml
+              DEPLOYDIR=apps/infra/cron
+              ;;
           esac
           echo "context=$CONTEXT" >> $GITHUB_OUTPUT
           echo "dockerfile=$DOCKERFILE" >> $GITHUB_OUTPUT
@@ -94,7 +101,8 @@ jobs:
       - name: Generate infrastructure .env file
         run: |
           # Core infrastructure secrets
-          echo "CLOUDFLARE_API_TOKEN=${{ secrets.CLOUDFLARE_API_TOKEN }}" > .env.infra
+          echo "CLOUDFLARE_API_TOKEN=${{ secrets.CLOUDFLARE_API_TOKEN }}" >> .env.infra
+          echo "CLOUDFLARE_ZONE_ID=${{ secrets.CLOUDFLARE_ZONE_ID }}" >> .env.infra
           echo "ELASTIC_PASSWORD=${{ secrets.ELASTIC_PASSWORD }}" >> .env.infra
           echo "KIBANA_SYSTEM_PASSWORD=${{ secrets.KIBANA_SYSTEM_PASSWORD }}" >> .env.infra
           echo "KIBANA_ADMIN_PASSWORD=${{ secrets.KIBANA_ADMIN_PASSWORD }}" >> .env.infra
