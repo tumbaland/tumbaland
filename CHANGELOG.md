@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.340](https://github.com/toomastahves/tumbaland/compare/v0.0.339...v0.0.340) (2026-04-30)
+
+
+### Features
+
+* add cron ([e396d16](https://github.com/toomastahves/tumbaland/commit/e396d161c352e65bb739d13967c42ce2b6436f6c))
+
 ### [0.0.339](https://github.com/toomastahves/tumbaland/compare/v0.0.338...v0.0.339) (2026-04-25)
 
 
