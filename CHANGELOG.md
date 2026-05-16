@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.344](https://github.com/toomastahves/tumbaland/compare/v0.0.343...v0.0.344) (2026-05-16)
+
+
+### Bug Fixes
+
+* real estate script ([98732e3](https://github.com/toomastahves/tumbaland/commit/98732e34e1053f95880fb57a56ae432ce03325f1))
+
 ### [0.0.343](https://github.com/toomastahves/tumbaland/compare/v0.0.342...v0.0.343) (2026-05-16)
 
 
