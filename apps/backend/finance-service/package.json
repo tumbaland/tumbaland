@@ -11,7 +11,8 @@
     "lint": "eslint . --ext ts --report-unused-disable-directives --max-warnings 0",
     "migrate:export-records": "node scripts/migration/export-finance-records.js",
     "migrate:export-classes": "node scripts/migration/export-asset-classes.js",
-    "migrate:run": "node scripts/migration/migrate-to-asset-allocations.js"
+    "migrate:run": "node scripts/migration/migrate-to-asset-allocations.js",
+    "migrate:update-real-estate-values": "node scripts/migration/update-real-estate-values.js"
   },
   "dependencies": {
     "@tumbaland/core": "*",
