@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.343](https://github.com/toomastahves/tumbaland/compare/v0.0.342...v0.0.343) (2026-05-16)
+
+
+### Features
+
+* add real estate migration script ([148bf94](https://github.com/toomastahves/tumbaland/commit/148bf942da0d442dc9c24fb347d9edc34d38dff3))
+
 ### [0.0.342](https://github.com/toomastahves/tumbaland/compare/v0.0.341...v0.0.342) (2026-04-30)
 
 
