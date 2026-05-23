@@ -23,7 +23,7 @@ while true; do
         echo "IP changed: ${LAST_IP:-<none>} -> $CURRENT_IP"
         # export for script if it references it directly
         export CURRENT_IP
-        /app/update_dns.sh
+        sh /app/update_dns.sh
         LAST_IP="$CURRENT_IP"
     else
         echo "IP unchanged ($CURRENT_IP)"
