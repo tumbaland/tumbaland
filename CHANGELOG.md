@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.345](https://github.com/toomastahves/tumbaland/compare/v0.0.344...v0.0.345) (2026-05-23)
+
+
+### Bug Fixes
+
+* entrypoint in cron ([2e7498f](https://github.com/toomastahves/tumbaland/commit/2e7498f8106fd8d614b81c56bd4bfdc0d00affd7))
+
 ### [0.0.344](https://github.com/toomastahves/tumbaland/compare/v0.0.343...v0.0.344) (2026-05-16)
 
 
