@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.348](https://github.com/toomastahves/tumbaland/compare/v0.0.347...v0.0.348) (2026-06-10)
+
+
+### Features
+
+* add relationship type select box ([8c51ed8](https://github.com/toomastahves/tumbaland/commit/8c51ed892037302d3e889a5520d27211fe492760))
+
 ### [0.0.347](https://github.com/toomastahves/tumbaland/compare/v0.0.346...v0.0.347) (2026-06-10)
 
 
