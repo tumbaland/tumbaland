@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.346](https://github.com/toomastahves/tumbaland/compare/v0.0.345...v0.0.346) (2026-06-10)
+
+
+### Bug Fixes
+
+* finance bugs ([f0d7b9b](https://github.com/toomastahves/tumbaland/commit/f0d7b9b6ccdfc3e97b0844877ed71ecd7e642f28))
+
 ### [0.0.345](https://github.com/toomastahves/tumbaland/compare/v0.0.344...v0.0.345) (2026-05-23)
 
 
