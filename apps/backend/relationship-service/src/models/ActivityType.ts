@@ -8,6 +8,7 @@ export interface IActivityType extends Document {
   description?: string; // Optional description
   color?: string; // Optional color for UI (hex code)
   icon?: string; // Optional icon identifier
+  valueType: 'string' | 'boolean' | 'number'; // How the description value is captured
   isActive: boolean; // Whether this type is active/available
   sortOrder: number; // For ordering in UI
   createdAt: Date;
@@ -59,6 +60,11 @@ const ActivityTypeSchema: Schema = new Schema(
     icon: {
       type: String,
       maxlength: 50
+    },
+    valueType: {
+      type: String,
+      enum: ['string', 'boolean', 'number'],
+      default: 'string'
     },
     isActive: {
       type: Boolean,

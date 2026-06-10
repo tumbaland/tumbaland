@@ -7,6 +7,7 @@ export interface CreateActivityTypeRequest {
   description?: string;
   color?: string;
   icon?: string;
+  valueType?: 'string' | 'boolean' | 'number';
   groupId?: string;
 }
 

@@ -11,11 +11,15 @@ import {
   Alert,
   CircularProgress,
   Typography,
-  FormControl
+  FormControl,
+  Autocomplete,
+  Switch,
+  FormControlLabel
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import { Activity, ActivityType, CreateActivityRequest } from '../api/types';
 import { getActivityTypes, createActivityType } from '../api/activityTypes';
+import { getActivityDescriptions } from '../api/activities';
 import { formatDateForInput, validateActivity } from '../utils/activityUtils';
 import GroupSelector from './GroupSelector';
 import { useTenantFilter } from './tenant';
@@ -38,7 +42,11 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
   const [newTypeSlug, setNewTypeSlug] = useState('');
   const [newTypeDescription, setNewTypeDescription] = useState('');
   const [newTypeColor, setNewTypeColor] = useState('#FF6B6B');
+  const [newTypeValueType, setNewTypeValueType] = useState<'string' | 'boolean' | 'number'>('string');
   const [creatingType, setCreatingType] = useState(false);
+
+  const [prevDescriptions, setPrevDescriptions] = useState<string[]>([]);
+  const [loadingDescriptions, setLoadingDescriptions] = useState(false);
 
   // Get current tenant context for prefill
   const currentGroupId = useTenantFilter();
@@ -106,6 +114,28 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
     }
   }, [newTypeName, showCreateType]);
 
+  // Derived: currently selected activity type + its valueType
+  const selectedType = activityTypes?.find(t => t._id === formData.activityTypeId);
+  const valueType = selectedType?.valueType || 'string';
+
+  // Load past descriptions for Autocomplete when a string-type activity is selected
+  useEffect(() => {
+    if (!formData.activityTypeId || !selectedType || valueType !== 'string') {
+      setPrevDescriptions([]);
+      return;
+    }
+    let cancelled = false;
+    setLoadingDescriptions(true);
+    getActivityDescriptions(formData.activityTypeId, currentGroupId)
+      .then(descriptions => {
+        if (!cancelled) setPrevDescriptions(descriptions);
+      })
+      .catch(() => { if (!cancelled) setPrevDescriptions([]); })
+      .finally(() => { if (!cancelled) setLoadingDescriptions(false); });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.activityTypeId, currentGroupId]);
+
   const loadActivityTypes = async () => {
     try {
       setLoadingTypes(true);
@@ -132,6 +162,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
         slug: newTypeSlug.trim(),
         description: newTypeDescription.trim() || undefined,
         color: newTypeColor,
+        valueType: newTypeValueType,
         groupId: currentGroupId // Use current tenant context
       });
 
@@ -139,13 +170,14 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
       setActivityTypes(prev => prev ? [...prev, newType] : [newType]);
 
       // Select the newly created type
-      setFormData(prev => ({ ...prev, activityTypeId: newType._id }));
+      setFormData(prev => ({ ...prev, activityTypeId: newType._id, description: '' }));
 
       // Reset create type form
       setNewTypeName('');
       setNewTypeSlug('');
       setNewTypeDescription('');
       setNewTypeColor('#FF6B6B');
+      setNewTypeValueType('string');
       setShowCreateType(false);
     } catch (error: any) {
       console.error('Failed to create activity type:', error);
@@ -273,7 +305,8 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev,
-                    activityTypeId: e.target.value
+                    activityTypeId: e.target.value,
+                    description: ''
                   }))
                 }
                 fullWidth
@@ -317,17 +350,57 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
                 )}
               </TextField>
 
-              <TextField
-                label="Description"
-                multiline
-                rows={3}
-                value={formData.description}
-                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                fullWidth
-                placeholder="Optional details about the activity..."
-                inputProps={{ maxLength: 500 }}
-                helperText={`${formData.description.length}/500 characters`}
-              />
+              {valueType === 'boolean' ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, px: 1 }}>
+                  <Typography variant="body2" color="text.secondary">Did this happen?</Typography>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={formData.description === 'true'}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.checked ? 'true' : 'false' }))}
+                      />
+                    }
+                    label={formData.description === 'true' ? 'Yes' : 'No'}
+                  />
+                </Box>
+              ) : valueType === 'number' ? (
+                <TextField
+                  label="Value"
+                  type="number"
+                  value={formData.description}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                  fullWidth
+                  placeholder="Enter a number"
+                  inputProps={{ step: 'any' }}
+                />
+              ) : (
+                <Autocomplete
+                  freeSolo
+                  options={prevDescriptions}
+                  value={formData.description}
+                  inputValue={formData.description}
+                  onInputChange={(_, newValue) => setFormData((prev) => ({ ...prev, description: newValue ?? '' }))}
+                  loading={loadingDescriptions}
+                  disabled={!formData.activityTypeId}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Description"
+                      placeholder={formData.activityTypeId ? 'Pick a past entry or type new…' : 'Select an activity type first'}
+                      inputProps={{ ...params.inputProps, maxLength: 500 }}
+                      InputProps={{
+                        ...params.InputProps,
+                        endAdornment: (
+                          <>
+                            {loadingDescriptions ? <CircularProgress size={18} /> : null}
+                            {params.InputProps.endAdornment}
+                          </>
+                        )
+                      }}
+                    />
+                  )}
+                />
+              )}
 
               <GroupSelector
                 value={formData.groupId}
@@ -382,7 +455,21 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
               disabled={creatingType}
               autoFocus
             />
-            
+
+            <TextField
+              label="Value type"
+              select
+              value={newTypeValueType}
+              onChange={(e) => setNewTypeValueType(e.target.value as 'string' | 'boolean' | 'number')}
+              fullWidth
+              disabled={creatingType}
+              helperText="How the description is captured when logging"
+            >
+              <MenuItem value="string">Text — free text / pick from past entries</MenuItem>
+              <MenuItem value="boolean">Yes / No — checkbox</MenuItem>
+              <MenuItem value="number">Number — numeric value</MenuItem>
+            </TextField>
+
             <TextField
               label="Description"
               value={newTypeDescription}

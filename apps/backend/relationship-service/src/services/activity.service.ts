@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { Activity, IActivity } from '../models/Activity';
 import { buildAccessQuery, canAccessResource } from '../utils/permissionUtils';
 
@@ -279,5 +280,34 @@ export const getActivityTypes = async (userId?: string, groupId?: string, userGr
     return await ActivityType.find(query).sort({ sortOrder: 1 });
   } catch (error: any) {
     throw new Error(`Failed to get activity types: ${error.message}`);
+  }
+};
+
+// Get all unique descriptions for a given activity type (for Autocomplete)
+export const getDescriptionsByTypeId = async (
+  typeId: string,
+  userId: string,
+  userGroupIds: string[],
+  groupId?: string
+): Promise<string[]> => {
+  try {
+    const matchQuery: any = {
+      'activity.typeId': new mongoose.Types.ObjectId(typeId),
+      'activity.description': { $exists: true, $ne: '' }
+    };
+
+    if (groupId) {
+      if (!userGroupIds.includes(groupId)) throw new Error('ACCESS_DENIED');
+      matchQuery.groupId = groupId;
+    } else {
+      matchQuery.userId = userId;
+      matchQuery.$or = [{ groupId: { $exists: false } }, { groupId: null }];
+    }
+
+    const descriptions: string[] = await Activity.distinct('activity.description', matchQuery);
+    return descriptions.filter(Boolean).sort();
+  } catch (error: any) {
+    if (error.message === 'ACCESS_DENIED') throw error;
+    throw new Error(`Failed to get descriptions: ${error.message}`);
   }
 };

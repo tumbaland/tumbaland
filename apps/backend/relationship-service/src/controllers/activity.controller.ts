@@ -384,3 +384,31 @@ export const getRecentActivitiesSummary = async (req: Request, res: Response): P
     });
   }
 };
+
+/**
+ * Get all unique descriptions for a given activity type
+ */
+export const getActivityDescriptions = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { typeId, groupId } = req.query;
+    const user = (req as any).user;
+    const userGroups = (req as any).userGroups || [];
+
+    if (!typeId) {
+      res.status(400).json({ success: false, message: 'typeId is required' });
+      return;
+    }
+
+    const descriptions = await ActivityService.getDescriptionsByTypeId(
+      typeId as string,
+      user.id,
+      userGroups,
+      groupId as string | undefined
+    );
+
+    res.json({ success: true, data: descriptions });
+  } catch (error: any) {
+    const statusCode = error.message === 'ACCESS_DENIED' ? 403 : 500;
+    res.status(statusCode).json({ success: false, message: error.message || 'Failed to fetch descriptions' });
+  }
+};

@@ -10,7 +10,8 @@ import {
   Box,
   Typography,
   FormControl,
-  CircularProgress
+  CircularProgress,
+  MenuItem
 } from '@mui/material';
 import { ActivityType } from '../api/types';
 import { CreateActivityTypeRequest, UpdateActivityTypeRequest } from '../api/activityTypes';
@@ -36,6 +37,7 @@ const ActivityTypeDialog: React.FC<ActivityTypeDialogProps> = ({
     slug: '',
     description: '',
     color: '#FF6B6B',
+    valueType: 'string',
     groupId: defaultGroupId
   });
   const [errors, setErrors] = useState<string[]>([]);
@@ -49,6 +51,7 @@ const ActivityTypeDialog: React.FC<ActivityTypeDialogProps> = ({
           slug: initialData.slug,
           description: initialData.description || '',
           color: initialData.color || '#FF6B6B',
+          valueType: initialData.valueType || 'string',
           groupId: initialData.groupId
         });
       } else {
@@ -57,6 +60,7 @@ const ActivityTypeDialog: React.FC<ActivityTypeDialogProps> = ({
           slug: '',
           description: '',
           color: '#FF6B6B',
+          valueType: 'string',
           groupId: defaultGroupId
         });
       }
@@ -126,7 +130,20 @@ const ActivityTypeDialog: React.FC<ActivityTypeDialogProps> = ({
             required
             autoFocus
           />
-          
+
+          <TextField
+            label="Value type"
+            select
+            value={formData.valueType || 'string'}
+            onChange={(e) => setFormData((prev) => ({ ...prev, valueType: e.target.value as 'string' | 'boolean' | 'number' }))}
+            fullWidth
+            helperText="Controls how the description is captured when logging this activity"
+          >
+            <MenuItem value="string">Text — free text or pick from past entries</MenuItem>
+            <MenuItem value="boolean">Yes / No — simple checkbox</MenuItem>
+            <MenuItem value="number">Number — numeric value (e.g. km, pages, reps)</MenuItem>
+          </TextField>
+
           <TextField
             label="Slug"
             value={formData.slug}

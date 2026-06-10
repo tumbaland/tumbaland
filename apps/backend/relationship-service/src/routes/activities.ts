@@ -9,7 +9,8 @@ import {
   getActivitiesByDateRange,
   getRecentActivities,
   getRecentActivitiesSummary,
-  getActivityTypes
+  getActivityTypes,
+  getActivityDescriptions
 } from '../controllers/activity.controller';
 import { authenticateToken } from '../middleware/authMiddleware';
 import { attachUserGroups } from '../middleware/userGroupsMiddleware';
@@ -28,6 +29,7 @@ router.get('/recent-summary', getRecentActivitiesSummary);
 router.get('/stats', getActivityStats);
 router.get('/date-range', getActivitiesByDateRange);
 router.get('/types', getActivityTypes);
+router.get('/descriptions', getActivityDescriptions);
 router.get('/:id', getActivityById);
 router.put('/:id', updateActivity);
 router.delete('/:id', deleteActivity);

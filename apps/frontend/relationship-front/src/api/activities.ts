@@ -110,6 +110,16 @@ export const getActivityTypes = async (): Promise<ActivityType[]> => {
 };
 
 /**
+ * Get all unique past descriptions for a given activity type (for Autocomplete)
+ */
+export const getActivityDescriptions = async (typeId: string, groupId?: string): Promise<string[]> => {
+  const params = new URLSearchParams({ typeId });
+  if (groupId) params.append('groupId', groupId);
+  const response = await relationshipApi.get(`/activities/descriptions?${params.toString()}`);
+  return response.data.data;
+};
+
+/**
  * Get recent activities summary by category and timeline
  * @param groupId - Optional: group ID to filter by
  */

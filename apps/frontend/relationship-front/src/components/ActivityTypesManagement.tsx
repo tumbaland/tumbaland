@@ -154,6 +154,7 @@ const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ group
           <TableHead sx={{ bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
             <TableRow>
               <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Name</TableCell>
+              <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Type</TableCell>
               <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Color</TableCell>
               <TableCell align="right" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Actions</TableCell>
             </TableRow>
@@ -169,6 +170,14 @@ const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ group
                   <Typography variant="subtitle2" fontWeight={600}>
                     {type.name}
                   </Typography>
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    label={type.valueType === 'boolean' ? 'Yes / No' : type.valueType === 'number' ? 'Number' : 'Text'}
+                    size="small"
+                    variant="outlined"
+                    sx={{ fontSize: '0.72rem' }}
+                  />
                 </TableCell>
                 <TableCell>
                   {type.color ? (

@@ -20,6 +20,7 @@ export interface ActivityType {
   description?: string;
   color?: string;
   icon?: string;
+  valueType?: 'string' | 'boolean' | 'number';
   isActive: boolean;
   sortOrder: number;
   createdAt: Date | string;
