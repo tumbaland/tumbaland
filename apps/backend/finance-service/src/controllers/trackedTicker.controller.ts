@@ -5,6 +5,31 @@ import {
   updateTrackedTicker,
   deleteTrackedTicker
 } from '../services/trackedTicker.service';
+import { searchTickers } from '../services/alphaVantage.service';
+
+/**
+ * Search ticker symbols via Alpha Vantage SYMBOL_SEARCH (costs 1 API call)
+ */
+export const searchTrackedTickers = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { q } = req.query;
+    if (!q || typeof q !== 'string' || q.trim().length < 2) {
+      res.status(400).json({ success: false, message: 'Query must be at least 2 characters' });
+      return;
+    }
+
+    const results = await searchTickers(q.trim());
+
+    res.json({ success: true, data: results });
+  } catch (error: any) {
+    console.error('Error searching tickers:', error);
+    const isRateLimit = error.message?.includes('rate limit') || error.message?.includes('Rate limit');
+    res.status(isRateLimit ? 429 : 500).json({
+      success: false,
+      message: error.message || 'Failed to search tickers'
+    });
+  }
+};
 
 /**
  * Get tracked tickers

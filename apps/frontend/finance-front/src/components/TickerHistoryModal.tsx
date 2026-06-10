@@ -169,7 +169,7 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
   const chartHistory = downsampleHistory(filteredHistory);
 
   // For statistics, always use the full filteredHistory
-  const statsPrices = filteredHistory.map((h) => h.close);
+  const statsPrices = filteredHistory.map((h) => h.price);
   const minPrice = statsPrices.length > 0 ? Math.min(...statsPrices) : 0;
   const maxPrice = statsPrices.length > 0 ? Math.max(...statsPrices) : 1;
 
@@ -252,7 +252,31 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
         ) : error ? (
           <Typography color="error">{error}</Typography>
         ) : filteredHistory.length === 0 ? (
-          <Typography>No price history found.</Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 5, gap: 2 }}>
+            <Typography color="text.secondary">No price history found for {ticker}.</Typography>
+            <Button
+              variant="contained"
+              onClick={async () => {
+                if (!ticker) return;
+                setLoading(true);
+                setError(null);
+                try {
+                  await fetchAllTickerPriceHistory(ticker);
+                  const data = await getTickerPriceHistory(ticker);
+                  setHistory(data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
+                } catch {
+                  setError('Failed to fetch historical records');
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            >
+              Fetch Historical Data
+            </Button>
+            <Typography variant="caption" color="text.secondary" sx={{ maxWidth: 400, textAlign: 'center' }}>
+              Fetches the last ~100 trading days from Alpha Vantage (free plan limit).
+            </Typography>
+          </Box>
         ) : (
           <>
             <Box ref={containerRef} sx={{ width: '100%', minHeight: 320, mt: 2, overflowX: 'auto' }}>
@@ -315,7 +339,7 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
                       d={chartHistory
                         .map((item, i) => {
                           const x = 60 + (i * (containerWidth - 2 * 60)) / (chartHistory.length - 1 || 1);
-                          const y = 300 - 60 - ((item.close - minPrice) / (maxPrice - minPrice || 1)) * (300 - 2 * 60);
+                          const y = 300 - 60 - ((item.price - minPrice) / (maxPrice - minPrice || 1)) * (300 - 2 * 60);
                           return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
                         })
                         .join(' ')}
@@ -330,7 +354,7 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
                   {['1m', '3m'].includes(quickRange) &&
                     filteredHistory.map((item, i) => {
                       const x = 60 + (i * (containerWidth - 2 * 60)) / (filteredHistory.length - 1 || 1);
-                      const y = 300 - 60 - ((item.close - minPrice) / (maxPrice - minPrice || 1)) * (300 - 2 * 60);
+                      const y = 300 - 60 - ((item.price - minPrice) / (maxPrice - minPrice || 1)) * (300 - 2 * 60);
                       return (
                         <g key={item.date}>
                           <circle
@@ -341,7 +365,7 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
                             stroke="#fff"
                             strokeWidth="2"
                           >
-                            <title>{`${new Date(item.date).toLocaleDateString()}: ${item.close.toFixed(2)}`}</title>
+                            <title>{`${new Date(item.date).toLocaleDateString()}: ${item.price.toFixed(2)}`}</title>
                           </circle>
                         </g>
                       );
@@ -419,15 +443,11 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
                   }
                 }}
               >
-                Fetch & Update All Historical Records
+                Refresh Last ~100 Trading Days
               </Button>
               <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 520, textAlign: 'center' }}>
-                <b>Note:</b> This action may take a long time.
-                <br />
-                It will fetch <b>all available historical records</b> for this ticker and{' '}
-                <b>update any existing records</b> in the database.
-                <br />
-                Please be patient and do not close the window until the process is complete.
+                Fetches the last ~100 trading days from Alpha Vantage and updates existing records.
+                Full history requires a premium plan.
               </Typography>
             </Box>
             <ConfirmationModal

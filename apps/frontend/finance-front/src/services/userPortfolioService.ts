@@ -7,6 +7,7 @@ export interface UserPortfolio {
   avgBuyPrice: number;
   buyDate?: string;
   notes?: string;
+  groupId?: string;
   latestPrice?: number;
   athPrice?: number;
   currentValue?: number;
@@ -31,13 +32,8 @@ export const getUserPortfolios = async (groupId?: string): Promise<UserPortfolio
 };
 
 export const addUserPortfolio = async (data: Omit<UserPortfolio, '_id'>): Promise<UserPortfolio> => {
-  // Map frontend 'ticker' field to backend 'symbol' field
-  const backendData = {
-    ...data,
-    symbol: data.ticker,
-    ticker: undefined
-  };
-  delete (backendData as any).ticker;
+  const { ticker, ...rest } = data;
+  const backendData = { ...rest, symbol: ticker };
   
   const res = await financeApi.post(API_URL, backendData);
   // Map backend 'symbol' field to frontend 'ticker' field

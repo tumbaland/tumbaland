@@ -7,6 +7,7 @@ export interface TrackedTicker {
   description?: string;
   dateAdded?: string;
   isActive: boolean;
+  groupId?: string;
 }
 
 const API_URL = '/tracked-tickers';
@@ -33,4 +34,18 @@ export const updateTrackedTicker = async (id: string, data: Partial<TrackedTicke
 
 export const deleteTrackedTicker = async (id: string): Promise<void> => {
   await financeApi.delete(`${API_URL}/${id}`);
+};
+
+export interface TickerSearchResult {
+  symbol: string;
+  name: string;
+  type: string;
+  region: string;
+  currency: string;
+  matchScore: string;
+}
+
+export const searchTickers = async (query: string): Promise<TickerSearchResult[]> => {
+  const res = await financeApi.get(`${API_URL}/search?q=${encodeURIComponent(query)}`);
+  return res.data.data;
 };

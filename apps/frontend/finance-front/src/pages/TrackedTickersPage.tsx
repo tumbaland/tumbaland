@@ -21,7 +21,7 @@ import {
   Snackbar,
   Alert
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, Search as SearchIcon } from '@mui/icons-material';
 import ConfirmationModal from '../components/ConfirmationModal';
 import TickerHistoryModal from '../components/TickerHistoryModal';
 import {
@@ -30,7 +30,7 @@ import {
   useUpdateTrackedTicker,
   useDeleteTrackedTicker
 } from '../hooks/useTrackedTicker';
-import { TrackedTicker } from '../services/trackedTickerService';
+import { TrackedTicker, TickerSearchResult, searchTickers } from '../services/trackedTickerService';
 
 const defaultForm: Omit<TrackedTicker, '_id' | 'dateAdded'> = {
   ticker: '',
@@ -57,6 +57,41 @@ const TrackedTickersPage: React.FC = () => {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
+
+  // Ticker search state (only shown when adding, not editing)
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<TickerSearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+
+  const handleTickerSearch = async () => {
+    if (searchQuery.trim().length < 2) return;
+    setSearchLoading(true);
+    setSearchError(null);
+    try {
+      const results = await searchTickers(searchQuery.trim());
+      setSearchResults(results);
+      if (results.length === 0) setSearchError('No results found');
+    } catch (err: any) {
+      const msg = err?.response?.status === 429
+        ? 'Rate limit reached (25 calls/day on free plan). Try again tomorrow.'
+        : 'Search failed. Check your API key or try again.';
+      setSearchError(msg);
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  const handleSelectSearchResult = (result: TickerSearchResult) => {
+    setForm((f) => ({
+      ...f,
+      ticker: result.symbol,
+      displayName: result.name
+    }));
+    setSearchResults([]);
+    setSearchQuery('');
+  };
 
   // Success/Error notifications
   const [snackbar, setSnackbar] = useState<{
@@ -123,6 +158,9 @@ const TrackedTickersPage: React.FC = () => {
     setDialogOpen(false);
     setForm(defaultForm);
     setEditingId(null);
+    setSearchQuery('');
+    setSearchResults([]);
+    setSearchError(null);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -135,7 +173,7 @@ const TrackedTickersPage: React.FC = () => {
     if (editingId) {
       await updateMutation.mutateAsync({ id: editingId, data: form });
     } else {
-      await createMutation.mutateAsync(form);
+      await createMutation.mutateAsync({ ...form, groupId: tenantGroupId });
     }
   };
 
@@ -277,23 +315,94 @@ const TrackedTickersPage: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
-      <Dialog 
-        open={dialogOpen} 
-        onClose={handleCloseDialog} 
-        fullWidth 
+      <Dialog
+        open={dialogOpen}
+        onClose={handleCloseDialog}
+        fullWidth
         maxWidth="sm"
         PaperProps={{
           elevation: 0,
-          sx: {
-            borderRadius: 3,
-            border: '1px solid',
-            borderColor: 'divider'
-          }
+          sx: { borderRadius: 3, border: '1px solid', borderColor: 'divider' }
         }}
       >
         <form onSubmit={handleSubmit}>
           <DialogTitle>{editingId ? 'Edit Ticker' : 'Add Ticker'}</DialogTitle>
           <DialogContent>
+            {/* Symbol search — only shown when adding */}
+            {!editingId && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                  Search by name or symbol to auto-fill the fields below.{' '}
+                  <Typography component="span" variant="caption" color="warning.main">
+                    Uses 1 of 25 daily API calls (free plan).
+                  </Typography>
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <TextField
+                    size="small"
+                    placeholder="e.g. Vanguard Europe"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleTickerSearch())}
+                    fullWidth
+                  />
+                  <Button
+                    variant="outlined"
+                    onClick={handleTickerSearch}
+                    disabled={searchLoading || searchQuery.trim().length < 2}
+                    startIcon={<SearchIcon />}
+                    sx={{ whiteSpace: 'nowrap' }}
+                  >
+                    {searchLoading ? 'Searching…' : 'Search'}
+                  </Button>
+                </Box>
+                {searchError && (
+                  <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                    {searchError}
+                  </Typography>
+                )}
+                {searchResults.length > 0 && (
+                  <Box
+                    sx={{
+                      mt: 1,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderRadius: 2,
+                      maxHeight: 200,
+                      overflowY: 'auto'
+                    }}
+                  >
+                    {searchResults.map((r) => (
+                      <Box
+                        key={r.symbol}
+                        onClick={() => handleSelectSearchResult(r)}
+                        sx={{
+                          px: 2,
+                          py: 1,
+                          cursor: 'pointer',
+                          '&:hover': { bgcolor: 'action.hover' },
+                          borderBottom: '1px solid',
+                          borderColor: 'divider',
+                          '&:last-child': { borderBottom: 'none' }
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                          <Typography variant="body2" fontWeight={600}>
+                            {r.symbol}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {r.type} · {r.region} · {r.currency}
+                          </Typography>
+                        </Box>
+                        <Typography variant="caption" color="text.secondary" noWrap>
+                          {r.name}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </Box>
+            )}
             <TextField
               margin="dense"
               label="Ticker"

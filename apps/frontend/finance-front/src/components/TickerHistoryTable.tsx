@@ -14,7 +14,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 
 interface PriceHistoryRow {
   date: string;
-  close: number;
+  price: number;
   open?: number;
   high?: number;
   low?: number;
@@ -79,7 +79,7 @@ const TickerHistoryTable: React.FC<TickerHistoryTableProps> = ({ rows, onDeleteR
                     {row.low !== undefined ? row.low.toFixed(2) : '-'}
                   </TableCell>
                   <TableCell align="right" sx={{ fontSize: { xs: 12, sm: 14 } }}>
-                    {row.close.toFixed(2)}
+                    {row.price.toFixed(2)}
                   </TableCell>
                   <TableCell align="right" sx={{ fontSize: { xs: 12, sm: 14 } }}>
                     {row.volume !== undefined ? row.volume.toLocaleString() : '-'}

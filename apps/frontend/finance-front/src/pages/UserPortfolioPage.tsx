@@ -21,7 +21,11 @@ import {
   TableSortLabel,
   Tooltip,
   Snackbar,
-  Alert
+  Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -31,13 +35,35 @@ import {
   useUpdateUserPortfolio,
   useDeleteUserPortfolio
 } from '../hooks/useUserPortfolio';
+import { useTrackedTickers } from '../hooks/useTrackedTicker';
 import { UserPortfolio } from '../services/userPortfolioService';
 
-const defaultForm: Omit<UserPortfolio, '_id'> = {
+// Keep numeric fields as strings during editing so the user sees exactly what
+// they typed (including commas). We parse to numbers only on submit.
+interface PortfolioFormState {
+  ticker: string;
+  quantity: string;
+  avgBuyPrice: string;
+}
+
+const defaultForm: PortfolioFormState = {
   ticker: '',
-  quantity: 0,
-  avgBuyPrice: 0
+  quantity: '',
+  avgBuyPrice: ''
 };
+
+// Accepts both dot (12.5) and comma (12,5) decimal separators.
+// Also handles European thousands+decimal format: 12.504,00 → 12504.00
+function parseNumericInput(value: string): number {
+  const s = value.trim();
+  if (s.includes(',') && s.includes('.')) {
+    return parseFloat(s.replace(/\./g, '').replace(',', '.')) || 0;
+  }
+  if (s.includes(',')) {
+    return parseFloat(s.replace(',', '.')) || 0;
+  }
+  return parseFloat(s) || 0;
+}
 
 const UserPortfolioPage: React.FC = () => {
   // Get the current tenant's group ID
@@ -45,12 +71,13 @@ const UserPortfolioPage: React.FC = () => {
 
   // React Query hooks
   const { data: portfolios = [], isLoading } = useUserPortfolios(tenantGroupId);
+  const { data: trackedTickers = [] } = useTrackedTickers(tenantGroupId);
   const createMutation = useCreateUserPortfolio();
   const updateMutation = useUpdateUserPortfolio();
   const deleteMutation = useDeleteUserPortfolio();
 
   // UI state
-  const [form, setForm] = useState(defaultForm);
+  const [form, setForm] = useState<PortfolioFormState>(defaultForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [orderBy, setOrderBy] = useState<keyof UserPortfolio>('ticker');
@@ -107,8 +134,8 @@ const UserPortfolioPage: React.FC = () => {
     if (portfolio) {
       setForm({
         ticker: portfolio.ticker,
-        quantity: portfolio.quantity,
-        avgBuyPrice: portfolio.avgBuyPrice
+        quantity: String(portfolio.quantity),
+        avgBuyPrice: String(portfolio.avgBuyPrice)
       });
       setEditingId(portfolio._id!);
     } else {
@@ -126,18 +153,20 @@ const UserPortfolioPage: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setForm((f) => ({
-      ...f,
-      [name]: name === 'quantity' || name === 'avgBuyPrice' ? Number(value) : value
-    }));
+    setForm((f) => ({ ...f, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const data = {
+      ticker: form.ticker,
+      quantity: parseNumericInput(form.quantity),
+      avgBuyPrice: parseNumericInput(form.avgBuyPrice)
+    };
     if (editingId) {
-      await updateMutation.mutateAsync({ id: editingId, data: form });
+      await updateMutation.mutateAsync({ id: editingId, data });
     } else {
-      await createMutation.mutateAsync(form);
+      await createMutation.mutateAsync({ ...data, groupId: tenantGroupId });
     }
   };
 
@@ -361,22 +390,33 @@ const UserPortfolioPage: React.FC = () => {
         <form onSubmit={handleSubmit}>
           <DialogTitle>{editingId ? 'Edit Portfolio Entry' : 'Add Portfolio Entry'}</DialogTitle>
           <DialogContent>
-            <TextField
-              margin="dense"
-              label="Ticker"
-              name="ticker"
-              value={form.ticker}
-              onChange={handleChange}
-              fullWidth
-              required
-            />
+            <FormControl fullWidth margin="dense" required>
+              <InputLabel>Ticker</InputLabel>
+              <Select
+                label="Ticker"
+                name="ticker"
+                value={form.ticker}
+                onChange={(e) => setForm((f) => ({ ...f, ticker: e.target.value }))}
+              >
+                {trackedTickers.length === 0 && (
+                  <MenuItem disabled value="">
+                    No tracked tickers — add some first
+                  </MenuItem>
+                )}
+                {trackedTickers.map((t) => (
+                  <MenuItem key={t._id ?? t.ticker} value={t.ticker}>
+                    {t.displayName} ({t.ticker})
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
             <TextField
               margin="dense"
               label="Quantity"
               name="quantity"
-              type="number"
               value={form.quantity}
               onChange={handleChange}
+              inputProps={{ inputMode: 'decimal' }}
               fullWidth
               required
             />
@@ -384,9 +424,9 @@ const UserPortfolioPage: React.FC = () => {
               margin="dense"
               label="Avg. Buy Price"
               name="avgBuyPrice"
-              type="number"
               value={form.avgBuyPrice}
               onChange={handleChange}
+              inputProps={{ inputMode: 'decimal' }}
               fullWidth
               required
             />

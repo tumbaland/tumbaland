@@ -4,7 +4,7 @@ export interface TickerPriceHistory {
   _id?: string;
   ticker: string;
   date: string;
-  close: number;
+  price: number;
   open?: number;
   high?: number;
   low?: number;
