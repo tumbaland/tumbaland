@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.347](https://github.com/toomastahves/tumbaland/compare/v0.0.346...v0.0.347) (2026-06-10)
+
+
+### Features
+
+* update portfolio optimizations ([c32d5fb](https://github.com/toomastahves/tumbaland/commit/c32d5fb39d0a1c82fdec29d4769a03c7cbdd9956))
+
 ### [0.0.346](https://github.com/toomastahves/tumbaland/compare/v0.0.345...v0.0.346) (2026-06-10)
 
 
