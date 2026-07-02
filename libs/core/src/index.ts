@@ -9,6 +9,9 @@ export { healthCheck, metricsHandler } from './health/healthController';
 // Database
 export { connectDB } from './database/connection';
 
+// Config
+export { requireEnv } from './config/env';
+
 // Middleware
 export { authenticateToken } from './middleware/authMiddleware';
 export { errorHandler } from './middleware/errorHandler';

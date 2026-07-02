@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { requireEnv } from '@tumbaland/core';
 
 export interface JwtUser {
   email: string;
@@ -14,7 +15,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
       res.status(401).json({ success: false, message: 'token required' });
       return;
     }
-    const secret = process.env.JWT_SECRET || 'fallback-secret';
+    const secret = requireEnv('JWT_SECRET');
     const decoded = jwt.verify(token, secret) as JwtUser;
     if (!decoded.email) {
       res.status(401).json({ success: false, message: 'invalid token' });

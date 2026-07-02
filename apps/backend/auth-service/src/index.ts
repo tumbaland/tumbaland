@@ -6,10 +6,13 @@ import authRoutes from './routes/authRoutes';
 import { connectDb } from './config/db';
 import path from 'path';
 import { healthCheck } from './controllers/healthController';
-import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware } from '@tumbaland/core';
+import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware, requireEnv } from '@tumbaland/core';
 
 // Load environment variables
 dotenv.config();
+
+// Fail fast if the JWT secret is missing — tokens must never be signed with a default
+requireEnv('JWT_SECRET');
 
 const app = express();
 const PORT = process.env.PORT || 5001;

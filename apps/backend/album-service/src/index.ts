@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser';
 import path from 'path';
 import connectDB from './config/database';
 import albumRoutes from './routes/albumRoutes';
@@ -8,10 +9,13 @@ import photoRoutes from './routes/photoRoutes';
 import statisticsRoutes from './routes/statisticsRoutes';
 import collageRoutes from './collage/collageRoutes';
 import { healthCheck } from './controllers/healthController';
-import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware } from '@tumbaland/core';
+import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware, requireEnv } from '@tumbaland/core';
 
 // Load environment variables
 dotenv.config();
+
+// Fail fast if the JWT secret is missing — auth must never run with a default
+requireEnv('JWT_SECRET');
 
 // Connect to MongoDB
 connectDB();
@@ -27,6 +31,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id', 'x-session-id']
 }));
 app.use(express.json());
+app.use(cookieParser());
 
 // Routes
 app.use('/api/albums', albumRoutes);

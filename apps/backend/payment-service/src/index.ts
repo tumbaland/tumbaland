@@ -9,9 +9,12 @@ import paymentRoutes from './routes/paymentRoutes';
 import { stripeWebhook } from './controllers/stripeController';
 import path from 'path';
 import { healthCheck } from './controllers/healthController';
-import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware } from '@tumbaland/core';
+import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware, requireEnv } from '@tumbaland/core';
 
 dotenv.config();
+
+// Fail fast if the JWT secret is missing — auth must never run with a default
+requireEnv('JWT_SECRET');
 
 const app = express();
 const PORT = process.env.PORT || 5005;

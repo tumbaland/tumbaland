@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { requireEnv } from '@tumbaland/core';
 
 export interface UserPayload {
   id: string;
@@ -17,7 +18,7 @@ export function authenticateToken(req: Request, res: Response, next: NextFunctio
       return next();
     }
 
-    const JWT_SECRET = process.env.JWT_SECRET || '';
+    const JWT_SECRET = requireEnv('JWT_SECRET');
     const token = (req as any).cookies?.access_token || req.headers.authorization?.replace('Bearer ', '');
 
     if (!token) {

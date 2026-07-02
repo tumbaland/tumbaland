@@ -13,6 +13,7 @@
   "dependencies": {
     "@tumbaland/core": "*",
     "@types/sharp": "^0.31.1",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.0.0",
     "express": "^5.1.0",
@@ -22,6 +23,7 @@
     "sharp": "^0.34.4"
   },
   "devDependencies": {
+    "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.18",
     "@types/express": "^5.0.2",
     "@types/jest": "^30.0.0",

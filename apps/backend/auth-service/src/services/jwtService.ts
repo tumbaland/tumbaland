@@ -1,4 +1,5 @@
 import * as jwt from 'jsonwebtoken';
+import { requireEnv } from '@tumbaland/core';
 
 const JWT_EXPIRES_IN = '24h';
 
@@ -14,12 +15,12 @@ export interface UserPayload {
 }
 
 export const generateJWT = (user: UserPayload): string => {
-  const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
+  const JWT_SECRET = requireEnv('JWT_SECRET');
   return jwt.sign(user, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 };
 
 export const verifyJWT = (token: string): UserPayload => {
-  const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
+  const JWT_SECRET = requireEnv('JWT_SECRET');
   try {
     return jwt.verify(token, JWT_SECRET) as UserPayload;
   } catch (error) {
