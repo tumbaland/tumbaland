@@ -25,9 +25,8 @@ import { useConfig } from '../hooks/useConfig';
 import { NotificationsMenu } from '@tumbaland/components';
 import { LoginButton } from '@tumbaland/components';
 
-interface AuthHeaderProps {}
 
-const AuthHeader: React.FC<AuthHeaderProps> = () => {
+const AuthHeader: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);

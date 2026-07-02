@@ -1,4 +1,3 @@
-import { getAllUserPortfolios } from './userPortfolio.service';
 import { getAssetAllocationsByGroup, getPersonalAssetAllocations } from './assetAllocation.service';
 import AssetClass from '../models/AssetClass';
 

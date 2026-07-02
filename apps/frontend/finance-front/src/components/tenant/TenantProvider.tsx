@@ -16,7 +16,7 @@ interface TenantContextValue {
 const TenantContext = createContext<TenantContextValue | null>(null);
 
 // Global listeners for tenant changes
-let tenantChangeListeners: ((tenant: TenantOption) => void)[] = [];
+const tenantChangeListeners: ((tenant: TenantOption) => void)[] = [];
 
 export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [globalTenant, setGlobalTenant] = useState<TenantOption | null>(null);

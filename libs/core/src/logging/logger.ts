@@ -1,4 +1,6 @@
 import winston from 'winston';
+import path from 'path';
+import fs from 'fs';
 
 // Define log levels
 const levels = {
@@ -57,8 +59,6 @@ const transports: winston.transport[] = [
 
 // Add file transport only in development (optional)
 if (!isProduction && process.env.LOG_TO_FILE === 'true') {
-  const path = require('path');
-  const fs = require('fs');
 
   // Create logs directory if it doesn't exist
   const logsDir = path.join(process.cwd(), 'logs');

@@ -1,5 +1,4 @@
 import { ActivityType, IActivityType } from '../models/ActivityType';
-import { buildAccessQuery, canAccessResource } from '../utils/permissionUtils';
 
 // Create a new activity type
 export const createActivityType = async (typeData: Partial<IActivityType>): Promise<IActivityType> => {
@@ -46,7 +45,7 @@ export const getActivityTypes = async (
     console.log('getActivityTypes called with filters:', { userId, groupId, isActive, limit, page });
 
     // Build query
-    let query: any = {};
+    const query: any = {};
 
     if (isActive !== undefined) {
       query.isActive = isActive;

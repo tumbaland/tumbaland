@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-typecheck-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed workspaces
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+          fi
+
+          # Fall back to a full run when the base commit is unavailable
+          # (first push of a branch, force push, zero SHA).
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
+            echo "Base commit unavailable — running on all workspaces"
+            echo "all=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          CHANGED=$(git diff --name-only "$BASE" HEAD)
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          # Shared code or tooling affects every workspace.
+          if echo "$CHANGED" | grep -qE '^(libs/|eslint\.config\.mjs|package\.json|package-lock\.json|\.github/workflows/ci\.yml)'; then
+            echo "Shared code/tooling changed — running on all workspaces"
+            echo "all=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          WORKSPACES=$(echo "$CHANGED" | grep -oE '^apps/(backend|frontend)/[^/]+' | sort -u | tr '\n' ' ')
+          echo "Changed workspaces: ${WORKSPACES:-none}"
+          echo "all=false" >> "$GITHUB_OUTPUT"
+          echo "workspaces=$WORKSPACES" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        if: steps.changes.outputs.all == 'true' || steps.changes.outputs.workspaces != ''
+        with:
+          node-version: 26
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.changes.outputs.all == 'true' || steps.changes.outputs.workspaces != ''
+        run: npm ci
+
+      - name: Build shared libs
+        if: steps.changes.outputs.all == 'true' || steps.changes.outputs.workspaces != ''
+        run: npm run build -w @tumbaland/core -w @tumbaland/components
+
+      - name: Lint, typecheck, build (all workspaces)
+        if: steps.changes.outputs.all == 'true'
+        run: |
+          npm run lint
+          npm run typecheck
+          npm run build --workspaces --if-present
+
+      - name: Lint, typecheck, build (changed workspaces)
+        if: steps.changes.outputs.all != 'true' && steps.changes.outputs.workspaces != ''
+        run: |
+          for ws in ${{ steps.changes.outputs.workspaces }}; do
+            echo "::group::$ws"
+            npm run lint --workspace="$ws"
+            npm run typecheck --workspace="$ws"
+            npm run build --workspace="$ws" --if-present
+            echo "::endgroup::"
+          done
+
+      - name: No workspace changes
+        if: steps.changes.outputs.all != 'true' && steps.changes.outputs.workspaces == ''
+        run: echo "No workspace code changed — skipping lint/typecheck/build."

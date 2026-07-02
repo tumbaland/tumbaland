@@ -61,7 +61,7 @@ const SegmentationView: React.FC<SegmentationViewNewProps> = ({ photo, formatDat
     } else {
       setDetailedResults(undefined);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [photo]);
 
   // Run segmentation analysis

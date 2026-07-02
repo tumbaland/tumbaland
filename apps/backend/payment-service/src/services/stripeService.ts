@@ -20,7 +20,7 @@ export function ensureStripe() {
 export const stripe = new Proxy({} as Stripe, {
   get(_target, prop) {
     const inst = getStripe();
-    // @ts-ignore dynamic access
+    // @ts-expect-error dynamic access
     return inst[prop];
   }
 });

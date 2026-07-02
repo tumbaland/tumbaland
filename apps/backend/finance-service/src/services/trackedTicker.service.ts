@@ -1,5 +1,5 @@
 import TrackedTicker from '../models/TrackedTicker';
-import { buildAccessQuery, canAccessResource } from '../utils/permissionUtils';
+import { canAccessResource } from '../utils/permissionUtils';
 
 export const getAllTrackedTickers = async (userId: string, userGroups: string[] = []) => {
   if (userGroups.length === 0) {

@@ -457,7 +457,7 @@ export const segmentationService = {
   // Function to extract job_id from file paths
   getJobIdFromPath(filePath: string): string {
     // Extract job_id from paths like "/results/masks_abc123-def456/" or "/results/segmented_abc123-def456.png"
-    const match = filePath.match(/[_\/]([a-f0-9-]+)[\/_\.]/);
+    const match = filePath.match(/[_/]([a-f0-9-]+)[/_.]/);
     return match ? match[1] : '';
   }
 };

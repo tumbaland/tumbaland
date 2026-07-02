@@ -45,7 +45,7 @@ export async function getTickerPriceHistory(): Promise<TickerPriceResponse[]> {
  */
 export async function fetchAndSaveTickerPrices(tickerParam?: string): Promise<TickerPriceResponse[]> {
   const results: TickerPriceResponse[] = [];
-  let tickers: string[] = [];
+  let tickers: string[];
 
   if (tickerParam) {
     tickers = [tickerParam];

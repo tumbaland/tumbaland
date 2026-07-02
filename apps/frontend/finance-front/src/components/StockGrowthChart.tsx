@@ -41,6 +41,29 @@ const StockGrowthChart: React.FC<StockGrowthChartProps> = ({ data, goal, mcBands
     }).format(amount);
   };
 
+  const chartLines = [
+    {
+      key: 'portfolioTotalValue',
+      label: 'Portfolio Total Value',
+      color: '#1976d2'
+    },
+    {
+      key: 'moneyInvested',
+      label: 'Money Invested',
+      color: '#2e7d32'
+    },
+    {
+      key: 'inflationAdjustedValue',
+      label: 'Inflation Adjusted Value',
+      color: '#ed6c02'
+    }
+  ];
+
+  // State for toggling line visibility
+  const [visibleLines, setVisibleLines] = React.useState<Record<string, boolean>>(() =>
+    Object.fromEntries(chartLines.map((line) => [line.key, true]))
+  );
+
   if (data.length === 0) {
     return (
       <Card>
@@ -60,29 +83,6 @@ const StockGrowthChart: React.FC<StockGrowthChartProps> = ({ data, goal, mcBands
       </Card>
     );
   }
-
-  const chartLines = [
-    { 
-      key: 'portfolioTotalValue', 
-      label: 'Portfolio Total Value', 
-      color: '#1976d2' 
-    },
-    { 
-      key: 'moneyInvested', 
-      label: 'Money Invested', 
-      color: '#2e7d32' 
-    },
-    { 
-      key: 'inflationAdjustedValue', 
-      label: 'Inflation Adjusted Value', 
-      color: '#ed6c02' 
-    }
-  ];
-
-  // State for toggling line visibility
-  const [visibleLines, setVisibleLines] = React.useState<Record<string, boolean>>(() =>
-    Object.fromEntries(chartLines.map((line) => [line.key, true]))
-  );
 
   // Calculate max value based only on visible lines
   const maxValue = Math.max(

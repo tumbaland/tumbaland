@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
-const cookieParser = require('cookie-parser');
+import cookieParser from 'cookie-parser';
 import authRoutes from './routes/authRoutes';
 import { connectDb } from './config/db';
 import path from 'path';

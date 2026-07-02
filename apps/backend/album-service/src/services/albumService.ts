@@ -89,7 +89,7 @@ class AlbumService {
     } = filter;
     const { userId, userGroups, groupServiceError } = context;
 
-    let matchQuery: any = {};
+    const matchQuery: any = {};
 
     // Build base query
     if (search) {
@@ -156,7 +156,7 @@ class AlbumService {
 
     const total = totalResult[0]?.total || 0;
 
-    let albumsWithCovers = albumsResult as any[];
+    let albumsWithCovers: any[];
 
     if (includeCover) {
       albumsWithCovers = await this.enrichAlbumsWithCoverPhotos(albumsResult);

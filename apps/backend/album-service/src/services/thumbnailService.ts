@@ -1,6 +1,5 @@
 import sharp from 'sharp';
 import * as fs from 'fs';
-import * as path from 'path';
 import { uploadFile, generateThumbnailFileId } from './fileServiceClient';
 import { logger } from '@tumbaland/core';
 
@@ -58,7 +57,7 @@ export const generateThumbnailFromBuffer = async (
     const metadata = await sharp(thumbnailBuffer).metadata();
 
     // Upload thumbnail to file-service
-    const uploadResult = await uploadFile(
+    await uploadFile(
       thumbnailBuffer,
       thumbnailFileId,
       `image/${opts.format}`,

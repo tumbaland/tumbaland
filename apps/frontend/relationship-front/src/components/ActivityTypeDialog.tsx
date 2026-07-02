@@ -77,7 +77,7 @@ const ActivityTypeDialog: React.FC<ActivityTypeDialogProps> = ({
     }
 
     // Generate slug if missing
-    let dataToSubmit = { ...formData };
+    const dataToSubmit = { ...formData };
     if (!dataToSubmit.slug?.trim()) {
       dataToSubmit.slug = dataToSubmit.name
         .toLowerCase()

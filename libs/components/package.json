@@ -1,6 +1,6 @@
 {
   "name": "@tumbaland/components",
-  "version": "1.11.1",
+  "version": "1.12.0",
   "author": "Tumbaland",
   "license": "MIT",
   "main": "dist/index.js",
@@ -13,7 +13,9 @@
     "release": "standard-version && npm run build && npm publish --access public",
     "release:beta": "standard-version --prerelease beta && npm run build && npm publish --access public --tag beta",
     "storybook:dev": "storybook dev -p 7000",
-    "storybook:prod": "storybook build"
+    "storybook:prod": "storybook build",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@mui/icons-material": "^9.1.1",
@@ -31,15 +33,9 @@
     "@storybook/addon-onboarding": "^10.4.6",
     "@storybook/react": "^10.4.6",
     "@storybook/react-vite": "^10.4.6",
-    "eslint-plugin-storybook": "^10.4.6",
     "@types/node": "^26.1.0",
     "standard-version": "^9.5.0",
     "storybook": "^10.4.6",
     "typescript": "^6.0.3"
-  },
-  "eslintConfig": {
-    "extends": [
-      "plugin:storybook/recommended"
-    ]
   }
 }

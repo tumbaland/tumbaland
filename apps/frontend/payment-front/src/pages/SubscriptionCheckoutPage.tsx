@@ -39,7 +39,7 @@ const SubscriptionCheckoutPage: React.FC = () => {
         try {
           // Touching top.location on cross-origin will throw
           // If not thrown, we can navigate top directly
-          // eslint-disable-next-line no-unused-expressions
+          // eslint-disable-next-line @typescript-eslint/no-unused-expressions
           (window.top as Window).location.href;
           (window.top as Window).location.assign(absUrl);
           return;
@@ -146,7 +146,7 @@ const SubscriptionCheckoutPage: React.FC = () => {
       const res = await paymentApi.createCheckoutSession(plan.code);
       // Debug log of raw response for troubleshooting missing URL
       // (Remove or guard behind env flag in production)
-      // eslint-disable-next-line no-console
+       
       console.debug('checkout-session response', res);
       if (res.free && res.subscription?.status === 'active') {
         const target = (res as any).url || '/subscription';

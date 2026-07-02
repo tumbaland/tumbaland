@@ -78,7 +78,7 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
     setQuickRange(value);
     const now = new Date();
     let start: string;
-    let end = now.toISOString().slice(0, 10);
+    const end = now.toISOString().slice(0, 10);
     switch (value) {
       case '1m': {
         const d = new Date(now);
@@ -113,7 +113,7 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
       case 'all':
       default: {
         // Set to earliest available date in history, or fallback to 10 years ago
-        let earliest = '';
+        let earliest: string;
         if (history.length > 0) {
           earliest = history.reduce((min, h) => (h.date < min ? h.date : min), history[0].date);
         } else {

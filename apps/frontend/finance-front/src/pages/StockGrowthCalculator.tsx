@@ -297,17 +297,16 @@ const StockGrowthCalculator: React.FC = () => {
 
     for (let s = 0; s < sims; s++) {
       let value = inputs.startingCapital;
-      let invested = inputs.startingCapital;
       for (let y = 1; y <= years; y++) {
         for (let m = 1; m <= stepsPerYear; m++) {
           // Contribution at step
           if (inputs.contributionFrequency === 'monthly') {
             value += contribMonthly;
-            invested += contribMonthly;
+
           } else if (m === 1 && !(y === 1 && stepsPerYear === 1)) {
             // annual contribution at start of each year (except first already included)
             value += contribAnnual;
-            invested += contribAnnual;
+
           }
           // GBM step with fee
           const drift = (mu - 0.5 * sigmaA * sigmaA) * dt;

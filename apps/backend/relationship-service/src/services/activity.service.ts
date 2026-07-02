@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 import { Activity, IActivity } from '../models/Activity';
-import { buildAccessQuery, canAccessResource } from '../utils/permissionUtils';
 
 // Create a new activity
 export const createActivity = async (activityData: Partial<IActivity>): Promise<IActivity> => {
@@ -44,7 +43,7 @@ export const getActivities = async (
     } = filters;
 
     // Build base query
-    let query: any = {};
+    const query: any = {};
 
     if (activityType) {
       // Find the activity type by slug and get its ID

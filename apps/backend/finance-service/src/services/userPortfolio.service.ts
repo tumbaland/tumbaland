@@ -1,6 +1,6 @@
 import UserPortfolio from '../models/UserPortfolio';
 import TickerPriceHistory from '../models/TickerPriceHistory';
-import { buildAccessQuery, canAccessResource } from '../utils/permissionUtils';
+import { canAccessResource } from '../utils/permissionUtils';
 
 export const getAllUserPortfolios = async (userId: string, userGroups: string[] = []) => {
   let portfolios;

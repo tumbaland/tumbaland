@@ -22,8 +22,8 @@ class StatisticsService {
     const { userId, userGroups } = context;
 
     // Build base query for filtering
-    let albumMatchQuery: any = {};
-    let photoMatchQuery: any = {};
+    const albumMatchQuery: any = {};
+    const photoMatchQuery: any = {};
 
     if (groupId) {
       // Filter by specific group

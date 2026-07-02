@@ -277,7 +277,7 @@ export const getRecentActivities = async (req: Request, res: Response): Promise<
       limit: limitNum,
       page: 1,
       sortBy: 'createdAt',
-      sortOrder: 'desc' as 'desc',
+      sortOrder: 'desc' as const,
       userId: user.id,
       userGroupIds: userGroups
     };
@@ -354,7 +354,7 @@ export const getRecentActivitiesSummary = async (req: Request, res: Response): P
           limit: 1000,
           page: 1,
           sortBy: 'date',
-          sortOrder: 'asc' as 'asc',
+          sortOrder: 'asc' as const,
           userId: user.id,
           userGroupIds: userGroups
         };

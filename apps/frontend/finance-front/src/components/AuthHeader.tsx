@@ -25,9 +25,8 @@ import { NotificationsMenu } from '@tumbaland/components';
 import { LoginButton } from '@tumbaland/components';
 import { useCurrentUser, useLogout } from '../hooks/useAuth';
 
-interface AuthHeaderProps {}
 
-const AuthHeader: React.FC<AuthHeaderProps> = () => {
+const AuthHeader: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationAnchorEl, setNotificationAnchorEl] = useState<null | HTMLElement>(null);
   const config = useConfig();

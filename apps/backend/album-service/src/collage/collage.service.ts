@@ -1,6 +1,6 @@
 import { CollageInput } from './collage.types';
 import { CollageModel, ICollage } from './collage.model';
-import { buildAccessQuery, canAccessResource } from '../utils/permissionUtils';
+import { canAccessResource } from '../utils/permissionUtils';
 import Album from '../models/Album';
 import { getPhotoSignedUrl } from '../services/fileServiceClient';
 import mongoose from 'mongoose';
@@ -8,7 +8,7 @@ import mongoose from 'mongoose';
 export const createCollage = async (
   data: CollageInput, 
   userId: string, 
-  userGroups: string[] = []
+  _userGroups: string[] = []
 ): Promise<ICollage> => {
   // Set the userId on the collage data
   const collageData = {
@@ -182,7 +182,7 @@ export const getCollageList = async (
   userGroups: string[] = [],
   groupId?: string
 ): Promise<ICollage[]> => {
-  let filter: any = {};
+  const filter: any = {};
   
   // Add album filter if provided
   if (albumId) {

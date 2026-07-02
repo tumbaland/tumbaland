@@ -12,17 +12,23 @@
     "dev": "concurrently \"npm run dev:back\" \"npm run dev:front\"",
     "dev:back": "concurrently \"npm run dev --workspace=auth-service\" \"npm run dev --workspace=public-service\" \"npm run dev --workspace=album-service\" \"npm run dev --workspace=finance-service\" \"npm run dev --workspace=relationship-service\" \"npm run dev --workspace=payment-service\" \"npm run dev --workspace=group-service\" \"npm run dev --workspace=file-service\"",
     "dev:front": "concurrently \"npm run dev --workspace=account-front\" \"npm run dev --workspace=auth-front\" \"npm run dev --workspace=shell-front\" \"npm run dev --workspace=album-front\" \"npm run dev --workspace=finance-front\" \"npm run dev --workspace=relationship-front\" \"npm run dev --workspace=payment-front\" \"npm run dev --workspace=group-front\"",
-    "lint": "npm run lint --workspaces",
+    "lint": "eslint .",
     "test": "npm run test --workspaces",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "concurrently": "^10.0.3",
     "eslint": "^10.6.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.7.0",
     "jest": "^30.4.2",
     "nodemon": "^3.1.14",
     "prettier": "^3.9.4",
     "ts-node": "^10.9.2",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.62.1"
   }
 }

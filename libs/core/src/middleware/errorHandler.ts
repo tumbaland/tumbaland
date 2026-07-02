@@ -9,7 +9,7 @@ export const errorHandler: ErrorRequestHandler = (
   error: Error,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void => {
   // Log the error
   logger.error('Unhandled error:', {

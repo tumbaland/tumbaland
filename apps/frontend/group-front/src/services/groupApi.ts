@@ -21,7 +21,7 @@ async function api<T = any>(path: string, init: RequestInit = {}): Promise<T> {
   });
   if (!res.ok) {
     let message = `HTTP ${res.status}`;
-    try { const j = await res.json(); if (j?.message) message = j.message; } catch {}
+    try { const j = await res.json(); if (j?.message) message = j.message; } catch { /* keep default message */ }
     throw new Error(message);
   }
   if (res.status === 204) return undefined as unknown as T;

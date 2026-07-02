@@ -86,10 +86,11 @@ export const getRelationshipStatistics = async (
       case 'month':
         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
         break;
-      case 'quarter':
+      case 'quarter': {
         const quarterStart = Math.floor(now.getMonth() / 3) * 3;
         startDate = new Date(now.getFullYear(), quarterStart, 1);
         break;
+      }
       case 'year':
         startDate = new Date(now.getFullYear(), 0, 1);
         break;
@@ -401,7 +402,6 @@ export const getMonthlyStatistics = async (
 
       let sexCount = 0;
       let togetherCount = 0;
-      const allDays = new Set<string>();
 
       item.activities.forEach((activity: any) => {
         if (activity.type === 'sex') {

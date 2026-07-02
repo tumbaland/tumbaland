@@ -263,7 +263,7 @@ const PortfolioOptimizer: React.FC = () => {
         resultPct: ((currentVal + buyAmt) / newTotal) * 100,
       };
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [sim, targetPortfolio, investEuros, totalValue]);
 
   // ── chart helpers ───────────────────────────────────────────────────────────

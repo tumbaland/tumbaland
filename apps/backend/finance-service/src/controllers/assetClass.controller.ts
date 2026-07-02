@@ -46,7 +46,6 @@ export const getAssetClasses = async (req: Request, res: Response): Promise<void
 export const createAssetClass = async (req: Request, res: Response): Promise<void> => {
   try {
     const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
 
     const assetClassData = {
       ...req.body,
