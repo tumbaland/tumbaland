@@ -1,4 +1,12 @@
 # Tumbalog
+### [0.0.350](https://github.com/toomastahves/tumbaland/compare/v0.0.349...v0.0.350) (2026-07-02)
+
+
+### Features
+
+* add CORS_ORIGIN to compose ([0ee09b7](https://github.com/toomastahves/tumbaland/commit/0ee09b7ac7745f18680019e18fe4e8971cca4010))
+* add reusable cors ([196944a](https://github.com/toomastahves/tumbaland/commit/196944a5ae7b1cbdf8ddbfacd124d596ed9cead2))
+
 ### [0.0.349](https://github.com/toomastahves/tumbaland/compare/v0.0.348...v0.0.349) (2026-07-02)
 
 
