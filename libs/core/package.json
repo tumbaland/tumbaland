@@ -1,6 +1,6 @@
 {
   "name": "@tumbaland/core",
-  "version": "1.9.4",
+  "version": "1.9.5",
   "description": "Core shared functionality for Tumbaland backend services",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -22,6 +22,7 @@
   "author": "Tumbaland Team",
   "license": "MIT",
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.2",
     "@types/jaeger-client": "^3.18.7",
     "@types/jsonwebtoken": "^9.0.6",
@@ -31,6 +32,7 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "cors": "^2.8.6",
     "express": "^5.1.0",
     "jaeger-client": "^3.19.0",
     "jsonwebtoken": "^9.0.2",

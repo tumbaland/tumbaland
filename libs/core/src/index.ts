@@ -14,6 +14,7 @@ export { requireEnv } from './config/env';
 
 // Middleware
 export { authenticateToken } from './middleware/authMiddleware';
+export { createCorsMiddleware } from './middleware/corsMiddleware';
 export { errorHandler } from './middleware/errorHandler';
 export { requestLogger, requestLoggerWithMetrics, simpleRequestLogger } from './middleware/requestLogger';
 

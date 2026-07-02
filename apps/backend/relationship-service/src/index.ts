@@ -1,5 +1,4 @@
 import express, { Request, Response } from 'express';
-import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import path from 'path';
@@ -8,7 +7,7 @@ import activityRoutes from './routes/activities';
 import activityTypeRoutes from './routes/activityTypes';
 import statisticsRoutes from './routes/statistics';
 import { healthCheck } from './controllers/healthController';
-import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware, requireEnv } from '@tumbaland/core';
+import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware, requireEnv, createCorsMiddleware } from '@tumbaland/core';
 
 // Load environment variables
 dotenv.config();
@@ -25,9 +24,7 @@ connectDB();
 // Middleware
 app.use(correlationMiddleware);
 app.use(tracingMiddleware);
-app.use(cors({
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id', 'x-session-id']
-}));
+app.use(createCorsMiddleware());
 app.use(express.json());
 app.use(cookieParser());
 app.use(requestLoggerWithMetrics);

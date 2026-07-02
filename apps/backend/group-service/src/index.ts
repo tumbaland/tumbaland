@@ -1,5 +1,4 @@
 import express, { Request, Response } from 'express';
-import cors from 'cors';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
@@ -7,7 +6,7 @@ import path from 'path';
 import { authenticateToken } from './middleware/authMiddleware';
 import groupRoutes from './routes/groupRoutes';
 import { healthCheck } from './controllers/healthController';
-import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware, requireEnv } from '@tumbaland/core';
+import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware, requireEnv, createCorsMiddleware } from '@tumbaland/core';
 
 dotenv.config();
 
@@ -18,9 +17,7 @@ const app = express();
 app.use(correlationMiddleware);
 app.use(tracingMiddleware);
 app.use(requestLoggerWithMetrics);
-app.use(cors({
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id', 'x-session-id']
-}));
+app.use(createCorsMiddleware());
 app.use(express.json()); // Add body parser middleware
 app.use(cookieParser());
 

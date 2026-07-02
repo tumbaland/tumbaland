@@ -1,12 +1,11 @@
 import express, { Request, Response } from 'express';
-import cors from 'cors';
 import dotenv from 'dotenv';
 const cookieParser = require('cookie-parser');
 import authRoutes from './routes/authRoutes';
 import { connectDb } from './config/db';
 import path from 'path';
 import { healthCheck } from './controllers/healthController';
-import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware, requireEnv } from '@tumbaland/core';
+import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware, requireEnv, createCorsMiddleware } from '@tumbaland/core';
 
 // Load environment variables
 dotenv.config();
@@ -23,23 +22,7 @@ app.use(tracingMiddleware);
 app.use(requestLoggerWithMetrics);
 app.use(express.json());
 app.use(cookieParser());
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      const allowedOrigins = (process.env.CORS_ORIGIN ?? '').split(',').map(o => o.trim());
-      logger.info('CORS request from:', { origin, allowedOrigins });
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS: ' + origin));
-      }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id', 'x-session-id'],
-    exposedHeaders: ['Content-Type', 'Content-Length', 'ETag', 'Cache-Control']
-  })
-);
+app.use(createCorsMiddleware({ exposedHeaders: ['Content-Type', 'Content-Length', 'ETag', 'Cache-Control'] }));
 
 // Serve static documentation files
 app.use('/api/docs', express.static(path.join(__dirname, '../docs')));

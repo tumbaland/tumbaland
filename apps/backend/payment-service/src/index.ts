@@ -1,5 +1,4 @@
 import express, { Request, Response } from 'express';
-import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import { connectDB } from './config/database';
@@ -9,7 +8,7 @@ import paymentRoutes from './routes/paymentRoutes';
 import { stripeWebhook } from './controllers/stripeController';
 import path from 'path';
 import { healthCheck } from './controllers/healthController';
-import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware, requireEnv } from '@tumbaland/core';
+import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware, requireEnv, createCorsMiddleware } from '@tumbaland/core';
 
 dotenv.config();
 
@@ -21,19 +20,9 @@ const PORT = process.env.PORT || 5005;
 
 connectDB();
 
-// Configure CORS with explicit origin whitelist (comma separated FRONTEND_ORIGIN)
-const allowedOrigins = (process.env.PAYMENT_URL || '').split(',').map((o: string) => o.trim()).filter(Boolean);
 app.use(correlationMiddleware);
 app.use(tracingMiddleware);
-app.use(cors({
-  origin: (origin, cb) => {
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-    logger.warn('Blocked CORS origin', { origin });
-    return cb(new Error('Not allowed by CORS'));
-  },
-  credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id', 'x-session-id']
-}));
+app.use(createCorsMiddleware());
 // JSON parser applied after defining webhook route (so webhook keeps raw Buffer)
 app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), stripeWebhook);
 app.use(express.json());

@@ -1,12 +1,11 @@
 import express, { Request, Response } from 'express';
-import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import todoRoutes from './routes/todoRoutes';
 import { loadTodos } from './services/todoService';
 import { healthCheck } from './controllers/healthController';
 import { submitLogs, getLogsHealth } from './controllers/logController';
-import { logger, errorHandler, correlationMiddleware, requestLogger } from '@tumbaland/core';
+import { logger, errorHandler, correlationMiddleware, requestLogger, createCorsMiddleware } from '@tumbaland/core';
 
 // Load environment variables
 dotenv.config();
@@ -16,12 +15,7 @@ const PORT = process.env.PORT || 5003;
 
 // Middleware
 app.use(correlationMiddleware);
-app.use(cors({
-  origin: true, // Allow all origins
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id', 'x-session-id']
-}));
+app.use(createCorsMiddleware());
 app.use(express.json());
 app.use(requestLogger);
 

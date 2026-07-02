@@ -1,5 +1,4 @@
 import express, { Request, Response } from 'express';
-import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import path from 'path';
@@ -12,7 +11,7 @@ import userPortfolioRoutes from './routes/userPortfolio';
 import dashboardRoutes from './routes/dashboard';
 import { startDailyPortfolioUpdate } from './services/portfolioScheduler.service';
 import { healthCheck } from './controllers/healthController';
-import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware, requireEnv } from '@tumbaland/core';
+import { logger, errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware, requireEnv, createCorsMiddleware } from '@tumbaland/core';
 
 // Load environment variables
 dotenv.config();
@@ -35,9 +34,7 @@ app.use(tracingMiddleware);
 app.use(requestLoggerWithMetrics);
 app.use(express.json()); // Parse JSON request bodies
 app.use(cookieParser());
-app.use(cors({
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id', 'x-session-id']
-}));
+app.use(createCorsMiddleware());
 
 // Routes
 app.use('/api/asset-classes', assetClassesRoutes);

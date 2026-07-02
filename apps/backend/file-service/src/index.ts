@@ -1,5 +1,4 @@
 import express, { Request, Response } from 'express';
-import cors from 'cors';
 import dotenv from 'dotenv';
 import {
   logger,
@@ -7,7 +6,8 @@ import {
   correlationMiddleware,
   requestLoggerWithMetrics,
   metricsHandler,
-  tracingMiddleware
+  tracingMiddleware,
+  createCorsMiddleware
 } from '@tumbaland/core';
 import routes from './routes/routes';
 
@@ -29,7 +29,7 @@ const PORT = process.env.PORT || 5002;
 app.use(correlationMiddleware);
 app.use(tracingMiddleware);
 app.use(requestLoggerWithMetrics);
-app.use(cors());
+app.use(createCorsMiddleware());
 
 // Raw body parser for file uploads – do NOT use express.json() before file routes.
 // We handle raw streams manually in controllers, so only parse JSON where needed.
