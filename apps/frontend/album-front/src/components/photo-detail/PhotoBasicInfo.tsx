@@ -13,7 +13,9 @@ const PhotoBasicInfo: React.FC<PhotoBasicInfoProps> = ({ photo, formatFileSize, 
     <Box sx={{ display: 'flex', gap: 4, flexDirection: { xs: 'column', lg: 'row' } }}>
       {/* Photo Display */}
       <Box sx={{ flex: 2 }}>
-        <Typography variant="h6" gutterBottom fontWeight={600}>
+        <Typography variant="h6" gutterBottom sx={{
+          fontWeight: 600
+        }}>
           Photo
         </Typography>
         <Box
@@ -43,11 +45,19 @@ const PhotoBasicInfo: React.FC<PhotoBasicInfoProps> = ({ photo, formatFileSize, 
       </Box>
       {/* Photo Details */}
       <Box sx={{ flex: 1, minWidth: { lg: 300 } }}>
-        <Typography variant="h6" gutterBottom fontWeight={600}>
+        <Typography variant="h6" gutterBottom sx={{
+          fontWeight: 600
+        }}>
           Details
         </Typography>
         <Box sx={{ mb: 3 }}>
-          <Typography variant="body2" color="text.secondary" gutterBottom fontWeight={500}>
+          <Typography
+            variant="body2"
+            gutterBottom
+            sx={{
+              color: "text.secondary",
+              fontWeight: 500
+            }}>
             Description
           </Typography>
           <Typography variant="body1">{photo.description || 'No description'}</Typography>
@@ -55,32 +65,58 @@ const PhotoBasicInfo: React.FC<PhotoBasicInfoProps> = ({ photo, formatFileSize, 
         <Divider sx={{ my: 3, opacity: 0.6 }} />
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 3 }}>
           <Box>
-            <Typography variant="body2" color="text.secondary" fontWeight={500}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                fontWeight: 500
+              }}>
               File Size
             </Typography>
-            <Typography variant="body1" fontWeight={500}>
+            <Typography variant="body1" sx={{
+              fontWeight: 500
+            }}>
               {formatFileSize(photo.size)}
             </Typography>
           </Box>
           <Box>
-            <Typography variant="body2" color="text.secondary" fontWeight={500}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                fontWeight: 500
+              }}>
               Dimensions
             </Typography>
-            <Typography variant="body1" fontWeight={500}>
+            <Typography variant="body1" sx={{
+              fontWeight: 500
+            }}>
               {photo.width && photo.height ? `${photo.width} × ${photo.height}` : 'Unknown'}
             </Typography>
           </Box>
           <Box>
-            <Typography variant="body2" color="text.secondary" fontWeight={500}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                fontWeight: 500
+              }}>
               Upload Date
             </Typography>
-            <Typography variant="body1" fontWeight={500}>
+            <Typography variant="body1" sx={{
+              fontWeight: 500
+            }}>
               {formatDate(photo.createdAt)}
             </Typography>
           </Box>
         </Box>
         <Box sx={{ mt: 3, mb: 2 }}>
-          <Typography variant="body2" color="text.secondary" fontWeight={500}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              fontWeight: 500
+            }}>
             Original Name
           </Typography>
           <Typography
@@ -92,7 +128,13 @@ const PhotoBasicInfo: React.FC<PhotoBasicInfoProps> = ({ photo, formatFileSize, 
         </Box>
         {photo.tags && photo.tags.length > 0 && (
           <Box sx={{ mt: 3 }}>
-            <Typography variant="body2" color="text.secondary" gutterBottom fontWeight={500}>
+            <Typography
+              variant="body2"
+              gutterBottom
+              sx={{
+                color: "text.secondary",
+                fontWeight: 500
+              }}>
               Tags
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>

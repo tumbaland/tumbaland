@@ -49,7 +49,12 @@ const AddMemberDialog: React.FC<AddMemberDialogProps> = ({
         <DialogTitle>Add Member</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                mb: 2
+              }}>
               Enter the email address of the user you want to add to this group.
             </Typography>
             {error && (
@@ -63,7 +68,7 @@ const AddMemberDialog: React.FC<AddMemberDialogProps> = ({
               type="email"
               fullWidth
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
               required
               disabled={loading}
             />

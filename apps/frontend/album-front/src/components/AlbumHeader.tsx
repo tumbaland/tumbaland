@@ -36,17 +36,18 @@ const AlbumHeader: React.FC<AlbumHeaderProps> = ({
         >
           Albums
         </Link>
-        <Typography color="text.primary">{album.name}</Typography>
+        <Typography sx={{
+          color: "text.primary"
+        }}>{album.name}</Typography>
       </Breadcrumbs>
-
       {/* Header */}
       <Box 
-        display="flex" 
-        flexDirection={{ xs: 'column', sm: 'row' }}
-        justifyContent="space-between" 
-        alignItems={{ xs: 'stretch', sm: 'flex-start' }}
-        mb={{ xs: 2, sm: 4 }}
         sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', sm: 'row' },
+          justifyContent: 'space-between',
+          alignItems: { xs: 'stretch', sm: 'flex-start' },
+          mb: { xs: 2, sm: 4 },
           background: 'rgba(255, 255, 255, 0.5)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
@@ -57,7 +58,7 @@ const AlbumHeader: React.FC<AlbumHeaderProps> = ({
         }}
       >
         <Box sx={{ mb: { xs: 2, sm: 0 } }}>
-          <Box display="flex" alignItems="center" mb={1}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
             <IconButton onClick={onNavigateBack} sx={{ mr: 1, ml: -1 }}>
               <ArrowBackIcon />
             </IconButton>
@@ -79,11 +80,22 @@ const AlbumHeader: React.FC<AlbumHeaderProps> = ({
             </Typography>
           </Box>
           {album.description && (
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 1, pl: { xs: 0, sm: 6 } }}>
+            <Typography
+              variant="body1"
+              sx={{
+                color: "text.secondary",
+                mb: 1,
+                pl: { xs: 0, sm: 6 }
+              }}>
               {album.description}
             </Typography>
           )}
-          <Typography variant="body2" color="text.secondary" sx={{ pl: { xs: 0, sm: 6 } }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              pl: { xs: 0, sm: 6 }
+            }}>
             {album.photoCount} {album.photoCount === 1 ? 'photo' : 'photos'}
             {album.isPublic ? ' • Public' : ' • Private'}
           </Typography>

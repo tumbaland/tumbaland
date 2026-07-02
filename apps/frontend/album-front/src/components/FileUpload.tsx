@@ -161,13 +161,15 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
       onClose={handleClose} 
       maxWidth="md" 
       fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: 4,
-          background: 'rgba(255, 255, 255, 0.9)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+      slotProps={{
+        paper: {
+          sx: {
+            borderRadius: 4,
+            background: 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }
         }
       }}
     >
@@ -201,13 +203,31 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
           onClick={() => document.getElementById('file-input')?.click()}
         >
           <PhotoLibraryIcon sx={{ fontSize: 64, color: 'primary.main', mb: 2, opacity: 0.8 }} />
-          <Typography variant="h6" gutterBottom fontWeight={600} color="primary.dark">
+          <Typography
+            variant="h6"
+            gutterBottom
+            sx={{
+              fontWeight: 600,
+              color: "primary.dark"
+            }}>
             Drop images and videos here
           </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
+          <Typography
+            variant="body1"
+            sx={{
+              color: "text.secondary",
+              mb: 1
+            }}>
             or click to browse from your computer
           </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2, opacity: 0.7 }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              display: 'block',
+              mt: 2,
+              opacity: 0.7
+            }}>
             Supports: JPG, PNG, GIF, WebP, MP4, MOV, AVI
           </Typography>
           <input
@@ -223,8 +243,12 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
         {uploading && (
           <Box sx={{ mt: 3, mb: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="body2" fontWeight={500}>Uploading...</Typography>
-              <Typography variant="body2" color="text.secondary">{Math.round(uploadProgress)}%</Typography>
+              <Typography variant="body2" sx={{
+                fontWeight: 500
+              }}>Uploading...</Typography>
+              <Typography variant="body2" sx={{
+                color: "text.secondary"
+              }}>{Math.round(uploadProgress)}%</Typography>
             </Box>
             <LinearProgress 
               variant="determinate" 
@@ -264,7 +288,9 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
                       </Typography>
                     }
                     secondary={
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>
                         {formatFileSize(fileItem.file.size)}
                       </Typography>
                     }
@@ -286,7 +312,6 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
           </Box>
         )}
       </DialogContent>
-
       <DialogActions sx={{ p: 3, pt: 1 }}>
         <Button 
           onClick={handleClose} 

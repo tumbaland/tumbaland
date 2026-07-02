@@ -103,8 +103,10 @@ const ActivityTypeDialog: React.FC<ActivityTypeDialogProps> = ({
       onClose={onClose}
       maxWidth="sm" 
       fullWidth
-      PaperProps={{
-        sx: { borderRadius: 2 }
+      slotProps={{
+        paper: {
+          sx: { borderRadius: 2 }
+        }
       }}
     >
       <DialogTitle sx={{ pb: 1, fontWeight: 600 }}>
@@ -125,7 +127,7 @@ const ActivityTypeDialog: React.FC<ActivityTypeDialogProps> = ({
           <TextField
             label="Name"
             value={formData.name}
-            onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
             fullWidth
             required
             autoFocus
@@ -135,7 +137,7 @@ const ActivityTypeDialog: React.FC<ActivityTypeDialogProps> = ({
             label="Value type"
             select
             value={formData.valueType || 'string'}
-            onChange={(e) => setFormData((prev) => ({ ...prev, valueType: e.target.value as 'string' | 'boolean' | 'number' }))}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData((prev) => ({ ...prev, valueType: e.target.value as 'string' | 'boolean' | 'number' }))}
             fullWidth
             helperText="Controls how the description is captured when logging this activity"
           >
@@ -157,7 +159,7 @@ const ActivityTypeDialog: React.FC<ActivityTypeDialogProps> = ({
           <TextField
             label="Description"
             value={formData.description}
-            onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+            onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
             fullWidth
             multiline
             rows={3}
@@ -174,7 +176,7 @@ const ActivityTypeDialog: React.FC<ActivityTypeDialogProps> = ({
                   component="input"
                   type="color"
                   value={formData.color}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, color: e.target.value }))}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData((prev) => ({ ...prev, color: e.target.value }))}
                   sx={{
                     width: 60,
                     height: 40,

@@ -53,7 +53,9 @@ const GroupDetailsHeader: React.FC<GroupDetailsHeaderProps> = ({
               <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
                 {groupName}
               </Typography>
-              <Typography variant="body1" color="text.secondary">
+              <Typography variant="body1" sx={{
+                color: "text.secondary"
+              }}>
                 Group Details
               </Typography>
             </Box>

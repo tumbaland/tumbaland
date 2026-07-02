@@ -71,10 +71,18 @@ const HoursBarChart: React.FC<BarChartProps> = ({ title = 'Activities per Month 
     return (
       <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom fontWeight="bold">
+          <Typography variant="h6" gutterBottom sx={{
+            fontWeight: "bold"
+          }}>
             {title}
           </Typography>
-          <Box display="flex" justifyContent="center" alignItems="center" height={height}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: height
+            }}>
             <CircularProgress />
           </Box>
         </CardContent>
@@ -86,7 +94,9 @@ const HoursBarChart: React.FC<BarChartProps> = ({ title = 'Activities per Month 
     return (
       <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom fontWeight="bold">
+          <Typography variant="h6" gutterBottom sx={{
+            fontWeight: "bold"
+          }}>
             {title}
           </Typography>
           <Alert severity="error">{error}</Alert>
@@ -99,11 +109,21 @@ const HoursBarChart: React.FC<BarChartProps> = ({ title = 'Activities per Month 
     return (
       <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom fontWeight="bold">
+          <Typography variant="h6" gutterBottom sx={{
+            fontWeight: "bold"
+          }}>
             {title}
           </Typography>
-          <Box display="flex" justifyContent="center" alignItems="center" height={height}>
-            <Typography color="text.secondary">No data available</Typography>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: height
+            }}>
+            <Typography sx={{
+              color: "text.secondary"
+            }}>No data available</Typography>
           </Box>
         </CardContent>
       </Card>
@@ -161,6 +181,7 @@ const HoursBarChart: React.FC<BarChartProps> = ({ title = 'Activities per Month 
       color: 'transparent',
       id: 'total-series',
       valueFormatter: () => '', // Hide value in tooltip
+      barLabel: (item: { dataIndex: number }) => totalPerMonth[item.dataIndex]?.toString(),
     }
   ];
 
@@ -178,8 +199,10 @@ const HoursBarChart: React.FC<BarChartProps> = ({ title = 'Activities per Month 
       }}
     >
       <CardContent>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h6" fontWeight="bold">{title}</Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6" sx={{
+            fontWeight: "bold"
+          }}>{title}</Typography>
           <FormControl size="small" sx={{ minWidth: 120 }}>
             <InputLabel>Year</InputLabel>
             <Select
@@ -244,12 +267,6 @@ const HoursBarChart: React.FC<BarChartProps> = ({ title = 'Activities per Month 
               ...(isMobile ? {} : { label: 'Activities' }) // Only show label on non-mobile
             }]}
             series={series}
-            barLabel={(item) => {
-              if ((item.seriesId as any) === 'total-series') {
-                return totalPerMonth[item.dataIndex]?.toString();
-              }
-              return null;
-            }}
             slotProps={{
               barLabel: {
                 style: {
@@ -276,27 +293,42 @@ const HoursBarChart: React.FC<BarChartProps> = ({ title = 'Activities per Month 
             gap: { xs: 2, sm: 0 }
           }}
         >
-          <Box textAlign="center" sx={{ minWidth: { xs: '80px', sm: 'auto' } }}>
+          <Box sx={{ textAlign: 'center', minWidth: { xs: '80px', sm: 'auto' } }}>
             <Typography variant="h6" color="primary" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
               {totalActivities}
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                fontSize: { xs: '0.75rem', sm: '0.875rem' }
+              }}>
               Total Activities
             </Typography>
           </Box>
-          <Box textAlign="center" sx={{ minWidth: { xs: '80px', sm: 'auto' } }}>
+          <Box sx={{ textAlign: 'center', minWidth: { xs: '80px', sm: 'auto' } }}>
             <Typography variant="h6" color="primary" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
               {avgActivities}
             </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                fontSize: { xs: '0.7rem', sm: '0.75rem' }
+              }}>
               Avg Activities per Month
             </Typography>
           </Box>
-          <Box textAlign="center" sx={{ minWidth: { xs: '80px', sm: 'auto' } }}>
+          <Box sx={{ textAlign: 'center', minWidth: { xs: '80px', sm: 'auto' } }}>
             <Typography variant="h6" color="primary" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
               {peakActivities}
             </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                fontSize: { xs: '0.7rem', sm: '0.75rem' }
+              }}>
               Peak Activities
             </Typography>
           </Box>

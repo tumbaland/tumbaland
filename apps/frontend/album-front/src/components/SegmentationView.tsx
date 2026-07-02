@@ -148,7 +148,13 @@ const SegmentationView: React.FC<SegmentationViewNewProps> = ({ photo, formatDat
             </Box>
           )}
           {healthStatus && (
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                mt: 1,
+                display: 'block'
+              }}>
               Last checked: {healthStatus.lastChecked.toLocaleString()}
             </Typography>
           )}
@@ -185,7 +191,9 @@ const SegmentationView: React.FC<SegmentationViewNewProps> = ({ photo, formatDat
             <Typography variant="h6" gutterBottom>
               Previous Segmentation Analysis
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{
+              color: "text.secondary"
+            }}>
               Analyzed: {formatDate(photo.aiAnalysis.segmentation.analyzedAt)}
             </Typography>
             <Typography variant="body2">
@@ -252,7 +260,9 @@ const SegmentationView: React.FC<SegmentationViewNewProps> = ({ photo, formatDat
                     }}
                   />
                 ) : (
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" sx={{
+                    color: "text.secondary"
+                  }}>
                     No visualization available for this segmentation result.
                   </Typography>
                 )}
@@ -283,10 +293,14 @@ const SegmentationView: React.FC<SegmentationViewNewProps> = ({ photo, formatDat
                       <Card key={idx} variant="outlined" sx={{ mb: 1, p: 2 }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <Box>
-                            <Typography variant="body1" fontWeight="bold">
+                            <Typography variant="body1" sx={{
+                              fontWeight: "bold"
+                            }}>
                               Mask {idx + 1}
                             </Typography>
-                            <Typography variant="body2" color="text.secondary">
+                            <Typography variant="body2" sx={{
+                              color: "text.secondary"
+                            }}>
                               Area: {mask.area.toLocaleString()} pixels
                             </Typography>
                           </Box>
@@ -326,7 +340,9 @@ const SegmentationView: React.FC<SegmentationViewNewProps> = ({ photo, formatDat
                     ))}
                   </Box>
                 ) : (
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" sx={{
+                    color: "text.secondary"
+                  }}>
                     No individual mask data available.
                   </Typography>
                 )}
@@ -339,7 +355,13 @@ const SegmentationView: React.FC<SegmentationViewNewProps> = ({ photo, formatDat
       {!photo.aiAnalysis?.segmentation && !detailedResults && (
         <Card variant="outlined">
           <CardContent>
-            <Typography variant="body1" color="text.secondary" align="center" sx={{ py: 4 }}>
+            <Typography
+              variant="body1"
+              align="center"
+              sx={{
+                color: "text.secondary",
+                py: 4
+              }}>
               No segmentation analysis has been performed on this image yet.
               Use the "Semantic Segmentation" button above to run analysis.
             </Typography>

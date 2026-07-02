@@ -81,10 +81,18 @@ const TotalDaysChart: React.FC<TotalDaysChartProps> = ({ title = 'Monthly Days B
     return (
       <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom fontWeight="bold">
+          <Typography variant="h6" gutterBottom sx={{
+            fontWeight: "bold"
+          }}>
             {title}
           </Typography>
-          <Box display="flex" justifyContent="center" alignItems="center" height={height}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: height
+            }}>
             <CircularProgress />
           </Box>
         </CardContent>
@@ -96,7 +104,9 @@ const TotalDaysChart: React.FC<TotalDaysChartProps> = ({ title = 'Monthly Days B
     return (
       <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom fontWeight="bold">
+          <Typography variant="h6" gutterBottom sx={{
+            fontWeight: "bold"
+          }}>
             {title}
           </Typography>
           <Alert severity="error">{error}</Alert>
@@ -112,8 +122,16 @@ const TotalDaysChart: React.FC<TotalDaysChartProps> = ({ title = 'Monthly Days B
           <Typography variant="h6" gutterBottom>
             {title}
           </Typography>
-          <Box display="flex" justifyContent="center" alignItems="center" height={height}>
-            <Typography color="text.secondary">No data available</Typography>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: height
+            }}>
+            <Typography sx={{
+              color: "text.secondary"
+            }}>No data available</Typography>
           </Box>
         </CardContent>
       </Card>
@@ -171,8 +189,10 @@ const TotalDaysChart: React.FC<TotalDaysChartProps> = ({ title = 'Monthly Days B
       }}
     >
       <CardContent>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h6" fontWeight="bold">{title}</Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6" sx={{
+            fontWeight: "bold"
+          }}>{title}</Typography>
           <FormControl size="small" sx={{ minWidth: 120 }}>
             <InputLabel>Year</InputLabel>
             <Select
@@ -241,8 +261,7 @@ const TotalDaysChart: React.FC<TotalDaysChartProps> = ({ title = 'Monthly Days B
               max: 31,
               ...(isMobile ? {} : { label: 'Days' }) // Only show label on non-mobile
             }]}
-            series={series}
-            barLabel="value"
+            series={series.map((item) => ({ ...item, barLabel: 'value' }))}
             slotProps={{
               barLabel: {
                 style: {
@@ -268,27 +287,47 @@ const TotalDaysChart: React.FC<TotalDaysChartProps> = ({ title = 'Monthly Days B
             gap: { xs: 2, sm: 0 }
           }}
         >
-          <Box textAlign="center" sx={{ minWidth: { xs: '80px', sm: 'auto' } }}>
+          <Box sx={{ textAlign: 'center', minWidth: { xs: '80px', sm: 'auto' } }}>
             <Typography variant="h6" color="error" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
               {totalMadeLove}
             </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                fontSize: { xs: '0.7rem', sm: '0.75rem' }
+              }}>
               Total Love Days
             </Typography>
           </Box>
-          <Box textAlign="center" sx={{ minWidth: { xs: '80px', sm: 'auto' } }}>
+          <Box sx={{ textAlign: 'center', minWidth: { xs: '80px', sm: 'auto' } }}>
             <Typography variant="h6" color="primary" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
               {totalJustMeet}
             </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                fontSize: { xs: '0.7rem', sm: '0.75rem' }
+              }}>
               Total Meet Days
             </Typography>
           </Box>
-          <Box textAlign="center" sx={{ minWidth: { xs: '80px', sm: 'auto' } }}>
-            <Typography variant="h6" color="text.secondary" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
+          <Box sx={{ textAlign: 'center', minWidth: { xs: '80px', sm: 'auto' } }}>
+            <Typography
+              variant="h6"
+              sx={{
+                color: "text.secondary",
+                fontSize: { xs: '1.1rem', sm: '1.25rem' }
+              }}>
               {totalMissYou}
             </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                fontSize: { xs: '0.7rem', sm: '0.75rem' }
+              }}>
               Days Not Met
             </Typography>
           </Box>

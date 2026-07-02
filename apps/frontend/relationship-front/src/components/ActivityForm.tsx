@@ -241,11 +241,13 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
         onClose={handleClose}
         maxWidth="sm"
         fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            boxShadow: '0 12px 40px rgba(0,0,0,0.12)',
-            overflow: 'hidden'
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: 3,
+              boxShadow: '0 12px 40px rgba(0,0,0,0.12)',
+              overflow: 'hidden'
+            }
           }
         }}
       >
@@ -276,18 +278,20 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
                   label="Date"
                   type="date"
                   value={formData.date}
-                  onChange={(e) => {
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     setFormData((prev) => ({ ...prev, date: e.target.value }));
                   }}
                   fullWidth
                   required
-                  InputLabelProps={{ shrink: true }}
+                  slotProps={{
+                    inputLabel: { shrink: true }
+                  }}
                 />
                 <TextField
                   label="Duration (hours)"
                   type="number"
                   value={formData.hours === null ? '' : String(formData.hours)}
-                  onChange={(e) =>
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setFormData((prev) => ({
                       ...prev,
                       hours: e.target.value === '' ? null : Number(e.target.value) || null
@@ -302,7 +306,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
                 label="Activity Type"
                 select
                 value={activityTypes ? formData.activityTypeId : ''}
-                onChange={(e) =>
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setFormData((prev) => ({
                     ...prev,
                     activityTypeId: e.target.value,
@@ -312,8 +316,10 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
                 fullWidth
                 required
                 disabled={loadingTypes}
-                SelectProps={{
-                  MenuProps: { PaperProps: { sx: { maxHeight: 300, borderRadius: 2 } } }
+                slotProps={{
+                  select: {
+                    MenuProps: { slotProps: { paper: { sx: { maxHeight: 300, borderRadius: 2 } } } }
+                  }
                 }}
               >
                 {(activityTypes || []).map((type) => (
@@ -352,7 +358,9 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
 
               {valueType === 'boolean' ? (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, px: 1 }}>
-                  <Typography variant="body2" color="text.secondary">Did this happen?</Typography>
+                  <Typography variant="body2" sx={{
+                    color: "text.secondary"
+                  }}>Did this happen?</Typography>
                   <FormControlLabel
                     control={
                       <Switch
@@ -368,10 +376,12 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
                   label="Value"
                   type="number"
                   value={formData.description}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                   fullWidth
                   placeholder="Enter a number"
-                  inputProps={{ step: 'any' }}
+                  slotProps={{
+                    htmlInput: { step: 'any' }
+                  }}
                 />
               ) : (
                 <Autocomplete
@@ -387,15 +397,21 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
                       {...params}
                       label="Description"
                       placeholder={formData.activityTypeId ? 'Pick a past entry or type new…' : 'Select an activity type first'}
-                      inputProps={{ ...params.inputProps, maxLength: 500 }}
-                      InputProps={{
-                        ...params.InputProps,
-                        endAdornment: (
-                          <>
-                            {loadingDescriptions ? <CircularProgress size={18} /> : null}
-                            {params.InputProps.endAdornment}
-                          </>
-                        )
+                      slotProps={{
+                        inputLabel: params.slotProps.inputLabel,
+                        htmlInput: {
+                          ...params.slotProps.htmlInput,
+                          maxLength: 500
+                        },
+                        input: {
+                          ...params.slotProps.input,
+                          endAdornment: (
+                            <>
+                              {loadingDescriptions ? <CircularProgress size={18} /> : null}
+                              {params.slotProps.input.endAdornment}
+                            </>
+                          )
+                        }
                       }}
                     />
                   )}
@@ -428,18 +444,19 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
           </DialogActions>
         </form>
       </Dialog>
-
       {/* Create Activity Type Dialog */}
       <Dialog
         open={showCreateType}
         onClose={() => !creatingType && setShowCreateType(false)}
         maxWidth="sm"
         fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            boxShadow: '0 12px 40px rgba(0,0,0,0.12)',
-            overflow: 'hidden'
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: 3,
+              boxShadow: '0 12px 40px rgba(0,0,0,0.12)',
+              overflow: 'hidden'
+            }
           }
         }}
       >
@@ -449,7 +466,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
             <TextField
               label="Name"
               value={newTypeName}
-              onChange={(e) => setNewTypeName(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTypeName(e.target.value)}
               fullWidth
               required
               disabled={creatingType}
@@ -460,7 +477,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
               label="Value type"
               select
               value={newTypeValueType}
-              onChange={(e) => setNewTypeValueType(e.target.value as 'string' | 'boolean' | 'number')}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTypeValueType(e.target.value as 'string' | 'boolean' | 'number')}
               fullWidth
               disabled={creatingType}
               helperText="How the description is captured when logging"
@@ -473,7 +490,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
             <TextField
               label="Description"
               value={newTypeDescription}
-              onChange={(e) => setNewTypeDescription(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setNewTypeDescription(e.target.value)}
               fullWidth
               multiline
               rows={2}
@@ -490,7 +507,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
                   component="input"
                   type="color"
                   value={newTypeColor}
-                  onChange={(e) => setNewTypeColor(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTypeColor(e.target.value)}
                   disabled={creatingType}
                   sx={{
                     width: 60,

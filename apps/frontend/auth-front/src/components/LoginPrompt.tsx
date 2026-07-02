@@ -12,16 +12,32 @@ const LoginPrompt: React.FC<LoginPromptProps> = ({ isLoading, initializationAtte
     {isLoading ? (
       <Box sx={{ py: 5 }}>
         <CircularProgress color="primary" />
-        <Typography variant="body2" color="text.secondary" mt={2}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mt: 2
+          }}>
           Initializing authentication...
         </Typography>
       </Box>
     ) : (
       <Box>
-        <Typography variant="h5" fontWeight={700} color="#1e293b" mb={1}>
+        <Typography
+          variant="h5"
+          sx={{
+            fontWeight: 700,
+            color: "#1e293b",
+            mb: 1
+          }}>
           Sign In
         </Typography>
-        <Typography variant="body1" color="text.secondary" mb={4}>
+        <Typography
+          variant="body1"
+          sx={{
+            color: "text.secondary",
+            mb: 4
+          }}>
           Welcome back! Please sign in to continue.
         </Typography>
 
@@ -38,18 +54,28 @@ const LoginPrompt: React.FC<LoginPromptProps> = ({ isLoading, initializationAtte
           }}
         >
           {initializationAttempted ? (
-            <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', opacity: 0.7 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                fontStyle: 'italic',
+                opacity: 0.7
+              }}>
               Loading Google Sign-In...
             </Typography>
           ) : (
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{
+              color: "text.secondary"
+            }}>
               Preparing authentication...
             </Typography>
           )}
         </Box>
         
         {error && (
-          <Typography variant="body2" color="error" mt={2}>
+          <Typography variant="body2" color="error" sx={{
+            mt: 2
+          }}>
             {error}
           </Typography>
         )}

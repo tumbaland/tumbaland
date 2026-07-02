@@ -31,13 +31,12 @@ const AlbumsHeader: React.FC<AlbumsHeaderProps> = ({
   return (
     <>
       <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        mb={{ xs: 2, sm: 4 }}
         sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: { xs: 2, sm: 4 },
           flexDirection: { xs: 'column', sm: 'row' },
-          alignItems: { xs: 'stretch', sm: 'center' },
           gap: { xs: 2, sm: 0 }
         }}
       >
@@ -79,12 +78,12 @@ const AlbumsHeader: React.FC<AlbumsHeaderProps> = ({
       </Box>
 
       <Box 
-        mb={{ xs: 2, sm: 4 }}
-        display="flex" 
-        gap={2} 
-        alignItems="center" 
-        flexWrap="wrap"
         sx={{
+          mb: { xs: 2, sm: 4 },
+          display: 'flex',
+          gap: 2,
+          alignItems: 'center',
+          flexWrap: 'wrap',
           background: 'rgba(255, 255, 255, 0.5)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
@@ -98,18 +97,20 @@ const AlbumsHeader: React.FC<AlbumsHeaderProps> = ({
           placeholder="Search albums..."
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon color="action" />
-              </InputAdornment>
-            ),
-            sx: {
-              borderRadius: 3,
-              backgroundColor: 'rgba(255, 255, 255, 0.5)',
-              '& fieldset': { border: 'none' },
-              '&:hover fieldset': { border: 'none' },
-              '&.Mui-focused fieldset': { border: 'none' }
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
+              ),
+              sx: {
+                borderRadius: 3,
+                backgroundColor: 'rgba(255, 255, 255, 0.5)',
+                '& fieldset': { border: 'none' },
+                '&:hover fieldset': { border: 'none' },
+                '&.Mui-focused fieldset': { border: 'none' }
+              }
             }
           }}
           sx={{ maxWidth: 400, flex: 1, minWidth: 200 }}

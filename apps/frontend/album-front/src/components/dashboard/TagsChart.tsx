@@ -38,7 +38,9 @@ const TagsChart: React.FC<TagsChartProps> = ({ tags }) => {
             </Typography>
           </Box>
           <Box sx={{ textAlign: 'center', py: 6 }}>
-            <Typography variant="body1" color="text.secondary">
+            <Typography variant="body1" sx={{
+              color: "text.secondary"
+            }}>
               No tags found
             </Typography>
           </Box>

@@ -41,11 +41,12 @@ const SubscriptionPage: React.FC = () => {
         <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: 'text.primary' }}>
           My Subscription
         </Typography>
-        <Typography variant="body1" color="text.secondary">
+        <Typography variant="body1" sx={{
+          color: "text.secondary"
+        }}>
           Manage your subscription and billing details
         </Typography>
       </Box>
-
       <Box sx={{ px: 2 }}>
         {message && (
           <Box sx={{ mb: 2, p: 2, bgcolor: 'error.light', borderRadius: 2, color: 'error.contrastText' }}>
@@ -94,7 +95,9 @@ const SubscriptionPage: React.FC = () => {
               {sub.renewsAt && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Event sx={{ color: 'text.secondary', fontSize: 20 }} />
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" sx={{
+                    color: "text.secondary"
+                  }}>
                     Renews: <Box component="span" sx={{ color: 'text.primary', fontWeight: 500 }}>{new Date(sub.renewsAt).toLocaleDateString()}</Box>
                   </Typography>
                 </Box>
@@ -103,7 +106,9 @@ const SubscriptionPage: React.FC = () => {
               {sub.cancelAt && (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Cancel sx={{ color: 'error.main', fontSize: 20 }} />
-                  <Typography variant="body2" color="error.main">
+                  <Typography variant="body2" sx={{
+                    color: "error.main"
+                  }}>
                     Ends: {new Date(sub.cancelAt).toLocaleDateString()}
                   </Typography>
                 </Box>
@@ -145,10 +150,14 @@ const SubscriptionPage: React.FC = () => {
             }}
           >
             <Subscriptions sx={{ fontSize: 64, color: 'text.secondary', mb: 2, opacity: 0.5 }} />
-            <Typography variant="h6" color="text.secondary" gutterBottom>
+            <Typography variant="h6" gutterBottom sx={{
+              color: "text.secondary"
+            }}>
               No Active Subscription
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{
+              color: "text.secondary"
+            }}>
               You don't have an active subscription. Choose a plan to get started.
             </Typography>
           </Paper>

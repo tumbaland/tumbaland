@@ -60,7 +60,9 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         </Box>
       </DialogTitle>
       <DialogContent>
-        <Typography variant="body1" color="text.secondary">
+        <Typography variant="body1" sx={{
+          color: "text.secondary"
+        }}>
           {message}
         </Typography>
       </DialogContent>{' '}

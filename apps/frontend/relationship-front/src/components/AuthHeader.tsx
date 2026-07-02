@@ -152,11 +152,13 @@ const AuthHeader: React.FC<AuthHeaderProps> = ({ user: propUser, isAuthenticated
             anchorEl={anchorEl}
             open={Boolean(anchorEl)}
             onClose={handleMenuClose}
-            MenuListProps={{
-              'aria-labelledby': 'account-button'
-            }}
             transformOrigin={{ horizontal: 'right', vertical: 'top' }}
             anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+            slotProps={{
+              list: {
+                'aria-labelledby': 'account-button'
+              }
+            }}
           >
             <MenuItem disabled>
               <Box
@@ -166,10 +168,14 @@ const AuthHeader: React.FC<AuthHeaderProps> = ({ user: propUser, isAuthenticated
                   alignItems: 'flex-start'
                 }}
               >
-                <Typography variant="body2" fontWeight="bold">
+                <Typography variant="body2" sx={{
+                  fontWeight: "bold"
+                }}>
                   {user.name}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{
+                  color: "text.secondary"
+                }}>
                   {user.email}
                 </Typography>
               </Box>

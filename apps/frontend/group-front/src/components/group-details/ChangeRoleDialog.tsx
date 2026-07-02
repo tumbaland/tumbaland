@@ -54,7 +54,12 @@ const ChangeRoleDialog: React.FC<ChangeRoleDialogProps> = ({
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
       <DialogTitle>Change Role</DialogTitle>
       <DialogContent>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 2
+          }}>
           Select a new role for <strong>{member.email}</strong>.
         </Typography>
         <FormControl component="fieldset">

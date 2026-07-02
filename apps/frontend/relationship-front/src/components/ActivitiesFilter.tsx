@@ -206,7 +206,9 @@ const ActivitiesFilter: React.FC<ActivitiesFilterProps> = React.memo(({
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <FilterIcon color="primary" />
-          <Typography variant="subtitle1" fontWeight={600}>
+          <Typography variant="subtitle1" sx={{
+            fontWeight: 600
+          }}>
             Filters
           </Typography>
           {hasActiveFilters && (
@@ -238,7 +240,6 @@ const ActivitiesFilter: React.FC<ActivitiesFilterProps> = React.memo(({
           </IconButton>
         </Box>
       </Box>
-
       <Collapse in={expanded}>
         <Box sx={{ p: 2 }}>
           {hasActiveFilters && (
@@ -271,14 +272,16 @@ const ActivitiesFilter: React.FC<ActivitiesFilterProps> = React.memo(({
                   </InputAdornment>
                 }
                 MenuProps={{
-                  PaperProps: {
-                    sx: {
+                  slotProps: {
+                    paper: {
+                      sx: {
                       maxHeight: 300,
                       borderRadius: 2,
                       boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
                       '&::-webkit-scrollbar': { width: '6px' },
                       '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
                       '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(0,0,0,0.1)', borderRadius: '3px' },
+                      },
                     },
                   },
                 }}
@@ -303,16 +306,18 @@ const ActivitiesFilter: React.FC<ActivitiesFilterProps> = React.memo(({
               label="Start Date"
               type="date"
               value={filters.startDate || ''}
-              onChange={(e) => handleFilterChange('startDate', e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <EventIcon fontSize="small" color="action" />
-                  </InputAdornment>
-                ),
-              }}
-            />
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFilterChange('startDate', e.target.value)}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <EventIcon fontSize="small" color="action" />
+                    </InputAdornment>
+                  ),
+                },
+
+                inputLabel: { shrink: true }
+              }} />
 
             <TextField
               fullWidth
@@ -320,16 +325,18 @@ const ActivitiesFilter: React.FC<ActivitiesFilterProps> = React.memo(({
               label="End Date"
               type="date"
               value={filters.endDate || ''}
-              onChange={(e) => handleFilterChange('endDate', e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <EventIcon fontSize="small" color="action" />
-                  </InputAdornment>
-                ),
-              }}
-            />
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFilterChange('endDate', e.target.value)}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <EventIcon fontSize="small" color="action" />
+                    </InputAdornment>
+                  ),
+                },
+
+                inputLabel: { shrink: true }
+              }} />
 
             <TextField
               fullWidth
@@ -340,12 +347,14 @@ const ActivitiesFilter: React.FC<ActivitiesFilterProps> = React.memo(({
               onKeyPress={handleDescriptionKeyPress}
               onBlur={handleDescriptionBlur}
               placeholder="Search..."
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon fontSize="small" color="action" />
-                  </InputAdornment>
-                ),
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" color="action" />
+                    </InputAdornment>
+                  ),
+                }
               }}
             />
           </Box>

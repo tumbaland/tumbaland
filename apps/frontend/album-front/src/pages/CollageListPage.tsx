@@ -94,7 +94,7 @@ const CollageListPage: React.FC = () => {
 
   if (collageListQuery.isLoading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
         <CircularProgress />
       </Box>
     );
@@ -104,17 +104,16 @@ const CollageListPage: React.FC = () => {
     <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 4 }, px: { xs: 1, sm: 3 } }}>
       {/* Header */}
       <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        mb={{ xs: 2, sm: 4 }}
         sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: { xs: 2, sm: 4 },
           flexDirection: { xs: 'column', sm: 'row' },
-          alignItems: { xs: 'stretch', sm: 'center' },
           gap: { xs: 2, sm: 0 }
         }}
       >
-        <Box display="flex" alignItems="center">
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <GridOnIcon sx={{ mr: 2, fontSize: 32, color: '#8b5cf6' }} />
           <Typography 
             variant="h4" 
@@ -152,15 +151,14 @@ const CollageListPage: React.FC = () => {
           Create Collage
         </Button>
       </Box>
-
       {/* Search Bar */}
-      <Box 
-        mb={{ xs: 2, sm: 4 }}
-        display="flex" 
-        gap={2} 
-        alignItems="center" 
-        flexWrap="wrap"
+      <Box
         sx={{
+          mb: { xs: 2, sm: 4 },
+          display: 'flex',
+          gap: 2,
+          alignItems: 'center',
+          flexWrap: 'wrap',
           background: 'rgba(255, 255, 255, 0.5)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
@@ -168,47 +166,56 @@ const CollageListPage: React.FC = () => {
           borderRadius: 4,
           border: '1px solid rgba(255, 255, 255, 0.4)',
           boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
-        }}
-      >
+        }}>
         <TextField
           placeholder="Search collages..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon color="action" />
-              </InputAdornment>
-            ),
-            sx: {
-              borderRadius: 3,
-              backgroundColor: 'rgba(255, 255, 255, 0.5)',
-              '& fieldset': { border: 'none' },
-              '&:hover fieldset': { border: 'none' },
-              '&.Mui-focused fieldset': { border: 'none' }
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
+              ),
+              sx: {
+                borderRadius: 3,
+                backgroundColor: 'rgba(255, 255, 255, 0.5)',
+                '& fieldset': { border: 'none' },
+                '&:hover fieldset': { border: 'none' },
+                '&.Mui-focused fieldset': { border: 'none' }
+              }
             }
           }}
           sx={{ maxWidth: 400, flex: 1, minWidth: 200 }}
         />
       </Box>
-
       {collageListQuery.isFetching && !collageListQuery.isLoading && (
         <LinearProgress sx={{ mb: 4 }} />
       )}
-
       {collageListQuery.error && (
         <Alert severity="error" sx={{ mb: 4 }}>
           Failed to load collages
         </Alert>
       )}
-
       {filteredCollages.length === 0 ? (
-        <Box textAlign="center" py={{ xs: 4, sm: 8 }}>
+        <Box
+          sx={{
+            textAlign: "center",
+            py: { xs: 4, sm: 8 }
+          }}>
           <PhotoLibraryIcon sx={{ fontSize: { xs: 48, sm: 64 }, color: 'grey.400', mb: 2 }} />
-          <Typography variant="h6" color="text.secondary" gutterBottom>
+          <Typography variant="h6" gutterBottom sx={{
+            color: "text.secondary"
+          }}>
             {searchTerm ? 'No collages found' : 'No collages yet'}
           </Typography>
-          <Typography variant="body2" color="text.secondary" mb={3}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              mb: 3
+            }}>
             {searchTerm ? 'Try adjusting your search terms' : 'Create your first collage to get started'}
           </Typography>
           {!searchTerm && (
@@ -242,14 +249,12 @@ const CollageListPage: React.FC = () => {
           ))}
         </Box>
       )}
-
       {/* Create Modal */}
       <CollageCreateModal
         open={modalOpen}
         onClose={handleCloseModal}
         onCreate={handleCreateCollage}
       />
-
       {/* Edit Modal - Kept for future use if we want inline editing */}
       {selectedCollage && (
         <CollageEditModal
@@ -268,7 +273,6 @@ const CollageListPage: React.FC = () => {
           }}
         />
       )}
-
       {/* Delete Confirmation */}
       <ConfirmDialog
         open={deleteDialogOpen}
@@ -281,7 +285,6 @@ const CollageListPage: React.FC = () => {
         variant="danger"
         loading={deleting}
       />
-
       {/* Floating Action Button for mobile */}
       <Fab
         color="primary"

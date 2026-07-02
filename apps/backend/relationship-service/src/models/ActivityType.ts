@@ -96,11 +96,10 @@ ActivityTypeSchema.index({ userId: 1, groupId: 1 });
 ActivityTypeSchema.index({ isActive: 1, sortOrder: 1 });
 
 // Pre-save middleware to generate slug from name if not provided
-ActivityTypeSchema.pre('save', function(this: IActivityType, next) {
+ActivityTypeSchema.pre('save', function(this: IActivityType) {
   if (this.isModified('name') && !this.slug) {
     this.slug = this.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
   }
-  next();
 });
 
 

@@ -110,7 +110,6 @@ const CollagePhotoEditModal: React.FC<CollagePhotoEditModalProps> = ({
           <CloseIcon />
         </IconButton>
       </DialogTitle>
-
       <DialogContent sx={{ pt: 1 }}>
         {photo && (
           <Box>
@@ -176,7 +175,9 @@ const CollagePhotoEditModal: React.FC<CollagePhotoEditModalProps> = ({
 
             {/* Rotation Slider */}
             <Box sx={{ mb: 3, px: 1 }}>
-              <Typography gutterBottom variant="body2" color="text.secondary">
+              <Typography gutterBottom variant="body2" sx={{
+                color: "text.secondary"
+              }}>
                 Rotation: {rotation}°
               </Typography>
               <Slider
@@ -220,7 +221,6 @@ const CollagePhotoEditModal: React.FC<CollagePhotoEditModalProps> = ({
           </Box>
         )}
       </DialogContent>
-
       <DialogActions sx={{ px: 3, pb: 3 }}>
         {onDelete && (
           <Button onClick={handleDelete} color="error" variant="outlined">

@@ -159,7 +159,7 @@ const AlbumDetailPage: React.FC = () => {
 
   if (loadingAlbum) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
         <CircularProgress />
       </Box>
     );

@@ -61,7 +61,9 @@ const AssetAllocationChart: React.FC<AssetAllocationChartProps> = ({ data, total
             </Typography>
           </Box>
           <Box sx={{ textAlign: 'center', py: 6 }}>
-            <Typography variant="body1" color="text.secondary">
+            <Typography variant="body1" sx={{
+              color: "text.secondary"
+            }}>
               No data available to display asset allocation
             </Typography>
           </Box>
@@ -109,7 +111,9 @@ const AssetAllocationChart: React.FC<AssetAllocationChartProps> = ({ data, total
           />
         </Box>
         <Box sx={{ textAlign: 'center', mt: 2 }}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{
+            color: "text.secondary"
+          }}>
             Total: {formatCurrency(totalValue)}
           </Typography>
         </Box>

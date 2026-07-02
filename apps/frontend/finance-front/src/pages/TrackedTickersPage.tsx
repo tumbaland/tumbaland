@@ -320,9 +320,11 @@ const TrackedTickersPage: React.FC = () => {
         onClose={handleCloseDialog}
         fullWidth
         maxWidth="sm"
-        PaperProps={{
-          elevation: 0,
-          sx: { borderRadius: 3, border: '1px solid', borderColor: 'divider' }
+        slotProps={{
+          paper: {
+            elevation: 0,
+            sx: { borderRadius: 3, border: '1px solid', borderColor: 'divider' }
+          }
         }}
       >
         <form onSubmit={handleSubmit}>
@@ -331,9 +333,17 @@ const TrackedTickersPage: React.FC = () => {
             {/* Symbol search — only shown when adding */}
             {!editingId && (
               <Box sx={{ mb: 2 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.secondary",
+                    display: 'block',
+                    mb: 1
+                  }}>
                   Search by name or symbol to auto-fill the fields below.{' '}
-                  <Typography component="span" variant="caption" color="warning.main">
+                  <Typography component="span" variant="caption" sx={{
+                    color: "warning.main"
+                  }}>
                     Uses 1 of 25 daily API calls (free plan).
                   </Typography>
                 </Typography>
@@ -387,14 +397,20 @@ const TrackedTickersPage: React.FC = () => {
                         }}
                       >
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                          <Typography variant="body2" fontWeight={600}>
+                          <Typography variant="body2" sx={{
+                            fontWeight: 600
+                          }}>
                             {r.symbol}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography variant="caption" sx={{
+                            color: "text.secondary"
+                          }}>
                             {r.type} · {r.region} · {r.currency}
                           </Typography>
                         </Box>
-                        <Typography variant="caption" color="text.secondary" noWrap>
+                        <Typography variant="caption" noWrap sx={{
+                          color: "text.secondary"
+                        }}>
                           {r.name}
                         </Typography>
                       </Box>

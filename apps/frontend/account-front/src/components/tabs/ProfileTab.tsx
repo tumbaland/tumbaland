@@ -133,13 +133,11 @@ const ProfileTab: React.FC = () => {
       <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
         Account Settings
       </Typography>
-
       {message && (
         <Alert severity={message.type} sx={{ mb: 3 }} onClose={() => setMessage(null)}>
           {message.text}
         </Alert>
       )}
-
       {/* Personal Information */}
       <Paper 
         elevation={0}
@@ -172,7 +170,7 @@ const ProfileTab: React.FC = () => {
                 fullWidth
                 label="First Name"
                 value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFirstName(e.target.value)}
                 variant="outlined"
                 size="small"
                 disabled={saving}
@@ -181,7 +179,7 @@ const ProfileTab: React.FC = () => {
                 fullWidth
                 label="Last Name"
                 value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLastName(e.target.value)}
                 variant="outlined"
                 size="small"
                 disabled={saving}
@@ -194,15 +192,16 @@ const ProfileTab: React.FC = () => {
               variant="outlined"
               size="small"
               disabled
-              InputProps={{
-                startAdornment: <Email sx={{ mr: 1, color: 'action.active', fontSize: 20 }} />
-              }}
               helperText="Managed via your login provider"
+              slotProps={{
+                input: {
+                  startAdornment: <Email sx={{ mr: 1, color: 'action.active', fontSize: 20 }} />
+                }
+              }}
             />
           </Box>
         </Box>
       </Paper>
-
       {/* Preferences */}
       <Paper 
         elevation={0}
@@ -228,7 +227,6 @@ const ProfileTab: React.FC = () => {
           label="Receive email notifications about account activity"
         />
       </Paper>
-
       {/* Danger Zone */}
       <Paper 
         elevation={0}
@@ -244,7 +242,12 @@ const ProfileTab: React.FC = () => {
         <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'error.main', mb: 1 }}>
           Danger Zone
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 2
+          }}>
           Permanently delete your account and all of your content.
         </Typography>
         <Button
@@ -257,7 +260,6 @@ const ProfileTab: React.FC = () => {
           Delete Account
         </Button>
       </Paper>
-
       {/* Actions */}
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
         <Button

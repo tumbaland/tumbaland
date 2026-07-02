@@ -94,11 +94,13 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
       open={open}
       onClose={onClose}
       fullScreen
-      PaperProps={{
-        sx: {
-          backgroundColor: 'transparent',
-          backgroundImage: 'none',
-          boxShadow: 'none'
+      slotProps={{
+        paper: {
+          sx: {
+            backgroundColor: 'transparent',
+            backgroundImage: 'none',
+            boxShadow: 'none'
+          }
         }
       }}
     >

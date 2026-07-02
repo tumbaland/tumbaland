@@ -143,7 +143,7 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({ title = 'Activity Heatmap
           <Typography variant="h6" gutterBottom>
             {title}
           </Typography>
-          <Box display="flex" justifyContent="center" alignItems="center" height={height}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height }}>
             <CircularProgress />
           </Box>
         </CardContent>
@@ -333,11 +333,18 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({ title = 'Activity Heatmap
             borderTop: '1px solid #e0e0e0'
           }}
         >
-          <Typography variant="caption" color="text.secondary" sx={{ mb: { xs: 1, sm: 0 } }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              mb: { xs: 1, sm: 0 }
+            }}>
             {data.length} days with activities
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" sx={{
+              color: "text.secondary"
+            }}>
               Less
             </Typography>
             {[0, 0.2, 0.4, 0.6, 0.8, 1].map((intensity, index) => (
@@ -352,7 +359,9 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({ title = 'Activity Heatmap
                 }}
               />
             ))}
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" sx={{
+              color: "text.secondary"
+            }}>
               More
             </Typography>
           </Box>
@@ -369,27 +378,33 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({ title = 'Activity Heatmap
             gap: 2
           }}
         >
-          <Box textAlign="center">
+          <Box sx={{ textAlign: 'center' }}>
             <Typography variant="h6" color="primary">
               {data.reduce((sum, item) => sum + item.totalActivities, 0)}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" sx={{
+              color: "text.secondary"
+            }}>
               Total Activities
             </Typography>
           </Box>
-          <Box textAlign="center">
+          <Box sx={{ textAlign: 'center' }}>
             <Typography variant="h6" color="primary">
               {data.filter((item) => item.totalActivities > 0).length}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" sx={{
+              color: "text.secondary"
+            }}>
               Active Days
             </Typography>
           </Box>
-          <Box textAlign="center">
+          <Box sx={{ textAlign: 'center' }}>
             <Typography variant="h6" color="primary">
               {maxActivityCount}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" sx={{
+              color: "text.secondary"
+            }}>
               Max Per Day
             </Typography>
           </Box>

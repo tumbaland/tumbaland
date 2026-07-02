@@ -64,7 +64,6 @@ const Dashboard: React.FC = () => {
           Track your investment portfolio performance and asset allocation
         </Typography>
       </Box>
-
       {dashboardData && (
         <>
           {/* Key Metrics Cards */}
@@ -90,7 +89,6 @@ const Dashboard: React.FC = () => {
           </Box>
         </>
       )}
-
       {!dashboardData && !isLoading && (
         <Card
           elevation={0}
@@ -104,10 +102,14 @@ const Dashboard: React.FC = () => {
         >
           <CardContent>
             <AccountBalance sx={{ fontSize: 64, color: '#cbd5e1', mb: 2 }} />
-            <Typography variant="h6" color="text.secondary" gutterBottom>
+            <Typography variant="h6" gutterBottom sx={{
+              color: "text.secondary"
+            }}>
               No Portfolio Data Available
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{
+              color: "text.secondary"
+            }}>
               Add your first portfolio holdings to see your dashboard
             </Typography>
           </CardContent>

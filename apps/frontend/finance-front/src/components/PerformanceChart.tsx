@@ -73,7 +73,9 @@ const PerformanceChart: React.FC<PerformanceChartProps> = ({ data }) => {
             </Typography>
           </Box>
           <Box sx={{ textAlign: 'center', py: 6 }}>
-            <Typography variant="body1" color="text.secondary">
+            <Typography variant="body1" sx={{
+              color: "text.secondary"
+            }}>
               No performance data available
             </Typography>
           </Box>
@@ -134,7 +136,9 @@ const PerformanceChart: React.FC<PerformanceChartProps> = ({ data }) => {
           />
         </Box>
         <Box sx={{ textAlign: 'center', mt: 2 }}>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{
+            color: "text.secondary"
+          }}>
             Top {sortedData.categories.length} performing assets
           </Typography>
         </Box>

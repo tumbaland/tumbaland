@@ -1,6 +1,6 @@
 import { Box, Typography, Button } from '@mui/material';
 import { ReactNode } from 'react';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import ErrorOutlinedIcon from '@mui/icons-material/ErrorOutlined';
 
 /**
  * Props for the ErrorPage component
@@ -27,7 +27,7 @@ export function ErrorPage({
       Please check your network connection and try again.
     </>
   ),
-  icon = <ErrorOutlineIcon sx={{ fontSize: 80, color: 'error.main' }} />,
+  icon = <ErrorOutlinedIcon sx={{ fontSize: 80, color: 'error.main' }} />,
   showRetry = true,
   onRetry = () => window.location.reload()
 }: ErrorPageProps) {
@@ -43,10 +43,18 @@ export function ErrorPage({
       }}
     >
       {icon}
-      <Typography variant="h4" color="error" fontWeight={600} gutterBottom>
+      <Typography variant="h4" color="error" gutterBottom sx={{
+        fontWeight: 600
+      }}>
         {title}
       </Typography>
-      <Typography variant="body1" color="text.secondary" textAlign="center" mb={showRetry ? 2 : 0}>
+      <Typography
+        variant="body1"
+        sx={{
+          color: "text.secondary",
+          textAlign: "center",
+          mb: showRetry ? 2 : 0
+        }}>
         {message}
       </Typography>
       {showRetry && (

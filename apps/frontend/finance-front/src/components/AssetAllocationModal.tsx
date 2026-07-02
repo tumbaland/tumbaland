@@ -26,12 +26,14 @@ const AssetAllocationModal: React.FC<{
   <Dialog 
     open={open} 
     onClose={onClose}
-    PaperProps={{
-      elevation: 0,
-      sx: {
-        borderRadius: 3,
-        border: '1px solid',
-        borderColor: 'divider'
+    slotProps={{
+      paper: {
+        elevation: 0,
+        sx: {
+          borderRadius: 3,
+          border: '1px solid',
+          borderColor: 'divider'
+        }
       }
     }}
   >
@@ -61,7 +63,7 @@ const AssetAllocationModal: React.FC<{
         required
         value={form.totalValue}
         onChange={(e) => setForm((f: any) => ({ ...f, totalValue: e.target.value }))}
-        InputLabelProps={{ shrink: true }}
+        slotProps={{ inputLabel: { shrink: true } }}
       />
 
       <TextField
@@ -73,7 +75,7 @@ const AssetAllocationModal: React.FC<{
         required
         value={form.gain}
         onChange={(e) => setForm((f: any) => ({ ...f, gain: e.target.value }))}
-        InputLabelProps={{ shrink: true }}
+        slotProps={{ inputLabel: { shrink: true } }}
       />
 
       <TextField
@@ -85,7 +87,7 @@ const AssetAllocationModal: React.FC<{
         required
         value={getInputDate(form.date)}
         onChange={(e) => setForm((f: any) => ({ ...f, date: e.target.value }))}
-        InputLabelProps={{ shrink: true }}
+        slotProps={{ inputLabel: { shrink: true } }}
       />
 
       <Box sx={{ mt: 2 }}>

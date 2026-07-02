@@ -12,20 +12,20 @@
   },
   "dependencies": {
     "@tumbaland/core": "*",
-    "express": "^5.1.0",
-    "cors": "^2.8.5",
-    "dotenv": "^17.0.0",
-    "mongoose": "^8.15.0",
-    "stripe": "^16.0.0",
+    "express": "^5.2.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "mongoose": "^9.7.3",
+    "stripe": "^22.3.0",
     "cookie-parser": "^1.4.7",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.3"
   },
   "devDependencies": {
-    "typescript": "^5.8.3",
-    "ts-node": "^10.9.0",
-    "@types/express": "^5.0.2",
-    "@types/node": "^24.0.7",
-    "@types/cookie-parser": "^1.4.9",
+    "typescript": "^6.0.3",
+    "ts-node": "^10.9.2",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.1.0",
+    "@types/cookie-parser": "^1.4.10",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/cors": "^2.8.19"
   }

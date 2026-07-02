@@ -101,7 +101,9 @@ const GroupMembersList: React.FC<GroupMembersListProps> = ({
                       <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                         {member.email.split('@')[0]}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" sx={{
+                        color: "text.secondary"
+                      }}>
                         {member.email}
                       </Typography>
                     </Box>
@@ -139,7 +141,9 @@ const GroupMembersList: React.FC<GroupMembersListProps> = ({
             {(!group.members || group.members.length === 0) && (
               <TableRow>
                 <TableCell colSpan={4} align="center" sx={{ py: 8 }}>
-                  <Typography color="text.secondary">
+                  <Typography sx={{
+                    color: "text.secondary"
+                  }}>
                     No members found in this group
                   </Typography>
                 </TableCell>

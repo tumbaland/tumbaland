@@ -52,9 +52,17 @@ const GroupFilter: React.FC<GroupFilterProps> = ({
 
   if (loading) {
     return (
-      <Box display="flex" alignItems="center" gap={1} py={1}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          py: 1
+        }}>
         <CircularProgress size={16} />
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{
+          color: "text.secondary"
+        }}>
           Loading filters...
         </Typography>
       </Box>
@@ -72,7 +80,12 @@ const GroupFilter: React.FC<GroupFilterProps> = ({
   return (
     <FormControl size="small" sx={{ minWidth: 200 }}>
       <InputLabel>
-        <Box display="flex" alignItems="center" gap={1}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1
+          }}>
           <FilterIcon fontSize="small" />
           Filter by Group
         </Box>
@@ -83,14 +96,24 @@ const GroupFilter: React.FC<GroupFilterProps> = ({
         onChange={(e) => onChange(e.target.value === 'all' ? undefined : e.target.value)}
       >
         <MenuItem value="all">
-          <Box display="flex" alignItems="center" gap={1}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1
+            }}>
             <PublicIcon fontSize="small" />
             <Typography>All Activities</Typography>
           </Box>
         </MenuItem>
         
         <MenuItem value="personal">
-          <Box display="flex" alignItems="center" gap={1}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1
+            }}>
             <PersonIcon fontSize="small" />
             <Typography>My Activities</Typography>
             <Chip label="Personal" size="small" color="primary" />
@@ -99,7 +122,12 @@ const GroupFilter: React.FC<GroupFilterProps> = ({
 
         {groups.map((group) => (
           <MenuItem key={group._id} value={group._id}>
-            <Box display="flex" alignItems="center" gap={1}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1
+              }}>
               <GroupIcon fontSize="small" />
               <Typography>{group.name}</Typography>
               {group.isOwner && (

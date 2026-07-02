@@ -12,7 +12,7 @@ export interface LoaderProps {
   fullHeight?: boolean;
 }
 
-export function Loader({ message = 'Loading...', size = 48, fullHeight = true }: LoaderProps) {
+export function Loader({ message = '', size = 48, fullHeight = true }: LoaderProps) {
   return (
     <Box
       sx={{
@@ -26,7 +26,9 @@ export function Loader({ message = 'Loading...', size = 48, fullHeight = true }:
       }}
     >
       <CircularProgress size={size} />
-      <Typography variant="body1" color="text.secondary">
+      <Typography variant="body1" sx={{
+        color: "text.secondary"
+      }}>
         {message}
       </Typography>
     </Box>

@@ -119,11 +119,13 @@ const AuthHeader: React.FC = () => {
                     anchorEl={anchorEl}
                     open={Boolean(anchorEl)}
                     onClose={handleMenuClose}
-                    MenuListProps={{
-                      'aria-labelledby': 'account-button'
-                    }}
                     transformOrigin={{ horizontal: 'right', vertical: 'top' }}
                     anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                    slotProps={{
+                      list: {
+                        'aria-labelledby': 'account-button'
+                      }
+                    }}
                   >
                     <MenuItem disabled>
                       <Box
@@ -223,9 +225,11 @@ const AuthHeader: React.FC = () => {
                   anchorEl={anchorEl}
                   open={Boolean(anchorEl)}
                   onClose={handleMenuClose}
-                  MenuListProps={{ 'aria-labelledby': 'account-button' }}
                   transformOrigin={{ horizontal: 'right', vertical: 'top' }}
                   anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                  slotProps={{
+                    list: { 'aria-labelledby': 'account-button' }
+                  }}
                 >
                   <MenuItem disabled>
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>

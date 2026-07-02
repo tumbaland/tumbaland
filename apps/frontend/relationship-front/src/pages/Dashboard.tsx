@@ -12,14 +12,17 @@ const Dashboard: React.FC = () => {
   return (
     <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth: '100%', overflowX: 'hidden' }}>
       <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
+        <Typography variant="h4" component="h1" gutterBottom sx={{
+          fontWeight: "bold"
+        }}>
           Dashboard
         </Typography>
-        <Typography variant="body1" color="text.secondary">
+        <Typography variant="body1" sx={{
+          color: "text.secondary"
+        }}>
           Overview of your relationship activities and statistics
         </Typography>
       </Box>
-
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
         {/* Key Statistics */}
         <Box sx={{ width: '100%' }}>

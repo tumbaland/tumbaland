@@ -58,15 +58,22 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, canModify, userRole, onMen
           </IconButton>
         )}
       </Box>
-
       <CardContent sx={{ flexGrow: 1, pt: 0, pb: 2 }}>
         <Typography variant="h6" component="h2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
           {group.name}
         </Typography>
 
-        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: "center",
+            mb: 2
+          }}>
           <PersonIcon fontSize="small" color="action" sx={{ fontSize: 16 }} />
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{
+            color: "text.secondary"
+          }}>
             {group.members?.length || 1} member{(group.members?.length || 1) !== 1 ? 's' : ''}
           </Typography>
           <Chip

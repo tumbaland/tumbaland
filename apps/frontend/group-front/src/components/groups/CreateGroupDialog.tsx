@@ -34,12 +34,16 @@ const CreateGroupDialog: React.FC<CreateGroupDialogProps> = ({
       onClose={onClose}
       maxWidth="sm"
       fullWidth
-      PaperProps={{
-        sx: { borderRadius: 3 }
+      slotProps={{
+        paper: {
+          sx: { borderRadius: 3 }
+        }
       }}
     >
       <DialogTitle sx={{ pb: 1 }}>
-        <Stack direction="row" alignItems="center" spacing={1}>
+        <Stack direction="row" spacing={1} sx={{
+          alignItems: "center"
+        }}>
           <AddIcon color="primary" />
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
             Create New Group
@@ -47,7 +51,12 @@ const CreateGroupDialog: React.FC<CreateGroupDialogProps> = ({
         </Stack>
       </DialogTitle>
       <DialogContent>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 2
+          }}>
           Give your group a descriptive name to help team members understand its purpose.
         </Typography>
         <TextField
@@ -56,9 +65,9 @@ const CreateGroupDialog: React.FC<CreateGroupDialogProps> = ({
           fullWidth
           variant="outlined"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
           placeholder="e.g., Marketing Team, Product Development"
-          onKeyPress={(e) => e.key === 'Enter' && onCreate()}
+          onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && onCreate()}
           sx={{ mt: 1 }}
         />
       </DialogContent>

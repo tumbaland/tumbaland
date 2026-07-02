@@ -142,7 +142,13 @@ const ObjectDetectionView: React.FC<ObjectDetectionViewNewProps> = ({ photo, for
             </Box>
           )}
           {healthStatus && (
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                mt: 1,
+                display: 'block'
+              }}>
               Last checked: {healthStatus.lastChecked.toLocaleString()}
             </Typography>
           )}
@@ -179,7 +185,9 @@ const ObjectDetectionView: React.FC<ObjectDetectionViewNewProps> = ({ photo, for
             <Typography variant="h6" gutterBottom>
               Previous Object Detection Analysis
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{
+              color: "text.secondary"
+            }}>
               Analyzed: {formatDate(photo.aiAnalysis.objectDetection.analyzedAt)}
             </Typography>
             <Typography variant="body2">
@@ -274,10 +282,14 @@ const ObjectDetectionView: React.FC<ObjectDetectionViewNewProps> = ({ photo, for
                       <Card key={idx} variant="outlined" sx={{ mb: 1, p: 2 }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <Box>
-                            <Typography variant="body1" fontWeight="bold">
+                            <Typography variant="body1" sx={{
+                              fontWeight: "bold"
+                            }}>
                               {det.class_name} (ID: {det.class_id})
                             </Typography>
-                            <Typography variant="body2" color="text.secondary">
+                            <Typography variant="body2" sx={{
+                              color: "text.secondary"
+                            }}>
                               Confidence: {(det.confidence * 100).toFixed(1)}%
                             </Typography>
                           </Box>
@@ -296,7 +308,9 @@ const ObjectDetectionView: React.FC<ObjectDetectionViewNewProps> = ({ photo, for
                     ))}
                   </Box>
                 ) : (
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" sx={{
+                    color: "text.secondary"
+                  }}>
                     No detected objects found.
                   </Typography>
                 )}
@@ -309,7 +323,13 @@ const ObjectDetectionView: React.FC<ObjectDetectionViewNewProps> = ({ photo, for
       {!photo.aiAnalysis?.objectDetection && !detailedResults && (
         <Card variant="outlined">
           <CardContent>
-            <Typography variant="body1" color="text.secondary" align="center" sx={{ py: 4 }}>
+            <Typography
+              variant="body1"
+              align="center"
+              sx={{
+                color: "text.secondary",
+                py: 4
+              }}>
               No object detection analysis has been performed on this image yet.
               Use the "Object Detection" button above to run analysis.
             </Typography>

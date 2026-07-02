@@ -53,19 +53,23 @@ const PhotoDetailHeader: React.FC<PhotoDetailHeaderProps> = ({
         >
           {album.name}
         </Link>
-        <Typography color="text.primary" noWrap sx={{ maxWidth: 200 }}>
+        <Typography
+          noWrap
+          sx={{
+            color: "text.primary",
+            maxWidth: 200
+          }}>
           {photo.title || photo.originalName}
         </Typography>
       </Breadcrumbs>
-
       {/* Header */}
       <Box
-        display="flex"
-        flexDirection={{ xs: 'column', md: 'row' }}
-        justifyContent="space-between"
-        alignItems={{ xs: 'stretch', md: 'flex-start' }}
-        mb={{ xs: 2, sm: 4 }}
         sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          justifyContent: 'space-between',
+          alignItems: { xs: 'stretch', md: 'flex-start' },
+          mb: { xs: 2, sm: 4 },
           background: 'rgba(255, 255, 255, 0.5)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
@@ -76,7 +80,7 @@ const PhotoDetailHeader: React.FC<PhotoDetailHeaderProps> = ({
         }}
       >
         <Box sx={{ mb: { xs: 2, md: 0 } }}>
-          <Box display="flex" alignItems="center">
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <IconButton onClick={() => onNavigate(`/albums/${album._id}`)} sx={{ mr: 1, ml: -1 }}>
               <ArrowBackIcon />
             </IconButton>
@@ -97,7 +101,7 @@ const PhotoDetailHeader: React.FC<PhotoDetailHeaderProps> = ({
             </Typography>
           </Box>
         </Box>
-        <Box display="flex" gap={1.5} flexWrap="wrap">
+        <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
           <Button
             variant="outlined"
             startIcon={<ShareIcon />}

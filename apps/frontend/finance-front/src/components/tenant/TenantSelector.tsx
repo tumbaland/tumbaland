@@ -11,7 +11,7 @@ import {
   Chip
 } from '@mui/material';
 import {
-  PersonOutline,
+  PersonOutlined,
   Groups,
   ExpandMore,
   Check
@@ -69,7 +69,7 @@ const TenantSelector: React.FC<TenantSelectorProps> = ({
   };
 
   const getIcon = (type: 'personal' | 'group') => {
-    return type === 'personal' ? <PersonOutline fontSize="small" /> : <Groups fontSize="small" />;
+    return type === 'personal' ? <PersonOutlined fontSize="small" /> : <Groups fontSize="small" />;
   };
 
   if (error) {
@@ -89,7 +89,7 @@ const TenantSelector: React.FC<TenantSelectorProps> = ({
         onClick={handleClick}
         disabled={loading || tenants.length === 0}
         endIcon={<ExpandMore />}
-        startIcon={selectedTenant ? getIcon(selectedTenant.type) : <PersonOutline fontSize="small" />}
+        startIcon={selectedTenant ? getIcon(selectedTenant.type) : <PersonOutlined fontSize="small" />}
         sx={{
           textTransform: 'none',
           fontWeight: 500,
@@ -108,7 +108,13 @@ const TenantSelector: React.FC<TenantSelectorProps> = ({
         }}
       >
         <Box sx={{ flexGrow: 1, textAlign: 'left', overflow: 'hidden' }}>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: 10 }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              display: 'block',
+              fontSize: 10
+            }}>
             Context
           </Typography>
           <Typography variant="body2" sx={{ 
@@ -122,7 +128,6 @@ const TenantSelector: React.FC<TenantSelectorProps> = ({
           </Typography>
         </Box>
       </Button>
-
       <Menu
         anchorEl={anchorEl}
         open={isOpen}
@@ -137,7 +142,12 @@ const TenantSelector: React.FC<TenantSelectorProps> = ({
         }}
       >
         <MenuItem disabled>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              fontWeight: 600
+            }}>
             SELECT CONTEXT
           </Typography>
         </MenuItem>
@@ -170,7 +180,9 @@ const TenantSelector: React.FC<TenantSelectorProps> = ({
                   </Box>
                 }
                 secondary={
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" sx={{
+                    color: "text.secondary"
+                  }}>
                     {tenant.type === 'personal' ? 'Your personal data' : 'Group workspace'}
                   </Typography>
                 }
@@ -183,7 +195,9 @@ const TenantSelector: React.FC<TenantSelectorProps> = ({
           <MenuItem disabled>
             <ListItemText
               primary={
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="body2" sx={{
+                  color: "text.secondary"
+                }}>
                   No contexts available
                 </Typography>
               }

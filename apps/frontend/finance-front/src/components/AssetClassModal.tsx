@@ -28,12 +28,14 @@ const AssetClassModal: React.FC<{
     onClose={onClose} 
     maxWidth="sm" 
     fullWidth
-    PaperProps={{
-      elevation: 0,
-      sx: {
-        borderRadius: 3,
-        border: '1px solid',
-        borderColor: 'divider'
+    slotProps={{
+      paper: {
+        elevation: 0,
+        sx: {
+          borderRadius: 3,
+          border: '1px solid',
+          borderColor: 'divider'
+        }
       }
     }}
   >
@@ -48,7 +50,7 @@ const AssetClassModal: React.FC<{
         required
         value={form.name}
         onChange={(e) => setForm((f: any) => ({ ...f, name: e.target.value }))}
-        InputLabelProps={{ shrink: true }}
+        slotProps={{ inputLabel: { shrink: true } }}
       />
       <TextField
         margin="dense"
@@ -60,7 +62,7 @@ const AssetClassModal: React.FC<{
         rows={3}
         value={form.description}
         onChange={(e) => setForm((f: any) => ({ ...f, description: e.target.value }))}
-        InputLabelProps={{ shrink: true }}
+        slotProps={{ inputLabel: { shrink: true } }}
       />
 
       <Box sx={{ mt: 2 }}>
@@ -102,7 +104,7 @@ const AssetClassModal: React.FC<{
           value={form.color || ''}
           onChange={(e) => setForm((f: any) => ({ ...f, color: e.target.value }))}
           placeholder="#667eea"
-          InputLabelProps={{ shrink: true }}
+          slotProps={{ inputLabel: { shrink: true } }}
           sx={{ mt: 1 }}
         />
       </Box>

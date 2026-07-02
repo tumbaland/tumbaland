@@ -39,7 +39,9 @@ const GroupDistributionChart: React.FC<GroupDistributionChartProps> = ({ groups 
             </Typography>
           </Box>
           <Box sx={{ textAlign: 'center', py: 6 }}>
-            <Typography variant="body1" color="text.secondary">
+            <Typography variant="body1" sx={{
+              color: "text.secondary"
+            }}>
               No group data available
             </Typography>
           </Box>

@@ -82,19 +82,30 @@ const AssetAllocationFilters: React.FC<AssetAllocationFiltersProps> = ({
           </Button>
         </Box>
         {quickRange && (
-          <Typography variant="caption" color="text.secondary" sx={{ width: { xs: '100%', sm: 'auto' }, textAlign: { xs: 'center', sm: 'left' }, fontSize: { xs: '0.75rem', sm: '0.8125rem' }, flex: { xs: '1 1 100%', sm: '0 0 auto' }, order: { xs: -2, sm: 0 } }}>Quick range active: {quickRange}</Typography>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              width: { xs: '100%', sm: 'auto' },
+              textAlign: { xs: 'center', sm: 'left' },
+              fontSize: { xs: '0.75rem', sm: '0.8125rem' },
+              flex: { xs: '1 1 100%', sm: '0 0 auto' },
+              order: { xs: -2, sm: 0 }
+            }}>Quick range active: {quickRange}</Typography>
         )}
         <TextField
           size="small"
           placeholder="Search..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              )
+            }
           }}
           sx={{
             minWidth: { xs: '100%', sm: 180, md: 220, lg: 260 },
@@ -107,14 +118,17 @@ const AssetAllocationFilters: React.FC<AssetAllocationFiltersProps> = ({
           }}
         />
         <Box sx={{ flexGrow: 1, minWidth: { xs: 0, sm: 20, md: 40 } }} />
-        <Typography variant="body2" color="text.secondary" sx={{
-          width: { xs: '100%', sm: 'auto' },
-          textAlign: { xs: 'center', sm: 'right' },
-          fontSize: { xs: '0.8125rem', sm: '0.875rem' },
-          flex: { xs: '1 1 100%', sm: '0 0 auto' },
-          whiteSpace: 'nowrap',
-          order: { xs: -4, sm: 0 }
-        }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            width: { xs: '100%', sm: 'auto' },
+            textAlign: { xs: 'center', sm: 'right' },
+            fontSize: { xs: '0.8125rem', sm: '0.875rem' },
+            flex: { xs: '1 1 100%', sm: '0 0 auto' },
+            whiteSpace: 'nowrap',
+            order: { xs: -4, sm: 0 }
+          }}>
           Showing {count} date{count === 1 ? '' : 's'} with allocations
         </Typography>
       </Box>

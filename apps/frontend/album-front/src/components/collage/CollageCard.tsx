@@ -84,7 +84,7 @@ const CollageCard: React.FC<CollageCardProps> = ({ collage, onView, onEdit, onDe
       onClick={() => onView(collage)}
     >
       <CardContent sx={{ flexGrow: 1, p: 2.5, display: 'flex', flexDirection: 'column' }}>
-        <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
           <Box sx={{ flex: 1 }}>
             <Typography 
               variant="h6" 
@@ -118,22 +118,21 @@ const CollageCard: React.FC<CollageCardProps> = ({ collage, onView, onEdit, onDe
           </IconButton>
         </Box>
         
-        <Typography 
-          variant="body2" 
-          color="text.secondary"
-          sx={{ 
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
             mb: 2,
             display: '-webkit-box',
             WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
             minHeight: 40
-          }}
-        >
+          }}>
           {collage.config?.title?.subtitle || 'No description'}
         </Typography>
 
-        <Box display="flex" justifyContent="space-between" alignItems="center" mt="auto">
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 'auto' }}>
           <Chip 
             label={`${collage.config?.photos?.length || 0} photos`} 
             size="small" 
@@ -144,22 +143,25 @@ const CollageCard: React.FC<CollageCardProps> = ({ collage, onView, onEdit, onDe
               borderColor: 'rgba(0,0,0,0.08)'
             }}
           />
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" sx={{
+            color: "text.secondary"
+          }}>
             {formatDate(collage.updatedAt)}
           </Typography>
         </Box>
       </CardContent>
-
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
         onClick={(e) => e.stopPropagation()}
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-            minWidth: 150
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: 2,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+              minWidth: 150
+            }
           }
         }}
       >

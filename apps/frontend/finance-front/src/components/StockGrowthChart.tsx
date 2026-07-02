@@ -50,7 +50,9 @@ const StockGrowthChart: React.FC<StockGrowthChartProps> = ({ data, goal, mcBands
             Growth Projection Chart
           </Typography>
           <Box sx={{ textAlign: 'center', py: 4 }}>
-            <Typography variant="body1" color="text.secondary">
+            <Typography variant="body1" sx={{
+              color: "text.secondary"
+            }}>
               No data available to display chart
             </Typography>
           </Box>
@@ -333,10 +335,14 @@ const StockGrowthChart: React.FC<StockGrowthChartProps> = ({ data, goal, mcBands
             gap: { xs: 1, sm: 0 }
           }}
         >
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{
+            color: "text.secondary"
+          }}>
             Showing {data.length} years of projection
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" sx={{
+            color: "text.secondary"
+          }}>
             Final portfolio value: {formatCurrency(data[data.length - 1].portfolioTotalValue)}
           </Typography>
         </Box>

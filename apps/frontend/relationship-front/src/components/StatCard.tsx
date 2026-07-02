@@ -29,7 +29,12 @@ const StatCard: React.FC<StatCardProps> = ({ icon, title, value, subtitle, color
       }}
     >
       <CardContent>
-        <Box display="flex" alignItems="center" mb={2}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            mb: 2
+          }}>
           <Box 
             sx={{ 
               color: color, 
@@ -44,14 +49,31 @@ const StatCard: React.FC<StatCardProps> = ({ icon, title, value, subtitle, color
           >
             {icon}
           </Box>
-          <Typography variant="subtitle1" fontWeight={600} color="text.secondary">
+          <Typography
+            variant="subtitle1"
+            sx={{
+              fontWeight: 600,
+              color: "text.secondary"
+            }}>
             {title}
           </Typography>
         </Box>
-        <Typography variant="h4" component="p" fontWeight="bold" gutterBottom sx={{ color: 'text.primary' }}>
+        <Typography
+          variant="h4"
+          component="p"
+          gutterBottom
+          sx={{
+            fontWeight: "bold",
+            color: 'text.primary'
+          }}>
           {value}
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            fontSize: '0.875rem'
+          }}>
           {subtitle}
         </Typography>
       </CardContent>

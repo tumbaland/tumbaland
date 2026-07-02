@@ -1,6 +1,6 @@
 {
   "name": "@tumbaland/components",
-  "version": "1.11.0",
+  "version": "1.11.1",
   "author": "Tumbaland",
   "license": "MIT",
   "main": "dist/index.js",
@@ -16,23 +16,26 @@
     "storybook:prod": "storybook build"
   },
   "dependencies": {
-    "@mui/material": "^7.1.2",
-    "web-vitals": "^5.1.0"
+    "@mui/icons-material": "^9.1.1",
+    "@mui/material": "^9.1.2",
+    "web-vitals": "^5.3.0"
   },
   "peerDependencies": {
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
-    "@esbuild/linux-x64": "^0.25.9",
-    "@rollup/rollup-linux-x64-gnu": "^4.50.1",
-    "@storybook/addon-docs": "^9.1.5",
-    "@storybook/addon-onboarding": "^9.1.5",
-    "@storybook/react-vite": "^9.1.5",
-    "eslint-plugin-storybook": "^9.1.5",
+    "@esbuild/linux-x64": "^0.28.1",
+    "@rollup/rollup-linux-x64-gnu": "^4.62.2",
+    "@storybook/addon-docs": "^10.4.6",
+    "@storybook/addon-onboarding": "^10.4.6",
+    "@storybook/react": "^10.4.6",
+    "@storybook/react-vite": "^10.4.6",
+    "eslint-plugin-storybook": "^10.4.6",
+    "@types/node": "^26.1.0",
     "standard-version": "^9.5.0",
-    "storybook": "^9.1.5",
-    "typescript": "^5.8.3"
+    "storybook": "^10.4.6",
+    "typescript": "^6.0.3"
   },
   "eslintConfig": {
     "extends": [

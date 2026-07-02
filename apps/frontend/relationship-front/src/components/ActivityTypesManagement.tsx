@@ -106,7 +106,12 @@ const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ group
 
   if (loading && activityTypes.length === 0) {
     return (
-      <Box display="flex" justifyContent="center" p={8}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          p: 8
+        }}>
         <CircularProgress />
       </Box>
     );
@@ -114,23 +119,26 @@ const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ group
 
   if (activityTypes.length === 0) {
     return (
-      <Box 
-        display="flex" 
-        flexDirection="column" 
-        alignItems="center" 
-        justifyContent="center" 
-        p={8}
-        sx={{ 
-          bgcolor: 'background.paper', 
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          p: 8,
+          bgcolor: 'background.paper',
           borderRadius: 2,
           border: '1px dashed',
           borderColor: 'divider'
-        }}
-      >
-        <Typography variant="h6" color="text.secondary" gutterBottom>
+        }}>
+        <Typography variant="h6" gutterBottom sx={{
+          color: "text.secondary"
+        }}>
           No Activity Types Found
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{
+          color: "text.secondary"
+        }}>
           Create your first activity type to get started.
         </Typography>
       </Box>
@@ -167,7 +175,9 @@ const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ group
                 hover
               >
                 <TableCell component="th" scope="row">
-                  <Typography variant="subtitle2" fontWeight={600}>
+                  <Typography variant="subtitle2" sx={{
+                    fontWeight: 600
+                  }}>
                     {type.name}
                   </Typography>
                 </TableCell>
@@ -219,7 +229,6 @@ const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ group
           </TableBody>
         </Table>
       </TableContainer>
-
       <ActivityTypeDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}

@@ -158,7 +158,9 @@ const GroupsTab = () => {
   if (loading && groups.length === 0) {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Typography variant="h6" color="text.secondary">
+        <Typography variant="h6" sx={{
+          color: "text.secondary"
+        }}>
           Loading your groups...
         </Typography>
       </Box>

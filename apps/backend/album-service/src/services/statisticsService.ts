@@ -244,8 +244,8 @@ class StatisticsService {
     for (const group of groupStats) {
       const groupPhotoQuery =
         group._id === 'personal'
-          ? { albumId: { $in: await Album.find({ userId, groupId: { $exists: false } }).distinct('_id') } }
-          : { albumId: { $in: await Album.find({ groupId: group._id }).distinct('_id') } };
+          ? { albumId: { $in: (await Album.find({ userId, groupId: { $exists: false } }).distinct('_id')).map((albumId) => albumId.toString()) } }
+          : { albumId: { $in: (await Album.find({ groupId: group._id }).distinct('_id')).map((albumId) => albumId.toString()) } };
 
       const photoCount = await Photo.countDocuments(groupPhotoQuery);
       group.photoCount = photoCount;

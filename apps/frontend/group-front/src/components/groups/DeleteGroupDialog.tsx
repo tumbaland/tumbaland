@@ -32,12 +32,16 @@ const DeleteGroupDialog: React.FC<DeleteGroupDialogProps> = ({
       open={open}
       onClose={onClose}
       maxWidth="sm"
-      PaperProps={{
-        sx: { borderRadius: 3 }
+      slotProps={{
+        paper: {
+          sx: { borderRadius: 3 }
+        }
       }}
     >
       <DialogTitle sx={{ pb: 1 }}>
-        <Stack direction="row" alignItems="center" spacing={1}>
+        <Stack direction="row" spacing={1} sx={{
+          alignItems: "center"
+        }}>
           <DeleteIcon color="error" />
           <Typography variant="h6" sx={{ fontWeight: 600, color: 'error.main' }}>
             Delete Group

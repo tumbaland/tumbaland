@@ -28,11 +28,12 @@ const PaymentsHistoryPage: React.FC = () => {
         <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: 'text.primary' }}>
           Payment History
         </Typography>
-        <Typography variant="body1" color="text.secondary">
+        <Typography variant="body1" sx={{
+          color: "text.secondary"
+        }}>
           View all your past payments and transactions
         </Typography>
       </Box>
-
       <Box sx={{ px: 2 }}>
         {payments.length === 0 ? (
           <Paper
@@ -47,10 +48,14 @@ const PaymentsHistoryPage: React.FC = () => {
             }}
           >
             <CreditCard sx={{ fontSize: 64, color: 'text.secondary', mb: 2, opacity: 0.5 }} />
-            <Typography variant="h6" color="text.secondary" gutterBottom>
+            <Typography variant="h6" gutterBottom sx={{
+              color: "text.secondary"
+            }}>
               No Payment History
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" sx={{
+              color: "text.secondary"
+            }}>
               Your payment history will appear here once you make transactions.
             </Typography>
           </Paper>

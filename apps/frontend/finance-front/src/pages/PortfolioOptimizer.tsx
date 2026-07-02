@@ -330,15 +330,12 @@ const PortfolioOptimizer: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" sx={{ mb: 3 }}>Portfolio Optimizer</Typography>
-
       {priceError && <Alert severity="error" sx={{ mb: 2 }}>{priceError}</Alert>}
-
       {tickersWithoutData.length > 0 && (
         <Alert severity="warning" sx={{ mb: 2 }}>
           No price history for: {tickersWithoutData.join(', ')}. Fetch data in Tracked Tickers first.
         </Alert>
       )}
-
       {/* ── Holdings performance ─────────────────────────────────────────── */}
       <Typography variant="h6" sx={{ mb: 1 }}>Current Holdings</Typography>
       <TableContainer component={Paper} elevation={0} sx={{ mb: 3, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
@@ -387,7 +384,6 @@ const PortfolioOptimizer: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
-
       {/* ── Efficient frontier ───────────────────────────────────────────── */}
       {sim && chartData ? (
         <>
@@ -447,7 +443,9 @@ const PortfolioOptimizer: React.FC = () => {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5, gap: 1, flexWrap: 'wrap' }}>
                 <Box>
                   <Typography variant="h6">Efficient Frontier</Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" sx={{
+                    color: "text.secondary"
+                  }}>
                     {SIMULATIONS.toLocaleString()} portfolios · {sim.dataPoints} days
                   </Typography>
                 </Box>
@@ -457,7 +455,7 @@ const PortfolioOptimizer: React.FC = () => {
                     size="small"
                     value={riskFreeRate}
                     onChange={e => setRiskFreeRate(parseFloat(e.target.value) || 0)}
-                    inputProps={{ inputMode: 'decimal', style: { width: 48 } }}
+                    slotProps={{ htmlInput: { inputMode: 'decimal', style: { width: 48 } } }}
                     sx={{ width: 140 }}
                   />
                   <Button variant="outlined" size="small" startIcon={<RefreshIcon />} onClick={runSimulation}>
@@ -482,8 +480,12 @@ const PortfolioOptimizer: React.FC = () => {
                   />
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 0.5 }}>
-                  <Typography variant="caption" color="text.secondary">● {sim.minVol.vol.toFixed(1)}% Min Risk</Typography>
-                  <Typography variant="caption" color="text.secondary">★ {sim.maxSharpe.vol.toFixed(1)}% Max Sharpe</Typography>
+                  <Typography variant="caption" sx={{
+                    color: "text.secondary"
+                  }}>● {sim.minVol.vol.toFixed(1)}% Min Risk</Typography>
+                  <Typography variant="caption" sx={{
+                    color: "text.secondary"
+                  }}>★ {sim.maxSharpe.vol.toFixed(1)}% Max Sharpe</Typography>
                 </Box>
               </Box>
 
@@ -496,9 +498,16 @@ const PortfolioOptimizer: React.FC = () => {
                     { label: 'Exp. return', from: `${sim.current!.ret.toFixed(1)}%`, to: `${targetPortfolio!.ret.toFixed(1)}%`, delta: analysis.retDelta, fmt: (d: number) => `${d >= 0 ? '+' : ''}${d.toFixed(1)}pp` },
                   ].map(({ label, from, to, delta, fmt }) => (
                     <Box key={label} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ minWidth: 75 }}>{label}</Typography>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: "text.secondary",
+                          minWidth: 75
+                        }}>{label}</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 38 }}>{from}</Typography>
-                      <Typography variant="caption" color="text.secondary">→</Typography>
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>→</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 700, color: '#7c3aed', minWidth: 38 }}>{to}</Typography>
                       <Chip size="small" label={fmt(delta)}
                         sx={{ height: 18, fontSize: '0.68rem', bgcolor: delta >= 0 ? '#f3e8ff' : '#fee2e2', color: delta >= 0 ? '#6b21a8' : '#7f1d1d', '& .MuiChip-label': { px: 0.75 } }} />
@@ -510,7 +519,9 @@ const PortfolioOptimizer: React.FC = () => {
               {/* What to buy next */}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mt: 2, mb: 1 }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>What to Buy Next</Typography>
-                <Typography variant="caption" color="text.secondary">only buys · no selling</Typography>
+                <Typography variant="caption" sx={{
+                  color: "text.secondary"
+                }}>only buys · no selling</Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
                 <TextField
@@ -518,11 +529,13 @@ const PortfolioOptimizer: React.FC = () => {
                   size="small"
                   value={investAmount}
                   onChange={e => setInvestAmount(e.target.value)}
-                  inputProps={{ inputMode: 'decimal' }}
+                  slotProps={{ htmlInput: { inputMode: 'decimal' } }}
                   sx={{ width: 130 }}
                 />
                 {targetPortfolio && (
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" sx={{
+                    color: "text.secondary"
+                  }}>
                     vol {targetPortfolio.vol.toFixed(1)}% · ret {targetPortfolio.ret.toFixed(1)}% · sharpe {targetPortfolio.sharpe.toFixed(2)}
                   </Typography>
                 )}
@@ -557,7 +570,9 @@ const PortfolioOptimizer: React.FC = () => {
                                 </Typography>
                               </Box>
                             ) : (
-                              <Typography variant="caption" color="text.secondary">—</Typography>
+                              <Typography variant="caption" sx={{
+                                color: "text.secondary"
+                              }}>—</Typography>
                             )}
                           </TableCell>
                           <TableCell align="right">

@@ -16,7 +16,12 @@ export const UnauthorizedPage: React.FC<UnauthorizedPageProps> = ({ onLogin }) =
           Access Restricted
         </Typography>
 
-        <Typography variant="body1" color="text.secondary" paragraph>
+        <Typography
+          variant="body1"
+          sx={{
+            color: "text.secondary",
+            mb: 2
+          }}>
           You need to be logged in to access the Tumbaland.
         </Typography>
 

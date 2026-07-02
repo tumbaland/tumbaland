@@ -67,7 +67,12 @@ const FinancialKPIs: React.FC<FinancialKPIsProps> = ({ data }) => {
               <AccountBalance sx={{ fontSize: { xs: 24, md: 28 } }} />
             </Box>
             <Box>
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                  fontSize: '0.875rem'
+                }}>
                 Total Portfolio
               </Typography>
               <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
@@ -80,7 +85,6 @@ const FinancialKPIs: React.FC<FinancialKPIsProps> = ({ data }) => {
           </Typography>
         </CardContent>
       </Card>
-
       {/* Total Gains */}
       <Card
         elevation={0}
@@ -111,7 +115,12 @@ const FinancialKPIs: React.FC<FinancialKPIsProps> = ({ data }) => {
               <TrendingUp sx={{ fontSize: { xs: 24, md: 28 } }} />
             </Box>
             <Box>
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                  fontSize: '0.875rem'
+                }}>
                 Total Gains
               </Typography>
               <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
@@ -133,7 +142,6 @@ const FinancialKPIs: React.FC<FinancialKPIsProps> = ({ data }) => {
           />
         </CardContent>
       </Card>
-
       {/* Monthly Change */}
       <Card
         elevation={0}
@@ -168,7 +176,12 @@ const FinancialKPIs: React.FC<FinancialKPIsProps> = ({ data }) => {
               )}
             </Box>
             <Box>
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                  fontSize: '0.875rem'
+                }}>
                 Monthly Change
               </Typography>
               <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>

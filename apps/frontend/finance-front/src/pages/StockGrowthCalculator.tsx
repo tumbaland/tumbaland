@@ -369,7 +369,7 @@ const StockGrowthCalculator: React.FC = () => {
                   value={inputs.startingCapital}
                   onChange={handleInputChange('startingCapital')}
                   fullWidth
-                  inputProps={{ min: 0, step: 100 }}
+                  slotProps={{ htmlInput: { min: 0, step: 100 } }}
                 />
 
                 <TextField
@@ -378,7 +378,7 @@ const StockGrowthCalculator: React.FC = () => {
                   value={inputs.expectedGrowth}
                   onChange={handleInputChange('expectedGrowth')}
                   fullWidth
-                  inputProps={{ min: 0, max: 50, step: 0.1 }}
+                  slotProps={{ htmlInput: { min: 0, max: 50, step: 0.1 } }}
                 />
 
                 <FormControl fullWidth>
@@ -426,7 +426,7 @@ const StockGrowthCalculator: React.FC = () => {
                     value={inputs.annualInvestment}
                     onChange={handleInputChange('annualInvestment')}
                     fullWidth
-                    inputProps={{ min: 0, step: 100 }}
+                    slotProps={{ htmlInput: { min: 0, step: 100 } }}
                   />
                 ) : (
                   <TextField
@@ -435,7 +435,7 @@ const StockGrowthCalculator: React.FC = () => {
                     value={inputs.monthlyInvestment}
                     onChange={handleInputChange('monthlyInvestment')}
                     fullWidth
-                    inputProps={{ min: 0, step: 10 }}
+                    slotProps={{ htmlInput: { min: 0, step: 10 } }}
                   />
                 )}
 
@@ -445,7 +445,7 @@ const StockGrowthCalculator: React.FC = () => {
                   value={inputs.maxYears}
                   onChange={handleInputChange('maxYears')}
                   fullWidth
-                  inputProps={{ min: 1, max: 50 }}
+                  slotProps={{ htmlInput: { min: 1, max: 50 } }}
                 />
 
                 <TextField
@@ -454,7 +454,7 @@ const StockGrowthCalculator: React.FC = () => {
                   value={inputs.expectedInflation}
                   onChange={handleInputChange('expectedInflation')}
                   fullWidth
-                  inputProps={{ min: 0, max: 20, step: 0.1 }}
+                  slotProps={{ htmlInput: { min: 0, max: 20, step: 0.1 } }}
                 />
 
                 <TextField
@@ -463,7 +463,7 @@ const StockGrowthCalculator: React.FC = () => {
                   value={inputs.annualFee}
                   onChange={handleInputChange('annualFee')}
                   fullWidth
-                  inputProps={{ min: 0, max: 5, step: 0.05 }}
+                  slotProps={{ htmlInput: { min: 0, max: 5, step: 0.05 } }}
                 />
 
                 <TextField
@@ -472,7 +472,7 @@ const StockGrowthCalculator: React.FC = () => {
                   value={inputs.targetGoal}
                   onChange={handleInputChange('targetGoal')}
                   fullWidth
-                  inputProps={{ min: 0, step: 500 }}
+                  slotProps={{ htmlInput: { min: 0, step: 500 } }}
                   helperText="Optional: used to show time to goal and goal line on the chart"
                 />
 
@@ -497,7 +497,7 @@ const StockGrowthCalculator: React.FC = () => {
                       value={inputs.annualVolatility}
                       onChange={handleInputChange('annualVolatility')}
                       fullWidth
-                      inputProps={{ min: 1, max: 80, step: 0.5 }}
+                      slotProps={{ htmlInput: { min: 1, max: 80, step: 0.5 } }}
                     />
                     <TextField
                       label="# Simulations"
@@ -505,7 +505,7 @@ const StockGrowthCalculator: React.FC = () => {
                       value={inputs.numSimulations}
                       onChange={handleInputChange('numSimulations')}
                       fullWidth
-                      inputProps={{ min: 100, max: 5000, step: 100 }}
+                      slotProps={{ htmlInput: { min: 100, max: 5000, step: 100 } }}
                     />
                     <FormControl fullWidth>
                       <InputLabel>Return Distribution</InputLabel>
@@ -526,7 +526,7 @@ const StockGrowthCalculator: React.FC = () => {
                         value={inputs.studentTDegrees}
                         onChange={handleInputChange('studentTDegrees')}
                         fullWidth
-                        inputProps={{ min: 2, max: 50, step: 1 }}
+                        slotProps={{ htmlInput: { min: 2, max: 50, step: 1 } }}
                       />
                     )}
                     {inputs.distribution === 'mixture' && (
@@ -536,7 +536,7 @@ const StockGrowthCalculator: React.FC = () => {
                         value={inputs.mixtureKurtosis}
                         onChange={handleInputChange('mixtureKurtosis')}
                         fullWidth
-                        inputProps={{ min: 0, max: 0.9, step: 0.05 }}
+                        slotProps={{ htmlInput: { min: 0, max: 0.9, step: 0.05 } }}
                         helperText="Probability of a large ±(2.5–4)σ shock per step"
                       />
                     )}

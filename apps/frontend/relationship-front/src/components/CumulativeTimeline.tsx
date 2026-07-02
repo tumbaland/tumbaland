@@ -124,10 +124,18 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
     return (
       <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom fontWeight="bold">
+          <Typography variant="h6" gutterBottom sx={{
+            fontWeight: "bold"
+          }}>
             {title}
           </Typography>
-          <Box display="flex" justifyContent="center" alignItems="center" height={height}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: height
+            }}>
             <CircularProgress />
           </Box>
         </CardContent>
@@ -139,7 +147,9 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
     return (
       <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom fontWeight="bold">
+          <Typography variant="h6" gutterBottom sx={{
+            fontWeight: "bold"
+          }}>
             {title}
           </Typography>
           <Alert severity="error">{error}</Alert>
@@ -152,11 +162,21 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
     return (
       <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom fontWeight="bold">
+          <Typography variant="h6" gutterBottom sx={{
+            fontWeight: "bold"
+          }}>
             {title}
           </Typography>
-          <Box display="flex" justifyContent="center" alignItems="center" height={height}>
-            <Typography color="text.secondary">No data available</Typography>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: height
+            }}>
+            <Typography sx={{
+              color: "text.secondary"
+            }}>No data available</Typography>
           </Box>
         </CardContent>
       </Card>
@@ -175,10 +195,12 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
     >
       <CardContent>
         {/* Header Controls */}
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={2}>
-          <Typography variant="h6" fontWeight="bold">{title}</Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+          <Typography variant="h6" sx={{
+            fontWeight: "bold"
+          }}>{title}</Typography>
 
-          <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
             {/* Year Selector */}
             <FormControl size="small" sx={{ minWidth: 120 }}>
               <InputLabel>Year</InputLabel>
@@ -296,29 +318,44 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
             gap: isMobile ? 1 : 2
           }}
         >
-          <Box textAlign="center">
+          <Box sx={{ textAlign: 'center' }}>
             <Typography variant={isMobile ? "body1" : "h6"} color="primary" sx={{ fontSize: isMobile ? '1rem' : undefined }}>
               {processedData.length > 0 ? processedData[processedData.length - 1].cumulativeActivities : 0}
             </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: isMobile ? '0.7rem' : undefined }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                fontSize: isMobile ? '0.7rem' : undefined
+              }}>
               Total Activities
             </Typography>
           </Box>
-          <Box textAlign="center">
+          <Box sx={{ textAlign: 'center' }}>
             <Typography variant={isMobile ? "body1" : "h6"} color="primary" sx={{ fontSize: isMobile ? '1rem' : undefined }}>
               {processedData.length}
             </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: isMobile ? '0.7rem' : undefined }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                fontSize: isMobile ? '0.7rem' : undefined
+              }}>
               Active Days
             </Typography>
           </Box>
-          <Box textAlign="center">
+          <Box sx={{ textAlign: 'center' }}>
             <Typography variant={isMobile ? "body1" : "h6"} color="primary" sx={{ fontSize: isMobile ? '1rem' : undefined }}>
               {processedData.length > 0
                 ? Math.round(processedData.reduce((sum, item) => sum + item.dailyActivities, 0) / processedData.length)
                 : 0}
             </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: isMobile ? '0.7rem' : undefined }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                fontSize: isMobile ? '0.7rem' : undefined
+              }}>
               Avg Per Day
             </Typography>
           </Box>

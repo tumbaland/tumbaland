@@ -26,13 +26,26 @@ const LoggedInUser: React.FC<LoggedInUserProps> = ({ user, onContinue, onLogout 
         }}
       />
     </Box>
-    <Typography variant="h5" fontWeight={700} color="#1e293b" gutterBottom>
+    <Typography
+      variant="h5"
+      gutterBottom
+      sx={{
+        fontWeight: 700,
+        color: "#1e293b"
+      }}>
       Welcome back, {user.name}!
     </Typography>
-    <Typography variant="body1" color="text.secondary" mb={4}>
+    <Typography
+      variant="body1"
+      sx={{
+        color: "text.secondary",
+        mb: 4
+      }}>
       {user.email}
     </Typography>
-    <Stack direction="row" spacing={2} justifyContent="center">
+    <Stack direction="row" spacing={2} sx={{
+      justifyContent: "center"
+    }}>
       <Button
         variant="contained"
         color="primary"

@@ -416,7 +416,7 @@ const UserPortfolioPage: React.FC = () => {
               name="quantity"
               value={form.quantity}
               onChange={handleChange}
-              inputProps={{ inputMode: 'decimal' }}
+              slotProps={{ htmlInput: { inputMode: 'decimal' } }}
               fullWidth
               required
             />
@@ -426,7 +426,7 @@ const UserPortfolioPage: React.FC = () => {
               name="avgBuyPrice"
               value={form.avgBuyPrice}
               onChange={handleChange}
-              inputProps={{ inputMode: 'decimal' }}
+              slotProps={{ htmlInput: { inputMode: 'decimal' } }}
               fullWidth
               required
             />

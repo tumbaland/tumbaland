@@ -87,17 +87,16 @@ const DashboardPage: React.FC = () => {
     <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 4 }, px: { xs: 1, sm: 3 } }}>
       {/* Header & Actions */}
       <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        mb={{ xs: 3, sm: 5 }}
         sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: { xs: 3, sm: 5 },
           flexDirection: { xs: 'column', sm: 'row' },
-          alignItems: { xs: 'flex-start', sm: 'center' },
           gap: { xs: 2, sm: 0 }
         }}
       >
-        <Box display="flex" alignItems="center">
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
           <DashboardIcon sx={{ mr: 2, fontSize: 32, color: '#667eea' }} />
           <Typography 
             variant="h4" 

@@ -72,7 +72,12 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
 
   return (
     <Box>
-      <Box display="flex" justifyContent="flex-end" mb={2}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "flex-end",
+          mb: 2
+        }}>
         <Button
           startIcon={<DownloadIcon />}
           variant="outlined"
@@ -146,7 +151,9 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
             {!activities || activities.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
-                  <Typography variant="body1" color="text.secondary">
+                  <Typography variant="body1" sx={{
+                    color: "text.secondary"
+                  }}>
                     No activities yet. Click "Add Activity" to get started!
                   </Typography>
                 </TableCell>
@@ -203,7 +210,6 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
           </TableBody>
         </Table>
       </TableContainer>
-      
       {/* Pagination */}
       <Box 
         sx={{ 
@@ -214,7 +220,9 @@ const ActivitiesTable: React.FC<ActivitiesTableProps> = ({
           gap: 2 
         }}
       >
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{
+          color: "text.secondary"
+        }}>
           Rows per page:
         </Typography>
         <Select

@@ -53,18 +53,22 @@ export function NotificationsMenu({
       >
         {notificationCount > 0 ? (
           // Show actual notifications when available
-          <MenuItem disabled>
-            <Typography variant="body2" color="text.secondary">
+          (<MenuItem disabled>
+            <Typography variant="body2" sx={{
+              color: "text.secondary"
+            }}>
               You have {notificationCount} new notification{notificationCount !== 1 ? 's' : ''}
             </Typography>
-          </MenuItem>
+          </MenuItem>)
         ) : (
           // Show placeholder when no notifications
-          <MenuItem disabled>
-            <Typography variant="body2" color="text.secondary">
+          (<MenuItem disabled>
+            <Typography variant="body2" sx={{
+              color: "text.secondary"
+            }}>
               No new notifications
             </Typography>
-          </MenuItem>
+          </MenuItem>)
         )}
 
         {/* Future: Add actual notification items here */}

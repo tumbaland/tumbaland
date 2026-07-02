@@ -44,7 +44,9 @@ const OptimalPortfolioChart: React.FC<OptimalPortfolioChartProps> = ({
             Portfolio Analysis
           </Typography>
           <Box sx={{ textAlign: 'center', py: 4 }}>
-            <Typography variant="body1" color="text.secondary">
+            <Typography variant="body1" sx={{
+              color: "text.secondary"
+            }}>
               No analysis data available
             </Typography>
           </Box>
@@ -179,12 +181,16 @@ const OptimalPortfolioChart: React.FC<OptimalPortfolioChartProps> = ({
             </svg>
           </Box>
 
-          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              fontStyle: 'italic'
+            }}>
             Bubble size represents Sharpe ratio. Green = Excellent (&gt;1.0), Orange = Good (0.5-1.0), Red = Poor (&lt;0.5)
           </Typography>
         </CardContent>
       </Card>
-
       {/* Asset Statistics Table */}
       <Card>
         <CardContent>
@@ -286,7 +292,6 @@ const OptimalPortfolioChart: React.FC<OptimalPortfolioChartProps> = ({
           </TableContainer>
         </CardContent>
       </Card>
-
       {/* Correlation Matrix */}
       {correlationMatrix.length > 0 && (
         <Card>
@@ -340,7 +345,9 @@ const OptimalPortfolioChart: React.FC<OptimalPortfolioChartProps> = ({
             </Box>
 
             <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" sx={{
+                color: "text.secondary"
+              }}>
                 Correlation strength:
               </Typography>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>

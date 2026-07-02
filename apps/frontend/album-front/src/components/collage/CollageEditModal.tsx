@@ -121,7 +121,11 @@ export const CollageEditModal: React.FC<CollageEditModalProps> = ({ open, onClos
           disabled={loading}
         />
         {error && (
-          <Box color="error.main" mt={1}>
+          <Box
+            sx={{
+              color: "error.main",
+              mt: 1
+            }}>
             {error}
           </Box>
         )}

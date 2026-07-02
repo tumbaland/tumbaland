@@ -34,17 +34,19 @@ const PhotoPaginationControls: React.FC<PhotoPaginationControlsProps> = ({
   if (position === 'top') {
     return (
       <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        mb={3}
         sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 3,
           flexDirection: { xs: 'column', sm: 'row' },
           gap: { xs: 2, sm: 0 }
         }}
       >
-        <Box display="flex" alignItems="center" gap={2}>
-          <Typography variant="body2" color="text.secondary">
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="body2" sx={{
+            color: "text.secondary"
+          }}>
             {pagination.total} {pagination.total === 1 ? 'photo' : 'photos'} total
           </Typography>
           <FormControl size="small" sx={{ minWidth: 120 }}>
@@ -58,7 +60,6 @@ const PhotoPaginationControls: React.FC<PhotoPaginationControlsProps> = ({
             </Select>
           </FormControl>
         </Box>
-
         {showPagination && (
           <Pagination
             count={pagination.pages}
@@ -83,7 +84,7 @@ const PhotoPaginationControls: React.FC<PhotoPaginationControlsProps> = ({
   // Bottom pagination
   if (showPagination) {
     return (
-      <Box mt={4} display="flex" justifyContent="center">
+      <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
         <Pagination
           count={pagination.pages}
           page={currentPage}

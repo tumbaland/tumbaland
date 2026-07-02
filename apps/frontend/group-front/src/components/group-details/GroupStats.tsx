@@ -31,7 +31,9 @@ const GroupStats: React.FC<GroupStatsProps> = ({ group }) => {
         <Typography variant="h4" sx={{ fontWeight: 700 }}>
           {group.members?.length || 0}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{
+          color: "text.secondary"
+        }}>
           Total Members
         </Typography>
       </Paper>
@@ -49,7 +51,9 @@ const GroupStats: React.FC<GroupStatsProps> = ({ group }) => {
         <Typography variant="h4" sx={{ fontWeight: 700 }}>
           {group.members?.filter(m => m.role === 'admin' || m.role === 'owner').length || 0}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{
+          color: "text.secondary"
+        }}>
           Admins
         </Typography>
       </Paper>
@@ -67,7 +71,9 @@ const GroupStats: React.FC<GroupStatsProps> = ({ group }) => {
         <Typography variant="h4" sx={{ fontWeight: 700 }}>
           {group.members?.filter(m => m.role === 'owner').length || 0}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{
+          color: "text.secondary"
+        }}>
           Owners
         </Typography>
       </Paper>

@@ -112,7 +112,13 @@ const RecentActivitiesCards: React.FC = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" height={200}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: 200
+        }}>
         <CircularProgress />
       </Box>
     );
@@ -164,7 +170,6 @@ const RecentActivitiesCards: React.FC = () => {
           </Select>
         </FormControl>
       </Box>
-
       <Box
         sx={{
           display: 'grid',
@@ -193,7 +198,13 @@ const RecentActivitiesCards: React.FC = () => {
               }}
             >
               <CardContent sx={{ p: 2 }}>
-                <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    mb: 2
+                  }}>
                   <Chip
                     label={activityType.name}
                     sx={{
@@ -204,7 +215,11 @@ const RecentActivitiesCards: React.FC = () => {
                       borderColor: alpha(activityType.color || '#607d8b', 0.3)
                     }}
                   />
-                  <Box display="flex" alignItems="center">
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center"
+                    }}>
                     {activities.length > 0 ? (
                       <Tooltip title={expandedCards.has(activityType.slug) ? 'Show less' : 'Show all'}>
                         <IconButton

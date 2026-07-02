@@ -34,7 +34,9 @@ const GroupsStats: React.FC<GroupsStatsProps> = ({ groups, getUserRole }) => {
         <Typography variant="h5" sx={{ fontWeight: 700 }}>
           {groups.length}
         </Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" sx={{
+          color: "text.secondary"
+        }}>
           Total Groups
         </Typography>
       </Paper>
@@ -52,7 +54,9 @@ const GroupsStats: React.FC<GroupsStatsProps> = ({ groups, getUserRole }) => {
         <Typography variant="h5" sx={{ fontWeight: 700 }}>
           {groups.reduce((acc, group) => acc + (group.members?.length || 1), 0)}
         </Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" sx={{
+          color: "text.secondary"
+        }}>
           Team Members
         </Typography>
       </Paper>
@@ -70,7 +74,9 @@ const GroupsStats: React.FC<GroupsStatsProps> = ({ groups, getUserRole }) => {
         <Typography variant="h5" sx={{ fontWeight: 700 }}>
           {groups.filter(g => getUserRole(g) === 'owner').length}
         </Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" sx={{
+          color: "text.secondary"
+        }}>
           Owned Groups
         </Typography>
       </Paper>

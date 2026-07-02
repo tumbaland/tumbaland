@@ -134,7 +134,9 @@ const PortfolioValueChart: React.FC<PortfolioValueChartProps> = ({ records, asse
             </Typography>
           </Box>
           <Box sx={{ textAlign: 'center', py: 6 }}>
-            <Typography variant="body1" color="text.secondary">
+            <Typography variant="body1" sx={{
+              color: "text.secondary"
+            }}>
               No data available to display portfolio timeline
             </Typography>
           </Box>

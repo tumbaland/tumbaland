@@ -13,7 +13,9 @@ const GroupsHeader: React.FC<GroupsHeaderProps> = ({ onCreateClick }) => {
         <Typography variant="h5" component="h1" sx={{ fontWeight: 700, color: 'text.primary' }}>
           My Groups
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{
+          color: "text.secondary"
+        }}>
           Manage your teams and projects
         </Typography>
       </Box>

@@ -34,12 +34,16 @@ const EditGroupDialog: React.FC<EditGroupDialogProps> = ({
       onClose={onClose}
       maxWidth="sm"
       fullWidth
-      PaperProps={{
-        sx: { borderRadius: 3 }
+      slotProps={{
+        paper: {
+          sx: { borderRadius: 3 }
+        }
       }}
     >
       <DialogTitle sx={{ pb: 1 }}>
-        <Stack direction="row" alignItems="center" spacing={1}>
+        <Stack direction="row" spacing={1} sx={{
+          alignItems: "center"
+        }}>
           <EditIcon color="primary" />
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
             Edit Group
@@ -53,8 +57,8 @@ const EditGroupDialog: React.FC<EditGroupDialogProps> = ({
           fullWidth
           variant="outlined"
           value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && onSave()}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
+          onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && onSave()}
           sx={{ mt: 1 }}
         />
       </DialogContent>

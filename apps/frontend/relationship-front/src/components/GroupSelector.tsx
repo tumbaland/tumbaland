@@ -52,9 +52,17 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
 
   if (loading) {
     return (
-      <Box display="flex" alignItems="center" gap={1} py={1}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          py: 1
+        }}>
         <CircularProgress size={16} />
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{
+          color: "text.secondary"
+        }}>
           Loading groups...
         </Typography>
       </Box>
@@ -79,7 +87,12 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
       >
         {includeNone && (
           <MenuItem value="">
-            <Box display="flex" alignItems="center" gap={1}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1
+              }}>
               <Typography>No group (private)</Typography>
               <Chip label="Private" size="small" color="default" />
             </Box>
@@ -88,7 +101,12 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
         
         {includePersonal && (
           <MenuItem value="personal">
-            <Box display="flex" alignItems="center" gap={1}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1
+              }}>
               <Typography>Personal only</Typography>
               <Chip label="Personal" size="small" color="primary" />
             </Box>
@@ -97,7 +115,12 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
 
         {groups.map((group) => (
           <MenuItem key={group._id} value={group._id}>
-            <Box display="flex" alignItems="center" gap={1}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1
+              }}>
               <Typography>{group.name}</Typography>
               {group.isOwner && (
                 <Chip label="Owner" size="small" color="secondary" />

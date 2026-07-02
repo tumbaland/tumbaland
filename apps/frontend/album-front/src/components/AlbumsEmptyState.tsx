@@ -9,12 +9,23 @@ interface AlbumsEmptyStateProps {
 
 const AlbumsEmptyState: React.FC<AlbumsEmptyStateProps> = ({ searchTerm, onCreateAlbum }) => {
   return (
-    <Box textAlign="center" py={{ xs: 4, sm: 8 }}>
+    <Box
+      sx={{
+        textAlign: "center",
+        py: { xs: 4, sm: 8 }
+      }}>
       <PhotoLibraryIcon sx={{ fontSize: { xs: 48, sm: 64 }, color: 'grey.400', mb: 2 }} />
-      <Typography variant="h6" color="text.secondary" gutterBottom>
+      <Typography variant="h6" gutterBottom sx={{
+        color: "text.secondary"
+      }}>
         {searchTerm ? 'No albums found' : 'No albums yet'}
       </Typography>
-      <Typography variant="body2" color="text.secondary" mb={3}>
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+          mb: 3
+        }}>
         {searchTerm ? 'Try adjusting your search terms' : 'Create your first album to get started'}
       </Typography>
       {!searchTerm && (

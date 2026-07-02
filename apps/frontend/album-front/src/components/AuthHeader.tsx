@@ -141,11 +141,13 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
             anchorEl={anchorEl}
             open={Boolean(anchorEl)}
             onClose={handleMenuClose}
-            MenuListProps={{
-              'aria-labelledby': 'account-button'
-            }}
             transformOrigin={{ horizontal: 'right', vertical: 'top' }}
             anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+            slotProps={{
+              list: {
+                'aria-labelledby': 'account-button'
+              }
+            }}
           >
             <MenuItem disabled>
               <Box
@@ -155,10 +157,14 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
                   alignItems: 'flex-start'
                 }}
               >
-                <Typography variant="body2" fontWeight="bold">
+                <Typography variant="body2" sx={{
+                  fontWeight: "bold"
+                }}>
                   {user.name}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography variant="caption" sx={{
+                  color: "text.secondary"
+                }}>
                   {user.email}
                 </Typography>
               </Box>
@@ -242,7 +248,7 @@ const AuthHeader: React.FC<AuthHeaderProps> = () => {
               >
                 {/* Show current route label, fallback to first menu item */}
                 {(() => {
-                  let bestMatch = null;
+                  let bestMatch: (typeof navigationItems)[number] | null = null;
                   let bestLength = -1;
                   for (const item of navigationItems) {
                     if (location.pathname.startsWith(item.path) && item.path.length > bestLength) {

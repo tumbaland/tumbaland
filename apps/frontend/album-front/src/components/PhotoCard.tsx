@@ -233,21 +233,27 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
         {photo.description && (
           <Typography
             variant="body2"
-            color="text.secondary"
             sx={{
+              color: "text.secondary",
               mt: 0.5,
               display: '-webkit-box',
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden',
               fontSize: { xs: '0.75rem', sm: '0.875rem' }
-            }}
-          >
+            }}>
             {photo.description}
           </Typography>
         )}
 
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', fontSize: { xs: '0.7rem', sm: '0.75rem' } }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: "text.secondary",
+            mt: 1,
+            display: 'block',
+            fontSize: { xs: '0.7rem', sm: '0.75rem' }
+          }}>
           {formatFileSize(photo.size)}
           {photo.width && photo.height && ` • ${photo.width}×${photo.height}`}
         </Typography>

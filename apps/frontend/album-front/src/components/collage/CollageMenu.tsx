@@ -64,7 +64,7 @@ const CollageMenu: React.FC<CollageMenuProps> = ({
   };
 
   return (
-    <Box display="flex" gap={1}>
+    <Box sx={{ display: 'flex', gap: 1 }}>
       <Tooltip title="Collage Settings">
         <IconButton 
           onClick={handleMenuOpen} 
@@ -84,12 +84,14 @@ const CollageMenu: React.FC<CollageMenuProps> = ({
         anchorEl={anchorEl} 
         open={open} 
         onClose={handleMenuClose}
-        PaperProps={{
-          sx: {
-            mt: 1.5,
-            borderRadius: 2,
-            minWidth: 250,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+        slotProps={{
+          paper: {
+            sx: {
+              mt: 1.5,
+              borderRadius: 2,
+              minWidth: 250,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+            }
           }
         }}
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}

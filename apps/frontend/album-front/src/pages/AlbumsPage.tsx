@@ -151,7 +151,7 @@ const AlbumsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
         <CircularProgress />
       </Box>
     );
@@ -184,7 +184,7 @@ const AlbumsPage: React.FC = () => {
         />
       ) : (
         <>
-          <Stack spacing={2} alignItems="center" sx={{ mb: 4 }}>
+          <Stack spacing={2} sx={{ alignItems: 'center', mb: 4 }}>
             <Pagination
               count={pagination.pages}
               page={page}
@@ -200,7 +200,7 @@ const AlbumsPage: React.FC = () => {
             onDeleteAlbum={handleDeleteAlbum}
             onMenuOpen={handleMenuOpen}
           />
-          <Stack spacing={2} alignItems="center" sx={{ mt: 4, mb: 2 }}>
+          <Stack spacing={2} sx={{ alignItems: 'center', mt: 4, mb: 2 }}>
             <Pagination
               count={pagination.pages}
               page={page}

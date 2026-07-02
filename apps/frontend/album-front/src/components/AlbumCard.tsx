@@ -101,7 +101,6 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete, 
         )}
         {editButton}
       </Box>
-
       <CardContent sx={{ flexGrow: 1, p: { xs: 1.5, sm: 2 } }}>
         <Typography gutterBottom variant="h6" component="div" noWrap sx={{ fontSize: { xs: '0.9rem', sm: '1.1rem' }, fontWeight: 600 }}>
           {album.name}
@@ -110,21 +109,26 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete, 
         {album.description && (
           <Typography
             variant="body2"
-            color="text.secondary"
             sx={{
+              color: "text.secondary",
               mt: 0.5,
               display: '-webkit-box',
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden',
               fontSize: { xs: '0.75rem', sm: '0.875rem' }
-            }}
-          >
+            }}>
             {album.description}
           </Typography>
         )}
 
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mt: 1,
+            fontSize: { xs: '0.75rem', sm: '0.875rem' }
+          }}>
           {album.photoCount} {album.photoCount === 1 ? 'photo' : 'photos'}
         </Typography>
 
@@ -139,7 +143,6 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete, 
           </Box>
         )}
       </CardContent>
-
       <Menu anchorEl={anchorEl} open={open} onClose={handleMenuClose} onClick={(e) => e.stopPropagation()}>
         {onEdit && <MenuItem onClick={handleEdit}>Edit Album</MenuItem>}
         {onDelete && <MenuItem onClick={handleDelete}>Delete Album</MenuItem>}

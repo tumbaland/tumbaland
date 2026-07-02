@@ -434,7 +434,7 @@ const CollageDetailsPage: React.FC = () => {
         </Box>
       )}
       {isLoading ? (
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
           <CircularProgress />
         </Box>
       ) : displayError ? (

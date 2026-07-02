@@ -79,11 +79,18 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         </IconButton>
 
         <DialogTitle sx={{ textAlign: 'center', pt: 3, pb: 2 }}>
-          <Typography fontWeight="600">{title}</Typography>
+          <Typography sx={{
+            fontWeight: "600"
+          }}>{title}</Typography>
         </DialogTitle>
 
         <DialogContent sx={{ textAlign: 'center', pt: 0, pb: 2 }}>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+          <Typography
+            variant="body1"
+            sx={{
+              color: "text.secondary",
+              mb: 2
+            }}>
             {message}
           </Typography>
         </DialogContent>

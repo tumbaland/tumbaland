@@ -70,11 +70,16 @@ const PlansPage: React.FC = () => {
         <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: 'text.primary' }}>
           Choose Your Plan
         </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 600, mx: 'auto' }}>
+        <Typography
+          variant="body1"
+          sx={{
+            color: "text.secondary",
+            maxWidth: 600,
+            mx: 'auto'
+          }}>
           Pick the plan that matches your current stage. You can upgrade or downgrade anytime.
         </Typography>
       </Box>
-
       <Box
         sx={{
           display: 'grid',
@@ -125,7 +130,6 @@ const PlansPage: React.FC = () => {
                   POPULAR
                 </Box>
               )}
-
               <CardContent sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                   <Avatar
@@ -142,7 +146,9 @@ const PlansPage: React.FC = () => {
                     <Typography variant="h6" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
                       {plan.name}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" sx={{
+                      color: "text.secondary"
+                    }}>
                       {alias === 'free' ? 'For starters' : alias === 'pro' ? 'For professionals' : 'For power users'}
                     </Typography>
                   </Box>
@@ -150,7 +156,9 @@ const PlansPage: React.FC = () => {
 
                 <Typography variant="h4" sx={{ mb: 3, fontWeight: 700, color: 'text.primary' }}>
                   {plan.priceMonthlyCents ? `${(plan.priceMonthlyCents / 100).toFixed(2)} €` : 'Free'}
-                  {(plan.priceMonthlyCents || 0) > 0 && <Typography component="span" variant="body2" color="text.secondary">/mo</Typography>}
+                  {(plan.priceMonthlyCents || 0) > 0 && <Typography component="span" variant="body2" sx={{
+                    color: "text.secondary"
+                  }}>/mo</Typography>}
                 </Typography>
 
                 <Divider sx={{ my: 2 }} />
@@ -167,7 +175,12 @@ const PlansPage: React.FC = () => {
                     return (
                       <Box key={k} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                         {icon}
-                        <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: "text.secondary",
+                            flex: 1
+                          }}>
                           <Box component="span" sx={{ color: 'text.primary', fontWeight: 500 }}>{matrixByKey[k].label}:</Box> {renderValue(k, alias)}
                         </Typography>
                       </Box>
@@ -184,7 +197,6 @@ const PlansPage: React.FC = () => {
                   )}
                 </Box>
               </CardContent>
-
               <CardActions sx={{ p: 3, pt: 0 }}>
                 {isCurrentPlan ? (
                   <Button

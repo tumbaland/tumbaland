@@ -51,7 +51,7 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
   // Loading state
   if (photosLoading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="40vh">
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '40vh' }}>
         <CircularProgress />
       </Box>
     );
@@ -60,10 +60,10 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
   // Empty state
   if (photos.length === 0) {
     return (
-      <Box 
-        textAlign="center" 
-        py={10}
+      <Box
         sx={{
+          textAlign: "center",
+          py: 10,
           background: 'rgba(255, 255, 255, 0.4)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
@@ -72,13 +72,23 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
           mx: 'auto',
           maxWidth: 600,
           mt: 4
-        }}
-      >
+        }}>
         <CloudUploadIcon sx={{ fontSize: 80, color: 'rgba(99, 102, 241, 0.3)', mb: 3 }} />
-        <Typography variant="h5" color="text.primary" gutterBottom fontWeight={600}>
+        <Typography
+          variant="h5"
+          gutterBottom
+          sx={{
+            color: "text.primary",
+            fontWeight: 600
+          }}>
           {searchTerm ? 'No photos found' : 'No photos yet'}
         </Typography>
-        <Typography variant="body1" color="text.secondary" mb={4}>
+        <Typography
+          variant="body1"
+          sx={{
+            color: "text.secondary",
+            mb: 4
+          }}>
           {searchTerm ? 'Try adjusting your search terms' : 'Upload your first photos to get started'}
         </Typography>
         {!searchTerm && (

@@ -179,12 +179,14 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
       onClose={onClose} 
       maxWidth="md" 
       fullWidth
-      PaperProps={{
-        elevation: 0,
-        sx: {
-          borderRadius: 3,
-          border: '1px solid',
-          borderColor: 'divider'
+      slotProps={{
+        paper: {
+          elevation: 0,
+          sx: {
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: 'divider'
+          }
         }
       }}
     >
@@ -253,7 +255,9 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
           <Typography color="error">{error}</Typography>
         ) : filteredHistory.length === 0 ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 5, gap: 2 }}>
-            <Typography color="text.secondary">No price history found for {ticker}.</Typography>
+            <Typography sx={{
+              color: "text.secondary"
+            }}>No price history found for {ticker}.</Typography>
             <Button
               variant="contained"
               onClick={async () => {
@@ -273,7 +277,13 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
             >
               Fetch Historical Data
             </Button>
-            <Typography variant="caption" color="text.secondary" sx={{ maxWidth: 400, textAlign: 'center' }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                maxWidth: 400,
+                textAlign: 'center'
+              }}>
               Fetches the last ~100 trading days from Alpha Vantage (free plan limit).
             </Typography>
           </Box>
@@ -384,27 +394,33 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
                   gap: { xs: 2, sm: 0 }
                 }}
               >
-                <Box textAlign="center" sx={{ mb: { xs: 1, sm: 0 } }}>
+                <Box sx={{ textAlign: 'center', mb: { xs: 1, sm: 0 } }}>
                   <Typography variant="h6" color="primary" sx={{ fontSize: { xs: 16, sm: 20 } }}>
                     {statsPrices.length}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" sx={{
+                    color: "text.secondary"
+                  }}>
                     Data Points
                   </Typography>
                 </Box>
-                <Box textAlign="center" sx={{ mb: { xs: 1, sm: 0 } }}>
+                <Box sx={{ textAlign: 'center', mb: { xs: 1, sm: 0 } }}>
                   <Typography variant="h6" color="primary" sx={{ fontSize: { xs: 16, sm: 20 } }}>
                     {maxPrice.toFixed(2)}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" sx={{
+                    color: "text.secondary"
+                  }}>
                     Max Close
                   </Typography>
                 </Box>
-                <Box textAlign="center">
+                <Box sx={{ textAlign: 'center' }}>
                   <Typography variant="h6" color="primary" sx={{ fontSize: { xs: 16, sm: 20 } }}>
                     {minPrice.toFixed(2)}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" sx={{
+                    color: "text.secondary"
+                  }}>
                     Min Close
                   </Typography>
                 </Box>
@@ -445,7 +461,13 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
               >
                 Refresh Last ~100 Trading Days
               </Button>
-              <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 520, textAlign: 'center' }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                  maxWidth: 520,
+                  textAlign: 'center'
+                }}>
                 Fetches the last ~100 trading days from Alpha Vantage and updates existing records.
                 Full history requires a premium plan.
               </Typography>

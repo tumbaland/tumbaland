@@ -18,18 +18,22 @@ const PhotoSearchBar: React.FC<PhotoSearchBarProps> = ({
   onSearchChange
 }) => {
   return (
-    <Box mb={{ xs: 2, sm: 4 }}>
+    <Box sx={{
+      mb: { xs: 2, sm: 4 }
+    }}>
       <TextField
         fullWidth
         placeholder="Search photos..."
         value={searchTerm}
         onChange={(e) => onSearchChange(e.target.value)}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <SearchIcon />
-            </InputAdornment>
-          )
+        slotProps={{
+          input: {
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            )
+          }
         }}
         sx={{ 
           maxWidth: 400,

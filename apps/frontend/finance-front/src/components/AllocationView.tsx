@@ -140,14 +140,15 @@ const AllocationView: React.FC<AllocationViewProps> = ({
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       {SummaryCards}
-
       <Card>
         <CardContent>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, mb: 2 }}>
             <Typography variant="h6">Allocation</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Box sx={{ width: 200 }}>
-                <Typography variant="caption" color="text.secondary">Hide positions below: {minPct.toFixed(1)}%</Typography>
+                <Typography variant="caption" sx={{
+                  color: "text.secondary"
+                }}>Hide positions below: {minPct.toFixed(1)}%</Typography>
                 <Slider size="small" min={0} max={5} step={0.1} value={minPct} onChange={(_, v) => setMinPct(v as number)} />
               </Box>
               <ToggleButtonGroup size="small" value={view} exclusive onChange={(_, v) => v && setView(v)}>
@@ -242,21 +243,29 @@ const AllocationView: React.FC<AllocationViewProps> = ({
                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'info.main', mb: 1 }}>Summary</Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
                   <Box>
-                    <Typography variant="body2" color="text.secondary">Positions (non-zero):</Typography>
+                    <Typography variant="body2" sx={{
+                      color: "text.secondary"
+                    }}>Positions (non-zero):</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{rows.length}</Typography>
                   </Box>
                   {typeof selectedCount === 'number' && (
                     <Box>
-                      <Typography variant="body2" color="text.secondary">Selected Assets:</Typography>
+                      <Typography variant="body2" sx={{
+                        color: "text.secondary"
+                      }}>Selected Assets:</Typography>
                       <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{selectedCount}</Typography>
                     </Box>
                   )}
                   <Box>
-                    <Typography variant="body2" color="text.secondary">Shorting:</Typography>
+                    <Typography variant="body2" sx={{
+                      color: "text.secondary"
+                    }}>Shorting:</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{allowShorts ? 'Allowed' : 'Disabled'}</Typography>
                   </Box>
                   <Box>
-                    <Typography variant="body2" color="text.secondary">Largest Position:</Typography>
+                    <Typography variant="body2" sx={{
+                      color: "text.secondary"
+                    }}>Largest Position:</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 'bold' }}>{rows[0] ? (rows[0].weight * 100).toFixed(1) + '%' : '-'}</Typography>
                   </Box>
                 </Box>

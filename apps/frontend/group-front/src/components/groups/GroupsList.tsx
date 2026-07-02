@@ -34,10 +34,23 @@ const GroupsList: React.FC<GroupsListProps> = ({
           }}
         >
           <GroupIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2, opacity: 0.5 }} />
-          <Typography variant="h6" color="text.secondary" gutterBottom sx={{ fontWeight: 600 }}>
+          <Typography
+            variant="h6"
+            gutterBottom
+            sx={{
+              color: "text.secondary",
+              fontWeight: 600
+            }}>
             No Groups Yet
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3, maxWidth: 400, mx: 'auto' }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              mb: 3,
+              maxWidth: 400,
+              mx: 'auto'
+            }}>
             Start building your collaborative workspace by creating your first group.
           </Typography>
           <Button

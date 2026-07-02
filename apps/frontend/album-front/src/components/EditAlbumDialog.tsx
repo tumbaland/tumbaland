@@ -55,13 +55,15 @@ const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({ open, album, onClose,
       onClose={onClose} 
       maxWidth="sm" 
       fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: 4,
-          background: 'rgba(255, 255, 255, 0.9)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+      slotProps={{
+        paper: {
+          sx: {
+            borderRadius: 4,
+            background: 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }
         }
       }}
     >

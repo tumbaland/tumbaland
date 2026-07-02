@@ -57,7 +57,9 @@ const EfficientFrontierChart: React.FC<EfficientFrontierChartProps> = ({
             Efficient Frontier
           </Typography>
           <Box sx={{ textAlign: 'center', py: 4 }}>
-            <Typography variant="body1" color="text.secondary">
+            <Typography variant="body1" sx={{
+              color: "text.secondary"
+            }}>
               No efficient frontier data available
             </Typography>
           </Box>
@@ -329,19 +331,25 @@ const EfficientFrontierChart: React.FC<EfficientFrontierChartProps> = ({
           </Typography>
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 2 }}>
             <Box>
-              <Typography variant="body2" color="text.secondary">Expected Return</Typography>
+              <Typography variant="body2" sx={{
+                color: "text.secondary"
+              }}>Expected Return</Typography>
               <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
                 {optimalPortfolio.expectedReturn.toFixed(2)}%
               </Typography>
             </Box>
             <Box>
-              <Typography variant="body2" color="text.secondary">Risk (Volatility)</Typography>
+              <Typography variant="body2" sx={{
+                color: "text.secondary"
+              }}>Risk (Volatility)</Typography>
               <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
                 {optimalPortfolio.volatility.toFixed(2)}%
               </Typography>
             </Box>
             <Box>
-              <Typography variant="body2" color="text.secondary">Sharpe Ratio</Typography>
+              <Typography variant="body2" sx={{
+                color: "text.secondary"
+              }}>Sharpe Ratio</Typography>
               <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'success.main' }}>
                 {optimalPortfolio.sharpeRatio.toFixed(3)}
               </Typography>

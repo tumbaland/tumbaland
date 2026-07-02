@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Box, Typography, Button, Card, CardContent, CircularProgress, Alert, Divider, Stack, Chip, Link as MuiLink, Checkbox, FormControlLabel, Dialog, DialogTitle, DialogContent, DialogActions, useMediaQuery, LinearProgress } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import { useSearchParams } from 'react-router-dom';
 import { paymentApi } from '../services/paymentApi';
@@ -176,7 +176,12 @@ const SubscriptionCheckoutPage: React.FC = () => {
     <Box sx={{ py: 5 }}>
       <Box sx={{ maxWidth: 980, mx: 'auto', px: 2 }}>
         <Typography variant="h4" sx={{ mb: 0.5, fontWeight: 700 }}>Checkout</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 3
+          }}>
           Secure payment powered by Stripe. Change or cancel anytime.
         </Typography>
 
@@ -186,40 +191,62 @@ const SubscriptionCheckoutPage: React.FC = () => {
               <CardContent>
                 {plan ? (
                   <Stack spacing={2}>
-                    <Typography variant="overline" color="text.secondary">Order Summary</Typography>
+                    <Typography variant="overline" sx={{
+                      color: "text.secondary"
+                    }}>Order Summary</Typography>
                     <Box>
-                      <Stack direction="row" alignItems="center" justifyContent="space-between">
+                      <Stack
+                        direction="row"
+                        sx={{
+                          alignItems: "center",
+                          justifyContent: "space-between"
+                        }}>
                         <Typography variant="h6">{plan.name}</Typography>
                         <Chip color={plan.priceMonthlyCents ? 'primary' : 'success'} label={plan.priceMonthlyCents ? 'Paid plan' : 'Free'} size="small" />
                       </Stack>
                       {plan.description && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{plan.description}</Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: "text.secondary",
+                            mt: 0.5
+                          }}>{plan.description}</Typography>
                       )}
                     </Box>
                     <Box>
                       <Typography variant="h3" sx={{ mt: 1 }}>{formatPrice(plan.priceMonthlyCents)}</Typography>
                       {!!plan.priceMonthlyCents && (
-                        <Typography variant="caption" color="text.secondary">Billed monthly • VAT may apply at checkout</Typography>
+                        <Typography variant="caption" sx={{
+                          color: "text.secondary"
+                        }}>Billed monthly • VAT may apply at checkout</Typography>
                       )}
                     </Box>
                     <Divider />
                     <Stack spacing={1.2}>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <CheckCircleOutlineIcon color="success" fontSize="small" />
+                      <Stack direction="row" spacing={1} sx={{
+                        alignItems: "center"
+                      }}>
+                        <CheckCircleOutlinedIcon color="success" fontSize="small" />
                         <Typography variant="body2">Instant activation after payment</Typography>
                       </Stack>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <CheckCircleOutlineIcon color="success" fontSize="small" />
+                      <Stack direction="row" spacing={1} sx={{
+                        alignItems: "center"
+                      }}>
+                        <CheckCircleOutlinedIcon color="success" fontSize="small" />
                         <Typography variant="body2">Cancel anytime from your account</Typography>
                       </Stack>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <CheckCircleOutlineIcon color="success" fontSize="small" />
+                      <Stack direction="row" spacing={1} sx={{
+                        alignItems: "center"
+                      }}>
+                        <CheckCircleOutlinedIcon color="success" fontSize="small" />
                         <Typography variant="body2">Email receipts and billing history</Typography>
                       </Stack>
                     </Stack>
                   </Stack>
                 ) : (
-                  <Typography variant="body1" color="text.secondary">Finalizing checkout...</Typography>
+                  <Typography variant="body1" sx={{
+                    color: "text.secondary"
+                  }}>Finalizing checkout...</Typography>
                 )}
               </CardContent>
             </Card>
@@ -231,7 +258,9 @@ const SubscriptionCheckoutPage: React.FC = () => {
                 <Stack spacing={2}>
                   {statusParam === 'success' && sessionId ? (
                     <Stack spacing={1.5}>
-                      <Stack direction="row" spacing={1} alignItems="center">
+                      <Stack direction="row" spacing={1} sx={{
+                        alignItems: "center"
+                      }}>
                         <CircularProgress size={18} />
                         <Typography variant="body2">Processing payment…</Typography>
                       </Stack>
@@ -254,16 +283,30 @@ const SubscriptionCheckoutPage: React.FC = () => {
                     <Stack spacing={1}>
                       <FormControlLabel
                         control={<Checkbox checked={acceptedTerms} onChange={(e) => setAcceptedTerms(e.target.checked)} />}
-                        label={<Typography variant="caption">I agree to the <MuiLink href="#" onClick={(e)=>{e.preventDefault(); setTermsOpen(true);}}>Terms and Conditions</MuiLink>.</Typography>}
+                        label={<Typography variant="caption">I agree to the <MuiLink href="#" onClick={(e: React.MouseEvent<HTMLAnchorElement>)=>{e.preventDefault(); setTermsOpen(true);}}>Terms and Conditions</MuiLink>.</Typography>}
                       />
-                      <Typography variant="caption" color="text.secondary">You must accept the Terms to proceed with payment.</Typography>
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>You must accept the Terms to proceed with payment.</Typography>
                     </Stack>
                   )}
-                  <Stack direction="row" spacing={1} alignItems="center" sx={{ color: 'text.secondary' }}>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{
+                      alignItems: "center",
+                      color: 'text.secondary'
+                    }}>
                     <LockOutlinedIcon fontSize="small" />
                     <Typography variant="caption">Secure checkout by Stripe. We never store your card details.</Typography>
                   </Stack>
-                  <Stack direction="row" spacing={1} alignItems="center" sx={{ color: 'text.secondary' }}>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{
+                      alignItems: "center",
+                      color: 'text.secondary'
+                    }}>
                     <SupportAgentIcon fontSize="small" />
                     <Typography variant="caption">Need help? Contact support.</Typography>
                   </Stack>
@@ -276,62 +319,68 @@ const SubscriptionCheckoutPage: React.FC = () => {
         <Dialog open={termsOpen} onClose={()=>setTermsOpen(false)} maxWidth="md" fullWidth fullScreen={fullScreen}>
           <DialogTitle>Terms and Conditions</DialogTitle>
           <DialogContent dividers sx={{ maxHeight: { xs: '80vh', sm: '70vh' }, overflowY: 'auto' }}>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "text.secondary",
+                display: 'block',
+                mb: 2
+              }}>
               Last updated: {new Date().toLocaleDateString()}
             </Typography>
 
-            <Typography variant="body2" paragraph>
+            <Typography variant="body2" sx={{ mb: 2 }}>
               These Terms and Conditions ("Terms") govern your use of Tumbaland and its related services. By creating an account,
               purchasing a subscription, or using the service, you agree to be bound by these Terms.
             </Typography>
 
             <Typography variant="subtitle2" sx={{ mt: 2 }}>1. Subscriptions & Billing</Typography>
-            <Typography variant="body2" paragraph>
+            <Typography variant="body2" sx={{ mb: 2 }}>
               Paid plans are billed in advance on a recurring basis (monthly unless stated otherwise) and renew automatically until canceled.
               You can cancel at any time from your account. If you cancel, access remains until the end of the current billing period.
             </Typography>
 
             <Typography variant="subtitle2" sx={{ mt: 2 }}>2. Trials, Discounts, and Taxes</Typography>
-            <Typography variant="body2" paragraph>
+            <Typography variant="body2" sx={{ mb: 2 }}>
               Promotional offers may be available and are subject to change. Prices are shown inclusive/exclusive of taxes where applicable.
               You are responsible for any applicable taxes and fees.
             </Typography>
 
             <Typography variant="subtitle2" sx={{ mt: 2 }}>3. Refunds</Typography>
-            <Typography variant="body2" paragraph>
+            <Typography variant="body2" sx={{ mb: 2 }}>
               Except where required by law, payments are non-refundable. If you believe you were charged in error, contact support within 14 days.
             </Typography>
 
             <Typography variant="subtitle2" sx={{ mt: 2 }}>4. Acceptable Use</Typography>
-            <Typography variant="body2" paragraph>
+            <Typography variant="body2" sx={{ mb: 2 }}>
               You agree not to misuse the service, including but not limited to: violating laws, infringing intellectual property,
               uploading harmful content, or attempting to disrupt or overload the service. We may suspend or terminate accounts that violate these Terms.
             </Typography>
 
             <Typography variant="subtitle2" sx={{ mt: 2 }}>5. Content & Privacy</Typography>
-            <Typography variant="body2" paragraph>
+            <Typography variant="body2" sx={{ mb: 2 }}>
               You retain ownership of content you upload. You grant us a limited license to store and process content for the purpose of providing the service.
               We handle personal data in accordance with our Privacy Policy.
             </Typography>
 
             <Typography variant="subtitle2" sx={{ mt: 2 }}>6. Service Availability</Typography>
-            <Typography variant="body2" paragraph>
+            <Typography variant="body2" sx={{ mb: 2 }}>
               We strive for high availability but do not guarantee uninterrupted service. Features may change over time. We may perform maintenance with or without notice.
             </Typography>
 
             <Typography variant="subtitle2" sx={{ mt: 2 }}>7. Limitation of Liability</Typography>
-            <Typography variant="body2" paragraph>
+            <Typography variant="body2" sx={{ mb: 2 }}>
               To the maximum extent permitted by law, Tumbaland and its affiliates will not be liable for indirect, incidental, special,
               consequential, or punitive damages, or any loss of profits, data, or goodwill.
             </Typography>
 
             <Typography variant="subtitle2" sx={{ mt: 2 }}>8. Changes to Terms</Typography>
-            <Typography variant="body2" paragraph>
+            <Typography variant="body2" sx={{ mb: 2 }}>
               We may update these Terms from time to time. Material changes will be communicated. Continued use after changes constitutes acceptance.
             </Typography>
 
             <Typography variant="subtitle2" sx={{ mt: 2 }}>9. Contact</Typography>
-            <Typography variant="body2" paragraph>
+            <Typography variant="body2" sx={{ mb: 2 }}>
               Questions? Contact support. You can also view these Terms at <MuiLink href="/terms" target="_blank" rel="noopener noreferrer">/terms</MuiLink>.
             </Typography>
           </DialogContent>
