@@ -1,4 +1,14 @@
 # Tumbalog
+### [0.0.351](https://github.com/toomastahves/tumbaland/compare/v0.0.350...v0.0.351) (2026-07-02)
+
+
+### Features
+
+* setup linter ([e72eb68](https://github.com/toomastahves/tumbaland/commit/e72eb6896ee06d9a726aefc6150939cd4901fc3a))
+* update jaeger library ([59fe6ef](https://github.com/toomastahves/tumbaland/commit/59fe6ef95347bae76be0a2c13ef2950d3a756175))
+* upgrade dependencies ([a015aef](https://github.com/toomastahves/tumbaland/commit/a015aefcf6aaca37b5d88b922243b76c0a0abe30))
+* upgrade to node v26 ([8e8c4c3](https://github.com/toomastahves/tumbaland/commit/8e8c4c31c52492d2f1667cfdab709a7cad9e800d))
+
 ### [0.0.350](https://github.com/toomastahves/tumbaland/compare/v0.0.349...v0.0.350) (2026-07-02)
 
 
