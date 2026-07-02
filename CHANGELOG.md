@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.349](https://github.com/toomastahves/tumbaland/compare/v0.0.348...v0.0.349) (2026-07-02)
+
+
+### Bug Fixes
+
+* jwt token fallback and cookie parser ([07932f4](https://github.com/toomastahves/tumbaland/commit/07932f4e8ccd51167f790ddcf2da5b02ab4643b2))
+
 ### [0.0.348](https://github.com/toomastahves/tumbaland/compare/v0.0.347...v0.0.348) (2026-06-10)
 
 
