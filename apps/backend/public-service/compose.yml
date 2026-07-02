@@ -10,6 +10,7 @@ services:
     environment:
       - PORT=5003
       - NODE_ENV=production
+      - CORS_ORIGIN=${CORS_ORIGIN}
     init: true
     networks:
       - tumbanet

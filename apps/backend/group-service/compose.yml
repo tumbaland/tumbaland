@@ -14,6 +14,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN}
       - AUTH_API_URL=${AUTH_API_URL}
+      - CORS_ORIGIN=${CORS_ORIGIN}
     init: true
     networks:
       - tumbanet
