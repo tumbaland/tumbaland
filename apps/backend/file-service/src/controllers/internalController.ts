@@ -8,7 +8,7 @@ import {
   getMetadata,
   listFiles
 } from '../utils/storage';
-import { logger, BadRequestError, NotFoundError } from '@tumbaland/core';
+import { logger, NotFoundError } from '@tumbaland/core';
 
 /**
  * PUT /internal/files/:fileId
@@ -97,11 +97,7 @@ export const internalDelete = (req: Request, res: Response): void => {
  * Delete all files matching a path prefix (folder delete).
  */
 export const internalDeleteFolder = (req: Request, res: Response): void => {
-  const { prefix } = req.body as { prefix?: string };
-
-  if (!prefix) {
-    throw new BadRequestError('prefix is required');
-  }
+  const { prefix } = req.body as { prefix: string };
 
   const count = deleteByPrefix(prefix);
   res.json({ success: true, message: `Deleted ${count} file(s)`, count });

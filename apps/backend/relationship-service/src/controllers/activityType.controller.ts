@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { BadRequestError, NotFoundError } from '@tumbaland/core';
+import { NotFoundError } from '@tumbaland/core';
 import * as ActivityTypeService from '../services/activityType.service';
 
 /**
@@ -11,11 +11,6 @@ export const createActivityType = async (req: Request, res: Response): Promise<v
     ...req.body,
     userId: user.id
   };
-
-  // Validate required fields
-  if (!typeData.name) {
-    throw new BadRequestError('Missing required field: name is required');
-  }
 
   // Generate slug if not provided
   if (!typeData.slug) {
@@ -129,10 +124,6 @@ export const deleteActivityType = async (req: Request, res: Response): Promise<v
 export const reorderActivityTypes = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
   const { typeIds, groupId } = req.body;
-
-  if (!Array.isArray(typeIds)) {
-    throw new BadRequestError('typeIds must be an array');
-  }
 
   await ActivityTypeService.reorderActivityTypes(typeIds, user.id, groupId);
 

@@ -34,14 +34,14 @@ describe('GET /api/albums', () => {
   });
 });
 
-describe('POST /api/albums (typed-error → errorHandler wiring)', () => {
-  it('returns 400 via the shared errorHandler when validation fails, with no try/catch in the controller', async () => {
+describe('POST /api/albums (validate() middleware → errorHandler wiring)', () => {
+  it('returns 400 via the shared errorHandler when the request body fails schema validation', async () => {
     const res = await request(app)
       .post('/api/albums')
       .set('Cookie', authCookie())
       .send({ name: '' });
 
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({ success: false, error: 'BadRequestError', message: 'Album name is required' });
+    expect(res.body).toEqual({ success: false, error: 'BadRequestError', message: 'name: Album name is required' });
   });
 });

@@ -34,8 +34,8 @@ describe('GET /api/activities', () => {
   });
 });
 
-describe('POST /api/activities (typed-error → errorHandler wiring)', () => {
-  it('returns 400 via the shared errorHandler when required fields are missing, with no try/catch in the controller', async () => {
+describe('POST /api/activities (validate() middleware → errorHandler wiring)', () => {
+  it('returns 400 via the shared errorHandler when required fields are missing', async () => {
     const res = await request(app)
       .post('/api/activities')
       .set('Cookie', authCookie())
@@ -45,7 +45,7 @@ describe('POST /api/activities (typed-error → errorHandler wiring)', () => {
     expect(res.body).toEqual({
       success: false,
       error: 'BadRequestError',
-      message: 'Missing required fields: date and activity are required'
+      message: 'date: A valid date is required'
     });
   });
 });

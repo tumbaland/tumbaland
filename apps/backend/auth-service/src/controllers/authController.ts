@@ -6,9 +6,6 @@ import { User } from '../models/User';
 
 export const validateToken = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
   const { idToken } = req.body;
-  if (!idToken) {
-    throw new BadRequestError('Token is required');
-  }
   const googleUser = await verifyGoogleToken(idToken);
 
   if (!googleUser) {
@@ -88,9 +85,6 @@ export const logout = (req: Request, res: Response): void => {
 
 export const invalidateUserTokens = async (req: Request, res: Response): Promise<void> => {
   const { email } = req.body;
-  if (!email) {
-    throw new BadRequestError('Email is required');
-  }
 
   // Increment token version to invalidate all existing tokens for this user
   const user = await User.findOneAndUpdate(

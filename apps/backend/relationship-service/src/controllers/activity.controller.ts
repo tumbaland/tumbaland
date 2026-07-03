@@ -13,20 +13,11 @@ export const createActivity = async (req: Request, res: Response): Promise<void>
     userId: user.id
   };
 
-  // Validate required fields
-  if (!activityData.date || !activityData.activity) {
-    throw new BadRequestError('Missing required fields: date and activity are required');
-  }
-
-  // Validate activity object structure
-  if (!activityData.activity.typeId) {
-    throw new BadRequestError('Activity object must contain typeId');
-  }
-
   // Validate that the activity type exists and is accessible
+  // (route-level schema validation already guarantees activity.typeId is present)
   const ActivityType = (await import('../models/ActivityType')).ActivityType;
   const activityType = await ActivityType.findOne({
-    _id: activityData.activity.typeId,
+    _id: activityData.activity!.typeId,
     isActive: true,
     $or: [
       { userId: user.id },
@@ -36,11 +27,6 @@ export const createActivity = async (req: Request, res: Response): Promise<void>
 
   if (!activityType) {
     throw new BadRequestError('Invalid or inaccessible activity type');
-  }
-
-  // Validate hours if provided (must be non-negative)
-  if (activityData.hours !== undefined && activityData.hours < 0) {
-    throw new BadRequestError('Hours must be a non-negative number');
   }
 
   const activity = await ActivityService.createActivity(activityData);

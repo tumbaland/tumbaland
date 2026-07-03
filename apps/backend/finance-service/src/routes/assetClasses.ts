@@ -1,11 +1,12 @@
 import { Router } from 'express';
-import { authenticateToken } from '@tumbaland/core';
+import { authenticateToken, validate } from '@tumbaland/core';
 import {
   getAssetClasses,
   createAssetClass,
   deleteAssetClass,
   updateAssetClass
 } from '../controllers/assetClass.controller';
+import { createAssetClassSchema, updateAssetClassSchema } from '../validation/schemas';
 
 const router = Router();
 
@@ -13,8 +14,8 @@ const router = Router();
 router.use(authenticateToken);
 
 router.get('/', getAssetClasses);
-router.post('/', createAssetClass);
+router.post('/', validate(createAssetClassSchema), createAssetClass);
 router.delete('/:id', deleteAssetClass);
-router.put('/:id', updateAssetClass);
+router.put('/:id', validate(updateAssetClassSchema), updateAssetClass);
 
 export default router;

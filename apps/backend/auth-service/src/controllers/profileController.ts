@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { BadRequestError, NotFoundError, UnauthorizedError } from '@tumbaland/core';
+import { NotFoundError, UnauthorizedError } from '@tumbaland/core';
 import { User } from '../models/User';
 
 export const getProfile = async (req: Request, res: Response): Promise<void> => {
@@ -36,15 +36,6 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
   }
 
   const { firstName, lastName } = req.body;
-
-  // Validate input - allow empty strings
-  if (firstName !== undefined && typeof firstName !== 'string') {
-    throw new BadRequestError('firstName must be a string');
-  }
-
-  if (lastName !== undefined && typeof lastName !== 'string') {
-    throw new BadRequestError('lastName must be a string');
-  }
 
   // Update the user in database - handle empty strings explicitly
   const updateData: any = {};

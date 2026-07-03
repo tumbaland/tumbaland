@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken } from '@tumbaland/core';
+import { authenticateToken, validate } from '@tumbaland/core';
 import {
   createActivityType,
   getActivityTypes,
@@ -8,6 +8,7 @@ import {
   deleteActivityType,
   reorderActivityTypes
 } from '../controllers/activityType.controller';
+import { createActivityTypeSchema, updateActivityTypeSchema, reorderActivityTypesSchema } from '../validation/schemas';
 
 const router = Router();
 
@@ -15,13 +16,13 @@ const router = Router();
 router.use(authenticateToken);
 
 // CRUD routes
-router.post('/', createActivityType);
+router.post('/', validate(createActivityTypeSchema), createActivityType);
 router.get('/', getActivityTypes);
 router.get('/:id', getActivityTypeById);
-router.put('/:id', updateActivityType);
+router.put('/:id', validate(updateActivityTypeSchema), updateActivityType);
 router.delete('/:id', deleteActivityType);
 
 // Special routes
-router.post('/reorder', reorderActivityTypes);
+router.post('/reorder', validate(reorderActivityTypesSchema), reorderActivityTypes);
 
 export default router;

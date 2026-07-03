@@ -12,7 +12,6 @@ export const createCheckoutSession = async (req: Request, res: Response): Promis
   ensureStripe();
   const email = req.user!.email;
   const { planCode, successUrl, cancelUrl } = req.body;
-  if (!planCode) { throw new BadRequestError('planCode required'); }
   if (!process.env.PAYMENT_URL && !successUrl) {
     throw new Error('PAYMENT_URL not configured and no successUrl provided');
   }

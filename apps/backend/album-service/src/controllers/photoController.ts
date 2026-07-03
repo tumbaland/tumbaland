@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { BadRequestError, NotFoundError, UnauthorizedError } from '@tumbaland/core';
+import { NotFoundError, UnauthorizedError } from '@tumbaland/core';
 import photoService from '../services/photoService';
 import { getUploadSignedUrl, generateFileId } from '../services/fileServiceClient';
 import Album from '../models/Album';
@@ -102,10 +102,6 @@ export const getUploadSignedUrlRequest = async (req: Request, res: Response): Pr
     throw new UnauthorizedError('Access token required');
   }
 
-  if (!filename || !mimetype || !albumId) {
-    throw new BadRequestError('Missing required fields: filename, mimetype, albumId');
-  }
-
   // Check if album exists
   const album = await Album.findById(albumId);
   if (!album) {
@@ -135,10 +131,6 @@ export const getUploadSignedUrlRequest = async (req: Request, res: Response): Pr
 export const updatePhotoAIAnalysis = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
   const { objectDetection, segmentation } = req.body;
-
-  if (!objectDetection && !segmentation) {
-    throw new BadRequestError('Must provide objectDetection or segmentation data');
-  }
 
   const photo = await photoService.updatePhotoAIAnalysis(id as string, {
     objectDetection,

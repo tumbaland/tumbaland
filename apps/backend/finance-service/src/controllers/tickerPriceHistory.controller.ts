@@ -35,10 +35,6 @@ export const fetchAndSaveTickerPrices = async (req: Request, res: Response): Pro
 export const fetchAndSaveAllTickerHistory = async (req: Request, res: Response): Promise<void> => {
   const { ticker } = req.body;
 
-  if (!ticker) {
-    throw new BadRequestError('Missing ticker in request body');
-  }
-
   const savedCount = await tickerPriceService.fetchAllTickerHistory(ticker);
 
   res.json({

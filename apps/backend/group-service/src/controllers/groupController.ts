@@ -53,7 +53,6 @@ export const createGroup = async (req: InternalServiceRequest, res: Response): P
     throw new BadRequestError('User email required');
   }
   const { name } = req.body as { name: string };
-  if (!name) throw new BadRequestError('name required');
   const group = await svc.createGroup(email, name);
   res.status(201).json({ success: true, data: group });
 };
@@ -99,7 +98,6 @@ export const getOne = async (req: Request, res: Response): Promise<void> => {
 
 export const updateGroup = async (req: Request, res: Response): Promise<void> => {
   const { name } = req.body as { name: string };
-  if (!name) throw new BadRequestError('name required');
   const group = await svc.updateGroup(req.params.id as string, userEmail(req), { name });
   res.json({ success: true, data: group });
 };
@@ -121,7 +119,6 @@ export const permanentlyDeleteGroup = async (req: Request, res: Response): Promi
 
 export const addMember = async (req: Request, res: Response): Promise<void> => {
   const { email, role } = req.body as { email: string; role?: GroupRole };
-  if (!email) throw new BadRequestError('email required');
   const group = await svc.addMember(req.params.id as string, userEmail(req), email, role);
 
   // Invalidate tokens for the added user

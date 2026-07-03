@@ -4,7 +4,8 @@ import todoRoutes from './routes/todoRoutes';
 import { loadTodos } from './services/todoService';
 import { healthCheck } from './controllers/healthController';
 import { submitLogs, getLogsHealth } from './controllers/logController';
-import { errorHandler, createBaseApp, strictRateLimiter } from '@tumbaland/core';
+import { errorHandler, createBaseApp, strictRateLimiter, validate } from '@tumbaland/core';
+import { submitLogsSchema } from './validation/schemas';
 
 // Every route here is unauthenticated, so it gets at least the standard
 // limiter as a baseline (built into createBaseApp); /api/todo additionally
@@ -22,7 +23,7 @@ loadTodos();
 app.use('/api/todo', strictRateLimiter, todoRoutes);
 
 // Logging routes
-app.post('/logs', submitLogs);
+app.post('/logs', validate(submitLogsSchema), submitLogs);
 app.get('/logs/health', getLogsHealth);
 
 // Serve OpenAPI docs as static files

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { validate } from '@tumbaland/core';
 import { requireApiKey, requireSignedToken } from '../middleware/auth';
 import { generateUploadUrl, generateDownloadUrl } from '../controllers/signedUrlController';
 import { uploadPublic, downloadPublic } from '../controllers/publicController';
@@ -11,17 +12,18 @@ import {
   internalDeleteFolder,
   internalList
 } from '../controllers/internalController';
+import { generateUploadUrlSchema, generateDownloadUrlSchema, deleteFolderSchema } from '../validation/schemas';
 
 const router = Router();
 
 // ─── Internal: signed URL generation (called by album-service) ────────────────
 // Requires API key header: X-Internal-Api-Key
-router.post('/internal/upload-url', requireApiKey, generateUploadUrl);
-router.post('/internal/download-url', requireApiKey, generateDownloadUrl);
+router.post('/internal/upload-url', requireApiKey, validate(generateUploadUrlSchema), generateUploadUrl);
+router.post('/internal/download-url', requireApiKey, validate(generateDownloadUrlSchema), generateDownloadUrl);
 
 // ─── Internal: server-to-server file operations ───────────────────────────────
-router.put('/internal/files/folder', requireApiKey, internalDeleteFolder); // must be before /:fileId
-router.delete('/internal/files/folder', requireApiKey, internalDeleteFolder);
+router.put('/internal/files/folder', requireApiKey, validate(deleteFolderSchema), internalDeleteFolder); // must be before /:fileId
+router.delete('/internal/files/folder', requireApiKey, validate(deleteFolderSchema), internalDeleteFolder);
 router.get('/internal/files', requireApiKey, internalList);
 router.put('/internal/files/*fileId', requireApiKey, internalUpload);
 router.get('/internal/meta/*fileId', requireApiKey, internalMetadata);

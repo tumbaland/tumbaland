@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken } from '@tumbaland/core';
+import { authenticateToken, validate } from '@tumbaland/core';
 import {
   createActivity,
   getActivities,
@@ -13,6 +13,7 @@ import {
   getActivityTypes,
   getActivityDescriptions
 } from '../controllers/activity.controller';
+import { createActivitySchema, updateActivitySchema } from '../validation/schemas';
 
 const router = Router();
 
@@ -20,7 +21,7 @@ const router = Router();
 router.use(authenticateToken);
 
 // CRUD routes
-router.post('/', createActivity);
+router.post('/', validate(createActivitySchema), createActivity);
 router.get('/', getActivities);
 router.get('/recent', getRecentActivities);
 router.get('/recent-summary', getRecentActivitiesSummary);
@@ -29,7 +30,7 @@ router.get('/date-range', getActivitiesByDateRange);
 router.get('/types', getActivityTypes);
 router.get('/descriptions', getActivityDescriptions);
 router.get('/:id', getActivityById);
-router.put('/:id', updateActivity);
+router.put('/:id', validate(updateActivitySchema), updateActivity);
 router.delete('/:id', deleteActivity);
 
 export default router;

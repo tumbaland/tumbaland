@@ -13,18 +13,19 @@
   },
   "dependencies": {
     "@tumbaland/core": "*",
-    "express": "^5.2.1",
+    "cookie-parser": "^1.4.7",
     "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.7.3",
     "stripe": "^22.3.0",
-    "cookie-parser": "^1.4.7",
-    "jsonwebtoken": "^9.0.3"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "typescript": "^6.0.3",
-    "@types/express": "^5.0.6",
-    "@types/node": "^26.1.0",
     "@types/cookie-parser": "^1.4.10",
-    "@types/jsonwebtoken": "^9.0.10"
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^26.1.0",
+    "typescript": "^6.0.3"
   }
 }

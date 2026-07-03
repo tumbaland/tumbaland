@@ -1,7 +1,7 @@
 import Album from '../models/Album';
 import Photo from '../models/Photo';
 import mongoose from 'mongoose';
-import { BadRequestError, ForbiddenError, NotFoundError } from '@tumbaland/core';
+import { ForbiddenError, NotFoundError } from '@tumbaland/core';
 import {
   deleteFile,
   getPhotoSignedUrl,
@@ -48,10 +48,6 @@ class AlbumService {
    */
   async createAlbum(input: CreateAlbumInput, userId: string): Promise<any> {
     const { name, description, isPublic = false, tags = [], groupId } = input;
-
-    if (!name || name.trim().length === 0) {
-      throw new BadRequestError('Album name is required');
-    }
 
     const album = new Album({
       name: name.trim(),
@@ -354,10 +350,6 @@ class AlbumService {
    * Set cover photo for album
    */
   async setCoverPhoto(albumId: string, photoId: string): Promise<any> {
-    if (!photoId) {
-      throw new BadRequestError('Photo ID is required');
-    }
-
     const album = await Album.findById(albumId);
     if (!album) {
       throw new NotFoundError('Album not found');

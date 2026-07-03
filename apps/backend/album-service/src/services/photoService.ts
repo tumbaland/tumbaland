@@ -1,6 +1,6 @@
 import Photo from '../models/Photo';
 import Album from '../models/Album';
-import { BadRequestError, ConflictError, NotFoundError } from '@tumbaland/core';
+import { ConflictError, NotFoundError } from '@tumbaland/core';
 import {
   deleteFile,
   getPhotoSignedUrl,
@@ -76,15 +76,9 @@ class PhotoService {
       metadata = {}
     } = input;
 
-    // Use minioFileId if provided, otherwise use fileId (for backward compatibility)
-    const actualMinioFileId = minioFileId || fileId;
-
-    // Validate required fields
-    if (!filename || !originalName || !actualMinioFileId || !albumId || !mimetype || !size) {
-      throw new BadRequestError(
-        'Missing required fields: filename, originalName, minioFileId (or fileId), albumId, mimetype, size'
-      );
-    }
+    // Use minioFileId if provided, otherwise use fileId (for backward compatibility).
+    // Route-level schema validation already guarantees one of them is present.
+    const actualMinioFileId = (minioFileId || fileId)!;
 
     // Check if album exists
     const album = await Album.findById(albumId);
