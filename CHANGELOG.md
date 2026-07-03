@@ -1,4 +1,16 @@
 # Tumbalog
+### [0.0.359](https://github.com/toomastahves/tumbaland/compare/v0.0.358...v0.0.359) (2026-07-03)
+
+
+### Features
+
+* unify logger ([d7f67a3](https://github.com/toomastahves/tumbaland/commit/d7f67a3f6c050ee0c63bb307cc69f65b71f47378))
+
+
+### Chores
+
+* **release:** 1.1.1 ([75291a9](https://github.com/toomastahves/tumbaland/commit/75291a942ff398540d65c3e4521ade8b6c5a1602))
+
 ### [0.0.358](https://github.com/toomastahves/tumbaland/compare/v0.0.357...v0.0.358) (2026-07-03)
 
 
