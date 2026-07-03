@@ -1,14 +1,13 @@
 import { Router } from 'express';
+import { authenticateToken } from '@tumbaland/core';
 import { getDashboard } from '../controllers/dashboard.controller';
-import { authenticateToken } from '../middleware/authMiddleware';
-import { userGroupsMiddleware } from '../middleware/userGroupsMiddleware';
 
 const router = Router();
 
-// Apply authentication middleware
+// Authentication also populates req.userGroups from the JWT.
 router.use(authenticateToken);
 
 // GET /api/dashboard - Get dashboard data
-router.get('/', userGroupsMiddleware, getDashboard);
+router.get('/', getDashboard);
 
 export default router;

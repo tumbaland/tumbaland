@@ -1,4 +1,5 @@
 import express from 'express';
+import { authenticateToken } from '@tumbaland/core';
 import {
   getStatistics,
   getMonthlyHoursData,
@@ -7,14 +8,11 @@ import {
   getWeeklyHeatmapDataController,
   getCumulativeTimelineDataController
 } from '../controllers/statistics.controller';
-import { authenticateToken } from '../middleware/authMiddleware';
-import { attachUserGroups } from '../middleware/userGroupsMiddleware';
 
 const router = express.Router();
 
-// Apply authentication and user groups middleware to all routes
+// Authentication also populates req.userGroups from the JWT.
 router.use(authenticateToken);
-router.use(attachUserGroups);
 
 /**
  * @route GET /api/statistics

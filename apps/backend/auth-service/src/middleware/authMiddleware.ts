@@ -1,15 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyJWT, UserPayload } from '../services/jwtService';
+import { verifyJWT } from '../services/jwtService';
 import { User } from '../models/User';
 
-// Extend Request interface to include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: UserPayload;
-    }
-  }
-}
+// req.user's ambient type comes from @tumbaland/core's global Express.Request
+// augmentation (see libs/core/src/types/auth.ts). This service's decoded JWT
+// payload (services/jwtService.ts) carries extra fields (tokenVersion, roles,
+// isApproved) beyond that shared shape, which is fine — it's a superset, so
+// assigning it to req.user below is still valid; those extra fields just
+// aren't part of req.user's public (cross-service) type and are read off the
+// local `decoded`/`dbUser` variables instead.
 
 export const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
   try {

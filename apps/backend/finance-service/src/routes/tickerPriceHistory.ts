@@ -1,11 +1,11 @@
 import { Router } from 'express';
+import { authenticateToken } from '@tumbaland/core';
 import {
   getTickerPriceHistory,
   fetchAndSaveTickerPrices,
   deleteTickerPriceHistory,
   fetchAndSaveAllTickerHistory
 } from '../controllers/tickerPriceHistory.controller';
-import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = Router();
 // Fetch and save all historic prices for a ticker

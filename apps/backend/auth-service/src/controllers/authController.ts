@@ -163,7 +163,7 @@ const getUserGroups = async (email: string): Promise<string[]> => {
 
 export const verifyAuth = async (req: Request, res: Response): Promise<void> => {
   try {
-    const currentUser = (req as any).user as UserPayload;
+    const currentUser = req.user as UserPayload;
     if (!currentUser?.email) {
       res.status(401).json({ success: false, message: 'No authenticated user' });
       return;
@@ -214,7 +214,7 @@ export const verifyAuth = async (req: Request, res: Response): Promise<void> => 
 export const refreshToken = async (req: Request, res: Response): Promise<void> => {
   try {
     // Get current user from JWT
-    const currentUser = (req as any).user as UserPayload;
+    const currentUser = req.user as UserPayload;
     if (!currentUser?.email) {
       res.status(401).json({ success: false, message: 'No authenticated user' });
       return;

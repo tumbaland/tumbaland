@@ -3,11 +3,23 @@ export interface UserPayload {
   email: string;
   name: string;
   picture?: string;
+  groups?: string[];
 }
 
-export interface AuthenticatedRequest extends Request {
-  user?: UserPayload;
-  correlationId?: string;
+/**
+ * Attaches `user`/`userGroups` to every Express `Request` across all
+ * services, replacing the ad-hoc `(req as any).user` casts and each
+ * service's own divergent local augmentation. Individual services may still
+ * carry additional request-scoped fields (e.g. auth-service's `dbUser`) —
+ * those stay local since they aren't meaningful outside that service.
+ */
+declare global {
+  namespace Express {
+    interface Request {
+      user?: UserPayload;
+      userGroups?: string[];
+    }
+  }
 }
 
 export interface ServiceHealth {

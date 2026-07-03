@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '../middleware/authMiddleware';
+import { authenticateToken as authenticate } from '@tumbaland/core';
 import { createOneTimePayment, listPayments } from '../controllers/paymentController';
 
 const router = Router();

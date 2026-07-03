@@ -1,21 +1,12 @@
 import express, { Request, Response } from 'express';
-import cookieParser from 'cookie-parser';
 import path from 'path';
 import authRoutes from './routes/authRoutes';
 import { healthCheck } from './controllers/healthController';
-import { errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware, createCorsMiddleware, securityHeaders, standardRateLimiter } from '@tumbaland/core';
+import { errorHandler, createBaseApp, metricsHandler } from '@tumbaland/core';
 
-const app = express();
-
-// Middleware
-app.use(securityHeaders);
-app.use(standardRateLimiter);
-app.use(correlationMiddleware);
-app.use(tracingMiddleware);
-app.use(requestLoggerWithMetrics);
-app.use(express.json());
-app.use(cookieParser());
-app.use(createCorsMiddleware({ exposedHeaders: ['Content-Type', 'Content-Length', 'ETag', 'Cache-Control'] }));
+const app = createBaseApp({
+  corsOptions: { exposedHeaders: ['Content-Type', 'Content-Length', 'ETag', 'Cache-Control'] }
+});
 
 // Serve static documentation files
 app.use('/api/docs', express.static(path.join(__dirname, '../docs')));

@@ -8,7 +8,7 @@ import Album from '../models/Album';
  */
 export const createPhoto = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
+    const user = req.user!;
     const album = await Album.findById(req.body.albumId);
 
     const photo = await photoService.createPhoto(req.body, user.id, album?.groupId);
@@ -143,7 +143,12 @@ export const deletePhoto = async (req: Request, res: Response): Promise<void> =>
 export const getUploadSignedUrlRequest = async (req: Request, res: Response): Promise<void> => {
   try {
     const { filename, mimetype, albumId } = req.body;
-    const userId = (req as any).user?.id;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'Access token required' });
+      return;
+    }
 
     if (!filename || !mimetype || !albumId) {
       res.status(400).json({

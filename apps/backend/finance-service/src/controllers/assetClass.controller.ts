@@ -6,8 +6,8 @@ import * as assetClassService from '../services/assetClass.service';
  */
 export const getAssetClasses = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const { groupId } = req.query;
 
     let assetClasses;
@@ -45,7 +45,7 @@ export const getAssetClasses = async (req: Request, res: Response): Promise<void
  */
 export const createAssetClass = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
+    const user = req.user!;
 
     const assetClassData = {
       ...req.body,
@@ -74,8 +74,8 @@ export const createAssetClass = async (req: Request, res: Response): Promise<voi
  */
 export const updateAssetClass = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const { id } = req.params;
 
     const updated = await assetClassService.updateAssetClass(id as string, req.body, user.id, userGroups);
@@ -113,8 +113,8 @@ export const updateAssetClass = async (req: Request, res: Response): Promise<voi
  */
 export const deleteAssetClass = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const { id } = req.params;
 
     await assetClassService.deleteAssetClass(id as string, user.id, userGroups);

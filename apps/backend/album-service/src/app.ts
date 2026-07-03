@@ -1,24 +1,13 @@
 import express from 'express';
-import cookieParser from 'cookie-parser';
 import path from 'path';
 import albumRoutes from './routes/albumRoutes';
 import photoRoutes from './routes/photoRoutes';
 import statisticsRoutes from './routes/statisticsRoutes';
 import collageRoutes from './collage/collageRoutes';
 import { healthCheck } from './controllers/healthController';
-import { errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware, createCorsMiddleware, securityHeaders, standardRateLimiter } from '@tumbaland/core';
+import { errorHandler, createBaseApp, metricsHandler } from '@tumbaland/core';
 
-const app = express();
-
-// Middleware
-app.use(securityHeaders);
-app.use(standardRateLimiter);
-app.use(correlationMiddleware);
-app.use(tracingMiddleware);
-app.use(requestLoggerWithMetrics);
-app.use(createCorsMiddleware());
-app.use(express.json());
-app.use(cookieParser());
+const app = createBaseApp();
 
 // Routes
 app.use('/api/albums', albumRoutes);

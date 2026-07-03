@@ -26,7 +26,7 @@ describe('GET /api/subscriptions/me', () => {
     const res = await request(app).get('/api/subscriptions/me');
 
     expect(res.status).toBe(401);
-    expect(res.body).toEqual({ success: false, message: 'token required' });
+    expect(res.body).toEqual({ success: false, message: 'Access token required' });
   });
 });
 

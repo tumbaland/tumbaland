@@ -6,8 +6,8 @@ import * as assetAllocationService from '../services/assetAllocation.service';
  */
 export const getAssetAllocations = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const { groupId } = req.query;
 
     let allocations;
@@ -45,7 +45,7 @@ export const getAssetAllocations = async (req: Request, res: Response): Promise<
  */
 export const createAssetAllocation = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
+    const user = req.user!;
 
     const allocationData = {
       ...req.body,
@@ -74,8 +74,8 @@ export const createAssetAllocation = async (req: Request, res: Response): Promis
  */
 export const updateAssetAllocation = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const { id } = req.params;
 
     const updated = await assetAllocationService.updateAssetAllocation(id as string, req.body, user.id, userGroups);
@@ -113,8 +113,8 @@ export const updateAssetAllocation = async (req: Request, res: Response): Promis
  */
 export const deleteAssetAllocation = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const { id } = req.params;
 
     await assetAllocationService.deleteAssetAllocation(id as string, user.id, userGroups);

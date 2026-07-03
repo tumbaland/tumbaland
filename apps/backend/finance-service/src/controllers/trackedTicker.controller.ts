@@ -36,8 +36,8 @@ export const searchTrackedTickers = async (req: Request, res: Response): Promise
  */
 export const getTrackedTickers = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const { groupId } = req.query;
 
     let tickers;
@@ -75,8 +75,8 @@ export const getTrackedTickers = async (req: Request, res: Response): Promise<vo
  */
 export const addTrackedTicker = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
 
     const created = await createTrackedTicker(req.body, user.id, userGroups);
 
@@ -105,8 +105,8 @@ export const addTrackedTicker = async (req: Request, res: Response): Promise<voi
  */
 export const editTrackedTicker = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const { id } = req.params;
 
     const updated = await updateTrackedTicker(id as string, req.body, user.id, userGroups);
@@ -139,8 +139,8 @@ export const editTrackedTicker = async (req: Request, res: Response): Promise<vo
  */
 export const removeTrackedTicker = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const { id } = req.params;
 
     await deleteTrackedTicker(id as string, user.id, userGroups);

@@ -1,17 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { requireEnv } from '../config/env';
-
-export interface UserPayload {
-  id: string;
-  email: string;
-  name: string;
-  picture?: string;
-}
+import { UserPayload } from '../types/auth';
 
 /**
  * JWT authentication middleware
- * Verifies JWT token and attaches user info to request
+ * Verifies JWT token and attaches user info (and its embedded groups) to
+ * the request — typed via the global `Express.Request` augmentation in
+ * `../types/auth`, no `(req as any)` cast needed.
  */
 export function authenticateToken(req: Request, res: Response, next: NextFunction): void {
   try {
@@ -24,7 +20,8 @@ export function authenticateToken(req: Request, res: Response, next: NextFunctio
     }
 
     const user = jwt.verify(token, JWT_SECRET) as UserPayload;
-    (req as any).user = user;
+    req.user = user;
+    req.userGroups = user.groups ?? [];
     next();
   } catch (error) {
     res.status(401).json({ success: false, message: 'Invalid or expired token' });

@@ -14,8 +14,8 @@ import {
 export const getStatistics = async (req: Request, res: Response): Promise<void> => {
   try {
     const { timeframe, groupId } = req.query;
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
 
     const validTimeframes = ['week', 'month', 'quarter', 'year', 'all'];
     const selectedTimeframe = (timeframe as string) || 'all';
@@ -58,8 +58,8 @@ export const getStatistics = async (req: Request, res: Response): Promise<void> 
 export const getMonthlyHoursData = async (req: Request, res: Response): Promise<void> => {
   try {
     const { year, groupId } = req.query;
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const selectedYear = year ? parseInt(year as string) : undefined;
 
     if (year && (isNaN(selectedYear!) || selectedYear! < 2000 || selectedYear! > new Date().getFullYear() + 1)) {
@@ -100,8 +100,8 @@ export const getMonthlyHoursData = async (req: Request, res: Response): Promise<
 export const getMonthlyStatisticsData = async (req: Request, res: Response): Promise<void> => {
   try {
     const { year, groupId } = req.query;
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const selectedYear = year ? parseInt(year as string) : undefined;
 
     if (year && (isNaN(selectedYear!) || selectedYear! < 2000 || selectedYear! > new Date().getFullYear() + 1)) {
@@ -142,8 +142,8 @@ export const getMonthlyStatisticsData = async (req: Request, res: Response): Pro
 export const getMonthlyActivityBreakdownData = async (req: Request, res: Response): Promise<void> => {
   try {
     const { year, groupId } = req.query;
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const selectedYear = year ? parseInt(year as string) : undefined;
 
     if (year && (isNaN(selectedYear!) || selectedYear! < 2000 || selectedYear! > new Date().getFullYear() + 1)) {
@@ -184,8 +184,8 @@ export const getMonthlyActivityBreakdownData = async (req: Request, res: Respons
 export const getWeeklyHeatmapDataController = async (req: Request, res: Response): Promise<void> => {
   try {
     const { year, groupId } = req.query;
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const selectedYear = year ? parseInt(year as string) : undefined;
 
     if (year && (isNaN(selectedYear!) || selectedYear! < 2000 || selectedYear! > new Date().getFullYear() + 1)) {
@@ -226,8 +226,8 @@ export const getWeeklyHeatmapDataController = async (req: Request, res: Response
 export const getCumulativeTimelineDataController = async (req: Request, res: Response): Promise<void> => {
   try {
     const { year, groupId } = req.query;
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const selectedYear = year ? parseInt(year as string) : undefined;
 
     if (year && (isNaN(selectedYear!) || selectedYear! < 2000 || selectedYear! > new Date().getFullYear() + 1)) {

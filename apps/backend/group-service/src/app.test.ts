@@ -27,3 +27,32 @@ describe('GET /api/groups', () => {
     expect(res.body).toEqual({ success: false, message: 'Access token required' });
   });
 });
+
+describe('internal service token bypass', () => {
+  beforeAll(() => {
+    process.env.INTERNAL_SERVICE_TOKEN = 'test-internal-token';
+  });
+
+  it('bypasses the JWT check for requests carrying a valid x-internal-token', async () => {
+    const res = await request(app)
+      .post('/api/groups')
+      .set('x-internal-token', 'test-internal-token')
+      .send({ name: 'Test Group' });
+
+    // Not rejected by the outer JWT check — it reaches the internal-service-aware
+    // controller logic instead (which then 400s because no email was supplied).
+    expect(res.body.message).not.toBe('Access token required');
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ success: false, message: 'User email required' });
+  });
+
+  it('rejects an internal token that does not match INTERNAL_SERVICE_TOKEN', async () => {
+    const res = await request(app)
+      .post('/api/groups')
+      .set('x-internal-token', 'wrong-token')
+      .send({ name: 'Test Group' });
+
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({ success: false, message: 'Invalid internal service token' });
+  });
+});

@@ -1,35 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { requireEnv } from '@tumbaland/core';
+import { authenticateToken as coreAuthenticateToken } from '@tumbaland/core';
 
-export interface UserPayload {
-  id: string;
-  email: string;
-  name: string;
-  picture?: string;
-}
-
+/**
+ * Wraps the shared JWT check with a bypass for internal service-to-service
+ * calls (identified by the x-internal-token header) — those aren't a user
+ * JWT at all, and are authenticated separately by validateInternalServiceToken
+ * in internalServiceAuth.ts, mounted downstream in groupRoutes.ts.
+ */
 export function authenticateToken(req: Request, res: Response, next: NextFunction): void {
-  try {
-    // Check for internal service token first
-    const internalToken = req.headers['x-internal-token'] as string;
-    if (internalToken) {
-      // Skip user auth for internal service requests - let internal service middleware handle it
-      return next();
-    }
-
-    const JWT_SECRET = requireEnv('JWT_SECRET');
-    const token = (req as any).cookies?.access_token || req.headers.authorization?.replace('Bearer ', '');
-
-    if (!token) {
-      res.status(401).json({ success: false, message: 'Access token required' });
-      return;
-    }
-    const user = jwt.verify(token, JWT_SECRET) as UserPayload;
-
-    (req as any).user = user;
+  if (req.headers['x-internal-token']) {
     next();
-  } catch (error) {
-    res.status(401).json({ success: false, message: 'Invalid or expired token' });
+    return;
   }
+  coreAuthenticateToken(req, res, next);
 }

@@ -6,7 +6,7 @@ import * as ActivityTypeService from '../services/activityType.service';
  */
 export const createActivityType = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
+    const user = req.user!;
     const typeData: any = {
       ...req.body,
       userId: user.id
@@ -46,8 +46,8 @@ export const createActivityType = async (req: Request, res: Response): Promise<v
 export const getActivityTypes = async (req: Request, res: Response): Promise<void> => {
   try {
     const { isActive, limit, page, groupId } = req.query;
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
 
     const filters: any = {};
 
@@ -178,7 +178,7 @@ export const deleteActivityType = async (req: Request, res: Response): Promise<v
  */
 export const reorderActivityTypes = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
+    const user = req.user!;
     const { typeIds, groupId } = req.body;
 
     if (!Array.isArray(typeIds)) {

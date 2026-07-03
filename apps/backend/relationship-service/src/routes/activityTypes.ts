@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { authenticateToken } from '@tumbaland/core';
 import {
   createActivityType,
   getActivityTypes,
@@ -7,14 +8,11 @@ import {
   deleteActivityType,
   reorderActivityTypes
 } from '../controllers/activityType.controller';
-import { authenticateToken } from '../middleware/authMiddleware';
-import { attachUserGroups } from '../middleware/userGroupsMiddleware';
 
 const router = Router();
 
-// Apply authentication and group middleware to all routes
+// Authentication also populates req.userGroups from the JWT.
 router.use(authenticateToken);
-router.use(attachUserGroups);
 
 // CRUD routes
 router.post('/', createActivityType);

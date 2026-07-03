@@ -6,7 +6,7 @@ import albumService from '../services/albumService';
  */
 export const createAlbum = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
+    const user = req.user!;
     const { name, description, isPublic, tags, groupId } = req.body;
 
     const album = await albumService.createAlbum(
@@ -34,8 +34,8 @@ export const createAlbum = async (req: Request, res: Response): Promise<void> =>
  */
 export const getAlbums = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const groupServiceError = (req as any).groupServiceError;
     const { page, limit, search, isPublic, groupId, includeCover } = req.query;
 
@@ -76,8 +76,8 @@ export const getAlbums = async (req: Request, res: Response): Promise<void> => {
  */
 export const getAlbumById = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const { id } = req.params;
 
     const album = await albumService.getAlbumById(id as string, {
@@ -105,8 +105,8 @@ export const getAlbumById = async (req: Request, res: Response): Promise<void> =
  */
 export const updateAlbum = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const { id } = req.params;
     const { name, description, isPublic, tags, coverPhotoId, groupId } = req.body;
 

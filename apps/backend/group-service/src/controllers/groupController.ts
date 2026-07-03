@@ -41,7 +41,7 @@ const invalidateUserTokens = async (userEmails: string[]): Promise<void> => {
     return req.body?.userEmail || req.query?.userEmail || req.params?.userEmail;
   }
   // For user requests, extract from authenticated user
-  return ((req as any).user?.email || '').toLowerCase();
+  return (req.user?.email || '').toLowerCase();
 };
 
 export const createGroup = async (req: InternalServiceRequest, res: Response) => {

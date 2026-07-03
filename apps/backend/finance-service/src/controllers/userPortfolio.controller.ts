@@ -11,8 +11,8 @@ import {
  */
 export const getUserPortfolios = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const { groupId } = req.query;
 
     let portfolios;
@@ -50,8 +50,8 @@ export const getUserPortfolios = async (req: Request, res: Response): Promise<vo
  */
 export const addUserPortfolio = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
 
     const created = await createUserPortfolio(req.body, user.id, userGroups);
 
@@ -80,8 +80,8 @@ export const addUserPortfolio = async (req: Request, res: Response): Promise<voi
  */
 export const editUserPortfolio = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const { id } = req.params;
 
     const updated = await updateUserPortfolio(id as string, req.body, user.id, userGroups);
@@ -114,8 +114,8 @@ export const editUserPortfolio = async (req: Request, res: Response): Promise<vo
  */
 export const removeUserPortfolio = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const { id } = req.params;
 
     await deleteUserPortfolio(id as string, user.id, userGroups);

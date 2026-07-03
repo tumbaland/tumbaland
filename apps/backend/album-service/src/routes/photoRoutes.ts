@@ -1,4 +1,5 @@
 import express from 'express';
+import { authenticateToken } from '@tumbaland/core';
 import {
   createPhoto,
   getPhotosByAlbum,
@@ -10,7 +11,6 @@ import {
   getPhotosForAIAnalysis,
   getPhotoByFileId
 } from '../controllers/photoController';
-import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = express.Router();
 

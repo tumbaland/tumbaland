@@ -10,7 +10,7 @@ import { ensureEventStore } from '../services/webhookEventStore';
 export const createCheckoutSession = (req: Request, res: Response): void => {
   (async () => {
     ensureStripe();
-    const email = (req as any).user.email;
+    const email = req.user!.email;
     const { planCode, successUrl, cancelUrl } = req.body;
     if (!planCode) { res.status(400).json({ success: false, message: 'planCode required' }); return; }
     if (!process.env.PAYMENT_URL && !successUrl) {

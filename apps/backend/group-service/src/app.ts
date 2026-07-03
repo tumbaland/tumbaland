@@ -1,20 +1,11 @@
 import express from 'express';
-import cookieParser from 'cookie-parser';
 import path from 'path';
 import { authenticateToken } from './middleware/authMiddleware';
 import groupRoutes from './routes/groupRoutes';
 import { healthCheck } from './controllers/healthController';
-import { errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware, createCorsMiddleware, securityHeaders, standardRateLimiter } from '@tumbaland/core';
+import { errorHandler, createBaseApp, metricsHandler } from '@tumbaland/core';
 
-const app = express();
-app.use(securityHeaders);
-app.use(standardRateLimiter);
-app.use(correlationMiddleware);
-app.use(tracingMiddleware);
-app.use(requestLoggerWithMetrics);
-app.use(createCorsMiddleware());
-app.use(express.json()); // Add body parser middleware
-app.use(cookieParser());
+const app = createBaseApp();
 
 // Health check endpoint
 app.get('/health', healthCheck);

@@ -5,81 +5,188 @@ on:
     branches: [main]
   pull_request:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  lint-typecheck-build:
+  changes:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      workspaces: ${{ steps.set-matrix.outputs.workspaces }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Detect changed workspaces
-        id: changes
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE="${{ github.event.pull_request.base.sha }}"
-          else
-            BASE="${{ github.event.before }}"
-          fi
-
-          # Fall back to a full run when the base commit is unavailable
-          # (first push of a branch, force push, zero SHA).
-          if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
-            echo "Base commit unavailable — running on all workspaces"
-            echo "all=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          CHANGED=$(git diff --name-only "$BASE" HEAD)
-          echo "Changed files:"
-          echo "$CHANGED"
-
-          # Shared code or tooling affects every workspace.
-          if echo "$CHANGED" | grep -qE '^(libs/|eslint\.config\.mjs|package\.json|package-lock\.json|\.github/workflows/ci\.yml)'; then
-            echo "Shared code/tooling changed — running on all workspaces"
-            echo "all=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          WORKSPACES=$(echo "$CHANGED" | grep -oE '^apps/(backend|frontend)/[^/]+' | sort -u | tr '\n' ' ')
-          echo "Changed workspaces: ${WORKSPACES:-none}"
-          echo "all=false" >> "$GITHUB_OUTPUT"
-          echo "workspaces=$WORKSPACES" >> "$GITHUB_OUTPUT"
-
-      - uses: actions/setup-node@v4
-        if: steps.changes.outputs.all == 'true' || steps.changes.outputs.workspaces != ''
+        uses: dorny/paths-filter@v3
+        id: filter
         with:
-          node-version: 26
-          cache: npm
+          filters: |
+            shared: &shared
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/ci.yml'
+              - 'eslint.config.mjs'
+            libs-changed: &libs-changed
+              - 'libs/**'
+            apps/backend/album-service:
+              - *shared
+              - *libs-changed
+              - 'apps/backend/album-service/**'
+            apps/backend/auth-service:
+              - *shared
+              - *libs-changed
+              - 'apps/backend/auth-service/**'
+            apps/backend/file-service:
+              - *shared
+              - *libs-changed
+              - 'apps/backend/file-service/**'
+            apps/backend/finance-service:
+              - *shared
+              - *libs-changed
+              - 'apps/backend/finance-service/**'
+            apps/backend/group-service:
+              - *shared
+              - *libs-changed
+              - 'apps/backend/group-service/**'
+            apps/backend/payment-service:
+              - *shared
+              - *libs-changed
+              - 'apps/backend/payment-service/**'
+            apps/backend/public-service:
+              - *shared
+              - *libs-changed
+              - 'apps/backend/public-service/**'
+            apps/backend/relationship-service:
+              - *shared
+              - *libs-changed
+              - 'apps/backend/relationship-service/**'
+            apps/frontend/account-front:
+              - *shared
+              - *libs-changed
+              - 'apps/frontend/account-front/**'
+            apps/frontend/album-front:
+              - *shared
+              - *libs-changed
+              - 'apps/frontend/album-front/**'
+            apps/frontend/auth-front:
+              - *shared
+              - *libs-changed
+              - 'apps/frontend/auth-front/**'
+            apps/frontend/finance-front:
+              - *shared
+              - *libs-changed
+              - 'apps/frontend/finance-front/**'
+            apps/frontend/group-front:
+              - *shared
+              - *libs-changed
+              - 'apps/frontend/group-front/**'
+            apps/frontend/payment-front:
+              - *shared
+              - *libs-changed
+              - 'apps/frontend/payment-front/**'
+            apps/frontend/relationship-front:
+              - *shared
+              - *libs-changed
+              - 'apps/frontend/relationship-front/**'
+            apps/frontend/shell-front:
+              - *shared
+              - *libs-changed
+              - 'apps/frontend/shell-front/**'
+            libs/core:
+              - *shared
+              - 'libs/core/**'
+            libs/components:
+              - *shared
+              - 'libs/components/**'
+
+      - name: Build workspace matrix
+        id: set-matrix
+        run: echo "workspaces=$(echo '${{ steps.filter.outputs.changes }}' | jq -c 'map(select(. != "shared" and . != "libs-changed"))')" >> "$GITHUB_OUTPUT"
+
+  lint-typecheck:
+    needs: changes
+    if: needs.changes.outputs.workspaces != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace: ${{ fromJSON(needs.changes.outputs.workspaces) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 26
+        uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+          cache: 'npm'
 
       - name: Install dependencies
-        if: steps.changes.outputs.all == 'true' || steps.changes.outputs.workspaces != ''
         run: npm ci
 
       - name: Build shared libs
-        if: steps.changes.outputs.all == 'true' || steps.changes.outputs.workspaces != ''
+        if: matrix.workspace != 'libs/core' && matrix.workspace != 'libs/components'
         run: npm run build -w @tumbaland/core -w @tumbaland/components
 
-      - name: Lint, typecheck, test, build (all workspaces)
-        if: steps.changes.outputs.all == 'true'
-        run: |
-          npm run lint
-          npm run typecheck
-          npm run test --workspaces --if-present
-          npm run build --workspaces --if-present
+      - name: Lint
+        run: npm run lint --workspace=${{ matrix.workspace }}
 
-      - name: Lint, typecheck, test, build (changed workspaces)
-        if: steps.changes.outputs.all != 'true' && steps.changes.outputs.workspaces != ''
-        run: |
-          for ws in ${{ steps.changes.outputs.workspaces }}; do
-            echo "::group::$ws"
-            npm run lint --workspace="$ws"
-            npm run typecheck --workspace="$ws"
-            npm run test --workspace="$ws" --if-present
-            npm run build --workspace="$ws" --if-present
-            echo "::endgroup::"
-          done
+      - name: Typecheck
+        run: npm run typecheck --workspace=${{ matrix.workspace }}
 
-      - name: No workspace changes
-        if: steps.changes.outputs.all != 'true' && steps.changes.outputs.workspaces == ''
-        run: echo "No workspace code changed — skipping lint/typecheck/test/build."
+  test:
+    needs: changes
+    if: needs.changes.outputs.workspaces != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace: ${{ fromJSON(needs.changes.outputs.workspaces) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 26
+        uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared libs
+        if: matrix.workspace != 'libs/core' && matrix.workspace != 'libs/components'
+        run: npm run build -w @tumbaland/core -w @tumbaland/components
+
+      - name: Test
+        run: npm run test --workspace=${{ matrix.workspace }} --if-present
+
+  build:
+    needs: changes
+    if: needs.changes.outputs.workspaces != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace: ${{ fromJSON(needs.changes.outputs.workspaces) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 26
+        uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared libs
+        if: matrix.workspace != 'libs/core' && matrix.workspace != 'libs/components'
+        run: npm run build -w @tumbaland/core -w @tumbaland/components
+
+      - name: Build
+        run: npm run build --workspace=${{ matrix.workspace }} --if-present

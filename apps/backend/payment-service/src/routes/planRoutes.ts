@@ -1,6 +1,6 @@
 import { Router } from 'express';
+import { authenticateToken as authenticate } from '@tumbaland/core';
 import { listPlans, createPlan, createPlansBulk, updatePlanStripePrices } from '../controllers/planController';
-import { authenticate } from '../middleware/authMiddleware';
 import { requireAdmin } from '../middleware/adminMiddleware';
 
 const router = Router();

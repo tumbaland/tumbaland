@@ -6,8 +6,8 @@ import * as collageService from './collage.service';
  */
 export const createCollage = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
 
     const collage = await collageService.createCollage(req.body, user.id, userGroups);
     res.status(201).json({
@@ -35,8 +35,8 @@ export const createCollage = async (req: Request, res: Response): Promise<void> 
  */
 export const updateCollage = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const { id } = req.params;
 
     const collage = await collageService.updateCollage(id as string, req.body, user.id, userGroups);
@@ -65,8 +65,8 @@ export const updateCollage = async (req: Request, res: Response): Promise<void> 
  */
 export const getCollageById = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const { id } = req.params;
 
     const result = await collageService.getCollageWithPhotos(id as string, user.id, userGroups);
@@ -98,8 +98,8 @@ export const getCollageById = async (req: Request, res: Response): Promise<void>
  */
 export const getCollageList = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const { albumId, groupId } = req.query;
 
     const collages = await collageService.getCollageList(
@@ -128,8 +128,8 @@ export const getCollageList = async (req: Request, res: Response): Promise<void>
  */
 export const deleteCollage = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const { id } = req.params;
 
     await collageService.deleteCollage(id as string, user.id, userGroups);

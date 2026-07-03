@@ -4,7 +4,7 @@ import { ensureStripe, stripe } from '../services/stripeService';
 
 export const getMySubscription = (req: Request, res: Response): void => {
   (async () => {
-    const email = (req as any).user.email;
+    const email = req.user!.email;
     const subs = await Subscription.find({ userEmail: email, status: { $in: ['active', 'past_due', 'incomplete'] } }).populate('plan');
     if (!subs.length) { res.json({ success: true, subscription: null }); return; }
     const statusRank: Record<string, number> = { active: 3, past_due: 2, incomplete: 1 };
@@ -24,7 +24,7 @@ export const getMySubscription = (req: Request, res: Response): void => {
 // List all subscriptions (including canceled) for the authenticated user
 export const listMySubscriptions = (req: Request, res: Response): void => {
   (async () => {
-    const email = (req as any).user.email;
+    const email = req.user!.email;
     const subs = await Subscription.find({ userEmail: email }).sort({ createdAt: -1 }).populate('plan');
     res.json({ success: true, subscriptions: subs });
   })().catch(err => { console.error('listMySubscriptions error', err); res.status(500).json({ success: false, message: 'internal error' }); });
@@ -32,7 +32,7 @@ export const listMySubscriptions = (req: Request, res: Response): void => {
 
 export const cancelSubscription = (req: Request, res: Response): void => {
   (async () => {
-    const email = (req as any).user.email;
+    const email = req.user!.email;
     // Allow cancel for active, past_due, incomplete (user may want to abort a pending checkout)
     const sub = await Subscription.findOne({ userEmail: email, status: { $in: ['active','past_due','incomplete'] } });
     if (!sub) { res.status(404).json({ success: false, message: 'no cancellable subscription' }); return; }

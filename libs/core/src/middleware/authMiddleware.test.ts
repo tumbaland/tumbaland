@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import { authenticateToken, UserPayload } from './authMiddleware';
+import { authenticateToken } from './authMiddleware';
+import { UserPayload } from '../types/auth';
 
 function mockReq(overrides: Partial<Request> = {}): Request {
   return { cookies: {}, headers: {}, ...overrides } as unknown as Request;
@@ -36,7 +37,27 @@ describe('authenticateToken', () => {
     authenticateToken(req, res, next);
 
     expect(next).toHaveBeenCalledTimes(1);
-    expect((req as any).user).toMatchObject({ id: '1', email: 'user@example.com' });
+    expect(req.user).toMatchObject({ id: '1', email: 'user@example.com' });
+  });
+
+  it('attaches an empty userGroups array when the token has no groups claim', () => {
+    const token = jwt.sign(payload, 'test-secret');
+    const req = mockReq({ cookies: { access_token: token } });
+    const res = mockRes();
+
+    authenticateToken(req, res, next);
+
+    expect(req.userGroups).toEqual([]);
+  });
+
+  it('attaches userGroups from the token when present', () => {
+    const token = jwt.sign({ ...payload, groups: ['group-1', 'group-2'] }, 'test-secret');
+    const req = mockReq({ cookies: { access_token: token } });
+    const res = mockRes();
+
+    authenticateToken(req, res, next);
+
+    expect(req.userGroups).toEqual(['group-1', 'group-2']);
   });
 
   it('accepts a Bearer token from the Authorization header', () => {

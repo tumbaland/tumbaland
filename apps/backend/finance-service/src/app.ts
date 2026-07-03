@@ -1,5 +1,4 @@
 import express from 'express';
-import cookieParser from 'cookie-parser';
 import path from 'path';
 import assetClassesRoutes from './routes/assetClasses';
 import assetAllocationsRoutes from './routes/assetAllocations';
@@ -8,19 +7,9 @@ import trackedSymbolsRoutes from './routes/trackedTicker';
 import userPortfolioRoutes from './routes/userPortfolio';
 import dashboardRoutes from './routes/dashboard';
 import { healthCheck } from './controllers/healthController';
-import { errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware, createCorsMiddleware, securityHeaders, standardRateLimiter } from '@tumbaland/core';
+import { errorHandler, createBaseApp, metricsHandler } from '@tumbaland/core';
 
-const app = express();
-
-// Middleware
-app.use(securityHeaders);
-app.use(standardRateLimiter);
-app.use(correlationMiddleware);
-app.use(tracingMiddleware);
-app.use(requestLoggerWithMetrics);
-app.use(express.json()); // Parse JSON request bodies
-app.use(cookieParser());
-app.use(createCorsMiddleware());
+const app = createBaseApp();
 
 // Routes
 app.use('/api/asset-classes', assetClassesRoutes);

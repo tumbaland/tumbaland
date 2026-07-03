@@ -1,5 +1,9 @@
 // @tumbaland/core - Core shared functionality for Tumbaland backend services
 
+// App bootstrap
+export { createBaseApp } from './app/createBaseApp';
+export type { CreateBaseAppOptions } from './app/createBaseApp';
+
 // Logging
 export { default as logger } from './logging/logger';
 

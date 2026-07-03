@@ -1,25 +1,10 @@
 import express, { Request, Response } from 'express';
-import {
-  errorHandler,
-  correlationMiddleware,
-  requestLoggerWithMetrics,
-  metricsHandler,
-  tracingMiddleware,
-  createCorsMiddleware,
-  securityHeaders,
-  standardRateLimiter
-} from '@tumbaland/core';
+import { errorHandler, createBaseApp, metricsHandler } from '@tumbaland/core';
 import routes from './routes/routes';
 
-const app = express();
-
-// Middleware
-app.use(securityHeaders);
-app.use(standardRateLimiter);
-app.use(correlationMiddleware);
-app.use(tracingMiddleware);
-app.use(requestLoggerWithMetrics);
-app.use(createCorsMiddleware());
+// No cookies (API key / signed URL auth only) and no blanket JSON parsing —
+// upload routes stream raw binary and parse conditionally below.
+const app = createBaseApp({ parseJson: false, parseCookies: false });
 
 // Raw body parser for file uploads – do NOT use express.json() before file routes.
 // We handle raw streams manually in controllers, so only parse JSON where needed.

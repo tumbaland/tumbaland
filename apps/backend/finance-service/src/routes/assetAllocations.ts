@@ -1,11 +1,11 @@
 import { Router } from 'express';
+import { authenticateToken } from '@tumbaland/core';
 import {
   getAssetAllocations,
   createAssetAllocation,
   deleteAssetAllocation,
   updateAssetAllocation
 } from '../controllers/assetAllocation.controller';
-import { authenticateToken } from '../middleware/authMiddleware';
 
 const router = Router();
 

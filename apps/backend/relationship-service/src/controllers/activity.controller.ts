@@ -7,7 +7,7 @@ import { IActivity } from '../models/Activity';
  */
 export const createActivity = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
+    const user = req.user!;
     const activityData: Partial<IActivity> = {
       ...req.body,
       userId: user.id
@@ -38,7 +38,7 @@ export const createActivity = async (req: Request, res: Response): Promise<void>
       isActive: true,
       $or: [
         { userId: user.id },
-        { groupId: { $in: (req as any).userGroups || [] } }
+        { groupId: { $in: req.userGroups || [] } }
       ]
     });
 
@@ -79,8 +79,8 @@ export const createActivity = async (req: Request, res: Response): Promise<void>
 export const getActivities = async (req: Request, res: Response): Promise<void> => {
   try {
     const { activityType, startDate, endDate, description, limit, page, sortBy, sortOrder, groupId } = req.query;
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
 
     const filters: any = {};
     if (activityType) filters.activityType = activityType as string;
@@ -269,8 +269,8 @@ export const getActivitiesByDateRange = async (req: Request, res: Response): Pro
 export const getRecentActivities = async (req: Request, res: Response): Promise<void> => {
   try {
     const { limit } = req.query;
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const limitNum = limit ? parseInt(limit as string) : 10;
 
     const filters = {
@@ -301,8 +301,8 @@ export const getRecentActivities = async (req: Request, res: Response): Promise<
  */
 export const getActivityTypes = async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
     const { groupId } = req.query;
 
     const types = await ActivityService.getActivityTypes(user.id, groupId as string, userGroups);
@@ -325,8 +325,8 @@ export const getActivityTypes = async (req: Request, res: Response): Promise<voi
 export const getRecentActivitiesSummary = async (req: Request, res: Response): Promise<void> => {
   try {
     const { groupId } = req.query;
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
 
     const activityTypes = await ActivityService.getActivityTypes(user.id, groupId as string, userGroups);
     const categories = activityTypes.map((type: any) => type.slug);
@@ -391,8 +391,8 @@ export const getRecentActivitiesSummary = async (req: Request, res: Response): P
 export const getActivityDescriptions = async (req: Request, res: Response): Promise<void> => {
   try {
     const { typeId, groupId } = req.query;
-    const user = (req as any).user;
-    const userGroups = (req as any).userGroups || [];
+    const user = req.user!;
+    const userGroups = req.userGroups || [];
 
     if (!typeId) {
       res.status(400).json({ success: false, message: 'typeId is required' });
