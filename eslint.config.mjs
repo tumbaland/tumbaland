@@ -50,7 +50,7 @@ export default tseslint.config(
 
   // Vite config files run in Node
   {
-    files: ['**/vite.config.ts', '**/.storybook/**/*.ts'],
+    files: ['**/vite.config.ts', '**/vite.config.mts', '**/.storybook/**/*.ts'],
     languageOptions: {
       globals: { ...globals.node },
     },

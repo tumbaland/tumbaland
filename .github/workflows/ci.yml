@@ -60,24 +60,26 @@ jobs:
         if: steps.changes.outputs.all == 'true' || steps.changes.outputs.workspaces != ''
         run: npm run build -w @tumbaland/core -w @tumbaland/components
 
-      - name: Lint, typecheck, build (all workspaces)
+      - name: Lint, typecheck, test, build (all workspaces)
         if: steps.changes.outputs.all == 'true'
         run: |
           npm run lint
           npm run typecheck
+          npm run test --workspaces --if-present
           npm run build --workspaces --if-present
 
-      - name: Lint, typecheck, build (changed workspaces)
+      - name: Lint, typecheck, test, build (changed workspaces)
         if: steps.changes.outputs.all != 'true' && steps.changes.outputs.workspaces != ''
         run: |
           for ws in ${{ steps.changes.outputs.workspaces }}; do
             echo "::group::$ws"
             npm run lint --workspace="$ws"
             npm run typecheck --workspace="$ws"
+            npm run test --workspace="$ws" --if-present
             npm run build --workspace="$ws" --if-present
             echo "::endgroup::"
           done
 
       - name: No workspace changes
         if: steps.changes.outputs.all != 'true' && steps.changes.outputs.workspaces == ''
-        run: echo "No workspace code changed — skipping lint/typecheck/build."
+        run: echo "No workspace code changed — skipping lint/typecheck/test/build."

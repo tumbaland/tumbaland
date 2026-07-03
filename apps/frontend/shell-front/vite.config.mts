@@ -1,10 +1,13 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 
+// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [react()],
-  server: { port: 3005 },
+  server: {
+    port: 3000
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
@@ -18,5 +21,10 @@ export default defineConfig(({ mode }) => ({
     target: 'esnext',
     minify: false,
     cssCodeSplit: false
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test/setup.ts']
   }
 }));

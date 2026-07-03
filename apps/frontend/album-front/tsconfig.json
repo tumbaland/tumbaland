@@ -16,7 +16,7 @@
 
     /* Path mapping for shared components */
     "baseUrl": ".",
-    "types": ["node"],
+    "types": ["node", "vitest/globals"],
     "ignoreDeprecations": "6.0",
     "paths": {
       "@tumbaland/components": ["../../../libs/components/src/index.ts"],
@@ -31,5 +31,6 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src"],
+  "exclude": ["src/test", "src/**/*.test.ts", "src/**/*.test.tsx"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
