@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 import App from './App';
 import { ConfigProvider } from './config/ConfigProvider';
+import { authService } from './services/authService';
 
 describe('App', () => {
   it('renders the account page once the user is authenticated', async () => {
@@ -20,6 +21,7 @@ describe('App', () => {
   });
 
   it('shows the unauthorized page when the user is not authenticated', async () => {
+    authService.clearAuthCache();
     vi.mocked(global.fetch).mockImplementation(async (input) => {
       const href = typeof input === 'string' ? input : input.toString();
       if (href.includes('/auth/verify')) {

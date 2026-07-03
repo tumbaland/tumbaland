@@ -30,7 +30,7 @@ export default tseslint.config(
 
   // Frontends + component library (browser, React)
   {
-    files: ['apps/frontend/**/*.{ts,tsx}', 'libs/components/**/*.{ts,tsx}'],
+    files: ['apps/frontend/**/*.{ts,tsx}', 'libs/components/**/*.{ts,tsx}', 'libs/frontend-core/**/*.ts'],
     languageOptions: {
       globals: { ...globals.browser },
     },

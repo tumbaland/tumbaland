@@ -12,14 +12,15 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
-    "react-router-dom": "^7.18.1",
-    "@mui/material": "^9.1.2",
-    "@mui/icons-material": "^9.1.1",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
-    "@tumbaland/components": "*"
+    "@mui/icons-material": "^9.1.1",
+    "@mui/material": "^9.1.2",
+    "@tumbaland/components": "*",
+    "@tumbaland/frontend-core": "*",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-router-dom": "^7.18.1"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",

@@ -1,0 +1,28 @@
+{
+  "name": "@tumbaland/frontend-core",
+  "version": "1.0.0",
+  "description": "Shared frontend auth/group/API-client logic for Tumbaland frontends",
+  "author": "Tumbaland",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "release": "standard-version && npm run build && npm publish --access public",
+    "release:beta": "standard-version --prerelease beta && npm run build && npm publish --access public --tag beta",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tumbaland/components": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "standard-version": "^9.5.0",
+    "typescript": "^6.0.3"
+  }
+}

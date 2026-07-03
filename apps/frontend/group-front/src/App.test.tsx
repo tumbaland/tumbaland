@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 import App from './App';
+import { authService } from './services/authService';
 
 // group-front's App component wraps itself in ConfigProvider, so no
 // external wrapping is needed here (unlike the other fronts).
@@ -17,6 +18,7 @@ describe('App', () => {
   });
 
   it('shows the unauthorized page when the user is not authenticated', async () => {
+    authService.clearAuthCache();
     vi.mocked(global.fetch).mockImplementation(async (input) => {
       const href = typeof input === 'string' ? input : input.toString();
       if (href.includes('/auth/verify')) {
