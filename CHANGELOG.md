@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.357](https://github.com/toomastahves/tumbaland/compare/v0.0.356...v0.0.357) (2026-07-03)
+
+
+### Features
+
+* use error handlers ([e3165cb](https://github.com/toomastahves/tumbaland/commit/e3165cb899fa67579756dbe55ef7f57455a79aa5))
+
 ### [0.0.356](https://github.com/toomastahves/tumbaland/compare/v0.0.355...v0.0.356) (2026-07-03)
 
 
