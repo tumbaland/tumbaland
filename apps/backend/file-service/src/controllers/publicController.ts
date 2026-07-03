@@ -36,36 +36,30 @@ export const downloadPublic = (req: Request, res: Response): void => {
   const fileId = [req.params.fileId].flat().join('/');
 
   if (!fileExists(fileId)) {
-    res.status(404).json({ success: false, message: 'File not found' });
-    return;
+    throw new NotFoundError('File not found');
   }
 
-  try {
-    const buffer = readFile(fileId);
-    const meta = getMetadata(fileId);
+  const buffer = readFile(fileId);
+  const meta = getMetadata(fileId);
 
-    // Attempt a basic content-type guess from extension
-    const ext = fileId.split('.').pop()?.toLowerCase() ?? '';
-    const mimeMap: Record<string, string> = {
-      jpg: 'image/jpeg',
-      jpeg: 'image/jpeg',
-      png: 'image/png',
-      gif: 'image/gif',
-      webp: 'image/webp',
-      mp4: 'video/mp4',
-      mov: 'video/quicktime',
-      avi: 'video/x-msvideo',
-      mkv: 'video/x-matroska',
-      pdf: 'application/pdf'
-    };
-    const contentType = mimeMap[ext] ?? 'application/octet-stream';
+  // Attempt a basic content-type guess from extension
+  const ext = fileId.split('.').pop()?.toLowerCase() ?? '';
+  const mimeMap: Record<string, string> = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    gif: 'image/gif',
+    webp: 'image/webp',
+    mp4: 'video/mp4',
+    mov: 'video/quicktime',
+    avi: 'video/x-msvideo',
+    mkv: 'video/x-matroska',
+    pdf: 'application/pdf'
+  };
+  const contentType = mimeMap[ext] ?? 'application/octet-stream';
 
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Content-Length', meta.size);
-    res.setHeader('Cache-Control', 'private, max-age=3600');
-    res.send(buffer);
-  } catch (err) {
-    logger.error(`Public download failed for ${fileId}:`, err);
-    res.status(500).json({ success: false, message: 'Download failed' });
-  }
+  res.setHeader('Content-Type', contentType);
+  res.setHeader('Content-Length', meta.size);
+  res.setHeader('Cache-Control', 'private, max-age=3600');
+  res.send(buffer);
 };

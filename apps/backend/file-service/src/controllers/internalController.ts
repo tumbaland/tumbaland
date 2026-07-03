@@ -8,7 +8,7 @@ import {
   getMetadata,
   listFiles
 } from '../utils/storage';
-import { logger } from '@tumbaland/core';
+import { logger, BadRequestError, NotFoundError } from '@tumbaland/core';
 
 /**
  * PUT /internal/files/:fileId
@@ -44,19 +44,13 @@ export const internalDownload = (req: Request, res: Response): void => {
   const fileId = [req.params.fileId].flat().join('/');
 
   if (!fileExists(fileId)) {
-    res.status(404).json({ success: false, message: 'File not found' });
-    return;
+    throw new NotFoundError('File not found');
   }
 
-  try {
-    const buffer = readFile(fileId);
-    res.setHeader('Content-Length', buffer.length);
-    res.setHeader('Content-Type', 'application/octet-stream');
-    res.send(buffer);
-  } catch (err) {
-    logger.error(`Internal download failed for ${fileId}:`, err);
-    res.status(500).json({ success: false, message: 'Download failed' });
-  }
+  const buffer = readFile(fileId);
+  res.setHeader('Content-Length', buffer.length);
+  res.setHeader('Content-Type', 'application/octet-stream');
+  res.send(buffer);
 };
 
 /**
@@ -80,17 +74,11 @@ export const internalMetadata = (req: Request, res: Response): void => {
   const fileId = [req.params.fileId].flat().join('/');
 
   if (!fileExists(fileId)) {
-    res.status(404).json({ success: false, message: 'File not found' });
-    return;
+    throw new NotFoundError('File not found');
   }
 
-  try {
-    const meta = getMetadata(fileId);
-    res.json({ success: true, data: meta });
-  } catch (err) {
-    logger.error(`Metadata failed for ${fileId}:`, err);
-    res.status(500).json({ success: false, message: 'Failed to get metadata' });
-  }
+  const meta = getMetadata(fileId);
+  res.json({ success: true, data: meta });
 };
 
 /**
@@ -99,13 +87,8 @@ export const internalMetadata = (req: Request, res: Response): void => {
  */
 export const internalDelete = (req: Request, res: Response): void => {
   const fileId = [req.params.fileId].flat().join('/');
-  try {
-    deleteFile(fileId);
-    res.json({ success: true, message: 'File deleted' });
-  } catch (err) {
-    logger.error(`Delete failed for ${fileId}:`, err);
-    res.status(500).json({ success: false, message: 'Delete failed' });
-  }
+  deleteFile(fileId);
+  res.json({ success: true, message: 'File deleted' });
 };
 
 /**
@@ -117,17 +100,11 @@ export const internalDeleteFolder = (req: Request, res: Response): void => {
   const { prefix } = req.body as { prefix?: string };
 
   if (!prefix) {
-    res.status(400).json({ success: false, message: 'prefix is required' });
-    return;
+    throw new BadRequestError('prefix is required');
   }
 
-  try {
-    const count = deleteByPrefix(prefix);
-    res.json({ success: true, message: `Deleted ${count} file(s)`, count });
-  } catch (err) {
-    logger.error(`Folder delete failed for prefix ${prefix}:`, err);
-    res.status(500).json({ success: false, message: 'Folder delete failed' });
-  }
+  const count = deleteByPrefix(prefix);
+  res.json({ success: true, message: `Deleted ${count} file(s)`, count });
 };
 
 /**
@@ -136,11 +113,6 @@ export const internalDeleteFolder = (req: Request, res: Response): void => {
  */
 export const internalList = (req: Request, res: Response): void => {
   const { prefix, maxKeys } = req.query as { prefix?: string; maxKeys?: string };
-  try {
-    const files = listFiles(prefix, maxKeys ? parseInt(maxKeys, 10) : 1000);
-    res.json({ success: true, data: files });
-  } catch (err) {
-    logger.error('List files failed:', err);
-    res.status(500).json({ success: false, message: 'List files failed' });
-  }
+  const files = listFiles(prefix, maxKeys ? parseInt(maxKeys, 10) : 1000);
+  res.json({ success: true, data: files });
 };

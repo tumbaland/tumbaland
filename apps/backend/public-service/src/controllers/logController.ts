@@ -12,50 +12,38 @@ import { logger } from '@tumbaland/core';
  * Supports both single log entries and arrays of log entries for batch processing
  */
 export const submitLogs = async (req: Request, res: Response) => {
-  try {
-    const logData = req.body;
+  const logData = req.body;
 
-    // Handle both single log entries and arrays of log entries
-    const logEntries = Array.isArray(logData) ? logData : [logData];
-    let processedCount = 0;
+  // Handle both single log entries and arrays of log entries
+  const logEntries = Array.isArray(logData) ? logData : [logData];
+  let processedCount = 0;
 
-    // Process each log entry
-    for (const entry of logEntries) {
-      // Add service identification for frontend logs
-      const logEntry = {
-        ...entry,
-        forwarded_by: 'public-service',
-        source: entry.service || 'unknown-frontend',
-        source_type: 'frontend_request',
-        ingestion_method: 'api_endpoint',
-        timestamp: entry.timestamp || new Date().toISOString(),
-        // Ensure required fields for Logstash processing
-        service: entry.service || 'unknown-frontend',
-        component: 'frontend',
-        level: entry.level || 'info'
-      };
+  // Process each log entry
+  for (const entry of logEntries) {
+    // Add service identification for frontend logs
+    const logEntry = {
+      ...entry,
+      forwarded_by: 'public-service',
+      source: entry.service || 'unknown-frontend',
+      source_type: 'frontend_request',
+      ingestion_method: 'api_endpoint',
+      timestamp: entry.timestamp || new Date().toISOString(),
+      // Ensure required fields for Logstash processing
+      service: entry.service || 'unknown-frontend',
+      component: 'frontend',
+      level: entry.level || 'info'
+    };
 
-      // Write to stdout (will be picked up by Filebeat)
-      console.log(JSON.stringify(logEntry));
-      processedCount++;
-    }
-
-    res.status(200).json({
-      status: 'logged',
-      count: processedCount,
-      message: `Successfully processed ${processedCount} log entries`
-    });
-  } catch (error) {
-    logger.error('Error processing frontend log submission', {
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      body: req.body
-    });
-    res.status(500).json({
-      error: 'Failed to process log submission',
-      message: 'An error occurred while processing the log entries'
-    });
+    // Write to stdout (will be picked up by Filebeat)
+    console.log(JSON.stringify(logEntry));
+    processedCount++;
   }
+
+  res.status(200).json({
+    status: 'logged',
+    count: processedCount,
+    message: `Successfully processed ${processedCount} log entries`
+  });
 };
 
 /**

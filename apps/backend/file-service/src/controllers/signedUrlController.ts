@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { BadRequestError } from '@tumbaland/core';
 import { signToken } from '../utils/hmac';
 
 const FILE_SERVICE_PUBLIC_URL = (): string =>
@@ -20,8 +21,7 @@ export const generateUploadUrl = (req: Request, res: Response): void => {
   };
 
   if (!fileId) {
-    res.status(400).json({ success: false, message: 'fileId is required' });
-    return;
+    throw new BadRequestError('fileId is required');
   }
 
   const expiresMs = Date.now() + expiresInMinutes * 60 * 1000;
@@ -51,8 +51,7 @@ export const generateDownloadUrl = (req: Request, res: Response): void => {
   };
 
   if (!fileId) {
-    res.status(400).json({ success: false, message: 'fileId is required' });
-    return;
+    throw new BadRequestError('fileId is required');
   }
 
   const expiresMs = Date.now() + expiresInMinutes * 60 * 1000;
