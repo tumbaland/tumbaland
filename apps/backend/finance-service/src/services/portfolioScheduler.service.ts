@@ -1,4 +1,5 @@
 import cron from 'node-cron';
+import { logger } from '@tumbaland/core';
 import TrackedTicker from '../models/TrackedTicker';
 import { fetchAndSaveAllStockHistory } from './alphaVantage.service';
 
@@ -17,17 +18,17 @@ export function startDailyPortfolioUpdate() {
 
     try {
       const trackedTickers = await TrackedTicker.find({ isActive: true });
-      console.log(`Daily price update starting for ${trackedTickers.length} tickers`);
+      logger.info('Daily price update starting', { tickerCount: trackedTickers.length });
 
       for (let i = 0; i < trackedTickers.length; i++) {
         const ticker = trackedTickers[i].ticker;
 
         try {
           const saved = await fetchAndSaveAllStockHistory(ticker);
-          console.log(`Updated ${ticker}: ${saved} records upserted`);
+          logger.info('Updated ticker', { ticker, recordsUpserted: saved });
           updated++;
         } catch (tickerErr) {
-          console.error(`Failed to update ${ticker}:`, tickerErr);
+          logger.error('Failed to update ticker', { ticker, error: (tickerErr as Error)?.message });
           skipped++;
         }
 
@@ -37,9 +38,9 @@ export function startDailyPortfolioUpdate() {
         }
       }
     } catch (err) {
-      console.error('Portfolio update job failed:', err);
+      logger.error('Portfolio update job failed', { error: (err as Error)?.message });
     }
 
-    console.log(`Daily update complete — updated: ${updated}, skipped: ${skipped}`);
+    logger.info('Daily update complete', { updated, skipped });
   });
 }

@@ -2,7 +2,6 @@ import { useEffect, useState, ReactNode } from 'react';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { Loader, ErrorPage, initMonitoring, initWebVitals } from '@tumbaland/components';
 import React from 'react';
-import { authService } from '../services/authService';
 
 export interface AppConfig {
   GROUP_API_URL?: string;
@@ -57,7 +56,6 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
         elkUrl: devConfig.PUBLIC_API_URL ? `${devConfig.PUBLIC_API_URL}/logs` : undefined
       });
       initWebVitals({ isDevelopment: true }).catch(console.error);
-      authService.init();
       return;
     }
 
@@ -73,7 +71,6 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
           elkUrl: loaded.PUBLIC_API_URL ? `${loaded.PUBLIC_API_URL}/logs` : undefined
         });
         initWebVitals({ isDevelopment: false }).catch(console.error);
-        authService.init(); 
       })
       .catch((err) => { console.error('Configuration load error:', err); setError(err.message); });
   }, []);

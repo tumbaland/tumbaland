@@ -50,19 +50,17 @@ function unwrap<T>(data: AnyApiResponse): T {
  * Core fetch helper adding auth token + credentials and improved error surface.
  */
 async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem('authToken');
-
   // Merge headers, allowing caller overrides.
   const mergedHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
     'x-correlation-id': getCorrelationId(),
     'x-session-id': getSessionId(),
-    ...(options.headers as Record<string, string> | undefined),
-    ...(token ? { Authorization: `Bearer ${token}` } : {})
+    ...(options.headers as Record<string, string> | undefined)
   };
 
   const response = await fetch(buildUrl(path), {
     ...options,
+    credentials: 'include',
     headers: mergedHeaders
   });
 

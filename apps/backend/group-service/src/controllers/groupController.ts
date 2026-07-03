@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { BadRequestError } from '@tumbaland/core';
+import { BadRequestError, logger } from '@tumbaland/core';
 import { InternalServiceRequest } from '../middleware/internalServiceAuth';
 import * as svc from '../services/groupService';
 import { GroupRole } from '../models/Group';
@@ -10,14 +10,14 @@ const invalidateUserTokens = async (userEmails: string[]): Promise<void> => {
   const internalToken = process.env.INTERNAL_SERVICE_TOKEN;
 
   if (!authServiceUrl || !internalToken) {
-    console.warn('Auth service not configured for token invalidation');
+    logger.warn('Auth service not configured for token invalidation');
     return;
   }
 
   // Invalidate tokens for affected users by incrementing their token version
   for (const email of userEmails) {
     try {
-      const invalidateResponse = await fetch(`${authServiceUrl}/api/auth/internal/invalidate-tokens`, {
+      const invalidateResponse = await fetch(`${authServiceUrl}/auth/internal/invalidate-tokens`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -28,12 +28,12 @@ const invalidateUserTokens = async (userEmails: string[]): Promise<void> => {
       });
 
       if (invalidateResponse.ok) {
-        console.log(`Successfully invalidated tokens for user: ${email}`);
+        logger.info('Successfully invalidated tokens for user', { email });
       } else {
-        console.error(`Failed to invalidate tokens for ${email}: ${invalidateResponse.status}`);
+        logger.error('Failed to invalidate tokens for user', { email, status: invalidateResponse.status });
       }
     } catch (error) {
-      console.error(`Failed to invalidate tokens for ${email}:`, error);
+      logger.error('Failed to invalidate tokens for user', { email, error: (error as Error)?.message });
     }
   }
 };

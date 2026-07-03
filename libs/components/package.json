@@ -1,6 +1,6 @@
 {
   "name": "@tumbaland/components",
-  "version": "1.12.2",
+  "version": "1.12.3",
   "author": "Tumbaland",
   "license": "MIT",
   "main": "dist/index.js",
@@ -14,6 +14,7 @@
     "release:beta": "standard-version --prerelease beta && npm run build && npm publish --access public --tag beta",
     "storybook:dev": "storybook dev -p 7000",
     "storybook:prod": "storybook build",
+    "test": "vitest run",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
@@ -24,7 +25,8 @@
   },
   "peerDependencies": {
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.18.1"
   },
   "devDependencies": {
     "@esbuild/linux-x64": "^0.28.1",
@@ -33,7 +35,11 @@
     "@storybook/addon-onboarding": "^10.4.6",
     "@storybook/react": "^10.4.6",
     "@storybook/react-vite": "^10.4.6",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
     "@types/node": "^26.1.0",
+    "@vitejs/plugin-react": "^6.0.3",
     "standard-version": "^9.5.0",
     "storybook": "^10.4.6",
     "typescript": "^6.0.3"

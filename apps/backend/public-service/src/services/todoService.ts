@@ -1,5 +1,6 @@
 import path from 'path';
 import fs from 'fs';
+import { logger } from '@tumbaland/core';
 
 const todosPath = path.join(__dirname, '../data/todos.json');
 let todos: string[] = [];
@@ -9,7 +10,7 @@ export function loadTodos() {
     const data = fs.readFileSync(todosPath, 'utf-8');
     todos = JSON.parse(data);
   } catch (err) {
-    console.error('Failed to load todos.json:', err);
+    logger.error('Failed to load todos.json', { error: (err as Error)?.message });
     todos = [];
   }
 }

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { BadRequestError, NotFoundError } from '@tumbaland/core';
+import { BadRequestError, logger, NotFoundError } from '@tumbaland/core';
 import { stripe, ensureStripe } from '../services/stripeService';
 import { Plan } from '../models/Plan';
 import { Subscription } from '../models/Subscription';
@@ -57,9 +57,9 @@ export const createCheckoutSession = async (req: Request, res: Response): Promis
   });
   const fallbackUrl = (!session.url && session.id?.startsWith('cs_')) ? `https://checkout.stripe.com/c/${session.id}` : session.url;
   if (!fallbackUrl) {
-    console.warn('[checkout-session] Missing session.url', { sessionId: session.id, planCode: plan.code });
+    logger.warn('[checkout-session] Missing session.url', { sessionId: session.id, planCode: plan.code });
   } else {
-    console.log('[checkout-session] Created session', { sessionId: session.id, hasUrl: !!session.url });
+    logger.info('[checkout-session] Created session', { sessionId: session.id, hasUrl: !!session.url });
   }
   res.status(201).json({ success: true, sessionId: session.id, url: fallbackUrl });
 };
@@ -77,7 +77,8 @@ export const stripeWebhook = async (req: Request, res: Response): Promise<void> 
     }
     event = stripe.webhooks.constructEvent(raw, sig, process.env.STRIPE_WEBHOOK_SECRET!);
   } catch (err: any) {
-    console.error('Webhook signature verification failed', err.message, {
+    logger.error('Webhook signature verification failed', {
+      error: err.message,
       debug: process.env.DEBUG_STRIPE_WEBHOOK === '1',
       hasRaw: Buffer.isBuffer((req as any).body),
       bodyType: typeof (req as any).body,
@@ -95,7 +96,7 @@ export const stripeWebhook = async (req: Request, res: Response): Promise<void> 
     return;
   }
   store.add(event.id);
-  console.log('[stripe] event', event.id, event.type, 'apiVersion', event.api_version);
+  logger.info('[stripe] event', { eventId: event.id, type: event.type, apiVersion: event.api_version });
 
   switch (event.type) {
     case 'checkout.session.completed': {
@@ -172,7 +173,7 @@ export const getCheckoutSessionStatus = async (req: Request, res: Response): Pro
     subscriptionDoc = await Subscription.findById(subscriptionId);
     // Auto-heal: if session paid/complete but local sub stuck incomplete, activate.
     if (subscriptionDoc && subscriptionDoc.status === 'incomplete' && session.status === 'complete' && session.payment_status === 'paid') {
-      console.log('[auto-heal] Activating subscription', { subscriptionId: subscriptionDoc.id, sessionId: session.id });
+      logger.info('[auto-heal] Activating subscription', { subscriptionId: subscriptionDoc.id, sessionId: session.id });
       subscriptionDoc.status = 'active';
       subscriptionDoc.stripeSubscriptionId = (session.subscription as any)?.id || subscriptionDoc.stripeSubscriptionId;
       subscriptionDoc.stripeCustomerId = (session.customer as string) || subscriptionDoc.stripeCustomerId;
@@ -237,7 +238,7 @@ async function ensureSubscriptionPayment(sub: any, source: any, origin: string, 
       }
     });
   } catch (err) {
-    console.error('[ensureSubscriptionPayment] error', err);
+    logger.error('[ensureSubscriptionPayment] error', { error: (err as Error)?.message });
   }
 }
 
@@ -256,12 +257,12 @@ async function deactivateLowerPricedSubs(primary: any) {
           other.status = 'canceled';
           other.canceledAt = new Date();
           await other.save();
-          console.log('[deactivateLowerPricedSubs] canceled lower plan', { otherId: other.id, otherPlan: other.planCode, primaryPlan: primary.planCode });
+          logger.info('[deactivateLowerPricedSubs] canceled lower plan', { otherId: other.id, otherPlan: other.planCode, primaryPlan: primary.planCode });
         }
       }
     }
   } catch (err) {
-    console.error('[deactivateLowerPricedSubs] error', err);
+    logger.error('[deactivateLowerPricedSubs] error', { error: (err as Error)?.message });
   }
 }
 
@@ -281,16 +282,16 @@ async function deactivateHigherPricedSubs(primary: any) {
             ensureStripe();
             await stripe.subscriptions.cancel(other.stripeSubscriptionId);
           } catch (e:any) {
-            console.warn('[deactivateHigherPricedSubs] stripe cancel failed', { subId: other.id, err: e?.message });
+            logger.warn('[deactivateHigherPricedSubs] stripe cancel failed', { subId: other.id, err: e?.message });
           }
         }
         other.status = 'canceled';
         other.canceledAt = new Date();
         await other.save();
-        console.log('[deactivateHigherPricedSubs] canceled higher-priced sub', { otherId: other.id, otherPlan: other.planCode, primaryPlan: primary.planCode });
+        logger.info('[deactivateHigherPricedSubs] canceled higher-priced sub', { otherId: other.id, otherPlan: other.planCode, primaryPlan: primary.planCode });
       }
     }
   } catch (err) {
-    console.error('[deactivateHigherPricedSubs] error', err);
+    logger.error('[deactivateHigherPricedSubs] error', { error: (err as Error)?.message });
   }
 }

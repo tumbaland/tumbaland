@@ -1,48 +1,46 @@
 import mongoose from 'mongoose';
+import logger from '../logging/logger';
 
-/**
- * Connect to MongoDB with proper error handling and logging
- */
-export const connectDB = async (): Promise<void> => {
+let connected = false;
+
+export const connectDB = async (serviceName?: string, uri?: string): Promise<void> => {
+  if (connected) return;
+
+  const mongoUri = uri || process.env.MONGODB_URI;
+  if (!mongoUri) {
+    throw new Error('MONGODB_URI environment variable is not set');
+  }
+
   try {
-    const mongoUri = process.env.MONGODB_URI;
-
-    if (!mongoUri) {
-      throw new Error('MONGODB_URI environment variable is not set');
-    }
-
     await mongoose.connect(mongoUri);
+    connected = true;
 
-    console.log('✅ MongoDB connected successfully');
+    logger.info('MongoDB connected', { service: serviceName });
 
-    // Handle connection events
     mongoose.connection.on('error', (err: Error) => {
-      console.error('❌ MongoDB connection error:', err);
+      logger.error('MongoDB connection error', { service: serviceName, error: err.message });
     });
 
     mongoose.connection.on('disconnected', () => {
-      console.log('📡 MongoDB disconnected');
+      logger.warn('MongoDB disconnected', { service: serviceName });
     });
 
     mongoose.connection.on('reconnected', () => {
-      console.log('🔄 MongoDB reconnected');
+      logger.info('MongoDB reconnected', { service: serviceName });
     });
-
   } catch (error) {
-    console.error('❌ Failed to connect to MongoDB:', error);
+    logger.error('Failed to connect to MongoDB', { service: serviceName, error: (error as Error).message });
     throw error;
   }
 };
 
-/**
- * Close MongoDB connection gracefully
- */
-export const disconnectDB = async (): Promise<void> => {
+export const disconnectDB = async (serviceName?: string): Promise<void> => {
   try {
     await mongoose.connection.close();
-    console.log('👋 MongoDB connection closed');
+    connected = false;
+    logger.info('MongoDB connection closed', { service: serviceName });
   } catch (error) {
-    console.error('❌ Error closing MongoDB connection:', error);
+    logger.error('Error closing MongoDB connection', { service: serviceName, error: (error as Error).message });
     throw error;
   }
 };

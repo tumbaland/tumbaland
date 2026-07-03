@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { NotFoundError } from '@tumbaland/core';
+import { logger, NotFoundError } from '@tumbaland/core';
 import { Subscription } from '../models/Subscription';
 import { ensureStripe, stripe } from '../services/stripeService';
 
@@ -32,7 +32,7 @@ export const cancelSubscription = async (req: Request, res: Response): Promise<v
   // Allow cancel for active, past_due, incomplete (user may want to abort a pending checkout)
   const sub = await Subscription.findOne({ userEmail: email, status: { $in: ['active','past_due','incomplete'] } });
   if (!sub) { throw new NotFoundError('No cancellable subscription'); }
-  console.log('[cancelSubscription] Found subscription', { id: sub.id, status: sub.status, stripeSub: sub.stripeSubscriptionId, planCode: sub.planCode });
+  logger.info('[cancelSubscription] Found subscription', { id: sub.id, status: sub.status, stripeSub: sub.stripeSubscriptionId, planCode: sub.planCode });
 
   // If we have a Stripe subscription id and status is active/past_due, request cancel at period end
   if (sub.stripeSubscriptionId && ['active','past_due'].includes(sub.status)) {
@@ -49,16 +49,16 @@ export const cancelSubscription = async (req: Request, res: Response): Promise<v
       sub.status = 'canceled';
       sub.canceledAt = new Date();
       await sub.save();
-      console.log('[cancelSubscription] Marked canceled with Stripe', { id: sub.id, cancelAt: sub.cancelAt });
+      logger.info('[cancelSubscription] Marked canceled with Stripe', { id: sub.id, cancelAt: sub.cancelAt });
       res.json({ success: true, subscription: sub, stripe: { id: updated.id, cancel_at_period_end: (updated as any).cancel_at_period_end } });
       return;
     } catch (e:any) {
-      console.error('Stripe cancel error', e?.message || e);
+      logger.error('Stripe cancel error', { error: e?.message || e });
       // Fallback: mark canceled locally anyway
       sub.status = 'canceled';
       sub.canceledAt = new Date();
       await sub.save();
-      console.log('[cancelSubscription] Fallback local cancel only', { id: sub.id });
+      logger.info('[cancelSubscription] Fallback local cancel only', { id: sub.id });
       res.status(202).json({ success: true, subscription: sub, warning: 'stripe_cancel_failed_local_only' });
       return;
     }
@@ -67,6 +67,6 @@ export const cancelSubscription = async (req: Request, res: Response): Promise<v
   sub.status = 'canceled';
   sub.canceledAt = new Date();
   await sub.save();
-  console.log('[cancelSubscription] Canceled locally (no stripe sub)', { id: sub.id });
+  logger.info('[cancelSubscription] Canceled locally (no stripe sub)', { id: sub.id });
   res.json({ success: true, subscription: sub });
 };

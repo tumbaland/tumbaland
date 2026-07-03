@@ -1,40 +1,20 @@
 import { getGlobalConfig } from './ConfigProvider';
 import { getCorrelationId, getSessionId } from '@tumbaland/components';
 
-// Helper to read JWT token from cookie
-function getJwtTokenFromCookie(cookieName = 'access_token'): string | null {
-  const match = document.cookie.match(new RegExp('(^| )' + cookieName + '=([^;]+)'));
-  return match ? match[2] : null;
-}
-
-// Sync JWT token from cookie to localStorage
-function syncJwtToken(): void {
-  const token = getJwtTokenFromCookie();
-  if (token && localStorage.getItem('authToken') !== token) {
-    localStorage.setItem('authToken', token);
-  }
-}
-
-// Initialize token sync
-syncJwtToken();
-
 // Base fetch wrapper with auth handling
 export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
   const appConfig = getGlobalConfig();
-  const token = localStorage.getItem('authToken');
 
   const requestConfig: RequestInit = {
     ...options,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       'x-correlation-id': getCorrelationId(),
       'x-session-id': getSessionId(),
-      ...options.headers,
-      ...(token && { Authorization: `Bearer ${token}` })
+      ...options.headers
     }
   };
-
-  console.log(token ? 'Adding Authorization header' : 'No auth token found in localStorage');
 
   const response = await fetch(`${appConfig.RELATIONSHIP_API_URL}/api${endpoint}`, requestConfig);
 

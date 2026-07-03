@@ -102,6 +102,10 @@ jobs:
             libs/components:
               - *shared
               - 'libs/components/**'
+            libs/frontend-core:
+              - *shared
+              - 'libs/frontend-core/**'
+              - 'libs/components/**'
 
       - name: Build workspace matrix
         id: set-matrix

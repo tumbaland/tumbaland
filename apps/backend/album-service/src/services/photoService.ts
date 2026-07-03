@@ -1,6 +1,6 @@
 import Photo from '../models/Photo';
 import Album from '../models/Album';
-import { ConflictError, NotFoundError } from '@tumbaland/core';
+import { ConflictError, logger, NotFoundError } from '@tumbaland/core';
 import {
   deleteFile,
   getPhotoSignedUrl,
@@ -176,7 +176,7 @@ class PhotoService {
     try {
       signedUrlMap = await getPhotoSignedUrlsBatch(photos, false, 60);
     } catch (error) {
-      console.error('Failed to fetch batch signed URLs for album photos:', error);
+      logger.error('Failed to fetch batch signed URLs for album photos', { error: (error as Error)?.message });
     }
 
     // Get thumbnail URLs for photos that have thumbnails
@@ -187,7 +187,7 @@ class PhotoService {
       try {
         thumbnailSignedUrlMap = await getPhotoSignedUrlsBatch(photosWithThumbnails, true, 60);
       } catch (error) {
-        console.error('Failed to fetch batch signed URLs for thumbnails:', error);
+        logger.error('Failed to fetch batch signed URLs for thumbnails', { error: (error as Error)?.message });
       }
     }
 
@@ -270,7 +270,7 @@ class PhotoService {
         await deleteFile(photo.minioThumbnailFileId);
       }
     } catch (error) {
-      console.error(`Failed to delete files for photo ${photoId}:`, error);
+      logger.error('Failed to delete files for photo', { photoId, error: (error as Error)?.message });
     }
 
     // Delete the photo record
@@ -343,9 +343,9 @@ class PhotoService {
           minioThumbnailFileId: thumbnailResult.thumbnailFileId
         });
 
-        console.log(`Thumbnail generated successfully for photo ${photoId}`);
+        logger.info('Thumbnail generated successfully', { photoId });
       } catch (error) {
-        console.error('Failed to generate thumbnail:', error);
+        logger.error('Failed to generate thumbnail', { error: (error as Error)?.message });
       }
     });
   }
@@ -376,13 +376,13 @@ class PhotoService {
             result.thumbnailSignedUrlExpiresInMinutes = thumbnailSignedUrlData.expiresInMinutes;
           }
         } catch (error) {
-          console.error('Failed to get thumbnail signed URL:', error);
+          logger.error('Failed to get thumbnail signed URL', { error: (error as Error)?.message });
         }
       }
 
       return result;
     } catch (error) {
-      console.error('Failed to get signed URL:', error);
+      logger.error('Failed to get signed URL', { error: (error as Error)?.message });
       return photo.toObject();
     }
   }

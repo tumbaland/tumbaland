@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { logger } from '@tumbaland/core';
 import healthService from '../services/healthService';
 
 /**
@@ -10,7 +11,7 @@ export const healthCheck = async (req: Request, res: Response): Promise<void> =>
     const statusCode = healthService.getHealthStatusCode(health);
     res.status(statusCode).json(health);
   } catch (error) {
-    console.error('Health check error:', error);
+    logger.error('Health check error', { error: (error as Error)?.message });
     res.status(503).json({
       status: 'error',
       service: 'album-service',

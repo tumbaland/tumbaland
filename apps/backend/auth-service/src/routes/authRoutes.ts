@@ -3,6 +3,7 @@ import { strictRateLimiter, validate, NotFoundError } from '@tumbaland/core';
 import { validateToken, logout, verifyAuth, refreshToken, invalidateUserTokens } from '../controllers/authController';
 import { getProfile, updateProfile } from '../controllers/profileController';
 import { authenticateToken, requireRole, requireApproved } from '../middleware/authMiddleware';
+import { requireInternalService } from '../middleware/internalServiceAuth';
 import { User } from '../models/User';
 import { validateTokenSchema, invalidateTokensSchema, updateProfileSchema, approveUserSchema } from '../validation/schemas';
 
@@ -25,8 +26,8 @@ router.put('/profile', authenticateToken, requireApproved, validate(updateProfil
 // Verify route now fully protected
 router.get('/verify', authenticateToken, requireApproved, verifyAuth);
 
-// Internal service endpoints for token management
-router.post('/internal/invalidate-tokens', validate(invalidateTokensSchema), invalidateUserTokens);
+// Internal service endpoints for token management — service-to-service only, never user-facing.
+router.post('/internal/invalidate-tokens', requireInternalService, validate(invalidateTokensSchema), invalidateUserTokens);
 
 // Admin utilities (manual authorization): mark user approved
 router.post(

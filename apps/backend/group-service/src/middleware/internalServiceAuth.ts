@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { logger } from '@tumbaland/core';
 
 export interface InternalServiceRequest extends Request {
   isInternalService?: boolean;
@@ -23,7 +24,7 @@ export const validateInternalServiceToken = (
     const expectedToken = process.env.INTERNAL_SERVICE_TOKEN;
     
     if (!expectedToken) {
-      console.error('INTERNAL_SERVICE_TOKEN not configured');
+      logger.error('INTERNAL_SERVICE_TOKEN not configured');
       return res.status(500).json({
         success: false,
         message: 'Internal service authentication not configured'
@@ -31,7 +32,7 @@ export const validateInternalServiceToken = (
     }
 
     if (internalToken !== expectedToken) {
-      console.error(`Invalid internal service token from ${serviceId || 'unknown service'}`);
+      logger.error('Invalid internal service token', { serviceId: serviceId || 'unknown service' });
       return res.status(401).json({
         success: false,
         message: 'Invalid internal service token'
@@ -42,7 +43,7 @@ export const validateInternalServiceToken = (
     req.isInternalService = true;
     req.serviceIdentifier = serviceId || 'unknown';
     
-    console.log(`✅ Internal service authenticated: ${req.serviceIdentifier}`);
+    logger.info('Internal service authenticated', { serviceIdentifier: req.serviceIdentifier });
     return next();
   }
 

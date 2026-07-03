@@ -15,11 +15,11 @@
     "isolatedModules": true,
     "noEmit": false,
     "jsx": "react-jsx",
-    "types": ["node"],
+    "types": ["node", "vitest/globals"],
     "declaration": true,
     "outDir": "dist",
     "rootDir": "src"
   },
   "include": ["src"],
-  "exclude": ["src/**/*.stories.tsx", "node_modules", "dist"],
+  "exclude": ["src/**/*.stories.tsx", "src/**/*.test.tsx", "node_modules", "dist"],
 }

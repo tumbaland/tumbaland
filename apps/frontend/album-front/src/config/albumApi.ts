@@ -4,20 +4,17 @@ import { getCorrelationId, getSessionId } from '@tumbaland/components';
 // Base fetch wrapper with auth handling
 export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
   const appConfig = getGlobalConfig();
-  const token = localStorage.getItem('authToken');
 
   const requestConfig: RequestInit = {
     ...options,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       'x-correlation-id': getCorrelationId(),
       'x-session-id': getSessionId(),
-      ...options.headers,
-      ...(token && { Authorization: `Bearer ${token}` })
+      ...options.headers
     }
   };
-
-  console.log(token ? 'Adding Authorization header' : 'No auth token found in localStorage');
 
   const response = await fetch(`${appConfig.ALBUM_API_URL}/api${endpoint}`, requestConfig);
 

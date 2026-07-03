@@ -59,37 +59,16 @@ const fetchGroupsGlobally = async (groupApiUrl: string): Promise<TenantOption[]>
         return [];
       }
 
-        // Get authentication token - sync from cookie first, then localStorage
-        const syncTokenFromCookie = () => {
-          const match = document.cookie.match(new RegExp('(^| )access_token=([^;]+)'));
-          const cookieToken = match ? match[2] : null;
-          if (cookieToken && localStorage.getItem('authToken') !== cookieToken) {
-            console.log('🔄 Syncing token from cookie to localStorage');
-            localStorage.setItem('authToken', cookieToken);
-          }
-          return cookieToken || localStorage.getItem('authToken');
-        };
-        
-        const authToken = syncTokenFromCookie();
-        console.log('Auth token found:', authToken ? 'Yes (length: ' + authToken.length + ')' : 'No');
-        console.log('Auth token value:', authToken ? authToken.substring(0, 20) + '...' : 'null');
-        
-        // Don't make the request if there's no valid token
-        if (!authToken || authToken.trim() === '') {
-          console.warn('⚠️ No valid authentication token found, skipping groups request');
-          return [];
-        }
-        
-        const headers = {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken.trim()}`
-        };      console.log('Request headers:', headers);
-      console.log(`Fetching groups from: ${groupApiUrl}/api/groups/mine`);
-      
-      // Use user authentication for fetching groups
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+
+      // Use user authentication for fetching groups; the httpOnly access_token
+      // cookie is attached automatically by the browser.
       const response = await fetch(`${groupApiUrl}/api/groups/mine`, {
         method: 'GET',
-        headers: headers,
+        credentials: 'include',
+        headers,
         signal: AbortSignal.timeout(5000) // 5 second timeout
       });
 

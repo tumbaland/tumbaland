@@ -1,7 +1,7 @@
 import Album from '../models/Album';
 import Photo from '../models/Photo';
 import mongoose from 'mongoose';
-import { ForbiddenError, NotFoundError } from '@tumbaland/core';
+import { ForbiddenError, logger, NotFoundError } from '@tumbaland/core';
 import {
   deleteFile,
   getPhotoSignedUrl,
@@ -335,7 +335,7 @@ class AlbumService {
           await deleteFile(photo.minioThumbnailFileId);
         }
       } catch (error) {
-        console.error(`Failed to delete file ${photo.minioFileId}:`, error);
+        logger.error('Failed to delete file', { fileId: photo.minioFileId, error: (error as Error)?.message });
       }
     }
 
@@ -401,7 +401,7 @@ class AlbumService {
         signedUrlMap = await getPhotoSignedUrlsBatch(coverPhotoDocs, false, 60);
         thumbnailSignedUrlMap = await getPhotoSignedUrlsBatch(coverPhotoDocs, true, 60);
       } catch (error) {
-        console.error('Failed to fetch batch signed URLs for cover photos:', error);
+        logger.error('Failed to fetch batch signed URLs for cover photos', { error: (error as Error)?.message });
       }
 
       coverPhotoMap = new Map(
@@ -468,7 +468,7 @@ class AlbumService {
         };
       }
     } catch (error) {
-      console.error('Failed to get cover photo signed URLs:', error);
+      logger.error('Failed to get cover photo signed URLs', { error: (error as Error)?.message });
     }
 
     return photo;

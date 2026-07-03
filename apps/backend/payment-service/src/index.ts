@@ -2,14 +2,13 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-import { logger, requireEnv } from '@tumbaland/core';
-import { connectDB } from './config/database';
+import { connectDB, logger, requireEnv } from '@tumbaland/core';
 import app from './app';
 
 // Fail fast if the JWT secret is missing — auth must never run with a default
 requireEnv('JWT_SECRET');
 
-connectDB();
+connectDB('payment-service');
 
 const PORT = process.env.PORT || 5005;
 

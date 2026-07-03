@@ -1,7 +1,13 @@
 import * as jwt from 'jsonwebtoken';
 import { requireEnv } from '@tumbaland/core';
 
-const JWT_EXPIRES_IN = '24h';
+// Kept short because tokenVersion revocation (POST /auth/internal/invalidate-tokens)
+// is only enforced by auth-service's own auth middleware — every other service just
+// verifies the JWT signature/expiry and has no way to know a token was revoked early.
+// A short expiry bounds that exposure window. The frontend re-verifies (and silently
+// re-mints a fresh cookie via /auth/verify) on a 5-minute cache, so active sessions
+// never notice; only fully idle sessions need to re-authenticate.
+const JWT_EXPIRES_IN = '30m';
 
 export interface UserPayload {
   id: string;

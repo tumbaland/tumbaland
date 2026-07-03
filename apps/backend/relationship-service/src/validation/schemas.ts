@@ -8,13 +8,15 @@ const activityDataSchema = z.object({
 export const createActivitySchema = z.object({
   date: z.coerce.date({ error: 'A valid date is required' }),
   hours: z.number().int().nonnegative().optional(),
-  activity: activityDataSchema
+  activity: activityDataSchema,
+  groupId: z.string().optional()
 });
 
 export const updateActivitySchema = z.object({
   date: z.coerce.date({ error: 'A valid date is required' }).optional(),
   hours: z.number().int().nonnegative().optional(),
-  activity: activityDataSchema.optional()
+  activity: activityDataSchema.optional(),
+  groupId: z.string().optional()
 });
 
 export const createActivityTypeSchema = z.object({

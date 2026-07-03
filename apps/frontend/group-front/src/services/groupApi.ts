@@ -6,17 +6,16 @@ export type GroupRole = GroupMember['role'];
 
 async function api<T = any>(path: string, init: RequestInit = {}): Promise<T> {
   const { GROUP_API_URL } = getGlobalConfig();
-  const token = localStorage.getItem('authToken');
 
   const mergedHeaders: Record<string, string> = {
     ...(init.headers as Record<string, string> | undefined),
     'x-correlation-id': getCorrelationId(),
-    'x-session-id': getSessionId(),
-    ...(token ? { Authorization: `Bearer ${token}` } : {})
+    'x-session-id': getSessionId()
   };
 
   const res = await fetch(`${GROUP_API_URL}${path}`, {
     ...init,
+    credentials: 'include',
     headers: mergedHeaders
   });
   if (!res.ok) {

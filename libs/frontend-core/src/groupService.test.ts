@@ -11,7 +11,6 @@ function mockFetchOnce(body: unknown, init: { ok?: boolean; statusText?: string 
 
 describe('createGroupService', () => {
   beforeEach(() => {
-    localStorage.clear();
     global.fetch = vi.fn();
   });
 
@@ -27,8 +26,7 @@ describe('createGroupService', () => {
       expect(groups).toEqual([{ _id: '1', name: 'Family' }]);
     });
 
-    it('sends the localStorage token as a Bearer header', async () => {
-      localStorage.setItem('authToken', 'my-jwt');
+    it('sends credentials:include so the httpOnly auth cookie is attached', async () => {
       mockFetchOnce({ success: true, data: [] });
       const groupService = createGroupService(config);
 
@@ -36,7 +34,7 @@ describe('createGroupService', () => {
 
       expect(global.fetch).toHaveBeenCalledWith(
         'https://groups.example/api/groups/mine',
-        expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer my-jwt' }) })
+        expect.objectContaining({ credentials: 'include' })
       );
     });
 

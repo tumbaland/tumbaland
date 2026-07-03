@@ -3,6 +3,8 @@
  * This file can be copied to other services or published as a shared package
  */
 
+import { logger } from '@tumbaland/core';
+
 export interface User {
   id: string;
   email: string;
@@ -38,7 +40,7 @@ export const checkAuth = async (authServiceUrl = 'http://localhost:5001', token?
 
     return await response.json();
   } catch (error) {
-    console.error('Auth check failed:', error);
+    logger.error('Auth check failed', { error: (error as Error)?.message });
     return {
       success: false,
       authenticated: false,
@@ -69,7 +71,7 @@ export const logout = async (authServiceUrl = 'http://localhost:5001'): Promise<
     const data = await response.json();
     return data.success;
   } catch (error) {
-    console.error('Logout failed:', error);
+    logger.error('Logout failed', { error: (error as Error)?.message });
     return false;
   }
 };
@@ -99,7 +101,7 @@ export const getUserProfile = async (
     const data = await response.json();
     return data.success ? data.user : null;
   } catch (error) {
-    console.error('Failed to get user profile:', error);
+    logger.error('Failed to get user profile', { error: (error as Error)?.message });
     return null;
   }
 };

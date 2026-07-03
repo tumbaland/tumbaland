@@ -1,6 +1,10 @@
 import request from 'supertest';
 import app from './app';
 
+beforeAll(() => {
+  process.env.INTERNAL_SERVICE_TOKEN = 'test-internal-token';
+});
+
 describe('GET /health', () => {
   it('reports unhealthy when MongoDB is not connected', async () => {
     const res = await request(app).get('/health');
@@ -41,5 +45,26 @@ describe('POST /auth/validate', () => {
       }
     }
     expect(sawTooManyRequests).toBe(true);
+  });
+});
+
+describe('POST /auth/internal/invalidate-tokens', () => {
+  it('rejects requests with no internal service token', async () => {
+    const res = await request(app)
+      .post('/auth/internal/invalidate-tokens')
+      .send({ email: 'user@example.com' });
+
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({ success: false, message: 'Invalid or missing internal service token' });
+  });
+
+  it('rejects an internal token that does not match INTERNAL_SERVICE_TOKEN', async () => {
+    const res = await request(app)
+      .post('/auth/internal/invalidate-tokens')
+      .set('x-internal-token', 'wrong-token')
+      .send({ email: 'user@example.com' });
+
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({ success: false, message: 'Invalid or missing internal service token' });
   });
 });

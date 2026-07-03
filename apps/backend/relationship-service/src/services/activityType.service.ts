@@ -1,9 +1,9 @@
-import { ConflictError } from '@tumbaland/core';
+import { ConflictError, logger } from '@tumbaland/core';
 import { ActivityType, IActivityType } from '../models/ActivityType';
 
 // Create a new activity type
 export const createActivityType = async (typeData: Partial<IActivityType>): Promise<IActivityType> => {
-  console.log('Creating activity type with data:', typeData);
+  logger.info('Creating activity type', { typeData });
 
   // Check if slug already exists
   const existingType = await ActivityType.findOne({ slug: typeData.slug });
@@ -14,7 +14,7 @@ export const createActivityType = async (typeData: Partial<IActivityType>): Prom
   const activityType = new ActivityType(typeData);
   const saved = await activityType.save();
 
-  console.log('Activity type created successfully:', saved);
+  logger.info('Activity type created successfully', { id: saved._id });
 
   return saved;
 };
@@ -69,7 +69,7 @@ export const getActivityTypes = async (
     ];
   } else {
     // No user context - this shouldn't happen in production, but return active types
-    console.warn('No userId provided to getActivityTypes - this should not happen in production');
+    logger.warn('No userId provided to getActivityTypes - this should not happen in production');
     query.isActive = true;
   }
 

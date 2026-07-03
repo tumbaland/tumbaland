@@ -21,17 +21,11 @@ export const useAuth = () => {
   });
 };
 
-// Hook to get current user (tries JWT first, falls back to API)
+// Hook to get current user
 export const useCurrentUser = () => {
   return useQuery({
     queryKey: authKeys.user(),
     queryFn: async () => {
-      // First try to get user from JWT token
-      const tokenUser = authService.getCurrentUserFromToken();
-      if (tokenUser) {
-        return tokenUser;
-      }
-      // Fall back to API call
       const authResult = await authService.checkAuth();
       return authResult.user;
     },

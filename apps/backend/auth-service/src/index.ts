@@ -3,17 +3,18 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
-import { logger, requireEnv } from '@tumbaland/core';
-import { connectDb } from './config/db';
+import { connectDB, logger, requireEnv } from '@tumbaland/core';
 import app from './app';
 
-// Fail fast if the JWT secret is missing — tokens must never be signed with a default
+// Fail fast if required secrets are missing — tokens must never be signed with a
+// default, and the internal-service endpoint must never accept an unset token.
 requireEnv('JWT_SECRET');
+requireEnv('INTERNAL_SERVICE_TOKEN');
 
 const PORT = process.env.PORT || 5001;
 
 // Connect DB then start server
-connectDb()
+connectDB('auth-service')
   .then(() => {
     app.listen(PORT, () => logger.info('Auth service started successfully', { port: PORT }));
   })

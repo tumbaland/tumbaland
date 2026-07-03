@@ -17,11 +17,6 @@ function authHeaders(): HeadersInit {
   };
 }
 
-function getJwtTokenFromCookie(cookieName = 'access_token'): string | null {
-  const match = document.cookie.match(new RegExp('(^| )' + cookieName + '=([^;]+)'));
-  return match ? match[2] : null;
-}
-
 /**
  * Builds a per-front auth service instance. Each of the 7 frontends that
  * previously hand-rolled their own (six divergent copies, per
@@ -32,32 +27,18 @@ function getJwtTokenFromCookie(cookieName = 'access_token'): string | null {
  *     getAuthServiceUrl: () => getGlobalConfig().AUTH_SERVICE_URL!,
  *     getAuthFrontUrl: () => getGlobalConfig().AUTH_FRONT_URL!
  *   });
+ *
+ * The JWT lives only in an httpOnly `access_token` cookie — it is never
+ * readable from JS (no localStorage mirror, no client-side decode). Every
+ * call here that needs the session sends `credentials: 'include'` so the
+ * browser attaches the cookie automatically; auth state is always read via
+ * the network (checkAuth/getCurrentUser), never decoded locally.
  */
 export function createAuthService(config: AuthServiceConfig) {
   let authCache: AuthResponse | null = null;
   let authCacheTime = 0;
 
-  function syncJwtToken(): void {
-    const token = getJwtTokenFromCookie();
-    if (token && localStorage.getItem('authToken') !== token) {
-      localStorage.setItem('authToken', token);
-    }
-  }
-
   return {
-    /** Sync the JWT from cookie to localStorage. Call once on app start. */
-    init(): void {
-      syncJwtToken();
-    },
-
-    getToken(): string | null {
-      return localStorage.getItem('authToken');
-    },
-
-    syncToken(): void {
-      syncJwtToken();
-    },
-
     clearAuthCache(): void {
       authCache = null;
       authCacheTime = 0;
@@ -116,7 +97,6 @@ export function createAuthService(config: AuthServiceConfig) {
 
         const data = await response.json();
         if (data.success) {
-          localStorage.removeItem('authToken');
           authCache = null;
           authCacheTime = 0;
           window.location.reload();
@@ -151,33 +131,6 @@ export function createAuthService(config: AuthServiceConfig) {
         return data.success ? data.user : null;
       } catch (error) {
         console.error('Get profile failed:', error);
-        return null;
-      }
-    },
-
-    /** Decodes the local JWT directly — no network call, but can be stale. */
-    getCurrentUserFromToken(): User | null {
-      try {
-        const token = this.getToken();
-        if (!token) return null;
-
-        const payload = token.split('.')[1];
-        if (!payload) return null;
-
-        const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
-
-        if (decoded.exp && Date.now() >= decoded.exp * 1000) {
-          return null;
-        }
-
-        return {
-          id: decoded.sub || decoded.id,
-          email: decoded.email,
-          name: decoded.name || decoded.preferred_username,
-          picture: decoded.picture
-        };
-      } catch (error) {
-        console.error('Failed to decode JWT token:', error);
         return null;
       }
     },

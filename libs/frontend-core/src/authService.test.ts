@@ -12,8 +12,6 @@ function mockFetchOnce(body: unknown, init: { ok?: boolean; status?: number } = 
 
 describe('createAuthService', () => {
   beforeEach(() => {
-    localStorage.clear();
-    document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
     global.fetch = vi.fn();
   });
 
@@ -21,25 +19,6 @@ describe('createAuthService', () => {
     getAuthServiceUrl: () => 'https://auth.example',
     getAuthFrontUrl: () => 'https://login.example'
   };
-
-  describe('init/syncToken', () => {
-    it('syncs the JWT from cookie to localStorage', () => {
-      document.cookie = 'access_token=my-jwt-token; path=/;';
-      const authService = createAuthService(config);
-
-      authService.init();
-
-      expect(authService.getToken()).toBe('my-jwt-token');
-    });
-
-    it('does nothing when there is no cookie', () => {
-      const authService = createAuthService(config);
-
-      authService.init();
-
-      expect(authService.getToken()).toBeNull();
-    });
-  });
 
   describe('checkAuth', () => {
     it('returns authenticated:true and caches the result', async () => {
@@ -107,33 +86,6 @@ describe('createAuthService', () => {
     });
   });
 
-  describe('getCurrentUserFromToken', () => {
-    it('decodes a valid, non-expired JWT from localStorage', () => {
-      const payload = { sub: '1', email: 'a@b.com', name: 'A', exp: Math.floor(Date.now() / 1000) + 3600 };
-      const token = `header.${btoa(JSON.stringify(payload))}.signature`;
-      localStorage.setItem('authToken', token);
-      const authService = createAuthService(config);
-
-      const user = authService.getCurrentUserFromToken();
-
-      expect(user).toEqual({ id: '1', email: 'a@b.com', name: 'A', picture: undefined });
-    });
-
-    it('returns null for an expired token', () => {
-      const payload = { sub: '1', email: 'a@b.com', name: 'A', exp: Math.floor(Date.now() / 1000) - 3600 };
-      const token = `header.${btoa(JSON.stringify(payload))}.signature`;
-      localStorage.setItem('authToken', token);
-      const authService = createAuthService(config);
-
-      expect(authService.getCurrentUserFromToken()).toBeNull();
-    });
-
-    it('returns null when there is no token', () => {
-      const authService = createAuthService(config);
-      expect(authService.getCurrentUserFromToken()).toBeNull();
-    });
-  });
-
   describe('isAuthenticated / getCurrentUser', () => {
     it('derive from checkAuth', async () => {
       mockFetchOnce({ success: true, authenticated: true, user: { id: '1', email: 'a@b.com', name: 'A' } });
@@ -145,8 +97,7 @@ describe('createAuthService', () => {
   });
 
   describe('logout', () => {
-    it('clears the token and cache on success', async () => {
-      localStorage.setItem('authToken', 'stale-token');
+    it('clears the auth cache and reloads on success', async () => {
       mockFetchOnce({ success: true, authenticated: true, user: null });
       const authService = createAuthService(config);
       await authService.checkAuth();
@@ -162,7 +113,10 @@ describe('createAuthService', () => {
       window.location = originalLocation;
 
       expect(result).toBe(true);
-      expect(localStorage.getItem('authToken')).toBeNull();
+
+      mockFetchOnce({ success: true, authenticated: false, user: null });
+      const afterLogout = await authService.checkAuth();
+      expect(afterLogout.authenticated).toBe(false);
     });
   });
 });

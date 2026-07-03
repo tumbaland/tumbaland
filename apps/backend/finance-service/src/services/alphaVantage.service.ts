@@ -1,4 +1,4 @@
-import { TooManyRequestsError } from '@tumbaland/core';
+import { logger, TooManyRequestsError } from '@tumbaland/core';
 import TickerPriceHistory from '../models/TickerPriceHistory';
 
 const BASE_URL = 'https://www.alphavantage.co/query';
@@ -49,7 +49,7 @@ export async function fetchStockPrice(symbol: string): Promise<StockPriceData | 
   const data = await response.json();
 
   if (isThrottled(data)) {
-    console.warn(`Alpha Vantage rate limit hit for ${symbol}: ${getThrottleMessage(data)}`);
+    logger.warn('Alpha Vantage rate limit hit', { symbol, message: getThrottleMessage(data) });
     return null;
   }
 

@@ -3,8 +3,7 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
-import { logger, requireEnv } from '@tumbaland/core';
-import { connectDB } from './config/database';
+import { connectDB, disconnectDB, logger, requireEnv } from '@tumbaland/core';
 import { startDailyPortfolioUpdate } from './services/portfolioScheduler.service';
 import app from './app';
 
@@ -12,7 +11,13 @@ import app from './app';
 requireEnv('JWT_SECRET');
 
 // Connect to MongoDB
-connectDB();
+connectDB('finance-service');
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  await disconnectDB('finance-service');
+  process.exit(0);
+});
 
 // Start daily portfolio update job
 startDailyPortfolioUpdate();

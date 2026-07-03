@@ -1,7 +1,6 @@
 import { useEffect, useState, ReactNode } from 'react';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { Loader, ErrorPage, initMonitoring, initWebVitals } from '@tumbaland/components';
-import { authService } from '../services/authService';
 import React from 'react';
 
 export interface AppConfig {
@@ -62,7 +61,6 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
       });
       
       initWebVitals({ isDevelopment: true }).catch(console.error);
-      authService.init();
       return;
     }
 
@@ -87,7 +85,6 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
         
         initWebVitals({ isDevelopment: false }).catch(console.error);
         // Initialize auth service
-        authService.init();
       })
       .catch((err) => {
         console.error('Configuration load error:', err);

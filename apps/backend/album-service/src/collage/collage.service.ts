@@ -4,7 +4,7 @@ import { canAccessResource } from '../utils/permissionUtils';
 import Album from '../models/Album';
 import { getPhotoSignedUrl } from '../services/fileServiceClient';
 import mongoose from 'mongoose';
-import { ForbiddenError, NotFoundError } from '@tumbaland/core';
+import { ForbiddenError, logger, NotFoundError } from '@tumbaland/core';
 
 export const createCollage = async (
   data: CollageInput, 
@@ -164,7 +164,7 @@ export const getCollageWithPhotos = async (
           thumbnailSignedUrlExpiresInMinutes: thumbnailSignedUrlData?.expiresInMinutes
         };
       } catch (error) {
-        console.error('Failed to get signed URLs for photo:', error);
+        logger.error('Failed to get signed URLs for photo', { error: (error as Error)?.message });
         return {
           ...photo,
           signedUrl: undefined,

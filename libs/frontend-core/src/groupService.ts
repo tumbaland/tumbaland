@@ -6,14 +6,9 @@ export interface GroupServiceConfig {
   getGroupApiUrl: () => string;
 }
 
-function getAuthToken(): string {
-  return localStorage.getItem('authToken') || '';
-}
-
 function groupHeaders(): HeadersInit {
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${getAuthToken()}`,
     'x-correlation-id': getCorrelationId(),
     'x-session-id': getSessionId()
   };
@@ -33,6 +28,7 @@ export function createGroupService(config: GroupServiceConfig) {
     async getUserGroups(): Promise<Group[]> {
       try {
         const response = await fetch(`${config.getGroupApiUrl()}/api/groups/mine`, {
+          credentials: 'include',
           headers: groupHeaders()
         });
 
@@ -56,6 +52,7 @@ export function createGroupService(config: GroupServiceConfig) {
     async getUserGroupIds(): Promise<string[]> {
       try {
         const response = await fetch(`${config.getGroupApiUrl()}/api/groups/mine/ids`, {
+          credentials: 'include',
           headers: groupHeaders()
         });
 

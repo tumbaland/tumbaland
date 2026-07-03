@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { BadRequestError, NotFoundError, UnauthorizedError } from '@tumbaland/core';
+import { BadRequestError, logger, NotFoundError, UnauthorizedError } from '@tumbaland/core';
 import { verifyGoogleToken } from '../services/googleAuthService';
 import { generateJWT, UserPayload } from '../services/jwtService';
 import { User } from '../models/User';
@@ -57,7 +57,7 @@ export const validateToken = async (req: Request, res: Response, _next: NextFunc
 
   // Set secure cookie for SSO across subdomains
   const cookieOptions = {
-    httpOnly: false,
+    httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax' as const,
     domain: process.env.COOKIE_DOMAIN || 'localhost',
@@ -70,8 +70,7 @@ export const validateToken = async (req: Request, res: Response, _next: NextFunc
   res.json({
     success: true,
     user: userPayload,
-    approved: dbUser.isApproved,
-    token: jwtToken
+    approved: dbUser.isApproved
   });
 };
 
@@ -97,7 +96,7 @@ export const invalidateUserTokens = async (req: Request, res: Response): Promise
     throw new NotFoundError('User not found');
   }
 
-  console.log(`Invalidated tokens for user: ${email} (new tokenVersion: ${user.tokenVersion})`);
+  logger.info('Invalidated tokens for user', { email, tokenVersion: user.tokenVersion });
 
   res.json({
     success: true,
@@ -132,7 +131,7 @@ const getUserGroups = async (email: string): Promise<string[]> => {
       }
     }
   } catch (error) {
-    console.warn('Failed to fetch user groups for JWT:', error);
+    logger.warn('Failed to fetch user groups for JWT', { error: (error as Error)?.message });
   }
 
   return userGroups;
@@ -161,7 +160,7 @@ export const verifyAuth = async (req: Request, res: Response): Promise<void> => 
 
   // Update cookie with fresh token
   const cookieOptions = {
-    httpOnly: false,
+    httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax' as const,
     domain: process.env.COOKIE_DOMAIN || 'localhost',
@@ -171,13 +170,12 @@ export const verifyAuth = async (req: Request, res: Response): Promise<void> => 
 
   res.cookie('access_token', newToken, cookieOptions);
 
-  console.log(`✅ Generated new token with ${userGroups.length} groups for user: ${currentUser.email}`);
+  logger.info('Generated new token for user', { email: currentUser.email, groupCount: userGroups.length });
 
   res.json({
     success: true,
     authenticated: true,
-    user: jwtPayload,
-    token: newToken
+    user: jwtPayload
   });
 };
 
@@ -205,7 +203,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
 
   // Update cookie
   const cookieOptions = {
-    httpOnly: false,
+    httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax' as const,
     domain: process.env.COOKIE_DOMAIN || 'localhost',
@@ -217,7 +215,6 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
 
   res.json({
     success: true,
-    token: newToken,
     groups: userGroups
   });
 };

@@ -3,7 +3,6 @@ import { CssBaseline } from '@mui/material';
 import { Loader, ErrorPage, initMonitoring, initWebVitals } from '@tumbaland/components';
 import HeartBrokenIcon from '@mui/icons-material/HeartBroken';
 import React from 'react';
-import { authService } from '../services/authService';
 
 export interface AppConfig {
   ALBUM_FRONT_URL?: string;
@@ -73,7 +72,6 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
         elkUrl: devConfig.PUBLIC_API_URL ? `${devConfig.PUBLIC_API_URL}/logs` : undefined
       });
       initWebVitals({ isDevelopment: true }).catch(console.error);
-      authService.init(); // Initialize auth service
       return;
     }
 
@@ -95,7 +93,6 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
           elkUrl: loadedConfig.PUBLIC_API_URL ? `${loadedConfig.PUBLIC_API_URL}/logs` : undefined
         });
         initWebVitals({ isDevelopment: false }).catch(console.error);
-        authService.init(); // Initialize auth service
       })
       .catch((err) => {
         console.error('Configuration load error:', err);

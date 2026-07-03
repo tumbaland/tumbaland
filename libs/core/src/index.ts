@@ -11,7 +11,7 @@ export { default as logger } from './logging/logger';
 export { healthCheck, metricsHandler } from './health/healthController';
 
 // Database
-export { connectDB } from './database/connection';
+export { connectDB, disconnectDB } from './database/connection';
 
 // Config
 export { requireEnv } from './config/env';
