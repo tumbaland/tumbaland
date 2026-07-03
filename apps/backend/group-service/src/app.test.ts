@@ -12,6 +12,11 @@ describe('GET /health', () => {
     expect(res.status).toBe(503);
     expect(res.body).toMatchObject({ status: 'error', service: 'group-service' });
   });
+
+  it('sets security headers (helmet)', async () => {
+    const res = await request(app).get('/health');
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+  });
 });
 
 describe('GET /api/groups', () => {

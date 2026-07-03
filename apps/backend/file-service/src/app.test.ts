@@ -8,6 +8,11 @@ describe('GET /health', () => {
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ status: 'ok', service: 'file-service' });
   });
+
+  it('sets security headers (helmet)', async () => {
+    const res = await request(app).get('/health');
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+  });
 });
 
 describe('internal file routes', () => {

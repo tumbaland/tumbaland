@@ -8,6 +8,11 @@ describe('GET /health', () => {
     expect(res.status).toBe(503);
     expect(res.body).toMatchObject({ status: 'error', service: 'auth-service', type: 'backend' });
   });
+
+  it('sets security headers (helmet)', async () => {
+    const res = await request(app).get('/health');
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+  });
 });
 
 describe('GET /auth/verify', () => {
@@ -24,5 +29,17 @@ describe('POST /auth/validate', () => {
     const res = await request(app).post('/auth/validate').send({});
 
     expect(res.status).not.toBe(401);
+  });
+
+  it('is strictly rate-limited against brute-forcing token issuance', async () => {
+    let sawTooManyRequests = false;
+    for (let i = 0; i < 25; i++) {
+      const res = await request(app).post('/auth/validate').send({});
+      if (res.status === 429) {
+        sawTooManyRequests = true;
+        break;
+      }
+    }
+    expect(sawTooManyRequests).toBe(true);
   });
 });

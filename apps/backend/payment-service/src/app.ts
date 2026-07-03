@@ -6,15 +6,20 @@ import subscriptionRoutes from './routes/subscriptionRoutes';
 import paymentRoutes from './routes/paymentRoutes';
 import { stripeWebhook } from './controllers/stripeController';
 import { healthCheck } from './controllers/healthController';
-import { errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware, createCorsMiddleware } from '@tumbaland/core';
+import { errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware, createCorsMiddleware, securityHeaders, standardRateLimiter } from '@tumbaland/core';
 
 const app = express();
 
+app.use(securityHeaders);
 app.use(correlationMiddleware);
 app.use(tracingMiddleware);
 app.use(createCorsMiddleware());
-// JSON parser applied after defining webhook route (so webhook keeps raw Buffer)
+// JSON parser applied after defining webhook route (so webhook keeps raw Buffer).
+// The webhook route is also registered before the rate limiter below: Stripe
+// delivers from its own servers, sometimes in bursts, and must never be
+// throttled the way a browser client would be.
 app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), stripeWebhook);
+app.use(standardRateLimiter);
 app.use(express.json());
 app.use(requestLoggerWithMetrics);
 app.use(cookieParser());

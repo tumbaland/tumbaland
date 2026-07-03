@@ -5,11 +5,13 @@ import activityRoutes from './routes/activities';
 import activityTypeRoutes from './routes/activityTypes';
 import statisticsRoutes from './routes/statistics';
 import { healthCheck } from './controllers/healthController';
-import { errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware, createCorsMiddleware } from '@tumbaland/core';
+import { errorHandler, correlationMiddleware, requestLoggerWithMetrics, metricsHandler, tracingMiddleware, createCorsMiddleware, securityHeaders, standardRateLimiter } from '@tumbaland/core';
 
 const app = express();
 
 // Middleware
+app.use(securityHeaders);
+app.use(standardRateLimiter);
 app.use(correlationMiddleware);
 app.use(tracingMiddleware);
 app.use(createCorsMiddleware());

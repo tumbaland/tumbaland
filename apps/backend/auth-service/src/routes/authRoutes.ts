@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { strictRateLimiter } from '@tumbaland/core';
 import { validateToken, logout, verifyAuth, refreshToken, invalidateUserTokens } from '../controllers/authController';
 import { getProfile, updateProfile } from '../controllers/profileController';
 import { authenticateToken, requireRole, requireApproved } from '../middleware/authMiddleware';
@@ -6,8 +7,9 @@ import { User } from '../models/User';
 
 const router = Router();
 
-// Login route (public) – must remain public so user can obtain token
-router.post('/validate', validateToken);
+// Login route (public) – must remain public so user can obtain token.
+// Strictly rate-limited: unauthenticated token issuance is a brute-force target.
+router.post('/validate', strictRateLimiter, validateToken);
 
 // Refresh token route (protected)
 router.post('/refresh', authenticateToken, requireApproved, refreshToken);

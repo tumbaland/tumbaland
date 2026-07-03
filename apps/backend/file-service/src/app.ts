@@ -5,13 +5,17 @@ import {
   requestLoggerWithMetrics,
   metricsHandler,
   tracingMiddleware,
-  createCorsMiddleware
+  createCorsMiddleware,
+  securityHeaders,
+  standardRateLimiter
 } from '@tumbaland/core';
 import routes from './routes/routes';
 
 const app = express();
 
 // Middleware
+app.use(securityHeaders);
+app.use(standardRateLimiter);
 app.use(correlationMiddleware);
 app.use(tracingMiddleware);
 app.use(requestLoggerWithMetrics);
