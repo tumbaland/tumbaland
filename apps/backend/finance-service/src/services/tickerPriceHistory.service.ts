@@ -1,6 +1,7 @@
 import TickerPriceHistory from '../models/TickerPriceHistory';
 import TrackedTicker from '../models/TrackedTicker';
 import { fetchStockPrice, fetchAndSaveAllStockHistory } from './alphaVantage.service';
+import { BadRequestError } from '@tumbaland/core';
 
 interface TickerPriceResponse {
   _id?: string;
@@ -93,7 +94,7 @@ export async function fetchAndSaveTickerPrices(tickerParam?: string): Promise<Ti
  */
 export async function fetchAllTickerHistory(ticker: string): Promise<number> {
   if (!ticker) {
-    throw new Error('Ticker is required');
+    throw new BadRequestError('Ticker is required');
   }
   return fetchAndSaveAllStockHistory(ticker);
 }
@@ -103,7 +104,7 @@ export async function fetchAllTickerHistory(ticker: string): Promise<number> {
  */
 export async function deleteTickerPriceRecord(id: string): Promise<string> {
   if (!id) {
-    throw new Error('ID is required');
+    throw new BadRequestError('ID is required');
   }
   await TickerPriceHistory.findByIdAndDelete(id);
   return id;

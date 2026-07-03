@@ -1,5 +1,6 @@
 import Album from '../models/Album';
 import Photo from '../models/Photo';
+import { ForbiddenError } from '@tumbaland/core';
 
 export interface StatisticsFilter {
   groupId?: string;
@@ -28,7 +29,7 @@ class StatisticsService {
     if (groupId) {
       // Filter by specific group
       if (!userGroups.includes(groupId)) {
-        throw new Error('Access denied: Not a member of this group');
+        throw new ForbiddenError('Access denied: Not a member of this group');
       }
       albumMatchQuery.groupId = groupId;
       photoMatchQuery.albumId = {

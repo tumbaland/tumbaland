@@ -1,5 +1,6 @@
 import Photo from '../models/Photo';
 import Album from '../models/Album';
+import { BadRequestError, ConflictError, NotFoundError } from '@tumbaland/core';
 import {
   deleteFile,
   getPhotoSignedUrl,
@@ -80,7 +81,7 @@ class PhotoService {
 
     // Validate required fields
     if (!filename || !originalName || !actualMinioFileId || !albumId || !mimetype || !size) {
-      throw new Error(
+      throw new BadRequestError(
         'Missing required fields: filename, originalName, minioFileId (or fileId), albumId, mimetype, size'
       );
     }
@@ -88,14 +89,14 @@ class PhotoService {
     // Check if album exists
     const album = await Album.findById(albumId);
     if (!album) {
-      throw new Error('Album not found');
+      throw new NotFoundError('Album not found');
     }
 
     // Check if photo with this minioFileId already exists
     if (actualMinioFileId) {
       const existingPhoto = await Photo.findOne({ minioFileId: actualMinioFileId });
       if (existingPhoto) {
-        throw new Error('Photo with this MinIO file ID already exists');
+        throw new ConflictError('Photo with this MinIO file ID already exists');
       }
     }
 
@@ -156,7 +157,7 @@ class PhotoService {
     // Check if album exists
     const album = await Album.findById(albumId);
     if (!album) {
-      throw new Error('Album not found');
+      throw new NotFoundError('Album not found');
     }
 
     const query: any = { albumId };
@@ -216,7 +217,7 @@ class PhotoService {
     const photo = await Photo.findById(photoId).populate('albumId');
 
     if (!photo) {
-      throw new Error('Photo not found');
+      throw new NotFoundError('Photo not found');
     }
 
     return this.enrichPhotoWithSignedUrl(photo);
@@ -229,7 +230,7 @@ class PhotoService {
     const photo = await Photo.findOne({ minioFileId: fileId }).populate('albumId');
 
     if (!photo) {
-      throw new Error('Photo not found');
+      throw new NotFoundError('Photo not found');
     }
 
     return photo;
@@ -241,7 +242,7 @@ class PhotoService {
   async updatePhoto(photoId: string, input: UpdatePhotoInput): Promise<any> {
     const photo = await Photo.findById(photoId);
     if (!photo) {
-      throw new Error('Photo not found');
+      throw new NotFoundError('Photo not found');
     }
 
     const updateData: any = {};
@@ -263,7 +264,7 @@ class PhotoService {
   async deletePhoto(photoId: string): Promise<void> {
     const photo = await Photo.findById(photoId);
     if (!photo) {
-      throw new Error('Photo not found');
+      throw new NotFoundError('Photo not found');
     }
 
     // Delete associated files
@@ -295,7 +296,7 @@ class PhotoService {
   async updatePhotoAIAnalysis(photoId: string, analysis: AIAnalysisUpdate): Promise<any> {
     const photo = await Photo.findById(photoId);
     if (!photo) {
-      throw new Error('Photo not found');
+      throw new NotFoundError('Photo not found');
     }
 
     const updateData: any = {};

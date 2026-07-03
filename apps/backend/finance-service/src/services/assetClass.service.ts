@@ -1,5 +1,6 @@
 import AssetClass, { IAssetClass } from '../models/AssetClass';
 import { buildAccessQuery, canAccessResource } from '../utils/permissionUtils';
+import { ForbiddenError, NotFoundError } from '@tumbaland/core';
 
 export const getAllAssetClasses = async () => {
   return AssetClass.find().sort({ name: 1 });
@@ -21,7 +22,7 @@ export const getPersonalAssetClasses = async (userId: string) => {
 export const getAssetClassesByGroup = async (groupId: string, userId: string, userGroupIds: string[]) => {
   // Check if user has access to the group
   if (!userGroupIds.includes(groupId)) {
-    throw new Error('ACCESS_DENIED');
+    throw new ForbiddenError('Access denied');
   }
 
   return AssetClass.find({ groupId }).sort({ name: 1 });
@@ -35,7 +36,7 @@ export const createAssetClass = async (data: Partial<IAssetClass>) => {
 export const deleteAssetClass = async (id: string, userId: string, userGroupIds: string[] = []) => {
   const assetClass = await AssetClass.findById(id);
   if (!assetClass) {
-    throw new Error('Asset class not found');
+    throw new NotFoundError('Asset class not found');
   }
 
   const hasAccess = canAccessResource(
@@ -46,7 +47,7 @@ export const deleteAssetClass = async (id: string, userId: string, userGroupIds:
     false
   );
   if (!hasAccess) {
-    throw new Error('ACCESS_DENIED');
+    throw new ForbiddenError('Access denied');
   }
 
   return AssetClass.findByIdAndDelete(id);
@@ -55,7 +56,7 @@ export const deleteAssetClass = async (id: string, userId: string, userGroupIds:
 export const updateAssetClass = async (id: string, data: Partial<IAssetClass>, userId: string, userGroupIds: string[] = []) => {
   const assetClass = await AssetClass.findById(id);
   if (!assetClass) {
-    throw new Error('Asset class not found');
+    throw new NotFoundError('Asset class not found');
   }
 
   const hasAccess = canAccessResource(
@@ -66,7 +67,7 @@ export const updateAssetClass = async (id: string, data: Partial<IAssetClass>, u
     false
   );
   if (!hasAccess) {
-    throw new Error('ACCESS_DENIED');
+    throw new ForbiddenError('Access denied');
   }
 
   return AssetClass.findByIdAndUpdate(id, data, { new: true });

@@ -1,6 +1,7 @@
 import Album from '../models/Album';
 import Photo from '../models/Photo';
 import mongoose from 'mongoose';
+import { BadRequestError, ForbiddenError, NotFoundError } from '@tumbaland/core';
 import {
   deleteFile,
   getPhotoSignedUrl,
@@ -49,7 +50,7 @@ class AlbumService {
     const { name, description, isPublic = false, tags = [], groupId } = input;
 
     if (!name || name.trim().length === 0) {
-      throw new Error('Album name is required');
+      throw new BadRequestError('Album name is required');
     }
 
     const album = new Album({
@@ -104,9 +105,10 @@ class AlbumService {
       // If groupId is specified, filter by group (user must be member)
       if (!userGroups.includes(groupId)) {
         if (groupServiceError) {
+          // Upstream group-service is down — a genuine 500, not a client error.
           throw new Error('Group service temporarily unavailable. Please try again.');
         }
-        throw new Error('Access denied: Not a member of this group');
+        throw new ForbiddenError('Access denied: Not a member of this group');
       }
       matchQuery.groupId = groupId;
     } else {
@@ -239,7 +241,7 @@ class AlbumService {
     const albumResult = await (Album as any).aggregate(aggregationPipeline);
 
     if (!albumResult || albumResult.length === 0) {
-      throw new Error('Album not found');
+      throw new NotFoundError('Album not found');
     }
 
     const albumData = albumResult[0];
@@ -254,7 +256,7 @@ class AlbumService {
     );
 
     if (!hasAccess && !albumData.isPublic) {
-      throw new Error('Access denied');
+      throw new ForbiddenError('Access denied');
     }
 
     // Process cover photo signed URL if exists
@@ -284,7 +286,7 @@ class AlbumService {
 
     const album = await Album.findById(albumId);
     if (!album) {
-      throw new Error('Album not found');
+      throw new NotFoundError('Album not found');
     }
 
     // Check if user can modify this album
@@ -297,7 +299,7 @@ class AlbumService {
     );
 
     if (!hasAccess) {
-      throw new Error('Access denied');
+      throw new ForbiddenError('Access denied');
     }
 
     const updateData: any = {};
@@ -321,7 +323,7 @@ class AlbumService {
   async deleteAlbum(albumId: string): Promise<void> {
     const album = await Album.findById(albumId);
     if (!album) {
-      throw new Error('Album not found');
+      throw new NotFoundError('Album not found');
     }
 
     // Get all photos in the album
@@ -353,18 +355,18 @@ class AlbumService {
    */
   async setCoverPhoto(albumId: string, photoId: string): Promise<any> {
     if (!photoId) {
-      throw new Error('Photo ID is required');
+      throw new BadRequestError('Photo ID is required');
     }
 
     const album = await Album.findById(albumId);
     if (!album) {
-      throw new Error('Album not found');
+      throw new NotFoundError('Album not found');
     }
 
     // Check if photo exists and belongs to the album
     const photo = await Photo.findOne({ _id: photoId, albumId });
     if (!photo) {
-      throw new Error('Photo not found in this album');
+      throw new NotFoundError('Photo not found in this album');
     }
 
     // Update album cover photo
@@ -378,7 +380,7 @@ class AlbumService {
   async removeCoverPhoto(albumId: string): Promise<any> {
     const album = await Album.findById(albumId);
     if (!album) {
-      throw new Error('Album not found');
+      throw new NotFoundError('Album not found');
     }
 
     album.coverPhotoId = undefined;

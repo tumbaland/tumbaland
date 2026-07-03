@@ -4,6 +4,7 @@ import { canAccessResource } from '../utils/permissionUtils';
 import Album from '../models/Album';
 import { getPhotoSignedUrl } from '../services/fileServiceClient';
 import mongoose from 'mongoose';
+import { ForbiddenError, NotFoundError } from '@tumbaland/core';
 
 export const createCollage = async (
   data: CollageInput, 
@@ -30,7 +31,7 @@ export const updateCollage = async (
   // First check if user has access to this collage
   const existingCollage = await CollageModel.findById(id);
   if (!existingCollage) {
-    return null;
+    throw new NotFoundError('Collage not found');
   }
 
   // Check permissions
@@ -43,7 +44,7 @@ export const updateCollage = async (
   );
 
   if (!hasAccess) {
-    throw new Error('ACCESS_DENIED');
+    throw new ForbiddenError('Access denied');
   }
 
   const collage = await CollageModel.findByIdAndUpdate(id, data, { new: true });
@@ -71,7 +72,7 @@ export const getCollageById = async (
   );
 
   if (!hasAccess) {
-    throw new Error('ACCESS_DENIED');
+    throw new ForbiddenError('Access denied');
   }
 
   return collage;
@@ -88,7 +89,7 @@ export const getCollageWithPhotos = async (
   const collage = await getCollageById(id, userId, userGroups);
   
   if (!collage) {
-    throw new Error('Collage not found');
+    throw new NotFoundError('Collage not found');
   }
 
   // Use aggregation to fetch photos from all albums in the collage
@@ -141,7 +142,7 @@ export const getCollageWithPhotos = async (
     );
 
     if (!hasAlbumAccess) {
-      throw new Error('Access denied to one or more albums');
+      throw new ForbiddenError('Access denied to one or more albums');
     }
   }
 
@@ -194,7 +195,7 @@ export const getCollageList = async (
     if (groupId) {
       // If groupId is specified, filter by group (user must be member)
       if (!userGroups.includes(groupId)) {
-        throw new Error('ACCESS_DENIED');
+        throw new ForbiddenError('Access denied');
       }
       filter.groupId = groupId;
     } else {
@@ -215,7 +216,7 @@ export const deleteCollage = async (
   // First check if user has access to this collage
   const existingCollage = await CollageModel.findById(id);
   if (!existingCollage) {
-    throw new Error('Collage not found');
+    throw new NotFoundError('Collage not found');
   }
 
   // Check permissions
@@ -228,7 +229,7 @@ export const deleteCollage = async (
   );
 
   if (!hasAccess) {
-    throw new Error('ACCESS_DENIED');
+    throw new ForbiddenError('Access denied');
   }
 
   await CollageModel.findByIdAndDelete(id);

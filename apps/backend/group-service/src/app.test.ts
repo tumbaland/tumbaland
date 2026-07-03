@@ -43,7 +43,7 @@ describe('internal service token bypass', () => {
     // controller logic instead (which then 400s because no email was supplied).
     expect(res.body.message).not.toBe('Access token required');
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({ success: false, message: 'User email required' });
+    expect(res.body).toEqual({ success: false, error: 'BadRequestError', message: 'User email required' });
   });
 
   it('rejects an internal token that does not match INTERNAL_SERVICE_TOKEN', async () => {

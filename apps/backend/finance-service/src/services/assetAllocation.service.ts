@@ -1,5 +1,6 @@
 import AssetAllocation, { IAssetAllocation } from '../models/AssetAllocation';
 import { buildAccessQuery, canAccessResource } from '../utils/permissionUtils';
+import { ForbiddenError, NotFoundError } from '@tumbaland/core';
 
 export const getAllAssetAllocations = async () => {
   return AssetAllocation.find().populate('assetClassId', 'name').sort({ date: -1 });
@@ -21,7 +22,7 @@ export const getPersonalAssetAllocations = async (userId: string) => {
 export const getAssetAllocationsByGroup = async (groupId: string, userId: string, userGroupIds: string[]) => {
   // Check if user has access to the group
   if (!userGroupIds.includes(groupId)) {
-    throw new Error('ACCESS_DENIED');
+    throw new ForbiddenError('Access denied');
   }
 
   return AssetAllocation.find({ groupId }).populate('assetClassId', 'name').sort({ date: -1 });
@@ -35,7 +36,7 @@ export const createAssetAllocation = async (data: Partial<IAssetAllocation>) => 
 export const deleteAssetAllocation = async (id: string, userId: string, userGroupIds: string[] = []) => {
   const allocation = await AssetAllocation.findById(id);
   if (!allocation) {
-    throw new Error('Asset allocation not found');
+    throw new NotFoundError('Asset allocation not found');
   }
 
   const hasAccess = canAccessResource(
@@ -46,7 +47,7 @@ export const deleteAssetAllocation = async (id: string, userId: string, userGrou
     false
   );
   if (!hasAccess) {
-    throw new Error('ACCESS_DENIED');
+    throw new ForbiddenError('Access denied');
   }
 
   return AssetAllocation.findByIdAndDelete(id);
@@ -55,7 +56,7 @@ export const deleteAssetAllocation = async (id: string, userId: string, userGrou
 export const updateAssetAllocation = async (id: string, data: Partial<IAssetAllocation>, userId: string, userGroupIds: string[] = []) => {
   const allocation = await AssetAllocation.findById(id);
   if (!allocation) {
-    throw new Error('Asset allocation not found');
+    throw new NotFoundError('Asset allocation not found');
   }
 
   const hasAccess = canAccessResource(
@@ -66,7 +67,7 @@ export const updateAssetAllocation = async (id: string, data: Partial<IAssetAllo
     false
   );
   if (!hasAccess) {
-    throw new Error('ACCESS_DENIED');
+    throw new ForbiddenError('Access denied');
   }
 
   return AssetAllocation.findByIdAndUpdate(id, data, { new: true });

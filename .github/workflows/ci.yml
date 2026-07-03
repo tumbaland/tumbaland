@@ -129,7 +129,7 @@ jobs:
 
       - name: Build shared libs
         if: matrix.workspace != 'libs/core' && matrix.workspace != 'libs/components'
-        run: npm run build -w @tumbaland/core -w @tumbaland/components
+        run: npm run build -w @tumbaland/core -w @tumbaland/components -w @tumbaland/frontend-core
 
       - name: Lint
         run: npm run lint --workspace=${{ matrix.workspace }}
@@ -159,7 +159,7 @@ jobs:
 
       - name: Build shared libs
         if: matrix.workspace != 'libs/core' && matrix.workspace != 'libs/components'
-        run: npm run build -w @tumbaland/core -w @tumbaland/components
+        run: npm run build -w @tumbaland/core -w @tumbaland/components -w @tumbaland/frontend-core
 
       - name: Test
         run: npm run test --workspace=${{ matrix.workspace }} --if-present
@@ -186,7 +186,7 @@ jobs:
 
       - name: Build shared libs
         if: matrix.workspace != 'libs/core' && matrix.workspace != 'libs/components'
-        run: npm run build -w @tumbaland/core -w @tumbaland/components
+        run: npm run build -w @tumbaland/core -w @tumbaland/components -w @tumbaland/frontend-core
 
       - name: Build
         run: npm run build --workspace=${{ matrix.workspace }} --if-present

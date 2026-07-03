@@ -1,5 +1,6 @@
 import TrackedTicker from '../models/TrackedTicker';
 import { canAccessResource } from '../utils/permissionUtils';
+import { ForbiddenError, NotFoundError } from '@tumbaland/core';
 
 export const getAllTrackedTickers = async (userId: string, userGroups: string[] = []) => {
   if (userGroups.length === 0) {
@@ -32,7 +33,7 @@ export const createTrackedTicker = async (
 ) => {
   // If groupId is provided, verify user has access to that group
   if (data.groupId && !userGroups.includes(data.groupId)) {
-    throw new Error('ACCESS_DENIED');
+    throw new ForbiddenError('Access denied');
   }
   
   const tracked = new TrackedTicker({
@@ -66,12 +67,12 @@ export const updateTrackedTicker = async (
   );
 
   if (!hasAccess) {
-    throw new Error('ACCESS_DENIED');
+    throw new ForbiddenError('Access denied');
   }
 
   // If groupId is being updated, verify user has access to the new group
   if (data.groupId && !userGroups.includes(data.groupId)) {
-    throw new Error('ACCESS_DENIED');
+    throw new ForbiddenError('Access denied');
   }
 
   return TrackedTicker.findByIdAndUpdate(id, data, { new: true });
@@ -81,7 +82,7 @@ export const deleteTrackedTicker = async (id: string, userId: string, userGroups
   // First check if user has access to this ticker
   const existingTicker = await TrackedTicker.findById(id);
   if (!existingTicker) {
-    throw new Error('Ticker not found');
+    throw new NotFoundError('Ticker not found');
   }
 
   // Check permissions
@@ -94,7 +95,7 @@ export const deleteTrackedTicker = async (id: string, userId: string, userGroups
   );
 
   if (!hasAccess) {
-    throw new Error('ACCESS_DENIED');
+    throw new ForbiddenError('Access denied');
   }
 
   return TrackedTicker.findByIdAndDelete(id);

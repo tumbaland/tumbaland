@@ -16,6 +16,9 @@ export { connectDB } from './database/connection';
 // Config
 export { requireEnv } from './config/env';
 
+// Errors
+export { HttpError, BadRequestError, UnauthorizedError, ForbiddenError, NotFoundError, ConflictError, TooManyRequestsError } from './errors/HttpError';
+
 // Middleware
 export { authenticateToken } from './middleware/authMiddleware';
 export { createCorsMiddleware } from './middleware/corsMiddleware';

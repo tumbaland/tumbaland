@@ -1,9 +1,15 @@
 import request from 'supertest';
+import jwt from 'jsonwebtoken';
 import app from './app';
 
 beforeAll(() => {
   process.env.JWT_SECRET = 'test-secret';
 });
+
+function authCookie() {
+  const token = jwt.sign({ id: '1', email: 'user@example.com', name: 'Test User' }, 'test-secret');
+  return `access_token=${token}`;
+}
 
 describe('GET /health', () => {
   it('reports unhealthy when MongoDB is not connected', async () => {
@@ -25,5 +31,17 @@ describe('GET /api/albums', () => {
 
     expect(res.status).toBe(401);
     expect(res.body).toEqual({ success: false, message: 'Access token required' });
+  });
+});
+
+describe('POST /api/albums (typed-error → errorHandler wiring)', () => {
+  it('returns 400 via the shared errorHandler when validation fails, with no try/catch in the controller', async () => {
+    const res = await request(app)
+      .post('/api/albums')
+      .set('Cookie', authCookie())
+      .send({ name: '' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ success: false, error: 'BadRequestError', message: 'Album name is required' });
   });
 });

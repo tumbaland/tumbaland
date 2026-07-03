@@ -1,3 +1,4 @@
+import { TooManyRequestsError } from '@tumbaland/core';
 import TickerPriceHistory from '../models/TickerPriceHistory';
 
 const BASE_URL = 'https://www.alphavantage.co/query';
@@ -78,7 +79,7 @@ export async function fetchAndSaveAllStockHistory(symbol: string): Promise<numbe
   const data = await response.json();
 
   if (isThrottled(data)) {
-    throw new Error(`Alpha Vantage rate limit: ${getThrottleMessage(data)}`);
+    throw new TooManyRequestsError(`Alpha Vantage rate limit: ${getThrottleMessage(data)}`);
   }
 
   const timeSeries = data['Time Series (Daily)'] as Record<string, Record<string, string>> | undefined;
@@ -117,7 +118,7 @@ export async function searchTickers(query: string): Promise<TickerSearchResult[]
   const data = await response.json();
 
   if (isThrottled(data)) {
-    throw new Error(`Alpha Vantage rate limit: ${getThrottleMessage(data)}`);
+    throw new TooManyRequestsError(`Alpha Vantage rate limit: ${getThrottleMessage(data)}`);
   }
 
   const matches = (data['bestMatches'] || []) as Record<string, string>[];

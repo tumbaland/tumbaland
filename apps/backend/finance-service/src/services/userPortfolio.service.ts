@@ -1,6 +1,7 @@
 import UserPortfolio from '../models/UserPortfolio';
 import TickerPriceHistory from '../models/TickerPriceHistory';
 import { canAccessResource } from '../utils/permissionUtils';
+import { ForbiddenError, NotFoundError } from '@tumbaland/core';
 
 export const getAllUserPortfolios = async (userId: string, userGroups: string[] = []) => {
   let portfolios;
@@ -83,7 +84,7 @@ export const createUserPortfolio = async (
   
   // If groupId is provided, verify user has access to that group
   if (data.groupId && !userGroups.includes(data.groupId)) {
-    throw new Error('ACCESS_DENIED');
+    throw new ForbiddenError('Access denied');
   }
   
   const portfolio = new UserPortfolio(portfolioData);
@@ -112,12 +113,12 @@ export const updateUserPortfolio = async (
   );
 
   if (!hasAccess) {
-    throw new Error('ACCESS_DENIED');
+    throw new ForbiddenError('Access denied');
   }
 
   // If groupId is being updated, verify user has access to the new group
   if (data.groupId && !userGroups.includes(data.groupId)) {
-    throw new Error('ACCESS_DENIED');
+    throw new ForbiddenError('Access denied');
   }
 
   return UserPortfolio.findByIdAndUpdate(id, data, { new: true });
@@ -127,7 +128,7 @@ export const deleteUserPortfolio = async (id: string, userId: string, userGroups
   // First check if user has access to this portfolio
   const existingPortfolio = await UserPortfolio.findById(id);
   if (!existingPortfolio) {
-    throw new Error('Portfolio not found');
+    throw new NotFoundError('Portfolio not found');
   }
 
   // Check permissions
@@ -140,7 +141,7 @@ export const deleteUserPortfolio = async (id: string, userId: string, userGroups
   );
 
   if (!hasAccess) {
-    throw new Error('ACCESS_DENIED');
+    throw new ForbiddenError('Access denied');
   }
 
   return UserPortfolio.findByIdAndDelete(id);
