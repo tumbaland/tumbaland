@@ -1,4 +1,12 @@
 # Tumbalog
+### [0.0.358](https://github.com/toomastahves/tumbaland/compare/v0.0.357...v0.0.358) (2026-07-03)
+
+
+### Features
+
+* add zod schema validation ([b80a56f](https://github.com/toomastahves/tumbaland/commit/b80a56faa066a8397e6d37b262ea04bcf5fb7cb6))
+* update lock file ([2285006](https://github.com/toomastahves/tumbaland/commit/228500602830e0ab3e422889692f3d32e77fbdbc))
+
 ### [0.0.357](https://github.com/toomastahves/tumbaland/compare/v0.0.356...v0.0.357) (2026-07-03)
 
 
