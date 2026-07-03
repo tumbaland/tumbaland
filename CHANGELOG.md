@@ -1,4 +1,16 @@
 # Tumbalog
+### [0.0.355](https://github.com/toomastahves/tumbaland/compare/v0.0.354...v0.0.355) (2026-07-03)
+
+
+### Features
+
+* upgrade depndencies ([c1a7ba8](https://github.com/toomastahves/tumbaland/commit/c1a7ba8f70eae7bce9b35d1876ea6b2dfbfccb4b))
+
+
+### Chores
+
+* **release:** 1.1.0 ([ac8dcba](https://github.com/toomastahves/tumbaland/commit/ac8dcba1ad151908763a2d1937b27ced4fa0e76c))
+
 ### [0.0.354](https://github.com/toomastahves/tumbaland/compare/v0.0.353...v0.0.354) (2026-07-03)
 
 
