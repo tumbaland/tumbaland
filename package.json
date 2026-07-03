@@ -21,13 +21,13 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/jest": "^30.0.0",
-    "@types/supertest": "^6.0.2",
+    "@types/supertest": "^7.2.0",
     "concurrently": "^10.0.3",
     "eslint": "^10.6.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.7.0",
     "jest": "^30.4.2",
-    "jsdom": "^25.0.1",
+    "jsdom": "^29.1.1",
     "nodemon": "^3.1.14",
     "prettier": "^3.9.4",
     "supertest": "^7.0.0",
@@ -35,6 +35,6 @@
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.62.1",
-    "vitest": "^2.1.8"
+    "vitest": "^4.1.9"
   }
 }
