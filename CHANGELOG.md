@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.353](https://github.com/toomastahves/tumbaland/compare/v0.0.352...v0.0.353) (2026-07-03)
+
+
+### Features
+
+* setup rate limiter and security headers ([b2abfc0](https://github.com/toomastahves/tumbaland/commit/b2abfc070ef979915ab66c573a017d447a0ed4df))
+
 ### [0.0.352](https://github.com/toomastahves/tumbaland/compare/v0.0.351...v0.0.352) (2026-07-03)
 
 
