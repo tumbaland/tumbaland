@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.356](https://github.com/toomastahves/tumbaland/compare/v0.0.355...v0.0.356) (2026-07-03)
+
+
+### Features
+
+* add common error handler ([63d23a1](https://github.com/toomastahves/tumbaland/commit/63d23a12e32c1ec19ac1d891dc87985580495f18))
+
 ### [0.0.355](https://github.com/toomastahves/tumbaland/compare/v0.0.354...v0.0.355) (2026-07-03)
 
 
