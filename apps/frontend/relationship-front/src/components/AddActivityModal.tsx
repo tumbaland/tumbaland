@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@mui/material';
 import { Add } from '@mui/icons-material';
+import { logger } from '@tumbaland/components';
 import { CreateActivityRequest } from '../api/types';
 import { createActivity } from '../api/activities';
 import ActivityForm from './ActivityForm';
@@ -34,7 +35,7 @@ const AddActivityModal: React.FC<AddActivityModalProps> = ({
       }
       return true;
     } catch (error) {
-      console.error('Failed to create activity:', error);
+      logger.error('Failed to create activity', error);
       // Return false so ActivityForm doesn't close the modal
       return false;
     }

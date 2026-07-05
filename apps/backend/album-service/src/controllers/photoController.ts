@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { NotFoundError, UnauthorizedError } from '@tumbaland/core';
+import { NotFoundError, UnauthorizedError, sendSuccess } from '@tumbaland/core';
 import photoService from '../services/photoService';
 import { getUploadSignedUrl, generateFileId } from '../services/fileServiceClient';
 import Album from '../models/Album';
@@ -13,11 +13,7 @@ export const createPhoto = async (req: Request, res: Response): Promise<void> =>
 
   const photo = await photoService.createPhoto(req.body, user.id, album?.groupId);
 
-  res.status(201).json({
-    success: true,
-    message: 'Photo created successfully',
-    data: photo
-  });
+  sendSuccess(res, photo, 'Photo created successfully', 201);
 };
 
 /**
@@ -33,13 +29,7 @@ export const getPhotosByAlbum = async (req: Request, res: Response): Promise<voi
     search: search as string
   });
 
-  res.json({
-    success: true,
-    data: {
-      photos: result.photos,
-      pagination: result.pagination
-    }
-  });
+  sendSuccess(res, { photos: result.photos, pagination: result.pagination });
 };
 
 /**
@@ -50,10 +40,7 @@ export const getPhotoById = async (req: Request, res: Response): Promise<void> =
 
   const photo = await photoService.getPhotoById(id as string);
 
-  res.json({
-    success: true,
-    data: photo
-  });
+  sendSuccess(res, photo);
 };
 
 /**
@@ -70,11 +57,7 @@ export const updatePhoto = async (req: Request, res: Response): Promise<void> =>
     metadata
   });
 
-  res.json({
-    success: true,
-    message: 'Photo updated successfully',
-    data: photo
-  });
+  sendSuccess(res, photo, 'Photo updated successfully');
 };
 
 /**
@@ -85,10 +68,7 @@ export const deletePhoto = async (req: Request, res: Response): Promise<void> =>
 
   await photoService.deletePhoto(id as string);
 
-  res.json({
-    success: true,
-    message: 'Photo deleted successfully'
-  });
+  sendSuccess(res, undefined, 'Photo deleted successfully');
 };
 
 /**
@@ -114,15 +94,7 @@ export const getUploadSignedUrlRequest = async (req: Request, res: Response): Pr
   // Get upload URL directly from file service
   const uploadUrl = await getUploadSignedUrl(fileId, mimetype, 15);
 
-  res.json({
-    success: true,
-    data: {
-      uploadUrl,
-      minioFileId: fileId,
-      albumId,
-      expiresInMinutes: 15
-    }
-  });
+  sendSuccess(res, { uploadUrl, minioFileId: fileId, albumId, expiresInMinutes: 15 });
 };
 
 /**
@@ -137,10 +109,7 @@ export const updatePhotoAIAnalysis = async (req: Request, res: Response): Promis
     segmentation
   });
 
-  res.json({
-    success: true,
-    data: photo
-  });
+  sendSuccess(res, photo);
 };
 
 /**
@@ -152,10 +121,7 @@ export const getPhotosForAIAnalysis = async (req: Request, res: Response): Promi
 
   const photos = await photoService.getPhotosForAIAnalysis(albumId as string, Number(limit));
 
-  res.json({
-    success: true,
-    data: photos
-  });
+  sendSuccess(res, photos);
 };
 
 /**
@@ -166,8 +132,5 @@ export const getPhotoByFileId = async (req: Request, res: Response): Promise<voi
 
   const photo = await photoService.getPhotoByFileId(fileId as string);
 
-  res.json({
-    success: true,
-    data: photo
-  });
+  sendSuccess(res, photo);
 };

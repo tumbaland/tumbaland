@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { NotFoundError } from '@tumbaland/core';
+import { NotFoundError, sendSuccess } from '@tumbaland/core';
 import * as ActivityTypeService from '../services/activityType.service';
 
 /**
@@ -18,11 +18,7 @@ export const createActivityType = async (req: Request, res: Response): Promise<v
   }
 
   const activityType = await ActivityTypeService.createActivityType(typeData);
-  res.status(201).json({
-    success: true,
-    message: 'Activity type created successfully',
-    data: activityType
-  });
+  sendSuccess(res, activityType, 'Activity type created successfully', 201);
 };
 
 /**
@@ -50,16 +46,13 @@ export const getActivityTypes = async (req: Request, res: Response): Promise<voi
 
   const result = await ActivityTypeService.getActivityTypes(filters);
 
-  res.json({
-    success: true,
-    data: {
-      types: result.types,
-      pagination: {
-        page: result.page,
-        limit: filters.limit,
-        total: result.total,
-        totalPages: result.totalPages
-      }
+  sendSuccess(res, {
+    types: result.types,
+    pagination: {
+      page: result.page,
+      limit: filters.limit,
+      total: result.total,
+      totalPages: result.totalPages
     }
   });
 };
@@ -75,10 +68,7 @@ export const getActivityTypeById = async (req: Request, res: Response): Promise<
     throw new NotFoundError('Activity type not found');
   }
 
-  res.json({
-    success: true,
-    data: activityType
-  });
+  sendSuccess(res, activityType);
 };
 
 /**
@@ -94,11 +84,7 @@ export const updateActivityType = async (req: Request, res: Response): Promise<v
     throw new NotFoundError('Activity type not found');
   }
 
-  res.json({
-    success: true,
-    message: 'Activity type updated successfully',
-    data: activityType
-  });
+  sendSuccess(res, activityType, 'Activity type updated successfully');
 };
 
 /**
@@ -112,10 +98,7 @@ export const deleteActivityType = async (req: Request, res: Response): Promise<v
     throw new NotFoundError('Activity type not found');
   }
 
-  res.json({
-    success: true,
-    message: 'Activity type deleted successfully'
-  });
+  sendSuccess(res, undefined, 'Activity type deleted successfully');
 };
 
 /**
@@ -127,8 +110,5 @@ export const reorderActivityTypes = async (req: Request, res: Response): Promise
 
   await ActivityTypeService.reorderActivityTypes(typeIds, user.id, groupId);
 
-  res.json({
-    success: true,
-    message: 'Activity types reordered successfully'
-  });
+  sendSuccess(res, undefined, 'Activity types reordered successfully');
 };

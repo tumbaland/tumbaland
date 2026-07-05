@@ -21,5 +21,8 @@ export { initConsoleInterception } from './console';
 // Correlation ID utilities
 export { generateCorrelationId, getCorrelationId, getSessionId } from './utils';
 
+// Small ergonomic logger wrapping captureMessage/captureException
+export { logger } from './logger';
+
 // Re-export types
 export type { MonitoringConfig } from './config';

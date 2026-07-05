@@ -1,4 +1,6 @@
+import { logger } from '@tumbaland/components';
 import { relationshipApi } from '../config/relationshipApi';
+import { ApiResponse } from './types';
 
 export interface RelationshipStatistics {
   totalHoursTogether: number;
@@ -115,13 +117,13 @@ export const getStatistics = async (timeframe: string = 'all', groupId?: string)
     if (groupId) {
       params.groupId = groupId;
     }
-    
-    const response = await relationshipApi.get('/statistics', {
+
+    const response = await relationshipApi.get<ApiResponse<RelationshipStatistics>>('/statistics', {
       params
     });
     return response.data.data;
   } catch (error: any) {
-    console.error('Error fetching statistics:', error);
+    logger.error('Error fetching statistics', error);
     throw new Error(error.response?.data?.message || 'Failed to fetch statistics');
   }
 };
@@ -136,13 +138,13 @@ export const getMonthlyHours = async (year?: number, groupId?: string): Promise<
     const params: Record<string, any> = {};
     if (year) params.year = year;
     if (groupId) params.groupId = groupId;
-    
-    const response = await relationshipApi.get('/statistics/monthly-hours', {
+
+    const response = await relationshipApi.get<ApiResponse<MonthlyHoursData[]>>('/statistics/monthly-hours', {
       params: Object.keys(params).length > 0 ? params : {}
     });
     return response.data.data;
   } catch (error: any) {
-    console.error('Error fetching monthly hours:', error);
+    logger.error('Error fetching monthly hours', error);
     throw new Error(error.response?.data?.message || 'Failed to fetch monthly hours');
   }
 };
@@ -157,13 +159,13 @@ export const getMonthlyStatistics = async (year?: number, groupId?: string): Pro
     const params: Record<string, any> = {};
     if (year) params.year = year;
     if (groupId) params.groupId = groupId;
-    
-    const response = await relationshipApi.get('/statistics/monthly-stats', {
+
+    const response = await relationshipApi.get<ApiResponse<MonthlyStatisticsData[]>>('/statistics/monthly-stats', {
       params: Object.keys(params).length > 0 ? params : {}
     });
     return response.data.data;
   } catch (error: any) {
-    console.error('Error fetching monthly statistics:', error);
+    logger.error('Error fetching monthly statistics', error);
     throw new Error(error.response?.data?.message || 'Failed to fetch monthly statistics');
   }
 };
@@ -178,13 +180,13 @@ export const getMonthlyActivityBreakdown = async (year?: number, groupId?: strin
     const params: Record<string, any> = {};
     if (year) params.year = year;
     if (groupId) params.groupId = groupId;
-    
-    const response = await relationshipApi.get('/statistics/monthly-activity-breakdown', {
+
+    const response = await relationshipApi.get<ApiResponse<MonthlyActivityData[]>>('/statistics/monthly-activity-breakdown', {
       params: Object.keys(params).length > 0 ? params : {}
     });
     return response.data.data;
   } catch (error: any) {
-    console.error('Error fetching monthly activity breakdown:', error);
+    logger.error('Error fetching monthly activity breakdown', error);
     throw new Error(error.response?.data?.message || 'Failed to fetch monthly activity breakdown');
   }
 };
@@ -199,13 +201,13 @@ export const getWeeklyHeatmapData = async (year?: number, groupId?: string): Pro
     const params: Record<string, any> = {};
     if (year) params.year = year;
     if (groupId) params.groupId = groupId;
-    
-    const response = await relationshipApi.get('/statistics/weekly-heatmap', {
+
+    const response = await relationshipApi.get<ApiResponse<WeeklyHeatmapData[]>>('/statistics/weekly-heatmap', {
       params: Object.keys(params).length > 0 ? params : {}
     });
     return response.data.data;
   } catch (error: any) {
-    console.error('Error fetching weekly heatmap data:', error);
+    logger.error('Error fetching weekly heatmap data', error);
     throw new Error(error.response?.data?.message || 'Failed to fetch weekly heatmap data');
   }
 };
@@ -220,13 +222,13 @@ export const getCumulativeTimelineData = async (year?: number, groupId?: string)
     const params: Record<string, any> = {};
     if (year) params.year = year;
     if (groupId) params.groupId = groupId;
-    
-    const response = await relationshipApi.get('/statistics/cumulative-timeline', {
+
+    const response = await relationshipApi.get<ApiResponse<CumulativeTimelineData[]>>('/statistics/cumulative-timeline', {
       params: Object.keys(params).length > 0 ? params : {}
     });
     return response.data.data;
   } catch (error: any) {
-    console.error('Error fetching cumulative timeline data:', error);
+    logger.error('Error fetching cumulative timeline data', error);
     throw new Error(error.response?.data?.message || 'Failed to fetch cumulative timeline data');
   }
 };

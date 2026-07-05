@@ -1,87 +1,66 @@
+import { createApiClient } from '@tumbaland/frontend-core';
 import { getGlobalConfig } from '../config/ConfigProvider';
-import { getCorrelationId, getSessionId } from '@tumbaland/components';
 import type { Group, GroupMember } from '../types';
 
 export type GroupRole = GroupMember['role'];
 
-async function api<T = any>(path: string, init: RequestInit = {}): Promise<T> {
-  const { GROUP_API_URL } = getGlobalConfig();
-
-  const mergedHeaders: Record<string, string> = {
-    ...(init.headers as Record<string, string> | undefined),
-    'x-correlation-id': getCorrelationId(),
-    'x-session-id': getSessionId()
-  };
-
-  const res = await fetch(`${GROUP_API_URL}${path}`, {
-    ...init,
-    credentials: 'include',
-    headers: mergedHeaders
-  });
-  if (!res.ok) {
-    let message = `HTTP ${res.status}`;
-    try { const j = await res.json(); if (j?.message) message = j.message; } catch { /* keep default message */ }
-    throw new Error(message);
+const client = createApiClient({
+  baseUrl: () => getGlobalConfig().GROUP_API_URL!,
+  onUnauthorized: () => {
+    const { AUTH_FRONT_URL } = getGlobalConfig();
+    if (AUTH_FRONT_URL) {
+      window.location.href = `${AUTH_FRONT_URL}?redirect_uri=${encodeURIComponent(window.location.href)}`;
+    }
   }
-  if (res.status === 204) return undefined as unknown as T;
-  return (await res.json()) as T;
-}
-
-function json(method: string, body?: any): RequestInit {
-  return {
-    method,
-  headers: { 'Content-Type': 'application/json' },
-    body: body !== undefined ? JSON.stringify(body) : undefined
-  };
-}
-
-function get(path: string) { return api(path); }
-function post(path: string, body?: any) { return api(path, json('POST', body)); }
-function patch(path: string, body?: any) { return api(path, json('PATCH', body)); }
-function del(path: string) { return api(path, { method: 'DELETE' }); }
+});
 
 export const groupApi = {
   async listMyGroups(): Promise<Group[]> {
-    const j = await get('/api/groups/mine');
+    const j = await client.get<{ data: Group[] }>('/api/groups/mine');
     return j?.data ?? [];
   },
-  
+
   async getMyGroupIds(): Promise<string[]> {
-    const j = await get('/api/groups/mine/ids');
+    const j = await client.get<{ data: string[] }>('/api/groups/mine/ids');
     return j?.data ?? [];
   },
-  
+
   async createGroup(name: string): Promise<Group> {
-    const j = await post('/api/groups', { name });
-    return j.data as Group;
+    const j = await client.post<{ data: Group }>('/api/groups', { name });
+    return j.data;
   },
-  
+
   async getGroup(id: string): Promise<Group> {
-    const j = await get(`/api/groups/${encodeURIComponent(id)}`);
-    return j.data as Group;
+    const j = await client.get<{ data: Group }>(`/api/groups/${encodeURIComponent(id)}`);
+    return j.data;
   },
-  
+
   async updateGroup(id: string, updates: { name?: string }): Promise<Group> {
-    const j = await patch(`/api/groups/${encodeURIComponent(id)}`, updates);
-    return j.data as Group;
+    const j = await client.patch<{ data: Group }>(`/api/groups/${encodeURIComponent(id)}`, updates);
+    return j.data;
   },
-  
+
   async deleteGroup(id: string): Promise<void> {
-    await del(`/api/groups/${encodeURIComponent(id)}`);
+    await client.delete(`/api/groups/${encodeURIComponent(id)}`);
   },
-  
+
   async addMember(id: string, email: string, role: GroupRole = 'member'): Promise<Group> {
-    const j = await post(`/api/groups/${encodeURIComponent(id)}/members`, { email, role });
-    return j.data as Group;
+    const j = await client.post<{ data: Group }>(`/api/groups/${encodeURIComponent(id)}/members`, { email, role });
+    return j.data;
   },
-  
+
   async updateMemberRole(id: string, memberEmail: string, role: GroupRole): Promise<Group> {
-    const j = await patch(`/api/groups/${encodeURIComponent(id)}/members/${encodeURIComponent(memberEmail)}`, { role });
-    return j.data as Group;
+    const j = await client.patch<{ data: Group }>(
+      `/api/groups/${encodeURIComponent(id)}/members/${encodeURIComponent(memberEmail)}`,
+      { role }
+    );
+    return j.data;
   },
-  
+
   async removeMember(id: string, memberEmail: string): Promise<Group> {
-    const j = await del(`/api/groups/${encodeURIComponent(id)}/members/${encodeURIComponent(memberEmail)}`);
-    return j.data as Group;
+    const j = await client.delete<{ data: Group }>(
+      `/api/groups/${encodeURIComponent(id)}/members/${encodeURIComponent(memberEmail)}`
+    );
+    return j.data;
   }
 };

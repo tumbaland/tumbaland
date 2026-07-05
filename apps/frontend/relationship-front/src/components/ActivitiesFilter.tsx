@@ -24,6 +24,7 @@ import {
   Category as CategoryIcon,
   ExpandMore as ExpandMoreIcon
 } from '@mui/icons-material';
+import { logger } from '@tumbaland/components';
 import { ActivityType } from '../api/types';
 import { getActivityTypes } from '../api/activityTypes';
 import { useTenantFilter } from './tenant/useTenantDataRefresh';
@@ -60,12 +61,12 @@ const ActivitiesFilter: React.FC<ActivitiesFilterProps> = React.memo(({
   useEffect(() => {
     const fetchActivityTypes = async () => {
       try {
-        console.log('Fetching activity types for groupId:', tenantGroupId);
+        logger.debug('Fetching activity types', { groupId: tenantGroupId });
         const response = await getActivityTypes({ groupId: tenantGroupId });
         setActivityTypes(response.data);
-        console.log('Fetched activity types:', response.data);
+        logger.debug('Fetched activity types', { count: response.data.length });
       } catch (error) {
-        console.error('Failed to fetch activity types:', error);
+        logger.error('Failed to fetch activity types', error);
       } finally {
         setLoadingTypes(false);
       }

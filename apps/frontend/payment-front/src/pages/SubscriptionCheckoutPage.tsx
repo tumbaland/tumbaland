@@ -5,6 +5,7 @@ import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import { useSearchParams } from 'react-router-dom';
+import { logger } from '@tumbaland/components';
 import { paymentApi } from '../services/paymentApi';
 import { Plan } from '../types';
 
@@ -126,7 +127,7 @@ const SubscriptionCheckoutPage: React.FC = () => {
           return;
         }
       } catch (e) {
-        console.error('poll error', e);
+        logger.error('poll error', e);
         if (attempts > 5) {
           finishWithError('Network issue while checking status. Please retry later.');
           return;
@@ -144,10 +145,7 @@ const SubscriptionCheckoutPage: React.FC = () => {
     setCreating(true); setError(null);
     try {
       const res = await paymentApi.createCheckoutSession(plan.code);
-      // Debug log of raw response for troubleshooting missing URL
-      // (Remove or guard behind env flag in production)
-       
-      console.debug('checkout-session response', res);
+      logger.debug('checkout-session response', res);
       if (res.free && res.subscription?.status === 'active') {
         const target = (res as any).url || '/subscription';
         navigateTop(target);

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { IconButton, alpha } from '@mui/material';
 import { Edit } from '@mui/icons-material';
+import { logger } from '@tumbaland/components';
 import { Activity, UpdateActivityRequest } from '../api/types';
 import { updateActivity } from '../api/activities';
 import ActivityForm from './ActivityForm';
@@ -32,7 +33,7 @@ const EditActivityModal: React.FC<EditActivityModalProps> = ({ activity, buttonP
       }
       return true;
     } catch (error) {
-      console.error('Failed to update activity:', error);
+      logger.error('Failed to update activity', error);
       return false;
     }
   };

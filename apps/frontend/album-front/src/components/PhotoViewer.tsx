@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '@tumbaland/components';
 import {
   Box,
   Dialog,
@@ -82,7 +83,7 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Download failed:', error);
+      logger.error('Download failed', error);
       window.open(selectedPhoto.signedUrl, '_blank');
     }
   };

@@ -1,4 +1,5 @@
 
+import { logger } from '@tumbaland/components';
 import { photoService } from './photoService';
 import { getGlobalConfig, AppConfig } from '../config/ConfigProvider';
 
@@ -181,7 +182,7 @@ const fetchPhotoFile = async (photoId: string): Promise<Blob> => {
       throw error;
     }
   } catch (error) {
-    console.error('Error fetching photo file:', error);
+    logger.error('Error fetching photo file', error);
     throw new AIServiceError(
       `Failed to fetch photo file: ${error instanceof Error ? error.message : 'Unknown error'}`,
       'segmentation'
@@ -238,7 +239,7 @@ export const segmentationService = {
       const data = await response.json();
       return data.status === 'healthy';
     } catch (error) {
-      console.warn('Segmentation service health check failed:', error);
+      logger.warn('Segmentation service health check failed', { error });
       return false;
     }
   },
@@ -257,7 +258,7 @@ export const segmentationService = {
       
       return await response.json();
     } catch (error) {
-      console.warn('Segmentation service health check failed:', error);
+      logger.warn('Segmentation service health check failed', { error });
       throw new AIServiceError(
         `Failed to get health details: ${error instanceof Error ? error.message : 'Unknown error'}`,
         'segmentation'
@@ -335,7 +336,7 @@ export const segmentationService = {
       
       return data;
     } catch (error) {
-      console.error('Error in segmentImage:', error);
+      logger.error('Error in segmentImage', error);
       if (error instanceof AIServiceError) {
         throw error;
       }
@@ -362,7 +363,7 @@ export const segmentationService = {
       const data = await response.json();
       return data.available_models?.map((model: any) => model.name) || [];
     } catch (error) {
-      console.error('Error getting available segmentation models:', error);
+      logger.error('Error getting available segmentation models', error);
       throw new AIServiceError(
         `Failed to get available models: ${error instanceof Error ? error.message : 'Unknown error'}`,
         'segmentation',
@@ -387,7 +388,7 @@ export const segmentationService = {
       
       return await response.json();
     } catch (error) {
-      console.error('Error switching segmentation model:', error);
+      logger.error('Error switching segmentation model', error);
       throw new AIServiceError(
         `Failed to switch model: ${error instanceof Error ? error.message : 'Unknown error'}`,
         'segmentation',
@@ -435,11 +436,11 @@ export const segmentationService = {
       }
 
       const result = await response.json();
-      console.log('Segmentation job info:', result);
-      
+      logger.debug('Segmentation job info', result);
+
       return result;
     } catch (error) {
-      console.error('Error fetching segmentation job info:', error);
+      logger.error('Error fetching segmentation job info', error);
       throw new AIServiceError(
         `Failed to fetch segmentation job info: ${error instanceof Error ? error.message : 'Unknown error'}`,
         'segmentation',

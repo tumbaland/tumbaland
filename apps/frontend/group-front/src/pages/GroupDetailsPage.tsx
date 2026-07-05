@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Container, Alert, CircularProgress } from '@mui/material';
+import { logger } from '@tumbaland/components';
 import { authService } from '../services/authService';
 import { groupApi } from '../services/groupApi';
 import { Group, GroupMember, User } from '../types';
@@ -41,7 +42,7 @@ const GroupDetailsPage: React.FC = () => {
         const { user } = await authService.checkAuth();
         setUser(user);
       } catch (err) {
-        console.error('Failed to check auth', err);
+        logger.error('Failed to check auth', err);
       }
     };
     init();
@@ -55,7 +56,7 @@ const GroupDetailsPage: React.FC = () => {
       setGroup(data);
       setEditName(data.name);
     } catch (err) {
-      console.error('Failed to fetch group details:', err);
+      logger.error('Failed to fetch group details', err);
       setError('Failed to load group details');
     } finally {
       setLoading(false);
@@ -78,7 +79,7 @@ const GroupDetailsPage: React.FC = () => {
       await fetchGroupDetails();
       setIsEditGroupOpen(false);
     } catch (err) {
-      console.error('Failed to update group:', err);
+      logger.error('Failed to update group', err);
       // Could add toast notification here
     } finally {
       setActionLoading(false);
@@ -97,7 +98,7 @@ const GroupDetailsPage: React.FC = () => {
       await groupApi.removeMember(groupId, email);
       await fetchGroupDetails();
     } catch (err) {
-      console.error('Failed to remove member:', err);
+      logger.error('Failed to remove member', err);
     }
   };
 
@@ -107,7 +108,7 @@ const GroupDetailsPage: React.FC = () => {
       await groupApi.updateMemberRole(groupId, email, newRole);
       await fetchGroupDetails();
     } catch (err) {
-      console.error('Failed to update role:', err);
+      logger.error('Failed to update role', err);
     }
   };
 

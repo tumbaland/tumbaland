@@ -6,7 +6,6 @@ import { useTenantFilter } from '../components/tenant';
 
 const ActivityTypesPage: React.FC = () => {
   const groupId = useTenantFilter();
-  console.log('ActivityTypesPage rendered with groupId:', groupId);
 
   return (
     <Container maxWidth="xl">

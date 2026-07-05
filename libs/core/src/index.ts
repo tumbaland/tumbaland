@@ -32,7 +32,8 @@ export type { UserPayload } from './types/auth';
 
 // Utils
 export { generateCorrelationId, correlationMiddleware } from './utils/correlation';
-export { createApiResponse } from './utils/response';
+export { createApiResponse, sendSuccess, sendError } from './utils/response';
+export type { ApiResponse } from './utils/response';
 
 // Metrics
 export {

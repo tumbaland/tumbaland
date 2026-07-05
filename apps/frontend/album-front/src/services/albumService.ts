@@ -4,7 +4,7 @@ import { Album, CreateAlbumData, ApiResponse, PaginatedResponse, AlbumStatistics
 export const albumService = {
   // Create a new album
   async createAlbum(albumData: CreateAlbumData & { groupId?: string }): Promise<ApiResponse<Album>> {
-    const response = await albumApi.post('/albums', albumData);
+    const response = await albumApi.post<ApiResponse<Album>>('/albums', albumData);
     return response.data;
   },
 
@@ -17,13 +17,13 @@ export const albumService = {
     groupId?: string;
     includeCover?: boolean;
   }): Promise<PaginatedResponse<Album>> {
-    const response = await albumApi.get('/albums', { params });
+    const response = await albumApi.get<ApiResponse<PaginatedResponse<Album>>>('/albums', { params });
     return response.data.data;
   },
 
   // Get album by ID
   async getAlbumById(id: string): Promise<Album> {
-    const response = await albumApi.get(`/albums/${id}`);
+    const response = await albumApi.get<ApiResponse<Album>>(`/albums/${id}`);
     return response.data.data;
   },
 
@@ -32,25 +32,25 @@ export const albumService = {
     id: string,
     albumData: Partial<CreateAlbumData> & { coverPhotoId?: string }
   ): Promise<ApiResponse<Album>> {
-    const response = await albumApi.put(`/albums/${id}`, albumData);
+    const response = await albumApi.put<ApiResponse<Album>>(`/albums/${id}`, albumData);
     return response.data;
   },
 
   // Delete album
   async deleteAlbum(id: string): Promise<ApiResponse<void>> {
-    const response = await albumApi.delete(`/albums/${id}`);
+    const response = await albumApi.delete<ApiResponse<void>>(`/albums/${id}`);
     return response.data;
   },
 
   // Set cover photo for album
   async setCoverPhoto(albumId: string, photoId: string): Promise<ApiResponse<Album>> {
-    const response = await albumApi.put(`/albums/${albumId}/cover`, { photoId });
+    const response = await albumApi.put<ApiResponse<Album>>(`/albums/${albumId}/cover`, { photoId });
     return response.data;
   },
 
   // Remove cover photo from album
   async removeCoverPhoto(albumId: string): Promise<ApiResponse<Album>> {
-    const response = await albumApi.delete(`/albums/${albumId}/cover`);
+    const response = await albumApi.delete<ApiResponse<Album>>(`/albums/${albumId}/cover`);
     return response.data;
   },
 
@@ -61,8 +61,8 @@ export const albumService = {
     totalMasks?: number;
     segmentationType?: string;
     processingTime?: number;
-  }): Promise<any> {
-    const response = await albumApi.put(`/photos/${photoId}/ai-analysis`, {
+  }): Promise<ApiResponse<unknown>> {
+    const response = await albumApi.put<ApiResponse<unknown>>(`/photos/${photoId}/ai-analysis`, {
       analysisType: analysis.analysisType,
       jobId: analysis.jobId,
       totalMasks: analysis.totalMasks,
@@ -77,7 +77,7 @@ export const albumService = {
     groupId?: string;
     tenantId?: string;
   }): Promise<AlbumStatistics> {
-    const response = await albumApi.get('/statistics', { params });
+    const response = await albumApi.get<ApiResponse<AlbumStatistics>>('/statistics', { params });
     return response.data.data;
   }
 };

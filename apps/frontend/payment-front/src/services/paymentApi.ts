@@ -1,5 +1,5 @@
+import { createApiClient } from '@tumbaland/frontend-core';
 import { getGlobalConfig } from '../config/ConfigProvider';
-import { getCorrelationId, getSessionId } from '@tumbaland/components';
 import { Plan, Subscription, Payment } from '../types';
 
 // Unified API response shapes we might encounter from the backend.
@@ -15,14 +15,15 @@ type AnyApiResponse = {
   [k: string]: any; // tolerate extra fields
 };
 
-/**
- * Build the normalized base URL (no trailing slash) and append /api + path
- */
-function buildUrl(path: string): string {
-  const cfg = getGlobalConfig();
-  const root = (cfg.PAYMENT_API_URL || '').replace(/\/$/, '');
-  return `${root}/api${path}`;
-}
+const client = createApiClient({
+  baseUrl: () => `${(getGlobalConfig().PAYMENT_API_URL || '').replace(/\/$/, '')}/api`,
+  onUnauthorized: () => {
+    const { AUTH_FRONT_URL } = getGlobalConfig();
+    if (AUTH_FRONT_URL) {
+      window.location.href = `${AUTH_FRONT_URL}?redirect_uri=${encodeURIComponent(window.location.href)}`;
+    }
+  }
+});
 
 /**
  * Extract the relevant payload entity from a heterogeneous API response.
@@ -46,41 +47,11 @@ function unwrap<T>(data: AnyApiResponse): T {
   return data as unknown as T; // final fallback
 }
 
-/**
- * Core fetch helper adding auth token + credentials and improved error surface.
- */
-async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
-  // Merge headers, allowing caller overrides.
-  const mergedHeaders: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'x-correlation-id': getCorrelationId(),
-    'x-session-id': getSessionId(),
-    ...(options.headers as Record<string, string> | undefined)
-  };
-
-  const response = await fetch(buildUrl(path), {
-    ...options,
-    credentials: 'include',
-    headers: mergedHeaders
+async function api<T>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
+  const body = await client.request<AnyApiResponse>(path, {
+    method: options.method,
+    body: options.body !== undefined ? JSON.stringify(options.body) : undefined
   });
-
-  let body: AnyApiResponse | undefined;
-  const text = await response.text();
-  try {
-    body = text ? (JSON.parse(text) as AnyApiResponse) : {};
-  } catch (e) {
-    // Non-JSON response: treat as error unless OK and expecting empty
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status} (non-JSON)`);
-    }
-    return {} as T;
-  }
-
-  if (!response.ok) {
-    const msg = body?.message || body?.error || `HTTP ${response.status}`;
-    throw new Error(msg);
-  }
-
   return unwrap<T>(body || {});
 }
 
@@ -91,7 +62,7 @@ export const paymentApi = {
   createCheckoutSession(planCode: string, successUrl?: string, cancelUrl?: string): Promise<{ sessionId?: string; url?: string; free?: boolean; subscription?: Subscription; }> {
     return api<{ sessionId?: string; url?: string; free?: boolean; subscription?: Subscription; }>('/subscriptions/checkout-session', {
       method: 'POST',
-      body: JSON.stringify({ planCode, successUrl, cancelUrl })
+      body: { planCode, successUrl, cancelUrl }
     });
   },
   getCheckoutSessionStatus(sessionId: string): Promise<{ success?: boolean; status: string; payment_status: string; subscription: Subscription | null; }> {
@@ -109,7 +80,7 @@ export const paymentApi = {
   createOneTime(amountCents: number, currency = 'eur'): Promise<Payment> {
     return api<Payment>('/payments/one-time', {
       method: 'POST',
-      body: JSON.stringify({ amountCents, currency })
+      body: { amountCents, currency }
     });
   },
   listMyPayments(): Promise<Payment[]> {

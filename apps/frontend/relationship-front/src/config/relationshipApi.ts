@@ -1,82 +1,32 @@
+import { createApiClient } from '@tumbaland/frontend-core';
 import { getGlobalConfig } from './ConfigProvider';
-import { getCorrelationId, getSessionId } from '@tumbaland/components';
 
-// Base fetch wrapper with auth handling
-export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
-  const appConfig = getGlobalConfig();
-
-  const requestConfig: RequestInit = {
-    ...options,
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-correlation-id': getCorrelationId(),
-      'x-session-id': getSessionId(),
-      ...options.headers
+const client = createApiClient({
+  baseUrl: () => `${getGlobalConfig().RELATIONSHIP_API_URL}/api`,
+  onUnauthorized: () => {
+    const { AUTH_FRONT_URL } = getGlobalConfig();
+    if (AUTH_FRONT_URL) {
+      window.location.href = `${AUTH_FRONT_URL}?redirect_uri=${encodeURIComponent(window.location.href)}`;
     }
-  };
-
-  const response = await fetch(`${appConfig.RELATIONSHIP_API_URL}/api${endpoint}`, requestConfig);
-
-  if (!response.ok) {
-    if (response.status === 401) {
-      console.error('Unauthorized access - redirecting to login');
-      // Handle unauthorized access
-    } else if (response.status >= 500) {
-      console.error('Server error:', response.status, response.statusText);
-    }
-    throw new Error(`API Error: ${response.status} ${response.statusText}`);
   }
+});
 
-  return response;
-}
-
-// Helper methods for common HTTP verbs
+// Helper methods for common HTTP verbs, kept axios-shaped ({ data }) so call sites don't change.
 export const relationshipApi = {
-  async get(endpoint: string, options?: { params?: Record<string, any> }): Promise<{ data: any }> {
-    let url = endpoint;
-    if (options?.params) {
-      const searchParams = new URLSearchParams();
-      Object.entries(options.params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          searchParams.append(key, String(value));
-        }
-      });
-      const paramString = searchParams.toString();
-      if (paramString) {
-        url += `?${paramString}`;
-      }
-    }
-
-    const response = await apiFetch(url);
-    const data = await response.json();
-    return { data };
+  async get<T = unknown>(endpoint: string, options?: { params?: Record<string, any> }): Promise<{ data: T }> {
+    return { data: await client.get<T>(endpoint, { params: options?.params }) };
   },
 
-  async post(endpoint: string, body?: any): Promise<{ data: any }> {
-    const response = await apiFetch(endpoint, {
-      method: 'POST',
-      body: body ? JSON.stringify(body) : undefined
-    });
-    const data = await response.json();
-    return { data };
+  async post<T = unknown>(endpoint: string, body?: unknown): Promise<{ data: T }> {
+    return { data: await client.post<T>(endpoint, body) };
   },
 
-  async put(endpoint: string, body?: any): Promise<{ data: any }> {
-    const response = await apiFetch(endpoint, {
-      method: 'PUT',
-      body: body ? JSON.stringify(body) : undefined
-    });
-    const data = await response.json();
-    return { data };
+  async put<T = unknown>(endpoint: string, body?: unknown): Promise<{ data: T }> {
+    return { data: await client.put<T>(endpoint, body) };
   },
 
-  async delete(endpoint: string): Promise<{ data: any }> {
-    const response = await apiFetch(endpoint, {
-      method: 'DELETE'
-    });
-    const data = await response.json();
-    return { data };
+  async delete<T = unknown>(endpoint: string): Promise<{ data: T }> {
+    return { data: await client.delete<T>(endpoint) };
   }
 };
 

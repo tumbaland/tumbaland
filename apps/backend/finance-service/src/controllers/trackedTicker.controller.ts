@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { BadRequestError, ForbiddenError } from '@tumbaland/core';
+import { BadRequestError, ForbiddenError, sendSuccess, sendError } from '@tumbaland/core';
 import {
   getAllTrackedTickers,
   createTrackedTicker,
@@ -19,7 +19,7 @@ export const searchTrackedTickers = async (req: Request, res: Response): Promise
 
   const results = await searchTickers(q.trim());
 
-  res.json({ success: true, data: results });
+  sendSuccess(res, results);
 };
 
 /**
@@ -42,10 +42,7 @@ export const getTrackedTickers = async (req: Request, res: Response): Promise<vo
     tickers = await getAllTrackedTickers(user.id, []);
   }
 
-  res.json({
-    success: true,
-    data: tickers
-  });
+  sendSuccess(res, tickers);
 };
 
 /**
@@ -57,11 +54,7 @@ export const addTrackedTicker = async (req: Request, res: Response): Promise<voi
 
   const created = await createTrackedTicker(req.body, user.id, userGroups);
 
-  res.status(201).json({
-    success: true,
-    message: 'Ticker added successfully',
-    data: created
-  });
+  sendSuccess(res, created, 'Ticker added successfully', 201);
 };
 
 /**
@@ -75,18 +68,11 @@ export const editTrackedTicker = async (req: Request, res: Response): Promise<vo
   const updated = await updateTrackedTicker(id as string, req.body, user.id, userGroups);
 
   if (!updated) {
-    res.status(404).json({
-      success: false,
-      message: 'Tracked ticker not found'
-    });
+    sendError(res, 'Tracked ticker not found', 404);
     return;
   }
 
-  res.json({
-    success: true,
-    message: 'Ticker updated successfully',
-    data: updated
-  });
+  sendSuccess(res, updated, 'Ticker updated successfully');
 };
 
 /**
@@ -99,8 +85,5 @@ export const removeTrackedTicker = async (req: Request, res: Response): Promise<
 
   await deleteTrackedTicker(id as string, user.id, userGroups);
 
-  res.json({
-    success: true,
-    message: 'Ticker deleted successfully'
-  });
+  sendSuccess(res, undefined, 'Ticker deleted successfully');
 };

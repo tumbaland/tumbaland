@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { IconButton, Tooltip, CircularProgress, alpha } from '@mui/material';
 import { Delete } from '@mui/icons-material';
+import { logger } from '@tumbaland/components';
 import { deleteActivity } from '../api/activities';
 import ConfirmationModal from './ConfirmationModal';
 
@@ -33,7 +34,7 @@ const DeleteActivityButton: React.FC<DeleteActivityButtonProps> = ({ activityId,
         window.location.reload();
       }
     } catch (error) {
-      console.error('Failed to delete activity:', error);
+      logger.error('Failed to delete activity', error);
       setError('Failed to delete activity. Please try again.');
     } finally {
       setIsDeleting(false);

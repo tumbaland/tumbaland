@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '@tumbaland/components';
 import {
   Box,
   Container,
@@ -61,7 +62,7 @@ const PhotoDetailPage: React.FC = () => {
         setAlbum(albumResponse);
       } catch (err) {
         setError('Failed to load photo details');
-        console.error('Error fetching photo details:', err);
+        logger.error('Error fetching photo details', err);
       } finally {
         setLoading(false);
       }
@@ -95,7 +96,7 @@ const PhotoDetailPage: React.FC = () => {
       setPhoto(response);
       setShowEditDialog(false);
     } catch (err) {
-      console.error('Failed to update photo:', err);
+      logger.error('Failed to update photo', err);
       alert('Failed to update photo');
     }
   };
@@ -115,7 +116,7 @@ const PhotoDetailPage: React.FC = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Download failed:', error);
+      logger.error('Download failed', error);
       window.open(photo.signedUrl, '_blank');
     }
   };

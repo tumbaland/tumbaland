@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { BadRequestError, NotFoundError } from '@tumbaland/core';
+import { BadRequestError, NotFoundError, sendSuccess } from '@tumbaland/core';
 import * as ActivityService from '../services/activity.service';
 import { IActivity } from '../models/Activity';
 
@@ -30,11 +30,7 @@ export const createActivity = async (req: Request, res: Response): Promise<void>
   }
 
   const activity = await ActivityService.createActivity(activityData);
-  res.status(201).json({
-    success: true,
-    message: 'Activity created successfully',
-    data: activity
-  });
+  sendSuccess(res, activity, 'Activity created successfully', 201);
 };
 
 /**
@@ -61,16 +57,13 @@ export const getActivities = async (req: Request, res: Response): Promise<void> 
 
   const result = await ActivityService.getActivities(filters);
 
-  res.json({
-    success: true,
-    data: {
-      activities: result.activities,
-      pagination: {
-        page: result.page,
-        limit: filters.limit,
-        total: result.total,
-        totalPages: result.totalPages
-      }
+  sendSuccess(res, {
+    activities: result.activities,
+    pagination: {
+      page: result.page,
+      limit: filters.limit,
+      total: result.total,
+      totalPages: result.totalPages
     }
   });
 };
@@ -86,10 +79,7 @@ export const getActivityById = async (req: Request, res: Response): Promise<void
     throw new NotFoundError('Activity not found');
   }
 
-  res.json({
-    success: true,
-    data: activity
-  });
+  sendSuccess(res, activity);
 };
 
 /**
@@ -105,11 +95,7 @@ export const updateActivity = async (req: Request, res: Response): Promise<void>
     throw new NotFoundError('Activity not found');
   }
 
-  res.json({
-    success: true,
-    message: 'Activity updated successfully',
-    data: activity
-  });
+  sendSuccess(res, activity, 'Activity updated successfully');
 };
 
 /**
@@ -123,10 +109,7 @@ export const deleteActivity = async (req: Request, res: Response): Promise<void>
     throw new NotFoundError('Activity not found');
   }
 
-  res.json({
-    success: true,
-    message: 'Activity deleted successfully'
-  });
+  sendSuccess(res, undefined, 'Activity deleted successfully');
 };
 
 /**
@@ -141,10 +124,7 @@ export const getActivityStats = async (req: Request, res: Response): Promise<voi
 
   const stats = await ActivityService.getActivityStats(filters);
 
-  res.json({
-    success: true,
-    data: stats
-  });
+  sendSuccess(res, stats);
 };
 
 /**
@@ -162,10 +142,7 @@ export const getActivitiesByDateRange = async (req: Request, res: Response): Pro
     new Date(endDate as string)
   );
 
-  res.json({
-    success: true,
-    data: activities
-  });
+  sendSuccess(res, activities);
 };
 
 /**
@@ -188,10 +165,7 @@ export const getRecentActivities = async (req: Request, res: Response): Promise<
 
   const result = await ActivityService.getActivities(filters);
 
-  res.json({
-    success: true,
-    data: result.activities
-  });
+  sendSuccess(res, result.activities);
 };
 
 /**
@@ -204,10 +178,7 @@ export const getActivityTypes = async (req: Request, res: Response): Promise<voi
 
   const types = await ActivityService.getActivityTypes(user.id, groupId as string, userGroups);
 
-  res.json({
-    success: true,
-    data: types
-  });
+  sendSuccess(res, types);
 };
 
 /**
@@ -263,10 +234,7 @@ export const getRecentActivitiesSummary = async (req: Request, res: Response): P
     }
   }
 
-  res.json({
-    success: true,
-    data: result
-  });
+  sendSuccess(res, result);
 };
 
 /**
@@ -288,5 +256,5 @@ export const getActivityDescriptions = async (req: Request, res: Response): Prom
     groupId as string | undefined
   );
 
-  res.json({ success: true, data: descriptions });
+  sendSuccess(res, descriptions);
 };

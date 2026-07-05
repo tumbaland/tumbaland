@@ -12,6 +12,7 @@ import {
   FormControlLabel
 } from '@mui/material';
 import { Email, Save, DeleteForever } from '@mui/icons-material';
+import { logger } from '@tumbaland/components';
 import { authService } from '../../services/authService';
 import { profileService } from '../../services/profileService';
 import { User } from '../../types';
@@ -35,28 +36,27 @@ const ProfileTab: React.FC = () => {
         const isAuth = await authService.isAuthenticated();
         
         if (!isAuth) {
-          console.log('ProfileTab: User not authenticated, redirecting to login');
+          logger.debug('ProfileTab: user not authenticated, redirecting to login');
           authService.redirectToLogin();
           return;
         }
 
         const currentUser = await authService.getProfile();
-        
+
         if (currentUser) {
           setUser(currentUser);
           setEmail(currentUser.email);
           setFirstName(currentUser.firstName || '');
           setLastName(currentUser.lastName || '');
-          console.log('ProfileTab: Profile data set successfully');
         } else {
-          console.error('ProfileTab: No profile data received');
+          logger.error('ProfileTab: no profile data received');
           setMessage({ type: 'error', text: 'Failed to load profile data' });
         }
       } catch (error) {
-        console.error('ProfileTab: Failed to load user data:', error);
+        logger.error('ProfileTab: failed to load user data', error);
         // Check if it's an authentication error
         if (error instanceof Error && error.message.includes('401')) {
-          console.log('ProfileTab: Authentication error, redirecting to login');
+          logger.debug('ProfileTab: authentication error, redirecting to login');
           authService.redirectToLogin();
           return;
         }
@@ -100,7 +100,7 @@ const ProfileTab: React.FC = () => {
         setMessage({ type: 'error', text: response.message || 'Failed to update profile' });
       }
     } catch (error) {
-      console.error('Failed to update profile:', error);
+      logger.error('Failed to update profile', error);
       setMessage({ type: 'error', text: 'Failed to update profile. Please try again.' });
     } finally {
       setSaving(false);

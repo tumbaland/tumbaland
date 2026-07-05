@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ForbiddenError } from '@tumbaland/core';
+import { ForbiddenError, sendSuccess, sendError } from '@tumbaland/core';
 import {
   getAllUserPortfolios,
   createUserPortfolio,
@@ -27,10 +27,7 @@ export const getUserPortfolios = async (req: Request, res: Response): Promise<vo
     portfolios = await getAllUserPortfolios(user.id, []);
   }
 
-  res.json({
-    success: true,
-    data: portfolios
-  });
+  sendSuccess(res, portfolios);
 };
 
 /**
@@ -42,11 +39,7 @@ export const addUserPortfolio = async (req: Request, res: Response): Promise<voi
 
   const created = await createUserPortfolio(req.body, user.id, userGroups);
 
-  res.status(201).json({
-    success: true,
-    message: 'Portfolio created successfully',
-    data: created
-  });
+  sendSuccess(res, created, 'Portfolio created successfully', 201);
 };
 
 /**
@@ -60,18 +53,11 @@ export const editUserPortfolio = async (req: Request, res: Response): Promise<vo
   const updated = await updateUserPortfolio(id as string, req.body, user.id, userGroups);
 
   if (!updated) {
-    res.status(404).json({
-      success: false,
-      message: 'Portfolio not found'
-    });
+    sendError(res, 'Portfolio not found', 404);
     return;
   }
 
-  res.json({
-    success: true,
-    message: 'Portfolio updated successfully',
-    data: updated
-  });
+  sendSuccess(res, updated, 'Portfolio updated successfully');
 };
 
 /**
@@ -84,8 +70,5 @@ export const removeUserPortfolio = async (req: Request, res: Response): Promise<
 
   await deleteUserPortfolio(id as string, user.id, userGroups);
 
-  res.json({
-    success: true,
-    message: 'Portfolio deleted successfully'
-  });
+  sendSuccess(res, undefined, 'Portfolio deleted successfully');
 };

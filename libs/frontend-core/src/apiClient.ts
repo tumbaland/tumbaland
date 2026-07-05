@@ -10,6 +10,21 @@ export interface ApiClientOptions {
 export interface ApiRequestOptions extends RequestInit {
   /** Skip the onUnauthorized callback for this call (e.g. an auth-check that expects 401 as a normal "not logged in" result, not a hard redirect). */
   skipAuthRedirect?: boolean;
+  /** Serialized onto the URL as a query string; undefined/null values are omitted. */
+  params?: Record<string, string | number | boolean | undefined | null>;
+}
+
+function appendParams(path: string, params?: ApiRequestOptions['params']): string {
+  if (!params) return path;
+  const searchParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      searchParams.append(key, String(value));
+    }
+  });
+  const query = searchParams.toString();
+  if (!query) return path;
+  return `${path}${path.includes('?') ? '&' : '?'}${query}`;
 }
 
 export class ApiError extends Error {
@@ -29,15 +44,13 @@ export class ApiError extends Error {
  * correlation/session headers, structured errors, and an opt-in 401 →
  * redirect-to-auth hook, per TECHNICAL_REVIEW.md P1.3. `authService` and
  * `groupService` don't route through this: they use different auth
- * transports (cookie vs. Bearer token) that predate this client. New
- * call sites (the many per-front album/finance/etc. service files that
- * still hand-roll fetch) can adopt this incrementally.
+ * transports (cookie vs. Bearer token) that predate this client.
  */
 export function createApiClient(options: ApiClientOptions) {
   async function request<T = unknown>(path: string, init: ApiRequestOptions = {}): Promise<T> {
-    const { skipAuthRedirect, headers, ...rest } = init;
+    const { skipAuthRedirect, headers, params, ...rest } = init;
 
-    const response = await fetch(`${options.baseUrl()}${path}`, {
+    const response = await fetch(`${options.baseUrl()}${appendParams(path, params)}`, {
       credentials: 'include',
       ...rest,
       headers: {

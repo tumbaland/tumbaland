@@ -17,6 +17,7 @@ import {
   alpha
 } from '@mui/material';
 import { ExpandMore, ExpandLess } from '@mui/icons-material';
+import { logger } from '@tumbaland/components';
 import { getRecentActivitiesSummary } from '../api/activities';
 import { Activity, ActivityType } from '../api/types';
 import { useTenantFilter } from './tenant';
@@ -60,8 +61,8 @@ const RecentActivitiesCards: React.FC = () => {
         const summaryResponse = await getRecentActivitiesSummary(tenantGroupId);
         const summaryData = summaryResponse;
 
-        console.log('Activity types:', types);
-        console.log('Summary data:', summaryData);
+        logger.debug('Fetched activity types', { count: types.length });
+        logger.debug('Fetched recent activities summary', { keys: Object.keys(summaryData) });
 
         // Transform data to use activity type slugs as keys
         const dataMap: Record<string, Activity[]> = {};
@@ -74,10 +75,10 @@ const RecentActivitiesCards: React.FC = () => {
           }
         });
 
-        console.log('Transformed data map:', dataMap);
+        logger.debug('Transformed recent activities data map', { keys: Object.keys(dataMap) });
         setActivitiesData(dataMap);
       } catch (err) {
-        console.error('Failed to fetch data:', err);
+        logger.error('Failed to fetch recent activities data', err);
         setError('Failed to load activities data');
       } finally {
         setLoading(false);

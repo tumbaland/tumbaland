@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { logger } from '@tumbaland/components';
 import {
   Box,
   Card,
@@ -56,7 +57,7 @@ const HoursBarChart: React.FC<BarChartProps> = ({ title = 'Activities per Month 
       setData(monthlyData);
       setActivityTypes(activityTypesResponse.data);
     } catch (err) {
-      console.error('Error fetching data:', err);
+      logger.error('Error fetching data', err);
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setLoading(false);
@@ -142,9 +143,6 @@ const HoursBarChart: React.FC<BarChartProps> = ({ title = 'Activities per Month 
   // Prepare data for the chart - create arrays for each activity type
   const monthLabels = data.map((item) => `${MONTHS[parseInt(item.month) - 1]} ${item.year}`);
 
-  console.log('Raw data:', data);
-  console.log('All activity types:', allActivityTypes);
-
   // Recalculate totals based on filtered activities
   const totalPerMonth = data.map(item => {
     return allActivityTypes.reduce((sum, type) => {
@@ -184,9 +182,6 @@ const HoursBarChart: React.FC<BarChartProps> = ({ title = 'Activities per Month 
       barLabel: (item: { dataIndex: number }) => totalPerMonth[item.dataIndex]?.toString(),
     }
   ];
-
-  console.log('Month labels:', monthLabels);
-  console.log('Series:', series);
 
   return (
     <Card 

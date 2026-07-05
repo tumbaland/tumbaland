@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { logger } from '@tumbaland/components';
 import {
   Box,
   Card,
@@ -63,15 +64,15 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
         getCumulativeTimelineData(selectedYear, tenantGroupId),
         getActivityTypes({ groupId: tenantGroupId })
       ]);
-      console.log('Fetched timeline data:', timelineData);
-      console.log('Fetched activity types:', activityTypesResponse);
+      logger.debug('Fetched cumulative timeline data', { count: timelineData.length });
+      logger.debug('Fetched activity types', { count: activityTypesResponse.data.length });
       setData(timelineData);
       setActivityTypes(activityTypesResponse.data);
       setSelectedLines(activityTypesResponse.data
         .filter(type => type.slug !== 'total')
         .map(type => type.slug));
     } catch (err) {
-      console.error('Error fetching data:', err);
+      logger.error('Error fetching cumulative timeline data', err);
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setLoading(false);

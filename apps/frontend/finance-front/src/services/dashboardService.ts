@@ -1,4 +1,5 @@
 import { financeApi } from '../config/financeApi';
+import { ApiResponse } from '../types';
 
 export interface DashboardKPIs {
   totalPortfolioValue: number;
@@ -42,6 +43,6 @@ const API_URL = '/dashboard';
 
 export const getDashboard = async (groupId?: string): Promise<DashboardData> => {
   const params = groupId ? { groupId } : {};
-  const res = await financeApi.get(API_URL, { params });
+  const res = await financeApi.get<ApiResponse<DashboardData>>(API_URL, { params });
   return res.data.data;
 };

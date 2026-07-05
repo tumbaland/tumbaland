@@ -11,6 +11,7 @@ import {
   RadioGroup,
   Typography
 } from '@mui/material';
+import { logger } from '@tumbaland/components';
 import { GroupMember } from '../../types';
 
 interface ChangeRoleDialogProps {
@@ -42,7 +43,7 @@ const ChangeRoleDialog: React.FC<ChangeRoleDialogProps> = ({
       await onSave(member.email, role);
       onClose();
     } catch (error) {
-      console.error('Failed to update role', error);
+      logger.error('Failed to update role', error);
     } finally {
       setLoading(false);
     }

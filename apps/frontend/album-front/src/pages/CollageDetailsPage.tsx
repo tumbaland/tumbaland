@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
+import { logger } from '@tumbaland/components';
 import {
   Box,
   CircularProgress,
@@ -346,7 +347,7 @@ const CollageDetailsPage: React.FC = () => {
         }
       ]);
     } catch (error) {
-      console.error('Failed to parse dropped photo data:', error);
+      logger.error('Failed to parse dropped photo data', error);
     }
   };
 

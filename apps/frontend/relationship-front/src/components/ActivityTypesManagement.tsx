@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '@tumbaland/components';
 import {
   Box,
   Typography,
@@ -49,7 +50,7 @@ const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ group
       const response = await getActivityTypes({ groupId });
       setActivityTypes(response.data);
     } catch (error: any) {
-      console.error('Failed to load activity types:', error);
+      logger.error('Failed to load activity types', error);
       // Ideally use a snackbar here instead of alert
     } finally {
       setLoading(false);

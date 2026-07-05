@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ForbiddenError } from '@tumbaland/core';
+import { ForbiddenError, sendSuccess } from '@tumbaland/core';
 import * as assetAllocationService from '../services/assetAllocation.service';
 
 /**
@@ -22,10 +22,7 @@ export const getAssetAllocations = async (req: Request, res: Response): Promise<
     allocations = await assetAllocationService.getPersonalAssetAllocations(user.id);
   }
 
-  res.json({
-    success: true,
-    data: allocations
-  });
+  sendSuccess(res, allocations);
 };
 
 /**
@@ -41,11 +38,7 @@ export const createAssetAllocation = async (req: Request, res: Response): Promis
 
   const allocation = await assetAllocationService.createAssetAllocation(allocationData);
 
-  res.status(201).json({
-    success: true,
-    message: 'Asset allocation created successfully',
-    data: allocation
-  });
+  sendSuccess(res, allocation, 'Asset allocation created successfully', 201);
 };
 
 /**
@@ -58,11 +51,7 @@ export const updateAssetAllocation = async (req: Request, res: Response): Promis
 
   const updated = await assetAllocationService.updateAssetAllocation(id as string, req.body, user.id, userGroups);
 
-  res.json({
-    success: true,
-    message: 'Asset allocation updated successfully',
-    data: updated
-  });
+  sendSuccess(res, updated, 'Asset allocation updated successfully');
 };
 
 /**
@@ -75,8 +64,5 @@ export const deleteAssetAllocation = async (req: Request, res: Response): Promis
 
   await assetAllocationService.deleteAssetAllocation(id as string, user.id, userGroups);
 
-  res.json({
-    success: true,
-    message: 'Asset allocation deleted successfully'
-  });
+  sendSuccess(res, undefined, 'Asset allocation deleted successfully');
 };

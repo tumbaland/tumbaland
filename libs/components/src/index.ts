@@ -19,6 +19,10 @@ export type {
   AuthHeaderTenantSelectorProps
 } from './components/AuthHeader';
 
+// Config provider factory
+export { createConfigProvider } from './config/createConfigProvider';
+export type { CreateConfigProviderOptions } from './config/createConfigProvider';
+
 // Monitoring
 export {
   initMonitoring,
@@ -30,5 +34,6 @@ export {
   initWebVitals,
   generateCorrelationId,
   getCorrelationId,
-  getSessionId
+  getSessionId,
+  logger
 } from './monitoring';

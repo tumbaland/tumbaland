@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { logger } from '@tumbaland/components';
 import {
   Box,
   Container,
@@ -112,7 +113,7 @@ const AlbumDetailPage: React.FC = () => {
     try {
       await updatePhoto(photoId, data);
     } catch (err) {
-      console.error('Failed to update photo:', err);
+      logger.error('Failed to update photo', err);
       alert('Failed to update photo');
     }
   };

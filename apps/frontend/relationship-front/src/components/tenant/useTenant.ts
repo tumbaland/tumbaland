@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { TenantOption, TenantProvider, useTenantListener, useTenantContext } from './TenantProvider';
-import { getCorrelationId, getSessionId } from '@tumbaland/components';
+import { getCorrelationId, getSessionId, logger } from '@tumbaland/components';
 
 // Re-export for convenience
 export { TenantProvider, useTenantListener, useTenantContext, type TenantOption };
@@ -38,25 +38,25 @@ const CACHE_DURATION = 30000; // 30 seconds
 // Global function to fetch groups - shared across all hook instances
 const fetchGroupsGlobally = async (groupApiUrl: string): Promise<TenantOption[]> => {
   requestCounter++;
-  console.log(`🔄 fetchGroupsGlobally called - Request #${requestCounter} for ${groupApiUrl}`);
-  
+  logger.debug('fetchGroupsGlobally called', { requestNumber: requestCounter, groupApiUrl });
+
   // Check if we have a valid cached request for the same API URL
   const now = Date.now();
-  if (globalGroupsFetchCache && 
-      globalGroupsApiUrl === groupApiUrl && 
+  if (globalGroupsFetchCache &&
+      globalGroupsApiUrl === groupApiUrl &&
       (now - globalGroupsCacheTimestamp) < CACHE_DURATION) {
-    console.log(`✅ Using cached groups request for ${groupApiUrl}`);
+    logger.debug('Using cached groups request', { groupApiUrl });
     return globalGroupsFetchCache;
   }
 
-  console.log(`🚀 Making new groups API request for ${groupApiUrl}`);
+  logger.debug('Making new groups API request', { groupApiUrl });
 
   // Create new request and cache it
   const fetchRequest = async (): Promise<TenantOption[]> => {
     try {
       // Check if groupApiUrl is provided
       if (!groupApiUrl) {
-        console.warn('No GROUP_API_URL provided to useTenant hook');
+        logger.warn('No GROUP_API_URL provided to useTenant hook');
         return [];
       }
 
@@ -75,7 +75,7 @@ const fetchGroupsGlobally = async (groupApiUrl: string): Promise<TenantOption[]>
         signal: AbortSignal.timeout(5000) // 5 second timeout
       });
 
-      console.log(`Groups API response status: ${response.status} ${response.statusText}`);
+      logger.debug('Groups API response', { status: response.status, statusText: response.statusText });
 
       if (!response.ok) {
         throw new Error(`Failed to fetch groups: ${response.status} ${response.statusText}`);
@@ -94,7 +94,7 @@ const fetchGroupsGlobally = async (groupApiUrl: string): Promise<TenantOption[]>
         type: 'group' as const
       }));
     } catch (err) {
-      console.error('Error fetching user groups:', err);
+      logger.error('Error fetching user groups', err);
       throw err;
     }
   };
@@ -139,7 +139,7 @@ export const useTenant = (
         return tenant;
       }
     } catch (err) {
-      console.warn('Failed to load saved tenant selection:', err);
+      logger.warn('Failed to load saved tenant selection', { error: err });
     }
     return null;
   }, []);
@@ -149,7 +149,7 @@ export const useTenant = (
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(tenant));
     } catch (err) {
-      console.warn('Failed to save tenant selection:', err);
+      logger.warn('Failed to save tenant selection', { error: err });
     }
   }, []);
 
@@ -201,7 +201,7 @@ export const useTenant = (
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load contexts';
-      console.error('Error in refreshTenants:', err);
+      logger.error('Error in refreshTenants', err);
       setError(errorMessage);
       
       // Fallback to personal account only
@@ -219,13 +219,13 @@ export const useTenant = (
 
   // Set selected tenant with page reload
   const setSelectedTenant = useCallback((tenant: TenantOption) => {
-    console.log(`🔄 Tenant changing to: ${tenant.type === 'personal' ? 'Personal' : tenant.name}`);
-    
+    logger.debug('Tenant changing', { to: tenant.type === 'personal' ? 'Personal' : tenant.name });
+
     // Save the new tenant selection
     saveTenant(tenant);
-    
+
     // Reload the page to refresh all data with the new context
-    console.log('🔄 Reloading page to apply new tenant context...');
+    logger.debug('Reloading page to apply new tenant context');
     window.location.reload();
   }, [saveTenant]);
 

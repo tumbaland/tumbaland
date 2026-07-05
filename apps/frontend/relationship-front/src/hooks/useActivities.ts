@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { logger } from '@tumbaland/components';
 import {
   Activity,
   CreateActivityRequest,
@@ -45,22 +46,22 @@ export const useActivities = (filters?: GetActivitiesFilters) => {
     setError(null);
     try {
       const data = await apiGetActivities(memoizedFilters);
-      console.log('Raw API data:', data);
+      logger.debug('useActivities: raw API data', { data });
 
       // Handle the ActivitiesResponse structure
       if (Array.isArray(data)) {
-        console.log('Setting activities directly (array):', data);
+        logger.debug('useActivities: setting activities directly (array)', { count: data.length });
         setActivities(data);
         setPagination((prev) => ({ ...prev, total: data.length }));
       } else {
-        console.log('Setting activities from data.activities:', data.activities);
+        logger.debug('useActivities: setting activities from data.activities', { count: data.activities?.length });
         setActivities(data.activities || []);
         if (data.pagination) {
           setPagination(data.pagination);
         }
       }
     } catch (err: any) {
-      console.error('useActivities: Error loading activities:', err);
+      logger.error('useActivities: error loading activities', err);
       setError(err.response?.data?.error || err.message || 'Failed to load activities');
     } finally {
       setLoading(false);

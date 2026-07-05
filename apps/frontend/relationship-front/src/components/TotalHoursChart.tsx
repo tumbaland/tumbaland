@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { logger } from '@tumbaland/components';
 import {
   Box,
   Card,
@@ -48,7 +49,7 @@ const TotalHoursChart: React.FC<TotalHoursChartProps> = ({ title = 'Total Hours 
       const monthlyData = await getMonthlyActivityBreakdown(selectedYear, tenantGroupId);
       setData(monthlyData);
     } catch (err) {
-      console.error('Error fetching data:', err);
+      logger.error('Error fetching data', err);
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setLoading(false);

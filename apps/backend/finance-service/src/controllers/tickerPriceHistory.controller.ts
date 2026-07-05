@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { BadRequestError } from '@tumbaland/core';
+import { BadRequestError, sendSuccess } from '@tumbaland/core';
 import * as tickerPriceService from '../services/tickerPriceHistory.service';
 
 /**
@@ -8,10 +8,7 @@ import * as tickerPriceService from '../services/tickerPriceHistory.service';
 export const getTickerPriceHistory = async (req: Request, res: Response): Promise<void> => {
   const records = await tickerPriceService.getTickerPriceHistory();
 
-  res.json({
-    success: true,
-    data: records
-  });
+  sendSuccess(res, records);
 };
 
 /**
@@ -22,11 +19,7 @@ export const fetchAndSaveTickerPrices = async (req: Request, res: Response): Pro
 
   const results = await tickerPriceService.fetchAndSaveTickerPrices(ticker);
 
-  res.json({
-    success: true,
-    message: 'Prices fetched and saved',
-    data: results
-  });
+  sendSuccess(res, results, 'Prices fetched and saved');
 };
 
 /**
@@ -37,11 +30,7 @@ export const fetchAndSaveAllTickerHistory = async (req: Request, res: Response):
 
   const savedCount = await tickerPriceService.fetchAllTickerHistory(ticker);
 
-  res.json({
-    success: true,
-    message: `Fetched and saved ${savedCount} records for ${ticker}`,
-    data: { ticker, recordsCount: savedCount }
-  });
+  sendSuccess(res, { ticker, recordsCount: savedCount }, `Fetched and saved ${savedCount} records for ${ticker}`);
 };
 
 /**
@@ -56,9 +45,5 @@ export const deleteTickerPriceHistory = async (req: Request, res: Response): Pro
 
   await tickerPriceService.deleteTickerPriceRecord(id as string);
 
-  res.json({
-    success: true,
-    message: 'Price history record deleted successfully',
-    data: { id }
-  });
+  sendSuccess(res, { id }, 'Price history record deleted successfully');
 };

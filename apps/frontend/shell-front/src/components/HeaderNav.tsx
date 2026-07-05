@@ -5,10 +5,9 @@ import { useTheme } from '@mui/material/styles';
 import { Person, Groups, Payment } from '@mui/icons-material';
 import { authService } from '../services/authService';
 import { User } from '../types';
-import { NotificationsMenu } from '@tumbaland/components';
+import { NotificationsMenu, LoginButton, logger } from '@tumbaland/components';
 import { AccountMenu } from './AccountMenu';
 import { NavigationButtons } from './NavigationButtons';
-import { LoginButton } from '@tumbaland/components';
 
 interface HeaderNavProps {
   currentRoute?: string;
@@ -30,7 +29,7 @@ export function HeaderNav({ currentRoute }: HeaderNavProps) {
         setIsAuthenticated(authenticated);
         setUser(user);
       } catch (error) {
-        console.error('Auth check failed:', error);
+        logger.error('Auth check failed', error);
       } finally {
         // Loading complete
       }

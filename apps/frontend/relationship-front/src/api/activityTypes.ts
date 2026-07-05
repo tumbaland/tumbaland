@@ -1,5 +1,5 @@
 import { relationshipApi as apiClient } from '../config/relationshipApi';
-import { ActivityType, PaginatedResponse } from './types';
+import { ActivityType, PaginatedResponse, ApiResponse } from './types';
 
 export interface CreateActivityTypeRequest {
   name: string;
@@ -25,6 +25,11 @@ export interface GetActivityTypesFilters {
 
 export interface ActivityTypesResponse extends PaginatedResponse<ActivityType> {}
 
+interface ActivityTypesBackendData {
+  types: ActivityType[];
+  pagination: ActivityTypesResponse['pagination'];
+}
+
 // Get all activity types
 export const getActivityTypes = async (filters?: GetActivityTypesFilters): Promise<ActivityTypesResponse> => {
   const params: Record<string, any> = {};
@@ -38,7 +43,7 @@ export const getActivityTypes = async (filters?: GetActivityTypesFilters): Promi
     params.groupId = filters.groupId;
   }
 
-  const response = await apiClient.get('/activity-types', { params });
+  const response = await apiClient.get<ApiResponse<ActivityTypesBackendData>>('/activity-types', { params });
 
   // Transform backend response to match frontend type
   const backendData = response.data;
@@ -50,19 +55,19 @@ export const getActivityTypes = async (filters?: GetActivityTypesFilters): Promi
 
 // Get activity type by ID
 export const getActivityTypeById = async (id: string): Promise<ActivityType> => {
-  const response = await apiClient.get(`/activity-types/${id}`);
+  const response = await apiClient.get<ApiResponse<ActivityType>>(`/activity-types/${id}`);
   return response.data.data;
 };
 
 // Create new activity type
 export const createActivityType = async (data: CreateActivityTypeRequest): Promise<ActivityType> => {
-  const response = await apiClient.post('/activity-types', data);
+  const response = await apiClient.post<ApiResponse<ActivityType>>('/activity-types', data);
   return response.data.data;
 };
 
 // Update activity type
 export const updateActivityType = async (id: string, data: UpdateActivityTypeRequest): Promise<ActivityType> => {
-  const response = await apiClient.put(`/activity-types/${id}`, data);
+  const response = await apiClient.put<ApiResponse<ActivityType>>(`/activity-types/${id}`, data);
   return response.data.data;
 };
 

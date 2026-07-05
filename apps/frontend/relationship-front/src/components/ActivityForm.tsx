@@ -17,6 +17,7 @@ import {
   FormControlLabel
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
+import { logger } from '@tumbaland/components';
 import { Activity, ActivityType, CreateActivityRequest } from '../api/types';
 import { getActivityTypes, createActivityType } from '../api/activityTypes';
 import { getActivityDescriptions } from '../api/activities';
@@ -139,12 +140,12 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
   const loadActivityTypes = async () => {
     try {
       setLoadingTypes(true);
-      console.log('Loading activity types for groupId:', currentGroupId);
+      logger.debug('Loading activity types', { groupId: currentGroupId });
       const response = await getActivityTypes({ groupId: currentGroupId });
       setActivityTypes(response.data);
-      console.log('Loaded activity types:', response.data);
+      logger.debug('Loaded activity types', { count: response.data.length });
     } catch (error) {
-      console.error('Failed to load activity types:', error);
+      logger.error('Failed to load activity types', error);
       setErrors(['Failed to load activity types']);
       setActivityTypes([]); // Set empty array to prevent undefined errors
     } finally {
@@ -180,7 +181,7 @@ const ActivityForm: React.FC<ActivityFormProps> = ({ open, onClose, onSubmit, ac
       setNewTypeValueType('string');
       setShowCreateType(false);
     } catch (error: any) {
-      console.error('Failed to create activity type:', error);
+      logger.error('Failed to create activity type', error);
       setErrors([error.message || 'Failed to create activity type']);
     } finally {
       setCreatingType(false);

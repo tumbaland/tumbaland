@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { logger } from '@tumbaland/components';
 import {
   Box,
   Button,
@@ -73,6 +74,26 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  const getImageDimensions = (file: File): Promise<{ width: number; height: number } | undefined> => {
+    if (!file.type.startsWith('image/')) {
+      return Promise.resolve(undefined);
+    }
+
+    return new Promise((resolve) => {
+      const objectUrl = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve({ width: img.naturalWidth, height: img.naturalHeight });
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(undefined);
+      };
+      img.src = objectUrl;
+    });
+  };
+
   const uploadFiles = async () => {
     if (files.length === 0) return;
 
@@ -92,6 +113,8 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
           // Upload file directly to MinIO
           await photoService.uploadFileToSignedUrl(signedUrlResponse.uploadUrl, file);
 
+          const dimensions = await getImageDimensions(file);
+
           // Create photo record in album service with minioFileId
           await photoService.createPhoto({
             filename: file.name,
@@ -99,16 +122,15 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
             minioFileId: signedUrlResponse.minioFileId,
             albumId: albumId,
             mimetype: file.type,
-            size: file.size
-            // TODO: Extract image dimensions
-            // width: undefined,
-            // height: undefined,
+            size: file.size,
+            width: dimensions?.width,
+            height: dimensions?.height
           });
 
           completed++;
           setUploadProgress((completed / files.length) * 100);
         } catch (err) {
-          console.error(`Failed to upload ${file.name}:`, err);
+          logger.error(`Failed to upload ${file.name}`, err);
           throw new Error(`Failed to upload ${file.name}`);
         }
       }

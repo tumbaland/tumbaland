@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { logger } from '@tumbaland/components';
 import {
   Box,
   Container,
@@ -86,7 +87,7 @@ const CollageListPage: React.FC = () => {
       setDeleteDialogOpen(false);
       setCollageToDelete(null);
     } catch (error) {
-      console.error('Failed to delete collage:', error);
+      logger.error('Failed to delete collage', error);
     } finally {
       setDeleting(false);
     }

@@ -1,6 +1,6 @@
 import { UpdateProfileRequest, UpdateProfileResponse } from '../types';
 import { getGlobalConfig } from '../config/ConfigProvider';
-import { getCorrelationId, getSessionId } from '@tumbaland/components';
+import { getCorrelationId, getSessionId, logger } from '@tumbaland/components';
 
 export const profileService = {
   // Update user profile
@@ -25,7 +25,7 @@ export const profileService = {
       const data = await response.json();
       return data;
     } catch (error) {
-      console.error('Profile update failed:', error);
+      logger.error('Profile update failed', error);
       throw error;
     }
   }

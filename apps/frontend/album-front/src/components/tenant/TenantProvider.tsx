@@ -1,4 +1,5 @@
 import React, { useState, useCallback, createContext, useContext, useEffect } from 'react';
+import { logger } from '@tumbaland/components';
 
 export interface TenantOption {
   id: string;
@@ -28,7 +29,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       try {
         listener(tenant);
       } catch (error) {
-        console.error('Error in tenant change listener:', error);
+        logger.error('Error in tenant change listener', error);
       }
     });
   }, []);
@@ -64,7 +65,7 @@ export const useTenantListener = (callback: (tenant: TenantOption) => void) => {
   
   useEffect(() => {
     if (!context) {
-      console.warn('useTenantListener used outside TenantProvider');
+      logger.warn('useTenantListener used outside TenantProvider');
       return;
     }
 

@@ -12,6 +12,7 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
+import { logger } from '@tumbaland/components';
 import { authService } from '../services/authService';
 import { User } from '../types';
 
@@ -38,7 +39,7 @@ const AuthHeader: React.FC = () => {
         setIsAuthenticated(authenticated);
         setUser(user);
       } catch (error) {
-        console.error('Auth check failed:', error);
+        logger.error('Auth check failed', error);
       } finally {
         setIsLoading(false);
       }

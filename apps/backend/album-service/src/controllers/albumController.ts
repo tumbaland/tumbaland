@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { sendSuccess } from '@tumbaland/core';
 import albumService from '../services/albumService';
 
 /**
@@ -13,11 +14,7 @@ export const createAlbum = async (req: Request, res: Response): Promise<void> =>
     user.id
   );
 
-  res.status(201).json({
-    success: true,
-    message: 'Album created successfully',
-    data: album
-  });
+  sendSuccess(res, album, 'Album created successfully', 201);
 };
 
 /**
@@ -44,13 +41,7 @@ export const getAlbums = async (req: Request, res: Response): Promise<void> => {
     groupServiceError
   });
 
-  res.json({
-    success: true,
-    data: {
-      albums: result.albums,
-      pagination: result.pagination
-    }
-  });
+  sendSuccess(res, { albums: result.albums, pagination: result.pagination });
 };
 
 /**
@@ -66,10 +57,7 @@ export const getAlbumById = async (req: Request, res: Response): Promise<void> =
     userGroups
   });
 
-  res.json({
-    success: true,
-    data: album
-  });
+  sendSuccess(res, album);
 };
 
 /**
@@ -87,11 +75,7 @@ export const updateAlbum = async (req: Request, res: Response): Promise<void> =>
     { userId: user.id, userGroups }
   );
 
-  res.json({
-    success: true,
-    message: 'Album updated successfully',
-    data: album
-  });
+  sendSuccess(res, album, 'Album updated successfully');
 };
 
 /**
@@ -102,10 +86,7 @@ export const deleteAlbum = async (req: Request, res: Response): Promise<void> =>
 
   await albumService.deleteAlbum(id as string);
 
-  res.json({
-    success: true,
-    message: 'Album and all photos deleted successfully'
-  });
+  sendSuccess(res, undefined, 'Album and all photos deleted successfully');
 };
 
 /**
@@ -117,11 +98,7 @@ export const setCoverPhoto = async (req: Request, res: Response): Promise<void> 
 
   const album = await albumService.setCoverPhoto(id as string, photoId);
 
-  res.json({
-    success: true,
-    message: 'Cover photo set successfully',
-    data: album
-  });
+  sendSuccess(res, album, 'Cover photo set successfully');
 };
 
 /**
@@ -132,9 +109,5 @@ export const removeCoverPhoto = async (req: Request, res: Response): Promise<voi
 
   const album = await albumService.removeCoverPhoto(id as string);
 
-  res.json({
-    success: true,
-    message: 'Cover photo removed successfully',
-    data: album
-  });
+  sendSuccess(res, album, 'Cover photo removed successfully');
 };

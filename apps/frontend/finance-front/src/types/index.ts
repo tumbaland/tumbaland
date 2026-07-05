@@ -1,3 +1,9 @@
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
 // Auth types
 export interface User {
   id: string;

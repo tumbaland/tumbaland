@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AuthHeader as SharedAuthHeader } from '@tumbaland/components';
+import { AuthHeader as SharedAuthHeader, logger } from '@tumbaland/components';
 import { authService } from '../services/authService';
 import { User } from '../types';
 import { navigationItems } from '../config/navigation';
@@ -32,7 +32,7 @@ const AuthHeader: React.FC = () => {
         setIsAuthenticated(authenticated);
         setUser(user);
       } catch (error) {
-        console.error('Auth check failed:', error);
+        logger.error('Auth check failed', error);
       } finally {
         setIsLoading(false);
       }

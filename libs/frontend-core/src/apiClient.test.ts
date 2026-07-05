@@ -77,4 +77,28 @@ describe('createApiClient', () => {
 
     expect(result).toBeUndefined();
   });
+
+  it('serializes params onto the query string, omitting nullish values', async () => {
+    mockFetchOnce({ items: [] });
+    const client = createApiClient({ baseUrl });
+
+    await client.get('/things', { params: { page: 2, search: 'x', groupId: undefined, archived: null } });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://api.example/things?page=2&search=x',
+      expect.objectContaining({ method: 'GET' })
+    );
+  });
+
+  it('appends params after an existing query string with &', async () => {
+    mockFetchOnce({ items: [] });
+    const client = createApiClient({ baseUrl });
+
+    await client.get('/things?sort=asc', { params: { page: 2 } });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://api.example/things?sort=asc&page=2',
+      expect.objectContaining({ method: 'GET' })
+    );
+  });
 });

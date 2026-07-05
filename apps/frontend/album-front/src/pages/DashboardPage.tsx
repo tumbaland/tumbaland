@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '@tumbaland/components';
 import {
   Box,
   Container,
@@ -42,7 +43,7 @@ const DashboardPage: React.FC = () => {
         });
         setStatistics(response);
       } catch (err) {
-        console.error('Failed to fetch statistics:', err);
+        logger.error('Failed to fetch statistics', err);
         setError('Failed to load dashboard statistics');
       } finally {
         setLoading(false);

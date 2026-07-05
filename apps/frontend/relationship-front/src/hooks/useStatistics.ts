@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { logger } from '@tumbaland/components';
 import { RelationshipStatistics, getStatistics } from '../api/statistics';
 
 interface UseStatisticsOptions {
@@ -29,7 +30,7 @@ export const useStatistics = (options: UseStatisticsOptions = {}): UseStatistics
       setStatistics(data);
     } catch (err: any) {
       setError(err.message);
-      console.error('Failed to fetch statistics:', err);
+      logger.error('Failed to fetch statistics', err);
     } finally {
       setLoading(false);
     }

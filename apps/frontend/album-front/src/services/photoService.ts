@@ -1,10 +1,10 @@
 import { albumApi } from '../config/albumApi';
-import { Photo, CreatePhotoData, PaginatedResponse } from '../types';
+import { Photo, CreatePhotoData, PaginatedResponse, ApiResponse, UploadSignedUrlResponse } from '../types';
 
 export const photoService = {
   // Create a new photo record
   async createPhoto(photoData: CreatePhotoData): Promise<Photo> {
-    const response = await albumApi.post('/photos', photoData);
+    const response = await albumApi.post<ApiResponse<Photo>>('/photos', photoData);
     return response.data.data;
   },
 
@@ -17,13 +17,13 @@ export const photoService = {
       search?: string;
     }
   ): Promise<PaginatedResponse<Photo>> {
-    const response = await albumApi.get(`/photos/album/${albumId}`, { params });
+    const response = await albumApi.get<ApiResponse<PaginatedResponse<Photo>>>(`/photos/album/${albumId}`, { params });
     return response.data.data;
   },
 
   // Get photo by ID
   async getPhotoById(id: string): Promise<Photo> {
-    const response = await albumApi.get(`/photos/${id}`);
+    const response = await albumApi.get<ApiResponse<Photo>>(`/photos/${id}`);
     return response.data.data;
   },
 
@@ -32,13 +32,13 @@ export const photoService = {
     id: string,
     photoData: Partial<Pick<Photo, 'title' | 'description' | 'tags' | 'metadata'>>
   ): Promise<Photo> {
-    const response = await albumApi.put(`/photos/${id}`, photoData);
+    const response = await albumApi.put<ApiResponse<Photo>>(`/photos/${id}`, photoData);
     return response.data.data;
   },
 
   // Delete photo
   async deletePhoto(id: string): Promise<void> {
-    const response = await albumApi.delete(`/photos/${id}`);
+    const response = await albumApi.delete<ApiResponse<void>>(`/photos/${id}`);
     return response.data.data;
   },
 
@@ -47,8 +47,8 @@ export const photoService = {
     filename: string,
     mimetype: string,
     albumId: string
-  ): Promise<{ uploadUrl: string; minioFileId: string; albumId: string; expiresInMinutes: number }> {
-    const response = await albumApi.post('/photos/upload-url', {
+  ): Promise<UploadSignedUrlResponse & { expiresInMinutes: number }> {
+    const response = await albumApi.post<ApiResponse<UploadSignedUrlResponse & { expiresInMinutes: number }>>('/photos/upload-url', {
       filename,
       mimetype,
       albumId
@@ -79,7 +79,7 @@ export const photoService = {
       processingTime: number;
     }
   ): Promise<Photo> {
-    const response = await albumApi.put(`/photos/${photoId}/ai-analysis`, analysisData);
+    const response = await albumApi.put<ApiResponse<Photo>>(`/photos/${photoId}/ai-analysis`, analysisData);
     return response.data.data;
   },
 

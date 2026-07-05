@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { sendSuccess } from '@tumbaland/core';
 import statisticsService from '../services/statisticsService';
 
 /**
@@ -14,8 +15,5 @@ export const getAlbumStatistics = async (req: Request, res: Response): Promise<v
     { userId: user.id, userGroups }
   );
 
-  res.json({
-    success: true,
-    data: statistics
-  });
+  sendSuccess(res, statistics);
 };

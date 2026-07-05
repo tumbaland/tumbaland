@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { BadRequestError, logger } from '@tumbaland/core';
+import { BadRequestError, logger, sendSuccess } from '@tumbaland/core';
 import { InternalServiceRequest } from '../middleware/internalServiceAuth';
 import * as svc from '../services/groupService';
 import { GroupRole } from '../models/Group';
@@ -54,7 +54,7 @@ export const createGroup = async (req: InternalServiceRequest, res: Response): P
   }
   const { name } = req.body as { name: string };
   const group = await svc.createGroup(email, name);
-  res.status(201).json({ success: true, data: group });
+  sendSuccess(res, group, undefined, 201);
 };
 
 export const listMine = async (req: InternalServiceRequest, res: Response): Promise<void> => {
@@ -69,7 +69,7 @@ export const listMine = async (req: InternalServiceRequest, res: Response): Prom
     await svc.updateMemberActivity((group as any)._id.toString(), email);
   }
 
-  res.json({ success: true, data: groups });
+  sendSuccess(res, groups);
 };
 
 export const listMyDeleted = async (req: InternalServiceRequest, res: Response): Promise<void> => {
@@ -78,7 +78,7 @@ export const listMyDeleted = async (req: InternalServiceRequest, res: Response):
     throw new BadRequestError('User email required');
   }
   const groups = await svc.listMyDeletedGroups(email);
-  res.json({ success: true, data: groups });
+  sendSuccess(res, groups);
 };
 
 export const getUserGroupIds = async (req: InternalServiceRequest, res: Response): Promise<void> => {
@@ -88,18 +88,18 @@ export const getUserGroupIds = async (req: InternalServiceRequest, res: Response
   }
   const groups = await svc.listMyGroups(email);
   const groupIds = groups.map(group => (group as any)._id.toString());
-  res.json({ success: true, data: groupIds });
+  sendSuccess(res, groupIds);
 };
 
 export const getOne = async (req: Request, res: Response): Promise<void> => {
   const group = await svc.getGroupIfMember(req.params.id as string, userEmail(req));
-  res.json({ success: true, data: group });
+  sendSuccess(res, group);
 };
 
 export const updateGroup = async (req: Request, res: Response): Promise<void> => {
   const { name } = req.body as { name: string };
   const group = await svc.updateGroup(req.params.id as string, userEmail(req), { name });
-  res.json({ success: true, data: group });
+  sendSuccess(res, group);
 };
 
 export const deleteGroup = async (req: Request, res: Response): Promise<void> => {
@@ -109,7 +109,7 @@ export const deleteGroup = async (req: Request, res: Response): Promise<void> =>
 
 export const restoreGroup = async (req: Request, res: Response): Promise<void> => {
   const group = await svc.restoreGroup(req.params.id as string, userEmail(req));
-  res.json({ success: true, data: group });
+  sendSuccess(res, group);
 };
 
 export const permanentlyDeleteGroup = async (req: Request, res: Response): Promise<void> => {
@@ -124,7 +124,7 @@ export const addMember = async (req: Request, res: Response): Promise<void> => {
   // Invalidate tokens for the added user
   await invalidateUserTokens([email]);
 
-  res.status(201).json({ success: true, data: group });
+  sendSuccess(res, group, undefined, 201);
 };
 
 export const updateRole = async (req: Request, res: Response): Promise<void> => {
@@ -138,7 +138,7 @@ export const updateRole = async (req: Request, res: Response): Promise<void> => 
   // Invalidate tokens for the user whose role changed
   await invalidateUserTokens([req.params.memberEmail as string]);
 
-  res.json({ success: true, data: group });
+  sendSuccess(res, group);
 };
 
 export const removeMember = async (req: Request, res: Response): Promise<void> => {
@@ -147,7 +147,7 @@ export const removeMember = async (req: Request, res: Response): Promise<void> =
   // Invalidate tokens for the removed user
   await invalidateUserTokens([req.params.memberEmail as string]);
 
-  res.json({ success: true, data: group });
+  sendSuccess(res, group);
 };
 
 export const membership = async (req: Request, res: Response): Promise<void> => {

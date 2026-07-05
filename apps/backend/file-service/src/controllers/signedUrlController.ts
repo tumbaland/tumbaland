@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { sendSuccess } from '@tumbaland/core';
 import { signToken } from '../utils/hmac';
 
 const FILE_SERVICE_PUBLIC_URL = (): string =>
@@ -23,15 +24,7 @@ export const generateUploadUrl = (req: Request, res: Response): void => {
   const token = signToken('upload', fileId, expiresMs);
   const uploadUrl = `${FILE_SERVICE_PUBLIC_URL()}/files/upload/${fileId}?token=${token}&expires=${expiresMs}`;
 
-  res.json({
-    success: true,
-    data: {
-      uploadUrl,
-      fileId,
-      expiresMs,
-      expiresInMinutes
-    }
-  });
+  sendSuccess(res, { uploadUrl, fileId, expiresMs, expiresInMinutes });
 };
 
 /**
@@ -49,13 +42,5 @@ export const generateDownloadUrl = (req: Request, res: Response): void => {
   const token = signToken('download', fileId, expiresMs);
   const downloadUrl = `${FILE_SERVICE_PUBLIC_URL()}/files/download/${fileId}?token=${token}&expires=${expiresMs}`;
 
-  res.json({
-    success: true,
-    data: {
-      downloadUrl,
-      fileId,
-      expiresMs,
-      expiresInMinutes
-    }
-  });
+  sendSuccess(res, { downloadUrl, fileId, expiresMs, expiresInMinutes });
 };

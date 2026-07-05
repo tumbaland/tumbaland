@@ -1,3 +1,4 @@
+import { logger } from '@tumbaland/components';
 import { TenantOption } from './TenantSelector';
 
 /**
@@ -23,7 +24,7 @@ const getTenantFromStorage = (): TenantOption | null => {
       return JSON.parse(saved) as TenantOption;
     }
   } catch (err) {
-    console.warn('Failed to load tenant from storage:', err);
+    logger.warn('Failed to load tenant from storage', { error: err });
   }
   return null;
 };

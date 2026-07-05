@@ -111,8 +111,37 @@ jobs:
         id: set-matrix
         run: echo "workspaces=$(echo '${{ steps.filter.outputs.changes }}' | jq -c 'map(select(. != "shared" and . != "libs-changed"))')" >> "$GITHUB_OUTPUT"
 
-  lint-typecheck:
+  build-libs:
     needs: changes
+    if: needs.changes.outputs.workspaces != '[]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 26
+        uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared libs
+        run: npm run build -w @tumbaland/core -w @tumbaland/components -w @tumbaland/frontend-core
+
+      - name: Upload built libs
+        uses: actions/upload-artifact@v4
+        with:
+          name: libs-dist
+          path: |
+            libs/core/dist
+            libs/components/dist
+            libs/frontend-core/dist
+          retention-days: 1
+
+  lint-typecheck:
+    needs: [changes, build-libs]
     if: needs.changes.outputs.workspaces != '[]'
     runs-on: ubuntu-latest
     strategy:
@@ -131,9 +160,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build shared libs
-        if: matrix.workspace != 'libs/core' && matrix.workspace != 'libs/components'
-        run: npm run build -w @tumbaland/core -w @tumbaland/components -w @tumbaland/frontend-core
+      - name: Download built libs
+        uses: actions/download-artifact@v4
+        with:
+          name: libs-dist
+          path: libs
 
       - name: Lint
         run: npm run lint --workspace=${{ matrix.workspace }}
@@ -142,7 +173,7 @@ jobs:
         run: npm run typecheck --workspace=${{ matrix.workspace }}
 
   test:
-    needs: changes
+    needs: [changes, build-libs]
     if: needs.changes.outputs.workspaces != '[]'
     runs-on: ubuntu-latest
     strategy:
@@ -161,15 +192,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build shared libs
-        if: matrix.workspace != 'libs/core' && matrix.workspace != 'libs/components'
-        run: npm run build -w @tumbaland/core -w @tumbaland/components -w @tumbaland/frontend-core
+      - name: Download built libs
+        uses: actions/download-artifact@v4
+        with:
+          name: libs-dist
+          path: libs
 
       - name: Test
         run: npm run test --workspace=${{ matrix.workspace }} --if-present
 
   build:
-    needs: changes
+    needs: [changes, build-libs]
     if: needs.changes.outputs.workspaces != '[]'
     runs-on: ubuntu-latest
     strategy:
@@ -188,9 +221,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build shared libs
-        if: matrix.workspace != 'libs/core' && matrix.workspace != 'libs/components'
-        run: npm run build -w @tumbaland/core -w @tumbaland/components -w @tumbaland/frontend-core
+      - name: Download built libs
+        uses: actions/download-artifact@v4
+        with:
+          name: libs-dist
+          path: libs
 
       - name: Build
         run: npm run build --workspace=${{ matrix.workspace }} --if-present

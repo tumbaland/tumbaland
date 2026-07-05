@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ForbiddenError } from '@tumbaland/core';
+import { ForbiddenError, sendSuccess } from '@tumbaland/core';
 import * as assetClassService from '../services/assetClass.service';
 
 /**
@@ -22,10 +22,7 @@ export const getAssetClasses = async (req: Request, res: Response): Promise<void
     assetClasses = await assetClassService.getPersonalAssetClasses(user.id);
   }
 
-  res.json({
-    success: true,
-    data: assetClasses
-  });
+  sendSuccess(res, assetClasses);
 };
 
 /**
@@ -41,11 +38,7 @@ export const createAssetClass = async (req: Request, res: Response): Promise<voi
 
   const assetClass = await assetClassService.createAssetClass(assetClassData);
 
-  res.status(201).json({
-    success: true,
-    message: 'Asset class created successfully',
-    data: assetClass
-  });
+  sendSuccess(res, assetClass, 'Asset class created successfully', 201);
 };
 
 /**
@@ -58,11 +51,7 @@ export const updateAssetClass = async (req: Request, res: Response): Promise<voi
 
   const updated = await assetClassService.updateAssetClass(id as string, req.body, user.id, userGroups);
 
-  res.json({
-    success: true,
-    message: 'Asset class updated successfully',
-    data: updated
-  });
+  sendSuccess(res, updated, 'Asset class updated successfully');
 };
 
 /**
@@ -75,8 +64,5 @@ export const deleteAssetClass = async (req: Request, res: Response): Promise<voi
 
   await assetClassService.deleteAssetClass(id as string, user.id, userGroups);
 
-  res.json({
-    success: true,
-    message: 'Asset class deleted successfully'
-  });
+  sendSuccess(res, undefined, 'Asset class deleted successfully');
 };

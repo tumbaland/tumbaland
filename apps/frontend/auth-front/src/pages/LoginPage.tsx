@@ -4,7 +4,7 @@ import { initializeGoogleSignIn } from '../authFlow';
 import LoggedInUser from '../components/LoggedInUser';
 import LoginPrompt from '../components/LoginPrompt';
 import { useConfig } from '../config/useConfig';
-import { getCorrelationId, getSessionId } from '@tumbaland/components';
+import { getCorrelationId, getSessionId, logger } from '@tumbaland/components';
 
 const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -30,7 +30,7 @@ const LoginPage: React.FC = () => {
           return;
         }
       } catch (err) {
-        console.log('No existing auth found:', err);
+        logger.debug('No existing auth found', { error: err });
       }
 
       const redirectUri = new URLSearchParams(window.location.search).get('redirect_uri') || '/';
@@ -46,7 +46,7 @@ const LoginPage: React.FC = () => {
       try {
         initializeGoogleSignIn(config.GOOGLE_CLIENT_ID, redirectUri);
       } catch (err) {
-        console.error('Error initializing Google Sign-In:', err);
+        logger.error('Error initializing Google Sign-In', err);
         setError('Failed to initialize Google Sign-In: ' + (err as Error).message);
       }
     };
@@ -68,7 +68,7 @@ const LoginPage: React.FC = () => {
         window.location.reload();
       }
     } catch (err) {
-      console.error('Logout failed:', err);
+      logger.error('Logout failed', err);
     }
   };
 

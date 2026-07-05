@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useConfig } from './useConfig';
-import { getCorrelationId, getSessionId } from '@tumbaland/components';
+import { getCorrelationId, getSessionId, logger } from '@tumbaland/components';
 
 export function useTodo() {
   const config = useConfig();
@@ -38,7 +38,7 @@ export function useTodo() {
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch todo';
-      console.error('Failed to fetch todo:', err);
+      logger.error('Failed to fetch todo', err);
       setError(errorMessage);
     } finally {
       isLoadingRef.current = false;

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { authService } from '../services/authService';
-import { UnauthorizedPage, Loader } from '@tumbaland/components';
+import { UnauthorizedPage, Loader, logger } from '@tumbaland/components';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -16,7 +16,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         const { authenticated } = await authService.checkAuth();
         setIsAuthenticated(authenticated);
       } catch (error) {
-        console.error('Auth check failed:', error);
+        logger.error('Auth check failed', error);
         setIsAuthenticated(false);
       } finally {
         setIsLoading(false);

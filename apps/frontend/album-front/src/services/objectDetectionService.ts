@@ -1,4 +1,5 @@
 
+import { logger } from '@tumbaland/components';
 import { photoService } from './photoService';
 import { getGlobalConfig, AppConfig } from '../config/ConfigProvider';
 
@@ -119,7 +120,7 @@ const fetchPhotoFile = async (photoId: string): Promise<Blob> => {
       throw error;
     }
   } catch (error) {
-    console.error('Error fetching photo file:', error);
+    logger.error('Error fetching photo file', error);
     throw new AIServiceError(
       `Failed to fetch photo file: ${error instanceof Error ? error.message : 'Unknown error'}`,
       'object-detection'
@@ -202,7 +203,7 @@ export const objectDetectionService = {
       });
       return statsResponse.ok;
     } catch (error) {
-      console.warn('Object detection service health check failed:', error);
+      logger.warn('Object detection service health check failed', { error });
       return false;
     }
   },
@@ -259,7 +260,7 @@ export const objectDetectionService = {
       const data: ObjectDetectionResponse = await response.json();
       return data;
     } catch (error) {
-      console.error('Error in detectObjects:', error);
+      logger.error('Error in detectObjects', error);
       if (error instanceof AIServiceError) {
         throw error;
       }
@@ -284,7 +285,7 @@ export const objectDetectionService = {
       
       return await response.json();
     } catch (error) {
-      console.error('Error getting object detection result:', error);
+      logger.error('Error getting object detection result', error);
       throw new AIServiceError(
         `Failed to get object detection result: ${error instanceof Error ? error.message : 'Unknown error'}`,
         'object-detection',
@@ -306,7 +307,7 @@ export const objectDetectionService = {
       
       return await response.json();
     } catch (error) {
-      console.error('Error getting object detection results by file ID:', error);
+      logger.error('Error getting object detection results by file ID', error);
       throw new AIServiceError(
         `Failed to get object detection results: ${error instanceof Error ? error.message : 'Unknown error'}`,
         'object-detection',
@@ -330,7 +331,7 @@ export const objectDetectionService = {
       const data = await response.json();
       return data.all_classes;
     } catch (error) {
-      console.error('Error getting available classes:', error);
+      logger.error('Error getting available classes', error);
       throw new AIServiceError(
         `Failed to get available classes: ${error instanceof Error ? error.message : 'Unknown error'}`,
         'object-detection',
@@ -353,7 +354,7 @@ export const objectDetectionService = {
       const data = await response.json();
       return data.models;
     } catch (error) {
-      console.error('Error getting available models:', error);
+      logger.error('Error getting available models', error);
       throw new AIServiceError(
         `Failed to get available models: ${error instanceof Error ? error.message : 'Unknown error'}`,
         'object-detection',

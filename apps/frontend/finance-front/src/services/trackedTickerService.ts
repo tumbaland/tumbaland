@@ -1,4 +1,5 @@
 import { financeApi } from '../config/financeApi';
+import { ApiResponse } from '../types';
 
 export interface TrackedTicker {
   _id?: string;
@@ -18,17 +19,17 @@ export const getTrackedTickers = async (groupId?: string): Promise<TrackedTicker
     params.append('groupId', groupId);
   }
   const url = params.toString() ? `${API_URL}?${params.toString()}` : API_URL;
-  const res = await financeApi.get(url);
+  const res = await financeApi.get<ApiResponse<TrackedTicker[]>>(url);
   return res.data.data;
 };
 
 export const addTrackedTicker = async (data: Omit<TrackedTicker, '_id' | 'dateAdded'>): Promise<TrackedTicker> => {
-  const res = await financeApi.post(API_URL, data);
+  const res = await financeApi.post<ApiResponse<TrackedTicker>>(API_URL, data);
   return res.data.data;
 };
 
 export const updateTrackedTicker = async (id: string, data: Partial<TrackedTicker>): Promise<TrackedTicker> => {
-  const res = await financeApi.put(`${API_URL}/${id}`, data);
+  const res = await financeApi.put<ApiResponse<TrackedTicker>>(`${API_URL}/${id}`, data);
   return res.data.data;
 };
 
@@ -46,6 +47,6 @@ export interface TickerSearchResult {
 }
 
 export const searchTickers = async (query: string): Promise<TickerSearchResult[]> => {
-  const res = await financeApi.get(`${API_URL}/search?q=${encodeURIComponent(query)}`);
+  const res = await financeApi.get<ApiResponse<TickerSearchResult[]>>(`${API_URL}/search?q=${encodeURIComponent(query)}`);
   return res.data.data;
 };

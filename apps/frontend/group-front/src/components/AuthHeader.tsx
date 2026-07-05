@@ -10,6 +10,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
 import { authService } from '../services/authService';
 import { User } from '../types';
+import { logger } from '@tumbaland/components';
 
 const AuthHeader: React.FC = () => {
   const navigate = useNavigate();
@@ -28,7 +29,7 @@ const AuthHeader: React.FC = () => {
         setIsAuthenticated(authenticated);
         setUser(user);
       } catch (error) {
-        console.error('Auth check failed:', error);
+        logger.error('Auth check failed', error);
       } finally {
         setIsLoading(false);
       }

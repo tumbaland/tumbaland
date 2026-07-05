@@ -5,15 +5,9 @@ import CalculateIcon from '@mui/icons-material/Calculate';
 import TuneIcon from '@mui/icons-material/Tune';
 import CategoryIcon from '@mui/icons-material/Category';
 import AssessmentIcon from '@mui/icons-material/Assessment';
+import { AuthHeaderNavigationItem } from '@tumbaland/components';
 
-export interface NavigationItem {
-  label: string;
-  path: string;
-  icon?: React.ElementType;
-  onClick?: () => void;
-}
-
-export const navigationItems: Omit<NavigationItem, 'onClick'>[] = [
+export const navigationItems: AuthHeaderNavigationItem[] = [
   {
     label: 'Dashboard',
     path: '/',
@@ -50,10 +44,3 @@ export const navigationItems: Omit<NavigationItem, 'onClick'>[] = [
     icon: TuneIcon
   }
 ];
-
-export const createNavigationItems = (navigate: (path: string) => void): NavigationItem[] => {
-  return navigationItems.map((item) => ({
-    ...item,
-    onClick: () => navigate(item.path)
-  }));
-};

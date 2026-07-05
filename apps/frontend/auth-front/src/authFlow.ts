@@ -1,5 +1,5 @@
 import { getGlobalConfig } from './config/ConfigProvider';
-import { getCorrelationId, getSessionId } from '@tumbaland/components';
+import { getCorrelationId, getSessionId, logger } from '@tumbaland/components';
 
 declare global {
   interface Window {
@@ -12,7 +12,7 @@ function handleCredentialResponse(response: { credential: string }, redirectUri:
   const idToken = response.credential;
   const config = getGlobalConfig();
 
-  console.log('Sending token to auth service:', config.AUTH_SERVICE_URL);
+  logger.debug('Sending token to auth service', { authServiceUrl: config.AUTH_SERVICE_URL });
 
   fetch(`${config.AUTH_SERVICE_URL}/auth/validate`, {
     method: 'POST',
@@ -31,24 +31,22 @@ function handleCredentialResponse(response: { credential: string }, redirectUri:
       return res.json();
     })
     .then((data) => {
-      console.log('Auth service response:', data);
+      logger.debug('Auth service response', data);
       if (data.success) {
         window.location.href = redirectUri; // Redirect back without JWT
       } else {
-        console.error('Validation failed:', data.message);
+        logger.error('Validation failed', data.message);
         alert('Authentication failed: ' + (data.message || 'Unknown error'));
       }
     })
     .catch((err) => {
-      console.error('Error:', err);
+      logger.error('Google credential exchange failed', err);
       alert('Authentication error: ' + err.message);
     });
 }
 
 export function initializeGoogleSignIn(clientId: string, redirectUri: string) {
-  console.log('Starting Google Sign-In initialization...');
-  console.log('Client ID:', clientId);
-  console.log('Redirect URI:', redirectUri);
+  logger.debug('Starting Google Sign-In initialization', { clientId, redirectUri });
 
   let retryCount = 0;
   const maxRetries = 100; // Wait up to 10 seconds
@@ -56,7 +54,6 @@ export function initializeGoogleSignIn(clientId: string, redirectUri: string) {
   const renderGoogleButton = () => {
     const buttonElement = document.getElementById('google-signin-button');
     if (!buttonElement) {
-      console.log('Button element not found yet');
       return false;
     }
 
@@ -66,39 +63,33 @@ export function initializeGoogleSignIn(clientId: string, redirectUri: string) {
       buttonElement.querySelector('div[role="button"]') ||
       buttonElement.innerHTML.includes('Sign in with Google')
     ) {
-      console.log('Google button already rendered');
       return true;
     }
 
-    console.log('Found button element, rendering Google button...');
     try {
       // Clear any existing content first
       buttonElement.innerHTML = '';
 
       window.google.accounts.id.renderButton(buttonElement, { theme: 'outline', size: 'large' });
-      console.log('Google Sign-In button rendered successfully');
+      logger.debug('Google Sign-In button rendered successfully');
       return true;
     } catch (error) {
-      console.error('Error rendering Google Sign-In button:', error);
+      logger.error('Error rendering Google Sign-In button', error);
       return false;
     }
   };
   const initializeGoogle = () => {
     retryCount++;
-    console.log(`Attempt ${retryCount}: Checking for Google Sign-In...`);
-    console.log('- Google object:', !!window.google);
-    console.log('- Google script loaded flag:', window.googleScriptLoaded);
-    console.log('- Google accounts:', !!(window.google && window.google.accounts));
-    console.log('- Google accounts.id:', !!(window.google && window.google.accounts && window.google.accounts.id));
 
     // Check if Google Sign-In library is loaded
     if (!window.google || !window.google.accounts || !window.google.accounts.id) {
       if (retryCount < maxRetries) {
-        console.log('Google Sign-In library not ready yet, retrying...');
         setTimeout(initializeGoogle, 100);
         return;
       } else {
-        console.error('Google Sign-In library failed to load after maximum retries');
+        logger.error('Google Sign-In library failed to load after maximum retries', undefined, {
+          googleScriptLoaded: window.googleScriptLoaded
+        });
         showFallbackMessage();
         return;
       }
@@ -106,16 +97,15 @@ export function initializeGoogleSignIn(clientId: string, redirectUri: string) {
 
     // Initialize Google Sign-In if not already done
     if (!googleInitialized) {
-      console.log('Google Sign-In library loaded successfully, initializing...');
       try {
         window.google.accounts.id.initialize({
           client_id: clientId,
           callback: (response: { credential: string }) => handleCredentialResponse(response, redirectUri)
         });
-        console.log('Google Sign-In initialized');
+        logger.debug('Google Sign-In initialized', { attempts: retryCount });
         googleInitialized = true;
       } catch (error) {
-        console.error('Error during Google Sign-In initialization:', error);
+        logger.error('Error during Google Sign-In initialization', error);
         showFallbackMessage();
         return;
       }
@@ -125,10 +115,9 @@ export function initializeGoogleSignIn(clientId: string, redirectUri: string) {
     const buttonRendered = renderGoogleButton();
 
     if (!buttonRendered && retryCount < maxRetries) {
-      console.log('Button not rendered yet, retrying...');
       setTimeout(initializeGoogle, 100);
     } else if (!buttonRendered) {
-      console.error('Failed to render Google Sign-In button after maximum retries');
+      logger.error('Failed to render Google Sign-In button after maximum retries');
       showFallbackMessage();
     }
   };

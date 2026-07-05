@@ -1,15 +1,9 @@
 import PhotoAlbumIcon from '@mui/icons-material/PhotoAlbum';
 import GridOnIcon from '@mui/icons-material/GridOn';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import { AuthHeaderNavigationItem } from '@tumbaland/components';
 
-export interface NavigationItem {
-  label: string;
-  path: string;
-  icon?: React.ElementType;
-  onClick?: () => void;
-}
-
-export const navigationItems: Omit<NavigationItem, 'onClick'>[] = [
+export const navigationItems: AuthHeaderNavigationItem[] = [
   {
     label: 'Dashboard',
     path: '/dashboard',
@@ -26,10 +20,3 @@ export const navigationItems: Omit<NavigationItem, 'onClick'>[] = [
     icon: GridOnIcon
   }
 ];
-
-export const createNavigationItems = (navigate: (path: string) => void): NavigationItem[] => {
-  return navigationItems.map((item) => ({
-    ...item,
-    onClick: () => navigate(item.path)
-  }));
-};

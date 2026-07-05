@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { financeApi } from '../config/financeApi';
+import { ApiResponse } from '../types';
 
 export interface DashboardKPIs {
   totalPortfolioValue: number;
@@ -41,7 +42,7 @@ export const useDashboard = (groupId?: string) => {
     queryKey: ['dashboard', groupId],
     queryFn: async () => {
       const params = groupId ? { groupId } : {};
-      const response = await financeApi.get('/dashboard', { params });
+      const response = await financeApi.get<ApiResponse<DashboardData>>('/dashboard', { params });
       return response.data.data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes

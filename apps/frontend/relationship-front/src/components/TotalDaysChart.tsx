@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { logger } from '@tumbaland/components';
 import {
   Box,
   Card,
@@ -66,7 +67,7 @@ const TotalDaysChart: React.FC<TotalDaysChartProps> = ({ title = 'Monthly Days B
       const monthlyData = await getMonthlyStatistics(selectedYear, tenantGroupId);
       setData(monthlyData);
     } catch (err) {
-      console.error('Error fetching data:', err);
+      logger.error('Error fetching data', err);
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setLoading(false);

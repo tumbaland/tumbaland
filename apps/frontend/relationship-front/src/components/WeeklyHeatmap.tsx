@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { logger } from '@tumbaland/components';
 import {
   Box,
   Card,
@@ -54,10 +55,10 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({ title = 'Activity Heatmap
       setLoading(true);
       setError(null);
       const heatmapData = await getWeeklyHeatmapData(selectedYear, tenantGroupId);
-      console.log('Fetched heatmap data:', heatmapData);
+      logger.debug('Fetched heatmap data', { count: heatmapData.length });
       setData(heatmapData);
     } catch (err) {
-      console.error('Error fetching heatmap data:', err);
+      logger.error('Error fetching heatmap data', err);
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setLoading(false);

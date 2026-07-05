@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ForbiddenError } from '@tumbaland/core';
+import { ForbiddenError, sendSuccess } from '@tumbaland/core';
 import { getDashboardData } from '../services/dashboard.service';
 
 /**
@@ -22,8 +22,5 @@ export const getDashboard = async (req: Request, res: Response): Promise<void> =
 
   const dashboardData = await getDashboardData(user.id, groupIds);
 
-  res.json({
-    success: true,
-    data: dashboardData
-  });
+  sendSuccess(res, dashboardData);
 };

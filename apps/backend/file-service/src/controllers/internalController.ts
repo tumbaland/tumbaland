@@ -8,7 +8,7 @@ import {
   getMetadata,
   listFiles
 } from '../utils/storage';
-import { logger, NotFoundError } from '@tumbaland/core';
+import { logger, NotFoundError, sendSuccess } from '@tumbaland/core';
 
 /**
  * PUT /internal/files/:fileId
@@ -78,7 +78,7 @@ export const internalMetadata = (req: Request, res: Response): void => {
   }
 
   const meta = getMetadata(fileId);
-  res.json({ success: true, data: meta });
+  sendSuccess(res, meta);
 };
 
 /**
@@ -88,7 +88,7 @@ export const internalMetadata = (req: Request, res: Response): void => {
 export const internalDelete = (req: Request, res: Response): void => {
   const fileId = [req.params.fileId].flat().join('/');
   deleteFile(fileId);
-  res.json({ success: true, message: 'File deleted' });
+  sendSuccess(res, undefined, 'File deleted');
 };
 
 /**
@@ -110,5 +110,5 @@ export const internalDeleteFolder = (req: Request, res: Response): void => {
 export const internalList = (req: Request, res: Response): void => {
   const { prefix, maxKeys } = req.query as { prefix?: string; maxKeys?: string };
   const files = listFiles(prefix, maxKeys ? parseInt(maxKeys, 10) : 1000);
-  res.json({ success: true, data: files });
+  sendSuccess(res, files);
 };

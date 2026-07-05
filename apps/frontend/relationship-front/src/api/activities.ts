@@ -6,7 +6,8 @@ import {
   GetActivitiesFilters,
   ActivityStats,
   ActivityType,
-  ActivitiesResponse
+  ActivitiesResponse,
+  ApiResponse
 } from './types';
 
 // Activity API functions
@@ -15,7 +16,7 @@ import {
  * Create a new activity
  */
 export const createActivity = async (activityData: CreateActivityRequest): Promise<Activity> => {
-  const response = await relationshipApi.post('/activities', activityData);
+  const response = await relationshipApi.post<ApiResponse<Activity>>('/activities', activityData);
   return response.data.data;
 };
 
@@ -35,7 +36,7 @@ export const getActivities = async (filters?: GetActivitiesFilters): Promise<Act
   if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
   if (filters?.groupId) params.append('groupId', filters.groupId);
 
-  const response = await relationshipApi.get(`/activities${params.toString() ? `?${params.toString()}` : ''}`);
+  const response = await relationshipApi.get<ApiResponse<ActivitiesResponse>>(`/activities${params.toString() ? `?${params.toString()}` : ''}`);
   return response.data.data;
 };
 
@@ -43,7 +44,7 @@ export const getActivities = async (filters?: GetActivitiesFilters): Promise<Act
  * Get activity by ID
  */
 export const getActivityById = async (id: string): Promise<Activity> => {
-  const response = await relationshipApi.get(`/activities/${id}`);
+  const response = await relationshipApi.get<ApiResponse<Activity>>(`/activities/${id}`);
   return response.data.data;
 };
 
@@ -51,7 +52,7 @@ export const getActivityById = async (id: string): Promise<Activity> => {
  * Update activity by ID
  */
 export const updateActivity = async (id: string, updateData: UpdateActivityRequest): Promise<Activity> => {
-  const response = await relationshipApi.put(`/activities/${id}`, updateData);
+  const response = await relationshipApi.put<ApiResponse<Activity>>(`/activities/${id}`, updateData);
   return response.data.data;
 };
 
@@ -74,7 +75,7 @@ export const getActivityStats = async (filters?: {
   if (filters?.startDate) params.append('startDate', new Date(filters.startDate).toISOString());
   if (filters?.endDate) params.append('endDate', new Date(filters.endDate).toISOString());
 
-  const response = await relationshipApi.get(`/activities/stats${params.toString() ? `?${params.toString()}` : ''}`);
+  const response = await relationshipApi.get<ApiResponse<ActivityStats>>(`/activities/stats${params.toString() ? `?${params.toString()}` : ''}`);
   return response.data.data;
 };
 
@@ -89,7 +90,7 @@ export const getActivitiesByDateRange = async (
   params.append('startDate', new Date(startDate).toISOString());
   params.append('endDate', new Date(endDate).toISOString());
 
-  const response = await relationshipApi.get(`/activities/date-range?${params.toString()}`);
+  const response = await relationshipApi.get<ApiResponse<Activity[]>>(`/activities/date-range?${params.toString()}`);
   return response.data.data;
 };
 
@@ -97,7 +98,7 @@ export const getActivitiesByDateRange = async (
  * Get recent activities
  */
 export const getRecentActivities = async (limit: number = 10): Promise<Activity[]> => {
-  const response = await relationshipApi.get(`/activities/recent?limit=${limit}`);
+  const response = await relationshipApi.get<ApiResponse<Activity[]>>(`/activities/recent?limit=${limit}`);
   return response.data.data;
 };
 
@@ -105,7 +106,7 @@ export const getRecentActivities = async (limit: number = 10): Promise<Activity[
  * Get available activity types
  */
 export const getActivityTypes = async (): Promise<ActivityType[]> => {
-  const response = await relationshipApi.get('/activity-types');
+  const response = await relationshipApi.get<ApiResponse<ActivityType[]>>('/activity-types');
   return response.data.data;
 };
 
@@ -115,21 +116,24 @@ export const getActivityTypes = async (): Promise<ActivityType[]> => {
 export const getActivityDescriptions = async (typeId: string, groupId?: string): Promise<string[]> => {
   const params = new URLSearchParams({ typeId });
   if (groupId) params.append('groupId', groupId);
-  const response = await relationshipApi.get(`/activities/descriptions?${params.toString()}`);
+  const response = await relationshipApi.get<ApiResponse<string[]>>(`/activities/descriptions?${params.toString()}`);
   return response.data.data;
 };
+
+// Keyed by activity type slug, then by "{months}months" timeline key (e.g. "1months", "3months", "12months").
+export type RecentActivitiesSummary = Record<string, Record<string, { activities: Activity[] }>>;
 
 /**
  * Get recent activities summary by category and timeline
  * @param groupId - Optional: group ID to filter by
  */
-export const getRecentActivitiesSummary = async (groupId?: string): Promise<any> => {
+export const getRecentActivitiesSummary = async (groupId?: string): Promise<RecentActivitiesSummary> => {
   const params: Record<string, any> = {};
   if (groupId) {
     params.groupId = groupId;
   }
-  
-  const response = await relationshipApi.get('/activities/recent-summary', {
+
+  const response = await relationshipApi.get<ApiResponse<RecentActivitiesSummary>>('/activities/recent-summary', {
     params: Object.keys(params).length > 0 ? params : undefined
   });
   return response.data.data;

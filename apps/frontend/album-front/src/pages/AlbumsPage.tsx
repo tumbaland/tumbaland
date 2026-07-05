@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '@tumbaland/components';
 import {
   Box,
   Container,
@@ -119,7 +120,7 @@ const AlbumsPage: React.FC = () => {
     try {
       await updateAlbum(albumId, data);
     } catch (err) {
-      console.error('Failed to update album:', err);
+      logger.error('Failed to update album', err);
       alert('Failed to update album');
     }
   };

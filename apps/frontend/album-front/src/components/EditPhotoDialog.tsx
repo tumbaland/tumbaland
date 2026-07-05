@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '@tumbaland/components';
 import {
   Dialog,
   DialogTitle,
@@ -47,7 +48,7 @@ const EditPhotoDialog: React.FC<EditPhotoDialogProps> = ({ open, photo, onClose,
       });
       onClose();
     } catch (error) {
-      console.error('Failed to update photo:', error);
+      logger.error('Failed to update photo', error);
     } finally {
       setSaving(false);
     }
