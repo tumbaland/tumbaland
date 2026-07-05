@@ -101,6 +101,11 @@ components:
 
     Activity:
       type: object
+      description: |
+        One logged entry: something that happened on a date. Which fields an
+        entry carries depends on its type's valueType — 'string' types use
+        description, 'number' types use hours, 'boolean' types are presence
+        markers (the entry existing means "yes").
       properties:
         _id:
           type: string
@@ -109,23 +114,18 @@ components:
           type: string
           format: date
           example: "2024-11-03"
+        typeId:
+          type: string
+          example: "507f1f77bcf86cd799439011"
+        description:
+          type: string
+          nullable: true
+          example: "Dinner at Italian restaurant"
         hours:
           type: integer
           nullable: true
           minimum: 0
           example: 2
-        activity:
-          type: object
-          properties:
-            typeId:
-              type: string
-              example: "507f1f77bcf86cd799439011"
-            description:
-              type: string
-              nullable: true
-              example: "Dinner at Italian restaurant"
-          required:
-            - typeId
         userId:
           type: string
           example: "user123"
@@ -141,7 +141,7 @@ components:
           format: date-time
       required:
         - date
-        - activity
+        - typeId
         - userId
 
     ActivityWithType:
@@ -149,16 +149,54 @@ components:
         - $ref: '#/components/schemas/Activity'
         - type: object
           properties:
-            activity:
-              type: object
-              properties:
-                typeId:
-                  $ref: '#/components/schemas/ActivityType'
-                description:
-                  type: string
-                  nullable: true
-              required:
-                - typeId
+            typeId:
+              $ref: '#/components/schemas/ActivityType'
+
+    Day:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          example: "2026-07-04"
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityWithType'
+      required:
+        - date
+        - entries
+
+    SaveDayRequest:
+      type: object
+      properties:
+        entries:
+          type: array
+          description: |
+            The complete set of entries for the day. Entries with a matching
+            _id are updated, new ones created, and existing entries missing
+            from the list are deleted. An empty list clears the day.
+          items:
+            type: object
+            properties:
+              _id:
+                type: string
+                description: Present when updating an existing entry
+              typeId:
+                type: string
+              description:
+                type: string
+                maxLength: 500
+              hours:
+                type: integer
+                minimum: 0
+            required:
+              - typeId
+        groupId:
+          type: string
+          nullable: true
+      required:
+        - entries
 
     ActivityStats:
       type: object
@@ -844,6 +882,112 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
+
+  # Day (journal) Endpoints
+  /api/days:
+    get:
+      tags:
+        - Days
+      summary: List days with their entries
+      description: |
+        Returns days (newest first) with all their entries, paginated by day.
+        Each entry carries a populated `type` object for rendering.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 30
+        - name: typeId
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          description: Case-insensitive substring match on entry descriptions
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Paginated days
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      days:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Day'
+                      total:
+                        type: integer
+                      page:
+                        type: integer
+                      totalPages:
+                        type: integer
+
+  /api/days/{date}:
+    put:
+      tags:
+        - Days
+      summary: Create or replace a day's entries
+      description: |
+        The day editor's save: create/replace all entries for one date in a
+        single call. An empty entries array clears the day.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema:
+            type: string
+            format: date
+            example: "2026-07-04"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveDayRequest'
+      responses:
+        '200':
+          description: The saved day
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Day'
 
   # Activity Management Endpoints
   /api/activities:

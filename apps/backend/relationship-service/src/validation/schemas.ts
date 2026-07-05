@@ -1,21 +1,22 @@
 import { z } from 'zod';
 
-const activityDataSchema = z.object({
-  typeId: z.string().min(1, 'typeId is required'),
-  description: z.string().max(500).optional()
-});
-
 export const createActivitySchema = z.object({
   date: z.coerce.date({ error: 'A valid date is required' }),
+  typeId: z.string().min(1, 'typeId is required'),
+  description: z.string().max(500).optional(),
   hours: z.number().int().nonnegative().optional(),
-  activity: activityDataSchema,
   groupId: z.string().optional()
 });
 
-export const updateActivitySchema = z.object({
-  date: z.coerce.date({ error: 'A valid date is required' }).optional(),
-  hours: z.number().int().nonnegative().optional(),
-  activity: activityDataSchema.optional(),
+export const updateActivitySchema = createActivitySchema.partial();
+
+export const saveDaySchema = z.object({
+  entries: z.array(z.object({
+    _id: z.string().optional(),
+    typeId: z.string().min(1, 'typeId is required'),
+    description: z.string().max(500).optional(),
+    hours: z.number().int().nonnegative().optional()
+  })),
   groupId: z.string().optional()
 });
 

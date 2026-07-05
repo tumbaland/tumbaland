@@ -163,7 +163,7 @@ export const getRelationshipStatistics = async (
       {
         $lookup: {
           from: 'activity_types',
-          localField: 'activity.typeId',
+          localField: 'typeId',
           foreignField: '_id',
           as: 'activityType'
         }
@@ -317,7 +317,7 @@ export const getMonthlyStatistics = async (
   pipeline.push({
     $lookup: {
       from: 'activity_types',
-      localField: 'activity.typeId',
+      localField: 'typeId',
       foreignField: '_id',
       as: 'activityType'
     }
@@ -467,7 +467,7 @@ export const getMonthlyActivityBreakdown = async (
   pipeline.push({
     $lookup: {
       from: 'activity_types',
-      localField: 'activity.typeId',
+      localField: 'typeId',
       foreignField: '_id',
       as: 'activityType'
     }
@@ -587,7 +587,7 @@ export const getWeeklyHeatmapData = async (
   pipeline.push({
     $lookup: {
       from: 'activity_types',
-      localField: 'activity.typeId',
+      localField: 'typeId',
       foreignField: '_id',
       as: 'activityType'
     }
@@ -711,7 +711,7 @@ export const getCumulativeTimelineData = async (
   pipeline.push({
     $lookup: {
       from: 'activity_types',
-      localField: 'activity.typeId',
+      localField: 'typeId',
       foreignField: '_id',
       as: 'activityType'
     }

@@ -14,10 +14,10 @@ export const createActivity = async (req: Request, res: Response): Promise<void>
   };
 
   // Validate that the activity type exists and is accessible
-  // (route-level schema validation already guarantees activity.typeId is present)
+  // (route-level schema validation already guarantees typeId is present)
   const ActivityType = (await import('../models/ActivityType')).ActivityType;
   const activityType = await ActivityType.findOne({
-    _id: activityData.activity!.typeId,
+    _id: activityData.typeId,
     isActive: true,
     $or: [
       { userId: user.id },

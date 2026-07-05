@@ -46,7 +46,7 @@ export const getActivities = async (
     const ActivityType = (await import('../models/ActivityType')).ActivityType;
     const typeDoc = await ActivityType.findOne({ slug: activityType, isActive: true });
     if (typeDoc) {
-      query['activity.typeId'] = typeDoc._id;
+      query.typeId = typeDoc._id;
     } else {
       // If type not found, return empty results
       return {
@@ -65,7 +65,7 @@ export const getActivities = async (
   }
 
   if (description) {
-    query['activity.description'] = { $regex: description, $options: 'i' };
+    query.description = { $regex: description, $options: 'i' };
   }
 
   // Apply permission filtering
@@ -96,12 +96,8 @@ export const getActivities = async (
     case 'hours':
       sortObj.hours = sortDirection;
       break;
-    case 'activity':
-    case 'activityType':
-      sortObj['activity.type'] = sortDirection;
-      break;
     case 'description':
-      sortObj['activity.description'] = sortDirection;
+      sortObj.description = sortDirection;
       break;
     case 'createdAt':
       sortObj.createdAt = sortDirection;
@@ -115,7 +111,7 @@ export const getActivities = async (
 
   // Execute queries
   const [activities, total] = await Promise.all([
-    Activity.find(query).populate('activity.typeId').sort(sortObj).skip(skip).limit(limit),
+    Activity.find(query).populate('typeId').sort(sortObj).skip(skip).limit(limit),
     Activity.countDocuments(query)
   ]);
 
@@ -162,25 +158,34 @@ export const getActivityStats = async (
     if (endDate) matchStage.date.$lte = endDate;
   }
 
-  const pipeline = [];
+  const pipeline: any[] = [];
 
   // Add match stage if there are filters
   if (Object.keys(matchStage).length > 0) {
     pipeline.push({ $match: matchStage });
-  } // Group by activity type
-  pipeline.push({
-    $group: {
-      _id: '$activity.type',
-      count: { $sum: 1 },
-      totalHours: { $sum: '$hours' },
-      avgHours: { $avg: '$hours' }
-    }
-  });
+  }
 
-  // Sort by total hours descending
-  pipeline.push({
-    $sort: { totalHours: -1 as const }
-  });
+  // Group by activity type
+  pipeline.push(
+    {
+      $lookup: {
+        from: 'activity_types',
+        localField: 'typeId',
+        foreignField: '_id',
+        as: 'activityType'
+      }
+    },
+    { $unwind: '$activityType' },
+    {
+      $group: {
+        _id: '$activityType.slug',
+        count: { $sum: 1 },
+        totalHours: { $sum: '$hours' },
+        avgHours: { $avg: '$hours' }
+      }
+    },
+    { $sort: { totalHours: -1 as const } }
+  );
 
   const stats = await Activity.aggregate(pipeline);
 
@@ -255,8 +260,8 @@ export const getDescriptionsByTypeId = async (
   groupId?: string
 ): Promise<string[]> => {
   const matchQuery: any = {
-    'activity.typeId': new mongoose.Types.ObjectId(typeId),
-    'activity.description': { $exists: true, $ne: '' }
+    typeId: new mongoose.Types.ObjectId(typeId),
+    description: { $exists: true, $ne: '' }
   };
 
   if (groupId) {
@@ -267,6 +272,6 @@ export const getDescriptionsByTypeId = async (
     matchQuery.$or = [{ groupId: { $exists: false } }, { groupId: null }];
   }
 
-  const descriptions: string[] = await Activity.distinct('activity.description', matchQuery);
-  return descriptions.filter(Boolean).sort();
+  const descriptions: string[] = await Activity.distinct('description', matchQuery);
+  return descriptions.filter(Boolean).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 };

@@ -1,17 +1,3 @@
-// Activity Types based on backend model
-export interface Activity {
-  _id?: string;
-  id?: string;
-  date: Date | string;
-  hours: number;
-  activity: {
-    typeId: ActivityType;
-    description: string;
-  };
-  createdAt?: Date | string;
-  updatedAt?: Date | string;
-}
-
 export interface ActivityType {
   _id: string;
   id: string;
@@ -29,41 +15,55 @@ export interface ActivityType {
   groupId?: string;
 }
 
-export interface CreateActivityRequest {
+/**
+ * One logged entry: something that happened on a date. Which fields it
+ * carries depends on its type's valueType — 'string' types use description
+ * (which game, which restaurant), 'number' types use hours, 'boolean' types
+ * are presence markers (the entry existing means "yes").
+ */
+export interface ActivityEntry {
+  _id: string;
   date: Date | string;
-  hours?: number;
-  activity: {
-    typeId: string; // ActivityType ID
-    description?: string;
-  };
-  groupId?: string;
-}
-
-export interface UpdateActivityRequest extends Partial<CreateActivityRequest> {}
-
-export interface GetActivitiesFilters {
-  activityType?: string; // ActivityType slug
-  startDate?: Date | string;
-  endDate?: Date | string;
+  typeId: string;
+  /** populated ActivityType (from GET /days) */
+  type?: ActivityType;
   description?: string;
-  limit?: number;
+  hours?: number;
+  userId?: string;
+  groupId?: string;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+}
+
+export interface Day {
+  /** YYYY-MM-DD */
+  date: string;
+  entries: ActivityEntry[];
+}
+
+/** Entry payload for PUT /days/:date. _id present = update existing. */
+export interface DayEntryInput {
+  _id?: string;
+  typeId: string;
+  description?: string;
+  hours?: number;
+}
+
+export interface GetDaysFilters {
   page?: number;
-  sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  limit?: number;
+  typeId?: string;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
   groupId?: string;
 }
 
-export interface ActivityStats {
-  totalActivities: number;
-  totalHours: number;
-  averageHoursPerActivity: number;
-  activitiesByType: Record<string, number>;
-  hoursPerType: Record<string, number>;
-  mostFrequentActivity: string;
-  dateRange: {
-    earliest: Date | string;
-    latest: Date | string;
-  };
+export interface DaysResponse {
+  days: Day[];
+  total: number;
+  page: number;
+  totalPages: number;
 }
 
 export interface ApiResponse<T> {
@@ -72,24 +72,9 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
-export interface ApiError {
-  error: string;
-  message?: string;
-}
-
 export interface PaginatedResponse<T> {
   data: T[];
   pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
-}
-
-export interface ActivitiesResponse {
-  activities: Activity[];
-  pagination?: {
     page: number;
     limit: number;
     total: number;

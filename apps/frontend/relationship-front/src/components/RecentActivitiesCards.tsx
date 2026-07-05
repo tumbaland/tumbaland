@@ -19,7 +19,7 @@ import {
 import { ExpandMore, ExpandLess } from '@mui/icons-material';
 import { logger } from '@tumbaland/components';
 import { getRecentActivitiesSummary } from '../api/activities';
-import { Activity, ActivityType } from '../api/types';
+import { ActivityEntry, ActivityType } from '../api/types';
 import { useTenantFilter } from './tenant';
 import { getActivityTypes } from '../api/activityTypes';
 
@@ -35,7 +35,7 @@ const timelineOptions: TimelineOption[] = [
 ];
 
 const RecentActivitiesCards: React.FC = () => {
-  const [activitiesData, setActivitiesData] = useState<Record<string, Activity[]>>({});
+  const [activitiesData, setActivitiesData] = useState<Record<string, ActivityEntry[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTimeline, setSelectedTimeline] = useState<number>(1); // Default to "Last Month"
@@ -65,7 +65,7 @@ const RecentActivitiesCards: React.FC = () => {
         logger.debug('Fetched recent activities summary', { keys: Object.keys(summaryData) });
 
         // Transform data to use activity type slugs as keys
-        const dataMap: Record<string, Activity[]> = {};
+        const dataMap: Record<string, ActivityEntry[]> = {};
         types.forEach((type) => {
           const timelineKey = `${selectedTimeline}months`;
           if (summaryData[type.slug] && summaryData[type.slug][timelineKey]) {
@@ -272,7 +272,7 @@ const RecentActivitiesCards: React.FC = () => {
                     >
                       {activities.map((activity, index) => (
                         <Box
-                          key={activity._id || activity.id || index}
+                          key={activity._id || index}
                           sx={{
                             display: 'flex',
                             alignItems: 'flex-start',
@@ -305,7 +305,10 @@ const RecentActivitiesCards: React.FC = () => {
                               wordBreak: 'break-word'
                             }}
                           >
-                            {activity.activity.description || 'No description'}
+                            {activity.description ||
+                              (activity.hours !== undefined && activity.hours !== null
+                                ? `${activity.hours}h`
+                                : '✓')}
                           </Typography>
                         </Box>
                       ))}

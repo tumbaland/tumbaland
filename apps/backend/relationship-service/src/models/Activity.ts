@@ -1,14 +1,15 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-// Interface for Activity document
+// One logged entry: something that happened on a date. What the entry carries
+// depends on its type's valueType: 'string' types use description (e.g. which
+// game, which restaurant), 'number' types use hours (e.g. hours together),
+// 'boolean' types are presence markers (the entry existing means "yes").
 export interface IActivity extends Document {
   id: string;
   date: Date;
-  hours: number; // integer
-  activity: {
-    typeId: mongoose.Types.ObjectId; // Reference to ActivityType
-    description: string;
-  };
+  typeId: mongoose.Types.ObjectId; // Reference to ActivityType
+  description?: string;
+  hours?: number; // integer
   createdAt: Date;
   updatedAt: Date;
   userId: string; // User ID who created the activity
@@ -23,6 +24,16 @@ const ActivitySchema: Schema = new Schema(
       required: true,
       index: true
     },
+    typeId: {
+      type: Schema.Types.ObjectId,
+      ref: 'ActivityType',
+      required: true
+    },
+    description: {
+      type: String,
+      required: false,
+      maxlength: 500
+    },
     hours: {
       type: Number,
       required: false,
@@ -30,18 +41,6 @@ const ActivitySchema: Schema = new Schema(
       validate: {
         validator: Number.isInteger,
         message: 'Hours must be an integer'
-      }
-    },
-    activity: {
-      typeId: {
-        type: Schema.Types.ObjectId,
-        ref: 'ActivityType',
-        required: true
-      },
-      description: {
-        type: String,
-        required: false,
-        maxlength: 500
       }
     },
     userId: {
@@ -61,66 +60,8 @@ const ActivitySchema: Schema = new Schema(
 );
 
 // Indexes for better query performance
-ActivitySchema.index({ 'activity.typeId': 1, date: -1 });
+ActivitySchema.index({ typeId: 1, date: -1 });
 ActivitySchema.index({ date: -1 });
 ActivitySchema.index({ createdAt: -1 });
-
-// Static methods
-ActivitySchema.statics.getActivityTypes = async function (userId?: string, groupId?: string) {
-  const ActivityType = mongoose.model('ActivityType');
-  const query: any = { isActive: true };
-
-  if (groupId) {
-    query.$or = [
-      { groupId },
-      { userId, groupId: { $exists: false } }
-    ];
-  } else if (userId) {
-    query.userId = userId;
-    query.$or = [
-      { groupId: { $exists: false } },
-      { groupId: null }
-    ];
-  }
-
-  return await ActivityType.find(query).sort({ sortOrder: 1 });
-};
-
-ActivitySchema.statics.getActivitiesByDateRange = function (startDate: Date, endDate: Date) {
-  return this.find({
-    date: {
-      $gte: startDate,
-      $lte: endDate
-    }
-  }).sort({ date: -1 });
-};
-
-ActivitySchema.statics.getActivityStats = function () {
-  return this.aggregate([
-    {
-      $lookup: {
-        from: 'activity_types',
-        localField: 'activity.typeId',
-        foreignField: '_id',
-        as: 'activityType'
-      }
-    },
-    {
-      $unwind: '$activityType'
-    },
-    {
-      $group: {
-        _id: '$activityType.slug',
-        name: { $first: '$activityType.name' },
-        count: { $sum: 1 },
-        totalHours: { $sum: '$hours' },
-        avgHours: { $avg: '$hours' }
-      }
-    },
-    {
-      $sort: { totalHours: -1 }
-    }
-  ]);
-};
 
 export const Activity = mongoose.model<IActivity>('Activity', ActivitySchema);

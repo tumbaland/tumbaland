@@ -1,5 +1,6 @@
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import DirectionsRunIcon from '@mui/icons-material/DirectionsRun';
+import MenuBookIcon from '@mui/icons-material/MenuBook';
+import CategoryIcon from '@mui/icons-material/Category';
 
 export const menuItems = [
   {
@@ -8,8 +9,13 @@ export const menuItems = [
     path: '/'
   },
   {
-    label: 'Activities',
-    icon: <DirectionsRunIcon fontSize="small" sx={{ mr: 1 }} />,
-    path: '/activities'
+    label: 'Journal',
+    icon: <MenuBookIcon fontSize="small" sx={{ mr: 1 }} />,
+    path: '/journal'
+  },
+  {
+    label: 'Activity Types',
+    icon: <CategoryIcon fontSize="small" sx={{ mr: 1 }} />,
+    path: '/activity-types'
   }
 ];
