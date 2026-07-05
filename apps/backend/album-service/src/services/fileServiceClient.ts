@@ -69,6 +69,15 @@ function request(
   });
 }
 
+class FileServiceHttpError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string
+  ) {
+    super(message);
+  }
+}
+
 async function requestJson<T = unknown>(
   method: string,
   urlStr: string,
@@ -81,7 +90,7 @@ async function requestJson<T = unknown>(
   const { status, body: responseBody } = await request(method, urlStr, headers, body);
   const text = responseBody.toString('utf8');
   if (status < 200 || status >= 300) {
-    throw new Error(`file-service ${method} ${urlStr} → ${status}: ${text}`);
+    throw new FileServiceHttpError(status, `file-service ${method} ${urlStr} → ${status}: ${text}`);
   }
   return JSON.parse(text) as T;
 }
@@ -203,33 +212,91 @@ export const getPhotoSignedUrl = async (
   return getSignedUrl(fileIdToUse, expiresInMinutes);
 };
 
+/** Max fileIds accepted per /internal/download-urls request. */
+const BATCH_URL_CHUNK = 1000;
+
 /**
- * Batch signed URL generation with concurrency limit.
+ * Get signed download URLs for many fileIds in as few HTTP round-trips as
+ * possible (one per 1000 files). Signing is stateless on the file-service
+ * side, so this avoids hammering it with per-file requests — a 100-photo
+ * collage used to fire 200 calls and trip the rate limiter.
+ *
+ * Falls back to per-file requests if file-service does not expose the batch
+ * endpoint yet (older deployment).
+ */
+export const getSignedUrlsBatch = async (
+  fileIds: string[],
+  expiresInMinutes = 60
+): Promise<Record<string, SignedUrlData>> => {
+  const result: Record<string, SignedUrlData> = {};
+  const uniqueIds = [...new Set(fileIds.filter(Boolean))];
+  if (uniqueIds.length === 0) return result;
+
+  for (let i = 0; i < uniqueIds.length; i += BATCH_URL_CHUNK) {
+    const chunk = uniqueIds.slice(i, i + BATCH_URL_CHUNK);
+    try {
+      const url = `${fileServiceBaseUrl()}/internal/download-urls`;
+      const data = await requestJson<{
+        success: boolean;
+        data: { urls: Record<string, { downloadUrl: string; expiresMs: number; expiresInMinutes: number }> };
+      }>('POST', url, { fileIds: chunk, expiresInMinutes });
+
+      for (const [fileId, entry] of Object.entries(data.data.urls)) {
+        result[fileId] = {
+          signedUrl: entry.downloadUrl,
+          expiresAt: new Date(entry.expiresMs).toISOString(),
+          expiresInMinutes: entry.expiresInMinutes
+        };
+      }
+    } catch (error) {
+      if (error instanceof FileServiceHttpError && error.status === 404) {
+        // file-service predates the batch endpoint — degrade to per-file calls
+        logger.warn('file-service has no /internal/download-urls endpoint, falling back to per-file requests');
+        const concurrencyLimit = 10;
+        for (let j = 0; j < chunk.length; j += concurrencyLimit) {
+          await Promise.all(
+            chunk.slice(j, j + concurrencyLimit).map(async (fileId) => {
+              const data = await getSignedUrl(fileId, expiresInMinutes);
+              if (data) result[fileId] = data;
+            })
+          );
+        }
+      } else {
+        logger.error('Failed to get batch signed URLs:', error);
+      }
+    }
+  }
+
+  return result;
+};
+
+/**
+ * Batch signed URL generation for photo documents.
+ * The result is keyed by `minioFileId` regardless of `isThumbnail`,
+ * matching what album/photo list builders expect.
  */
 export const getPhotoSignedUrlsBatch = async (
   photos: Array<{ minioFileId?: string; minioThumbnailFileId?: string }>,
   isThumbnail = false,
   expiresInMinutes = 60
 ): Promise<Record<string, SignedUrlData>> => {
+  const entries = photos
+    .map((photo) => ({
+      key: photo.minioFileId,
+      fileId: isThumbnail ? photo.minioThumbnailFileId : photo.minioFileId
+    }))
+    .filter((e): e is { key: string; fileId: string } => Boolean(e.key && e.fileId));
+
+  const urlMap = await getSignedUrlsBatch(
+    entries.map((e) => e.fileId),
+    expiresInMinutes
+  );
+
   const result: Record<string, SignedUrlData> = {};
-  const concurrencyLimit = 10;
-
-  for (let i = 0; i < photos.length; i += concurrencyLimit) {
-    const batch = photos.slice(i, i + concurrencyLimit);
-    await Promise.all(
-      batch.map(async (photo) => {
-        try {
-          const signedUrlData = await getPhotoSignedUrl(photo, isThumbnail, expiresInMinutes);
-          if (signedUrlData && photo.minioFileId) {
-            result[photo.minioFileId] = signedUrlData;
-          }
-        } catch (error) {
-          logger.warn(`Failed to get signed URL for photo ${photo.minioFileId}:`, error);
-        }
-      })
-    );
+  for (const entry of entries) {
+    const data = urlMap[entry.fileId];
+    if (data) result[entry.key] = data;
   }
-
   return result;
 };
 

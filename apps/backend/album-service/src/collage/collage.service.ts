@@ -2,7 +2,7 @@ import { CollageInput } from './collage.types';
 import { CollageModel, ICollage } from './collage.model';
 import { canAccessResource } from '../utils/permissionUtils';
 import Album from '../models/Album';
-import { getPhotoSignedUrl } from '../services/fileServiceClient';
+import { getSignedUrlsBatch } from '../services/fileServiceClient';
 import mongoose from 'mongoose';
 import { ForbiddenError, logger, NotFoundError } from '@tumbaland/core';
 
@@ -121,7 +121,9 @@ export const getCollageWithPhotos = async (
               mimetype: '$$photo.mimetype',
               createdAt: '$$photo.createdAt',
               title: '$$photo.title',
-              description: '$$photo.description'
+              description: '$$photo.description',
+              width: '$$photo.width',
+              height: '$$photo.height'
             }
           }
         }
@@ -146,33 +148,32 @@ export const getCollageWithPhotos = async (
     }
   }
 
-  // Flatten all photos and get signed URLs in parallel
+  // Flatten all photos and fetch every signed URL (originals + thumbnails)
+  // in a single batch request to file-service.
   const allPhotos = albumsWithPhotos.flatMap((album: any) => album.photos);
-  const photosWithUrls = await Promise.all(
-    allPhotos.map(async (photo: any) => {
-      try {
-        const signedUrlData = await getPhotoSignedUrl(photo, false, 60);
-        const thumbnailSignedUrlData = await getPhotoSignedUrl(photo, true, 60);
+  let urlMap: Awaited<ReturnType<typeof getSignedUrlsBatch>> = {};
+  try {
+    urlMap = await getSignedUrlsBatch(
+      allPhotos.flatMap((photo: any) => [photo.minioFileId, photo.minioThumbnailFileId]).filter(Boolean),
+      60
+    );
+  } catch (error) {
+    logger.error('Failed to get signed URLs for collage photos', { error: (error as Error)?.message });
+  }
 
-        return {
-          ...photo,
-          signedUrl: signedUrlData?.signedUrl,
-          signedUrlExpiresAt: signedUrlData?.expiresAt,
-          signedUrlExpiresInMinutes: signedUrlData?.expiresInMinutes,
-          thumbnailSignedUrl: thumbnailSignedUrlData?.signedUrl,
-          thumbnailSignedUrlExpiresAt: thumbnailSignedUrlData?.expiresAt,
-          thumbnailSignedUrlExpiresInMinutes: thumbnailSignedUrlData?.expiresInMinutes
-        };
-      } catch (error) {
-        logger.error('Failed to get signed URLs for photo', { error: (error as Error)?.message });
-        return {
-          ...photo,
-          signedUrl: undefined,
-          thumbnailSignedUrl: undefined
-        };
-      }
-    })
-  );
+  const photosWithUrls = allPhotos.map((photo: any) => {
+    const original = photo.minioFileId ? urlMap[photo.minioFileId] : undefined;
+    const thumbnail = photo.minioThumbnailFileId ? urlMap[photo.minioThumbnailFileId] : undefined;
+    return {
+      ...photo,
+      signedUrl: original?.signedUrl,
+      signedUrlExpiresAt: original?.expiresAt,
+      signedUrlExpiresInMinutes: original?.expiresInMinutes,
+      thumbnailSignedUrl: thumbnail?.signedUrl,
+      thumbnailSignedUrlExpiresAt: thumbnail?.expiresAt,
+      thumbnailSignedUrlExpiresInMinutes: thumbnail?.expiresInMinutes
+    };
+  });
 
   return { collage, photos: photosWithUrls };
 };

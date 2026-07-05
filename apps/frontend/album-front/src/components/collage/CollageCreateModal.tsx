@@ -29,20 +29,25 @@ interface CollageCreateModalProps {
 }
 
 const defaultConfig = {
-  version: '1.0',
+  version: '2.0',
   date: new Date().toISOString(),
-  viewport: { width: 1200, height: 800 },
+  // 16:9 design space; the editor scales it to fit whatever screen it opens on
+  viewport: { width: 1600, height: 900 },
   theme: 'default',
   photos: [],
-  textSections: [],
+  texts: [],
   title: { text: '', subtitle: '' },
-  backgroundColor: '#f1f5f9', // Slate-100
+  backgroundColor: '#111111',
   borderColor: '#ffffff',
   photoTransparencyMode: false
 };
 
+/** They make one collage per month — suggest e.g. "July 2026" as the title. */
+const suggestedTitle = () =>
+  new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+
 export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, onClose, onCreate }) => {
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState(suggestedTitle);
   const [subtitle, setSubtitle] = useState('');
   const [albumIds, setAlbumIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -58,6 +63,11 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
       setError('Title is required');
       return;
     }
+    if (albumIds.length === 0) {
+      // the backend rejects collages without a source album
+      setError('Pick at least one source album');
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -71,7 +81,7 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
         albumIds,
         groupId: tenantGroupId // Include the active group ID from tenant context
       });
-      setTitle('');
+      setTitle(suggestedTitle());
       setSubtitle('');
       setAlbumIds([]);
       onClose();
@@ -84,7 +94,7 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
 
   const handleClose = () => {
     if (!loading) {
-      setTitle('');
+      setTitle(suggestedTitle());
       setSubtitle('');
       setAlbumIds([]);
       setError(null);

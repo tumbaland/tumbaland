@@ -26,7 +26,11 @@ export const useCollageDetails = (collageId?: string) => {
   return useQuery({
     queryKey: collageKeys.detail(collageId),
     queryFn: () => collageService.getCollageById(collageId as string),
-    enabled: Boolean(collageId)
+    enabled: Boolean(collageId),
+    // Signed photo URLs expire after 60 minutes; refetching keeps them fresh
+    // while a collage stays open (the editor only re-reads URLs, not layout).
+    refetchInterval: 45 * 60 * 1000,
+    refetchIntervalInBackground: true
   });
 };
 

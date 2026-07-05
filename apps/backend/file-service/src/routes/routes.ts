@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { validate } from '@tumbaland/core';
 import { requireApiKey, requireSignedToken } from '../middleware/auth';
-import { generateUploadUrl, generateDownloadUrl } from '../controllers/signedUrlController';
+import { generateUploadUrl, generateDownloadUrl, generateDownloadUrls } from '../controllers/signedUrlController';
 import { uploadPublic, downloadPublic } from '../controllers/publicController';
 import {
   internalUpload,
@@ -12,7 +12,12 @@ import {
   internalDeleteFolder,
   internalList
 } from '../controllers/internalController';
-import { generateUploadUrlSchema, generateDownloadUrlSchema, deleteFolderSchema } from '../validation/schemas';
+import {
+  generateUploadUrlSchema,
+  generateDownloadUrlSchema,
+  generateDownloadUrlsSchema,
+  deleteFolderSchema
+} from '../validation/schemas';
 
 const router = Router();
 
@@ -20,6 +25,7 @@ const router = Router();
 // Requires API key header: X-Internal-Api-Key
 router.post('/internal/upload-url', requireApiKey, validate(generateUploadUrlSchema), generateUploadUrl);
 router.post('/internal/download-url', requireApiKey, validate(generateDownloadUrlSchema), generateDownloadUrl);
+router.post('/internal/download-urls', requireApiKey, validate(generateDownloadUrlsSchema), generateDownloadUrls);
 
 // ─── Internal: server-to-server file operations ───────────────────────────────
 router.put('/internal/files/folder', requireApiKey, validate(deleteFolderSchema), internalDeleteFolder); // must be before /:fileId

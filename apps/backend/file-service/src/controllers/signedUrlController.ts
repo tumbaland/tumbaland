@@ -44,3 +44,30 @@ export const generateDownloadUrl = (req: Request, res: Response): void => {
 
   sendSuccess(res, { downloadUrl, fileId, expiresMs, expiresInMinutes });
 };
+
+/**
+ * POST /internal/download-urls
+ * Body: { fileIds: string[], expiresInMinutes? }
+ * Batch variant of /internal/download-url: signing is pure HMAC, so one
+ * request can produce URLs for a whole collage/album (up to 1000 files)
+ * instead of one round-trip per file.
+ */
+export const generateDownloadUrls = (req: Request, res: Response): void => {
+  const { fileIds, expiresInMinutes = DEFAULT_DOWNLOAD_MINUTES } = req.body as {
+    fileIds: string[];
+    expiresInMinutes?: number;
+  };
+
+  const expiresMs = Date.now() + expiresInMinutes * 60 * 1000;
+  const urls: Record<string, { downloadUrl: string; expiresMs: number; expiresInMinutes: number }> = {};
+  for (const fileId of fileIds) {
+    const token = signToken('download', fileId, expiresMs);
+    urls[fileId] = {
+      downloadUrl: `${FILE_SERVICE_PUBLIC_URL()}/files/download/${fileId}?token=${token}&expires=${expiresMs}`,
+      expiresMs,
+      expiresInMinutes
+    };
+  }
+
+  sendSuccess(res, { urls, expiresMs, expiresInMinutes });
+};

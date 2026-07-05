@@ -62,11 +62,13 @@ export const updatePhotoAIAnalysisSchema = z.object({
 export const createCollageSchema = z.object({
   title: z.string().min(1, 'title is required'),
   config: z.record(z.string(), z.any()),
-  albumIds: z.array(z.string()).min(1, 'albumIds must contain at least one album')
+  albumIds: z.array(z.string()).min(1, 'albumIds must contain at least one album'),
+  groupId: z.string().optional()
 });
 
 export const updateCollageSchema = z.object({
   title: z.string().min(1).optional(),
   config: z.record(z.string(), z.any()).optional(),
-  albumIds: z.array(z.string()).optional()
+  albumIds: z.array(z.string()).optional(),
+  groupId: z.string().optional()
 });

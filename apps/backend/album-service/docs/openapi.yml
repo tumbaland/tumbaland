@@ -524,6 +524,9 @@ components:
           items:
             type: string
           example: ["507f1f77bcf86cd799439011"]
+        groupId:
+          type: string
+          description: "Optional group to associate the collage with"
       required:
         - title
         - albumIds
@@ -537,6 +540,13 @@ components:
         config:
           type: object
           description: "Updated collage configuration"
+        albumIds:
+          type: array
+          items:
+            type: string
+        groupId:
+          type: string
+          description: "Optional group to associate the collage with"
 
     AlbumsResponse:
       type: object

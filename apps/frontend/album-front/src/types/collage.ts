@@ -1,3 +1,26 @@
+export interface CollageConfigPhoto {
+  photoId: string;
+  /** legacy alias for photoId kept for very old configs */
+  filename?: string;
+  caption?: string;
+  /** v2 flat coordinates */
+  x?: number;
+  y?: number;
+  /** v1 coordinates */
+  position?: { left: number; top: number };
+  width: number;
+  height: number;
+  rotation?: number;
+  /** v2: explicit per-photo frame override (undefined = inherit) */
+  id?: string;
+  frame?: boolean;
+  /** v1 frame fields */
+  frameVisible?: boolean;
+  transparentBackground?: boolean;
+  scaleX?: string;
+  scaleY?: string;
+}
+
 export interface CollageTextBox {
   id: string;
   text: string;
@@ -5,6 +28,9 @@ export interface CollageTextBox {
   y: number;
   width: number;
   height: number;
+  /** v2 styling; absent on v1 configs */
+  fontSize?: number;
+  color?: string;
 }
 
 export interface CollageConfig {
@@ -12,19 +38,7 @@ export interface CollageConfig {
   date: string;
   viewport: { width: number; height: number };
   theme: string;
-  photos: Array<{
-    photoId: string;
-    filename: string;
-    caption?: string;
-    position: { left: number; top: number };
-    width: number;
-    height: number;
-    rotation?: number;
-    frameVisible?: boolean;
-    scaleX?: string;
-    scaleY?: string;
-    transparentBackground?: boolean;
-  }>;
+  photos: CollageConfigPhoto[];
   texts?: CollageTextBox[];
   textSections?: Array<any>;
   title?: { text: string; subtitle?: string };
@@ -39,6 +53,7 @@ export interface Collage {
   config: CollageConfig;
   albumIds: string[];
   ownerId: string;
+  groupId?: string;
   createdAt: string;
   updatedAt: string;
   thumbnail?: string;

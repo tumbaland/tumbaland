@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { logger } from '@tumbaland/components';
 import {
   Box,
@@ -26,6 +27,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import CollageCard from '../components/collage/CollageCard';
 
 const CollageListPage: React.FC = () => {
+  const navigate = useNavigate();
   const collageListQuery = useCollageList();
   const { createCollage, deleteCollage, updateCollage } = useCollageMutations();
   const [searchTerm, setSearchTerm] = useState('');
@@ -61,16 +63,22 @@ const CollageListPage: React.FC = () => {
   const handleCloseModal = () => setModalOpen(false);
   
   const handleCreateCollage = async (input: CollageInput) => {
-    await createCollage(input);
-    await collageListQuery.refetch();
+    const created = await createCollage(input);
+    // jump straight into the editor for the new collage
+    navigate(`/collages/${created._id}`);
   };
 
   const handleViewCollage = (collage: Collage) => {
-    window.open(`/collages/${collage._id}?mode=view`, '_blank');
+    navigate(`/collages/${collage._id}?mode=view`);
   };
 
   const handleEditCollage = (collage: Collage) => {
-    window.open(`/collages/${collage._id}?mode=edit`, '_blank');
+    navigate(`/collages/${collage._id}`);
+  };
+
+  const handleEditDetails = (collage: Collage) => {
+    setSelectedCollage(collage);
+    setEditModalOpen(true);
   };
 
   const handleDeleteClick = (collage: Collage) => {
@@ -245,6 +253,7 @@ const CollageListPage: React.FC = () => {
               collage={collage}
               onView={handleViewCollage}
               onEdit={handleEditCollage}
+              onEditDetails={handleEditDetails}
               onDelete={handleDeleteClick}
             />
           ))}
@@ -256,7 +265,7 @@ const CollageListPage: React.FC = () => {
         onClose={handleCloseModal}
         onCreate={handleCreateCollage}
       />
-      {/* Edit Modal - Kept for future use if we want inline editing */}
+      {/* Edit details (title / subtitle / source albums) */}
       {selectedCollage && (
         <CollageEditModal
           open={editModalOpen}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -13,19 +13,90 @@ import {
 } from '@mui/material';
 import {
   MoreVert as MoreVertIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon
+  Brush as BrushIcon,
+  Delete as DeleteIcon,
+  DriveFileRenameOutline as RenameIcon
 } from '@mui/icons-material';
 import { Collage } from '../../types/collage';
+import { normalizeCollageConfig } from './collageDoc';
 
 interface CollageCardProps {
   collage: Collage;
   onView: (collage: Collage) => void;
   onEdit: (collage: Collage) => void;
+  onEditDetails: (collage: Collage) => void;
   onDelete: (collage: Collage) => void;
 }
 
-const CollageCard: React.FC<CollageCardProps> = ({ collage, onView, onEdit, onDelete }) => {
+/** Schematic thumbnail: the saved layout drawn as scaled rectangles. */
+const CollagePreview: React.FC<{ collage: Collage }> = ({ collage }) => {
+  const doc = useMemo(() => normalizeCollageConfig(collage.config), [collage.config]);
+  const { width: vw, height: vh } = doc.canvas;
+  const pct = (v: number, total: number) => `${(v / total) * 100}%`;
+
+  return (
+    <Box
+      sx={{
+        position: 'relative',
+        width: '100%',
+        aspectRatio: '16 / 10',
+        bgcolor: doc.background,
+        overflow: 'hidden',
+        borderTopLeftRadius: 'inherit',
+        borderTopRightRadius: 'inherit'
+      }}
+    >
+      {doc.photos.map((p) => (
+        <Box
+          key={p.id}
+          sx={{
+            position: 'absolute',
+            left: pct(p.x, vw),
+            top: pct(p.y, vh),
+            width: pct(p.width, vw),
+            height: pct(p.height, vh),
+            transform: `rotate(${p.rotation || 0}deg)`,
+            bgcolor: 'rgba(255,255,255,0.28)',
+            border: '1px solid rgba(255,255,255,0.45)',
+            borderRadius: '2px'
+          }}
+        />
+      ))}
+      {doc.texts.map((t) => (
+        <Box
+          key={t.id}
+          sx={{
+            position: 'absolute',
+            left: pct(t.x, vw),
+            top: pct(t.y + t.height / 2, vh),
+            width: pct(t.width, vw),
+            height: '2px',
+            bgcolor: t.color,
+            opacity: 0.85,
+            borderRadius: 1
+          }}
+        />
+      ))}
+      {doc.photos.length === 0 && doc.texts.length === 0 && (
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'rgba(255,255,255,0.4)',
+            fontSize: '0.75rem'
+          }}
+        >
+          Empty collage
+        </Box>
+      )}
+    </Box>
+  );
+};
+
+const CollageCard: React.FC<CollageCardProps> = ({ collage, onView, onEdit, onEditDetails, onDelete }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -33,27 +104,19 @@ const CollageCard: React.FC<CollageCardProps> = ({ collage, onView, onEdit, onDe
     setAnchorEl(event.currentTarget);
   };
 
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
+  const handleMenuClose = () => setAnchorEl(null);
 
-  const handleEdit = () => {
+  const menuAction = (action: (c: Collage) => void) => () => {
     handleMenuClose();
-    onEdit(collage);
+    action(collage);
   };
 
-  const handleDelete = () => {
-    handleMenuClose();
-    onDelete(collage);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString(undefined, {
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString(undefined, {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
     });
-  };
 
   return (
     <Card
@@ -74,78 +137,63 @@ const CollageCard: React.FC<CollageCardProps> = ({ collage, onView, onEdit, onDe
         '&:hover': {
           transform: 'translateY(-8px)',
           boxShadow: '0 12px 30px rgba(0,0,0,0.1)',
-          background: 'rgba(255, 255, 255, 0.8)',
-          '& .collage-actions': {
-            opacity: 1,
-            transform: 'translateY(0)'
-          }
+          background: 'rgba(255, 255, 255, 0.8)'
         }
       }}
       onClick={() => onView(collage)}
     >
-      <CardContent sx={{ flexGrow: 1, p: 2.5, display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-          <Box sx={{ flex: 1 }}>
-            <Typography 
-              variant="h6" 
-              component="h2" 
-              sx={{ 
-                fontWeight: 600,
-                fontSize: '1.1rem',
-                lineHeight: 1.3,
-                wordBreak: 'break-word',
-                mt: 0.5,
-                display: '-webkit-box',
-                WebkitLineClamp: 3,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden'
-              }}
-            >
-              {collage.title}
-            </Typography>
-          </Box>
+      <CollagePreview collage={collage} />
+      <CardContent sx={{ flexGrow: 1, p: 2, display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <Typography
+            variant="h6"
+            component="h2"
+            sx={{
+              fontWeight: 600,
+              fontSize: '1rem',
+              lineHeight: 1.3,
+              wordBreak: 'break-word',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              flex: 1
+            }}
+          >
+            {collage.title}
+          </Typography>
           <IconButton
             size="small"
             onClick={handleMenuOpen}
-            sx={{ 
-              mt: 0.5,
-              mr: -1,
-              color: 'text.secondary',
-              '&:hover': { bgcolor: 'rgba(0,0,0,0.05)' }
-            }}
+            sx={{ mr: -1, color: 'text.secondary', '&:hover': { bgcolor: 'rgba(0,0,0,0.05)' } }}
           >
-            <MoreVertIcon />
+            <MoreVertIcon fontSize="small" />
           </IconButton>
         </Box>
-        
-        <Typography
-          variant="body2"
-          sx={{
-            color: "text.secondary",
-            mb: 2,
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-            minHeight: 40
-          }}>
-          {collage.config?.title?.subtitle || 'No description'}
-        </Typography>
 
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 'auto' }}>
-          <Chip 
-            label={`${collage.config?.photos?.length || 0} photos`} 
-            size="small" 
-            variant="outlined"
-            sx={{ 
-              borderRadius: 1.5,
-              bgcolor: 'rgba(0,0,0,0.02)',
-              borderColor: 'rgba(0,0,0,0.08)'
+        {collage.config?.title?.subtitle && (
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden'
             }}
+          >
+            {collage.config.title.subtitle}
+          </Typography>
+        )}
+
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 'auto', pt: 1 }}>
+          <Chip
+            label={`${collage.config?.photos?.length || 0} photos`}
+            size="small"
+            variant="outlined"
+            sx={{ borderRadius: 1.5, bgcolor: 'rgba(0,0,0,0.02)', borderColor: 'rgba(0,0,0,0.08)' }}
           />
-          <Typography variant="caption" sx={{
-            color: "text.secondary"
-          }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             {formatDate(collage.updatedAt)}
           </Typography>
         </Box>
@@ -157,21 +205,23 @@ const CollageCard: React.FC<CollageCardProps> = ({ collage, onView, onEdit, onDe
         onClick={(e) => e.stopPropagation()}
         slotProps={{
           paper: {
-            sx: {
-              borderRadius: 2,
-              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-              minWidth: 150
-            }
+            sx: { borderRadius: 2, boxShadow: '0 4px 20px rgba(0,0,0,0.1)', minWidth: 170 }
           }
         }}
       >
-        <MenuItem onClick={handleEdit}>
+        <MenuItem onClick={menuAction(onEdit)}>
           <ListItemIcon>
-            <EditIcon fontSize="small" />
+            <BrushIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Edit</ListItemText>
+          <ListItemText>Open editor</ListItemText>
         </MenuItem>
-        <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
+        <MenuItem onClick={menuAction(onEditDetails)}>
+          <ListItemIcon>
+            <RenameIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Edit details</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={menuAction(onDelete)} sx={{ color: 'error.main' }}>
           <ListItemIcon>
             <DeleteIcon fontSize="small" color="error" />
           </ListItemIcon>

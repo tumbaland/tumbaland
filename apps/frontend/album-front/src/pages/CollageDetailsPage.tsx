@@ -1,508 +1,361 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { logger } from '@tumbaland/components';
 import {
+  Alert,
   Box,
   CircularProgress,
+  IconButton,
+  Snackbar,
+  Tooltip,
   Typography
 } from '@mui/material';
-import { CanvasText } from '../components/collage/DraggableTextBox';
-import { AlbumPhoto } from '../components/collage/AlbumPhotoList';
-import CollageMenu from '../components/collage/CollageMenu';
-import CollageLayout from '../components/collage/CollageLayout';
-import CollagePhotoEditModal from '../components/collage/CollagePhotoEditModal';
-import CollageCanvas from '../components/collage/CollageCanvas';
-import CollageSidebar from '../components/collage/CollageSidebar';
-import CollageTextEditor from '../components/collage/CollageTextEditor';
-import { CanvasPhoto } from '../components/collage/CollageCanvasPhoto';
-import { Collage } from '../types/collage';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import EditIcon from '@mui/icons-material/Edit';
+import DownloadIcon from '@mui/icons-material/Download';
 import { useCollageDetails, useCollageMutations } from '../hooks/useCollage';
+import { useCollageEditor } from '../hooks/useCollageEditor';
+import {
+  normalizeCollageConfig,
+  serializeCollageDoc
+} from '../components/collage/collageDoc';
+import CollageStage, { ResolvedPhoto } from '../components/collage/CollageStage';
+import CollageToolbar from '../components/collage/CollageToolbar';
+import CollagePhotoTray, { AlbumPhoto } from '../components/collage/CollagePhotoTray';
+import CollagePhotoDialog from '../components/collage/CollagePhotoDialog';
+import CollageTextDialog from '../components/collage/CollageTextDialog';
+import { downloadBlob, exportCollageToPng } from '../components/collage/exportCollage';
 
+/** Full-screen collage editor / viewer. Route: /collages/:id[?mode=view] */
 const CollageDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  const mode = searchParams.get('mode') || 'edit';
-  const isViewMode = mode === 'view';
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const isViewMode = searchParams.get('mode') === 'view';
+
   const collageQuery = useCollageDetails(id);
   const { updateCollage } = useCollageMutations();
-  const isLoading = collageQuery.isPending;
-  const loadError = collageQuery.error ? 'Failed to load collage' : null;
-  const [collage, setCollage] = useState<Collage | null>(null);
-  const [albumPhotos, setAlbumPhotos] = useState<AlbumPhoto[]>([]);
-  const [canvasPhotos, setCanvasPhotos] = useState<CanvasPhoto[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const displayError = error || loadError;
+  const editor = useCollageEditor();
+  const { doc, selectedItem } = editor;
+
+  const [zoom, setZoom] = useState(0); // 0 = fit
   const [saving, setSaving] = useState(false);
-  const [backgroundColor, setBackgroundColor] = useState<string>('#111');
-  const [photoTransparencyMode, setPhotoTransparencyMode] = useState<boolean>(true);
-  const [borderColor, setBorderColor] = useState<string>('#fff');
-  
-  // Viewport state: initialize from browser window size
-  const getInitialViewport = () => {
-    if (typeof window !== 'undefined') {
-      return { width: window.innerWidth, height: window.innerHeight };
+  const [editItemId, setEditItemId] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
+
+  const collage = collageQuery.data?.collage;
+  const albumPhotos = useMemo(
+    () => (collageQuery.data?.albumPhotos ?? []) as AlbumPhoto[],
+    [collageQuery.data]
+  );
+
+  // Initialize the editor once per collage; refetches only refresh photo URLs.
+  const initializedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (collage && initializedFor.current !== collage._id) {
+      initializedFor.current = collage._id;
+      editor.init(normalizeCollageConfig(collage.config));
     }
-    return { width: 1200, height: 800 };
-  };
-  const [viewport, setViewport] = useState<{ width: number; height: number }>(getInitialViewport());
-  
-  // Caption edit state
-  const [photoEditModal, setPhotoEditModal] = useState<{ open: boolean; photoIndex: number | null }>({
-    open: false,
-    photoIndex: null
-  });
-  
-  // Text box state
-  const [canvasTexts, setCanvasTexts] = useState<CanvasText[]>([]);
-  const [textEditIdx, setTextEditIdx] = useState<number | null>(null);
-  const [textEditValue, setTextEditValue] = useState('');
+  }, [collage, editor]);
 
-  // Custom drag/resize state
-  const [dragPhotoId, setDragPhotoId] = useState<string | null>(null);
-  const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [resizePhotoId, setResizePhotoId] = useState<string | null>(null);
-  const [resizeOrigin, setResizeOrigin] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [resizeStart, setResizeStart] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  const photoById = useMemo(() => {
+    const map = new Map<string, AlbumPhoto>();
+    for (const p of albumPhotos) map.set(p._id, p);
+    return map;
+  }, [albumPhotos]);
 
-  // Disable drag/resize if any modal is open
-  const isModalOpen = photoEditModal.open || textEditIdx !== null;
+  const resolvePhoto = useCallback(
+    (photoId: string): ResolvedPhoto | undefined => {
+      const p = photoById.get(photoId);
+      if (!p) return undefined;
+      return {
+        src: p.signedUrl,
+        thumbSrc: p.thumbnailSignedUrl,
+        width: p.width,
+        height: p.height,
+        title: p.title
+      };
+    },
+    [photoById]
+  );
 
-  // Add new text box to canvas
-  const handleAddTextBox = () => {
-    setCanvasTexts((prev) => [
-      ...prev,
-      {
-        id: 'text-' + Date.now(),
-        text: 'Double-click to edit',
-        x: 200 + Math.random() * 100,
-        y: 200 + Math.random() * 100,
-        width: 180,
-        height: 48
+  const usedPhotoIds = useMemo(
+    () => new Set((doc?.photos ?? []).map((p) => p.photoId)),
+    [doc?.photos]
+  );
+
+  const placePhoto = useCallback(
+    (photo: AlbumPhoto, at?: { x: number; y: number }) => {
+      if (!doc) return;
+      const place = (naturalW: number, naturalH: number) => {
+        const target = Math.min(doc.canvas.width, doc.canvas.height) * 0.35;
+        const ratio = naturalW > 0 && naturalH > 0 ? naturalW / naturalH : 4 / 3;
+        const width = ratio >= 1 ? target : target * ratio;
+        const height = ratio >= 1 ? target / ratio : target;
+        const x = at ? at.x - width / 2 : doc.canvas.width / 2 - width / 2;
+        const y = at ? at.y - height / 2 : doc.canvas.height / 2 - height / 2;
+        editor.addPhoto({ photoId: photo._id, x, y, width, height, rotation: 0, caption: '' });
+      };
+      if (photo.width && photo.height) {
+        place(photo.width, photo.height);
+      } else if (photo.signedUrl || photo.thumbnailSignedUrl) {
+        // older photos have no stored dimensions; read them from the image itself
+        const img = new Image();
+        img.onload = () => place(img.naturalWidth, img.naturalHeight);
+        img.onerror = () => place(4, 3);
+        img.src = (photo.signedUrl || photo.thumbnailSignedUrl) as string;
+      } else {
+        place(4, 3);
       }
-    ]);
-  };
+    },
+    [doc, editor]
+  );
 
-  // Double-click to edit text box
-  const handleTextBoxDoubleClick = (idx: number) => {
-    setTextEditIdx(idx);
-    setTextEditValue(canvasTexts[idx]?.text || '');
-  };
-
-  // Save text box edit
-  const handleTextSave = () => {
-    if (textEditIdx === null) return;
-    setCanvasTexts((prev) => prev.map((t, idx) => (idx === textEditIdx ? { ...t, text: textEditValue } : t)));
-    setTextEditIdx(null);
-    setTextEditValue('');
-  };
-
-  const handleTextCancel = () => {
-    setTextEditIdx(null);
-    setTextEditValue('');
-  };
-
-  // Delete text box
-  const handleDeleteTextBox = () => {
-    if (textEditIdx === null) return;
-    setCanvasTexts((prev) => prev.filter((_, idx) => idx !== textEditIdx));
-    setTextEditIdx(null);
-    setTextEditValue('');
-  };
-
-  // Open caption edit dialog
-  const handlePhotoDoubleClick = (idx: number) => {
-    setPhotoEditModal({ open: true, photoIndex: idx });
-  };
-
-  // Save photo properties from edit modal
-  const handlePhotoSave = (photoId: string, data: { caption?: string; transparentBackground?: boolean; showBorder?: boolean; rotation?: number }) => {
-    // Find photo index by ID
-    const photoIndex = canvasPhotos.findIndex(p => p.id === photoId);
-    if (photoIndex === -1) return;
-
-    setCanvasPhotos((prev) => 
-      prev.map((p, idx) => 
-        idx === photoIndex 
-          ? { 
-              ...p, 
-              caption: data.caption, 
-              transparentBackground: data.transparentBackground, 
-              showBorder: data.showBorder,
-              rotation: data.rotation !== undefined ? data.rotation : p.rotation
-            }
-          : p
-      )
-    );
-
-    // Also update collage.config.photos in memory for immediate UI feedback
-    if (collage && collage.config && collage.config.photos && collage.config.photos[photoIndex]) {
-      if (data.caption !== undefined) {
-        collage.config.photos[photoIndex].caption = data.caption;
-      }
-      if (data.transparentBackground !== undefined) {
-        collage.config.photos[photoIndex].transparentBackground = data.transparentBackground;
-      }
-      if (data.showBorder !== undefined) {
-        collage.config.photos[photoIndex].frameVisible = data.showBorder;
-      }
-      if (data.rotation !== undefined) {
-        collage.config.photos[photoIndex].rotation = data.rotation;
-      }
-      setCollage({ ...collage });
-    }
-  };
-
-  // Delete photo from canvas
-  const handleDeletePhoto = (photoId: string) => {
-    const photoIndex = canvasPhotos.findIndex(p => p.id === photoId);
-    if (photoIndex === -1) return;
-    
-    setCanvasPhotos((prev) => prev.filter((_, idx) => idx !== photoIndex));
-    // Also update collage.config.photos in memory for immediate UI feedback
-    if (collage && collage.config && collage.config.photos) {
-      collage.config.photos.splice(photoIndex, 1);
-      setCollage({ ...collage });
-    }
-    setPhotoEditModal({ open: false, photoIndex: null });
-  };
-
-  const handleCaptionCancel = () => {
-    setPhotoEditModal({ open: false, photoIndex: null });
-  };
-
-  const handleSave = async () => {
-    if (!collage) return;
+  const handleSave = useCallback(async () => {
+    if (!collage || !doc) return;
     setSaving(true);
     try {
-      const photos = canvasPhotos.map((p, idx) => {
-        // Use stored fileId, or extract from URL as fallback
-        const photoId = p.fileId || (typeof p.src === 'string' && p.src.includes('/serve/') 
-          ? p.src.split('/serve/')[1]?.split('?')[0] 
-          : '');
-        
-        return {
-          photoId, // Use photoId for the collage config
-          filename: photoId, // Keep filename for backward compatibility
-          position: { left: p.x, top: p.y },
-          width: p.width,
-          height: p.height,
-          rotation: p.rotation || 0,
-          transparentBackground: p.transparentBackground,
-          frameVisible: p.showBorder,
-          caption:
-            p.caption !== undefined ? p.caption : (collage?.config?.photos && collage.config.photos[idx]?.caption) || ''
-        };
-      });
-      // Save text boxes to config
-      const texts = canvasTexts.map((t) => ({
-        id: t.id,
-        text: t.text,
-        x: t.x,
-        y: t.y,
-        width: t.width,
-        height: t.height
-      }));
-      // Save viewport to config
-      const viewportConfig = {
-        width: window.innerWidth,
-        height: window.innerHeight
-      };
       await updateCollage(collage._id, {
-        ...collage,
-        config: {
-          ...collage.config,
-          photos,
-          texts,
-          backgroundColor,
-          photoTransparencyMode,
-          borderColor,
-          viewport: viewportConfig
-        },
-        albumIds: collage.albumIds
+        title: collage.title,
+        config: serializeCollageDoc(doc, collage.config),
+        albumIds: collage.albumIds,
+        groupId: collage.groupId
       });
-      await collageQuery.refetch();
+      editor.markSaved();
+      setToast({ message: 'Collage saved', severity: 'success' });
     } catch (e) {
-      setError('Failed to save collage');
+      logger.error('Failed to save collage', e);
+      setToast({ message: 'Failed to save collage', severity: 'error' });
     } finally {
       setSaving(false);
     }
-  };
+  }, [collage, doc, editor, updateCollage]);
 
-  useEffect(() => {
-    const data = collageQuery.data;
-    if (!data || !data.collage) {
-      return;
-    }
-
-    const fetchedCollage = data.collage;
-    const fetchedAlbumPhotos = (data.albumPhotos || []) as AlbumPhoto[];
-
-    setCollage(fetchedCollage);
-    setAlbumPhotos(fetchedAlbumPhotos);
-
-    if (fetchedCollage.config?.photos) {
-      setCanvasPhotos(
-        fetchedCollage.config.photos.map((p: any, idx: number) => {
-          const albumPhoto = fetchedAlbumPhotos.find((ap: any) => ap._id === p.photoId);
-          return {
-            id: p.photoId + '-' + idx,
-            fileId: p.photoId,
-            src: albumPhoto?.signedUrl || p.filename || undefined,
-            x: p.position?.left || 100,
-            y: p.position?.top || 100,
-            width: p.width || 120,
-            height: p.height || 120,
-            rotation: p.rotation || 0,
-            transparentBackground: p.transparentBackground,
-            showBorder: p.frameVisible ?? true,
-            caption: p.caption || ''
-          };
-        })
-      );
-    } else {
-      setCanvasPhotos([]);
-    }
-
-    if (fetchedCollage.config?.texts) {
-      setCanvasTexts(
-        fetchedCollage.config.texts.map((t: any) => ({
-          id: t.id,
-          text: t.text,
-          x: t.x,
-          y: t.y,
-          width: t.width,
-          height: t.height
-        }))
-      );
-    } else {
-      setCanvasTexts([]);
-    }
-
-    setBackgroundColor(fetchedCollage.config?.backgroundColor ?? '#111');
-    setPhotoTransparencyMode(
-      fetchedCollage.config?.photoTransparencyMode !== undefined
-        ? fetchedCollage.config.photoTransparencyMode
-        : true
-    );
-    setBorderColor(fetchedCollage.config?.borderColor ?? '#fff');
-
-    if (fetchedCollage.config?.viewport?.width && fetchedCollage.config.viewport?.height) {
-      setViewport({ width: fetchedCollage.config.viewport.width, height: fetchedCollage.config.viewport.height });
-    } else if (typeof window !== 'undefined') {
-      setViewport({ width: window.innerWidth, height: window.innerHeight });
-    } else {
-      setViewport({ width: 1200, height: 800 });
-    }
-
-    setError(null);
-  }, [collageQuery.data]);
-
-  // Add photo from album to canvas
-  const handleAddPhoto = (photo: AlbumPhoto) => {
-    setCanvasPhotos((prev) => [
-      ...prev,
-      {
-        id: photo._id + '-' + Date.now(),
-        fileId: photo._id, // Store the photo's database ID for saving
-        src: photo.signedUrl,
-        x: 100 + Math.random() * 200,
-        y: 100 + Math.random() * 200,
-        width: photo.width || 120,
-        height: photo.height || 120,
-        rotation: 0,
-        transparentBackground: photoTransparencyMode,
-        showBorder: false
-      }
-    ]);
-  };
-
-  // Handle drag start from sidebar
-  const handlePhotoDragStart = (photo: AlbumPhoto, e: React.DragEvent) => {
-    e.dataTransfer.setData('application/json', JSON.stringify(photo));
-  };
-
-  // Handle drop on canvas
-  const handleCanvasDrop = (e: React.DragEvent) => {
-    e.preventDefault();
+  const handleExport = useCallback(async () => {
+    if (!doc) return;
     try {
-      const photo: AlbumPhoto = JSON.parse(e.dataTransfer.getData('application/json'));
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      
-      setCanvasPhotos((prev) => [
-        ...prev,
-        {
-          id: photo._id + '-' + Date.now(),
-          fileId: photo._id,
-          src: photo.signedUrl,
-          x: x - (photo.width || 120) / 2, // Center the photo on the drop point
-          y: y - (photo.height || 120) / 2,
-          width: photo.width || 120,
-          height: photo.height || 120,
-          rotation: 0,
-          transparentBackground: photoTransparencyMode,
-          showBorder: false
-        }
-      ]);
-    } catch (error) {
-      logger.error('Failed to parse dropped photo data', error);
+      const blob = await exportCollageToPng(doc, resolvePhoto);
+      downloadBlob(blob, `${collage?.title || 'collage'}.png`);
+    } catch (e) {
+      logger.error('Failed to export collage', e);
+      setToast({
+        message: e instanceof Error ? e.message : 'Failed to export collage',
+        severity: 'error'
+      });
     }
-  };
+  }, [doc, collage, resolvePhoto]);
 
-  // Start drag or resize mode on click (disabled in view mode or when modal open)
-  const handlePhotoMouseDown = (e: React.MouseEvent, photo: CanvasPhoto) => {
-    if (isViewMode || isModalOpen) return;
-    setDragPhotoId(photo.id);
-    setDragOffset({
-      x: e.clientX - photo.x,
-      y: e.clientY - photo.y
-    });
-  };
+  const handleBack = useCallback(() => {
+    if (editor.isDirty && !window.confirm('You have unsaved changes. Leave anyway?')) return;
+    navigate('/collages');
+  }, [editor.isDirty, navigate]);
 
-  const handlePhotoResizeMouseDown = (e: React.MouseEvent, photo: CanvasPhoto) => {
-    if (isViewMode || isModalOpen) return;
-    setResizePhotoId(photo.id);
-    setResizeOrigin({ x: e.clientX, y: e.clientY });
-    setResizeStart({ width: photo.width, height: photo.height });
-  };
+  const setMode = useCallback(
+    (view: boolean) => {
+      setSearchParams(view ? { mode: 'view' } : {}, { replace: true });
+    },
+    [setSearchParams]
+  );
 
-  // Move photo with mouse when in drag mode (disabled in view mode)
+  // Warn about unsaved changes on tab close / reload
   useEffect(() => {
-    if (isViewMode || isModalOpen) return;
-    if (!dragPhotoId) return;
-    const handleMouseMove = (e: MouseEvent) => {
-      setCanvasPhotos((prev) =>
-        prev.map((p) => (p.id === dragPhotoId ? { ...p, x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y } : p))
-      );
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (editor.isDirty) e.preventDefault();
     };
-    const handleMouseUp = () => {
-      setDragPhotoId(null);
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [dragPhotoId, dragOffset, isViewMode, isModalOpen]);
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [editor.isDirty]);
 
-  // Resize photo with mouse when in resize mode (disabled in view mode)
+  // Keyboard shortcuts (edit mode, and not while typing or in a dialog)
   useEffect(() => {
-    if (isViewMode || isModalOpen) return;
-    if (!resizePhotoId) return;
-    const handleMouseMove = (e: MouseEvent) => {
-      setCanvasPhotos((prev) =>
-        prev.map((p) =>
-          p.id === resizePhotoId
-            ? {
-                ...p,
-                width: Math.max(40, resizeStart.width + (e.clientX - resizeOrigin.x)),
-                height: Math.max(40, resizeStart.height + (e.clientY - resizeOrigin.y))
-              }
-            : p
-        )
-      );
+    if (isViewMode) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (editItemId || target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) editor.redo();
+        else editor.undo();
+      } else if (mod && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        editor.redo();
+      } else if (mod && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        void handleSave();
+      } else if ((e.key === 'Delete' || e.key === 'Backspace') && editor.selectedId) {
+        e.preventDefault();
+        editor.removeItem(editor.selectedId);
+      } else if (e.key === 'Escape') {
+        editor.select(null);
+      } else if (e.key.startsWith('Arrow') && editor.selectedId && selectedItem) {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1;
+        const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+        const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+        editor.patchItem(editor.selectedId, {
+          x: selectedItem.item.x + dx,
+          y: selectedItem.item.y + dy
+        });
+      }
     };
-    const handleMouseUp = () => {
-      setResizePhotoId(null);
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [resizePhotoId, resizeOrigin, resizeStart, isViewMode, isModalOpen]);
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [editor, selectedItem, editItemId, isViewMode, handleSave]);
+
+  const editingItem = useMemo(() => {
+    if (!doc || !editItemId) return null;
+    const photo = doc.photos.find((p) => p.id === editItemId);
+    if (photo) return { kind: 'photo' as const, photo };
+    const text = doc.texts.find((t) => t.id === editItemId);
+    if (text) return { kind: 'text' as const, text };
+    return null;
+  }, [doc, editItemId]);
+
+  if (collageQuery.isPending) {
+    return (
+      <Box sx={{ position: 'fixed', inset: 0, zIndex: 1300, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#000' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (collageQuery.error || !collage) {
+    return (
+      <Box sx={{ position: 'fixed', inset: 0, zIndex: 1300, display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default' }}>
+        <Typography color="error">
+          {collageQuery.error ? 'Failed to load collage' : 'Collage not found'}
+        </Typography>
+        <IconButton onClick={() => navigate('/collages')}>
+          <ArrowBackIcon />
+        </IconButton>
+      </Box>
+    );
+  }
 
   return (
-    <CollageLayout>
-      {/* Hide menu in view mode */}
-      {!isViewMode && (
-        <Box sx={{ position: 'absolute', top: 16, right: 24, zIndex: 20 }}>
-          <CollageMenu
-            onSave={handleSave}
-            disabled={saving || collageQuery.isFetching || !collage}
-            backgroundColor={backgroundColor}
-            onBackgroundColorChange={setBackgroundColor}
-            onAddTextBox={handleAddTextBox}
-            photoTransparencyMode={photoTransparencyMode}
-            onPhotoTransparencyModeChange={setPhotoTransparencyMode}
-            borderColor={borderColor}
-            onBorderColorChange={setBorderColor}
-          />
-        </Box>
+    <Box
+      sx={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1300,
+        display: 'flex',
+        flexDirection: 'column',
+        bgcolor: '#000'
+      }}
+    >
+      {!isViewMode && doc && (
+        <CollageToolbar
+          title={collage.title}
+          isDirty={editor.isDirty}
+          saving={saving}
+          canUndo={editor.canUndo}
+          canRedo={editor.canRedo}
+          background={doc.background}
+          frameColor={doc.frameColor}
+          frameEnabled={doc.frameEnabled}
+          zoom={zoom}
+          hasSelection={Boolean(selectedItem)}
+          onBack={handleBack}
+          onSave={handleSave}
+          onUndo={editor.undo}
+          onRedo={editor.redo}
+          onAddText={() => editor.addText()}
+          onBackgroundChange={(background) => editor.patchDoc({ background })}
+          onFrameColorChange={(frameColor) => editor.patchDoc({ frameColor })}
+          onFrameEnabledChange={(frameEnabled) => editor.patchDoc({ frameEnabled })}
+          onZoomChange={setZoom}
+          onExport={handleExport}
+          onPreview={() => setMode(true)}
+          onEditSelected={() => selectedItem && setEditItemId(selectedItem.item.id)}
+          onDeleteSelected={() => editor.selectedId && editor.removeItem(editor.selectedId)}
+          onBringForward={() => editor.selectedId && editor.reorderItem(editor.selectedId, 1)}
+          onSendBackward={() => editor.selectedId && editor.reorderItem(editor.selectedId, -1)}
+        />
       )}
-      {isLoading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-          <CircularProgress />
-        </Box>
-      ) : displayError ? (
-        <Typography color="error">{displayError}</Typography>
-      ) : collage ? (
-        <Box sx={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden' }}>
-          {/* Sidebar: Album Photos (hide in view mode) */}
-          {!isViewMode && (
-            <CollageSidebar albumPhotos={albumPhotos} onPhotoClick={handleAddPhoto} onPhotoDragStart={handlePhotoDragStart} />
-          )}
-          
-          {/* Canvas Area */}
-          <CollageCanvas
-            canvasPhotos={canvasPhotos}
-            canvasTexts={canvasTexts}
-            viewport={viewport}
-            backgroundColor={backgroundColor}
-            isViewMode={isViewMode}
-            dragPhotoId={dragPhotoId}
-            resizePhotoId={resizePhotoId}
-            photoTransparencyMode={photoTransparencyMode}
-            borderColor={borderColor}
-            onPhotoMouseDown={handlePhotoMouseDown}
-            onPhotoResizeMouseDown={handlePhotoResizeMouseDown}
-            onPhotoContextMenu={(e, idx) => {
-              if (!isViewMode) {
-                e.preventDefault();
-                setPhotoEditModal({ open: true, photoIndex: idx });
-              }
-            }}
-            onPhotoDoubleClick={handlePhotoDoubleClick}
-            setTextBoxes={isViewMode || isModalOpen ? () => {} : setCanvasTexts}
-            onTextBoxDoubleClick={isViewMode || isModalOpen ? () => {} : handleTextBoxDoubleClick}
-            onDrop={isViewMode ? undefined : handleCanvasDrop}
-            collageConfigPhotos={collage.config?.photos}
-          />
 
-          {/* Photo Edit Modal (edit mode only) */}
-          {!isViewMode && (
-            <CollagePhotoEditModal
-              open={photoEditModal.open}
-              photo={photoEditModal.photoIndex !== null ? canvasPhotos[photoEditModal.photoIndex] : null}
-              onClose={handleCaptionCancel}
-              onSave={handlePhotoSave}
-              onDelete={handleDeletePhoto}
-              globalTransparencyMode={photoTransparencyMode}
-              borderColor={borderColor}
-              globalBackgroundColor={backgroundColor}
-            />
-          )}
-          
-          {/* Text Box Edit Dialog (edit mode only) */}
-          {!isViewMode && (
-            <CollageTextEditor
-              open={textEditIdx !== null}
-              text={textEditValue}
-              onTextChange={setTextEditValue}
-              onSave={handleTextSave}
-              onCancel={handleTextCancel}
-              onDelete={handleDeleteTextBox}
-            />
-          )}
+      {isViewMode && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 12,
+            right: 12,
+            zIndex: 60,
+            display: 'flex',
+            gap: 0.5,
+            opacity: 0.35,
+            transition: 'opacity 0.2s',
+            '&:hover': { opacity: 1 }
+          }}
+        >
+          <Tooltip title="Edit collage">
+            <IconButton size="small" onClick={() => setMode(false)} sx={{ color: '#fff', bgcolor: 'rgba(0,0,0,0.4)' }}>
+              <EditIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Download as PNG">
+            <IconButton size="small" onClick={handleExport} sx={{ color: '#fff', bgcolor: 'rgba(0,0,0,0.4)' }}>
+              <DownloadIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Back to collages">
+            <IconButton size="small" onClick={handleBack} sx={{ color: '#fff', bgcolor: 'rgba(0,0,0,0.4)' }}>
+              <ArrowBackIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Box>
-      ) : (
-        <Typography>No collage found.</Typography>
       )}
-    </CollageLayout>
+
+      <Box sx={{ flex: 1, display: 'flex', minHeight: 0 }}>
+        {!isViewMode && (
+          <CollagePhotoTray photos={albumPhotos} usedPhotoIds={usedPhotoIds} onAddPhoto={placePhoto} />
+        )}
+        <CollageStage
+          editor={editor}
+          resolvePhoto={resolvePhoto}
+          readOnly={isViewMode}
+          zoom={isViewMode ? 0 : zoom}
+          onEditItem={setEditItemId}
+          onDropPhoto={(photoId, x, y) => {
+            const photo = photoById.get(photoId);
+            if (photo) placePhoto(photo, { x, y });
+          }}
+        />
+      </Box>
+
+      <CollagePhotoDialog
+        open={editingItem?.kind === 'photo'}
+        photo={editingItem?.kind === 'photo' ? editingItem.photo : null}
+        photoSrc={
+          editingItem?.kind === 'photo'
+            ? resolvePhoto(editingItem.photo.photoId)?.thumbSrc || resolvePhoto(editingItem.photo.photoId)?.src
+            : undefined
+        }
+        onClose={() => setEditItemId(null)}
+        onSave={(patch) => editItemId && editor.patchItem(editItemId, patch)}
+        onDelete={() => editItemId && editor.removeItem(editItemId)}
+      />
+      <CollageTextDialog
+        open={editingItem?.kind === 'text'}
+        text={editingItem?.kind === 'text' ? editingItem.text : null}
+        onClose={() => setEditItemId(null)}
+        onSave={(patch) => editItemId && editor.patchItem(editItemId, patch)}
+        onDelete={() => editItemId && editor.removeItem(editItemId)}
+      />
+
+      <Snackbar
+        open={Boolean(toast)}
+        autoHideDuration={3500}
+        onClose={() => setToast(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity={toast?.severity ?? 'success'} variant="filled" onClose={() => setToast(null)}>
+          {toast?.message}
+        </Alert>
+      </Snackbar>
+    </Box>
   );
 };
 

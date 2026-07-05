@@ -11,6 +11,14 @@ export const generateDownloadUrlSchema = z.object({
   expiresInMinutes: z.number().optional()
 });
 
+export const generateDownloadUrlsSchema = z.object({
+  fileIds: z
+    .array(z.string().min(1))
+    .min(1, 'fileIds must contain at least one id')
+    .max(1000, 'at most 1000 fileIds per request'),
+  expiresInMinutes: z.number().optional()
+});
+
 export const deleteFolderSchema = z.object({
   prefix: z.string().min(1, 'prefix is required')
 });
