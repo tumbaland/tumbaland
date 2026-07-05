@@ -223,36 +223,84 @@ components:
         - totalHours
         - avgHours
 
+    TypeStatistics:
+      type: object
+      description: Per-activity-type statistics for the selected timeframe
+      properties:
+        typeId:
+          type: string
+        slug:
+          type: string
+        name:
+          type: string
+        color:
+          type: string
+          nullable: true
+        valueType:
+          type: string
+          nullable: true
+        count:
+          type: integer
+        totalHours:
+          type: number
+        uniqueDays:
+          type: integer
+          description: Distinct days with at least one entry of this type
+      required:
+        - typeId
+        - slug
+        - name
+        - count
+        - totalHours
+        - uniqueDays
+
     RelationshipStatistics:
       type: object
+      description: |
+        Type-agnostic statistics. The dashboard decides which types to
+        feature via the user's dashboard settings.
       properties:
         totalActivities:
           type: integer
           example: 150
         totalHours:
-          type: integer
-          example: 450
-        averageHoursPerActivity:
           type: number
-          example: 3.0
-        mostActiveDay:
+          example: 450
+        firstEntryDate:
           type: string
-          example: "Saturday"
-        activityBreakdown:
+          format: date
+          nullable: true
+          description: Date of the first entry ever logged in this scope
+        daysSinceFirstEntry:
+          type: integer
+        types:
           type: array
           items:
-            $ref: '#/components/schemas/ActivityStats'
-        recentActivity:
-          $ref: '#/components/schemas/ActivityWithType'
-          nullable: true
-        timeframe:
-          type: string
-          example: "all"
+            $ref: '#/components/schemas/TypeStatistics'
       required:
         - totalActivities
         - totalHours
-        - averageHoursPerActivity
-        - activityBreakdown
+        - daysSinceFirstEntry
+        - types
+
+    DashboardSettings:
+      type: object
+      properties:
+        highlightTypeIds:
+          type: array
+          items:
+            type: string
+          description: |
+            Activity types featured on the dashboard — a stat card each; the
+            first one drives the monthly days-breakdown chart.
+        hiddenTypeIds:
+          type: array
+          items:
+            type: string
+          description: Activity types excluded from count-based charts
+      required:
+        - highlightTypeIds
+        - hiddenTypeIds
 
     MonthlyHoursData:
       type: object
@@ -280,37 +328,37 @@ components:
       properties:
         month:
           type: string
-          example: "2024-11"
-        days:
+          example: "11"
+        year:
+          type: integer
+          example: 2024
+        totalDays:
+          type: integer
+          description: Calendar days in the month
+        daysWithEntries:
+          type: integer
+          description: Distinct days in the month with at least one entry of any type
+        types:
           type: array
           items:
             type: object
             properties:
-              date:
+              slug:
                 type: string
-                format: date
-                example: "2024-11-03"
-              hours:
+              count:
                 type: integer
-                example: 4
-              activities:
+              uniqueDays:
                 type: integer
-                example: 2
             required:
-              - date
-              - hours
-              - activities
-        totalHours:
-          type: integer
-          example: 45
-        totalActivities:
-          type: integer
-          example: 12
+              - slug
+              - count
+              - uniqueDays
       required:
         - month
-        - days
-        - totalHours
-        - totalActivities
+        - year
+        - totalDays
+        - daysWithEntries
+        - types
 
     MonthlyActivityBreakdown:
       type: object
@@ -882,6 +930,66 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
+
+  # Dashboard Settings Endpoints
+  /api/dashboard-settings:
+    get:
+      tags:
+        - Dashboard Settings
+      summary: Get dashboard settings
+      description: |
+        Returns the dashboard configuration for the current scope
+        (personal, or shared per group when groupId is given). Defaults to
+        empty lists when nothing has been saved yet.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Dashboard settings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/DashboardSettings'
+    put:
+      tags:
+        - Dashboard Settings
+      summary: Save dashboard settings
+      description: Upserts the dashboard configuration for the current scope.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/DashboardSettings'
+                - type: object
+                  properties:
+                    groupId:
+                      type: string
+      responses:
+        '200':
+          description: The saved settings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/DashboardSettings'
 
   # Day (journal) Endpoints
   /api/days:

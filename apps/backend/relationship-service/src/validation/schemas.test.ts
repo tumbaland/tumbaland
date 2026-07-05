@@ -1,4 +1,9 @@
-import { createActivitySchema, updateActivitySchema, saveDaySchema } from './schemas';
+import {
+  createActivitySchema,
+  updateActivitySchema,
+  saveDaySchema,
+  saveDashboardSettingsSchema
+} from './schemas';
 
 describe('createActivitySchema', () => {
   it('preserves groupId when the activity is created under a group context', () => {
@@ -54,5 +59,22 @@ describe('saveDaySchema', () => {
 
   it('rejects entries without a typeId', () => {
     expect(() => saveDaySchema.parse({ entries: [{ description: 'x' }] })).toThrow();
+  });
+});
+
+describe('saveDashboardSettingsSchema', () => {
+  it('accepts highlight and hidden type lists with a group scope', () => {
+    const result = saveDashboardSettingsSchema.parse({
+      highlightTypeIds: ['t1'],
+      hiddenTypeIds: ['t2', 't3'],
+      groupId: 'group-1'
+    });
+
+    expect(result.highlightTypeIds).toEqual(['t1']);
+    expect(result.groupId).toBe('group-1');
+  });
+
+  it('requires both lists to be present', () => {
+    expect(() => saveDashboardSettingsSchema.parse({ highlightTypeIds: [] })).toThrow();
   });
 });

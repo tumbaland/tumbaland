@@ -25,11 +25,18 @@ interface BarChartProps {
   title?: string;
   year?: number;
   height?: number;
+  /** activity type slugs excluded from this chart (user's dashboard config) */
+  hiddenSlugs?: Set<string>;
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-const HoursBarChart: React.FC<BarChartProps> = ({ title = 'Activities per Month by Type', year, height = 400 }) => {
+const HoursBarChart: React.FC<BarChartProps> = ({
+  title = 'Activities per Month by Type',
+  year,
+  height = 400,
+  hiddenSlugs
+}) => {
   const [data, setData] = useState<MonthlyActivityData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -131,14 +138,14 @@ const HoursBarChart: React.FC<BarChartProps> = ({ title = 'Activities per Month 
     );
   }
 
-  // Get all unique activity types from the data
+  // All activity types present in the data, minus the ones the user hid
   const allActivityTypes = Array.from(
     new Set(
       data.flatMap(month =>
         Object.keys(month.activities)
       )
     )
-  ).filter(type => !['sex', 'together'].includes(type));
+  ).filter(type => !hiddenSlugs?.has(type));
 
   // Prepare data for the chart - create arrays for each activity type
   const monthLabels = data.map((item) => `${MONTHS[parseInt(item.month) - 1]} ${item.year}`);

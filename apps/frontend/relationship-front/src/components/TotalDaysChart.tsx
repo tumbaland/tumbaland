@@ -17,34 +17,36 @@ import {
 } from '@mui/material';
 import { BarChart } from '@mui/x-charts';
 import { getMonthlyStatistics, MonthlyStatisticsData } from '../api/statistics';
+import { ActivityType } from '../api/types';
 import { useTenantFilter } from './tenant';
 
 interface TotalDaysChartProps {
   title?: string;
   year?: number;
   height?: number;
+  /**
+   * Optional highlighted activity type: its days get their own colored
+   * segment, split out of the overall "days with entries" count.
+   */
+  featuredType?: ActivityType;
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-const COLORS = {
-  madeLove: '#e91e63', // Pink for sex days
-  justMeet: '#2196f3', // Blue for days met without sex
-  missYou: '#90a4ae' // Blue-grey for days not met, dark enough for white text
-};
-
-const LEGEND_ITEMS = [
-  { key: 'madeLove', label: 'Made Love', color: COLORS.madeLove },
-  { key: 'justMeet', label: 'Just Meet', color: COLORS.justMeet },
-  { key: 'missYou', label: 'Miss You', color: COLORS.missYou }
-];
+const COLOR_TOGETHER = '#2196f3'; // days with entries (not featured)
+const COLOR_APART = '#90a4ae'; // days without any entry
 
 // Helper function to get total days in a month
 const getDaysInMonth = (year: number, month: number): number => {
   return new Date(year, month, 0).getDate();
 };
 
-const TotalDaysChart: React.FC<TotalDaysChartProps> = ({ title = 'Monthly Days Breakdown', year, height = 400 }) => {
+const TotalDaysChart: React.FC<TotalDaysChartProps> = ({
+  title = 'Monthly Days Breakdown',
+  year,
+  height = 400,
+  featuredType
+}) => {
   const [data, setData] = useState<MonthlyStatisticsData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,24 +78,17 @@ const TotalDaysChart: React.FC<TotalDaysChartProps> = ({ title = 'Monthly Days B
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedYear, tenantGroupId]);
 
   if (loading) {
     return (
       <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom sx={{
-            fontWeight: "bold"
-          }}>
+          <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
             {title}
           </Typography>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: height
-            }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: height }}>
             <CircularProgress />
           </Box>
         </CardContent>
@@ -105,9 +100,7 @@ const TotalDaysChart: React.FC<TotalDaysChartProps> = ({ title = 'Monthly Days B
     return (
       <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom sx={{
-            fontWeight: "bold"
-          }}>
+          <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
             {title}
           </Typography>
           <Alert severity="error">{error}</Alert>
@@ -118,21 +111,13 @@ const TotalDaysChart: React.FC<TotalDaysChartProps> = ({ title = 'Monthly Days B
 
   if (data.length === 0) {
     return (
-      <Card elevation={2}>
+      <Card elevation={0} sx={{ height: '100%', border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom>
+          <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
             {title}
           </Typography>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: height
-            }}>
-            <Typography sx={{
-              color: "text.secondary"
-            }}>No data available</Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: height }}>
+            <Typography sx={{ color: 'text.secondary' }}>No data available</Typography>
           </Box>
         </CardContent>
       </Card>
@@ -142,45 +127,44 @@ const TotalDaysChart: React.FC<TotalDaysChartProps> = ({ title = 'Monthly Days B
   // Prepare data for the chart
   const monthLabels = data.map((item) => `${MONTHS[parseInt(item.month) - 1]} ${item.year}`);
 
-  // Create series for each category
-  const madeLoveData = data.map((item) => item.daysWithSex);
-  // Just Meet is (Days Met) - (Days with Sex) to ensure they sum up to Total Met Days without intersection
-  const justMeetData = data.map((item) => Math.max(0, item.daysMet - item.daysWithSex));
-  const missYouData = data.map((item) => {
+  const featuredDaysFor = (item: MonthlyStatisticsData): number =>
+    featuredType ? item.types.find((t) => t.slug === featuredType.slug)?.uniqueDays || 0 : 0;
+
+  const featuredData = data.map(featuredDaysFor);
+  // remaining days with entries, so the segments sum to daysWithEntries
+  const togetherData = data.map((item) => Math.max(0, item.daysWithEntries - featuredDaysFor(item)));
+  const apartData = data.map((item) => {
     const calendarDays = getDaysInMonth(item.year, parseInt(item.month));
-    return Math.max(0, calendarDays - item.daysMet);
+    return Math.max(0, calendarDays - item.daysWithEntries);
   });
 
+  const featuredLabel = featuredType ? `${featuredType.name} days` : '';
+  const togetherLabel = featuredType ? 'Other days together' : 'Days together';
+  const apartLabel = 'Days apart';
+  const featuredColor = featuredType?.color || theme.palette.error.main;
+
   const series = [
-    {
-      data: madeLoveData,
-      label: 'Made Love',
-      stack: 'days',
-      color: COLORS.madeLove
-    },
-    {
-      data: justMeetData,
-      label: 'Just Meet',
-      stack: 'days',
-      color: COLORS.justMeet
-    },
-    {
-      data: missYouData,
-      label: 'Miss You',
-      stack: 'days',
-      color: COLORS.missYou
-    }
+    ...(featuredType
+      ? [{ data: featuredData, label: featuredLabel, stack: 'days', color: featuredColor }]
+      : []),
+    { data: togetherData, label: togetherLabel, stack: 'days', color: COLOR_TOGETHER },
+    { data: apartData, label: apartLabel, stack: 'days', color: COLOR_APART }
   ];
 
-  const totalMadeLove = data.reduce((sum, item) => sum + item.daysWithSex, 0);
-  const totalJustMeet = data.reduce((sum, item) => sum + Math.max(0, item.daysMet - item.daysWithSex), 0);
-  const totalMissYou = data.reduce((sum, item) => {
-    const calendarDays = getDaysInMonth(item.year, parseInt(item.month));
-    return sum + Math.max(0, calendarDays - item.daysMet);
-  }, 0);
+  const totalFeatured = featuredData.reduce((sum, v) => sum + v, 0);
+  const totalTogether = togetherData.reduce((sum, v) => sum + v, 0);
+  const totalApart = apartData.reduce((sum, v) => sum + v, 0);
+
+  const legendItems = [
+    ...(featuredType
+      ? [{ key: 'featured', label: featuredLabel, color: featuredColor, count: totalFeatured, textColor: 'white' }]
+      : []),
+    { key: 'together', label: togetherLabel, color: COLOR_TOGETHER, count: totalTogether, textColor: 'white' },
+    { key: 'apart', label: apartLabel, color: COLOR_APART, count: totalApart, textColor: '#666' }
+  ];
 
   return (
-    <Card 
+    <Card
       elevation={0}
       sx={{
         height: '100%',
@@ -191,9 +175,9 @@ const TotalDaysChart: React.FC<TotalDaysChartProps> = ({ title = 'Monthly Days B
     >
       <CardContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{
-            fontWeight: "bold"
-          }}>{title}</Typography>
+          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+            {title}
+          </Typography>
           <FormControl size="small" sx={{ minWidth: 120 }}>
             <InputLabel>Year</InputLabel>
             <Select
@@ -214,54 +198,49 @@ const TotalDaysChart: React.FC<TotalDaysChartProps> = ({ title = 'Monthly Days B
 
         {/* Legend */}
         <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
-          {LEGEND_ITEMS.map((item) => {
-            const totals = {
-              madeLove: totalMadeLove,
-              justMeet: totalJustMeet,
-              missYou: totalMissYou
-            };
-            const count = totals[item.key as keyof typeof totals];
-
-            return (
-              <Chip
-                key={item.key}
-                label={`${item.label} (${count})`}
-                size="small"
-                sx={{
-                  backgroundColor: item.color,
-                  color: item.key === 'missYou' ? '#666' : 'white',
-                  '& .MuiChip-label': {
-                    fontSize: { xs: '0.65rem', sm: '0.75rem' }
-                  },
-                  minWidth: { xs: '60px', sm: 'auto' }
-                }}
-              />
-            );
-          })}
+          {legendItems.map((item) => (
+            <Chip
+              key={item.key}
+              label={`${item.label} (${item.count})`}
+              size="small"
+              sx={{
+                backgroundColor: item.color,
+                color: item.textColor,
+                '& .MuiChip-label': {
+                  fontSize: { xs: '0.65rem', sm: '0.75rem' }
+                },
+                minWidth: { xs: '60px', sm: 'auto' }
+              }}
+            />
+          ))}
         </Box>
 
         <Box sx={{ width: '100%', height: height - 100 }}>
           <BarChart
-            xAxis={[{ 
-              scaleType: 'band', 
-              data: monthLabels,
-              tickLabelStyle: {
-                angle: 0,
-                textAnchor: 'middle',
-                fontSize: 12
-              },
-              valueFormatter: (value: string, context) => {
-                const parts = value.split(' ');
-                if (context.location === 'tick') {
-                  return (value === monthLabels[0] || parts[0] === 'Jan') ? parts[1] : '';
+            xAxis={[
+              {
+                scaleType: 'band',
+                data: monthLabels,
+                tickLabelStyle: {
+                  angle: 0,
+                  textAnchor: 'middle',
+                  fontSize: 12
+                },
+                valueFormatter: (value: string, context) => {
+                  const parts = value.split(' ');
+                  if (context.location === 'tick') {
+                    return value === monthLabels[0] || parts[0] === 'Jan' ? parts[1] : '';
+                  }
+                  return value;
                 }
-                return value;
               }
-            }]}
-            yAxis={[{ 
-              max: 31,
-              ...(isMobile ? {} : { label: 'Days' }) // Only show label on non-mobile
-            }]}
+            ]}
+            yAxis={[
+              {
+                max: 31,
+                ...(isMobile ? {} : { label: 'Days' }) // Only show label on non-mobile
+              }
+            ]}
             series={series.map((item) => ({ ...item, barLabel: 'value' }))}
             slotProps={{
               barLabel: {
@@ -288,50 +267,22 @@ const TotalDaysChart: React.FC<TotalDaysChartProps> = ({ title = 'Monthly Days B
             gap: { xs: 2, sm: 0 }
           }}
         >
-          <Box sx={{ textAlign: 'center', minWidth: { xs: '80px', sm: 'auto' } }}>
-            <Typography variant="h6" color="error" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
-              {totalMadeLove}
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                color: "text.secondary",
-                fontSize: { xs: '0.7rem', sm: '0.75rem' }
-              }}>
-              Total Love Days
-            </Typography>
-          </Box>
-          <Box sx={{ textAlign: 'center', minWidth: { xs: '80px', sm: 'auto' } }}>
-            <Typography variant="h6" color="primary" sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
-              {totalJustMeet}
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                color: "text.secondary",
-                fontSize: { xs: '0.7rem', sm: '0.75rem' }
-              }}>
-              Total Meet Days
-            </Typography>
-          </Box>
-          <Box sx={{ textAlign: 'center', minWidth: { xs: '80px', sm: 'auto' } }}>
-            <Typography
-              variant="h6"
-              sx={{
-                color: "text.secondary",
-                fontSize: { xs: '1.1rem', sm: '1.25rem' }
-              }}>
-              {totalMissYou}
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{
-                color: "text.secondary",
-                fontSize: { xs: '0.7rem', sm: '0.75rem' }
-              }}>
-              Days Not Met
-            </Typography>
-          </Box>
+          {legendItems.map((item) => (
+            <Box key={item.key} sx={{ textAlign: 'center', minWidth: { xs: '80px', sm: 'auto' } }}>
+              <Typography variant="h6" sx={{ color: item.color, fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
+                {item.count}
+              </Typography>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: 'text.secondary',
+                  fontSize: { xs: '0.7rem', sm: '0.75rem' }
+                }}
+              >
+                {item.label}
+              </Typography>
+            </Box>
+          ))}
         </Box>
       </CardContent>
     </Card>

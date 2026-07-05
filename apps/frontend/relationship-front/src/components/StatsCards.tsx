@@ -17,16 +17,21 @@ import { useStatistics } from '../hooks/useStatistics';
 import { useTenantFilter } from '../components/tenant';
 import StatCard from './StatCard';
 
-const StatsCards: React.FC = () => {
+interface StatsCardsProps {
+  /** activity types to feature with their own stat card (days it happened) */
+  highlightTypeIds: string[];
+}
+
+const StatsCards: React.FC<StatsCardsProps> = ({ highlightTypeIds }) => {
   const theme = useTheme();
   const [timeframe, setTimeframe] = useState<string>('all');
-  
+
   // Get the current tenant's group ID
   const tenantGroupId = useTenantFilter();
-  
-  const { statistics, loading, error } = useStatistics({ 
-    timeframe, 
-    groupId: tenantGroupId 
+
+  const { statistics, loading, error } = useStatistics({
+    timeframe,
+    groupId: tenantGroupId
   });
 
   const timeframeOptions = [
@@ -76,10 +81,28 @@ const StatsCards: React.FC = () => {
   if (!statistics) {
     return (
       <Box>
-        <Alert severity="warning" sx={{ borderRadius: 2 }}>No statistics available. Please check if the backend is running.</Alert>
+        <Alert severity="warning" sx={{ borderRadius: 2 }}>
+          No statistics available. Please check if the backend is running.
+        </Alert>
       </Box>
     );
   }
+
+  // one card per highlighted type: on how many days did it happen?
+  const highlightedTypes = highlightTypeIds
+    .map((typeId) => statistics.types.find((t) => t.typeId === typeId))
+    .filter((t): t is NonNullable<typeof t> => Boolean(t));
+
+  const firstEntryLabel = statistics.firstEntryDate
+    ? new Date(`${statistics.firstEntryDate}T00:00:00`).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      })
+    : null;
+
+  const cardCount = 3 + highlightedTypes.length;
+
   return (
     <Box>
       {/* Header with Title and Timeframe Selector */}
@@ -121,7 +144,7 @@ const StatsCards: React.FC = () => {
           gridTemplateColumns: {
             xs: '1fr',
             sm: 'repeat(2, 1fr)',
-            md: 'repeat(4, 1fr)'
+            md: `repeat(${Math.min(cardCount, 4)}, 1fr)`
           },
           gap: 3
         }}
@@ -130,8 +153,8 @@ const StatsCards: React.FC = () => {
           <StatCard
             icon={<Timeline />}
             title="Days"
-            value={statistics.daysTogether}
-            subtitle={`${statistics.daysTogether} days since Jan 25, 2024`}
+            value={statistics.daysSinceFirstEntry}
+            subtitle={firstEntryLabel ? `days since ${firstEntryLabel}` : 'no entries yet'}
             color={theme.palette.warning.main}
           />
         </Box>
@@ -139,20 +162,22 @@ const StatsCards: React.FC = () => {
           <StatCard
             icon={<AccessTime />}
             title="Total Hours"
-            value={statistics.totalHoursTogether}
-            subtitle={`${statistics.totalHoursTogether} hours for ${getTimeframeLabel()}`}
+            value={statistics.totalHours}
+            subtitle={`${statistics.totalHours} hours for ${getTimeframeLabel()}`}
             color={theme.palette.primary.main}
           />
         </Box>
-        <Box>
-          <StatCard
-            icon={<Favorite />}
-            title="Love Days"
-            value={statistics.sexActivityDays}
-            subtitle={`${statistics.sexActivityDays} love days for ${getTimeframeLabel()}`}
-            color={theme.palette.error.main}
-          />
-        </Box>
+        {highlightedTypes.map((type) => (
+          <Box key={type.typeId}>
+            <StatCard
+              icon={<Favorite />}
+              title={`${type.name} Days`}
+              value={type.uniqueDays}
+              subtitle={`days with ${type.name.toLowerCase()} for ${getTimeframeLabel()}`}
+              color={type.color || theme.palette.error.main}
+            />
+          </Box>
+        ))}
         <Box>
           <StatCard
             icon={<Event />}

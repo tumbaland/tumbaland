@@ -20,6 +20,8 @@ interface WeeklyHeatmapProps {
   title?: string;
   year?: number;
   height?: number;
+  /** activity type slugs excluded from the counts (user's dashboard config) */
+  hiddenSlugs?: Set<string>;
 }
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -37,7 +39,12 @@ const getActivityColor = (count: number, maxCount: number): string => {
   return '#0d4820';
 };
 
-const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({ title = 'Activity Heatmap', year, height = 200 }) => {
+const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
+  title = 'Activity Heatmap',
+  year,
+  height = 200,
+  hiddenSlugs
+}) => {
   const [data, setData] = useState<WeeklyHeatmapData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,8 +76,17 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({ title = 'Activity Heatmap
     fetchData();
   }, [selectedYear, tenantGroupId]);
 
+  // Count for a day, excluding types the user hid from charts
+  const effectiveCount = (d: WeeklyHeatmapData): number => {
+    if (!hiddenSlugs || hiddenSlugs.size === 0) return d.totalActivities;
+    return Object.entries(d.activities).reduce(
+      (sum, [slug, info]) => (hiddenSlugs.has(slug) ? sum : sum + info.count),
+      0
+    );
+  };
+
   // Calculate max activity count for color scaling
-  const maxActivityCount = Math.max(...data.map((d) => d.totalActivities), 1);
+  const maxActivityCount = Math.max(...data.map(effectiveCount), 1);
 
   // Create a map for quick lookup of data by date
   const dataMap = new Map<string, WeeklyHeatmapData>();
@@ -288,7 +304,7 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({ title = 'Activity Heatmap
                     }}
                   >
                     {week.map((day, dayIndex) => {
-                      const activityCount = day.data?.totalActivities || 0;
+                      const activityCount = day.data ? effectiveCount(day.data) : 0;
                       const color = day.isCurrentYear ? getActivityColor(activityCount, maxActivityCount) : '#ebedf0';
 
                       const tooltipTitle = day.data
@@ -381,7 +397,7 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({ title = 'Activity Heatmap
         >
           <Box sx={{ textAlign: 'center' }}>
             <Typography variant="h6" color="primary">
-              {data.reduce((sum, item) => sum + item.totalActivities, 0)}
+              {data.reduce((sum, item) => sum + effectiveCount(item), 0)}
             </Typography>
             <Typography variant="caption" sx={{
               color: "text.secondary"
@@ -391,7 +407,7 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({ title = 'Activity Heatmap
           </Box>
           <Box sx={{ textAlign: 'center' }}>
             <Typography variant="h6" color="primary">
-              {data.filter((item) => item.totalActivities > 0).length}
+              {data.filter((item) => effectiveCount(item) > 0).length}
             </Typography>
             <Typography variant="caption" sx={{
               color: "text.secondary"

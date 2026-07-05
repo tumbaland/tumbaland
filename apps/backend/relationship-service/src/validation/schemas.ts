@@ -10,6 +10,12 @@ export const createActivitySchema = z.object({
 
 export const updateActivitySchema = createActivitySchema.partial();
 
+export const saveDashboardSettingsSchema = z.object({
+  highlightTypeIds: z.array(z.string()).max(20),
+  hiddenTypeIds: z.array(z.string()).max(50),
+  groupId: z.string().optional()
+});
+
 export const saveDaySchema = z.object({
   entries: z.array(z.object({
     _id: z.string().optional(),

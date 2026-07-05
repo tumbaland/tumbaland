@@ -2,11 +2,26 @@ import { logger } from '@tumbaland/components';
 import { relationshipApi } from '../config/relationshipApi';
 import { ApiResponse } from './types';
 
+export interface TypeStatistics {
+  typeId: string;
+  slug: string;
+  name: string;
+  color?: string;
+  valueType?: string;
+  count: number;
+  totalHours: number;
+  /** distinct days having at least one entry of this type (within the timeframe) */
+  uniqueDays: number;
+}
+
 export interface RelationshipStatistics {
-  totalHoursTogether: number;
-  sexActivityDays: number;
+  totalHours: number;
   totalActivities: number;
-  daysTogether: number;
+  /** date of the first entry ever logged in this scope (YYYY-MM-DD) */
+  firstEntryDate: string | null;
+  daysSinceFirstEntry: number;
+  /** per-type breakdown; the dashboard decides which types to feature */
+  types: TypeStatistics[];
 }
 
 export interface StatisticsResponse {
@@ -29,14 +44,19 @@ export interface MonthlyHoursResponse {
   generatedAt: string;
 }
 
+export interface MonthlyTypeStatistics {
+  slug: string;
+  count: number;
+  uniqueDays: number;
+}
+
 export interface MonthlyStatisticsData {
   month: string;
   year: number;
   totalDays: number;
-  daysMet: number;
-  daysWithSex: number;
-  daysTogether: number;
-  daysNotMet: number;
+  /** distinct days in the month with at least one entry of any type */
+  daysWithEntries: number;
+  types: MonthlyTypeStatistics[];
 }
 
 export interface MonthlyStatisticsResponse {

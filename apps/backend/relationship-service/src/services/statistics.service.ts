@@ -1,11 +1,26 @@
 import { Activity } from '../models/Activity';
 import { buildAccessQuery } from '../utils/permissionUtils';
 
+export interface TypeStatistics {
+  typeId: string;
+  slug: string;
+  name: string;
+  color?: string;
+  valueType?: string;
+  count: number;
+  totalHours: number;
+  /** distinct days having at least one entry of this type (within the timeframe) */
+  uniqueDays: number;
+}
+
 export interface RelationshipStatistics {
-  totalHoursTogether: number;
-  sexActivityDays: number;
+  totalHours: number;
   totalActivities: number;
-  daysTogether: number;
+  /** date of the first entry ever logged in this scope (not timeframe-limited) */
+  firstEntryDate: string | null;
+  daysSinceFirstEntry: number;
+  /** per-type breakdown; the dashboard decides which types to feature */
+  types: TypeStatistics[];
 }
 
 export interface MonthlyHoursData {
@@ -15,14 +30,19 @@ export interface MonthlyHoursData {
   activities: number;
 }
 
+export interface MonthlyTypeStatistics {
+  slug: string;
+  count: number;
+  uniqueDays: number;
+}
+
 export interface MonthlyStatisticsData {
   month: string;
   year: number;
   totalDays: number;
-  daysMet: number;
-  daysWithSex: number;
-  daysTogether: number;
-  daysNotMet: number;
+  /** distinct days in the month with at least one entry of any type */
+  daysWithEntries: number;
+  types: MonthlyTypeStatistics[];
 }
 
 export interface MonthlyActivityData {
@@ -133,31 +153,10 @@ export const getRelationshipStatistics = async (
   const baseQuery = {
     ...accessQuery,
     ...dateFilter
-  };    // Get basic statistics
-  const [totalStats, totalHoursStats, sexActivities] = await Promise.all([
-    Activity.aggregate([
-      { $match: baseQuery },
-      {
-        $group: {
-          _id: null,
-          totalActivities: { $sum: 1 },
-          avgHours: { $avg: { $ifNull: ['$hours', 0] } }
-        }
-      }
-    ]),
+  };
 
-    // Total hours (including all activities)
-    Activity.aggregate([
-      { $match: baseQuery },
-      {
-        $group: {
-          _id: null,
-          totalHours: { $sum: { $ifNull: ['$hours', 0] } }
-        }
-      }
-    ]),
-
-    // Sex activity days
+  const [perTypeStats, firstEntry] = await Promise.all([
+    // One row per activity type: count, hours, distinct days
     Activity.aggregate([
       { $match: baseQuery },
       {
@@ -170,36 +169,51 @@ export const getRelationshipStatistics = async (
       },
       { $unwind: '$activityType' },
       {
-        $match: {
-          'activityType.slug': 'sex'
-        }
-      },
-      {
         $group: {
-          _id: {
-            year: { $year: '$date' },
-            month: { $month: '$date' },
-            day: { $dayOfMonth: '$date' }
+          _id: '$activityType._id',
+          slug: { $first: '$activityType.slug' },
+          name: { $first: '$activityType.name' },
+          color: { $first: '$activityType.color' },
+          valueType: { $first: '$activityType.valueType' },
+          count: { $sum: 1 },
+          totalHours: { $sum: { $ifNull: ['$hours', 0] } },
+          uniqueDays: {
+            $addToSet: { $dateToString: { format: '%Y-%m-%d', date: '$date' } }
           }
         }
       },
-      { $count: 'uniqueDays' }
-    ])
+      { $sort: { count: -1 as const } }
+    ]),
+
+    // First entry ever in this scope, independent of the selected timeframe
+    Activity.findOne(accessQuery).sort({ date: 1 }).select('date')
   ]);
 
-  // Calculate basic stats
-  const totalActivities = totalStats[0]?.totalActivities || 0;
-  const totalHours = totalHoursStats[0]?.totalHours || 0;
-  const sexActivityDays = sexActivities[0]?.uniqueDays || 0;
-  // Calculate days together since relationship start (January 25, 2024)
-  const relationshipStartDate = new Date('2024-01-25');
-  const daysTogether = Math.floor((now.getTime() - relationshipStartDate.getTime()) / (1000 * 60 * 60 * 24));
+  const types: TypeStatistics[] = perTypeStats.map((t: any) => ({
+    typeId: String(t._id),
+    slug: t.slug,
+    name: t.name,
+    color: t.color,
+    valueType: t.valueType,
+    count: t.count,
+    totalHours: Math.round(t.totalHours * 100) / 100,
+    uniqueDays: t.uniqueDays.length
+  }));
+
+  const totalActivities = types.reduce((sum, t) => sum + t.count, 0);
+  const totalHours = types.reduce((sum, t) => sum + t.totalHours, 0);
+
+  const firstEntryDate = firstEntry ? new Date(firstEntry.date) : null;
+  const daysSinceFirstEntry = firstEntryDate
+    ? Math.floor((now.getTime() - firstEntryDate.getTime()) / (1000 * 60 * 60 * 24))
+    : 0;
 
   return {
-    totalHoursTogether: Math.round(totalHours * 100) / 100,
-    sexActivityDays,
+    totalHours: Math.round(totalHours * 100) / 100,
     totalActivities,
-    daysTogether
+    firstEntryDate: firstEntryDate ? firstEntryDate.toISOString().slice(0, 10) : null,
+    daysSinceFirstEntry,
+    types
   };
 };
 
@@ -344,7 +358,8 @@ export const getMonthlyStatistics = async (
     }
   });
 
-  // Group by year-month and type to count all activities and unique days
+  // Group by year-month and type, keeping the distinct dates so the month
+  // level can compute "days with any entry" as a true union across types.
   pipeline.push({
     $group: {
       _id: {
@@ -353,7 +368,7 @@ export const getMonthlyStatistics = async (
         type: '$_id.type'
       },
       count: { $sum: 1 },
-      uniqueDays: { $addToSet: '$_id.date' }
+      dates: { $addToSet: '$_id.date' }
     }
   });
 
@@ -368,7 +383,7 @@ export const getMonthlyStatistics = async (
         $push: {
           type: '$_id.type',
           count: '$count',
-          uniqueDays: { $size: '$uniqueDays' }
+          dates: '$dates'
         }
       }
     }
@@ -389,33 +404,22 @@ export const getMonthlyStatistics = async (
     const month = item._id.month;
     const totalDays = new Date(year, month, 0).getDate();
 
-    let sexCount = 0;
-    let togetherCount = 0;
-
-    item.activities.forEach((activity: any) => {
-      if (activity.type === 'sex') {
-        sexCount = activity.count;
-      }
-      if (activity.type === 'together') {
-        togetherCount = activity.count;
-      }
+    const allDates = new Set<string>();
+    const types: MonthlyTypeStatistics[] = item.activities.map((activity: any) => {
+      for (const date of activity.dates) allDates.add(date);
+      return {
+        slug: activity.type,
+        count: activity.count,
+        uniqueDays: activity.dates.length
+      };
     });
-
-    // Calculate unique days met (days with either sex or together)
-    // This requires another pass to get unique days across activities
-    const daysMet = Math.max(
-      item.activities.find((a: any) => a.type === 'sex')?.uniqueDays || 0,
-      item.activities.find((a: any) => a.type === 'together')?.uniqueDays || 0
-    );
 
     return {
       month: month.toString().padStart(2, '0'),
-      year: year,
-      totalDays: totalDays,
-      daysMet: daysMet,
-      daysWithSex: sexCount,
-      daysTogether: togetherCount,
-      daysNotMet: totalDays - daysMet
+      year,
+      totalDays,
+      daysWithEntries: allDates.size,
+      types
     };
   });
 
@@ -646,18 +650,15 @@ export const getWeeklyHeatmapData = async (
       activities[activity.type].hours += activity.hours || 0;
     });
 
-    // Filter out 'together' for totalActivities
-    const filteredActivities = item.activities.filter(
-      (activity: any) => activity.type !== 'together'
-    );
-
     return {
       date: item._id.date,
       dayOfWeek: item._id.dayOfWeek - 1, // Convert to 0-6 (Sunday-Saturday)
       week: item._id.week,
       month: item._id.month,
       year: item._id.year,
-      totalActivities: filteredActivities.length,
+      // all types included; the dashboard applies the user's hidden-type
+      // configuration client-side via the per-type breakdown
+      totalActivities: item.totalActivities || 0,
       totalHours: item.totalHours || 0,
       activities
     };
