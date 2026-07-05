@@ -1,10 +1,10 @@
 import express from 'express';
 import path from 'path';
 import assetClassesRoutes from './routes/assetClasses';
-import assetAllocationsRoutes from './routes/assetAllocations';
-import portfolioHistoryRoutes from './routes/tickerPriceHistory';
-import trackedSymbolsRoutes from './routes/trackedTicker';
-import userPortfolioRoutes from './routes/userPortfolio';
+import snapshotsRoutes from './routes/snapshots';
+import tickerPriceHistoryRoutes from './routes/tickerPriceHistory';
+import trackedTickersRoutes from './routes/trackedTicker';
+import holdingsRoutes from './routes/holdings';
 import dashboardRoutes from './routes/dashboard';
 import { healthCheck } from './controllers/healthController';
 import { errorHandler, createBaseApp, metricsHandler } from '@tumbaland/core';
@@ -13,10 +13,10 @@ const app = createBaseApp();
 
 // Routes
 app.use('/api/asset-classes', assetClassesRoutes);
-app.use('/api/asset-allocations', assetAllocationsRoutes);
-app.use('/api/ticker-price-history', portfolioHistoryRoutes);
-app.use('/api/tracked-tickers', trackedSymbolsRoutes);
-app.use('/api/user-portfolio', userPortfolioRoutes);
+app.use('/api/snapshots', snapshotsRoutes);
+app.use('/api/ticker-price-history', tickerPriceHistoryRoutes);
+app.use('/api/tracked-tickers', trackedTickersRoutes);
+app.use('/api/holdings', holdingsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
 // Serve OpenAPI docs as static files

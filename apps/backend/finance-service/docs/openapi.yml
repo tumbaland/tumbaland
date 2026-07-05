@@ -1,8 +1,10 @@
 openapi: 3.0.3
 info:
   title: Tumbaland Finance Service API
-  description: API for managing financial data including asset classes, allocations, portfolios, and market data
-  version: 1.0.0
+  description: |
+    Personal finance tracking: monthly net-worth snapshots per asset class,
+    market-traded holdings with daily price collection, and dashboard analytics.
+  version: 2.0.0
   contact:
     name: Tumbaland Support
     email: support@tumbaland.com
@@ -19,49 +21,38 @@ tags:
   - name: Monitoring
     description: Service metrics and monitoring
   - name: Asset Classes
-    description: Asset class management operations
-  - name: Asset Allocations
-    description: Asset allocation tracking and management
-  - name: Ticker Price History
-    description: Historical price data for financial instruments
+    description: Categories tracked in monthly check-ins (e.g. Cash, Investments, Real estate)
+  - name: Snapshots
+    description: Monthly net-worth check-ins (one document per month with all asset class values)
+  - name: Holdings
+    description: ETF/stock positions, enriched with latest prices
   - name: Tracked Tickers
-    description: Management of tracked financial instruments
-  - name: User Portfolio
-    description: User portfolio holdings and positions
+    description: Instruments whose prices are fetched daily from Alpha Vantage
+  - name: Ticker Price History
+    description: Historical price data for tracked instruments
   - name: Dashboard
-    description: Financial dashboard and analytics
+    description: Net worth, allocation and investment analytics
 
 security:
-  - bearerAuth: []
+  - cookieAuth: []
 
 paths:
   /health:
     get:
       summary: Health check endpoint
-      description: Check if the finance service is running
-      tags:
-        - Health
+      tags: [Health]
+      security: []
       responses:
         '200':
           description: Service is healthy
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "ok"
-                  timestamp:
-                    type: string
-                    format: date-time
+        '503':
+          description: Service is unhealthy (e.g. MongoDB not connected)
 
   /metrics:
     get:
       summary: Prometheus metrics endpoint
-      description: Get service metrics for monitoring
-      tags:
-        - Monitoring
+      tags: [Monitoring]
+      security: []
       responses:
         '200':
           description: Metrics data
@@ -72,846 +63,430 @@ paths:
 
   /api/asset-classes:
     get:
-      summary: Get asset classes
-      description: Retrieve all asset classes for the authenticated user or specified group
-      tags:
-        - Asset Classes
-      security:
-        - bearerAuth: []
+      summary: List asset classes
+      description: Personal classes by default; pass groupId for a group context.
+      tags: [Asset Classes]
       parameters:
-        - name: groupId
-          in: query
-          description: Optional group ID to filter asset classes
-          schema:
-            type: string
+        - $ref: '#/components/parameters/GroupId'
       responses:
         '200':
           description: List of asset classes
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/AssetClass'
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AssetClass'
         '403':
-          description: Access denied
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+          $ref: '#/components/responses/Forbidden'
     post:
       summary: Create asset class
-      description: Create a new asset class for the authenticated user
-      tags:
-        - Asset Classes
-      security:
-        - bearerAuth: []
+      tags: [Asset Classes]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AssetClassCreate'
+              $ref: '#/components/schemas/AssetClassInput'
       responses:
         '201':
-          description: Asset class created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AssetClass'
+          description: Asset class created
         '400':
-          description: Invalid request data
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/BadRequest'
 
   /api/asset-classes/{id}:
     put:
       summary: Update asset class
-      description: Update an existing asset class
-      tags:
-        - Asset Classes
-      security:
-        - bearerAuth: []
+      tags: [Asset Classes]
       parameters:
-        - name: id
-          in: path
-          required: true
-          description: Asset class ID
-          schema:
-            type: string
+        - $ref: '#/components/parameters/Id'
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AssetClassUpdate'
+              $ref: '#/components/schemas/AssetClassInput'
       responses:
         '200':
-          description: Asset class updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AssetClass'
+          description: Asset class updated
         '403':
-          description: Access denied
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/Forbidden'
         '404':
-          description: Asset class not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+          $ref: '#/components/responses/NotFound'
     delete:
       summary: Delete asset class
-      description: Delete an asset class
-      tags:
-        - Asset Classes
-      security:
-        - bearerAuth: []
+      tags: [Asset Classes]
       parameters:
-        - name: id
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Asset class deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/snapshots:
+    get:
+      summary: List monthly snapshots
+      description: Sorted by date descending. Personal snapshots by default; pass groupId for a group context.
+      tags: [Snapshots]
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      responses:
+        '200':
+          description: List of snapshots
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Snapshot'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/snapshots/{month}:
+    put:
+      summary: Create or replace the snapshot for a month (the monthly check-in)
+      description: Upserts the full set of asset class values for the month in one call.
+      tags: [Snapshots]
+      parameters:
+        - name: month
           in: path
           required: true
-          description: Asset class ID
+          description: Month key, YYYY-MM
           schema:
             type: string
-      responses:
-        '200':
-          description: Asset class deleted successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-        '403':
-          description: Access denied
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: Asset class not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /api/asset-allocations:
-    get:
-      summary: Get asset allocations
-      description: Retrieve all asset allocations for the authenticated user or specified group
-      tags:
-        - Asset Allocations
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: groupId
-          in: query
-          description: Optional group ID to filter allocations
-          schema:
-            type: string
-        - name: startDate
-          in: query
-          description: Start date filter (ISO format)
-          schema:
-            type: string
-            format: date
-        - name: endDate
-          in: query
-          description: End date filter (ISO format)
-          schema:
-            type: string
-            format: date
-      responses:
-        '200':
-          description: List of asset allocations
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/AssetAllocation'
-        '403':
-          description: Access denied
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-    post:
-      summary: Create asset allocation
-      description: Create a new asset allocation for the authenticated user
-      tags:
-        - Asset Allocations
-      security:
-        - bearerAuth: []
+            pattern: '^\d{4}-(0[1-9]|1[0-2])$'
+            example: '2026-07'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AssetAllocationCreate'
+              type: object
+              required: [entries]
+              properties:
+                entries:
+                  type: array
+                  minItems: 1
+                  items:
+                    $ref: '#/components/schemas/SnapshotEntry'
+                groupId:
+                  type: string
+      responses:
+        '200':
+          description: Snapshot saved
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/snapshots/{id}:
+    delete:
+      summary: Delete a snapshot
+      tags: [Snapshots]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Snapshot deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/holdings:
+    get:
+      summary: List holdings with price enrichment
+      description: >
+        Personal holdings by default; pass groupId for a group context. Each holding is
+        enriched with displayName (from its tracked ticker), latestPrice, latestPriceDate,
+        athPrice, currentValue, valueIncrease and percentIncrease.
+      tags: [Holdings]
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      responses:
+        '200':
+          description: List of holdings
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Holding'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      summary: Create holding
+      description: >
+        Also starts tracking the holding's ticker in the same context (if not already
+        tracked) so the daily price job covers it. Pass displayName to name the
+        auto-created tracked ticker.
+      tags: [Holdings]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HoldingInput'
       responses:
         '201':
-          description: Asset allocation created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AssetAllocation'
+          description: Holding created
         '400':
-          description: Invalid request data
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
-  /api/asset-allocations/{id}:
+  /api/holdings/{id}:
     put:
-      summary: Update asset allocation
-      description: Update an existing asset allocation
-      tags:
-        - Asset Allocations
-      security:
-        - bearerAuth: []
+      summary: Update holding
+      tags: [Holdings]
       parameters:
-        - name: id
-          in: path
-          required: true
-          description: Asset allocation ID
-          schema:
-            type: string
+        - $ref: '#/components/parameters/Id'
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AssetAllocationUpdate'
+              $ref: '#/components/schemas/HoldingInput'
       responses:
         '200':
-          description: Asset allocation updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AssetAllocation'
+          description: Holding updated
         '403':
-          description: Access denied
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/Forbidden'
         '404':
-          description: Asset allocation not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+          $ref: '#/components/responses/NotFound'
     delete:
-      summary: Delete asset allocation
-      description: Delete an asset allocation
-      tags:
-        - Asset Allocations
-      security:
-        - bearerAuth: []
+      summary: Delete holding
+      tags: [Holdings]
       parameters:
-        - name: id
-          in: path
-          required: true
-          description: Asset allocation ID
-          schema:
-            type: string
+        - $ref: '#/components/parameters/Id'
       responses:
         '200':
-          description: Asset allocation deleted successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
+          description: Holding deleted
         '403':
-          description: Access denied
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/Forbidden'
         '404':
-          description: Asset allocation not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /api/ticker-price-history:
-    get:
-      summary: Get ticker price history
-      description: Retrieve historical price data for tracked tickers
-      tags:
-        - Ticker Price History
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: groupId
-          in: query
-          description: Optional group ID to filter price history
-          schema:
-            type: string
-        - name: ticker
-          in: query
-          description: Filter by specific ticker symbol
-          schema:
-            type: string
-        - name: startDate
-          in: query
-          description: Start date filter (ISO format)
-          schema:
-            type: string
-            format: date
-        - name: endDate
-          in: query
-          description: End date filter (ISO format)
-          schema:
-            type: string
-            format: date
-      responses:
-        '200':
-          description: List of ticker price history records
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/TickerPriceHistory'
-        '403':
-          description: Access denied
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-    post:
-      summary: Fetch and save latest ticker prices
-      description: Fetch latest prices from external APIs and save to database
-      tags:
-        - Ticker Price History
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Prices fetched and saved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FetchAndSavePricesResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /api/ticker-price-history/fetch-all:
-    post:
-      summary: Fetch and save all historical prices for tickers
-      description: Fetch complete historical price data for all tracked tickers
-      tags:
-        - Ticker Price History
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Historical prices fetched and saved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FetchAndSavePricesResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /api/ticker-price-history/{id}:
-    delete:
-      summary: Delete ticker price history record
-      description: Delete a specific price history record
-      tags:
-        - Ticker Price History
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: Price history record ID
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Price history record deleted successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-        '403':
-          description: Access denied
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: Price history record not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/NotFound'
 
   /api/tracked-tickers:
     get:
-      summary: Get tracked tickers
-      description: Retrieve all tracked tickers for the authenticated user or specified group
-      tags:
-        - Tracked Tickers
-      security:
-        - bearerAuth: []
+      summary: List tracked tickers
+      tags: [Tracked Tickers]
       parameters:
-        - name: groupId
-          in: query
-          description: Optional group ID to filter tracked tickers
-          schema:
-            type: string
+        - $ref: '#/components/parameters/GroupId'
       responses:
         '200':
           description: List of tracked tickers
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/TrackedTicker'
-        '403':
-          description: Access denied
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
     post:
-      summary: Add tracked ticker
-      description: Add a new ticker to track
-      tags:
-        - Tracked Tickers
-      security:
-        - bearerAuth: []
+      summary: Track a ticker
+      tags: [Tracked Tickers]
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TrackedTickerCreate'
+              $ref: '#/components/schemas/TrackedTickerInput'
       responses:
         '201':
-          description: Tracked ticker added successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TrackedTicker'
+          description: Ticker tracked
+
+  /api/tracked-tickers/search:
+    get:
+      summary: Search ticker symbols
+      description: Alpha Vantage SYMBOL_SEARCH (costs 1 API call; free plan is 25/day).
+      tags: [Tracked Tickers]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search term, minimum 2 characters
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Matching symbols
         '400':
-          description: Invalid request data
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          description: Alpha Vantage rate limit exhausted
 
   /api/tracked-tickers/{id}:
     put:
       summary: Update tracked ticker
-      description: Update an existing tracked ticker
-      tags:
-        - Tracked Tickers
-      security:
-        - bearerAuth: []
+      tags: [Tracked Tickers]
       parameters:
-        - name: id
-          in: path
-          required: true
-          description: Tracked ticker ID
-          schema:
-            type: string
+        - $ref: '#/components/parameters/Id'
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TrackedTickerUpdate'
+              $ref: '#/components/schemas/TrackedTickerInput'
       responses:
         '200':
-          description: Tracked ticker updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TrackedTicker'
-        '403':
-          description: Access denied
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: Tracked ticker not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+          description: Ticker updated
     delete:
-      summary: Remove tracked ticker
-      description: Remove a tracked ticker
-      tags:
-        - Tracked Tickers
-      security:
-        - bearerAuth: []
+      summary: Stop tracking a ticker
+      description: Saved price history is kept.
+      tags: [Tracked Tickers]
       parameters:
-        - name: id
-          in: path
-          required: true
-          description: Tracked ticker ID
-          schema:
-            type: string
+        - $ref: '#/components/parameters/Id'
       responses:
         '200':
-          description: Tracked ticker removed successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-        '403':
-          description: Access denied
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: Tracked ticker not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          description: Ticker deleted
 
-  /api/user-portfolio:
+  /api/ticker-price-history:
     get:
-      summary: Get user portfolios
-      description: Retrieve all user portfolio holdings
-      tags:
-        - User Portfolio
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: groupId
-          in: query
-          description: Optional group ID to filter portfolios
-          schema:
-            type: string
+      summary: Get all price history records
+      tags: [Ticker Price History]
       responses:
         '200':
-          description: List of user portfolio holdings
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/UserPortfolio'
-        '403':
-          description: Access denied
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          description: Price history records
 
+  /api/ticker-price-history/fetch:
     post:
-      summary: Add portfolio holding
-      description: Add a new holding to the user portfolio
-      tags:
-        - User Portfolio
-      security:
-        - bearerAuth: []
+      summary: Fetch and save latest prices
+      description: Fetches the latest quote for one ticker, or for all tracked tickers when body is empty.
+      tags: [Ticker Price History]
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UserPortfolioCreate'
-      responses:
-        '201':
-          description: Portfolio holding added successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserPortfolio'
-        '400':
-          description: Invalid request data
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /api/user-portfolio/{id}:
-    put:
-      summary: Update portfolio holding
-      description: Update an existing portfolio holding
-      tags:
-        - User Portfolio
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: Portfolio holding ID
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserPortfolioUpdate'
+              type: object
+              properties:
+                ticker:
+                  type: string
       responses:
         '200':
-          description: Portfolio holding updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserPortfolio'
-        '403':
-          description: Access denied
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: Portfolio holding not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          description: Prices fetched and saved
+        '429':
+          description: Alpha Vantage rate limit exhausted
 
+  /api/ticker-price-history/fetch-all:
+    post:
+      summary: Fetch ~100 days of history for a ticker
+      tags: [Ticker Price History]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ticker]
+              properties:
+                ticker:
+                  type: string
+      responses:
+        '200':
+          description: History fetched and saved
+        '429':
+          description: Alpha Vantage rate limit exhausted
+
+  /api/ticker-price-history/{id}:
     delete:
-      summary: Remove portfolio holding
-      description: Remove a holding from the user portfolio
-      tags:
-        - User Portfolio
-      security:
-        - bearerAuth: []
+      summary: Delete a price record
+      tags: [Ticker Price History]
       parameters:
-        - name: id
-          in: path
-          required: true
-          description: Portfolio holding ID
-          schema:
-            type: string
+        - $ref: '#/components/parameters/Id'
       responses:
         '200':
-          description: Portfolio holding removed successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-        '403':
-          description: Access denied
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: Portfolio holding not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          description: Record deleted
 
   /api/dashboard:
     get:
       summary: Get dashboard data
-      description: Retrieve comprehensive dashboard data including KPIs, portfolio history, and asset allocation
-      tags:
-        - Dashboard
-      security:
-        - bearerAuth: []
+      description: KPIs, net worth history, latest allocation and holdings summary.
+      tags: [Dashboard]
       parameters:
-        - name: groupId
-          in: query
-          description: Optional group ID to filter dashboard data
-          schema:
-            type: string
+        - $ref: '#/components/parameters/GroupId'
       responses:
         '200':
           description: Dashboard data
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DashboardResponse'
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/DashboardData'
         '403':
-          description: Access denied
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/Forbidden'
 
 components:
   securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: access_token
+      description: JWT issued by the auth service (httpOnly cookie)
+
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    GroupId:
+      name: groupId
+      in: query
+      required: false
+      description: Group context; caller must be a member. Omit for personal data.
+      schema:
+        type: string
+
+  responses:
+    BadRequest:
+      description: Invalid request data
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Access denied
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
 
   schemas:
+    SuccessEnvelope:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+
     ErrorResponse:
       type: object
       properties:
+        success:
+          type: boolean
+          example: false
         error:
           type: string
-      required:
-        - error
+        message:
+          type: string
 
     AssetClass:
       type: object
@@ -920,10 +495,12 @@ components:
           type: string
         name:
           type: string
+          example: Real estate
         description:
           type: string
         color:
           type: string
+          example: '#ec4899'
         userId:
           type: string
         groupId:
@@ -934,172 +511,121 @@ components:
         updatedAt:
           type: string
           format: date-time
-      required:
-        - _id
-        - name
-        - userId
 
-    AssetClassCreate:
+    AssetClassInput:
       type: object
+      required: [name]
       properties:
         name:
           type: string
-          minLength: 1
         description:
           type: string
         color:
           type: string
         groupId:
           type: string
-      required:
-        - name
 
-    AssetClassUpdate:
+    SnapshotEntry:
       type: object
+      required: [assetClassId, value]
       properties:
-        name:
+        assetClassId:
           type: string
-          minLength: 1
-        description:
-          type: string
-        color:
-          type: string
-      additionalProperties: false
+        value:
+          type: number
+          minimum: 0
+          description: Current value of the asset class
+        gain:
+          type: number
+          default: 0
+          description: Cumulative gain vs invested (0 for classes without a meaningful cost basis)
 
-    AssetAllocation:
+    Snapshot:
       type: object
       properties:
         _id:
           type: string
-        assetClassId:
-          type: string
-        totalValue:
-          type: number
-          minimum: 0
-        gain:
-          type: number
         date:
           type: string
           format: date-time
-        userId:
-          type: string
-        groupId:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-      required:
-        - _id
-        - assetClassId
-        - totalValue
-        - gain
-        - date
-        - userId
-
-    AssetAllocationCreate:
-      type: object
-      properties:
-        assetClassId:
-          type: string
-        totalValue:
-          type: number
-          minimum: 0
-        gain:
-          type: number
-        date:
-          type: string
-          format: date-time
-        groupId:
-          type: string
-      required:
-        - assetClassId
-        - totalValue
-        - gain
-        - date
-
-    AssetAllocationUpdate:
-      type: object
-      properties:
-        assetClassId:
-          type: string
-        totalValue:
-          type: number
-          minimum: 0
-        gain:
-          type: number
-        date:
-          type: string
-          format: date-time
-      required:
-        - assetClassId
-        - totalValue
-        - gain
-        - date
-
-    TickerPriceHistory:
-      type: object
-      properties:
-        date:
-          type: string
-          format: date
-        ticker:
-          type: string
-        price:
-          type: number
-        open:
-          type: number
-        high:
-          type: number
-        low:
-          type: number
-        volume:
-          type: number
-      required:
-        - date
-        - ticker
-        - price
-
-    FetchAndSavePricesResponse:
-      type: object
-      properties:
-        message:
-          type: string
-        results:
+          description: First of the month, UTC
+        entries:
           type: array
           items:
-            $ref: '#/components/schemas/TickerPriceHistory'
-      required:
-        - message
-        - results
+            $ref: '#/components/schemas/SnapshotEntry'
+        userId:
+          type: string
+        groupId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
-    TrackedTicker:
+    Holding:
       type: object
       properties:
         _id:
           type: string
+        ticker:
+          type: string
+          example: VUSA.DEX
+        quantity:
+          type: number
+        avgBuyPrice:
+          type: number
+        buyDate:
+          type: string
+          format: date
+        notes:
+          type: string
+        userId:
+          type: string
+        groupId:
+          type: string
+        displayName:
+          type: string
+          description: From the matching tracked ticker
+        latestPrice:
+          type: number
+        latestPriceDate:
+          type: string
+          format: date-time
+        athPrice:
+          type: number
+        currentValue:
+          type: number
+        valueIncrease:
+          type: number
+        percentIncrease:
+          type: number
+
+    HoldingInput:
+      type: object
+      required: [ticker, quantity, avgBuyPrice]
+      properties:
         ticker:
           type: string
         displayName:
           type: string
-        description:
+          description: Used to name the auto-created tracked ticker
+        quantity:
+          type: number
+        avgBuyPrice:
+          type: number
+        buyDate:
           type: string
-        dateAdded:
+          format: date
+        notes:
           type: string
-          format: date-time
-        isActive:
-          type: boolean
-      required:
-        - _id
-        - ticker
-        - displayName
-        - dateAdded
-        - isActive
+        groupId:
+          type: string
 
-    TrackedTickerCreate:
+    TrackedTickerInput:
       type: object
+      required: [ticker, displayName]
       properties:
         ticker:
           type: string
@@ -1110,156 +636,80 @@ components:
         isActive:
           type: boolean
           default: true
-      required:
-        - ticker
-        - displayName
+          description: Whether the daily price job fetches this ticker
+        groupId:
+          type: string
 
-    TrackedTickerUpdate:
-      type: object
-      properties:
-        ticker:
-          type: string
-        displayName:
-          type: string
-        description:
-          type: string
-        isActive:
-          type: boolean
-      required:
-        - ticker
-        - displayName
-
-    UserPortfolio:
-      type: object
-      properties:
-        ticker:
-          type: string
-        quantity:
-          type: number
-        avgBuyPrice:
-          type: number
-        buyDate:
-          type: string
-          format: date
-        notes:
-          type: string
-        latestPrice:
-          type: number
-        athPrice:
-          type: number
-        currentValue:
-          type: number
-        valueIncrease:
-          type: number
-        percentIncrease:
-          type: number
-      required:
-        - ticker
-        - quantity
-        - avgBuyPrice
-
-    UserPortfolioCreate:
-      type: object
-      properties:
-        ticker:
-          type: string
-        quantity:
-          type: number
-        avgBuyPrice:
-          type: number
-        buyDate:
-          type: string
-          format: date
-        notes:
-          type: string
-      required:
-        - ticker
-        - quantity
-        - avgBuyPrice
-
-    UserPortfolioUpdate:
-      type: object
-      properties:
-        ticker:
-          type: string
-        quantity:
-          type: number
-        avgBuyPrice:
-          type: number
-        buyDate:
-          type: string
-          format: date
-        notes:
-          type: string
-      required:
-        - ticker
-        - quantity
-        - avgBuyPrice
-
-    DashboardResponse:
+    DashboardData:
       type: object
       properties:
         kpis:
           type: object
           properties:
-            totalPortfolioValue:
+            netWorth:
               type: number
-            totalInvested:
+            asOf:
+              type: string
+              format: date-time
+              nullable: true
+            monthChange:
               type: number
-            totalGains:
+            monthChangePct:
               type: number
-            totalGainsPercentage:
+            yearChange:
               type: number
-            monthlyChange:
+            yearChangePct:
               type: number
-            monthlyChangePercentage:
+            totalGain:
               type: number
-            assetBreakdown:
-              type: object
-              properties:
-                stocks:
-                  type: number
-                etfs:
-                  type: number
-                cash:
-                  type: number
-                other:
-                  type: number
-            topPerformers:
-              type: array
-              items:
-                type: object
-                properties:
-                  symbol:
-                    type: string
-                  currentValue:
-                    type: number
-                  percentIncrease:
-                    type: number
-        portfolioHistory:
+            totalGainPct:
+              type: number
+        netWorthHistory:
           type: array
           items:
             type: object
             properties:
               date:
                 type: string
-                format: date
-              totalValue:
+                format: date-time
+              total:
                 type: number
-              totalInvested:
-                type: number
-        assetAllocation:
+              byClass:
+                type: object
+                additionalProperties:
+                  type: number
+        allocation:
           type: array
           items:
             type: object
             properties:
-              assetClass:
+              assetClassId:
                 type: string
-              percentage:
-                type: number
+              name:
+                type: string
+              color:
+                type: string
               value:
                 type: number
-      required:
-        - kpis
-        - portfolioHistory
-        - assetAllocation
+              gain:
+                type: number
+              percentage:
+                type: number
+        assetColors:
+          type: object
+          additionalProperties:
+            type: string
+        holdings:
+          type: object
+          nullable: true
+          properties:
+            count:
+              type: integer
+            totalValue:
+              type: number
+            totalCost:
+              type: number
+            gain:
+              type: number
+            gainPct:
+              type: number

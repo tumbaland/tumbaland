@@ -1,208 +1,132 @@
 import React from 'react';
-import {
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  alpha
-} from '@mui/material';
-import {
-  TrendingUp,
-  TrendingDown,
-  AccountBalance
-} from '@mui/icons-material';
-import { Chip } from '@mui/material';
-
-interface FinancialKPIsData {
-  totalValue: number;
-  totalGains: number;
-  gainsPercentage: number;
-  monthlyChange: number;
-  monthlyChangePercent: number;
-}
+import { Card, CardContent, Typography, Box, alpha } from '@mui/material';
+import { TrendingUp, TrendingDown, TrendingFlat, AccountBalance, CalendarMonth, Savings } from '@mui/icons-material';
+import { DashboardKPIs } from '../services/dashboardService';
+import { formatCurrency, formatPct } from '../utils/numberUtils';
 
 interface FinancialKPIsProps {
-  data: FinancialKPIsData;
+  kpis: DashboardKPIs;
 }
 
-const FinancialKPIs: React.FC<FinancialKPIsProps> = ({ data }) => {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('et-EE', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
+interface Tile {
+  label: string;
+  sublabel?: string;
+  value: string;
+  detail?: string;
+  icon: React.ReactNode;
+  accent: string;
+  valueColor?: string;
+}
+
+const trendIcon = (v: number) =>
+  v > 0 ? <TrendingUp sx={{ fontSize: { xs: 24, md: 28 } }} />
+  : v < 0 ? <TrendingDown sx={{ fontSize: { xs: 24, md: 28 } }} />
+  : <TrendingFlat sx={{ fontSize: { xs: 24, md: 28 } }} />;
+
+const trendColor = (v: number) => (v > 0 ? 'success.main' : v < 0 ? 'error.main' : 'text.primary');
+
+const signed = (v: number) => `${v >= 0 ? '+' : ''}${formatCurrency(v)}`;
+
+const FinancialKPIs: React.FC<FinancialKPIsProps> = ({ kpis }) => {
+  const tiles: Tile[] = [
+    {
+      label: 'Net worth',
+      sublabel: kpis.asOf ? `as of ${kpis.asOf.slice(0, 7)}` : undefined,
+      value: formatCurrency(kpis.netWorth),
+      icon: <AccountBalance sx={{ fontSize: { xs: 24, md: 28 } }} />,
+      accent: '#667eea'
+    },
+    {
+      label: 'Past month',
+      value: signed(kpis.monthChange),
+      detail: formatPct(kpis.monthChangePct),
+      icon: trendIcon(kpis.monthChange),
+      accent: '#11998e',
+      valueColor: trendColor(kpis.monthChange)
+    },
+    {
+      label: 'Past year',
+      value: signed(kpis.yearChange),
+      detail: formatPct(kpis.yearChangePct),
+      icon: <CalendarMonth sx={{ fontSize: { xs: 24, md: 28 } }} />,
+      accent: '#8b5cf6',
+      valueColor: trendColor(kpis.yearChange)
+    },
+    {
+      label: 'Total gain',
+      sublabel: 'vs invested',
+      value: signed(kpis.totalGain),
+      detail: formatPct(kpis.totalGainPct),
+      icon: <Savings sx={{ fontSize: { xs: 24, md: 28 } }} />,
+      accent: '#eab308',
+      valueColor: trendColor(kpis.totalGain)
+    }
+  ];
 
   return (
-    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: { xs: 2, md: 3 }, mb: { xs: 3, md: 4 } }}>
-      {/* Total Portfolio Value */}
-      <Card
-        elevation={0}
-        sx={{
-          borderRadius: 3,
-          border: '1px solid',
-          borderColor: 'divider',
-          transition: 'transform 0.2s, box-shadow 0.2s',
-          '&:hover': {
-            transform: 'translateY(-2px)',
-            boxShadow: `0 4px 20px ${alpha('#667eea', 0.15)}`,
-            borderColor: alpha('#667eea', 0.5)
-          }
-        }}
-      >
-        <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Box
-              sx={{
-                p: 1.5,
-                borderRadius: 2,
-                bgcolor: alpha('#667eea', 0.1),
-                color: '#667eea',
-                mr: 2,
-                display: 'flex'
-              }}
-            >
-              <AccountBalance sx={{ fontSize: { xs: 24, md: 28 } }} />
-            </Box>
-            <Box>
-              <Typography
-                variant="body2"
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' },
+        gap: { xs: 2, md: 3 },
+        mb: { xs: 3, md: 4 }
+      }}
+    >
+      {tiles.map((tile) => (
+        <Card
+          key={tile.label}
+          elevation={0}
+          sx={{
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: 'divider',
+            transition: 'transform 0.2s, box-shadow 0.2s',
+            '&:hover': {
+              transform: 'translateY(-2px)',
+              boxShadow: `0 4px 20px ${alpha(tile.accent, 0.15)}`,
+              borderColor: alpha(tile.accent, 0.5)
+            }
+          }}
+        >
+          <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+              <Box
                 sx={{
-                  color: "text.secondary",
-                  fontSize: '0.875rem'
-                }}>
-                Total Portfolio
-              </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                Current Value
-              </Typography>
+                  p: 1.25,
+                  borderRadius: 2,
+                  bgcolor: alpha(tile.accent, 0.1),
+                  color: tile.accent,
+                  mr: 1.5,
+                  display: 'flex'
+                }}
+              >
+                {tile.icon}
+              </Box>
+              <Box>
+                <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
+                  {tile.label}
+                </Typography>
+                {tile.sublabel && (
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                    {tile.sublabel}
+                  </Typography>
+                )}
+              </Box>
             </Box>
-          </Box>
-          <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, fontSize: { xs: '1.75rem', md: '2.125rem' }, color: 'text.primary' }}>
-            {formatCurrency(data.totalValue)}
-          </Typography>
-        </CardContent>
-      </Card>
-      {/* Total Gains */}
-      <Card
-        elevation={0}
-        sx={{
-          borderRadius: 3,
-          border: '1px solid',
-          borderColor: 'divider',
-          transition: 'transform 0.2s, box-shadow 0.2s',
-          '&:hover': {
-            transform: 'translateY(-2px)',
-            boxShadow: `0 4px 20px ${alpha('#11998e', 0.15)}`,
-            borderColor: alpha('#11998e', 0.5)
-          }
-        }}
-      >
-        <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Box
-              sx={{
-                p: 1.5,
-                borderRadius: 2,
-                bgcolor: alpha('#11998e', 0.1),
-                color: '#11998e',
-                mr: 2,
-                display: 'flex'
-              }}
+            <Typography
+              variant="h5"
+              sx={{ fontWeight: 700, color: tile.valueColor || 'text.primary', fontSize: { xs: '1.4rem', md: '1.6rem' } }}
             >
-              <TrendingUp sx={{ fontSize: { xs: 24, md: 28 } }} />
-            </Box>
-            <Box>
-              <Typography
-                variant="body2"
-                sx={{
-                  color: "text.secondary",
-                  fontSize: '0.875rem'
-                }}>
-                Total Gains
+              {tile.value}
+            </Typography>
+            {tile.detail && (
+              <Typography variant="body2" sx={{ color: tile.valueColor || 'text.secondary', mt: 0.5 }}>
+                {tile.detail}
               </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                Unrealized Profits
-              </Typography>
-            </Box>
-          </Box>
-          <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, fontSize: { xs: '1.75rem', md: '2.125rem' }, color: 'text.primary' }}>
-            {formatCurrency(data.totalGains)}
-          </Typography>
-          <Chip
-            label={`${data.gainsPercentage >= 0 ? '+' : ''}${data.gainsPercentage.toFixed(1)}%`}
-            sx={{
-              bgcolor: alpha('#11998e', 0.1),
-              color: '#11998e',
-              fontWeight: 600,
-              fontSize: '0.75rem'
-            }}
-          />
-        </CardContent>
-      </Card>
-      {/* Monthly Change */}
-      <Card
-        elevation={0}
-        sx={{
-          borderRadius: 3,
-          border: '1px solid',
-          borderColor: 'divider',
-          transition: 'transform 0.2s, box-shadow 0.2s',
-          '&:hover': {
-            transform: 'translateY(-2px)',
-            boxShadow: `0 4px 20px ${alpha(data.monthlyChange >= 0 ? '#22c55e' : '#ef4444', 0.15)}`,
-            borderColor: alpha(data.monthlyChange >= 0 ? '#22c55e' : '#ef4444', 0.5)
-          }
-        }}
-      >
-        <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Box
-              sx={{
-                p: 1.5,
-                borderRadius: 2,
-                bgcolor: alpha(data.monthlyChange >= 0 ? '#22c55e' : '#ef4444', 0.1),
-                color: data.monthlyChange >= 0 ? '#22c55e' : '#ef4444',
-                mr: 2,
-                display: 'flex'
-              }}
-            >
-              {data.monthlyChange >= 0 ? (
-                <TrendingUp sx={{ fontSize: { xs: 24, md: 28 } }} />
-              ) : (
-                <TrendingDown sx={{ fontSize: { xs: 24, md: 28 } }} />
-              )}
-            </Box>
-            <Box>
-              <Typography
-                variant="body2"
-                sx={{
-                  color: "text.secondary",
-                  fontSize: '0.875rem'
-                }}>
-                Monthly Change
-              </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                Latest Performance
-              </Typography>
-            </Box>
-          </Box>
-          <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, fontSize: { xs: '1.75rem', md: '2.125rem' }, color: 'text.primary' }}>
-            {formatCurrency(data.monthlyChange)}
-          </Typography>
-          <Chip
-            label={`${data.monthlyChangePercent >= 0 ? '+' : ''}${data.monthlyChangePercent.toFixed(1)}%`}
-            sx={{
-              bgcolor: alpha(data.monthlyChange >= 0 ? '#22c55e' : '#ef4444', 0.1),
-              color: data.monthlyChange >= 0 ? '#22c55e' : '#ef4444',
-              fontWeight: 600,
-              fontSize: '0.75rem'
-            }}
-          />
-        </CardContent>
-      </Card>
+            )}
+          </CardContent>
+        </Card>
+      ))}
     </Box>
   );
 };

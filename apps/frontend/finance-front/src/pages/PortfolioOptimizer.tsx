@@ -19,7 +19,7 @@ import {
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { useTenantFilter } from '../components/tenant';
-import { useUserPortfolios } from '../hooks/useUserPortfolio';
+import { useHoldings } from '../hooks/useHoldings';
 import { useTrackedTickers } from '../hooks/useTrackedTicker';
 import { getTickerPriceHistory } from '../services/tickerPriceHistoryService';
 
@@ -92,7 +92,7 @@ interface SimResult {
 
 const PortfolioOptimizer: React.FC = () => {
   const tenantGroupId = useTenantFilter();
-  const { data: portfolios = [], isLoading: portfolioLoading } = useUserPortfolios(tenantGroupId);
+  const { data: portfolios = [], isLoading: portfolioLoading } = useHoldings(tenantGroupId);
   const { data: trackedTickers = [] } = useTrackedTickers(tenantGroupId);
 
   const [pricesByTicker, setPricesByTicker] = useState<Record<string, number[]>>({});

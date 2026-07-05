@@ -25,9 +25,9 @@ describe('GET /health', () => {
   });
 });
 
-describe('GET /api/user-portfolio', () => {
+describe('GET /api/holdings', () => {
   it('rejects requests with no access token', async () => {
-    const res = await request(app).get('/api/user-portfolio');
+    const res = await request(app).get('/api/holdings');
 
     expect(res.status).toBe(401);
     expect(res.body).toEqual({ success: false, message: 'Access token required' });

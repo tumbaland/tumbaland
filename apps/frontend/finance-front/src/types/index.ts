@@ -29,13 +29,18 @@ export interface AssetClass {
   updatedAt: string;
 }
 
-// Asset Allocation types
-export interface AssetAllocation {
-  _id: string;
-  assetClassId: string | AssetClass;
-  totalValue: number;
+// Monthly net-worth snapshot: one document per month with the value of every
+// asset class on the first of that month
+export interface SnapshotEntry {
+  assetClassId: string;
+  value: number;
   gain: number;
-  date: string;
+}
+
+export interface Snapshot {
+  _id: string;
+  date: string; // first of month, UTC
+  entries: SnapshotEntry[];
   userId: string;
   groupId?: string;
   createdAt: string;

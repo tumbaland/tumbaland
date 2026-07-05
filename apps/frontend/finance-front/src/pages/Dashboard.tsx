@@ -1,23 +1,17 @@
 import React from 'react';
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  CircularProgress,
-  Alert
-} from '@mui/material';
-import { AccountBalance } from '@mui/icons-material';
+import { Box, Card, CardContent, Typography, CircularProgress, Alert, Button } from '@mui/material';
+import { AccountBalance, ShowChart } from '@mui/icons-material';
+import { Link } from 'react-router-dom';
 import { useTenantFilter } from '../components/tenant';
 import { useDashboard } from '../hooks/useDashboard';
 import FinancialKPIs from '../components/FinancialKPIs';
 import PortfolioValueChart from '../components/PortfolioValueChart';
+import AllocationCard from '../components/AllocationCard';
+import { formatCurrency, formatPct } from '../utils/numberUtils';
 
 const Dashboard: React.FC = () => {
   const tenantGroupId = useTenantFilter();
-
-  // Use new dashboard hook
-  const { data: dashboardData, isLoading, error } = useDashboard(tenantGroupId);
+  const { data, isLoading, error } = useDashboard(tenantGroupId);
 
   if (isLoading) {
     return (
@@ -35,83 +29,94 @@ const Dashboard: React.FC = () => {
     );
   }
 
+  const hasData = data && data.netWorthHistory.length > 0;
+
   return (
-    <Box sx={{
-      minHeight: '100vh',
-      py: { xs: 2, md: 4 },
-      px: { xs: 2, md: 4 }
-    }}>
-      {/* Header */}
+    <Box sx={{ minHeight: '100vh', py: { xs: 2, md: 4 }, px: { xs: 2, md: 4 } }}>
       <Box sx={{ mb: { xs: 3, md: 4 } }}>
-        <Typography
-          variant="h4"
-          sx={{
-            fontWeight: 700,
-            color: '#1e293b',
-            textAlign: { xs: 'center', md: 'left' },
-            mb: 1
-          }}
-        >
-          Financial Dashboard
+        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
+          Dashboard
         </Typography>
-        <Typography
-          variant="body1"
-          sx={{
-            color: '#64748b',
-            textAlign: { xs: 'center', md: 'left' }
-          }}
-        >
-          Track your investment portfolio performance and asset allocation
+        <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+          Your net worth, asset allocation and investments at a glance
         </Typography>
       </Box>
-      {dashboardData && (
-        <>
-          {/* Key Metrics Cards */}
-          <FinancialKPIs
-            data={{
-              totalValue: dashboardData.kpis.totalPortfolioValue,
-              totalGains: dashboardData.kpis.totalGains,
-              gainsPercentage: dashboardData.kpis.totalGainsPercentage,
-              monthlyChange: dashboardData.kpis.monthlyChange,
-              monthlyChangePercent: dashboardData.kpis.monthlyChangePercentage
-            }}
-          />
 
-          {/* Portfolio Timeline - Full Width */}
-          <Box sx={{ mb: { xs: 3, md: 4 } }}>
+      {hasData && (
+        <>
+          <FinancialKPIs kpis={data.kpis} />
+
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' },
+              gap: { xs: 3, md: 4 },
+              mb: { xs: 3, md: 4 },
+              alignItems: 'start'
+            }}
+          >
             <PortfolioValueChart
-              records={dashboardData.portfolioHistory}
-              assetColors={dashboardData.assetAllocation.reduce((acc, allocation) => {
-                acc[allocation.assetClass] = allocation.color || '#667eea';
-                return acc;
-              }, {} as { [key: string]: string })}
+              records={data.netWorthHistory.map((p) => ({
+                date: p.date,
+                totalValue: p.total,
+                assetBreakdown: p.byClass
+              }))}
+              assetColors={data.assetColors}
             />
+            <AllocationCard allocation={data.allocation} />
           </Box>
+
+          {data.holdings && (
+            <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+              <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <ShowChart sx={{ mr: 2, color: '#667eea' }} />
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      Investments · {data.holdings.count} holding{data.holdings.count === 1 ? '' : 's'}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <Box>
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>Market value</Typography>
+                      <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatCurrency(data.holdings.totalValue)}</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>Unrealized P/L</Typography>
+                      <Typography
+                        variant="h6"
+                        sx={{ fontWeight: 700, color: data.holdings.gain >= 0 ? 'success.main' : 'error.main' }}
+                      >
+                        {data.holdings.gain >= 0 ? '+' : ''}{formatCurrency(data.holdings.gain)} ({formatPct(data.holdings.gainPct)})
+                      </Typography>
+                    </Box>
+                    <Button component={Link} to="/investments" variant="outlined" size="small">
+                      View holdings
+                    </Button>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
-      {!dashboardData && !isLoading && (
+
+      {!hasData && (
         <Card
           elevation={0}
-          sx={{
-            borderRadius: 3,
-            border: '1px solid',
-            borderColor: 'divider',
-            textAlign: 'center',
-            py: 6
-          }}
+          sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', textAlign: 'center', py: 6 }}
         >
           <CardContent>
             <AccountBalance sx={{ fontSize: 64, color: '#cbd5e1', mb: 2 }} />
-            <Typography variant="h6" gutterBottom sx={{
-              color: "text.secondary"
-            }}>
-              No Portfolio Data Available
+            <Typography variant="h6" gutterBottom sx={{ color: 'text.secondary' }}>
+              No data yet
             </Typography>
-            <Typography variant="body2" sx={{
-              color: "text.secondary"
-            }}>
-              Add your first portfolio holdings to see your dashboard
+            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
+              Add your first monthly check-in to see your net worth here.
             </Typography>
+            <Button component={Link} to="/net-worth" variant="contained">
+              Go to Net Worth
+            </Button>
           </CardContent>
         </Card>
       )}

@@ -1,10 +1,8 @@
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import SavingsIcon from '@mui/icons-material/Savings';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
-import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import CalculateIcon from '@mui/icons-material/Calculate';
 import TuneIcon from '@mui/icons-material/Tune';
-import CategoryIcon from '@mui/icons-material/Category';
-import AssessmentIcon from '@mui/icons-material/Assessment';
 import { AuthHeaderNavigationItem } from '@tumbaland/components';
 
 export const navigationItems: AuthHeaderNavigationItem[] = [
@@ -14,24 +12,14 @@ export const navigationItems: AuthHeaderNavigationItem[] = [
     icon: DashboardIcon
   },
   {
-    label: 'Allocation',
-    path: '/asset-allocations',
-    icon: AssessmentIcon
+    label: 'Net Worth',
+    path: '/net-worth',
+    icon: SavingsIcon
   },
   {
-    label: 'Asset',
-    path: '/asset-classes',
-    icon: CategoryIcon
-  },
-  {
-    label: 'Tickers',
-    path: '/tracked-tickers',
+    label: 'Investments',
+    path: '/investments',
     icon: ShowChartIcon
-  },
-  {
-    label: 'Portfolio',
-    path: '/user-portfolio',
-    icon: AccountBalanceWalletIcon
   },
   {
     label: 'Calculator',

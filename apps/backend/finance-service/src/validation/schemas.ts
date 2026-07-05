@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
-export const createUserPortfolioSchema = z.object({
-  symbol: z.string().min(1),
+export const createHoldingSchema = z.object({
+  ticker: z.string().min(1),
+  displayName: z.string().optional(),
   quantity: z.number(),
   avgBuyPrice: z.number(),
   buyDate: z.iso.date().optional(),
@@ -9,7 +10,7 @@ export const createUserPortfolioSchema = z.object({
   groupId: z.string().optional()
 });
 
-export const updateUserPortfolioSchema = createUserPortfolioSchema.partial();
+export const updateHoldingSchema = createHoldingSchema.partial();
 
 export const createTrackedTickerSchema = z.object({
   ticker: z.string().min(1),
@@ -30,15 +31,14 @@ export const createAssetClassSchema = z.object({
 
 export const updateAssetClassSchema = createAssetClassSchema.partial();
 
-export const createAssetAllocationSchema = z.object({
-  assetClassId: z.string().min(1),
-  totalValue: z.number().min(0),
-  gain: z.number(),
-  date: z.coerce.date({ error: 'A valid date is required' }),
+export const upsertSnapshotSchema = z.object({
+  entries: z.array(z.object({
+    assetClassId: z.string().min(1),
+    value: z.number().min(0),
+    gain: z.number().default(0)
+  })).min(1, 'At least one entry is required'),
   groupId: z.string().optional()
 });
-
-export const updateAssetAllocationSchema = createAssetAllocationSchema.partial();
 
 export const tickerFetchSchema = z.object({
   ticker: z.string().min(1, 'ticker is required')

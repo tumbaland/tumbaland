@@ -2,41 +2,39 @@ import { financeApi } from '../config/financeApi';
 import { ApiResponse } from '../types';
 
 export interface DashboardKPIs {
-  totalPortfolioValue: number;
-  totalInvested: number;
-  totalGains: number;
-  totalGainsPercentage: number;
-  monthlyChange: number;
-  monthlyChangePercentage: number;
-  assetBreakdown: {
-    stocks: number;
-    etfs: number;
-    cash: number;
-    other: number;
-  };
-  topPerformers: Array<{
-    symbol: string;
-    currentValue: number;
-    percentIncrease: number;
-  }>;
+  netWorth: number;
+  asOf: string | null;
+  monthChange: number;
+  monthChangePct: number;
+  yearChange: number;
+  yearChangePct: number;
+  totalGain: number;
+  totalGainPct: number;
 }
 
 export interface DashboardData {
   kpis: DashboardKPIs;
-  portfolioHistory: Array<{
+  netWorthHistory: Array<{
     date: string;
-    totalValue: number;
-    totalInvested: number;
-    assetBreakdown: {
-      [assetClass: string]: number;
-    };
+    total: number;
+    byClass: Record<string, number>;
   }>;
-  assetAllocation: Array<{
-    assetClass: string;
-    percentage: number;
+  allocation: Array<{
+    assetClassId: string;
+    name: string;
+    color: string;
     value: number;
-    color?: string;
+    gain: number;
+    percentage: number;
   }>;
+  assetColors: Record<string, string>;
+  holdings: {
+    count: number;
+    totalValue: number;
+    totalCost: number;
+    gain: number;
+    gainPct: number;
+  } | null;
 }
 
 const API_URL = '/dashboard';

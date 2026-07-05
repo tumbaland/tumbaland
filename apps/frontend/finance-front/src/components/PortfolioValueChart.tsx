@@ -20,7 +20,6 @@ import { LineChart } from '@mui/x-charts';
 interface PortfolioHistoryData {
   date: string;
   totalValue: number;
-  totalInvested: number;
   assetBreakdown?: {
     [assetClass: string]: number;
   };
@@ -75,7 +74,7 @@ const PortfolioValueChart: React.FC<PortfolioValueChartProps> = ({ records, asse
     const series = [
       {
         id: 'totalValue',
-        label: 'Total Portfolio',
+        label: 'Net worth',
         data: useLogScale
           ? filteredRecords.map(record => record.totalValue === 0 ? 0.01 : record.totalValue)
           : filteredRecords.map(record => record.totalValue),
@@ -130,7 +129,7 @@ const PortfolioValueChart: React.FC<PortfolioValueChartProps> = ({ records, asse
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
             <Timeline sx={{ mr: 2, color: '#667eea' }} />
             <Typography variant="h6" sx={{ fontWeight: 600, color: '#1e293b' }}>
-              Portfolio Value Over Time
+              Net Worth Over Time
             </Typography>
           </Box>
           <Box sx={{ textAlign: 'center', py: 6 }}>
@@ -160,7 +159,7 @@ const PortfolioValueChart: React.FC<PortfolioValueChartProps> = ({ records, asse
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Timeline sx={{ mr: 2, color: '#667eea' }} />
             <Typography variant="h6" sx={{ fontWeight: 600, color: '#1e293b' }}>
-              Portfolio Value Over Time
+              Net Worth Over Time
             </Typography>
           </Box>
 
@@ -210,7 +209,7 @@ const PortfolioValueChart: React.FC<PortfolioValueChartProps> = ({ records, asse
               }
             }]}
             yAxis={[{
-              label: isMobile ? '' : 'Portfolio Value (€)',
+              label: isMobile ? '' : 'Net Worth (€)',
               labelStyle: { textAnchor: 'middle' },
               scaleType: useLogScale ? 'log' : 'linear'
             }]}
