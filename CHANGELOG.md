@@ -1,4 +1,16 @@
 # Tumbalog
+### [0.0.361](https://github.com/toomastahves/tumbaland/compare/v0.0.360...v0.0.361) (2026-07-05)
+
+
+### Features
+
+* publish libraries ([70ea45f](https://github.com/toomastahves/tumbaland/commit/70ea45f92e981bd5bda5581fe3a6c4c0337e59d0))
+
+
+### Chores
+
+* **release:** 1.2.0 ([c2b62d3](https://github.com/toomastahves/tumbaland/commit/c2b62d3c257372a3230094341d4d14c6fecb19de))
+
 ### [0.0.360](https://github.com/toomastahves/tumbaland/compare/v0.0.359...v0.0.360) (2026-07-05)
 
 
