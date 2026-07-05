@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.362](https://github.com/toomastahves/tumbaland/compare/v0.0.361...v0.0.362) (2026-07-05)
+
+
+### Features
+
+* create collage v2 ([6dbcda1](https://github.com/toomastahves/tumbaland/commit/6dbcda13b6ada7a8ca570483ae17254482a65e27))
+
 ### [0.0.361](https://github.com/toomastahves/tumbaland/compare/v0.0.360...v0.0.361) (2026-07-05)
 
 
