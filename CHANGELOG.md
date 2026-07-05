@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.365](https://github.com/toomastahves/tumbaland/compare/v0.0.364...v0.0.365) (2026-07-05)
+
+
+### Features
+
+* add dashboard customizations ([5849b96](https://github.com/toomastahves/tumbaland/commit/5849b96eec3fc2b91fef8050c6554925d31a963d))
+
 ### [0.0.364](https://github.com/toomastahves/tumbaland/compare/v0.0.363...v0.0.364) (2026-07-05)
 
 
