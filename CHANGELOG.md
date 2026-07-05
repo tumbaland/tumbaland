@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.363](https://github.com/toomastahves/tumbaland/compare/v0.0.362...v0.0.363) (2026-07-05)
+
+
+### Features
+
+* create finance v2 ([9ae3a3d](https://github.com/toomastahves/tumbaland/commit/9ae3a3de2da5174b86d550835f82307d10942371))
+
 ### [0.0.362](https://github.com/toomastahves/tumbaland/compare/v0.0.361...v0.0.362) (2026-07-05)
 
 
