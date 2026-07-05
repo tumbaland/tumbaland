@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.364](https://github.com/toomastahves/tumbaland/compare/v0.0.363...v0.0.364) (2026-07-05)
+
+
+### Features
+
+* add relationship journal ([9b56ccd](https://github.com/toomastahves/tumbaland/commit/9b56ccd865679f9db9247343b962f20d0652bbdf))
+
 ### [0.0.363](https://github.com/toomastahves/tumbaland/compare/v0.0.362...v0.0.363) (2026-07-05)
 
 
