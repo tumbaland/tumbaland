@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { logger } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 import {
   Box,
   Container,

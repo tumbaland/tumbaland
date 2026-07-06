@@ -1,6 +1,7 @@
 import { useState, useEffect, ReactNode } from 'react';
 import { authService } from '../services/authService';
-import { UnauthorizedPage, Loader, logger } from '@tumbaland/components';
+import { UnauthorizedPage, Loader } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 
 interface ProtectedRouteProps {
   children: ReactNode;

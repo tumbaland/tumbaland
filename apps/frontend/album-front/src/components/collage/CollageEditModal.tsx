@@ -17,7 +17,7 @@ import {
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { Collage, CollageInput } from '../../types/collage';
 import { useAlbums } from '../../hooks/useAlbums';
-import { useTenantFilter } from '../../components/tenant';
+import { useTenantFilter } from '@tumbaland/components';
 
 interface CollageEditModalProps {
   open: boolean;

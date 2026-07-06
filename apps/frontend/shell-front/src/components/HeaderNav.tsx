@@ -5,7 +5,8 @@ import { useTheme } from '@mui/material/styles';
 import { Person, Groups, Payment } from '@mui/icons-material';
 import { authService } from '../services/authService';
 import { User } from '../types';
-import { NotificationsMenu, LoginButton, logger } from '@tumbaland/components';
+import { NotificationsMenu, LoginButton } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 import { AccountMenu } from './AccountMenu';
 import { NavigationButtons } from './NavigationButtons';
 

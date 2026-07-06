@@ -1,10 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { useConfig } from './useConfig';
-import { getCorrelationId, getSessionId, logger } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
+import { publicApi } from '../services/publicApi';
 
 export function useTodo() {
-  const config = useConfig();
-  const API_URL = config.PUBLIC_API_URL;
   const [todo, setTodo] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,18 +16,7 @@ export function useTodo() {
     setError(null);
 
     try {
-      const res = await fetch(`${API_URL}/api/todo/random`, {
-        headers: {
-          'x-correlation-id': getCorrelationId(),
-          'x-session-id': getSessionId()
-        }
-      });
-
-      if (!res.ok) {
-        throw new Error(`Failed to fetch todo: ${res.status}`);
-      }
-
-      const data: { todo: string } = await res.json();
+      const data = await publicApi.get<{ todo: string }>('/api/todo/random');
 
       if (data && data.todo) {
         setTodo(data.todo);
@@ -44,7 +31,7 @@ export function useTodo() {
       isLoadingRef.current = false;
       setIsLoading(false);
     }
-  }, [API_URL]);
+  }, []);
 
   // Auto-fetch on mount
   useEffect(() => {

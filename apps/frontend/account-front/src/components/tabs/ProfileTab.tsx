@@ -12,7 +12,7 @@ import {
   FormControlLabel
 } from '@mui/material';
 import { Email, Save, DeleteForever } from '@mui/icons-material';
-import { logger } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 import { authService } from '../../services/authService';
 import { profileService } from '../../services/profileService';
 import { User } from '../../types';

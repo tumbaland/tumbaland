@@ -17,7 +17,7 @@ export const getDays = async (filters?: GetDaysFilters): Promise<DaysResponse> =
   const response = await relationshipApi.get<ApiResponse<DaysResponse>>(
     `/days${params.size ? `?${params.toString()}` : ''}`
   );
-  return response.data.data;
+  return response.data;
 };
 
 /**
@@ -33,5 +33,5 @@ export const saveDay = async (
     entries,
     ...(groupId ? { groupId } : {})
   });
-  return response.data.data;
+  return response.data;
 };

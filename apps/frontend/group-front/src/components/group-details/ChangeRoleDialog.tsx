@@ -11,7 +11,7 @@ import {
   RadioGroup,
   Typography
 } from '@mui/material';
-import { logger } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 import { GroupMember } from '../../types';
 
 interface ChangeRoleDialogProps {

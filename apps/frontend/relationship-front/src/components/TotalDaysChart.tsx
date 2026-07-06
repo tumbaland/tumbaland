@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { logger } from '@tumbaland/components';
+import { useTenantFilter } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 import {
   Box,
   Card,
@@ -18,7 +19,6 @@ import {
 import { BarChart } from '@mui/x-charts';
 import { getMonthlyStatistics, MonthlyStatisticsData } from '../api/statistics';
 import { ActivityType } from '../api/types';
-import { useTenantFilter } from './tenant';
 
 interface TotalDaysChartProps {
   title?: string;

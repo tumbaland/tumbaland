@@ -17,10 +17,10 @@ import {
   alpha
 } from '@mui/material';
 import { ExpandMore, ExpandLess } from '@mui/icons-material';
-import { logger } from '@tumbaland/components';
+import { useTenantFilter } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 import { getRecentActivitiesSummary } from '../api/activities';
 import { ActivityEntry, ActivityType } from '../api/types';
-import { useTenantFilter } from './tenant';
 import { getActivityTypes } from '../api/activityTypes';
 
 interface TimelineOption {

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { logger } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 import {
   Alert,
   Box,

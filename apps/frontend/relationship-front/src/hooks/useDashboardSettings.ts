@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { logger } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 import { DashboardSettingsData, getDashboardSettings, saveDashboardSettings } from '../api/dashboardSettings';
 import { getActivityTypes } from '../api/activityTypes';
 import { ActivityType } from '../api/types';

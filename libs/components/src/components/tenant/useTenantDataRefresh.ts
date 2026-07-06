@@ -1,4 +1,4 @@
-import { logger } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 import { TenantOption } from './TenantProvider';
 
 /**
@@ -8,7 +8,7 @@ import { TenantOption } from './TenantProvider';
  */
 export const useTenantFilter = (): string | undefined => {
   const selectedTenant = getTenantFromStorage();
-  
+
   // Return groupId for group context, undefined for personal context
   return selectedTenant?.type === 'group' ? selectedTenant.id : undefined;
 };

@@ -17,12 +17,12 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
-import { logger } from '@tumbaland/components';
+import { useTenantFilter } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 import { ActivityType, Day, DayEntryInput } from '../api/types';
 import { getActivityTypes } from '../api/activityTypes';
 import { getActivityDescriptions } from '../api/activities';
 import { getDays, saveDay } from '../api/days';
-import { useTenantFilter } from './tenant';
 
 interface DayEditorDialogProps {
   open: boolean;

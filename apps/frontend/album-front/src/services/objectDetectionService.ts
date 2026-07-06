@@ -1,5 +1,5 @@
 
-import { logger } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 import { photoService } from './photoService';
 import { getGlobalConfig, AppConfig } from '../config/ConfigProvider';
 

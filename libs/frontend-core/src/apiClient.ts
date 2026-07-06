@@ -1,4 +1,4 @@
-import { getCorrelationId, getSessionId } from '@tumbaland/components';
+import { getCorrelationId, getSessionId } from './monitoring';
 
 export interface ApiClientOptions {
   /** Read fresh at call time (config may not be resolved yet at module load). */

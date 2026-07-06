@@ -17,7 +17,7 @@ const API_URL = '/ticker-price-history';
 export const getTickerPriceHistory = async (ticker?: string): Promise<TickerPriceHistory[]> => {
   const url = ticker ? `${API_URL}?ticker=${ticker}` : API_URL;
   const res = await financeApi.get<ApiResponse<TickerPriceHistory[]>>(url);
-  return res.data.data;
+  return res.data;
 };
 
 export const fetchTickerPriceHistory = async (ticker: string): Promise<void> => {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { logger } from '@tumbaland/components';
 import { TenantOption, TenantProvider, useTenantListener, useTenantContext } from './TenantProvider';
+import { getCorrelationId, getSessionId, logger } from '@tumbaland/frontend-core';
 
 // Re-export for convenience
 export { TenantProvider, useTenantListener, useTenantContext, type TenantOption };
@@ -61,7 +61,9 @@ const fetchGroupsGlobally = async (groupApiUrl: string): Promise<TenantOption[]>
       }
 
       const headers = {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'x-correlation-id': getCorrelationId(),
+        'x-session-id': getSessionId()
       };
 
       // Use user authentication for fetching groups; the httpOnly access_token
@@ -80,7 +82,7 @@ const fetchGroupsGlobally = async (groupApiUrl: string): Promise<TenantOption[]>
       }
 
       const data: GroupApiResponse = await response.json();
-      
+
       if (!data.success) {
         throw new Error('API returned unsuccessful response');
       }
@@ -176,7 +178,7 @@ export const useTenant = (
 
       // Fetch groups
       const groupTenants = await fetchGroups();
-      
+
       const allTenants = [personalTenant, ...groupTenants];
       setAvailableTenants(allTenants);
 
@@ -201,11 +203,11 @@ export const useTenant = (
       const errorMessage = err instanceof Error ? err.message : 'Failed to load contexts';
       logger.error('Error in refreshTenants', err);
       setError(errorMessage);
-      
+
       // Fallback to personal account only
       const personalTenant: TenantOption = {
         id: 'personal',
-        name: 'Personal', 
+        name: 'Personal',
         type: 'personal'
       };
       setAvailableTenants([personalTenant]);

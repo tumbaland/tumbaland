@@ -6,7 +6,7 @@ const API_URL = '/snapshots';
 export const getSnapshots = async (groupId?: string): Promise<Snapshot[]> => {
   const params = groupId ? { groupId } : undefined;
   const res = await financeApi.get<ApiResponse<Snapshot[]>>(API_URL, { params });
-  return res.data.data;
+  return res.data;
 };
 
 /** Create or replace the snapshot for a month (YYYY-MM): the monthly check-in. */
@@ -19,7 +19,7 @@ export const saveSnapshot = async (
     entries,
     ...(groupId ? { groupId } : {})
   });
-  return res.data.data;
+  return res.data;
 };
 
 export const deleteSnapshot = async (id: string): Promise<void> => {

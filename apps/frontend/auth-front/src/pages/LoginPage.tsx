@@ -4,7 +4,8 @@ import { initializeGoogleSignIn } from '../authFlow';
 import LoggedInUser from '../components/LoggedInUser';
 import LoginPrompt from '../components/LoginPrompt';
 import { useConfig } from '../config/useConfig';
-import { getCorrelationId, getSessionId, logger } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
+import { authApi } from '../services/authApi';
 
 const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -16,14 +17,7 @@ const LoginPage: React.FC = () => {
   useEffect(() => {
     const checkExistingAuth = async () => {
       try {
-        const response = await fetch(`${config.AUTH_SERVICE_URL}/auth/verify`, {
-          credentials: 'include',
-          headers: {
-            'x-correlation-id': getCorrelationId(),
-            'x-session-id': getSessionId()
-          }
-        });
-        const data = await response.json();
+        const data = await authApi.get<{ success: boolean; authenticated: boolean; user?: unknown }>('/auth/verify');
         if (data.success && data.authenticated) {
           setUser(data.user);
           setIsLoading(false);
@@ -55,18 +49,9 @@ const LoginPage: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      const response = await fetch(`${config.AUTH_SERVICE_URL}/auth/logout`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'x-correlation-id': getCorrelationId(),
-          'x-session-id': getSessionId()
-        }
-      });
-      if (response.ok) {
-        setUser(null);
-        window.location.reload();
-      }
+      await authApi.post('/auth/logout');
+      setUser(null);
+      window.location.reload();
     } catch (err) {
       logger.error('Logout failed', err);
     }

@@ -1,6 +1,6 @@
 {
   "name": "@tumbaland/components",
-  "version": "1.13.0",
+  "version": "1.13.2",
   "author": "Tumbaland",
   "license": "MIT",
   "main": "dist/index.js",
@@ -21,7 +21,7 @@
   "dependencies": {
     "@mui/icons-material": "^9.2.0",
     "@mui/material": "^9.2.0",
-    "web-vitals": "^5.3.0"
+    "@tumbaland/frontend-core": "*"
   },
   "peerDependencies": {
     "react": "^19.1.0",

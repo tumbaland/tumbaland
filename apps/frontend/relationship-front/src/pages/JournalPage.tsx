@@ -16,12 +16,12 @@ import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
 import DownloadIcon from '@mui/icons-material/Download';
 import EditCalendarIcon from '@mui/icons-material/EditCalendar';
-import { logger } from '@tumbaland/components';
+import { useTenantFilter } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 import { ActivityType, Day, DaysResponse } from '../api/types';
 import { getDays } from '../api/days';
 import { getActivityTypes } from '../api/activityTypes';
 import DayEditorDialog from '../components/DayEditorDialog';
-import { useTenantFilter } from '../components/tenant';
 
 const PAGE_SIZE = 30;
 

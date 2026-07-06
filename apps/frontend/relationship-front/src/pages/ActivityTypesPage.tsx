@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Typography, Container, Button } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import ActivityTypesManagement from '../components/ActivityTypesManagement';
-import { useTenantFilter } from '../components/tenant';
+import { useTenantFilter } from '@tumbaland/components';
 
 const ActivityTypesPage: React.FC = () => {
   const groupId = useTenantFilter();

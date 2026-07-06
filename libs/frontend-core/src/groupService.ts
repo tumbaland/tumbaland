@@ -1,4 +1,4 @@
-import { getCorrelationId, getSessionId } from '@tumbaland/components';
+import { getCorrelationId, getSessionId } from './monitoring';
 import { ApiResponse, Group } from './types';
 
 export interface GroupServiceConfig {

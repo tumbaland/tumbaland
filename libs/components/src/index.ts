@@ -5,6 +5,16 @@ export { LoginButton } from './components/LoginButton';
 export { NotificationsMenu } from './components/NotificationsMenu/NotificationsMenu';
 export { AuthHeader } from './components/AuthHeader';
 
+// Tenant selection: provider, selector, and hooks shared across domain frontends
+export {
+  TenantSelector,
+  TenantProvider,
+  useTenant,
+  useTenantListener,
+  useTenantContext,
+  useTenantFilter
+} from './components/tenant';
+
 // Re-export types for better TypeScript support and documentation
 export type { LoaderProps } from './components/Loader';
 export type { ErrorPageProps } from './components/ErrorPage';
@@ -18,22 +28,8 @@ export type {
   AuthHeaderTenantOption,
   AuthHeaderTenantSelectorProps
 } from './components/AuthHeader';
+export type { TenantOption, TenantSelectorProps, UseTenantResult } from './components/tenant';
 
 // Config provider factory
 export { createConfigProvider } from './config/createConfigProvider';
 export type { CreateConfigProviderOptions } from './config/createConfigProvider';
-
-// Monitoring
-export {
-  initMonitoring,
-  captureException,
-  captureMessage,
-  setUser,
-  setTag,
-  recordMetric,
-  initWebVitals,
-  generateCorrelationId,
-  getCorrelationId,
-  getSessionId,
-  logger
-} from './monitoring';

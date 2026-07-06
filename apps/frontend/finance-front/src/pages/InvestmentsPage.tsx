@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Typography, Tabs, Tab, Snackbar, Alert, CircularProgress } from '@mui/material';
-import { useTenantFilter } from '../components/tenant';
+import { useTenantFilter } from '@tumbaland/components';
 import { useHoldings } from '../hooks/useHoldings';
 import { useTrackedTickers } from '../hooks/useTrackedTicker';
 import HoldingsTab from '../components/investments/HoldingsTab';

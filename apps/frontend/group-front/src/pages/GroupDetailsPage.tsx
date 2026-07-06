@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Container, Alert, CircularProgress } from '@mui/material';
-import { logger } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 import { authService } from '../services/authService';
 import { groupApi } from '../services/groupApi';
 import { Group, GroupMember, User } from '../types';

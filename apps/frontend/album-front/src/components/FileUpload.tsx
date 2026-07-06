@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { logger } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 import {
   Box,
   Button,

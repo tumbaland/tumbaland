@@ -2,7 +2,7 @@ import { createContext, useEffect, useState, ReactNode } from 'react';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { Loader } from '../components/Loader';
 import { ErrorPage, ErrorPageProps } from '../components/ErrorPage';
-import { initMonitoring, initWebVitals } from '../monitoring';
+import { initMonitoring, initWebVitals } from '@tumbaland/frontend-core';
 
 export interface CreateConfigProviderOptions<TConfig extends { PUBLIC_API_URL?: string }> {
   /** Passed to initMonitoring as the `service` tag. */

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { logger } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 import {
   Box,
   Container,

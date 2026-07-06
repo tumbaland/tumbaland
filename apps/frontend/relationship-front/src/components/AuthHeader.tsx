@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { AuthHeader as SharedAuthHeader, logger } from '@tumbaland/components';
+import { AuthHeader as SharedAuthHeader, TenantSelector, useTenant } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 import { authService } from '../services/authService';
 import { User } from '../types';
 import { navigationItems } from '../config/navigation';
-import { TenantSelector, useTenant } from './tenant';
 import { useConfig } from '../hooks/useConfig';
 
 // No caller passes props to <AuthHeader /> today (checked all usages), so this wrapper always

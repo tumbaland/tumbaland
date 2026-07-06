@@ -18,7 +18,7 @@ import {
   Tooltip
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { useTenantFilter } from '../components/tenant';
+import { useTenantFilter } from '@tumbaland/components';
 import { useHoldings } from '../hooks/useHoldings';
 import { useTrackedTickers } from '../hooks/useTrackedTicker';
 import { getTickerPriceHistory } from '../services/tickerPriceHistoryService';

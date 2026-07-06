@@ -25,7 +25,7 @@ import {
   KeyboardArrowUp,
   Category as CategoryIcon
 } from '@mui/icons-material';
-import { useTenantFilter } from '../components/tenant';
+import { useTenantFilter } from '@tumbaland/components';
 import { useSnapshots, useSaveSnapshot, useDeleteSnapshot } from '../hooks/useSnapshots';
 import { useAssetClasses } from '../hooks/useAssetClasses';
 import CheckInDialog from '../components/net-worth/CheckInDialog';

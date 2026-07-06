@@ -1,8 +1,7 @@
 import React from 'react';
-import { AuthHeader as SharedAuthHeader } from '@tumbaland/components';
+import { AuthHeader as SharedAuthHeader, TenantSelector, useTenant } from '@tumbaland/components';
 import { authService } from '../services/authService';
 import { navigationItems } from '../config/navigation';
-import { TenantSelector, useTenant } from './tenant';
 import { useConfig } from '../hooks/useConfig';
 import { useCurrentUser, useLogout } from '../hooks/useAuth';
 

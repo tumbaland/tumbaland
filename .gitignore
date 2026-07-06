@@ -16,3 +16,8 @@ apps/infra/tumbaland-proxy/cloudflare.ini
 storage
 apps/infra/mongodb/data
 backups/
+
+# Playwright E2E artifacts
+e2e/test-results
+e2e/playwright-report
+e2e/.last-run.json

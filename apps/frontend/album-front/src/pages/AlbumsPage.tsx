@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { logger } from '@tumbaland/components';
+import { useTenantFilter } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 import {
   Box,
   Container,
@@ -23,7 +24,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAlbums } from '../hooks/useAlbums';
 import EditAlbumDialog from '../components/EditAlbumDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { useTenantFilter } from '../components/tenant';
 import { Album } from '../types';
 import CreateAlbumDialog from '../components/CreateAlbumDialog';
 import AlbumsGrid from '../components/AlbumsGrid';

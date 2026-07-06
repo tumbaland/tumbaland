@@ -5,7 +5,7 @@ export const photoService = {
   // Create a new photo record
   async createPhoto(photoData: CreatePhotoData): Promise<Photo> {
     const response = await albumApi.post<ApiResponse<Photo>>('/photos', photoData);
-    return response.data.data;
+    return response.data;
   },
 
   // Get photos by album
@@ -18,13 +18,13 @@ export const photoService = {
     }
   ): Promise<PaginatedResponse<Photo>> {
     const response = await albumApi.get<ApiResponse<PaginatedResponse<Photo>>>(`/photos/album/${albumId}`, { params });
-    return response.data.data;
+    return response.data;
   },
 
   // Get photo by ID
   async getPhotoById(id: string): Promise<Photo> {
     const response = await albumApi.get<ApiResponse<Photo>>(`/photos/${id}`);
-    return response.data.data;
+    return response.data;
   },
 
   // Update photo
@@ -33,13 +33,13 @@ export const photoService = {
     photoData: Partial<Pick<Photo, 'title' | 'description' | 'tags' | 'metadata'>>
   ): Promise<Photo> {
     const response = await albumApi.put<ApiResponse<Photo>>(`/photos/${id}`, photoData);
-    return response.data.data;
+    return response.data;
   },
 
   // Delete photo
   async deletePhoto(id: string): Promise<void> {
     const response = await albumApi.delete<ApiResponse<void>>(`/photos/${id}`);
-    return response.data.data;
+    return response.data;
   },
 
   // Get upload signed URL from album service (MinIO)
@@ -53,7 +53,7 @@ export const photoService = {
       mimetype,
       albumId
     });
-    return response.data.data;
+    return response.data;
   },
 
   // Upload file to signed URL
@@ -80,7 +80,7 @@ export const photoService = {
     }
   ): Promise<Photo> {
     const response = await albumApi.put<ApiResponse<Photo>>(`/photos/${photoId}/ai-analysis`, analysisData);
-    return response.data.data;
+    return response.data;
   },
 
   // Utility: Load photos with signed URLs (album service now provides them directly)

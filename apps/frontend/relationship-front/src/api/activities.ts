@@ -8,7 +8,7 @@ export const getActivityDescriptions = async (typeId: string, groupId?: string):
   const params = new URLSearchParams({ typeId });
   if (groupId) params.append('groupId', groupId);
   const response = await relationshipApi.get<ApiResponse<string[]>>(`/activities/descriptions?${params.toString()}`);
-  return response.data.data;
+  return response.data;
 };
 
 // Keyed by activity type slug, then by "{months}months" timeline key (e.g. "1months", "3months", "12months").
@@ -22,5 +22,5 @@ export const getRecentActivitiesSummary = async (groupId?: string): Promise<Rece
   const response = await relationshipApi.get<ApiResponse<RecentActivitiesSummary>>('/activities/recent-summary', {
     params: groupId ? { groupId } : undefined
   });
-  return response.data.data;
+  return response.data;
 };

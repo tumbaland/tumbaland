@@ -1,5 +1,6 @@
 import { getGlobalConfig } from './config/ConfigProvider';
-import { getCorrelationId, getSessionId, logger } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
+import { authApi } from './services/authApi';
 
 declare global {
   interface Window {
@@ -8,30 +9,20 @@ declare global {
   }
 }
 
+interface ValidateResponse {
+  success: boolean;
+  message?: string;
+}
+
 function handleCredentialResponse(response: { credential: string }, redirectUri: string) {
   const idToken = response.credential;
-  const config = getGlobalConfig();
 
-  logger.debug('Sending token to auth service', { authServiceUrl: config.AUTH_SERVICE_URL });
+  logger.debug('Sending token to auth service', { authServiceUrl: getGlobalConfig().AUTH_SERVICE_URL });
 
-  fetch(`${config.AUTH_SERVICE_URL}/auth/validate`, {
-    method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json',
-      'x-correlation-id': getCorrelationId(),
-      'x-session-id': getSessionId()
-    },
-    body: JSON.stringify({ idToken }),
-    credentials: 'include' // Include cookies in the request
-  })
-    .then((res) => {
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-      return res.json();
-    })
+  authApi
+    .post<ValidateResponse>('/auth/validate', { idToken })
     .then((data) => {
-      logger.debug('Auth service response', data);
+      logger.debug('Auth service response', { success: data.success, message: data.message });
       if (data.success) {
         window.location.href = redirectUri; // Redirect back without JWT
       } else {
@@ -41,7 +32,7 @@ function handleCredentialResponse(response: { credential: string }, redirectUri:
     })
     .catch((err) => {
       logger.error('Google credential exchange failed', err);
-      alert('Authentication error: ' + err.message);
+      alert('Authentication error: ' + (err instanceof Error ? err.message : 'Unknown error'));
     });
 }
 

@@ -1,7 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { collageService } from '../services/collageService';
 import { Collage, CollageInput } from '../types/collage';
-import { useTenantFilter } from '../components/tenant';
+import { useTenantFilter } from '@tumbaland/components';
 
 const collageKeys = {
   all: ['collages'] as const,

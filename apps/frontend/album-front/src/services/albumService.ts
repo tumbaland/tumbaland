@@ -5,7 +5,7 @@ export const albumService = {
   // Create a new album
   async createAlbum(albumData: CreateAlbumData & { groupId?: string }): Promise<ApiResponse<Album>> {
     const response = await albumApi.post<ApiResponse<Album>>('/albums', albumData);
-    return response.data;
+    return response;
   },
 
   // Get all albums
@@ -18,13 +18,13 @@ export const albumService = {
     includeCover?: boolean;
   }): Promise<PaginatedResponse<Album>> {
     const response = await albumApi.get<ApiResponse<PaginatedResponse<Album>>>('/albums', { params });
-    return response.data.data;
+    return response.data;
   },
 
   // Get album by ID
   async getAlbumById(id: string): Promise<Album> {
     const response = await albumApi.get<ApiResponse<Album>>(`/albums/${id}`);
-    return response.data.data;
+    return response.data;
   },
 
   // Update album
@@ -33,25 +33,25 @@ export const albumService = {
     albumData: Partial<CreateAlbumData> & { coverPhotoId?: string }
   ): Promise<ApiResponse<Album>> {
     const response = await albumApi.put<ApiResponse<Album>>(`/albums/${id}`, albumData);
-    return response.data;
+    return response;
   },
 
   // Delete album
   async deleteAlbum(id: string): Promise<ApiResponse<void>> {
     const response = await albumApi.delete<ApiResponse<void>>(`/albums/${id}`);
-    return response.data;
+    return response;
   },
 
   // Set cover photo for album
   async setCoverPhoto(albumId: string, photoId: string): Promise<ApiResponse<Album>> {
     const response = await albumApi.put<ApiResponse<Album>>(`/albums/${albumId}/cover`, { photoId });
-    return response.data;
+    return response;
   },
 
   // Remove cover photo from album
   async removeCoverPhoto(albumId: string): Promise<ApiResponse<Album>> {
     const response = await albumApi.delete<ApiResponse<Album>>(`/albums/${albumId}/cover`);
-    return response.data;
+    return response;
   },
 
   // Update photo AI analysis info
@@ -69,7 +69,7 @@ export const albumService = {
       segmentationType: analysis.segmentationType,
       processingTime: analysis.processingTime
     });
-    return response.data;
+    return response;
   },
 
   // Get album statistics for dashboard
@@ -78,6 +78,6 @@ export const albumService = {
     tenantId?: string;
   }): Promise<AlbumStatistics> {
     const response = await albumApi.get<ApiResponse<AlbumStatistics>>('/statistics', { params });
-    return response.data.data;
+    return response.data;
   }
 };

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { logger } from '@tumbaland/components';
+import { useTenantFilter } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 import {
   Box,
   Container,
@@ -17,7 +18,6 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { albumService } from '../services/albumService';
 import { AlbumStatistics } from '../types';
-import { useTenantFilter } from '../components/tenant';
 import StatisticsOverview from '../components/dashboard/StatisticsOverview';
 import TimeSeriesChart from '../components/dashboard/TimeSeriesChart';
 import StorageChart from '../components/dashboard/StorageChart';

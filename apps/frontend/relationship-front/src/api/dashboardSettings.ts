@@ -16,7 +16,7 @@ export const getDashboardSettings = async (groupId?: string): Promise<DashboardS
   const response = await relationshipApi.get<ApiResponse<DashboardSettingsData>>('/dashboard-settings', {
     params: groupId ? { groupId } : undefined
   });
-  return response.data.data;
+  return response.data;
 };
 
 export const saveDashboardSettings = async (
@@ -27,5 +27,5 @@ export const saveDashboardSettings = async (
     ...settings,
     ...(groupId ? { groupId } : {})
   });
-  return response.data.data;
+  return response.data;
 };

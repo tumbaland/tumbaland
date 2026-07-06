@@ -1,0 +1,147 @@
+jest.mock('./collage.model', () => {
+  const CollageModel: any = jest.fn().mockImplementation((data: any) => ({
+    ...data,
+    save: jest.fn().mockResolvedValue(undefined)
+  }));
+  CollageModel.findById = jest.fn();
+  CollageModel.findByIdAndUpdate = jest.fn();
+  CollageModel.findByIdAndDelete = jest.fn();
+  CollageModel.find = jest.fn();
+  return { CollageModel };
+});
+
+import { CollageModel } from './collage.model';
+import {
+  createCollage,
+  updateCollage,
+  getCollageById,
+  getCollageList,
+  deleteCollage
+} from './collage.service';
+import { CollageInput } from './collage.types';
+
+const mockedCtor = CollageModel as unknown as jest.Mock;
+const mockedFindById = CollageModel.findById as unknown as jest.Mock;
+const mockedFindByIdAndUpdate = CollageModel.findByIdAndUpdate as unknown as jest.Mock;
+const mockedFindByIdAndDelete = CollageModel.findByIdAndDelete as unknown as jest.Mock;
+const mockedFind = CollageModel.find as unknown as jest.Mock;
+
+const OWNER = 'user-1';
+const OTHER = 'user-2';
+
+const collageInput = { title: 'My Collage', albumIds: ['album-1'], config: { photos: [] } } as unknown as CollageInput;
+
+describe('collage.service', () => {
+  describe('createCollage', () => {
+    it('stamps the userId onto the saved collage', async () => {
+      const result: any = await createCollage(collageInput, OWNER);
+      expect(mockedCtor).toHaveBeenCalledWith(expect.objectContaining({ title: 'My Collage', userId: OWNER }));
+      expect(result.userId).toBe(OWNER);
+      expect(result.save).toHaveBeenCalled();
+    });
+  });
+
+  describe('getCollageById', () => {
+    it('returns null when the collage does not exist', async () => {
+      mockedFindById.mockResolvedValue(null);
+      expect(await getCollageById('missing', OWNER)).toBeNull();
+    });
+
+    it('returns the collage for its owner', async () => {
+      const collage = { _id: 'c1', userId: OWNER };
+      mockedFindById.mockResolvedValue(collage);
+      expect(await getCollageById('c1', OWNER)).toBe(collage);
+    });
+
+    it('throws ForbiddenError for a non-owner with no group access', async () => {
+      mockedFindById.mockResolvedValue({ _id: 'c1', userId: OWNER });
+      await expect(getCollageById('c1', OTHER)).rejects.toMatchObject({ name: 'ForbiddenError' });
+    });
+
+    it('allows a member of the collage group', async () => {
+      const collage = { _id: 'c1', userId: OWNER, groupId: 'group-9' };
+      mockedFindById.mockResolvedValue(collage);
+      expect(await getCollageById('c1', OTHER, ['group-9'])).toBe(collage);
+    });
+  });
+
+  describe('updateCollage', () => {
+    it('throws NotFoundError when the collage does not exist', async () => {
+      mockedFindById.mockResolvedValue(null);
+      await expect(updateCollage('missing', collageInput, OWNER)).rejects.toMatchObject({ name: 'NotFoundError' });
+    });
+
+    it('throws ForbiddenError when the user cannot access the collage', async () => {
+      mockedFindById.mockResolvedValue({ _id: 'c1', userId: OWNER });
+      await expect(updateCollage('c1', collageInput, OTHER)).rejects.toMatchObject({ name: 'ForbiddenError' });
+      expect(mockedFindByIdAndUpdate).not.toHaveBeenCalled();
+    });
+
+    it('updates and returns the collage for an authorized user', async () => {
+      mockedFindById.mockResolvedValue({ _id: 'c1', userId: OWNER });
+      const updated = { _id: 'c1', title: 'Updated' };
+      mockedFindByIdAndUpdate.mockResolvedValue(updated);
+
+      const result = await updateCollage('c1', collageInput, OWNER);
+
+      expect(mockedFindByIdAndUpdate).toHaveBeenCalledWith('c1', collageInput, { new: true });
+      expect(result).toBe(updated);
+    });
+  });
+
+  describe('deleteCollage', () => {
+    it('throws NotFoundError when the collage does not exist', async () => {
+      mockedFindById.mockResolvedValue(null);
+      await expect(deleteCollage('missing', OWNER)).rejects.toMatchObject({ name: 'NotFoundError' });
+    });
+
+    it('throws ForbiddenError when the user cannot access the collage', async () => {
+      mockedFindById.mockResolvedValue({ _id: 'c1', userId: OWNER });
+      await expect(deleteCollage('c1', OTHER)).rejects.toMatchObject({ name: 'ForbiddenError' });
+      expect(mockedFindByIdAndDelete).not.toHaveBeenCalled();
+    });
+
+    it('deletes the collage for an authorized user', async () => {
+      mockedFindById.mockResolvedValue({ _id: 'c1', userId: OWNER });
+      mockedFindByIdAndDelete.mockResolvedValue({ _id: 'c1' });
+
+      await deleteCollage('c1', OWNER);
+
+      expect(mockedFindByIdAndDelete).toHaveBeenCalledWith('c1');
+    });
+  });
+
+  describe('getCollageList', () => {
+    beforeEach(() => {
+      mockedFind.mockReturnValue({ sort: jest.fn().mockResolvedValue([]) });
+    });
+
+    it('filters by albumId when provided', async () => {
+      await getCollageList('album-1', OWNER);
+      expect(mockedFind).toHaveBeenCalledWith(expect.objectContaining({ albumIds: { $in: ['album-1'] } }));
+    });
+
+    it('scopes to personal collages (no group) when no groupId is given', async () => {
+      await getCollageList(undefined, OWNER);
+      expect(mockedFind).toHaveBeenCalledWith({ userId: OWNER, groupId: { $exists: false } });
+    });
+
+    it('scopes to a group when the user is a member', async () => {
+      await getCollageList(undefined, OWNER, ['group-9'], 'group-9');
+      expect(mockedFind).toHaveBeenCalledWith({ groupId: 'group-9' });
+    });
+
+    it('throws ForbiddenError when requesting a group the user does not belong to', async () => {
+      await expect(getCollageList(undefined, OWNER, [], 'group-9')).rejects.toMatchObject({ name: 'ForbiddenError' });
+      expect(mockedFind).not.toHaveBeenCalled();
+    });
+
+    it('sorts results by createdAt descending', async () => {
+      const sort = jest.fn().mockResolvedValue([{ _id: 'c1' }]);
+      mockedFind.mockReturnValue({ sort });
+      const result = await getCollageList(undefined, OWNER);
+      expect(sort).toHaveBeenCalledWith({ createdAt: -1 });
+      expect(result).toEqual([{ _id: 'c1' }]);
+    });
+  });
+});

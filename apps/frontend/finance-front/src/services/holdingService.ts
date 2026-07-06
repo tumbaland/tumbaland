@@ -24,17 +24,17 @@ const API_URL = '/holdings';
 export const getHoldings = async (groupId?: string): Promise<Holding[]> => {
   const params = groupId ? { groupId } : undefined;
   const res = await financeApi.get<ApiResponse<Holding[]>>(API_URL, { params });
-  return res.data.data;
+  return res.data;
 };
 
 export const addHolding = async (data: Omit<Holding, '_id'>): Promise<Holding> => {
   const res = await financeApi.post<ApiResponse<Holding>>(API_URL, data);
-  return res.data.data;
+  return res.data;
 };
 
 export const updateHolding = async (id: string, data: Partial<Holding>): Promise<Holding> => {
   const res = await financeApi.put<ApiResponse<Holding>>(`${API_URL}/${id}`, data);
-  return res.data.data;
+  return res.data;
 };
 
 export const deleteHolding = async (id: string): Promise<void> => {

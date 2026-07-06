@@ -1,5 +1,5 @@
 import React, { useState, useCallback, createContext, useContext, useEffect } from 'react';
-import { logger } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 
 export interface TenantOption {
   id: string;
@@ -36,7 +36,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const registerTenantChangeListener = useCallback((callback: (tenant: TenantOption) => void) => {
     tenantChangeListeners.push(callback);
-    
+
     // Return cleanup function
     return () => {
       const index = tenantChangeListeners.indexOf(callback);
@@ -62,7 +62,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 // Hook to listen for tenant changes in components
 export const useTenantListener = (callback: (tenant: TenantOption) => void) => {
   const context = useContext(TenantContext);
-  
+
   useEffect(() => {
     if (!context) {
       logger.warn('useTenantListener used outside TenantProvider');

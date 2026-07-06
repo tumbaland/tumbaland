@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { logger } from '@tumbaland/components';
+import { useTenantFilter } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 import {
   Box,
   Card,
@@ -14,7 +15,6 @@ import {
   InputLabel
 } from '@mui/material';
 import { getWeeklyHeatmapData, WeeklyHeatmapData } from '../api/statistics';
-import { useTenantFilter } from './tenant';
 
 interface WeeklyHeatmapProps {
   title?: string;

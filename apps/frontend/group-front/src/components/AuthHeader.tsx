@@ -10,7 +10,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
 import { authService } from '../services/authService';
 import { User } from '../types';
-import { logger } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 
 const AuthHeader: React.FC = () => {
   const navigate = useNavigate();

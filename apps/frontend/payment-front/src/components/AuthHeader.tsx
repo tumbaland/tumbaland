@@ -12,7 +12,7 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import CircularProgress from '@mui/material/CircularProgress';
 import Divider from '@mui/material/Divider';
-import { logger } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 import { authService } from '../services/authService';
 import { User } from '../types';
 

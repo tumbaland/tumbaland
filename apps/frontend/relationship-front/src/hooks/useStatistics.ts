@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { logger } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 import { RelationshipStatistics, getStatistics } from '../api/statistics';
 
 interface UseStatisticsOptions {

@@ -48,27 +48,27 @@ export const getActivityTypes = async (filters?: GetActivityTypesFilters): Promi
   // Transform backend response to match frontend type
   const backendData = response.data;
   return {
-    data: backendData.data.types,
-    pagination: backendData.data.pagination
+    data: backendData.types,
+    pagination: backendData.pagination
   };
 };
 
 // Get activity type by ID
 export const getActivityTypeById = async (id: string): Promise<ActivityType> => {
   const response = await apiClient.get<ApiResponse<ActivityType>>(`/activity-types/${id}`);
-  return response.data.data;
+  return response.data;
 };
 
 // Create new activity type
 export const createActivityType = async (data: CreateActivityTypeRequest): Promise<ActivityType> => {
   const response = await apiClient.post<ApiResponse<ActivityType>>('/activity-types', data);
-  return response.data.data;
+  return response.data;
 };
 
 // Update activity type
 export const updateActivityType = async (id: string, data: UpdateActivityTypeRequest): Promise<ActivityType> => {
   const response = await apiClient.put<ApiResponse<ActivityType>>(`/activity-types/${id}`, data);
-  return response.data.data;
+  return response.data;
 };
 
 // Delete activity type

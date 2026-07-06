@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { logger } from '@tumbaland/components';
+import { useTenantFilter } from '@tumbaland/components';
+import { logger } from '@tumbaland/frontend-core';
 import {
   Box,
   Card,
@@ -19,7 +20,6 @@ import { LineChart } from '@mui/x-charts';
 import { getCumulativeTimelineData, CumulativeTimelineData } from '../api/statistics';
 import { getActivityTypes } from '../api/activityTypes';
 import { ActivityType } from '../api/types';
-import { useTenantFilter } from './tenant';
 interface ProcessedCumulativeTimelineData extends CumulativeTimelineData {
   cumulativeByType?: {
     activityTypeSlug: string;
