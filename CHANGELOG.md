@@ -1,4 +1,16 @@
 # Tumbalog
+### [0.0.366](https://github.com/toomastahves/tumbaland/compare/v0.0.365...v0.0.366) (2026-07-06)
+
+
+### Features
+
+* reduce code duplication ([a0c0574](https://github.com/toomastahves/tumbaland/commit/a0c0574ba77a50820be4bd42b13bf6e952ecf080))
+
+
+### Chores
+
+* **release:** 1.2.1 ([0908371](https://github.com/toomastahves/tumbaland/commit/09083712e16f8482766c03fa66841ba85cd00888))
+
 ### [0.0.365](https://github.com/toomastahves/tumbaland/compare/v0.0.364...v0.0.365) (2026-07-05)
 
 
