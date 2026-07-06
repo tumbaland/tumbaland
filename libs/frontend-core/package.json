@@ -1,6 +1,6 @@
 {
   "name": "@tumbaland/frontend-core",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Shared frontend auth/group/API-client logic for Tumbaland frontends",
   "author": "Tumbaland",
   "license": "MIT",
@@ -18,7 +18,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@tumbaland/components": "*"
+    "web-vitals": "^5.3.0"
   },
   "devDependencies": {
     "@types/node": "^26.1.0",
