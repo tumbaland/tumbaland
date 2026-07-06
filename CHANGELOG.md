@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.368](https://github.com/toomastahves/tumbaland/compare/v0.0.367...v0.0.368) (2026-07-06)
+
+
+### Features
+
+* optimize ci build ([74088ef](https://github.com/toomastahves/tumbaland/commit/74088ef1596b73739c2a4059cd65f1f686e0537e))
+
 ### [0.0.367](https://github.com/toomastahves/tumbaland/compare/v0.0.366...v0.0.367) (2026-07-06)
 
 
