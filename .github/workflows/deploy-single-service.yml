@@ -34,7 +34,10 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    # Native ARM64 runner: builds the arm64 image directly instead of emulating
+    # it under QEMU on an x64 runner (the previous `platforms: linux/arm64` path),
+    # which was the dominant cost of every deploy.
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -42,107 +45,18 @@ jobs:
       - name: Set variables
         id: vars
         run: |
-          case "${{ github.event.inputs.service }}" in
-            relationship-front)
-              CONTEXT=./apps/frontend/relationship-front
-              DOCKERFILE=./apps/frontend/relationship-front/Dockerfile
-              DEPLOYPATH=apps/frontend/relationship-front/compose.yml
-              DEPLOYDIR=apps/frontend/relationship-front
-              ;;
-            album-front)
-              CONTEXT=./apps/frontend/album-front
-              DOCKERFILE=./apps/frontend/album-front/Dockerfile
-              DEPLOYPATH=apps/frontend/album-front/compose.yml
-              DEPLOYDIR=apps/frontend/album-front
-              ;;
-            finance-front)
-              CONTEXT=./apps/frontend/finance-front
-              DOCKERFILE=./apps/frontend/finance-front/Dockerfile
-              DEPLOYPATH=apps/frontend/finance-front/compose.yml
-              DEPLOYDIR=apps/frontend/finance-front
-              ;;
-            shell-front)
-              CONTEXT=./apps/frontend/shell-front
-              DOCKERFILE=./apps/frontend/shell-front/Dockerfile
-              DEPLOYPATH=apps/frontend/shell-front/compose.yml
-              DEPLOYDIR=apps/frontend/shell-front
-              ;;
-            auth-front)
-              CONTEXT=./apps/frontend/auth-front
-              DOCKERFILE=./apps/frontend/auth-front/Dockerfile
-              DEPLOYPATH=apps/frontend/auth-front/compose.yml
-              DEPLOYDIR=apps/frontend/auth-front
-              ;;
-            account-front)
-              CONTEXT=./apps/frontend/account-front
-              DOCKERFILE=./apps/frontend/account-front/Dockerfile
-              DEPLOYPATH=apps/frontend/account-front/compose.yml
-              DEPLOYDIR=apps/frontend/account-front
-              ;;
-            payment-front)
-              CONTEXT=./apps/frontend/payment-front
-              DOCKERFILE=./apps/frontend/payment-front/Dockerfile
-              DEPLOYPATH=apps/frontend/payment-front/compose.yml
-              DEPLOYDIR=apps/frontend/payment-front
-              ;;
-            group-front)
-              CONTEXT=./apps/frontend/group-front
-              DOCKERFILE=./apps/frontend/group-front/Dockerfile
-              DEPLOYPATH=apps/frontend/group-front/compose.yml
-              DEPLOYDIR=apps/frontend/group-front
-              ;;
-            album-service)
-              CONTEXT=./apps/backend/album-service
-              DOCKERFILE=./apps/backend/album-service/Dockerfile
-              DEPLOYPATH=apps/backend/album-service/compose.yml
-              DEPLOYDIR=apps/backend/album-service
-              ;;
-            auth-service)
-              CONTEXT=./apps/backend/auth-service
-              DOCKERFILE=./apps/backend/auth-service/Dockerfile
-              DEPLOYPATH=apps/backend/auth-service/compose.yml
-              DEPLOYDIR=apps/backend/auth-service
-              ;;
-            finance-service)
-              CONTEXT=./apps/backend/finance-service
-              DOCKERFILE=./apps/backend/finance-service/Dockerfile
-              DEPLOYPATH=apps/backend/finance-service/compose.yml
-              DEPLOYDIR=apps/backend/finance-service
-              ;;
-            public-service)
-              CONTEXT=./apps/backend/public-service
-              DOCKERFILE=./apps/backend/public-service/Dockerfile
-              DEPLOYPATH=apps/backend/public-service/compose.yml
-              DEPLOYDIR=apps/backend/public-service
-              ;;
-            relationship-service)
-              CONTEXT=./apps/backend/relationship-service
-              DOCKERFILE=./apps/backend/relationship-service/Dockerfile
-              DEPLOYPATH=apps/backend/relationship-service/compose.yml
-              DEPLOYDIR=apps/backend/relationship-service
-              ;;
-            payment-service)
-              CONTEXT=./apps/backend/payment-service
-              DOCKERFILE=./apps/backend/payment-service/Dockerfile
-              DEPLOYPATH=apps/backend/payment-service/compose.yml
-              DEPLOYDIR=apps/backend/payment-service
-              ;;
-            group-service)
-              CONTEXT=./apps/backend/group-service
-              DOCKERFILE=./apps/backend/group-service/Dockerfile
-              DEPLOYPATH=apps/backend/group-service/compose.yml
-              DEPLOYDIR=apps/backend/group-service
-              ;;
-            file-service)
-              CONTEXT=./apps/backend/file-service
-              DOCKERFILE=./apps/backend/file-service/Dockerfile
-              DEPLOYPATH=apps/backend/file-service/compose.yml
-              DEPLOYDIR=apps/backend/file-service
-              ;;
+          SERVICE="${{ github.event.inputs.service }}"
+          # Convention: names ending in -front live under apps/frontend, everything
+          # else (the -service backends) under apps/backend. Each dir has a
+          # Dockerfile and a compose.yml.
+          case "$SERVICE" in
+            *-front) TIER=frontend ;;
+            *)       TIER=backend ;;
           esac
-          echo "context=$CONTEXT" >> $GITHUB_OUTPUT
-          echo "dockerfile=$DOCKERFILE" >> $GITHUB_OUTPUT
-          echo "deploy_path=$DEPLOYPATH" >> $GITHUB_OUTPUT
+          DEPLOYDIR="apps/$TIER/$SERVICE"
+          echo "context=./$DEPLOYDIR" >> $GITHUB_OUTPUT
+          echo "dockerfile=./$DEPLOYDIR/Dockerfile" >> $GITHUB_OUTPUT
+          echo "deploy_path=$DEPLOYDIR/compose.yml" >> $GITHUB_OUTPUT
           echo "deploy_dir=$DEPLOYDIR" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
@@ -160,8 +74,13 @@ jobs:
           context: ${{ steps.vars.outputs.context }}
           file: ${{ steps.vars.outputs.dockerfile }}
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.inputs.service }}:latest
-          platforms: linux/arm64
+          # Immutable SHA tag (for rollback) plus the :latest tag the compose files pull.
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.inputs.service }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.inputs.service }}:${{ github.sha }}
+          # Reuse the npm-install/build layers across runs via the GitHub Actions cache.
+          cache-from: type=gha,scope=${{ github.event.inputs.service }}
+          cache-to: type=gha,mode=max,scope=${{ github.event.inputs.service }}
 
       - name: Generate .env file
         run: |

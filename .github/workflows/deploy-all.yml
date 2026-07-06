@@ -1,0 +1,195 @@
+name: Deploy All Services
+
+run-name: Deploy All (${{ github.event.inputs.target }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Which services to deploy'
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - all-frontend
+          - all-backend
+      gap_seconds:
+        description: 'Pause between each service deploy on the server (seconds)'
+        required: false
+        default: '20'
+        type: string
+
+jobs:
+  # Resolve the list of services to (re)build and deploy from the chosen target.
+  set-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      services_json: ${{ steps.compute.outputs.services_json }}
+      services_list: ${{ steps.compute.outputs.services_list }}
+    steps:
+      - id: compute
+        run: |
+          FRONT="account-front album-front auth-front finance-front group-front payment-front relationship-front shell-front"
+          BACK="album-service auth-service file-service finance-service group-service payment-service public-service relationship-service"
+          case "${{ github.event.inputs.target }}" in
+            all)          SVCS="$FRONT $BACK" ;;
+            all-frontend) SVCS="$FRONT" ;;
+            all-backend)  SVCS="$BACK" ;;
+          esac
+          JSON=$(printf '%s\n' $SVCS | jq -R . | jq -cs .)
+          echo "services_json=$JSON" >> "$GITHUB_OUTPUT"
+          echo "services_list=$SVCS" >> "$GITHUB_OUTPUT"
+
+  # Build + push every image in parallel. This never touches the server, so there is
+  # no reason to serialize it — the slow part (image build) all happens at once.
+  build:
+    needs: set-matrix
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.set-matrix.outputs.services_json) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve paths
+        id: vars
+        run: |
+          case "${{ matrix.service }}" in
+            *-front) TIER=frontend ;;
+            *)       TIER=backend ;;
+          esac
+          echo "dir=apps/$TIER/${{ matrix.service }}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ steps.vars.outputs.dir }}
+          file: ./${{ steps.vars.outputs.dir }}/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  # Deploy to the server strictly one service at a time, with a pause between each,
+  # so the server never has to stop/start more than one container at once.
+  deploy:
+    needs: [set-matrix, build]
+    runs-on: ubuntu-latest
+    # Shares the concurrency group with deploy-single-service so no two deploys
+    # ever hit the server simultaneously.
+    concurrency:
+      group: tumbaland-deployment
+      cancel-in-progress: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate .env file
+        run: |
+          echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" > .env.app
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env.app
+          echo "INTERNAL_SERVICE_TOKEN=${{ secrets.INTERNAL_SERVICE_TOKEN }}" >> .env.app
+          echo "GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}" >> .env.app
+          echo "GOOGLE_CLOUD_KEY_FILE_BASE64=${{ secrets.GOOGLE_CLOUD_KEY_FILE_BASE64 }}" >> .env.app
+          echo "COOKIE_DOMAIN=${{ vars.COOKIE_DOMAIN }}" >> .env.app
+          echo "GOOGLE_CLOUD_PROJECT_ID=${{ vars.GOOGLE_CLOUD_PROJECT_ID }}" >> .env.app
+          echo "GOOGLE_CLOUD_BUCKET_NAME=${{ vars.GOOGLE_CLOUD_BUCKET_NAME }}" >> .env.app
+          echo "CORS_ORIGIN=${{ vars.CORS_ORIGIN }}" >> .env.app
+          echo "ALPHA_VANTAGE_API_KEY=${{ secrets.ALPHA_VANTAGE_API_KEY }}" >> .env.app
+          echo "GROUP_API_URL=${{ vars.GROUP_API_URL }}" >> .env.app
+          echo "ALBUM_API_URL=${{ vars.ALBUM_API_URL }}" >> .env.app
+          echo "AUTH_SERVICE_URL=${{ vars.AUTH_SERVICE_URL }}" >> .env.app
+          echo "AUTH_FRONT_URL=${{ vars.AUTH_FRONT_URL }}" >> .env.app
+          echo "FINANCE_API_URL=${{ vars.FINANCE_API_URL }}" >> .env.app
+          echo "RELATIONSHIP_FRONT_URL=${{ vars.RELATIONSHIP_FRONT_URL }}" >> .env.app
+          echo "ALBUM_FRONT_URL=${{ vars.ALBUM_FRONT_URL }}" >> .env.app
+          echo "FINANCE_FRONT_URL=${{ vars.FINANCE_FRONT_URL }}" >> .env.app
+          echo "RELATIONSHIP_API_URL=${{ vars.RELATIONSHIP_API_URL }}" >> .env.app
+          echo "PUBLIC_API_URL=${{ vars.PUBLIC_API_URL }}" >> .env.app
+          echo "OBJECT_DETECTION_API_URL=${{ vars.OBJECT_DETECTION_API_URL }}" >> .env.app
+          echo "SEGMENTATION_API_URL=${{ vars.SEGMENTATION_API_URL }}" >> .env.app
+          echo "PAYMENT_API_URL=${{ vars.PAYMENT_API_URL }}" >> .env.app
+          echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" >> .env.app
+          echo "STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}" >> .env.app
+          echo "PAYMENT_FRONT_URL=${{ vars.PAYMENT_FRONT_URL }}" >> .env.app
+          echo "PAYMENT_URL=${{ vars.PAYMENT_URL }}" >> .env.app
+          echo "GROUP_FRONT_URL=${{ vars.GROUP_FRONT_URL }}" >> .env.app
+          echo "ACCOUNT_FRONT_URL=${{ vars.ACCOUNT_FRONT_URL }}" >> .env.app
+          echo "SHELL_FRONT_URL=${{ vars.SHELL_FRONT_URL }}" >> .env.app
+          echo "CLOUDFLARE_API_TOKEN=${{ secrets.CLOUDFLARE_API_TOKEN }}" >> .env.app
+          echo "FILE_ACCESS_SECRET=${{ secrets.FILE_ACCESS_SECRET }}" >> .env.app
+          echo "LOGSTASH_HTTP_URL=${{ vars.LOGSTASH_HTTP_URL }}" >> .env.app
+          echo "FILE_SERVICE_URL=${{ vars.FILE_SERVICE_URL }}" >> .env.app
+          echo "FILE_SERVICE_API_KEY=${{ secrets.FILE_SERVICE_API_KEY }}" >> .env.app
+          echo "FILE_SERVICE_HMAC_SECRET=${{ secrets.FILE_SERVICE_HMAC_SECRET }}" >> .env.app
+          echo "FILE_SERVICE_PUBLIC_URL=${{ vars.FILE_SERVICE_PUBLIC_URL }}" >> .env.app
+
+      - name: Copy .env file to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ vars.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: .env.app
+          target: ~/tumbaland/
+
+      - name: Copy compose files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ vars.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "apps/frontend/*/compose.yml,apps/backend/*/compose.yml"
+          target: ~/tumbaland/
+
+      - name: Set deploy variables
+        run: |
+          echo "SERVICES=${{ needs.set-matrix.outputs.services_list }}" >> "$GITHUB_ENV"
+          echo "GAP_SECONDS=${{ github.event.inputs.gap_seconds }}" >> "$GITHUB_ENV"
+
+      - name: SSH and deploy services one at a time
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ vars.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          envs: SERVICES,GAP_SECONDS
+          command_timeout: 30m
+          script: |
+            cd ~/tumbaland
+            export COMPOSE_HTTP_TIMEOUT=300
+            docker network ls | grep -q tumbanet || docker network create tumbanet
+            for svc in $SERVICES; do
+              case "$svc" in
+                *-front) TIER=frontend ;;
+                *)       TIER=backend ;;
+              esac
+              CF="apps/$TIER/$svc/compose.yml"
+              echo "=== Deploying $svc ($CF) ==="
+              docker compose --env-file .env.app -f "$CF" pull
+              docker compose --env-file .env.app -f "$CF" up -d
+              # Wait for the container to report running before touching the next
+              # service, so a slow start never overlaps the next stop/start.
+              state=""
+              for i in $(seq 1 30); do
+                state=$(docker compose --env-file .env.app -f "$CF" ps --format '{{.State}}' 2>/dev/null | head -n1)
+                [ "$state" = "running" ] && break
+                sleep 2
+              done
+              echo "$svc state: ${state:-unknown}"
+              sleep "$GAP_SECONDS"
+            done
+            echo "All requested services deployed."
