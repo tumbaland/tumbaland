@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.367](https://github.com/toomastahves/tumbaland/compare/v0.0.366...v0.0.367) (2026-07-06)
+
+
+### Features
+
+* imrove albums views ([825692e](https://github.com/toomastahves/tumbaland/commit/825692efc6efb42cba731095eb5295c7d86553f3))
+
 ### [0.0.366](https://github.com/toomastahves/tumbaland/compare/v0.0.365...v0.0.366) (2026-07-06)
 
 
