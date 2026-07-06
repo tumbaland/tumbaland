@@ -16,9 +16,15 @@ interface GroupData {
 
 interface GroupDistributionChartProps {
   groups: GroupData[];
+  groupNames?: Record<string, string>;
 }
 
-const GroupDistributionChart: React.FC<GroupDistributionChartProps> = ({ groups }) => {
+const GroupDistributionChart: React.FC<GroupDistributionChartProps> = ({ groups, groupNames = {} }) => {
+  const labelFor = (groupId: string): string => {
+    if (groupId === 'personal') return 'Personal';
+    return groupNames[groupId] ?? `Group ${groupId.slice(-6)}`;
+  };
+
   if (!groups.length) {
     return (
       <Card
@@ -77,7 +83,7 @@ const GroupDistributionChart: React.FC<GroupDistributionChartProps> = ({ groups 
               data: groups.map((group, index) => ({
                 id: group.groupId,
                 value: group.photoCount,
-                label: group.groupId === 'personal' ? 'Personal' : `Group ${group.groupId}`,
+                label: labelFor(group.groupId),
                 color: colors[index % colors.length]
               })),
               innerRadius: 30,
@@ -109,7 +115,7 @@ const GroupDistributionChart: React.FC<GroupDistributionChartProps> = ({ groups 
                   }}
                 />
                 <Typography variant="body2" sx={{ color: '#64748b' }}>
-                  {group.groupId === 'personal' ? 'Personal' : `Group ${group.groupId}`}
+                  {labelFor(group.groupId)}
                 </Typography>
               </Box>
               <Typography variant="body2" sx={{ color: '#1e293b', fontWeight: 600 }}>

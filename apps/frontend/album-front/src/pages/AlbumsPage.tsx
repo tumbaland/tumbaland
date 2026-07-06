@@ -13,7 +13,10 @@ import {
   ListItemText,
   LinearProgress,
   Pagination,
-  Stack
+  Stack,
+  Snackbar,
+  Tooltip,
+  Typography
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -45,6 +48,7 @@ const AlbumsPage: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
+  const [toast, setToast] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
 
   // Debounce search term to prevent excessive API calls
   useEffect(() => {
@@ -87,11 +91,14 @@ const AlbumsPage: React.FC = () => {
 
     setDeleting(true);
     try {
+      const deletedName = albumToDelete.name;
       await deleteAlbum(albumToDelete._id);
       setShowDeleteDialog(false);
       setAlbumToDelete(null);
+      setToast({ message: `Deleted "${deletedName}"`, severity: 'success' });
     } catch (err) {
-      alert('Failed to delete album');
+      logger.error('Failed to delete album', err);
+      setToast({ message: 'Failed to delete album', severity: 'error' });
     } finally {
       setDeleting(false);
     }
@@ -119,9 +126,10 @@ const AlbumsPage: React.FC = () => {
   const handleSaveEditAlbum = async (albumId: string, data: { name: string; description: string }) => {
     try {
       await updateAlbum(albumId, data);
+      setToast({ message: 'Album updated', severity: 'success' });
     } catch (err) {
       logger.error('Failed to update album', err);
-      alert('Failed to update album');
+      setToast({ message: 'Failed to update album', severity: 'error' });
     }
   };
 
@@ -185,15 +193,23 @@ const AlbumsPage: React.FC = () => {
         />
       ) : (
         <>
-          <Stack spacing={2} sx={{ alignItems: 'center', mb: 4 }}>
-            <Pagination
-              count={pagination.pages}
-              page={page}
-              onChange={(_, value) => setPage(value)}
-              color="primary"
-              showFirstButton
-              showLastButton
-            />
+          <Stack
+            direction="row"
+            sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, mb: 3 }}
+          >
+            <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+              {pagination.total} {pagination.total === 1 ? 'album' : 'albums'}
+            </Typography>
+            {pagination.pages > 1 && (
+              <Pagination
+                count={pagination.pages}
+                page={page}
+                onChange={(_, value) => setPage(value)}
+                color="primary"
+                showFirstButton
+                showLastButton
+              />
+            )}
           </Stack>
           <AlbumsGrid
             albums={albums}
@@ -201,16 +217,18 @@ const AlbumsPage: React.FC = () => {
             onDeleteAlbum={handleDeleteAlbum}
             onMenuOpen={handleMenuOpen}
           />
-          <Stack spacing={2} sx={{ alignItems: 'center', mt: 4, mb: 2 }}>
-            <Pagination
-              count={pagination.pages}
-              page={page}
-              onChange={(_, value) => setPage(value)}
-              color="primary"
-              showFirstButton
-              showLastButton
-            />
-          </Stack>
+          {pagination.pages > 1 && (
+            <Stack spacing={2} sx={{ alignItems: 'center', mt: 4, mb: 2 }}>
+              <Pagination
+                count={pagination.pages}
+                page={page}
+                onChange={(_, value) => setPage(value)}
+                color="primary"
+                showFirstButton
+                showLastButton
+              />
+            </Stack>
+          )}
         </>
       )}
 
@@ -222,12 +240,19 @@ const AlbumsPage: React.FC = () => {
           </ListItemIcon>
           <ListItemText>Edit Album</ListItemText>
         </MenuItem>
-        <MenuItem onClick={handleMenuDelete} disabled={selectedAlbum?.photoCount !== 0}>
-          <ListItemIcon>
-            <DeleteIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Delete Album</ListItemText>
-        </MenuItem>
+        <Tooltip
+          title={selectedAlbum && selectedAlbum.photoCount !== 0 ? 'Remove all photos before deleting this album' : ''}
+          placement="left"
+        >
+          <span>
+            <MenuItem onClick={handleMenuDelete} disabled={selectedAlbum?.photoCount !== 0}>
+              <ListItemIcon>
+                <DeleteIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText>Delete Album</ListItemText>
+            </MenuItem>
+          </span>
+        </Tooltip>
       </Menu>
 
       {/* Edit Album Dialog */}
@@ -273,6 +298,18 @@ const AlbumsPage: React.FC = () => {
       >
         <AddIcon />
       </Fab>
+
+      {/* Toast feedback for album actions */}
+      <Snackbar
+        open={Boolean(toast)}
+        autoHideDuration={3500}
+        onClose={() => setToast(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity={toast?.severity ?? 'success'} variant="filled" onClose={() => setToast(null)}>
+          {toast?.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };
