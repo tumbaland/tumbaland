@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.369](https://github.com/toomastahves/tumbaland/compare/v0.0.368...v0.0.369) (2026-07-06)
+
+
+### Bug Fixes
+
+* ci failing build for libs ([9709982](https://github.com/toomastahves/tumbaland/commit/970998273ff78dc7a139f6dbb1f15474db348357))
+
 ### [0.0.368](https://github.com/toomastahves/tumbaland/compare/v0.0.367...v0.0.368) (2026-07-06)
 
 
