@@ -128,7 +128,9 @@ jobs:
         run: npm ci
 
       - name: Build shared libs
-        run: npm run build -w @tumbaland/core -w @tumbaland/components -w @tumbaland/frontend-core
+        # Order matters: components imports from frontend-core, so frontend-core
+        # must be built (its dist/.d.ts emitted) before components typechecks.
+        run: npm run build -w @tumbaland/core -w @tumbaland/frontend-core -w @tumbaland/components
 
       - name: Upload built libs
         uses: actions/upload-artifact@v4
