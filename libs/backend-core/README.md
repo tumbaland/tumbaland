@@ -120,54 +120,15 @@ This library is optimized for Docker deployments:
 
 ## 📦 Releases & Versioning
 
-This library uses [standard-version](https://github.com/conventional-changelog/standard-version) for automated versioning and follows [Conventional Commits](https://conventionalcommits.org/) specification.
-
-### Release Types
-
-- **PATCH** (`1.0.0` → `1.0.1`): Bug fixes
-- **MINOR** (`1.0.0` → `1.1.0`): New features (backward compatible)
-- **MAJOR** (`1.0.0` → `2.0.0`): Breaking changes
-
-### Commit Message Format
-
-```
-type(scope): description
-
-[optional body]
-
-[optional footer]
-```
-
-**Types:**
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation
-- `style`: Code style changes
-- `refactor`: Code refactoring
-- `test`: Testing
-- `chore`: Maintenance
-
-**Examples:**
-```
-feat(auth): add JWT token refresh
-fix(logging): resolve memory leak in Winston transport
-docs(api): update health check endpoint documentation
-```
-
-### Release Process
-
-1. **Make changes** with conventional commit messages
-2. **Run release script**: `./release.sh`
-3. **Push changes**: `git push origin main`
-4. **Publish**: Automated via GitHub Actions
-
-### Changelog
-
-Changelogs are maintained at the project level in the root `CHANGELOG.md` file. Individual library changelogs are not generated to maintain consistency across the monorepo.
-
-### Beta Releases
-
-For beta releases: `npm run release:beta`
+This library is a real published npm package (`@tumbaland/backend-core`), versioned independently
+of the monorepo with [standard-version](https://github.com/conventional-changelog/standard-version)
+and [Conventional Commits](https://conventionalcommits.org/). See the root
+[README's "Commits & Releases" section](../../README.md#commits--releases) for the full process
+and the reasoning behind it — summary: commit with conventional messages, then from this directory
+run `npm run release` (never hand-edit `version` and `npm publish` directly, or the package,
+changelog, and tags drift out of sync with each other). Tags for this package are scoped as
+`backend-core-vX.Y.Z` so they can't collide with `frontend-core`'s, `components`', or the
+monorepo's own `app-vX.Y.Z` tags.
 
 ---
 

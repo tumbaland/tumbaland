@@ -58,3 +58,43 @@ plain names for backend services).
    ```sh
    ssh tom@192.168.0.131
    ```
+
+## Commits & Releases
+
+Use [Conventional Commits](https://www.conventionalcommits.org/) for every commit, everywhere in
+this repo: `type(scope): description`, e.g. `fix(finance-service): correct snapshot rounding`,
+`feat(album-front): add collage zoom`. Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`,
+`chore`, `perf`. This is what drives both versioning mechanisms below — write real, correctly-typed
+messages even for app-only changes.
+
+### App changes (services, frontends) — nothing to do
+
+Every push to `main` runs `.github/workflows/changelog.yml`, which bumps the root
+`package.json`, appends to the root `CHANGELOG.md`, and tags `app-vX.Y.Z`. This is a monorepo-wide
+history marker only — it is **not** consumed by deploys (those tag Docker images `:latest` and
+`:{sha}`, see `deploy-single-service.yml`) and is never published anywhere. You don't run anything
+for this; just commit with the right type/scope and it happens on merge.
+
+### Library releases (`libs/backend-core`, `libs/frontend-core`, `libs/components`) — manual, per package
+
+These three are real npm packages (`@tumbaland/*`) that every app depends on via `"*"` and that get
+installed from the registry, not just workspace-linked. Cut a release only when you've made a
+change worth publishing:
+
+1. Land your commits on `main` first, scoped to the lib that changed
+   (`fix(backend-core): ...`, `feat(components): ...`).
+2. `cd libs/<package>`
+3. `npm run release` — bumps that package's own `version` from the commits since its last tag,
+   writes/updates its `CHANGELOG.md`, creates a `chore(release): X.Y.Z` commit, tags it
+   (`backend-core-vX.Y.Z` / `frontend-core-vX.Y.Z` / `components-vX.Y.Z` — each package has its
+   own tag namespace so releases can never collide), builds, and publishes to npm.
+   Use `npm run release:beta` for a prerelease (`-beta.0`, tagged `beta` on npm).
+4. `git push origin main --follow-tags`
+5. Apps pin `"@tumbaland/x": "*"`, so nothing else needs bumping — `npm install` at the repo root
+   picks up the new published version.
+
+**Always release through `npm run release` — never hand-edit a lib's `package.json` version and
+run `npm publish` directly.** That shortcut is how `backend-core` and `components` ended up
+published on npm with no matching `CHANGELOG.md` or git tag at all: the registry, the changelog,
+and git history all drifted out of sync with each other. Going through the script keeps all three
+in lockstep.

@@ -49,20 +49,18 @@ npm run build
 
 ### Publishing Process
 
-The library uses `standard-version` for automated versioning and changelog generation.
-
-#### Production Release
+The library uses `standard-version` for automated versioning and changelog generation. See the
+root [README's "Commits & Releases" section](../../README.md#commits--releases) for the full,
+authoritative process. Summary:
 
 ```bash
 npm run release
 ```
 
-This command will:
-1. Bump version according to conventional commits
-2. Skip CHANGELOG.md
-3. Skip git tag
-4. Build the library (`npm run build`)
-5. Publish to npm with public access
+This bumps `version` from conventional commits since the last `components-v*` tag, writes
+`CHANGELOG.md`, commits `chore(release): X.Y.Z`, tags it `components-vX.Y.Z`, builds, and
+publishes to npm with public access. Always release through this script — never hand-edit
+`version` and run `npm publish` directly, or the package, changelog, and tags drift apart.
 
 #### Beta Release
 
