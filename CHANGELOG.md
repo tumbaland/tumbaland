@@ -1,4 +1,23 @@
 # Tumbalog
+### [0.0.373](https://github.com/toomastahves/tumbaland/compare/v0.0.372...v0.0.373) (2026-07-12)
+
+
+### Features
+
+* setup backend-core library ([186d01f](https://github.com/toomastahves/tumbaland/commit/186d01fcc047f2ef059c625894404419f848ac7a))
+* unitfy tsconfig build ([fc6e1fa](https://github.com/toomastahves/tumbaland/commit/fc6e1fa7a6dc3fa2a3e3c201aee299eb5abef7e1))
+* use new backend-core library ([416ff59](https://github.com/toomastahves/tumbaland/commit/416ff59f1d58848938265f62e955f9a9fbd8aad3))
+
+
+### Bug Fixes
+
+* wait for upload to finish ([e824a0a](https://github.com/toomastahves/tumbaland/commit/e824a0a833ded0e27d2567b08499f2d57ab3cd31))
+
+
+### Chores
+
+* **release:** 1.3.1 ([6b8e79b](https://github.com/toomastahves/tumbaland/commit/6b8e79b571e796dbeb4dd10a99bf26b93b040075))
+
 ### [0.0.372](https://github.com/toomastahves/tumbaland/compare/v0.0.371...v0.0.372) (2026-07-12)
 
 
