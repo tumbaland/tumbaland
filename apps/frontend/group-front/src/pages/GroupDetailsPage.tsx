@@ -117,9 +117,11 @@ const GroupDetailsPage: React.FC = () => {
     setSelectedMember(member);
   };
 
+  // Only closes the menu popover — `selectedMember` must survive this, since
+  // "Change Role" fires this in the same click handler as opening ChangeRoleDialog,
+  // which reads `selectedMember` for its `member` prop.
   const handleMenuClose = () => {
     setMenuAnchorEl(null);
-    setSelectedMember(null);
   };
 
   if (loading) {
@@ -190,7 +192,7 @@ const GroupDetailsPage: React.FC = () => {
 
       <ChangeRoleDialog
         open={isChangeRoleOpen}
-        onClose={() => setIsChangeRoleOpen(false)}
+        onClose={() => { setIsChangeRoleOpen(false); setSelectedMember(null); }}
         member={selectedMember}
         onSave={handleUpdateRole}
       />
