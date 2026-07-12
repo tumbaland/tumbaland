@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.372](https://github.com/toomastahves/tumbaland/compare/v0.0.371...v0.0.372) (2026-07-12)
+
+
+### Bug Fixes
+
+* pass albumid when uploading file ([a59caa6](https://github.com/toomastahves/tumbaland/commit/a59caa6c8f578f6010f6a7e6edbc0b40b565de8a))
+
 ### [0.0.371](https://github.com/toomastahves/tumbaland/compare/v0.0.370...v0.0.371) (2026-07-12)
 
 
