@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.3.1](https://github.com/toomastahves/tumbaland/compare/v0.0.372...v1.3.1) (2026-07-12)
+
+
+### Bug Fixes
+
+* wait for upload to finish ([e824a0a](https://github.com/toomastahves/tumbaland/commit/e824a0a833ded0e27d2567b08499f2d57ab3cd31))
+
 ## [1.3.0](https://github.com/toomastahves/tumbaland/compare/v0.0.369...v1.3.0) (2026-07-12)
 
 
