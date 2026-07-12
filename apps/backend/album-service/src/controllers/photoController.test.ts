@@ -1,0 +1,191 @@
+import { Request, Response } from 'express';
+
+jest.mock('../services/photoService', () => ({
+  __esModule: true,
+  default: {
+    createPhoto: jest.fn(),
+    getPhotosByAlbum: jest.fn(),
+    getPhotoById: jest.fn(),
+    updatePhoto: jest.fn(),
+    deletePhoto: jest.fn(),
+    updatePhotoAIAnalysis: jest.fn(),
+    getPhotosForAIAnalysis: jest.fn(),
+    getPhotoByFileId: jest.fn()
+  }
+}));
+
+jest.mock('../services/fileServiceClient', () => ({
+  getUploadSignedUrl: jest.fn(),
+  generateFileId: jest.fn()
+}));
+
+jest.mock('../models/Album', () => ({ __esModule: true, default: { findById: jest.fn() } }));
+
+import photoService from '../services/photoService';
+import { getUploadSignedUrl, generateFileId } from '../services/fileServiceClient';
+import Album from '../models/Album';
+import {
+  createPhoto,
+  getPhotosByAlbum,
+  getPhotoById,
+  updatePhoto,
+  deletePhoto,
+  getUploadSignedUrlRequest,
+  updatePhotoAIAnalysis,
+  getPhotosForAIAnalysis,
+  getPhotoByFileId
+} from './photoController';
+
+const mockedPhotoService = photoService as jest.Mocked<typeof photoService>;
+const mockedGetUploadSignedUrl = getUploadSignedUrl as jest.Mock;
+const mockedGenerateFileId = generateFileId as jest.Mock;
+const mockedAlbumFindById = Album.findById as unknown as jest.Mock;
+
+function mockRes(): Response {
+  const res: Partial<Response> = {};
+  res.status = jest.fn().mockReturnValue(res);
+  res.json = jest.fn().mockReturnValue(res);
+  return res as Response;
+}
+
+const baseReq = (overrides: Partial<Request> = {}) =>
+  ({ user: { id: 'user-1' }, body: {}, params: {}, query: {}, ...overrides }) as unknown as Request;
+
+beforeEach(() => jest.clearAllMocks());
+
+describe('createPhoto', () => {
+  it('looks up the album to derive groupId, then creates the photo', async () => {
+    mockedAlbumFindById.mockResolvedValue({ groupId: 'group-1' });
+    mockedPhotoService.createPhoto.mockResolvedValue({ _id: 'p1' } as any);
+    const res = mockRes();
+
+    await createPhoto(baseReq({ body: { albumId: 'a1', filename: 'x.jpg' } }), res);
+
+    expect(mockedPhotoService.createPhoto).toHaveBeenCalledWith(
+      { albumId: 'a1', filename: 'x.jpg' },
+      'user-1',
+      'group-1'
+    );
+    expect(res.status).toHaveBeenCalledWith(201);
+  });
+});
+
+describe('getPhotosByAlbum', () => {
+  it('parses pagination query params', async () => {
+    mockedPhotoService.getPhotosByAlbum.mockResolvedValue({
+      photos: [],
+      pagination: { page: 1, total: 0, pages: 0 }
+    });
+    const res = mockRes();
+
+    await getPhotosByAlbum(baseReq({ params: { albumId: 'a1' }, query: { page: '2', limit: '5' } }), res);
+
+    expect(mockedPhotoService.getPhotosByAlbum).toHaveBeenCalledWith('a1', { page: 2, limit: 5, search: undefined });
+  });
+});
+
+describe('getPhotoById', () => {
+  it('returns the photo', async () => {
+    mockedPhotoService.getPhotoById.mockResolvedValue({ _id: 'p1' } as any);
+    const res = mockRes();
+
+    await getPhotoById(baseReq({ params: { id: 'p1' } }), res);
+
+    expect(mockedPhotoService.getPhotoById).toHaveBeenCalledWith('p1');
+  });
+});
+
+describe('updatePhoto', () => {
+  it('updates the photo metadata', async () => {
+    mockedPhotoService.updatePhoto.mockResolvedValue({ _id: 'p1', title: 'New' } as any);
+    const res = mockRes();
+
+    await updatePhoto(baseReq({ params: { id: 'p1' }, body: { title: 'New' } }), res);
+
+    expect(mockedPhotoService.updatePhoto).toHaveBeenCalledWith('p1', expect.objectContaining({ title: 'New' }));
+  });
+});
+
+describe('deletePhoto', () => {
+  it('deletes the photo', async () => {
+    mockedPhotoService.deletePhoto.mockResolvedValue(undefined);
+    const res = mockRes();
+
+    await deletePhoto(baseReq({ params: { id: 'p1' } }), res);
+
+    expect(mockedPhotoService.deletePhoto).toHaveBeenCalledWith('p1');
+  });
+});
+
+describe('getUploadSignedUrlRequest', () => {
+  it('throws UnauthorizedError when there is no authenticated user', async () => {
+    const res = mockRes();
+
+    await expect(
+      getUploadSignedUrlRequest(baseReq({ user: undefined, body: { albumId: 'a1' } }), res)
+    ).rejects.toThrow('Access token required');
+  });
+
+  it('throws NotFoundError when the album does not exist', async () => {
+    mockedAlbumFindById.mockResolvedValue(null);
+    const res = mockRes();
+
+    await expect(
+      getUploadSignedUrlRequest(baseReq({ body: { albumId: 'missing' } }), res)
+    ).rejects.toThrow('Album not found');
+  });
+
+  it('generates a fileId and returns a signed upload URL', async () => {
+    mockedAlbumFindById.mockResolvedValue({ groupId: 'group-1' });
+    mockedGenerateFileId.mockReturnValue('group-1/a1/123/original.jpg');
+    mockedGetUploadSignedUrl.mockResolvedValue('https://upload.example');
+    const res = mockRes();
+
+    await getUploadSignedUrlRequest(
+      baseReq({ body: { filename: 'photo.jpg', mimetype: 'image/jpeg', albumId: 'a1' } }),
+      res
+    );
+
+    expect(mockedGenerateFileId).toHaveBeenCalledWith('user-1', 'a1', 'photo.jpg', 'group-1');
+    expect(mockedGetUploadSignedUrl).toHaveBeenCalledWith('group-1/a1/123/original.jpg', 'image/jpeg', 15);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ uploadUrl: 'https://upload.example' }) })
+    );
+  });
+});
+
+describe('updatePhotoAIAnalysis', () => {
+  it('updates the AI analysis fields', async () => {
+    mockedPhotoService.updatePhotoAIAnalysis.mockResolvedValue({ _id: 'p1' } as any);
+    const res = mockRes();
+
+    await updatePhotoAIAnalysis(baseReq({ params: { id: 'p1' }, body: { objectDetection: { jobId: 'j1' } } }), res);
+
+    expect(mockedPhotoService.updatePhotoAIAnalysis).toHaveBeenCalledWith(
+      'p1',
+      expect.objectContaining({ objectDetection: { jobId: 'j1' } })
+    );
+  });
+});
+
+describe('getPhotosForAIAnalysis', () => {
+  it('defaults limit to 50', async () => {
+    mockedPhotoService.getPhotosForAIAnalysis.mockResolvedValue([]);
+    const res = mockRes();
+
+    await getPhotosForAIAnalysis(baseReq({ params: { albumId: 'a1' } }), res);
+
+    expect(mockedPhotoService.getPhotosForAIAnalysis).toHaveBeenCalledWith('a1', 50);
+  });
+});
+
+describe('getPhotoByFileId', () => {
+  it('returns the photo for a given fileId', async () => {
+    mockedPhotoService.getPhotoByFileId.mockResolvedValue({ _id: 'p1' } as any);
+    const res = mockRes();
+
+    await getPhotoByFileId(baseReq({ params: { fileId: 'file-1' } }), res);
+
+    expect(mockedPhotoService.getPhotoByFileId).toHaveBeenCalledWith('file-1');
+  });
+});

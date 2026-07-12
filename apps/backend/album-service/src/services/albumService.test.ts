@@ -1,11 +1,15 @@
-jest.mock('../models/Album', () => ({
-  __esModule: true,
-  default: {
-    findById: jest.fn(),
-    findByIdAndUpdate: jest.fn(),
-    findByIdAndDelete: jest.fn()
-  }
-}));
+jest.mock('../models/Album', () => {
+  const ctor: any = jest.fn().mockImplementation((data: any) => ({
+    ...data,
+    save: jest.fn().mockResolvedValue({ ...data, _id: 'new-album-id' })
+  }));
+  ctor.findById = jest.fn();
+  ctor.findByIdAndUpdate = jest.fn();
+  ctor.findByIdAndDelete = jest.fn();
+  ctor.aggregate = jest.fn();
+  ctor.find = jest.fn();
+  return { __esModule: true, default: ctor };
+});
 
 jest.mock('../models/Photo', () => ({
   __esModule: true,
@@ -17,21 +21,27 @@ jest.mock('../models/Photo', () => ({
 }));
 
 jest.mock('./fileServiceClient', () => ({
-  deleteFile: jest.fn()
+  deleteFile: jest.fn(),
+  getPhotoSignedUrl: jest.fn(),
+  getPhotoSignedUrlsBatch: jest.fn()
 }));
 
 import Album from '../models/Album';
 import Photo from '../models/Photo';
-import { deleteFile } from './fileServiceClient';
+import { deleteFile, getPhotoSignedUrl, getPhotoSignedUrlsBatch } from './fileServiceClient';
 import albumService from './albumService';
 
+const mockedCtor = Album as unknown as jest.Mock;
 const mockedFindById = Album.findById as unknown as jest.Mock;
 const mockedFindByIdAndUpdate = Album.findByIdAndUpdate as unknown as jest.Mock;
 const mockedFindByIdAndDelete = Album.findByIdAndDelete as unknown as jest.Mock;
+const mockedAggregate = Album.aggregate as unknown as jest.Mock;
 const mockedPhotoFind = Photo.find as unknown as jest.Mock;
 const mockedPhotoFindOne = Photo.findOne as unknown as jest.Mock;
 const mockedPhotoDeleteMany = Photo.deleteMany as unknown as jest.Mock;
 const mockedDeleteFile = deleteFile as unknown as jest.Mock;
+const mockedGetPhotoSignedUrl = getPhotoSignedUrl as unknown as jest.Mock;
+const mockedGetPhotoSignedUrlsBatch = getPhotoSignedUrlsBatch as unknown as jest.Mock;
 
 function ctx(overrides: Partial<{ userId: string; userGroups: string[] }> = {}) {
   return { userId: overrides.userId ?? 'user-1', userGroups: overrides.userGroups ?? [] };
@@ -158,5 +168,115 @@ describe('removeCoverPhoto', () => {
 
     expect(album.coverPhotoId).toBeUndefined();
     expect(album.save).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('createAlbum', () => {
+  it('trims name/description/tags and stamps the userId', async () => {
+    const result: any = await albumService.createAlbum(
+      { name: '  Trip  ', description: '  desc  ', tags: [' a ', '', ' b '] },
+      'user-1'
+    );
+
+    expect(mockedCtor).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Trip', description: 'desc', tags: ['a', 'b'], userId: 'user-1' })
+    );
+    expect(result._id).toBe('new-album-id');
+  });
+});
+
+describe('getAlbums', () => {
+  it('scopes to personal albums (no groupId) by default', async () => {
+    mockedAggregate.mockResolvedValueOnce([{ _id: 'a1', coverPhotoId: undefined }]).mockResolvedValueOnce([{ total: 1 }]);
+
+    const result = await albumService.getAlbums({}, ctx());
+
+    expect(mockedAggregate).toHaveBeenNthCalledWith(
+      1,
+      expect.arrayContaining([{ $match: { userId: 'user-1', groupId: { $exists: false } } }])
+    );
+    expect(result.pagination).toEqual({ page: 1, limit: 10, total: 1, pages: 1 });
+  });
+
+  it('throws ForbiddenError when filtering by a group the user is not a member of', async () => {
+    await expect(albumService.getAlbums({ groupId: 'g1' }, ctx())).rejects.toMatchObject({ name: 'ForbiddenError' });
+  });
+
+  it('throws a plain Error (not ForbiddenError) when group-service is down and groupId access cannot be verified', async () => {
+    await expect(
+      albumService.getAlbums({ groupId: 'g1' }, { userId: 'user-1', userGroups: [], groupServiceError: true })
+    ).rejects.toMatchObject({ message: 'Group service temporarily unavailable. Please try again.' });
+  });
+
+  it('scopes by groupId when the user is a member', async () => {
+    mockedAggregate.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+
+    await albumService.getAlbums({ groupId: 'g1' }, ctx({ userGroups: ['g1'] }));
+
+    expect(mockedAggregate).toHaveBeenNthCalledWith(1, expect.arrayContaining([{ $match: { groupId: 'g1' } }]));
+  });
+
+  it('skips cover-photo enrichment when includeCover is false', async () => {
+    mockedAggregate.mockResolvedValueOnce([{ _id: 'a1', coverPhotoId: 'p1' }]).mockResolvedValueOnce([{ total: 1 }]);
+
+    const result = await albumService.getAlbums({ includeCover: false }, ctx());
+
+    expect(result.albums[0]).toMatchObject({ coverPhoto: null });
+    expect(mockedPhotoFind).not.toHaveBeenCalled();
+  });
+
+  it('enriches albums with cover photo signed URLs when includeCover is true', async () => {
+    mockedAggregate.mockResolvedValueOnce([{ _id: 'a1', coverPhotoId: 'p1' }]).mockResolvedValueOnce([{ total: 1 }]);
+    mockedPhotoFind.mockResolvedValue([
+      { id: 'p1', minioFileId: 'file-1', mimetype: 'image/jpeg', toObject: () => ({ id: 'p1' }) }
+    ]);
+    mockedGetPhotoSignedUrlsBatch.mockResolvedValue({ 'file-1': { signedUrl: 'https://x', expiresAt: 't', expiresInMinutes: 60 } });
+
+    const result = await albumService.getAlbums({}, ctx());
+
+    expect(result.albums[0].coverPhoto).toMatchObject({ signedUrl: 'https://x' });
+  });
+});
+
+describe('getAlbumById', () => {
+  it('throws NotFoundError when the aggregation returns nothing', async () => {
+    mockedAggregate.mockResolvedValue([]);
+
+    await expect(albumService.getAlbumById('507f1f77bcf86cd799439011', ctx())).rejects.toMatchObject({
+      name: 'NotFoundError'
+    });
+  });
+
+  it('throws ForbiddenError when the user cannot access a private, non-owned album', async () => {
+    mockedAggregate.mockResolvedValue([{ _id: 'a1', userId: 'someone-else', isPublic: false }]);
+
+    await expect(albumService.getAlbumById('507f1f77bcf86cd799439011', ctx())).rejects.toMatchObject({
+      name: 'ForbiddenError'
+    });
+  });
+
+  it('returns the album with a resolved cover photo when accessible', async () => {
+    mockedAggregate.mockResolvedValue([
+      {
+        _id: 'a1',
+        userId: 'user-1',
+        isPublic: false,
+        coverPhotoDoc: { minioFileId: 'file-1', mimetype: 'image/jpeg' }
+      }
+    ]);
+    mockedGetPhotoSignedUrl.mockResolvedValue({ signedUrl: 'https://x', expiresAt: 't', expiresInMinutes: 60 });
+
+    const result = await albumService.getAlbumById('507f1f77bcf86cd799439011', ctx());
+
+    expect(result.coverPhoto).toMatchObject({ signedUrl: 'https://x' });
+    expect(result.coverPhotoDoc).toBeUndefined();
+  });
+
+  it('returns the album with no cover photo when none is set', async () => {
+    mockedAggregate.mockResolvedValue([{ _id: 'a1', userId: 'user-1', isPublic: false, coverPhotoDoc: undefined }]);
+
+    const result = await albumService.getAlbumById('507f1f77bcf86cd799439011', ctx());
+
+    expect(result.coverPhoto).toBeNull();
   });
 });

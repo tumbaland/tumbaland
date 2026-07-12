@@ -10,15 +10,24 @@ jest.mock('./collage.model', () => {
   return { CollageModel };
 });
 
+jest.mock('../models/Album', () => ({ __esModule: true, default: { aggregate: jest.fn() } }));
+jest.mock('../services/fileServiceClient', () => ({ getSignedUrlsBatch: jest.fn() }));
+
 import { CollageModel } from './collage.model';
+import Album from '../models/Album';
+import { getSignedUrlsBatch } from '../services/fileServiceClient';
 import {
   createCollage,
   updateCollage,
   getCollageById,
   getCollageList,
-  deleteCollage
+  deleteCollage,
+  getCollageWithPhotos
 } from './collage.service';
 import { CollageInput } from './collage.types';
+
+const mockedAggregate = Album.aggregate as unknown as jest.Mock;
+const mockedGetSignedUrlsBatch = getSignedUrlsBatch as unknown as jest.Mock;
 
 const mockedCtor = CollageModel as unknown as jest.Mock;
 const mockedFindById = CollageModel.findById as unknown as jest.Mock;
@@ -142,6 +151,51 @@ describe('collage.service', () => {
       const result = await getCollageList(undefined, OWNER);
       expect(sort).toHaveBeenCalledWith({ createdAt: -1 });
       expect(result).toEqual([{ _id: 'c1' }]);
+    });
+  });
+
+  describe('getCollageWithPhotos', () => {
+    const collageId = '507f1f77bcf86cd799439011';
+
+    it('throws NotFoundError when the collage does not exist', async () => {
+      mockedFindById.mockResolvedValue(null);
+      await expect(getCollageWithPhotos(collageId, OWNER)).rejects.toMatchObject({ name: 'NotFoundError' });
+    });
+
+    it('throws ForbiddenError when an album in the collage is not accessible', async () => {
+      mockedFindById.mockResolvedValue({ _id: 'c1', userId: OWNER, albumIds: ['507f1f77bcf86cd799439012'] });
+      mockedAggregate.mockResolvedValue([{ userId: 'someone-else', groupId: undefined, photos: [] }]);
+
+      await expect(getCollageWithPhotos(collageId, OWNER)).rejects.toMatchObject({ name: 'ForbiddenError' });
+    });
+
+    it('returns the collage with photos enriched with signed URLs', async () => {
+      mockedFindById.mockResolvedValue({ _id: 'c1', userId: OWNER, albumIds: ['507f1f77bcf86cd799439012'] });
+      mockedAggregate.mockResolvedValue([
+        {
+          userId: OWNER,
+          photos: [{ _id: 'p1', minioFileId: 'file-1', minioThumbnailFileId: 'thumb-1' }]
+        }
+      ]);
+      mockedGetSignedUrlsBatch.mockResolvedValue({
+        'file-1': { signedUrl: 'https://original', expiresAt: 't', expiresInMinutes: 60 },
+        'thumb-1': { signedUrl: 'https://thumb', expiresAt: 't', expiresInMinutes: 60 }
+      });
+
+      const result = await getCollageWithPhotos(collageId, OWNER);
+
+      expect(result.photos[0]).toMatchObject({ signedUrl: 'https://original', thumbnailSignedUrl: 'https://thumb' });
+    });
+
+    it('still returns the collage (with un-enriched photos) when the signed-url batch call fails', async () => {
+      mockedFindById.mockResolvedValue({ _id: 'c1', userId: OWNER, albumIds: ['507f1f77bcf86cd799439012'] });
+      mockedAggregate.mockResolvedValue([{ userId: OWNER, photos: [{ _id: 'p1', minioFileId: 'file-1' }] }]);
+      mockedGetSignedUrlsBatch.mockRejectedValue(new Error('file-service down'));
+
+      const result = await getCollageWithPhotos(collageId, OWNER);
+
+      expect(result.photos[0]).toMatchObject({ _id: 'p1' });
+      expect(result.photos[0].signedUrl).toBeUndefined();
     });
   });
 });
