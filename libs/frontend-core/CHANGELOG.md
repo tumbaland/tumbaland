@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.3.0](https://github.com/toomastahves/tumbaland/compare/v0.0.369...v1.3.0) (2026-07-12)
+
+
+### Features
+
+* add file service docs, use scalar for docs ([9bc3e59](https://github.com/toomastahves/tumbaland/commit/9bc3e59be3f46d5758e867ac43ed010a9758119b))
+* unify ts config files ([e58d283](https://github.com/toomastahves/tumbaland/commit/e58d2834e33c311bcad40bd3fb0ed1ae08f3afde))
+
 ### [1.2.1](https://github.com/toomastahves/tumbaland/compare/v0.0.365...v1.2.1) (2026-07-06)
 
 ## [1.2.0](https://github.com/toomastahves/tumbaland/compare/v0.0.359...v1.2.0) (2026-07-05)
