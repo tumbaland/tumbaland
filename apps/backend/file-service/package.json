@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.build.json && npm run docs:build",
     "docs:build": "redocly bundle openapi/openapi.yml -o docs/openapi.yml",
     "test": "jest",
+    "test:coverage": "jest --coverage",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
