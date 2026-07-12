@@ -75,14 +75,12 @@ describe('createAuthService', () => {
       const originalLocation = window.location;
       // jsdom throws "Not implemented: navigation" on a real assignment to
       // window.location.href — replace the whole object with a plain one.
-      // @ts-expect-error simplified stand-in, only `href` is used
-      delete window.location;
-      window.location = { href: '' } as Location;
+      Object.defineProperty(window, 'location', { writable: true, value: { href: '' } });
 
       authService.redirectToLogin('https://app.example/page');
 
       expect(window.location.href).toBe('https://login.example?redirect_uri=https%3A%2F%2Fapp.example%2Fpage');
-      window.location = originalLocation;
+      Object.defineProperty(window, 'location', { writable: true, value: originalLocation });
     });
   });
 
@@ -105,12 +103,10 @@ describe('createAuthService', () => {
       mockFetchOnce({ success: true });
       // jsdom's location.reload isn't configurable — swap the whole object.
       const originalLocation = window.location;
-      // @ts-expect-error simplified stand-in, only `reload` is used
-      delete window.location;
-      window.location = { ...originalLocation, reload: vi.fn() } as unknown as Location;
+      Object.defineProperty(window, 'location', { writable: true, value: { ...originalLocation, reload: vi.fn() } });
 
       const result = await authService.logout();
-      window.location = originalLocation;
+      Object.defineProperty(window, 'location', { writable: true, value: originalLocation });
 
       expect(result).toBe(true);
 
@@ -138,13 +134,11 @@ describe('createAuthService', () => {
       const authService = createAuthService(config);
       mockFetchOnce({ success: false });
       const originalLocation = window.location;
-      // @ts-expect-error simplified stand-in, only `reload` is used
-      delete window.location;
-      window.location = { ...originalLocation, reload: vi.fn() } as unknown as Location;
+      Object.defineProperty(window, 'location', { writable: true, value: { ...originalLocation, reload: vi.fn() } });
 
       const result = await authService.logout();
       const reloadCalled = (window.location.reload as ReturnType<typeof vi.fn>).mock.calls.length > 0;
-      window.location = originalLocation;
+      Object.defineProperty(window, 'location', { writable: true, value: originalLocation });
 
       expect(result).toBe(false);
       expect(reloadCalled).toBe(false);

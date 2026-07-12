@@ -38,7 +38,7 @@ jest.mock('@opentelemetry/resources', () => ({
   resourceFromAttributes: resourceFromAttributesMock
 }));
 
-import { context, trace } from '@opentelemetry/api';
+import { context } from '@opentelemetry/api';
 
 async function loadTracing() {
   let tracing!: typeof import('./index');

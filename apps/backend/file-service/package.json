@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node dist/index.js",
     "dev": "npm run docs:build && nodemon --exec ts-node src/index.ts",
-    "build": "tsc && npm run docs:build",
+    "build": "tsc -p tsconfig.build.json && npm run docs:build",
     "docs:build": "redocly bundle openapi/openapi.yml -o docs/openapi.yml",
     "test": "jest",
     "lint": "eslint .",
