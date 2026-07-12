@@ -1,4 +1,4 @@
-import { financeApi } from '../config/financeApi';
+import { financeApi } from './financeApi';
 import { ApiResponse } from '../types';
 
 export interface TickerPriceHistory {

@@ -14,7 +14,7 @@ import {
   MenuItem,
   InputLabel
 } from '@mui/material';
-import { getWeeklyHeatmapData, WeeklyHeatmapData } from '../api/statistics';
+import { getWeeklyHeatmapData, WeeklyHeatmapData } from '../services/statistics';
 
 interface WeeklyHeatmapProps {
   title?: string;

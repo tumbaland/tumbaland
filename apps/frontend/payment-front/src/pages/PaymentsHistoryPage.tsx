@@ -3,7 +3,7 @@ import { Box, Typography, TableContainer, Table, TableHead, TableBody, TableRow,
 import { paymentApi } from '../services/paymentApi';
 import { Payment } from '../types';
 import { Loader } from '@tumbaland/components';
-import { CreditCard, CheckCircle, Error, Schedule } from '@mui/icons-material';
+import { CreditCard, CheckCircle, Error as ErrorIcon, Schedule } from '@mui/icons-material';
 
 const PaymentsHistoryPage: React.FC = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -14,7 +14,7 @@ const PaymentsHistoryPage: React.FC = () => {
     paymentApi
       .listMyPayments()
       .then((res: Payment[]) => setPayments(res))
-      .catch((e: any) => setError(e.message || 'Failed'))
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Failed'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -87,7 +87,7 @@ const PaymentsHistoryPage: React.FC = () => {
                         return <CheckCircle sx={{ color: 'success.main', fontSize: 18 }} />;
                       case 'failed':
                       case 'error':
-                        return <Error sx={{ color: 'error.main', fontSize: 18 }} />;
+                        return <ErrorIcon sx={{ color: 'error.main', fontSize: 18 }} />;
                       case 'pending':
                         return <Schedule sx={{ color: 'warning.main', fontSize: 18 }} />;
                       default:

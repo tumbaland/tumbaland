@@ -27,7 +27,7 @@ app.use('/api/plans', planRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/payments', paymentRoutes);
 
-// Health check endpoint
+// Health check endpoint (DB-aware readiness; /health/live is mounted by createBaseApp)
 app.get('/health', healthCheck);
 
 // Metrics endpoint for Prometheus

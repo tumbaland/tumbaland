@@ -1,4 +1,4 @@
-import { albumApi } from '../config/albumApi';
+import { albumApi } from './albumApi';
 import { Album, CreateAlbumData, ApiResponse, PaginatedResponse, AlbumStatistics } from '../types';
 
 export const albumService = {

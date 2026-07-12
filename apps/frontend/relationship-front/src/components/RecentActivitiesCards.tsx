@@ -19,9 +19,9 @@ import {
 import { ExpandMore, ExpandLess } from '@mui/icons-material';
 import { useTenantFilter } from '@tumbaland/components';
 import { logger } from '@tumbaland/frontend-core';
-import { getRecentActivitiesSummary } from '../api/activities';
-import { ActivityEntry, ActivityType } from '../api/types';
-import { getActivityTypes } from '../api/activityTypes';
+import { getRecentActivitiesSummary } from '../services/activities';
+import { ActivityEntry, ActivityType } from '../services/types';
+import { getActivityTypes } from '../services/activityTypes';
 
 interface TimelineOption {
   label: string;

@@ -85,8 +85,8 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
       setSubtitle('');
       setAlbumIds([]);
       onClose();
-    } catch (e: any) {
-      setError(e.message || 'Failed to create collage');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to create collage');
     } finally {
       setLoading(false);
     }

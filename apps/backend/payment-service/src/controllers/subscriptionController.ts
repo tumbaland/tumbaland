@@ -52,8 +52,8 @@ export const cancelSubscription = async (req: Request, res: Response): Promise<v
       logger.info('[cancelSubscription] Marked canceled with Stripe', { id: sub.id, cancelAt: sub.cancelAt });
       res.json({ success: true, subscription: sub, stripe: { id: updated.id, cancel_at_period_end: (updated as any).cancel_at_period_end } });
       return;
-    } catch (e:any) {
-      logger.error('Stripe cancel error', { error: e?.message || e });
+    } catch (e) {
+      logger.error('Stripe cancel error', { error: e instanceof Error ? e.message : e });
       // Fallback: mark canceled locally anyway
       sub.status = 'canceled';
       sub.canceledAt = new Date();

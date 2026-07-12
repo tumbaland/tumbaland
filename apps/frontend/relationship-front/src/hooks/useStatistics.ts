@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { logger } from '@tumbaland/frontend-core';
-import { RelationshipStatistics, getStatistics } from '../api/statistics';
+import { RelationshipStatistics, getStatistics } from '../services/statistics';
 
 interface UseStatisticsOptions {
   timeframe?: string;
@@ -28,8 +28,8 @@ export const useStatistics = (options: UseStatisticsOptions = {}): UseStatistics
       setError(null);
       const data = await getStatistics(timeframe, groupId);
       setStatistics(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch statistics');
       logger.error('Failed to fetch statistics', err);
     } finally {
       setLoading(false);

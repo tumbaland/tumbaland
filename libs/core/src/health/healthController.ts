@@ -39,6 +39,17 @@ export const healthCheck = async (req: Request, res: Response) => {
 };
 
 /**
+ * Liveness check: confirms the process is up and serving HTTP, without
+ * touching MongoDB or any other dependency. Used by the Docker-level
+ * HEALTHCHECK so a transient DB outage doesn't get reported as the
+ * container itself being unhealthy — `/health` (above) is the DB-aware
+ * readiness check for dashboards/monitoring.
+ */
+export const healthLive = (req: Request, res: Response) => {
+  res.status(200).json({ status: 'ok' });
+};
+
+/**
  * Prometheus metrics endpoint
  * Exposes application metrics for monitoring
  */

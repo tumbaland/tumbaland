@@ -29,7 +29,7 @@ app.get('/logs/health', getLogsHealth);
 // Serve OpenAPI docs as static files
 app.use('/api/docs', express.static(path.join(__dirname, '../docs')));
 
-// Health check endpoint
+// Health check endpoint (all this service needs — no DB dependency; /health/live is mounted by createBaseApp)
 app.get('/health', healthCheck);
 
 // Error handler

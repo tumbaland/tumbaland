@@ -5,6 +5,7 @@ import { tracingMiddleware } from '../tracing';
 import { requestLogger, requestLoggerWithMetrics } from '../middleware/requestLogger';
 import { createCorsMiddleware, CorsMiddlewareOptions } from '../middleware/corsMiddleware';
 import { securityHeaders, standardRateLimiter } from '../middleware/security';
+import { healthLive } from '../health/healthController';
 
 export interface CreateBaseAppOptions {
   /** Passed through to createCorsMiddleware. */
@@ -30,8 +31,18 @@ export interface CreateBaseAppOptions {
  * Assembles the middleware stack every service was hand-rolling in its own
  * index.ts (correlation → tracing → request logging → security → rate
  * limiting → CORS → cookies → JSON body). Services still mount their own
- * routes, `/health`, `/metrics`, and `app.use(errorHandler)` last —
- * this only owns the common prefix, not the whole app lifecycle.
+ * routes, `/health` (DB-aware readiness), `/metrics`, and
+ * `app.use(errorHandler)` last — this only owns the common prefix, not the
+ * whole app lifecycle.
+ *
+ * `/health/live` is the one exception: it's mounted here, first, ahead of
+ * every other middleware. It has zero per-service variation (it never
+ * touches a dependency, just confirms the process is up), so — unlike
+ * `/health` — there's nothing for a service to customize. Mounting it
+ * before the rate limiter also matters operationally: a service under
+ * heavy legitimate traffic shouldn't have its own liveness probe start
+ * getting 429s and get killed for being "unhealthy" at the exact moment
+ * it's just busy.
  *
  * Services with non-standard body parsing (a webhook needing the raw body,
  * or conditional parsing per-route) should pass `parseJson`/`parseCookies:
@@ -48,6 +59,8 @@ export function createBaseApp(options: CreateBaseAppOptions = {}): Express {
   } = options;
 
   const app = express();
+
+  app.get('/health/live', healthLive);
 
   app.use(securityHeaders);
   if (rateLimiter) app.use(rateLimiter);

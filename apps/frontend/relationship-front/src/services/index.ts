@@ -6,5 +6,5 @@ export * from './days';
 export * from './statistics';
 
 // Convenience re-exports for commonly used items
-export { relationshipApi as api } from '../config/relationshipApi';
+export { relationshipApi as api } from './relationshipApi';
 export { getStatistics, statisticsApi } from './statistics';

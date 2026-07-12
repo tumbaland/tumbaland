@@ -1,6 +1,10 @@
-import { logger } from '@tumbaland/frontend-core';
-import { relationshipApi } from '../config/relationshipApi';
+import { ApiError, logger } from '@tumbaland/frontend-core';
+import { relationshipApi } from './relationshipApi';
 import { ApiResponse } from './types';
+
+function statisticsErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof ApiError || error instanceof Error ? error.message : fallback;
+}
 
 export interface TypeStatistics {
   typeId: string;
@@ -142,9 +146,9 @@ export const getStatistics = async (timeframe: string = 'all', groupId?: string)
       params
     });
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error fetching statistics', error);
-    throw new Error(error.response?.data?.message || 'Failed to fetch statistics');
+    throw new Error(statisticsErrorMessage(error, 'Failed to fetch statistics'));
   }
 };
 
@@ -163,9 +167,9 @@ export const getMonthlyHours = async (year?: number, groupId?: string): Promise<
       params: Object.keys(params).length > 0 ? params : {}
     });
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error fetching monthly hours', error);
-    throw new Error(error.response?.data?.message || 'Failed to fetch monthly hours');
+    throw new Error(statisticsErrorMessage(error, 'Failed to fetch monthly hours'));
   }
 };
 
@@ -184,9 +188,9 @@ export const getMonthlyStatistics = async (year?: number, groupId?: string): Pro
       params: Object.keys(params).length > 0 ? params : {}
     });
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error fetching monthly statistics', error);
-    throw new Error(error.response?.data?.message || 'Failed to fetch monthly statistics');
+    throw new Error(statisticsErrorMessage(error, 'Failed to fetch monthly statistics'));
   }
 };
 
@@ -205,9 +209,9 @@ export const getMonthlyActivityBreakdown = async (year?: number, groupId?: strin
       params: Object.keys(params).length > 0 ? params : {}
     });
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error fetching monthly activity breakdown', error);
-    throw new Error(error.response?.data?.message || 'Failed to fetch monthly activity breakdown');
+    throw new Error(statisticsErrorMessage(error, 'Failed to fetch monthly activity breakdown'));
   }
 };
 
@@ -226,9 +230,9 @@ export const getWeeklyHeatmapData = async (year?: number, groupId?: string): Pro
       params: Object.keys(params).length > 0 ? params : {}
     });
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error fetching weekly heatmap data', error);
-    throw new Error(error.response?.data?.message || 'Failed to fetch weekly heatmap data');
+    throw new Error(statisticsErrorMessage(error, 'Failed to fetch weekly heatmap data'));
   }
 };
 
@@ -247,9 +251,9 @@ export const getCumulativeTimelineData = async (year?: number, groupId?: string)
       params: Object.keys(params).length > 0 ? params : {}
     });
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     logger.error('Error fetching cumulative timeline data', error);
-    throw new Error(error.response?.data?.message || 'Failed to fetch cumulative timeline data');
+    throw new Error(statisticsErrorMessage(error, 'Failed to fetch cumulative timeline data'));
   }
 };
 

@@ -17,9 +17,9 @@ import {
   useMediaQuery
 } from '@mui/material';
 import { BarChart } from '@mui/x-charts';
-import { getMonthlyActivityBreakdown, MonthlyActivityData } from '../api/statistics';
-import { getActivityTypes } from '../api/activityTypes';
-import { ActivityType } from '../api/types';
+import { getMonthlyActivityBreakdown, MonthlyActivityData } from '../services/statistics';
+import { getActivityTypes } from '../services/activityTypes';
+import { ActivityType } from '../services/types';
 
 interface BarChartProps {
   title?: string;

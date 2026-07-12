@@ -1,4 +1,4 @@
-import { financeApi } from '../config/financeApi';
+import { financeApi } from './financeApi';
 import { ApiResponse, Snapshot, SnapshotEntry } from '../types';
 
 const API_URL = '/snapshots';

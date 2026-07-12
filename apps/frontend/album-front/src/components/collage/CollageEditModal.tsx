@@ -60,8 +60,8 @@ export const CollageEditModal: React.FC<CollageEditModalProps> = ({ open, onClos
         groupId: tenantGroupId // Include the active group ID from tenant context
       });
       onClose();
-    } catch (e: any) {
-      setError(e.message || 'Failed to update collage');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to update collage');
     } finally {
       setLoading(false);
     }

@@ -20,11 +20,6 @@ services:
     init: true
     networks:
       - tumbanet
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:5002/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
 volumes:
   file_data:

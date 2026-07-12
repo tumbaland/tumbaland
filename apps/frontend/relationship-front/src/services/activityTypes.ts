@@ -1,4 +1,4 @@
-import { relationshipApi as apiClient } from '../config/relationshipApi';
+import { relationshipApi as apiClient } from './relationshipApi';
 import { ActivityType, PaginatedResponse, ApiResponse } from './types';
 
 export interface CreateActivityTypeRequest {

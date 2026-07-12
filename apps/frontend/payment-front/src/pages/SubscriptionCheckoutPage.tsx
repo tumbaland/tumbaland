@@ -160,8 +160,8 @@ const SubscriptionCheckoutPage: React.FC = () => {
         // If neither free nor Stripe URL, navigate to subscription overview as safe default
         navigateTop('/subscription');
       }
-    } catch (e: any) {
-      setError(e.message || 'Failed to start checkout');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to start checkout');
     } finally { setCreating(false); }
   };
 

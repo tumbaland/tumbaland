@@ -16,7 +16,7 @@ import {
   useMediaQuery
 } from '@mui/material';
 import { BarChart } from '@mui/x-charts';
-import { getMonthlyActivityBreakdown, MonthlyActivityData } from '../api/statistics';
+import { getMonthlyActivityBreakdown, MonthlyActivityData } from '../services/statistics';
 
 interface TotalHoursChartProps {
   title?: string;

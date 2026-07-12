@@ -17,8 +17,8 @@ import {
   useMediaQuery
 } from '@mui/material';
 import { BarChart } from '@mui/x-charts';
-import { getMonthlyStatistics, MonthlyStatisticsData } from '../api/statistics';
-import { ActivityType } from '../api/types';
+import { getMonthlyStatistics, MonthlyStatisticsData } from '../services/statistics';
+import { ActivityType } from '../services/types';
 
 interface TotalDaysChartProps {
   title?: string;

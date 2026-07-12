@@ -13,8 +13,8 @@ import {
   CircularProgress,
   MenuItem
 } from '@mui/material';
-import { ActivityType } from '../api/types';
-import { CreateActivityTypeRequest, UpdateActivityTypeRequest } from '../api/activityTypes';
+import { ActivityType } from '../services/types';
+import { CreateActivityTypeRequest, UpdateActivityTypeRequest } from '../services/activityTypes';
 import GroupSelector from './GroupSelector';
 
 interface ActivityTypeDialogProps {
@@ -90,8 +90,8 @@ const ActivityTypeDialog: React.FC<ActivityTypeDialogProps> = ({
       setSubmitting(true);
       await onSubmit(dataToSubmit);
       onClose();
-    } catch (error: any) {
-      setErrors([error.message || 'Failed to save activity type']);
+    } catch (error) {
+      setErrors([error instanceof Error ? error.message : 'Failed to save activity type']);
     } finally {
       setSubmitting(false);
     }

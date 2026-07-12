@@ -18,11 +18,11 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import { useTenantFilter } from '@tumbaland/components';
-import { logger } from '@tumbaland/frontend-core';
-import { ActivityType, Day, DayEntryInput } from '../api/types';
-import { getActivityTypes } from '../api/activityTypes';
-import { getActivityDescriptions } from '../api/activities';
-import { getDays, saveDay } from '../api/days';
+import { ApiError, logger } from '@tumbaland/frontend-core';
+import { ActivityType, Day, DayEntryInput } from '../services/types';
+import { getActivityTypes } from '../services/activityTypes';
+import { getActivityDescriptions } from '../services/activities';
+import { getDays, saveDay } from '../services/days';
 
 interface DayEditorDialogProps {
   open: boolean;
@@ -189,9 +189,9 @@ const DayEditorDialog: React.FC<DayEditorDialogProps> = ({
       const day = await saveDay(date, entries, groupId);
       onSaved(day);
       onClose();
-    } catch (e: any) {
+    } catch (e) {
       logger.error('Failed to save day', e);
-      setError(e.response?.data?.message || e.message || 'Failed to save day');
+      setError(e instanceof ApiError || e instanceof Error ? e.message : 'Failed to save day');
     } finally {
       setSaving(false);
     }

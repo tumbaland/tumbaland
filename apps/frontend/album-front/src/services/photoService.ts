@@ -1,4 +1,4 @@
-import { albumApi } from '../config/albumApi';
+import { albumApi } from './albumApi';
 import { Photo, CreatePhotoData, PaginatedResponse, ApiResponse, UploadSignedUrlResponse } from '../types';
 
 export const photoService = {

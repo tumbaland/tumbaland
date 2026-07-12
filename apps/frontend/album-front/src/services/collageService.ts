@@ -1,5 +1,5 @@
 import { Collage, CollageInput } from '../types/collage';
-import { albumApi } from '../config/albumApi';
+import { albumApi } from './albumApi';
 import { ApiResponse, Photo } from '../types';
 
 export const collageService = {

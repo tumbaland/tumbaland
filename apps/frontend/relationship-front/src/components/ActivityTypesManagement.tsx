@@ -29,8 +29,8 @@ import {
   deleteActivityType,
   CreateActivityTypeRequest,
   UpdateActivityTypeRequest
-} from '../api/activityTypes';
-import { ActivityType } from '../api/types';
+} from '../services/activityTypes';
+import { ActivityType } from '../services/types';
 import ActivityTypeDialog from './ActivityTypeDialog';
 
 interface ActivityTypesManagementProps {
@@ -49,7 +49,7 @@ const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ group
       setLoading(true);
       const response = await getActivityTypes({ groupId });
       setActivityTypes(response.data);
-    } catch (error: any) {
+    } catch (error) {
       logger.error('Failed to load activity types', error);
       // Ideally use a snackbar here instead of alert
     } finally {
@@ -75,8 +75,8 @@ const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ group
     try {
       await deleteActivityType(id);
       await loadActivityTypes();
-    } catch (error: any) {
-      alert('Failed to delete activity type: ' + error.message);
+    } catch (error) {
+      alert('Failed to delete activity type: ' + (error instanceof Error ? error.message : error));
     }
   };
 

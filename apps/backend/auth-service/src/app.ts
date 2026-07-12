@@ -19,7 +19,7 @@ app.get('/docs', (req: Request, res: Response) => {
   res.redirect('/api/docs/index.html');
 });
 
-// Health check endpoint
+// Health check endpoint (DB-aware readiness; /health/live is mounted by createBaseApp)
 app.get('/health', healthCheck);
 
 // Metrics endpoint for Prometheus

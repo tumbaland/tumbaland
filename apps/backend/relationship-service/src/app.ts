@@ -20,7 +20,7 @@ app.use('/api/statistics', statisticsRoutes);
 // Serve OpenAPI docs as static files
 app.use('/api/docs', express.static(path.join(__dirname, '../docs')));
 
-// Health check endpoint
+// Health check endpoint (DB-aware readiness; /health/live is mounted by createBaseApp)
 app.get('/health', healthCheck);
 
 // Metrics endpoint for Prometheus

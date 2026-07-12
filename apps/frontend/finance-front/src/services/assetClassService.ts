@@ -1,4 +1,4 @@
-import { financeApi } from '../config/financeApi';
+import { financeApi } from './financeApi';
 import { ApiResponse, AssetClass } from '../types';
 
 export const getAssetClasses = async (params?: { groupId?: string }): Promise<AssetClass[]> => {

@@ -21,7 +21,7 @@ const SubscriptionPage: React.FC = () => {
         setSub(s);
         setAllSubs(Array.isArray(list) ? list : []);
       })
-      .catch((e: any) => setMessage(e.message || 'Failed'))
+      .catch((e: unknown) => setMessage(e instanceof Error ? e.message : 'Failed'))
       .finally(() => setLoading(false));
   };
 

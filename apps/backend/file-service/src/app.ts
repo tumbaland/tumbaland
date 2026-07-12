@@ -29,7 +29,7 @@ app.use((req, res, next) => {
   express.json()(req, res, next);
 });
 
-// Health check
+// Health check (/health/live is mounted by createBaseApp)
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', service: 'file-service', timestamp: new Date().toISOString() });
 });

@@ -8,7 +8,7 @@ export type { CreateBaseAppOptions } from './app/createBaseApp';
 export { default as logger } from './logging/logger';
 
 // Health checks
-export { healthCheck, metricsHandler } from './health/healthController';
+export { healthCheck, healthLive, metricsHandler } from './health/healthController';
 
 // Database
 export { connectDB, disconnectDB } from './database/connection';

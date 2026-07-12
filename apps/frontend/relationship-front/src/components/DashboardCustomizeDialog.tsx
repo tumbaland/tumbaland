@@ -11,8 +11,8 @@ import {
   DialogTitle,
   Typography
 } from '@mui/material';
-import { ActivityType } from '../api/types';
-import { DashboardSettingsData } from '../api/dashboardSettings';
+import { ActivityType } from '../services/types';
+import { DashboardSettingsData } from '../services/dashboardSettings';
 
 interface DashboardCustomizeDialogProps {
   open: boolean;

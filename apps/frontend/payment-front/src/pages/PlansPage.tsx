@@ -22,8 +22,8 @@ const PlansPage: React.FC = () => {
         ]);
         setPlans(plansRes);
         setSubscription(subRes);
-      } catch (e: any) {
-        setError(e.message || 'Failed to load plans');
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to load plans');
       } finally {
         setLoading(false);
       }

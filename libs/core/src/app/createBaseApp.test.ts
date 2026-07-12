@@ -53,4 +53,17 @@ describe('createBaseApp', () => {
     expect(first.status).toBe(200);
     expect(second.status).toBe(429);
   });
+
+  it('mounts /health/live ahead of the rate limiter, so it never gets 429s a busy service would', async () => {
+    const app = createBaseApp({ rateLimiter: (await import('../middleware/security')).createRateLimiter({ windowMs: 60_000, max: 1 }) });
+    app.get('/ping', (_req, res) => res.json({ ok: true }));
+
+    await request(app).get('/ping'); // exhaust the max: 1 budget
+    const live1 = await request(app).get('/health/live');
+    const live2 = await request(app).get('/health/live');
+
+    expect(live1.status).toBe(200);
+    expect(live1.body).toEqual({ status: 'ok' });
+    expect(live2.status).toBe(200);
+  });
 });

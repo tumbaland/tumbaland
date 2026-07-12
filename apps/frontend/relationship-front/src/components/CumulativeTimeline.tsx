@@ -17,9 +17,9 @@ import {
   useMediaQuery
 } from '@mui/material';
 import { LineChart } from '@mui/x-charts';
-import { getCumulativeTimelineData, CumulativeTimelineData } from '../api/statistics';
-import { getActivityTypes } from '../api/activityTypes';
-import { ActivityType } from '../api/types';
+import { getCumulativeTimelineData, CumulativeTimelineData } from '../services/statistics';
+import { getActivityTypes } from '../services/activityTypes';
+import { ActivityType } from '../services/types';
 interface ProcessedCumulativeTimelineData extends CumulativeTimelineData {
   cumulativeByType?: {
     activityTypeSlug: string;

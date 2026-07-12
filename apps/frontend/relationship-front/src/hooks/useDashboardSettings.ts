@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { logger } from '@tumbaland/frontend-core';
-import { DashboardSettingsData, getDashboardSettings, saveDashboardSettings } from '../api/dashboardSettings';
-import { getActivityTypes } from '../api/activityTypes';
-import { ActivityType } from '../api/types';
+import { DashboardSettingsData, getDashboardSettings, saveDashboardSettings } from '../services/dashboardSettings';
+import { getActivityTypes } from '../services/activityTypes';
+import { ActivityType } from '../services/types';
 
 const EMPTY_SETTINGS: DashboardSettingsData = { highlightTypeIds: [], hiddenTypeIds: [] };
 

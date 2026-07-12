@@ -58,8 +58,8 @@ const GroupsTab = () => {
       if (currentUser) {
         setCurrentUserEmail(currentUser.email);
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to load groups');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load groups');
     } finally {
       setLoading(false);
     }
@@ -76,8 +76,8 @@ const GroupsTab = () => {
       setCreateOpen(false);
       setCreateName('');
       await load();
-    } catch (err: any) {
-      setError(err.message || 'Failed to create group');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create group');
     } finally {
       setCreateLoading(false);
     }
@@ -93,8 +93,8 @@ const GroupsTab = () => {
       setEditGroup(null);
       setEditName('');
       await load();
-    } catch (err: any) {
-      setError(err.message || 'Failed to update group');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update group');
     } finally {
       setEditLoading(false);
     }
@@ -109,8 +109,8 @@ const GroupsTab = () => {
       setDeleteOpen(false);
       setDeleteGroup(null);
       await load();
-    } catch (err: any) {
-      setError(err.message || 'Failed to delete group');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete group');
     } finally {
       setDeleteLoading(false);
     }

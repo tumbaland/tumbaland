@@ -76,16 +76,17 @@ export const stripeWebhook = async (req: Request, res: Response): Promise<void> 
       throw new Error('Webhook body is not Buffer');
     }
     event = stripe.webhooks.constructEvent(raw, sig, process.env.STRIPE_WEBHOOK_SECRET!);
-  } catch (err: any) {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     logger.error('Webhook signature verification failed', {
-      error: err.message,
+      error: message,
       debug: process.env.DEBUG_STRIPE_WEBHOOK === '1',
       hasRaw: Buffer.isBuffer((req as any).body),
       bodyType: typeof (req as any).body,
       length: Buffer.isBuffer((req as any).body) ? (req as any).body.length : 'n/a',
       sigHeaderPresent: !!sig
     });
-    res.status(400).send(`Webhook Error: ${err.message}`);
+    res.status(400).send(`Webhook Error: ${message}`);
     return;
   }
 
@@ -281,8 +282,8 @@ async function deactivateHigherPricedSubs(primary: any) {
           try {
             ensureStripe();
             await stripe.subscriptions.cancel(other.stripeSubscriptionId);
-          } catch (e:any) {
-            logger.warn('[deactivateHigherPricedSubs] stripe cancel failed', { subId: other.id, err: e?.message });
+          } catch (e) {
+            logger.warn('[deactivateHigherPricedSubs] stripe cancel failed', { subId: other.id, err: e instanceof Error ? e.message : e });
           }
         }
         other.status = 'canceled';

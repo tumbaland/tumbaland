@@ -1,4 +1,4 @@
-import { relationshipApi } from '../config/relationshipApi';
+import { relationshipApi } from './relationshipApi';
 import { ApiResponse } from './types';
 
 /**

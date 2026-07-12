@@ -1,5 +1,5 @@
 import { createApiClient } from '@tumbaland/frontend-core';
-import { getGlobalConfig } from './ConfigProvider';
+import { getGlobalConfig } from '../config/ConfigProvider';
 
 /**
  * Authenticated client for the album-service. Methods return the parsed JSON

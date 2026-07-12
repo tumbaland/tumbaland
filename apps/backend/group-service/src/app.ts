@@ -7,7 +7,7 @@ import { errorHandler, createBaseApp, metricsHandler } from '@tumbaland/core';
 
 const app = createBaseApp();
 
-// Health check endpoint
+// Health check endpoint (DB-aware readiness; /health/live is mounted by createBaseApp)
 app.get('/health', healthCheck);
 
 // Metrics endpoint for Prometheus

@@ -18,9 +18,9 @@ import DownloadIcon from '@mui/icons-material/Download';
 import EditCalendarIcon from '@mui/icons-material/EditCalendar';
 import { useTenantFilter } from '@tumbaland/components';
 import { logger } from '@tumbaland/frontend-core';
-import { ActivityType, Day, DaysResponse } from '../api/types';
-import { getDays } from '../api/days';
-import { getActivityTypes } from '../api/activityTypes';
+import { ActivityType, Day, DaysResponse } from '../services/types';
+import { getDays } from '../services/days';
+import { getActivityTypes } from '../services/activityTypes';
 import DayEditorDialog from '../components/DayEditorDialog';
 
 const PAGE_SIZE = 30;
@@ -126,7 +126,7 @@ const JournalPage: React.FC = () => {
       setPage(1);
       setTotalPages(result.totalPages);
       setTotal(result.total);
-    } catch (e: any) {
+    } catch (e) {
       logger.error('Failed to load days', e);
       setError('Failed to load the journal');
     } finally {
