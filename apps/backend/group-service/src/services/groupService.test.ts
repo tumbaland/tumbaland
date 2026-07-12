@@ -3,7 +3,8 @@ jest.mock('../models/Group', () => ({
     create: jest.fn(),
     find: jest.fn(),
     findOne: jest.fn(),
-    findByIdAndDelete: jest.fn()
+    findByIdAndDelete: jest.fn(),
+    updateOne: jest.fn()
   }
 }));
 
@@ -14,6 +15,7 @@ const mockedCreate = Group.create as unknown as jest.Mock;
 const mockedFind = Group.find as unknown as jest.Mock;
 const mockedFindOne = Group.findOne as unknown as jest.Mock;
 const mockedFindByIdAndDelete = Group.findByIdAndDelete as unknown as jest.Mock;
+const mockedUpdateOne = Group.updateOne as unknown as jest.Mock;
 
 function makeGroup(overrides: Partial<{ members: any[]; deletedAt: Date | null }> = {}) {
   return {
@@ -228,5 +230,85 @@ describe('checkMembership', () => {
     const result = await groupService.checkMembership('group-1', 'OWNER@example.com');
 
     expect(result).toEqual({ member: true, role: 'owner' });
+  });
+});
+
+describe('updateMemberActivity', () => {
+  it('sets lastActivity for the matching member using a lowercased email', async () => {
+    mockedUpdateOne.mockResolvedValue({});
+
+    await groupService.updateMemberActivity('group-1', 'Member@Example.com');
+
+    expect(mockedUpdateOne).toHaveBeenCalledWith(
+      { _id: 'group-1', 'members.email': 'member@example.com' },
+      { $set: { 'members.$.lastActivity': expect.any(Date) } }
+    );
+  });
+});
+
+describe('listMyDeletedGroups', () => {
+  it('queries soft-deleted groups for the member, sorted by deletedAt desc', async () => {
+    const sort = jest.fn().mockResolvedValue([]);
+    mockedFind.mockReturnValue({ sort });
+
+    await groupService.listMyDeletedGroups('Owner@Example.com');
+
+    expect(mockedFind).toHaveBeenCalledWith({
+      'members.email': 'owner@example.com',
+      deletedAt: { $exists: true }
+    });
+    expect(sort).toHaveBeenCalledWith({ deletedAt: -1 });
+  });
+});
+
+describe('restoreGroup', () => {
+  it('throws NotFoundError when no soft-deleted group matches', async () => {
+    mockedFindOne.mockResolvedValue(null);
+    await expect(groupService.restoreGroup('group-1', 'owner@example.com')).rejects.toMatchObject({
+      name: 'NotFoundError'
+    });
+  });
+
+  it('rejects a non-owner', async () => {
+    mockedFindOne.mockResolvedValue(makeGroup({ members: [{ email: 'admin@example.com', role: 'admin' }] }));
+    await expect(groupService.restoreGroup('group-1', 'admin@example.com')).rejects.toMatchObject({
+      name: 'ForbiddenError'
+    });
+  });
+
+  it('clears deletedAt for the owner', async () => {
+    const group = makeGroup({ deletedAt: new Date() });
+    mockedFindOne.mockResolvedValue(group);
+
+    const result = await groupService.restoreGroup('group-1', 'owner@example.com');
+
+    expect(group.deletedAt).toBeUndefined();
+    expect(group.save).toHaveBeenCalledTimes(1);
+    expect(result).toBe(group);
+  });
+});
+
+describe('permanentlyDeleteGroup', () => {
+  it('throws NotFoundError when no soft-deleted group matches', async () => {
+    mockedFindOne.mockResolvedValue(null);
+    await expect(groupService.permanentlyDeleteGroup('group-1', 'owner@example.com')).rejects.toMatchObject({
+      name: 'NotFoundError'
+    });
+  });
+
+  it('rejects a non-owner', async () => {
+    mockedFindOne.mockResolvedValue(makeGroup({ members: [{ email: 'admin@example.com', role: 'admin' }] }));
+    await expect(groupService.permanentlyDeleteGroup('group-1', 'admin@example.com')).rejects.toMatchObject({
+      name: 'ForbiddenError'
+    });
+  });
+
+  it('permanently deletes the group for the owner', async () => {
+    mockedFindOne.mockResolvedValue(makeGroup());
+    mockedFindByIdAndDelete.mockResolvedValue({});
+
+    await groupService.permanentlyDeleteGroup('group-1', 'owner@example.com');
+
+    expect(mockedFindByIdAndDelete).toHaveBeenCalledWith('group-1');
   });
 });
