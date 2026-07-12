@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.374](https://github.com/toomastahves/tumbaland/compare/v0.0.373...v0.0.374) (2026-07-12)
+
+
+### Features
+
+* unify tsconfig files ([b5b59c7](https://github.com/toomastahves/tumbaland/commit/b5b59c71777d8c560ea6cd03807e557f3ffa0e45))
+
 ### [0.0.373](https://github.com/toomastahves/tumbaland/compare/v0.0.372...v0.0.373) (2026-07-12)
 
 
