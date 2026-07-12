@@ -1,4 +1,17 @@
 # Tumbalog
+### [0.0.375](https://github.com/toomastahves/tumbaland/compare/v0.0.374...v0.0.375) (2026-07-12)
+
+
+### Features
+
+* increase library test coverage to 90% ([205e540](https://github.com/toomastahves/tumbaland/commit/205e540a1c1b5a93d4648b9ad909ed0f945d87fc))
+
+
+### Chores
+
+* **release:** 1.3.2 ([4d4d53f](https://github.com/toomastahves/tumbaland/commit/4d4d53fdb93f4c82b4fc82b7c4a984993260b5c7))
+* **release:** 1.3.3 ([1e6c9d9](https://github.com/toomastahves/tumbaland/commit/1e6c9d98cbf86b9666b45fe298f383ed77969a3d))
+
 ### [0.0.374](https://github.com/toomastahves/tumbaland/compare/v0.0.373...v0.0.374) (2026-07-12)
 
 
