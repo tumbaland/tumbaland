@@ -1,9 +1,16 @@
 import {
   parseNumericInput,
   parseNumberWithCommas,
+  formatCurrency,
   formatPct,
   formatNumberWithCommas
 } from './numberUtils';
+
+describe('formatCurrency', () => {
+  it('formats a value as EUR with no decimals', () => {
+    expect(formatCurrency(12504)).toBe('12 504 €');
+  });
+});
 
 describe('parseNumericInput', () => {
   it('parses a plain dot decimal', () => {

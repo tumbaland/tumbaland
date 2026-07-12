@@ -4,11 +4,14 @@ import {
   dot,
   matVecMul,
   invertMatrix,
+  buildMuSigma,
   weightsMinVariance,
   weightsTangency,
   weightsTargetReturn,
   portfolioVariance,
   portfolioReturn,
+  computeEfficientFrontierUnconstrained,
+  computeEfficientFrontierNoShort,
   projectToSimplex,
   Matrix
 } from './portfolioMath';
@@ -98,6 +101,10 @@ describe('weightsTangency', () => {
     const w = weightsTangency([0.1, 0.2], [[0.04, 0], [0, 0.09]], 0.02)!;
     expect(sum(w)).toBeCloseTo(1, 10);
   });
+
+  it('returns null for a singular covariance', () => {
+    expect(weightsTangency([0.1, 0.2], [[1, 1], [1, 1]], 0.02)).toBeNull();
+  });
 });
 
 describe('weightsTargetReturn', () => {
@@ -108,6 +115,71 @@ describe('weightsTargetReturn', () => {
     const w = weightsTargetReturn(mu, Sigma, target)!;
     expect(portfolioReturn(w, mu)).toBeCloseTo(target, 8);
     expect(sum(w)).toBeCloseTo(1, 8);
+  });
+
+  it('returns null for a singular covariance', () => {
+    expect(weightsTargetReturn([0.1, 0.2], [[1, 1], [1, 1]], 0.15)).toBeNull();
+  });
+
+  it('returns null when all assets have identical expected returns (D ~ 0)', () => {
+    // With mu constant, B^2 = A*C exactly, so D = A*C - B*B = 0.
+    expect(weightsTargetReturn([0.1, 0.1], [[0.04, 0], [0, 0.09]], 0.15)).toBeNull();
+  });
+});
+
+describe('buildMuSigma', () => {
+  it('annualizes per-ticker mean returns and pairwise covariances', () => {
+    const returns = { AAPL: [0.01, 0.02, -0.01], MSFT: [0.005, 0.015, 0.0] };
+    const { mu, Sigma } = buildMuSigma(returns, ['AAPL', 'MSFT']);
+
+    expect(mu[0]).toBeCloseTo(mean(returns.AAPL) * 252, 10);
+    expect(Sigma[0][0]).toBeCloseTo(covariance(returns.AAPL, returns.AAPL) * 252, 10);
+    expect(Sigma[0][1]).toBeCloseTo(covariance(returns.AAPL, returns.MSFT) * 252, 10);
+  });
+
+  it('treats a missing ticker series as empty (mean/covariance of [])', () => {
+    const { mu, Sigma } = buildMuSigma({ AAPL: [0.01, 0.02] }, ['AAPL', 'GOOG']);
+    expect(mu[1]).toBe(0);
+    expect(Sigma[1][1]).toBe(0);
+  });
+});
+
+describe('computeEfficientFrontierUnconstrained', () => {
+  it('returns an increasing-return, increasing-risk frontier', () => {
+    const mu = [0.08, 0.15];
+    const Sigma: Matrix = [[0.04, 0.01], [0.01, 0.09]];
+
+    const frontier = computeEfficientFrontierUnconstrained(mu, Sigma, 20);
+
+    expect(frontier.length).toBeGreaterThan(0);
+    for (let i = 1; i < frontier.length; i++) {
+      expect(frontier[i].risk).toBeGreaterThanOrEqual(frontier[i - 1].risk);
+      expect(frontier[i].return).toBeGreaterThan(frontier[i - 1].return);
+    }
+  });
+
+  it('skips unreachable target-return points for a singular covariance', () => {
+    const frontier = computeEfficientFrontierUnconstrained([0.1, 0.1], [[1, 1], [1, 1]], 10);
+    expect(frontier).toEqual([]);
+  });
+});
+
+describe('computeEfficientFrontierNoShort', () => {
+  it('returns weights that stay on the simplex (no shorting)', () => {
+    const mu = [0.08, 0.15];
+    const Sigma: Matrix = [[0.04, 0.01], [0.01, 0.09]];
+
+    const frontier = computeEfficientFrontierNoShort(mu, Sigma, 5, 20, 0.02);
+
+    expect(frontier.length).toBeGreaterThan(0);
+    for (const point of frontier) {
+      expect(sum(point.weights!)).toBeCloseTo(1, 6);
+      expect(Math.min(...point.weights!)).toBeGreaterThanOrEqual(-1e-9);
+    }
+  });
+
+  it('returns an empty frontier for zero assets', () => {
+    expect(computeEfficientFrontierNoShort([], [], 5)).toEqual([]);
   });
 });
 
