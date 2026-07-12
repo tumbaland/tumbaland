@@ -24,11 +24,11 @@ describe('assetClassService', () => {
   it('posts a new asset class and returns the created record', async () => {
     mockFetchOnce({ success: true, data: { _id: 'ac-2', name: 'Bonds' } });
 
-    const result = await createAssetClass({ name: 'Bonds' });
+    const result = await createAssetClass({ name: 'Bonds', userId: 'user-1' });
 
     expect(result).toEqual({ _id: 'ac-2', name: 'Bonds' });
     const [, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(init).toMatchObject({ method: 'POST', body: JSON.stringify({ name: 'Bonds' }) });
+    expect(init).toMatchObject({ method: 'POST', body: JSON.stringify({ name: 'Bonds', userId: 'user-1' }) });
   });
 
   it('updates an asset class via PUT', async () => {
