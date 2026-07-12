@@ -39,6 +39,7 @@ jest.mock('@opentelemetry/resources', () => ({
 }));
 
 import { context } from '@opentelemetry/api';
+import { ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 
 async function loadTracing() {
   let tracing!: typeof import('./index');
@@ -90,6 +91,23 @@ describe('initTracer', () => {
     initTracer('album-service');
 
     expect(exporterCtorMock).toHaveBeenCalledWith({ url: 'http://jaeger-endpoint/v1/traces' });
+  });
+
+  it('falls back to version 1.0.0 and environment "development" when their env vars are unset', async () => {
+    const merged: Record<string, string | undefined> = { ...process.env };
+    delete merged.npm_package_version;
+    delete merged.NODE_ENV;
+    process.env = merged as NodeJS.ProcessEnv;
+
+    const { initTracer } = await loadTracing();
+    initTracer('album-service');
+
+    expect(resourceFromAttributesMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        [ATTR_SERVICE_VERSION]: '1.0.0',
+        'deployment.environment': 'development'
+      })
+    );
   });
 
   it('registers the provider and returns a tracer scoped to the given service name', async () => {

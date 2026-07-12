@@ -45,4 +45,17 @@ describe('ErrorPage', () => {
 
     expect(screen.getByTestId('custom-icon')).toBeInTheDocument();
   });
+
+  it('reloads the page when the retry button is clicked with no onRetry provided', async () => {
+    const originalLocation = window.location;
+    const reloadSpy = vi.fn();
+    Object.defineProperty(window, 'location', { writable: true, value: { ...originalLocation, reload: reloadSpy } });
+    const user = userEvent.setup();
+    render(<ErrorPage />);
+
+    await user.click(screen.getByRole('button', { name: /retry/i }));
+
+    expect(reloadSpy).toHaveBeenCalledTimes(1);
+    Object.defineProperty(window, 'location', { writable: true, value: originalLocation });
+  });
 });

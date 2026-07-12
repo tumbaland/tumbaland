@@ -90,6 +90,15 @@ describe('createApiClient', () => {
     );
   });
 
+  it('leaves the path unchanged when params has no defined values', async () => {
+    mockFetchOnce({ items: [] });
+    const client = createApiClient({ baseUrl });
+
+    await client.get('/things', { params: { groupId: undefined, archived: null } });
+
+    expect(global.fetch).toHaveBeenCalledWith('https://api.example/things', expect.objectContaining({ method: 'GET' }));
+  });
+
   it('appends params after an existing query string with &', async () => {
     mockFetchOnce({ items: [] });
     const client = createApiClient({ baseUrl });
@@ -140,6 +149,21 @@ describe('createApiClient', () => {
       'https://api.example/things/1',
       expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ name: 'patched' }) })
     );
+  });
+
+  it('POST, PUT, and PATCH send body:undefined when called with no body', async () => {
+    mockFetchOnce({ ok: true });
+    mockFetchOnce({ ok: true });
+    mockFetchOnce({ ok: true });
+    const client = createApiClient({ baseUrl });
+
+    await client.post('/things');
+    await client.put('/things/1');
+    await client.patch('/things/1');
+
+    for (const call of (global.fetch as ReturnType<typeof vi.fn>).mock.calls) {
+      expect(call[1]).toMatchObject({ body: undefined });
+    }
   });
 
   it('sends the correlation/session headers and lets caller-supplied headers override them', async () => {

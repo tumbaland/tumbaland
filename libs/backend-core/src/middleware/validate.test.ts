@@ -57,4 +57,16 @@ describe('validate', () => {
     expect(res.status).toBe(200);
     expect(res.body.data).toEqual({ name: 'Carol' });
   });
+
+  it('omits the field prefix when the zod issue has no path (whole-body validation)', async () => {
+    const arraySchema = z.array(z.string());
+    const app = buildApp(arraySchema);
+    const rawResult = arraySchema.safeParse({ not: 'an array' });
+
+    const res = await request(app).post('/things').send({ not: 'an array' });
+
+    expect(res.status).toBe(400);
+    expect(rawResult.success).toBe(false);
+    expect(res.body.message).toBe(!rawResult.success ? rawResult.error.issues[0].message : undefined);
+  });
 });

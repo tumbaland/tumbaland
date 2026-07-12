@@ -82,6 +82,22 @@ describe('createAuthService', () => {
       expect(window.location.href).toBe('https://login.example?redirect_uri=https%3A%2F%2Fapp.example%2Fpage');
       Object.defineProperty(window, 'location', { writable: true, value: originalLocation });
     });
+
+    it('falls back to window.location.href when no returnUrl is given', () => {
+      const authService = createAuthService(config);
+      const originalLocation = window.location;
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: { href: 'https://app.example/current-page' }
+      });
+
+      authService.redirectToLogin();
+
+      expect(window.location.href).toBe(
+        'https://login.example?redirect_uri=https%3A%2F%2Fapp.example%2Fcurrent-page'
+      );
+      Object.defineProperty(window, 'location', { writable: true, value: originalLocation });
+    });
   });
 
   describe('isAuthenticated / getCurrentUser', () => {

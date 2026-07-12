@@ -51,6 +51,13 @@ describe('createGroupService', () => {
 
       await expect(groupService.getUserGroups()).rejects.toThrow('nope');
     });
+
+    it('throws a default message when the API reports success:false with no message', async () => {
+      mockFetchOnce({ success: false });
+      const groupService = createGroupService(config);
+
+      await expect(groupService.getUserGroups()).rejects.toThrow('Failed to fetch groups');
+    });
   });
 
   describe('getUserGroupIds', () => {

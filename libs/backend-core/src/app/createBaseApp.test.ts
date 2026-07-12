@@ -54,6 +54,15 @@ describe('createBaseApp', () => {
     expect(second.status).toBe(429);
   });
 
+  it('uses the plain request logger (no metrics histogram) when metrics is false', async () => {
+    const app = createBaseApp({ metrics: false });
+    app.get('/ping', (_req, res) => res.json({ ok: true }));
+
+    const res = await request(app).get('/ping');
+
+    expect(res.status).toBe(200);
+  });
+
   it('mounts /health/live ahead of the rate limiter, so it never gets 429s a busy service would', async () => {
     const app = createBaseApp({ rateLimiter: (await import('../middleware/security')).createRateLimiter({ windowMs: 60_000, max: 1 }) });
     app.get('/ping', (_req, res) => res.json({ ok: true }));

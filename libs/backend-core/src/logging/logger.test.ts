@@ -35,6 +35,21 @@ describe('logger', () => {
     expect(logger.level).toBe('info');
   });
 
+  it('defaults to development (debug level) when NODE_ENV is unset', async () => {
+    const ORIGINAL_ENV = process.env;
+    const merged: Record<string, string | undefined> = { ...ORIGINAL_ENV };
+    delete merged.NODE_ENV;
+    process.env = merged as NodeJS.ProcessEnv;
+
+    let loggerModule!: typeof import('./logger').default;
+    await jest.isolateModulesAsync(async () => {
+      loggerModule = (await import('./logger')).default;
+    });
+
+    process.env = ORIGINAL_ENV;
+    expect(loggerModule.level).toBe('debug');
+  });
+
   it('does not create a file transport when LOG_TO_FILE is unset', async () => {
     const logger = await loadLogger({ NODE_ENV: 'development', LOG_TO_FILE: undefined });
     expect(namedTransports(logger, 'file')).toHaveLength(0);

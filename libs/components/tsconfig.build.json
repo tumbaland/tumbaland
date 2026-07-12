@@ -3,5 +3,5 @@
   "compilerOptions": {
     "types": ["node"]
   },
-  "exclude": ["src/**/*.stories.tsx", "src/**/*.test.tsx", "node_modules", "dist"]
+  "exclude": ["src/**/*.stories.tsx", "src/**/*.test.ts", "src/**/*.test.tsx", "node_modules", "dist"]
 }

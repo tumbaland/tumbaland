@@ -81,6 +81,31 @@ describe('metricsMiddleware', () => {
   });
 });
 
+describe('default labels', () => {
+  it('falls back to app "unknown-service" and version "1.0.0" when their env vars are unset', async () => {
+    const ORIGINAL_ENV = process.env;
+    const merged: Record<string, string | undefined> = { ...ORIGINAL_ENV };
+    delete merged.SERVICE_NAME;
+    delete merged.npm_package_version;
+    process.env = merged as NodeJS.ProcessEnv;
+
+    // isolateModulesAsync sandboxes the whole module registry, including
+    // prom-client itself — the spy must target the Registry class required
+    // *inside* the sandbox, not the one imported at the top of this file.
+    await jest.isolateModulesAsync(async () => {
+      const innerPromClient = (await import('prom-client')).default;
+      const setDefaultLabelsSpy = jest.spyOn(innerPromClient.Registry.prototype, 'setDefaultLabels');
+
+      await import('./index');
+
+      expect(setDefaultLabelsSpy).toHaveBeenCalledWith({ app: 'unknown-service', version: '1.0.0' });
+      setDefaultLabelsSpy.mockRestore();
+    });
+
+    process.env = ORIGINAL_ENV;
+  });
+});
+
 describe('businessMetrics', () => {
   it('exposes counters that can be incremented without throwing', () => {
     expect(() => businessMetrics.albumsCreated.inc()).not.toThrow();

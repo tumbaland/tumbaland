@@ -104,15 +104,21 @@ const fetchGroupsGlobally = async (groupApiUrl: string): Promise<TenantOption[]>
   globalGroupsCacheTimestamp = now;
   globalGroupsApiUrl = groupApiUrl;
 
-  // Clear cache after request completes (success or failure)
-  globalGroupsFetchCache.finally(() => {
-    setTimeout(() => {
-      if (globalGroupsFetchCache && (Date.now() - globalGroupsCacheTimestamp) >= CACHE_DURATION) {
-        globalGroupsFetchCache = null;
-        globalGroupsApiUrl = '';
-      }
-    }, CACHE_DURATION);
-  });
+  // Clear cache after request completes (success or failure). `.finally()`
+  // returns a new derived promise that rejects if the request did — nothing
+  // else observes that derived promise (callers only await the original
+  // `globalGroupsFetchCache` reference returned below), so without a no-op
+  // `.catch()` here a failed request logs as an unhandled rejection.
+  globalGroupsFetchCache
+    .finally(() => {
+      setTimeout(() => {
+        if (globalGroupsFetchCache && (Date.now() - globalGroupsCacheTimestamp) >= CACHE_DURATION) {
+          globalGroupsFetchCache = null;
+          globalGroupsApiUrl = '';
+        }
+      }, CACHE_DURATION);
+    })
+    .catch(() => {});
 
   return globalGroupsFetchCache;
 };

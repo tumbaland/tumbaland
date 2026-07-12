@@ -147,6 +147,25 @@ describe('AuthHeader', () => {
       });
     });
 
+    it.each([
+      ['profile', 'account'],
+      ['groups', 'groups'],
+      ['billing', 'payments']
+    ])('navigates window.top to the shell-front %s page from the account menu', async (menuItemName, path) => {
+      const userEventInstance = userEvent.setup();
+      renderAuthHeader({ isAuthenticated: true, user });
+      // jsdom's window.top === window by default; stub location the same way
+      // the other suites do to avoid jsdom's "Not implemented: navigation".
+      const originalLocation = window.location;
+      Object.defineProperty(window, 'location', { writable: true, value: { ...originalLocation, href: '' } });
+
+      await userEventInstance.click(screen.getByRole('button', { name: /account menu/i }));
+      await userEventInstance.click(await screen.findByRole('menuitem', { name: new RegExp(menuItemName, 'i') }));
+
+      expect(window.location.href).toBe(`https://shell.example/${path}`);
+      Object.defineProperty(window, 'location', { writable: true, value: originalLocation });
+    });
+
     it('renders the injected tenant selector with forwarded props', () => {
       const tenants: AuthHeaderTenantOption[] = [{ id: '1', name: 'Personal', type: 'personal', isSelected: true }];
       renderAuthHeader({
@@ -200,6 +219,44 @@ describe('AuthHeader', () => {
       await userEventInstance.click(albumsItem);
 
       expect(mockNavigate).toHaveBeenCalledWith('/albums');
+    });
+
+    it('renders the tenant selector inline (not just in the desktop layout) when authenticated', () => {
+      mediaQueryState.isMobile = true;
+      renderAuthHeader({
+        isAuthenticated: true,
+        user: { name: 'Ada Lovelace', email: 'ada@example.com' }
+      });
+
+      expect(screen.getByTestId('tenant-selector')).toBeInTheDocument();
+    });
+  });
+
+  describe('navigation items with icons', () => {
+    function IconStub() {
+      return <span data-testid="nav-icon" />;
+    }
+
+    it('renders the icon next to each desktop nav button', () => {
+      renderAuthHeader({ navigationItems: [{ label: 'Home', path: '/', icon: IconStub }] });
+
+      expect(screen.getAllByTestId('nav-icon').length).toBeGreaterThan(0);
+    });
+
+    it('renders the icon next to each item in the mobile nav dropdown', async () => {
+      mediaQueryState.isMobile = true;
+      const userEventInstance = userEvent.setup();
+      renderAuthHeader({
+        navigationItems: [
+          { label: 'Home', path: '/', icon: IconStub },
+          { label: 'Albums', path: '/albums' }
+        ]
+      });
+
+      await userEventInstance.click(screen.getByRole('button', { name: /home/i }));
+      await screen.findByRole('menuitem', { name: 'Albums' });
+
+      expect(screen.getAllByTestId('nav-icon').length).toBeGreaterThan(0);
     });
   });
 });

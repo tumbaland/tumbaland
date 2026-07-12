@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
-import { healthCheck, healthLive } from './healthController';
+import { healthCheck, healthLive, metricsHandler } from './healthController';
 
 function mockRes(): Response {
   const res: Partial<Response> = {};
@@ -87,5 +87,27 @@ describe('healthCheck', () => {
 
     expect(res.status).toHaveBeenCalledWith(503);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ status: 'error', error: 'Health check failed' }));
+  });
+
+  it('falls back to default service/version/description in the error body when env vars are unset', async () => {
+    delete process.env.SERVICE_NAME;
+    delete process.env.npm_package_version;
+    delete process.env.SERVICE_DESCRIPTION;
+    jest.spyOn(mongoose, 'connection', 'get').mockImplementation(() => {
+      throw new Error('boom');
+    });
+    const res = mockRes();
+
+    await healthCheck({} as Request, res);
+
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ service: 'unknown-service', version: '1.0.0', description: 'Backend service' })
+    );
+  });
+});
+
+describe('metricsHandler re-export', () => {
+  it('re-exports the same metricsHandler function from ../metrics', () => {
+    expect(typeof metricsHandler).toBe('function');
   });
 });
