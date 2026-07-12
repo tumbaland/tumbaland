@@ -10,6 +10,7 @@ WORKDIR /app
 COPY --from=builder /app/package*.json ./
 RUN npm ci --omit=dev
 COPY --from=builder --chown=node:node /app/dist ./dist
+COPY --from=builder --chown=node:node /app/docs ./docs
 RUN mkdir -p /data && chown node:node /data
 USER node
 EXPOSE 5002

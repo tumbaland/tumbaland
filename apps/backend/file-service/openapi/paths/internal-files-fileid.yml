@@ -1,0 +1,79 @@
+parameters:
+  - name: fileId
+    in: path
+    required: true
+    description: |
+      Full storage path, not a single segment — may itself contain slashes
+      (e.g. `groupId/albumId/photo.jpg`). Express's wildcard route captures
+      everything after `/internal/files/`.
+    schema:
+      type: string
+put:
+  tags: [Internal]
+  summary: Upload a file (server-to-server)
+  description: Accepts the raw file bytes as the request body (no multipart wrapper).
+  security:
+    - internalApiKey: []
+  requestBody:
+    required: true
+    content:
+      application/octet-stream:
+        schema:
+          type: string
+          format: binary
+  responses:
+    '200':
+      description: File written.
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/InternalUploadResponse.yml'
+    '401':
+      $ref: '../components/responses/Unauthorized.yml'
+    '500':
+      $ref: '../components/responses/ServerError.yml'
+get:
+  tags: [Internal]
+  summary: Download a file (server-to-server)
+  description: Returns the raw file bytes as `application/octet-stream`.
+  security:
+    - internalApiKey: []
+  responses:
+    '200':
+      description: File bytes.
+      content:
+        application/octet-stream:
+          schema:
+            type: string
+            format: binary
+    '401':
+      $ref: '../components/responses/Unauthorized.yml'
+    '404':
+      $ref: '../components/responses/NotFound.yml'
+head:
+  tags: [Internal]
+  summary: Check whether a file exists
+  description: No response body either way — presence is conveyed entirely by status code.
+  security:
+    - internalApiKey: []
+  responses:
+    '200':
+      description: File exists.
+    '404':
+      description: File does not exist.
+    '401':
+      $ref: '../components/responses/Unauthorized.yml'
+delete:
+  tags: [Internal]
+  summary: Delete a single file
+  security:
+    - internalApiKey: []
+  responses:
+    '200':
+      description: File deleted (or already absent — deletion is idempotent).
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/MessageResponse.yml'
+    '401':
+      $ref: '../components/responses/Unauthorized.yml'

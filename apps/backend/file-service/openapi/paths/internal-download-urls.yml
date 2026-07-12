@@ -1,0 +1,28 @@
+post:
+  tags: [Internal]
+  summary: Generate signed download URLs in batch
+  description: |
+    Batch variant of `/internal/download-url`: signing is pure HMAC (no
+    per-file lookup), so one request can produce URLs for a whole
+    collage/album — up to 1000 files — instead of one round-trip per file.
+  security:
+    - internalApiKey: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/GenerateDownloadUrlsRequest.yml'
+  responses:
+    '200':
+      description: Signed download URLs generated, keyed by fileId.
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/DownloadUrlsBatchResponse.yml'
+    '400':
+      $ref: '../components/responses/BadRequest.yml'
+    '401':
+      $ref: '../components/responses/Unauthorized.yml'
+    '500':
+      $ref: '../components/responses/ServerError.yml'

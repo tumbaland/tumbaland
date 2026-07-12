@@ -1,0 +1,21 @@
+type: object
+properties:
+  success:
+    type: boolean
+    example: true
+  data:
+    type: object
+    properties:
+      size:
+        type: integer
+        format: int64
+        example: 204800
+      lastModified:
+        type: string
+        format: date-time
+    required:
+      - size
+      - lastModified
+required:
+  - success
+  - data

@@ -1,0 +1,25 @@
+get:
+  tags: [Internal]
+  summary: Get file metadata
+  parameters:
+    - name: fileId
+      in: path
+      required: true
+      description: |
+        Full storage path, not a single segment — may itself contain
+        slashes (e.g. `groupId/albumId/photo.jpg`).
+      schema:
+        type: string
+  security:
+    - internalApiKey: []
+  responses:
+    '200':
+      description: Size and last-modified time.
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/FileMetadataResponse.yml'
+    '401':
+      $ref: '../components/responses/Unauthorized.yml'
+    '404':
+      $ref: '../components/responses/NotFound.yml'

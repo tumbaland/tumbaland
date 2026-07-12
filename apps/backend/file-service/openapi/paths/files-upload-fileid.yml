@@ -1,0 +1,57 @@
+put:
+  tags: [Public]
+  summary: Upload a file directly from the browser
+  description: |
+    Browser-direct upload using a signed URL obtained from
+    `POST /internal/upload-url`. `token` and `expires` are validated
+    against the `fileId`; the request body is the raw file bytes.
+  parameters:
+    - name: fileId
+      in: path
+      required: true
+      description: |
+        Full storage path, not a single segment — may itself contain
+        slashes (e.g. `groupId/albumId/photo.jpg`).
+      schema:
+        type: string
+    - name: token
+      in: query
+      required: true
+      schema:
+        type: string
+    - name: expires
+      in: query
+      required: true
+      description: Unix epoch ms the token was signed to expire at.
+      schema:
+        type: string
+  requestBody:
+    required: true
+    content:
+      application/octet-stream:
+        schema:
+          type: string
+          format: binary
+  responses:
+    '200':
+      description: File uploaded.
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/PublicUploadResponse.yml'
+    '400':
+      description: Missing or non-numeric `expires`.
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/Error.yml'
+    '401':
+      description: Missing `token` or `expires`.
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/Error.yml'
+    '403':
+      $ref: '../components/responses/Forbidden.yml'
+    '500':
+      $ref: '../components/responses/ServerError.yml'

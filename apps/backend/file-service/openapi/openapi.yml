@@ -1,0 +1,57 @@
+openapi: 3.0.3
+info:
+  title: File Service API
+  description: |
+    Binary file storage for the other backend services: server-to-server
+    upload/download/list/delete, plus HMAC-signed URLs that let a browser
+    upload or download a file directly without proxying the bytes through
+    the calling service.
+
+    Split across small files under `openapi/` and bundled into the single
+    `docs/openapi.yml` this page loads — see `apps/backend/file-service/package.json`'s
+    `docs:build` script.
+  version: 1.0.0
+  contact:
+    name: Tumbaland Team
+servers:
+  - url: http://localhost:5002
+    description: Development server
+  - url: https://file-api.tumbaland.eu
+    description: Production server
+
+tags:
+  - name: Internal
+    description: Server-to-server calls, guarded by the X-Internal-Api-Key header.
+  - name: Public
+    description: Browser-direct signed upload/download using a token minted by an Internal endpoint.
+
+security:
+  - internalApiKey: []
+
+components:
+  securitySchemes:
+    internalApiKey:
+      type: apiKey
+      in: header
+      name: X-Internal-Api-Key
+      description: Shared secret used by other backend services for server-to-server calls.
+
+paths:
+  /internal/upload-url:
+    $ref: 'paths/internal-upload-url.yml'
+  /internal/download-url:
+    $ref: 'paths/internal-download-url.yml'
+  /internal/download-urls:
+    $ref: 'paths/internal-download-urls.yml'
+  /internal/files/folder:
+    $ref: 'paths/internal-files-folder.yml'
+  /internal/files:
+    $ref: 'paths/internal-files.yml'
+  /internal/files/{fileId}:
+    $ref: 'paths/internal-files-fileid.yml'
+  /internal/meta/{fileId}:
+    $ref: 'paths/internal-meta-fileid.yml'
+  /files/upload/{fileId}:
+    $ref: 'paths/files-upload-fileid.yml'
+  /files/download/{fileId}:
+    $ref: 'paths/files-download-fileid.yml'

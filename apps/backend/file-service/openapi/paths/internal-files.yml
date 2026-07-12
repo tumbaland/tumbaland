@@ -1,0 +1,28 @@
+get:
+  tags: [Internal]
+  summary: List stored files
+  parameters:
+    - name: prefix
+      in: query
+      description: Restrict the listing to paths starting with this prefix.
+      schema:
+        type: string
+    - name: maxKeys
+      in: query
+      description: Maximum number of entries to return.
+      schema:
+        type: integer
+        default: 1000
+  security:
+    - internalApiKey: []
+  responses:
+    '200':
+      description: File listing.
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/FileListResponse.yml'
+    '401':
+      $ref: '../components/responses/Unauthorized.yml'
+    '500':
+      $ref: '../components/responses/ServerError.yml'

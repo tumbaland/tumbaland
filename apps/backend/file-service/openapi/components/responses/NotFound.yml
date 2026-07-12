@@ -1,0 +1,5 @@
+description: No file exists at the given fileId.
+content:
+  application/json:
+    schema:
+      $ref: '../schemas/Error.yml'

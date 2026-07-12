@@ -1,0 +1,5 @@
+description: Missing or invalid credential (API key, or signed-URL token/expires).
+content:
+  application/json:
+    schema:
+      $ref: '../schemas/Error.yml'

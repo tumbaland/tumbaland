@@ -1,0 +1,5 @@
+description: Signed-URL token is invalid or expired.
+content:
+  application/json:
+    schema:
+      $ref: '../schemas/Error.yml'

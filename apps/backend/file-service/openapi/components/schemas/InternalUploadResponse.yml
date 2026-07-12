@@ -1,0 +1,19 @@
+type: object
+description: |
+  Note: unlike most of this API's success responses, this one is not
+  wrapped in a `data` envelope — the fields sit at the top level.
+properties:
+  success:
+    type: boolean
+    example: true
+  fileId:
+    type: string
+    example: 'groupId/albumId/photo.jpg'
+  size:
+    type: integer
+    format: int64
+    description: Bytes written.
+required:
+  - success
+  - fileId
+  - size

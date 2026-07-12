@@ -1,0 +1,52 @@
+get:
+  tags: [Public]
+  summary: Download or display a file directly from the browser
+  description: |
+    Browser-direct download using a signed URL obtained from
+    `POST /internal/download-url` or `/internal/download-urls`. Content-Type
+    is guessed from the file extension (falls back to
+    `application/octet-stream`); the response is cacheable for one hour.
+  parameters:
+    - name: fileId
+      in: path
+      required: true
+      description: |
+        Full storage path, not a single segment — may itself contain
+        slashes (e.g. `groupId/albumId/photo.jpg`).
+      schema:
+        type: string
+    - name: token
+      in: query
+      required: true
+      schema:
+        type: string
+    - name: expires
+      in: query
+      required: true
+      description: Unix epoch ms the token was signed to expire at.
+      schema:
+        type: string
+  responses:
+    '200':
+      description: File bytes.
+      content:
+        application/octet-stream:
+          schema:
+            type: string
+            format: binary
+    '400':
+      description: Missing or non-numeric `expires`.
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/Error.yml'
+    '401':
+      description: Missing `token` or `expires`.
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/Error.yml'
+    '403':
+      $ref: '../components/responses/Forbidden.yml'
+    '404':
+      $ref: '../components/responses/NotFound.yml'

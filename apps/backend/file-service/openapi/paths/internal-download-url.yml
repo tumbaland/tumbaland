@@ -1,0 +1,27 @@
+post:
+  tags: [Internal]
+  summary: Generate a signed download URL
+  description: |
+    Returns a time-limited, HMAC-signed URL that a browser can `GET`
+    directly, without going through the calling service.
+  security:
+    - internalApiKey: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/GenerateDownloadUrlRequest.yml'
+  responses:
+    '200':
+      description: Signed download URL generated.
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/DownloadUrlResponse.yml'
+    '400':
+      $ref: '../components/responses/BadRequest.yml'
+    '401':
+      $ref: '../components/responses/Unauthorized.yml'
+    '500':
+      $ref: '../components/responses/ServerError.yml'

@@ -1,0 +1,27 @@
+post:
+  tags: [Internal]
+  summary: Generate a signed upload URL
+  description: |
+    Returns a time-limited, HMAC-signed URL that a browser can `PUT` raw
+    bytes to directly, without going through the calling service.
+  security:
+    - internalApiKey: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/schemas/GenerateUploadUrlRequest.yml'
+  responses:
+    '200':
+      description: Signed upload URL generated.
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/UploadUrlResponse.yml'
+    '400':
+      $ref: '../components/responses/BadRequest.yml'
+    '401':
+      $ref: '../components/responses/Unauthorized.yml'
+    '500':
+      $ref: '../components/responses/ServerError.yml'

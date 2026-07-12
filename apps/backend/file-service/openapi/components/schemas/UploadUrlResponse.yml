@@ -1,0 +1,29 @@
+type: object
+properties:
+  success:
+    type: boolean
+    example: true
+  data:
+    type: object
+    properties:
+      uploadUrl:
+        type: string
+        description: Signed URL the browser can PUT the file's raw bytes to directly.
+        example: 'https://files.tumbaland.eu/files/upload/groupId/albumId/photo.jpg?token=abcdef&expires=1735689600000'
+      fileId:
+        type: string
+        example: 'groupId/albumId/photo.jpg'
+      expiresMs:
+        type: integer
+        format: int64
+        description: Unix epoch ms after which the signed URL stops working.
+      expiresInMinutes:
+        type: integer
+    required:
+      - uploadUrl
+      - fileId
+      - expiresMs
+      - expiresInMinutes
+required:
+  - success
+  - data

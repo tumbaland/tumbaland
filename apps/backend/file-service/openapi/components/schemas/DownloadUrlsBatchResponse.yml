@@ -1,0 +1,37 @@
+type: object
+properties:
+  success:
+    type: boolean
+    example: true
+  data:
+    type: object
+    properties:
+      urls:
+        type: object
+        description: Keyed by the requested fileId.
+        additionalProperties:
+          type: object
+          properties:
+            downloadUrl:
+              type: string
+            expiresMs:
+              type: integer
+              format: int64
+            expiresInMinutes:
+              type: integer
+          required:
+            - downloadUrl
+            - expiresMs
+            - expiresInMinutes
+      expiresMs:
+        type: integer
+        format: int64
+      expiresInMinutes:
+        type: integer
+    required:
+      - urls
+      - expiresMs
+      - expiresInMinutes
+required:
+  - success
+  - data

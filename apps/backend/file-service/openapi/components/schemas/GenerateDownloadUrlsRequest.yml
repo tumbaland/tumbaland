@@ -1,0 +1,14 @@
+type: object
+properties:
+  fileIds:
+    type: array
+    items:
+      type: string
+      minLength: 1
+    minItems: 1
+    maxItems: 1000
+  expiresInMinutes:
+    type: number
+    description: Defaults to 60 minutes.
+required:
+  - fileIds

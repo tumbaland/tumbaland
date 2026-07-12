@@ -1,0 +1,5 @@
+description: Request body failed schema validation.
+content:
+  application/json:
+    schema:
+      $ref: '../schemas/Error.yml'

@@ -1,0 +1,18 @@
+type: object
+description: |
+  Note: unlike most of this API's success responses, this one is not
+  wrapped in a `data` envelope — the fields sit at the top level.
+properties:
+  success:
+    type: boolean
+    example: true
+  message:
+    type: string
+    example: 'Deleted 12 file(s)'
+  count:
+    type: integer
+    description: Number of files removed.
+required:
+  - success
+  - message
+  - count

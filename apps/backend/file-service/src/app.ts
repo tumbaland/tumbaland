@@ -1,4 +1,5 @@
 import express, { Request, Response } from 'express';
+import path from 'path';
 import { errorHandler, createBaseApp, createRateLimiter, metricsHandler } from '@tumbaland/core';
 import routes from './routes/routes';
 
@@ -28,6 +29,9 @@ app.use((req, res, next) => {
   }
   express.json()(req, res, next);
 });
+
+// Serve OpenAPI docs as static files
+app.use('/api/docs', express.static(path.join(__dirname, '../docs')));
 
 // Health check (/health/live is mounted by createBaseApp)
 app.get('/health', (_req: Request, res: Response) => {
