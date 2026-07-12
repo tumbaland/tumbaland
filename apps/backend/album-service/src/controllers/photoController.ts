@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { NotFoundError, UnauthorizedError, sendSuccess } from '@tumbaland/core';
+import { NotFoundError, UnauthorizedError, sendSuccess } from '@tumbaland/backend-core';
 import photoService from '../services/photoService';
 import { getUploadSignedUrl, generateFileId } from '../services/fileServiceClient';
 import Album from '../models/Album';

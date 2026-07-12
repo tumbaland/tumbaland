@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { authenticateToken as coreAuthenticateToken } from '@tumbaland/core';
+import { authenticateToken as coreAuthenticateToken } from '@tumbaland/backend-core';
 
 /**
  * Wraps the shared JWT check with a bypass for internal service-to-service

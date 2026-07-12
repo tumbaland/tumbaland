@@ -1,4 +1,4 @@
-import { ConflictError, logger } from '@tumbaland/core';
+import { ConflictError, logger } from '@tumbaland/backend-core';
 import { ActivityType, IActivityType } from '../models/ActivityType';
 
 // Create a new activity type

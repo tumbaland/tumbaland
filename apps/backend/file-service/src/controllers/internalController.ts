@@ -8,7 +8,7 @@ import {
   getMetadata,
   listFiles
 } from '../utils/storage';
-import { logger, NotFoundError, sendSuccess } from '@tumbaland/core';
+import { logger, NotFoundError, sendSuccess } from '@tumbaland/backend-core';
 
 /**
  * PUT /internal/files/:fileId

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { NotFoundError, sendSuccess } from '@tumbaland/core';
+import { NotFoundError, sendSuccess } from '@tumbaland/backend-core';
 import * as ActivityTypeService from '../services/activityType.service';
 
 /**

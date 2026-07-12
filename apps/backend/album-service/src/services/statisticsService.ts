@@ -1,6 +1,6 @@
 import Album from '../models/Album';
 import Photo from '../models/Photo';
-import { ForbiddenError } from '@tumbaland/core';
+import { ForbiddenError } from '@tumbaland/backend-core';
 
 export interface StatisticsFilter {
   groupId?: string;

@@ -4,7 +4,7 @@ import { canAccessResource } from '../utils/permissionUtils';
 import Album from '../models/Album';
 import { getSignedUrlsBatch } from '../services/fileServiceClient';
 import mongoose from 'mongoose';
-import { ForbiddenError, logger, NotFoundError } from '@tumbaland/core';
+import { ForbiddenError, logger, NotFoundError } from '@tumbaland/backend-core';
 
 export const createCollage = async (
   data: CollageInput, 

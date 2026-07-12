@@ -5,7 +5,7 @@ import photoRoutes from './routes/photoRoutes';
 import statisticsRoutes from './routes/statisticsRoutes';
 import collageRoutes from './collage/collageRoutes';
 import { healthCheck } from './controllers/healthController';
-import { errorHandler, createBaseApp, metricsHandler } from '@tumbaland/core';
+import { errorHandler, createBaseApp, metricsHandler } from '@tumbaland/backend-core';
 
 const app = createBaseApp();
 

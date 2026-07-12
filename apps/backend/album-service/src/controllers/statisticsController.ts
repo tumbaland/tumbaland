@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { sendSuccess } from '@tumbaland/core';
+import { sendSuccess } from '@tumbaland/backend-core';
 import statisticsService from '../services/statisticsService';
 
 /**

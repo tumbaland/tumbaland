@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import path from 'path';
-import { errorHandler, createBaseApp, createRateLimiter, metricsHandler } from '@tumbaland/core';
+import { errorHandler, createBaseApp, createRateLimiter, metricsHandler } from '@tumbaland/backend-core';
 import routes from './routes/routes';
 
 // Rate-limit policy for a file host, not a JSON API:

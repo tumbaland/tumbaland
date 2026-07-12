@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken, validate } from '@tumbaland/core';
+import { authenticateToken, validate } from '@tumbaland/backend-core';
 import { getDashboardSettings, saveDashboardSettings } from '../controllers/dashboardSettings.controller';
 import { saveDashboardSettingsSchema } from '../validation/schemas';
 

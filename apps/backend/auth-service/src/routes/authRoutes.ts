@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { strictRateLimiter, validate, NotFoundError } from '@tumbaland/core';
+import { strictRateLimiter, validate, NotFoundError } from '@tumbaland/backend-core';
 import { validateToken, logout, verifyAuth, refreshToken, invalidateUserTokens } from '../controllers/authController';
 import { getProfile, updateProfile } from '../controllers/profileController';
 import { authenticateToken, requireRole, requireApproved } from '../middleware/authMiddleware';

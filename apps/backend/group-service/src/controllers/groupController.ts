@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { BadRequestError, logger, sendSuccess } from '@tumbaland/core';
+import { BadRequestError, logger, sendSuccess } from '@tumbaland/backend-core';
 import { InternalServiceRequest } from '../middleware/internalServiceAuth';
 import * as svc from '../services/groupService';
 import { GroupRole } from '../models/Group';

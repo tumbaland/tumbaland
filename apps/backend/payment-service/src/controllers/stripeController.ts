@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { BadRequestError, logger, NotFoundError } from '@tumbaland/core';
+import { BadRequestError, logger, NotFoundError } from '@tumbaland/backend-core';
 import { stripe, ensureStripe } from '../services/stripeService';
 import { Plan } from '../models/Plan';
 import { Subscription } from '../models/Subscription';

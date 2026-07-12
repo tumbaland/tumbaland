@@ -1,7 +1,7 @@
 import sharp from 'sharp';
 import * as fs from 'fs';
 import { uploadFile, generateThumbnailFileId } from './fileServiceClient';
-import { logger } from '@tumbaland/core';
+import { logger } from '@tumbaland/backend-core';
 
 export interface ThumbnailOptions {
   width?: number;

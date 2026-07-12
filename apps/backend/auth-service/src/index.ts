@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
-import { connectDB, logger, requireEnv } from '@tumbaland/core';
+import { connectDB, logger, requireEnv } from '@tumbaland/backend-core';
 import app from './app';
 
 // Fail fast if required secrets are missing — tokens must never be signed with a

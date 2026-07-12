@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { ForbiddenError } from '@tumbaland/core';
+import { ForbiddenError } from '@tumbaland/backend-core';
 import { Activity, IActivity } from '../models/Activity';
 
 // Create a new activity

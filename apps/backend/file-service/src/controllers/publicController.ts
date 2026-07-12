@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { writeFile, readFile, fileExists, getMetadata } from '../utils/storage';
-import { logger, NotFoundError } from '@tumbaland/core';
+import { logger, NotFoundError } from '@tumbaland/backend-core';
 
 /**
  * PUT /files/upload/:fileId?token=...&expires=...

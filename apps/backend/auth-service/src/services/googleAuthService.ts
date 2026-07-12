@@ -1,5 +1,5 @@
 import { OAuth2Client } from 'google-auth-library';
-import { logger } from '@tumbaland/core';
+import { logger } from '@tumbaland/backend-core';
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 

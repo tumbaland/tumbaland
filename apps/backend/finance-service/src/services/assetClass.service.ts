@@ -1,6 +1,6 @@
 import AssetClass, { IAssetClass } from '../models/AssetClass';
 import { buildAccessQuery, canAccessResource } from '../utils/permissionUtils';
-import { ForbiddenError, NotFoundError } from '@tumbaland/core';
+import { ForbiddenError, NotFoundError } from '@tumbaland/backend-core';
 
 export const getAllAssetClasses = async () => {
   return AssetClass.find().sort({ name: 1 });

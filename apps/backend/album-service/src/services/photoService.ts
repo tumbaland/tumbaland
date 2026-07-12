@@ -1,6 +1,6 @@
 import Photo from '../models/Photo';
 import Album from '../models/Album';
-import { ConflictError, logger, NotFoundError } from '@tumbaland/core';
+import { ConflictError, logger, NotFoundError } from '@tumbaland/backend-core';
 import {
   deleteFile,
   getPhotoSignedUrl,

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { BadRequestError } from '@tumbaland/core';
+import { BadRequestError } from '@tumbaland/backend-core';
 import {
   getRelationshipStatistics,
   getMonthlyHours,

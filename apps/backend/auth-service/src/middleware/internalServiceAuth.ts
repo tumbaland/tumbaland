@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { requireEnv } from '@tumbaland/core';
+import { requireEnv } from '@tumbaland/backend-core';
 
 /**
  * Strictly requires a valid internal-service token. Unlike group-service's

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { logger } from '@tumbaland/core';
+import { logger } from '@tumbaland/backend-core';
 
 const DATA_DIR = (): string => process.env.FILE_SERVICE_DATA_DIR || '/data';
 

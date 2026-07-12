@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken, validate } from '@tumbaland/core';
+import { authenticateToken, validate } from '@tumbaland/backend-core';
 import { getHoldings, addHolding, editHolding, removeHolding } from '../controllers/holding.controller';
 import { createHoldingSchema, updateHoldingSchema } from '../validation/schemas';
 

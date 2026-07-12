@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 import path from 'path';
 import authRoutes from './routes/authRoutes';
 import { healthCheck } from './controllers/healthController';
-import { errorHandler, createBaseApp, metricsHandler } from '@tumbaland/core';
+import { errorHandler, createBaseApp, metricsHandler } from '@tumbaland/backend-core';
 
 const app = createBaseApp({
   corsOptions: { exposedHeaders: ['Content-Type', 'Content-Length', 'ETag', 'Cache-Control'] }

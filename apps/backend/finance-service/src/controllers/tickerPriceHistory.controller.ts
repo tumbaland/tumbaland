@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { BadRequestError, sendSuccess } from '@tumbaland/core';
+import { BadRequestError, sendSuccess } from '@tumbaland/backend-core';
 import * as tickerPriceService from '../services/tickerPriceHistory.service';
 
 /**

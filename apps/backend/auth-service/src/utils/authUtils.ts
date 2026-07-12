@@ -3,7 +3,7 @@
  * This file can be copied to other services or published as a shared package
  */
 
-import { logger } from '@tumbaland/core';
+import { logger } from '@tumbaland/backend-core';
 
 export interface User {
   id: string;

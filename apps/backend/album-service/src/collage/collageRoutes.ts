@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken, validate } from '@tumbaland/core';
+import { authenticateToken, validate } from '@tumbaland/backend-core';
 import * as collageController from './collage.controller';
 import { createCollageSchema, updateCollageSchema } from '../validation/schemas';
 

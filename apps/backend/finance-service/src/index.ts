@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
-import { connectDB, disconnectDB, logger, requireEnv } from '@tumbaland/core';
+import { connectDB, disconnectDB, logger, requireEnv } from '@tumbaland/backend-core';
 import { startDailyPortfolioUpdate } from './services/portfolioScheduler.service';
 import app from './app';
 

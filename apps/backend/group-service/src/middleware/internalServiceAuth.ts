@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { logger } from '@tumbaland/core';
+import { logger } from '@tumbaland/backend-core';
 
 export interface InternalServiceRequest extends Request {
   isInternalService?: boolean;

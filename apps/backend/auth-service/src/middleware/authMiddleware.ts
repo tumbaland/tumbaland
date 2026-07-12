@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-import { logger } from '@tumbaland/core';
+import { logger } from '@tumbaland/backend-core';
 import { verifyJWT } from '../services/jwtService';
 import { User } from '../models/User';
 
-// req.user's ambient type comes from @tumbaland/core's global Express.Request
+// req.user's ambient type comes from @tumbaland/backend-core's global Express.Request
 // augmentation (see libs/core/src/types/auth.ts). This service's decoded JWT
 // payload (services/jwtService.ts) carries extra fields (tokenVersion, roles,
 // isApproved) beyond that shared shape, which is fine — it's a superset, so

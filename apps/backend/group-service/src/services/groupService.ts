@@ -1,4 +1,4 @@
-import { ConflictError, ForbiddenError, NotFoundError } from '@tumbaland/core';
+import { ConflictError, ForbiddenError, NotFoundError } from '@tumbaland/backend-core';
 import { Group, IGroup, GroupRole } from '../models/Group';
 
 export async function updateMemberActivity(groupId: string, memberEmail: string): Promise<void> {

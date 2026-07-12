@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { BadRequestError, ForbiddenError, sendSuccess } from '@tumbaland/core';
+import { BadRequestError, ForbiddenError, sendSuccess } from '@tumbaland/backend-core';
 import * as snapshotService from '../services/snapshot.service';
 
 const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;

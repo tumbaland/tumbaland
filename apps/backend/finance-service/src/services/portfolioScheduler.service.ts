@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { logger } from '@tumbaland/core';
+import { logger } from '@tumbaland/backend-core';
 import TrackedTicker from '../models/TrackedTicker';
 import { fetchAndSaveAllStockHistory } from './alphaVantage.service';
 

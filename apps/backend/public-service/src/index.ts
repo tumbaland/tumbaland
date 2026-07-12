@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
-import { logger } from '@tumbaland/core';
+import { logger } from '@tumbaland/backend-core';
 import app from './app';
 
 const PORT = process.env.PORT || 5003;

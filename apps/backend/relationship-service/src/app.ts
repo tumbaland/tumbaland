@@ -6,7 +6,7 @@ import dayRoutes from './routes/days';
 import dashboardSettingsRoutes from './routes/dashboardSettings';
 import statisticsRoutes from './routes/statistics';
 import { healthCheck } from './controllers/healthController';
-import { errorHandler, createBaseApp, metricsHandler } from '@tumbaland/core';
+import { errorHandler, createBaseApp, metricsHandler } from '@tumbaland/backend-core';
 
 const app = createBaseApp();
 

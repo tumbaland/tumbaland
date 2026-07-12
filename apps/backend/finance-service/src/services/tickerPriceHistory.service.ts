@@ -1,7 +1,7 @@
 import TickerPriceHistory from '../models/TickerPriceHistory';
 import TrackedTicker from '../models/TrackedTicker';
 import { fetchStockPrice, fetchAndSaveAllStockHistory } from './alphaVantage.service';
-import { BadRequestError } from '@tumbaland/core';
+import { BadRequestError } from '@tumbaland/backend-core';
 
 interface TickerPriceResponse {
   _id?: string;

@@ -1,4 +1,4 @@
-import { logger, TooManyRequestsError } from '@tumbaland/core';
+import { logger, TooManyRequestsError } from '@tumbaland/backend-core';
 import TickerPriceHistory from '../models/TickerPriceHistory';
 
 const BASE_URL = 'https://www.alphavantage.co/query';

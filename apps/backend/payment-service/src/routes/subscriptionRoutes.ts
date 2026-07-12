@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken as authenticate, validate } from '@tumbaland/core';
+import { authenticateToken as authenticate, validate } from '@tumbaland/backend-core';
 import { getMySubscription, listMySubscriptions, cancelSubscription } from '../controllers/subscriptionController';
 import { getCheckoutSessionStatus, createCheckoutSession } from '../controllers/stripeController';
 import { createCheckoutSessionSchema } from '../validation/schemas';

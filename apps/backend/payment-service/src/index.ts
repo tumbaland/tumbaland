@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-import { connectDB, logger, requireEnv } from '@tumbaland/core';
+import { connectDB, logger, requireEnv } from '@tumbaland/backend-core';
 import app from './app';
 
 // Fail fast if the JWT secret is missing — auth must never run with a default

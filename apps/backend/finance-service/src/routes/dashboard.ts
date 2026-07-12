@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken } from '@tumbaland/core';
+import { authenticateToken } from '@tumbaland/backend-core';
 import { getDashboard } from '../controllers/dashboard.controller';
 
 const router = Router();

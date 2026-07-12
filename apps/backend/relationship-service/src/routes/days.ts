@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken, validate } from '@tumbaland/core';
+import { authenticateToken, validate } from '@tumbaland/backend-core';
 import { getDays, saveDay } from '../controllers/day.controller';
 import { saveDaySchema } from '../validation/schemas';
 

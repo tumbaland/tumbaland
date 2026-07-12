@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { BadRequestError, ConflictError, NotFoundError } from '@tumbaland/core';
+import { BadRequestError, ConflictError, NotFoundError } from '@tumbaland/backend-core';
 import { Plan, IPlan } from '../models/Plan';
 
 export const listPlans = async (_req: Request, res: Response): Promise<void> => {

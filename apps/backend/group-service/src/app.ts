@@ -3,7 +3,7 @@ import path from 'path';
 import { authenticateToken } from './middleware/authMiddleware';
 import groupRoutes from './routes/groupRoutes';
 import { healthCheck } from './controllers/healthController';
-import { errorHandler, createBaseApp, metricsHandler } from '@tumbaland/core';
+import { errorHandler, createBaseApp, metricsHandler } from '@tumbaland/backend-core';
 
 const app = createBaseApp();
 

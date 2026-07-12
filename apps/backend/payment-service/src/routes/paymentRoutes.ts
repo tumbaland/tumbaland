@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken as authenticate, validate } from '@tumbaland/core';
+import { authenticateToken as authenticate, validate } from '@tumbaland/backend-core';
 import { createOneTimePayment, listPayments } from '../controllers/paymentController';
 import { createOneTimePaymentSchema } from '../validation/schemas';
 

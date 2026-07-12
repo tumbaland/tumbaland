@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { validate } from '@tumbaland/core';
+import { validate } from '@tumbaland/backend-core';
 import { requireApiKey, requireSignedToken } from '../middleware/auth';
 import { generateUploadUrl, generateDownloadUrl, generateDownloadUrls } from '../controllers/signedUrlController';
 import { uploadPublic, downloadPublic } from '../controllers/publicController';

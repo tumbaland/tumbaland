@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ForbiddenError, sendSuccess, sendError } from '@tumbaland/core';
+import { ForbiddenError, sendSuccess, sendError } from '@tumbaland/backend-core';
 import * as holdingService from '../services/holding.service';
 
 /**

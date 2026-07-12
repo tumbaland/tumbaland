@@ -1,6 +1,6 @@
 import { Router, RequestHandler } from 'express';
 
-import { validate } from '@tumbaland/core';
+import { validate } from '@tumbaland/backend-core';
 import { validateInternalServiceToken, allowUserOrInternalService } from '../middleware/internalServiceAuth';
 import * as ctrl from '../controllers/groupController';
 import { createGroupSchema, updateGroupSchema, addMemberSchema, updateRoleSchema } from '../validation/schemas';

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { BadRequestError, logger, NotFoundError, UnauthorizedError } from '@tumbaland/core';
+import { BadRequestError, logger, NotFoundError, UnauthorizedError } from '@tumbaland/backend-core';
 import { verifyGoogleToken } from '../services/googleAuthService';
 import { generateJWT, UserPayload } from '../services/jwtService';
 import { User } from '../models/User';

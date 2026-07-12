@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { logger } from '@tumbaland/core';
+import { logger } from '@tumbaland/backend-core';
 
 /**
  * Log controller for handling frontend log submissions

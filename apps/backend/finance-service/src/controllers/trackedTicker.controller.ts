@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { BadRequestError, ForbiddenError, sendSuccess, sendError } from '@tumbaland/core';
+import { BadRequestError, ForbiddenError, sendSuccess, sendError } from '@tumbaland/backend-core';
 import {
   getAllTrackedTickers,
   createTrackedTicker,

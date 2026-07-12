@@ -1,4 +1,4 @@
-import { ForbiddenError } from '@tumbaland/core';
+import { ForbiddenError } from '@tumbaland/backend-core';
 import { DashboardSettings, IDashboardSettings } from '../models/DashboardSettings';
 
 export interface DashboardSettingsData {

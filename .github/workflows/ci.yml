@@ -103,9 +103,9 @@ jobs:
               - *shared
               - *libs-changed
               - 'apps/frontend/shell-front/**'
-            libs/core:
+            libs/backend-core:
               - *shared
-              - 'libs/core/**'
+              - 'libs/backend-core/**'
             libs/components:
               - *shared
               - 'libs/components/**'
@@ -137,14 +137,14 @@ jobs:
       - name: Build shared libs
         # Order matters: components imports from frontend-core, so frontend-core
         # must be built (its dist/.d.ts emitted) before components typechecks.
-        run: npm run build -w @tumbaland/core -w @tumbaland/frontend-core -w @tumbaland/components
+        run: npm run build -w @tumbaland/backend-core -w @tumbaland/frontend-core -w @tumbaland/components
 
       - name: Upload built libs
         uses: actions/upload-artifact@v4
         with:
           name: libs-dist
           path: |
-            libs/core/dist
+            libs/backend-core/dist
             libs/components/dist
             libs/frontend-core/dist
           retention-days: 1

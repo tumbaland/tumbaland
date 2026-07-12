@@ -1,5 +1,5 @@
 import Snapshot, { ISnapshotEntry } from '../models/Snapshot';
-import { ForbiddenError, NotFoundError } from '@tumbaland/core';
+import { ForbiddenError, NotFoundError } from '@tumbaland/backend-core';
 import { canAccessResource } from '../utils/permissionUtils';
 
 /** Parse a YYYY-MM month key into a UTC first-of-month Date. */

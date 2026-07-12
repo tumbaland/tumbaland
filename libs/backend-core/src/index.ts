@@ -1,4 +1,4 @@
-// @tumbaland/core - Core shared functionality for Tumbaland backend services
+// @tumbaland/backend-core - Core shared functionality for Tumbaland backend services
 
 // App bootstrap
 export { createBaseApp } from './app/createBaseApp';

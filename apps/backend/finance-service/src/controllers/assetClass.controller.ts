@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ForbiddenError, sendSuccess } from '@tumbaland/core';
+import { ForbiddenError, sendSuccess } from '@tumbaland/backend-core';
 import * as assetClassService from '../services/assetClass.service';
 
 /**

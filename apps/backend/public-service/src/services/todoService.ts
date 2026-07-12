@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs';
-import { logger } from '@tumbaland/core';
+import { logger } from '@tumbaland/backend-core';
 
 const todosPath = path.join(__dirname, '../data/todos.json');
 let todos: string[] = [];

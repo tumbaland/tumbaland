@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken } from '@tumbaland/core';
+import { authenticateToken } from '@tumbaland/backend-core';
 import { getAlbumStatistics } from '../controllers/statisticsController';
 
 const router = express.Router();

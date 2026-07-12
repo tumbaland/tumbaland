@@ -1,7 +1,7 @@
 import Album from '../models/Album';
 import Photo from '../models/Photo';
 import mongoose from 'mongoose';
-import { ForbiddenError, logger, NotFoundError } from '@tumbaland/core';
+import { ForbiddenError, logger, NotFoundError } from '@tumbaland/backend-core';
 import {
   deleteFile,
   getPhotoSignedUrl,

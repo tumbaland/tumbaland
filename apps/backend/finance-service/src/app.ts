@@ -7,7 +7,7 @@ import trackedTickersRoutes from './routes/trackedTicker';
 import holdingsRoutes from './routes/holdings';
 import dashboardRoutes from './routes/dashboard';
 import { healthCheck } from './controllers/healthController';
-import { errorHandler, createBaseApp, metricsHandler } from '@tumbaland/core';
+import { errorHandler, createBaseApp, metricsHandler } from '@tumbaland/backend-core';
 
 const app = createBaseApp();
 

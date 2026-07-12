@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { NotFoundError, UnauthorizedError } from '@tumbaland/core';
+import { NotFoundError, UnauthorizedError } from '@tumbaland/backend-core';
 import { User } from '../models/User';
 
 export const getProfile = async (req: Request, res: Response): Promise<void> => {

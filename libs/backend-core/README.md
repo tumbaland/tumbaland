@@ -1,11 +1,11 @@
-# @tumbaland/core
+# @tumbaland/backend-core
 
 Core shared functionality for Tumbaland backend services.
 
 ## Installation
 
 ```bash
-npm install @tumbaland/core
+npm install @tumbaland/backend-core
 ```
 
 ## Usage
@@ -21,7 +21,7 @@ import {
   requestLogger,
   errorHandler,
   correlationMiddleware
-} from '@tumbaland/core';
+} from '@tumbaland/backend-core';
 
 const app = express();
 
@@ -56,7 +56,7 @@ connectDB()
 ### Using Authentication
 
 ```typescript
-import { authenticateToken } from '@tumbaland/core';
+import { authenticateToken } from '@tumbaland/backend-core';
 
 app.get('/protected', authenticateToken, (req, res) => {
   const user = (req as any).user;
@@ -67,7 +67,7 @@ app.get('/protected', authenticateToken, (req, res) => {
 ### Structured Logging
 
 ```typescript
-import { logger } from '@tumbaland/core';
+import { logger } from '@tumbaland/backend-core';
 
 // Different log levels
 logger.error('Database connection failed', { error: err.message });
@@ -79,7 +79,7 @@ logger.debug('Processing request', { correlationId: req.correlationId });
 ### API Responses
 
 ```typescript
-import { sendSuccess, sendError } from '@tumbaland/core';
+import { sendSuccess, sendError } from '@tumbaland/backend-core';
 
 app.get('/api/users', (req, res) => {
   // Success response

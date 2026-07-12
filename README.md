@@ -6,13 +6,13 @@ npm workspaces monorepo with three workspace groups:
 
 - `apps/backend/*` — Express + MongoDB services (auth, album, finance, relationship, payment,
   group, file, public). Each service is a thin `routes → controllers → services → models` stack
-  built on `@tumbaland/core`.
+  built on `@tumbaland/backend-core`.
 - `apps/frontend/*` — Vite + React + MUI single-page apps, one per domain, plus `shell-front` which
   hosts the top-level shell/navigation. Each app owns a `ConfigProvider` (built on
   `@tumbaland/components`'s `createConfigProvider`) and its own domain services (built on
   `@tumbaland/frontend-core`'s `createApiClient`).
 - `libs/*` — shared packages published to the other two groups:
-  - `@tumbaland/core` — backend: `createBaseApp`, auth/CORS/rate-limit/validation middleware,
+  - `@tumbaland/backend-core` — backend: `createBaseApp`, auth/CORS/rate-limit/validation middleware,
     the typed `HttpError` hierarchy + `errorHandler`, `sendSuccess`/`sendError` response helpers,
     logger, metrics, tracing.
   - `@tumbaland/components` — frontend: shared React components (`AuthHeader`, `Loader`,

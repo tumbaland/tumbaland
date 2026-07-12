@@ -2,7 +2,7 @@ import Holding from '../models/Holding';
 import TrackedTicker from '../models/TrackedTicker';
 import TickerPriceHistory from '../models/TickerPriceHistory';
 import { canAccessResource } from '../utils/permissionUtils';
-import { ForbiddenError, NotFoundError } from '@tumbaland/core';
+import { ForbiddenError, NotFoundError } from '@tumbaland/backend-core';
 
 export interface HoldingInput {
   ticker: string;

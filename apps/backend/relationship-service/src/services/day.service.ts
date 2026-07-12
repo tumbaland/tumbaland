@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { BadRequestError, ForbiddenError } from '@tumbaland/core';
+import { BadRequestError, ForbiddenError } from '@tumbaland/backend-core';
 import { Activity, IActivity } from '../models/Activity';
 import { ActivityType } from '../models/ActivityType';
 

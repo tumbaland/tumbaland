@@ -6,7 +6,7 @@ import subscriptionRoutes from './routes/subscriptionRoutes';
 import paymentRoutes from './routes/paymentRoutes';
 import { stripeWebhook } from './controllers/stripeController';
 import { healthCheck } from './controllers/healthController';
-import { errorHandler, createBaseApp, metricsHandler, standardRateLimiter } from '@tumbaland/core';
+import { errorHandler, createBaseApp, metricsHandler, standardRateLimiter } from '@tumbaland/backend-core';
 
 // rateLimiter/parseJson/parseCookies are all off here: the webhook route
 // below must be registered — and therefore exempt — before the rate

@@ -1,5 +1,5 @@
 import * as jwt from 'jsonwebtoken';
-import { requireEnv } from '@tumbaland/core';
+import { requireEnv } from '@tumbaland/backend-core';
 
 // Kept short because tokenVersion revocation (POST /auth/internal/invalidate-tokens)
 // is only enforced by auth-service's own auth middleware — every other service just

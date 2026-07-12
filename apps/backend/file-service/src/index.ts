@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-import { logger } from '@tumbaland/core';
+import { logger } from '@tumbaland/backend-core';
 import app from './app';
 
 // Validate required env vars at startup

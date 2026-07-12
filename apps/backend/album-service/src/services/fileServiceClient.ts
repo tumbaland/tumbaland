@@ -12,7 +12,7 @@
 import https from 'https';
 import http from 'http';
 import { URL } from 'url';
-import { logger } from '@tumbaland/core';
+import { logger } from '@tumbaland/backend-core';
 
 // ─── Config helpers ───────────────────────────────────────────────────────────
 
