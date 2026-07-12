@@ -1,4 +1,12 @@
 # Tumbalog
+### [0.0.370](https://github.com/toomastahves/tumbaland/compare/v0.0.369...v0.0.370) (2026-07-12)
+
+
+### Features
+
+* add file service docs, use scalar for docs ([9bc3e59](https://github.com/toomastahves/tumbaland/commit/9bc3e59be3f46d5758e867ac43ed010a9758119b))
+* unify ts config files ([e58d283](https://github.com/toomastahves/tumbaland/commit/e58d2834e33c311bcad40bd3fb0ed1ae08f3afde))
+
 ### [0.0.369](https://github.com/toomastahves/tumbaland/compare/v0.0.368...v0.0.369) (2026-07-06)
 
 
