@@ -118,6 +118,7 @@ class PhotoService {
         actualMinioFileId,
         originalName,
         userId,
+        albumId,
         groupId
       );
     }
@@ -323,6 +324,7 @@ class PhotoService {
     minioFileId: string,
     originalName: string,
     userId: string,
+    albumId: string,
     groupId?: string
   ): void {
     setImmediate(async () => {
@@ -335,7 +337,8 @@ class PhotoService {
           imageBuffer,
           originalName,
           userId,
-          groupId || ''
+          albumId,
+          groupId
         );
 
         // Update photo with thumbnail file ID returned from generation
