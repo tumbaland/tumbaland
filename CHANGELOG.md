@@ -1,4 +1,30 @@
 # Tumbalog
+### [0.0.376](https://github.com/toomastahves/tumbaland/compare/v0.0.375...v0.0.376) (2026-07-12)
+
+
+### Features
+
+* add account-front test coverage over 90% ([5f45829](https://github.com/toomastahves/tumbaland/commit/5f45829d7db3fe45256610e1d367f6b3cf1a4a6b))
+* increase album-service coverage over 90% ([9a76385](https://github.com/toomastahves/tumbaland/commit/9a76385bcc4563275d40261c82c651bf2167f03b))
+* increase auth service coverage over 90% ([943c5b6](https://github.com/toomastahves/tumbaland/commit/943c5b62cb5d4622f2b6edeaa8fa717ba8411acb))
+* increase file service test coverage over 90% ([02dac57](https://github.com/toomastahves/tumbaland/commit/02dac57d8a04b03b8f51d550fb58f7e85c6b3186))
+* increase finance-front test coverage over 90% ([b2c7112](https://github.com/toomastahves/tumbaland/commit/b2c71122e6f6db6a9252f27f51755f96f78291cf))
+* increase finance-service test coverage over 90% ([a91c0d1](https://github.com/toomastahves/tumbaland/commit/a91c0d1c510a5f0251e26ed154c89ab021045e3b))
+* increase group-front test coverage over 90% ([7555f1b](https://github.com/toomastahves/tumbaland/commit/7555f1b6e3bb9f46c81df2fca8745a6482c5bd2b))
+* increase group-service test coverage over 90% ([46ff95b](https://github.com/toomastahves/tumbaland/commit/46ff95be2477129e585867f246e90e13f2e1c79f))
+* increase payment-front test coverage over 90% ([4efc221](https://github.com/toomastahves/tumbaland/commit/4efc2215da7cf6ff48f7acd9fec1f6424636350b))
+* increase payment-service test coverage over 90% ([79e8f8b](https://github.com/toomastahves/tumbaland/commit/79e8f8b45757425f889cdff3769dab32f1487d57))
+* increase relationship-front test coverage over 90% ([ffe864b](https://github.com/toomastahves/tumbaland/commit/ffe864b9b4f1114f10db3f78f0762c41dd1ff6df))
+* increase relationship-service test coverage over 90% ([7eaf6ec](https://github.com/toomastahves/tumbaland/commit/7eaf6eccb89d59c8e6debb07df0a0ab5ab391faa))
+* increase shell-front test coverage over 90% ([1573801](https://github.com/toomastahves/tumbaland/commit/1573801763a20e61b5c76c450dbc987171bf5795))
+* increase test overage for public-service over 90% ([6e0a292](https://github.com/toomastahves/tumbaland/commit/6e0a2920b032f85c198214be6c117f807dc3c134))
+* setup tests for auth front with coverage over 90% ([1eef7d9](https://github.com/toomastahves/tumbaland/commit/1eef7d934b8df1cd8c913a1941aad5cb6397f43d))
+
+
+### Bug Fixes
+
+* remove unused const ([ad83912](https://github.com/toomastahves/tumbaland/commit/ad839125d095a793e0fec4794ea8f0b975adfd39))
+
 ### [0.0.375](https://github.com/toomastahves/tumbaland/compare/v0.0.374...v0.0.375) (2026-07-12)
 
 
