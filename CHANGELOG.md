@@ -1,4 +1,17 @@
 # Tumbalog
+### [0.0.371](https://github.com/toomastahves/tumbaland/compare/v0.0.370...v0.0.371) (2026-07-12)
+
+
+### Features
+
+* bump versions ([e1e5452](https://github.com/toomastahves/tumbaland/commit/e1e545274060013315de5dff62a3a1e287c58448))
+* increase libraries test coverage ([fac7c37](https://github.com/toomastahves/tumbaland/commit/fac7c37d63425aed9525f07dedf1e85748c6c8bf))
+
+
+### Chores
+
+* **release:** 1.3.0 ([61fc5a7](https://github.com/toomastahves/tumbaland/commit/61fc5a77022a65798fd07b626b57899b0fdb443b))
+
 ### [0.0.370](https://github.com/toomastahves/tumbaland/compare/v0.0.369...v0.0.370) (2026-07-12)
 
 
