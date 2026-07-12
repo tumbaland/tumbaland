@@ -122,6 +122,19 @@ describe('authMiddleware', () => {
       expect(next).toHaveBeenCalledTimes(1);
       expect(res.status).not.toHaveBeenCalled();
     });
+
+    it('accepts a token passed via the Authorization: Bearer header when no cookie is present', async () => {
+      const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User', tokenVersion: 1 });
+      const req = mockReq({ cookies: {}, headers: { authorization: `Bearer ${token}` } } as any);
+      const res = mockRes();
+      const next = jest.fn();
+      mockedFindOne.mockResolvedValue({ email: 'user@example.com', tokenVersion: 1, isApproved: true });
+
+      await authenticateToken(req, res, next);
+
+      expect(next).toHaveBeenCalledTimes(1);
+      expect(res.status).not.toHaveBeenCalled();
+    });
   });
 
   describe('optionalAuth', () => {
@@ -160,6 +173,19 @@ describe('authMiddleware', () => {
       expect(next).toHaveBeenCalledTimes(1);
       expect(req.user).toMatchObject({ email: 'user@example.com' });
       expect(mockedFindOneAndUpdate).toHaveBeenCalledTimes(1);
+    });
+
+    it('accepts a token passed via the Authorization: Bearer header when no cookie is present', async () => {
+      const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User', tokenVersion: 1 });
+      const req = mockReq({ cookies: {}, headers: { authorization: `Bearer ${token}` } } as any);
+      const res = mockRes();
+      const next = jest.fn();
+      mockedFindOneAndUpdate.mockResolvedValue({ email: 'user@example.com' });
+
+      await optionalAuth(req, res, next);
+
+      expect(next).toHaveBeenCalledTimes(1);
+      expect(req.user).toMatchObject({ email: 'user@example.com' });
     });
   });
 
