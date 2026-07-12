@@ -40,7 +40,6 @@ import {
 import { generateThumbnailFromBuffer, isSupportedImageFormat } from './thumbnailService';
 import photoService from './photoService';
 
-const mockedPhotoCtor = Photo as unknown as jest.Mock;
 const mockedFindById = Photo.findById as unknown as jest.Mock;
 const mockedFindOne = Photo.findOne as unknown as jest.Mock;
 const mockedFind = Photo.find as unknown as jest.Mock;
