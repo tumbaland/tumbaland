@@ -15,6 +15,7 @@
     "storybook:dev": "storybook dev -p 7000",
     "storybook:prod": "storybook build",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
@@ -40,6 +41,7 @@
     "@testing-library/user-event": "^14.5.2",
     "@types/node": "^26.1.0",
     "@vitejs/plugin-react": "^6.0.3",
+    "@vitest/coverage-v8": "^4.1.10",
     "standard-version": "^9.5.0",
     "storybook": "^10.4.6",
     "typescript": "^6.0.3"

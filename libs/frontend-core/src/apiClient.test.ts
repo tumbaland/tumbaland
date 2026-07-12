@@ -101,4 +101,58 @@ describe('createApiClient', () => {
       expect.objectContaining({ method: 'GET' })
     );
   });
+
+  it('falls back to a generic status message when a non-ok response body is not JSON', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => {
+        throw new Error('not json');
+      }
+    });
+    const client = createApiClient({ baseUrl });
+
+    let caught: unknown;
+    try {
+      await client.get('/things');
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toMatchObject({ status: 500, message: 'HTTP error! status: 500', body: undefined });
+  });
+
+  it('PUT and PATCH serialize the body as JSON with the matching method', async () => {
+    mockFetchOnce({ updated: true });
+    mockFetchOnce({ patched: true });
+    const client = createApiClient({ baseUrl });
+
+    await client.put('/things/1', { name: 'updated' });
+    await client.patch('/things/1', { name: 'patched' });
+
+    expect(global.fetch).toHaveBeenNthCalledWith(
+      1,
+      'https://api.example/things/1',
+      expect.objectContaining({ method: 'PUT', body: JSON.stringify({ name: 'updated' }) })
+    );
+    expect(global.fetch).toHaveBeenNthCalledWith(
+      2,
+      'https://api.example/things/1',
+      expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ name: 'patched' }) })
+    );
+  });
+
+  it('sends the correlation/session headers and lets caller-supplied headers override them', async () => {
+    mockFetchOnce({ ok: true });
+    const client = createApiClient({ baseUrl });
+
+    await client.get('/things', { headers: { 'Content-Type': 'text/plain' } });
+
+    const [, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(init.headers).toMatchObject({
+      'Content-Type': 'text/plain',
+      'x-correlation-id': expect.any(String),
+      'x-session-id': expect.any(String)
+    });
+  });
 });

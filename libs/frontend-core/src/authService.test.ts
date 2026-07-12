@@ -118,5 +118,72 @@ describe('createAuthService', () => {
       const afterLogout = await authService.checkAuth();
       expect(afterLogout.authenticated).toBe(false);
     });
+
+    it('returns false and does not clear the cache when the response is not ok', async () => {
+      mockFetchOnce({ success: true, authenticated: true, user: null });
+      const authService = createAuthService(config);
+      await authService.checkAuth();
+
+      mockFetchOnce({}, { ok: false, status: 500 });
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const result = await authService.logout();
+
+      expect(result).toBe(false);
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Logout failed:', expect.any(Error));
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('does not reload or clear the cache when the API reports success:false', async () => {
+      const authService = createAuthService(config);
+      mockFetchOnce({ success: false });
+      const originalLocation = window.location;
+      // @ts-expect-error simplified stand-in, only `reload` is used
+      delete window.location;
+      window.location = { ...originalLocation, reload: vi.fn() } as unknown as Location;
+
+      const result = await authService.logout();
+      const reloadCalled = (window.location.reload as ReturnType<typeof vi.fn>).mock.calls.length > 0;
+      window.location = originalLocation;
+
+      expect(result).toBe(false);
+      expect(reloadCalled).toBe(false);
+    });
+  });
+
+  describe('getProfile', () => {
+    it('returns the full profile on success', async () => {
+      mockFetchOnce({ success: true, user: { id: '1', email: 'a@b.com', firstName: 'A' } });
+      const authService = createAuthService(config);
+
+      const profile = await authService.getProfile();
+
+      expect(profile).toEqual({ id: '1', email: 'a@b.com', firstName: 'A' });
+    });
+
+    it('returns null when the API reports success:false', async () => {
+      mockFetchOnce({ success: false });
+      const authService = createAuthService(config);
+
+      const profile = await authService.getProfile();
+
+      expect(profile).toBeNull();
+    });
+
+    it('returns null and logs when the response is not ok', async () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        text: async () => 'Forbidden'
+      });
+      const authService = createAuthService(config);
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const profile = await authService.getProfile();
+
+      expect(profile).toBeNull();
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Profile fetch error:', 403, 'Forbidden');
+      consoleErrorSpy.mockRestore();
+    });
   });
 });

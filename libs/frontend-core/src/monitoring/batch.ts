@@ -31,15 +31,17 @@ const sendBatch = async () => {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
   } catch (error) {
-    // Log error without triggering console interception to prevent recursion
+    // Log error without triggering console interception to prevent recursion.
+    // Must call originalWarn (not console.warn) below — console.warn is the
+    // no-op we're about to install for the duration of this block.
     const originalWarn = console.warn;
     console.warn = () => {}; // Temporarily disable console.warn
     try {
-      console.warn('Failed to send log batch, dropping logs:', error);
+      originalWarn('Failed to send log batch, dropping logs:', error);
       // Optional: log failed batch to console in development
       if (config.isDevelopment) {
         batchToSend.forEach(log => {
-          console.warn('📝 [DROPPED LOG]:', JSON.stringify(log));
+          originalWarn('📝 [DROPPED LOG]:', JSON.stringify(log));
         });
       }
     } finally {
