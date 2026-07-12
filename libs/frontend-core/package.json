@@ -18,6 +18,9 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
+  "standard-version": {
+    "tagPrefix": "frontend-core-v"
+  },
   "dependencies": {
     "web-vitals": "^5.3.0"
   },

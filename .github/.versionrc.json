@@ -5,5 +5,5 @@
     { "type": "chore", "section": "Chores", "hidden": false }
   ],
   "header": "# Tumbalog",
-  "tagPrefix": "v"
+  "tagPrefix": "app-v"
 }

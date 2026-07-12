@@ -19,6 +19,9 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
+  "standard-version": {
+    "tagPrefix": "components-v"
+  },
   "dependencies": {
     "@mui/icons-material": "^9.2.0",
     "@mui/material": "^9.2.0",
