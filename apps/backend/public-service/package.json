@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.build.json",
     "postbuild": "mkdir -p dist/data && cp ./src/data/todos.json dist/data/todos.json",
     "test": "jest",
+    "test:coverage": "jest --coverage",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
