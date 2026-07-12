@@ -1,3 +1,5 @@
+import mongoose from 'mongoose';
+
 jest.mock('../models/Activity', () => {
   const Activity: any = jest.fn().mockImplementation((data: any) => ({
     ...data,
@@ -112,6 +114,40 @@ describe('saveDay', () => {
     );
   });
 
+  it('sets description on an updated entry when one is provided', async () => {
+    mockAccessibleTypes(['t1']);
+    mockedActivityFind
+      .mockResolvedValueOnce([{ _id: 'e1' }])
+      .mockReturnValueOnce(mockReload([]));
+    mockedFindByIdAndUpdate.mockResolvedValue({});
+
+    await saveDay('2024-05-01', [{ _id: 'e1', typeId: 't1', description: '  brunch  ', hours: 1 }], 'user-1', []);
+
+    expect(mockedFindByIdAndUpdate).toHaveBeenCalledWith(
+      'e1',
+      expect.objectContaining({ $set: expect.objectContaining({ description: 'brunch', hours: 1 }) }),
+      { runValidators: true }
+    );
+  });
+
+  it('reshapes a populated typeId into a type field on the returned entries', async () => {
+    mockedActivityFind
+      .mockResolvedValueOnce([])
+      .mockReturnValueOnce(
+        mockReload([
+          { toObject: () => ({ _id: 'e1', typeId: { _id: 't1', name: 'Coffee' } }) },
+          { toObject: () => ({ _id: 'e2', typeId: undefined }) }
+        ])
+      );
+
+    const result = await saveDay('2024-05-01', [], 'user-1', []);
+
+    expect(result.entries).toEqual([
+      { _id: 'e1', typeId: 't1', type: { _id: 't1', name: 'Coffee' } },
+      { _id: 'e2', typeId: undefined }
+    ]);
+  });
+
   it('clears the day when passed an empty entry list', async () => {
     mockedActivityFind
       .mockResolvedValueOnce([{ _id: 'e1' }, { _id: 'e2' }])
@@ -148,5 +184,24 @@ describe('getDays', () => {
     expect(result.total).toBe(5);
     expect(result.totalPages).toBe(3); // ceil(5 / 2)
     expect(result.days).toEqual([{ date: '2024-05-02', entries: [{ _id: 'a1' }] }]);
+  });
+
+  it('applies typeId/search/date-range filters to the match stage', async () => {
+    mockedAggregate.mockResolvedValue([{ days: [], totalCount: [] }]);
+
+    await getDays({
+      userId: 'user-1',
+      userGroupIds: [],
+      typeId: '507f1f77bcf86cd799439011',
+      search: 'coffee',
+      startDate: new Date('2024-01-01'),
+      endDate: new Date('2024-12-31')
+    });
+
+    const pipeline = mockedAggregate.mock.calls[0][0];
+    const match = pipeline[0].$match;
+    expect(match.typeId).toBeInstanceOf(mongoose.Types.ObjectId);
+    expect(match.description).toEqual({ $regex: 'coffee', $options: 'i' });
+    expect(match.date).toEqual({ $gte: new Date('2024-01-01'), $lte: new Date('2024-12-31') });
   });
 });

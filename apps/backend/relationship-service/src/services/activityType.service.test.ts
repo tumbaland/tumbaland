@@ -1,0 +1,243 @@
+jest.mock('../models/ActivityType', () => {
+  const ActivityType: any = jest.fn().mockImplementation((data: any) => ({
+    ...data,
+    save: jest.fn().mockResolvedValue({ ...data, _id: 'new-id' })
+  }));
+  ActivityType.findOne = jest.fn();
+  ActivityType.find = jest.fn();
+  ActivityType.findById = jest.fn();
+  ActivityType.findByIdAndUpdate = jest.fn();
+  ActivityType.findByIdAndDelete = jest.fn();
+  ActivityType.countDocuments = jest.fn();
+  ActivityType.bulkWrite = jest.fn();
+  return { ActivityType };
+});
+
+import { ActivityType } from '../models/ActivityType';
+import {
+  createActivityType,
+  getActivityTypes,
+  getActivityTypeById,
+  getActivityTypeBySlug,
+  updateActivityType,
+  deleteActivityType,
+  hardDeleteActivityType,
+  reorderActivityTypes
+} from './activityType.service';
+
+const mockedCtor = ActivityType as unknown as jest.Mock;
+const mockedFindOne = ActivityType.findOne as unknown as jest.Mock;
+const mockedFind = ActivityType.find as unknown as jest.Mock;
+const mockedFindById = ActivityType.findById as unknown as jest.Mock;
+const mockedFindByIdAndUpdate = ActivityType.findByIdAndUpdate as unknown as jest.Mock;
+const mockedFindByIdAndDelete = ActivityType.findByIdAndDelete as unknown as jest.Mock;
+const mockedCountDocuments = ActivityType.countDocuments as unknown as jest.Mock;
+const mockedBulkWrite = ActivityType.bulkWrite as unknown as jest.Mock;
+
+// ActivityType.find(...).sort(...).skip(...).limit(...).lean()
+const mockFindChain = (docs: unknown[]) => ({
+  sort: jest.fn().mockReturnValue({
+    skip: jest.fn().mockReturnValue({
+      limit: jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue(docs)
+      })
+    })
+  })
+});
+
+beforeEach(() => jest.clearAllMocks());
+
+describe('createActivityType', () => {
+  it('throws when the slug already exists', async () => {
+    mockedFindOne.mockResolvedValue({ _id: 'existing' });
+
+    await expect(createActivityType({ slug: 'reading' })).rejects.toMatchObject({ name: 'ConflictError' });
+    expect(mockedCtor).not.toHaveBeenCalled();
+  });
+
+  it('creates and returns the new type when the slug is free', async () => {
+    mockedFindOne.mockResolvedValue(null);
+
+    const result = await createActivityType({ slug: 'reading', name: 'Reading' });
+
+    expect(mockedCtor).toHaveBeenCalledWith({ slug: 'reading', name: 'Reading' });
+    expect(result).toMatchObject({ slug: 'reading', name: 'Reading' });
+  });
+});
+
+describe('getActivityTypes', () => {
+  it('scopes to group + personal fallback when groupId is a real id', async () => {
+    mockedFind.mockReturnValue(mockFindChain([]));
+    mockedCountDocuments.mockResolvedValue(0);
+
+    await getActivityTypes({ userId: 'u1', groupId: 'g1' });
+
+    expect(mockedFind).toHaveBeenCalledWith({
+      isActive: true,
+      $or: [{ groupId: 'g1' }, { userId: 'u1', groupId: { $exists: false } }]
+    });
+  });
+
+  it('scopes to personal-only when groupId is explicitly null', async () => {
+    mockedFind.mockReturnValue(mockFindChain([]));
+    mockedCountDocuments.mockResolvedValue(0);
+
+    await getActivityTypes({ userId: 'u1', groupId: null as any });
+
+    expect(mockedFind).toHaveBeenCalledWith({
+      isActive: true,
+      userId: 'u1',
+      $or: [{ groupId: { $exists: false } }, { groupId: null }]
+    });
+  });
+
+  it('defaults to personal context when no groupId is given but a userId is', async () => {
+    mockedFind.mockReturnValue(mockFindChain([]));
+    mockedCountDocuments.mockResolvedValue(0);
+
+    await getActivityTypes({ userId: 'u1' });
+
+    expect(mockedFind).toHaveBeenCalledWith({
+      isActive: true,
+      userId: 'u1',
+      $or: [{ groupId: { $exists: false } }, { groupId: null }]
+    });
+  });
+
+  it('falls back to active-only when neither userId nor groupId is given', async () => {
+    mockedFind.mockReturnValue(mockFindChain([]));
+    mockedCountDocuments.mockResolvedValue(0);
+
+    const result = await getActivityTypes({});
+
+    expect(mockedFind).toHaveBeenCalledWith({ isActive: true });
+    expect(result).toEqual({ types: [], total: 0, page: 1, totalPages: 0 });
+  });
+
+  it('computes pagination from the total count', async () => {
+    mockedFind.mockReturnValue(mockFindChain([{ _id: 't1' }]));
+    mockedCountDocuments.mockResolvedValue(25);
+
+    const result = await getActivityTypes({ userId: 'u1', limit: 10, page: 2 });
+
+    expect(result).toEqual({ types: [{ _id: 't1' }], total: 25, page: 2, totalPages: 3 });
+  });
+});
+
+describe('getActivityTypeById', () => {
+  it('delegates to findById', async () => {
+    mockedFindById.mockResolvedValue({ _id: 't1' });
+    expect(await getActivityTypeById('t1')).toEqual({ _id: 't1' });
+    expect(mockedFindById).toHaveBeenCalledWith('t1');
+  });
+});
+
+describe('getActivityTypeBySlug', () => {
+  it('scopes by group when groupId is given', async () => {
+    mockedFindOne.mockResolvedValue({ _id: 't1' });
+
+    await getActivityTypeBySlug('reading', 'u1', 'g1');
+
+    expect(mockedFindOne).toHaveBeenCalledWith({
+      slug: 'reading',
+      isActive: true,
+      $or: [{ groupId: 'g1' }, { userId: 'u1', groupId: { $exists: false } }]
+    });
+  });
+
+  it('scopes by personal context when only userId is given', async () => {
+    mockedFindOne.mockResolvedValue(null);
+
+    await getActivityTypeBySlug('reading', 'u1');
+
+    expect(mockedFindOne).toHaveBeenCalledWith({
+      slug: 'reading',
+      isActive: true,
+      userId: 'u1',
+      $or: [{ groupId: { $exists: false } }, { groupId: null }]
+    });
+  });
+
+  it('queries by slug alone when neither is given', async () => {
+    mockedFindOne.mockResolvedValue(null);
+
+    await getActivityTypeBySlug('reading');
+
+    expect(mockedFindOne).toHaveBeenCalledWith({ slug: 'reading', isActive: true });
+  });
+});
+
+describe('updateActivityType', () => {
+  it('throws when the new slug collides with another type', async () => {
+    mockedFindOne.mockResolvedValue({ _id: 'other' });
+
+    await expect(updateActivityType('t1', { slug: 'taken' })).rejects.toMatchObject({ name: 'ConflictError' });
+    expect(mockedFindOne).toHaveBeenCalledWith({ slug: 'taken', _id: { $ne: 't1' } });
+    expect(mockedFindByIdAndUpdate).not.toHaveBeenCalled();
+  });
+
+  it('updates when the slug is free or unchanged', async () => {
+    mockedFindOne.mockResolvedValue(null);
+    mockedFindByIdAndUpdate.mockResolvedValue({ _id: 't1', slug: 'reading' });
+
+    const result = await updateActivityType('t1', { slug: 'reading' });
+
+    expect(result).toEqual({ _id: 't1', slug: 'reading' });
+  });
+
+  it('skips the uniqueness check when the slug is not being updated', async () => {
+    mockedFindByIdAndUpdate.mockResolvedValue({ _id: 't1', name: 'New name' });
+
+    await updateActivityType('t1', { name: 'New name' });
+
+    expect(mockedFindOne).not.toHaveBeenCalled();
+  });
+});
+
+describe('deleteActivityType', () => {
+  it('soft-deletes by returning true when a document was updated', async () => {
+    mockedFindByIdAndUpdate.mockResolvedValue({ _id: 't1' });
+    expect(await deleteActivityType('t1')).toBe(true);
+    expect(mockedFindByIdAndUpdate).toHaveBeenCalledWith('t1', { isActive: false });
+  });
+
+  it('returns false when nothing was found', async () => {
+    mockedFindByIdAndUpdate.mockResolvedValue(null);
+    expect(await deleteActivityType('missing')).toBe(false);
+  });
+});
+
+describe('hardDeleteActivityType', () => {
+  it('returns true when a document was deleted', async () => {
+    mockedFindByIdAndDelete.mockResolvedValue({ _id: 't1' });
+    expect(await hardDeleteActivityType('t1')).toBe(true);
+  });
+
+  it('returns false when nothing was found', async () => {
+    mockedFindByIdAndDelete.mockResolvedValue(null);
+    expect(await hardDeleteActivityType('missing')).toBe(false);
+  });
+});
+
+describe('reorderActivityTypes', () => {
+  it('builds a bulk update scoped to the user and personal context', async () => {
+    mockedBulkWrite.mockResolvedValue({});
+
+    await reorderActivityTypes(['t1', 't2'], 'u1');
+
+    expect(mockedBulkWrite).toHaveBeenCalledWith([
+      { updateOne: { filter: { _id: 't1', userId: 'u1', groupId: { $exists: false } }, update: { sortOrder: 0 } } },
+      { updateOne: { filter: { _id: 't2', userId: 'u1', groupId: { $exists: false } }, update: { sortOrder: 1 } } }
+    ]);
+  });
+
+  it('scopes to the group when groupId is given', async () => {
+    mockedBulkWrite.mockResolvedValue({});
+
+    await reorderActivityTypes(['t1'], 'u1', 'g1');
+
+    expect(mockedBulkWrite).toHaveBeenCalledWith([
+      { updateOne: { filter: { _id: 't1', userId: 'u1', groupId: 'g1' }, update: { sortOrder: 0 } } }
+    ]);
+  });
+});
