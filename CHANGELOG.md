@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.379](https://github.com/toomastahves/tumbaland/compare/app-v0.0.378...app-v0.0.379) (2026-07-13)
+
+
+### Bug Fixes
+
+* failing finance api test ([776eedd](https://github.com/toomastahves/tumbaland/commit/776eedd956b478df2c6ad429af75e4521381345d))
+
 ### [0.0.378](https://github.com/toomastahves/tumbaland/compare/app-v0.0.377...app-v0.0.378) (2026-07-13)
 
 
