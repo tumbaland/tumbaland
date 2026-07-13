@@ -1,4 +1,9 @@
 import { vi } from 'vitest';
+
+vi.mock('../config/ConfigProvider', () => ({
+  getGlobalConfig: () => ({ FINANCE_API_URL: 'http://localhost:4003', AUTH_FRONT_URL: 'http://localhost:3004' })
+}));
+
 import { financeApi } from './financeApi';
 
 function mock401() {
