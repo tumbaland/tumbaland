@@ -1,7 +1,6 @@
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import SavingsIcon from '@mui/icons-material/Savings';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
-import CalculateIcon from '@mui/icons-material/Calculate';
 import TuneIcon from '@mui/icons-material/Tune';
 import { AuthHeaderNavigationItem } from '@tumbaland/components';
 
@@ -22,13 +21,8 @@ export const navigationItems: AuthHeaderNavigationItem[] = [
     icon: ShowChartIcon
   },
   {
-    label: 'Calculator',
-    path: '/stock-growth-calculator',
-    icon: CalculateIcon
-  },
-  {
-    label: 'Optimizer',
-    path: '/portfolio-optimizer',
+    label: 'Planner',
+    path: '/planner',
     icon: TuneIcon
   }
 ];
