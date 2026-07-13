@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.378](https://github.com/toomastahves/tumbaland/compare/app-v0.0.377...app-v0.0.378) (2026-07-13)
+
+
+### Features
+
+* upgrade portfolio optimization to planner ([cec5441](https://github.com/toomastahves/tumbaland/commit/cec54417bfe7b91e20126f48d5ec1fd757dcf952))
+
 ### 0.0.377 (2026-07-12)
 
 
