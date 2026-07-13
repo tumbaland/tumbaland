@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.380](https://github.com/toomastahves/tumbaland/compare/app-v0.0.379...app-v0.0.380) (2026-07-13)
+
+
+### Features
+
+* add todo ([3d6cc29](https://github.com/toomastahves/tumbaland/commit/3d6cc29167fae4c5688519ca4322f34cdc350a3b))
+
 ### [0.0.379](https://github.com/toomastahves/tumbaland/compare/app-v0.0.378...app-v0.0.379) (2026-07-13)
 
 
