@@ -9,6 +9,8 @@ export default tseslint.config(
       '**/node_modules/**',
       '**/dist/**',
       '**/coverage/**',
+      '**/playwright-report/**',
+      '**/test-results/**',
       '**/storybook-static/**',
       'apps/infra/**',
       '**/*.js',
@@ -50,7 +52,15 @@ export default tseslint.config(
 
   // Vite config files run in Node
   {
-    files: ['**/vite.config.ts', '**/vite.config.mts', '**/.storybook/**/*.ts'],
+    files: ['**/vite.config.ts', '**/vite.config.mts', 'playwright.config.ts', '**/.storybook/**/*.ts'],
+    languageOptions: {
+      globals: { ...globals.node },
+    },
+  },
+
+  // Playwright specs run in Node while driving a browser.
+  {
+    files: ['e2e/**/*.ts'],
     languageOptions: {
       globals: { ...globals.node },
     },

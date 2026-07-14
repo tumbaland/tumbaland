@@ -1,10 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Paper, Chip } from '@mui/material';
+import { Box, Typography, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Paper, Chip, ChipProps } from '@mui/material';
 import { paymentApi } from '../services/paymentApi';
 import { Subscription } from '../types';
 import { Loader } from '@tumbaland/components';
 
-const statusColor: Record<string,string> = { active: 'success', past_due: 'warning', incomplete: 'info', canceled: 'default' };
+const statusColor: Record<Subscription['status'], ChipProps['color']> = {
+  active: 'success',
+  past_due: 'warning',
+  incomplete: 'info',
+  canceled: 'default'
+};
 
 const AllSubscriptionsPage: React.FC = () => {
   const [subs, setSubs] = useState<Subscription[]>([]);
@@ -40,7 +45,7 @@ const AllSubscriptionsPage: React.FC = () => {
               <TableRow key={s._id}>
                 <TableCell>{s.createdAt ? new Date(s.createdAt).toLocaleString() : ''}</TableCell>
                 <TableCell>{s.planCode}</TableCell>
-                <TableCell><Chip size="small" color={statusColor[s.status] as any || 'default'} label={s.status} /></TableCell>
+                <TableCell><Chip size="small" color={statusColor[s.status]} label={s.status} /></TableCell>
                 <TableCell>{s.renewsAt ? new Date(s.renewsAt).toLocaleString() : '-'}</TableCell>
                 <TableCell>{s.canceledAt ? new Date(s.canceledAt).toLocaleString() : '-'}</TableCell>
               </TableRow>

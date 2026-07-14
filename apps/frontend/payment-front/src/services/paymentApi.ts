@@ -10,9 +10,10 @@ type AnyApiResponse = {
   plan?: Plan;
   plans?: Plan[];
   subscription?: Subscription | null;
+  subscriptions?: Subscription[];
   payments?: Payment[];
   payment?: Payment;
-  [k: string]: any; // tolerate extra fields
+  [k: string]: unknown; // tolerate extra fields
 };
 
 const client = createApiClient({

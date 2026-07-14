@@ -1,4 +1,4 @@
-import { useMemo, memo } from 'react';
+import { useMemo, memo, CSSProperties } from 'react';
 import { Box } from '@mui/material';
 
 type CuteFallingStarsProps = { count?: number };
@@ -65,8 +65,8 @@ const CuteFallingStars = memo(function CuteFallingStars({ count = 24 }: CuteFall
           }}
           style={{
             // Use CSS variable for direction
-            ['--rotateDir' as any]: star.rotateDir
-          }}
+            '--rotateDir': star.rotateDir
+          } as CSSProperties & Record<'--rotateDir', number>}
         >
           {star.symbol}
         </Box>

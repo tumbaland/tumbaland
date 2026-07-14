@@ -1,4 +1,12 @@
 import { vi } from 'vitest';
+
+vi.mock('../config/ConfigProvider', () => ({
+  getGlobalConfig: () => ({
+    RELATIONSHIP_API_URL: 'http://localhost:4004',
+    AUTH_FRONT_URL: 'http://localhost:3004'
+  })
+}));
+
 import { relationshipApi } from './relationshipApi';
 
 it('redirects to the auth front on a 401 response', async () => {

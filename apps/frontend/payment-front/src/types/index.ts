@@ -36,7 +36,7 @@ export interface Payment {
   status: 'succeeded' | 'pending' | 'failed' | 'refunded';
   stripePaymentIntentId?: string;
   stripeChargeId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   createdAt?: string;
   updatedAt?: string;
 }

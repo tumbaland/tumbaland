@@ -14,6 +14,8 @@
     "dev:front": "concurrently \"npm run dev --workspace=account-front\" \"npm run dev --workspace=auth-front\" \"npm run dev --workspace=shell-front\" \"npm run dev --workspace=album-front\" \"npm run dev --workspace=finance-front\" \"npm run dev --workspace=relationship-front\" \"npm run dev --workspace=payment-front\" \"npm run dev --workspace=group-front\"",
     "lint": "eslint .",
     "test": "npm run test --workspaces --if-present",
+    "test:e2e": "npm run build --workspace=@tumbaland/frontend-core && playwright test",
+    "test:e2e:full": "E2E_WEB_SERVER_COMMAND=\"npm run dev\" npm run test:e2e",
     "test:coverage": "npm run test:coverage --workspaces --if-present",
     "coverage:report": "node scripts/coverage-report.js",
     "format": "prettier --write .",
@@ -22,6 +24,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.61.1",
     "@types/jest": "^30.0.0",
     "@types/supertest": "^7.2.0",
     "concurrently": "^10.0.3",

@@ -1,13 +1,13 @@
 // Error and message tracking
 
-import { getMonitoringConfig, isInterceptingConsole } from './config';
+import { getMonitoringConfig, isInterceptingConsole, MonitoringContext, MonitoringLevel } from './config';
 import { queueLog } from './batch';
 import { getCorrelationId, getSessionId } from './utils';
 
 // Error tracking with local ELK logging
 export const captureException = async (
   error: Error,
-  context?: any,
+  context?: MonitoringContext,
   options: {
     isDevelopment?: boolean;
     service?: string;
@@ -34,11 +34,11 @@ export const captureException = async (
   // Always log to console for development
   if (config.isDevelopment) {
     const originalIsIntercepting = isInterceptingConsole();
-    (window as any)._monitoringInterceptingConsole = true;
+    window._monitoringInterceptingConsole = true;
     try {
       console.error('🚨 Frontend Error:', errorData);
     } finally {
-      (window as any)._monitoringInterceptingConsole = originalIsIntercepting;
+      window._monitoringInterceptingConsole = originalIsIntercepting;
     }
   }
 
@@ -50,8 +50,8 @@ export const captureException = async (
 
 export const captureMessage = async (
   message: string,
-  level: 'debug' | 'info' | 'warn' | 'error' = 'info',
-  context?: any,
+  level: MonitoringLevel = 'info',
+  context?: MonitoringContext,
   options: {
     isDevelopment?: boolean;
     service?: string;
@@ -77,12 +77,12 @@ export const captureMessage = async (
   // Always log to console for development
   if (config.isDevelopment) {
     const originalIsIntercepting = isInterceptingConsole();
-    (window as any)._monitoringInterceptingConsole = true;
+    window._monitoringInterceptingConsole = true;
     try {
       const logLevel = level.toUpperCase();
       console.log(`[${logLevel}] ${message}`, context || '');
     } finally {
-      (window as any)._monitoringInterceptingConsole = originalIsIntercepting;
+      window._monitoringInterceptingConsole = originalIsIntercepting;
     }
   }
 

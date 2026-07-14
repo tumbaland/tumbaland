@@ -22,7 +22,7 @@ interface AccountMenuProps {
     key: string;
     label: string;
     route: string;
-    icon: React.ComponentType<any>;
+    icon: React.ElementType;
   }>;
 }
 

@@ -88,7 +88,7 @@ const SubscriptionCheckoutPage: React.FC = () => {
     if (!(statusParam === 'success' && sessionId)) return;
     let attempts = 0;
     let active = true;
-    let timer: any;
+    let timer: ReturnType<typeof setTimeout> | undefined;
 
     const schedule = () => {
       if (!active) return;
@@ -147,7 +147,7 @@ const SubscriptionCheckoutPage: React.FC = () => {
       const res = await paymentApi.createCheckoutSession(plan.code);
       logger.debug('checkout-session response', res);
       if (res.free && res.subscription?.status === 'active') {
-        const target = (res as any).url || '/subscription';
+        const target = res.url || '/subscription';
         navigateTop(target);
         return;
       }

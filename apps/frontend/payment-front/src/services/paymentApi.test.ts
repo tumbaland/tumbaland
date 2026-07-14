@@ -1,4 +1,12 @@
 import { vi } from 'vitest';
+
+vi.mock('../config/ConfigProvider', () => ({
+  getGlobalConfig: () => ({
+    PAYMENT_API_URL: 'http://localhost:4005',
+    AUTH_FRONT_URL: 'http://localhost:3004'
+  })
+}));
+
 import { paymentApi } from './paymentApi';
 
 function mockFetchOnce(body: unknown, init: { ok?: boolean; status?: number } = {}) {

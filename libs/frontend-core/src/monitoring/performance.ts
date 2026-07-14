@@ -1,9 +1,10 @@
 // Performance monitoring utilities
 
+import type { MetricType } from 'web-vitals';
 import { getMonitoringConfig, isInterceptingConsole } from './config';
 
 // Web vitals will be loaded dynamically
-let webVitals: any = null;
+let webVitals: typeof import('web-vitals') | null = null;
 
 // User tracking (local storage only)
 export const setUser = (
@@ -14,11 +15,11 @@ export const setUser = (
 
   if (config.isDevelopment) {
     const originalIsIntercepting = isInterceptingConsole();
-    (window as any)._monitoringInterceptingConsole = true;
+    window._monitoringInterceptingConsole = true;
     try {
       console.log('👤 User set:', user);
     } finally {
-      (window as any)._monitoringInterceptingConsole = originalIsIntercepting;
+      window._monitoringInterceptingConsole = originalIsIntercepting;
     }
   }
   // Could store in localStorage for persistence if needed
@@ -33,11 +34,11 @@ export const setTag = (
 
   if (config.isDevelopment) {
     const originalIsIntercepting = isInterceptingConsole();
-    (window as any)._monitoringInterceptingConsole = true;
+    window._monitoringInterceptingConsole = true;
     try {
       console.log(`🏷️ Tag set: ${key} = ${value}`);
     } finally {
-      (window as any)._monitoringInterceptingConsole = originalIsIntercepting;
+      window._monitoringInterceptingConsole = originalIsIntercepting;
     }
   }
   // Store tags locally if needed for context
@@ -54,11 +55,11 @@ export const startTransaction = (
   const startTime = Date.now();
   if (config.isDevelopment) {
     const originalIsIntercepting = isInterceptingConsole();
-    (window as any)._monitoringInterceptingConsole = true;
+    window._monitoringInterceptingConsole = true;
     try {
       console.log(`⏱️ Transaction started: ${name} (${op})`);
     } finally {
-      (window as any)._monitoringInterceptingConsole = originalIsIntercepting;
+      window._monitoringInterceptingConsole = originalIsIntercepting;
     }
   }
 
@@ -68,11 +69,11 @@ export const startTransaction = (
       recordMetric(`${name}_duration`, duration, 'ms', { isDevelopment: config.isDevelopment });
       if (config.isDevelopment) {
         const originalIsIntercepting = isInterceptingConsole();
-        (window as any)._monitoringInterceptingConsole = true;
+        window._monitoringInterceptingConsole = true;
         try {
           console.log(`✅ Transaction finished: ${name} (${duration}ms)`);
         } finally {
-          (window as any)._monitoringInterceptingConsole = originalIsIntercepting;
+          window._monitoringInterceptingConsole = originalIsIntercepting;
         }
       }
     }
@@ -93,12 +94,12 @@ export const recordMetric = (
   // Always log to console for development with better formatting
   if (config.isDevelopment) {
     const originalIsIntercepting = isInterceptingConsole();
-    (window as any)._monitoringInterceptingConsole = true;
+    window._monitoringInterceptingConsole = true;
     try {
       const formattedValue = unit === 'ms' ? `${metricValue.toFixed(2)}ms` : `${metricValue}${unit}`;
       console.log(`📊 Performance: ${name} = ${formattedValue}`);
     } finally {
-      (window as any)._monitoringInterceptingConsole = originalIsIntercepting;
+      window._monitoringInterceptingConsole = originalIsIntercepting;
     }
   }
 
@@ -112,11 +113,11 @@ export const initWebVitals = async (options: { isDevelopment?: boolean } = {}) =
 
   if (config.isDevelopment) {
     const originalIsIntercepting = isInterceptingConsole();
-    (window as any)._monitoringInterceptingConsole = true;
+    window._monitoringInterceptingConsole = true;
     try {
       console.log('📊 Web Vitals monitoring initialized (development mode)');
     } finally {
-      (window as any)._monitoringInterceptingConsole = originalIsIntercepting;
+      window._monitoringInterceptingConsole = originalIsIntercepting;
     }
 
     try {
@@ -125,18 +126,21 @@ export const initWebVitals = async (options: { isDevelopment?: boolean } = {}) =
       webVitals = webVitalsModule;
 
       // Use the new web-vitals API (v5+)
-      webVitals.onCLS((metric: any) => recordMetric('CLS', metric, 'unitless', { isDevelopment: config.isDevelopment }));
-      webVitals.onFCP((metric: any) => recordMetric('FCP', metric, 'ms', { isDevelopment: config.isDevelopment }));
-      webVitals.onLCP((metric: any) => recordMetric('LCP', metric, 'ms', { isDevelopment: config.isDevelopment }));
-      webVitals.onTTFB((metric: any) => recordMetric('TTFB', metric, 'ms', { isDevelopment: config.isDevelopment }));
+      const reportMetric = (name: string, metric: MetricType, unit: string) => {
+        recordMetric(name, metric, unit, { isDevelopment: config.isDevelopment });
+      };
+      webVitals.onCLS((metric) => reportMetric('CLS', metric, 'unitless'));
+      webVitals.onFCP((metric) => reportMetric('FCP', metric, 'ms'));
+      webVitals.onLCP((metric) => reportMetric('LCP', metric, 'ms'));
+      webVitals.onTTFB((metric) => reportMetric('TTFB', metric, 'ms'));
       // Note: FID is deprecated in web-vitals v5
     } catch (e) {
       const originalIsIntercepting = isInterceptingConsole();
-      (window as any)._monitoringInterceptingConsole = true;
+      window._monitoringInterceptingConsole = true;
       try {
         console.warn('Web Vitals library not available - install web-vitals package');
       } finally {
-        (window as any)._monitoringInterceptingConsole = originalIsIntercepting;
+        window._monitoringInterceptingConsole = originalIsIntercepting;
       }
     }
   }

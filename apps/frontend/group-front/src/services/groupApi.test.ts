@@ -1,4 +1,12 @@
 import { vi } from 'vitest';
+
+vi.mock('../config/ConfigProvider', () => ({
+  getGlobalConfig: () => ({
+    GROUP_API_URL: 'http://localhost:4006',
+    AUTH_FRONT_URL: 'http://localhost:3004'
+  })
+}));
+
 import { groupApi } from './groupApi';
 
 function mockFetchOnce(body: unknown, init: { ok?: boolean; status?: number } = {}) {

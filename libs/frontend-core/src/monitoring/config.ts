@@ -7,6 +7,29 @@ export interface MonitoringConfig {
   captureConsoleLevels?: ('debug' | 'info' | 'warn' | 'error')[];
 }
 
+export type MonitoringLevel = 'debug' | 'info' | 'warn' | 'error';
+export type MonitoringContext = Record<string, unknown>;
+
+export interface MonitoringLog {
+  timestamp?: string;
+  level?: MonitoringLevel | string;
+  service?: string;
+  component?: string;
+  message?: string;
+  url?: string;
+  userAgent?: string;
+  context?: MonitoringContext;
+  correlationId?: string;
+  sessionId?: string;
+  [key: string]: unknown;
+}
+
+declare global {
+  interface Window {
+    _monitoringInterceptingConsole?: boolean;
+  }
+}
+
 // Global monitoring configuration
 let monitoringConfig: MonitoringConfig = {
   isDevelopment: false,
@@ -16,7 +39,7 @@ let monitoringConfig: MonitoringConfig = {
 
 // Flag to prevent recursive console interception
 export const isInterceptingConsole = (): boolean => {
-  return typeof window !== 'undefined' && (window as any)._monitoringInterceptingConsole === true;
+  return typeof window !== 'undefined' && window._monitoringInterceptingConsole === true;
 };
 
 // Get current monitoring configuration

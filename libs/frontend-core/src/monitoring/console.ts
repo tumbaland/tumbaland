@@ -1,17 +1,20 @@
 // Console interception for automatic log capture
 
-import { isInterceptingConsole } from './config';
+import { isInterceptingConsole, MonitoringContext, MonitoringLevel } from './config';
 
 // Type for the capture message function
 type CaptureMessageFn = (
   message: string,
-  level: 'debug' | 'info' | 'warn' | 'error',
-  context?: any
+  level: MonitoringLevel,
+  context?: MonitoringContext
 ) => void;
+
+type ConsoleMethodName = 'error' | 'warn' | 'log' | 'info' | 'debug';
+type ConsoleMethod = (...args: unknown[]) => void;
 
 // Initialize console interception
 export const initConsoleInterception = (
-  captureConsoleLevels: ('debug' | 'info' | 'warn' | 'error')[] = ['error', 'warn'],
+  captureConsoleLevels: MonitoringLevel[] = ['error', 'warn'],
   captureMessageFn?: CaptureMessageFn
 ) => {
   // If no capture function provided, skip interception
@@ -19,13 +22,13 @@ export const initConsoleInterception = (
 
   // Helper function to conditionally intercept console methods
   const interceptConsole = (
-    methodName: keyof Console,
-    level: 'debug' | 'info' | 'warn' | 'error'
+    methodName: ConsoleMethodName,
+    level: MonitoringLevel
   ) => {
     if (!captureConsoleLevels.includes(level)) return;
 
-    const originalMethod = (console as any)[methodName];
-    (console as any)[methodName] = (...args: any[]) => {
+    const originalMethod = console[methodName] as ConsoleMethod;
+    console[methodName] = ((...args: unknown[]) => {
       // Call original console method
       originalMethod.apply(console, args);
 
@@ -39,15 +42,15 @@ export const initConsoleInterception = (
         ).join(' ');
 
         // Set interception flag to prevent recursion during capture
-        (window as any)._monitoringInterceptingConsole = true;
+        window._monitoringInterceptingConsole = true;
         captureMessageFn(message, level, {
           source: `console.${methodName}`,
           args: args
         });
       } finally {
-        (window as any)._monitoringInterceptingConsole = false;
+        window._monitoringInterceptingConsole = false;
       }
-    };
+    }) as Console[typeof methodName];
   };
 
   // Intercept console methods based on configuration

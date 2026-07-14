@@ -37,6 +37,8 @@ jobs:
               - 'package-lock.json'
               - '.github/workflows/ci.yml'
               - 'eslint.config.mjs'
+              - 'playwright.config.ts'
+              - 'e2e/**'
             libs-changed: &libs-changed
               - 'libs/**'
             apps/backend/album-service:
@@ -209,6 +211,28 @@ jobs:
 
       - name: Test
         run: npm run test --workspace=${{ matrix.workspace }} --if-present
+
+  e2e:
+    needs: [changes, build-libs]
+    if: needs.changes.outputs.workspaces != '[]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 26
+        uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run frontend smoke e2e tests
+        run: npm run test:e2e
 
   build:
     needs: [changes, build-libs]

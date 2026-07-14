@@ -1,9 +1,9 @@
 // Batch logging system for efficient log transmission
 
-import { getMonitoringConfig } from './config';
+import { getMonitoringConfig, MonitoringLog } from './config';
 
 // Log batching for better performance
-let logBatch: any[] = [];
+let logBatch: MonitoringLog[] = [];
 let batchTimeout: NodeJS.Timeout | null = null;
 const BATCH_SIZE = 10;
 const BATCH_INTERVAL = 5000; // 5 seconds
@@ -51,7 +51,7 @@ const sendBatch = async () => {
 };
 
 // Queue log for batching
-export const queueLog = (logData: any) => {
+export const queueLog = (logData: MonitoringLog) => {
   logBatch.push(logData);
 
   // Send immediately if batch is full

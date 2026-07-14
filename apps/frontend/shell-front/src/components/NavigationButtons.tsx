@@ -6,7 +6,7 @@ export interface NavigationItem {
   key: string;
   label: string;
   route: string;
-  icon: React.ComponentType<any>;
+  icon: React.ElementType;
 }
 
 interface NavigationButtonsProps {
