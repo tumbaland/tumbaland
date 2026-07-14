@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.381](https://github.com/toomastahves/tumbaland/compare/app-v0.0.380...app-v0.0.381) (2026-07-14)
+
+
+### Features
+
+* add e2e smoke test ([14bc7df](https://github.com/toomastahves/tumbaland/commit/14bc7dfc89474e09cd2ceac565475efe74050102))
+
 ### [0.0.380](https://github.com/toomastahves/tumbaland/compare/app-v0.0.379...app-v0.0.380) (2026-07-13)
 
 
