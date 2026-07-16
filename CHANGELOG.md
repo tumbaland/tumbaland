@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.383](https://github.com/toomastahves/tumbaland/compare/app-v0.0.382...app-v0.0.383) (2026-07-16)
+
+
+### Bug Fixes
+
+* healthcheck ([b8c717b](https://github.com/toomastahves/tumbaland/commit/b8c717b192f2e1df6172fd1a552c3b53e1359ba2))
+
 ### [0.0.382](https://github.com/toomastahves/tumbaland/compare/app-v0.0.381...app-v0.0.382) (2026-07-14)
 
 
