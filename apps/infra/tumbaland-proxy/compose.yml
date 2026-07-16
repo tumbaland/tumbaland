@@ -16,7 +16,7 @@ services:
       - ./certs/renewal:/etc/letsencrypt/renewal
       - ./html:/usr/share/nginx/html
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health", "||", "exit", "1"]
+      test: ["CMD-SHELL", "curl -f http://localhost/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -25,6 +25,9 @@ const apiKey = (): string => {
   return key;
 };
 
+/** Abort file-service requests that get no response, so callers degrade instead of hanging. */
+const REQUEST_TIMEOUT_MS = 10_000;
+
 // ─── Low-level HTTP helpers ───────────────────────────────────────────────────
 
 interface RawResponse {
@@ -63,6 +66,9 @@ function request(
       );
     });
 
+    req.setTimeout(REQUEST_TIMEOUT_MS, () => {
+      req.destroy(new Error(`file-service request timed out after ${REQUEST_TIMEOUT_MS}ms: ${method} ${urlStr}`));
+    });
     req.on('error', reject);
     if (body) req.write(body);
     req.end();

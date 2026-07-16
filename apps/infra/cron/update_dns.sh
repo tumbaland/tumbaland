@@ -27,21 +27,21 @@ CURRENT_IP=$(curl -s https://api.ipify.org)
 echo "Updating DNS records with ip: $CURRENT_IP"
 echo "----------------------------------------"
 
-echo "Updating *.visin.eu..."
+echo "Updating *.tumbaland.eu..."
 curl "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records/6d3fc5c8df508f86a31bbf40e08eef0b" \
     -X PATCH \
     -H "Content-Type: application/json" \
     -H "$AUTH_HEADER" \
     -d "{\"content\": \"$CURRENT_IP\"}"
 
-echo "Updating visin.eu..."
+echo "Updating tumbaland.eu..."
 curl "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records/1d2b2b164059e4ef27833e779d3fa9a7" \
     -X PATCH \
     -H "Content-Type: application/json" \
     -H "$AUTH_HEADER" \
     -d "{\"content\": \"$CURRENT_IP\"}"
 
-echo "Updating www.visin.eu..."
+echo "Updating www.tumbaland.eu..."
 curl "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/dns_records/28ae3c518ddba3b6b37069b213e7a6ee" \
     -X PATCH \
     -H "Content-Type: application/json" \
