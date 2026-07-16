@@ -1,4 +1,11 @@
 # Tumbalog
+### [0.0.384](https://github.com/toomastahves/tumbaland/compare/app-v0.0.383...app-v0.0.384) (2026-07-16)
+
+
+### Bug Fixes
+
+* cron deployment ([dd15be2](https://github.com/toomastahves/tumbaland/commit/dd15be203409a1f3ae8c7c70fbaa157cfc63bfcb))
+
 ### [0.0.383](https://github.com/toomastahves/tumbaland/compare/app-v0.0.382...app-v0.0.383) (2026-07-16)
 
 
