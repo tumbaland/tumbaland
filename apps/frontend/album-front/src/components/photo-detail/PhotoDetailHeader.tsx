@@ -9,6 +9,8 @@ import {
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
+  NavigateBefore as NavigateBeforeIcon,
+  NavigateNext as NavigateNextIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Download as DownloadIcon,
@@ -23,6 +25,11 @@ interface PhotoDetailHeaderProps {
   onDownload: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onPrevious?: () => void;
+  onNext?: () => void;
+  hasPrevious?: boolean;
+  hasNext?: boolean;
+  photoPosition?: { index: number; total: number };
 }
 
 const PhotoDetailHeader: React.FC<PhotoDetailHeaderProps> = ({
@@ -31,7 +38,12 @@ const PhotoDetailHeader: React.FC<PhotoDetailHeaderProps> = ({
   onNavigate,
   onDownload,
   onEdit,
-  onDelete
+  onDelete,
+  onPrevious,
+  onNext,
+  hasPrevious = false,
+  hasNext = false,
+  photoPosition
 }) => {
   return (
     <>
@@ -87,9 +99,11 @@ const PhotoDetailHeader: React.FC<PhotoDetailHeaderProps> = ({
             <Typography
               variant="h4"
               component="h1"
+              noWrap
               sx={{
                 fontWeight: 700,
                 fontSize: { xs: '1.5rem', sm: '2.125rem' },
+                maxWidth: { xs: 200, sm: 400 },
                 background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
                 backgroundClip: 'text',
                 textFillColor: 'transparent',
@@ -100,6 +114,39 @@ const PhotoDetailHeader: React.FC<PhotoDetailHeaderProps> = ({
               {photo.title || photo.originalName}
             </Typography>
           </Box>
+          {(onPrevious || onNext) && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
+              <IconButton
+                onClick={onPrevious}
+                disabled={!hasPrevious}
+                size="small"
+                aria-label="Previous photo"
+                sx={{
+                  border: '1px solid rgba(0,0,0,0.12)',
+                  bgcolor: 'rgba(255,255,255,0.5)'
+                }}
+              >
+                <NavigateBeforeIcon fontSize="small" />
+              </IconButton>
+              <IconButton
+                onClick={onNext}
+                disabled={!hasNext}
+                size="small"
+                aria-label="Next photo"
+                sx={{
+                  border: '1px solid rgba(0,0,0,0.12)',
+                  bgcolor: 'rgba(255,255,255,0.5)'
+                }}
+              >
+                <NavigateNextIcon fontSize="small" />
+              </IconButton>
+              {photoPosition && (
+                <Typography variant="caption" sx={{ color: 'text.secondary', ml: 0.5 }}>
+                  {photoPosition.index} of {photoPosition.total}
+                </Typography>
+              )}
+            </Box>
+          )}
         </Box>
         <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
           <Button

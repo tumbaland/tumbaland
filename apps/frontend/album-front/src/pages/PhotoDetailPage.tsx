@@ -18,6 +18,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Photo, Album } from '../types';
 import { albumService } from '../services/albumService';
 import { photoService } from '../services/photoService';
+import { usePhotos } from '../hooks/usePhotos';
 import EditPhotoDialog from '../components/EditPhotoDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import SegmentationView from '../components/SegmentationView';
@@ -37,6 +38,41 @@ const PhotoDetailPage: React.FC = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [tabValue, setTabValue] = useState(0);
+
+  // Full, unpaginated album photo order — used to find the previous/next photo
+  const { photos: albumPhotos } = usePhotos(albumId || '');
+  const currentPhotoIndex = albumPhotos.findIndex((p) => p._id === photoId);
+  const previousPhoto = currentPhotoIndex > 0 ? albumPhotos[currentPhotoIndex - 1] : null;
+  const nextPhoto =
+    currentPhotoIndex >= 0 && currentPhotoIndex < albumPhotos.length - 1
+      ? albumPhotos[currentPhotoIndex + 1]
+      : null;
+
+  const goToPhoto = (targetPhotoId: string) => {
+    navigate(`/albums/${albumId}/photos/${targetPhotoId}`);
+  };
+  const handlePreviousPhoto = () => previousPhoto && goToPhoto(previousPhoto._id);
+  const handleNextPhoto = () => nextPhoto && goToPhoto(nextPhoto._id);
+
+  // Keyboard navigation, mirrors the quick-view PhotoViewer
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (showEditDialog || showDeleteDialog) return;
+
+      if (event.key === 'ArrowLeft' && previousPhoto) {
+        event.preventDefault();
+        navigate(`/albums/${albumId}/photos/${previousPhoto._id}`);
+      } else if (event.key === 'ArrowRight' && nextPhoto) {
+        event.preventDefault();
+        navigate(`/albums/${albumId}/photos/${nextPhoto._id}`);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [previousPhoto, nextPhoto, showEditDialog, showDeleteDialog, navigate, albumId]);
 
   // Refetch photo after analysis completes
   const refetchPhoto = async () => {
@@ -167,6 +203,13 @@ const PhotoDetailPage: React.FC = () => {
         onDownload={handleDownload}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onPrevious={handlePreviousPhoto}
+        onNext={handleNextPhoto}
+        hasPrevious={Boolean(previousPhoto)}
+        hasNext={Boolean(nextPhoto)}
+        photoPosition={
+          currentPhotoIndex >= 0 ? { index: currentPhotoIndex + 1, total: albumPhotos.length } : undefined
+        }
       />
 
       {/* Main Content with Tabs */}
