@@ -7,10 +7,10 @@ import { requireEnv } from '@tumbaland/backend-core';
 // bounds that exposure window. The frontend re-verifies (and silently re-mints a
 // fresh cookie via /auth/verify) on a 5-minute cache, so active sessions never
 // notice; only sessions idle longer than this need to re-authenticate. Previously
-// 30m, which forced re-logins on any tab left idle for half an hour; widened to
-// cover a normal work session while still keeping the revocation window well under
-// the 7-day cookie lifetime.
-const JWT_EXPIRES_IN = '4h';
+// 30m, which forced re-logins on any tab left idle for half an hour; widened to a
+// full day to match typical session/cookie expectations, still under the 7-day
+// cookie lifetime that bounds the revocation exposure window.
+const JWT_EXPIRES_IN = '24h';
 
 export interface UserPayload {
   id: string;
