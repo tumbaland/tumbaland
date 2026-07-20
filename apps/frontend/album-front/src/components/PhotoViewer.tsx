@@ -262,11 +262,14 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
               setImgDimensions({ width: img.naturalWidth, height: img.naturalHeight });
             }}
             sx={{
-              maxWidth:
+              // Fixed (not max-) dimensions + objectFit below, so the box stays the
+              // same size whether the thumbnail or full-res image is showing — only
+              // sharpness changes when the full image swaps in, no resize jump.
+              width:
                 isMobile && imgDimensions && imgDimensions.width > imgDimensions.height && isPortrait
                   ? '100vh'
                   : '90vw',
-              maxHeight:
+              height:
                 isMobile && imgDimensions && imgDimensions.width > imgDimensions.height && isPortrait
                   ? '100vw'
                   : '90vh',
@@ -275,8 +278,6 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
               userSelect: 'none',
               margin: 'auto',
               display: 'block',
-              width: 'auto',
-              height: 'auto',
               zIndex: 2,
               boxShadow: 3,
               borderRadius: 2,
