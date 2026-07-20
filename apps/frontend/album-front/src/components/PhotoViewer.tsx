@@ -17,6 +17,7 @@ import {
 } from '@mui/icons-material';
 import { Photo } from '../types';
 import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
+import { useProgressiveImage } from '../hooks/useProgressiveImage';
 
 interface PhotoViewerProps {
   photos: Photo[];
@@ -42,6 +43,7 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isPortrait = window.innerHeight > window.innerWidth;
   const swipeHandlers = useSwipeNavigation(onNext, onPrevious);
+  const { displaySrc } = useProgressiveImage(selectedPhoto?.signedUrl, selectedPhoto?.thumbnailUrl);
 
   // Keyboard navigation
   useEffect(() => {
@@ -253,7 +255,7 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
         ) : (
           <Box
             component="img"
-            src={selectedPhoto.signedUrl}
+            src={displaySrc}
             alt={selectedPhoto.title || selectedPhoto.originalName}
             onLoad={(e) => {
               const img = e.currentTarget as HTMLImageElement;

@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Typography, Divider, Chip } from '@mui/material';
 import { Photo } from '../../types';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
+import { useProgressiveImage } from '../../hooks/useProgressiveImage';
 
 interface PhotoBasicInfoProps {
   photo: Photo;
@@ -19,6 +20,7 @@ const PhotoBasicInfo: React.FC<PhotoBasicInfoProps> = ({
   onSwipePrevious
 }) => {
   const swipeHandlers = useSwipeNavigation(onSwipeNext ?? (() => {}), onSwipePrevious ?? (() => {}));
+  const { displaySrc } = useProgressiveImage(photo.signedUrl, photo.thumbnailUrl || photo.thumbnailSignedUrl);
   return (
     <Box sx={{ display: 'flex', gap: 4, flexDirection: { xs: 'column', lg: 'row' } }}>
       {/* Photo Display */}
@@ -42,7 +44,7 @@ const PhotoBasicInfo: React.FC<PhotoBasicInfoProps> = ({
         >
           <Box
             component="img"
-            src={photo.signedUrl}
+            src={displaySrc}
             alt={photo.title || photo.originalName}
             sx={{
               width: '100%',
