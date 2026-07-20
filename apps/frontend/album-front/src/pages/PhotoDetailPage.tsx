@@ -250,6 +250,8 @@ const PhotoDetailPage: React.FC = () => {
             photo={photo}
             formatFileSize={formatFileSize}
             formatDate={formatDate}
+            onSwipeNext={nextPhoto ? handleNextPhoto : undefined}
+            onSwipePrevious={previousPhoto ? handlePreviousPhoto : undefined}
           />
         </TabPanel>
         <TabPanel value={tabValue} index={1}>

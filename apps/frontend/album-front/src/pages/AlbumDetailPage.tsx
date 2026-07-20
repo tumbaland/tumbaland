@@ -63,6 +63,12 @@ const AlbumDetailPage: React.FC = () => {
     search: searchTerm || undefined
   });
 
+  // Unpaginated album photo list, so the quick-view modal can step through
+  // every photo (not just the current page's) with Previous/Next.
+  const { photos: allPhotos } = usePhotos(albumId || '', {
+    search: searchTerm || undefined
+  });
+
   const {
     selectedPhoto,
     selectedPhotoIndex,
@@ -71,7 +77,7 @@ const AlbumDetailPage: React.FC = () => {
     handlePreviousPhoto,
     handleNextPhoto,
     handleClosePhotoViewer
-  } = usePhotoViewer(photos);
+  } = usePhotoViewer(allPhotos);
 
 
   const handleDeletePhoto = async (photo: Photo) => {
@@ -223,7 +229,7 @@ const AlbumDetailPage: React.FC = () => {
       />
 
       <PhotoViewer
-        photos={photos}
+        photos={allPhotos}
         selectedPhoto={selectedPhoto}
         selectedPhotoIndex={selectedPhotoIndex}
         open={showPhotoViewer}

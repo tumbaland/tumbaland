@@ -16,6 +16,7 @@ import {
   Download as DownloadIcon
 } from '@mui/icons-material';
 import { Photo } from '../types';
+import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 
 interface PhotoViewerProps {
   photos: Photo[];
@@ -40,6 +41,7 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isPortrait = window.innerHeight > window.innerWidth;
+  const swipeHandlers = useSwipeNavigation(onNext, onPrevious);
 
   // Keyboard navigation
   useEffect(() => {
@@ -106,6 +108,8 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
       }}
     >
       <DialogContent
+        onTouchStart={swipeHandlers.onTouchStart}
+        onTouchEnd={swipeHandlers.onTouchEnd}
         sx={{
           p: 0,
           m: 0,
@@ -171,17 +175,17 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
           <IconButton
             onClick={onPrevious}
             sx={{
-              display: { xs: 'none', sm: 'flex' },
+              display: 'flex',
               position: 'absolute',
-              left: 16,
+              left: { xs: 4, sm: 16 },
               top: '50%',
               transform: 'translateY(-50%)',
               color: 'white',
               bgcolor: 'rgba(0, 0, 0, 0.5)',
               zIndex: 3,
               '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.7)' },
-              width: 56,
-              height: 56
+              width: { xs: 44, sm: 56 },
+              height: { xs: 44, sm: 56 }
             }}
           >
             <NavigateBeforeIcon fontSize="large" />
@@ -193,17 +197,17 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
           <IconButton
             onClick={onNext}
             sx={{
-              display: { xs: 'none', sm: 'flex' },
+              display: 'flex',
               position: 'absolute',
-              right: 16,
+              right: { xs: 4, sm: 16 },
               top: '50%',
               transform: 'translateY(-50%)',
               color: 'white',
               bgcolor: 'rgba(0, 0, 0, 0.5)',
               zIndex: 3,
               '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.7)' },
-              width: 56,
-              height: 56
+              width: { xs: 44, sm: 56 },
+              height: { xs: 44, sm: 56 }
             }}
           >
             <NavigateNextIcon fontSize="large" />
