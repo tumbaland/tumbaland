@@ -1,14 +1,24 @@
 import React from 'react';
 import { Box, Typography, Divider, Chip } from '@mui/material';
 import { Photo } from '../../types';
+import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 
 interface PhotoBasicInfoProps {
   photo: Photo;
   formatFileSize: (bytes: number) => string;
   formatDate: (dateString: string) => string;
+  onSwipeNext?: () => void;
+  onSwipePrevious?: () => void;
 }
 
-const PhotoBasicInfo: React.FC<PhotoBasicInfoProps> = ({ photo, formatFileSize, formatDate }) => {
+const PhotoBasicInfo: React.FC<PhotoBasicInfoProps> = ({
+  photo,
+  formatFileSize,
+  formatDate,
+  onSwipeNext,
+  onSwipePrevious
+}) => {
+  const swipeHandlers = useSwipeNavigation(onSwipeNext ?? (() => {}), onSwipePrevious ?? (() => {}));
   return (
     <Box sx={{ display: 'flex', gap: 4, flexDirection: { xs: 'column', lg: 'row' } }}>
       {/* Photo Display */}
@@ -19,6 +29,8 @@ const PhotoBasicInfo: React.FC<PhotoBasicInfoProps> = ({ photo, formatFileSize, 
           Photo
         </Typography>
         <Box
+          onTouchStart={swipeHandlers.onTouchStart}
+          onTouchEnd={swipeHandlers.onTouchEnd}
           sx={{
             display: 'flex',
             justifyContent: 'center',
