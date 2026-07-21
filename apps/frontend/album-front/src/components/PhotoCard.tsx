@@ -1,6 +1,13 @@
 import React from 'react';
 import { Card, CardMedia, CardContent, Typography, IconButton, Box, Menu, MenuItem, Chip } from '@mui/material';
-import { MoreVert as MoreVertIcon, Image as ImageIcon, Star as StarIcon, Videocam as VideocamIcon } from '@mui/icons-material';
+import {
+  MoreVert as MoreVertIcon,
+  Image as ImageIcon,
+  Star as StarIcon,
+  Videocam as VideocamIcon,
+  CheckCircle as CheckCircleIcon,
+  RadioButtonUnchecked as RadioButtonUncheckedIcon
+} from '@mui/icons-material';
 import { Photo } from '../types';
 
 interface PhotoCardProps {
@@ -11,6 +18,9 @@ interface PhotoCardProps {
   onSetCover?: (photo: Photo) => void;
   onViewDetails?: (photo: Photo) => void;
   isCoverPhoto?: boolean;
+  selectMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (photo: Photo) => void;
 }
 
 const PhotoCard: React.FC<PhotoCardProps> = ({
@@ -20,7 +30,10 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
   onDelete,
   onSetCover,
   onViewDetails,
-  isCoverPhoto = false
+  isCoverPhoto = false,
+  selectMode = false,
+  selected = false,
+  onToggleSelect
 }) => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
@@ -77,14 +90,15 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
         background: 'rgba(255, 255, 255, 0.7)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255, 255, 255, 0.5)',
+        border: selected ? '2px solid' : '1px solid rgba(255, 255, 255, 0.5)',
+        borderColor: selected ? 'primary.main' : 'rgba(255, 255, 255, 0.5)',
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         '&:hover': {
           transform: 'translateY(-4px)',
           boxShadow: '0 12px 24px rgba(0,0,0,0.1)'
         }
       }}
-      onClick={() => onView(photo)}
+      onClick={() => (selectMode ? onToggleSelect?.(photo) : onView(photo))}
     >
       <Box sx={{ position: 'relative', width: '100%', aspectRatio: '1 / 1' }}>
         {photo.thumbnailUrl ? (
@@ -209,7 +223,7 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
             Cover
           </Box>
         )}
-        {(onEdit || onDelete || onSetCover) && (
+        {!selectMode && (onEdit || onDelete || onSetCover) && (
           <IconButton
             size="small"
             onClick={handleMenuClick}
@@ -223,6 +237,26 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
           >
             <MoreVertIcon fontSize="small" />
           </IconButton>
+        )}
+        {selectMode && (
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: 8,
+              left: 8,
+              zIndex: 2,
+              display: 'flex',
+              bgcolor: 'rgba(0, 0, 0, 0.4)',
+              borderRadius: '50%',
+              p: 0.25
+            }}
+          >
+            {selected ? (
+              <CheckCircleIcon sx={{ color: 'primary.main', bgcolor: 'white', borderRadius: '50%' }} fontSize="small" />
+            ) : (
+              <RadioButtonUncheckedIcon sx={{ color: 'white' }} fontSize="small" />
+            )}
+          </Box>
         )}
       </Box>
       <CardContent sx={{ display: { xs: 'none', sm: 'block' }, flexGrow: 1, p: 2 }}>
