@@ -233,7 +233,6 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
               onSetCover={onSetCoverPhoto}
               onViewDetails={onViewPhotoDetails}
               isCoverPhoto={album?.coverPhotoId === photo._id}
-              density={density}
             />
           </Box>
         ))}
