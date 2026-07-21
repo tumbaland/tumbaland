@@ -1,3 +1,5 @@
+export type GridDensity = 'large' | 'comfortable' | 'compact' | 'tiny';
+
 export interface Album {
   _id: string;
   name: string;

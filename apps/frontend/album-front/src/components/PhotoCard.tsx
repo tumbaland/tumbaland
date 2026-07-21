@@ -13,14 +13,14 @@ interface PhotoCardProps {
   isCoverPhoto?: boolean;
 }
 
-const PhotoCard: React.FC<PhotoCardProps> = ({ 
-  photo, 
-  onView, 
-  onEdit, 
-  onDelete, 
-  onSetCover, 
+const PhotoCard: React.FC<PhotoCardProps> = ({
+  photo,
+  onView,
+  onEdit,
+  onDelete,
+  onSetCover,
   onViewDetails,
-  isCoverPhoto = false 
+  isCoverPhoto = false
 }) => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
