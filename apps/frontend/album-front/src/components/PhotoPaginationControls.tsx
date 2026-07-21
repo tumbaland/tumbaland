@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
   Pagination,
+  Slider,
+  IconButton,
   FormControl,
   Select,
   MenuItem,
@@ -10,6 +12,7 @@ import {
   useMediaQuery,
   useTheme
 } from '@mui/material';
+import { NavigateBefore as NavigateBeforeIcon, NavigateNext as NavigateNextIcon } from '@mui/icons-material';
 
 interface PhotoPaginationControlsProps {
   pagination: {
@@ -23,6 +26,11 @@ interface PhotoPaginationControlsProps {
   position?: 'top' | 'bottom';
 }
 
+// Above this many pages, a full row of page numbers stops being useful —
+// switch to a slider so jumping from page 3 to page 80 doesn't mean
+// hunting through (or endlessly clicking past) a wall of buttons.
+const MAX_PAGES_FOR_FULL_LIST = 20;
+
 const PhotoPaginationControls: React.FC<PhotoPaginationControlsProps> = ({
   pagination,
   currentPage,
@@ -32,10 +40,74 @@ const PhotoPaginationControls: React.FC<PhotoPaginationControlsProps> = ({
   position = 'top'
 }) => {
   const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const siblingCount = isMobile ? 0 : isDesktop ? 2 : 1;
   const showPagination = pageSize > 0 && pagination.pages > 1;
+  const showAsSlider = pagination.pages > MAX_PAGES_FOR_FULL_LIST;
+
+  // Live thumb position while dragging; only navigates once the drag is
+  // released (or a keyboard step commits), so scrubbing across 100 pages
+  // doesn't fire a request per pixel of movement.
+  const [dragPage, setDragPage] = useState<number | null>(null);
+  const sliderPage = dragPage ?? currentPage;
+
+  const goToPage = (event: React.SyntheticEvent | Event, page: number) => {
+    onPageChange(event as unknown as React.ChangeEvent<unknown>, Math.min(Math.max(page, 1), pagination.pages));
+  };
+
+  const paginationControl = showAsSlider ? (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%', maxWidth: 420 }}>
+      <IconButton
+        size="small"
+        onClick={(e) => goToPage(e, currentPage - 1)}
+        disabled={currentPage <= 1}
+        aria-label="Previous page"
+      >
+        <NavigateBeforeIcon fontSize="small" />
+      </IconButton>
+      <Slider
+        value={sliderPage}
+        min={1}
+        max={pagination.pages}
+        step={1}
+        onChange={(_, value) => setDragPage(value as number)}
+        onChangeCommitted={(event, value) => {
+          setDragPage(null);
+          goToPage(event, value as number);
+        }}
+        valueLabelDisplay="auto"
+        valueLabelFormat={(value) => `Page ${value}`}
+        sx={{ flex: 1 }}
+      />
+      <IconButton
+        size="small"
+        onClick={(e) => goToPage(e, currentPage + 1)}
+        disabled={currentPage >= pagination.pages}
+        aria-label="Next page"
+      >
+        <NavigateNextIcon fontSize="small" />
+      </IconButton>
+      <Typography variant="body2" sx={{ color: 'text.secondary', whiteSpace: 'nowrap', minWidth: 56, textAlign: 'right' }}>
+        {currentPage} / {pagination.pages}
+      </Typography>
+    </Box>
+  ) : (
+    <Pagination
+      count={pagination.pages}
+      page={currentPage}
+      onChange={onPageChange}
+      color="primary"
+      size="medium"
+      showFirstButton
+      showLastButton
+      siblingCount={pagination.pages}
+      boundaryCount={pagination.pages}
+      sx={{
+        '& .MuiPaginationItem-root': {
+          fontSize: { xs: '0.875rem', sm: '1rem' }
+        }
+      }}
+    />
+  );
 
   if (position === 'top') {
     return (
@@ -43,7 +115,7 @@ const PhotoPaginationControls: React.FC<PhotoPaginationControlsProps> = ({
         sx={{
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center',
+          alignItems: isMobile ? 'stretch' : 'center',
           mb: 3,
           flexDirection: { xs: 'column', sm: 'row' },
           gap: { xs: 2, sm: 0 }
@@ -65,23 +137,7 @@ const PhotoPaginationControls: React.FC<PhotoPaginationControlsProps> = ({
             </Select>
           </FormControl>
         </Box>
-        {showPagination && (
-          <Pagination
-            count={pagination.pages}
-            page={currentPage}
-            onChange={onPageChange}
-            color="primary"
-            size="medium"
-            showFirstButton
-            showLastButton
-            siblingCount={siblingCount}
-            sx={{
-              '& .MuiPaginationItem-root': {
-                fontSize: { xs: '0.875rem', sm: '1rem' }
-              }
-            }}
-          />
-        )}
+        {showPagination && paginationControl}
       </Box>
     );
   }
@@ -90,21 +146,7 @@ const PhotoPaginationControls: React.FC<PhotoPaginationControlsProps> = ({
   if (showPagination) {
     return (
       <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
-        <Pagination
-          count={pagination.pages}
-          page={currentPage}
-          onChange={onPageChange}
-          color="primary"
-          size="medium"
-          showFirstButton
-          showLastButton
-          siblingCount={siblingCount}
-          sx={{
-            '& .MuiPaginationItem-root': {
-              fontSize: { xs: '0.875rem', sm: '1rem' }
-            }
-          }}
-        />
+        {paginationControl}
       </Box>
     );
   }
