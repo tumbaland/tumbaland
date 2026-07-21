@@ -225,13 +225,8 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
           </IconButton>
         )}
       </Box>
-      <CardContent sx={{ flexGrow: 1, p: { xs: 1.5, sm: 2 } }}>
-        <Typography
-          variant="subtitle2"
-          component="h3"
-          noWrap
-          sx={{ display: { xs: 'none', sm: 'block' }, fontWeight: 600, fontSize: '1rem' }}
-        >
+      <CardContent sx={{ display: { xs: 'none', sm: 'block' }, flexGrow: 1, p: 2 }}>
+        <Typography variant="subtitle2" component="h3" noWrap sx={{ fontWeight: 600, fontSize: '1rem' }}>
           {photo.title || photo.originalName}
         </Typography>
 
@@ -245,7 +240,7 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden',
-              fontSize: { xs: '0.75rem', sm: '0.875rem' }
+              fontSize: '0.875rem'
             }}>
             {photo.description}
           </Typography>
@@ -256,7 +251,7 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
           sx={{
             color: "text.secondary",
             mt: 1,
-            display: { xs: 'none', sm: 'block' },
+            display: 'block',
             fontSize: '0.75rem'
           }}>
           {formatFileSize(photo.size)}
