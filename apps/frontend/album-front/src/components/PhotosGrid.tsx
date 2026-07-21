@@ -1,16 +1,53 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
   Button,
   Alert,
-  CircularProgress
+  CircularProgress,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip
 } from '@mui/material';
 import {
-  CloudUpload as CloudUploadIcon
+  CloudUpload as CloudUploadIcon,
+  ViewComfy as ViewComfyIcon,
+  ViewCompact as ViewCompactIcon
 } from '@mui/icons-material';
 import { Photo, Album } from '../types';
 import PhotoCard from './PhotoCard';
+
+type GridDensity = 'comfortable' | 'compact';
+
+const DENSITY_STORAGE_KEY = 'tumbaland:photoGridDensity';
+
+const GRID_COLUMNS: Record<GridDensity, Record<string, string>> = {
+  comfortable: {
+    xs: 'repeat(2, minmax(0, 1fr))',
+    sm: 'repeat(3, minmax(0, 1fr))',
+    md: 'repeat(4, minmax(0, 1fr))',
+    lg: 'repeat(5, minmax(0, 1fr))',
+    xl: 'repeat(6, minmax(0, 1fr))'
+  },
+  compact: {
+    xs: 'repeat(3, minmax(0, 1fr))',
+    sm: 'repeat(4, minmax(0, 1fr))',
+    md: 'repeat(6, minmax(0, 1fr))',
+    lg: 'repeat(7, minmax(0, 1fr))',
+    xl: 'repeat(8, minmax(0, 1fr))'
+  }
+};
+
+const GRID_GAP: Record<GridDensity, Record<string, number>> = {
+  comfortable: { xs: 1.5, sm: 2, md: 3 },
+  compact: { xs: 0.5, sm: 0.75, md: 1 }
+};
+
+const getStoredDensity = (): GridDensity => {
+  if (typeof window === 'undefined') return 'comfortable';
+  const stored = window.localStorage.getItem(DENSITY_STORAGE_KEY);
+  return stored === 'compact' ? 'compact' : 'comfortable';
+};
 
 interface PhotosGridProps {
   photos: Photo[];
@@ -39,6 +76,19 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
   onViewPhotoDetails,
   onUploadPhotos
 }) => {
+  const [density, setDensity] = useState<GridDensity>(getStoredDensity);
+
+  useEffect(() => {
+    window.localStorage.setItem(DENSITY_STORAGE_KEY, density);
+  }, [density]);
+
+  const handleDensityChange = (
+    _event: React.MouseEvent<HTMLElement>,
+    value: GridDensity | null
+  ) => {
+    if (value) setDensity(value);
+  };
+
   // Error Alert
   if (photosError) {
     return (
@@ -118,33 +168,49 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
 
   // Photos grid
   return (
-    <Box
-      sx={{
-        display: 'grid',
-        gridTemplateColumns: {
-          xs: 'repeat(2, minmax(0, 1fr))',
-          sm: 'repeat(3, minmax(0, 1fr))',
-          md: 'repeat(4, minmax(0, 1fr))',
-          lg: 'repeat(5, minmax(0, 1fr))',
-          xl: 'repeat(6, minmax(0, 1fr))'
-        },
-        gap: { xs: 1.5, sm: 2, md: 3 }
-      }}
-    >
-      {photos.map((photo) => (
-        <Box key={photo._id}>
-          <PhotoCard
-            photo={photo}
-            onView={onViewPhoto}
-            onEdit={onEditPhoto}
-            onDelete={onDeletePhoto}
-            onSetCover={onSetCoverPhoto}
-            onViewDetails={onViewPhotoDetails}
-            isCoverPhoto={album?.coverPhotoId === photo._id}
-          />
-        </Box>
-      ))}
-    </Box>
+    <>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.5 }}>
+        <ToggleButtonGroup
+          value={density}
+          exclusive
+          onChange={handleDensityChange}
+          size="small"
+          aria-label="Grid density"
+        >
+          <ToggleButton value="comfortable" aria-label="Comfortable grid">
+            <Tooltip title="Comfortable">
+              <ViewComfyIcon fontSize="small" />
+            </Tooltip>
+          </ToggleButton>
+          <ToggleButton value="compact" aria-label="Compact grid">
+            <Tooltip title="Compact">
+              <ViewCompactIcon fontSize="small" />
+            </Tooltip>
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: GRID_COLUMNS[density],
+          gap: GRID_GAP[density]
+        }}
+      >
+        {photos.map((photo) => (
+          <Box key={photo._id}>
+            <PhotoCard
+              photo={photo}
+              onView={onViewPhoto}
+              onEdit={onEditPhoto}
+              onDelete={onDeletePhoto}
+              onSetCover={onSetCoverPhoto}
+              onViewDetails={onViewPhotoDetails}
+              isCoverPhoto={album?.coverPhotoId === photo._id}
+            />
+          </Box>
+        ))}
+      </Box>
+    </>
   );
 };
 
