@@ -6,7 +6,9 @@ import {
   FormControl,
   Select,
   MenuItem,
-  InputLabel
+  InputLabel,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 
 interface PhotoPaginationControlsProps {
@@ -29,6 +31,10 @@ const PhotoPaginationControls: React.FC<PhotoPaginationControlsProps> = ({
   onPageSizeChange,
   position = 'top'
 }) => {
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const siblingCount = isMobile ? 0 : isDesktop ? 2 : 1;
   const showPagination = pageSize > 0 && pagination.pages > 1;
 
   if (position === 'top') {
@@ -52,10 +58,9 @@ const PhotoPaginationControls: React.FC<PhotoPaginationControlsProps> = ({
           <FormControl size="small" sx={{ minWidth: 120 }}>
             <InputLabel>Per page</InputLabel>
             <Select value={pageSize} onChange={onPageSizeChange} label="Per page">
-              <MenuItem value={10}>10</MenuItem>
-              <MenuItem value={20}>20</MenuItem>
-              <MenuItem value={50}>50</MenuItem>
-              <MenuItem value={100}>100</MenuItem>
+              <MenuItem value={24}>24</MenuItem>
+              <MenuItem value={48}>48</MenuItem>
+              <MenuItem value={96}>96</MenuItem>
               <MenuItem value={0}>All</MenuItem>
             </Select>
           </FormControl>
@@ -69,7 +74,7 @@ const PhotoPaginationControls: React.FC<PhotoPaginationControlsProps> = ({
             size="medium"
             showFirstButton
             showLastButton
-            siblingCount={0}
+            siblingCount={siblingCount}
             sx={{
               '& .MuiPaginationItem-root': {
                 fontSize: { xs: '0.875rem', sm: '1rem' }
@@ -93,7 +98,7 @@ const PhotoPaginationControls: React.FC<PhotoPaginationControlsProps> = ({
           size="medium"
           showFirstButton
           showLastButton
-          siblingCount={0}
+          siblingCount={siblingCount}
           sx={{
             '& .MuiPaginationItem-root': {
               fontSize: { xs: '0.875rem', sm: '1rem' }
