@@ -78,6 +78,9 @@ interface PhotosGridProps {
   onSetCoverPhoto: (photo: Photo) => void;
   onViewPhotoDetails: (photo: Photo) => void;
   onUploadPhotos: () => void;
+  selectMode?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelectPhoto?: (photo: Photo) => void;
 }
 
 const PhotosGrid: React.FC<PhotosGridProps> = ({
@@ -91,7 +94,10 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
   onDeletePhoto,
   onSetCoverPhoto,
   onViewPhotoDetails,
-  onUploadPhotos
+  onUploadPhotos,
+  selectMode = false,
+  selectedIds,
+  onToggleSelectPhoto
 }) => {
   const [density, setDensity] = useState<GridDensity>(getStoredDensity);
 
@@ -233,6 +239,9 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
               onSetCover={onSetCoverPhoto}
               onViewDetails={onViewPhotoDetails}
               isCoverPhoto={album?.coverPhotoId === photo._id}
+              selectMode={selectMode}
+              selected={selectedIds?.has(photo._id)}
+              onToggleSelect={onToggleSelectPhoto}
             />
           </Box>
         ))}

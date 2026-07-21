@@ -6,11 +6,14 @@ import {
   Container,
   Alert,
   CircularProgress,
-  Button
+  Button,
+  Typography
 } from '@mui/material';
+import { Delete as DeleteIcon, Checklist as ChecklistIcon, Close as CloseIcon } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { usePhotos } from '../hooks/usePhotos';
 import { usePhotoViewer } from '../hooks/usePhotoViewer';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { albumService } from '../services/albumService';
 import AlbumHeader from '../components/AlbumHeader';
 import PhotoSearchBar from '../components/PhotoSearchBar';
@@ -35,7 +38,12 @@ const AlbumDetailPage: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [photoToEdit, setPhotoToEdit] = useState<Photo | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const queryClient = useQueryClient();
+  const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
   const albumQuery = useQuery({
     queryKey: ['album', albumId],
     queryFn: () => albumService.getAlbumById(albumId as string),
@@ -60,13 +68,13 @@ const AlbumDetailPage: React.FC = () => {
   } = usePhotos(albumId || '', {
     page: currentPage,
     limit: pageSize === 0 ? undefined : pageSize, // 0 means "All"
-    search: searchTerm || undefined
+    search: debouncedSearchTerm || undefined
   });
 
   // Unpaginated album photo list, so the quick-view modal can step through
   // every photo (not just the current page's) with Previous/Next.
   const { photos: allPhotos } = usePhotos(albumId || '', {
-    search: searchTerm || undefined
+    search: debouncedSearchTerm || undefined
   });
 
   const {
@@ -83,6 +91,38 @@ const AlbumDetailPage: React.FC = () => {
   const handleDeletePhoto = async (photo: Photo) => {
     setPhotoToDelete(photo);
     setShowDeleteDialog(true);
+  };
+
+  const handleToggleSelectMode = () => {
+    setSelectMode((prev) => !prev);
+    setSelectedIds(new Set());
+  };
+
+  const handleToggleSelectPhoto = (photo: Photo) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(photo._id)) next.delete(photo._id);
+      else next.add(photo._id);
+      return next;
+    });
+  };
+
+  const handleSelectAllOnPage = () => {
+    setSelectedIds(new Set(photos.map((p) => p._id)));
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    setBulkDeleting(true);
+    try {
+      await Promise.all(Array.from(selectedIds).map((id) => deletePhoto(id)));
+      setShowBulkDeleteDialog(false);
+      setSelectMode(false);
+      setSelectedIds(new Set());
+    } catch (err) {
+      alert('Failed to delete some photos');
+    } finally {
+      setBulkDeleting(false);
+    }
   };
 
   const handleConfirmDeletePhoto = async () => {
@@ -153,7 +193,7 @@ const AlbumDetailPage: React.FC = () => {
   // Reset to first page when search changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [debouncedSearchTerm]);
   const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
     setCurrentPage(value);
   };
@@ -196,6 +236,35 @@ const AlbumDetailPage: React.FC = () => {
         onSearchChange={setSearchTerm}
       />
 
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+        {selectMode ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              {selectedIds.size} selected
+            </Typography>
+            <Button size="small" onClick={handleSelectAllOnPage}>
+              Select all on page
+            </Button>
+            <Button
+              size="small"
+              color="error"
+              startIcon={<DeleteIcon />}
+              disabled={selectedIds.size === 0}
+              onClick={() => setShowBulkDeleteDialog(true)}
+            >
+              Delete
+            </Button>
+            <Button size="small" startIcon={<CloseIcon />} onClick={handleToggleSelectMode}>
+              Cancel
+            </Button>
+          </Box>
+        ) : (
+          <Button size="small" startIcon={<ChecklistIcon />} onClick={handleToggleSelectMode}>
+            Select
+          </Button>
+        )}
+      </Box>
+
       <PhotoPaginationControls
         pagination={pagination}
         currentPage={currentPage}
@@ -217,6 +286,9 @@ const AlbumDetailPage: React.FC = () => {
         onSetCoverPhoto={handleSetCoverPhoto}
         onViewPhotoDetails={handleViewPhotoDetails}
         onUploadPhotos={() => setShowUploadDialog(true)}
+        selectMode={selectMode}
+        selectedIds={selectedIds}
+        onToggleSelectPhoto={handleToggleSelectPhoto}
       />
 
       <PhotoPaginationControls
@@ -261,6 +333,19 @@ const AlbumDetailPage: React.FC = () => {
         cancelText="Cancel"
         variant="danger"
         loading={deleting}
+      />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={showBulkDeleteDialog}
+        onClose={() => setShowBulkDeleteDialog(false)}
+        onConfirm={handleConfirmBulkDelete}
+        title="Delete photos"
+        message={`Delete ${selectedIds.size} selected photo${selectedIds.size === 1 ? '' : 's'}? This cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
+        loading={bulkDeleting}
       />
 
       {/* Edit Photo Dialog */}
