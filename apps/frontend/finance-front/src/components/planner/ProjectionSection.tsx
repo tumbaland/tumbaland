@@ -8,6 +8,7 @@ import {
   Button,
   Card,
   CardContent,
+  Collapse,
   FormControl,
   InputLabel,
   MenuItem,
@@ -68,6 +69,10 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
   const [goal, setGoal] = useState('');
   const [inflation, setInflation] = useState('2.5');
   const [fee, setFee] = useState('0');
+
+  // Collapsed by default — up to 50 rows is the single biggest contributor
+  // to the page's scroll length, and most people just want the chart above.
+  const [showYearlyTable, setShowYearlyTable] = useState(false);
 
   const [source, setSource] = useState<PlanSource>('manual');
   const sourceTouched = useRef(false);
@@ -371,58 +376,65 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
         {/* Yearly table */}
         {rows.length > 0 && (
           <Box sx={{ mt: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
               <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', m: 0 }}>
                 <TableChart sx={{ mr: 1 }} />
                 Detailed Yearly Breakdown
               </Typography>
-              <Button variant="outlined" size="small" onClick={downloadCSV}>Download CSV</Button>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button variant="text" size="small" onClick={() => setShowYearlyTable(v => !v)}>
+                  {showYearlyTable ? 'Hide table' : 'Show table'}
+                </Button>
+                <Button variant="outlined" size="small" onClick={downloadCSV}>Download CSV</Button>
+              </Box>
             </Box>
 
-            <TableContainer component={Paper} sx={{ maxHeight: 600, mt: 2 }}>
-              <Table stickyHeader>
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Year</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>Money Invested</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>Gain from Market</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>Portfolio Total Value</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 'bold' }}>Inflation Adjusted Value</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {rows.map(row => (
-                    <TableRow key={row.year} hover>
-                      <TableCell sx={{ fontWeight: 'medium' }}>{row.year}</TableCell>
-                      <TableCell align="right">{formatCurrency(row.moneyInvested)}</TableCell>
-                      <TableCell
-                        align="right"
-                        sx={{
-                          color: row.gainFromMarket >= 0 ? 'success.main' : 'error.main',
-                          fontWeight: 'medium'
-                        }}
-                      >
-                        {formatCurrency(row.gainFromMarket)}
-                      </TableCell>
-                      <TableCell align="right" sx={{ color: 'primary.main', fontWeight: 'medium' }}>
-                        {formatCurrency(row.portfolioTotalValue)}
-                      </TableCell>
-                      <TableCell align="right" sx={{ color: 'warning.main', fontWeight: 'medium' }}>
-                        {formatCurrency(row.inflationAdjustedValue)}
-                      </TableCell>
+            <Collapse in={showYearlyTable} timeout="auto">
+              <TableContainer component={Paper} sx={{ maxHeight: 600, mt: 2 }}>
+                <Table stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 'bold' }}>Year</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>Money Invested</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>Gain from Market</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>Portfolio Total Value</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 'bold' }}>Inflation Adjusted Value</TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                  </TableHead>
+                  <TableBody>
+                    {rows.map(row => (
+                      <TableRow key={row.year} hover>
+                        <TableCell sx={{ fontWeight: 'medium' }}>{row.year}</TableCell>
+                        <TableCell align="right">{formatCurrency(row.moneyInvested)}</TableCell>
+                        <TableCell
+                          align="right"
+                          sx={{
+                            color: row.gainFromMarket >= 0 ? 'success.main' : 'error.main',
+                            fontWeight: 'medium'
+                          }}
+                        >
+                          {formatCurrency(row.gainFromMarket)}
+                        </TableCell>
+                        <TableCell align="right" sx={{ color: 'primary.main', fontWeight: 'medium' }}>
+                          {formatCurrency(row.portfolioTotalValue)}
+                        </TableCell>
+                        <TableCell align="right" sx={{ color: 'warning.main', fontWeight: 'medium' }}>
+                          {formatCurrency(row.inflationAdjustedValue)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
 
-            <Alert severity="info" sx={{ mt: 2 }}>
-              <Typography variant="body2">
-                <strong>Note:</strong> Projections assume monthly contributions and compounding. Real market
-                performance will vary significantly year to year. Results are for educational purposes only and
-                should not be considered as investment advice.
-              </Typography>
-            </Alert>
+              <Alert severity="info" sx={{ mt: 2 }}>
+                <Typography variant="body2">
+                  <strong>Note:</strong> Projections assume monthly contributions and compounding. Real market
+                  performance will vary significantly year to year. Results are for educational purposes only and
+                  should not be considered as investment advice.
+                </Typography>
+              </Alert>
+            </Collapse>
           </Box>
         )}
       </CardContent>
