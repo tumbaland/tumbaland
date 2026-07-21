@@ -18,9 +18,13 @@ const FrontierChart: React.FC<FrontierChartProps> = ({ sim, targetPortfolio }) =
   useEffect(() => {
     const el = chartRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setChartWidth(Math.max(300, el.offsetWidth)));
+    // Floor of 200 (not 300) so this doesn't force the chart wider than a
+    // narrow mobile container actually is — on phones the true offsetWidth
+    // often dips below the old 300 floor, which forced the SVG to overflow
+    // its (unclipped) container on every resize and slowly widen the page.
+    const ro = new ResizeObserver(() => setChartWidth(Math.max(200, el.offsetWidth)));
     ro.observe(el);
-    setChartWidth(Math.max(300, el.offsetWidth));
+    setChartWidth(Math.max(200, el.offsetWidth));
     return () => ro.disconnect();
   }, []);
 
@@ -56,8 +60,12 @@ const FrontierChart: React.FC<FrontierChartProps> = ({ sim, targetPortfolio }) =
   const tickColor = theme.palette.text.secondary;
 
   return (
-    <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 0 }} ref={chartRef}>
-      <svg width={chartWidth} height={CHART_HEIGHT}>
+    <Paper
+      elevation={0}
+      sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 0, overflow: 'hidden' }}
+      ref={chartRef}
+    >
+      <svg width={chartWidth} height={CHART_HEIGHT} style={{ display: 'block', maxWidth: '100%' }}>
         <g transform={`translate(${MARGIN.left},${MARGIN.top})`}>
           {yTicks.map((r, i) => (
             <g key={i}>
