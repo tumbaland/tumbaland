@@ -13,7 +13,9 @@ import {
   TableCell,
   TableHead,
   TableRow,
-  Alert
+  Alert,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import { AssetClass, SnapshotEntry } from '../../types';
 import { parseNumericInput, formatCurrency } from '../../utils/numberUtils';
@@ -53,6 +55,8 @@ const CheckInDialog: React.FC<CheckInDialogProps> = ({
   const [month, setMonth] = useState(defaultMonth);
   const [form, setForm] = useState<Map<string, EntryFormValue>>(new Map());
   const [error, setError] = useState<string | null>(null);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   useEffect(() => {
     if (!open) return;
@@ -140,50 +144,100 @@ const CheckInDialog: React.FC<CheckInDialogProps> = ({
           sx={{ mb: 2 }}
           slotProps={{ inputLabel: { shrink: true } }}
         />
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Asset class</TableCell>
-              <TableCell align="right" sx={{ width: 140 }}>Value (€)</TableCell>
-              <TableCell align="right" sx={{ width: 140 }}>Total gain (€)</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
+        {isMobile ? (
+          // A 3-column table (name + two 140px-wide inputs) has no room to
+          // breathe on a phone — the inputs get squeezed down to showing a
+          // single digit of a 6-figure value. Stacked cards give each field
+          // its own full-width row instead.
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
             {assetClasses.map((ac) => (
-              <TableRow key={ac._id}>
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: ac.color || '#667eea' }} />
-                    {ac.name}
-                  </Box>
-                </TableCell>
-                <TableCell align="right">
+              <Box key={ac._id} sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: ac.color || '#667eea' }} />
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{ac.name}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', gap: 1.5 }}>
                   <TextField
+                    label="Value (€)"
+                    fullWidth
                     value={form.get(ac._id)?.value ?? ''}
                     onChange={(e) => setField(ac._id, 'value', e.target.value)}
                     size="small"
                     placeholder="—"
-                    slotProps={{ htmlInput: { inputMode: 'decimal', style: { textAlign: 'right' } } }}
+                    slotProps={{ inputLabel: { shrink: true }, htmlInput: { inputMode: 'decimal' } }}
                   />
-                </TableCell>
-                <TableCell align="right">
                   <TextField
+                    label="Total gain (€)"
+                    fullWidth
                     value={form.get(ac._id)?.gain ?? ''}
                     onChange={(e) => setField(ac._id, 'gain', e.target.value)}
                     size="small"
                     placeholder="0"
-                    slotProps={{ htmlInput: { inputMode: 'decimal', style: { textAlign: 'right' } } }}
+                    slotProps={{ inputLabel: { shrink: true }, htmlInput: { inputMode: 'decimal' } }}
                   />
-                </TableCell>
-              </TableRow>
+                </Box>
+              </Box>
             ))}
-            <TableRow>
-              <TableCell sx={{ fontWeight: 700 }}>Net worth</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 700 }}>{formatCurrency(total)}</TableCell>
-              <TableCell />
-            </TableRow>
-          </TableBody>
-        </Table>
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                p: 1.5,
+                bgcolor: 'action.hover',
+                borderRadius: 2
+              }}
+            >
+              <Typography sx={{ fontWeight: 700 }}>Net worth</Typography>
+              <Typography sx={{ fontWeight: 700 }}>{formatCurrency(total)}</Typography>
+            </Box>
+          </Box>
+        ) : (
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Asset class</TableCell>
+                <TableCell align="right" sx={{ width: 140 }}>Value (€)</TableCell>
+                <TableCell align="right" sx={{ width: 140 }}>Total gain (€)</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {assetClasses.map((ac) => (
+                <TableRow key={ac._id}>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: ac.color || '#667eea' }} />
+                      {ac.name}
+                    </Box>
+                  </TableCell>
+                  <TableCell align="right">
+                    <TextField
+                      value={form.get(ac._id)?.value ?? ''}
+                      onChange={(e) => setField(ac._id, 'value', e.target.value)}
+                      size="small"
+                      placeholder="—"
+                      slotProps={{ htmlInput: { inputMode: 'decimal', style: { textAlign: 'right' } } }}
+                    />
+                  </TableCell>
+                  <TableCell align="right">
+                    <TextField
+                      value={form.get(ac._id)?.gain ?? ''}
+                      onChange={(e) => setField(ac._id, 'gain', e.target.value)}
+                      size="small"
+                      placeholder="0"
+                      slotProps={{ htmlInput: { inputMode: 'decimal', style: { textAlign: 'right' } } }}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+              <TableRow>
+                <TableCell sx={{ fontWeight: 700 }}>Net worth</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 700 }}>{formatCurrency(total)}</TableCell>
+                <TableCell />
+              </TableRow>
+            </TableBody>
+          </Table>
+        )}
         {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
       </DialogContent>
       <DialogActions>
