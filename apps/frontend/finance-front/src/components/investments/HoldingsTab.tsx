@@ -17,7 +17,9 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  Tooltip
+  Tooltip,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, ShowChart as ShowChartIcon } from '@mui/icons-material';
 import { Holding } from '../../services/holdingService';
@@ -45,6 +47,8 @@ const emptyForm: HoldingForm = { ticker: '', displayName: '', quantity: '', avgB
 const plColor = (v?: number) => (v === undefined ? 'text.secondary' : v > 0 ? 'success.main' : v < 0 ? 'error.main' : 'text.secondary');
 
 const HoldingsTab: React.FC<HoldingsTabProps> = ({ holdings, tenantGroupId, notify }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const createMutation = useCreateHolding();
   const updateMutation = useUpdateHolding();
   const deleteMutation = useDeleteHolding();
@@ -128,45 +132,16 @@ const HoldingsTab: React.FC<HoldingsTabProps> = ({ holdings, tenantGroupId, noti
         </Button>
       </Box>
 
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Ticker</TableCell>
-              <TableCell>Name</TableCell>
-              <TableCell align="right">Quantity</TableCell>
-              <TableCell align="right">Avg buy</TableCell>
-              <TableCell align="right">Cost</TableCell>
-              <TableCell align="right">Latest price</TableCell>
-              <TableCell align="right">Value</TableCell>
-              <TableCell align="right">P/L</TableCell>
-              <TableCell align="right">P/L %</TableCell>
-              <TableCell align="right" sx={{ width: 130 }}>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {holdings.map((h) => (
-              <TableRow key={h._id} hover>
-                <TableCell sx={{ fontWeight: 600 }}>{h.ticker}</TableCell>
-                <TableCell>{h.displayName || '—'}</TableCell>
-                <TableCell align="right">{h.quantity}</TableCell>
-                <TableCell align="right">{h.avgBuyPrice.toFixed(3)}</TableCell>
-                <TableCell align="right">{formatCurrency(h.avgBuyPrice * h.quantity)}</TableCell>
-                <TableCell align="right">
-                  {h.latestPrice !== undefined ? (
-                    <Tooltip title={h.latestPriceDate ? `As of ${h.latestPriceDate.slice(0, 10)}` : ''}>
-                      <span>{h.latestPrice.toFixed(3)}</span>
-                    </Tooltip>
-                  ) : 'no data'}
-                </TableCell>
-                <TableCell align="right">{h.currentValue !== undefined ? formatCurrency(h.currentValue) : '—'}</TableCell>
-                <TableCell align="right" sx={{ color: plColor(h.valueIncrease) }}>
-                  {h.valueIncrease !== undefined ? `${h.valueIncrease >= 0 ? '+' : ''}${formatCurrency(h.valueIncrease)}` : '—'}
-                </TableCell>
-                <TableCell align="right" sx={{ color: plColor(h.percentIncrease) }}>
-                  {h.percentIncrease !== undefined ? formatPct(h.percentIncrease) : '—'}
-                </TableCell>
-                <TableCell align="right">
+      {isMobile ? (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          {holdings.map((h) => (
+            <Paper key={h._id} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, p: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Box>
+                  <Typography sx={{ fontWeight: 600 }}>{h.ticker}</Typography>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>{h.displayName || '—'}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', flexShrink: 0 }}>
                   <IconButton size="small" onClick={() => setHistoryTicker(h.ticker)} title="Price history">
                     <ShowChartIcon fontSize="small" />
                   </IconButton>
@@ -176,38 +151,158 @@ const HoldingsTab: React.FC<HoldingsTabProps> = ({ holdings, tenantGroupId, noti
                   <IconButton size="small" onClick={() => setDeleteTarget(h)}>
                     <DeleteIcon fontSize="small" />
                   </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-            {holdings.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={10} sx={{ textAlign: 'center', py: 6 }}>
-                  <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-                    No holdings yet — add your first ETF or stock position.
+                </Box>
+              </Box>
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mt: 1.5 }}>
+                <Box>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>Quantity</Typography>
+                  <Typography variant="body2">{h.quantity}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>Avg buy</Typography>
+                  <Typography variant="body2">{h.avgBuyPrice.toFixed(3)}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>Cost</Typography>
+                  <Typography variant="body2">{formatCurrency(h.avgBuyPrice * h.quantity)}</Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>Latest price</Typography>
+                  <Typography variant="body2">
+                    {h.latestPrice !== undefined ? h.latestPrice.toFixed(3) : 'no data'}
                   </Typography>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-          {holdings.length > 0 && (
-            <TableFooter>
-              <TableRow>
-                <TableCell colSpan={4} sx={{ fontWeight: 700 }}>Total</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700 }}>{formatCurrency(totals.cost)}</TableCell>
-                <TableCell />
-                <TableCell align="right" sx={{ fontWeight: 700 }}>{formatCurrency(totals.value)}</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700, color: plColor(totals.pl) }}>
-                  {`${totals.pl >= 0 ? '+' : ''}${formatCurrency(totals.pl)}`}
-                </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700, color: plColor(totals.pl) }}>
-                  {totals.cost > 0 ? formatPct((totals.pl / totals.cost) * 100) : '—'}
-                </TableCell>
-                <TableCell />
-              </TableRow>
-            </TableFooter>
+                </Box>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mt: 1.5 }}>
+                <Box>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>Value</Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 700 }}>
+                    {h.currentValue !== undefined ? formatCurrency(h.currentValue) : '—'}
+                  </Typography>
+                </Box>
+                <Box sx={{ textAlign: 'right' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: plColor(h.valueIncrease) }}>
+                    {h.valueIncrease !== undefined ? `${h.valueIncrease >= 0 ? '+' : ''}${formatCurrency(h.valueIncrease)}` : '—'}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: plColor(h.percentIncrease) }}>
+                    {h.percentIncrease !== undefined ? formatPct(h.percentIncrease) : '—'}
+                  </Typography>
+                </Box>
+              </Box>
+            </Paper>
+          ))}
+          {holdings.length === 0 && (
+            <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, p: 4, textAlign: 'center' }}>
+              <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+                No holdings yet — add your first ETF or stock position.
+              </Typography>
+            </Paper>
           )}
-        </Table>
-      </TableContainer>
+          {holdings.length > 0 && (
+            <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, p: 2, bgcolor: 'action.hover' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <Box>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>Total cost</Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 700 }}>{formatCurrency(totals.cost)}</Typography>
+                </Box>
+                <Box sx={{ textAlign: 'right' }}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>Total value</Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 700 }}>{formatCurrency(totals.value)}</Typography>
+                </Box>
+                <Box sx={{ textAlign: 'right' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: plColor(totals.pl) }}>
+                    {`${totals.pl >= 0 ? '+' : ''}${formatCurrency(totals.pl)}`}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: plColor(totals.pl) }}>
+                    {totals.cost > 0 ? formatPct((totals.pl / totals.cost) * 100) : '—'}
+                  </Typography>
+                </Box>
+              </Box>
+            </Paper>
+          )}
+        </Box>
+      ) : (
+        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Ticker</TableCell>
+                <TableCell>Name</TableCell>
+                <TableCell align="right">Quantity</TableCell>
+                <TableCell align="right">Avg buy</TableCell>
+                <TableCell align="right">Cost</TableCell>
+                <TableCell align="right">Latest price</TableCell>
+                <TableCell align="right">Value</TableCell>
+                <TableCell align="right">P/L</TableCell>
+                <TableCell align="right">P/L %</TableCell>
+                <TableCell align="right" sx={{ width: 130 }}>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {holdings.map((h) => (
+                <TableRow key={h._id} hover>
+                  <TableCell sx={{ fontWeight: 600 }}>{h.ticker}</TableCell>
+                  <TableCell>{h.displayName || '—'}</TableCell>
+                  <TableCell align="right">{h.quantity}</TableCell>
+                  <TableCell align="right">{h.avgBuyPrice.toFixed(3)}</TableCell>
+                  <TableCell align="right">{formatCurrency(h.avgBuyPrice * h.quantity)}</TableCell>
+                  <TableCell align="right">
+                    {h.latestPrice !== undefined ? (
+                      <Tooltip title={h.latestPriceDate ? `As of ${h.latestPriceDate.slice(0, 10)}` : ''}>
+                        <span>{h.latestPrice.toFixed(3)}</span>
+                      </Tooltip>
+                    ) : 'no data'}
+                  </TableCell>
+                  <TableCell align="right">{h.currentValue !== undefined ? formatCurrency(h.currentValue) : '—'}</TableCell>
+                  <TableCell align="right" sx={{ color: plColor(h.valueIncrease) }}>
+                    {h.valueIncrease !== undefined ? `${h.valueIncrease >= 0 ? '+' : ''}${formatCurrency(h.valueIncrease)}` : '—'}
+                  </TableCell>
+                  <TableCell align="right" sx={{ color: plColor(h.percentIncrease) }}>
+                    {h.percentIncrease !== undefined ? formatPct(h.percentIncrease) : '—'}
+                  </TableCell>
+                  <TableCell align="right">
+                    <IconButton size="small" onClick={() => setHistoryTicker(h.ticker)} title="Price history">
+                      <ShowChartIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => openEdit(h)}>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => setDeleteTarget(h)}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {holdings.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={10} sx={{ textAlign: 'center', py: 6 }}>
+                    <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+                      No holdings yet — add your first ETF or stock position.
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+            {holdings.length > 0 && (
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={4} sx={{ fontWeight: 700 }}>Total</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 700 }}>{formatCurrency(totals.cost)}</TableCell>
+                  <TableCell />
+                  <TableCell align="right" sx={{ fontWeight: 700 }}>{formatCurrency(totals.value)}</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: plColor(totals.pl) }}>
+                    {`${totals.pl >= 0 ? '+' : ''}${formatCurrency(totals.pl)}`}
+                  </TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: plColor(totals.pl) }}>
+                    {totals.cost > 0 ? formatPct((totals.pl / totals.cost) * 100) : '—'}
+                  </TableCell>
+                  <TableCell />
+                </TableRow>
+              </TableFooter>
+            )}
+          </Table>
+        </TableContainer>
+      )}
 
       {/* Add/Edit dialog */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>

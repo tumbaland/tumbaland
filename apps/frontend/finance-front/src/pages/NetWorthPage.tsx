@@ -15,7 +15,9 @@ import {
   Snackbar,
   Alert,
   CircularProgress,
-  Chip
+  Chip,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -45,6 +47,8 @@ function nextMonth(month: string): string {
 
 const NetWorthPage: React.FC = () => {
   const tenantGroupId = useTenantFilter();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const { data: snapshots = [], isLoading, error } = useSnapshots(tenantGroupId);
   const { data: assetClasses = [] } = useAssetClasses(tenantGroupId);
@@ -113,6 +117,24 @@ const NetWorthPage: React.FC = () => {
     }
     setDeleteTarget(null);
   };
+
+  const renderBreakdownChips = (snapshot: Snapshot) =>
+    [...snapshot.entries]
+      .sort((a, b) => b.value - a.value)
+      .map((e) => {
+        const ac = classById.get(e.assetClassId);
+        return (
+          <Chip
+            key={e.assetClassId}
+            size="small"
+            sx={{ borderLeft: `4px solid ${ac?.color || '#667eea'}` }}
+            label={
+              `${ac?.name || 'Unknown'}: ${formatCurrency(e.value)}` +
+              (e.gain ? ` (${e.gain > 0 ? '+' : ''}${formatCurrency(e.gain)} gain)` : '')
+            }
+          />
+        );
+      });
 
   const toggleExpand = (id: string) => {
     setExpanded((prev) => {
@@ -187,89 +209,136 @@ const NetWorthPage: React.FC = () => {
       )}
 
       {/* History */}
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ width: 40 }} />
-              <TableCell>Month</TableCell>
-              <TableCell align="right">Net worth</TableCell>
-              <TableCell align="right">Change</TableCell>
-              <TableCell align="right">Change %</TableCell>
-              <TableCell align="right">Total gain</TableCell>
-              <TableCell align="right" sx={{ width: 110 }}>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {rows.map((row) => (
-              <React.Fragment key={row.snapshot._id}>
-                <TableRow hover sx={{ cursor: 'pointer' }} onClick={() => toggleExpand(row.snapshot._id)}>
-                  <TableCell>
+      {isMobile ? (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          {rows.map((row) => (
+            <Paper
+              key={row.snapshot._id}
+              elevation={0}
+              sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, p: 2 }}
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Box sx={{ cursor: 'pointer', flexGrow: 1 }} onClick={() => toggleExpand(row.snapshot._id)}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+                    <Typography sx={{ fontWeight: 600 }}>{row.month}</Typography>
                     <IconButton size="small">
-                      {expanded.has(row.snapshot._id) ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
+                      {expanded.has(row.snapshot._id) ? <KeyboardArrowUp fontSize="small" /> : <KeyboardArrowDown fontSize="small" />}
                     </IconButton>
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>{row.month}</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>{formatCurrency(row.total)}</TableCell>
-                  <TableCell align="right" sx={{ color: changeColor(row.change ?? 0) }}>
+                  </Box>
+                  <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatCurrency(row.total)}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', flexShrink: 0 }}>
+                  <IconButton size="small" onClick={() => { setEditSnapshot(row.snapshot); setCheckInOpen(true); }}>
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton size="small" onClick={() => setDeleteTarget(row.snapshot)}>
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              </Box>
+              <Box sx={{ display: 'flex', gap: 3, mt: 1 }}>
+                <Box>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>Change</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: changeColor(row.change ?? 0) }}>
                     {row.change !== undefined ? `${row.change >= 0 ? '+' : ''}${formatCurrency(row.change)}` : '—'}
-                  </TableCell>
-                  <TableCell align="right" sx={{ color: changeColor(row.change ?? 0) }}>
-                    {row.changePct !== undefined ? formatPct(row.changePct) : '—'}
-                  </TableCell>
-                  <TableCell align="right" sx={{ color: changeColor(row.gain) }}>
+                    {row.changePct !== undefined && ` (${formatPct(row.changePct)})`}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>Total gain</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: changeColor(row.gain) }}>
                     {row.gain !== 0 ? `${row.gain >= 0 ? '+' : ''}${formatCurrency(row.gain)}` : '—'}
-                  </TableCell>
-                  <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                    <IconButton size="small" onClick={() => { setEditSnapshot(row.snapshot); setCheckInOpen(true); }}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => setDeleteTarget(row.snapshot)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell colSpan={7} sx={{ py: 0, border: 0 }}>
-                    <Collapse in={expanded.has(row.snapshot._id)} timeout="auto" unmountOnExit>
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, py: 1.5, pl: 6 }}>
-                        {[...row.snapshot.entries]
-                          .sort((a, b) => b.value - a.value)
-                          .map((e) => {
-                            const ac = classById.get(e.assetClassId);
-                            return (
-                              <Chip
-                                key={e.assetClassId}
-                                size="small"
-                                sx={{ borderLeft: `4px solid ${ac?.color || '#667eea'}` }}
-                                label={
-                                  `${ac?.name || 'Unknown'}: ${formatCurrency(e.value)}` +
-                                  (e.gain ? ` (${e.gain > 0 ? '+' : ''}${formatCurrency(e.gain)} gain)` : '')
-                                }
-                              />
-                            );
-                          })}
-                      </Box>
-                    </Collapse>
-                  </TableCell>
-                </TableRow>
-              </React.Fragment>
-            ))}
-            {rows.length === 0 && (
+                  </Typography>
+                </Box>
+              </Box>
+              <Collapse in={expanded.has(row.snapshot._id)} timeout="auto" unmountOnExit>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1.5 }}>
+                  {renderBreakdownChips(row.snapshot)}
+                </Box>
+              </Collapse>
+            </Paper>
+          ))}
+          {rows.length === 0 && (
+            <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, p: 4, textAlign: 'center' }}>
+              <Typography variant="body1" sx={{ color: 'text.secondary', mb: 1 }}>
+                No check-ins yet
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                Set up your asset classes, then add your first monthly check-in.
+              </Typography>
+            </Paper>
+          )}
+        </Box>
+      ) : (
+        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
+          <Table size="small">
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={7} sx={{ textAlign: 'center', py: 6 }}>
-                  <Typography variant="body1" sx={{ color: 'text.secondary', mb: 1 }}>
-                    No check-ins yet
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    Set up your asset classes, then add your first monthly check-in.
-                  </Typography>
-                </TableCell>
+                <TableCell sx={{ width: 40 }} />
+                <TableCell>Month</TableCell>
+                <TableCell align="right">Net worth</TableCell>
+                <TableCell align="right">Change</TableCell>
+                <TableCell align="right">Change %</TableCell>
+                <TableCell align="right">Total gain</TableCell>
+                <TableCell align="right" sx={{ width: 110 }}>Actions</TableCell>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {rows.map((row) => (
+                <React.Fragment key={row.snapshot._id}>
+                  <TableRow hover sx={{ cursor: 'pointer' }} onClick={() => toggleExpand(row.snapshot._id)}>
+                    <TableCell>
+                      <IconButton size="small">
+                        {expanded.has(row.snapshot._id) ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
+                      </IconButton>
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>{row.month}</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>{formatCurrency(row.total)}</TableCell>
+                    <TableCell align="right" sx={{ color: changeColor(row.change ?? 0) }}>
+                      {row.change !== undefined ? `${row.change >= 0 ? '+' : ''}${formatCurrency(row.change)}` : '—'}
+                    </TableCell>
+                    <TableCell align="right" sx={{ color: changeColor(row.change ?? 0) }}>
+                      {row.changePct !== undefined ? formatPct(row.changePct) : '—'}
+                    </TableCell>
+                    <TableCell align="right" sx={{ color: changeColor(row.gain) }}>
+                      {row.gain !== 0 ? `${row.gain >= 0 ? '+' : ''}${formatCurrency(row.gain)}` : '—'}
+                    </TableCell>
+                    <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                      <IconButton size="small" onClick={() => { setEditSnapshot(row.snapshot); setCheckInOpen(true); }}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton size="small" onClick={() => setDeleteTarget(row.snapshot)}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell colSpan={7} sx={{ py: 0, border: 0 }}>
+                      <Collapse in={expanded.has(row.snapshot._id)} timeout="auto" unmountOnExit>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, py: 1.5, pl: 6 }}>
+                          {renderBreakdownChips(row.snapshot)}
+                        </Box>
+                      </Collapse>
+                    </TableCell>
+                  </TableRow>
+                </React.Fragment>
+              ))}
+              {rows.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} sx={{ textAlign: 'center', py: 6 }}>
+                    <Typography variant="body1" sx={{ color: 'text.secondary', mb: 1 }}>
+                      No check-ins yet
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      Set up your asset classes, then add your first monthly check-in.
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
       <CheckInDialog
         open={checkInOpen}

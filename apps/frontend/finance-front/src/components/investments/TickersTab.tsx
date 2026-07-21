@@ -18,7 +18,9 @@ import {
   TextField,
   Switch,
   FormControlLabel,
-  Chip
+  Chip,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -59,6 +61,8 @@ const emptyForm: TickerForm = { ticker: '', displayName: '', description: '', is
  * watching instruments you don't own yet and for pulling price history.
  */
 const TickersTab: React.FC<TickersTabProps> = ({ tickers, tenantGroupId, notify }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const createMutation = useCreateTrackedTicker();
   const updateMutation = useUpdateTrackedTicker();
   const deleteMutation = useDeleteTrackedTicker();
@@ -135,27 +139,25 @@ const TickersTab: React.FC<TickersTabProps> = ({ tickers, tenantGroupId, notify 
         </Button>
       </Box>
 
-      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Ticker</TableCell>
-              <TableCell>Name</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Added</TableCell>
-              <TableCell align="right" sx={{ width: 170 }}>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {tickers.map((t) => (
-              <TableRow key={t._id} hover>
-                <TableCell sx={{ fontWeight: 600 }}>{t.ticker}</TableCell>
-                <TableCell>{t.displayName}</TableCell>
-                <TableCell>
-                  <Chip size="small" label={t.isActive ? 'Active' : 'Paused'} color={t.isActive ? 'success' : 'default'} />
-                </TableCell>
-                <TableCell>{t.dateAdded ? t.dateAdded.slice(0, 10) : '—'}</TableCell>
-                <TableCell align="right">
+      {isMobile ? (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          {tickers.map((t) => (
+            <Paper key={t._id} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, p: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography sx={{ fontWeight: 600 }}>{t.ticker}</Typography>
+                    <Chip size="small" label={t.isActive ? 'Active' : 'Paused'} color={t.isActive ? 'success' : 'default'} />
+                  </Box>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>{t.displayName}</Typography>
+                </Box>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mt: 1.5 }}>
+                <Box>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>Added</Typography>
+                  <Typography variant="body2">{t.dateAdded ? t.dateAdded.slice(0, 10) : '—'}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', flexShrink: 0 }}>
                   <IconButton size="small" onClick={() => setHistoryTicker(t.ticker)} title="Price history">
                     <ShowChartIcon fontSize="small" />
                   </IconButton>
@@ -173,21 +175,73 @@ const TickersTab: React.FC<TickersTabProps> = ({ tickers, tenantGroupId, notify 
                   <IconButton size="small" onClick={() => setDeleteTarget(t)}>
                     <DeleteIcon fontSize="small" />
                   </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-            {tickers.length === 0 && (
+                </Box>
+              </Box>
+            </Paper>
+          ))}
+          {tickers.length === 0 && (
+            <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, p: 4, textAlign: 'center' }}>
+              <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+                No tracked tickers — add a holding or track a ticker to start collecting prices.
+              </Typography>
+            </Paper>
+          )}
+        </Box>
+      ) : (
+        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
+          <Table size="small">
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={5} sx={{ textAlign: 'center', py: 6 }}>
-                  <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-                    No tracked tickers — add a holding or track a ticker to start collecting prices.
-                  </Typography>
-                </TableCell>
+                <TableCell>Ticker</TableCell>
+                <TableCell>Name</TableCell>
+                <TableCell>Status</TableCell>
+                <TableCell>Added</TableCell>
+                <TableCell align="right" sx={{ width: 170 }}>Actions</TableCell>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {tickers.map((t) => (
+                <TableRow key={t._id} hover>
+                  <TableCell sx={{ fontWeight: 600 }}>{t.ticker}</TableCell>
+                  <TableCell>{t.displayName}</TableCell>
+                  <TableCell>
+                    <Chip size="small" label={t.isActive ? 'Active' : 'Paused'} color={t.isActive ? 'success' : 'default'} />
+                  </TableCell>
+                  <TableCell>{t.dateAdded ? t.dateAdded.slice(0, 10) : '—'}</TableCell>
+                  <TableCell align="right">
+                    <IconButton size="small" onClick={() => setHistoryTicker(t.ticker)} title="Price history">
+                      <ShowChartIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleFetchHistory(t.ticker)}
+                      disabled={fetching !== null}
+                      title="Fetch last ~100 days of prices now"
+                    >
+                      <CloudDownloadIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => openEdit(t)}>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => setDeleteTarget(t)}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {tickers.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} sx={{ textAlign: 'center', py: 6 }}>
+                    <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+                      No tracked tickers — add a holding or track a ticker to start collecting prices.
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
       {/* Add/Edit dialog */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
