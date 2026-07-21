@@ -9,7 +9,7 @@ import {
 import {
   CloudUpload as CloudUploadIcon
 } from '@mui/icons-material';
-import { Photo, Album } from '../types';
+import { Photo, Album, GridDensity } from '../types';
 import PhotoCard from './PhotoCard';
 
 interface PhotosGridProps {
@@ -24,7 +24,18 @@ interface PhotosGridProps {
   onSetCoverPhoto: (photo: Photo) => void;
   onViewPhotoDetails: (photo: Photo) => void;
   onUploadPhotos: () => void;
+  density?: GridDensity;
 }
+
+const COLUMNS = {
+  comfortable: { xs: 2, sm: 3, md: 4, lg: 5, xl: 6 },
+  compact: { xs: 3, sm: 4, md: 6, lg: 8, xl: 10 }
+};
+
+const GAP = {
+  comfortable: { xs: 1.5, sm: 2, md: 3 },
+  compact: { xs: 0.5, sm: 0.75, md: 1 }
+};
 
 const PhotosGrid: React.FC<PhotosGridProps> = ({
   photos,
@@ -37,8 +48,10 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
   onDeletePhoto,
   onSetCoverPhoto,
   onViewPhotoDetails,
-  onUploadPhotos
+  onUploadPhotos,
+  density = 'comfortable'
 }) => {
+  const columns = COLUMNS[density];
   // Error Alert
   if (photosError) {
     return (
@@ -122,13 +135,13 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
       sx={{
         display: 'grid',
         gridTemplateColumns: {
-          xs: 'repeat(2, minmax(0, 1fr))',
-          sm: 'repeat(3, minmax(0, 1fr))',
-          md: 'repeat(4, minmax(0, 1fr))',
-          lg: 'repeat(5, minmax(0, 1fr))',
-          xl: 'repeat(6, minmax(0, 1fr))'
+          xs: `repeat(${columns.xs}, minmax(0, 1fr))`,
+          sm: `repeat(${columns.sm}, minmax(0, 1fr))`,
+          md: `repeat(${columns.md}, minmax(0, 1fr))`,
+          lg: `repeat(${columns.lg}, minmax(0, 1fr))`,
+          xl: `repeat(${columns.xl}, minmax(0, 1fr))`
         },
-        gap: { xs: 1.5, sm: 2, md: 3 }
+        gap: GAP[density]
       }}
     >
       {photos.map((photo) => (

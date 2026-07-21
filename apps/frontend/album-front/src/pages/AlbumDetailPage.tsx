@@ -21,14 +21,22 @@ import AlbumFloatingActionButton from '../components/AlbumFloatingActionButton';
 import FileUpload from '../components/FileUpload';
 import ConfirmDialog from '../components/ConfirmDialog';
 import EditPhotoDialog from '../components/EditPhotoDialog';
-import { Photo } from '../types';
+import { Photo, GridDensity } from '../types';
+
+const GRID_DENSITY_STORAGE_KEY = 'album-grid-density';
+
+function loadStoredDensity(): GridDensity {
+  const stored = localStorage.getItem(GRID_DENSITY_STORAGE_KEY);
+  return stored === 'compact' ? 'compact' : 'comfortable';
+}
 
 const AlbumDetailPage: React.FC = () => {
   const { albumId } = useParams<{ albumId: string }>();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(24);
+  const [density, setDensity] = useState<GridDensity>(loadStoredDensity);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [photoToDelete, setPhotoToDelete] = useState<Photo | null>(null);
@@ -164,6 +172,11 @@ const AlbumDetailPage: React.FC = () => {
     setCurrentPage(1); // Reset to first page when changing page size
   };
 
+  const handleDensityChange = (newDensity: GridDensity) => {
+    setDensity(newDensity);
+    localStorage.setItem(GRID_DENSITY_STORAGE_KEY, newDensity);
+  };
+
   if (loadingAlbum) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
@@ -202,6 +215,8 @@ const AlbumDetailPage: React.FC = () => {
         pageSize={pageSize}
         onPageChange={handlePageChange}
         onPageSizeChange={handlePageSizeChange}
+        density={density}
+        onDensityChange={handleDensityChange}
         position="top"
       />
 
@@ -217,6 +232,7 @@ const AlbumDetailPage: React.FC = () => {
         onSetCoverPhoto={handleSetCoverPhoto}
         onViewPhotoDetails={handleViewPhotoDetails}
         onUploadPhotos={() => setShowUploadDialog(true)}
+        density={density}
       />
 
       <PhotoPaginationControls
