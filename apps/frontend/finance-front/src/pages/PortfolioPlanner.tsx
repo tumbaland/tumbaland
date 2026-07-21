@@ -125,7 +125,7 @@ const PortfolioPlanner: React.FC = () => {
   const tickersWithoutData = holdings.map(p => p.ticker).filter(t => !pricesByTicker[t]);
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: { xs: 2, md: 3 } }}>
       <Typography variant="h4" sx={{ mb: 3 }}>Portfolio Planner</Typography>
       {priceError && <Alert severity="error" sx={{ mb: 2 }}>{priceError}</Alert>}
       {holdings.length === 0 && (

@@ -14,7 +14,9 @@ import {
   Button,
   Slider,
   Tooltip,
-  Alert
+  Alert,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { FrontierSim, SimPoint } from '../../utils/frontierSim';
@@ -47,6 +49,8 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
 }) => {
   const [investAmount, setInvestAmount] = useState<string>('1000');
   const investEuros = parseFloat(investAmount) || 0;
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   // Analysis: deltas between current portfolio and target
   const analysis = useMemo(() => {
@@ -133,7 +137,7 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
                 step={0.1}
                 value={targetVol ?? sim.maxSharpe.vol}
                 onChange={(_, v) => onTargetVolChange(v as number)}
-                sx={{ color: '#7c3aed' }}
+                sx={{ color: '#7c3aed', flex: 1 }}
               />
             </Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 0.5 }}>
@@ -198,55 +202,101 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
             )}
           </Box>
           {buyPlan ? (
-            <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow sx={{ '& th': { fontWeight: 600 } }}>
-                    <TableCell>Ticker</TableCell>
-                    <TableCell align="right">Now %</TableCell>
-                    <TableCell align="right" sx={{ color: '#7c3aed' }}>Target %</TableCell>
-                    <TableCell align="right">Buy (€)</TableCell>
-                    <TableCell align="right">After %</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {buyPlan.map(row => (
-                    <TableRow key={row.ticker} hover>
-                      <TableCell sx={{ fontWeight: 600 }}>
-                        <Tooltip title={nameByTicker[row.ticker] ?? row.ticker} placement="right">
-                          <span>{row.ticker}</span>
-                        </Tooltip>
-                      </TableCell>
-                      <TableCell align="right">{row.currentPct.toFixed(1)}%</TableCell>
-                      <TableCell align="right" sx={{ color: '#7c3aed' }}>{row.targetPct.toFixed(1)}%</TableCell>
-                      <TableCell align="right">
-                        {row.buyAmt > 0.5 ? (
-                          <Box sx={{ display: 'inline-block', px: 1, py: 0.25, borderRadius: 1, bgcolor: '#f3e8ff' }}>
-                            <Typography variant="caption" sx={{ fontWeight: 700, color: '#6b21a8', whiteSpace: 'nowrap' }}>
-                              ↑ €{Math.round(row.buyAmt).toLocaleString()}
-                            </Typography>
-                          </Box>
-                        ) : (
-                          <Typography variant="caption" sx={{
-                            color: "text.secondary"
-                          }}>—</Typography>
-                        )}
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2" sx={{ color: Math.abs(row.resultPct - row.targetPct) < 1 ? 'success.main' : 'text.primary' }}>
+            isMobile ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                {buyPlan.map(row => (
+                  <Paper key={row.ticker} elevation={0} sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <Tooltip title={nameByTicker[row.ticker] ?? row.ticker} placement="right">
+                        <Typography sx={{ fontWeight: 600 }}>{row.ticker}</Typography>
+                      </Tooltip>
+                      {row.buyAmt > 0.5 ? (
+                        <Box sx={{ px: 1, py: 0.25, borderRadius: 1, bgcolor: '#f3e8ff' }}>
+                          <Typography variant="caption" sx={{ fontWeight: 700, color: '#6b21a8', whiteSpace: 'nowrap' }}>
+                            ↑ €{Math.round(row.buyAmt).toLocaleString()}
+                          </Typography>
+                        </Box>
+                      ) : (
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>No buy</Typography>
+                      )}
+                    </Box>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1, mt: 1 }}>
+                      <Box>
+                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>Now</Typography>
+                        <Typography variant="body2">{row.currentPct.toFixed(1)}%</Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>Target</Typography>
+                        <Typography variant="body2" sx={{ color: '#7c3aed' }}>{row.targetPct.toFixed(1)}%</Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>After</Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{ color: Math.abs(row.resultPct - row.targetPct) < 1 ? 'success.main' : 'text.primary' }}
+                        >
                           {row.resultPct.toFixed(1)}%
                         </Typography>
-                      </TableCell>
+                      </Box>
+                    </Box>
+                  </Paper>
+                ))}
+                <Paper elevation={0} sx={{ p: 1.5, borderRadius: 2, bgcolor: 'action.hover', display: 'flex', justifyContent: 'space-between' }}>
+                  <Typography sx={{ fontWeight: 600 }}>Total</Typography>
+                  <Typography sx={{ fontWeight: 700, color: '#6b21a8' }}>€{Math.round(investEuros).toLocaleString()}</Typography>
+                </Paper>
+              </Box>
+            ) : (
+              <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ '& th': { fontWeight: 600 } }}>
+                      <TableCell>Ticker</TableCell>
+                      <TableCell align="right">Now %</TableCell>
+                      <TableCell align="right" sx={{ color: '#7c3aed' }}>Target %</TableCell>
+                      <TableCell align="right">Buy (€)</TableCell>
+                      <TableCell align="right">After %</TableCell>
                     </TableRow>
-                  ))}
-                  <TableRow sx={{ bgcolor: 'action.hover' }}>
-                    <TableCell colSpan={3} sx={{ fontWeight: 600 }}>Total</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 700, color: '#6b21a8' }}>€{Math.round(investEuros).toLocaleString()}</TableCell>
-                    <TableCell />
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </TableContainer>
+                  </TableHead>
+                  <TableBody>
+                    {buyPlan.map(row => (
+                      <TableRow key={row.ticker} hover>
+                        <TableCell sx={{ fontWeight: 600 }}>
+                          <Tooltip title={nameByTicker[row.ticker] ?? row.ticker} placement="right">
+                            <span>{row.ticker}</span>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell align="right">{row.currentPct.toFixed(1)}%</TableCell>
+                        <TableCell align="right" sx={{ color: '#7c3aed' }}>{row.targetPct.toFixed(1)}%</TableCell>
+                        <TableCell align="right">
+                          {row.buyAmt > 0.5 ? (
+                            <Box sx={{ display: 'inline-block', px: 1, py: 0.25, borderRadius: 1, bgcolor: '#f3e8ff' }}>
+                              <Typography variant="caption" sx={{ fontWeight: 700, color: '#6b21a8', whiteSpace: 'nowrap' }}>
+                                ↑ €{Math.round(row.buyAmt).toLocaleString()}
+                              </Typography>
+                            </Box>
+                          ) : (
+                            <Typography variant="caption" sx={{
+                              color: "text.secondary"
+                            }}>—</Typography>
+                          )}
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2" sx={{ color: Math.abs(row.resultPct - row.targetPct) < 1 ? 'success.main' : 'text.primary' }}>
+                            {row.resultPct.toFixed(1)}%
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow sx={{ bgcolor: 'action.hover' }}>
+                      <TableCell colSpan={3} sx={{ fontWeight: 600 }}>Total</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, color: '#6b21a8' }}>€{Math.round(investEuros).toLocaleString()}</TableCell>
+                      <TableCell />
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )
           ) : (
             <Alert severity="info">Enter an amount above to see the buy plan.</Alert>
           )}

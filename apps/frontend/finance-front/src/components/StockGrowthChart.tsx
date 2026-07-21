@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CardContent, Typography, Box } from '@mui/material';
+import { Card, CardContent, Typography, Box, useTheme, useMediaQuery } from '@mui/material';
 import { TrendingUp } from '@mui/icons-material';
 
 interface YearlyResult {
@@ -19,6 +19,8 @@ interface StockGrowthChartProps {
 const StockGrowthChart: React.FC<StockGrowthChartProps> = ({ data, goal, mcBands }) => {
   const [containerWidth, setContainerWidth] = React.useState(800);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   React.useEffect(() => {
     const updateWidth = () => {
@@ -101,7 +103,16 @@ const StockGrowthChart: React.FC<StockGrowthChartProps> = ({ data, goal, mcBands
 
   const chartHeight = 400;
   const chartWidth = containerWidth;
-  const padding = 80;
+  // Less side padding on mobile leaves more room for the plot itself, and
+  // the y-axis labels switch to a compact "€150K" form so they still fit
+  // without overlapping the first data points.
+  const padding = isMobile ? 50 : 80;
+  const formatAxisCurrency = (amount: number) => {
+    if (!isMobile) return formatCurrency(amount);
+    if (Math.abs(amount) >= 1_000_000) return `€${(amount / 1_000_000).toFixed(1)}M`;
+    if (Math.abs(amount) >= 1_000) return `€${Math.round(amount / 1000)}K`;
+    return formatCurrency(amount);
+  };
 
   const getXPosition = (index: number) => {
     return padding + (index * (chartWidth - 2 * padding)) / (data.length - 1);
@@ -205,7 +216,7 @@ const StockGrowthChart: React.FC<StockGrowthChartProps> = ({ data, goal, mcBands
                 <g key={ratio}>
                   <line x1={padding} y1={y} x2={chartWidth - padding} y2={y} stroke="#e0e0e0" strokeWidth="1" />
                   <text x={padding - 10} y={y + 4} textAnchor="end" fontSize="12" fill="#666">
-                    {formatCurrency(value)}
+                    {formatAxisCurrency(value)}
                   </text>
                 </g>
               );
