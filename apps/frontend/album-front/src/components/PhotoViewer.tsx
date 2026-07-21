@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { logger } from '@tumbaland/frontend-core';
 import {
   Box,
   Dialog,
@@ -18,6 +17,7 @@ import {
 import { Photo } from '../types';
 import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 import { useProgressiveImage } from '../hooks/useProgressiveImage';
+import { downloadPhoto } from '../utils/downloadPhoto';
 
 interface PhotoViewerProps {
   photos: Photo[];
@@ -72,24 +72,9 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
     };
   }, [open, onPrevious, onNext, onClose]);
 
-  const handleDownload = async () => {
-    if (!selectedPhoto || !selectedPhoto.signedUrl) return;
-    
-    try {
-      const response = await fetch(selectedPhoto.signedUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = selectedPhoto.originalName || `photo-${selectedPhoto._id}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      logger.error('Download failed', error);
-      window.open(selectedPhoto.signedUrl, '_blank');
-    }
+  const handleDownload = () => {
+    if (!selectedPhoto) return;
+    downloadPhoto(selectedPhoto);
   };
 
   if (!selectedPhoto) return null;

@@ -19,6 +19,7 @@ import { Photo, Album } from '../types';
 import { albumService } from '../services/albumService';
 import { photoService } from '../services/photoService';
 import { usePhotos } from '../hooks/usePhotos';
+import { downloadPhoto } from '../utils/downloadPhoto';
 import EditPhotoDialog from '../components/EditPhotoDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import SegmentationView from '../components/SegmentationView';
@@ -137,24 +138,9 @@ const PhotoDetailPage: React.FC = () => {
     }
   };
 
-  const handleDownload = async () => {
-    if (!photo || !photo.signedUrl) return;
-    
-    try {
-      const response = await fetch(photo.signedUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = photo.originalName || `photo-${photo._id}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      logger.error('Download failed', error);
-      window.open(photo.signedUrl, '_blank');
-    }
+  const handleDownload = () => {
+    if (!photo) return;
+    downloadPhoto(photo);
   };
 
   const formatFileSize = (bytes: number) => {
