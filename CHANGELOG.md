@@ -1,4 +1,6 @@
 # Tumbalog
+### [0.0.397](https://github.com/toomastahves/tumbaland/compare/app-v0.0.396...app-v0.0.397) (2026-07-21)
+
 ### [0.0.396](https://github.com/toomastahves/tumbaland/compare/app-v0.0.395...app-v0.0.396) (2026-07-21)
 
 ### [0.0.395](https://github.com/toomastahves/tumbaland/compare/app-v0.0.394...app-v0.0.395) (2026-07-21)
