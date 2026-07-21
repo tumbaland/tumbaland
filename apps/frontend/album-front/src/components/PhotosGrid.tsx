@@ -11,18 +11,25 @@ import {
 } from '@mui/material';
 import {
   CloudUpload as CloudUploadIcon,
+  ViewStream as ViewStreamIcon,
   ViewComfy as ViewComfyIcon,
   ViewCompact as ViewCompactIcon,
   Apps as AppsIcon
 } from '@mui/icons-material';
-import { Photo, Album } from '../types';
+import { Photo, Album, GridDensity } from '../types';
 import PhotoCard from './PhotoCard';
 
-type GridDensity = 'comfortable' | 'compact' | 'tiny';
-
 const DENSITY_STORAGE_KEY = 'tumbaland:photoGridDensity';
+const DENSITIES: GridDensity[] = ['large', 'comfortable', 'compact', 'tiny'];
 
 const GRID_COLUMNS: Record<GridDensity, Record<string, string>> = {
+  large: {
+    xs: 'repeat(1, minmax(0, 1fr))',
+    sm: 'repeat(2, minmax(0, 1fr))',
+    md: 'repeat(3, minmax(0, 1fr))',
+    lg: 'repeat(4, minmax(0, 1fr))',
+    xl: 'repeat(4, minmax(0, 1fr))'
+  },
   comfortable: {
     xs: 'repeat(2, minmax(0, 1fr))',
     sm: 'repeat(3, minmax(0, 1fr))',
@@ -47,6 +54,7 @@ const GRID_COLUMNS: Record<GridDensity, Record<string, string>> = {
 };
 
 const GRID_GAP: Record<GridDensity, Record<string, number>> = {
+  large: { xs: 2, sm: 2, md: 3 },
   comfortable: { xs: 1.5, sm: 2, md: 3 },
   compact: { xs: 0.5, sm: 0.75, md: 1 },
   tiny: { xs: 0.25, sm: 0.5, md: 0.75 }
@@ -55,7 +63,7 @@ const GRID_GAP: Record<GridDensity, Record<string, number>> = {
 const getStoredDensity = (): GridDensity => {
   if (typeof window === 'undefined') return 'comfortable';
   const stored = window.localStorage.getItem(DENSITY_STORAGE_KEY);
-  return stored === 'compact' || stored === 'tiny' ? stored : 'comfortable';
+  return (DENSITIES as string[]).includes(stored || '') ? (stored as GridDensity) : 'comfortable';
 };
 
 interface PhotosGridProps {
@@ -186,6 +194,11 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
           size="small"
           aria-label="Grid density"
         >
+          <ToggleButton value="large" aria-label="Large grid">
+            <Tooltip title="Large (1 per row on mobile)">
+              <ViewStreamIcon fontSize="small" />
+            </Tooltip>
+          </ToggleButton>
           <ToggleButton value="comfortable" aria-label="Comfortable grid">
             <Tooltip title="Comfortable">
               <ViewComfyIcon fontSize="small" />
@@ -220,6 +233,7 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
               onSetCover={onSetCoverPhoto}
               onViewDetails={onViewPhotoDetails}
               isCoverPhoto={album?.coverPhotoId === photo._id}
+              density={density}
             />
           </Box>
         ))}

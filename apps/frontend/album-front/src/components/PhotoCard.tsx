@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardMedia, CardContent, Typography, IconButton, Box, Menu, MenuItem, Chip } from '@mui/material';
 import { MoreVert as MoreVertIcon, Image as ImageIcon, Star as StarIcon, Videocam as VideocamIcon } from '@mui/icons-material';
-import { Photo } from '../types';
+import { Photo, GridDensity } from '../types';
 
 interface PhotoCardProps {
   photo: Photo;
@@ -11,6 +11,7 @@ interface PhotoCardProps {
   onSetCover?: (photo: Photo) => void;
   onViewDetails?: (photo: Photo) => void;
   isCoverPhoto?: boolean;
+  density?: GridDensity;
 }
 
 const PhotoCard: React.FC<PhotoCardProps> = ({ 
@@ -20,7 +21,8 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
   onDelete, 
   onSetCover, 
   onViewDetails,
-  isCoverPhoto = false 
+  isCoverPhoto = false,
+  density = 'comfortable'
 }) => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
@@ -225,7 +227,10 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
           </IconButton>
         )}
       </Box>
-      <CardContent sx={{ display: { xs: 'none', sm: 'block' }, flexGrow: 1, p: 2 }}>
+      {/* The "large" density (1 per row on mobile) has room to spare, so
+          the caption is worth keeping there instead of hiding it like the
+          denser mobile layouts do. */}
+      <CardContent sx={{ display: density === 'large' ? 'block' : { xs: 'none', sm: 'block' }, flexGrow: 1, p: 2 }}>
         <Typography variant="subtitle2" component="h3" noWrap sx={{ fontWeight: 600, fontSize: '1rem' }}>
           {photo.title || photo.originalName}
         </Typography>
