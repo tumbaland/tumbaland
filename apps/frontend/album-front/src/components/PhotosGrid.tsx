@@ -12,12 +12,13 @@ import {
 import {
   CloudUpload as CloudUploadIcon,
   ViewComfy as ViewComfyIcon,
-  ViewCompact as ViewCompactIcon
+  ViewCompact as ViewCompactIcon,
+  Apps as AppsIcon
 } from '@mui/icons-material';
 import { Photo, Album } from '../types';
 import PhotoCard from './PhotoCard';
 
-type GridDensity = 'comfortable' | 'compact';
+type GridDensity = 'comfortable' | 'compact' | 'tiny';
 
 const DENSITY_STORAGE_KEY = 'tumbaland:photoGridDensity';
 
@@ -35,18 +36,26 @@ const GRID_COLUMNS: Record<GridDensity, Record<string, string>> = {
     md: 'repeat(6, minmax(0, 1fr))',
     lg: 'repeat(7, minmax(0, 1fr))',
     xl: 'repeat(8, minmax(0, 1fr))'
+  },
+  tiny: {
+    xs: 'repeat(4, minmax(0, 1fr))',
+    sm: 'repeat(5, minmax(0, 1fr))',
+    md: 'repeat(8, minmax(0, 1fr))',
+    lg: 'repeat(10, minmax(0, 1fr))',
+    xl: 'repeat(12, minmax(0, 1fr))'
   }
 };
 
 const GRID_GAP: Record<GridDensity, Record<string, number>> = {
   comfortable: { xs: 1.5, sm: 2, md: 3 },
-  compact: { xs: 0.5, sm: 0.75, md: 1 }
+  compact: { xs: 0.5, sm: 0.75, md: 1 },
+  tiny: { xs: 0.25, sm: 0.5, md: 0.75 }
 };
 
 const getStoredDensity = (): GridDensity => {
   if (typeof window === 'undefined') return 'comfortable';
   const stored = window.localStorage.getItem(DENSITY_STORAGE_KEY);
-  return stored === 'compact' ? 'compact' : 'comfortable';
+  return stored === 'compact' || stored === 'tiny' ? stored : 'comfortable';
 };
 
 interface PhotosGridProps {
@@ -185,6 +194,11 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
           <ToggleButton value="compact" aria-label="Compact grid">
             <Tooltip title="Compact">
               <ViewCompactIcon fontSize="small" />
+            </Tooltip>
+          </ToggleButton>
+          <ToggleButton value="tiny" aria-label="Tiny grid">
+            <Tooltip title="Tiny">
+              <AppsIcon fontSize="small" />
             </Tooltip>
           </ToggleButton>
         </ToggleButtonGroup>
