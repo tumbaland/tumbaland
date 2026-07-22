@@ -36,7 +36,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     }
   };
 
-  const getConfirmButtonColor = () => {
+  const getConfirmButtonColor = (): 'error' | 'warning' | 'primary' => {
     switch (severity) {
       case 'error':
         return 'error';
@@ -72,7 +72,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             {cancelText}
           </Button>
         )}
-        <Button onClick={onConfirm} variant="contained" color={getConfirmButtonColor() as any}>
+        <Button onClick={onConfirm} variant="contained" color={getConfirmButtonColor()}>
           {confirmText}
         </Button>
       </DialogActions>

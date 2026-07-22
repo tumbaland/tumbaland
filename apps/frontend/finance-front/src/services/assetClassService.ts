@@ -6,7 +6,9 @@ export const getAssetClasses = async (params?: { groupId?: string }): Promise<As
   return response.data;
 };
 
-export const createAssetClass = async (data: Omit<AssetClass, '_id' | 'createdAt' | 'updatedAt'> & { groupId?: string }): Promise<AssetClass> => {
+export const createAssetClass = async (
+  data: Omit<AssetClass, '_id' | 'userId' | 'createdAt' | 'updatedAt'> & { groupId?: string; userId?: string }
+): Promise<AssetClass> => {
   const response = await financeApi.post<ApiResponse<AssetClass>>(`/asset-classes`, data);
   return response.data;
 };
