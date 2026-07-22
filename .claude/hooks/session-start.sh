@@ -12,6 +12,12 @@ if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
   exit 0
 fi
 
+# Run asynchronously: the session starts immediately while install + lib
+# builds proceed in the background. Trade-off: for the first ~minute of a
+# session, node_modules and the built libs may not be ready yet, so an
+# early lint/typecheck/test could fail until provisioning finishes.
+echo '{"async": true, "asyncTimeout": 600000}'
+
 cd "$CLAUDE_PROJECT_DIR"
 
 # Install every workspace's dependencies. `npm install` (not `npm ci`) so the
