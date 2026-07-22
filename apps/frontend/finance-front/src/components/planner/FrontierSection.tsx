@@ -15,10 +15,17 @@ import {
   Slider,
   Tooltip,
   Alert,
+  FormControlLabel,
+  Switch,
   useTheme,
   useMediaQuery
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
+
+// Below this many trading days, the return/volatility estimates behind the
+// frontier are based on a fairly short price history and should be read as
+// a rough guide rather than a precise forecast.
+const LOW_DATA_THRESHOLD_DAYS = 252;
 import { FrontierSim, SimPoint } from '../../utils/frontierSim';
 import FrontierChart from './FrontierChart';
 
@@ -49,6 +56,7 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
 }) => {
   const [investAmount, setInvestAmount] = useState<string>('1000');
   const investEuros = parseFloat(investAmount) || 0;
+  const [rebalanceMode, setRebalanceMode] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -63,11 +71,29 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
     };
   }, [sim, targetPortfolio]);
 
-  // Buy-only plan: how to allocate next investment to move toward target
+  // Buy-only plan: how to allocate next investment to move toward target.
+  // Rebalance mode additionally allows negative amounts (sells) so the plan
+  // can hit the target exactly, even without new money.
   const buyPlan = useMemo(() => {
-    if (!sim.current || !targetPortfolio || totalValue <= 0 || investEuros <= 0) return null;
+    if (!sim.current || !targetPortfolio || totalValue <= 0) return null;
+    if (!rebalanceMode && investEuros <= 0) return null;
     const tickers = sim.tickers;
     const newTotal = totalValue + investEuros;
+
+    if (rebalanceMode) {
+      return tickers.map((ticker, i) => {
+        const currentVal = sim.current!.weights[i] * totalValue;
+        const targetVal = targetPortfolio.weights[i] * newTotal;
+        return {
+          ticker,
+          currentPct: sim.current!.weights[i] * 100,
+          targetPct: targetPortfolio.weights[i] * 100,
+          buyAmt: targetVal - currentVal, // positive = buy, negative = sell
+          resultPct: targetPortfolio.weights[i] * 100
+        };
+      });
+    }
+
     const needed = tickers.map((_, i) => {
       const currentVal = sim.current!.weights[i] * totalValue;
       const targetVal = targetPortfolio.weights[i] * newTotal;
@@ -85,7 +111,7 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
         resultPct: ((currentVal + buyAmt) / newTotal) * 100
       };
     });
-  }, [sim, targetPortfolio, investEuros, totalValue]);
+  }, [sim, targetPortfolio, investEuros, totalValue, rebalanceMode]);
 
   return (
     <>
@@ -108,6 +134,11 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
                 color: "text.secondary"
               }}>
                 {simulations.toLocaleString()} portfolios · {sim.dataPoints} days
+                {sim.dataPoints < LOW_DATA_THRESHOLD_DAYS && (
+                  <Box component="span" sx={{ color: 'warning.main', fontWeight: 600 }}>
+                    {' '}· based on limited history, treat as a rough guide
+                  </Box>
+                )}
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -178,13 +209,15 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
           )}
 
           {/* What to buy next */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mt: 2, mb: 1 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mt: 2, mb: 1, flexWrap: 'wrap', gap: 1 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>What to Buy Next</Typography>
-            <Typography variant="caption" sx={{
-              color: "text.secondary"
-            }}>only buys · no selling</Typography>
+            <FormControlLabel
+              sx={{ m: 0 }}
+              control={<Switch size="small" checked={rebalanceMode} onChange={e => setRebalanceMode(e.target.checked)} />}
+              label={<Typography variant="caption" sx={{ color: 'text.secondary' }}>Rebalance (buy + sell)</Typography>}
+            />
           </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5, flexWrap: 'wrap' }}>
             <TextField
               label="Invest (€)"
               size="small"
@@ -216,8 +249,14 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
                             ↑ €{Math.round(row.buyAmt).toLocaleString()}
                           </Typography>
                         </Box>
+                      ) : row.buyAmt < -0.5 ? (
+                        <Box sx={{ px: 1, py: 0.25, borderRadius: 1, bgcolor: '#fee2e2' }}>
+                          <Typography variant="caption" sx={{ fontWeight: 700, color: '#991b1b', whiteSpace: 'nowrap' }}>
+                            ↓ €{Math.round(Math.abs(row.buyAmt)).toLocaleString()}
+                          </Typography>
+                        </Box>
                       ) : (
-                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>No buy</Typography>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>No change</Typography>
                       )}
                     </Box>
                     <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1, mt: 1 }}>
@@ -254,7 +293,7 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
                       <TableCell>Ticker</TableCell>
                       <TableCell align="right">Now %</TableCell>
                       <TableCell align="right" sx={{ color: '#7c3aed' }}>Target %</TableCell>
-                      <TableCell align="right">Buy (€)</TableCell>
+                      <TableCell align="right">{rebalanceMode ? 'Buy/Sell (€)' : 'Buy (€)'}</TableCell>
                       <TableCell align="right">After %</TableCell>
                     </TableRow>
                   </TableHead>
@@ -273,6 +312,12 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
                             <Box sx={{ display: 'inline-block', px: 1, py: 0.25, borderRadius: 1, bgcolor: '#f3e8ff' }}>
                               <Typography variant="caption" sx={{ fontWeight: 700, color: '#6b21a8', whiteSpace: 'nowrap' }}>
                                 ↑ €{Math.round(row.buyAmt).toLocaleString()}
+                              </Typography>
+                            </Box>
+                          ) : row.buyAmt < -0.5 ? (
+                            <Box sx={{ display: 'inline-block', px: 1, py: 0.25, borderRadius: 1, bgcolor: '#fee2e2' }}>
+                              <Typography variant="caption" sx={{ fontWeight: 700, color: '#991b1b', whiteSpace: 'nowrap' }}>
+                                ↓ €{Math.round(Math.abs(row.buyAmt)).toLocaleString()}
                               </Typography>
                             </Box>
                           ) : (
@@ -304,7 +349,9 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
       </Box>
 
       {/* ── Portfolio metrics summary (full width below) ──────────────── */}
-      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
+      {/* CSS Grid with minmax(0, 1fr) tracks — unlike flex-wrap + flex-basis,
+          this can't be forced wider than the viewport by a card's content. */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(4, minmax(0, 1fr))' }, gap: 2, mb: 3 }}>
         {[
           { label: 'Your Portfolio', point: sim.current, color: '#ef4444' },
           { label: '◆ Target', point: targetPortfolio, color: '#7c3aed' },
@@ -313,7 +360,7 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
         ]
           .filter(x => x.point != null)
           .map(({ label, point, color }) => (
-            <Paper key={label} elevation={0} sx={{ flex: '1 1 140px', p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+            <Paper key={label} elevation={0} sx={{ minWidth: 0, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
               <Typography variant="caption" sx={{ color, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</Typography>
               <Box sx={{ mt: 1 }}>
                 <Typography variant="body2">Return: <b>{point!.ret.toFixed(1)}%</b></Typography>

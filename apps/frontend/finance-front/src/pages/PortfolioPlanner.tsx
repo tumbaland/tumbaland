@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Box, Typography, CircularProgress, Alert } from '@mui/material';
+import { Box, Typography, CircularProgress, Alert, Tabs, Tab } from '@mui/material';
 import { useTenantFilter } from '@tumbaland/components';
 import { useHoldings } from '../hooks/useHoldings';
 import { useTrackedTickers } from '../hooks/useTrackedTicker';
+import { usePersistedState } from '../hooks/usePersistedState';
 import { getTickerPriceHistory } from '../services/tickerPriceHistoryService';
 import { FrontierSim, runFrontierSimulation } from '../utils/frontierSim';
 import HoldingsTable, { HoldingStat } from '../components/planner/HoldingsTable';
@@ -22,7 +23,8 @@ const PortfolioPlanner: React.FC = () => {
   const [pricesByTicker, setPricesByTicker] = useState<Record<string, number[]>>({});
   const [loadingPrices, setLoadingPrices] = useState(false);
   const [priceError, setPriceError] = useState<string | null>(null);
-  const [riskFreeRate, setRiskFreeRate] = useState('3'); // % per year
+  const [riskFreeRate, setRiskFreeRate] = usePersistedState('finance-planner-risk-free-rate', '3'); // % per year
+  const [tab, setTab] = useState(0);
 
   const nameByTicker = useMemo(() => {
     const m: Record<string, string> = {};
@@ -80,8 +82,9 @@ const PortfolioPlanner: React.FC = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (Object.keys(pricesByTicker).length >= 2) runSim(); }, [pricesByTicker]);
 
-  // Target risk level chosen by the user via slider
-  const [targetVol, setTargetVol] = useState<number | null>(null);
+  // Target risk level chosen by the user via slider — persisted so a returning
+  // user's plan doesn't reset to Max Sharpe on every visit.
+  const [targetVol, setTargetVol] = usePersistedState<number | null>('finance-planner-target-vol', null);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (sim && targetVol === null) setTargetVol(sim.maxSharpe.vol); }, [sim]);
@@ -140,33 +143,47 @@ const PortfolioPlanner: React.FC = () => {
         </Alert>
       )}
 
-      {holdings.length > 0 && (
-        <HoldingsTable holdings={holdingStats} nameByTicker={nameByTicker} totalValue={totalValue} />
-      )}
+      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Tab label="Holdings" />
+        <Tab label="Frontier" />
+        <Tab label="Projection" />
+      </Tabs>
 
-      {sim ? (
-        <FrontierSection
-          sim={sim}
-          targetPortfolio={targetPortfolio}
-          targetVol={targetVol}
-          onTargetVolChange={setTargetVol}
-          riskFreeRate={riskFreeRate}
-          onRiskFreeRateChange={setRiskFreeRate}
-          onRerun={runSim}
-          totalValue={totalValue}
-          nameByTicker={nameByTicker}
-          simulations={SIMULATIONS}
-        />
-      ) : (
-        holdings.length > 0 && Object.keys(pricesByTicker).length < 2 && (
-          <Alert severity="info" sx={{ mb: 3 }}>
-            Need price history for at least 2 holdings to run the optimizer.
-            Open each ticker in Tracked Tickers and fetch its historical data first.
-          </Alert>
-        )
-      )}
+      {/* Panels stay mounted (just hidden) so switching tabs never re-fetches or
+          resets in-progress input — only one is visible at a time. */}
+      <Box role="tabpanel" hidden={tab !== 0}>
+        {holdings.length > 0 && (
+          <HoldingsTable holdings={holdingStats} nameByTicker={nameByTicker} totalValue={totalValue} />
+        )}
+      </Box>
 
-      <ProjectionSection sim={sim} targetPortfolio={targetPortfolio} portfolioValue={totalValue} />
+      <Box role="tabpanel" hidden={tab !== 1}>
+        {sim ? (
+          <FrontierSection
+            sim={sim}
+            targetPortfolio={targetPortfolio}
+            targetVol={targetVol}
+            onTargetVolChange={setTargetVol}
+            riskFreeRate={riskFreeRate}
+            onRiskFreeRateChange={setRiskFreeRate}
+            onRerun={runSim}
+            totalValue={totalValue}
+            nameByTicker={nameByTicker}
+            simulations={SIMULATIONS}
+          />
+        ) : (
+          holdings.length > 0 && Object.keys(pricesByTicker).length < 2 && (
+            <Alert severity="info">
+              Need price history for at least 2 holdings to run the optimizer.
+              Open each ticker in Tracked Tickers and fetch its historical data first.
+            </Alert>
+          )
+        )}
+      </Box>
+
+      <Box role="tabpanel" hidden={tab !== 2}>
+        <ProjectionSection sim={sim} targetPortfolio={targetPortfolio} portfolioValue={totalValue} />
+      </Box>
     </Box>
   );
 };

@@ -77,8 +77,15 @@ function hasFormLabel(labelText: string): boolean {
   return Array.from(document.querySelectorAll('label')).some((l) => l.textContent === labelText);
 }
 
+// Frontier/Projection inputs are persisted to localStorage, and their panel is
+// hidden until its tab is selected — switch there before interacting with it.
+async function switchTab(name: string) {
+  await userEvent.click(screen.getByRole('tab', { name }));
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
+  localStorage.clear();
   mockedUseHoldings.mockReturnValue({ data: holdings, isLoading: false });
   mockedUseTrackedTickers.mockReturnValue({ data: trackedTickers });
   mockedGetHistory.mockResolvedValue(fullHistory);
@@ -156,6 +163,7 @@ it('warns about holdings missing price history and skips the frontier below 2 ti
 it('switches the projection basis to manual, applies presets, and flips to custom on edit', async () => {
   render(<PortfolioPlanner />);
   await screen.findByText('Efficient Frontier');
+  await switchTab('Projection');
   await setNumber('Investment Period (Years)', '3'); // keep Monte Carlo runs cheap
 
   await selectOption('Projection Basis', 'Manual');
@@ -174,6 +182,7 @@ it('switches the projection basis to manual, applies presets, and flips to custo
 it('recalculates when the investment period changes', async () => {
   render(<PortfolioPlanner />);
   await screen.findByText('Efficient Frontier');
+  await switchTab('Projection');
 
   await setNumber('Investment Period (Years)', '5');
   expect(await screen.findByText('Showing 5 years of projection', undefined, FIND)).toBeInTheDocument();
@@ -182,6 +191,7 @@ it('recalculates when the investment period changes', async () => {
 it('shows years-to-goal when a reachable target goal is set', async () => {
   render(<PortfolioPlanner />);
   await screen.findByText('Efficient Frontier');
+  await switchTab('Projection');
   await setNumber('Investment Period (Years)', '5');
   await setNumber('Target Goal (EUR)', '5000');
 
@@ -192,6 +202,7 @@ it('shows years-to-goal when a reachable target goal is set', async () => {
 it('shows "Not reached" when the goal is out of reach', async () => {
   render(<PortfolioPlanner />);
   await screen.findByText('Efficient Frontier');
+  await switchTab('Projection');
   await setNumber('Investment Period (Years)', '3');
   await setNumber('Target Goal (EUR)', '999999999');
 
@@ -201,6 +212,7 @@ it('shows "Not reached" when the goal is out of reach', async () => {
 it('shows the buy plan by default and asks for an amount when cleared', async () => {
   render(<PortfolioPlanner />);
   await screen.findByText('Efficient Frontier');
+  await switchTab('Frontier');
 
   expect(screen.queryByText(/enter an amount above/i)).not.toBeInTheDocument();
 
@@ -212,6 +224,7 @@ it('shows the buy plan by default and asks for an amount when cleared', async ()
 it('updates the risk-free rate and re-runs the simulation on demand', async () => {
   render(<PortfolioPlanner />);
   await screen.findByText('Efficient Frontier');
+  await switchTab('Frontier');
 
   const riskFreeInput = screen.getByLabelText('Risk-free (%/yr)');
   await userEvent.clear(riskFreeInput);
@@ -225,6 +238,7 @@ it('updates the risk-free rate and re-runs the simulation on demand', async () =
 it('moves the target-risk slider', async () => {
   render(<PortfolioPlanner />);
   await screen.findByText('Efficient Frontier');
+  await switchTab('Frontier');
 
   const slider = document.querySelector('input[type="range"]') as HTMLInputElement;
   expect(slider).toBeInTheDocument();
@@ -239,6 +253,7 @@ it('moves the target-risk slider', async () => {
 it('reveals inflation and fee fields under advanced assumptions', async () => {
   render(<PortfolioPlanner />);
   await screen.findByText('Efficient Frontier');
+  await switchTab('Projection');
 
   await userEvent.click(screen.getByText('Advanced assumptions'));
   expect(screen.getByLabelText('Expected Inflation (%)')).toBeInTheDocument();
@@ -253,6 +268,7 @@ it('downloads a CSV of the projection', async () => {
 
   render(<PortfolioPlanner />);
   await screen.findByText('Efficient Frontier');
+  await switchTab('Projection');
   await userEvent.click(await screen.findByRole('button', { name: /download csv/i }, FIND));
 
   expect(createObjectURL).toHaveBeenCalled();
