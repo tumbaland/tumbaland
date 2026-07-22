@@ -132,3 +132,63 @@ it('shows an alert when deletion fails', async () => {
 
   await waitFor(() => expect(alertSpy).toHaveBeenCalledWith('Failed to delete activity type: nope'));
 });
+
+describe('on mobile', () => {
+  // The 4-column table (Name/Type/Color/Actions) had no mobile treatment and
+  // relied on horizontal scroll — below the sm breakpoint it switches to a
+  // stacked card per activity type instead.
+  beforeEach(() => {
+    vi.stubGlobal(
+      'matchMedia',
+      (query: string) => ({
+        matches: true,
+        media: query,
+        onchange: null,
+        addListener: () => {},
+        removeListener: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        dispatchEvent: () => false
+      })
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('renders cards instead of a table', async () => {
+    mockedGetTypes.mockResolvedValue({ data: types, pagination: {} as any });
+    render(<ActivityTypesManagement groupId="g1" />);
+
+    await screen.findByText('Reading');
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.getByText('Number')).toBeInTheDocument();
+    expect(screen.getByText('Text')).toBeInTheDocument();
+    expect(screen.getByText('#111111')).toBeInTheDocument();
+  });
+
+  it('omits the color chip for a type with no color', async () => {
+    mockedGetTypes.mockResolvedValue({ data: types, pagination: {} as any });
+    render(<ActivityTypesManagement />);
+    await screen.findByText('Running');
+    expect(screen.queryByText('-')).not.toBeInTheDocument();
+  });
+
+  it('still supports editing and deleting from the card layout', async () => {
+    mockedGetTypes.mockResolvedValue({ data: types, pagination: {} as any });
+    mockedUpdate.mockResolvedValue(undefined);
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    mockedDelete.mockResolvedValue(undefined);
+    render(<ActivityTypesManagement />);
+    await screen.findByText('Reading');
+
+    await userEvent.click(screen.getAllByLabelText('Edit')[0]);
+    expect(await screen.findByText('Edit Activity Type')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Update' }));
+    await waitFor(() => expect(mockedUpdate).toHaveBeenCalledWith('t1', expect.anything()));
+
+    await userEvent.click(screen.getAllByLabelText('Delete')[0]);
+    await waitFor(() => expect(mockedDelete).toHaveBeenCalledWith('t1'));
+  });
+});
