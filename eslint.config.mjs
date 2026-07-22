@@ -66,8 +66,11 @@ export default tseslint.config(
     },
   },
 
-  // Project-wide rule calibration: the codebase deliberately uses `any` at
-  // integration boundaries (express req/res, mongoose docs); don't fight it.
+  // Default calibration, mainly a safety net for tooling/config files not
+  // covered by a workspace (vite/playwright/storybook configs, e2e specs):
+  // every real source tree — backend services + libs/backend-core, frontend
+  // apps + libs/frontend-core + libs/components — promotes this to `error`
+  // via the overrides below (tests keep `any` allowed everywhere).
   {
     rules: {
       '@typescript-eslint/no-explicit-any': 'warn',
@@ -81,12 +84,24 @@ export default tseslint.config(
     },
   },
 
-  // Frontend apps: no `any` in source; still allowed in test files. (Other
-  // backend services keep the project-wide `warn` above — they still lean on
-  // `any` at integration boundaries like express req/res and mongoose docs.)
+  // Frontend apps + the shared frontend libs: no `any` in source (still
+  // allowed in tests). libs/frontend-core and libs/components are now
+  // verified clean of non-test `any`, closing the last gap from the
+  // any-removal campaign — every workspace in the repo enforces this at
+  // `error` except test files (only tooling/config files outside any
+  // workspace's src, e.g. vite/playwright/storybook configs, still fall
+  // back to the project-wide `warn` above).
   {
-    files: ['apps/frontend/**/*.{ts,tsx}'],
-    ignores: ['apps/frontend/**/*.test.{ts,tsx}'],
+    files: [
+      'apps/frontend/**/*.{ts,tsx}',
+      'libs/frontend-core/**/*.ts',
+      'libs/components/**/*.{ts,tsx}',
+    ],
+    ignores: [
+      'apps/frontend/**/*.test.{ts,tsx}',
+      'libs/frontend-core/**/*.test.ts',
+      'libs/components/**/*.test.{ts,tsx}',
+    ],
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
     },
