@@ -13,7 +13,7 @@ import {
   Typography
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
-import AssetClassModal from '../AssetClassModal';
+import AssetClassModal, { AssetClassFormValues } from '../AssetClassModal';
 import ConfirmationModal from '../ConfirmationModal';
 import { AssetClass } from '../../types';
 import {
@@ -31,7 +31,7 @@ interface AssetClassManagerDialogProps {
   isClassInUse: (id: string) => boolean;
 }
 
-const emptyForm = { name: '', description: '', color: '#3b82f6', groupId: undefined as string | undefined };
+const emptyForm: AssetClassFormValues = { name: '', description: '', color: '#3b82f6', groupId: undefined };
 
 /** Add/rename/recolor asset classes without leaving the Net Worth page. */
 const AssetClassManagerDialog: React.FC<AssetClassManagerDialogProps> = ({
@@ -47,7 +47,7 @@ const AssetClassManagerDialog: React.FC<AssetClassManagerDialogProps> = ({
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<any>(emptyForm);
+  const [form, setForm] = useState<AssetClassFormValues>(emptyForm);
   const [deleteTarget, setDeleteTarget] = useState<AssetClass | null>(null);
 
   const openCreate = () => {
@@ -62,7 +62,7 @@ const AssetClassManagerDialog: React.FC<AssetClassManagerDialogProps> = ({
     setEditorOpen(true);
   };
 
-  const handleSubmit = async (f: any) => {
+  const handleSubmit = async (f: AssetClassFormValues) => {
     if (editingId) {
       await updateMutation.mutateAsync({ id: editingId, data: { name: f.name, description: f.description, color: f.color } });
     } else {

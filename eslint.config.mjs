@@ -88,5 +88,14 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
     },
+  },
+
+  // finance-front: no `any` in source; still allowed in test files.
+  {
+    files: ['apps/frontend/finance-front/**/*.{ts,tsx}'],
+    ignores: ['apps/frontend/finance-front/**/*.test.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
+    },
   }
 );

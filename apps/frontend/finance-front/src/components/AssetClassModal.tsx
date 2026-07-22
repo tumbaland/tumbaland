@@ -15,12 +15,19 @@ const PREDEFINED_COLORS = [
   '#f59e0b', // Amber
 ];
 
+export interface AssetClassFormValues {
+  name: string;
+  description: string;
+  color: string;
+  groupId?: string;
+}
+
 const AssetClassModal: React.FC<{
   open: boolean;
   onClose: () => void;
-  onSubmit: (form: any) => void;
-  form: any;
-  setForm: (f: any) => void;
+  onSubmit: (form: AssetClassFormValues) => void;
+  form: AssetClassFormValues;
+  setForm: React.Dispatch<React.SetStateAction<AssetClassFormValues>>;
   title: string;
 }> = ({ open, onClose, onSubmit, form, setForm, title }) => (
   <Dialog 
@@ -49,7 +56,7 @@ const AssetClassModal: React.FC<{
         fullWidth
         required
         value={form.name}
-        onChange={(e) => setForm((f: any) => ({ ...f, name: e.target.value }))}
+        onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
         slotProps={{ inputLabel: { shrink: true } }}
       />
       <TextField
@@ -61,7 +68,7 @@ const AssetClassModal: React.FC<{
         multiline
         rows={3}
         value={form.description}
-        onChange={(e) => setForm((f: any) => ({ ...f, description: e.target.value }))}
+        onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
         slotProps={{ inputLabel: { shrink: true } }}
       />
 
@@ -87,7 +94,7 @@ const AssetClassModal: React.FC<{
                   border: '3px solid #666'
                 }
               }}
-              onClick={() => setForm((f: any) => ({ ...f, color }))}
+              onClick={() => setForm((f) => ({ ...f, color }))}
             >
               {form.color === color && (
                 <Box sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: 'white' }} />
@@ -102,7 +109,7 @@ const AssetClassModal: React.FC<{
           type="text"
           fullWidth
           value={form.color || ''}
-          onChange={(e) => setForm((f: any) => ({ ...f, color: e.target.value }))}
+          onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))}
           placeholder="#667eea"
           slotProps={{ inputLabel: { shrink: true } }}
           sx={{ mt: 1 }}
@@ -112,7 +119,7 @@ const AssetClassModal: React.FC<{
       <Box sx={{ mt: 2 }}>
         <GroupSelector
           value={form.groupId}
-          onChange={(groupId) => setForm((f: any) => ({ ...f, groupId }))}
+          onChange={(groupId) => setForm((f) => ({ ...f, groupId }))}
           label="Share with Group (optional)"
           includePersonal={false}
           includeNone={true}
