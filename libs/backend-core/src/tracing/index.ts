@@ -1,4 +1,15 @@
-import { context, propagation, trace, SpanKind, Tracer } from '@opentelemetry/api';
+import {
+  context,
+  propagation,
+  trace,
+  SpanKind,
+  Tracer,
+  Span,
+  Context,
+  Attributes,
+  AttributeValue,
+} from '@opentelemetry/api';
+import { Request, Response, NextFunction } from 'express';
 import { NodeTracerProvider, BatchSpanProcessor } from '@opentelemetry/sdk-trace-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { resourceFromAttributes } from '@opentelemetry/resources';
@@ -36,19 +47,19 @@ export const getTracer = (): Tracer => {
 };
 
 // Start a new span. `parent` may be a Span or a Context (e.g. from extractSpanContext).
-export const startSpan = (operationName: string, parentSpan?: any) => {
-  if (!parentSpan) {
+export const startSpan = (operationName: string, parent?: Span | Context) => {
+  if (!parent) {
     return getTracer().startSpan(operationName);
   }
+  // A Span exposes `spanContext()`; a Context does not — use that to decide
+  // whether we need to wrap the parent span into an active context first.
   const parentContext =
-    typeof parentSpan.spanContext === 'function'
-      ? trace.setSpan(context.active(), parentSpan)
-      : parentSpan;
+    'spanContext' in parent ? trace.setSpan(context.active(), parent) : parent;
   return getTracer().startSpan(operationName, undefined, parentContext);
 };
 
 // Middleware for Express to create spans for requests
-export const tracingMiddleware = (req: any, res: any, next: any) => {
+export const tracingMiddleware = (req: Request, res: Response, next: NextFunction) => {
   const parentContext = propagation.extract(context.active(), req.headers);
   const span = getTracer().startSpan(
     `${req.method} ${req.path}`,
@@ -70,28 +81,30 @@ export const tracingMiddleware = (req: any, res: any, next: any) => {
 };
 
 // Helper to create child spans
-export const createChildSpan = (operationName: string, parentSpan: any) => {
-  return startSpan(operationName, parentSpan);
+export const createChildSpan = (operationName: string, parent: Span | Context) => {
+  return startSpan(operationName, parent);
 };
 
 // Helper to log events to spans
-export const logToSpan = (span: any, event: string, data?: any) => {
+export const logToSpan = (span: Span, event: string, data?: Attributes) => {
   span.addEvent(event, data);
 };
 
 // Helper to set tags on spans
-export const setSpanTag = (span: any, key: string, value: any) => {
+export const setSpanTag = (span: Span, key: string, value: AttributeValue) => {
   span.setAttribute(key, value);
 };
 
 // Helper to inject tracing headers (W3C traceparent) for downstream calls
-export const injectHeaders = (span: any) => {
+export const injectHeaders = (span: Span) => {
   const headers: { [key: string]: string } = {};
   propagation.inject(trace.setSpan(context.active(), span), headers);
   return headers;
 };
 
 // Helper to extract span context from incoming headers; pass the result to startSpan as parent
-export const extractSpanContext = (headers: any) => {
+export const extractSpanContext = (
+  headers: Record<string, string | string[] | undefined>
+): Context => {
   return propagation.extract(context.active(), headers);
 };

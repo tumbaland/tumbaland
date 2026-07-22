@@ -92,12 +92,13 @@ export default tseslint.config(
     },
   },
 
-  // All backend services cleared of `any` in source (still allowed in
-  // tests). libs/backend-core (shared across every service) still leans on
-  // `any` at integration boundaries and keeps the project-wide `warn` above.
+  // All backend services AND the shared backend-core lib cleared of `any` in
+  // source (still allowed in tests). backend-core's observability layer
+  // (tracing/metrics/error handling) is now typed against the OpenTelemetry
+  // and Express APIs instead of leaning on `any` at those boundaries.
   {
-    files: ['apps/backend/**/*.ts'],
-    ignores: ['apps/backend/**/*.test.ts'],
+    files: ['apps/backend/**/*.ts', 'libs/backend-core/**/*.ts'],
+    ignores: ['apps/backend/**/*.test.ts', 'libs/backend-core/**/*.test.ts'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
     },

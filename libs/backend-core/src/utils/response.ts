@@ -3,7 +3,7 @@ import { Response } from 'express';
 /**
  * Standard API response format
  */
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   message?: string;
@@ -14,7 +14,7 @@ export interface ApiResponse<T = any> {
 /**
  * Create a standardized API response
  */
-export function createApiResponse<T = any>(
+export function createApiResponse<T = unknown>(
   success: boolean,
   data?: T,
   message?: string,
@@ -34,7 +34,7 @@ export function createApiResponse<T = any>(
 /**
  * Send a success response
  */
-export function sendSuccess<T = any>(
+export function sendSuccess<T = unknown>(
   res: Response,
   data?: T,
   message?: string,

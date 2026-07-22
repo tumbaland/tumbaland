@@ -53,7 +53,7 @@ export const errorHandler: ErrorRequestHandler = (
       statusCode: known.statusCode,
       url: req.url,
       method: req.method,
-      correlationId: (req as any).correlationId
+      correlationId: req.correlationId
     });
   } else {
     logger.error('Unhandled error:', {
@@ -63,7 +63,7 @@ export const errorHandler: ErrorRequestHandler = (
       method: req.method,
       ip: req.ip,
       userAgent: req.get('User-Agent'),
-      correlationId: (req as any).correlationId
+      correlationId: req.correlationId
     });
   }
 

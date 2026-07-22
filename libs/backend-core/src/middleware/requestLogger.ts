@@ -1,4 +1,5 @@
 import morgan from 'morgan';
+import { Request, Response, NextFunction } from 'express';
 import logger from '../logging/logger';
 import { metricsMiddleware } from '../metrics';
 
@@ -24,7 +25,7 @@ export const requestLoggerWithMetrics = [requestLogger, metricsMiddleware];
  * Simple request logger for development
  * Logs basic request info with correlation ID
  */
-export const simpleRequestLogger = (req: any, res: any, next: any) => {
+export const simpleRequestLogger = (req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
   const correlationId = req.correlationId || 'unknown';
 

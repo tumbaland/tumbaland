@@ -15,7 +15,7 @@ export function generateCorrelationId(): string {
 export const correlationMiddleware: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
   const correlationId = req.headers['x-correlation-id'] as string || generateCorrelationId();
 
-  (req as any).correlationId = correlationId;
+  req.correlationId = correlationId;
   res.setHeader('x-correlation-id', correlationId);
 
   next();
