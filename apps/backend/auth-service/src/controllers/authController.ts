@@ -37,7 +37,7 @@ export const validateToken = async (req: Request, res: Response, _next: NextFunc
 
   // Update userPayload to use database user ID instead of Google sub
   const userPayload: UserPayload = {
-    id: (dbUser._id as any).toString(), // Use MongoDB _id instead of Google sub
+    id: dbUser._id.toString(), // Use MongoDB _id instead of Google sub
     email: googleUser.email || '',
     name: googleUser.name || '',
     picture: googleUser.picture,

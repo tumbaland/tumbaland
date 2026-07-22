@@ -66,7 +66,7 @@ export const listMine = async (req: InternalServiceRequest, res: Response): Prom
 
   // Update last activity for this user in each group
   for (const group of groups) {
-    await svc.updateMemberActivity((group as any)._id.toString(), email);
+    await svc.updateMemberActivity(group._id.toString(), email);
   }
 
   sendSuccess(res, groups);
@@ -87,7 +87,7 @@ export const getUserGroupIds = async (req: InternalServiceRequest, res: Response
     throw new BadRequestError('User email required');
   }
   const groups = await svc.listMyGroups(email);
-  const groupIds = groups.map(group => (group as any)._id.toString());
+  const groupIds = groups.map(group => group._id.toString());
   sendSuccess(res, groupIds);
 };
 
@@ -128,11 +128,12 @@ export const addMember = async (req: Request, res: Response): Promise<void> => {
 };
 
 export const updateRole = async (req: Request, res: Response): Promise<void> => {
+  const { role } = req.body as { role: GroupRole };
   const group = await svc.updateMemberRole(
     req.params.id as string,
     userEmail(req),
     req.params.memberEmail as string,
-    (req.body as any).role
+    role
   );
 
   // Invalidate tokens for the user whose role changed

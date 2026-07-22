@@ -4,7 +4,6 @@ import { logger } from '@tumbaland/backend-core';
 export interface InternalServiceRequest extends Request {
   isInternalService?: boolean;
   serviceIdentifier?: string;
-  user?: any; // Add user property for auth compatibility
 }
 
 /**

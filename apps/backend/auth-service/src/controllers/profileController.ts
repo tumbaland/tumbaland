@@ -38,7 +38,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
   const { firstName, lastName } = req.body;
 
   // Update the user in database - handle empty strings explicitly
-  const updateData: any = {};
+  const updateData: Partial<Record<'firstName' | 'lastName', string | null>> = {};
   if (firstName !== undefined) {
     const trimmedFirstName = firstName.trim();
     updateData.firstName = trimmedFirstName === '' ? null : trimmedFirstName;
@@ -62,7 +62,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
   res.json({
     success: true,
     user: {
-      id: (updatedUser._id as any).toString(),
+      id: updatedUser._id.toString(),
       email: updatedUser.email,
       firstName: updatedUser.firstName,
       lastName: updatedUser.lastName,
