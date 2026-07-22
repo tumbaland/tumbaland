@@ -109,9 +109,10 @@ it('falls back to a manual-assumptions projection when there are no holdings', a
   render(<PortfolioPlanner />);
 
   expect(screen.getByText(/add holdings in the investments page/i)).toBeInTheDocument();
-  // No frontier without holdings, but the projection still runs on presets
+  // No frontier without holdings, but the projection still runs on manual fields
   expect(screen.queryByText('Efficient Frontier')).not.toBeInTheDocument();
-  expect(hasFormLabel('Scenario Preset')).toBe(true);
+  expect(hasFormLabel('Growth (%)')).toBe(true);
+  expect(hasFormLabel('Volatility (%)')).toBe(true);
   expect(await screen.findByText('Detailed Yearly Breakdown', undefined, FIND)).toBeInTheDocument();
   expect(screen.getByText('Showing 30 years of projection')).toBeInTheDocument();
 });
@@ -137,7 +138,7 @@ it('renders holdings, the efficient frontier and a history-derived projection on
   expect(basisCombobox).toHaveTextContent('Current portfolio');
   expect(screen.getByText(/derived from your holdings/i)).toBeInTheDocument();
   expect(screen.getByText(/shrunk toward a long-run/i)).toBeInTheDocument();
-  expect(hasFormLabel('Scenario Preset')).toBe(false);
+  expect(hasFormLabel('Growth (%)')).toBe(false);
   expect(await screen.findByText('Detailed Yearly Breakdown', undefined, FIND)).toBeInTheDocument();
 });
 
@@ -157,26 +158,23 @@ it('warns about holdings missing price history and skips the frontier below 2 ti
   expect(await screen.findByText(/no price history for: MSFT/i)).toBeInTheDocument();
   expect(await screen.findByText(/need price history for at least 2 holdings/i)).toBeInTheDocument();
   // Manual projection still available
-  expect(hasFormLabel('Scenario Preset')).toBe(true);
+  expect(hasFormLabel('Growth (%)')).toBe(true);
 });
 
-it('switches the projection basis to manual, applies presets, and flips to custom on edit', async () => {
+it('switches the projection basis and updates the derived assumptions', async () => {
   render(<PortfolioPlanner />);
   await screen.findByText('Efficient Frontier');
   await switchTab('Projection');
   await setNumber('Investment Period (Years)', '3'); // keep Monte Carlo runs cheap
 
-  await selectOption('Projection Basis', 'Manual');
-  expect(hasFormLabel('Scenario Preset')).toBe(true);
+  const basisLabel = Array.from(document.querySelectorAll('label')).find((l) => l.textContent === 'Projection Basis')!;
+  const basisCombobox = basisLabel.closest('.MuiFormControl-root')!.querySelector('[role="combobox"]') as HTMLElement;
+  expect(basisCombobox).toHaveTextContent('Current portfolio');
 
-  await selectOption('Scenario Preset', 'Aggressive');
-  expect(getNumberInput('Growth (%)').value).toBe('12');
-  expect(getNumberInput('Volatility (%)').value).toBe('25');
-
-  await setNumber('Growth (%)', '9');
-  const presetLabel = Array.from(document.querySelectorAll('label')).find((l) => l.textContent === 'Scenario Preset')!;
-  const combobox = presetLabel.closest('.MuiFormControl-root')!.querySelector('[role="combobox"]') as HTMLElement;
-  expect(combobox).toHaveTextContent('Custom');
+  await selectOption('Projection Basis', 'Min Risk');
+  expect(basisCombobox).toHaveTextContent('Min Risk');
+  // No manual growth/volatility fields once a frontier-derived basis is active
+  expect(hasFormLabel('Growth (%)')).toBe(false);
 });
 
 it('recalculates when the investment period changes', async () => {
@@ -250,14 +248,14 @@ it('moves the target-risk slider', async () => {
   await waitFor(() => expect(slider.value).toBe(slider.max));
 });
 
-it('reveals inflation and fee fields under advanced assumptions', async () => {
+it('shows the inflation field directly, with no fee field or hidden section', async () => {
   render(<PortfolioPlanner />);
   await screen.findByText('Efficient Frontier');
   await switchTab('Projection');
 
-  await userEvent.click(screen.getByText('Advanced assumptions'));
   expect(screen.getByLabelText('Inflation (%)')).toBeInTheDocument();
-  expect(screen.getByLabelText('Annual Fee (%)')).toBeInTheDocument();
+  expect(screen.queryByText('Advanced assumptions')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Annual Fee (%)')).not.toBeInTheDocument();
 });
 
 it('downloads a CSV of the projection', async () => {

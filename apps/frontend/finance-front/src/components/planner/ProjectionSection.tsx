@@ -1,8 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
   Alert,
   Box,
   Button,
@@ -23,7 +20,6 @@ import {
   TextField,
   Typography
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { TableChart, TrendingUp } from '@mui/icons-material';
 import StockGrowthChart from '../StockGrowthChart';
 import { usePersistedState } from '../../hooks/usePersistedState';
@@ -33,7 +29,6 @@ import {
   McBands,
   ProjectionParams,
   SCENARIO_PRESETS,
-  ScenarioPreset,
   YearlyProjection,
   projectDeterministic,
   runMonteCarloBands,
@@ -45,7 +40,13 @@ const MC_SIMULATIONS = 1000;
 const DEBOUNCE_MS = 250;
 const MAX_YEARS = 50;
 
-type PlanSource = 'target' | 'current' | 'maxSharpe' | 'minVol' | 'manual';
+type PlanSource = 'target' | 'current' | 'maxSharpe' | 'minVol';
+
+// Smaller, denser fields for a compact, single-column form.
+const compactFieldSx = {
+  '& .MuiInputBase-input': { fontSize: '0.8rem' },
+  '& .MuiInputLabel-root': { fontSize: '0.8rem' }
+};
 
 interface ProjectionSectionProps {
   sim: FrontierSim | null;
@@ -71,20 +72,18 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
   const [years, setYears] = usePersistedState('finance-planner-years', '30');
   const [goal, setGoal] = usePersistedState('finance-planner-goal', '');
   const [inflation, setInflation] = usePersistedState('finance-planner-inflation', '2.5');
-  const [fee, setFee] = usePersistedState('finance-planner-fee', '0');
 
   // Collapsed by default — up to 50 rows is the single biggest contributor
   // to the page's scroll length, and most people just want the chart above.
   const [showYearlyTable, setShowYearlyTable] = useState(false);
 
-  const [source, setSource] = usePersistedState<PlanSource>('finance-planner-source', 'manual');
+  const [source, setSource] = usePersistedState<PlanSource>('finance-planner-source', 'target');
   // A returning user's saved basis should stick rather than being immediately
   // overwritten by the "follow the real portfolio" effect below.
   const sourceTouched = useRef(localStorage.getItem('finance-planner-source') !== null);
   const capitalTouched = useRef(false);
 
-  // Manual-mode assumptions (also the fallback when there is no price history)
-  const [preset, setPreset] = usePersistedState<ScenarioPreset | 'custom'>('finance-planner-preset', 'base');
+  // Fallback assumptions when there's no price history to derive a basis from.
   const [growth, setGrowth] = usePersistedState('finance-planner-growth', String(SCENARIO_PRESETS.base.growth));
   const [volatility, setVolatility] = usePersistedState('finance-planner-volatility', String(SCENARIO_PRESETS.base.volatility));
 
@@ -93,7 +92,6 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
   // overrides either by hand.
   useEffect(() => {
     if (sim && !sourceTouched.current) setSource(sim.current ? 'current' : 'target');
-    if (!sim && source !== 'manual') setSource('manual');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sim]);
   useEffect(() => {
@@ -103,7 +101,7 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
   }, [portfolioValue]);
 
   const basisPoint: SimPoint | null = useMemo(() => {
-    if (!sim || source === 'manual') return null;
+    if (!sim) return null;
     if (source === 'current') return sim.current;
     if (source === 'maxSharpe') return sim.maxSharpe;
     if (source === 'minVol') return sim.minVol;
@@ -128,9 +126,9 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
       expectedAnnualReturnPct: growthPct,
       annualVolatilityPct: volatilityPct,
       annualInflationPct: parseFloat(inflation) || 0,
-      annualFeePct: parseFloat(fee) || 0
+      annualFeePct: 0
     };
-  }, [startingCapital, contribution, years, growthPct, volatilityPct, inflation, fee]);
+  }, [startingCapital, contribution, years, growthPct, volatilityPct, inflation]);
 
   const [rows, setRows] = useState<YearlyProjection[]>([]);
   const [bands, setBands] = useState<McBands | null>(null);
@@ -144,14 +142,6 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
     }, DEBOUNCE_MS);
     return () => clearTimeout(t);
   }, [params]);
-
-  const applyPreset = (value: ScenarioPreset | 'custom') => {
-    setPreset(value);
-    if (value !== 'custom') {
-      setGrowth(String(SCENARIO_PRESETS[value].growth));
-      setVolatility(String(SCENARIO_PRESETS[value].volatility));
-    }
-  };
 
   const finalRow = rows[rows.length - 1];
   const goalNum = parseFloat(goal);
@@ -210,8 +200,8 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
           Growth Projection
         </Typography>
 
-        {/* Primary inputs */}
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 1.5, mt: 1.5 }}>
+        {/* All choices stacked in a single compact column. */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, mt: 1.5, maxWidth: 360 }}>
           <TextField
             label="Starting Capital (EUR)"
             type="number"
@@ -222,6 +212,7 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
               setStartingCapital(e.target.value);
             }}
             fullWidth
+            sx={compactFieldSx}
             slotProps={{ htmlInput: { min: 0, step: 100 } }}
             helperText={portfolioValue > 0 ? 'Defaults to your portfolio value' : undefined}
           />
@@ -232,8 +223,8 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
             value={contribution}
             onChange={e => setContribution(e.target.value)}
             fullWidth
+            sx={compactFieldSx}
             slotProps={{ htmlInput: { min: 0, step: 50 } }}
-            helperText=" "
           />
           <TextField
             label="Investment Period (Years)"
@@ -242,8 +233,8 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
             value={years}
             onChange={e => setYears(e.target.value)}
             fullWidth
+            sx={compactFieldSx}
             slotProps={{ htmlInput: { min: 1, max: MAX_YEARS } }}
-            helperText=" "
           />
           <TextField
             label="Target Goal (EUR)"
@@ -252,80 +243,67 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
             value={goal}
             onChange={e => setGoal(e.target.value)}
             fullWidth
+            sx={compactFieldSx}
             slotProps={{ htmlInput: { min: 0, step: 500 } }}
             helperText="Optional goal line on the chart"
           />
-        </Box>
 
-        {/* Return/volatility assumptions — aligned to the same grid as the
-            primary inputs above so the two rows read as one consistent
-            block. The caption gets its own full-width row below so a long
-            sentence can never widen (or be forced to widen) the grid. */}
-        <Box sx={{ mt: 1.5 }}>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 1.5 }}>
-            {sim && (
-              <FormControl fullWidth size="small">
-                <InputLabel>Projection Basis</InputLabel>
-                <Select
-                  label="Projection Basis"
-                  value={source}
-                  onChange={e => {
-                    sourceTouched.current = true;
-                    setSource(e.target.value as PlanSource);
-                  }}
-                >
-                  <MenuItem value="target">Target (risk slider)</MenuItem>
-                  {sim.current && <MenuItem value="current">Current portfolio</MenuItem>}
-                  <MenuItem value="maxSharpe">Max Sharpe</MenuItem>
-                  <MenuItem value="minVol">Min Risk</MenuItem>
-                  <MenuItem value="manual">Manual</MenuItem>
-                </Select>
-              </FormControl>
-            )}
-            {!(basisPoint && sim) && (
-              <>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Scenario Preset</InputLabel>
-                  <Select
-                    label="Scenario Preset"
-                    value={preset}
-                    onChange={e => applyPreset(e.target.value as ScenarioPreset | 'custom')}
-                  >
-                    <MenuItem value="conservative">Conservative</MenuItem>
-                    <MenuItem value="base">Base</MenuItem>
-                    <MenuItem value="aggressive">Aggressive</MenuItem>
-                    <MenuItem value="custom">Custom</MenuItem>
-                  </Select>
-                </FormControl>
-                <TextField
-                  label="Growth (%)"
-                  type="number"
-                  size="small"
-                  value={growth}
-                  onChange={e => {
-                    setPreset('custom');
-                    setGrowth(e.target.value);
-                  }}
-                  fullWidth
-                  slotProps={{ htmlInput: { min: 0, max: 50, step: 0.1 } }}
-                />
-                <TextField
-                  label="Volatility (%)"
-                  type="number"
-                  size="small"
-                  value={volatility}
-                  onChange={e => {
-                    setPreset('custom');
-                    setVolatility(e.target.value);
-                  }}
-                  fullWidth
-                  slotProps={{ htmlInput: { min: 0, max: 80, step: 0.5 } }}
-                />
-              </>
-            )}
-          </Box>
+          {sim && (
+            <FormControl fullWidth size="small" sx={compactFieldSx}>
+              <InputLabel>Projection Basis</InputLabel>
+              <Select
+                label="Projection Basis"
+                value={source}
+                onChange={e => {
+                  sourceTouched.current = true;
+                  setSource(e.target.value as PlanSource);
+                }}
+              >
+                <MenuItem value="target">Target (risk slider)</MenuItem>
+                {sim.current && <MenuItem value="current">Current portfolio</MenuItem>}
+                <MenuItem value="maxSharpe">Max Sharpe</MenuItem>
+                <MenuItem value="minVol">Min Risk</MenuItem>
+              </Select>
+            </FormControl>
+          )}
+          {!sim && (
+            <>
+              <TextField
+                label="Growth (%)"
+                type="number"
+                size="small"
+                value={growth}
+                onChange={e => setGrowth(e.target.value)}
+                fullWidth
+                sx={compactFieldSx}
+                slotProps={{ htmlInput: { min: 0, max: 50, step: 0.1 } }}
+              />
+              <TextField
+                label="Volatility (%)"
+                type="number"
+                size="small"
+                value={volatility}
+                onChange={e => setVolatility(e.target.value)}
+                fullWidth
+                sx={compactFieldSx}
+                slotProps={{ htmlInput: { min: 0, max: 80, step: 0.5 } }}
+              />
+            </>
+          )}
+
+          <TextField
+            label="Inflation (%)"
+            type="number"
+            size="small"
+            value={inflation}
+            onChange={e => setInflation(e.target.value)}
+            fullWidth
+            sx={compactFieldSx}
+            slotProps={{ htmlInput: { min: 0, max: 20, step: 0.1 } }}
+          />
+
           {basisPoint && sim && (
-            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
+            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
               Assumes <b>{growthPct.toFixed(1)}%</b> expected return · <b>{basisPoint.vol.toFixed(1)}%</b> volatility —{' '}
               {basisPoint.ret.toFixed(1)}% annualized, derived from your holdings&apos; price history
               ({sim.dataPoints} trading days) and shrunk toward a long-run {LONG_RUN_RETURN_PCT}% to
@@ -333,35 +311,6 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
             </Typography>
           )}
         </Box>
-
-        {/* Advanced assumptions */}
-        <Accordion elevation={0} disableGutters sx={{ mt: 1.5, '&:before': { display: 'none' }, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ minHeight: 40, '&.Mui-expanded': { minHeight: 40 } }}>
-            <Typography variant="body2">Advanced assumptions</Typography>
-          </AccordionSummary>
-          <AccordionDetails sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-            <TextField
-              label="Inflation (%)"
-              type="number"
-              size="small"
-              value={inflation}
-              onChange={e => setInflation(e.target.value)}
-              sx={{ width: 130 }}
-              slotProps={{ htmlInput: { min: 0, max: 20, step: 0.1 } }}
-              helperText=" "
-            />
-            <TextField
-              label="Annual Fee (%)"
-              type="number"
-              size="small"
-              value={fee}
-              onChange={e => setFee(e.target.value)}
-              sx={{ width: 130 }}
-              slotProps={{ htmlInput: { min: 0, max: 5, step: 0.05 } }}
-              helperText="Expense ratio or drag"
-            />
-          </AccordionDetails>
-        </Accordion>
 
         {/* Summary — CSS Grid with minmax(0, 1fr) tracks so a wide value (e.g.
             the p10-p90 range) can never force the row wider than the
