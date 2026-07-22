@@ -1,18 +1,19 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { ProtectedRoute } from '@tumbaland/components';
 import GroupDetailsPage from '../pages/GroupDetailsPage';
-import { ProtectedRoute } from '../components/ProtectedRoute';
 import GroupsPage from '../pages/GroupsPage';
+import { authService } from '../services/authService';
 
 const AppRoutes = () => (
   <Routes>
     <Route path="/" element={<Navigate to="/groups" replace />} />
     <Route path="/groups" element={
-      <ProtectedRoute>
+      <ProtectedRoute authService={authService}>
         <GroupsPage />
       </ProtectedRoute>
     } />
     <Route path="/groups/:id" element={
-      <ProtectedRoute>
+      <ProtectedRoute authService={authService}>
         <GroupDetailsPage />
       </ProtectedRoute>
     } />

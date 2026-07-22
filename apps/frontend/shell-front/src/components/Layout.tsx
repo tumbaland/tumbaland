@@ -1,12 +1,13 @@
 import { useLocation } from 'react-router-dom';
 import { useState, ReactNode, useEffect } from 'react';
 import CircularProgress from '@mui/material/CircularProgress';
+import { ProtectedRoute } from '@tumbaland/components';
 import { SideMenu } from './SideMenu';
 import { HeaderNav } from './HeaderNav';
-import { ProtectedRoute } from './ProtectedRoute';
 import Footer from './Footer';
 import { getAppByRoute } from '../config/apps';
 import { useConfig } from '../config/ConfigProvider';
+import { authService } from '../services/authService';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 
@@ -78,7 +79,7 @@ export default function Layout({ children }: LayoutProps) {
           }}
         >
           {showIframe ? (
-            <ProtectedRoute>
+            <ProtectedRoute authService={authService}>
               <>
                 {loading && (
                   <div
