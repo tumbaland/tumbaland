@@ -1,5 +1,57 @@
+import { PipelineStage } from 'mongoose';
 import { Activity } from '../models/Activity';
 import { buildAccessQuery } from '../utils/permissionUtils';
+
+interface ActivityMatchConditions {
+  date?: { $gte?: Date; $lt?: Date };
+  groupId?: string | null;
+  userId?: string;
+  $or?: Record<string, unknown>[];
+}
+
+export interface StatisticsFilters {
+  userId?: string;
+  userGroupIds?: string[];
+  groupId?: string;
+  personalOnly?: boolean;
+}
+
+interface PerTypeAggRow {
+  _id: unknown;
+  slug: string;
+  name: string;
+  color?: string;
+  valueType?: string;
+  count: number;
+  totalHours: number;
+  uniqueDays: string[];
+}
+
+interface MonthlyStatsAggRow {
+  _id: { year: number; month: number };
+  activities: { type: string; count: number; dates: string[] }[];
+}
+
+interface MonthlyActivityAggRow {
+  _id: { year: number; month: number };
+  activities: { type: string; count: number; hours: number }[];
+  totalActivities: number;
+  totalHours: number;
+}
+
+interface WeeklyHeatmapAggRow {
+  _id: { date: string; year: number; month: number; dayOfWeek: number; week: number };
+  activities: { type: string; hours?: number }[];
+  totalActivities: number;
+  totalHours: number;
+}
+
+interface CumulativeTimelineAggRow {
+  _id: string;
+  activities: { type: string; count: number; hours: number }[];
+  dailyActivities: number;
+  dailyHours: number;
+}
 
 export interface TypeStatistics {
   typeId: string;
@@ -90,7 +142,7 @@ export interface CumulativeTimelineData {
 
 export const getRelationshipStatistics = async (
   timeframe: string = 'all',
-  filters: any
+  filters: StatisticsFilters
 ): Promise<RelationshipStatistics> => {
   const { userId, userGroupIds = [], groupId, personalOnly } = filters;
 
@@ -135,7 +187,7 @@ export const getRelationshipStatistics = async (
     };
   } else {
     // Use old behavior for backward compatibility
-    accessQuery = buildAccessQuery(userId, userGroupIds, false);
+    accessQuery = buildAccessQuery(userId!, userGroupIds, false);
   }
 
   // Build date filter
@@ -157,7 +209,7 @@ export const getRelationshipStatistics = async (
 
   const [perTypeStats, firstEntry] = await Promise.all([
     // One row per activity type: count, hours, distinct days
-    Activity.aggregate([
+    Activity.aggregate<PerTypeAggRow>([
       { $match: baseQuery },
       {
         $lookup: {
@@ -189,7 +241,7 @@ export const getRelationshipStatistics = async (
     Activity.findOne(accessQuery).sort({ date: 1 }).select('date')
   ]);
 
-  const types: TypeStatistics[] = perTypeStats.map((t: any) => ({
+  const types: TypeStatistics[] = perTypeStats.map((t) => ({
     typeId: String(t._id),
     slug: t.slug,
     name: t.name,
@@ -219,12 +271,12 @@ export const getRelationshipStatistics = async (
 
 export const getMonthlyHours = async (
   year?: number,
-  filters: any = {}
+  filters: StatisticsFilters = {}
 ): Promise<MonthlyHoursData[]> => {
   const { userId, userGroupIds = [], groupId, personalOnly } = filters;
 
   // Build query conditions
-  const conditions: any = {};
+  const conditions: ActivityMatchConditions = {};
 
   if (year) {
     conditions.date = {
@@ -292,15 +344,15 @@ export const getMonthlyHours = async (
 
 export const getMonthlyStatistics = async (
   year?: number,
-  filters: any = {}
+  filters: StatisticsFilters = {}
 ): Promise<MonthlyStatisticsData[]> => {
   const { userId, userGroupIds = [], groupId, personalOnly } = filters;
 
   // Build aggregation pipeline
-  const pipeline: any[] = [];
+  const pipeline: PipelineStage[] = [];
 
   // Build match conditions
-  const matchConditions: any = {};
+  const matchConditions: ActivityMatchConditions = {};
 
   if (year) {
     const startDate = new Date(year, 0, 1);
@@ -396,16 +448,16 @@ export const getMonthlyStatistics = async (
     }
   });
 
-  const result = await Activity.aggregate(pipeline);
+  const result = await Activity.aggregate<MonthlyStatsAggRow>(pipeline);
 
   // Transform result
-  const monthlyStats: MonthlyStatisticsData[] = result.map((item: any) => {
+  const monthlyStats: MonthlyStatisticsData[] = result.map((item) => {
     const year = item._id.year;
     const month = item._id.month;
     const totalDays = new Date(year, month, 0).getDate();
 
     const allDates = new Set<string>();
-    const types: MonthlyTypeStatistics[] = item.activities.map((activity: any) => {
+    const types: MonthlyTypeStatistics[] = item.activities.map((activity) => {
       for (const date of activity.dates) allDates.add(date);
       return {
         slug: activity.type,
@@ -428,15 +480,15 @@ export const getMonthlyStatistics = async (
 
 export const getMonthlyActivityBreakdown = async (
   year?: number,
-  filters: any = {}
+  filters: StatisticsFilters = {}
 ): Promise<MonthlyActivityData[]> => {
   const { userId, userGroupIds = [], groupId, personalOnly } = filters;
 
   // Build aggregation pipeline
-  const pipeline: any[] = [];
+  const pipeline: PipelineStage[] = [];
 
   // Build match conditions
-  const matchConditions: any = {};
+  const matchConditions: ActivityMatchConditions = {};
 
   // Add year filter if specified
   if (year) {
@@ -520,14 +572,14 @@ export const getMonthlyActivityBreakdown = async (
     }
   );
 
-  const result = await Activity.aggregate(pipeline);
+  const result = await Activity.aggregate<MonthlyActivityAggRow>(pipeline);
 
   // Transform the result to match our interface
-  const transformedResult: MonthlyActivityData[] = result.map((item: any) => {
+  const transformedResult: MonthlyActivityData[] = result.map((item) => {
     const activities: { [key: string]: { count: number; hours: number } } = {};
 
     // Fill in actual data from all activity types
-    item.activities.forEach((activity: any) => {
+    item.activities.forEach((activity) => {
       activities[activity.type] = {
         count: activity.count || 0,
         hours: activity.hours || 0
@@ -548,15 +600,15 @@ export const getMonthlyActivityBreakdown = async (
 
 export const getWeeklyHeatmapData = async (
   year?: number,
-  filters: any = {}
+  filters: StatisticsFilters = {}
 ): Promise<WeeklyHeatmapData[]> => {
   const { userId, userGroupIds = [], groupId, personalOnly } = filters;
 
   // Build aggregation pipeline
-  const pipeline: any[] = [];
+  const pipeline: PipelineStage[] = [];
 
   // Build match conditions
-  const matchConditions: any = {};
+  const matchConditions: ActivityMatchConditions = {};
 
   // Add year filter if specified
   if (year) {
@@ -635,14 +687,14 @@ export const getWeeklyHeatmapData = async (
     }
   );
 
-  const result = await Activity.aggregate(pipeline);
+  const result = await Activity.aggregate<WeeklyHeatmapAggRow>(pipeline);
 
   // Transform the result to match our interface
-  const transformedResult: WeeklyHeatmapData[] = result.map((item: any) => {
+  const transformedResult: WeeklyHeatmapData[] = result.map((item) => {
     const activities: { [key: string]: { count: number; hours: number } } = {};
 
     // Count activities by type (include all types)
-    item.activities.forEach((activity: any) => {
+    item.activities.forEach((activity) => {
       if (!activities[activity.type]) {
         activities[activity.type] = { count: 0, hours: 0 };
       }
@@ -669,15 +721,15 @@ export const getWeeklyHeatmapData = async (
 
 export const getCumulativeTimelineData = async (
   year?: number,
-  filters: any = {}
+  filters: StatisticsFilters = {}
 ): Promise<CumulativeTimelineData[]> => {
   const { userId, userGroupIds = [], groupId, personalOnly } = filters;
 
   // Build aggregation pipeline
-  const pipeline: any[] = [];
+  const pipeline: PipelineStage[] = [];
 
   // Build match conditions
-  const matchConditions: any = {};
+  const matchConditions: ActivityMatchConditions = {};
 
   // Add year filter if specified
   if (year) {
@@ -761,7 +813,7 @@ export const getCumulativeTimelineData = async (
     }
   );
 
-  const result = await Activity.aggregate(pipeline);
+  const result = await Activity.aggregate<CumulativeTimelineAggRow>(pipeline);
 
   // Determine date range
   let startDate: Date;
@@ -781,8 +833,8 @@ export const getCumulativeTimelineData = async (
   }
 
   // Create a map of activity data by date
-  const activityDataByDate = new Map<string, any>();
-  result.forEach((item: any) => {
+  const activityDataByDate = new Map<string, CumulativeTimelineAggRow>();
+  result.forEach((item) => {
     activityDataByDate.set(item._id, item);
   });
 
@@ -807,7 +859,7 @@ export const getCumulativeTimelineData = async (
 
     if (activityData) {
       // Use pre-calculated counts from aggregation
-      activityData.activities.forEach((activity: any) => {
+      activityData.activities.forEach((activity) => {
         dailyActivityBreakdown[activity.type] = activity.count;
       });
 

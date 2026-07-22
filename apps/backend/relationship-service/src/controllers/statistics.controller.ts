@@ -6,7 +6,8 @@ import {
   getMonthlyStatistics,
   getMonthlyActivityBreakdown,
   getWeeklyHeatmapData,
-  getCumulativeTimelineData
+  getCumulativeTimelineData,
+  StatisticsFilters
 } from '../services/statistics.service';
 
 function parseYearParam(year: unknown): number | undefined {
@@ -34,7 +35,7 @@ export const getStatistics = async (req: Request, res: Response): Promise<void> 
     throw new BadRequestError('Invalid timeframe. Must be one of: week, month, quarter, year, all');
   }
 
-  const filters: any = { userId: user.id };
+  const filters: StatisticsFilters = { userId: user.id };
 
   if (groupId) {
     filters.groupId = groupId as string;
@@ -62,7 +63,7 @@ export const getMonthlyHoursData = async (req: Request, res: Response): Promise<
   const userGroups = req.userGroups || [];
   const selectedYear = parseYearParam(year);
 
-  const filters: any = { userId: user.id };
+  const filters: StatisticsFilters = { userId: user.id };
 
   if (groupId) {
     filters.groupId = groupId as string;
@@ -89,7 +90,7 @@ export const getMonthlyStatisticsData = async (req: Request, res: Response): Pro
   const userGroups = req.userGroups || [];
   const selectedYear = parseYearParam(year);
 
-  const filters: any = { userId: user.id };
+  const filters: StatisticsFilters = { userId: user.id };
 
   if (groupId) {
     filters.groupId = groupId as string;
@@ -116,7 +117,7 @@ export const getMonthlyActivityBreakdownData = async (req: Request, res: Respons
   const userGroups = req.userGroups || [];
   const selectedYear = parseYearParam(year);
 
-  const filters: any = { userId: user.id };
+  const filters: StatisticsFilters = { userId: user.id };
 
   if (groupId) {
     filters.groupId = groupId as string;
@@ -143,7 +144,7 @@ export const getWeeklyHeatmapDataController = async (req: Request, res: Response
   const userGroups = req.userGroups || [];
   const selectedYear = parseYearParam(year);
 
-  const filters: any = { userId: user.id };
+  const filters: StatisticsFilters = { userId: user.id };
 
   if (groupId) {
     filters.groupId = groupId as string;
@@ -170,7 +171,7 @@ export const getCumulativeTimelineDataController = async (req: Request, res: Res
   const userGroups = req.userGroups || [];
   const selectedYear = parseYearParam(year);
 
-  const filters: any = { userId: user.id };
+  const filters: StatisticsFilters = { userId: user.id };
 
   if (groupId) {
     filters.groupId = groupId as string;

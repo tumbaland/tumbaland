@@ -100,6 +100,7 @@ export default tseslint.config(
       'apps/backend/group-service/**/*.ts',
       'apps/backend/finance-service/**/*.ts',
       'apps/backend/payment-service/**/*.ts',
+      'apps/backend/relationship-service/**/*.ts',
     ],
     ignores: ['apps/backend/**/*.test.ts'],
     rules: {
