@@ -211,10 +211,11 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
         </Typography>
 
         {/* Primary inputs */}
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 2, mt: 2 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 1.5, mt: 1.5 }}>
           <TextField
             label="Starting Capital (EUR)"
             type="number"
+            size="small"
             value={startingCapital}
             onChange={e => {
               capitalTouched.current = true;
@@ -227,6 +228,7 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
           <TextField
             label="Monthly Contribution (EUR)"
             type="number"
+            size="small"
             value={contribution}
             onChange={e => setContribution(e.target.value)}
             fullWidth
@@ -235,6 +237,7 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
           <TextField
             label="Investment Period (Years)"
             type="number"
+            size="small"
             value={years}
             onChange={e => setYears(e.target.value)}
             fullWidth
@@ -243,6 +246,7 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
           <TextField
             label="Target Goal (EUR)"
             type="number"
+            size="small"
             value={goal}
             onChange={e => setGoal(e.target.value)}
             fullWidth
@@ -251,92 +255,95 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
           />
         </Box>
 
-        {/* Return/volatility assumptions */}
-        <Box sx={{ display: 'flex', gap: 2, mt: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-          {sim && (
-            <FormControl sx={{ minWidth: 220 }} size="small">
-              <InputLabel>Projection Basis</InputLabel>
-              <Select
-                label="Projection Basis"
-                value={source}
-                onChange={e => {
-                  sourceTouched.current = true;
-                  setSource(e.target.value as PlanSource);
-                }}
-              >
-                <MenuItem value="target">Target (risk slider)</MenuItem>
-                {sim.current && <MenuItem value="current">Current portfolio</MenuItem>}
-                <MenuItem value="maxSharpe">Max Sharpe</MenuItem>
-                <MenuItem value="minVol">Min Risk</MenuItem>
-                <MenuItem value="manual">Manual</MenuItem>
-              </Select>
-            </FormControl>
-          )}
-          {basisPoint && sim ? (
-            <Typography variant="caption" sx={{
-              color: "text.secondary"
-            }}>
+        {/* Return/volatility assumptions — the basis picker and its explanatory
+            caption each get their own row so a long sentence can never widen
+            (and can't be forced to widen) the row it shares with the Select. */}
+        <Box sx={{ mt: 1.5 }}>
+          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
+            {sim && (
+              <FormControl sx={{ minWidth: 200 }} size="small">
+                <InputLabel>Projection Basis</InputLabel>
+                <Select
+                  label="Projection Basis"
+                  value={source}
+                  onChange={e => {
+                    sourceTouched.current = true;
+                    setSource(e.target.value as PlanSource);
+                  }}
+                >
+                  <MenuItem value="target">Target (risk slider)</MenuItem>
+                  {sim.current && <MenuItem value="current">Current portfolio</MenuItem>}
+                  <MenuItem value="maxSharpe">Max Sharpe</MenuItem>
+                  <MenuItem value="minVol">Min Risk</MenuItem>
+                  <MenuItem value="manual">Manual</MenuItem>
+                </Select>
+              </FormControl>
+            )}
+            {!(basisPoint && sim) && (
+              <>
+                <FormControl sx={{ minWidth: 150 }} size="small">
+                  <InputLabel>Scenario Preset</InputLabel>
+                  <Select
+                    label="Scenario Preset"
+                    value={preset}
+                    onChange={e => applyPreset(e.target.value as ScenarioPreset | 'custom')}
+                  >
+                    <MenuItem value="conservative">Conservative</MenuItem>
+                    <MenuItem value="base">Base</MenuItem>
+                    <MenuItem value="aggressive">Aggressive</MenuItem>
+                    <MenuItem value="custom">Custom</MenuItem>
+                  </Select>
+                </FormControl>
+                <TextField
+                  label="Growth (%)"
+                  type="number"
+                  size="small"
+                  value={growth}
+                  onChange={e => {
+                    setPreset('custom');
+                    setGrowth(e.target.value);
+                  }}
+                  sx={{ width: 130 }}
+                  slotProps={{ htmlInput: { min: 0, max: 50, step: 0.1 } }}
+                />
+                <TextField
+                  label="Volatility (%)"
+                  type="number"
+                  size="small"
+                  value={volatility}
+                  onChange={e => {
+                    setPreset('custom');
+                    setVolatility(e.target.value);
+                  }}
+                  sx={{ width: 130 }}
+                  slotProps={{ htmlInput: { min: 0, max: 80, step: 0.5 } }}
+                />
+              </>
+            )}
+          </Box>
+          {basisPoint && sim && (
+            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
               Assumes <b>{growthPct.toFixed(1)}%</b> expected return · <b>{basisPoint.vol.toFixed(1)}%</b> volatility —{' '}
               {basisPoint.ret.toFixed(1)}% annualized, derived from your holdings&apos; price history
               ({sim.dataPoints} trading days) and shrunk toward a long-run {LONG_RUN_RETURN_PCT}% to
               avoid extrapolating a short sample
             </Typography>
-          ) : (
-            <>
-              <FormControl sx={{ minWidth: 160 }} size="small">
-                <InputLabel>Scenario Preset</InputLabel>
-                <Select
-                  label="Scenario Preset"
-                  value={preset}
-                  onChange={e => applyPreset(e.target.value as ScenarioPreset | 'custom')}
-                >
-                  <MenuItem value="conservative">Conservative</MenuItem>
-                  <MenuItem value="base">Base</MenuItem>
-                  <MenuItem value="aggressive">Aggressive</MenuItem>
-                  <MenuItem value="custom">Custom</MenuItem>
-                </Select>
-              </FormControl>
-              <TextField
-                label="Expected Annual Growth (%)"
-                type="number"
-                size="small"
-                value={growth}
-                onChange={e => {
-                  setPreset('custom');
-                  setGrowth(e.target.value);
-                }}
-                sx={{ width: 200 }}
-                slotProps={{ htmlInput: { min: 0, max: 50, step: 0.1 } }}
-              />
-              <TextField
-                label="Annual Volatility (%)"
-                type="number"
-                size="small"
-                value={volatility}
-                onChange={e => {
-                  setPreset('custom');
-                  setVolatility(e.target.value);
-                }}
-                sx={{ width: 170 }}
-                slotProps={{ htmlInput: { min: 0, max: 80, step: 0.5 } }}
-              />
-            </>
           )}
         </Box>
 
         {/* Advanced assumptions */}
         <Accordion elevation={0} disableGutters sx={{ mt: 1.5, '&:before': { display: 'none' }, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ minHeight: 40, '&.Mui-expanded': { minHeight: 40 } }}>
             <Typography variant="body2">Advanced assumptions</Typography>
           </AccordionSummary>
-          <AccordionDetails sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+          <AccordionDetails sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
             <TextField
-              label="Expected Inflation (%)"
+              label="Inflation (%)"
               type="number"
               size="small"
               value={inflation}
               onChange={e => setInflation(e.target.value)}
-              sx={{ width: 190 }}
+              sx={{ width: 130 }}
               slotProps={{ htmlInput: { min: 0, max: 20, step: 0.1 } }}
             />
             <TextField
@@ -345,7 +352,7 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
               size="small"
               value={fee}
               onChange={e => setFee(e.target.value)}
-              sx={{ width: 150 }}
+              sx={{ width: 130 }}
               slotProps={{ htmlInput: { min: 0, max: 5, step: 0.05 } }}
               helperText="Expense ratio or drag"
             />

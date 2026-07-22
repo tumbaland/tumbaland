@@ -170,10 +170,10 @@ it('switches the projection basis to manual, applies presets, and flips to custo
   expect(hasFormLabel('Scenario Preset')).toBe(true);
 
   await selectOption('Scenario Preset', 'Aggressive');
-  expect(getNumberInput('Expected Annual Growth (%)').value).toBe('12');
-  expect(getNumberInput('Annual Volatility (%)').value).toBe('25');
+  expect(getNumberInput('Growth (%)').value).toBe('12');
+  expect(getNumberInput('Volatility (%)').value).toBe('25');
 
-  await setNumber('Expected Annual Growth (%)', '9');
+  await setNumber('Growth (%)', '9');
   const presetLabel = Array.from(document.querySelectorAll('label')).find((l) => l.textContent === 'Scenario Preset')!;
   const combobox = presetLabel.closest('.MuiFormControl-root')!.querySelector('[role="combobox"]') as HTMLElement;
   expect(combobox).toHaveTextContent('Custom');
@@ -256,7 +256,7 @@ it('reveals inflation and fee fields under advanced assumptions', async () => {
   await switchTab('Projection');
 
   await userEvent.click(screen.getByText('Advanced assumptions'));
-  expect(screen.getByLabelText('Expected Inflation (%)')).toBeInTheDocument();
+  expect(screen.getByLabelText('Inflation (%)')).toBeInTheDocument();
   expect(screen.getByLabelText('Annual Fee (%)')).toBeInTheDocument();
 });
 
