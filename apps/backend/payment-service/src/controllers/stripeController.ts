@@ -1,8 +1,10 @@
 import { Request, Response } from 'express';
+import Stripe from 'stripe';
 import { BadRequestError, logger, NotFoundError } from '@tumbaland/backend-core';
 import { stripe, ensureStripe } from '../services/stripeService';
 import { Plan } from '../models/Plan';
-import { Subscription } from '../models/Subscription';
+import { HydratedDocument } from 'mongoose';
+import { Subscription, ISubscription } from '../models/Subscription';
 import { Payment } from '../models/Payment';
 import { ensureEventStore } from '../services/webhookEventStore';
 
@@ -42,7 +44,7 @@ export const createCheckoutSession = async (req: Request, res: Response): Promis
     sub = await Subscription.create({ userEmail: email, planCode: plan.code, plan: plan._id, status: 'incomplete' });
   }
 
-  const priceId = (plan as any).stripePriceId;
+  const priceId = plan.stripePriceId;
   if (!priceId) { throw new BadRequestError('Plan missing stripePriceId'); }
 
   const session = await stripe.checkout.sessions.create({
@@ -69,9 +71,9 @@ export const stripeWebhook = async (req: Request, res: Response): Promise<void> 
   ensureStripe();
   const sig = req.headers['stripe-signature'];
   if (!sig) { res.status(400).send('missing signature'); return; }
-  let event: any;
+  let event: Stripe.Event;
   try {
-    const raw = req.body as any;
+    const raw = req.body;
     if (!Buffer.isBuffer(raw)) {
       throw new Error('Webhook body is not Buffer');
     }
@@ -81,9 +83,9 @@ export const stripeWebhook = async (req: Request, res: Response): Promise<void> 
     logger.error('Webhook signature verification failed', {
       error: message,
       debug: process.env.DEBUG_STRIPE_WEBHOOK === '1',
-      hasRaw: Buffer.isBuffer((req as any).body),
-      bodyType: typeof (req as any).body,
-      length: Buffer.isBuffer((req as any).body) ? (req as any).body.length : 'n/a',
+      hasRaw: Buffer.isBuffer(req.body),
+      bodyType: typeof req.body,
+      length: Buffer.isBuffer(req.body) ? req.body.length : 'n/a',
       sigHeaderPresent: !!sig
     });
     res.status(400).send(`Webhook Error: ${message}`);
@@ -119,7 +121,7 @@ export const stripeWebhook = async (req: Request, res: Response): Promise<void> 
     }
     case 'invoice.payment_failed': {
       const invoice = event.data.object;
-      const stripeSubId = invoice.subscription as string | undefined;
+      const stripeSubId = getInvoiceSubscriptionId(invoice);
       if (stripeSubId) {
         const sub = await Subscription.findOne({ stripeSubscriptionId: stripeSubId });
         if (sub && sub.status !== 'canceled') {
@@ -131,7 +133,7 @@ export const stripeWebhook = async (req: Request, res: Response): Promise<void> 
     }
     case 'invoice.payment_succeeded': {
       const invoice = event.data.object;
-      const stripeSubId = invoice.subscription as string | undefined;
+      const stripeSubId = getInvoiceSubscriptionId(invoice);
       if (stripeSubId) {
         const sub = await Subscription.findOne({ stripeSubscriptionId: stripeSubId });
         if (sub) {
@@ -176,7 +178,8 @@ export const getCheckoutSessionStatus = async (req: Request, res: Response): Pro
     if (subscriptionDoc && subscriptionDoc.status === 'incomplete' && session.status === 'complete' && session.payment_status === 'paid') {
       logger.info('[auto-heal] Activating subscription', { subscriptionId: subscriptionDoc.id, sessionId: session.id });
       subscriptionDoc.status = 'active';
-      subscriptionDoc.stripeSubscriptionId = (session.subscription as any)?.id || subscriptionDoc.stripeSubscriptionId;
+      const expandedSub = typeof session.subscription === 'object' ? session.subscription : null;
+      subscriptionDoc.stripeSubscriptionId = expandedSub?.id || subscriptionDoc.stripeSubscriptionId;
       subscriptionDoc.stripeCustomerId = (session.customer as string) || subscriptionDoc.stripeCustomerId;
       subscriptionDoc.renewsAt = computeRenewsAtFromSession(session);
       await subscriptionDoc.save();
@@ -194,17 +197,36 @@ function addMonths(date: Date, count: number): Date {
   return d;
 }
 
-function computeRenewsAtFromSession(session: any): Date | undefined {
-  // Try to derive from subscription current_period_end if expanded; otherwise assume +1 month
-  const sub = session.subscription as any;
-  if (sub && typeof sub === 'object' && sub.current_period_end) {
+// This service pins an older Stripe API version (see stripeService.ts). Both
+// helpers below read fields (`invoice.subscription`, `subscription.current_period_end`)
+// that were flat on their parent object in that version but have since moved
+// in the newer API version the installed SDK's bundled types describe, so
+// they aren't visible on Stripe.Invoice / Stripe.Subscription anymore.
+function getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | undefined {
+  const sub = (invoice as unknown as { subscription?: string | { id: string } }).subscription;
+  return typeof sub === 'string' ? sub : sub?.id;
+}
+
+function computeRenewsAtFromSession(session: Stripe.Checkout.Session): Date | undefined {
+  // Try to derive from the subscription's current_period_end if expanded; otherwise assume +1 month.
+  const sub = typeof session.subscription === 'object'
+    ? (session.subscription as unknown as { current_period_end?: number })
+    : null;
+  if (sub?.current_period_end) {
     return new Date(sub.current_period_end * 1000);
   }
   return addMonths(new Date(), 1);
 }
 
 // Create a payment record for an activated subscription if one does not already exist for this cycle.
-async function ensureSubscriptionPayment(sub: any, source: any, origin: string, invoiceId?: string, amountOverride?: number, currencyOverride?: string) {
+async function ensureSubscriptionPayment(
+  sub: HydratedDocument<ISubscription>,
+  source: { id?: string } | undefined,
+  origin: string,
+  invoiceId?: string,
+  amountOverride?: number,
+  currencyOverride?: string
+) {
   try {
     // Don't create payments for free plans (0 price)
     const plan = await Plan.findOne({ code: sub.planCode });
@@ -244,7 +266,7 @@ async function ensureSubscriptionPayment(sub: any, source: any, origin: string, 
 }
 
 // Cancel (set status=canceled) any other active/past_due/incomplete subs for same user that are lower priced than the newly activated one.
-async function deactivateLowerPricedSubs(primary: any) {
+async function deactivateLowerPricedSubs(primary: HydratedDocument<ISubscription>) {
   try {
     const primaryPlan = await Plan.findOne({ code: primary.planCode });
     if (!primaryPlan) return;
@@ -268,7 +290,7 @@ async function deactivateLowerPricedSubs(primary: any) {
 }
 
 // Cancel any higher-priced active/past_due subscriptions when downgrading (e.g., to free)
-async function deactivateHigherPricedSubs(primary: any) {
+async function deactivateHigherPricedSubs(primary: HydratedDocument<ISubscription>) {
   try {
     const primaryPlan = await Plan.findOne({ code: primary.planCode });
     if (!primaryPlan) return;

@@ -6,7 +6,7 @@ export const planInputSchema = z.object({
   description: z.string().optional(),
   priceMonthlyCents: z.coerce.number({ error: 'priceMonthlyCents required' }),
   priceYearlyCents: z.coerce.number().optional(),
-  features: z.any().optional()
+  features: z.array(z.string()).optional()
 });
 
 // createPlan accepts either a single plan object or an array (bulk-create shorthand).

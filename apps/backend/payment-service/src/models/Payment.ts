@@ -8,7 +8,7 @@ export interface IPayment extends Document {
   status: 'succeeded' | 'pending' | 'failed' | 'refunded';
   stripePaymentIntentId?: string;
   stripeChargeId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   createdAt: Date; updatedAt: Date;
 }
 

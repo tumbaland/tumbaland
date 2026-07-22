@@ -23,25 +23,25 @@ describe('requireAdmin', () => {
     const res = mockRes();
     const next = jest.fn();
 
-    requireAdmin({ user: { role: 'member' } } as unknown as Request, res, next);
+    requireAdmin({ user: { roles: ['member'] } } as unknown as Request, res, next);
 
     expect(res.status).toHaveBeenCalledWith(403);
   });
 
-  it('allows a user with role "admin"', () => {
+  it('rejects a user with no roles', () => {
     const res = mockRes();
     const next = jest.fn();
 
-    requireAdmin({ user: { role: 'admin' } } as unknown as Request, res, next);
+    requireAdmin({ user: { roles: [] } } as unknown as Request, res, next);
 
-    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.status).toHaveBeenCalledWith(403);
   });
 
-  it('allows a user with isAdmin:true', () => {
+  it('allows a user whose roles include "admin"', () => {
     const res = mockRes();
     const next = jest.fn();
 
-    requireAdmin({ user: { isAdmin: true } } as unknown as Request, res, next);
+    requireAdmin({ user: { roles: ['member', 'admin'] } } as unknown as Request, res, next);
 
     expect(next).toHaveBeenCalledTimes(1);
   });

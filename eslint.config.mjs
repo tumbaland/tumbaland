@@ -92,14 +92,14 @@ export default tseslint.config(
     },
   },
 
-  // Backend pilot: these three services have been cleared of `any` in source
-  // (still allowed in tests) to see how well the "no any" rule holds up
-  // against express/mongoose boundaries before rolling it out further.
+  // Backend services cleared of `any` in source (still allowed in tests).
+  // The rest of the backend keeps the project-wide `warn` above.
   {
     files: [
       'apps/backend/auth-service/**/*.ts',
       'apps/backend/group-service/**/*.ts',
       'apps/backend/finance-service/**/*.ts',
+      'apps/backend/payment-service/**/*.ts',
     ],
     ignores: ['apps/backend/**/*.test.ts'],
     rules: {

@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
+import { z } from 'zod';
 import { BadRequestError, ConflictError, NotFoundError } from '@tumbaland/backend-core';
 import { Plan, IPlan } from '../models/Plan';
+import { planInputSchema } from '../validation/schemas';
 
 export const listPlans = async (_req: Request, res: Response): Promise<void> => {
   const plans = await Plan.find({ isActive: true }).sort({ priceMonthlyCents: 1 });
@@ -30,7 +32,7 @@ export const createPlan = async (req: Request, res: Response): Promise<void> => 
 };
 
 export const createPlansBulk = async (req: Request, res: Response): Promise<void> => {
-  const payload = req.body as any[];
+  const payload = req.body as z.infer<typeof planInputSchema>[];
   // Check duplicates in request
   const codes = payload.map(p => p.code);
   const dupInRequest = codes.find((c, idx) => codes.indexOf(c) !== idx);
