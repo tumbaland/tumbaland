@@ -23,7 +23,7 @@ export const createAlbum = async (req: Request, res: Response): Promise<void> =>
 export const getAlbums = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
   const userGroups = req.userGroups || [];
-  const groupServiceError = (req as any).groupServiceError;
+  const groupServiceError = (req as Request & { groupServiceError?: boolean }).groupServiceError;
   const { page, limit, search, isPublic, groupId, includeCover } = req.query;
 
   const filter = {

@@ -92,16 +92,11 @@ export default tseslint.config(
     },
   },
 
-  // Backend services cleared of `any` in source (still allowed in tests).
-  // The rest of the backend keeps the project-wide `warn` above.
+  // All backend services cleared of `any` in source (still allowed in
+  // tests). libs/backend-core (shared across every service) still leans on
+  // `any` at integration boundaries and keeps the project-wide `warn` above.
   {
-    files: [
-      'apps/backend/auth-service/**/*.ts',
-      'apps/backend/group-service/**/*.ts',
-      'apps/backend/finance-service/**/*.ts',
-      'apps/backend/payment-service/**/*.ts',
-      'apps/backend/relationship-service/**/*.ts',
-    ],
+    files: ['apps/backend/**/*.ts'],
     ignores: ['apps/backend/**/*.test.ts'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',

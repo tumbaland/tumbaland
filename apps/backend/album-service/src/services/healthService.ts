@@ -33,7 +33,7 @@ class HealthService {
   /**
    * Get HTTP status code based on health
    */
-  getHealthStatusCode(health: any): number {
+  getHealthStatusCode(health: { status: 'ok' | 'error' }): number {
     return health.status === 'ok' ? 200 : 503;
   }
 }

@@ -1,6 +1,6 @@
-import Album from '../models/Album';
+import Album, { IAlbum } from '../models/Album';
 import Photo from '../models/Photo';
-import mongoose from 'mongoose';
+import mongoose, { PipelineStage } from 'mongoose';
 import { ForbiddenError, logger, NotFoundError } from '@tumbaland/backend-core';
 import {
   deleteFile,
@@ -9,6 +9,62 @@ import {
   SignedUrlData
 } from './fileServiceClient';
 import { canAccessResource } from '../utils/permissionUtils';
+
+interface AlbumMatchQuery {
+  $text?: { $search: string };
+  isPublic?: boolean;
+  groupId?: string | { $exists: false };
+  userId?: string;
+}
+
+interface AlbumAggRow {
+  _id: unknown;
+  name: string;
+  description?: string;
+  coverPhotoId?: string;
+  isPublic: boolean;
+  tags: string[];
+  userId: string;
+  groupId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  photoCount: number;
+}
+
+interface AlbumByIdAggRow extends AlbumAggRow {
+  coverPhotoDoc?: PhotoDocLike;
+}
+
+interface PhotoDocLike {
+  _id: unknown;
+  filename: string;
+  originalName: string;
+  minioFileId?: string;
+  minioThumbnailFileId?: string;
+  albumId: string;
+  title?: string;
+  description?: string;
+  mimetype: string;
+  size: number;
+  width?: number;
+  height?: number;
+  tags: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface PhotoWithSignedUrls extends PhotoDocLike {
+  signedUrl?: string | null;
+  signedUrlExpiresAt?: string | null;
+  signedUrlExpiresInMinutes?: number | null;
+  thumbnailSignedUrl?: string | null;
+  thumbnailSignedUrlExpiresAt?: string | null;
+  thumbnailSignedUrlExpiresInMinutes?: number | null;
+}
+
+interface AlbumWithCoverPhoto extends AlbumAggRow {
+  coverPhoto: PhotoWithSignedUrls | null;
+}
 
 export interface CreateAlbumInput {
   name: string;
@@ -46,7 +102,7 @@ class AlbumService {
   /**
    * Create a new album with validation
    */
-  async createAlbum(input: CreateAlbumInput, userId: string): Promise<any> {
+  async createAlbum(input: CreateAlbumInput, userId: string): Promise<IAlbum> {
     const { name, description, isPublic = false, tags = [], groupId } = input;
 
     const album = new Album({
@@ -68,7 +124,7 @@ class AlbumService {
     filter: GetAlbumsFilter,
     context: AlbumPermissionContext
   ): Promise<{
-    albums: any[];
+    albums: AlbumWithCoverPhoto[];
     pagination: {
       page: number;
       limit: number;
@@ -86,7 +142,7 @@ class AlbumService {
     } = filter;
     const { userId, userGroups, groupServiceError } = context;
 
-    const matchQuery: any = {};
+    const matchQuery: AlbumMatchQuery = {};
 
     // Build base query
     if (search) {
@@ -116,7 +172,7 @@ class AlbumService {
     const skip = (Number(page) - 1) * Number(limit);
 
     // Use aggregation pipeline to get albums with photo counts in one query
-    const aggregationPipeline: any[] = [
+    const aggregationPipeline: PipelineStage[] = [
       { $match: matchQuery },
       {
         $lookup: {
@@ -142,24 +198,24 @@ class AlbumService {
     ];
 
     // Get total count for pagination
-    const totalPipeline: any[] = [
+    const totalPipeline: PipelineStage[] = [
       { $match: matchQuery },
       { $count: 'total' }
     ];
 
     const [albumsResult, totalResult] = await Promise.all([
-      (Album as any).aggregate(aggregationPipeline),
-      (Album as any).aggregate(totalPipeline)
+      Album.aggregate<AlbumAggRow>(aggregationPipeline),
+      Album.aggregate<{ total: number }>(totalPipeline)
     ]);
 
     const total = totalResult[0]?.total || 0;
 
-    let albumsWithCovers: any[];
+    let albumsWithCovers: AlbumWithCoverPhoto[];
 
     if (includeCover) {
       albumsWithCovers = await this.enrichAlbumsWithCoverPhotos(albumsResult);
     } else {
-      albumsWithCovers = (albumsResult as any[]).map((album: any) => ({
+      albumsWithCovers = albumsResult.map((album) => ({
         ...album,
         coverPhoto: null
       }));
@@ -179,11 +235,11 @@ class AlbumService {
   /**
    * Get album by ID with photo count and cover photo
    */
-  async getAlbumById(albumId: string, context: AlbumPermissionContext): Promise<any> {
+  async getAlbumById(albumId: string, context: AlbumPermissionContext): Promise<AlbumWithCoverPhoto> {
     const { userId, userGroups } = context;
 
     // Use aggregation to get album with photo count and cover photo in one query
-    const aggregationPipeline: any[] = [
+    const aggregationPipeline: PipelineStage[] = [
       { $match: { _id: new mongoose.Types.ObjectId(albumId as string) } },
       {
         $lookup: {
@@ -234,7 +290,7 @@ class AlbumService {
       }
     ];
 
-    const albumResult = await (Album as any).aggregate(aggregationPipeline);
+    const albumResult = await Album.aggregate<AlbumByIdAggRow>(aggregationPipeline);
 
     if (!albumResult || albumResult.length === 0) {
       throw new NotFoundError('Album not found');
@@ -256,13 +312,13 @@ class AlbumService {
     }
 
     // Process cover photo signed URL if exists
-    let coverPhoto = null;
+    let coverPhoto: PhotoWithSignedUrls | null = null;
     if (albumData.coverPhotoDoc) {
       coverPhoto = await this.enrichPhotoWithSignedUrls(albumData.coverPhotoDoc);
     }
 
     // Remove the coverPhotoDoc field and add coverPhoto
-    const { coverPhotoDoc, ...albumResponse } = albumData;
+    const { coverPhotoDoc: _coverPhotoDoc, ...albumResponse } = albumData;
 
     return {
       ...albumResponse,
@@ -277,7 +333,7 @@ class AlbumService {
     albumId: string,
     input: UpdateAlbumInput,
     context: AlbumPermissionContext
-  ): Promise<any> {
+  ): Promise<IAlbum | null> {
     const { userId, userGroups } = context;
 
     const album = await Album.findById(albumId);
@@ -298,7 +354,7 @@ class AlbumService {
       throw new ForbiddenError('Access denied');
     }
 
-    const updateData: any = {};
+    const updateData: Partial<Pick<IAlbum, 'name' | 'description' | 'isPublic' | 'tags' | 'coverPhotoId' | 'groupId'>> = {};
     if (input.name) updateData.name = input.name.trim();
     if (input.description !== undefined) updateData.description = input.description?.trim();
     if (input.isPublic !== undefined) updateData.isPublic = input.isPublic;
@@ -349,7 +405,7 @@ class AlbumService {
   /**
    * Set cover photo for album
    */
-  async setCoverPhoto(albumId: string, photoId: string): Promise<any> {
+  async setCoverPhoto(albumId: string, photoId: string): Promise<IAlbum> {
     const album = await Album.findById(albumId);
     if (!album) {
       throw new NotFoundError('Album not found');
@@ -369,7 +425,7 @@ class AlbumService {
   /**
    * Remove cover photo from album
    */
-  async removeCoverPhoto(albumId: string): Promise<any> {
+  async removeCoverPhoto(albumId: string): Promise<IAlbum> {
     const album = await Album.findById(albumId);
     if (!album) {
       throw new NotFoundError('Album not found');
@@ -382,16 +438,16 @@ class AlbumService {
   /**
    * Private helper: Enrich albums with cover photos
    */
-  private async enrichAlbumsWithCoverPhotos(albums: any[]): Promise<any[]> {
+  private async enrichAlbumsWithCoverPhotos(albums: AlbumAggRow[]): Promise<AlbumWithCoverPhoto[]> {
     const coverPhotoIds = Array.from(
       new Set(
         albums
-          .filter((album: any) => album.coverPhotoId)
-          .map((album: any) => album.coverPhotoId.toString())
+          .filter((album) => album.coverPhotoId)
+          .map((album) => album.coverPhotoId!.toString())
       )
     );
 
-    let coverPhotoMap = new Map<string, any>();
+    let coverPhotoMap = new Map<string, PhotoWithSignedUrls>();
     if (coverPhotoIds.length > 0) {
       const coverPhotoDocs = await Photo.find({ _id: { $in: coverPhotoIds } });
       let signedUrlMap: Record<string, SignedUrlData> = {};
@@ -404,7 +460,7 @@ class AlbumService {
         logger.error('Failed to fetch batch signed URLs for cover photos', { error: (error as Error)?.message });
       }
 
-      coverPhotoMap = new Map(
+      coverPhotoMap = new Map<string, PhotoWithSignedUrls>(
         coverPhotoDocs.map((photo) => {
           const signedUrlData = signedUrlMap[photo.minioFileId || ''];
           const thumbnailSignedUrlData = thumbnailSignedUrlMap[photo.minioFileId || ''];
@@ -434,7 +490,7 @@ class AlbumService {
     }
 
     // Combine albums with cover photos
-    return albums.map((album: any) => ({
+    return albums.map((album) => ({
       ...album,
       coverPhoto: album.coverPhotoId ? coverPhotoMap.get(album.coverPhotoId.toString()) || null : null
     }));
@@ -443,7 +499,7 @@ class AlbumService {
   /**
    * Private helper: Enrich photo with signed URLs
    */
-  private async enrichPhotoWithSignedUrls(photo: any): Promise<any> {
+  private async enrichPhotoWithSignedUrls(photo: PhotoDocLike): Promise<PhotoWithSignedUrls> {
     try {
       const signedUrlData = await getPhotoSignedUrl(photo, false, 60);
       const thumbnailSignedUrlData = await getPhotoSignedUrl(photo, true, 60);

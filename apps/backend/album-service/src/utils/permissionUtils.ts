@@ -14,7 +14,9 @@ export function buildAccessQuery(
   groupIds: string[] = [], 
   includePublic: boolean = false
 ) {
-  const conditions: any[] = [
+  const conditions: Array<
+    { userId: string } | { groupId: { $in: string[] } } | { isPublic: boolean }
+  > = [
     { userId } // User's own resources
   ];
 

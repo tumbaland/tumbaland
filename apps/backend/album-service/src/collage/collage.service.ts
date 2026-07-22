@@ -3,8 +3,44 @@ import { CollageModel, ICollage } from './collage.model';
 import { canAccessResource } from '../utils/permissionUtils';
 import Album from '../models/Album';
 import { getSignedUrlsBatch } from '../services/fileServiceClient';
-import mongoose from 'mongoose';
+import mongoose, { PipelineStage } from 'mongoose';
 import { ForbiddenError, logger, NotFoundError } from '@tumbaland/backend-core';
+
+interface AggregatedPhoto {
+  _id: unknown;
+  filename: string;
+  minioFileId?: string;
+  minioThumbnailFileId?: string;
+  mimetype: string;
+  createdAt: Date;
+  title?: string;
+  description?: string;
+  width?: number;
+  height?: number;
+}
+
+interface AlbumWithPhotosAggRow {
+  _id: unknown;
+  userId?: string;
+  groupId?: string;
+  isPublic?: boolean;
+  photos: AggregatedPhoto[];
+}
+
+interface PhotoWithSignedUrl extends AggregatedPhoto {
+  signedUrl?: string;
+  signedUrlExpiresAt?: string;
+  signedUrlExpiresInMinutes?: number;
+  thumbnailSignedUrl?: string;
+  thumbnailSignedUrlExpiresAt?: string;
+  thumbnailSignedUrlExpiresInMinutes?: number;
+}
+
+interface CollageListFilter {
+  albumIds?: { $in: string[] };
+  groupId?: string | { $exists: false };
+  userId?: string;
+}
 
 export const createCollage = async (
   data: CollageInput, 
@@ -85,15 +121,15 @@ export const getCollageWithPhotos = async (
   id: string,
   userId: string,
   userGroups: string[] = []
-): Promise<{ collage: ICollage; photos: any[] }> => {
+): Promise<{ collage: ICollage; photos: PhotoWithSignedUrl[] }> => {
   const collage = await getCollageById(id, userId, userGroups);
-  
+
   if (!collage) {
     throw new NotFoundError('Collage not found');
   }
 
   // Use aggregation to fetch photos from all albums in the collage
-  const aggregationPipeline: any[] = [
+  const aggregationPipeline: PipelineStage[] = [
     { $match: { _id: { $in: collage.albumIds.map(id => new mongoose.Types.ObjectId(id)) } } },
     {
       $lookup: {
@@ -131,7 +167,7 @@ export const getCollageWithPhotos = async (
     }
   ];
 
-  const albumsWithPhotos = await (Album as any).aggregate(aggregationPipeline);
+  const albumsWithPhotos = await Album.aggregate<AlbumWithPhotosAggRow>(aggregationPipeline);
 
   // Check access permissions for all albums
   for (const album of albumsWithPhotos) {
@@ -150,18 +186,18 @@ export const getCollageWithPhotos = async (
 
   // Flatten all photos and fetch every signed URL (originals + thumbnails)
   // in a single batch request to file-service.
-  const allPhotos = albumsWithPhotos.flatMap((album: any) => album.photos);
+  const allPhotos = albumsWithPhotos.flatMap((album) => album.photos);
   let urlMap: Awaited<ReturnType<typeof getSignedUrlsBatch>> = {};
   try {
     urlMap = await getSignedUrlsBatch(
-      allPhotos.flatMap((photo: any) => [photo.minioFileId, photo.minioThumbnailFileId]).filter(Boolean),
+      allPhotos.flatMap((photo) => [photo.minioFileId, photo.minioThumbnailFileId]).filter((id): id is string => Boolean(id)),
       60
     );
   } catch (error) {
     logger.error('Failed to get signed URLs for collage photos', { error: (error as Error)?.message });
   }
 
-  const photosWithUrls = allPhotos.map((photo: any) => {
+  const photosWithUrls: PhotoWithSignedUrl[] = allPhotos.map((photo) => {
     const original = photo.minioFileId ? urlMap[photo.minioFileId] : undefined;
     const thumbnail = photo.minioThumbnailFileId ? urlMap[photo.minioThumbnailFileId] : undefined;
     return {
@@ -184,7 +220,7 @@ export const getCollageList = async (
   userGroups: string[] = [],
   groupId?: string
 ): Promise<ICollage[]> => {
-  const filter: any = {};
+  const filter: CollageListFilter = {};
   
   // Add album filter if provided
   if (albumId) {
