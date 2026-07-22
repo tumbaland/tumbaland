@@ -41,7 +41,7 @@ export const getActivities = async (req: Request, res: Response): Promise<void> 
   const user = req.user!;
   const userGroups = req.userGroups || [];
 
-  const filters: any = {};
+  const filters: Parameters<typeof ActivityService.getActivities>[0] = {};
   if (activityType) filters.activityType = activityType as string;
   if (startDate) filters.startDate = new Date(startDate as string);
   if (endDate) filters.endDate = new Date(endDate as string);
@@ -118,7 +118,7 @@ export const deleteActivity = async (req: Request, res: Response): Promise<void>
 export const getActivityStats = async (req: Request, res: Response): Promise<void> => {
   const { startDate, endDate } = req.query;
 
-  const filters: any = {};
+  const filters: Parameters<typeof ActivityService.getActivityStats>[0] = {};
   if (startDate) filters.startDate = new Date(startDate as string);
   if (endDate) filters.endDate = new Date(endDate as string);
 
@@ -190,7 +190,7 @@ export const getRecentActivitiesSummary = async (req: Request, res: Response): P
   const userGroups = req.userGroups || [];
 
   const activityTypes = await ActivityService.getActivityTypes(user.id, groupId as string, userGroups);
-  const categories = activityTypes.map((type: any) => type.slug);
+  const categories = activityTypes.map((type) => type.slug);
 
   const timelines = [
     { label: 'Last Month', months: 1 },
@@ -198,7 +198,7 @@ export const getRecentActivitiesSummary = async (req: Request, res: Response): P
     { label: 'Last Year', months: 12 }
   ];
 
-  const result: Record<string, any> = {};
+  const result: Record<string, Record<string, { label: string; activities: IActivity[] }>> = {};
 
   for (const category of categories) {
     result[category] = {};
@@ -208,7 +208,7 @@ export const getRecentActivitiesSummary = async (req: Request, res: Response): P
       const startDate = new Date();
       startDate.setMonth(startDate.getMonth() - timeline.months);
 
-      const filters: any = {
+      const filters: Parameters<typeof ActivityService.getActivities>[0] = {
         startDate,
         endDate,
         activityType: category,

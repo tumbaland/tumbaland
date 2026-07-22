@@ -1,20 +1,24 @@
 import { Request, Response } from 'express';
 import { NotFoundError, sendSuccess } from '@tumbaland/backend-core';
 import * as ActivityTypeService from '../services/activityType.service';
+import { IActivityType } from '../models/ActivityType';
+import { createActivityTypeSchema } from '../validation/schemas';
+import { z } from 'zod';
 
 /**
  * Create a new activity type
  */
 export const createActivityType = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
-  const typeData: any = {
-    ...req.body,
+  const body = req.body as z.infer<typeof createActivityTypeSchema>;
+  const typeData: Partial<IActivityType> = {
+    ...body,
     userId: user.id
   };
 
   // Generate slug if not provided
   if (!typeData.slug) {
-    typeData.slug = typeData.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    typeData.slug = body.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
   }
 
   const activityType = await ActivityTypeService.createActivityType(typeData);
@@ -29,7 +33,14 @@ export const getActivityTypes = async (req: Request, res: Response): Promise<voi
   const user = req.user!;
   const userGroups = req.userGroups || [];
 
-  const filters: any = {};
+  const filters: {
+    userId?: string;
+    groupId?: string | null;
+    isActive?: boolean;
+    limit?: number;
+    page?: number;
+    userGroupIds?: string[];
+  } = {};
 
   if (isActive !== undefined) filters.isActive = isActive === 'true';
   if (limit) filters.limit = parseInt(limit as string) || 50;

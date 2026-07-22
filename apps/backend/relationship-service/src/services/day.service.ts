@@ -1,7 +1,16 @@
 import mongoose from 'mongoose';
 import { BadRequestError, ForbiddenError } from '@tumbaland/backend-core';
 import { Activity, IActivity } from '../models/Activity';
-import { ActivityType } from '../models/ActivityType';
+import { ActivityType, IActivityType } from '../models/ActivityType';
+
+interface ActivityScopeQuery {
+  groupId?: string;
+  userId?: string;
+  typeId?: mongoose.Types.ObjectId;
+  description?: Record<string, unknown>;
+  date?: { $gte?: Date; $lte?: Date };
+  $or?: Record<string, unknown>[];
+}
 
 export interface DayEntryInput {
   _id?: string;
@@ -10,9 +19,14 @@ export interface DayEntryInput {
   hours?: number;
 }
 
+/** An activity entry with its type populated for rendering. */
+export interface DayEntry extends IActivity {
+  type?: IActivityType;
+}
+
 export interface Day {
   date: string; // YYYY-MM-DD
-  entries: IActivity[];
+  entries: DayEntry[];
 }
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -29,10 +43,15 @@ export function dayToDate(day: string): Date {
   return date;
 }
 
-function scopeQuery(userId: string, groupId?: string) {
+function scopeQuery(userId: string, groupId?: string): ActivityScopeQuery {
   return groupId
     ? { groupId }
     : { userId, $or: [{ groupId: { $exists: false } }, { groupId: null }] };
+}
+
+interface DayFacetResult {
+  days: { _id: Date; entries: DayEntry[] }[];
+  totalCount: { count: number }[];
 }
 
 /**
@@ -56,7 +75,7 @@ export const getDays = async (options: {
     throw new ForbiddenError('Access denied');
   }
 
-  const match: any = scopeQuery(userId, groupId);
+  const match: ActivityScopeQuery = scopeQuery(userId, groupId);
   if (typeId) match.typeId = new mongoose.Types.ObjectId(typeId);
   if (search) match.description = { $regex: search, $options: 'i' };
   if (startDate || endDate) {
@@ -65,7 +84,7 @@ export const getDays = async (options: {
     if (endDate) match.date.$lte = endDate;
   }
 
-  const [result] = await Activity.aggregate([
+  const [result] = await Activity.aggregate<DayFacetResult>([
     { $match: match },
     { $sort: { date: -1, createdAt: 1 } },
     {
@@ -93,7 +112,7 @@ export const getDays = async (options: {
   ]);
 
   const total = result.totalCount[0]?.count || 0;
-  const days: Day[] = result.days.map((d: any) => ({
+  const days: Day[] = result.days.map((d) => ({
     date: d._id.toISOString().slice(0, 10),
     entries: d.entries
   }));
@@ -146,8 +165,8 @@ export const saveDay = async (
     const hours = entry.hours ?? undefined;
 
     if (entry._id && existingById.has(entry._id)) {
-      const $set: any = { typeId: entry.typeId };
-      const $unset: any = {};
+      const $set: Partial<Pick<IActivity, 'typeId' | 'description' | 'hours'>> = { typeId: entry.typeId as unknown as IActivity['typeId'] };
+      const $unset: Partial<Record<'description' | 'hours', ''>> = {};
       if (description === undefined) $unset.description = '';
       else $set.description = description;
       if (hours === undefined) $unset.hours = '';
@@ -171,16 +190,16 @@ export const saveDay = async (
   }
 
   // Return the fresh day in the same shape getDays produces (raw typeId + populated type)
-  const saved = await Activity.find({ ...scope, date }).populate('typeId').sort({ createdAt: 1 });
+  const saved = await Activity.find({ ...scope, date }).populate<{ typeId: IActivityType }>('typeId').sort({ createdAt: 1 });
   return {
     date: day,
-    entries: saved.map((doc) => {
-      const obj: any = doc.toObject();
-      if (obj.typeId && typeof obj.typeId === 'object' && obj.typeId._id) {
-        obj.type = obj.typeId;
-        obj.typeId = obj.typeId._id;
+    entries: saved.map((doc): DayEntry => {
+      const obj = doc.toObject();
+      const { typeId, ...rest } = obj;
+      if (typeId && typeof typeId === 'object' && '_id' in typeId) {
+        return { ...rest, type: typeId, typeId: typeId._id } as unknown as DayEntry;
       }
-      return obj;
+      return { ...rest, typeId } as unknown as DayEntry;
     })
   };
 };

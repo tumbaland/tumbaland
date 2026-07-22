@@ -1,6 +1,13 @@
 import { ConflictError, logger } from '@tumbaland/backend-core';
 import { ActivityType, IActivityType } from '../models/ActivityType';
 
+interface ActivityTypeQuery {
+  isActive?: boolean;
+  slug?: string;
+  userId?: string;
+  $or?: Record<string, unknown>[];
+}
+
 // Create a new activity type
 export const createActivityType = async (typeData: Partial<IActivityType>): Promise<IActivityType> => {
   logger.info('Creating activity type', { typeData });
@@ -23,12 +30,12 @@ export const createActivityType = async (typeData: Partial<IActivityType>): Prom
 export const getActivityTypes = async (
   filters: {
     userId?: string;
-    groupId?: string;
+    groupId?: string | null;
     isActive?: boolean;
     limit?: number;
     page?: number;
   } = {}
-): Promise<{ types: any; total: number; page: number; totalPages: number }> => {
+): Promise<{ types: IActivityType[]; total: number; page: number; totalPages: number }> => {
   const {
     userId,
     groupId,
@@ -38,7 +45,7 @@ export const getActivityTypes = async (
   } = filters;
 
   // Build query
-  const query: any = {};
+  const query: ActivityTypeQuery = {};
 
   if (isActive !== undefined) {
     query.isActive = isActive;
@@ -99,7 +106,7 @@ export const getActivityTypeById = async (id: string): Promise<IActivityType | n
 
 // Get activity type by slug
 export const getActivityTypeBySlug = async (slug: string, userId?: string, groupId?: string): Promise<IActivityType | null> => {
-  const query: any = { slug, isActive: true };
+  const query: ActivityTypeQuery = { slug, isActive: true };
 
   if (groupId) {
     query.$or = [

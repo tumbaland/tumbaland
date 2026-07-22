@@ -1,6 +1,22 @@
-import mongoose from 'mongoose';
+import mongoose, { PipelineStage } from 'mongoose';
 import { ForbiddenError } from '@tumbaland/backend-core';
 import { Activity, IActivity } from '../models/Activity';
+import { IActivityType } from '../models/ActivityType';
+
+interface ActivityQuery {
+  typeId?: mongoose.Types.ObjectId;
+  date?: { $gte?: Date; $lte?: Date };
+  description?: Record<string, unknown>;
+  groupId?: string | null;
+  userId?: string;
+  $or?: Record<string, unknown>[];
+}
+
+interface ActivityTypeQuery {
+  isActive?: boolean;
+  userId?: string;
+  $or?: Record<string, unknown>[];
+}
 
 // Create a new activity
 export const createActivity = async (activityData: Partial<IActivity>): Promise<IActivity> => {
@@ -39,7 +55,7 @@ export const getActivities = async (
   } = filters;
 
   // Build base query
-  const query: any = {};
+  const query: ActivityQuery = {};
 
   if (activityType) {
     // Find the activity type by slug and get its ID
@@ -85,7 +101,7 @@ export const getActivities = async (
   }
 
   // Build sort object
-  const sortObj: any = {};
+  const sortObj: Record<string, 1 | -1> = {};
   const sortDirection = sortOrder === 'asc' ? 1 : -1;
 
   // Map frontend sort fields to database fields
@@ -141,24 +157,38 @@ export const deleteActivity = async (id: string): Promise<boolean> => {
   return !!result;
 };
 
+interface ActivityStatsByType {
+  _id: string;
+  count: number;
+  totalHours: number;
+  avgHours: number;
+}
+
+interface ActivityStatsOverall {
+  totalActivities: number;
+  totalHours: number;
+  avgHours: number | null;
+  _id?: null;
+}
+
 // Get activity statistics
 export const getActivityStats = async (
   filters: {
     startDate?: Date;
     endDate?: Date;
   } = {}
-): Promise<any> => {
+): Promise<{ byType: ActivityStatsByType[]; overall: ActivityStatsOverall }> => {
   const { startDate, endDate } = filters;
 
   // Build match stage for date filtering
-  const matchStage: any = {};
+  const matchStage: ActivityQuery = {};
   if (startDate || endDate) {
     matchStage.date = {};
     if (startDate) matchStage.date.$gte = startDate;
     if (endDate) matchStage.date.$lte = endDate;
   }
 
-  const pipeline: any[] = [];
+  const pipeline: PipelineStage[] = [];
 
   // Add match stage if there are filters
   if (Object.keys(matchStage).length > 0) {
@@ -228,9 +258,9 @@ export const getRecentActivities = async (limit: number = 10): Promise<IActivity
 };
 
 // Get unique activity types
-export const getActivityTypes = async (userId?: string, groupId?: string, userGroupIds: string[] = []): Promise<any[]> => {
+export const getActivityTypes = async (userId?: string, groupId?: string, userGroupIds: string[] = []): Promise<IActivityType[]> => {
   const ActivityType = (await import('../models/ActivityType')).ActivityType;
-  const query: any = { isActive: true };
+  const query: ActivityTypeQuery = { isActive: true };
 
   if (groupId) {
     // Check if user has access to the specific group
@@ -259,7 +289,7 @@ export const getDescriptionsByTypeId = async (
   userGroupIds: string[],
   groupId?: string
 ): Promise<string[]> => {
-  const matchQuery: any = {
+  const matchQuery: ActivityQuery = {
     typeId: new mongoose.Types.ObjectId(typeId),
     description: { $exists: true, $ne: '' }
   };
