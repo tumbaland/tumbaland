@@ -22,16 +22,21 @@ const StockGrowthChart: React.FC<StockGrowthChartProps> = ({ data, goal, mcBands
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
+  // ResizeObserver (not a one-time mount measurement + window resize listener)
+  // so this recovers correctly if the chart first mounts inside a hidden tab
+  // panel — offsetWidth reads 0 while display:none, and a plain resize
+  // listener never fires just from the tab becoming visible later, leaving
+  // the chart stuck with a bogus (even negative) width forever. A floor of
+  // 200 keeps a still-hidden or mid-layout container from collapsing the
+  // viewBox to zero/negative in the meantime.
   React.useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        setContainerWidth(containerRef.current.offsetWidth - 48); // Account for padding
-      }
-    };
-
+    const el = containerRef.current;
+    if (!el) return;
+    const updateWidth = () => setContainerWidth(Math.max(200, el.offsetWidth - 48));
+    const ro = new ResizeObserver(updateWidth);
+    ro.observe(el);
     updateWidth();
-    window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
+    return () => ro.disconnect();
   }, []);
 
   const formatCurrency = (amount: number) => {
