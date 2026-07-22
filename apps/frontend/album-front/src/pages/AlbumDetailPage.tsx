@@ -7,7 +7,8 @@ import {
   Alert,
   CircularProgress,
   Button,
-  Typography
+  Typography,
+  SelectChangeEvent
 } from '@mui/material';
 import { Delete as DeleteIcon, Checklist as ChecklistIcon, Close as CloseIcon } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -198,8 +199,8 @@ const AlbumDetailPage: React.FC = () => {
     setCurrentPage(value);
   };
 
-  const handlePageSizeChange = (event: any) => {
-    const newPageSize = parseInt(event.target.value);
+  const handlePageSizeChange = (event: SelectChangeEvent<number>) => {
+    const newPageSize = typeof event.target.value === 'number' ? event.target.value : parseInt(event.target.value);
     setPageSize(newPageSize);
     setCurrentPage(1); // Reset to first page when changing page size
   };

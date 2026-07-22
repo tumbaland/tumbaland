@@ -13,9 +13,10 @@ import {
 import { Close as CloseIcon, CheckCircle as CheckCircleIcon, Warning as WarningIcon } from '@mui/icons-material';
 import { ObjectDetectionResult, HealthStatus, objectDetectionService } from '../services/objectDetectionService';
 import { albumService } from '../services/albumService';
+import { Photo } from '../types';
 
 interface ObjectDetectionViewNewProps {
-  photo: any;
+  photo: Photo;
   formatDate: (dateString: string) => string;
   onAnalysisComplete?: () => void;
 }
@@ -44,12 +45,13 @@ const ObjectDetectionView: React.FC<ObjectDetectionViewNewProps> = ({ photo, for
   useEffect(() => {
     checkHealth();
     // If previous analysis exists, fetch its details automatically
-    if (photo?.aiAnalysis?.objectDetection?.jobId) {
+    const jobId = photo?.aiAnalysis?.objectDetection?.jobId;
+    if (jobId) {
       (async () => {
         setLoadingDetails('objectDetection');
         setAnalysisError(null);
         try {
-          const jobResult = await objectDetectionService.getObjectDetectionResult(photo.aiAnalysis.objectDetection.jobId);
+          const jobResult = await objectDetectionService.getObjectDetectionResult(jobId);
           setDetailedResults(jobResult as ObjectDetectionResult);
         } catch (err) {
           setAnalysisError('Unable to load detailed analysis results. The results may no longer be available.');
@@ -191,8 +193,8 @@ const ObjectDetectionView: React.FC<ObjectDetectionViewNewProps> = ({ photo, for
               Analyzed: {formatDate(photo.aiAnalysis.objectDetection.analyzedAt)}
             </Typography>
             <Typography variant="body2">
-              Detected {photo.aiAnalysis.objectDetection.totalObjects} objects
-              (Model: {photo.aiAnalysis.objectDetection.modelName}, Processing time: {photo.aiAnalysis.objectDetection.processingTime.toFixed(2)}s)
+              Detected {photo.aiAnalysis.objectDetection.totalDetections} objects
+              (Processing time: {photo.aiAnalysis.objectDetection.processingTime.toFixed(2)}s)
             </Typography>
             {!detailedResults && (
               <Button

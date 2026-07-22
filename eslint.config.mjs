@@ -81,19 +81,12 @@ export default tseslint.config(
     },
   },
 
-  // relationship-front: no `any` in source; still allowed in test files.
+  // Frontend apps: no `any` in source; still allowed in test files. (Backend
+  // keeps the project-wide `warn` above — it deliberately uses `any` at
+  // integration boundaries like express req/res and mongoose docs.)
   {
-    files: ['apps/frontend/relationship-front/**/*.{ts,tsx}'],
-    ignores: ['apps/frontend/relationship-front/**/*.test.{ts,tsx}'],
-    rules: {
-      '@typescript-eslint/no-explicit-any': 'error',
-    },
-  },
-
-  // finance-front: no `any` in source; still allowed in test files.
-  {
-    files: ['apps/frontend/finance-front/**/*.{ts,tsx}'],
-    ignores: ['apps/frontend/finance-front/**/*.test.{ts,tsx}'],
+    files: ['apps/frontend/**/*.{ts,tsx}'],
+    ignores: ['apps/frontend/**/*.test.{ts,tsx}'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
     },

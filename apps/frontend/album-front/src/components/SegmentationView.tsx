@@ -13,9 +13,10 @@ import {
 import { Close as CloseIcon, CheckCircle as CheckCircleIcon, Warning as WarningIcon } from '@mui/icons-material';
 import { SegmentationResult, HealthStatus, segmentationService } from '../services/segmentationService';
 import { albumService } from '../services/albumService';
+import { Photo } from '../types';
 
 interface SegmentationViewNewProps {
-  photo: any;
+  photo: Photo;
   formatDate: (dateString: string) => string;
   onAnalysisComplete?: () => void;
 }
@@ -44,13 +45,14 @@ const SegmentationView: React.FC<SegmentationViewNewProps> = ({ photo, formatDat
   useEffect(() => {
     checkHealth();
     // Always fetch latest segmentation job details when tab is opened
-    if (photo?.aiAnalysis?.segmentation?.jobId) {
+    const jobId = photo?.aiAnalysis?.segmentation?.jobId;
+    if (jobId) {
       (async () => {
         setLoadingDetails('segmentation');
         setAnalysisError(null);
         try {
           // Always fetch latest job details from backend
-          const jobResult = await segmentationService.getSegmentationResult(photo.aiAnalysis.segmentation.jobId);
+          const jobResult = await segmentationService.getSegmentationResult(jobId);
           setDetailedResults(jobResult as SegmentationResult);
         } catch (err) {
           setAnalysisError('Unable to load detailed analysis results. The results may no longer be available.');

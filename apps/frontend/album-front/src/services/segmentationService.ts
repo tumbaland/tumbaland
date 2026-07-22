@@ -244,7 +244,7 @@ export const segmentationService = {
     }
   },
 
-  async getSegmentationHealthDetails(): Promise<any> {
+  async getSegmentationHealthDetails(): Promise<unknown> {
     try {
       const config = getConfig();
       const apiUrl = config.SEGMENTATION_API_URL;
@@ -360,8 +360,8 @@ export const segmentationService = {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      const data = await response.json();
-      return data.available_models?.map((model: any) => model.name) || [];
+      const data: { available_models?: { name: string }[] } = await response.json();
+      return data.available_models?.map((model) => model.name) || [];
     } catch (error) {
       logger.error('Error getting available segmentation models', error);
       throw new AIServiceError(

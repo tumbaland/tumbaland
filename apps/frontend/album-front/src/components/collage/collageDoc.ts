@@ -65,7 +65,7 @@ const toNumber = (value: unknown, fallback: number): number => {
 };
 
 export const normalizeCollageConfig = (config?: CollageConfig | null): CollageDoc => {
-  const cfg: any = config ?? {};
+  const cfg: Partial<CollageConfig> = config ?? {};
 
   const canvas = {
     width: toNumber(cfg.viewport?.width, DEFAULT_CANVAS.width),
@@ -73,7 +73,7 @@ export const normalizeCollageConfig = (config?: CollageConfig | null): CollageDo
   };
 
   const photos: CollagePhotoItem[] = Array.isArray(cfg.photos)
-    ? cfg.photos.map((p: any): CollagePhotoItem => {
+    ? cfg.photos.map((p): CollagePhotoItem => {
         // v1 kept the photo id in `photoId`, some very old configs only in `filename`
         const photoId = p.photoId || p.filename || '';
         // v1 stored transparency, not frames: transparent === no frame
@@ -95,7 +95,7 @@ export const normalizeCollageConfig = (config?: CollageConfig | null): CollageDo
     : [];
 
   const texts: CollageTextItem[] = Array.isArray(cfg.texts)
-    ? cfg.texts.map((t: any): CollageTextItem => ({
+    ? cfg.texts.map((t): CollageTextItem => ({
         id: typeof t.id === 'string' && t.id ? t.id : newItemId(),
         text: typeof t.text === 'string' ? t.text : '',
         x: toNumber(t.x, 100),
@@ -122,8 +122,8 @@ export const serializeCollageDoc = (doc: CollageDoc, existingConfig?: CollageCon
   return {
     ...(existingConfig ?? {}),
     version: '2.0',
-    date: (existingConfig as any)?.date ?? new Date().toISOString(),
-    theme: (existingConfig as any)?.theme ?? 'default',
+    date: existingConfig?.date ?? new Date().toISOString(),
+    theme: existingConfig?.theme ?? 'default',
     viewport: { width: doc.canvas.width, height: doc.canvas.height },
     backgroundColor: doc.background,
     borderColor: doc.frameColor,

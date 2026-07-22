@@ -10,7 +10,8 @@ import {
   MenuItem,
   InputLabel,
   useMediaQuery,
-  useTheme
+  useTheme,
+  SelectChangeEvent
 } from '@mui/material';
 import { NavigateBefore as NavigateBeforeIcon, NavigateNext as NavigateNextIcon } from '@mui/icons-material';
 
@@ -22,7 +23,7 @@ interface PhotoPaginationControlsProps {
   currentPage: number;
   pageSize: number;
   onPageChange: (event: React.ChangeEvent<unknown>, value: number) => void;
-  onPageSizeChange: (event: any) => void;
+  onPageSizeChange: (event: SelectChangeEvent<number>) => void;
   position?: 'top' | 'bottom';
 }
 
