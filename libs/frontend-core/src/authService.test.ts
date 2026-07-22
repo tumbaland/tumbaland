@@ -1,4 +1,4 @@
-import { createAuthService } from './authService';
+import { createAuthService, createAppAuthService } from './authService';
 
 function mockFetchOnce(body: unknown, init: { ok?: boolean; status?: number } = {}) {
   const { ok = true, status = 200 } = init;
@@ -195,5 +195,49 @@ describe('createAuthService', () => {
       expect(consoleErrorSpy).toHaveBeenCalledWith('Profile fetch error:', 403, 'Forbidden');
       consoleErrorSpy.mockRestore();
     });
+  });
+});
+
+describe('createAppAuthService', () => {
+  beforeEach(() => {
+    global.fetch = vi.fn();
+  });
+
+  it('maps AUTH_SERVICE_URL into the verify request', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true, authenticated: true, user: null })
+    });
+    const authService = createAppAuthService(() => ({
+      AUTH_SERVICE_URL: 'https://auth.example',
+      AUTH_FRONT_URL: 'https://login.example'
+    }));
+
+    const authenticated = await authService.isAuthenticated();
+
+    expect(authenticated).toBe(true);
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://auth.example/auth/verify',
+      expect.objectContaining({ credentials: 'include' })
+    );
+  });
+
+  it('maps AUTH_FRONT_URL into the login redirect', () => {
+    const authService = createAppAuthService(() => ({
+      AUTH_SERVICE_URL: 'https://auth.example',
+      AUTH_FRONT_URL: 'https://login.example'
+    }));
+    const originalLocation = window.location;
+    // jsdom throws "Not implemented: navigation" on a real href assignment —
+    // replace the whole object with a plain one (as the tests above do).
+    Object.defineProperty(window, 'location', { writable: true, value: { href: '' } });
+
+    authService.redirectToLogin('https://app.example/page');
+
+    expect(window.location.href).toBe(
+      'https://login.example?redirect_uri=https%3A%2F%2Fapp.example%2Fpage'
+    );
+    Object.defineProperty(window, 'location', { writable: true, value: originalLocation });
   });
 });
