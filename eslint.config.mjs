@@ -24,7 +24,7 @@ export default tseslint.config(
 
   // Backend services + shared core (Node)
   {
-    files: ['apps/backend/**/*.ts', 'libs/core/**/*.ts'],
+    files: ['apps/backend/**/*.ts', 'libs/backend-core/**/*.ts'],
     languageOptions: {
       globals: { ...globals.node },
     },
