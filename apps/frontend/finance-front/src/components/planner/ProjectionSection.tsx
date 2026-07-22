@@ -233,6 +233,7 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
             onChange={e => setContribution(e.target.value)}
             fullWidth
             slotProps={{ htmlInput: { min: 0, step: 50 } }}
+            helperText=" "
           />
           <TextField
             label="Investment Period (Years)"
@@ -242,6 +243,7 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
             onChange={e => setYears(e.target.value)}
             fullWidth
             slotProps={{ htmlInput: { min: 1, max: MAX_YEARS } }}
+            helperText=" "
           />
           <TextField
             label="Target Goal (EUR)"
@@ -255,13 +257,14 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
           />
         </Box>
 
-        {/* Return/volatility assumptions — the basis picker and its explanatory
-            caption each get their own row so a long sentence can never widen
-            (and can't be forced to widen) the row it shares with the Select. */}
+        {/* Return/volatility assumptions — aligned to the same grid as the
+            primary inputs above so the two rows read as one consistent
+            block. The caption gets its own full-width row below so a long
+            sentence can never widen (or be forced to widen) the grid. */}
         <Box sx={{ mt: 1.5 }}>
-          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 1.5 }}>
             {sim && (
-              <FormControl sx={{ minWidth: 200 }} size="small">
+              <FormControl fullWidth size="small">
                 <InputLabel>Projection Basis</InputLabel>
                 <Select
                   label="Projection Basis"
@@ -281,7 +284,7 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
             )}
             {!(basisPoint && sim) && (
               <>
-                <FormControl sx={{ minWidth: 150 }} size="small">
+                <FormControl fullWidth size="small">
                   <InputLabel>Scenario Preset</InputLabel>
                   <Select
                     label="Scenario Preset"
@@ -303,7 +306,7 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
                     setPreset('custom');
                     setGrowth(e.target.value);
                   }}
-                  sx={{ width: 130 }}
+                  fullWidth
                   slotProps={{ htmlInput: { min: 0, max: 50, step: 0.1 } }}
                 />
                 <TextField
@@ -315,7 +318,7 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
                     setPreset('custom');
                     setVolatility(e.target.value);
                   }}
-                  sx={{ width: 130 }}
+                  fullWidth
                   slotProps={{ htmlInput: { min: 0, max: 80, step: 0.5 } }}
                 />
               </>
@@ -345,6 +348,7 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
               onChange={e => setInflation(e.target.value)}
               sx={{ width: 130 }}
               slotProps={{ htmlInput: { min: 0, max: 20, step: 0.1 } }}
+              helperText=" "
             />
             <TextField
               label="Annual Fee (%)"
@@ -359,15 +363,24 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
           </AccordionDetails>
         </Accordion>
 
-        {/* Summary */}
+        {/* Summary — CSS Grid with minmax(0, 1fr) tracks so a wide value (e.g.
+            the p10-p90 range) can never force the row wider than the
+            viewport the way flex-wrap + flex-basis could. */}
         {finalRow && (
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mt: 2 }}>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(auto-fill, minmax(150px, 1fr))' },
+              gap: 2,
+              mt: 2
+            }}
+          >
             {summaryItems.map(item => (
-              <Paper key={item.label} elevation={0} sx={{ flex: '1 1 150px', p: 1.5, bgcolor: 'action.hover', borderRadius: 2 }}>
+              <Paper key={item.label} elevation={0} sx={{ minWidth: 0, p: 1.5, bgcolor: 'action.hover', borderRadius: 2 }}>
                 <Typography variant="caption" sx={{
                   color: "text.secondary"
                 }}>{item.label}</Typography>
-                <Typography variant="body2" sx={{ fontWeight: 700, color: item.color }}>{item.value}</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 700, color: item.color, overflowWrap: 'break-word' }}>{item.value}</Typography>
               </Paper>
             ))}
           </Box>
@@ -375,7 +388,7 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
 
         {/* Chart */}
         {rows.length > 0 && (
-          <Box sx={{ mt: 3 }}>
+          <Box sx={{ mt: 3, minWidth: 0 }}>
             <StockGrowthChart data={rows} goal={goalValue} mcBands={bands || undefined} />
             <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
               The blue line is the expected (average) compound path; the shaded band spans the 10th–90th percentile of{' '}
