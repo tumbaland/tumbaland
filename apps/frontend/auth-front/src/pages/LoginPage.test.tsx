@@ -1,11 +1,11 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import LoginPage from './LoginPage';
-import { useConfig } from '../config/useConfig';
+import { useConfig } from '../config/ConfigProvider';
 import { initializeGoogleSignIn } from '../authFlow';
 import { authApi } from '../services/authApi';
 
-vi.mock('../config/useConfig', () => ({ useConfig: vi.fn() }));
+vi.mock('../config/ConfigProvider', () => ({ useConfig: vi.fn() }));
 vi.mock('../authFlow', () => ({ initializeGoogleSignIn: vi.fn() }));
 vi.mock('../services/authApi', () => ({ authApi: { get: vi.fn(), post: vi.fn() } }));
 

@@ -1,4 +1,4 @@
-import { createContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { Loader } from '../components/Loader';
 import { ErrorPage, ErrorPageProps } from '../components/ErrorPage';
@@ -42,7 +42,7 @@ export function createConfigProvider<TConfig extends { PUBLIC_API_URL?: string }
 ) {
   let globalConfig: TConfig | null = null;
 
-  const ConfigContext = createContext<TConfig>({} as TConfig);
+  const ConfigContext = createContext<TConfig | null>(null);
 
   function getGlobalConfig(): TConfig {
     if (!globalConfig) {
@@ -120,5 +120,13 @@ export function createConfigProvider<TConfig extends { PUBLIC_API_URL?: string }
     );
   }
 
-  return { ConfigContext, ConfigProvider, getGlobalConfig };
+  function useConfig(): TConfig {
+    const config = useContext(ConfigContext);
+    if (!config) {
+      throw new Error('useConfig must be used within a ConfigProvider');
+    }
+    return config;
+  }
+
+  return { ConfigContext, ConfigProvider, getGlobalConfig, useConfig };
 }

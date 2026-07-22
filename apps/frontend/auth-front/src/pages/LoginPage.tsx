@@ -3,7 +3,7 @@ import { Box, Card, CardContent, Alert } from '@mui/material';
 import { initializeGoogleSignIn } from '../authFlow';
 import LoggedInUser from '../components/LoggedInUser';
 import LoginPrompt from '../components/LoginPrompt';
-import { useConfig } from '../config/useConfig';
+import { useConfig } from '../config/ConfigProvider';
 import { logger } from '@tumbaland/frontend-core';
 import { authApi } from '../services/authApi';
 

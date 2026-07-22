@@ -27,3 +27,4 @@ const factory = createConfigProvider<AppConfig>({
 export const ConfigContext = factory.ConfigContext;
 export const ConfigProvider = factory.ConfigProvider;
 export const getGlobalConfig = factory.getGlobalConfig;
+export const useConfig = factory.useConfig;
