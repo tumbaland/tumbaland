@@ -115,7 +115,62 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
 
   return (
     <>
-      {/* Two-column layout: chart left, controls + table right */}
+      {/* Header + controls */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5, gap: 1, flexWrap: 'wrap' }}>
+        <Box>
+          <Typography variant="h6">Efficient Frontier</Typography>
+          <Typography variant="caption" sx={{
+            color: "text.secondary"
+          }}>
+            {simulations.toLocaleString()} portfolios · {sim.dataPoints} days
+            {sim.dataPoints < LOW_DATA_THRESHOLD_DAYS && (
+              <Box component="span" sx={{ color: 'warning.main', fontWeight: 600 }}>
+                {' '}· based on limited history, treat as a rough guide
+              </Box>
+            )}
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <TextField
+            label="Risk-free (%/yr)"
+            size="small"
+            value={riskFreeRate}
+            onChange={e => onRiskFreeRateChange(e.target.value)}
+            slotProps={{ htmlInput: { inputMode: 'decimal', style: { width: 48 } } }}
+            sx={{ width: 140 }}
+          />
+          <Button variant="outlined" size="small" startIcon={<RefreshIcon />} onClick={onRerun}>
+            Re-run
+          </Button>
+        </Box>
+      </Box>
+
+      {/* Target risk slider — full width, above the chart */}
+      <Box sx={{ mb: 2.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.25 }}>
+          <Typography variant="body2" sx={{ whiteSpace: 'nowrap', minWidth: 130 }}>
+            Target risk: <b>{(targetVol ?? sim.maxSharpe.vol).toFixed(1)}%</b>
+          </Typography>
+          <Slider
+            min={parseFloat(sim.minVol.vol.toFixed(1))}
+            max={parseFloat((Math.max(sim.maxSharpe.vol * 1.8, (sim.current?.vol ?? 0) * 1.15)).toFixed(1))}
+            step={0.1}
+            value={targetVol ?? sim.maxSharpe.vol}
+            onChange={(_, v) => onTargetVolChange(v as number)}
+            sx={{ color: '#7c3aed', flex: 1 }}
+          />
+        </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 0.5 }}>
+          <Typography variant="caption" sx={{
+            color: "text.secondary"
+          }}>● {sim.minVol.vol.toFixed(1)}% Min Risk</Typography>
+          <Typography variant="caption" sx={{
+            color: "text.secondary"
+          }}>★ {sim.maxSharpe.vol.toFixed(1)}% Max Sharpe</Typography>
+        </Box>
+      </Box>
+
+      {/* Two-column layout: chart left, analysis + buy plan right */}
       <Box sx={{ display: 'flex', gap: 3, alignItems: 'flex-start', mb: 3, flexDirection: { xs: 'column', md: 'row' } }}>
 
         {/* ── Left: chart ── */}
@@ -123,63 +178,8 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
           <FrontierChart sim={sim} targetPortfolio={targetPortfolio} />
         </Box>
 
-        {/* ── Right: controls + slider + buy plan ── */}
+        {/* ── Right: analysis + buy plan ── */}
         <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
-
-          {/* Header + controls */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5, gap: 1, flexWrap: 'wrap' }}>
-            <Box>
-              <Typography variant="h6">Efficient Frontier</Typography>
-              <Typography variant="caption" sx={{
-                color: "text.secondary"
-              }}>
-                {simulations.toLocaleString()} portfolios · {sim.dataPoints} days
-                {sim.dataPoints < LOW_DATA_THRESHOLD_DAYS && (
-                  <Box component="span" sx={{ color: 'warning.main', fontWeight: 600 }}>
-                    {' '}· based on limited history, treat as a rough guide
-                  </Box>
-                )}
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <TextField
-                label="Risk-free (%/yr)"
-                size="small"
-                value={riskFreeRate}
-                onChange={e => onRiskFreeRateChange(e.target.value)}
-                slotProps={{ htmlInput: { inputMode: 'decimal', style: { width: 48 } } }}
-                sx={{ width: 140 }}
-              />
-              <Button variant="outlined" size="small" startIcon={<RefreshIcon />} onClick={onRerun}>
-                Re-run
-              </Button>
-            </Box>
-          </Box>
-
-          {/* Target risk slider */}
-          <Box sx={{ mt: 2, mb: 1 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.25 }}>
-              <Typography variant="body2" sx={{ whiteSpace: 'nowrap', minWidth: 130 }}>
-                Target risk: <b>{(targetVol ?? sim.maxSharpe.vol).toFixed(1)}%</b>
-              </Typography>
-              <Slider
-                min={parseFloat(sim.minVol.vol.toFixed(1))}
-                max={parseFloat((Math.max(sim.maxSharpe.vol * 1.8, (sim.current?.vol ?? 0) * 1.15)).toFixed(1))}
-                step={0.1}
-                value={targetVol ?? sim.maxSharpe.vol}
-                onChange={(_, v) => onTargetVolChange(v as number)}
-                sx={{ color: '#7c3aed', flex: 1 }}
-              />
-            </Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 0.5 }}>
-              <Typography variant="caption" sx={{
-                color: "text.secondary"
-              }}>● {sim.minVol.vol.toFixed(1)}% Min Risk</Typography>
-              <Typography variant="caption" sx={{
-                color: "text.secondary"
-              }}>★ {sim.maxSharpe.vol.toFixed(1)}% Max Sharpe</Typography>
-            </Box>
-          </Box>
 
           {/* Analysis chips vs target */}
           {analysis && (
