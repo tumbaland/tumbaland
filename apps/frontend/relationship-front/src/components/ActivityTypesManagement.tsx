@@ -15,6 +15,7 @@ import {
   Paper,
   Chip,
   useTheme,
+  useMediaQuery,
   alpha
 } from '@mui/material';
 import {
@@ -39,6 +40,7 @@ interface ActivityTypesManagementProps {
 
 const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ groupId }) => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [activityTypes, setActivityTypes] = useState<ActivityType[]>([]);
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -148,88 +150,139 @@ const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ group
 
   return (
     <Box>
-      <TableContainer 
-        component={Paper} 
-        elevation={0} 
-        sx={{ 
-          border: '1px solid',
-          borderColor: 'divider',
-          borderRadius: 2,
-          overflowX: 'auto',
-          width: '100%'
-        }}
-      >
-        <Table sx={{ width: '100%' }} aria-label="activity types table">
-          <TableHead sx={{ bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Name</TableCell>
-              <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Type</TableCell>
-              <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Color</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {activityTypes.map((type) => (
-              <TableRow 
-                key={type._id}
-                sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                hover
-              >
-                <TableCell component="th" scope="row">
-                  <Typography variant="subtitle2" sx={{
-                    fontWeight: 600
-                  }}>
-                    {type.name}
-                  </Typography>
-                </TableCell>
-                <TableCell>
+      {isMobile ? (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          {activityTypes.map((type) => (
+            <Paper
+              key={type._id}
+              elevation={0}
+              sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                  {type.name}
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
+                  <Tooltip title="Edit">
+                    <IconButton onClick={() => handleEdit(type)} size="small" color="primary">
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Delete">
+                    <IconButton onClick={() => handleDelete(type._id)} size="small" color="error">
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
+                <Chip
+                  label={type.valueType === 'boolean' ? 'Yes / No' : type.valueType === 'number' ? 'Number' : 'Text'}
+                  size="small"
+                  variant="outlined"
+                  sx={{ fontSize: '0.72rem' }}
+                />
+                {type.color && (
                   <Chip
-                    label={type.valueType === 'boolean' ? 'Yes / No' : type.valueType === 'number' ? 'Number' : 'Text'}
+                    icon={<CircleIcon style={{ fill: type.color, fontSize: 12 }} />}
+                    label={type.color}
                     size="small"
                     variant="outlined"
-                    sx={{ fontSize: '0.72rem' }}
+                    sx={{
+                      borderColor: alpha(type.color, 0.5),
+                      bgcolor: alpha(type.color, 0.05),
+                      fontFamily: 'monospace'
+                    }}
                   />
-                </TableCell>
-                <TableCell>
-                  {type.color ? (
+                )}
+              </Box>
+            </Paper>
+          ))}
+        </Box>
+      ) : (
+        <TableContainer
+          component={Paper}
+          elevation={0}
+          sx={{
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 2,
+            overflowX: 'auto',
+            width: '100%'
+          }}
+        >
+          <Table sx={{ width: '100%' }} aria-label="activity types table">
+            <TableHead sx={{ bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Name</TableCell>
+                <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Type</TableCell>
+                <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Color</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {activityTypes.map((type) => (
+                <TableRow
+                  key={type._id}
+                  sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                  hover
+                >
+                  <TableCell component="th" scope="row">
+                    <Typography variant="subtitle2" sx={{
+                      fontWeight: 600
+                    }}>
+                      {type.name}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
                     <Chip
-                      icon={<CircleIcon style={{ fill: type.color, fontSize: 12 }} />}
-                      label={type.color}
+                      label={type.valueType === 'boolean' ? 'Yes / No' : type.valueType === 'number' ? 'Number' : 'Text'}
                       size="small"
                       variant="outlined"
-                      sx={{ 
-                        borderColor: alpha(type.color, 0.5),
-                        bgcolor: alpha(type.color, 0.05),
-                        fontFamily: 'monospace'
-                      }}
+                      sx={{ fontSize: '0.72rem' }}
                     />
-                  ) : (
-                    '-'
-                  )}
-                </TableCell>
-                <TableCell align="right">
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                    <Tooltip title="Edit">
-                      <IconButton onClick={() => handleEdit(type)} size="small" color="primary">
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete">
-                      <IconButton
-                        onClick={() => handleDelete(type._id)}
+                  </TableCell>
+                  <TableCell>
+                    {type.color ? (
+                      <Chip
+                        icon={<CircleIcon style={{ fill: type.color, fontSize: 12 }} />}
+                        label={type.color}
                         size="small"
-                        color="error"
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                        variant="outlined"
+                        sx={{
+                          borderColor: alpha(type.color, 0.5),
+                          bgcolor: alpha(type.color, 0.05),
+                          fontFamily: 'monospace'
+                        }}
+                      />
+                    ) : (
+                      '-'
+                    )}
+                  </TableCell>
+                  <TableCell align="right">
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                      <Tooltip title="Edit">
+                        <IconButton onClick={() => handleEdit(type)} size="small" color="primary">
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete">
+                        <IconButton
+                          onClick={() => handleDelete(type._id)}
+                          size="small"
+                          color="error"
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
       <ActivityTypeDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
