@@ -289,7 +289,7 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
               // For activity type specific lines, we need to access the cumulative data for that type
               return {
                 data: processedData.map(item => {
-                  const typeData = item.cumulativeByType?.find((type: any) => type.activityTypeSlug === lineSlug);
+                  const typeData = item.cumulativeByType?.find((type) => type.activityTypeSlug === lineSlug);
                   return typeData?.cumulativeActivities || 0;
                 }),
                 label: activityType?.name || lineSlug,

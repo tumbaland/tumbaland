@@ -32,7 +32,7 @@ interface ActivityTypesBackendData {
 
 // Get all activity types
 export const getActivityTypes = async (filters?: GetActivityTypesFilters): Promise<ActivityTypesResponse> => {
-  const params: Record<string, any> = {};
+  const params: Record<string, string | number | boolean> = {};
 
   if (filters?.isActive !== undefined) params.isActive = filters.isActive;
   if (filters?.limit) params.limit = filters.limit;

@@ -137,7 +137,7 @@ export interface CumulativeTimelineResponse {
  */
 export const getStatistics = async (timeframe: string = 'all', groupId?: string): Promise<RelationshipStatistics> => {
   try {
-    const params: Record<string, any> = { timeframe };
+    const params: Record<string, string | number> = { timeframe };
     if (groupId) {
       params.groupId = groupId;
     }
@@ -159,7 +159,7 @@ export const getStatistics = async (timeframe: string = 'all', groupId?: string)
  */
 export const getMonthlyHours = async (year?: number, groupId?: string): Promise<MonthlyHoursData[]> => {
   try {
-    const params: Record<string, any> = {};
+    const params: Record<string, string | number> = {};
     if (year) params.year = year;
     if (groupId) params.groupId = groupId;
 
@@ -180,7 +180,7 @@ export const getMonthlyHours = async (year?: number, groupId?: string): Promise<
  */
 export const getMonthlyStatistics = async (year?: number, groupId?: string): Promise<MonthlyStatisticsData[]> => {
   try {
-    const params: Record<string, any> = {};
+    const params: Record<string, string | number> = {};
     if (year) params.year = year;
     if (groupId) params.groupId = groupId;
 
@@ -201,7 +201,7 @@ export const getMonthlyStatistics = async (year?: number, groupId?: string): Pro
  */
 export const getMonthlyActivityBreakdown = async (year?: number, groupId?: string): Promise<MonthlyActivityData[]> => {
   try {
-    const params: Record<string, any> = {};
+    const params: Record<string, string | number> = {};
     if (year) params.year = year;
     if (groupId) params.groupId = groupId;
 
@@ -222,7 +222,7 @@ export const getMonthlyActivityBreakdown = async (year?: number, groupId?: strin
  */
 export const getWeeklyHeatmapData = async (year?: number, groupId?: string): Promise<WeeklyHeatmapData[]> => {
   try {
-    const params: Record<string, any> = {};
+    const params: Record<string, string | number> = {};
     if (year) params.year = year;
     if (groupId) params.groupId = groupId;
 
@@ -243,7 +243,7 @@ export const getWeeklyHeatmapData = async (year?: number, groupId?: string): Pro
  */
 export const getCumulativeTimelineData = async (year?: number, groupId?: string): Promise<CumulativeTimelineData[]> => {
   try {
-    const params: Record<string, any> = {};
+    const params: Record<string, string | number> = {};
     if (year) params.year = year;
     if (groupId) params.groupId = groupId;
 

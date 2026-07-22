@@ -84,7 +84,10 @@ const DayEditorDialog: React.FC<DayEditorDialogProps> = ({
         const day = daysResponse.days.find((d) => d.date === date);
         const next: Drafts = {};
         for (const entry of day?.entries ?? []) {
-          const typeId = typeof entry.typeId === 'string' ? entry.typeId : (entry.typeId as any)?._id;
+          // The API type says typeId is always a string, but a populated
+          // reference from the backend can still come through as an object.
+          const rawTypeId = entry.typeId as unknown as string | { _id: string };
+          const typeId = typeof rawTypeId === 'string' ? rawTypeId : rawTypeId?._id;
           if (!typeId) continue;
           (next[typeId] ??= []).push({
             _id: entry._id,
