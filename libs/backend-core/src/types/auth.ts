@@ -4,6 +4,7 @@ export interface UserPayload {
   name: string;
   picture?: string;
   groups?: string[];
+  roles?: string[];
 }
 
 /**

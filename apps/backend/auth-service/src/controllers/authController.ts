@@ -47,10 +47,11 @@ export const validateToken = async (req: Request, res: Response, _next: NextFunc
   // Fetch user groups and include in JWT payload
   const userGroups = await getUserGroups(userPayload.email);
 
-  // Include groups in the JWT payload
+  // Include groups and roles in the JWT payload
   const jwtPayload: UserPayload = {
     ...userPayload,
-    groups: userGroups
+    groups: userGroups,
+    roles: dbUser.roles
   };
 
   const jwtToken = generateJWT(jwtPayload);
@@ -137,22 +138,31 @@ const getUserGroups = async (email: string): Promise<string[]> => {
   return userGroups;
 };
 
+const getUserRoles = async (email: string): Promise<string[]> => {
+  const dbUser = await User.findOne({ email: email.toLowerCase() });
+  return dbUser?.roles || [];
+};
+
 export const verifyAuth = async (req: Request, res: Response): Promise<void> => {
   const currentUser = req.user as UserPayload;
   if (!currentUser?.email) {
     throw new UnauthorizedError('No authenticated user');
   }
 
-  // Fetch fresh user groups
-  const userGroups = await getUserGroups(currentUser.email);
+  // Fetch fresh user groups and roles
+  const [userGroups, userRoles] = await Promise.all([
+    getUserGroups(currentUser.email),
+    getUserRoles(currentUser.email)
+  ]);
 
-  // Generate new JWT with fresh groups
+  // Generate new JWT with fresh groups/roles
   const jwtPayload: UserPayload = {
     id: currentUser.id,
     email: currentUser.email,
     name: currentUser.name,
     picture: currentUser.picture,
     groups: userGroups,
+    roles: userRoles,
     tokenVersion: currentUser.tokenVersion || 1
   };
 
@@ -186,16 +196,20 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     throw new UnauthorizedError('No authenticated user');
   }
 
-  // Fetch fresh user groups
-  const userGroups = await getUserGroups(currentUser.email);
+  // Fetch fresh user groups and roles
+  const [userGroups, userRoles] = await Promise.all([
+    getUserGroups(currentUser.email),
+    getUserRoles(currentUser.email)
+  ]);
 
-  // Generate new JWT with updated groups
+  // Generate new JWT with updated groups/roles
   const jwtPayload: UserPayload = {
     id: currentUser.id,
     email: currentUser.email,
     name: currentUser.name,
     picture: currentUser.picture,
     groups: userGroups,
+    roles: userRoles,
     tokenVersion: currentUser.tokenVersion || 1
   };
 
