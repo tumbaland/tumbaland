@@ -6,12 +6,16 @@
  * resolution, parent-span-vs-context handling, the helper wrappers), using
  * the real (side-effect-free) @opentelemetry/api for trace/context/propagation.
  */
-const mockSpan = () => ({
-  setAttribute: jest.fn(),
-  addEvent: jest.fn(),
-  end: jest.fn(),
-  spanContext: jest.fn(() => ({ traceId: 't', spanId: 's', traceFlags: 1 }))
-});
+// A partial span: only the members these tests exercise are stubbed, cast to
+// the full Span type so it satisfies the now-typed tracing helpers. The jest
+// mocks remain reachable at runtime for the assertions below.
+const mockSpan = () =>
+  ({
+    setAttribute: jest.fn(),
+    addEvent: jest.fn(),
+    end: jest.fn(),
+    spanContext: jest.fn(() => ({ traceId: 't', spanId: 's', traceFlags: 1 }))
+  }) as unknown as Span;
 
 const mockTracer = { startSpan: jest.fn(() => mockSpan()) };
 const registerMock = jest.fn();
@@ -38,7 +42,7 @@ jest.mock('@opentelemetry/resources', () => ({
   resourceFromAttributes: resourceFromAttributesMock
 }));
 
-import { context } from '@opentelemetry/api';
+import { context, Span } from '@opentelemetry/api';
 import { ATTR_SERVICE_VERSION } from '@opentelemetry/semantic-conventions';
 
 async function loadTracing() {

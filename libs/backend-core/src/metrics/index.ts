@@ -1,4 +1,5 @@
 import promClient from 'prom-client';
+import { Request, Response, NextFunction } from 'express';
 
 // Create a Registry which registers the metrics
 const register = new promClient.Registry();
@@ -69,7 +70,7 @@ export const businessMetrics = {
 };
 
 // Metrics endpoint handler
-export const metricsHandler = async (req: any, res: any) => {
+export const metricsHandler = async (_req: Request, res: Response) => {
   try {
     res.set('Content-Type', register.contentType);
     const metrics = await register.metrics();
@@ -80,7 +81,7 @@ export const metricsHandler = async (req: any, res: any) => {
 };
 
 // Middleware to collect HTTP metrics
-export const metricsMiddleware = (req: any, res: any, next: any) => {
+export const metricsMiddleware = (req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
   const { method, url } = req;
 
