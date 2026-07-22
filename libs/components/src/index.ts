@@ -1,5 +1,6 @@
 export { Loader } from './components/Loader';
 export { ErrorPage } from './components/ErrorPage';
+export { AppErrorBoundary } from './components/AppErrorBoundary';
 export { UnauthorizedPage } from './components/UnauthorizedPage';
 export { LoginButton } from './components/LoginButton';
 export { NotificationsMenu } from './components/NotificationsMenu/NotificationsMenu';
@@ -18,6 +19,7 @@ export {
 // Re-export types for better TypeScript support and documentation
 export type { LoaderProps } from './components/Loader';
 export type { ErrorPageProps } from './components/ErrorPage';
+export type { AppErrorBoundaryProps } from './components/AppErrorBoundary';
 export type { UnauthorizedPageProps } from './components/UnauthorizedPage';
 export type { LoginButtonProps } from './components/LoginButton';
 export type { NotificationsMenuProps } from './components/NotificationsMenu/NotificationsMenu';
