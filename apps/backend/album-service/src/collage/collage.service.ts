@@ -1,10 +1,9 @@
 import { CollageInput } from './collage.types';
 import { CollageModel, ICollage } from './collage.model';
-import { canAccessResource } from '../utils/permissionUtils';
 import Album from '../models/Album';
 import { getSignedUrlsBatch } from '../services/fileServiceClient';
 import mongoose, { PipelineStage } from 'mongoose';
-import { ForbiddenError, logger, NotFoundError } from '@tumbaland/backend-core';
+import { canAccessResource, ForbiddenError, logger, NotFoundError } from '@tumbaland/backend-core';
 
 interface AggregatedPhoto {
   _id: unknown;

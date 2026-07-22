@@ -1,6 +1,5 @@
 import Snapshot, { ISnapshotEntry } from '../models/Snapshot';
-import { ForbiddenError, NotFoundError } from '@tumbaland/backend-core';
-import { canAccessResource } from '../utils/permissionUtils';
+import { canAccessResource, ForbiddenError, NotFoundError } from '@tumbaland/backend-core';
 
 /** Parse a YYYY-MM month key into a UTC first-of-month Date. */
 export function monthToDate(month: string): Date {
