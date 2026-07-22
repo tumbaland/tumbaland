@@ -81,12 +81,27 @@ export default tseslint.config(
     },
   },
 
-  // Frontend apps: no `any` in source; still allowed in test files. (Backend
-  // keeps the project-wide `warn` above — it deliberately uses `any` at
-  // integration boundaries like express req/res and mongoose docs.)
+  // Frontend apps: no `any` in source; still allowed in test files. (Other
+  // backend services keep the project-wide `warn` above — they still lean on
+  // `any` at integration boundaries like express req/res and mongoose docs.)
   {
     files: ['apps/frontend/**/*.{ts,tsx}'],
     ignores: ['apps/frontend/**/*.test.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
+    },
+  },
+
+  // Backend pilot: these three services have been cleared of `any` in source
+  // (still allowed in tests) to see how well the "no any" rule holds up
+  // against express/mongoose boundaries before rolling it out further.
+  {
+    files: [
+      'apps/backend/auth-service/**/*.ts',
+      'apps/backend/group-service/**/*.ts',
+      'apps/backend/finance-service/**/*.ts',
+    ],
+    ignores: ['apps/backend/**/*.test.ts'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
     },

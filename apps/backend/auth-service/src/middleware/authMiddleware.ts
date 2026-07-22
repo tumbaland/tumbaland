@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '@tumbaland/backend-core';
 import { verifyJWT } from '../services/jwtService';
-import { User } from '../models/User';
+import { User, IUser } from '../models/User';
 
 // req.user's ambient type comes from @tumbaland/backend-core's global Express.Request
 // augmentation (see libs/core/src/types/auth.ts). This service's decoded JWT
@@ -10,6 +10,16 @@ import { User } from '../models/User';
 // assigning it to req.user below is still valid; those extra fields just
 // aren't part of req.user's public (cross-service) type and are read off the
 // local `decoded`/`dbUser` variables instead.
+//
+// `dbUser` itself is a local-only Request field (per backend-core's comment),
+// so it gets its own local augmentation rather than living in the shared one.
+declare global {
+  namespace Express {
+    interface Request {
+      dbUser?: IUser;
+    }
+  }
+}
 
 export const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -36,7 +46,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     req.user = decoded;
 
     // attach db user (if needed elsewhere)
-    (req as any).dbUser = dbUser;
+    req.dbUser = dbUser;
     next();
   } catch (error) {
     logger.error('Token verification failed', { error: (error as Error)?.message });
@@ -68,7 +78,7 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
 
 export const requireRole = (role: string) => {
   return (req: Request, res: Response, next: NextFunction): void => {
-    const dbUser = (req as any).dbUser;
+    const dbUser = req.dbUser;
     if (!dbUser || !dbUser.roles || !dbUser.roles.includes(role)) {
       res.status(403).json({ success: false, message: 'Forbidden' });
       return;
@@ -79,7 +89,7 @@ export const requireRole = (role: string) => {
 
 // Enforce approval after basic authentication for protected areas; allow only specific endpoints before approval
 export const requireApproved = (req: Request, res: Response, next: NextFunction): void => {
-  const dbUser = (req as any).dbUser;
+  const dbUser = req.dbUser;
   if (!dbUser) {
     res.status(401).json({ success: false, message: 'Not authenticated' });
     return;
