@@ -26,6 +26,7 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { TableChart, TrendingUp } from '@mui/icons-material';
 import StockGrowthChart from '../StockGrowthChart';
+import { usePersistedState } from '../../hooks/usePersistedState';
 import { FrontierSim, SimPoint } from '../../utils/frontierSim';
 import {
   LONG_RUN_RETURN_PCT,
@@ -62,26 +63,30 @@ const formatCurrency = (amount: number) =>
 
 const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfolio, portfolioValue }) => {
   // Text inputs stay strings so the user can clear a field while typing;
-  // parsing happens once, when building the projection params.
+  // parsing happens once, when building the projection params. Persisted
+  // (except starting capital, which follows the real portfolio value) so a
+  // returning user's plan doesn't reset on every visit.
   const [startingCapital, setStartingCapital] = useState('1000');
-  const [contribution, setContribution] = useState('500');
-  const [years, setYears] = useState('30');
-  const [goal, setGoal] = useState('');
-  const [inflation, setInflation] = useState('2.5');
-  const [fee, setFee] = useState('0');
+  const [contribution, setContribution] = usePersistedState('finance-planner-contribution', '500');
+  const [years, setYears] = usePersistedState('finance-planner-years', '30');
+  const [goal, setGoal] = usePersistedState('finance-planner-goal', '');
+  const [inflation, setInflation] = usePersistedState('finance-planner-inflation', '2.5');
+  const [fee, setFee] = usePersistedState('finance-planner-fee', '0');
 
   // Collapsed by default — up to 50 rows is the single biggest contributor
   // to the page's scroll length, and most people just want the chart above.
   const [showYearlyTable, setShowYearlyTable] = useState(false);
 
-  const [source, setSource] = useState<PlanSource>('manual');
-  const sourceTouched = useRef(false);
+  const [source, setSource] = usePersistedState<PlanSource>('finance-planner-source', 'manual');
+  // A returning user's saved basis should stick rather than being immediately
+  // overwritten by the "follow the real portfolio" effect below.
+  const sourceTouched = useRef(localStorage.getItem('finance-planner-source') !== null);
   const capitalTouched = useRef(false);
 
   // Manual-mode assumptions (also the fallback when there is no price history)
-  const [preset, setPreset] = useState<ScenarioPreset | 'custom'>('base');
-  const [growth, setGrowth] = useState(String(SCENARIO_PRESETS.base.growth));
-  const [volatility, setVolatility] = useState(String(SCENARIO_PRESETS.base.volatility));
+  const [preset, setPreset] = usePersistedState<ScenarioPreset | 'custom'>('finance-planner-preset', 'base');
+  const [growth, setGrowth] = usePersistedState('finance-planner-growth', String(SCENARIO_PRESETS.base.growth));
+  const [volatility, setVolatility] = usePersistedState('finance-planner-volatility', String(SCENARIO_PRESETS.base.volatility));
 
   // Follow the real portfolio: default the projection to the frontier target
   // and the starting capital to the actual portfolio value, until the user
