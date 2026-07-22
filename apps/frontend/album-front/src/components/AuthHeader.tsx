@@ -4,7 +4,7 @@ import { logger } from '@tumbaland/frontend-core';
 import { authService } from '../services/authService';
 import { User } from '../types';
 import { navigationItems } from '../config/navigation';
-import { useConfig } from '../hooks/useConfig';
+import { useConfig } from '../config/ConfigProvider';
 
 const AuthHeader: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);

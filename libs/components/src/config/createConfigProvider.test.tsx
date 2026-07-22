@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, renderHook, screen, waitFor } from '@testing-library/react';
 import { createConfigProvider } from './createConfigProvider';
 
 const { initMonitoringMock, initWebVitalsMock } = vi.hoisted(() => ({
@@ -224,5 +224,38 @@ describe('createConfigProvider (production mode)', () => {
     );
 
     await waitFor(() => expect(screen.getByTestId('child')).toBeInTheDocument());
+  });
+});
+
+describe('createConfigProvider useConfig', () => {
+  const getDevConfig = () => ({ PUBLIC_API_URL: 'https://api.example', featureFlag: true }) satisfies TestConfig;
+
+  it('returns the config when called within a mounted ConfigProvider', async () => {
+    const { ConfigProvider, useConfig } = createConfigProvider<TestConfig>({
+      serviceName: 'test-service',
+      isDev: true,
+      mode: 'development',
+      getDevConfig
+    });
+
+    const { result } = renderHook(() => useConfig(), {
+      wrapper: ({ children }) => <ConfigProvider>{children}</ConfigProvider>
+    });
+
+    await waitFor(() => expect(result.current).toEqual(getDevConfig()));
+  });
+
+  it('throws when called outside a ConfigProvider', () => {
+    const { useConfig } = createConfigProvider<TestConfig>({
+      serviceName: 'test-service',
+      isDev: true,
+      mode: 'development',
+      getDevConfig
+    });
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect(() => renderHook(() => useConfig())).toThrow('useConfig must be used within a ConfigProvider');
+
+    errorSpy.mockRestore();
   });
 });

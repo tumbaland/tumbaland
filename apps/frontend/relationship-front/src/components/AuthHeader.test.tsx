@@ -21,7 +21,7 @@ vi.mock('../services/authService', () => ({
   authService: { checkAuth: vi.fn(), redirectToLogin: vi.fn(), logout: vi.fn() }
 }));
 
-vi.mock('../hooks/useConfig', () => ({
+vi.mock('../config/ConfigProvider', () => ({
   useConfig: () => ({ GROUP_API_URL: 'https://group.example', SHELL_FRONT_URL: 'https://shell.example' })
 }));
 

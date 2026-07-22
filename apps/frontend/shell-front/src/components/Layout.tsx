@@ -6,7 +6,7 @@ import { HeaderNav } from './HeaderNav';
 import { ProtectedRoute } from './ProtectedRoute';
 import Footer from './Footer';
 import { getAppByRoute } from '../config/apps';
-import { useConfig } from '../hooks/useConfig';
+import { useConfig } from '../config/ConfigProvider';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 

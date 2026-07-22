@@ -2,7 +2,7 @@ import React from 'react';
 import { AuthHeader as SharedAuthHeader, TenantSelector, useTenant } from '@tumbaland/components';
 import { authService } from '../services/authService';
 import { navigationItems } from '../config/navigation';
-import { useConfig } from '../hooks/useConfig';
+import { useConfig } from '../config/ConfigProvider';
 import { useCurrentUser, useLogout } from '../hooks/useAuth';
 
 const AuthHeader: React.FC = () => {
