@@ -10,6 +10,7 @@ import {
   Typography,
   Chip
 } from '@mui/material';
+import type { SxProps, Theme } from '@mui/material';
 import {
   PersonOutlined,
   Groups,
@@ -36,7 +37,7 @@ export interface TenantSelectorProps {
   /** Error state */
   error?: string | null;
   /** Custom styling */
-  sx?: any;
+  sx?: SxProps<Theme>;
 }
 
 const TenantSelector: React.FC<TenantSelectorProps> = ({
