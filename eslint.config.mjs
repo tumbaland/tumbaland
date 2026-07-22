@@ -79,5 +79,14 @@ export default tseslint.config(
       '@typescript-eslint/no-namespace': ['error', { allowDeclarations: true }],
       'preserve-caught-error': 'off',
     },
+  },
+
+  // relationship-front: no `any` in source; still allowed in test files.
+  {
+    files: ['apps/frontend/relationship-front/**/*.{ts,tsx}'],
+    ignores: ['apps/frontend/relationship-front/**/*.test.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
+    },
   }
 );

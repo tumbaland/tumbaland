@@ -10,7 +10,8 @@ import {
   MenuItem,
   InputLabel,
   Typography,
-  useTheme
+  useTheme,
+  SelectChangeEvent
 } from '@mui/material';
 import { AccessTime, Favorite, Timeline, Event } from '@mui/icons-material';
 import { useStatistics } from '../hooks/useStatistics';
@@ -41,7 +42,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ highlightTypeIds }) => {
     { value: 'year', label: 'This Year' },
     { value: 'all', label: 'All Time' }
   ];
-  const handleTimeframeChange = (event: any) => {
+  const handleTimeframeChange = (event: SelectChangeEvent<string>) => {
     setTimeframe(event.target.value);
   };
 
