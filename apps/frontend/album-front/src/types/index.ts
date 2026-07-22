@@ -56,13 +56,13 @@ export interface Photo {
   };
   aiAnalysis?: {
     objectDetection?: {
-      resultId: string;
+      jobId: string;
       analyzedAt: string;
       totalDetections: number;
       processingTime: number;
     };
     segmentation?: {
-      resultId: string;
+      jobId: string;
       analyzedAt: string;
       totalMasks: number;
       segmentationType: 'automatic' | 'prompted' | 'error';

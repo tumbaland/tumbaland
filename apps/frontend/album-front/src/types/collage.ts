@@ -40,7 +40,8 @@ export interface CollageConfig {
   theme: string;
   photos: CollageConfigPhoto[];
   texts?: CollageTextBox[];
-  textSections?: Array<any>;
+  /** unknown legacy shape; kept opaque so it survives a normalize/serialize round-trip */
+  textSections?: unknown[];
   title?: { text: string; subtitle?: string };
   backgroundColor?: string;
   photoTransparencyMode?: boolean;

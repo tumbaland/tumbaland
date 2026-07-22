@@ -2,9 +2,14 @@ import { getGlobalConfig } from './config/ConfigProvider';
 import { logger } from '@tumbaland/frontend-core';
 import { authApi } from './services/authApi';
 
+interface GoogleAccountsId {
+  initialize(config: { client_id: string; callback: (response: { credential: string }) => void }): void;
+  renderButton(parent: HTMLElement, options: { theme: string; size: string }): void;
+}
+
 declare global {
   interface Window {
-    google: any;
+    google?: { accounts?: { id?: GoogleAccountsId } };
     googleScriptLoaded?: boolean;
   }
 }
@@ -57,11 +62,16 @@ export function initializeGoogleSignIn(clientId: string, redirectUri: string) {
       return true;
     }
 
+    const googleId = window.google?.accounts?.id;
+    if (!googleId) {
+      return false;
+    }
+
     try {
       // Clear any existing content first
       buttonElement.innerHTML = '';
 
-      window.google.accounts.id.renderButton(buttonElement, { theme: 'outline', size: 'large' });
+      googleId.renderButton(buttonElement, { theme: 'outline', size: 'large' });
       logger.debug('Google Sign-In button rendered successfully');
       return true;
     } catch (error) {

@@ -7,10 +7,16 @@ import { useConfig } from '../config/useConfig';
 import { logger } from '@tumbaland/frontend-core';
 import { authApi } from '../services/authApi';
 
+interface AuthenticatedUser {
+  name: string;
+  email: string;
+  picture?: string;
+}
+
 const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [initializationAttempted, setInitializationAttempted] = useState(false);
   const config = useConfig();
 
@@ -19,7 +25,7 @@ const LoginPage: React.FC = () => {
       try {
         const data = await authApi.get<{ success: boolean; authenticated: boolean; user?: unknown }>('/auth/verify');
         if (data.success && data.authenticated) {
-          setUser(data.user);
+          setUser(data.user as AuthenticatedUser);
           setIsLoading(false);
           return;
         }

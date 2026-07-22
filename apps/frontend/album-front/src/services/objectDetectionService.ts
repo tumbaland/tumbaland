@@ -132,7 +132,7 @@ const fetchPhotoFile = async (photoId: string): Promise<Blob> => {
 const createFormDataWithFile = (
   blob: Blob, 
   filename: string, 
-  additionalFields: Record<string, any> = {}
+  additionalFields: Record<string, unknown> = {}
 ): FormData => {
   const formData = new FormData();
   formData.append('file', blob, filename);
