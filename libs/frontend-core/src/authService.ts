@@ -143,3 +143,25 @@ export function createAuthService(config: AuthServiceConfig) {
 }
 
 export type AuthService = ReturnType<typeof createAuthService>;
+
+/** The auth-related keys every front's resolved config exposes. */
+export interface AppAuthConfig {
+  AUTH_SERVICE_URL?: string;
+  AUTH_FRONT_URL?: string;
+}
+
+/**
+ * Convenience over `createAuthService` for the frontends, which all read the
+ * same two auth URLs from their resolved config. Centralizes that key mapping
+ * so each app's `services/authService.ts` is just:
+ *
+ *   export const authService = createAppAuthService(getGlobalConfig);
+ *
+ * instead of repeating the `AUTH_SERVICE_URL` / `AUTH_FRONT_URL` wiring.
+ */
+export function createAppAuthService(getGlobalConfig: () => AppAuthConfig): AuthService {
+  return createAuthService({
+    getAuthServiceUrl: () => getGlobalConfig().AUTH_SERVICE_URL!,
+    getAuthFrontUrl: () => getGlobalConfig().AUTH_FRONT_URL!
+  });
+}
