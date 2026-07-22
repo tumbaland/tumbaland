@@ -34,7 +34,7 @@ export const createPhotoSchema = z.object({
   width: z.number().optional(),
   height: z.number().optional(),
   tags: z.array(z.string()).optional(),
-  metadata: z.record(z.string(), z.any()).optional()
+  metadata: z.record(z.string(), z.unknown()).optional()
 }).refine((data) => data.minioFileId || data.fileId, {
   message: 'minioFileId (or fileId) is required'
 });
@@ -43,7 +43,7 @@ export const updatePhotoSchema = z.object({
   title: z.string().optional(),
   description: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  metadata: z.record(z.string(), z.any()).optional()
+  metadata: z.record(z.string(), z.unknown()).optional()
 });
 
 export const uploadSignedUrlSchema = z.object({
@@ -53,22 +53,22 @@ export const uploadSignedUrlSchema = z.object({
 });
 
 export const updatePhotoAIAnalysisSchema = z.object({
-  objectDetection: z.record(z.string(), z.any()).optional(),
-  segmentation: z.record(z.string(), z.any()).optional()
+  objectDetection: z.record(z.string(), z.unknown()).optional(),
+  segmentation: z.record(z.string(), z.unknown()).optional()
 }).refine((data) => data.objectDetection || data.segmentation, {
   message: 'Must provide objectDetection or segmentation data'
 });
 
 export const createCollageSchema = z.object({
   title: z.string().min(1, 'title is required'),
-  config: z.record(z.string(), z.any()),
+  config: z.record(z.string(), z.unknown()),
   albumIds: z.array(z.string()).min(1, 'albumIds must contain at least one album'),
   groupId: z.string().optional()
 });
 
 export const updateCollageSchema = z.object({
   title: z.string().min(1).optional(),
-  config: z.record(z.string(), z.any()).optional(),
+  config: z.record(z.string(), z.unknown()).optional(),
   albumIds: z.array(z.string()).optional(),
   groupId: z.string().optional()
 });

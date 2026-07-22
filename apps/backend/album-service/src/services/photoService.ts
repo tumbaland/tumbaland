@@ -1,4 +1,5 @@
-import Photo from '../models/Photo';
+import { HydratedDocument } from 'mongoose';
+import Photo, { IPhoto } from '../models/Photo';
 import Album from '../models/Album';
 import { ConflictError, logger, NotFoundError } from '@tumbaland/backend-core';
 import {
@@ -23,14 +24,45 @@ export interface CreatePhotoInput {
   width?: number;
   height?: number;
   tags?: string[];
-  metadata?: Record<string, any>;
+  metadata?: IPhoto['metadata'];
 }
 
 export interface UpdatePhotoInput {
   title?: string;
   description?: string;
   tags?: string[];
-  metadata?: Record<string, any>;
+  metadata?: IPhoto['metadata'];
+}
+
+interface PhotoQuery {
+  albumId: string;
+  $text?: { $search: string };
+}
+
+interface PhotoWithSignedUrls {
+  _id: unknown;
+  filename: string;
+  originalName: string;
+  minioFileId?: string;
+  minioThumbnailFileId?: string;
+  albumId: string;
+  title?: string;
+  description?: string;
+  mimetype: string;
+  size: number;
+  width?: number;
+  height?: number;
+  tags: string[];
+  metadata: IPhoto['metadata'];
+  aiAnalysis?: IPhoto['aiAnalysis'];
+  createdAt: Date;
+  updatedAt: Date;
+  signedUrl?: string;
+  signedUrlExpiresAt?: string;
+  signedUrlExpiresInMinutes?: number;
+  thumbnailSignedUrl?: string;
+  thumbnailSignedUrlExpiresAt?: string;
+  thumbnailSignedUrlExpiresInMinutes?: number;
 }
 
 export interface GetPhotosFilter {
@@ -39,27 +71,13 @@ export interface GetPhotosFilter {
   search?: string;
 }
 
-export interface AIAnalysisUpdate {
-  objectDetection?: {
-    jobId: string;
-    analyzedAt: Date;
-    totalDetections: number;
-    processingTime: number;
-  };
-  segmentation?: {
-    jobId: string;
-    analyzedAt: Date;
-    totalMasks: number;
-    segmentationType: string;
-    processingTime: number;
-  };
-}
+export type AIAnalysisUpdate = NonNullable<IPhoto['aiAnalysis']>;
 
 class PhotoService {
   /**
    * Create a new photo record
    */
-  async createPhoto(input: CreatePhotoInput, userId: string, groupId?: string): Promise<any> {
+  async createPhoto(input: CreatePhotoInput, userId: string, groupId?: string): Promise<IPhoto> {
     const {
       filename,
       originalName,
@@ -139,7 +157,7 @@ class PhotoService {
     albumId: string,
     filter: GetPhotosFilter
   ): Promise<{
-    photos: any[];
+    photos: PhotoWithSignedUrls[];
     pagination: {
       page: number;
       limit?: number;
@@ -155,7 +173,7 @@ class PhotoService {
       throw new NotFoundError('Album not found');
     }
 
-    const query: any = { albumId };
+    const query: PhotoQuery = { albumId };
     if (search) {
       query.$text = { $search: search };
     }
@@ -208,7 +226,7 @@ class PhotoService {
   /**
    * Get single photo by ID
    */
-  async getPhotoById(photoId: string): Promise<any> {
+  async getPhotoById(photoId: string): Promise<PhotoWithSignedUrls> {
     const photo = await Photo.findById(photoId).populate('albumId');
 
     if (!photo) {
@@ -221,7 +239,7 @@ class PhotoService {
   /**
    * Get photo by file ID (used for public/file-service lookups)
    */
-  async getPhotoByFileId(fileId: string): Promise<any> {
+  async getPhotoByFileId(fileId: string): Promise<IPhoto> {
     const photo = await Photo.findOne({ minioFileId: fileId }).populate('albumId');
 
     if (!photo) {
@@ -234,13 +252,13 @@ class PhotoService {
   /**
    * Update photo metadata
    */
-  async updatePhoto(photoId: string, input: UpdatePhotoInput): Promise<any> {
+  async updatePhoto(photoId: string, input: UpdatePhotoInput): Promise<IPhoto | null> {
     const photo = await Photo.findById(photoId);
     if (!photo) {
       throw new NotFoundError('Photo not found');
     }
 
-    const updateData: any = {};
+    const updateData: Partial<Pick<IPhoto, 'title' | 'description' | 'tags' | 'metadata'>> = {};
     if (input.title !== undefined) updateData.title = input.title?.trim();
     if (input.description !== undefined) updateData.description = input.description?.trim();
     if (input.tags) {
@@ -288,19 +306,25 @@ class PhotoService {
   /**
    * Update photo AI analysis results
    */
-  async updatePhotoAIAnalysis(photoId: string, analysis: AIAnalysisUpdate): Promise<any> {
+  async updatePhotoAIAnalysis(photoId: string, analysis: AIAnalysisUpdate): Promise<IPhoto | null> {
     const photo = await Photo.findById(photoId);
     if (!photo) {
       throw new NotFoundError('Photo not found');
     }
 
-    const updateData: any = {};
-    if (analysis.objectDetection) {
-      updateData.objectDetection = analysis.objectDetection;
+    if (!analysis.objectDetection && !analysis.segmentation) {
+      return photo;
     }
-    if (analysis.segmentation) {
-      updateData.segmentation = analysis.segmentation;
-    }
+
+    // aiAnalysis.objectDetection/segmentation are nested fields (see Photo schema);
+    // merge with the photo's existing aiAnalysis so setting one doesn't clear the other.
+    const updateData: Pick<IPhoto, 'aiAnalysis'> = {
+      aiAnalysis: {
+        ...photo.aiAnalysis,
+        ...(analysis.objectDetection ? { objectDetection: analysis.objectDetection } : {}),
+        ...(analysis.segmentation ? { segmentation: analysis.segmentation } : {})
+      }
+    };
 
     return Photo.findByIdAndUpdate(photoId, updateData, { new: true });
   }
@@ -308,7 +332,7 @@ class PhotoService {
   /**
    * Get photos for AI analysis (batch retrieval)
    */
-  async getPhotosForAIAnalysis(albumId: string, limit: number = 50): Promise<any[]> {
+  async getPhotosForAIAnalysis(albumId: string, limit: number = 50): Promise<IPhoto[]> {
     const photos = await Photo.find({ albumId })
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -356,10 +380,10 @@ class PhotoService {
   /**
    * Private helper: Enrich photo with signed URL
    */
-  private async enrichPhotoWithSignedUrl(photo: any): Promise<any> {
+  private async enrichPhotoWithSignedUrl(photo: HydratedDocument<IPhoto>): Promise<PhotoWithSignedUrls> {
     try {
       const signedUrlData = await getPhotoSignedUrl(photo, false, 60);
-      const result: any = {
+      const result: PhotoWithSignedUrls = {
         ...photo.toObject()
       };
 
@@ -394,14 +418,14 @@ class PhotoService {
    * Private helper: Enrich photo with URLs from maps
    */
   private enrichPhotoWithUrls(
-    photo: any,
+    photo: HydratedDocument<IPhoto>,
     signedUrlMap: Record<string, SignedUrlData>,
     thumbnailSignedUrlMap: Record<string, SignedUrlData>
-  ): any {
+  ): PhotoWithSignedUrls {
     const signedUrlData = signedUrlMap[photo.minioFileId || ''];
     const photoObj = photo.toObject();
 
-    const result: any = { ...photoObj };
+    const result: PhotoWithSignedUrls = { ...photoObj };
 
     if (signedUrlData) {
       result.signedUrl = signedUrlData.signedUrl;

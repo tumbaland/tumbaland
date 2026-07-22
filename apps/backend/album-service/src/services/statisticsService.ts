@@ -11,6 +11,65 @@ export interface StatisticsContext {
   userGroups: string[];
 }
 
+interface AlbumMatchQuery {
+  groupId?: string | { $exists: false };
+  userId?: string;
+}
+
+interface PhotoMatchQuery {
+  albumId?: { $in: string[] };
+}
+
+interface StorageStats {
+  totalSize: number;
+  avgSize: number;
+}
+
+interface TimeSeriesRow {
+  _id: { year: number; month: number };
+  count: number;
+}
+
+interface TagStatRow {
+  _id: string;
+  count: number;
+}
+
+interface AIAnalysisStats {
+  totalPhotos: number;
+  analyzedPhotos: number;
+  totalDetections: number;
+  totalMasks: number;
+}
+
+interface GroupStatRow {
+  _id: string;
+  albumCount: number;
+  photoCount: number;
+}
+
+interface AlbumStatisticsResult {
+  overview: {
+    totalAlbums: number;
+    totalPhotos: number;
+    totalStorage: number;
+    averagePhotoSize: number;
+  };
+  timeSeries: {
+    albumsCreated: { date: string; count: number }[];
+    photosUploaded: { date: string; count: number }[];
+  };
+  tags: { tag: string; count: number }[];
+  aiAnalysis: {
+    totalPhotos: number;
+    analyzedPhotos: number;
+    analysisRate: number;
+    totalDetections: number;
+    totalMasks: number;
+  };
+  groups: { groupId: string; albumCount: number; photoCount: number }[];
+}
+
 class StatisticsService {
   /**
    * Get comprehensive album and photo statistics
@@ -18,13 +77,13 @@ class StatisticsService {
   async getAlbumStatistics(
     filter: StatisticsFilter,
     context: StatisticsContext
-  ): Promise<any> {
+  ): Promise<AlbumStatisticsResult> {
     const { groupId } = filter;
     const { userId, userGroups } = context;
 
     // Build base query for filtering
-    const albumMatchQuery: any = {};
-    const photoMatchQuery: any = {};
+    const albumMatchQuery: AlbumMatchQuery = {};
+    const photoMatchQuery: PhotoMatchQuery = {};
 
     if (groupId) {
       // Filter by specific group
@@ -33,14 +92,14 @@ class StatisticsService {
       }
       albumMatchQuery.groupId = groupId;
       photoMatchQuery.albumId = {
-        $in: await Album.find({ groupId }).distinct('_id')
+        $in: (await Album.find({ groupId }).distinct('_id')).map((id) => id.toString())
       };
     } else {
       // No group specified: show personal albums only
       albumMatchQuery.userId = userId;
       albumMatchQuery.groupId = { $exists: false };
       photoMatchQuery.albumId = {
-        $in: await Album.find({ userId, groupId: { $exists: false } }).distinct('_id')
+        $in: (await Album.find({ userId, groupId: { $exists: false } }).distinct('_id')).map((id) => id.toString())
       };
     }
 
@@ -66,13 +125,13 @@ class StatisticsService {
     const aiStats = await this.getAIAnalysisStats(photoMatchQuery);
 
     // Get albums by group (if no specific group filter)
-    let groupStats = [];
+    let groupStats: GroupStatRow[] = [];
     if (!groupId) {
       groupStats = await this.getGroupStats(userId);
     }
 
     // Format time series data
-    const formatTimeSeries = (stats: any[]) => {
+    const formatTimeSeries = (stats: TimeSeriesRow[]) => {
       return stats.map(stat => ({
         date: `${stat._id.year}-${String(stat._id.month).padStart(2, '0')}`,
         count: stat.count
@@ -112,8 +171,8 @@ class StatisticsService {
   /**
    * Private helper: Get storage statistics
    */
-  private async getStorageStats(photoMatchQuery: any): Promise<any> {
-    const storageResult = await Photo.aggregate([
+  private async getStorageStats(photoMatchQuery: PhotoMatchQuery): Promise<StorageStats> {
+    const storageResult = await Photo.aggregate<StorageStats>([
       { $match: photoMatchQuery },
       {
         $group: {
@@ -130,11 +189,11 @@ class StatisticsService {
   /**
    * Private helper: Get album creation statistics (12 months)
    */
-  private async getAlbumCreationStats(albumMatchQuery: any): Promise<any[]> {
+  private async getAlbumCreationStats(albumMatchQuery: AlbumMatchQuery): Promise<TimeSeriesRow[]> {
     const twelveMonthsAgo = new Date();
     twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
 
-    return Album.aggregate([
+    return Album.aggregate<TimeSeriesRow>([
       { $match: { ...albumMatchQuery, createdAt: { $gte: twelveMonthsAgo } } },
       {
         $group: {
@@ -154,11 +213,11 @@ class StatisticsService {
   /**
    * Private helper: Get photo upload statistics (12 months)
    */
-  private async getPhotoUploadStats(photoMatchQuery: any): Promise<any[]> {
+  private async getPhotoUploadStats(photoMatchQuery: PhotoMatchQuery): Promise<TimeSeriesRow[]> {
     const twelveMonthsAgo = new Date();
     twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
 
-    return Photo.aggregate([
+    return Photo.aggregate<TimeSeriesRow>([
       { $match: { ...photoMatchQuery, createdAt: { $gte: twelveMonthsAgo } } },
       {
         $group: {
@@ -178,8 +237,8 @@ class StatisticsService {
   /**
    * Private helper: Get popular tags (top 10)
    */
-  private async getPopularTags(albumMatchQuery: any): Promise<any[]> {
-    return Album.aggregate([
+  private async getPopularTags(albumMatchQuery: AlbumMatchQuery): Promise<TagStatRow[]> {
+    return Album.aggregate<TagStatRow>([
       { $match: albumMatchQuery },
       { $unwind: '$tags' },
       {
@@ -196,8 +255,8 @@ class StatisticsService {
   /**
    * Private helper: Get AI analysis statistics
    */
-  private async getAIAnalysisStats(photoMatchQuery: any): Promise<any> {
-    const aiAnalysisStats = await Photo.aggregate([
+  private async getAIAnalysisStats(photoMatchQuery: PhotoMatchQuery): Promise<AIAnalysisStats> {
+    const aiAnalysisStats = await Photo.aggregate<AIAnalysisStats>([
       { $match: photoMatchQuery },
       {
         $group: {
@@ -229,8 +288,8 @@ class StatisticsService {
   /**
    * Private helper: Get group statistics
    */
-  private async getGroupStats(userId: string): Promise<any[]> {
-    const groupStats = await Album.aggregate([
+  private async getGroupStats(userId: string): Promise<GroupStatRow[]> {
+    const groupStats = await Album.aggregate<GroupStatRow>([
       { $match: { userId } },
       {
         $group: {

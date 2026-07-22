@@ -23,7 +23,7 @@ export interface CollageConfig {
     scaleX: string;
     scaleY: string;
   }>;
-  textSections: Array<any>;
+  textSections: Array<Record<string, unknown>>;
   title: {
     text: string;
     subtitle: string;

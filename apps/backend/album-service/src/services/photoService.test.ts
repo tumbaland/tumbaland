@@ -295,13 +295,40 @@ describe('updatePhotoAIAnalysis', () => {
     await expect(photoService.updatePhotoAIAnalysis('p1', {})).rejects.toMatchObject({ name: 'NotFoundError' });
   });
 
-  it('updates only the provided analysis fields', async () => {
+  it('nests the provided analysis fields under aiAnalysis, matching the schema', async () => {
     mockedFindById.mockResolvedValue({ _id: 'p1' });
     mockedFindByIdAndUpdate.mockResolvedValue({ _id: 'p1' });
 
     await photoService.updatePhotoAIAnalysis('p1', { objectDetection: { jobId: 'j1' } as any });
 
-    expect(mockedFindByIdAndUpdate).toHaveBeenCalledWith('p1', { objectDetection: { jobId: 'j1' } }, { new: true });
+    expect(mockedFindByIdAndUpdate).toHaveBeenCalledWith(
+      'p1',
+      { aiAnalysis: { objectDetection: { jobId: 'j1' } } },
+      { new: true }
+    );
+  });
+
+  it('merges with the existing aiAnalysis so setting one field does not clear the other', async () => {
+    mockedFindById.mockResolvedValue({ _id: 'p1', aiAnalysis: { segmentation: { jobId: 's1' } } });
+    mockedFindByIdAndUpdate.mockResolvedValue({ _id: 'p1' });
+
+    await photoService.updatePhotoAIAnalysis('p1', { objectDetection: { jobId: 'j1' } as any });
+
+    expect(mockedFindByIdAndUpdate).toHaveBeenCalledWith(
+      'p1',
+      { aiAnalysis: { segmentation: { jobId: 's1' }, objectDetection: { jobId: 'j1' } } },
+      { new: true }
+    );
+  });
+
+  it('returns the existing photo without updating when neither field is provided', async () => {
+    const existingPhoto = { _id: 'p1' };
+    mockedFindById.mockResolvedValue(existingPhoto);
+
+    const result = await photoService.updatePhotoAIAnalysis('p1', {});
+
+    expect(mockedFindByIdAndUpdate).not.toHaveBeenCalled();
+    expect(result).toBe(existingPhoto);
   });
 });
 

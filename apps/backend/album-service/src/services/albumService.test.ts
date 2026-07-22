@@ -269,7 +269,7 @@ describe('getAlbumById', () => {
     const result = await albumService.getAlbumById('507f1f77bcf86cd799439011', ctx());
 
     expect(result.coverPhoto).toMatchObject({ signedUrl: 'https://x' });
-    expect(result.coverPhotoDoc).toBeUndefined();
+    expect('coverPhotoDoc' in result).toBe(false);
   });
 
   it('returns the album with no cover photo when none is set', async () => {
