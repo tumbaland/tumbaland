@@ -1,6 +1,6 @@
 import { PipelineStage } from 'mongoose';
+import { buildAccessQuery } from '@tumbaland/backend-core';
 import { Activity } from '../models/Activity';
-import { buildAccessQuery } from '../utils/permissionUtils';
 
 interface ActivityMatchConditions {
   date?: { $gte?: Date; $lt?: Date };

@@ -10,8 +10,8 @@
  * @param includePublic - Whether to include public resources
  */
 export function buildAccessQuery(
-  userId: string, 
-  groupIds: string[] = [], 
+  userId: string,
+  groupIds: string[] = [],
   includePublic: boolean = false
 ) {
   const conditions: Array<

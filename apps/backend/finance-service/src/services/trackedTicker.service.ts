@@ -1,6 +1,5 @@
 import TrackedTicker from '../models/TrackedTicker';
-import { canAccessResource } from '../utils/permissionUtils';
-import { ForbiddenError, NotFoundError } from '@tumbaland/backend-core';
+import { canAccessResource, ForbiddenError, NotFoundError } from '@tumbaland/backend-core';
 
 export const getAllTrackedTickers = async (userId: string, userGroups: string[] = []) => {
   if (userGroups.length === 0) {

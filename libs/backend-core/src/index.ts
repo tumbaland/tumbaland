@@ -34,6 +34,7 @@ export type { UserPayload } from './types/auth';
 export { generateCorrelationId, correlationMiddleware } from './utils/correlation';
 export { createApiResponse, sendSuccess, sendError } from './utils/response';
 export type { ApiResponse } from './utils/response';
+export { buildAccessQuery, canAccessResource } from './utils/permissionUtils';
 
 // Metrics
 export {

@@ -1,14 +1,13 @@
 import Album, { IAlbum } from '../models/Album';
 import Photo from '../models/Photo';
 import mongoose, { PipelineStage } from 'mongoose';
-import { ForbiddenError, logger, NotFoundError } from '@tumbaland/backend-core';
+import { canAccessResource, ForbiddenError, logger, NotFoundError } from '@tumbaland/backend-core';
 import {
   deleteFile,
   getPhotoSignedUrl,
   getPhotoSignedUrlsBatch,
   SignedUrlData
 } from './fileServiceClient';
-import { canAccessResource } from '../utils/permissionUtils';
 
 interface AlbumMatchQuery {
   $text?: { $search: string };
