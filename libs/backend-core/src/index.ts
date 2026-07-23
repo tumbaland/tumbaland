@@ -11,6 +11,8 @@ export { default as logger } from './logging/logger';
 
 // Health checks
 export { healthCheck, healthLive, metricsHandler } from './health/healthController';
+export { createHealthCheck } from './health/createHealthCheck';
+export type { HealthCheckConfig } from './health/createHealthCheck';
 
 // Database
 export { connectDB, disconnectDB } from './database/connection';
