@@ -39,4 +39,81 @@ describe('albumService', () => {
 
     await expect(albumService.getAlbumById('missing-id')).rejects.toMatchObject({ status: 404, message: 'Album not found' });
   });
+
+  it('updates an album and returns the full envelope', async () => {
+    mockFetchOnce({ success: true, data: { _id: 'album-1', name: 'Renamed' } });
+
+    const result = await albumService.updateAlbum('album-1', { name: 'Renamed' });
+
+    expect(result).toEqual({ success: true, data: { _id: 'album-1', name: 'Renamed' } });
+    const [url, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(String(url)).toContain('/albums/album-1');
+    expect(init).toMatchObject({ method: 'PUT' });
+  });
+
+  it('deletes an album and returns the full envelope', async () => {
+    mockFetchOnce({ success: true });
+
+    const result = await albumService.deleteAlbum('album-1');
+
+    expect(result).toEqual({ success: true });
+    const [url, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(String(url)).toContain('/albums/album-1');
+    expect(init).toMatchObject({ method: 'DELETE' });
+  });
+
+  it('sets the cover photo for an album', async () => {
+    mockFetchOnce({ success: true, data: { _id: 'album-1', coverPhotoId: 'photo-1' } });
+
+    await albumService.setCoverPhoto('album-1', 'photo-1');
+
+    const [url, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(String(url)).toContain('/albums/album-1/cover');
+    expect(init).toMatchObject({ method: 'PUT', body: JSON.stringify({ photoId: 'photo-1' }) });
+  });
+
+  it('removes the cover photo from an album', async () => {
+    mockFetchOnce({ success: true, data: { _id: 'album-1', coverPhotoId: undefined } });
+
+    await albumService.removeCoverPhoto('album-1');
+
+    const [url, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(String(url)).toContain('/albums/album-1/cover');
+    expect(init).toMatchObject({ method: 'DELETE' });
+  });
+
+  it('updates a photo\'s AI analysis info', async () => {
+    mockFetchOnce({ success: true, data: {} });
+
+    await albumService.updatePhotoAIAnalysis('photo-1', {
+      analysisType: 'segmentation',
+      jobId: 'job-1',
+      totalMasks: 5,
+      segmentationType: 'automatic',
+      processingTime: 800
+    });
+
+    const [url, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(String(url)).toContain('/photos/photo-1/ai-analysis');
+    expect(init).toMatchObject({
+      method: 'PUT',
+      body: JSON.stringify({
+        analysisType: 'segmentation',
+        jobId: 'job-1',
+        totalMasks: 5,
+        segmentationType: 'automatic',
+        processingTime: 800
+      })
+    });
+  });
+
+  it('fetches album statistics for the dashboard', async () => {
+    mockFetchOnce({ success: true, data: { overview: { totalAlbums: 3 } } });
+
+    const result = await albumService.getAlbumStatistics({ groupId: 'group-1' });
+
+    expect(result).toEqual({ overview: { totalAlbums: 3 } });
+    const [url] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(String(url)).toContain('/statistics?groupId=group-1');
+  });
 });
