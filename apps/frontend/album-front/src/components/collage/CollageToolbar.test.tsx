@@ -1,0 +1,155 @@
+import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { vi } from 'vitest';
+import CollageToolbar from './CollageToolbar';
+
+function baseProps() {
+  return {
+    title: 'My collage',
+    isDirty: false,
+    saving: false,
+    canUndo: false,
+    canRedo: false,
+    background: '#111111',
+    frameColor: '#ffffff',
+    frameEnabled: true,
+    zoom: 1,
+    hasSelection: false,
+    onBack: vi.fn(),
+    onSave: vi.fn(),
+    onUndo: vi.fn(),
+    onRedo: vi.fn(),
+    onAddText: vi.fn(),
+    onBackgroundChange: vi.fn(),
+    onFrameColorChange: vi.fn(),
+    onFrameEnabledChange: vi.fn(),
+    onZoomChange: vi.fn(),
+    onExport: vi.fn(),
+    onPreview: vi.fn(),
+    onEditSelected: vi.fn(),
+    onDeleteSelected: vi.fn(),
+    onBringForward: vi.fn(),
+    onSendBackward: vi.fn()
+  };
+}
+
+it('shows the title without a dirty marker when not dirty, and disables Save', () => {
+  render(<CollageToolbar {...baseProps()} />);
+
+  expect(screen.getByText('My collage')).toBeInTheDocument();
+  expect(screen.queryByText('•')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /^save$/i })).toBeDisabled();
+});
+
+it('shows a dirty marker and enables Save when isDirty', () => {
+  render(<CollageToolbar {...baseProps()} isDirty />);
+
+  expect(screen.getByText('•')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /^save$/i })).toBeEnabled();
+});
+
+it('shows "Saving…" and disables Save while saving', () => {
+  render(<CollageToolbar {...baseProps()} isDirty saving />);
+
+  expect(screen.getByRole('button', { name: /saving/i })).toBeDisabled();
+});
+
+it('disables Undo/Redo based on canUndo/canRedo', () => {
+  const { container, rerender } = render(<CollageToolbar {...baseProps()} canUndo={false} canRedo={false} />);
+
+  expect(container.querySelector('[data-testid="UndoIcon"]')!.closest('button')).toBeDisabled();
+  expect(container.querySelector('[data-testid="RedoIcon"]')!.closest('button')).toBeDisabled();
+
+  rerender(<CollageToolbar {...baseProps()} canUndo canRedo />);
+
+  expect(container.querySelector('[data-testid="UndoIcon"]')!.closest('button')).toBeEnabled();
+  expect(container.querySelector('[data-testid="RedoIcon"]')!.closest('button')).toBeEnabled();
+});
+
+it('calls onBack, onUndo, onRedo, onAddText, onPreview, onExport, and onSave', async () => {
+  const props = baseProps();
+  const { container } = render(<CollageToolbar {...props} isDirty canUndo canRedo />);
+
+  await userEvent.click(screen.getByRole('button', { name: /back to collages/i }));
+  expect(props.onBack).toHaveBeenCalledTimes(1);
+
+  // Undo/Redo IconButtons are wrapped in a <span> for the Tooltip (MUI's
+  // disabled-target pattern), so the aria-label lands on that span, not the
+  // button itself — select via the icon's data-testid instead.
+  await userEvent.click(container.querySelector('[data-testid="UndoIcon"]')!.closest('button')!);
+  expect(props.onUndo).toHaveBeenCalledTimes(1);
+
+  await userEvent.click(container.querySelector('[data-testid="RedoIcon"]')!.closest('button')!);
+  expect(props.onRedo).toHaveBeenCalledTimes(1);
+
+  await userEvent.click(screen.getByRole('button', { name: /add text/i }));
+  expect(props.onAddText).toHaveBeenCalledTimes(1);
+
+  await userEvent.click(screen.getByRole('button', { name: /^preview$/i }));
+  expect(props.onPreview).toHaveBeenCalledTimes(1);
+
+  await userEvent.click(screen.getByRole('button', { name: /download as png/i }));
+  expect(props.onExport).toHaveBeenCalledTimes(1);
+
+  await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
+  expect(props.onSave).toHaveBeenCalledTimes(1);
+});
+
+it('toggles frame-enabled via the frame icon button', async () => {
+  const props = baseProps();
+  render(<CollageToolbar {...props} frameEnabled />);
+
+  await userEvent.click(screen.getByRole('button', { name: /photo frames: on/i }));
+
+  expect(props.onFrameEnabledChange).toHaveBeenCalledWith(false);
+});
+
+it('changes the zoom level via the select', async () => {
+  const props = baseProps();
+  render(<CollageToolbar {...props} zoom={1} />);
+
+  await userEvent.click(screen.getByRole('combobox'));
+  await userEvent.click(await screen.findByRole('option', { name: '50%' }));
+
+  expect(props.onZoomChange).toHaveBeenCalledWith(0.5);
+});
+
+it('changes the background and frame colors via the color swatches', () => {
+  const props = baseProps();
+  const { container } = render(<CollageToolbar {...props} />);
+
+  const colorInputs = container.querySelectorAll('input[type="color"]');
+  expect(colorInputs).toHaveLength(2);
+
+  fireEvent.change(colorInputs[0], { target: { value: '#ff0000' } });
+  fireEvent.change(colorInputs[1], { target: { value: '#00ff00' } });
+
+  expect(props.onBackgroundChange).toHaveBeenCalledWith('#ff0000');
+  expect(props.onFrameColorChange).toHaveBeenCalledWith('#00ff00');
+});
+
+it('omits the selection-only actions when hasSelection is false', () => {
+  render(<CollageToolbar {...baseProps()} hasSelection={false} />);
+
+  expect(screen.queryByRole('button', { name: /edit item/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /bring forward/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /send backward/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /delete item/i })).not.toBeInTheDocument();
+});
+
+it('shows and wires the selection-only actions when hasSelection is true', async () => {
+  const props = baseProps();
+  render(<CollageToolbar {...props} hasSelection />);
+
+  await userEvent.click(screen.getByRole('button', { name: /edit item/i }));
+  expect(props.onEditSelected).toHaveBeenCalledTimes(1);
+
+  await userEvent.click(screen.getByRole('button', { name: /bring forward/i }));
+  expect(props.onBringForward).toHaveBeenCalledTimes(1);
+
+  await userEvent.click(screen.getByRole('button', { name: /send backward/i }));
+  expect(props.onSendBackward).toHaveBeenCalledTimes(1);
+
+  await userEvent.click(screen.getByRole('button', { name: /delete item/i }));
+  expect(props.onDeleteSelected).toHaveBeenCalledTimes(1);
+});
