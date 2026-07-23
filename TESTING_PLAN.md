@@ -10,8 +10,11 @@ statements: 90%   branches: 80%   functions: 90%   lines: 90%
 
 configured per workspace (`coverageThreshold` in `jest.config.js` for the
 Jest-based backend workspaces, `coverage.thresholds` in the Vitest config for
-the frontend workspaces) so a workspace's own `test`/`test:coverage` script
-fails locally and in CI the moment it drops below the gate.
+the frontend workspaces) so a workspace's own `test:coverage` script fails
+locally the moment it drops below the gate. CI's per-workspace `verify` job
+(`.github/workflows/ci.yml`) runs `test:coverage` (not plain `test`) for
+this reason — a touched workspace that drops below its gate fails CI, not
+just a local check a developer might skip.
 
 `scripts/coverage-report.js` (`npm run coverage:report`) aggregates each
 workspace's `coverage/coverage-summary.json` into one repo-wide number to

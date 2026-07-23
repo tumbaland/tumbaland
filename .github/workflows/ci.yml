@@ -215,7 +215,7 @@ jobs:
         run: npm run typecheck --workspace=${{ matrix.workspace }}
 
       - name: Test
-        run: npm run test --workspace=${{ matrix.workspace }} --if-present
+        run: npm run test:coverage --workspace=${{ matrix.workspace }} --if-present
 
       - name: Build
         run: npm run build --workspace=${{ matrix.workspace }} --if-present
