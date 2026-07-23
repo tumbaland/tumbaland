@@ -1,0 +1,136 @@
+import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { vi } from 'vitest';
+import CollagePhotoDialog from './CollagePhotoDialog';
+import { CollagePhotoItem } from './collageDoc';
+
+const photo: CollagePhotoItem = {
+  id: 'photo-1',
+  photoId: 'p1',
+  x: 0,
+  y: 0,
+  width: 100,
+  height: 100,
+  rotation: 0,
+  caption: 'Original caption'
+};
+
+it('prefills the caption and rotation from the given item', () => {
+  render(<CollagePhotoDialog open photo={photo} onClose={vi.fn()} onSave={vi.fn()} onDelete={vi.fn()} />);
+
+  expect(screen.getByDisplayValue('Original caption')).toBeInTheDocument();
+  expect(screen.getByText('Rotation: 0°')).toBeInTheDocument();
+});
+
+it('shows "Use collage setting" when frame is undefined (inherit)', () => {
+  render(<CollagePhotoDialog open photo={photo} onClose={vi.fn()} onSave={vi.fn()} onDelete={vi.fn()} />);
+
+  expect(screen.getByText('Use collage setting')).toBeInTheDocument();
+});
+
+it('shows "Always framed" when frame is explicitly true', () => {
+  render(<CollagePhotoDialog open photo={{ ...photo, frame: true }} onClose={vi.fn()} onSave={vi.fn()} onDelete={vi.fn()} />);
+
+  expect(screen.getByText('Always framed')).toBeInTheDocument();
+});
+
+it('shows "Never framed" when frame is explicitly false', () => {
+  render(<CollagePhotoDialog open photo={{ ...photo, frame: false }} onClose={vi.fn()} onSave={vi.fn()} onDelete={vi.fn()} />);
+
+  expect(screen.getByText('Never framed')).toBeInTheDocument();
+});
+
+it('renders the preview image with the current rotation when photoSrc is given', () => {
+  render(
+    <CollagePhotoDialog
+      open
+      photo={{ ...photo, rotation: 45 }}
+      photoSrc="https://cdn.example/photo.jpg"
+      onClose={vi.fn()}
+      onSave={vi.fn()}
+      onDelete={vi.fn()}
+    />
+  );
+
+  const img = screen.getByRole('img', { name: 'preview' });
+  expect(img).toHaveAttribute('src', 'https://cdn.example/photo.jpg');
+  expect(img).toHaveStyle({ transform: 'rotate(45deg)' });
+});
+
+it('omits the preview image when there is no photoSrc', () => {
+  render(<CollagePhotoDialog open photo={photo} onClose={vi.fn()} onSave={vi.fn()} onDelete={vi.fn()} />);
+
+  expect(screen.queryByRole('img')).not.toBeInTheDocument();
+});
+
+it('saves the trimmed caption, rotation, and resolved frame value, then closes', async () => {
+  const onSave = vi.fn();
+  const onClose = vi.fn();
+  render(
+    <CollagePhotoDialog
+      open
+      photo={{ ...photo, caption: '  padded  ' }}
+      onClose={onClose}
+      onSave={onSave}
+      onDelete={vi.fn()}
+    />
+  );
+
+  await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+  expect(onSave).toHaveBeenCalledWith({ caption: 'padded', rotation: 0, frame: undefined });
+  expect(onClose).toHaveBeenCalledTimes(1);
+});
+
+it('calls onDelete then onClose when removing from the collage', async () => {
+  const onDelete = vi.fn();
+  const onClose = vi.fn();
+  render(<CollagePhotoDialog open photo={photo} onClose={onClose} onSave={vi.fn()} onDelete={onDelete} />);
+
+  await userEvent.click(screen.getByRole('button', { name: /remove from collage/i }));
+
+  expect(onDelete).toHaveBeenCalledTimes(1);
+  expect(onClose).toHaveBeenCalledTimes(1);
+});
+
+it('updates the rotation via the slider and reflects it in the preview + saved patch', async () => {
+  const onSave = vi.fn();
+  render(
+    <CollagePhotoDialog
+      open
+      photo={photo}
+      photoSrc="https://cdn.example/photo.jpg"
+      onClose={vi.fn()}
+      onSave={onSave}
+      onDelete={vi.fn()}
+    />
+  );
+
+  fireEvent.change(screen.getByRole('slider'), { target: { value: 90 } });
+
+  expect(screen.getByText('Rotation: 90°')).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+  expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ rotation: 90 }));
+});
+
+it('changes the frame setting via the select and saves the resolved boolean', async () => {
+  const onSave = vi.fn();
+  render(<CollagePhotoDialog open photo={photo} onClose={vi.fn()} onSave={onSave} onDelete={vi.fn()} />);
+
+  await userEvent.click(screen.getByRole('combobox'));
+  await userEvent.click(await screen.findByRole('option', { name: 'Always framed' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+  expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ frame: true }));
+});
+
+it('closes without saving on Cancel', async () => {
+  const onSave = vi.fn();
+  const onClose = vi.fn();
+  render(<CollagePhotoDialog open photo={photo} onClose={onClose} onSave={onSave} onDelete={vi.fn()} />);
+
+  await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+  expect(onSave).not.toHaveBeenCalled();
+  expect(onClose).toHaveBeenCalledTimes(1);
+});
