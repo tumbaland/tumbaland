@@ -9,6 +9,21 @@ const assetClasses: AssetClass[] = [
   { _id: 'a2', name: 'Cash', userId: 'u1', createdAt: '', updatedAt: '' }
 ];
 
+function setMobile(isMobile: boolean) {
+  window.matchMedia = ((query: string) => ({
+    matches: isMobile,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false
+  })) as unknown as typeof window.matchMedia;
+}
+
+afterEach(() => setMobile(false));
+
 function renderDialog(overrides: Partial<React.ComponentProps<typeof CheckInDialog>> = {}) {
   const onClose = vi.fn();
   const onSubmit = vi.fn().mockResolvedValue(undefined);
@@ -113,4 +128,33 @@ it('calls onClose from the Cancel button', async () => {
   const { onClose } = renderDialog();
   await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   expect(onClose).toHaveBeenCalled();
+});
+
+it('allows changing the month and a gain value, computing the total from values only', async () => {
+  renderDialog({ defaultMonth: '' });
+
+  await userEvent.type(screen.getByLabelText('Month'), '2024-06');
+  const valueInputs = screen.getAllByPlaceholderText('—');
+  const gainInputs = screen.getAllByPlaceholderText('0');
+  await userEvent.type(valueInputs[0], '1000');
+  await userEvent.type(gainInputs[0], '50');
+
+  expect(screen.getByText('1000 €')).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole('button', { name: /save check-in/i }));
+  expect(screen.queryByText('Pick a month first')).not.toBeInTheDocument();
+});
+
+it('renders stacked cards in the mobile layout, supporting value/gain entry there too', async () => {
+  setMobile(true);
+  const { onSubmit } = renderDialog();
+
+  const valueInputs = screen.getAllByPlaceholderText('—');
+  const gainInputs = screen.getAllByPlaceholderText('0');
+  await userEvent.type(valueInputs[0], '1000');
+  await userEvent.type(gainInputs[0], '25');
+  expect(screen.getByText('1000 €')).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole('button', { name: /save check-in/i }));
+  expect(onSubmit).toHaveBeenCalledWith('2024-05', [{ assetClassId: 'a1', value: 1000, gain: 25 }]);
 });

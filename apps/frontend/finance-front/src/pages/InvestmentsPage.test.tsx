@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 
@@ -52,10 +52,24 @@ it('switches to the tracked tickers tab', async () => {
   expect(screen.getByText('tickers tab')).toBeInTheDocument();
 });
 
-it('shows a snackbar notification raised by a child tab', async () => {
+it('shows a snackbar notification raised by a child tab, and dismisses it', async () => {
   render(<InvestmentsPage />);
   await userEvent.click(screen.getByText('notify success'));
   expect(await screen.findByText('saved')).toBeInTheDocument();
+
+  await userEvent.click(screen.getByLabelText(/close/i));
+  await waitFor(() => expect(screen.queryByText('saved')).not.toBeInTheDocument());
+});
+
+it('auto-hides the snackbar after its duration elapses', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  render(<InvestmentsPage />);
+  await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).click(screen.getByText('notify success'));
+  expect(screen.getByText('saved')).toBeInTheDocument();
+
+  vi.advanceTimersByTime(4000);
+  await waitFor(() => expect(screen.queryByText('saved')).not.toBeInTheDocument());
+  vi.useRealTimers();
 });
 
 it('defaults holdings/tickers to empty arrays while their queries have no data yet', () => {

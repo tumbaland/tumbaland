@@ -37,6 +37,21 @@ import { TrackedTicker } from '../../services/trackedTickerService';
 
 const mockedFetchAll = fetchAllTickerPriceHistory as unknown as ReturnType<typeof vi.fn>;
 
+function setMobile(isMobile: boolean) {
+  window.matchMedia = ((query: string) => ({
+    matches: isMobile,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false
+  })) as unknown as typeof window.matchMedia;
+}
+
+afterEach(() => setMobile(false));
+
 const tickers: TrackedTicker[] = [
   { _id: 't1', ticker: 'AAPL', displayName: 'Apple', isActive: true, dateAdded: '2024-01-01T00:00:00.000Z' },
   { _id: 't2', ticker: 'BND', displayName: 'Vanguard Bond', isActive: false }
@@ -173,6 +188,41 @@ it('opens and closes the price history modal', async () => {
 
   await userEvent.click(screen.getByText('close history'));
   expect(screen.queryByText('history for AAPL')).not.toBeInTheDocument();
+});
+
+it('renders ticker cards in the mobile layout, supporting fetch/edit/delete/history from there', async () => {
+  setMobile(true);
+  mockedFetchAll.mockResolvedValue(undefined);
+  const notify = vi.fn();
+  render(<TickersTab tickers={tickers} notify={notify} />);
+
+  expect(screen.getByText('Apple')).toBeInTheDocument();
+  expect(screen.getByText('Active')).toBeInTheDocument();
+
+  const fetchButtons = screen.getAllByRole('button').filter((b) => b.querySelector('[data-testid="CloudDownloadIcon"]'));
+  await userEvent.click(fetchButtons[0]);
+  expect(mockedFetchAll).toHaveBeenCalledWith('AAPL');
+
+  const historyButtons = screen.getAllByRole('button').filter((b) => b.querySelector('[data-testid="ShowChartIcon"]'));
+  await userEvent.click(historyButtons[0]);
+  expect(screen.getByText('history for AAPL')).toBeInTheDocument();
+  await userEvent.click(screen.getByText('close history'));
+
+  const editButtons = screen.getAllByRole('button').filter((b) => b.querySelector('[data-testid="EditIcon"]'));
+  await userEvent.click(editButtons[0]);
+  expect(screen.getByLabelText(/^Ticker/)).toHaveValue('AAPL');
+});
+
+it('cancels the delete confirmation without deleting', async () => {
+  const notify = vi.fn();
+  render(<TickersTab tickers={tickers} notify={notify} />);
+
+  const deleteButtons = screen.getAllByRole('button').filter((b) => b.querySelector('[data-testid="DeleteIcon"]'));
+  await userEvent.click(deleteButtons[0]);
+  await userEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
+
+  expect(mockedDeleteMutateAsync).not.toHaveBeenCalled();
+  await waitFor(() => expect(screen.queryByText('Stop tracking ticker')).not.toBeInTheDocument());
 });
 
 it('cancels the add-ticker dialog', async () => {
