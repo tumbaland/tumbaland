@@ -171,12 +171,21 @@ jobs:
         # must be built (its dist/.d.ts emitted) before components typechecks.
         run: npm run build -w @tumbaland/backend-core -w @tumbaland/frontend-core -w @tumbaland/components
 
-      - name: Upload built libs
+      # Split into a backend and a frontend artifact so each verify job pulls
+      # only the libs its workspace actually consumes, instead of every job
+      # downloading all three lib dists regardless of what it builds.
+      - name: Upload built backend lib
         uses: actions/upload-artifact@v4
         with:
-          name: libs-dist
+          name: libs-dist-backend
+          path: libs/backend-core/dist
+          retention-days: 1
+
+      - name: Upload built frontend libs
+        uses: actions/upload-artifact@v4
+        with:
+          name: libs-dist-frontend
           path: |
-            libs/backend-core/dist
             libs/components/dist
             libs/frontend-core/dist
           retention-days: 1
@@ -205,10 +214,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Download built libs
+      # Backend services and backend-core consume only backend-core/dist;
+      # frontend apps and the frontend libs consume only components/dist and
+      # frontend-core/dist. Each job downloads just its side.
+      - name: Download backend lib
+        if: startsWith(matrix.workspace, 'apps/backend/') || matrix.workspace == 'libs/backend-core'
         uses: actions/download-artifact@v4
         with:
-          name: libs-dist
+          name: libs-dist-backend
+          path: libs/backend-core/dist
+
+      - name: Download frontend libs
+        if: startsWith(matrix.workspace, 'apps/frontend/') || matrix.workspace == 'libs/components' || matrix.workspace == 'libs/frontend-core'
+        uses: actions/download-artifact@v4
+        with:
+          name: libs-dist-frontend
           path: libs
 
       - name: Typecheck
