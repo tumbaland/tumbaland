@@ -8,6 +8,9 @@
     "apps/backend/*",
     "libs/*"
   ],
+  "engines": {
+    "node": ">=26"
+  },
   "scripts": {
     "dev": "concurrently \"npm run dev:back\" \"npm run dev:front\"",
     "dev:back": "concurrently \"npm run dev --workspace=auth-service\" \"npm run dev --workspace=public-service\" \"npm run dev --workspace=album-service\" \"npm run dev --workspace=finance-service\" \"npm run dev --workspace=relationship-service\" \"npm run dev --workspace=payment-service\" \"npm run dev --workspace=group-service\" \"npm run dev --workspace=file-service\"",

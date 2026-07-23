@@ -2,11 +2,11 @@
 // Aggregates coverage/coverage-summary.json (Jest and Vitest v8 both emit the
 // same shape via their "json-summary" reporter) across every workspace and
 // prints one repo-wide percentage — that's the number to track against the
-// 90% goal from TESTING_PLAN.md, not any single workspace in isolation.
+// repo-wide 90% coverage goal, not any single workspace in isolation.
 //
-// Workspaces without a coverage-summary.json yet (not reached in the plan's
-// phased rollout) are skipped, not treated as 0% — the repo-wide number only
-// reflects packages that have actually opted into coverage tracking so far.
+// Workspaces without a coverage-summary.json yet are skipped, not treated as
+// 0% — the repo-wide number only reflects packages that have actually emitted
+// coverage output so far.
 
 const fs = require('fs');
 const path = require('path');
