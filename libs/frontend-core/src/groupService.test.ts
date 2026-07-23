@@ -1,4 +1,5 @@
 import { createGroupService } from './groupService';
+import { logger } from './monitoring';
 
 function mockFetchOnce(body: unknown, init: { ok?: boolean; statusText?: string } = {}) {
   const { ok = true, statusText = 'OK' } = init;
@@ -85,11 +86,11 @@ describe('createGroupService', () => {
     it('throws when the response is not ok', async () => {
       mockFetchOnce({}, { ok: false, statusText: 'Unauthorized' });
       const groupService = createGroupService(config);
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
 
       await expect(groupService.getUserGroupIds()).rejects.toThrow('Failed to fetch group IDs: Unauthorized');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error fetching user group IDs:', expect.any(Error));
-      consoleErrorSpy.mockRestore();
+      expect(loggerErrorSpy).toHaveBeenCalledWith('Error fetching user group IDs', expect.any(Error));
+      loggerErrorSpy.mockRestore();
     });
 
     it('throws when the API reports success:false', async () => {
@@ -111,11 +112,11 @@ describe('createGroupService', () => {
     it('logs and rethrows on a non-ok response', async () => {
       mockFetchOnce({}, { ok: false, statusText: 'Unauthorized' });
       const groupService = createGroupService(config);
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
 
       await expect(groupService.getUserGroups()).rejects.toThrow();
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Error fetching user groups:', expect.any(Error));
-      consoleErrorSpy.mockRestore();
+      expect(loggerErrorSpy).toHaveBeenCalledWith('Error fetching user groups', expect.any(Error));
+      loggerErrorSpy.mockRestore();
     });
   });
 });

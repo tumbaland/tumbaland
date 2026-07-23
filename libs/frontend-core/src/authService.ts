@@ -1,4 +1,4 @@
-import { getCorrelationId, getSessionId } from './monitoring';
+import { getCorrelationId, getSessionId, logger } from './monitoring';
 import { AuthResponse, User } from './types';
 
 export interface AuthServiceConfig {
@@ -70,7 +70,7 @@ export function createAuthService(config: AuthServiceConfig) {
         authCacheTime = now;
         return result;
       } catch (error) {
-        console.error('Auth check failed:', error);
+        logger.error('Auth check failed', error);
         const result: AuthResponse = { authenticated: false, user: null };
         authCache = result;
         authCacheTime = now;
@@ -103,7 +103,7 @@ export function createAuthService(config: AuthServiceConfig) {
         }
         return data.success;
       } catch (error) {
-        console.error('Logout failed:', error);
+        logger.error('Logout failed', error);
         return false;
       }
     },
@@ -123,14 +123,14 @@ export function createAuthService(config: AuthServiceConfig) {
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('Profile fetch error:', response.status, errorText);
+          logger.error('Profile fetch error', undefined, { status: response.status, body: errorText });
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
         return data.success ? data.user : null;
       } catch (error) {
-        console.error('Get profile failed:', error);
+        logger.error('Get profile failed', error);
         return null;
       }
     },

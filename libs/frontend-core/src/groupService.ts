@@ -1,4 +1,4 @@
-import { getCorrelationId, getSessionId } from './monitoring';
+import { getCorrelationId, getSessionId, logger } from './monitoring';
 import { ApiResponse, Group } from './types';
 
 export interface GroupServiceConfig {
@@ -44,7 +44,7 @@ export function createGroupService(config: GroupServiceConfig) {
 
         return result.data;
       } catch (error) {
-        console.error('Error fetching user groups:', error);
+        logger.error('Error fetching user groups', error);
         throw error;
       }
     },
@@ -68,7 +68,7 @@ export function createGroupService(config: GroupServiceConfig) {
 
         return result.data;
       } catch (error) {
-        console.error('Error fetching user group IDs:', error);
+        logger.error('Error fetching user group IDs', error);
         throw error;
       }
     }
