@@ -11,8 +11,19 @@ vi.mock('react-router-dom', async (importOriginal) => {
 });
 
 // FileUpload is a Phase 7 component with its own upload/drag-drop logic —
-// stub it so this test stays scoped to AlbumDetailPage's own logic.
-vi.mock('../components/FileUpload', () => ({ default: () => <div>file upload</div> }));
+// stub it so this test stays scoped to AlbumDetailPage's own logic. The
+// stub exposes plain buttons wired to the real onUploadComplete/onClose
+// props so this page's own callback-wiring can still be verified.
+vi.mock('../components/FileUpload', () => ({
+  default: ({ open, onUploadComplete, onClose }: { open: boolean; onUploadComplete: () => void; onClose: () => void }) =>
+    open ? (
+      <div>
+        file upload
+        <button onClick={onUploadComplete}>simulate upload complete</button>
+        <button onClick={onClose}>simulate close upload</button>
+      </div>
+    ) : null
+}));
 
 vi.mock('../hooks/usePhotos', () => ({ usePhotos: vi.fn() }));
 vi.mock('../services/albumService', () => ({ albumService: { getAlbumById: vi.fn(), setCoverPhoto: vi.fn() } }));
@@ -231,4 +242,113 @@ it('cancels select mode via the Cancel button', async () => {
   await userEvent.click(screen.getByRole('button', { name: /cancel/i }));
 
   expect(screen.queryByText('0 selected')).not.toBeInTheDocument();
+});
+
+it('toggles selection of a single photo by clicking its card in select mode', async () => {
+  const photos = [
+    makePhoto({ _id: 'p1', signedUrl: 'https://cdn.example/p1.jpg' }),
+    makePhoto({ _id: 'p2', signedUrl: 'https://cdn.example/p2.jpg' })
+  ];
+  mockedUsePhotos.mockReturnValue(
+    basePhotosReturn({ photos, pagination: { page: 1, limit: 24, total: 2, pages: 1 } })
+  );
+
+  renderPage();
+  await screen.findByRole('heading', { name: 'Trip' });
+  await userEvent.click(screen.getByRole('button', { name: /^select$/i }));
+
+  const [firstCard] = screen.getAllByRole('img');
+  await userEvent.click(firstCard);
+  expect(screen.getByText('1 selected')).toBeInTheDocument();
+
+  await userEvent.click(firstCard);
+  expect(screen.getByText('0 selected')).toBeInTheDocument();
+});
+
+it('cancels the single-photo delete confirmation without deleting', async () => {
+  const deletePhoto = vi.fn().mockResolvedValue(undefined);
+  const photos = [makePhoto({ _id: 'p1', title: 'Sunset' })];
+  mockedUsePhotos.mockReturnValue(
+    basePhotosReturn({ photos, deletePhoto, pagination: { page: 1, limit: 24, total: 1, pages: 1 } })
+  );
+
+  renderPage();
+  await screen.findByRole('heading', { name: 'Trip' });
+
+  await openPhotoMenu();
+  await userEvent.click(screen.getByText('Delete Photo'));
+  await userEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
+
+  expect(deletePhoto).not.toHaveBeenCalled();
+  await waitFor(() => expect(screen.queryByText('Delete Photo')).not.toBeInTheDocument());
+});
+
+it('cancels the bulk-delete confirmation without deleting', async () => {
+  const deletePhoto = vi.fn().mockResolvedValue(undefined);
+  const photos = [makePhoto({ _id: 'p1' }), makePhoto({ _id: 'p2' })];
+  mockedUsePhotos.mockReturnValue(
+    basePhotosReturn({ photos, deletePhoto, pagination: { page: 1, limit: 24, total: 2, pages: 1 } })
+  );
+
+  renderPage();
+  await screen.findByRole('heading', { name: 'Trip' });
+
+  await userEvent.click(screen.getByRole('button', { name: /^select$/i }));
+  await userEvent.click(screen.getByRole('button', { name: /select all on page/i }));
+  await userEvent.click(screen.getByRole('button', { name: /^delete$/i }));
+  const dialog = within(screen.getByRole('dialog'));
+  await userEvent.click(dialog.getByRole('button', { name: /^cancel$/i }));
+
+  expect(deletePhoto).not.toHaveBeenCalled();
+});
+
+it('navigates to the photo detail page from the card menu', async () => {
+  const photos = [makePhoto({ _id: 'p1', title: 'Sunset' })];
+  mockedUsePhotos.mockReturnValue(
+    basePhotosReturn({ photos, pagination: { page: 1, limit: 24, total: 1, pages: 1 } })
+  );
+
+  renderPage();
+  await screen.findByRole('heading', { name: 'Trip' });
+
+  await openPhotoMenu();
+  await userEvent.click(screen.getByText('View Details'));
+
+  expect(mockedNavigate).toHaveBeenCalledWith('/albums/album-1/photos/p1');
+});
+
+it('changes page and page size via the pagination controls', async () => {
+  const fetchPhotos = vi.fn();
+  const photos = [makePhoto({ _id: 'p1' })];
+  mockedUsePhotos.mockReturnValue(
+    basePhotosReturn({ photos, fetchPhotos, pagination: { page: 1, limit: 24, total: 50, pages: 3 } })
+  );
+
+  renderPage();
+  await screen.findByRole('heading', { name: 'Trip' });
+
+  await userEvent.click(screen.getAllByRole('button', { name: /go to page 2/i })[0]);
+
+  await userEvent.click(screen.getByRole('combobox'));
+  await userEvent.click(await screen.findByRole('option', { name: '48' }));
+
+  expect(screen.getByText('50 photos total')).toBeInTheDocument();
+});
+
+it('refreshes photos when an upload completes, and closes the dialog independently', async () => {
+  const fetchPhotos = vi.fn();
+  const photos = [makePhoto({ _id: 'p1' })];
+  mockedUsePhotos.mockReturnValue(
+    basePhotosReturn({ photos, fetchPhotos, pagination: { page: 1, limit: 24, total: 1, pages: 1 } })
+  );
+
+  renderPage();
+  await screen.findByRole('heading', { name: 'Trip' });
+  await userEvent.click(screen.getAllByRole('button', { name: /upload media/i })[0]);
+
+  await userEvent.click(screen.getByText('simulate upload complete'));
+  expect(fetchPhotos).toHaveBeenCalled();
+
+  await userEvent.click(screen.getByText('simulate close upload'));
+  expect(screen.queryByText('file upload')).not.toBeInTheDocument();
 });

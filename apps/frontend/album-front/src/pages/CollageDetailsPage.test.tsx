@@ -25,6 +25,7 @@ vi.mock('../components/collage/CollageStage', () => ({
     <div>
       collage stage
       <button onClick={() => props.onDropPhoto?.('photo-1', 10, 20)}>simulate drop photo-1</button>
+      <button onClick={() => props.onDropPhoto?.('photo-2', 10, 20)}>simulate drop photo-2</button>
     </div>
   )
 }));
@@ -252,4 +253,174 @@ it('switches to preview (view) mode via the toolbar', async () => {
   await userEvent.click(screen.getByRole('button', { name: /^preview$/i }));
 
   expect(screen.queryByText('Summer trip')).not.toBeInTheDocument();
+});
+
+it('switches back to edit mode from the view-mode mini action bar', async () => {
+  renderPage('/collages/collage-1?mode=view');
+
+  await userEvent.click(screen.getByRole('button', { name: /edit collage/i }));
+
+  expect(screen.getByText('Summer trip')).toBeInTheDocument();
+});
+
+it('exports the collage as PNG from the view-mode mini action bar', async () => {
+  renderPage('/collages/collage-1?mode=view');
+
+  await userEvent.click(screen.getByRole('button', { name: /download as png/i }));
+
+  await waitFor(() => expect(mockedExportCollageToPng).toHaveBeenCalled());
+});
+
+it('reorders the selected item via Bring forward / Send backward', async () => {
+  mockedUseCollageDetails.mockReturnValue({
+    data: { collage, albumPhotos },
+    isPending: false,
+    error: null
+  });
+  renderPage();
+  await userEvent.click(screen.getByText('simulate drop photo-1'));
+
+  await userEvent.click(screen.getByRole('button', { name: /bring forward/i }));
+  await userEvent.click(screen.getByRole('button', { name: /send backward/i }));
+
+  // Reordering a single item is a no-op on doc contents, but exercising the
+  // handlers shouldn't throw or clear the selection.
+  expect(screen.getByRole('button', { name: /edit item/i })).toBeInTheDocument();
+});
+
+it('changes background color, frame color, and toggles photo frames via the toolbar', async () => {
+  renderPage();
+
+  const colorInputs = document.querySelectorAll('input[type="color"]');
+  const { fireEvent } = await import('@testing-library/react');
+  fireEvent.change(colorInputs[0], { target: { value: '#222222' } });
+  fireEvent.change(colorInputs[1], { target: { value: '#333333' } });
+  await userEvent.click(screen.getByRole('button', { name: /photo frames/i }));
+
+  expect(screen.getByRole('button', { name: /^save$/i })).toBeEnabled();
+});
+
+it('edits a text item via "Edit item", saving the new text and closing the dialog', async () => {
+  renderPage();
+  await userEvent.click(screen.getByRole('button', { name: /add text/i }));
+
+  await userEvent.click(screen.getByRole('button', { name: /edit item/i }));
+  expect(screen.getByText('Edit text')).toBeInTheDocument();
+
+  const textInput = screen.getByLabelText('Text');
+  await userEvent.clear(textInput);
+  await userEvent.type(textInput, 'Hello world');
+  await userEvent.click(screen.getByRole('button', { name: /^apply$/i }));
+
+  await waitFor(() => expect(screen.queryByText('Edit text')).not.toBeInTheDocument());
+});
+
+it('deletes a text item from within its edit dialog', async () => {
+  renderPage();
+  await userEvent.click(screen.getByRole('button', { name: /add text/i }));
+  await userEvent.click(screen.getByRole('button', { name: /edit item/i }));
+
+  await userEvent.click(screen.getByRole('button', { name: /^delete$/i }));
+
+  await waitFor(() => expect(screen.queryByText('Edit text')).not.toBeInTheDocument());
+  expect(screen.queryByRole('button', { name: /edit item/i })).not.toBeInTheDocument();
+});
+
+it('cancels out of a text item edit dialog without saving', async () => {
+  renderPage();
+  await userEvent.click(screen.getByRole('button', { name: /add text/i }));
+  await userEvent.click(screen.getByRole('button', { name: /edit item/i }));
+
+  await userEvent.click(screen.getByRole('button', { name: /^cancel$/i }));
+
+  await waitFor(() => expect(screen.queryByText('Edit text')).not.toBeInTheDocument());
+  expect(screen.getByRole('button', { name: /edit item/i })).toBeInTheDocument();
+});
+
+it('saves photo settings via "Apply" in the photo settings dialog', async () => {
+  mockedUseCollageDetails.mockReturnValue({
+    data: { collage, albumPhotos },
+    isPending: false,
+    error: null
+  });
+  renderPage();
+  await userEvent.click(screen.getByText('simulate drop photo-1'));
+  await userEvent.click(screen.getByRole('button', { name: /edit item/i }));
+
+  await userEvent.type(screen.getByLabelText('Caption'), 'Beach day');
+  await userEvent.click(screen.getByRole('button', { name: /^apply$/i }));
+
+  await waitFor(() => expect(screen.queryByText('Photo settings')).not.toBeInTheDocument());
+});
+
+it('removes a photo from the collage via "Remove from collage" in the photo settings dialog', async () => {
+  mockedUseCollageDetails.mockReturnValue({
+    data: { collage, albumPhotos },
+    isPending: false,
+    error: null
+  });
+  renderPage();
+  await userEvent.click(screen.getByText('simulate drop photo-1'));
+  await userEvent.click(screen.getByRole('button', { name: /edit item/i }));
+
+  await userEvent.click(screen.getByRole('button', { name: /remove from collage/i }));
+
+  await waitFor(() => expect(screen.queryByText('Photo settings')).not.toBeInTheDocument());
+  expect(screen.queryByRole('button', { name: /edit item/i })).not.toBeInTheDocument();
+});
+
+it('dismisses the save-success toast', async () => {
+  mutations.updateCollage.mockResolvedValue(undefined);
+  renderPage();
+  await userEvent.click(screen.getByRole('button', { name: /add text/i }));
+  await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
+  expect(await screen.findByText('Collage saved')).toBeInTheDocument();
+
+  const closeButtons = screen.getAllByRole('button').filter((b) => b.querySelector('[data-testid="CloseIcon"]'));
+  await userEvent.click(closeButtons[closeButtons.length - 1]);
+
+  await waitFor(() => expect(screen.queryByText('Collage saved')).not.toBeInTheDocument());
+});
+
+it('warns before closing the tab when there are unsaved changes', async () => {
+  renderPage();
+  await userEvent.click(screen.getByRole('button', { name: /add text/i }));
+
+  const event = new Event('beforeunload', { cancelable: true });
+  window.dispatchEvent(event);
+
+  expect(event.defaultPrevented).toBe(true);
+});
+
+it('places a photo with no stored dimensions by reading them from the loaded image', async () => {
+  class FakeImage {
+    onload: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    naturalWidth = 400;
+    naturalHeight = 300;
+    private _src = '';
+    set src(value: string) {
+      this._src = value;
+      queueMicrotask(() => this.onload?.());
+    }
+    get src() {
+      return this._src;
+    }
+  }
+  vi.stubGlobal('Image', FakeImage as unknown as typeof Image);
+
+  mockedUseCollageDetails.mockReturnValue({
+    data: {
+      collage,
+      albumPhotos: [{ _id: 'photo-2', filename: 'b.jpg', signedUrl: 'https://cdn.example/b.jpg' }]
+    },
+    isPending: false,
+    error: null
+  });
+  renderPage();
+
+  await userEvent.click(screen.getByText('simulate drop photo-2'));
+
+  await waitFor(() => expect(screen.getByRole('button', { name: /^save$/i })).toBeEnabled());
+  vi.unstubAllGlobals();
 });
