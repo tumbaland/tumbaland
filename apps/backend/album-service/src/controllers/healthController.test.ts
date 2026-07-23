@@ -1,15 +1,6 @@
 import { Request, Response } from 'express';
-
-jest.mock('../services/healthService', () => ({
-  __esModule: true,
-  default: { checkHealth: jest.fn(), getHealthStatusCode: jest.fn() }
-}));
-
-import healthService from '../services/healthService';
+import mongoose from 'mongoose';
 import { healthCheck } from './healthController';
-
-const mockedCheckHealth = healthService.checkHealth as jest.Mock;
-const mockedGetStatusCode = healthService.getHealthStatusCode as jest.Mock;
 
 function mockRes(): Response {
   const res: Partial<Response> = {};
@@ -18,27 +9,35 @@ function mockRes(): Response {
   return res as Response;
 }
 
-beforeEach(() => jest.clearAllMocks());
+afterEach(() => jest.restoreAllMocks());
 
 describe('healthCheck', () => {
-  it('responds with the health service result and matching status code', async () => {
-    mockedCheckHealth.mockResolvedValue({ status: 'ok' });
-    mockedGetStatusCode.mockReturnValue(200);
+  it('responds 200 with the album-service identity and mongodb connected when Mongo is up', async () => {
+    jest.spyOn(mongoose, 'connection', 'get').mockReturnValue({ readyState: 1 } as never);
     const res = mockRes();
 
     await healthCheck({} as Request, res);
 
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledWith({ status: 'ok' });
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'ok',
+        service: 'album-service',
+        description: 'Photo album management service',
+        dependencies: { mongodb: 'connected' }
+      })
+    );
   });
 
-  it('responds 503 with a generic error body when checkHealth throws', async () => {
-    mockedCheckHealth.mockRejectedValue(new Error('db down'));
+  it('responds 503 with mongodb disconnected when Mongo is down', async () => {
+    jest.spyOn(mongoose, 'connection', 'get').mockReturnValue({ readyState: 0 } as never);
     const res = mockRes();
 
     await healthCheck({} as Request, res);
 
     expect(res.status).toHaveBeenCalledWith(503);
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ status: 'error', error: 'Health check failed' }));
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'error', dependencies: { mongodb: 'disconnected' } })
+    );
   });
 });

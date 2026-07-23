@@ -16,12 +16,14 @@ consistently. The items below are the concrete gaps worth closing, most impactfu
 
 ## Medium priority — maintainability / DRY
 
-- [x] **De-duplicate the per-service `healthController`.** *(partial — done)*
-  Added a `createHealthCheck({ service, description })` factory to `@tumbaland/backend-core` and
-  collapsed the three byte-identical inline controllers (`auth`, `group`, `payment`) onto it; the
-  existing per-service health tests pass unchanged. Left `album`/`finance` (delegate to their own
-  `healthService` class), `relationship` (synchronous, no DB), and `public` (static, no DB) as-is —
-  they carry genuinely different contracts, not duplication.
+- [x] **Unify the health check across all services onto one standard.** *(done)*
+  Added a `createHealthCheck({ service, description, checkDatabase? })` factory to
+  `@tumbaland/backend-core` as the single `/health` readiness handler, and moved **all eight**
+  services onto it. `checkDatabase: false` covers the one DB-less service (`public`). Removed the
+  three redundant local health-service modules (`album`/`finance` `healthService`,
+  `relationship` `health.service`) and their tests; per-service controller tests now smoke-test the
+  wiring (100% coverage on each `healthController`). Documented the standard in backend-core's
+  README.
 
 - [ ] **Split `relationship-service/src/services/statistics.service.ts` (899 lines).**
   It exports six large aggregation functions (`getRelationshipStatistics`, `getMonthlyHours`,

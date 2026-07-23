@@ -8,29 +8,50 @@ export interface HealthCheckConfig {
   description: string;
   /** Reported version. Defaults to `1.0.0`. */
   version?: string;
+  /**
+   * Whether readiness depends on the MongoDB connection. Defaults to `true`:
+   * the response reports `dependencies.mongodb` and returns 503 while
+   * disconnected. Set `false` for services with no database (e.g.
+   * public-service), which then always report `ok` with no `dependencies`.
+   */
+  checkDatabase?: boolean;
 }
 
 /**
- * Builds a DB-aware readiness handler: reports healthy only while the MongoDB
- * connection is up (`readyState === 1`). It mirrors, byte for byte, the
- * response contract that auth/group/payment each hand-rolled inline —
- * `{ status, service, type, timestamp, version, description,
- * dependencies.mongodb }` on success, and a generic error body on failure —
- * so services can drop the duplicated controller without changing what
- * monitoring sees.
+ * The single, unified `/health` readiness handler for every backend service.
+ *
+ * Response contract (identical across services):
+ *   { status, service, type: 'backend', timestamp, version, description }
+ * plus, when `checkDatabase` is `true` (the default), a
+ * `dependencies.mongodb` field and a 503 while the connection is down. A
+ * DB-less service (`checkDatabase: false`) omits `dependencies` and always
+ * reports `ok`. On an unexpected failure the handler returns 503 with a
+ * generic `error: 'Health check failed'` body.
+ *
+ * `/health/live` (liveness, no dependency checks) is mounted separately by
+ * `createBaseApp`.
  */
-export const createHealthCheck = ({ service, description, version = '1.0.0' }: HealthCheckConfig) => {
+export const createHealthCheck = ({
+  service,
+  description,
+  version = '1.0.0',
+  checkDatabase = true
+}: HealthCheckConfig) => {
   return async (_req: Request, res: Response): Promise<void> => {
+    const timestamp = new Date().toISOString();
+    const base = { service, type: 'backend', timestamp, version, description };
+
+    if (!checkDatabase) {
+      res.status(200).json({ status: 'ok', ...base });
+      return;
+    }
+
     try {
       const isMongoHealthy = mongoose.connection.readyState === 1; // 1 = connected
 
       res.status(isMongoHealthy ? 200 : 503).json({
         status: isMongoHealthy ? 'ok' : 'error',
-        service,
-        type: 'backend',
-        timestamp: new Date().toISOString(),
-        version,
-        description,
+        ...base,
         dependencies: {
           mongodb: isMongoHealthy ? 'connected' : 'disconnected'
         }
@@ -38,11 +59,7 @@ export const createHealthCheck = ({ service, description, version = '1.0.0' }: H
     } catch {
       res.status(503).json({
         status: 'error',
-        service,
-        type: 'backend',
-        timestamp: new Date().toISOString(),
-        version,
-        description,
+        ...base,
         error: 'Health check failed'
       });
     }

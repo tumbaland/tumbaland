@@ -1,11 +1,11 @@
-import { Request, Response } from 'express';
-import { checkHealth, getHealthStatusCode } from '../services/health.service';
+import { createHealthCheck } from '@tumbaland/backend-core';
 
 /**
- * Health check endpoint
+ * Health check endpoint with database connectivity.
+ * Built on the shared backend-core factory so the DB-aware response contract
+ * stays identical across services.
  */
-export const healthCheck = (req: Request, res: Response): void => {
-  const health = checkHealth();
-  const statusCode = getHealthStatusCode(health);
-  res.status(statusCode).json(health);
-};
+export const healthCheck = createHealthCheck({
+  service: 'relationship-service',
+  description: 'Social relationship management service'
+});

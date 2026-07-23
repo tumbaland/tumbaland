@@ -69,4 +69,21 @@ describe('createHealthCheck', () => {
       expect.objectContaining({ status: 'error', service: 'demo-service', error: 'Health check failed' })
     );
   });
+
+  describe('checkDatabase: false (DB-less services)', () => {
+    it('always responds 200 ok without touching Mongo or emitting dependencies', async () => {
+      const connectionSpy = jest.spyOn(mongoose, 'connection', 'get');
+      const res = mockRes();
+
+      await createHealthCheck({ ...config, checkDatabase: false })({} as Request, res);
+
+      expect(connectionSpy).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(200);
+      const body = (res.json as jest.Mock).mock.calls[0][0];
+      expect(body).toEqual(
+        expect.objectContaining({ status: 'ok', service: 'demo-service', type: 'backend', description: 'Demo service' })
+      );
+      expect(body).not.toHaveProperty('dependencies');
+    });
+  });
 });

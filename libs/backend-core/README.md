@@ -64,6 +64,58 @@ app.get('/protected', authenticateToken, (req, res) => {
 });
 ```
 
+### Health Checks (unified standard)
+
+Every service mounts the same `/health` readiness endpoint via the
+`createHealthCheck` factory — one response contract across all services, so
+monitoring and dashboards see identical shapes:
+
+```typescript
+import { createHealthCheck } from '@tumbaland/backend-core';
+
+// DB-backed service (default): reports `dependencies.mongodb` and returns 503
+// while the connection is down.
+export const healthCheck = createHealthCheck({
+  service: 'my-service',
+  description: 'My awesome service'
+});
+
+// Service with no database: readiness is a static ok, no `dependencies`.
+export const healthCheck = createHealthCheck({
+  service: 'public-service',
+  description: 'Public API endpoints service',
+  checkDatabase: false
+});
+
+app.get('/health', healthCheck);
+```
+
+Response body: `{ status, service, type: 'backend', timestamp, version, description }`,
+plus `dependencies.mongodb` when `checkDatabase` is on. `/health/live` (liveness,
+no dependency checks — used by the Docker `HEALTHCHECK`) is mounted separately by
+`createBaseApp`.
+
+### Graceful Shutdown
+
+`registerShutdown` wires `SIGINT` **and** `SIGTERM` (the signal Docker/Kubernetes
+send on stop and rollout) to drain the HTTP server and close the MongoDB
+connection before the process exits:
+
+```typescript
+import { registerShutdown } from '@tumbaland/backend-core';
+
+const server = app.listen(PORT, () => logger.info('Service started', { port: PORT }));
+
+// DB-backed service
+registerShutdown({ serviceName: 'my-service', server });
+
+// No-DB service: skip the Mongo disconnect
+registerShutdown({ serviceName: 'public-service', server, disconnectDatabase: false });
+```
+
+The handler is idempotent and self-arms a force-exit timer so a hung close still
+terminates.
+
 ### Structured Logging
 
 ```typescript
