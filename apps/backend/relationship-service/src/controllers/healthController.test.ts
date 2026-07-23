@@ -1,15 +1,6 @@
 import { Request, Response } from 'express';
-
-jest.mock('../services/health.service', () => ({
-  checkHealth: jest.fn(),
-  getHealthStatusCode: jest.fn()
-}));
-
-import { checkHealth, getHealthStatusCode } from '../services/health.service';
+import mongoose from 'mongoose';
 import { healthCheck } from './healthController';
-
-const mockedCheckHealth = checkHealth as jest.Mock;
-const mockedGetHealthStatusCode = getHealthStatusCode as jest.Mock;
 
 function mockRes(): Response {
   const res: Partial<Response> = {};
@@ -18,14 +9,35 @@ function mockRes(): Response {
   return res as Response;
 }
 
-it('responds with the health payload and its derived status code', () => {
-  const health = { status: 'ok' };
-  mockedCheckHealth.mockReturnValue(health);
-  mockedGetHealthStatusCode.mockReturnValue(200);
-  const res = mockRes();
+afterEach(() => jest.restoreAllMocks());
 
-  healthCheck({} as Request, res);
+describe('healthCheck', () => {
+  it('responds 200 with the relationship-service identity and mongodb connected when Mongo is up', async () => {
+    jest.spyOn(mongoose, 'connection', 'get').mockReturnValue({ readyState: 1 } as never);
+    const res = mockRes();
 
-  expect(res.status).toHaveBeenCalledWith(200);
-  expect(res.json).toHaveBeenCalledWith(health);
+    await healthCheck({} as Request, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: 'ok',
+        service: 'relationship-service',
+        description: 'Social relationship management service',
+        dependencies: { mongodb: 'connected' }
+      })
+    );
+  });
+
+  it('responds 503 with mongodb disconnected when Mongo is down', async () => {
+    jest.spyOn(mongoose, 'connection', 'get').mockReturnValue({ readyState: 0 } as never);
+    const res = mockRes();
+
+    await healthCheck({} as Request, res);
+
+    expect(res.status).toHaveBeenCalledWith(503);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'error', dependencies: { mongodb: 'disconnected' } })
+    );
+  });
 });

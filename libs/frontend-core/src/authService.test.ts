@@ -1,4 +1,5 @@
 import { createAuthService, createAppAuthService } from './authService';
+import { logger } from './monitoring';
 
 function mockFetchOnce(body: unknown, init: { ok?: boolean; status?: number } = {}) {
   const { ok = true, status = 200 } = init;
@@ -137,13 +138,13 @@ describe('createAuthService', () => {
       await authService.checkAuth();
 
       mockFetchOnce({}, { ok: false, status: 500 });
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
 
       const result = await authService.logout();
 
       expect(result).toBe(false);
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Logout failed:', expect.any(Error));
-      consoleErrorSpy.mockRestore();
+      expect(loggerErrorSpy).toHaveBeenCalledWith('Logout failed', expect.any(Error));
+      loggerErrorSpy.mockRestore();
     });
 
     it('does not reload or clear the cache when the API reports success:false', async () => {
@@ -187,13 +188,16 @@ describe('createAuthService', () => {
         text: async () => 'Forbidden'
       });
       const authService = createAuthService(config);
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
 
       const profile = await authService.getProfile();
 
       expect(profile).toBeNull();
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Profile fetch error:', 403, 'Forbidden');
-      consoleErrorSpy.mockRestore();
+      expect(loggerErrorSpy).toHaveBeenCalledWith('Profile fetch error', undefined, {
+        status: 403,
+        body: 'Forbidden'
+      });
+      loggerErrorSpy.mockRestore();
     });
   });
 });
