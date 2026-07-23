@@ -3,6 +3,8 @@
 // App bootstrap
 export { createBaseApp } from './app/createBaseApp';
 export type { CreateBaseAppOptions } from './app/createBaseApp';
+export { registerShutdown } from './app/shutdown';
+export type { RegisterShutdownOptions } from './app/shutdown';
 
 // Logging
 export { default as logger } from './logging/logger';

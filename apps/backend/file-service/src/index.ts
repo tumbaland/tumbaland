@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-import { logger } from '@tumbaland/backend-core';
+import { logger, registerShutdown } from '@tumbaland/backend-core';
 import app from './app';
 
 // Validate required env vars at startup
@@ -16,4 +16,7 @@ for (const key of REQUIRED_ENV) {
 
 const PORT = process.env.PORT || 5002;
 
-app.listen(PORT, () => logger.info('File service started', { port: PORT }));
+const server = app.listen(PORT, () => logger.info('File service started', { port: PORT }));
+
+// Graceful shutdown (SIGINT + SIGTERM). No DB connection to close.
+registerShutdown({ serviceName: 'file-service', server, disconnectDatabase: false });
