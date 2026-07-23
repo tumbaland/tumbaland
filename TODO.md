@@ -7,25 +7,21 @@ consistently. The items below are the concrete gaps worth closing, most impactfu
 
 ## High priority — reliability
 
-- [ ] **Consistent graceful shutdown across all backend services.**
-  Only `finance-service` and `relationship-service` register a `SIGINT` handler that calls
-  `disconnectDB()`; the other six (`album`, `auth`, `file`, `group`, `payment`, `public`) exit
-  without draining the Mongo connection. **No service handles `SIGTERM`** — which is the signal
-  Docker/Kubernetes actually send on stop/rollout — so every service is force-killed on deploy.
-  - Add a shared `bootstrapService({ serviceName, port, onReady? })` / `registerShutdown()`
-    helper in `@tumbaland/backend-core` that wires `SIGINT` **and** `SIGTERM` →
-    `server.close()` → `disconnectDB()` → `process.exit(0)`, and adopt it in every
-    `src/index.ts`. This also removes the dotenv/`connectDB`/`requireEnv`/`app.listen`
-    boilerplate duplicated in all eight bootstrap files.
+- [x] **Consistent graceful shutdown across all backend services.** *(done)*
+  Added `registerShutdown()` to `@tumbaland/backend-core` (wires `SIGINT` **and** `SIGTERM` →
+  optional cleanup hook → `server.close()` → `disconnectDB()` → exit, with an idempotency guard
+  and a force-exit safety timer) and adopted it in all eight `src/index.ts` files. `file`/`public`
+  opt out of the DB disconnect. Previously only `finance` and `relationship` had ad-hoc `SIGINT`
+  handlers and no service handled `SIGTERM` — the signal Docker/Kubernetes send on rollout.
 
 ## Medium priority — maintainability / DRY
 
-- [ ] **De-duplicate the per-service `healthController`.**
-  `@tumbaland/backend-core` already exports `healthCheck` and `healthLive`, yet 7 services each
-  ship their own `controllers/healthController.ts` in 3+ divergent shapes (10–37 lines, 7
-  distinct file hashes). Consolidate onto the shared implementation (parameterize the
-  service-name/description) and delete the local copies + their tests, or document why a service
-  must diverge.
+- [x] **De-duplicate the per-service `healthController`.** *(partial — done)*
+  Added a `createHealthCheck({ service, description })` factory to `@tumbaland/backend-core` and
+  collapsed the three byte-identical inline controllers (`auth`, `group`, `payment`) onto it; the
+  existing per-service health tests pass unchanged. Left `album`/`finance` (delegate to their own
+  `healthService` class), `relationship` (synchronous, no DB), and `public` (static, no DB) as-is —
+  they carry genuinely different contracts, not duplication.
 
 - [ ] **Split `relationship-service/src/services/statistics.service.ts` (899 lines).**
   It exports six large aggregation functions (`getRelationshipStatistics`, `getMonthlyHours`,
@@ -37,11 +33,11 @@ consistently. The items below are the concrete gaps worth closing, most impactfu
 
 ## Lower priority — code quality
 
-- [ ] **Route library-level errors through the monitoring layer instead of `console`.**
-  `libs/frontend-core/src/authService.ts` (6×) and `groupService.ts` (2×) call `console.error`
-  directly even though the repo has a monitoring layer (`captureException`/`logger`). Swap these
-  for the monitoring API so library errors are captured consistently.
-  (`public-service/logController.ts`'s `console.log` is intentional log forwarding — leave it.)
+- [x] **Route library-level errors through the monitoring layer instead of `console`.** *(done)*
+  Swapped the eight `console.error` call sites in `libs/frontend-core/src/authService.ts` and
+  `groupService.ts` for the monitoring `logger.error` (feeds `captureException`/`captureMessage`),
+  and updated the tests to assert on the logger. (`public-service/logController.ts`'s `console.log`
+  is intentional log forwarding — left as-is.)
 
 - [ ] **Audit the `react-hooks/exhaustive-deps` suppressions (5 sites).**
   `finance-front/pages/PortfolioPlanner.tsx` (2×), `finance-front/components/planner/ProjectionSection.tsx`,
