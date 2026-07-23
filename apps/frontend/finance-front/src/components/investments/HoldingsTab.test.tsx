@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 
@@ -29,6 +29,21 @@ vi.mock('../TickerHistoryModal', () => ({
 
 import HoldingsTab from './HoldingsTab';
 import { Holding } from '../../services/holdingService';
+
+function setMobile(isMobile: boolean) {
+  window.matchMedia = ((query: string) => ({
+    matches: isMobile,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false
+  })) as unknown as typeof window.matchMedia;
+}
+
+afterEach(() => setMobile(false));
 
 const holdings: Holding[] = [
   {
@@ -150,6 +165,55 @@ it('opens and closes the price history modal for a holding', async () => {
 
   await userEvent.click(screen.getByText('close history'));
   expect(screen.queryByText('history for AAPL')).not.toBeInTheDocument();
+});
+
+it('renders holding cards in the mobile layout, supporting edit/delete/history from there', async () => {
+  setMobile(true);
+  mockedUpdateMutateAsync.mockResolvedValue({});
+  render(<HoldingsTab holdings={holdings} notify={vi.fn()} />);
+
+  expect(screen.getByText('Apple')).toBeInTheDocument();
+  expect(screen.getByText('no data')).toBeInTheDocument();
+
+  const historyButtons = screen.getAllByRole('button').filter((b) => b.querySelector('[data-testid="ShowChartIcon"]'));
+  await userEvent.click(historyButtons[0]);
+  expect(screen.getByText('history for AAPL')).toBeInTheDocument();
+  await userEvent.click(screen.getByText('close history'));
+
+  const editButtons = screen.getAllByRole('button').filter((b) => b.querySelector('[data-testid="EditIcon"]'));
+  await userEvent.click(editButtons[0]);
+  expect(screen.getByLabelText(/^Ticker/)).toHaveValue('AAPL');
+  await userEvent.click(screen.getByRole('button', { name: 'Update' }));
+  expect(mockedUpdateMutateAsync).toHaveBeenCalled();
+});
+
+it('cancels the delete confirmation without deleting', async () => {
+  const notify = vi.fn();
+  render(<HoldingsTab holdings={holdings} notify={notify} />);
+
+  const deleteButtons = screen.getAllByRole('button').filter((b) => b.querySelector('[data-testid="DeleteIcon"]'));
+  await userEvent.click(deleteButtons[0]);
+  await userEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
+
+  expect(mockedDeleteMutateAsync).not.toHaveBeenCalled();
+  await waitFor(() => expect(screen.queryByText('Delete holding')).not.toBeInTheDocument());
+});
+
+it('allows typing a display name directly when creating a holding', async () => {
+  mockedCreateMutateAsync.mockResolvedValue({});
+  const notify = vi.fn();
+  render(<HoldingsTab holdings={[]} notify={notify} />);
+
+  await userEvent.click(screen.getByRole('button', { name: /add holding/i }));
+  await userEvent.type(screen.getByLabelText(/^Ticker/), 'msft');
+  await userEvent.type(screen.getByLabelText('Display name'), 'Microsoft');
+  await userEvent.type(screen.getByLabelText(/^Quantity/), '2');
+  await userEvent.type(screen.getByLabelText(/^Average buy price/), '150');
+  await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+  expect(mockedCreateMutateAsync).toHaveBeenCalledWith(
+    expect.objectContaining({ ticker: 'MSFT', displayName: 'Microsoft' })
+  );
 });
 
 it('cancels the add-holding dialog', async () => {
