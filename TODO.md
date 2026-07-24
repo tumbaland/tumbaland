@@ -1,58 +1,64 @@
 # Code Improvement TODO
 
-A prioritized list of improvements found while analyzing the monorepo (`apps/backend/*`,
-`apps/frontend/*`, `libs/*`). The codebase is generally healthy — strong test coverage
-(~323 test files for ~466 sources), no `: any`, shared `createBaseApp`/`errorHandler` used
-consistently. The items below are the concrete gaps worth closing, most impactful first.
-
-## High priority — reliability
-
-- [x] **Consistent graceful shutdown across all backend services.** *(done)*
-  Added `registerShutdown()` to `@tumbaland/backend-core` (wires `SIGINT` **and** `SIGTERM` →
-  optional cleanup hook → `server.close()` → `disconnectDB()` → exit, with an idempotency guard
-  and a force-exit safety timer) and adopted it in all eight `src/index.ts` files. `file`/`public`
-  opt out of the DB disconnect. Previously only `finance` and `relationship` had ad-hoc `SIGINT`
-  handlers and no service handled `SIGTERM` — the signal Docker/Kubernetes send on rollout.
+A prioritized list of improvements from analyzing the monorepo (`apps/backend/*`,
+`apps/frontend/*`, `libs/*`). Overall the codebase is healthy: 322 test files for 465 sources,
+no production `: any` or `as any` casts, `eslint .` reports 0 errors (231 warnings, all
+`no-explicit-any` in test files), and the shared `createBaseApp`/`errorHandler`/`registerShutdown`/
+`createHealthCheck` primitives are used consistently across all eight backend services. The items
+below are the concrete gaps worth closing, most impactful first.
 
 ## Medium priority — maintainability / DRY
 
-- [x] **Unify the health check across all services onto one standard.** *(done)*
-  Added a `createHealthCheck({ service, description, checkDatabase? })` factory to
-  `@tumbaland/backend-core` as the single `/health` readiness handler, and moved **all eight**
-  services onto it. `checkDatabase: false` covers the one DB-less service (`public`). Removed the
-  three redundant local health-service modules (`album`/`finance` `healthService`,
-  `relationship` `health.service`) and their tests; per-service controller tests now smoke-test the
-  wiring (100% coverage on each `healthController`). Documented the standard in backend-core's
-  README.
+- [ ] **Split `relationship-service/src/services/statistics.service.ts` (899 lines — the largest
+  file in the repo).** It exports six large aggregation functions (`getRelationshipStatistics`,
+  `getMonthlyHours`, `getMonthlyStatistics`, `getMonthlyActivityBreakdown`, `getWeeklyHeatmapData`,
+  `getCumulativeTimelineData`) that repeat similar Mongo `$match`/date-bucketing pipeline fragments.
+  Extract shared pipeline builders and split into per-concern modules (e.g. `statistics/monthly.ts`,
+  `statistics/heatmap.ts`, `statistics/timeline.ts`) for readability and easier testing.
 
-- [ ] **Split `relationship-service/src/services/statistics.service.ts` (899 lines).**
-  It exports six large aggregation functions (`getRelationshipStatistics`, `getMonthlyHours`,
-  `getMonthlyStatistics`, `getMonthlyActivityBreakdown`, `getWeeklyHeatmapData`,
-  `getCumulativeTimelineData`) that repeat similar Mongo `$match`/date-bucketing pipeline
-  fragments. Extract shared pipeline builders and split into per-concern modules
-  (e.g. `statistics/monthly.ts`, `statistics/heatmap.ts`, `statistics/timeline.ts`) for
-  readability and easier testing.
+- [ ] **De-duplicate the two album-front AI service clients.**
+  `segmentationService.ts` (464 lines) and `objectDetectionService.ts` (381 lines) independently
+  define near-identical scaffolding: their own `AIServiceError` class, a `HealthStatus` interface,
+  and the same submit → poll-job → fetch-result lifecycle. Extract a shared
+  `createAiServiceClient`/base module (one `AIServiceError`, one polling helper, one health check)
+  and have both clients build on it, mirroring how the frontend already shares
+  `@tumbaland/frontend-core`'s `createApiClient`.
+
+- [ ] **Break up the largest frontend components.** `album-front/components/collage/CollageStage.tsx`
+  (513) and `finance-front/components/TickerHistoryModal.tsx` (511) are the two biggest React files.
+  Both mix data-fetching, layout, and interaction logic in a single component — extract custom hooks
+  (e.g. a `useCollageStage`/`useTickerHistory` data hook) and presentational subcomponents to shrink
+  the render body and make the units independently testable.
 
 ## Lower priority — code quality
 
-- [x] **Route library-level errors through the monitoring layer instead of `console`.** *(done)*
-  Swapped the eight `console.error` call sites in `libs/frontend-core/src/authService.ts` and
-  `groupService.ts` for the monitoring `logger.error` (feeds `captureException`/`captureMessage`),
-  and updated the tests to assert on the logger. (`public-service/logController.ts`'s `console.log`
-  is intentional log forwarding — left as-is.)
-
 - [ ] **Audit the `react-hooks/exhaustive-deps` suppressions (5 sites).**
-  `finance-front/pages/PortfolioPlanner.tsx` (2×), `finance-front/components/planner/ProjectionSection.tsx`,
-  `relationship-front/components/TotalDaysChart.tsx`, and
-  `payment-front/pages/SubscriptionCheckoutPage.tsx` disable the rule. Each is a potential
-  stale-closure bug — verify the intent (usually "run once when X changes") and encode it with a
-  ref or a correct dependency list rather than a blanket disable.
+  `finance-front/pages/PortfolioPlanner.tsx` (2×, both "run once when X changes" effects),
+  `finance-front/components/planner/ProjectionSection.tsx`,
+  `relationship-front/components/TotalDaysChart.tsx`, and (for
+  `@typescript-eslint/no-unused-expressions`) `payment-front/pages/SubscriptionCheckoutPage.tsx`
+  disable a lint rule. Each blanket disable is a potential stale-closure bug — verify the intent and
+  encode it with a ref or a correct dependency list rather than suppressing the rule.
 
-## Tooling — verify
+- [ ] **Silence the 231 `no-explicit-any` warnings in test files.** Every remaining lint warning is
+  an `any` inside a `*.test.ts(x)` file (e.g. `libs/backend-core/src/utils/correlation.test.ts`,
+  the `libs/frontend-core/src/monitoring/*.test.ts` suite). Replace with precise mock/spy types (or
+  `unknown` + a narrowing assertion) so the warning count is a real signal again rather than noise.
 
-- [ ] **Confirm the ESLint 10 / `@eslint/js` resolution.**
-  A fresh checkout failed `npx eslint .` with
-  `Cannot find package '.../@eslint/js/index.js'` (the installed `@eslint/js` exposes an exports
-  map, not `index.js`). Confirm CI's `npm ci` produces a lockfile-consistent install and that
-  `eslint.config.mjs`'s import resolves there; pin/align the `@eslint/js` ↔ `eslint` versions if
-  the mismatch is real rather than environment-only.
+## Tooling — resolved / verified
+
+- [x] **ESLint 10 / `@eslint/js` resolution.** *(verified)* A clean `npm ci` install resolves
+  `@eslint/js`'s exports map correctly; `eslint .` runs to completion with 0 errors. The earlier
+  `Cannot find package '.../@eslint/js/index.js'` failure was a stale/partial `node_modules`, not a
+  version mismatch — `@eslint/js ^10.0.1` and `eslint ^10.6.0` are compatible.
+
+## Previously completed (kept for record)
+
+- [x] **Consistent graceful shutdown across all backend services** — `registerShutdown()` in
+  `@tumbaland/backend-core` (SIGINT + SIGTERM → cleanup → `server.close()` → `disconnectDB()`),
+  adopted in all eight `src/index.ts`.
+- [x] **Unified `/health` readiness check** — `createHealthCheck({ service, description,
+  checkDatabase? })` factory in backend-core, adopted by all eight services; redundant per-service
+  health modules removed.
+- [x] **Library errors routed through the monitoring layer** — the eight `console.error` sites in
+  `libs/frontend-core`'s `authService.ts`/`groupService.ts` now use the monitoring `logger.error`.
