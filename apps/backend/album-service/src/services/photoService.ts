@@ -129,6 +129,11 @@ class PhotoService {
 
     const savedPhoto = await photo.save();
 
+    // Keep the album's denormalized photoCount/totalSize in sync so listing
+    // and dashboard pages can read them directly instead of aggregating
+    // across every photo on each request.
+    await Album.updateOne({ _id: albumId }, { $inc: { photoCount: 1, totalSize: size } });
+
     // Generate thumbnail asynchronously for supported image formats (don't block photo creation)
     if (isSupportedImageFormat(mimetype)) {
       this.generateThumbnailAsync(
@@ -294,6 +299,9 @@ class PhotoService {
 
     // Delete the photo record
     await Photo.findByIdAndDelete(photoId);
+
+    // Keep the album's denormalized photoCount/totalSize in sync (see createPhoto).
+    await Album.updateOne({ _id: photo.albumId }, { $inc: { photoCount: -1, totalSize: -photo.size } });
 
     // If this was the cover photo, remove it from the album
     const album = await Album.findOne({ coverPhotoId: photoId });

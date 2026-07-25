@@ -23,6 +23,7 @@ export function makeAlbum(overrides: Partial<Album> = {}): Album {
     isPublic: false,
     tags: [],
     photoCount: 0,
+    totalSize: 0,
     userId: 'user-1',
     createdAt: '2024-01-01T00:00:00.000Z',
     updatedAt: '2024-01-01T00:00:00.000Z',

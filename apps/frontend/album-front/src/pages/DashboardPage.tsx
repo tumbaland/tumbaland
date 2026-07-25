@@ -209,6 +209,11 @@ const DashboardPage: React.FC = () => {
           <StorageChart
             totalStorage={statistics.overview.totalStorage}
             averagePhotoSize={statistics.overview.averagePhotoSize}
+            topAlbums={statistics.albums.map((album) => ({
+              albumId: album.albumId,
+              name: album.name,
+              totalSize: album.totalSize
+            }))}
           />
           <AIAnalysisChart data={statistics.aiAnalysis} />
         </Box>

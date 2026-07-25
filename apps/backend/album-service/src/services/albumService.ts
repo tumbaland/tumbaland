@@ -28,6 +28,7 @@ interface AlbumAggRow {
   createdAt: Date;
   updatedAt: Date;
   photoCount: number;
+  totalSize: number;
 }
 
 interface AlbumByIdAggRow extends AlbumAggRow {
@@ -170,44 +171,17 @@ class AlbumService {
 
     const skip = (Number(page) - 1) * Number(limit);
 
-    // Use aggregation pipeline to get albums with photo counts in one query
-    const aggregationPipeline: PipelineStage[] = [
-      { $match: matchQuery },
-      {
-        $lookup: {
-          from: 'photos',
-          localField: '_id',
-          foreignField: 'albumId',
-          as: 'photos'
-        }
-      },
-      {
-        $addFields: {
-          photoCount: { $size: '$photos' }
-        }
-      },
-      {
-        $project: {
-          photos: 0 // Remove the photos array from result
-        }
-      },
-      { $sort: { updatedAt: -1 as -1 } },
-      { $skip: skip },
-      { $limit: Number(limit) }
-    ];
-
-    // Get total count for pagination
-    const totalPipeline: PipelineStage[] = [
-      { $match: matchQuery },
-      { $count: 'total' }
-    ];
-
-    const [albumsResult, totalResult] = await Promise.all([
-      Album.aggregate<AlbumAggRow>(aggregationPipeline),
-      Album.aggregate<{ total: number }>(totalPipeline)
+    // photoCount/totalSize are denormalized onto the album document itself
+    // (see photoService's create/deletePhoto), so listing albums is a plain
+    // find — no per-page join across the photos collection needed.
+    const [albumsResult, total] = await Promise.all([
+      Album.find(matchQuery)
+        .sort({ updatedAt: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .lean<AlbumAggRow[]>(),
+      Album.countDocuments(matchQuery)
     ]);
-
-    const total = totalResult[0]?.total || 0;
 
     let albumsWithCovers: AlbumWithCoverPhoto[];
 
@@ -237,54 +211,30 @@ class AlbumService {
   async getAlbumById(albumId: string, context: AlbumPermissionContext): Promise<AlbumWithCoverPhoto> {
     const { userId, userGroups } = context;
 
-    // Use aggregation to get album with photo count and cover photo in one query
+    // Album's own photoCount/totalSize are already denormalized (see
+    // photoService's create/deletePhoto), so this pipeline only needs to
+    // resolve the cover photo — no more pulling every photo in the album
+    // into the pipeline just to count and filter them in memory.
     const aggregationPipeline: PipelineStage[] = [
       { $match: { _id: new mongoose.Types.ObjectId(albumId as string) } },
       {
         $lookup: {
           from: 'photos',
-          let: { albumId: '$_id', coverPhotoId: '$coverPhotoId' },
+          let: { coverPhotoId: '$coverPhotoId' },
           pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $or: [
-                    { $eq: ['$albumId', '$$albumId'] },
-                    { $eq: ['$_id', '$$coverPhotoId'] }
-                  ]
-                }
-              }
-            }
+            { $match: { $expr: { $eq: ['$_id', '$$coverPhotoId'] } } }
           ],
-          as: 'relatedPhotos'
+          as: 'coverPhotoDocs'
         }
       },
       {
         $addFields: {
-          photoCount: {
-            $size: {
-              $filter: {
-                input: '$relatedPhotos',
-                cond: { $eq: ['$$this.albumId', '$_id'] }
-              }
-            }
-          },
-          coverPhotoDoc: {
-            $arrayElemAt: [
-              {
-                $filter: {
-                  input: '$relatedPhotos',
-                  cond: { $eq: ['$$this._id', '$coverPhotoId'] }
-                }
-              },
-              0
-            ]
-          }
+          coverPhotoDoc: { $arrayElemAt: ['$coverPhotoDocs', 0] }
         }
       },
       {
         $project: {
-          relatedPhotos: 0
+          coverPhotoDocs: 0
         }
       }
     ];

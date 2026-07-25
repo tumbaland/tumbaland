@@ -7,24 +7,26 @@ import {
   LinearProgress
 } from '@mui/material';
 import { Storage as StorageIcon } from '@mui/icons-material';
+import { formatBytes } from '../../utils/formatBytes';
+
+export interface StorageChartAlbum {
+  albumId: string;
+  name: string;
+  totalSize: number;
+}
 
 interface StorageChartProps {
   totalStorage: number;
   averagePhotoSize: number;
+  /** Top albums by storage used, largest first (see statisticsService.getTopAlbumsByStorage). */
+  topAlbums?: StorageChartAlbum[];
 }
 
-const StorageChart: React.FC<StorageChartProps> = ({ totalStorage, averagePhotoSize }) => {
-  const formatBytes = (bytes: number): string => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-  };
-
-  // Calculate storage usage percentage (assuming 10GB limit for demo)
-  const storageLimit = 10 * 1024 * 1024 * 1024; // 10GB
-  const usagePercentage = Math.min((totalStorage / storageLimit) * 100, 100);
+const StorageChart: React.FC<StorageChartProps> = ({ totalStorage, averagePhotoSize, topAlbums = [] }) => {
+  // Relative to the largest album in the list, not a storage cap — there is
+  // no plan-level storage limit, so this bar visualizes distribution across
+  // albums rather than usage against a quota.
+  const largestAlbumSize = topAlbums[0]?.totalSize || 0;
 
   return (
     <Card
@@ -45,40 +47,57 @@ const StorageChart: React.FC<StorageChartProps> = ({ totalStorage, averagePhotoS
           </Typography>
         </Box>
 
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h4" sx={{ fontWeight: 700, color: '#1e293b', mb: 1 }}>
-            {formatBytes(totalStorage)}
-          </Typography>
-          <Typography variant="body2" sx={{ color: '#64748b', mb: 2 }}>
-            Total storage used
-          </Typography>
-
-          <LinearProgress
-            variant="determinate"
-            value={usagePercentage}
-            sx={{
-              height: 8,
-              borderRadius: 4,
-              backgroundColor: '#e5e7eb',
-              '& .MuiLinearProgress-bar': {
-                borderRadius: 4,
-                backgroundColor: usagePercentage > 80 ? '#ef4444' : '#22c55e'
-              }
-            }}
-          />
-          <Typography variant="caption" sx={{ color: '#64748b', mt: 1, display: 'block' }}>
-            {usagePercentage.toFixed(1)}% of 10GB limit
-          </Typography>
+        <Box sx={{ mb: 3, display: 'flex', gap: 4 }}>
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 700, color: '#1e293b', mb: 0.5 }}>
+              {formatBytes(totalStorage)}
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#64748b' }}>
+              Total storage used
+            </Typography>
+          </Box>
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 700, color: '#1e293b', mb: 0.5 }}>
+              {formatBytes(averagePhotoSize)}
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#64748b' }}>
+              Average photo size
+            </Typography>
+          </Box>
         </Box>
 
-        <Box>
-          <Typography variant="body2" sx={{ color: '#64748b', mb: 1 }}>
-            Average photo size
-          </Typography>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: '#1e293b' }}>
-            {formatBytes(averagePhotoSize)}
-          </Typography>
-        </Box>
+        {topAlbums.length > 0 && (
+          <Box>
+            <Typography variant="body2" sx={{ color: '#64748b', mb: 1.5 }}>
+              Largest albums
+            </Typography>
+            {topAlbums.map((album) => (
+              <Box key={album.albumId} sx={{ mb: 1.25 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                  <Typography variant="body2" noWrap sx={{ color: '#1e293b', maxWidth: '70%' }}>
+                    {album.name}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 600 }}>
+                    {formatBytes(album.totalSize)}
+                  </Typography>
+                </Box>
+                <LinearProgress
+                  variant="determinate"
+                  value={largestAlbumSize > 0 ? (album.totalSize / largestAlbumSize) * 100 : 0}
+                  sx={{
+                    height: 6,
+                    borderRadius: 3,
+                    backgroundColor: '#e5e7eb',
+                    '& .MuiLinearProgress-bar': {
+                      borderRadius: 3,
+                      backgroundColor: '#f59e0b'
+                    }
+                  }}
+                />
+              </Box>
+            ))}
+          </Box>
+        )}
       </CardContent>
     </Card>
   );

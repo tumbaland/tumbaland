@@ -25,6 +25,18 @@ interface StorageStats {
   avgSize: number;
 }
 
+interface AlbumStorageAggRow {
+  totalSize: number;
+  totalPhotoCount: number;
+}
+
+interface TopAlbumRow {
+  _id: unknown;
+  name: string;
+  totalSize: number;
+  photoCount: number;
+}
+
 interface TimeSeriesRow {
   _id: { year: number; month: number };
   count: number;
@@ -68,6 +80,7 @@ interface AlbumStatisticsResult {
     totalMasks: number;
   };
   groups: { groupId: string; albumCount: number; photoCount: number }[];
+  albums: { albumId: string; name: string; totalSize: number; photoCount: number }[];
 }
 
 class StatisticsService {
@@ -109,8 +122,17 @@ class StatisticsService {
       Photo.countDocuments(photoMatchQuery)
     ]);
 
-    // Get storage usage (sum of photo sizes)
-    const storageStats = await this.getStorageStats(photoMatchQuery);
+    // Get storage usage. Summed from the albums' own denormalized totalSize
+    // (see photoService's create/deletePhoto) rather than aggregating over
+    // every matching photo — the album collection is orders of magnitude
+    // smaller than the photo collection, so this scales with album count,
+    // not photo count.
+    const storageStats = await this.getStorageStats(albumMatchQuery);
+
+    // Get the albums with the most storage used (top 8), for the dashboard's
+    // per-album breakdown. Backed by the { userId/groupId, totalSize } index
+    // on Album, so this is a fast indexed sort/limit, not a full scan.
+    const topAlbums = await this.getTopAlbumsByStorage(albumMatchQuery);
 
     // Get albums created over time (last 12 months)
     const albumCreationStats = await this.getAlbumCreationStats(albumMatchQuery);
@@ -164,26 +186,50 @@ class StatisticsService {
         groupId: group._id,
         albumCount: group.albumCount,
         photoCount: group.photoCount
+      })),
+      albums: topAlbums.map(album => ({
+        albumId: String(album._id),
+        name: album.name,
+        totalSize: album.totalSize,
+        photoCount: album.photoCount
       }))
     };
   }
 
   /**
-   * Private helper: Get storage statistics
+   * Private helper: Get storage statistics, summed from the albums'
+   * denormalized totalSize/photoCount rather than scanning every photo.
    */
-  private async getStorageStats(photoMatchQuery: PhotoMatchQuery): Promise<StorageStats> {
-    const storageResult = await Photo.aggregate<StorageStats>([
-      { $match: photoMatchQuery },
+  private async getStorageStats(albumMatchQuery: AlbumMatchQuery): Promise<StorageStats> {
+    const storageResult = await Album.aggregate<AlbumStorageAggRow>([
+      { $match: albumMatchQuery },
       {
         $group: {
           _id: null,
-          totalSize: { $sum: '$size' },
-          avgSize: { $avg: '$size' }
+          totalSize: { $sum: '$totalSize' },
+          totalPhotoCount: { $sum: '$photoCount' }
         }
       }
     ]);
 
-    return storageResult[0] || { totalSize: 0, avgSize: 0 };
+    const { totalSize = 0, totalPhotoCount = 0 } = storageResult[0] || {};
+    return {
+      totalSize,
+      avgSize: totalPhotoCount > 0 ? totalSize / totalPhotoCount : 0
+    };
+  }
+
+  /**
+   * Private helper: Get the top N albums by storage used, for the
+   * dashboard's per-album breakdown. A plain indexed find — no aggregation
+   * across photos.
+   */
+  private async getTopAlbumsByStorage(albumMatchQuery: AlbumMatchQuery, limit = 8): Promise<TopAlbumRow[]> {
+    return Album.find(albumMatchQuery)
+      .select({ name: 1, totalSize: 1, photoCount: 1 })
+      .sort({ totalSize: -1 })
+      .limit(limit)
+      .lean<TopAlbumRow[]>();
   }
 
   /**

@@ -18,13 +18,24 @@ const mockedAlbumAggregate = Album.aggregate as unknown as jest.Mock;
 const mockedPhotoCount = Photo.countDocuments as unknown as jest.Mock;
 const mockedPhotoAggregate = Photo.aggregate as unknown as jest.Mock;
 
-function distinctable(ids: string[] = []) {
-  return { distinct: jest.fn().mockResolvedValue(ids) };
+// Album.find() serves two different call shapes in statisticsService:
+// `.distinct('_id')` (resolving photoMatchQuery's albumId list) and
+// `.select().sort().limit().lean()` (getTopAlbumsByStorage). This stub
+// supports both so the same default works regardless of which call site
+// a given test doesn't care about.
+function albumFindStub(result: unknown[] = []) {
+  return {
+    distinct: jest.fn().mockResolvedValue(result),
+    select: jest.fn().mockReturnThis(),
+    sort: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    lean: jest.fn().mockResolvedValue(result)
+  };
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockedAlbumFind.mockReturnValue(distinctable([]));
+  mockedAlbumFind.mockReturnValue(albumFindStub([]));
   mockedAlbumCount.mockResolvedValue(0);
   mockedPhotoCount.mockResolvedValue(0);
   mockedAlbumAggregate.mockResolvedValue([]);
@@ -39,7 +50,7 @@ describe('getAlbumStatistics', () => {
   });
 
   it('scopes to a group the user belongs to', async () => {
-    mockedAlbumFind.mockReturnValue(distinctable(['a1']));
+    mockedAlbumFind.mockReturnValue(albumFindStub(['a1']));
     mockedAlbumCount.mockResolvedValue(2);
     mockedPhotoCount.mockResolvedValue(5);
 
@@ -56,11 +67,11 @@ describe('getAlbumStatistics', () => {
 
   it('scopes to personal albums and includes group stats when no groupId is given', async () => {
     mockedAlbumAggregate
+      .mockResolvedValueOnce([{ totalSize: 1000, totalPhotoCount: 2 }]) // storage stats
       .mockResolvedValueOnce([]) // album creation stats
       .mockResolvedValueOnce([]) // popular tags
       .mockResolvedValueOnce([{ _id: 'personal', albumCount: 3, photoCount: 0 }]); // group stats
     mockedPhotoAggregate
-      .mockResolvedValueOnce([{ totalSize: 1000, avgSize: 500 }]) // storage stats
       .mockResolvedValueOnce([]) // photo upload stats
       .mockResolvedValueOnce([{ totalPhotos: 2, analyzedPhotos: 1, totalDetections: 3, totalMasks: 0 }]); // ai stats
 
@@ -73,15 +84,35 @@ describe('getAlbumStatistics', () => {
   });
 
   it('formats time-series and tag data, and defaults an empty analysisRate when there are no photos', async () => {
-    mockedAlbumAggregate.mockResolvedValueOnce([{ _id: { year: 2026, month: 3 }, count: 4 }]).mockResolvedValueOnce([
-      { _id: 'vacation', count: 5 }
-    ]).mockResolvedValueOnce([]);
-    mockedPhotoAggregate.mockResolvedValueOnce([]).mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    mockedAlbumAggregate
+      .mockResolvedValueOnce([]) // storage stats
+      .mockResolvedValueOnce([{ _id: { year: 2026, month: 3 }, count: 4 }]) // album creation stats
+      .mockResolvedValueOnce([{ _id: 'vacation', count: 5 }]) // popular tags
+      .mockResolvedValueOnce([]); // group stats
+    mockedPhotoAggregate.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
 
     const result = await statisticsService.getAlbumStatistics({}, { userId: 'u1', userGroups: [] });
 
     expect(result.timeSeries.albumsCreated).toEqual([{ date: '2026-03', count: 4 }]);
     expect(result.tags).toEqual([{ tag: 'vacation', count: 5 }]);
     expect(result.aiAnalysis.analysisRate).toBe(0);
+  });
+
+  it('returns the top albums by storage, sorted and limited via an indexed find (no photo aggregation)', async () => {
+    const topAlbumsStub = albumFindStub([
+      { _id: 'a1', name: 'Trip', totalSize: 5000, photoCount: 10 },
+      { _id: 'a2', name: 'Wedding', totalSize: 3000, photoCount: 4 }
+    ]);
+    mockedAlbumFind.mockReturnValue(topAlbumsStub);
+
+    const result = await statisticsService.getAlbumStatistics({}, { userId: 'u1', userGroups: [] });
+
+    expect(topAlbumsStub.select).toHaveBeenCalledWith({ name: 1, totalSize: 1, photoCount: 1 });
+    expect(topAlbumsStub.sort).toHaveBeenCalledWith({ totalSize: -1 });
+    expect(topAlbumsStub.limit).toHaveBeenCalledWith(8);
+    expect(result.albums).toEqual([
+      { albumId: 'a1', name: 'Trip', totalSize: 5000, photoCount: 10 },
+      { albumId: 'a2', name: 'Wedding', totalSize: 3000, photoCount: 4 }
+    ]);
   });
 });

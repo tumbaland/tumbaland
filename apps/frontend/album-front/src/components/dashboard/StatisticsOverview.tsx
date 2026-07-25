@@ -11,6 +11,7 @@ import {
   Storage as StorageIcon,
   Image as ImageIcon
 } from '@mui/icons-material';
+import { formatBytes } from '../../utils/formatBytes';
 
 interface StatisticsOverviewData {
   totalAlbums: number;
@@ -24,14 +25,6 @@ interface StatisticsOverviewProps {
 }
 
 const StatisticsOverview: React.FC<StatisticsOverviewProps> = ({ data }) => {
-  const formatBytes = (bytes: number): string => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-  };
-
   const stats = [
     {
       title: 'Total Albums',

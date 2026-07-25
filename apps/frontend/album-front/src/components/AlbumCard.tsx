@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardMedia, Typography, Chip, Box, Menu, MenuItem } from '@mui/material';
 import { PhotoLibrary as PhotoLibraryIcon } from '@mui/icons-material';
 import { Album } from '../types';
+import { formatBytes } from '../utils/formatBytes';
 
 interface AlbumCardProps {
   album: Album;
@@ -130,6 +131,7 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete, 
             fontSize: { xs: '0.75rem', sm: '0.875rem' }
           }}>
           {album.photoCount} {album.photoCount === 1 ? 'photo' : 'photos'}
+          {album.photoCount > 0 && ` • ${formatBytes(album.totalSize)}`}
         </Typography>
 
         {album.tags && album.tags.length > 0 && (

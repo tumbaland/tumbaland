@@ -8,6 +8,7 @@ jest.mock('../models/Album', () => {
   ctor.findByIdAndDelete = jest.fn();
   ctor.aggregate = jest.fn();
   ctor.find = jest.fn();
+  ctor.countDocuments = jest.fn();
   return { __esModule: true, default: ctor };
 });
 
@@ -36,6 +37,8 @@ const mockedFindById = Album.findById as unknown as jest.Mock;
 const mockedFindByIdAndUpdate = Album.findByIdAndUpdate as unknown as jest.Mock;
 const mockedFindByIdAndDelete = Album.findByIdAndDelete as unknown as jest.Mock;
 const mockedAggregate = Album.aggregate as unknown as jest.Mock;
+const mockedFind = Album.find as unknown as jest.Mock;
+const mockedCountDocuments = Album.countDocuments as unknown as jest.Mock;
 const mockedPhotoFind = Photo.find as unknown as jest.Mock;
 const mockedPhotoFindOne = Photo.findOne as unknown as jest.Mock;
 const mockedPhotoDeleteMany = Photo.deleteMany as unknown as jest.Mock;
@@ -185,16 +188,25 @@ describe('createAlbum', () => {
   });
 });
 
+function albumsChainable(result: unknown[]) {
+  const query: any = {
+    sort: jest.fn().mockReturnThis(),
+    skip: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    lean: jest.fn().mockResolvedValue(result)
+  };
+  return query;
+}
+
 describe('getAlbums', () => {
   it('scopes to personal albums (no groupId) by default', async () => {
-    mockedAggregate.mockResolvedValueOnce([{ _id: 'a1', coverPhotoId: undefined }]).mockResolvedValueOnce([{ total: 1 }]);
+    mockedFind.mockReturnValueOnce(albumsChainable([{ _id: 'a1', coverPhotoId: undefined, photoCount: 0, totalSize: 0 }]));
+    mockedCountDocuments.mockResolvedValueOnce(1);
 
     const result = await albumService.getAlbums({}, ctx());
 
-    expect(mockedAggregate).toHaveBeenNthCalledWith(
-      1,
-      expect.arrayContaining([{ $match: { userId: 'user-1', groupId: { $exists: false } } }])
-    );
+    expect(mockedFind).toHaveBeenCalledWith({ userId: 'user-1', groupId: { $exists: false } });
+    expect(mockedCountDocuments).toHaveBeenCalledWith({ userId: 'user-1', groupId: { $exists: false } });
     expect(result.pagination).toEqual({ page: 1, limit: 10, total: 1, pages: 1 });
   });
 
@@ -209,15 +221,17 @@ describe('getAlbums', () => {
   });
 
   it('scopes by groupId when the user is a member', async () => {
-    mockedAggregate.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    mockedFind.mockReturnValueOnce(albumsChainable([]));
+    mockedCountDocuments.mockResolvedValueOnce(0);
 
     await albumService.getAlbums({ groupId: 'g1' }, ctx({ userGroups: ['g1'] }));
 
-    expect(mockedAggregate).toHaveBeenNthCalledWith(1, expect.arrayContaining([{ $match: { groupId: 'g1' } }]));
+    expect(mockedFind).toHaveBeenCalledWith({ groupId: 'g1' });
   });
 
   it('skips cover-photo enrichment when includeCover is false', async () => {
-    mockedAggregate.mockResolvedValueOnce([{ _id: 'a1', coverPhotoId: 'p1' }]).mockResolvedValueOnce([{ total: 1 }]);
+    mockedFind.mockReturnValueOnce(albumsChainable([{ _id: 'a1', coverPhotoId: 'p1', photoCount: 1, totalSize: 100 }]));
+    mockedCountDocuments.mockResolvedValueOnce(1);
 
     const result = await albumService.getAlbums({ includeCover: false }, ctx());
 
@@ -226,7 +240,8 @@ describe('getAlbums', () => {
   });
 
   it('enriches albums with cover photo signed URLs when includeCover is true', async () => {
-    mockedAggregate.mockResolvedValueOnce([{ _id: 'a1', coverPhotoId: 'p1' }]).mockResolvedValueOnce([{ total: 1 }]);
+    mockedFind.mockReturnValueOnce(albumsChainable([{ _id: 'a1', coverPhotoId: 'p1', photoCount: 1, totalSize: 100 }]));
+    mockedCountDocuments.mockResolvedValueOnce(1);
     mockedPhotoFind.mockResolvedValue([
       { id: 'p1', minioFileId: 'file-1', mimetype: 'image/jpeg', toObject: () => ({ id: 'p1' }) }
     ]);

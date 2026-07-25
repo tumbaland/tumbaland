@@ -14,7 +14,7 @@ jest.mock('../models/Photo', () => {
 
 jest.mock('../models/Album', () => ({
   __esModule: true,
-  default: { findById: jest.fn(), findOne: jest.fn() }
+  default: { findById: jest.fn(), findOne: jest.fn(), updateOne: jest.fn() }
 }));
 
 jest.mock('./fileServiceClient', () => ({
@@ -47,6 +47,7 @@ const mockedFindByIdAndUpdate = Photo.findByIdAndUpdate as unknown as jest.Mock;
 const mockedFindByIdAndDelete = Photo.findByIdAndDelete as unknown as jest.Mock;
 const mockedAlbumFindById = Album.findById as unknown as jest.Mock;
 const mockedAlbumFindOne = Album.findOne as unknown as jest.Mock;
+const mockedAlbumUpdateOne = Album.updateOne as unknown as jest.Mock;
 const mockedDeleteFile = deleteFile as unknown as jest.Mock;
 const mockedGetPhotoSignedUrl = getPhotoSignedUrl as unknown as jest.Mock;
 const mockedGetPhotoSignedUrlsBatch = getPhotoSignedUrlsBatch as unknown as jest.Mock;
@@ -82,6 +83,10 @@ describe('createPhoto', () => {
     expect(result._id).toBe('new-photo-id');
     expect(album.coverPhotoId).toBe('new-photo-id');
     expect(album.save).toHaveBeenCalledTimes(1);
+    expect(mockedAlbumUpdateOne).toHaveBeenCalledWith(
+      { _id: 'a1' },
+      { $inc: { photoCount: 1, totalSize: 100 } }
+    );
   });
 
   it('does not overwrite an existing album cover', async () => {
@@ -258,7 +263,7 @@ describe('deletePhoto', () => {
   });
 
   it('deletes files, the photo, and clears the album cover if it was the cover photo', async () => {
-    mockedFindById.mockResolvedValue({ minioFileId: 'file-1', minioThumbnailFileId: 'thumb-1' });
+    mockedFindById.mockResolvedValue({ albumId: 'a1', size: 100, minioFileId: 'file-1', minioThumbnailFileId: 'thumb-1' });
     const album: any = { coverPhotoId: 'p1', save: jest.fn().mockResolvedValue(undefined) };
     mockedAlbumFindOne.mockResolvedValue(album);
 
@@ -267,12 +272,16 @@ describe('deletePhoto', () => {
     expect(mockedDeleteFile).toHaveBeenCalledWith('file-1');
     expect(mockedDeleteFile).toHaveBeenCalledWith('thumb-1');
     expect(mockedFindByIdAndDelete).toHaveBeenCalledWith('p1');
+    expect(mockedAlbumUpdateOne).toHaveBeenCalledWith(
+      { _id: 'a1' },
+      { $inc: { photoCount: -1, totalSize: -100 } }
+    );
     expect(album.coverPhotoId).toBeUndefined();
     expect(album.save).toHaveBeenCalledTimes(1);
   });
 
   it('still deletes the photo record even if file deletion fails', async () => {
-    mockedFindById.mockResolvedValue({ minioFileId: 'file-1' });
+    mockedFindById.mockResolvedValue({ albumId: 'a1', size: 100, minioFileId: 'file-1' });
     mockedDeleteFile.mockRejectedValue(new Error('down'));
     mockedAlbumFindOne.mockResolvedValue(null);
 
@@ -281,7 +290,7 @@ describe('deletePhoto', () => {
   });
 
   it('does not touch any album when the deleted photo was not a cover photo', async () => {
-    mockedFindById.mockResolvedValue({});
+    mockedFindById.mockResolvedValue({ albumId: 'a1', size: 50 });
     mockedAlbumFindOne.mockResolvedValue(null);
 
     await photoService.deletePhoto('p1');
