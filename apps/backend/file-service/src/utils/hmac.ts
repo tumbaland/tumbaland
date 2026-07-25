@@ -32,6 +32,15 @@ export const verifyToken = (
   token: string
 ): boolean => {
   if (Date.now() > expiresMs) return false;
+
   const expected = signToken(operation, fileId, expiresMs);
-  return crypto.timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(token, 'hex'));
+  const expectedBuf = Buffer.from(expected, 'hex');
+  const tokenBuf = Buffer.from(token, 'hex');
+
+  // A malformed/wrong-length token is a rejected token, not a server fault —
+  // timingSafeEqual throws RangeError on mismatched lengths, so check first
+  // rather than let the caller's try/catch turn this into a 500.
+  if (tokenBuf.length !== expectedBuf.length) return false;
+
+  return crypto.timingSafeEqual(expectedBuf, tokenBuf);
 };

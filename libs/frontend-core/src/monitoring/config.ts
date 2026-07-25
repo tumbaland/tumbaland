@@ -72,8 +72,10 @@ export const initMonitoring = (environment: string = 'development', options: {
     elkUrl
   });
 
-  console.log(`📊 Local monitoring initialized (${environment} mode) for ${service}/${component}`);
-  console.log(`📝 Console interception enabled for levels: ${captureConsoleLevels.join(', ')}`);
+  if (environment === 'development') {
+    console.log(`📊 Local monitoring initialized (${environment} mode) for ${service}/${component}`);
+    console.log(`📝 Console interception enabled for levels: ${captureConsoleLevels.join(', ')}`);
+  }
 
   // Initialize console interception and error handlers after modules are loaded
   Promise.all([

@@ -69,11 +69,13 @@ describe('verifyToken', () => {
     expect(verifyToken('download', 'a.jpg', futureExpiry, flipped)).toBe(false);
   });
 
-  it('throws for a malformed (non-hex, wrong-length) token — timingSafeEqual requires equal-length buffers', () => {
+  it('returns false (not throw) for a malformed, wrong-length token', () => {
     const futureExpiry = Date.now() + 60_000;
 
-    // This isn't caught inside verifyToken itself; the caller (requireSignedToken
-    // middleware) wraps it in a try/catch and responds 500, see auth.test.ts.
-    expect(() => verifyToken('download', 'a.jpg', futureExpiry, 'not-a-real-token')).toThrow();
+    // timingSafeEqual would throw RangeError on mismatched buffer lengths;
+    // verifyToken checks the length itself first so a malformed token is
+    // just rejected, same as any other invalid token — see auth.test.ts for
+    // the middleware asserting this comes back as 403, not 500.
+    expect(verifyToken('download', 'a.jpg', futureExpiry, 'not-a-real-token')).toBe(false);
   });
 });
