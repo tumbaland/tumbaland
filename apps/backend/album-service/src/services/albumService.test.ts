@@ -229,6 +229,17 @@ describe('getAlbums', () => {
     expect(mockedFind).toHaveBeenCalledWith({ groupId: 'g1' });
   });
 
+  it('coalesces photoCount/totalSize to 0 for an album that predates those fields (not yet backfilled)', async () => {
+    // .lean() returns exactly what's on disk — an album saved before the
+    // photoCount/totalSize migration simply has neither field.
+    mockedFind.mockReturnValueOnce(albumsChainable([{ _id: 'legacy-album', coverPhotoId: undefined }]));
+    mockedCountDocuments.mockResolvedValueOnce(1);
+
+    const result = await albumService.getAlbums({}, ctx());
+
+    expect(result.albums[0]).toMatchObject({ photoCount: 0, totalSize: 0 });
+  });
+
   it('skips cover-photo enrichment when includeCover is false', async () => {
     mockedFind.mockReturnValueOnce(albumsChainable([{ _id: 'a1', coverPhotoId: 'p1', photoCount: 1, totalSize: 100 }]));
     mockedCountDocuments.mockResolvedValueOnce(1);
@@ -268,6 +279,27 @@ describe('getAlbumById', () => {
     await expect(albumService.getAlbumById('507f1f77bcf86cd799439011', ctx())).rejects.toMatchObject({
       name: 'ForbiddenError'
     });
+  });
+
+  it('builds the aggregation pipeline to coalesce photoCount/totalSize to 0 for a not-yet-backfilled album', async () => {
+    // Album.aggregate is mocked here, so this can only verify the pipeline
+    // we construct asks Mongo to $ifNull the fields — it can't exercise
+    // Mongo's actual $ifNull evaluation the way a real-DB integration test
+    // could (see TODO.md's note on the data layer having no contract tests).
+    mockedAggregate.mockResolvedValue([{ _id: 'a1', userId: 'user-1', isPublic: false }]);
+
+    await albumService.getAlbumById('507f1f77bcf86cd799439011', ctx());
+
+    expect(mockedAggregate).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          $addFields: expect.objectContaining({
+            photoCount: { $ifNull: ['$photoCount', 0] },
+            totalSize: { $ifNull: ['$totalSize', 0] }
+          })
+        })
+      ])
+    );
   });
 
   it('returns the album with a resolved cover photo when accessible', async () => {

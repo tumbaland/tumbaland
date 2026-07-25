@@ -174,12 +174,21 @@ class AlbumService {
     // photoCount/totalSize are denormalized onto the album document itself
     // (see photoService's create/deletePhoto), so listing albums is a plain
     // find — no per-page join across the photos collection needed.
+    //
+    // .lean() returns the raw driver document, not a hydrated Mongoose
+    // document, so it does NOT apply the schema's `default: 0` — an album
+    // that predates these fields (i.e. hasn't been backfilled by
+    // scripts/migration/backfill-album-storage.js) comes back with
+    // photoCount/totalSize simply absent, not 0. Coalesce explicitly so a
+    // not-yet-backfilled album renders as "0 photos" rather than
+    // "undefined photos".
     const [albumsResult, total] = await Promise.all([
       Album.find(matchQuery)
         .sort({ updatedAt: -1 })
         .skip(skip)
         .limit(Number(limit))
-        .lean<AlbumAggRow[]>(),
+        .lean<AlbumAggRow[]>()
+        .then((rows) => rows.map((row) => ({ ...row, photoCount: row.photoCount ?? 0, totalSize: row.totalSize ?? 0 }))),
       Album.countDocuments(matchQuery)
     ]);
 
@@ -215,6 +224,11 @@ class AlbumService {
     // photoService's create/deletePhoto), so this pipeline only needs to
     // resolve the cover photo — no more pulling every photo in the album
     // into the pipeline just to count and filter them in memory.
+    //
+    // $ifNull covers an album that predates these fields (i.e. hasn't been
+    // backfilled by scripts/migration/backfill-album-storage.js yet) —
+    // aggregation output reflects exactly what's stored, so a missing field
+    // would otherwise come back as absent/undefined rather than 0.
     const aggregationPipeline: PipelineStage[] = [
       { $match: { _id: new mongoose.Types.ObjectId(albumId as string) } },
       {
@@ -229,7 +243,9 @@ class AlbumService {
       },
       {
         $addFields: {
-          coverPhotoDoc: { $arrayElemAt: ['$coverPhotoDocs', 0] }
+          coverPhotoDoc: { $arrayElemAt: ['$coverPhotoDocs', 0] },
+          photoCount: { $ifNull: ['$photoCount', 0] },
+          totalSize: { $ifNull: ['$totalSize', 0] }
         }
       },
       {

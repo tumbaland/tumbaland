@@ -223,13 +223,23 @@ class StatisticsService {
    * Private helper: Get the top N albums by storage used, for the
    * dashboard's per-album breakdown. A plain indexed find — no aggregation
    * across photos.
+   *
+   * Note: the $sort happens in MongoDB against whatever totalSize actually
+   * has on disk, so an album that predates this field (hasn't been
+   * backfilled by scripts/migration/backfill-album-storage.js) sorts as if
+   * its size were 0/absent regardless of how many photos it really has —
+   * that ranking can only be fixed by running the backfill, not by
+   * coalescing after the fact. The .map() below only protects display
+   * (so a legacy album that does make the top N doesn't render "undefined").
    */
   private async getTopAlbumsByStorage(albumMatchQuery: AlbumMatchQuery, limit = 8): Promise<TopAlbumRow[]> {
-    return Album.find(albumMatchQuery)
+    const rows = await Album.find(albumMatchQuery)
       .select({ name: 1, totalSize: 1, photoCount: 1 })
       .sort({ totalSize: -1 })
       .limit(limit)
       .lean<TopAlbumRow[]>();
+
+    return rows.map((row) => ({ ...row, totalSize: row.totalSize ?? 0, photoCount: row.photoCount ?? 0 }));
   }
 
   /**

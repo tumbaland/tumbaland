@@ -115,4 +115,16 @@ describe('getAlbumStatistics', () => {
       { albumId: 'a2', name: 'Wedding', totalSize: 3000, photoCount: 4 }
     ]);
   });
+
+  it('coalesces totalSize/photoCount to 0 for an album that predates those fields (not yet backfilled)', async () => {
+    // Note: this only covers display-side coalescing. The $sort itself runs
+    // in Mongo against whatever's actually on disk, so a legacy album's rank
+    // among the top N is only correct once the backfill script has run —
+    // see the comment on getTopAlbumsByStorage.
+    mockedAlbumFind.mockReturnValue(albumFindStub([{ _id: 'legacy-album', name: 'Old Trip' }]));
+
+    const result = await statisticsService.getAlbumStatistics({}, { userId: 'u1', userGroups: [] });
+
+    expect(result.albums).toEqual([{ albumId: 'legacy-album', name: 'Old Trip', totalSize: 0, photoCount: 0 }]);
+  });
 });
