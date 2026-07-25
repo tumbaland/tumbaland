@@ -14,6 +14,16 @@ interface TickerPriceResponse {
   volume?: number;
 }
 
+// Normalizes to the UTC midnight boundary for the given day, so the same
+// value can be used in both the upsert filter and the written document —
+// writing the untruncated "now" timestamp while filtering on the
+// date-only string previously meant the filter could never match what a
+// prior run had written, and every call inserted a duplicate row instead
+// of updating one.
+function toUtcDateOnly(date: Date): Date {
+  return new Date(date.toISOString().slice(0, 10));
+}
+
 /**
  * Get all ticker price history records
  */
@@ -59,9 +69,9 @@ export async function fetchAndSaveTickerPrices(tickerParam?: string): Promise<Ti
   for (const ticker of tickers) {
     const priceData = await fetchStockPrice(ticker);
     if (priceData) {
-      const today = new Date();
+      const today = toUtcDateOnly(new Date());
       const record = await TickerPriceHistory.findOneAndUpdate(
-        { ticker, date: today.toISOString().slice(0, 10) },
+        { ticker, date: today },
         {
           ticker,
           date: today,
@@ -114,9 +124,9 @@ export async function deleteTickerPriceRecord(id: string): Promise<string> {
 export async function fetchAndSaveLatestPrice(ticker: string): Promise<void> {
   const price = await fetchStockPrice(ticker);
   if (price === null) return;
-  const today = new Date();
+  const today = toUtcDateOnly(new Date());
   await TickerPriceHistory.findOneAndUpdate(
-    { ticker, date: today.toISOString().slice(0, 10) },
+    { ticker, date: today },
     { ticker, date: today, price },
     { upsert: true, new: true }
   );

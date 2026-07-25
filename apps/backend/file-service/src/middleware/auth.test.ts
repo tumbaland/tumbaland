@@ -122,7 +122,7 @@ describe('requireSignedToken', () => {
     expect(res.status).toHaveBeenCalledWith(403);
   });
 
-  it('rejects with 500 when the token is malformed and verifyToken throws', () => {
+  it('rejects with 403 (not 500) when the token is malformed', () => {
     const expiresMs = Date.now() + 60_000;
     const req = reqWith({ token: 'not-a-real-token', expires: String(expiresMs) });
     const res = mockRes();
@@ -130,8 +130,8 @@ describe('requireSignedToken', () => {
 
     requireSignedToken('download')(req, res, next);
 
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Token verification failed' });
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Invalid or expired token' });
     expect(next).not.toHaveBeenCalled();
   });
 

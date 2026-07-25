@@ -13,26 +13,6 @@ The items below are the concrete gaps that survived that baseline, most impactfu
 
 ## High priority — correctness & data integrity
 
-- [ ] **Fix the duplicate-row upsert in `finance-service`'s ticker price writes.**
-      `tickerPriceHistory.service.ts` (`fetchAndSaveTickerPrices`, ~line 63, and
-      `fetchAndSaveLatestPrice`, ~line 118) queries with a _date-only string_ but writes a _full
-      timestamp_:
-
-  ```ts
-  await TickerPriceHistory.findOneAndUpdate(
-    { ticker, date: today.toISOString().slice(0, 10) }, // casts to 2026-07-25T00:00:00Z
-    { ticker, date: today /* ... */ }, // stores 2026-07-25T14:33:12Z
-    { upsert: true, new: true }
-  );
-  ```
-
-  The filter can never match the document the previous run wrote, so every invocation inserts
-  a **new** row for the same ticker/day instead of updating one. Normalize the written value to
-  the same midnight boundary the filter uses (as `alphaVantage.service.ts`'s
-  `fetchAndSaveAllStockHistory` already does — it uses `new Date(date)` on both sides and is
-  correct). Add a unique compound index `{ ticker: 1, date: 1 }` so the schema enforces the
-  invariant rather than relying on every call site getting the cast right.
-
 - [ ] **Bound `getTickerPriceHistory()`.** `tickerPriceHistory.service.ts:21` is
       `TickerPriceHistory.find().sort({ date: -1 })` — no filter, no projection, no limit — and then
       re-sorts the whole result set in JavaScript. It loads the entire price-history collection into
@@ -49,10 +29,11 @@ The items below are the concrete gaps that survived that baseline, most impactfu
       `{ groupId: 1, <sortField>: -1 }` pairs to `Activity`, `Album`, `Photo`, `Holding`, and
       `DashboardSettings`.
 
-  Five models carry **no** index at all: `auth-service/User`, `finance-service/AssetClass`,
-  `finance-service/Holding`, `finance-service/TickerPriceHistory`, `payment-service/Plan`. At
-  minimum `User` needs its lookup key indexed and `TickerPriceHistory` needs `{ ticker, date }`
-  (see the item above) — every price upsert is currently a full collection scan.
+  Four models carry **no** index at all: `auth-service/User`, `finance-service/AssetClass`,
+  `finance-service/Holding`, `payment-service/Plan`. At minimum `User` needs its lookup key
+  indexed — every lookup on it is currently a full collection scan.
+  (`finance-service/TickerPriceHistory` now has `{ ticker: 1, date: 1 }` — see "Previously
+  completed" below.)
 
 - [ ] **Unify how services handle a failed DB connection at startup.** `connectDB()` rethrows on
       failure, but the eight `src/index.ts` files do four different things with that promise:
@@ -181,12 +162,6 @@ The items below are the concrete gaps that survived that baseline, most impactfu
       `x-internal-token` header. Make the bypass verify the token itself instead of trusting a
       downstream mount, so the safe behavior doesn't depend on remembering.
 
-- [ ] **Return 403, not 500, for a malformed signed-URL token.** `file-service`'s `verifyToken`
-      calls `crypto.timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(token, 'hex'))`;
-      `timingSafeEqual` throws `RangeError` when the buffers differ in length, which the middleware's
-      `catch` turns into `500 Token verification failed`. A wrong-length token is a rejected token, not
-      a server fault — length-check first and return 403.
-
 ## Lower priority — code quality
 
 - [ ] **Audit the `react-hooks/exhaustive-deps` suppressions (5 sites).**
@@ -199,24 +174,29 @@ The items below are the concrete gaps that survived that baseline, most impactfu
       an `any` inside a `*.test.ts(x)` file. Replace with precise mock/spy types (or `unknown` plus a
       narrowing assertion) so the warning count is signal rather than noise.
 
-- [ ] **Gate the two ungated `console.log`s in `@tumbaland/frontend-core`.**
-      `monitoring/config.ts:75-76` logs unconditionally on `initLocalMonitoring`, unlike the rest of the
-      module which checks `config.isDevelopment`. In-repo apps are only saved by the Vite
-      `dropConsole: true` production build — but this is a published npm package, so any consumer not
-      using that exact build config gets the emoji lines in production.
-
-- [ ] **Drop the `as RequestHandler` casts in `group-service/routes/groupRoutes.ts`.** All thirteen
-      routes cast their controller. The casts exist because `internalServiceAuth.ts`'s middlewares
-      `return res.status(...)` (inferred `Response`, not `void`) and its handlers take a widened
-      `InternalServiceRequest`. Type the middlewares as `RequestHandler` and use the existing
-      `Express.Request` augmentation from `@tumbaland/backend-core`; the casts then go away.
-
-- [ ] **Align `express` versions.** `libs/backend-core` declares `express@^5.1.0` while all eight
-      services declare `^5.2.1`. Harmless today (the ranges overlap and hoisting resolves one copy),
-      but it's the only dependency drift in the repo — worth closing while it's cheap.
-
 ## Previously completed (kept for record)
 
+- [x] **Fixed the duplicate-row upsert in `finance-service`'s ticker price writes.**
+      `fetchAndSaveTickerPrices`/`fetchAndSaveLatestPrice` now normalize to the same UTC
+      midnight boundary on both the upsert filter and the written document (via a shared
+      `toUtcDateOnly` helper), matching what `alphaVantage.service.ts` already did correctly.
+      Added a unique compound index `{ ticker: 1, date: 1 }` on `TickerPriceHistory` so the
+      schema enforces the invariant. Regression tests assert the filter and update dates match.
+- [x] **`file-service` returns 403, not 500, for a malformed signed-URL token** —
+      `verifyToken` length-checks the token buffer before calling `timingSafeEqual`, so a
+      wrong-length token is rejected like any other invalid token instead of raising
+      `RangeError` for the middleware's catch block to turn into a 500.
+- [x] **Dropped the `as RequestHandler` casts in `group-service/routes/groupRoutes.ts`** —
+      `isInternalService`/`serviceIdentifier` moved from a local `InternalServiceRequest`
+      subtype onto the global `Express.Request` augmentation (alongside `user`/`userGroups`
+      from `@tumbaland/backend-core`), and both internal-auth middlewares are now explicitly
+      typed `RequestHandler` with `void`-returning branches. Controllers and routes reference
+      `Request` directly; no casts needed at the route-mounting call sites.
+- [x] **Gated the two ungated `console.log`s in `@tumbaland/frontend-core`** —
+      `monitoring/config.ts`'s `initMonitoring` now only logs its startup banner when
+      `environment === 'development'`, matching the rest of the module.
+- [x] **Aligned `express` versions** — `libs/backend-core` now declares `^5.2.1`, matching all
+      eight services.
 - [x] **Consistent graceful shutdown across all backend services** — `registerShutdown()` in
       `@tumbaland/backend-core`, adopted in all eight `src/index.ts`.
 - [x] **Unified `/health` readiness check** — `createHealthCheck({ service, description,

@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { BadRequestError, logger, sendSuccess } from '@tumbaland/backend-core';
-import { InternalServiceRequest } from '../middleware/internalServiceAuth';
 import * as svc from '../services/groupService';
 import { GroupRole } from '../models/Group';
 
@@ -38,7 +37,7 @@ const invalidateUserTokens = async (userEmails: string[]): Promise<void> => {
   }
 };
 
-const userEmail = (req: InternalServiceRequest) => {
+const userEmail = (req: Request) => {
   // For internal service requests, extract email from request body or params
   if (req.isInternalService) {
     return req.body?.userEmail || req.query?.userEmail || req.params?.userEmail;
@@ -47,7 +46,7 @@ const userEmail = (req: InternalServiceRequest) => {
   return (req.user?.email || '').toLowerCase();
 };
 
-export const createGroup = async (req: InternalServiceRequest, res: Response): Promise<void> => {
+export const createGroup = async (req: Request, res: Response): Promise<void> => {
   const email = userEmail(req);
   if (!email) {
     throw new BadRequestError('User email required');
@@ -57,7 +56,7 @@ export const createGroup = async (req: InternalServiceRequest, res: Response): P
   sendSuccess(res, group, undefined, 201);
 };
 
-export const listMine = async (req: InternalServiceRequest, res: Response): Promise<void> => {
+export const listMine = async (req: Request, res: Response): Promise<void> => {
   const email = userEmail(req);
   if (!email) {
     throw new BadRequestError('User email required');
@@ -72,7 +71,7 @@ export const listMine = async (req: InternalServiceRequest, res: Response): Prom
   sendSuccess(res, groups);
 };
 
-export const listMyDeleted = async (req: InternalServiceRequest, res: Response): Promise<void> => {
+export const listMyDeleted = async (req: Request, res: Response): Promise<void> => {
   const email = userEmail(req);
   if (!email) {
     throw new BadRequestError('User email required');
@@ -81,7 +80,7 @@ export const listMyDeleted = async (req: InternalServiceRequest, res: Response):
   sendSuccess(res, groups);
 };
 
-export const getUserGroupIds = async (req: InternalServiceRequest, res: Response): Promise<void> => {
+export const getUserGroupIds = async (req: Request, res: Response): Promise<void> => {
   const email = userEmail(req);
   if (!email) {
     throw new BadRequestError('User email required');

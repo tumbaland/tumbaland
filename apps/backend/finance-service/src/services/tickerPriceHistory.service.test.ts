@@ -89,6 +89,17 @@ describe('fetchAndSaveTickerPrices', () => {
     expect(result).toEqual([]);
     expect(mockedFindOneAndUpdate).not.toHaveBeenCalled();
   });
+
+  it('upserts on the same date-only value it writes, so a second run the same day updates in place', async () => {
+    mockedFetchStockPrice.mockResolvedValue({ close: 150, open: 148, high: 151, low: 147, volume: 1000 });
+    mockedFindOneAndUpdate.mockResolvedValue({ date: new Date(), ticker: 'AAPL', price: 150 });
+
+    await fetchAndSaveTickerPrices('AAPL');
+
+    const [filter, update] = mockedFindOneAndUpdate.mock.calls[0];
+    expect(filter.date).toEqual(update.date);
+    expect(filter.date.toISOString()).toBe(filter.date.toISOString().slice(0, 10) + 'T00:00:00.000Z');
+  });
 });
 
 describe('fetchAllTickerHistory', () => {
@@ -125,5 +136,13 @@ describe('fetchAndSaveLatestPrice (legacy)', () => {
     mockedFetchStockPrice.mockResolvedValue(150);
     await fetchAndSaveLatestPrice('AAPL');
     expect(mockedFindOneAndUpdate).toHaveBeenCalled();
+  });
+
+  it('upserts on the same date-only value it writes', async () => {
+    mockedFetchStockPrice.mockResolvedValue(150);
+    await fetchAndSaveLatestPrice('AAPL');
+
+    const [filter, update] = mockedFindOneAndUpdate.mock.calls[0];
+    expect(filter.date).toEqual(update.date);
   });
 });

@@ -66,6 +66,11 @@ describe('initMonitoring', () => {
     expect(getMonitoringConfig().isDevelopment).toBe(false);
   });
 
+  it('does not log to the console in production — this is a published package, not just an in-repo app', () => {
+    initMonitoring('production');
+    expect(consoleLogSpy).not.toHaveBeenCalled();
+  });
+
   it('defaults service/component to "frontend" and captureConsoleLevels to error+warn', () => {
     initMonitoring('development');
     expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('error, warn'));

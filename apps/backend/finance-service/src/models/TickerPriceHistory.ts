@@ -20,4 +20,9 @@ const TickerPriceHistorySchema: Schema = new Schema({
   volume: { type: Number }
 });
 
+// Enforces one record per ticker per day at the schema level, so a caller
+// that gets the date normalization wrong gets a duplicate-key error instead
+// of a silent duplicate row.
+TickerPriceHistorySchema.index({ ticker: 1, date: 1 }, { unique: true });
+
 export default mongoose.model<ITickerPriceHistory>('TickerPriceHistory', TickerPriceHistorySchema);
