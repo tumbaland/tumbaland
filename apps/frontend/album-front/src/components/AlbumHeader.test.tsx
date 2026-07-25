@@ -4,20 +4,27 @@ import { vi } from 'vitest';
 import AlbumHeader from './AlbumHeader';
 import { makeAlbum } from '../test/fixtures';
 
-it('renders the album name, description, photo count, and public/private status', () => {
-  const album = makeAlbum({ description: 'Summer trip', photoCount: 1, isPublic: true });
+it('renders the album name, description, photo count, total size, and public/private status', () => {
+  const album = makeAlbum({ description: 'Summer trip', photoCount: 1, totalSize: 1024 * 500, isPublic: true });
   render(<AlbumHeader album={album} onNavigateBack={vi.fn()} onUploadPhotos={vi.fn()} />);
 
   expect(screen.getAllByText(album.name).length).toBeGreaterThan(0);
   expect(screen.getByText('Summer trip')).toBeInTheDocument();
-  expect(screen.getByText('1 photo • Public')).toBeInTheDocument();
+  expect(screen.getByText('1 photo • 500 KB • Public')).toBeInTheDocument();
 });
 
 it('shows a plural photo count and private status', () => {
-  const album = makeAlbum({ photoCount: 4, isPublic: false });
+  const album = makeAlbum({ photoCount: 4, totalSize: 1024 * 1024 * 2, isPublic: false });
   render(<AlbumHeader album={album} onNavigateBack={vi.fn()} onUploadPhotos={vi.fn()} />);
 
-  expect(screen.getByText('4 photos • Private')).toBeInTheDocument();
+  expect(screen.getByText('4 photos • 2 MB • Private')).toBeInTheDocument();
+});
+
+it('omits the size segment for an empty album', () => {
+  const album = makeAlbum({ photoCount: 0, totalSize: 0, isPublic: false });
+  render(<AlbumHeader album={album} onNavigateBack={vi.fn()} onUploadPhotos={vi.fn()} />);
+
+  expect(screen.getByText('0 photos • Private')).toBeInTheDocument();
 });
 
 it('omits the description when the album has none', () => {

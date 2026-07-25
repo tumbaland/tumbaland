@@ -25,7 +25,8 @@ const statistics = {
   timeSeries: { albumsCreated: [], photosUploaded: [] },
   tags: [],
   aiAnalysis: { totalPhotos: 100, analyzedPhotos: 10, analysisRate: 10, totalDetections: 1, totalMasks: 1 },
-  groups: []
+  groups: [],
+  albums: [{ albumId: 'a1', name: 'Trip', totalSize: 512, photoCount: 3 }]
 };
 
 function renderPage() {
@@ -81,6 +82,16 @@ it('renders the overview and charts once statistics are available', () => {
   expect(screen.getByText('Total Albums')).toBeInTheDocument();
   expect(screen.getByText('Activity Over Time')).toBeInTheDocument();
   expect(screen.getByText('Storage Usage')).toBeInTheDocument();
+});
+
+it('passes the per-album storage breakdown through to the storage chart', () => {
+  mockedUseStatistics.mockReturnValue({ statistics, loading: false, isFetching: false, error: null, refetch: vi.fn() });
+
+  renderPage();
+
+  expect(screen.getByText('Largest albums')).toBeInTheDocument();
+  expect(screen.getByText('Trip')).toBeInTheDocument();
+  expect(screen.getByText('512 B')).toBeInTheDocument();
 });
 
 it('navigates to /albums and /collages from the header buttons', async () => {

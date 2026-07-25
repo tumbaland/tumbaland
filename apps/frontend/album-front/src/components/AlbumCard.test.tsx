@@ -4,19 +4,25 @@ import { vi } from 'vitest';
 import AlbumCard from './AlbumCard';
 import { makeAlbum } from '../test/fixtures';
 
-it('renders the album name, description, and singular photo count', () => {
-  const album = makeAlbum({ description: 'Summer trip', photoCount: 1 });
+it('renders the album name, description, and singular photo count with no size shown', () => {
+  const album = makeAlbum({ description: 'Summer trip', photoCount: 1, totalSize: 0 });
   render(<AlbumCard album={album} onView={vi.fn()} />);
 
   expect(screen.getByText(album.name)).toBeInTheDocument();
   expect(screen.getByText('Summer trip')).toBeInTheDocument();
-  expect(screen.getByText('1 photo')).toBeInTheDocument();
+  expect(screen.getByText('1 photo • 0 B')).toBeInTheDocument();
 });
 
-it('renders a plural photo count', () => {
-  render(<AlbumCard album={makeAlbum({ photoCount: 5 })} onView={vi.fn()} />);
+it('renders a plural photo count and the formatted total size', () => {
+  render(<AlbumCard album={makeAlbum({ photoCount: 5, totalSize: 1024 * 1024 * 12 })} onView={vi.fn()} />);
 
-  expect(screen.getByText('5 photos')).toBeInTheDocument();
+  expect(screen.getByText('5 photos • 12 MB')).toBeInTheDocument();
+});
+
+it('omits the size segment for an empty album', () => {
+  render(<AlbumCard album={makeAlbum({ photoCount: 0, totalSize: 0 })} onView={vi.fn()} />);
+
+  expect(screen.getByText('0 photos')).toBeInTheDocument();
 });
 
 it('shows up to 3 tags plus a +N overflow chip', () => {

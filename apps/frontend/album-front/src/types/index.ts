@@ -9,6 +9,7 @@ export interface Album {
   isPublic: boolean;
   tags: string[];
   photoCount: number;
+  totalSize: number;
   userId: string;
   groupId?: string;
   createdAt: string;
@@ -146,6 +147,12 @@ export interface AlbumStatistics {
   groups: Array<{
     groupId: string;
     albumCount: number;
+    photoCount: number;
+  }>;
+  albums: Array<{
+    albumId: string;
+    name: string;
+    totalSize: number;
     photoCount: number;
   }>;
 }

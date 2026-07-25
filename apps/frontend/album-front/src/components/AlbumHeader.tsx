@@ -12,6 +12,7 @@ import {
   ArrowBack as ArrowBackIcon
 } from '@mui/icons-material';
 import { Album } from '../types';
+import { formatBytes } from '../utils/formatBytes';
 
 interface AlbumHeaderProps {
   album: Album;
@@ -97,6 +98,7 @@ const AlbumHeader: React.FC<AlbumHeaderProps> = ({
               pl: { xs: 0, sm: 6 }
             }}>
             {album.photoCount} {album.photoCount === 1 ? 'photo' : 'photos'}
+            {album.photoCount > 0 && ` • ${formatBytes(album.totalSize)}`}
             {album.isPublic ? ' • Public' : ' • Private'}
           </Typography>
         </Box>
