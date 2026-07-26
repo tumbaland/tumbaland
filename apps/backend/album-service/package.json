@@ -10,7 +10,6 @@
     "test": "jest",
     "test:coverage": "jest --coverage",
     "lint": "eslint .",
-    "migrate:backfill-album-storage": "node scripts/migration/backfill-album-storage.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
