@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.5.0](https://github.com/toomastahves/tumbaland/compare/frontend-core-v1.4.0...frontend-core-v1.5.0) (2026-07-26)
+
+
+### Features
+
+* **album-front,album-service:** rework dashboard storage card, drop fake 10GB limit, add per-album size ([#62](https://github.com/toomastahves/tumbaland/issues/62)) ([43e0582](https://github.com/toomastahves/tumbaland/commit/43e05820147d0dd5be3be37dd807c8291c9ebcd1))
+* release libraries ([7edf076](https://github.com/toomastahves/tumbaland/commit/7edf076d901154638d3288f64a635dc728a4c35d))
+
+
+### Bug Fixes
+
+* **album-service:** coalesce photoCount/totalSize for albums that predate them ([#63](https://github.com/toomastahves/tumbaland/issues/63)) ([3134d37](https://github.com/toomastahves/tumbaland/commit/3134d3729821152311e56d173cb7afc23d036643))
+* correct ticker-price upsert, 500->403 on bad token, and small TODO cleanups ([#61](https://github.com/toomastahves/tumbaland/issues/61)) ([c3e497e](https://github.com/toomastahves/tumbaland/commit/c3e497efa678cb513cf57abfee1a5d76df1319c5))
+* cron deployment ([dd15be2](https://github.com/toomastahves/tumbaland/commit/dd15be203409a1f3ae8c7c70fbaa157cfc63bfcb))
+* **eslint:** apply Node globals to backend-core ([#37](https://github.com/toomastahves/tumbaland/issues/37)) ([44acc4c](https://github.com/toomastahves/tumbaland/commit/44acc4c78b82319c43b2db1323dc68384fb49a43))
+* healthcheck ([b8c717b](https://github.com/toomastahves/tumbaland/commit/b8c717b192f2e1df6172fd1a552c3b53e1359ba2))
+
 ## 1.4.0 (2026-07-14)
 
 
