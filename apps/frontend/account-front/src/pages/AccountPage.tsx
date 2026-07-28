@@ -1,10 +1,11 @@
 import React from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Box, Tabs, Tab } from '@mui/material';
 import ProfileTab from '../components/tabs/ProfileTab';
 
 const AccountPage: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Determine active tab based on current path
   const getActiveTab = () => {
@@ -14,8 +15,8 @@ const AccountPage: React.FC = () => {
   };
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    const paths = ['profile', 'security', 'data'];
-    window.history.pushState(null, '', paths[newValue]);
+    const paths = ['/profile', '/security', '/data'];
+    navigate(paths[newValue]);
   };
 
   return (

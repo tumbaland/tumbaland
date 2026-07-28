@@ -5,6 +5,7 @@ export interface AppConfig {
   AUTH_SERVICE_URL?: string;
   AUTH_FRONT_URL?: string;
   PUBLIC_API_URL?: string;
+  SHELL_FRONT_URL?: string;
 }
 
 const factory = createConfigProvider<AppConfig>({
@@ -16,7 +17,8 @@ const factory = createConfigProvider<AppConfig>({
     PAYMENT_API_URL: import.meta.env.VITE_PAYMENT_API_URL,
     AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL,
     AUTH_FRONT_URL: import.meta.env.VITE_AUTH_FRONT_URL,
-    PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL
+    PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL,
+    SHELL_FRONT_URL: import.meta.env.VITE_SHELL_FRONT_URL
   })
 });
 

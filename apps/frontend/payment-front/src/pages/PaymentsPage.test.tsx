@@ -13,32 +13,32 @@ function renderAt(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
-        <Route path="/payments/*" element={<PaymentsPage />} />
+        <Route path="/*" element={<PaymentsPage />} />
       </Routes>
     </MemoryRouter>
   );
 }
 
-it('defaults to the Plans tab at the bare /payments path', async () => {
-  renderAt('/payments');
+it('defaults to the Plans tab at the bare root path', async () => {
+  renderAt('/');
   expect(await screen.findByText('plans tab content')).toBeInTheDocument();
   expect(screen.getByRole('tab', { name: 'Plans' })).toHaveAttribute('aria-selected', 'true');
 });
 
 it('selects the Subscriptions tab', async () => {
-  renderAt('/payments/subscriptions');
+  renderAt('/subscriptions');
   expect(await screen.findByText('subscriptions tab content')).toBeInTheDocument();
   expect(screen.getByRole('tab', { name: 'Subscriptions' })).toHaveAttribute('aria-selected', 'true');
 });
 
 it('selects the Payments (history) tab', async () => {
-  renderAt('/payments/history');
+  renderAt('/history');
   expect(await screen.findByText('payments tab content')).toBeInTheDocument();
   expect(screen.getByRole('tab', { name: 'Payments' })).toHaveAttribute('aria-selected', 'true');
 });
 
 it('navigates when a different tab is clicked', async () => {
-  renderAt('/payments/plans');
+  renderAt('/plans');
   await screen.findByText('plans tab content');
 
   await userEvent.click(screen.getByRole('tab', { name: 'Subscriptions' }));
@@ -47,7 +47,7 @@ it('navigates when a different tab is clicked', async () => {
 });
 
 it('navigates to the Payments tab from the tab bar', async () => {
-  renderAt('/payments/plans');
+  renderAt('/plans');
   await screen.findByText('plans tab content');
 
   await userEvent.click(screen.getByRole('tab', { name: 'Payments' }));

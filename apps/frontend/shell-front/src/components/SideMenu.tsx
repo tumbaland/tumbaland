@@ -10,7 +10,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import IconButton from '@mui/material/IconButton';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
-import { APPS } from '../config/apps';
+import { APPS, isRouteActive } from '../config/apps';
 import { AppConfigItem } from '../config/apps';
 
 interface SideMenuProps {
@@ -32,7 +32,7 @@ export function SideMenu({ currentRoute }: SideMenuProps) {
     if (isMobile) setMobileOpen(false);
   };
 
-  const isActive = (route: string) => currentRoute === route;
+  const isActive = (route: string) => (route === '/' ? currentRoute === '/' : isRouteActive(route, currentRoute));
 
   // Custom permanent side menu for desktop
   const sideMenuContent = (

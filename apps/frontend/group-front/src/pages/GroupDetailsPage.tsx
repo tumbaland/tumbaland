@@ -147,7 +147,7 @@ const GroupDetailsPage: React.FC = () => {
     <Box sx={{ minHeight: '100vh', bgcolor: 'grey.50', pb: 8 }}>
       <GroupDetailsHeader 
         groupName={group.name}
-        onBack={() => navigate('/groups')}
+        onBack={() => navigate('/')}
         onEdit={() => setIsEditGroupOpen(true)}
         currentUserRole={currentUserRole}
       />

@@ -6,7 +6,7 @@ export const menuItems = [
   {
     label: 'Dashboard',
     icon: <DashboardIcon fontSize="small" sx={{ mr: 1 }} />,
-    path: '/'
+    path: '/dashboard'
   },
   {
     label: 'Journal',

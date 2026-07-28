@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Button, IconButton } from '@mui/material';
+import { isRouteActive } from '../config/apps';
 
 export interface NavigationItem {
   key: string;
@@ -24,7 +25,7 @@ export function NavigationButtons({
 }: NavigationButtonsProps) {
   const navigate = useNavigate();
 
-  const isActiveRoute = (route: string) => currentRoute === route;
+  const isActiveRoute = (route: string) => isRouteActive(route, currentRoute);
 
   const handleNavigation = (item: NavigationItem) => {
     navigate(item.route);

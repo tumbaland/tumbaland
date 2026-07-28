@@ -32,7 +32,7 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, canModify, userRole, onMen
         position: 'relative'
       }}
       component={RouterLink}
-      to={`/groups/${group._id}`}
+      to={`/${group._id}`}
     >
       <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Avatar

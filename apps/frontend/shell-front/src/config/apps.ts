@@ -70,6 +70,16 @@ export const USER_APPS: AppConfigItem[] = [
   }
 ];
 
-export const getAppByRoute = (route: string) => {
-  return [...APPS, ...USER_APPS].find((app) => app.route === route);
-};
+const EMBEDDABLE_APPS = [...APPS, ...USER_APPS].filter((app) => app.route !== '/');
+
+/**
+ * Match an app by route prefix, so nested child routes like
+ * `/album/albums/64f2/photos/abc` still resolve to the Album app. Everything
+ * after the prefix belongs to the child app's own router.
+ */
+export const getAppByRoute = (pathname: string) =>
+  EMBEDDABLE_APPS.find((app) => pathname === app.route || pathname.startsWith(`${app.route}/`));
+
+/** Nav highlighting: an app stays active while the user is deep inside it. */
+export const isRouteActive = (route: string, pathname?: string) =>
+  !!pathname && (pathname === route || (route !== '/' && pathname.startsWith(`${route}/`)));

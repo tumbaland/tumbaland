@@ -54,12 +54,34 @@ it('renders a protected iframe and hides the loader once it loads, with the foot
   renderAt('/relationship', { RELATIONSHIP_FRONT_URL: 'https://relationship.example' });
 
   const iframe = await screen.findByTitle('Relationship');
-  expect(iframe).toHaveAttribute('src', 'https://relationship.example');
+  expect(iframe).toHaveAttribute('src', 'https://relationship.example/?embedded=1&embedPath=%2F');
   expect(screen.getByRole('progressbar')).toBeInTheDocument();
   expect(screen.getByText('Status')).toBeInTheDocument();
 
   iframe.dispatchEvent(new Event('load'));
   await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
+});
+
+it('boots the iframe on a nested route and keeps the src stable as the child navigates', async () => {
+  renderAt('/relationship/journal', { RELATIONSHIP_FRONT_URL: 'https://relationship.example' });
+
+  const iframe = await screen.findByTitle('Relationship');
+  expect(iframe).toHaveAttribute('src', 'https://relationship.example/?embedded=1&embedPath=%2Fjournal');
+
+  // A location report from the child updates the shell URL, never the src.
+  const event = new MessageEvent('message', {
+    data: { source: 'tumbaland-app', type: 'app:location', app: 'relationship-front', path: '/activity-types' },
+    origin: 'https://relationship.example'
+  });
+  Object.defineProperty(event, 'source', { value: (iframe as HTMLIFrameElement).contentWindow });
+  window.dispatchEvent(event);
+
+  await waitFor(() =>
+    expect(screen.getByTitle('Relationship')).toHaveAttribute(
+      'src',
+      'https://relationship.example/?embedded=1&embedPath=%2Fjournal'
+    )
+  );
 });
 
 it('shows an unauthorized page instead of the iframe when not authenticated', async () => {

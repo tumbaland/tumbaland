@@ -24,7 +24,7 @@ function renderCard(overrides: Partial<{ group: Group; canModify: boolean; userR
 
 it('links to the group detail page', () => {
   renderCard();
-  expect(screen.getByRole('link')).toHaveAttribute('href', '/groups/g1');
+  expect(screen.getByRole('link')).toHaveAttribute('href', '/g1');
 });
 
 it('shows the plural member count', () => {

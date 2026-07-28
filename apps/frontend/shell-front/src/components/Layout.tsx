@@ -1,7 +1,7 @@
-import { useLocation } from 'react-router-dom';
-import { useState, ReactNode, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useState, ReactNode, useCallback, useEffect, useRef } from 'react';
 import CircularProgress from '@mui/material/CircularProgress';
-import { ProtectedRoute } from '@tumbaland/components';
+import { ProtectedRoute, buildEmbeddedUrl, extractChildPath, useShellBridge } from '@tumbaland/components';
 import { SideMenu } from './SideMenu';
 import { HeaderNav } from './HeaderNav';
 import Footer from './Footer';
@@ -18,19 +18,53 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const [loading, setLoading] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const config = useConfig();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const frameRef = useRef<HTMLIFrameElement>(null);
 
   const currentApp = getAppByRoute(location.pathname);
   const appUrl = currentApp?.urlKey ? config[currentApp.urlKey] : undefined;
-  const showIframe = appUrl && location.pathname !== '/';
+  const appKey = currentApp && appUrl ? `${currentApp.route}|${appUrl}` : null;
+
+  // The iframe src is captured once per app: the deep-linked path rides along on
+  // first mount, but every later navigation goes over postMessage. Recomputing
+  // src per route would reload the whole child app on each click, so it is
+  // derived during render and only refreshed when the app itself changes.
+  const [frameSrc, setFrameSrc] = useState<{ key: string; src: string } | null>(null);
+  if (appKey && currentApp && appUrl && frameSrc?.key !== appKey) {
+    setFrameSrc({
+      key: appKey,
+      src: buildEmbeddedUrl(appUrl, extractChildPath(currentApp.route, location.pathname, location.search))
+    });
+  }
+  const showIframe = appKey !== null && frameSrc?.key === appKey;
+
+  const handleChildNavigate = useCallback(
+    (shellPath: string, options: { replace: boolean }) => navigate(shellPath, { replace: options.replace }),
+    [navigate]
+  );
+
+  const handleChildTitle = useCallback((title: string) => {
+    if (title) document.title = title;
+  }, []);
+
+  useShellBridge({
+    frameRef,
+    appRoute: currentApp?.route,
+    appUrl,
+    shellPath: location.pathname,
+    shellSearch: location.search,
+    onNavigate: handleChildNavigate,
+    onTitleChange: handleChildTitle
+  });
 
   useEffect(() => {
-    if (showIframe) {
+    if (appKey) {
       setLoading(true);
     }
-  }, [appUrl]);
+  }, [appKey]);
 
   return (
     <div
@@ -100,7 +134,9 @@ export default function Layout({ children }: LayoutProps) {
                   </div>
                 )}
                 <iframe
-                  src={appUrl}
+                  key={appKey!}
+                  ref={frameRef}
+                  src={frameSrc!.src}
                   title={currentApp!.name}
                   style={{ width: '100%', height: '100%', border: 'none', zIndex: 1 }}
                   allow="fullscreen"

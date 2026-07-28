@@ -7,7 +7,7 @@ import { AuthHeaderNavigationItem } from '@tumbaland/components';
 export const navigationItems: AuthHeaderNavigationItem[] = [
   {
     label: 'Dashboard',
-    path: '/',
+    path: '/dashboard',
     icon: DashboardIcon
   },
   {

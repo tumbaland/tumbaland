@@ -6,7 +6,9 @@ import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import { useSearchParams } from 'react-router-dom';
 import { logger } from '@tumbaland/frontend-core';
+import { readEmbedContext, toOrigin } from '@tumbaland/components';
 import { paymentApi } from '../services/paymentApi';
+import { ConfigContext } from '../config/ConfigProvider';
 import { Plan } from '../types';
 
 // Placeholder: fetch plans & show chosen plan, then user clicks "Confirm & Pay" which calls startSubscription
@@ -27,6 +29,13 @@ const SubscriptionCheckoutPage: React.FC = () => {
   const [termsOpen, setTermsOpen] = useState(false);
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
+  // Read through the context directly: this page is rendered bare in tests,
+  // where useConfig() would throw.
+  const config = React.useContext(ConfigContext);
+  // Inside our own shell the parent listens for navigate-top and drives the
+  // redirect itself; any other embedder does not, so we escape the frame.
+  const inShell = React.useMemo(() => readEmbedContext().embedded, []);
+  const shellOrigin = React.useMemo(() => toOrigin(config?.SHELL_FRONT_URL), [config?.SHELL_FRONT_URL]);
 
   const formatPrice = (cents?: number) => (cents ? `${(cents/100).toFixed(2)} € / month` : 'Free');
 
@@ -46,7 +55,10 @@ const SubscriptionCheckoutPage: React.FC = () => {
           return;
         } catch {
           // Cross-origin: ask parent to navigate the top-level
-          window.parent.postMessage({ source: 'payment-front', type: 'tumbaland:navigate-top', url: absUrl }, '*');
+          window.parent.postMessage({ source: 'payment-front', type: 'tumbaland:navigate-top', url: absUrl }, shellOrigin ?? '*');
+          // Our shell acts on that message, so escaping the frame ourselves
+          // would race it. Only fall through for embedders that don't listen.
+          if (inShell) return;
           // Best-effort fallback: try opening in the top browsing context from user gesture
           // This often succeeds even when direct assignment is blocked in iframes
           const opened = window.open(absUrl, '_top');

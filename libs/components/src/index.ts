@@ -37,3 +37,32 @@ export type { TenantOption, TenantSelectorProps, UseTenantResult } from './compo
 // Config provider factory
 export { createConfigProvider } from './config/createConfigProvider';
 export type { CreateConfigProviderOptions } from './config/createConfigProvider';
+
+// Shell/iframe routing bridge: the shell owns the URL, embedded children run
+// headless on a MemoryRouter and sync their location over postMessage.
+export {
+  EmbeddedRouter,
+  useShellBridge,
+  EMBED_FLAG,
+  EMBED_PATH,
+  buildEmbeddedUrl,
+  extractChildPath,
+  joinShellPath,
+  normalizeEmbedPath,
+  readEmbedContext,
+  safeUrl,
+  toOrigin,
+  APP_SOURCE,
+  SHELL_SOURCE,
+  isAppLocationMessage,
+  isNavigateTopMessage,
+  isShellNavigateMessage
+} from './routing';
+export type {
+  EmbeddedRouterProps,
+  ShellBridgeOptions,
+  EmbedContext,
+  AppLocationMessage,
+  NavigateTopMessage,
+  ShellNavigateMessage
+} from './routing';

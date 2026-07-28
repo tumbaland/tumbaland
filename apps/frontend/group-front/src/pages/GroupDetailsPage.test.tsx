@@ -69,13 +69,13 @@ it('renders the group header, stats, and members once loaded, resolving the curr
   expect(screen.getByRole('button', { name: /edit group/i })).toBeInTheDocument();
 });
 
-it('navigates back to /groups', async () => {
+it('navigates back to the groups list', async () => {
   render(<GroupDetailsPage />);
   await screen.findByText('Family');
 
   await userEvent.click(screen.getByRole('button', { name: /back to groups/i }));
 
-  expect(mockedNavigate).toHaveBeenCalledWith('/groups');
+  expect(mockedNavigate).toHaveBeenCalledWith('/');
 });
 
 it('logs and swallows a failed auth check without blocking the page', async () => {
