@@ -8,10 +8,24 @@ const group: Group = {
   _id: 'g1',
   name: 'Family',
   members: [
-    { email: 'owner@example.com', role: 'owner', joinedAt: '2024-01-15T00:00:00.000Z' },
+    {
+      email: 'owner@example.com',
+      role: 'owner',
+      joinedAt: '2024-01-15T00:00:00.000Z',
+      lastActivity: '2024-01-20T05:30:45.000Z'
+    },
     { email: 'admin@example.com', role: 'admin' },
     { email: 'member@example.com', role: 'member' }
   ]
+};
+
+const pad = (n: number): string => String(n).padStart(2, '0');
+const expectDateParts = (iso: string): { date: string; time: string } => {
+  const d = new Date(iso);
+  return {
+    date: `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${pad(d.getFullYear() % 100)}`,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+  };
 };
 
 function renderList(overrides: Partial<{ group: Group; currentUserRole: string; currentUserEmail: string }> = {}) {
@@ -34,13 +48,25 @@ it('shows the empty state when there are no members', () => {
   expect(screen.getByText('No members found in this group')).toBeInTheDocument();
 });
 
-it('renders a row per member with name derived from email, role chip, and formatted join date', () => {
+it('renders a row per member with name derived from email, role chip, and a stacked joined date/time', () => {
   renderList({ currentUserRole: 'owner', currentUserEmail: 'owner@example.com' });
 
   expect(screen.getAllByText('owner').length).toBeGreaterThan(0); // derived name + role chip
   expect(screen.getByText('admin@example.com')).toBeInTheDocument();
-  expect(screen.getByText('1/15/2024')).toBeInTheDocument();
-  expect(screen.getAllByText('-').length).toBe(2); // admin/member have no joinedAt
+
+  const joined = expectDateParts('2024-01-15T00:00:00.000Z');
+  expect(screen.getByText(joined.date)).toBeInTheDocument();
+  expect(screen.getByText(joined.time)).toBeInTheDocument();
+  // admin/member have neither joinedAt nor lastActivity -> 4 dash placeholders
+  expect(screen.getAllByText('-').length).toBe(4);
+});
+
+it('shows a stacked last-active date/time when present', () => {
+  renderList({ currentUserRole: 'owner', currentUserEmail: 'owner@example.com' });
+
+  const lastActive = expectDateParts('2024-01-20T00:00:00.000Z');
+  expect(screen.getByText(lastActive.date)).toBeInTheDocument();
+  expect(screen.getByText(lastActive.time)).toBeInTheDocument();
 });
 
 it('shows Add Member for an owner/admin and hides it for a plain member', () => {

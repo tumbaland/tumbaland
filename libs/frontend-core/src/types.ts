@@ -7,6 +7,7 @@ export interface User {
   picture?: string;
   roles?: string[];
   isApproved?: boolean;
+  lastLoginAt?: string;
 }
 
 export interface AuthResponse {

@@ -20,7 +20,8 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
     firstName: dbUser.firstName,
     lastName: dbUser.lastName,
     name: req.user.name,
-    picture: req.user.picture
+    picture: req.user.picture,
+    lastLoginAt: dbUser.lastLoginAt
   };
 
   res.json({

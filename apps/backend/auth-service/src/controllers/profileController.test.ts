@@ -46,7 +46,8 @@ describe('getProfile', () => {
   });
 
   it('combines JWT and DB user data on success', async () => {
-    mockedFindById.mockResolvedValue({ firstName: 'Ada', lastName: 'Lovelace', isApproved: true });
+    const lastLoginAt = new Date('2026-07-27T10:00:00.000Z');
+    mockedFindById.mockResolvedValue({ firstName: 'Ada', lastName: 'Lovelace', isApproved: true, lastLoginAt });
     const res = mockRes();
 
     await getProfile(authedReq(), res);
@@ -59,7 +60,8 @@ describe('getProfile', () => {
         firstName: 'Ada',
         lastName: 'Lovelace',
         name: 'Ada Lovelace',
-        picture: 'pic.png'
+        picture: 'pic.png',
+        lastLoginAt
       },
       approved: true
     });

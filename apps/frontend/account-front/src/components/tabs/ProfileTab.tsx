@@ -199,6 +199,14 @@ const ProfileTab: React.FC = () => {
                 }
               }}
             />
+            {user?.lastLoginAt && (
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                Last login: {new Date(user.lastLoginAt).toLocaleString(undefined, {
+                  dateStyle: 'medium',
+                  timeStyle: 'short'
+                })}
+              </Typography>
+            )}
           </Box>
         </Box>
       </Paper>

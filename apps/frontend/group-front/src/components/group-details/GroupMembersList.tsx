@@ -28,6 +28,38 @@ interface GroupMembersListProps {
   onMenuOpen: (event: React.MouseEvent<HTMLElement>, member: GroupMember) => void;
 }
 
+const pad = (n: number): string => String(n).padStart(2, '0');
+
+const splitDateTime = (value?: string): { date: string; time: string } | null => {
+  if (!value) return null;
+
+  const d = new Date(value);
+  return {
+    date: `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${pad(d.getFullYear() % 100)}`,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+  };
+};
+
+const DateTimeCell: React.FC<{ value?: string }> = ({ value }) => {
+  const parts = splitDateTime(value);
+  if (!parts) {
+    return (
+      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+        -
+      </Typography>
+    );
+  }
+
+  return (
+    <Box>
+      <Typography variant="body2">{parts.date}</Typography>
+      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+        {parts.time}
+      </Typography>
+    </Box>
+  );
+};
+
 const GroupMembersList: React.FC<GroupMembersListProps> = ({
   group,
   currentUserRole,
@@ -86,6 +118,7 @@ const GroupMembersList: React.FC<GroupMembersListProps> = ({
               <TableCell>Member</TableCell>
               <TableCell>Role</TableCell>
               <TableCell>Joined Date</TableCell>
+              <TableCell>Last Active</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -124,7 +157,10 @@ const GroupMembersList: React.FC<GroupMembersListProps> = ({
                   />
                 </TableCell>
                 <TableCell>
-                  {member.joinedAt ? new Date(member.joinedAt).toLocaleDateString() : '-'}
+                  <DateTimeCell value={member.joinedAt} />
+                </TableCell>
+                <TableCell>
+                  <DateTimeCell value={member.lastActivity} />
                 </TableCell>
                 <TableCell align="right">
                   {canEditMember(member) && (
@@ -140,7 +176,7 @@ const GroupMembersList: React.FC<GroupMembersListProps> = ({
             ))}
             {(!group.members || group.members.length === 0) && (
               <TableRow>
-                <TableCell colSpan={4} align="center" sx={{ py: 8 }}>
+                <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
                   <Typography sx={{
                     color: "text.secondary"
                   }}>

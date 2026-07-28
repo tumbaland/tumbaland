@@ -82,6 +82,20 @@ it('shows a generic error message for a non-401 load failure', async () => {
   expect(mockedRedirectToLogin).not.toHaveBeenCalled();
 });
 
+it('shows the last login time when the profile includes it', async () => {
+  mockedGetProfile.mockResolvedValue({ ...user, lastLoginAt: '2026-07-27T10:00:00.000Z' });
+  render(<ProfileTab />);
+
+  expect(await screen.findByText(/last login:/i)).toBeInTheDocument();
+});
+
+it('omits the last login line when the profile has no lastLoginAt', async () => {
+  render(<ProfileTab />);
+
+  await screen.findByDisplayValue('Jane');
+  expect(screen.queryByText(/last login:/i)).not.toBeInTheDocument();
+});
+
 it('handles firstName/lastName being absent from the loaded user', async () => {
   mockedGetProfile.mockResolvedValue({ id: 'u1', email: 'jane@example.com' });
   render(<ProfileTab />);

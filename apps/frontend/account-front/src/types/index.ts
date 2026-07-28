@@ -29,6 +29,7 @@ export interface User {
   name: string;
   picture?: string;
   username?: string;
+  lastLoginAt?: string;
 }
 
 export interface AuthResponse {
