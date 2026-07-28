@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.6.0](https://github.com/toomastahves/tumbaland/compare/frontend-core-v1.5.0...frontend-core-v1.6.0) (2026-07-28)
+
+
+### Features
+
+* release libs ([aa51080](https://github.com/toomastahves/tumbaland/commit/aa51080e282e2e40aa3e7166488b42e752fb478c))
+* remove unused services ([b1dad0f](https://github.com/toomastahves/tumbaland/commit/b1dad0fb19a56ce913222a3a2c47715c99351698))
+* rework routing to show exact url in browser ([6a1cd66](https://github.com/toomastahves/tumbaland/commit/6a1cd66ea6f9213da8ae60c94be0bdae62ae8d5b))
+* show last login ([c7b517f](https://github.com/toomastahves/tumbaland/commit/c7b517f86860d89f60ade4a849da3e1926c11f53))
+
 ## [1.5.0](https://github.com/toomastahves/tumbaland/compare/frontend-core-v1.4.0...frontend-core-v1.5.0) (2026-07-26)
 
 
