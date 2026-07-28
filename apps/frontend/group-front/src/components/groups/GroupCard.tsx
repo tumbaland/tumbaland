@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Paper, Typography, IconButton, Avatar, CardContent, Stack, Chip, Button } from '@mui/material';
 import { Group as GroupIcon, MoreVert as MoreVertIcon, Person as PersonIcon } from '@mui/icons-material';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router';
 import { Group } from '../../types';
 
 interface GroupCardProps {

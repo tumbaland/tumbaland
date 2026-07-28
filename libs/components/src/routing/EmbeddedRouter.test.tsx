@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { Route, Routes, useNavigate } from 'react-router-dom';
+import { Route, Routes, useNavigate } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EmbeddedRouter } from './EmbeddedRouter';
 import { APP_SOURCE, SHELL_SOURCE } from './messages';

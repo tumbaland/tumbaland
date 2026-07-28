@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 
 const mockedNavigate = vi.fn();
-vi.mock('react-router-dom', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('react-router-dom')>();
+vi.mock('react-router', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-router')>();
   return { ...actual, useParams: () => ({ id: 'g1' }), useNavigate: () => mockedNavigate };
 });
 

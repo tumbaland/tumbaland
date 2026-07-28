@@ -4,7 +4,7 @@ import { useTheme } from '@mui/material/styles';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router';
 import { logger } from '@tumbaland/frontend-core';
 import { readEmbedContext, toOrigin } from '@tumbaland/components';
 import { paymentApi } from '../services/paymentApi';

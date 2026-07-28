@@ -14,7 +14,7 @@ import {
   ViewInAr as ViewInArIcon,
   Info as InfoIcon
 } from '@mui/icons-material';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router';
 import { Photo, Album } from '../types';
 import { albumService } from '../services/albumService';
 import { photoService } from '../services/photoService';

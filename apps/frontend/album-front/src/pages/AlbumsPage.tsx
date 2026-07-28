@@ -23,7 +23,7 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { useAlbums } from '../hooks/useAlbums';
 import EditAlbumDialog from '../components/EditAlbumDialog';
 import ConfirmDialog from '../components/ConfirmDialog';

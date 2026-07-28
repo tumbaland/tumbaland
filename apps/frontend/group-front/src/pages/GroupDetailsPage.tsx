@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router';
 import { Box, Container, Alert, CircularProgress } from '@mui/material';
 import { logger } from '@tumbaland/frontend-core';
 import { authService } from '../services/authService';

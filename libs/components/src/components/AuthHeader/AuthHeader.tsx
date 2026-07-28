@@ -16,7 +16,7 @@ import {
 import { useTheme, SxProps, Theme } from '@mui/material/styles';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { AccountCircle, Logout, Person, Groups, Payment } from '@mui/icons-material';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router';
 import { NotificationsMenu } from '../NotificationsMenu/NotificationsMenu';
 import { LoginButton } from '../LoginButton';
 

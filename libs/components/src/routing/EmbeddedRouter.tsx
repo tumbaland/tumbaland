@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useMemo, useRef } from 'react';
-import { BrowserRouter, MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter, MemoryRouter, useLocation, useNavigate } from 'react-router';
 import { logger } from '@tumbaland/frontend-core';
 import { normalizeEmbedPath, readEmbedContext, toOrigin } from './embedContext';
 import { APP_SOURCE, AppLocationMessage, isShellNavigateMessage } from './messages';

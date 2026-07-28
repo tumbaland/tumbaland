@@ -11,7 +11,7 @@ import {
   SelectChangeEvent
 } from '@mui/material';
 import { Delete as DeleteIcon, Checklist as ChecklistIcon, Close as CloseIcon } from '@mui/icons-material';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router';
 import { usePhotos } from '../hooks/usePhotos';
 import { usePhotoViewer } from '../hooks/usePhotoViewer';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';

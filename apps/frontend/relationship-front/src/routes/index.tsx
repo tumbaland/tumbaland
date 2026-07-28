@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router';
 import Dashboard from '../pages/Dashboard';
 import JournalPage from '../pages/JournalPage';
 import ActivityTypesPage from '../pages/ActivityTypesPage';

@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router';
 import { useState, ReactNode, useCallback, useEffect, useRef } from 'react';
 import CircularProgress from '@mui/material/CircularProgress';
 import { ProtectedRoute, buildEmbeddedUrl, extractChildPath, useShellBridge } from '@tumbaland/components';

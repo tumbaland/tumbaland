@@ -36,8 +36,8 @@ jobs:
         run: |
           cp .github/.versionrc.json $GITHUB_WORKSPACE/.versionrc.json
 
-      - name: Run standard-version
-        run: npx standard-version
+      - name: Run commit-and-tag-version
+        run: npx commit-and-tag-version
 
       - name: Push changes and tags
         env:

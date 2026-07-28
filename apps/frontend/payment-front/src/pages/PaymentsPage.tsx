@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router';
 import { Box, Tabs, Tab } from '@mui/material';
 import PlansTab from '../components/tabs/PlansTab';
 import SubscriptionsTab from '../components/tabs/SubscriptionsTab';

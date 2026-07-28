@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router';
 import { ProtectedRoute } from '@tumbaland/components';
 import PaymentsPage from '../pages/PaymentsPage';
 import SubscriptionCheckoutPage from '../pages/SubscriptionCheckoutPage';

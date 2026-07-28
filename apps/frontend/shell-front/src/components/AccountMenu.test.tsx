@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router';
 import { vi } from 'vitest';
 import { Person } from '@mui/icons-material';
 import { AccountMenu } from './AccountMenu';

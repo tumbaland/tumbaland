@@ -1,6 +1,6 @@
 {
   "name": "@tumbaland/backend-core",
-  "version": "1.18.0",
+  "version": "1.20.0",
   "description": "Core shared functionality for Tumbaland backend services",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -9,8 +9,8 @@
     "dev": "tsc --watch",
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run clean && npm run build",
-    "release": "standard-version && npm run build && npm publish --access public",
-    "release:beta": "standard-version --prerelease beta && npm run build && npm publish --access public --tag beta",
+    "release": "commit-and-tag-version && npm run build && npm publish --access public",
+    "release:beta": "commit-and-tag-version --prerelease beta && npm run build && npm publish --access public --tag beta",
     "test": "jest",
     "test:coverage": "jest --coverage",
     "lint": "eslint .",
@@ -25,7 +25,7 @@
   ],
   "author": "Tumbaland Team",
   "license": "MIT",
-  "standard-version": {
+  "commit-and-tag-version": {
     "tagPrefix": "backend-core-v"
   },
   "devDependencies": {
@@ -35,7 +35,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/morgan": "^1.9.10",
     "@types/node": "^26.1.0",
-    "standard-version": "^9.5.0",
+    "commit-and-tag-version": "^13.1.2",
     "typescript": "^6.0.3"
   },
   "dependencies": {

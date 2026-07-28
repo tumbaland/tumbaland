@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Card, CardContent, Typography, CircularProgress, Alert, Button } from '@mui/material';
 import { AccountBalance, ShowChart } from '@mui/icons-material';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { useTenantFilter } from '@tumbaland/components';
 import { useDashboard } from '../hooks/useDashboard';
 import FinancialKPIs from '../components/FinancialKPIs';

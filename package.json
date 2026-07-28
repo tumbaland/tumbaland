@@ -26,7 +26,8 @@
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "overrides": {
-    "shell-quote": "^1.9.0"
+    "shell-quote": "^1.9.0",
+    "babel-plugin-istanbul": "^8.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

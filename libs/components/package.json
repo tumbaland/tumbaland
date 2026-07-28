@@ -1,6 +1,6 @@
 {
   "name": "@tumbaland/components",
-  "version": "1.16.0",
+  "version": "1.18.0",
   "author": "Tumbaland",
   "license": "MIT",
   "main": "dist/index.js",
@@ -10,8 +10,8 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "release": "standard-version && npm run build && npm publish --access public",
-    "release:beta": "standard-version --prerelease beta && npm run build && npm publish --access public --tag beta",
+    "release": "commit-and-tag-version && npm run build && npm publish --access public",
+    "release:beta": "commit-and-tag-version --prerelease beta && npm run build && npm publish --access public --tag beta",
     "storybook:dev": "storybook dev -p 7000",
     "storybook:prod": "storybook build",
     "test": "vitest run",
@@ -19,7 +19,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
-  "standard-version": {
+  "commit-and-tag-version": {
     "tagPrefix": "components-v"
   },
   "dependencies": {
@@ -28,9 +28,9 @@
     "@tumbaland/frontend-core": "*"
   },
   "peerDependencies": {
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "react-router-dom": "^7.18.1"
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-router": "^8.3.0"
   },
   "devDependencies": {
     "@esbuild/linux-x64": "^0.28.1",
@@ -45,7 +45,7 @@
     "@types/node": "^26.1.0",
     "@vitejs/plugin-react": "^6.0.3",
     "@vitest/coverage-v8": "^4.1.10",
-    "standard-version": "^9.5.0",
+    "commit-and-tag-version": "^13.1.2",
     "storybook": "^10.4.6",
     "typescript": "^6.0.3"
   }
