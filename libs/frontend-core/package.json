@@ -1,6 +1,6 @@
 {
   "name": "@tumbaland/frontend-core",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "Shared frontend auth/group/API-client logic for Tumbaland frontends",
   "author": "Tumbaland",
   "license": "MIT",
@@ -11,14 +11,14 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "release": "standard-version && npm run build && npm publish --access public",
-    "release:beta": "standard-version --prerelease beta && npm run build && npm publish --access public --tag beta",
+    "release": "commit-and-tag-version && npm run build && npm publish --access public",
+    "release:beta": "commit-and-tag-version --prerelease beta && npm run build && npm publish --access public --tag beta",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
-  "standard-version": {
+  "commit-and-tag-version": {
     "tagPrefix": "frontend-core-v"
   },
   "dependencies": {
@@ -27,7 +27,7 @@
   "devDependencies": {
     "@types/node": "^26.1.0",
     "@vitest/coverage-v8": "^4.1.10",
-    "standard-version": "^9.5.0",
+    "commit-and-tag-version": "^13.1.2",
     "typescript": "^6.0.3"
   }
 }
