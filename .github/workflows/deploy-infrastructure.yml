@@ -15,6 +15,7 @@ on:
           - tumbaland-proxy
           - elk
           - rabbitmq
+          - beszel
 
 # Ensure only one infrastructure deployment runs at a time
 concurrency:
@@ -58,9 +59,16 @@ jobs:
               ;;
             cron)
               CONTEXT=./apps/infra/cron
-              DOCKERFILE="" 
+              DOCKERFILE=""
               DEPLOYPATH=apps/infra/cron/compose.yml
               DEPLOYDIR=apps/infra/cron
+              ;;
+            beszel)
+              # Upstream images, nothing to build.
+              CONTEXT=./apps/infra/beszel
+              DOCKERFILE=""
+              DEPLOYPATH=apps/infra/beszel/compose.yml
+              DEPLOYDIR=apps/infra/beszel
               ;;
           esac
           echo "context=$CONTEXT" >> $GITHUB_OUTPUT
@@ -112,6 +120,11 @@ jobs:
           echo "CONSUL_ACL_MASTER_TOKEN=${{ secrets.CONSUL_ACL_MASTER_TOKEN }}" >> .env.infra
           echo "RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}" >> .env.infra
           RABBITMQ_PASSWORD="${{ secrets.RABBITMQ_PASSWORD }}" && echo "RABBITMQ_URL=amqp://admin:$RABBITMQ_PASSWORD@rabbitmq:5672/tumbaland" >> .env.infra
+
+          # Beszel monitoring. BESZEL_KEY is an SSH public key and contains spaces,
+          # so it must be quoted — compose strips the quotes when reading the env file.
+          echo "BESZEL_KEY='${{ secrets.BESZEL_KEY }}'" >> .env.infra
+          echo "BESZEL_TOKEN=${{ secrets.BESZEL_TOKEN }}" >> .env.infra
 
           echo "✅ Generated .env.infra file with contents:"
           cat .env.infra

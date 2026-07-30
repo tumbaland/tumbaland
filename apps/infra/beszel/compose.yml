@@ -1,0 +1,65 @@
+# Beszel — host and container monitoring for the tumbaland Raspberry Pi.
+#
+#   beszel-hub    web UI + metrics history, served at https://beszel.tumbaland.eu via tumbaland-proxy
+#   beszel-agent  collects Pi host stats and per-container Docker stats
+#
+# The hub and agent talk over a shared unix socket in ./socket rather than over the
+# network, so the agent never opens a listening TCP port. This is upstream's
+# "same-system" topology (supplemental/docker/same-system in henrygd/beszel).
+#
+# This is a second, independent hub from the one on the visin Pi — each Pi monitors
+# itself and has its own metrics history.
+#
+# First deploy needs a one-time manual bootstrap to get BESZEL_KEY/BESZEL_TOKEN out
+# of the hub UI — see README.md. Until then the agent won't come up cleanly.
+
+services:
+  beszel-hub:
+    image: henrygd/beszel:0.18.7
+    container_name: tumbaland-beszel-hub
+    restart: unless-stopped
+    ports:
+      # Loopback only, unlike the other infra services: this exists so the
+      # host-networked agent can reach HUB_URL. Public access goes through
+      # tumbaland-proxy, which reaches the hub over tumbanet as beszel-hub:8090.
+      - '127.0.0.1:8090:8090'
+    environment:
+      APP_URL: https://beszel.tumbaland.eu
+    volumes:
+      - ./data:/beszel_data
+      - ./socket:/beszel_socket
+    networks:
+      - tumbanet
+    healthcheck:
+      test: ['CMD', '/beszel', 'health', '--url', 'http://localhost:8090']
+      interval: 120s
+      timeout: 5s
+      start_period: 10s
+    init: true
+
+  beszel-agent:
+    image: henrygd/beszel-agent:0.18.7
+    container_name: tumbaland-beszel-agent
+    restart: unless-stopped
+    # Host networking so the agent reports the Pi's real interfaces, load and
+    # temperatures instead of a bridge namespace's. It therefore cannot also join
+    # tumbanet — it doesn't need to, since the hub reaches it via the unix socket.
+    network_mode: host
+    volumes:
+      - ./agent_data:/var/lib/beszel-agent
+      - ./socket:/beszel_socket
+      # Read-only: the agent only reads container stats, it never controls Docker.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      LISTEN: /beszel_socket/beszel.sock
+      HUB_URL: http://localhost:8090
+      KEY: ${BESZEL_KEY}
+      TOKEN: ${BESZEL_TOKEN}
+    init: true
+    # Deliberately no healthcheck: `/agent health` exits 0 even when nothing is
+    # listening, so it would report green unconditionally. The hub's own
+    # up/down status for the system is the real liveness signal.
+
+networks:
+  tumbanet:
+    external: true
