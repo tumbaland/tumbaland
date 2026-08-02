@@ -1,4 +1,30 @@
 # Tumbalog
+## [0.0.413](https://github.com/toomastahves/tumbaland/compare/app-v0.0.412...app-v0.0.413) (2026-08-02)
+
+### Features
+
+* **album-front,album-service:** rework dashboard storage card, drop fake 10GB limit, add per-album size ([#62](https://github.com/toomastahves/tumbaland/issues/62)) ([43e0582](https://github.com/toomastahves/tumbaland/commit/43e05820147d0dd5be3be37dd807c8291c9ebcd1))
+* fix library versions ([cebc9ea](https://github.com/toomastahves/tumbaland/commit/cebc9eaf85fe8cbc451d3b5cc7c6426f07762cf9))
+* release libs ([aa51080](https://github.com/toomastahves/tumbaland/commit/aa51080e282e2e40aa3e7166488b42e752fb478c))
+* remove unused services ([b1dad0f](https://github.com/toomastahves/tumbaland/commit/b1dad0fb19a56ce913222a3a2c47715c99351698))
+* rework routing to show exact url in browser ([6a1cd66](https://github.com/toomastahves/tumbaland/commit/6a1cd66ea6f9213da8ae60c94be0bdae62ae8d5b))
+* setup beszel ([16db18c](https://github.com/toomastahves/tumbaland/commit/16db18c85281783c4a3a8c6e0d81444e83294c9a))
+* show last login ([c7b517f](https://github.com/toomastahves/tumbaland/commit/c7b517f86860d89f60ade4a849da3e1926c11f53))
+* upgrade deps ([4631449](https://github.com/toomastahves/tumbaland/commit/463144984aa80a63c892141d212e0389d5390aa1))
+
+### Bug Fixes
+
+* **album-service:** coalesce photoCount/totalSize for albums that predate them ([#63](https://github.com/toomastahves/tumbaland/issues/63)) ([3134d37](https://github.com/toomastahves/tumbaland/commit/3134d3729821152311e56d173cb7afc23d036643))
+* correct ticker-price upsert, 500->403 on bad token, and small TODO cleanups ([#61](https://github.com/toomastahves/tumbaland/issues/61)) ([c3e497e](https://github.com/toomastahves/tumbaland/commit/c3e497efa678cb513cf57abfee1a5d76df1319c5))
+* **eslint:** apply Node globals to backend-core ([#37](https://github.com/toomastahves/tumbaland/issues/37)) ([44acc4c](https://github.com/toomastahves/tumbaland/commit/44acc4c78b82319c43b2db1323dc68384fb49a43))
+
+### Chores
+
+* add SessionStart hook to provision web sessions ([#40](https://github.com/toomastahves/tumbaland/issues/40)) ([80fd1cf](https://github.com/toomastahves/tumbaland/commit/80fd1cf38bb49679df484fe5fcbd23a85f53c2c5))
+* **release:** 1.5.0 ([a472248](https://github.com/toomastahves/tumbaland/commit/a472248e32e78581c617b1776b76c9f16cd73e57))
+* **release:** 1.6.0 ([38ba884](https://github.com/toomastahves/tumbaland/commit/38ba8848daea81a0e623b2f7da16628e7d0d63ce))
+* **release:** 1.6.1 ([506d4ab](https://github.com/toomastahves/tumbaland/commit/506d4abf5ff81f386d16385ed3226340b959276b))
+* remove stale testing plan, drop dead AuthHeader code, split CI lib artifacts ([#56](https://github.com/toomastahves/tumbaland/issues/56)) ([812c1b0](https://github.com/toomastahves/tumbaland/commit/812c1b0ab858b00279da851bfce513313870d7de))
 ### [0.0.412](https://github.com/toomastahves/tumbaland/compare/app-v0.0.411...app-v0.0.412) (2026-07-22)
 
 ### [0.0.411](https://github.com/toomastahves/tumbaland/compare/app-v0.0.410...app-v0.0.411) (2026-07-22)
