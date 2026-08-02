@@ -19,8 +19,8 @@
     "@mui/material": "^9.2.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
-    "@tumbaland/components": "*",
-    "@tumbaland/frontend-core": "*"
+    "@tumbaland/components": "1.18.0",
+    "@tumbaland/frontend-core": "1.6.1"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.6.3",

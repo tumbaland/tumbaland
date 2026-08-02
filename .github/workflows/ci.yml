@@ -17,6 +17,16 @@ jobs:
       - name: Ensure every workspace has CI coverage
         run: node .github/scripts/validate-ci-matrix.js
 
+  # Deployed images install the libs from npm, so a consumer left on an older
+  # pinned version silently compiles against stale typings inside Docker's
+  # cached npm-install layer. Catch that drift here, not in a failed deploy.
+  lib-versions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check workspaces pin the current lib versions
+        run: node scripts/sync-lib-versions.mjs --check
+
   # Whole-repo lint in one pass. Doesn't need built libs (no type-aware
   # lint rules), so it runs standalone and stays cheap regardless of how
   # many workspaces a change touches - this is what used to fan out into
