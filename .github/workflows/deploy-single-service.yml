@@ -33,11 +33,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    # Native ARM64 runner: builds the arm64 image directly instead of emulating
-    # it under QEMU on an x64 runner (the previous `platforms: linux/arm64` path),
-    # which was the dominant cost of every deploy.
+  # Native ARM64 hosted runner: builds the arm64 image directly instead of
+  # emulating it under QEMU on an x64 runner (the previous `platforms: linux/arm64`
+  # path), which was the dominant cost of every deploy — and keeps the build off
+  # the Pi, which only has to pull the result.
+  build:
     runs-on: ubuntu-24.04-arm
+    outputs:
+      deploy_path: ${{ steps.vars.outputs.deploy_path }}
+      deploy_dir: ${{ steps.vars.outputs.deploy_dir }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -82,7 +86,19 @@ jobs:
           cache-from: type=gha,scope=${{ github.event.inputs.service }}
           cache-to: type=gha,mode=max,scope=${{ github.event.inputs.service }}
 
+  # Runs on the Pi itself: the runner dials out to GitHub, so the deploy needs no
+  # inbound port at home. Replaces the old scp + ssh sequence, which depended on
+  # the public IP being reachable — it no longer is, ingress comes through the
+  # Cloudflare Tunnel and that carries HTTP(S) only, not SSH.
+  deploy:
+    needs: build
+    runs-on: [self-hosted, tumbaland-pi]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Generate .env file
+
         run: |
           echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" > .env.app
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env.app
@@ -123,33 +139,28 @@ jobs:
           echo "FILE_SERVICE_HMAC_SECRET=${{ secrets.FILE_SERVICE_HMAC_SECRET }}" >> .env.app
           echo "FILE_SERVICE_PUBLIC_URL=${{ vars.FILE_SERVICE_PUBLIC_URL }}" >> .env.app
 
-      - name: Copy .env file to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ vars.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          source: .env.app
-          target: ~/tumbaland/
+      - name: Stage compose file into the deploy tree
+        env:
+          DEPLOY_DIR: ${{ needs.build.outputs.deploy_dir }}
+        run: |
+          # Compose runs from $DEPLOY_ROOT, not the runner workspace: file-service's
+          # volume binds ${FILE_DATA_PATH:-./data} relative to its compose file, and
+          # the workspace is wiped between jobs — running from there would point it
+          # at an empty directory. Same location scp used to write to.
+          DEPLOY_ROOT="${{ vars.DEPLOY_ROOT }}"
+          DEPLOY_ROOT="${DEPLOY_ROOT:-$HOME/tumbaland}"
+          echo "DEPLOY_ROOT=$DEPLOY_ROOT" >> "$GITHUB_ENV"
 
-      - name: Copy compose file to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ vars.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          source: ${{ steps.vars.outputs.deploy_path }}
-          target: ~/tumbaland/
+          mkdir -p "$DEPLOY_ROOT/$DEPLOY_DIR"
+          cp .env.app "$DEPLOY_ROOT/"
+          cp "$DEPLOY_DIR/compose.yml" "$DEPLOY_ROOT/$DEPLOY_DIR/"
 
-      - name: SSH and deploy on server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ vars.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
-            cd ~/tumbaland
-            export COMPOSE_HTTP_TIMEOUT=300
-            docker network ls | grep -q tumbanet || docker network create tumbanet
-            docker compose --env-file .env.app -f ${{ steps.vars.outputs.deploy_path }} pull
-            docker compose --env-file .env.app -f ${{ steps.vars.outputs.deploy_path }} up -d
+      - name: Deploy service
+        env:
+          DEPLOY_PATH: ${{ needs.build.outputs.deploy_path }}
+        run: |
+          cd "$DEPLOY_ROOT"
+          export COMPOSE_HTTP_TIMEOUT=300
+          docker network ls | grep -q tumbanet || docker network create tumbanet
+          docker compose --env-file .env.app -f "$DEPLOY_PATH" pull
+          docker compose --env-file .env.app -f "$DEPLOY_PATH" up -d

@@ -87,7 +87,10 @@ jobs:
   # so the server never has to stop/start more than one container at once.
   deploy:
     needs: [set-matrix, build]
-    runs-on: ubuntu-latest
+    # Runs on the Pi itself: the runner dials out to GitHub, so the deploy needs
+    # no inbound port at home. Replaces the old scp + ssh sequence, which depended
+    # on the public IP being reachable.
+    runs-on: [self-hosted, tumbaland-pi]
     # Shares the concurrency group with deploy-single-service so no two deploys
     # ever hit the server simultaneously.
     concurrency:
@@ -137,59 +140,48 @@ jobs:
           echo "FILE_SERVICE_HMAC_SECRET=${{ secrets.FILE_SERVICE_HMAC_SECRET }}" >> .env.app
           echo "FILE_SERVICE_PUBLIC_URL=${{ vars.FILE_SERVICE_PUBLIC_URL }}" >> .env.app
 
-      - name: Copy .env file to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ vars.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          source: .env.app
-          target: ~/tumbaland/
-
-      - name: Copy compose files to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ vars.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          source: "apps/frontend/*/compose.yml,apps/backend/*/compose.yml"
-          target: ~/tumbaland/
-
-      - name: Set deploy variables
+      - name: Stage compose files into the deploy tree
         run: |
-          echo "SERVICES=${{ needs.set-matrix.outputs.services_list }}" >> "$GITHUB_ENV"
-          echo "GAP_SECONDS=${{ github.event.inputs.gap_seconds }}" >> "$GITHUB_ENV"
+          # Compose runs from $DEPLOY_ROOT, not the runner workspace: service compose
+          # files bind-mount relative paths (file-service's data dir) and the
+          # workspace is wiped between jobs. Same location scp used to write to.
+          DEPLOY_ROOT="${{ vars.DEPLOY_ROOT }}"
+          DEPLOY_ROOT="${DEPLOY_ROOT:-$HOME/tumbaland}"
+          echo "DEPLOY_ROOT=$DEPLOY_ROOT" >> "$GITHUB_ENV"
 
-      - name: SSH and deploy services one at a time
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ vars.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          envs: SERVICES,GAP_SECONDS
-          command_timeout: 30m
-          script: |
-            cd ~/tumbaland
-            export COMPOSE_HTTP_TIMEOUT=300
-            docker network ls | grep -q tumbanet || docker network create tumbanet
-            for svc in $SERVICES; do
-              case "$svc" in
-                *-front) TIER=frontend ;;
-                *)       TIER=backend ;;
-              esac
-              CF="apps/$TIER/$svc/compose.yml"
-              echo "=== Deploying $svc ($CF) ==="
-              docker compose --env-file .env.app -f "$CF" pull
-              docker compose --env-file .env.app -f "$CF" up -d
-              # Wait for the container to report running before touching the next
-              # service, so a slow start never overlaps the next stop/start.
-              state=""
-              for i in $(seq 1 30); do
-                state=$(docker compose --env-file .env.app -f "$CF" ps --format '{{.State}}' 2>/dev/null | head -n1)
-                [ "$state" = "running" ] && break
-                sleep 2
-              done
-              echo "$svc state: ${state:-unknown}"
-              sleep "$GAP_SECONDS"
+          mkdir -p "$DEPLOY_ROOT"
+          cp .env.app "$DEPLOY_ROOT/"
+          for compose in apps/frontend/*/compose.yml apps/backend/*/compose.yml; do
+            mkdir -p "$DEPLOY_ROOT/$(dirname "$compose")"
+            cp "$compose" "$DEPLOY_ROOT/$compose"
+          done
+
+      - name: Deploy services one at a time
+        env:
+          SERVICES: ${{ needs.set-matrix.outputs.services_list }}
+          GAP_SECONDS: ${{ github.event.inputs.gap_seconds }}
+        run: |
+          cd "$DEPLOY_ROOT"
+          export COMPOSE_HTTP_TIMEOUT=300
+          docker network ls | grep -q tumbanet || docker network create tumbanet
+          for svc in $SERVICES; do
+            case "$svc" in
+              *-front) TIER=frontend ;;
+              *)       TIER=backend ;;
+            esac
+            CF="apps/$TIER/$svc/compose.yml"
+            echo "=== Deploying $svc ($CF) ==="
+            docker compose --env-file .env.app -f "$CF" pull
+            docker compose --env-file .env.app -f "$CF" up -d
+            # Wait for the container to report running before touching the next
+            # service, so a slow start never overlaps the next stop/start.
+            state=""
+            for i in $(seq 1 30); do
+              state=$(docker compose --env-file .env.app -f "$CF" ps --format '{{.State}}' 2>/dev/null | head -n1)
+              [ "$state" = "running" ] && break
+              sleep 2
             done
-            echo "All requested services deployed."
+            echo "$svc state: ${state:-unknown}"
+            sleep "$GAP_SECONDS"
+          done
+          echo "All requested services deployed."
