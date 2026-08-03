@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.414](https://github.com/toomastahves/tumbaland/compare/app-v0.0.413...app-v0.0.414) (2026-08-03)
+
+### Features
+
+* setup self hosted github runners ([3646438](https://github.com/toomastahves/tumbaland/commit/3646438137dcd2465f6368c0f043e3fc32be2d0e))
 ## [0.0.413](https://github.com/toomastahves/tumbaland/compare/app-v0.0.412...app-v0.0.413) (2026-08-02)
 
 ### Features
