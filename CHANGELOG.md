@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.417](https://github.com/toomastahves/tumbaland/compare/app-v0.0.416...app-v0.0.417) (2026-08-04)
+
+### Bug Fixes
+
+* failing tests ([0b48e3f](https://github.com/toomastahves/tumbaland/commit/0b48e3f517742f43c78311ff791b6a45ff746cc2))
 ## [0.0.416](https://github.com/toomastahves/tumbaland/compare/app-v0.0.415...app-v0.0.416) (2026-08-04)
 
 ### Bug Fixes
