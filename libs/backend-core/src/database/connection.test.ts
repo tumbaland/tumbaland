@@ -89,16 +89,70 @@ describe('connectDB', () => {
     expect(mongoose.connect).toHaveBeenCalledTimes(1);
   });
 
-  it('logs and rethrows when mongoose.connect fails', async () => {
+  it('logs and rethrows when mongoose.connect fails on the last allowed attempt', async () => {
     process.env.MONGODB_URI = 'mongodb://env-uri';
     const { connectDB, mongoose, logger } = await freshConnectDB();
     (mongoose.connect as jest.Mock).mockRejectedValueOnce(new Error('ECONNREFUSED'));
 
-    await expect(connectDB('my-service')).rejects.toThrow('ECONNREFUSED');
-    expect(logger.error).toHaveBeenCalledWith('Failed to connect to MongoDB', {
+    await expect(connectDB('my-service', undefined, { maxAttempts: 1 })).rejects.toThrow('ECONNREFUSED');
+    expect(logger.error).toHaveBeenCalledWith('Failed to connect to MongoDB, giving up', {
       service: 'my-service',
+      attempt: 1,
       error: 'ECONNREFUSED'
     });
+  });
+
+  it('retries a failing connection until it succeeds', async () => {
+    process.env.MONGODB_URI = 'mongodb://env-uri';
+    const { connectDB, mongoose, logger } = await freshConnectDB();
+    (mongoose.connect as jest.Mock)
+      .mockRejectedValueOnce(new Error('getaddrinfo EAI_AGAIN'))
+      .mockRejectedValueOnce(new Error('getaddrinfo EAI_AGAIN'));
+
+    await connectDB('my-service', undefined, { initialDelayMs: 0 });
+
+    expect(mongoose.connect).toHaveBeenCalledTimes(3);
+    expect(logger.warn).toHaveBeenCalledTimes(2);
+    expect(logger.info).toHaveBeenCalledWith('MongoDB connected', { service: 'my-service' });
+  });
+
+  it('gives up after maxAttempts', async () => {
+    process.env.MONGODB_URI = 'mongodb://env-uri';
+    const { connectDB, mongoose } = await freshConnectDB();
+    (mongoose.connect as jest.Mock).mockRejectedValue(new Error('auth failed'));
+
+    await expect(
+      connectDB('my-service', undefined, { maxAttempts: 3, initialDelayMs: 0 })
+    ).rejects.toThrow('auth failed');
+
+    expect(mongoose.connect).toHaveBeenCalledTimes(3);
+  });
+
+  it('caps the backoff delay at maxDelayMs', async () => {
+    process.env.MONGODB_URI = 'mongodb://env-uri';
+    const { connectDB, mongoose, logger } = await freshConnectDB();
+    (mongoose.connect as jest.Mock)
+      .mockRejectedValueOnce(new Error('down'))
+      .mockRejectedValueOnce(new Error('down'))
+      .mockRejectedValueOnce(new Error('down'));
+
+    await connectDB('my-service', undefined, { initialDelayMs: 1, maxDelayMs: 2 });
+
+    const delays = (logger.warn as jest.Mock).mock.calls.map((call) => call[1].delayMs);
+    expect(delays).toEqual([1, 2, 2]);
+  });
+
+  it('lets concurrent callers share one retry loop', async () => {
+    process.env.MONGODB_URI = 'mongodb://env-uri';
+    const { connectDB, mongoose } = await freshConnectDB();
+    (mongoose.connect as jest.Mock).mockRejectedValueOnce(new Error('not ready'));
+
+    await Promise.all([
+      connectDB('my-service', undefined, { initialDelayMs: 0 }),
+      connectDB('my-service', undefined, { initialDelayMs: 0 })
+    ]);
+
+    expect(mongoose.connect).toHaveBeenCalledTimes(2);
   });
 
   it('registers error/disconnected/reconnected handlers that log through the shared logger', async () => {
