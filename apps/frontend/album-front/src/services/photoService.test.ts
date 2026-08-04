@@ -135,7 +135,11 @@ describe('loadPhotosWithThumbnails', () => {
 
     const result = await photoService.loadPhotosWithThumbnails('album-1');
 
-    expect(result.photos[0]).toMatchObject({
+    // photos is optional on PaginatedResponse, so narrow before indexing —
+    // toHaveLength keeps this from passing vacuously if it ever comes back empty.
+    const photos = result.photos ?? [];
+    expect(photos).toHaveLength(1);
+    expect(photos[0]).toMatchObject({
       thumbnailUrl: 'https://cdn.example/thumb.jpg',
       fileUrl: 'https://cdn.example/full.jpg'
     });
@@ -151,8 +155,10 @@ describe('loadPhotosWithThumbnails', () => {
 
     const result = await photoService.loadPhotosWithThumbnails('album-1');
 
-    expect(result.photos[0].thumbnailUrl).toBeUndefined();
-    expect(result.photos[0].fileUrl).toBe('https://cdn.example/full.jpg');
+    const photos = result.photos ?? [];
+    expect(photos).toHaveLength(1);
+    expect(photos[0].thumbnailUrl).toBeUndefined();
+    expect(photos[0].fileUrl).toBe('https://cdn.example/full.jpg');
   });
 
   it('defaults to an empty photos array when the response omits it', async () => {

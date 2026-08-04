@@ -33,7 +33,10 @@ import { albumService } from '../services/albumService';
 import { makeAlbum, makePhoto } from '../test/fixtures';
 import AlbumDetailPage from './AlbumDetailPage';
 
-const mockedUsePhotos = usePhotos as unknown as ReturnType<typeof vi.fn>;
+// vitest 4's Mock type is a call+construct union, so ReturnType<typeof vi.fn>
+// no longer satisfies ReturnType's `(...args: any) => any` constraint. Type the
+// override against the real hook's return type instead of the mock's.
+const mockedUsePhotos = vi.mocked(usePhotos);
 const mockedGetAlbumById = albumService.getAlbumById as unknown as ReturnType<typeof vi.fn>;
 
 function renderPage() {
@@ -49,7 +52,7 @@ function renderPage() {
   );
 }
 
-function basePhotosReturn(overrides: Partial<ReturnType<typeof mockedUsePhotos>> = {}) {
+function basePhotosReturn(overrides: Partial<ReturnType<typeof usePhotos>> = {}) {
   return {
     photos: [],
     loading: false,
