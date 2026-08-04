@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.415](https://github.com/toomastahves/tumbaland/compare/app-v0.0.414...app-v0.0.415) (2026-08-04)
+
+### Bug Fixes
+
+* db connection retries ([5c52ae8](https://github.com/toomastahves/tumbaland/commit/5c52ae80b30ebfc8dcb43155a4c8fd2496f4c133))
 ## [0.0.414](https://github.com/toomastahves/tumbaland/compare/app-v0.0.413...app-v0.0.414) (2026-08-03)
 
 ### Features
