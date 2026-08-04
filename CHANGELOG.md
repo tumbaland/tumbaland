@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.418](https://github.com/toomastahves/tumbaland/compare/app-v0.0.417...app-v0.0.418) (2026-08-04)
+
+### Bug Fixes
+
+* proxy config ([3ea8d95](https://github.com/toomastahves/tumbaland/commit/3ea8d95f2914b78c1ff78a28ecf882824d7a8df7))
 ## [0.0.417](https://github.com/toomastahves/tumbaland/compare/app-v0.0.416...app-v0.0.417) (2026-08-04)
 
 ### Bug Fixes
