@@ -9,15 +9,23 @@ import app from './app';
 // Fail fast if the JWT secret is missing — auth must never run with a default
 requireEnv('JWT_SECRET');
 
-// Connect to MongoDB
-connectDB('album-service');
-
 const PORT = process.env.PORT || 4002;
 
-// Start the server
-const server = app.listen(PORT, () =>
-  logger.info('Album service started successfully', { port: PORT })
-);
+// Connect before binding the port: a service that can't reach MongoDB has
+// nothing to serve, and listening anyway would pass the health check while
+// failing every request. Exiting hands recovery to the container restart policy.
+const start = async (): Promise<void> => {
+  await connectDB('album-service');
 
-// Graceful shutdown (SIGINT + SIGTERM: drain HTTP, then close the DB)
-registerShutdown({ serviceName: 'album-service', server });
+  const server = app.listen(PORT, () =>
+    logger.info('Album service started successfully', { port: PORT })
+  );
+
+  // Graceful shutdown (SIGINT + SIGTERM: drain HTTP, then close the DB)
+  registerShutdown({ serviceName: 'album-service', server });
+};
+
+start().catch((error: Error) => {
+  logger.error('Failed to start album-service', { error: error.message, stack: error.stack });
+  process.exit(1);
+});

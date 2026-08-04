@@ -5,6 +5,7 @@ services:
       dockerfile: Dockerfile
     image: toomastahves/finance-service:latest
     restart: unless-stopped
+    stop_grace_period: 15s
     ports:
       - '4003:4003'
     environment:

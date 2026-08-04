@@ -229,7 +229,10 @@ function albumStatistics() {
       totalDetections: 0,
       totalMasks: 0
     },
-    groups: []
+    groups: [],
+    // Required by AlbumStatistics and returned by the real /api/statistics —
+    // omitting it crashed DashboardPage on statistics.albums.map().
+    albums: []
   };
 }
 

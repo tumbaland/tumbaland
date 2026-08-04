@@ -1,94 +1,58 @@
 import mongoose from 'mongoose';
 import logger from '../logging/logger';
 
-export interface ConnectDBOptions {
-  /**
-   * How many times to try before giving up. Defaults to Infinity: a service that
-   * boots before the host's network is up must keep trying, not die once.
-   */
-  maxAttempts?: number;
-  /** Backoff delay for the first retry. Doubles per attempt up to maxDelayMs. */
-  initialDelayMs?: number;
-  /** Ceiling for the backoff delay. */
-  maxDelayMs?: number;
-}
-
-const DEFAULT_INITIAL_DELAY_MS = 1000;
-const DEFAULT_MAX_DELAY_MS = 30000;
-
 let connected = false;
 /**
- * Set while a retry loop is running so concurrent callers await that loop
- * instead of starting a second one against the same mongoose singleton.
+ * Set while a connection attempt is in flight so concurrent callers await that
+ * attempt instead of opening a second one against the same mongoose singleton.
  */
 let pending: Promise<void> | null = null;
 let listenersRegistered = false;
 
-const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-
-export const connectDB = async (
-  serviceName?: string,
-  uri?: string,
-  options: ConnectDBOptions = {}
-): Promise<void> => {
+/**
+ * Connects once and throws on failure. There is deliberately no retry loop here.
+ *
+ * MongoDB is Atlas (`mongodb+srv://`), not a sidecar container, so there is no
+ * boot race to ride out — and the driver already retries for us: `connect()`
+ * keeps doing server selection for `serverSelectionTimeoutMS` (30s by default)
+ * before it rejects, so a transient DNS or network blip is absorbed there.
+ * Anything that survives that is a real fault — bad credentials, an IP missing
+ * from the Atlas allowlist, a dead cluster — and no amount of retrying fixes it.
+ *
+ * Callers exit non-zero when this throws, which hands the problem to the
+ * container restart policy (`restart: unless-stopped`) that already supervises
+ * every service. One supervisor, and a service that can't reach its database
+ * shows up as a restarting container instead of a healthy one serving errors.
+ */
+export const connectDB = async (serviceName?: string, uri?: string): Promise<void> => {
   if (connected) return;
   if (pending) return pending;
 
   const mongoUri = uri || process.env.MONGODB_URI;
-  // A missing URI is a config error, not a transient one — retrying can never
-  // fix it, so fail immediately rather than looping forever on a typo.
   if (!mongoUri) {
     throw new Error('MONGODB_URI environment variable is not set');
   }
 
-  pending = connectWithRetry(mongoUri, serviceName, options).finally(() => {
+  pending = connectOnce(mongoUri, serviceName).finally(() => {
     pending = null;
   });
 
   return pending;
 };
 
-async function connectWithRetry(
-  mongoUri: string,
-  serviceName: string | undefined,
-  options: ConnectDBOptions
-): Promise<void> {
-  const maxAttempts = options.maxAttempts ?? Infinity;
-  const initialDelayMs = options.initialDelayMs ?? DEFAULT_INITIAL_DELAY_MS;
-  const maxDelayMs = options.maxDelayMs ?? DEFAULT_MAX_DELAY_MS;
+async function connectOnce(mongoUri: string, serviceName: string | undefined): Promise<void> {
+  try {
+    await mongoose.connect(mongoUri);
+    connected = true;
 
-  for (let attempt = 1; ; attempt++) {
-    try {
-      await mongoose.connect(mongoUri);
-      connected = true;
-
-      registerConnectionListeners(serviceName);
-      logger.info('MongoDB connected', { service: serviceName });
-      return;
-    } catch (error) {
-      const message = (error as Error).message;
-
-      if (attempt >= maxAttempts) {
-        logger.error('Failed to connect to MongoDB, giving up', {
-          service: serviceName,
-          attempt,
-          error: message
-        });
-        throw error;
-      }
-
-      // Exponential backoff, capped: a Mongo outage lasting hours shouldn't
-      // grow the gap past maxDelayMs and leave the service down long after
-      // the database comes back.
-      const delayMs = Math.min(initialDelayMs * 2 ** (attempt - 1), maxDelayMs);
-      logger.warn('Failed to connect to MongoDB, retrying', {
-        service: serviceName,
-        attempt,
-        delayMs,
-        error: message
-      });
-      await sleep(delayMs);
-    }
+    registerConnectionListeners(serviceName);
+    logger.info('MongoDB connected', { service: serviceName });
+  } catch (error) {
+    logger.error('Failed to connect to MongoDB', {
+      service: serviceName,
+      error: (error as Error).message
+    });
+    throw error;
   }
 }
 

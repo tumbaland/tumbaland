@@ -13,19 +13,21 @@ requireEnv('INTERNAL_SERVICE_TOKEN');
 
 const PORT = process.env.PORT || 5001;
 
-// Listen first, connect in the background: connectDB retries indefinitely, so
-// gating listen() on it meant a Mongo outage at boot left nothing bound to the
-// port at all — the proxy returned 502 with no way to see why. Serving /health
-// immediately reports the disconnected state instead, and routes recover on
-// their own once the retry loop succeeds.
-const server = app.listen(PORT, () =>
-  logger.info('Auth service started successfully', { port: PORT })
-);
-// Graceful shutdown (SIGINT + SIGTERM: drain HTTP, then close the DB)
-registerShutdown({ serviceName: 'auth-service', server });
+// Connect before binding the port: a service that can't reach MongoDB has
+// nothing to serve, and listening anyway would pass the health check while
+// failing every request. Exiting hands recovery to the container restart policy.
+const start = async (): Promise<void> => {
+  await connectDB('auth-service');
 
-connectDB('auth-service').catch((err) => {
-  // Only non-retryable config errors (a missing MONGODB_URI) land here.
-  logger.error('Failed to start auth-service', { error: err.message, stack: err.stack });
+  const server = app.listen(PORT, () =>
+    logger.info('Auth service started successfully', { port: PORT })
+  );
+
+  // Graceful shutdown (SIGINT + SIGTERM: drain HTTP, then close the DB)
+  registerShutdown({ serviceName: 'auth-service', server });
+};
+
+start().catch((error: Error) => {
+  logger.error('Failed to start auth-service', { error: error.message, stack: error.stack });
   process.exit(1);
 });

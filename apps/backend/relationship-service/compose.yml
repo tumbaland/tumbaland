@@ -5,6 +5,7 @@ services:
       dockerfile: Dockerfile
     image: toomastahves/relationship-service:latest
     restart: unless-stopped
+    stop_grace_period: 15s
     ports:
       - '4001:4001'
     environment:

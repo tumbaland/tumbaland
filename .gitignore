@@ -18,8 +18,9 @@ storage
 apps/infra/mongodb/data
 backups/
 
-# Playwright E2E artifacts
-e2e/test-results
-e2e/playwright-report
-e2e/.last-run.json
+# Playwright E2E artifacts. Written relative to playwright.config.ts, which
+# lives at the repo root — not next to the specs in e2e/.
+test-results/
+playwright-report/
+.last-run.json
 coverage

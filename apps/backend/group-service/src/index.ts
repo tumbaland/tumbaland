@@ -8,12 +8,23 @@ import app from './app';
 // Fail fast if the JWT secret is missing — auth must never run with a default
 requireEnv('JWT_SECRET');
 
-connectDB('group-service').catch(err => logger.error('MongoDB connection error', { error: err.message }));
-
 const PORT = process.env.PORT || 5006;
-const server = app.listen(PORT, () =>
-  logger.info('Group service started successfully', { port: PORT })
-);
 
-// Graceful shutdown (SIGINT + SIGTERM: drain HTTP, then close the DB)
-registerShutdown({ serviceName: 'group-service', server });
+// Connect before binding the port: a service that can't reach MongoDB has
+// nothing to serve, and listening anyway would pass the health check while
+// failing every request. Exiting hands recovery to the container restart policy.
+const start = async (): Promise<void> => {
+  await connectDB('group-service');
+
+  const server = app.listen(PORT, () =>
+    logger.info('Group service started successfully', { port: PORT })
+  );
+
+  // Graceful shutdown (SIGINT + SIGTERM: drain HTTP, then close the DB)
+  registerShutdown({ serviceName: 'group-service', server });
+};
+
+start().catch((error: Error) => {
+  logger.error('Failed to start group-service', { error: error.message, stack: error.stack });
+  process.exit(1);
+});
