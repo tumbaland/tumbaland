@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: toomastahves/finance-front:latest
+    image: toomastahves/tumbaland-finance-front:latest
     restart: unless-stopped
     environment:
       FINANCE_API_URL: ${FINANCE_API_URL}

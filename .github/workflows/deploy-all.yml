@@ -77,9 +77,12 @@ jobs:
           context: ./${{ steps.vars.outputs.dir }}
           file: ./${{ steps.vars.outputs.dir }}/Dockerfile
           push: true
+          # `tumbaland-` prefix: the Docker Hub account is shared with visin, which
+          # publishes its own group-service, auth-service, file-service, auth-front
+          # and account-front. See deploy-single-service.yml for the full note.
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/tumbaland-${{ matrix.service }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/tumbaland-${{ matrix.service }}:${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 

@@ -79,9 +79,13 @@ jobs:
           file: ${{ steps.vars.outputs.dockerfile }}
           push: true
           # Immutable SHA tag (for rollback) plus the :latest tag the compose files pull.
+          # The `tumbaland-` prefix is load-bearing: the Docker Hub account is shared
+          # with visin, which has its own group-service, auth-service, file-service,
+          # auth-front and account-front. Unprefixed, both projects pushed to the same
+          # `:latest` and whichever deployed last silently replaced the other's image.
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.inputs.service }}:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.inputs.service }}:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/tumbaland-${{ github.event.inputs.service }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/tumbaland-${{ github.event.inputs.service }}:${{ github.sha }}
           # Reuse the npm-install/build layers across runs via the GitHub Actions cache.
           cache-from: type=gha,scope=${{ github.event.inputs.service }}
           cache-to: type=gha,mode=max,scope=${{ github.event.inputs.service }}

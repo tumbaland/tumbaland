@@ -36,24 +36,30 @@ jobs:
       - name: Set variables
         id: vars
         run: |
+          # IMAGE is the Docker Hub repository name. It carries a `tumbaland-` prefix
+          # because the account is shared with visin — see deploy-single-service.yml.
+          # tumbaland-proxy already reads as namespaced, so it keeps its own name.
           case "${{ github.event.inputs.service }}" in
             tumbaland-proxy)
               CONTEXT=./apps/infra/tumbaland-proxy
               DOCKERFILE=./apps/infra/tumbaland-proxy/Dockerfile
               DEPLOYPATH=apps/infra/tumbaland-proxy/compose.yml
               DEPLOYDIR=apps/infra/tumbaland-proxy
+              IMAGE=tumbaland-proxy
               ;;
             elk)
               CONTEXT=./apps/infra/elk
               DOCKERFILE=./apps/infra/elk/Dockerfile
               DEPLOYPATH=apps/infra/elk/docker-compose.yml
               DEPLOYDIR=apps/infra/elk
+              IMAGE=tumbaland-elk
               ;;
             rabbitmq)
               CONTEXT=./apps/infra/rabbitmq
               DOCKERFILE=./apps/infra/rabbitmq/Dockerfile
               DEPLOYPATH=apps/infra/rabbitmq/docker-compose.yml
               DEPLOYDIR=apps/infra/rabbitmq
+              IMAGE=tumbaland-rabbitmq
               ;;
             beszel)
               # Upstream images, nothing to build.
@@ -61,10 +67,12 @@ jobs:
               DOCKERFILE=""
               DEPLOYPATH=apps/infra/beszel/compose.yml
               DEPLOYDIR=apps/infra/beszel
+              IMAGE=""
               ;;
           esac
           echo "context=$CONTEXT" >> $GITHUB_OUTPUT
           echo "dockerfile=$DOCKERFILE" >> $GITHUB_OUTPUT
+          echo "image=$IMAGE" >> $GITHUB_OUTPUT
           echo "deploy_path=$DEPLOYPATH" >> $GITHUB_OUTPUT
           echo "deploy_dir=$DEPLOYDIR" >> $GITHUB_OUTPUT
 
@@ -97,8 +105,8 @@ jobs:
           push: true
           # Immutable SHA tag (for rollback) plus the :latest tag compose pulls.
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.inputs.service }}:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.inputs.service }}:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.vars.outputs.image }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ steps.vars.outputs.image }}:${{ github.sha }}
           # No `platforms:` — the runner is already arm64, so this builds natively.
           # Layer cache keyed per infra service, as the app deploys do.
           cache-from: type=gha,scope=infra-${{ github.event.inputs.service }}

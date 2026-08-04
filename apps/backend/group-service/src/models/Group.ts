@@ -46,6 +46,4 @@ const GroupSchema = new Schema<IGroup>({
   deletedAt: { type: Date, default: null }
 },{ timestamps: true });
 
-GroupSchema.index({ 'members.email': 1 });
-
 export const Group = model<IGroup>('Group', GroupSchema);
