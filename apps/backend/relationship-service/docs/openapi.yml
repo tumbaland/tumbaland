@@ -413,6 +413,91 @@ components:
         - daysSinceFirstEntry
         - types
 
+    TypeCadence:
+      type: object
+      description: |
+        How often one activity type is normally logged, and how long it has been.
+        Never timeframe-limited: staleness only means anything against the full history.
+      properties:
+        typeId:
+          type: string
+        slug:
+          type: string
+        name:
+          type: string
+        color:
+          type: string
+          nullable: true
+        lastDate:
+          type: string
+          format: date
+          description: Most recent entry of this type
+        daysSince:
+          type: integer
+          description: Whole days between lastDate and today (0 = logged today)
+        loggedDays:
+          type: integer
+          description: Distinct days this type was ever logged on
+        typicalGapDays:
+          type: number
+          nullable: true
+          description: Mean gap between consecutive logged days; null until there are two
+        overdueRatio:
+          type: number
+          nullable: true
+          description: |
+            daysSince measured against this type's own rhythm — 1 is exactly due,
+            3 is three times the usual gap. Null when the cadence is unknown.
+      required:
+        - typeId
+        - slug
+        - name
+        - lastDate
+        - daysSince
+        - loggedDays
+        - typicalGapDays
+        - overdueRatio
+
+    StreakStatistics:
+      type: object
+      description: Logging streaks and per-type staleness, over the whole history of a scope
+      properties:
+        currentStreak:
+          type: integer
+          description: Consecutive logged days ending today or yesterday; 0 once the chain breaks
+          example: 25
+        longestStreak:
+          type: integer
+          example: 55
+        longestStreakStart:
+          type: string
+          format: date
+          nullable: true
+        longestStreakEnd:
+          type: string
+          format: date
+          nullable: true
+        totalLoggedDays:
+          type: integer
+          description: Distinct days with at least one entry, ever
+        lastEntryDate:
+          type: string
+          format: date
+          nullable: true
+        daysSinceLastEntry:
+          type: integer
+          nullable: true
+        types:
+          type: array
+          description: One row per type ever logged, most overdue first
+          items:
+            $ref: '#/components/schemas/TypeCadence'
+      required:
+        - currentStreak
+        - longestStreak
+        - totalLoggedDays
+        - types
+
     DashboardSettings:
       type: object
       properties:
@@ -428,6 +513,15 @@ components:
           items:
             type: string
           description: Activity types excluded from count-based charts
+        startDate:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+          nullable: true
+          description: |
+            Day the dashboard's "days together" count runs from. Null or absent
+            falls back to the first logged entry. Send an empty string or null to
+            clear a stored value.
+          example: "2024-01-18"
       required:
         - highlightTypeIds
         - hiddenTypeIds
@@ -794,6 +888,22 @@ components:
         - success
         - data
         - timeframe
+        - generatedAt
+
+    StreakStatisticsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/StreakStatistics'
+        generatedAt:
+          type: string
+          format: date-time
+      required:
+        - success
+        - data
         - generatedAt
 
     MonthlyHoursResponse:
@@ -1987,6 +2097,40 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  /api/statistics/streaks:
+    get:
+      tags:
+        - Statistics
+      summary: Get logging streaks and per-type staleness
+      description: |
+        Current and longest logging streaks, plus how overdue each activity type is
+        against its own typical cadence — the dashboard's "it has been a while since…"
+        row. Always answered over the full history rather than a timeframe, and
+        future-dated entries are excluded so a planned day cannot claim a streak.
+      parameters:
+        - name: groupId
+          in: query
+          schema:
+            type: string
+          description: Filter by specific group ID (defaults to personal entries)
+          example: "group456"
+      responses:
+        '200':
+          description: Streak statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StreakStatisticsResponse'
         '500':
           description: Internal server error
           content:

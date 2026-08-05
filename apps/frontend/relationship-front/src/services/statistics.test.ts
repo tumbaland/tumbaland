@@ -5,7 +5,8 @@ import {
   getMonthlyStatistics,
   getMonthlyActivityBreakdown,
   getWeeklyHeatmapData,
-  getCumulativeTimelineData
+  getCumulativeTimelineData,
+  getStreaks
 } from './statistics';
 
 function mockFetchOnce(body: unknown, init: { ok?: boolean; status?: number } = {}) {
@@ -39,6 +40,29 @@ describe('getStatistics', () => {
   it('falls back to a generic message for a non-Error rejection', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce('not an error');
     await expect(getStatistics()).rejects.toThrow('Failed to fetch statistics');
+  });
+});
+
+describe('getStreaks', () => {
+  it('omits groupId when not given', async () => {
+    mockFetchOnce({ success: true, data: { currentStreak: 0 } });
+    await getStreaks();
+    const [url] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(String(url)).toContain('/statistics/streaks');
+    expect(String(url)).not.toContain('groupId');
+  });
+
+  it('passes the groupId through and returns the payload', async () => {
+    mockFetchOnce({ success: true, data: { currentStreak: 4, types: [] } });
+    const result = await getStreaks('g1');
+    expect(result).toEqual({ currentStreak: 4, types: [] });
+    const [url] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(String(url)).toContain('groupId=g1');
+  });
+
+  it('falls back to a generic message for a non-Error rejection', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce('not an error');
+    await expect(getStreaks()).rejects.toThrow('Failed to fetch streaks');
   });
 });
 

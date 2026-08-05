@@ -7,6 +7,7 @@ import {
   getMonthlyActivityBreakdown,
   getWeeklyHeatmapData,
   getCumulativeTimelineData,
+  getStreakStatistics,
   StatisticsFilters
 } from '../services/statistics.service';
 
@@ -22,12 +23,29 @@ function parseYearParam(year: unknown): number | undefined {
 }
 
 /**
+ * A request's scope: the named group, or — with no `groupId` — the caller's own
+ * entries only. Every statistics endpoint scopes the same way, so the dashboard
+ * never mixes a group's numbers into a personal view.
+ */
+function scopeFilters(req: Request): StatisticsFilters {
+  const { groupId } = req.query;
+  const filters: StatisticsFilters = { userId: req.user!.id };
+
+  if (groupId) {
+    filters.groupId = groupId as string;
+  } else {
+    filters.userGroupIds = req.userGroups || [];
+    filters.personalOnly = true;
+  }
+
+  return filters;
+}
+
+/**
  * Get relationship statistics
  */
 export const getStatistics = async (req: Request, res: Response): Promise<void> => {
-  const { timeframe, groupId } = req.query;
-  const user = req.user!;
-  const userGroups = req.userGroups || [];
+  const { timeframe } = req.query;
 
   const validTimeframes = ['week', 'month', 'quarter', 'year', 'all'];
   const selectedTimeframe = (timeframe as string) || 'all';
@@ -35,14 +53,7 @@ export const getStatistics = async (req: Request, res: Response): Promise<void> 
     throw new BadRequestError('Invalid timeframe. Must be one of: week, month, quarter, year, all');
   }
 
-  const filters: StatisticsFilters = { userId: user.id };
-
-  if (groupId) {
-    filters.groupId = groupId as string;
-  } else {
-    filters.userGroupIds = userGroups;
-    filters.personalOnly = true;
-  }
+  const filters = scopeFilters(req);
 
   const statistics = await getRelationshipStatistics(selectedTimeframe, filters);
 
@@ -55,22 +66,25 @@ export const getStatistics = async (req: Request, res: Response): Promise<void> 
 };
 
 /**
+ * Get logging streaks and per-type staleness
+ */
+export const getStreaks = async (req: Request, res: Response): Promise<void> => {
+  const streaks = await getStreakStatistics(scopeFilters(req));
+
+  res.json({
+    success: true,
+    data: streaks,
+    generatedAt: new Date().toISOString()
+  });
+};
+
+/**
  * Get monthly hours statistics
  */
 export const getMonthlyHoursData = async (req: Request, res: Response): Promise<void> => {
-  const { year, groupId } = req.query;
-  const user = req.user!;
-  const userGroups = req.userGroups || [];
+  const { year } = req.query;
+  const filters = scopeFilters(req);
   const selectedYear = parseYearParam(year);
-
-  const filters: StatisticsFilters = { userId: user.id };
-
-  if (groupId) {
-    filters.groupId = groupId as string;
-  } else {
-    filters.userGroupIds = userGroups;
-    filters.personalOnly = true;
-  }
 
   const monthlyHours = await getMonthlyHours(selectedYear, filters);
 
@@ -85,19 +99,9 @@ export const getMonthlyHoursData = async (req: Request, res: Response): Promise<
  * Get monthly statistics (days breakdown)
  */
 export const getMonthlyStatisticsData = async (req: Request, res: Response): Promise<void> => {
-  const { year, groupId } = req.query;
-  const user = req.user!;
-  const userGroups = req.userGroups || [];
+  const { year } = req.query;
+  const filters = scopeFilters(req);
   const selectedYear = parseYearParam(year);
-
-  const filters: StatisticsFilters = { userId: user.id };
-
-  if (groupId) {
-    filters.groupId = groupId as string;
-  } else {
-    filters.userGroupIds = userGroups;
-    filters.personalOnly = true;
-  }
 
   const monthlyStats = await getMonthlyStatistics(selectedYear, filters);
 
@@ -112,19 +116,9 @@ export const getMonthlyStatisticsData = async (req: Request, res: Response): Pro
  * Get monthly activity breakdown
  */
 export const getMonthlyActivityBreakdownData = async (req: Request, res: Response): Promise<void> => {
-  const { year, groupId } = req.query;
-  const user = req.user!;
-  const userGroups = req.userGroups || [];
+  const { year } = req.query;
+  const filters = scopeFilters(req);
   const selectedYear = parseYearParam(year);
-
-  const filters: StatisticsFilters = { userId: user.id };
-
-  if (groupId) {
-    filters.groupId = groupId as string;
-  } else {
-    filters.userGroupIds = userGroups;
-    filters.personalOnly = true;
-  }
 
   const monthlyActivityData = await getMonthlyActivityBreakdown(selectedYear, filters);
 
@@ -139,19 +133,9 @@ export const getMonthlyActivityBreakdownData = async (req: Request, res: Respons
  * Get weekly heatmap data
  */
 export const getWeeklyHeatmapDataController = async (req: Request, res: Response): Promise<void> => {
-  const { year, groupId } = req.query;
-  const user = req.user!;
-  const userGroups = req.userGroups || [];
+  const { year } = req.query;
+  const filters = scopeFilters(req);
   const selectedYear = parseYearParam(year);
-
-  const filters: StatisticsFilters = { userId: user.id };
-
-  if (groupId) {
-    filters.groupId = groupId as string;
-  } else {
-    filters.userGroupIds = userGroups;
-    filters.personalOnly = true;
-  }
 
   const heatmapData = await getWeeklyHeatmapData(selectedYear, filters);
 
@@ -166,19 +150,9 @@ export const getWeeklyHeatmapDataController = async (req: Request, res: Response
  * Get cumulative timeline data
  */
 export const getCumulativeTimelineDataController = async (req: Request, res: Response): Promise<void> => {
-  const { year, groupId } = req.query;
-  const user = req.user!;
-  const userGroups = req.userGroups || [];
+  const { year } = req.query;
+  const filters = scopeFilters(req);
   const selectedYear = parseYearParam(year);
-
-  const filters: StatisticsFilters = { userId: user.id };
-
-  if (groupId) {
-    filters.groupId = groupId as string;
-  } else {
-    filters.userGroupIds = userGroups;
-    filters.personalOnly = true;
-  }
 
   const timelineData = await getCumulativeTimelineData(selectedYear, filters);
 

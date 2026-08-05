@@ -9,6 +9,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  TextField,
   Typography
 } from '@mui/material';
 import { ActivityType } from '../services/types';
@@ -63,6 +64,7 @@ const DashboardCustomizeDialog: React.FC<DashboardCustomizeDialogProps> = ({
 }) => {
   const [highlights, setHighlights] = useState<string[]>([]);
   const [hidden, setHidden] = useState<string[]>([]);
+  const [startDate, setStartDate] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,6 +72,7 @@ const DashboardCustomizeDialog: React.FC<DashboardCustomizeDialogProps> = ({
     if (open) {
       setHighlights(settings.highlightTypeIds);
       setHidden(settings.hiddenTypeIds);
+      setStartDate(settings.startDate || '');
       setError(null);
     }
   }, [open, settings]);
@@ -82,7 +85,7 @@ const DashboardCustomizeDialog: React.FC<DashboardCustomizeDialogProps> = ({
     setSaving(true);
     setError(null);
     try {
-      await onSave({ highlightTypeIds: highlights, hiddenTypeIds: hidden });
+      await onSave({ highlightTypeIds: highlights, hiddenTypeIds: hidden, startDate: startDate || null });
       onClose();
     } catch {
       setError('Failed to save dashboard settings');
@@ -104,11 +107,28 @@ const DashboardCustomizeDialog: React.FC<DashboardCustomizeDialogProps> = ({
             {error}
           </Alert>
         )}
+        <Typography variant="subtitle2" sx={{ mt: 1 }}>
+          Together since
+        </Typography>
+        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.5 }}>
+          The day the "Days" card counts from. Leave it empty to count from the first
+          entry you logged.
+        </Typography>
+        <TextField
+          type="date"
+          size="small"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          slotProps={{
+            htmlInput: { max: new Date().toISOString().slice(0, 10), 'aria-label': 'Together since' }
+          }}
+        />
+
         {types.length === 0 ? (
-          <Alert severity="info">Create some activity types first.</Alert>
+          <Alert severity="info" sx={{ mt: 3 }}>Create some activity types first.</Alert>
         ) : (
           <>
-            <Typography variant="subtitle2" sx={{ mt: 1 }}>
+            <Typography variant="subtitle2" sx={{ mt: 3 }}>
               Highlighted activities
             </Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.5 }}>

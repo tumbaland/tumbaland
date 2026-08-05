@@ -19,7 +19,7 @@ describe('getDashboardSettings', () => {
 
     const settings = await getDashboardSettings('u1', []);
 
-    expect(settings).toEqual({ highlightTypeIds: [], hiddenTypeIds: [] });
+    expect(settings).toEqual({ highlightTypeIds: [], hiddenTypeIds: [], startDate: null });
   });
 
   it('returns stored personal settings', async () => {
@@ -28,7 +28,15 @@ describe('getDashboardSettings', () => {
     const settings = await getDashboardSettings('u1', []);
 
     expect(mockedFindOne).toHaveBeenCalledWith({ userId: 'u1', $or: [{ groupId: { $exists: false } }, { groupId: null }] });
-    expect(settings).toEqual({ highlightTypeIds: ['t1'], hiddenTypeIds: ['t2'] });
+    expect(settings).toEqual({ highlightTypeIds: ['t1'], hiddenTypeIds: ['t2'], startDate: null });
+  });
+
+  it('returns a stored start date', async () => {
+    mockedFindOne.mockResolvedValue({ highlightTypeIds: [], hiddenTypeIds: [], startDate: '2024-01-18' });
+
+    const settings = await getDashboardSettings('u1', []);
+
+    expect(settings.startDate).toBe('2024-01-18');
   });
 
   it('returns stored group settings', async () => {
@@ -57,11 +65,43 @@ describe('saveDashboardSettings', () => {
       { userId: 'u1', $or: [{ groupId: { $exists: false } }, { groupId: null }] },
       {
         $set: { highlightTypeIds: ['t1'], hiddenTypeIds: [] },
+        $unset: { startDate: '' },
         $setOnInsert: { userId: 'u1' }
       },
       { new: true, upsert: true }
     );
-    expect(settings).toEqual({ highlightTypeIds: ['t1'], hiddenTypeIds: [] });
+    expect(settings).toEqual({ highlightTypeIds: ['t1'], hiddenTypeIds: [], startDate: null });
+  });
+
+  it('stores a start date when one is given', async () => {
+    mockedFindOneAndUpdate.mockResolvedValue({ highlightTypeIds: [], hiddenTypeIds: [], startDate: '2024-01-18' });
+
+    const settings = await saveDashboardSettings(
+      { highlightTypeIds: [], hiddenTypeIds: [], startDate: '2024-01-18' },
+      'u1',
+      []
+    );
+
+    expect(mockedFindOneAndUpdate).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        $set: { highlightTypeIds: [], hiddenTypeIds: [], startDate: '2024-01-18' }
+      }),
+      { new: true, upsert: true }
+    );
+    expect(settings.startDate).toBe('2024-01-18');
+  });
+
+  it('unsets the start date when it is cleared', async () => {
+    mockedFindOneAndUpdate.mockResolvedValue({ highlightTypeIds: [], hiddenTypeIds: [] });
+
+    await saveDashboardSettings({ highlightTypeIds: [], hiddenTypeIds: [], startDate: '' }, 'u1', []);
+
+    expect(mockedFindOneAndUpdate).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ $unset: { startDate: '' } }),
+      { new: true, upsert: true }
+    );
   });
 
   it('upserts group settings with the group id set on insert', async () => {
@@ -73,6 +113,7 @@ describe('saveDashboardSettings', () => {
       { groupId: 'g1' },
       {
         $set: { highlightTypeIds: [], hiddenTypeIds: [] },
+        $unset: { startDate: '' },
         $setOnInsert: { userId: 'u1', groupId: 'g1' }
       },
       { new: true, upsert: true }

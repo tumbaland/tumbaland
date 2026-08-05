@@ -25,10 +25,10 @@ export const getDashboardSettings = async (req: Request, res: Response): Promise
 export const saveDashboardSettings = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
   const userGroups = req.userGroups || [];
-  const { highlightTypeIds, hiddenTypeIds, groupId } = req.body;
+  const { highlightTypeIds, hiddenTypeIds, startDate, groupId } = req.body;
 
   const settings = await DashboardSettingsService.saveDashboardSettings(
-    { highlightTypeIds, hiddenTypeIds },
+    { highlightTypeIds, hiddenTypeIds, startDate },
     user.id,
     userGroups,
     groupId

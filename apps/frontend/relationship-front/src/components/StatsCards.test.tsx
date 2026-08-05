@@ -56,6 +56,26 @@ it('renders base cards plus a card per highlighted type, with a formatted first-
   expect(screen.getByText(/days since jan 15, 2024/i)).toBeInTheDocument();
 });
 
+it('counts from a configured start date instead of the first entry', () => {
+  const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
+  mockedUseStatistics.mockReturnValue({
+    statistics: {
+      totalHours: 0,
+      totalActivities: 0,
+      firstEntryDate: '2024-01-15',
+      daysSinceFirstEntry: 100,
+      types: []
+    },
+    loading: false,
+    error: null
+  });
+
+  render(<StatsCards highlightTypeIds={[]} startDate={twoDaysAgo} />);
+
+  expect(screen.getByText('2')).toBeInTheDocument();
+  expect(screen.queryByText(/days since jan 15, 2024/i)).not.toBeInTheDocument();
+});
+
 it('shows "no entries yet" when there is no first entry date', () => {
   mockedUseStatistics.mockReturnValue({
     statistics: { totalHours: 0, totalActivities: 0, firstEntryDate: null, daysSinceFirstEntry: 0, types: [] },

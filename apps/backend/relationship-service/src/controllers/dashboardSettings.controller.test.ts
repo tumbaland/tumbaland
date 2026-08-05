@@ -50,13 +50,18 @@ describe('saveDashboardSettings', () => {
     const req = {
       user: { id: 'u1' },
       userGroups: ['g1'],
-      body: { highlightTypeIds: ['t1'], hiddenTypeIds: ['t2'], groupId: 'g1' }
+      body: { highlightTypeIds: ['t1'], hiddenTypeIds: ['t2'], startDate: '2024-01-18', groupId: 'g1' }
     } as unknown as Request;
     const res = mockRes();
 
     await saveDashboardSettings(req, res);
 
-    expect(mockedSave).toHaveBeenCalledWith({ highlightTypeIds: ['t1'], hiddenTypeIds: ['t2'] }, 'u1', ['g1'], 'g1');
+    expect(mockedSave).toHaveBeenCalledWith(
+      { highlightTypeIds: ['t1'], hiddenTypeIds: ['t2'], startDate: '2024-01-18' },
+      'u1',
+      ['g1'],
+      'g1'
+    );
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ data: { highlightTypeIds: ['t1'], hiddenTypeIds: ['t2'] }, message: 'Dashboard settings saved' })
     );

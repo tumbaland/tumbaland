@@ -6,10 +6,13 @@ import { ApiResponse } from './types';
  * - highlightTypeIds: types featured as stat cards; the first also drives
  *   the monthly days-breakdown chart.
  * - hiddenTypeIds: types excluded from count-based charts.
+ * - startDate: the day the "days together" count runs from; null falls back to
+ *   the first logged entry.
  */
 export interface DashboardSettingsData {
   highlightTypeIds: string[];
   hiddenTypeIds: string[];
+  startDate?: string | null;
 }
 
 export const getDashboardSettings = async (groupId?: string): Promise<DashboardSettingsData> => {

@@ -98,4 +98,23 @@ describe('saveDashboardSettingsSchema', () => {
   it('requires both lists to be present', () => {
     expect(() => saveDashboardSettingsSchema.parse({ highlightTypeIds: [] })).toThrow();
   });
+
+  it('accepts a YYYY-MM-DD start date, and an empty one meaning "no override"', () => {
+    const base = { highlightTypeIds: [], hiddenTypeIds: [] };
+
+    expect(saveDashboardSettingsSchema.parse({ ...base, startDate: '2024-01-18' }).startDate).toBe('2024-01-18');
+    expect(saveDashboardSettingsSchema.parse({ ...base, startDate: '' }).startDate).toBe('');
+    expect(saveDashboardSettingsSchema.parse({ ...base, startDate: null }).startDate).toBeNull();
+    expect(saveDashboardSettingsSchema.parse(base).startDate).toBeUndefined();
+  });
+
+  it('rejects a start date that is not a plain day', () => {
+    expect(() =>
+      saveDashboardSettingsSchema.parse({
+        highlightTypeIds: [],
+        hiddenTypeIds: [],
+        startDate: '2024-01-18T00:00:00Z'
+      })
+    ).toThrow();
+  });
 });

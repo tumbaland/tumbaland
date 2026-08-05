@@ -35,6 +35,36 @@ export interface StatisticsResponse {
   generatedAt: string;
 }
 
+export interface TypeCadence {
+  typeId: string;
+  slug: string;
+  name: string;
+  color?: string;
+  /** YYYY-MM-DD of the most recent entry of this type */
+  lastDate: string;
+  /** whole days between lastDate and today — 0 means logged today */
+  daysSince: number;
+  /** distinct days this type was ever logged on */
+  loggedDays: number;
+  /** mean gap between consecutive logged days; null until there are two of them */
+  typicalGapDays: number | null;
+  /** daysSince measured against this type's own rhythm; 1 means exactly due */
+  overdueRatio: number | null;
+}
+
+export interface StreakStatistics {
+  /** consecutive logged days ending today or yesterday; 0 once the chain breaks */
+  currentStreak: number;
+  longestStreak: number;
+  longestStreakStart: string | null;
+  longestStreakEnd: string | null;
+  totalLoggedDays: number;
+  lastEntryDate: string | null;
+  daysSinceLastEntry: number | null;
+  /** one row per type ever logged, most overdue first */
+  types: TypeCadence[];
+}
+
 export interface MonthlyHoursData {
   month: string;
   year: number;
@@ -153,6 +183,26 @@ export const getStatistics = async (timeframe: string = 'all', groupId?: string)
 };
 
 /**
+ * Get logging streaks and per-type staleness. Never timeframe-scoped: "last
+ * time" only means anything against the whole history.
+ * @param groupId - Optional: group ID to filter by
+ */
+export const getStreaks = async (groupId?: string): Promise<StreakStatistics> => {
+  try {
+    const params: Record<string, string | number> = {};
+    if (groupId) params.groupId = groupId;
+
+    const response = await relationshipApi.get<ApiResponse<StreakStatistics>>('/statistics/streaks', {
+      params
+    });
+    return response.data;
+  } catch (error) {
+    logger.error('Error fetching streaks', error);
+    throw new Error(statisticsErrorMessage(error, 'Failed to fetch streaks'));
+  }
+};
+
+/**
  * Get monthly hours statistics
  * @param year - Optional: specific year to filter by
  * @param groupId - Optional: group ID to filter by
@@ -259,6 +309,7 @@ export const getCumulativeTimelineData = async (year?: number, groupId?: string)
 
 export const statisticsApi = {
   getStatistics,
+  getStreaks,
   getMonthlyHours,
   getMonthlyStatistics,
   getMonthlyActivityBreakdown,

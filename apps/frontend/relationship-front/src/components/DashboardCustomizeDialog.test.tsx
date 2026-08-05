@@ -58,9 +58,44 @@ it('saves the selected highlight/hidden ids and closes', async () => {
   await userEvent.click(screen.getAllByText('Gaming')[1]); // hidden
   await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-  expect(onSave).toHaveBeenCalledWith({ highlightTypeIds: ['t1'], hiddenTypeIds: ['t2'] });
+  expect(onSave).toHaveBeenCalledWith({
+    highlightTypeIds: ['t1'],
+    hiddenTypeIds: ['t2'],
+    startDate: null
+  });
   await screen.findByRole('button', { name: 'Save' });
   expect(onClose).toHaveBeenCalled();
+});
+
+it('saves a chosen start date and pre-fills it from the current settings', async () => {
+  const { onSave } = renderDialog({ settings: { highlightTypeIds: [], hiddenTypeIds: [], startDate: '2024-01-18' } });
+
+  const field = screen.getByLabelText('Together since');
+  expect(field).toHaveValue('2024-01-18');
+
+  await userEvent.clear(field);
+  await userEvent.type(field, '2023-05-06');
+  await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+  expect(onSave).toHaveBeenCalledWith({
+    highlightTypeIds: [],
+    hiddenTypeIds: [],
+    startDate: '2023-05-06'
+  });
+});
+
+it('clears the start date back to the first-entry fallback', async () => {
+  const { onSave } = renderDialog({ settings: { highlightTypeIds: [], hiddenTypeIds: [], startDate: '2024-01-18' } });
+
+  await userEvent.clear(screen.getByLabelText('Together since'));
+  await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+  expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ startDate: null }));
+});
+
+it('offers the start date even before any activity types exist', () => {
+  renderDialog({ types: [] });
+  expect(screen.getByLabelText('Together since')).toBeInTheDocument();
 });
 
 it('shows an error message and re-enables the form when saving fails', async () => {

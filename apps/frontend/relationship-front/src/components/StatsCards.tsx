@@ -21,9 +21,14 @@ import StatCard from './StatCard';
 interface StatsCardsProps {
   /** activity types to feature with their own stat card (days it happened) */
   highlightTypeIds: string[];
+  /**
+   * YYYY-MM-DD the "Days" card counts from. Absent falls back to the first
+   * logged entry, which is rarely the day things actually started.
+   */
+  startDate?: string | null;
 }
 
-const StatsCards: React.FC<StatsCardsProps> = ({ highlightTypeIds }) => {
+const StatsCards: React.FC<StatsCardsProps> = ({ highlightTypeIds, startDate }) => {
   const theme = useTheme();
   const [timeframe, setTimeframe] = useState<string>('all');
 
@@ -94,8 +99,15 @@ const StatsCards: React.FC<StatsCardsProps> = ({ highlightTypeIds }) => {
     .map((typeId) => statistics.types.find((t) => t.typeId === typeId))
     .filter((t): t is NonNullable<typeof t> => Boolean(t));
 
-  const firstEntryLabel = statistics.firstEntryDate
-    ? new Date(`${statistics.firstEntryDate}T00:00:00`).toLocaleDateString(undefined, {
+  // A configured start date wins over the first entry: the count is meant to be
+  // "how long we have been together", not "how long we have been logging".
+  const countFrom = startDate || statistics.firstEntryDate;
+  const daysSince = startDate
+    ? Math.max(0, Math.floor((Date.now() - Date.parse(`${startDate}T00:00:00`)) / 86400000))
+    : statistics.daysSinceFirstEntry;
+
+  const countFromLabel = countFrom
+    ? new Date(`${countFrom}T00:00:00`).toLocaleDateString(undefined, {
         year: 'numeric',
         month: 'short',
         day: 'numeric'
@@ -154,8 +166,8 @@ const StatsCards: React.FC<StatsCardsProps> = ({ highlightTypeIds }) => {
           <StatCard
             icon={<Timeline />}
             title="Days"
-            value={statistics.daysSinceFirstEntry}
-            subtitle={firstEntryLabel ? `days since ${firstEntryLabel}` : 'no entries yet'}
+            value={daysSince}
+            subtitle={countFromLabel ? `days since ${countFromLabel}` : 'no entries yet'}
             color={theme.palette.warning.main}
           />
         </Box>

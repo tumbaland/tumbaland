@@ -6,7 +6,8 @@ jest.mock('../services/statistics.service', () => ({
   getMonthlyStatistics: jest.fn(),
   getMonthlyActivityBreakdown: jest.fn(),
   getWeeklyHeatmapData: jest.fn(),
-  getCumulativeTimelineData: jest.fn()
+  getCumulativeTimelineData: jest.fn(),
+  getStreakStatistics: jest.fn()
 }));
 
 import * as StatisticsService from '../services/statistics.service';
@@ -16,7 +17,8 @@ import {
   getMonthlyStatisticsData,
   getMonthlyActivityBreakdownData,
   getWeeklyHeatmapDataController,
-  getCumulativeTimelineDataController
+  getCumulativeTimelineDataController,
+  getStreaks
 } from './statistics.controller';
 
 function mockRes(): Response {
@@ -57,6 +59,34 @@ describe('getStatistics', () => {
       userGroupIds: ['g1'],
       personalOnly: true
     });
+  });
+});
+
+describe('getStreaks', () => {
+  it('scopes personally when no group is given', async () => {
+    (StatisticsService.getStreakStatistics as jest.Mock).mockResolvedValue({ currentStreak: 3 });
+    const req = { query: {}, user: { id: 'u1' }, userGroups: ['g1'] } as unknown as Request;
+    const res = mockRes();
+
+    await getStreaks(req, res);
+
+    expect(StatisticsService.getStreakStatistics).toHaveBeenCalledWith({
+      userId: 'u1',
+      userGroupIds: ['g1'],
+      personalOnly: true
+    });
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true, data: { currentStreak: 3 } })
+    );
+  });
+
+  it('scopes to the group when given', async () => {
+    (StatisticsService.getStreakStatistics as jest.Mock).mockResolvedValue({});
+    const req = { query: { groupId: 'g1' }, user: { id: 'u1' }, userGroups: ['g1'] } as unknown as Request;
+
+    await getStreaks(req, mockRes());
+
+    expect(StatisticsService.getStreakStatistics).toHaveBeenCalledWith({ userId: 'u1', groupId: 'g1' });
   });
 });
 

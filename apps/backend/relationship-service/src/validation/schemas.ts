@@ -21,6 +21,12 @@ export const updateActivitySchema = createActivitySchema.partial();
 export const saveDashboardSettingsSchema = z.object({
   highlightTypeIds: z.array(z.string()).max(20),
   hiddenTypeIds: z.array(z.string()).max(50),
+  // '' and null both mean "no override" — the service clears the stored value.
+  startDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Start date must be formatted as YYYY-MM-DD')
+    .or(z.literal(''))
+    .nullish(),
   groupId: z.string().optional()
 });
 

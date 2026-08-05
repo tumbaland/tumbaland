@@ -6,7 +6,8 @@ import {
   getMonthlyStatisticsData,
   getMonthlyActivityBreakdownData,
   getWeeklyHeatmapDataController,
-  getCumulativeTimelineDataController
+  getCumulativeTimelineDataController,
+  getStreaks
 } from '../controllers/statistics.controller';
 
 const router = express.Router();
@@ -20,6 +21,13 @@ router.use(authenticateToken);
  * @query timeframe - Optional: week, month, quarter, year, all (default: all)
  */
 router.get('/', getStatistics);
+
+/**
+ * @route GET /api/statistics/streaks
+ * @desc Logging streaks and how overdue each activity type is against its own cadence
+ * @query groupId - Optional: group to scope to (defaults to personal entries)
+ */
+router.get('/streaks', getStreaks);
 
 /**
  * @route GET /api/statistics/monthly-hours

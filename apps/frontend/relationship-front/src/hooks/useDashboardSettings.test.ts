@@ -41,7 +41,7 @@ it('falls back to empty settings and logs when loading fails', async () => {
   const { result } = renderHook(() => useDashboardSettings());
 
   await waitFor(() => expect(result.current.loading).toBe(false));
-  expect(result.current.settings).toEqual({ highlightTypeIds: [], hiddenTypeIds: [] });
+  expect(result.current.settings).toEqual({ highlightTypeIds: [], hiddenTypeIds: [], startDate: null });
 });
 
 it('optimistically updates then commits the saved settings', async () => {

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Box, Button, Typography } from '@mui/material';
 import TuneIcon from '@mui/icons-material/Tune';
 import StatsCards from '../components/StatsCards';
+import StreakCards from '../components/StreakCards';
 import RecentActivitiesCards from '../components/RecentActivitiesCards';
 import HoursBarChart from '../components/HoursBarChart';
 import TotalHoursChart from '../components/TotalHoursChart';
@@ -66,7 +67,12 @@ const Dashboard: React.FC = () => {
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
         {/* Key Statistics */}
         <Box sx={{ width: '100%' }}>
-          <StatsCards highlightTypeIds={settings.highlightTypeIds} />
+          <StatsCards highlightTypeIds={settings.highlightTypeIds} startDate={settings.startDate} />
+        </Box>
+
+        {/* Streaks and staleness nudges */}
+        <Box sx={{ width: '100%' }}>
+          <StreakCards hiddenTypeIds={settings.hiddenTypeIds} />
         </Box>
 
         {/* Recent Activities */}

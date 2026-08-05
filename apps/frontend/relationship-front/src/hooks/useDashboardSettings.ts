@@ -4,7 +4,7 @@ import { DashboardSettingsData, getDashboardSettings, saveDashboardSettings } fr
 import { getActivityTypes } from '../services/activityTypes';
 import { ActivityType } from '../services/types';
 
-const EMPTY_SETTINGS: DashboardSettingsData = { highlightTypeIds: [], hiddenTypeIds: [] };
+const EMPTY_SETTINGS: DashboardSettingsData = { highlightTypeIds: [], hiddenTypeIds: [], startDate: null };
 
 /**
  * Dashboard configuration + the activity types it refers to, for the current

@@ -4,12 +4,21 @@ import { DashboardSettings, IDashboardSettings } from '../models/DashboardSettin
 export interface DashboardSettingsData {
   highlightTypeIds: string[];
   hiddenTypeIds: string[];
+  /** YYYY-MM-DD the "days together" count runs from; null/absent = first entry */
+  startDate?: string | null;
 }
 
 const DEFAULT_SETTINGS: DashboardSettingsData = {
   highlightTypeIds: [],
-  hiddenTypeIds: []
+  hiddenTypeIds: [],
+  startDate: null
 };
+
+const toData = (settings: IDashboardSettings): DashboardSettingsData => ({
+  highlightTypeIds: settings.highlightTypeIds,
+  hiddenTypeIds: settings.hiddenTypeIds,
+  startDate: settings.startDate ?? null
+});
 
 /** Personal settings are keyed by user; group settings are shared per group. */
 const scopeQuery = (userId: string, groupId?: string) =>
@@ -29,10 +38,7 @@ export const getDashboardSettings = async (
   assertGroupAccess(userGroupIds, groupId);
   const settings = await DashboardSettings.findOne(scopeQuery(userId, groupId));
   if (!settings) return { ...DEFAULT_SETTINGS };
-  return {
-    highlightTypeIds: settings.highlightTypeIds,
-    hiddenTypeIds: settings.hiddenTypeIds
-  };
+  return toData(settings);
 };
 
 export const saveDashboardSettings = async (
@@ -42,19 +48,20 @@ export const saveDashboardSettings = async (
   groupId?: string
 ): Promise<DashboardSettingsData> => {
   assertGroupAccess(userGroupIds, groupId);
+  // An empty start date clears the override rather than storing a blank string,
+  // so the count falls back to the first entry again.
   const settings: IDashboardSettings = await DashboardSettings.findOneAndUpdate(
     scopeQuery(userId, groupId),
     {
       $set: {
         highlightTypeIds: data.highlightTypeIds,
-        hiddenTypeIds: data.hiddenTypeIds
+        hiddenTypeIds: data.hiddenTypeIds,
+        ...(data.startDate ? { startDate: data.startDate } : {})
       },
+      ...(data.startDate ? {} : { $unset: { startDate: '' } }),
       $setOnInsert: { userId, ...(groupId ? { groupId } : {}) }
     },
     { new: true, upsert: true }
   );
-  return {
-    highlightTypeIds: settings.highlightTypeIds,
-    hiddenTypeIds: settings.hiddenTypeIds
-  };
+  return toData(settings);
 };
