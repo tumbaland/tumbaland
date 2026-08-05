@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.421](https://github.com/toomastahves/tumbaland/compare/app-v0.0.420...app-v0.0.421) (2026-08-05)
+
+### Features
+
+* add streaks ([dc76445](https://github.com/toomastahves/tumbaland/commit/dc76445e21b9de97ae58f040fe77df06fab76921))
 ## [0.0.420](https://github.com/toomastahves/tumbaland/compare/app-v0.0.419...app-v0.0.420) (2026-08-05)
 
 ### Features
