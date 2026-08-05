@@ -7,6 +7,8 @@ export interface ActivityType {
   color?: string;
   icon?: string;
   valueType?: 'string' | 'boolean' | 'number';
+  /** whether entries of this type can carry a place; orthogonal to valueType */
+  hasLocation?: boolean;
   isActive: boolean;
   sortOrder: number;
   createdAt: Date | string;
@@ -15,11 +17,19 @@ export interface ActivityType {
   groupId?: string;
 }
 
+/** Where an entry happened. Only on entries whose type has hasLocation. */
+export interface ActivityLocation {
+  label: string;
+  lat: number;
+  lng: number;
+}
+
 /**
  * One logged entry: something that happened on a date. Which fields it
  * carries depends on its type's valueType — 'string' types use description
  * (which game, which restaurant), 'number' types use hours, 'boolean' types
- * are presence markers (the entry existing means "yes").
+ * are presence markers (the entry existing means "yes"). Independently of
+ * that, a type with hasLocation adds a place.
  */
 export interface ActivityEntry {
   _id: string;
@@ -29,6 +39,7 @@ export interface ActivityEntry {
   type?: ActivityType;
   description?: string;
   hours?: number;
+  location?: ActivityLocation;
   userId?: string;
   groupId?: string;
   createdAt?: Date | string;
@@ -47,6 +58,49 @@ export interface DayEntryInput {
   typeId: string;
   description?: string;
   hours?: number;
+  /** null clears a previously saved place */
+  location?: ActivityLocation | null;
+}
+
+/** One distinct place with its visit history — a pin on the map. */
+export interface Place {
+  /** rounded "lat,lng"; stable pin identity */
+  id: string;
+  label: string;
+  lat: number;
+  lng: number;
+  visits: number;
+  /** YYYY-MM-DD */
+  firstVisit: string;
+  /** YYYY-MM-DD */
+  lastVisit: string;
+  types: PlaceTypeBreakdown[];
+}
+
+export interface PlaceTypeBreakdown {
+  typeId: string;
+  name: string;
+  slug: string;
+  color?: string;
+  count: number;
+}
+
+/** One visit behind a pin, as listed in its popup. */
+export interface PlaceVisit {
+  /** YYYY-MM-DD */
+  date: string;
+  typeId: string;
+  typeName?: string;
+  typeColor?: string;
+  description?: string;
+  hours?: number;
+}
+
+export interface GetPlacesFilters {
+  groupId?: string;
+  typeId?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface GetDaysFilters {

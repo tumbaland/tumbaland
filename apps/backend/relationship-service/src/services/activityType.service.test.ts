@@ -48,10 +48,12 @@ const mockFindChain = (docs: unknown[]) => ({
 beforeEach(() => jest.clearAllMocks());
 
 describe('createActivityType', () => {
-  it('throws when the slug already exists', async () => {
+  it('throws when the slug already exists in the same scope', async () => {
     mockedFindOne.mockResolvedValue({ _id: 'existing' });
 
-    await expect(createActivityType({ slug: 'reading' })).rejects.toMatchObject({ name: 'ConflictError' });
+    await expect(createActivityType({ slug: 'reading', userId: 'u1' })).rejects.toMatchObject({
+      name: 'ConflictError'
+    });
     expect(mockedCtor).not.toHaveBeenCalled();
   });
 
@@ -62,6 +64,36 @@ describe('createActivityType', () => {
 
     expect(mockedCtor).toHaveBeenCalledWith({ slug: 'reading', name: 'Reading' });
     expect(result).toMatchObject({ slug: 'reading', name: 'Reading' });
+  });
+
+  it('checks a personal slug against that user only, not the whole collection', async () => {
+    mockedFindOne.mockResolvedValue(null);
+
+    await createActivityType({ slug: 'movies', name: 'Movies', userId: 'u1' });
+
+    expect(mockedFindOne).toHaveBeenCalledWith({
+      slug: 'movies',
+      userId: 'u1',
+      $or: [{ groupId: { $exists: false } }, { groupId: null }]
+    });
+  });
+
+  it('checks a group slug against that group only', async () => {
+    mockedFindOne.mockResolvedValue(null);
+
+    await createActivityType({ slug: 'movies', name: 'Movies', userId: 'u1', groupId: 'g1' });
+
+    expect(mockedFindOne).toHaveBeenCalledWith({ slug: 'movies', groupId: 'g1' });
+  });
+
+  it('lets a second user create a slug the first user already uses', async () => {
+    // No document matches the second user's scope, so the create goes through.
+    mockedFindOne.mockResolvedValue(null);
+
+    await expect(
+      createActivityType({ slug: 'movies', name: 'Movies', userId: 'u2' })
+    ).resolves.toMatchObject({ slug: 'movies' });
+    expect(mockedFindOne).toHaveBeenCalledWith(expect.objectContaining({ userId: 'u2' }));
   });
 });
 
@@ -168,15 +200,44 @@ describe('getActivityTypeBySlug', () => {
 });
 
 describe('updateActivityType', () => {
-  it('throws when the new slug collides with another type', async () => {
+  // ActivityType.findById(...).select('userId groupId') resolves the stored scope.
+  const mockStoredScope = (scope: Record<string, unknown> | null) => {
+    mockedFindById.mockReturnValue({ select: jest.fn().mockResolvedValue(scope) });
+  };
+
+  it('throws when the new slug collides within the same scope', async () => {
+    mockStoredScope({ userId: 'u1' });
     mockedFindOne.mockResolvedValue({ _id: 'other' });
 
     await expect(updateActivityType('t1', { slug: 'taken' })).rejects.toMatchObject({ name: 'ConflictError' });
-    expect(mockedFindOne).toHaveBeenCalledWith({ slug: 'taken', _id: { $ne: 't1' } });
+    expect(mockedFindOne).toHaveBeenCalledWith({
+      slug: 'taken',
+      userId: 'u1',
+      $or: [{ groupId: { $exists: false } }, { groupId: null }],
+      _id: { $ne: 't1' }
+    });
+    expect(mockedFindByIdAndUpdate).not.toHaveBeenCalled();
+  });
+
+  it('checks a group type\'s slug within its group only', async () => {
+    mockStoredScope({ userId: 'u1', groupId: 'g1' });
+    mockedFindOne.mockResolvedValue(null);
+    mockedFindByIdAndUpdate.mockResolvedValue({ _id: 't1' });
+
+    await updateActivityType('t1', { slug: 'movies' });
+
+    expect(mockedFindOne).toHaveBeenCalledWith({ slug: 'movies', groupId: 'g1', _id: { $ne: 't1' } });
+  });
+
+  it('returns null when the type being updated no longer exists', async () => {
+    mockStoredScope(null);
+
+    await expect(updateActivityType('gone', { slug: 'x' })).resolves.toBeNull();
     expect(mockedFindByIdAndUpdate).not.toHaveBeenCalled();
   });
 
   it('updates when the slug is free or unchanged', async () => {
+    mockStoredScope({ userId: 'u1' });
     mockedFindOne.mockResolvedValue(null);
     mockedFindByIdAndUpdate.mockResolvedValue({ _id: 't1', slug: 'reading' });
 

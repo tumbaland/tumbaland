@@ -6,8 +6,6 @@ import {
   getActivityById,
   updateActivity,
   deleteActivity,
-  getActivityStats,
-  getActivitiesByDateRange,
   getRecentActivities,
   getRecentActivitiesSummary,
   getActivityTypes,
@@ -25,8 +23,6 @@ router.post('/', validate(createActivitySchema), createActivity);
 router.get('/', getActivities);
 router.get('/recent', getRecentActivities);
 router.get('/recent-summary', getRecentActivitiesSummary);
-router.get('/stats', getActivityStats);
-router.get('/date-range', getActivitiesByDateRange);
 router.get('/types', getActivityTypes);
 router.get('/descriptions', getActivityDescriptions);
 router.get('/:id', getActivityById);

@@ -100,3 +100,52 @@ it('calls onClose from the Cancel button', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   expect(onClose).toHaveBeenCalled();
 });
+
+it('defaults location tracking to off for a new type', () => {
+  render(<ActivityTypeDialog open onClose={vi.fn()} onSubmit={vi.fn()} />);
+
+  expect(screen.getByLabelText('Track where it happened')).not.toBeChecked();
+});
+
+it('submits hasLocation when location tracking is switched on', async () => {
+  const onSubmit = vi.fn().mockResolvedValue(undefined);
+  render(<ActivityTypeDialog open onClose={vi.fn()} onSubmit={onSubmit} />);
+
+  await userEvent.type(screen.getByLabelText(/^Name/), 'Restaurants');
+  await userEvent.click(screen.getByLabelText('Track where it happened'));
+  await userEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+  await waitFor(() =>
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ name: 'Restaurants', hasLocation: true }))
+  );
+});
+
+it('reflects an existing type\'s location setting when editing', () => {
+  render(
+    <ActivityTypeDialog
+      open
+      onClose={vi.fn()}
+      onSubmit={vi.fn()}
+      initialData={{ ...initialData, hasLocation: true }}
+    />
+  );
+
+  expect(screen.getByLabelText('Track where it happened')).toBeChecked();
+});
+
+it('can switch location tracking back off', async () => {
+  const onSubmit = vi.fn().mockResolvedValue(undefined);
+  render(
+    <ActivityTypeDialog
+      open
+      onClose={vi.fn()}
+      onSubmit={onSubmit}
+      initialData={{ ...initialData, hasLocation: true }}
+    />
+  );
+
+  await userEvent.click(screen.getByLabelText('Track where it happened'));
+  await userEvent.click(screen.getByRole('button', { name: 'Update' }));
+
+  await waitFor(() => expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ hasLocation: false })));
+});

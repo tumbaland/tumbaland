@@ -31,6 +31,8 @@ const DashboardSettingsSchema: Schema = new Schema(
   }
 );
 
+// One settings document per scope and every read is a findOne on that scope,
+// never a sorted range — so these two equality indexes are all this needs.
 DashboardSettingsSchema.index({ groupId: 1 });
 DashboardSettingsSchema.index({ userId: 1, groupId: 1 });
 

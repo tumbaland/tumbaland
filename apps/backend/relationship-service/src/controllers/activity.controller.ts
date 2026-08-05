@@ -113,39 +113,6 @@ export const deleteActivity = async (req: Request, res: Response): Promise<void>
 };
 
 /**
- * Get activity statistics
- */
-export const getActivityStats = async (req: Request, res: Response): Promise<void> => {
-  const { startDate, endDate } = req.query;
-
-  const filters: Parameters<typeof ActivityService.getActivityStats>[0] = {};
-  if (startDate) filters.startDate = new Date(startDate as string);
-  if (endDate) filters.endDate = new Date(endDate as string);
-
-  const stats = await ActivityService.getActivityStats(filters);
-
-  sendSuccess(res, stats);
-};
-
-/**
- * Get activities by date range
- */
-export const getActivitiesByDateRange = async (req: Request, res: Response): Promise<void> => {
-  const { startDate, endDate } = req.query;
-
-  if (!startDate || !endDate) {
-    throw new BadRequestError('Both startDate and endDate are required');
-  }
-
-  const activities = await ActivityService.getActivitiesByDateRange(
-    new Date(startDate as string),
-    new Date(endDate as string)
-  );
-
-  sendSuccess(res, activities);
-};
-
-/**
  * Get recent activities
  */
 export const getRecentActivities = async (req: Request, res: Response): Promise<void> => {

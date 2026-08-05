@@ -8,12 +8,29 @@ interface ActivityTypeQuery {
   $or?: Record<string, unknown>[];
 }
 
+/**
+ * Query matching the one scope a slug has to be unique within: a single group,
+ * or a single user's personal (non-group) types. Mirrors the partial unique
+ * indexes on the model — keep the two in step.
+ */
+const slugScopeQuery = (
+  slug: string,
+  userId?: string,
+  groupId?: string
+): Record<string, unknown> =>
+  groupId
+    ? { slug, groupId }
+    : { slug, userId, $or: [{ groupId: { $exists: false } }, { groupId: null }] };
+
 // Create a new activity type
 export const createActivityType = async (typeData: Partial<IActivityType>): Promise<IActivityType> => {
   logger.info('Creating activity type', { typeData });
 
-  // Check if slug already exists
-  const existingType = await ActivityType.findOne({ slug: typeData.slug });
+  // A slug only has to be unique within its own scope, so that one user's
+  // "movies" doesn't block everyone else's.
+  const existingType = await ActivityType.findOne(
+    slugScopeQuery(typeData.slug as string, typeData.userId, typeData.groupId)
+  );
   if (existingType) {
     throw new ConflictError('Activity type with this slug already exists');
   }
@@ -126,9 +143,19 @@ export const getActivityTypeBySlug = async (slug: string, userId?: string, group
 
 // Update activity type by ID
 export const updateActivityType = async (id: string, updateData: Partial<IActivityType>): Promise<IActivityType | null> => {
-  // If slug is being updated, check for uniqueness
+  // If slug is being updated, check for uniqueness within the type's own scope.
+  // The scope comes from the update where given, otherwise from the stored doc.
   if (updateData.slug) {
-    const existingType = await ActivityType.findOne({ slug: updateData.slug, _id: { $ne: id } });
+    const current = await ActivityType.findById(id).select('userId groupId');
+    if (!current) return null;
+
+    const userId = updateData.userId ?? current.userId;
+    const groupId = updateData.groupId ?? current.groupId;
+
+    const existingType = await ActivityType.findOne({
+      ...slugScopeQuery(updateData.slug, userId, groupId),
+      _id: { $ne: id }
+    });
     if (existingType) {
       throw new ConflictError('Activity type with this slug already exists');
     }

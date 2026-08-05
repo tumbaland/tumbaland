@@ -3,6 +3,7 @@ import path from 'path';
 import activityRoutes from './routes/activities';
 import activityTypeRoutes from './routes/activityTypes';
 import dayRoutes from './routes/days';
+import placeRoutes from './routes/places';
 import dashboardSettingsRoutes from './routes/dashboardSettings';
 import statisticsRoutes from './routes/statistics';
 import { healthCheck } from './controllers/healthController';
@@ -14,6 +15,7 @@ const app = createBaseApp();
 app.use('/api/activities', activityRoutes);
 app.use('/api/activity-types', activityTypeRoutes);
 app.use('/api/days', dayRoutes);
+app.use('/api/places', placeRoutes);
 app.use('/api/dashboard-settings', dashboardSettingsRoutes);
 app.use('/api/statistics', statisticsRoutes);
 

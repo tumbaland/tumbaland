@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 
@@ -35,6 +36,14 @@ const readingType = { _id: 't1', id: 't1', name: 'Reading', slug: 'reading', col
 
 const todayKey = () => new Date().toISOString().slice(0, 10);
 
+// The page reads ?date= to deep-link a day from the map, so it needs a Router.
+const renderPage = (initialEntry = '/journal') =>
+  render(
+    <MemoryRouter initialEntries={[initialEntry]}>
+      <JournalPage />
+    </MemoryRouter>
+  );
+
 const dayWithEntry = (date: string, overrides: Partial<any> = {}) => ({
   date,
   entries: [{ _id: 'e1', typeId: 't1', type: readingType, description: 'Book club', ...overrides }]
@@ -47,19 +56,19 @@ beforeEach(() => {
 
 it('shows a spinner while loading', () => {
   mockedGetDays.mockReturnValue(new Promise(() => {}));
-  render(<JournalPage />);
+  renderPage();
   expect(screen.getByRole('progressbar')).toBeInTheDocument();
 });
 
 it('shows an error message when loading fails', async () => {
   mockedGetDays.mockRejectedValue(new Error('boom'));
-  render(<JournalPage />);
+  renderPage();
   expect(await screen.findByText('Failed to load the journal')).toBeInTheDocument();
 });
 
 it('shows an empty state with a Log today shortcut when there are no days', async () => {
   mockedGetDays.mockResolvedValue({ days: [], page: 1, totalPages: 1, total: 0 });
-  render(<JournalPage />);
+  renderPage();
   expect(await screen.findByText('Nothing logged yet')).toBeInTheDocument();
   expect(screen.getByText('Your days together')).toBeInTheDocument();
 });
@@ -71,7 +80,7 @@ it('renders days grouped by month with entry chips, and a day count', async () =
     totalPages: 1,
     total: 1
   });
-  render(<JournalPage />);
+  renderPage();
 
   expect(await screen.findByText('1 day logged')).toBeInTheDocument();
   expect(screen.getByText('May 2024')).toBeInTheDocument();
@@ -85,7 +94,7 @@ it('opens the editor for today via "Log today" and shows "Edit today\'s log" onc
     totalPages: 1,
     total: 1
   });
-  render(<JournalPage />);
+  renderPage();
 
   const editButton = await screen.findByRole('button', { name: "Edit today's log" });
   await userEvent.click(editButton);
@@ -95,7 +104,7 @@ it('opens the editor for today via "Log today" and shows "Edit today\'s log" onc
 
 it('opens a date-editable editor via "Other day"', async () => {
   mockedGetDays.mockResolvedValue({ days: [], page: 1, totalPages: 1, total: 0 });
-  render(<JournalPage />);
+  renderPage();
   await screen.findByText('Nothing logged yet');
 
   await userEvent.click(screen.getByRole('button', { name: 'Other day' }));
@@ -109,7 +118,7 @@ it('opens the editor for a specific day from its card', async () => {
     totalPages: 1,
     total: 1
   });
-  render(<JournalPage />);
+  renderPage();
   await screen.findByText('May 2024');
 
   await userEvent.click(screen.getByText(/Book club/));
@@ -118,7 +127,7 @@ it('opens the editor for a specific day from its card', async () => {
 
 it('reloads the journal when the editor reports a save', async () => {
   mockedGetDays.mockResolvedValue({ days: [], page: 1, totalPages: 1, total: 0 });
-  render(<JournalPage />);
+  renderPage();
   await screen.findByText('Nothing logged yet');
 
   await userEvent.click(screen.getAllByRole('button', { name: 'Log today' })[0]);
@@ -129,7 +138,7 @@ it('reloads the journal when the editor reports a save', async () => {
 
 it('filters by search text after debounce', async () => {
   mockedGetDays.mockResolvedValue({ days: [], page: 1, totalPages: 1, total: 0 });
-  render(<JournalPage />);
+  renderPage();
   await screen.findByText('Nothing logged yet');
 
   await userEvent.type(screen.getByPlaceholderText('Search descriptions…'), 'walk');
@@ -142,7 +151,7 @@ it('filters by search text after debounce', async () => {
 
 it('filters by activity type', async () => {
   mockedGetDays.mockResolvedValue({ days: [], page: 1, totalPages: 1, total: 0 });
-  render(<JournalPage />);
+  renderPage();
   await screen.findByText('Nothing logged yet');
 
   const typeSelect = await screen.findByLabelText('Activity');
@@ -156,7 +165,7 @@ it('loads more days via the Load older days button', async () => {
   mockedGetDays
     .mockResolvedValueOnce({ days: [dayWithEntry('2024-05-01')], page: 1, totalPages: 2, total: 2 })
     .mockResolvedValueOnce({ days: [dayWithEntry('2024-04-01')], page: 2, totalPages: 2, total: 2 });
-  render(<JournalPage />);
+  renderPage();
   await screen.findByText('May 2024');
 
   await userEvent.click(screen.getByRole('button', { name: 'Load older days' }));
@@ -177,7 +186,7 @@ it('exports a CSV when the Export button is clicked', async () => {
   (URL as any).revokeObjectURL = revokeObjectURL;
   const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
-  render(<JournalPage />);
+  renderPage();
   await screen.findByText('May 2024');
 
   await userEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
@@ -185,4 +194,130 @@ it('exports a CSV when the Export button is clicked', async () => {
   expect(createObjectURL).toHaveBeenCalled();
   expect(clickSpy).toHaveBeenCalled();
   expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock');
+});
+
+it('shows the place on an entry chip when one was logged', async () => {
+  mockedGetDays.mockResolvedValue({
+    days: [
+      {
+        date: '2024-05-01',
+        entries: [
+          {
+            _id: 'e1',
+            typeId: 't1',
+            type: readingType,
+            description: 'tasting menu',
+            location: { label: 'Kolm Sõsarat', lat: 59.4405, lng: 24.7453 }
+          }
+        ]
+      }
+    ],
+    total: 1,
+    page: 1,
+    totalPages: 1
+  });
+  renderPage();
+
+  expect(await screen.findByText('Kolm Sõsarat')).toBeInTheDocument();
+});
+
+it('opens the day editor for a ?date= deep link from the map', async () => {
+  mockedGetDays.mockResolvedValue({ days: [], total: 0, page: 1, totalPages: 0 });
+  renderPage('/journal?date=2024-05-01');
+
+  expect(await screen.findByText('DayEditorDialog for 2024-05-01')).toBeInTheDocument();
+});
+
+it('ignores a malformed ?date= value', async () => {
+  mockedGetDays.mockResolvedValue({ days: [], total: 0, page: 1, totalPages: 0 });
+  renderPage('/journal?date=last-tuesday');
+
+  await screen.findByText('Nothing logged yet');
+  expect(screen.queryByText(/DayEditorDialog for/)).not.toBeInTheDocument();
+});
+
+it('includes the place columns in the CSV export', async () => {
+  let exported = '';
+  const createObjectURL = vi.fn((blob: Blob) => {
+    void blob.text().then((text) => {
+      exported = text;
+    });
+    return 'blob:mock';
+  });
+  URL.createObjectURL = createObjectURL as unknown as typeof URL.createObjectURL;
+  URL.revokeObjectURL = vi.fn();
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+  mockedGetDays.mockResolvedValue({
+    days: [
+      dayWithEntry('2024-05-01', {
+        description: 'tasting menu',
+        location: { label: 'Kolm Sõsarat', lat: 59.4405, lng: 24.7453 }
+      })
+    ],
+    page: 1,
+    totalPages: 1,
+    total: 1
+  });
+  renderPage();
+  await screen.findByText('May 2024');
+
+  await userEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+
+  await waitFor(() => expect(exported).toContain('"Place","Latitude","Longitude"'));
+  expect(exported).toContain('"Kolm Sõsarat","59.4405","24.7453"');
+});
+
+it('exports every matching day, not just the pages already loaded', async () => {
+  let exported = '';
+  URL.createObjectURL = vi.fn((blob: Blob) => {
+    void blob.text().then((text) => {
+      exported = text;
+    });
+    return 'blob:mock';
+  }) as unknown as typeof URL.createObjectURL;
+  URL.revokeObjectURL = vi.fn();
+  vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+  // On screen: one page of the paginated view. The export must re-fetch and
+  // walk every page rather than serialising what happens to be in state.
+  mockedGetDays.mockImplementation(({ limit, page }: any) => {
+    if (limit === 30) {
+      return Promise.resolve({ days: [dayWithEntry('2024-05-01')], page: 1, totalPages: 3, total: 3 });
+    }
+    return Promise.resolve({
+      days: [dayWithEntry(page === 1 ? '2024-05-01' : '2024-03-01')],
+      page,
+      totalPages: 2,
+      total: 2
+    });
+  });
+
+  renderPage();
+  await screen.findByText('May 2024');
+
+  await userEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+
+  await waitFor(() => expect(exported).toContain('2024-03-01'));
+  expect(exported).toContain('2024-05-01');
+  // page 1 and page 2 of the export-sized pages, on top of the initial view load
+  expect(mockedGetDays).toHaveBeenCalledWith(expect.objectContaining({ limit: 200, page: 1 }));
+  expect(mockedGetDays).toHaveBeenCalledWith(expect.objectContaining({ limit: 200, page: 2 }));
+});
+
+it('reports a failure to export without wiping the journal', async () => {
+  mockedGetDays.mockImplementation(({ limit }: any) =>
+    limit === 30
+      ? Promise.resolve({ days: [dayWithEntry('2024-05-01')], page: 1, totalPages: 1, total: 1 })
+      : Promise.reject(new Error('boom'))
+  );
+
+  renderPage();
+  await screen.findByText('May 2024');
+
+  await userEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+
+  expect(await screen.findByText('Failed to export the journal')).toBeInTheDocument();
+  expect(screen.getByText('May 2024')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Export CSV' })).toBeEnabled();
 });

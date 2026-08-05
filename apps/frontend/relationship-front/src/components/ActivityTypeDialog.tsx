@@ -10,8 +10,11 @@ import {
   Box,
   Typography,
   FormControl,
+  FormControlLabel,
+  FormHelperText,
   CircularProgress,
-  MenuItem
+  MenuItem,
+  Switch
 } from '@mui/material';
 import { ActivityType } from '../services/types';
 import { CreateActivityTypeRequest, UpdateActivityTypeRequest } from '../services/activityTypes';
@@ -38,6 +41,7 @@ const ActivityTypeDialog: React.FC<ActivityTypeDialogProps> = ({
     description: '',
     color: '#FF6B6B',
     valueType: 'string',
+    hasLocation: false,
     groupId: defaultGroupId
   });
   const [errors, setErrors] = useState<string[]>([]);
@@ -52,6 +56,7 @@ const ActivityTypeDialog: React.FC<ActivityTypeDialogProps> = ({
           description: initialData.description || '',
           color: initialData.color || '#FF6B6B',
           valueType: initialData.valueType || 'string',
+          hasLocation: initialData.hasLocation ?? false,
           groupId: initialData.groupId
         });
       } else {
@@ -61,6 +66,7 @@ const ActivityTypeDialog: React.FC<ActivityTypeDialogProps> = ({
           description: '',
           color: '#FF6B6B',
           valueType: 'string',
+          hasLocation: false,
           groupId: defaultGroupId
         });
       }
@@ -145,6 +151,23 @@ const ActivityTypeDialog: React.FC<ActivityTypeDialogProps> = ({
             <MenuItem value="boolean">Yes / No — simple checkbox</MenuItem>
             <MenuItem value="number">Number — numeric value (e.g. km, pages, reps)</MenuItem>
           </TextField>
+
+          <FormControl>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={formData.hasLocation ?? false}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setFormData((prev) => ({ ...prev, hasLocation: e.target.checked }))
+                  }
+                />
+              }
+              label="Track where it happened"
+            />
+            <FormHelperText sx={{ ml: 0 }}>
+              Adds a place picker when logging this activity, and puts it on the map
+            </FormHelperText>
+          </FormControl>
 
           <TextField
             label="Slug"

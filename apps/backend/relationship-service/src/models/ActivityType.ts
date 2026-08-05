@@ -9,6 +9,7 @@ export interface IActivityType extends Document {
   color?: string; // Optional color for UI (hex code)
   icon?: string; // Optional icon identifier
   valueType: 'string' | 'boolean' | 'number'; // How the description value is captured
+  hasLocation: boolean; // Whether entries of this type can carry a place (orthogonal to valueType)
   isActive: boolean; // Whether this type is active/available
   sortOrder: number; // For ordering in UI
   createdAt: Date;
@@ -35,7 +36,6 @@ const ActivityTypeSchema: Schema = new Schema(
       required: true,
       trim: true,
       lowercase: true,
-      unique: true,
       maxlength: 50,
       validate: {
         validator: function(v: string) {
@@ -66,6 +66,10 @@ const ActivityTypeSchema: Schema = new Schema(
       enum: ['string', 'boolean', 'number'],
       default: 'string'
     },
+    hasLocation: {
+      type: Boolean,
+      default: false
+    },
     isActive: {
       type: Boolean,
       default: true
@@ -94,6 +98,24 @@ const ActivityTypeSchema: Schema = new Schema(
 ActivityTypeSchema.index({ slug: 1 });
 ActivityTypeSchema.index({ userId: 1, groupId: 1 });
 ActivityTypeSchema.index({ isActive: 1, sortOrder: 1 });
+
+// A slug only has to be unique within its own scope — one user's "movies" must
+// not stop anyone else creating theirs. Group types are unique per group, and
+// personal types per user; the partial filters keep the two apart so a personal
+// type never collides with a group's.
+//
+// The personal filter is `{ groupId: null }` rather than `{ $exists: false }`:
+// Mongo rejects `$exists: false` in a partial index ("Expression not supported
+// in partial index: $not"), while null-equality matches both an explicit null
+// and a missing field — which is exactly the set the service treats as personal.
+ActivityTypeSchema.index(
+  { groupId: 1, slug: 1 },
+  { unique: true, partialFilterExpression: { groupId: { $type: 'string' } } }
+);
+ActivityTypeSchema.index(
+  { userId: 1, slug: 1 },
+  { unique: true, partialFilterExpression: { groupId: null } }
+);
 
 // Pre-save middleware to generate slug from name if not provided
 ActivityTypeSchema.pre('save', function(this: IActivityType) {

@@ -16,6 +16,8 @@ import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
 import DownloadIcon from '@mui/icons-material/Download';
 import EditCalendarIcon from '@mui/icons-material/EditCalendar';
+import PlaceIcon from '@mui/icons-material/Place';
+import { useSearchParams } from 'react-router';
 import { useTenantFilter } from '@tumbaland/components';
 import { logger } from '@tumbaland/frontend-core';
 import { ActivityType, Day, DaysResponse } from '../services/types';
@@ -24,6 +26,8 @@ import { getActivityTypes } from '../services/activityTypes';
 import DayEditorDialog from '../components/DayEditorDialog';
 
 const PAGE_SIZE = 30;
+/** Bigger pages for the export, so a long history takes few round trips. */
+const EXPORT_PAGE_SIZE = 200;
 
 const todayKey = () => new Date().toISOString().slice(0, 10);
 
@@ -64,10 +68,18 @@ const EntryChip: React.FC<{ entry: Day['entries'][number] }> = ({ entry }) => {
         />
       }
       label={
-        <span>
-          <strong>{type?.name || 'Unknown'}</strong>
-          {value ? ` · ${value}` : ''}
-        </span>
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
+          <span>
+            <strong>{type?.name || 'Unknown'}</strong>
+            {value ? ` · ${value}` : ''}
+          </span>
+          {entry.location && (
+            <>
+              <PlaceIcon sx={{ fontSize: 13, ml: 0.5, color: 'text.disabled' }} />
+              <span>{entry.location.label}</span>
+            </>
+          )}
+        </Box>
       }
       sx={{ borderColor: 'divider', bgcolor: 'transparent', maxWidth: '100%' }}
     />
@@ -76,6 +88,7 @@ const EntryChip: React.FC<{ entry: Day['entries'][number] }> = ({ entry }) => {
 
 const JournalPage: React.FC = () => {
   const tenantGroupId = useTenantFilter();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [days, setDays] = useState<Day[]>([]);
   const [page, setPage] = useState(1);
@@ -83,6 +96,7 @@ const JournalPage: React.FC = () => {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [typeFilter, setTypeFilter] = useState('');
@@ -106,10 +120,10 @@ const JournalPage: React.FC = () => {
   }, [tenantGroupId]);
 
   const fetchPage = useCallback(
-    async (pageToLoad: number): Promise<DaysResponse> =>
+    async (pageToLoad: number, limit: number = PAGE_SIZE): Promise<DaysResponse> =>
       getDays({
         page: pageToLoad,
-        limit: PAGE_SIZE,
+        limit,
         groupId: tenantGroupId,
         typeId: typeFilter || undefined,
         search: debouncedSearch || undefined
@@ -159,15 +173,59 @@ const JournalPage: React.FC = () => {
     setEditorOpen(true);
   };
 
-  const handleExportCSV = () => {
-    const rows = [['Date', 'Activity', 'Description', 'Hours']];
-    for (const day of days) {
+  // ?date=YYYY-MM-DD opens that day straight away — how the map's pin popups
+  // link back into the journal. Consumed once so a later close doesn't reopen.
+  const linkedDate = searchParams.get('date');
+  useEffect(() => {
+    if (!linkedDate || !/^\d{4}-\d{2}-\d{2}$/.test(linkedDate)) return;
+    setEditorDate(linkedDate);
+    setEditorDateEditable(false);
+    setEditorOpen(true);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('date');
+        return next;
+      },
+      { replace: true }
+    );
+  }, [linkedDate, setSearchParams]);
+
+  /**
+   * Exports every day matching the current filters, not just the pages already
+   * scrolled into view — it re-fetches the full set rather than serialising
+   * component state, which would silently export 30 days or 60 depending on
+   * how many times "Load older days" had been pressed.
+   */
+  const handleExportCSV = async () => {
+    setExporting(true);
+    setError(null);
+
+    let allDays: Day[];
+    try {
+      const first = await fetchPage(1, EXPORT_PAGE_SIZE);
+      allDays = first.days;
+      for (let nextPage = 2; nextPage <= first.totalPages; nextPage++) {
+        allDays = allDays.concat((await fetchPage(nextPage, EXPORT_PAGE_SIZE)).days);
+      }
+    } catch (e) {
+      logger.error('Failed to export the journal', e);
+      setError('Failed to export the journal');
+      setExporting(false);
+      return;
+    }
+
+    const rows = [['Date', 'Activity', 'Description', 'Hours', 'Place', 'Latitude', 'Longitude']];
+    for (const day of allDays) {
       for (const entry of day.entries) {
         rows.push([
           day.date,
           entry.type?.name || '',
           (entry.description || '').replace(/"/g, '""'),
-          entry.hours !== undefined && entry.hours !== null ? String(entry.hours) : ''
+          entry.hours !== undefined && entry.hours !== null ? String(entry.hours) : '',
+          (entry.location?.label || '').replace(/"/g, '""'),
+          entry.location ? String(entry.location.lat) : '',
+          entry.location ? String(entry.location.lng) : ''
         ]);
       }
     }
@@ -178,6 +236,7 @@ const JournalPage: React.FC = () => {
     link.download = 'journal_export.csv';
     link.click();
     URL.revokeObjectURL(url);
+    setExporting(false);
   };
 
   // group loaded days by month for section headers
@@ -272,12 +331,12 @@ const JournalPage: React.FC = () => {
         <Box sx={{ flex: 1 }} />
         <Button
           startIcon={<DownloadIcon />}
-          onClick={handleExportCSV}
-          disabled={days.length === 0}
+          onClick={() => void handleExportCSV()}
+          disabled={days.length === 0 || exporting}
           size="small"
           sx={{ textTransform: 'none' }}
         >
-          Export CSV
+          {exporting ? 'Exporting…' : 'Export CSV'}
         </Button>
       </Box>
 

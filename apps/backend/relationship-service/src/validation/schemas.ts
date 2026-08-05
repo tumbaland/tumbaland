@@ -1,10 +1,18 @@
 import { z } from 'zod';
 
+/** Where an entry happened; only accepted for types with hasLocation. */
+export const locationSchema = z.object({
+  label: z.string().trim().min(1, 'A place needs a name').max(200),
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180)
+});
+
 export const createActivitySchema = z.object({
   date: z.coerce.date({ error: 'A valid date is required' }),
   typeId: z.string().min(1, 'typeId is required'),
   description: z.string().max(500).optional(),
   hours: z.number().int().nonnegative().optional(),
+  location: locationSchema.optional(),
   groupId: z.string().optional()
 });
 
@@ -21,7 +29,8 @@ export const saveDaySchema = z.object({
     _id: z.string().optional(),
     typeId: z.string().min(1, 'typeId is required'),
     description: z.string().max(500).optional(),
-    hours: z.number().int().nonnegative().optional()
+    hours: z.number().int().nonnegative().optional(),
+    location: locationSchema.nullish()
   })),
   groupId: z.string().optional()
 });
@@ -33,6 +42,7 @@ export const createActivityTypeSchema = z.object({
   color: z.string().regex(/^#[0-9A-F]{6}$/i, 'Color must be a valid hex code (e.g., #FF5733)').optional(),
   icon: z.string().max(50).optional(),
   valueType: z.enum(['string', 'boolean', 'number']).optional(),
+  hasLocation: z.boolean().optional(),
   isActive: z.boolean().optional(),
   sortOrder: z.number().optional(),
   groupId: z.string().optional()

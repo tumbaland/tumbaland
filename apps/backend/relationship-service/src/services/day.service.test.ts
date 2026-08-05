@@ -27,9 +27,13 @@ const mockedDeleteMany = Activity.deleteMany as unknown as jest.Mock;
 const mockedAggregate = Activity.aggregate as unknown as jest.Mock;
 const mockedTypeFind = ActivityType.find as unknown as jest.Mock;
 
-// ActivityType.find(...).select('_id') resolves to the accessible type ids.
-const mockAccessibleTypes = (ids: string[]) => {
-  mockedTypeFind.mockReturnValue({ select: jest.fn().mockResolvedValue(ids.map((id) => ({ _id: id }))) });
+// ActivityType.find(...).select('_id hasLocation') resolves to the accessible types.
+const mockAccessibleTypes = (ids: string[], locationIds: string[] = []) => {
+  mockedTypeFind.mockReturnValue({
+    select: jest
+      .fn()
+      .mockResolvedValue(ids.map((id) => ({ _id: id, hasLocation: locationIds.includes(id) })))
+  });
 };
 
 // Activity.find(...).populate('typeId').sort(...) — the reload after a save.
@@ -98,7 +102,7 @@ describe('saveDay', () => {
     expect(mockedActivityCtor).toHaveBeenCalledWith(expect.objectContaining({ typeId: 't1', description: 'new entry', userId: 'user-1' }));
   });
 
-  it('unsets description/hours when an updated entry omits them', async () => {
+  it('unsets description/hours/location when an updated entry omits them', async () => {
     mockAccessibleTypes(['t1']);
     mockedActivityFind
       .mockResolvedValueOnce([{ _id: 'e1' }])
@@ -109,7 +113,7 @@ describe('saveDay', () => {
 
     expect(mockedFindByIdAndUpdate).toHaveBeenCalledWith(
       'e1',
-      expect.objectContaining({ $unset: { description: '', hours: '' } }),
+      expect.objectContaining({ $unset: { description: '', hours: '', location: '' } }),
       { runValidators: true }
     );
   });
@@ -160,6 +164,65 @@ describe('saveDay', () => {
     expect(mockedDeleteMany).toHaveBeenCalledWith({ _id: { $in: ['e1', 'e2'] } });
     expect(mockedActivityCtor).not.toHaveBeenCalled();
     expect(result).toEqual({ date: '2024-05-01', entries: [] });
+  });
+
+  it('stores a trimmed location on a new entry whose type opts in', async () => {
+    mockAccessibleTypes(['t1'], ['t1']);
+    mockedActivityFind.mockResolvedValueOnce([]).mockReturnValueOnce(mockReload([]));
+
+    await saveDay(
+      '2024-05-01',
+      [{ typeId: 't1', location: { label: '  Kolm Sõsarat  ', lat: 59.4405, lng: 24.7453 } }],
+      'user-1',
+      []
+    );
+
+    expect(mockedActivityCtor).toHaveBeenCalledWith(
+      expect.objectContaining({
+        typeId: 't1',
+        location: { label: 'Kolm Sõsarat', lat: 59.4405, lng: 24.7453 }
+      })
+    );
+  });
+
+  it('rejects a location on a type that has not opted in', async () => {
+    mockAccessibleTypes(['t1']); // hasLocation false
+
+    await expect(
+      saveDay('2024-05-01', [{ typeId: 't1', location: { label: 'Home', lat: 1, lng: 2 } }], 'user-1', [])
+    ).rejects.toMatchObject({ name: 'BadRequestError' });
+    expect(mockedActivityCtor).not.toHaveBeenCalled();
+  });
+
+  it('sets a location on an updated entry and clears it when passed null', async () => {
+    mockAccessibleTypes(['t1'], ['t1']);
+    mockedActivityFind
+      .mockResolvedValueOnce([{ _id: 'e1' }])
+      .mockReturnValueOnce(mockReload([]))
+      .mockResolvedValueOnce([{ _id: 'e1' }])
+      .mockReturnValueOnce(mockReload([]));
+    mockedFindByIdAndUpdate.mockResolvedValue({});
+
+    await saveDay(
+      '2024-05-01',
+      [{ _id: 'e1', typeId: 't1', location: { label: 'Vabaduse väljak', lat: 59.43, lng: 24.74 } }],
+      'user-1',
+      []
+    );
+    expect(mockedFindByIdAndUpdate).toHaveBeenLastCalledWith(
+      'e1',
+      expect.objectContaining({
+        $set: expect.objectContaining({ location: { label: 'Vabaduse väljak', lat: 59.43, lng: 24.74 } })
+      }),
+      { runValidators: true }
+    );
+
+    await saveDay('2024-05-01', [{ _id: 'e1', typeId: 't1', location: null }], 'user-1', []);
+    expect(mockedFindByIdAndUpdate).toHaveBeenLastCalledWith(
+      'e1',
+      expect.objectContaining({ $unset: expect.objectContaining({ location: '' }) }),
+      { runValidators: true }
+    );
   });
 });
 

@@ -8,6 +8,8 @@ export interface CreateActivityTypeRequest {
   color?: string;
   icon?: string;
   valueType?: 'string' | 'boolean' | 'number';
+  /** whether entries of this type can carry a place; orthogonal to valueType */
+  hasLocation?: boolean;
   groupId?: string;
 }
 

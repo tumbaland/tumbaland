@@ -19,10 +19,12 @@ import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import { useTenantFilter } from '@tumbaland/components';
 import { ApiError, logger } from '@tumbaland/frontend-core';
-import { ActivityType, Day, DayEntryInput } from '../services/types';
+import { ActivityLocation, ActivityType, Day, DayEntryInput, Place } from '../services/types';
 import { getActivityTypes } from '../services/activityTypes';
 import { getActivityDescriptions } from '../services/activities';
 import { getDays, saveDay } from '../services/days';
+import { getPlaces } from '../services/places';
+import LocationPicker from './map/LocationPicker';
 
 interface DayEditorDialogProps {
   open: boolean;
@@ -38,6 +40,7 @@ interface EntryDraft {
   _id?: string;
   description: string;
   hours: string; // keep as text while editing
+  location: ActivityLocation | null;
 }
 
 /** per-type editing state: a type is "on" when it has at least one draft */
@@ -50,7 +53,8 @@ const todayKey = () => new Date().toISOString().slice(0, 10);
  * - boolean types: the checkbox itself is the answer
  * - number types: an hours field
  * - string types: one or more description fields with past-entry autocomplete
- * Saving replaces the whole day in a single PUT /days/:date call.
+ * Types with hasLocation additionally get a place picker, independent of
+ * valueType. Saving replaces the whole day in a single PUT /days/:date call.
  */
 const DayEditorDialog: React.FC<DayEditorDialogProps> = ({
   open,
@@ -67,6 +71,7 @@ const DayEditorDialog: React.FC<DayEditorDialogProps> = ({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [descriptionOptions, setDescriptionOptions] = useState<Record<string, string[]>>({});
+  const [savedPlaces, setSavedPlaces] = useState<Place[]>([]);
 
   // Load activity types + the day's current entries whenever the target day changes
   useEffect(() => {
@@ -81,6 +86,16 @@ const DayEditorDialog: React.FC<DayEditorDialogProps> = ({
       .then(([typesResponse, daysResponse]) => {
         if (cancelled) return;
         setTypes(typesResponse.data);
+
+        // Only fetch the place history if some type can actually use it.
+        if (typesResponse.data.some((type) => type.hasLocation)) {
+          getPlaces({ groupId })
+            .then((places) => {
+              if (!cancelled) setSavedPlaces(places);
+            })
+            .catch((e) => logger.error('Failed to load saved places', e));
+        }
+
         const day = daysResponse.days.find((d) => d.date === date);
         const next: Drafts = {};
         for (const entry of day?.entries ?? []) {
@@ -92,7 +107,8 @@ const DayEditorDialog: React.FC<DayEditorDialogProps> = ({
           (next[typeId] ??= []).push({
             _id: entry._id,
             description: entry.description ?? '',
-            hours: entry.hours !== undefined && entry.hours !== null ? String(entry.hours) : ''
+            hours: entry.hours !== undefined && entry.hours !== null ? String(entry.hours) : '',
+            location: entry.location ?? null
           });
         }
         setDrafts(next);
@@ -132,7 +148,7 @@ const DayEditorDialog: React.FC<DayEditorDialogProps> = ({
       if (next[type._id]?.length) {
         delete next[type._id];
       } else {
-        next[type._id] = [{ description: '', hours: '' }];
+        next[type._id] = [{ description: '', hours: '', location: null }];
         if (type.valueType === 'string') loadDescriptions(type._id);
       }
       return next;
@@ -147,7 +163,7 @@ const DayEditorDialog: React.FC<DayEditorDialogProps> = ({
   };
 
   const addDraft = (typeId: string) => {
-    setDrafts((prev) => ({ ...prev, [typeId]: [...(prev[typeId] ?? []), { description: '', hours: '' }] }));
+    setDrafts((prev) => ({ ...prev, [typeId]: [...(prev[typeId] ?? []), { description: '', hours: '', location: null }] }));
   };
 
   const removeDraft = (typeId: string, index: number) => {
@@ -182,6 +198,8 @@ const DayEditorDialog: React.FC<DayEditorDialogProps> = ({
         } else if (type.valueType !== 'boolean' && draft.description.trim()) {
           entry.description = draft.description.trim();
         }
+        // null (not undefined) so an existing place is cleared on save
+        if (type.hasLocation) entry.location = draft.location;
         entries.push(entry);
       }
     }
@@ -324,6 +342,20 @@ const DayEditorDialog: React.FC<DayEditorDialogProps> = ({
                       >
                         Add another {type.name.toLowerCase()}
                       </Button>
+                    </Box>
+                  )}
+
+                  {checked && type.hasLocation && (
+                    <Box sx={{ ml: 5, my: 1, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                      {typeDrafts.map((draft, index) => (
+                        <LocationPicker
+                          key={draft._id ?? index}
+                          label={typeDrafts.length > 1 ? `Place ${index + 1}` : 'Place'}
+                          value={draft.location}
+                          savedPlaces={savedPlaces}
+                          onChange={(location) => patchDraft(type._id, index, { location })}
+                        />
+                      ))}
                     </Box>
                   )}
                 </Box>

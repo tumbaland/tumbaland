@@ -60,6 +60,27 @@ describe('saveDaySchema', () => {
   it('rejects entries without a typeId', () => {
     expect(() => saveDaySchema.parse({ entries: [{ description: 'x' }] })).toThrow();
   });
+
+  it('accepts an entry carrying a location', () => {
+    const result = saveDaySchema.parse({
+      entries: [{ typeId: 't1', location: { label: 'Kolm Sõsarat', lat: 59.4405, lng: 24.7453 } }]
+    });
+    expect(result.entries[0].location).toEqual({ label: 'Kolm Sõsarat', lat: 59.4405, lng: 24.7453 });
+  });
+
+  it('accepts a null location, which clears a previously saved place', () => {
+    const result = saveDaySchema.parse({ entries: [{ typeId: 't1', location: null }] });
+    expect(result.entries[0].location).toBeNull();
+  });
+
+  it.each([
+    ['an unnamed place', { label: '   ', lat: 0, lng: 0 }],
+    ['an out-of-range latitude', { label: 'x', lat: 91, lng: 0 }],
+    ['an out-of-range longitude', { label: 'x', lat: 0, lng: -181 }],
+    ['a missing coordinate', { label: 'x', lat: 0 }]
+  ])('rejects %s', (_case, location) => {
+    expect(() => saveDaySchema.parse({ entries: [{ typeId: 't1', location }] })).toThrow();
+  });
 });
 
 describe('saveDashboardSettingsSchema', () => {

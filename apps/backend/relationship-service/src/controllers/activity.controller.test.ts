@@ -24,8 +24,6 @@ import {
   getActivityById,
   updateActivity,
   deleteActivity,
-  getActivityStats,
-  getActivitiesByDateRange,
   getRecentActivities,
   getActivityTypes,
   getRecentActivitiesSummary,
@@ -171,47 +169,6 @@ describe('deleteActivity', () => {
     await deleteActivity(req, res);
 
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ message: 'Activity deleted successfully' }));
-  });
-});
-
-describe('getActivityStats', () => {
-  it('parses optional date filters', async () => {
-    (ActivityService.getActivityStats as jest.Mock).mockResolvedValue({ byType: [], overall: {} });
-    const req = { query: { startDate: '2024-01-01', endDate: '2024-02-01' } } as unknown as Request;
-
-    await getActivityStats(req, mockRes());
-
-    expect(ActivityService.getActivityStats).toHaveBeenCalledWith({
-      startDate: new Date('2024-01-01'),
-      endDate: new Date('2024-02-01')
-    });
-  });
-
-  it('defaults to an empty filter set', async () => {
-    (ActivityService.getActivityStats as jest.Mock).mockResolvedValue({});
-    const req = { query: {} } as unknown as Request;
-
-    await getActivityStats(req, mockRes());
-
-    expect(ActivityService.getActivityStats).toHaveBeenCalledWith({});
-  });
-});
-
-describe('getActivitiesByDateRange', () => {
-  it('rejects when startDate or endDate is missing', async () => {
-    const req = { query: { startDate: '2024-01-01' } } as unknown as Request;
-    await expect(getActivitiesByDateRange(req, mockRes())).rejects.toMatchObject({ name: 'BadRequestError' });
-  });
-
-  it('returns activities in the given range', async () => {
-    (ActivityService.getActivitiesByDateRange as jest.Mock).mockResolvedValue([{ _id: 'a1' }]);
-    const req = { query: { startDate: '2024-01-01', endDate: '2024-02-01' } } as unknown as Request;
-    const res = mockRes();
-
-    await getActivitiesByDateRange(req, res);
-
-    expect(ActivityService.getActivitiesByDateRange).toHaveBeenCalledWith(new Date('2024-01-01'), new Date('2024-02-01'));
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: [{ _id: 'a1' }] }));
   });
 });
 

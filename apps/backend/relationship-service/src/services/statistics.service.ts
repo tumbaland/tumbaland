@@ -146,9 +146,10 @@ export const getRelationshipStatistics = async (
 ): Promise<RelationshipStatistics> => {
   const { userId, userGroupIds = [], groupId, personalOnly } = filters;
 
-  // Calculate date range based on timeframe
+  // Calculate date range based on timeframe. 'all' needs no start date — it
+  // builds an empty date filter below rather than reaching back to a cutoff.
   const now = new Date();
-  let startDate: Date;
+  let startDate: Date | undefined;
 
   switch (timeframe) {
     case 'week':
@@ -166,7 +167,7 @@ export const getRelationshipStatistics = async (
       startDate = new Date(now.getFullYear(), 0, 1);
       break;
     default:
-      startDate = new Date(2020, 0, 1); // Far back date
+      startDate = undefined;
   }
 
   const endDate = now;
@@ -191,15 +192,14 @@ export const getRelationshipStatistics = async (
   }
 
   // Build date filter
-  const dateFilter =
-    timeframe === 'all'
-      ? {}
-      : {
-          date: {
-            $gte: startDate,
-            $lte: endDate
-          }
-        };
+  const dateFilter = startDate
+    ? {
+        date: {
+          $gte: startDate,
+          $lte: endDate
+        }
+      }
+    : {};
 
   // Combine access query with date filter
   const baseQuery = {
@@ -310,7 +310,9 @@ export const getMonthlyHours = async (
 
   activities.forEach((activity) => {
     const date = new Date(activity.date);
-    const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+    // UTC: entries are stored at UTC midnight, and every other aggregation here
+    // buckets with Mongo's `$year`/`$month`, which are UTC too.
+    const monthKey = `${date.getUTCFullYear()}-${(date.getUTCMonth() + 1).toString().padStart(2, '0')}`;
 
     if (!monthlyData.has(monthKey)) {
       monthlyData.set(monthKey, { hours: 0, activities: 0 });
@@ -820,8 +822,11 @@ export const getCumulativeTimelineData = async (
   let endDate: Date;
 
   if (year) {
-    startDate = new Date(year, 0, 1);
-    endDate = new Date(year + 1, 0, 1);
+    // UTC, to match the `$dateToString` day keys the aggregation produced and the
+    // `toISOString()` formatting below — local midnight would shift the whole
+    // series by a day for any host east or west of UTC.
+    startDate = new Date(Date.UTC(year, 0, 1));
+    endDate = new Date(Date.UTC(year + 1, 0, 1));
   } else {
     // If no year specified, find the actual date range from activities
     if (result.length === 0) {
@@ -843,7 +848,7 @@ export const getCumulativeTimelineData = async (
   const currentDate = new Date(startDate);
   while (currentDate <= endDate) {
     allDates.push(currentDate.toISOString().split('T')[0]);
-    currentDate.setDate(currentDate.getDate() + 1);
+    currentDate.setUTCDate(currentDate.getUTCDate() + 1);
   }
 
   // Transform and calculate cumulative totals

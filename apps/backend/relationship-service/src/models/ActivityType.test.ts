@@ -36,3 +36,29 @@ describe('ActivityType pre-save slug generation', () => {
     expect(doc.slug).toBeUndefined();
   });
 });
+
+describe('ActivityType indexes', () => {
+  const indexes = ActivityType.schema.indexes();
+  const find = (key: Record<string, unknown>) =>
+    indexes.find(([fields]) => JSON.stringify(fields) === JSON.stringify(key));
+
+  it('has no global unique index on slug, so scopes cannot block each other', () => {
+    expect(ActivityType.schema.path('slug').options.unique).toBeUndefined();
+    const [, options] = find({ slug: 1 }) ?? [];
+    expect(options?.unique).toBeUndefined();
+  });
+
+  it('makes a slug unique within one group', () => {
+    const [, options] = find({ groupId: 1, slug: 1 }) ?? [];
+    expect(options?.unique).toBe(true);
+    expect(options?.partialFilterExpression).toEqual({ groupId: { $type: 'string' } });
+  });
+
+  it('makes a slug unique within one user\'s personal types', () => {
+    const [, options] = find({ userId: 1, slug: 1 }) ?? [];
+    expect(options?.unique).toBe(true);
+    // Null-equality, not `$exists: false` — Mongo rejects the latter in a
+    // partial index, and this form matches a missing groupId as well.
+    expect(options?.partialFilterExpression).toEqual({ groupId: null });
+  });
+});

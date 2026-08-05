@@ -8,7 +8,6 @@ jest.mock('../models/Activity', () => {
   Activity.findById = jest.fn();
   Activity.findByIdAndUpdate = jest.fn();
   Activity.findByIdAndDelete = jest.fn();
-  Activity.aggregate = jest.fn();
   Activity.distinct = jest.fn();
   return { Activity };
 });
@@ -25,9 +24,6 @@ import {
   getActivityById,
   updateActivity,
   deleteActivity,
-  getActivityStats,
-  getActivitiesByDateRange,
-  getRecentActivities,
   getActivityTypes,
   getDescriptionsByTypeId
 } from './activity.service';
@@ -38,7 +34,6 @@ const mockedCountDocuments = Activity.countDocuments as unknown as jest.Mock;
 const mockedFindById = Activity.findById as unknown as jest.Mock;
 const mockedFindByIdAndUpdate = Activity.findByIdAndUpdate as unknown as jest.Mock;
 const mockedFindByIdAndDelete = Activity.findByIdAndDelete as unknown as jest.Mock;
-const mockedAggregate = Activity.aggregate as unknown as jest.Mock;
 const mockedDistinct = Activity.distinct as unknown as jest.Mock;
 const mockedTypeFindOne = ActivityType.findOne as jest.Mock;
 const mockedTypeFind = ActivityType.find as jest.Mock;
@@ -165,64 +160,6 @@ describe('getActivityById / updateActivity / deleteActivity', () => {
   it('deleteActivity returns false when nothing was found', async () => {
     mockedFindByIdAndDelete.mockResolvedValue(null);
     expect(await deleteActivity('missing')).toBe(false);
-  });
-});
-
-describe('getActivityStats', () => {
-  it('builds a date match stage and returns byType + overall totals', async () => {
-    mockedAggregate.mockResolvedValueOnce([{ _id: 'reading', count: 3, totalHours: 6, avgHours: 2 }]);
-    mockedAggregate.mockResolvedValueOnce([{ _id: null, totalActivities: 3, totalHours: 6, avgHours: 2 }]);
-
-    const result = await getActivityStats({ startDate: new Date('2024-01-01'), endDate: new Date('2024-02-01') });
-
-    const firstPipeline = mockedAggregate.mock.calls[0][0];
-    expect(firstPipeline[0]).toEqual({ $match: { date: { $gte: new Date('2024-01-01'), $lte: new Date('2024-02-01') } } });
-    expect(result.byType).toEqual([{ _id: 'reading', count: 3, totalHours: 6, avgHours: 2 }]);
-    expect(result.overall).toEqual({ _id: null, totalActivities: 3, totalHours: 6, avgHours: 2 });
-  });
-
-  it('defaults overall totals to zero when there is no data and skips the match stage', async () => {
-    mockedAggregate.mockResolvedValueOnce([]);
-    mockedAggregate.mockResolvedValueOnce([]);
-
-    const result = await getActivityStats({});
-
-    const firstPipeline = mockedAggregate.mock.calls[0][0];
-    expect(firstPipeline[0].$match).toBeUndefined();
-    expect(result.overall).toEqual({ totalActivities: 0, totalHours: 0, avgHours: null });
-  });
-});
-
-describe('getActivitiesByDateRange', () => {
-  it('queries by inclusive date bounds', async () => {
-    const chain = { sort: jest.fn().mockResolvedValue([{ _id: 'a1' }]) };
-    mockedFind.mockReturnValue(chain);
-
-    const result = await getActivitiesByDateRange(new Date('2024-01-01'), new Date('2024-02-01'));
-
-    expect(mockedFind).toHaveBeenCalledWith({ date: { $gte: new Date('2024-01-01'), $lte: new Date('2024-02-01') } });
-    expect(result).toEqual([{ _id: 'a1' }]);
-  });
-});
-
-describe('getRecentActivities', () => {
-  it('sorts by creation date and applies the given limit', async () => {
-    const limitFn = jest.fn().mockResolvedValue([{ _id: 'a1' }]);
-    mockedFind.mockReturnValue({ sort: jest.fn().mockReturnValue({ limit: limitFn }) });
-
-    const result = await getRecentActivities(5);
-
-    expect(limitFn).toHaveBeenCalledWith(5);
-    expect(result).toEqual([{ _id: 'a1' }]);
-  });
-
-  it('defaults the limit to 10', async () => {
-    const limitFn = jest.fn().mockResolvedValue([]);
-    mockedFind.mockReturnValue({ sort: jest.fn().mockReturnValue({ limit: limitFn }) });
-
-    await getRecentActivities();
-
-    expect(limitFn).toHaveBeenCalledWith(10);
   });
 });
 

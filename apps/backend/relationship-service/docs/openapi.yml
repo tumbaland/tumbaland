@@ -71,6 +71,14 @@ components:
           type: string
           nullable: true
           example: "heart"
+        hasLocation:
+          type: boolean
+          default: false
+          description: |
+            Whether entries of this type can carry a place. Orthogonal to
+            valueType, so a 'string' type can hold both a description and a
+            location.
+          example: true
         isActive:
           type: boolean
           default: true
@@ -126,6 +134,11 @@ components:
           nullable: true
           minimum: 0
           example: 2
+        location:
+          allOf:
+            - $ref: '#/components/schemas/ActivityLocation'
+          nullable: true
+          description: Present only on entries whose type has hasLocation set.
         userId:
           type: string
           example: "user123"
@@ -143,6 +156,116 @@ components:
         - date
         - typeId
         - userId
+
+    ActivityLocation:
+      type: object
+      description: Where an entry happened.
+      properties:
+        label:
+          type: string
+          maxLength: 200
+          example: "Kolm Sõsarat"
+        lat:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+          example: 59.4405
+        lng:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+          example: 24.7453
+      required:
+        - label
+        - lat
+        - lng
+
+    Place:
+      type: object
+      description: |
+        A distinct place in a scope, with how often and when it was visited.
+        Visits fold together by coordinates rounded to 4 decimals (~11 m), so a
+        place re-picked from the geocoder with a slightly different name still
+        lands on a single pin. The label shown comes from the most recent visit.
+      properties:
+        id:
+          type: string
+          description: Rounded "lat,lng" — stable pin identity.
+          example: "59.4405,24.7453"
+        label:
+          type: string
+          example: "Kolm Sõsarat"
+        lat:
+          type: number
+          format: double
+          example: 59.44051
+        lng:
+          type: number
+          format: double
+          example: 24.74532
+        visits:
+          type: integer
+          example: 3
+        firstVisit:
+          type: string
+          format: date
+          example: "2024-01-02"
+        lastVisit:
+          type: string
+          format: date
+          example: "2024-06-11"
+        types:
+          type: array
+          items:
+            type: object
+            properties:
+              typeId:
+                type: string
+              name:
+                type: string
+              slug:
+                type: string
+              color:
+                type: string
+                nullable: true
+              count:
+                type: integer
+      required:
+        - id
+        - label
+        - lat
+        - lng
+        - visits
+        - firstVisit
+        - lastVisit
+        - types
+
+    PlaceVisit:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          example: "2024-06-11"
+        typeId:
+          type: string
+        typeName:
+          type: string
+          nullable: true
+        typeColor:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        hours:
+          type: integer
+          nullable: true
+      required:
+        - date
+        - typeId
 
     ActivityWithType:
       allOf:
@@ -190,6 +313,13 @@ components:
               hours:
                 type: integer
                 minimum: 0
+              location:
+                allOf:
+                  - $ref: '#/components/schemas/ActivityLocation'
+                nullable: true
+                description: |
+                  Only accepted for types with hasLocation set; null clears a
+                  previously saved place.
             required:
               - typeId
         groupId:
@@ -1097,6 +1227,105 @@ paths:
                   data:
                     $ref: '#/components/schemas/Day'
 
+  # Place (map) Endpoints
+  /api/places:
+    get:
+      tags:
+        - Places
+      summary: List distinct places with visit counts
+      description: |
+        Every distinct place in the caller's scope, with how often and when it
+        was visited and a per-activity-type breakdown. Powers the map page's
+        pins and the day editor's "places you've been" suggestions.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: groupId
+          in: query
+          schema:
+            type: string
+        - name: typeId
+          in: query
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Places, most-visited first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Place'
+        '403':
+          description: Caller is not a member of the requested group
+
+  /api/places/visits:
+    get:
+      tags:
+        - Places
+      summary: List the individual visits behind one pin
+      description: |
+        Visits are matched on the same rounded-coordinate bucket that
+        `GET /api/places` groups by, newest first.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+        - name: groupId
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Visits, newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PlaceVisit'
+        '400':
+          description: lat/lng missing or not numeric
+        '403':
+          description: Caller is not a member of the requested group
+
   # Activity Management Endpoints
   /api/activities:
     post:
@@ -1286,96 +1515,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RecentActivitiesSummaryResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearerAuth: []
-        - internalAuth: []
-
-  /api/activities/stats:
-    get:
-      tags:
-        - Activities
-      summary: Get activity statistics
-      description: |
-        Retrieves aggregated statistics for activities grouped by activity type.
-        Shows count, total hours, and average hours for each activity type.
-        Only includes activities the user has access to.
-      parameters:
-        - name: startDate
-          in: query
-          schema:
-            type: string
-            format: date
-          description: Filter statistics from this date
-          example: "2024-01-01"
-        - name: endDate
-          in: query
-          schema:
-            type: string
-            format: date
-          description: Filter statistics until this date
-          example: "2024-12-31"
-      responses:
-        '200':
-          description: Activity statistics retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ActivityStatsResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearerAuth: []
-        - internalAuth: []
-
-  /api/activities/date-range:
-    get:
-      tags:
-        - Activities
-      summary: Get activities by date range
-      description: |
-        Retrieves activities within a specific date range.
-        Both startDate and endDate are required.
-        Returns activities sorted by date.
-      parameters:
-        - name: startDate
-          in: query
-          required: true
-          schema:
-            type: string
-            format: date
-          description: Start date for the range (inclusive)
-          example: "2024-11-01"
-        - name: endDate
-          in: query
-          required: true
-          schema:
-            type: string
-            format: date
-          description: End date for the range (inclusive)
-          example: "2024-11-30"
-      responses:
-        '200':
-          description: Activities retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ActivitiesResponse'
-        '400':
-          description: Bad request - missing startDate or endDate
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:

@@ -1,4 +1,4 @@
-import mongoose, { PipelineStage } from 'mongoose';
+import mongoose from 'mongoose';
 import { ForbiddenError } from '@tumbaland/backend-core';
 import { Activity, IActivity } from '../models/Activity';
 import { IActivityType } from '../models/ActivityType';
@@ -155,106 +155,6 @@ export const updateActivity = async (id: string, updateData: Partial<IActivity>)
 export const deleteActivity = async (id: string): Promise<boolean> => {
   const result = await Activity.findByIdAndDelete(id);
   return !!result;
-};
-
-interface ActivityStatsByType {
-  _id: string;
-  count: number;
-  totalHours: number;
-  avgHours: number;
-}
-
-interface ActivityStatsOverall {
-  totalActivities: number;
-  totalHours: number;
-  avgHours: number | null;
-  _id?: null;
-}
-
-// Get activity statistics
-export const getActivityStats = async (
-  filters: {
-    startDate?: Date;
-    endDate?: Date;
-  } = {}
-): Promise<{ byType: ActivityStatsByType[]; overall: ActivityStatsOverall }> => {
-  const { startDate, endDate } = filters;
-
-  // Build match stage for date filtering
-  const matchStage: ActivityQuery = {};
-  if (startDate || endDate) {
-    matchStage.date = {};
-    if (startDate) matchStage.date.$gte = startDate;
-    if (endDate) matchStage.date.$lte = endDate;
-  }
-
-  const pipeline: PipelineStage[] = [];
-
-  // Add match stage if there are filters
-  if (Object.keys(matchStage).length > 0) {
-    pipeline.push({ $match: matchStage });
-  }
-
-  // Group by activity type
-  pipeline.push(
-    {
-      $lookup: {
-        from: 'activity_types',
-        localField: 'typeId',
-        foreignField: '_id',
-        as: 'activityType'
-      }
-    },
-    { $unwind: '$activityType' },
-    {
-      $group: {
-        _id: '$activityType.slug',
-        count: { $sum: 1 },
-        totalHours: { $sum: '$hours' },
-        avgHours: { $avg: '$hours' }
-      }
-    },
-    { $sort: { totalHours: -1 as const } }
-  );
-
-  const stats = await Activity.aggregate(pipeline);
-
-  // Calculate overall totals
-  const overallStats = await Activity.aggregate([
-    ...(Object.keys(matchStage).length > 0 ? [{ $match: matchStage }] : []),
-    {
-      $group: {
-        _id: null,
-        totalActivities: { $sum: 1 },
-        totalHours: { $sum: '$hours' },
-        avgHours: { $avg: '$hours' }
-      }
-    }
-  ]);
-
-  return {
-    byType: stats,
-    overall: overallStats[0] || {
-      totalActivities: 0,
-      totalHours: 0,
-      avgHours: null
-    }
-  };
-};
-
-// Get activities by date range
-export const getActivitiesByDateRange = async (startDate: Date, endDate: Date): Promise<IActivity[]> => {
-  return Activity.find({
-    date: {
-      $gte: startDate,
-      $lte: endDate
-    }
-  }).sort({ date: -1 });
-};
-
-// Get recent activities
-export const getRecentActivities = async (limit: number = 10): Promise<IActivity[]> => {
-  return Activity.find().sort({ createdAt: -1 }).limit(limit);
 };
 
 // Get unique activity types

@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { BadRequestError, ForbiddenError } from '@tumbaland/backend-core';
-import { Activity, IActivity } from '../models/Activity';
+import { Activity, IActivity, IActivityLocation } from '../models/Activity';
 import { ActivityType, IActivityType } from '../models/ActivityType';
 
 interface ActivityScopeQuery {
@@ -17,6 +17,8 @@ export interface DayEntryInput {
   typeId: string;
   description?: string;
   hours?: number;
+  /** null clears a previously saved place; undefined leaves it untouched on create */
+  location?: IActivityLocation | null;
 }
 
 /** An activity entry with its type populated for rendering. */
@@ -43,7 +45,8 @@ export function dayToDate(day: string): Date {
   return date;
 }
 
-function scopeQuery(userId: string, groupId?: string): ActivityScopeQuery {
+/** Entries visible in one scope: a whole group, or a user's non-group entries. */
+export function scopeQuery(userId: string, groupId?: string): ActivityScopeQuery {
   return groupId
     ? { groupId }
     : { userId, $or: [{ groupId: { $exists: false } }, { groupId: null }] };
@@ -141,14 +144,25 @@ export const saveDay = async (
 
   // Every referenced type must exist and be accessible to the caller
   const typeIds = [...new Set(entries.map((e) => e.typeId))];
+  const locationTypeIds = new Set<string>();
   if (typeIds.length > 0) {
     const accessible = await ActivityType.find({
       _id: { $in: typeIds },
       $or: [{ userId }, { groupId: { $in: userGroupIds } }]
-    }).select('_id');
+    }).select('_id hasLocation');
     if (accessible.length !== typeIds.length) {
       throw new BadRequestError('Invalid or inaccessible activity type');
     }
+    for (const type of accessible) {
+      if (type.hasLocation) locationTypeIds.add(String(type._id));
+    }
+  }
+
+  // A place is only meaningful on a type that opts in; silently storing one on
+  // a type the editor never shows a picker for would strand it on the map.
+  const strayLocation = entries.find((e) => e.location && !locationTypeIds.has(e.typeId));
+  if (strayLocation) {
+    throw new BadRequestError('This activity type does not accept a location');
   }
 
   const existing = await Activity.find({ ...scope, date });
@@ -163,14 +177,23 @@ export const saveDay = async (
   for (const entry of entries) {
     const description = entry.description?.trim() || undefined;
     const hours = entry.hours ?? undefined;
+    const location = entry.location
+      ? {
+          label: entry.location.label.trim(),
+          lat: entry.location.lat,
+          lng: entry.location.lng
+        }
+      : undefined;
 
     if (entry._id && existingById.has(entry._id)) {
-      const $set: Partial<Pick<IActivity, 'typeId' | 'description' | 'hours'>> = { typeId: entry.typeId as unknown as IActivity['typeId'] };
-      const $unset: Partial<Record<'description' | 'hours', ''>> = {};
+      const $set: Partial<Pick<IActivity, 'typeId' | 'description' | 'hours' | 'location'>> = { typeId: entry.typeId as unknown as IActivity['typeId'] };
+      const $unset: Partial<Record<'description' | 'hours' | 'location', ''>> = {};
       if (description === undefined) $unset.description = '';
       else $set.description = description;
       if (hours === undefined) $unset.hours = '';
       else $set.hours = hours;
+      if (location === undefined) $unset.location = '';
+      else $set.location = location;
 
       await Activity.findByIdAndUpdate(
         entry._id,
@@ -183,6 +206,7 @@ export const saveDay = async (
         typeId: entry.typeId,
         ...(description !== undefined ? { description } : {}),
         ...(hours !== undefined ? { hours } : {}),
+        ...(location !== undefined ? { location } : {}),
         userId,
         ...(groupId ? { groupId } : {})
       }).save();

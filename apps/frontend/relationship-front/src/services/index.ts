@@ -3,6 +3,8 @@ export * from './types';
 export * from './activities';
 export * from './activityTypes';
 export * from './days';
+export * from './places';
+export * from './geocoding';
 export * from './statistics';
 
 // Convenience re-exports for commonly used items
