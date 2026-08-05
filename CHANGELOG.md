@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.420](https://github.com/toomastahves/tumbaland/compare/app-v0.0.419...app-v0.0.420) (2026-08-05)
+
+### Features
+
+* add location tracking and map ([44be557](https://github.com/toomastahves/tumbaland/commit/44be55712f06cf294e95783677fa1ff22c35de2c))
 ## [0.0.419](https://github.com/toomastahves/tumbaland/compare/app-v0.0.418...app-v0.0.419) (2026-08-04)
 
 ### Features
