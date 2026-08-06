@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.425](https://github.com/toomastahves/tumbaland/compare/app-v0.0.424...app-v0.0.425) (2026-08-06)
+
+### Features
+
+* improve analytics ([4afe745](https://github.com/toomastahves/tumbaland/commit/4afe7450108f6ccc7ff5f6209a35489211bad2bd))
 ## [0.0.424](https://github.com/toomastahves/tumbaland/compare/app-v0.0.423...app-v0.0.424) (2026-08-06)
 
 ### Features
