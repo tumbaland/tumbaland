@@ -7,6 +7,8 @@ import {
   getSummary,
   getAnalyticsReport,
   importTransactions,
+  editCategory,
+  bulkRecategorise,
   removeTransaction
 } from '../controllers/transaction.controller';
 
@@ -28,8 +30,11 @@ router.get('/summary', getSummary);
 router.get('/analytics', getAnalyticsReport);
 router.post('/import', csvBody, importTransactions);
 router.get('/', getTransactions);
-// Entries come from imports rather than by hand, so there is no create or
-// update route; delete stays, for backing out a bad import.
+// Entries come from imports rather than by hand, so there is no create route
+// and no general update. The category is the exception: it is ours rather than
+// the bank's, and the uncategorised backlog has to be fillable.
+router.post('/recategorise', bulkRecategorise);
+router.patch('/:id/category', editCategory);
 router.delete('/:id', removeTransaction);
 
 export default router;

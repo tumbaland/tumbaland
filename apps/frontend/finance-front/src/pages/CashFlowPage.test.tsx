@@ -11,6 +11,8 @@ const mockedUseTransactions = vi.fn();
 const mockedUseSummary = vi.fn();
 const mockedUseAnalytics = vi.fn();
 const mockedDelete = vi.fn();
+const mockedUpdateCategory = vi.fn();
+const mockedRecategorise = vi.fn();
 
 vi.mock('../hooks/useCashflow', () => ({
   useTransactions: (...args: unknown[]) => mockedUseTransactions(...args),
@@ -18,7 +20,9 @@ vi.mock('../hooks/useCashflow', () => ({
   useCashflowSummary: (...args: unknown[]) => mockedUseSummary(...args),
   useAnalytics: (...args: unknown[]) => mockedUseAnalytics(...args),
   useDeleteTransaction: () => ({ mutateAsync: mockedDelete }),
-  useImportStatement: () => ({ mutateAsync: vi.fn(), isPending: false })
+  useImportStatement: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useUpdateCategory: () => ({ mutateAsync: mockedUpdateCategory, isPending: false }),
+  useRecategorise: () => ({ mutateAsync: mockedRecategorise, isPending: false })
 }));
 
 import CashFlowPage from './CashFlowPage';
@@ -47,16 +51,28 @@ const analytics = {
   years: [
     {
       year: 2026, income: 3000, expense: 900, consumption: 900, invested: 0,
-      savings: 2100, savingsRate: 70,
-      incomeChange: null, incomeChangePct: null, expenseChange: null, expenseChangePct: null
+      savings: 2100, savingsRate: 70, months: 12, from: '2026-01', to: '2026-12',
+      incomeChange: null, incomeChangePct: null, expenseChange: null, expenseChangePct: null,
+      partial: false
     }
   ],
+  trailing: {
+    current: {
+      income: 36000, expense: 12000, consumption: 12000, invested: 0,
+      savings: 24000, savingsRate: 66.67, months: 12, from: '2025-09', to: '2026-08'
+    },
+    previous: {
+      income: 30000, expense: 15000, consumption: 15000, invested: 0,
+      savings: 15000, savingsRate: 50, months: 12, from: '2024-09', to: '2025-08'
+    }
+  },
+
   investmentCategories: ['Investments', 'Savings'],
   months: [{ period: '2026-07', income: 3000, expense: 900, savings: 2100 }],
   categoryTrends: [
     {
       category: 'Groceries', byYear: { 2026: 900 }, total: 900,
-      latest: 900, previous: 0, change: 900, changePct: null
+      latest: 900, previous: 0, change: 900, changePct: null, perMonth: 75
     }
   ],
   incomeSources: [],
@@ -115,9 +131,11 @@ it('points at importing when there is nothing recorded', () => {
   expect(screen.getByRole('button', { name: /import your first statement/i })).toBeInTheDocument();
 });
 
-it('opens on the overview with the summary cards', () => {
+it('opens on the overview, labelling the range the figures cover', () => {
   render(<CashFlowPage />);
 
+  expect(screen.getByText('Last 12 months')).toBeInTheDocument();
+  expect(screen.getByText(/Sept 2025 – Aug 2026/)).toBeInTheDocument();
   expect(screen.getByText('Savings rate')).toBeInTheDocument();
 });
 
@@ -255,12 +273,49 @@ it('opens the import dialog', async () => {
   expect(screen.getByText('Import bank statement')).toBeInTheDocument();
 });
 
-it('offers no way to add or edit an entry by hand', async () => {
+it('offers no way to add an entry by hand', async () => {
   render(<CashFlowPage />);
   await openTransactions();
 
   expect(screen.queryByRole('button', { name: /add transaction/i })).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: /^edit/i })).not.toBeInTheDocument();
+});
+
+it('sorts by amount and flips direction on a second click', async () => {
+  render(<CashFlowPage />);
+  await openTransactions();
+
+  await userEvent.click(screen.getByRole('button', { name: 'Amount' }));
+  await waitFor(() =>
+    expect(mockedUseTransactions).toHaveBeenLastCalledWith(
+      expect.objectContaining({ sort: 'amount', direction: 'desc' })
+    )
+  );
+
+  await userEvent.click(screen.getByRole('button', { name: 'Amount' }));
+  await waitFor(() =>
+    expect(mockedUseTransactions).toHaveBeenLastCalledWith(
+      expect.objectContaining({ sort: 'amount', direction: 'asc' })
+    )
+  );
+});
+
+it('opens the category editor from a row', async () => {
+  render(<CashFlowPage />);
+  await openTransactions();
+
+  const editButtons = screen.getAllByRole('button').filter((b) => b.querySelector('[data-testid="EditIcon"]'));
+  await userEvent.click(editButtons[0]);
+
+  expect(screen.getByText('Change category')).toBeInTheDocument();
+});
+
+it('opens the category editor by clicking the category chip', async () => {
+  render(<CashFlowPage />);
+  await openTransactions();
+
+  await userEvent.click(screen.getByText('Salary'));
+
+  expect(screen.getByText('Change category')).toBeInTheDocument();
 });
 
 it('renders transaction cards in the mobile layout', async () => {

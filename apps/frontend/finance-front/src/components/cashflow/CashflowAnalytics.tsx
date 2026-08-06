@@ -38,6 +38,14 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
   const currency = analytics.currency || 'EUR';
   const money = (v: number) => formatCurrency(v, currency);
 
+  // Comparisons run on the trailing twelve months rather than calendar years:
+  // in March, "this year" is two months against twelve, and every category
+  // would look like it had collapsed.
+  const trailing = analytics.trailing;
+  const trailingLabel = trailing?.previous
+    ? `${formatPeriod(trailing.current.from)}–${formatPeriod(trailing.current.to)} against the 12 months before`
+    : `${formatPeriod(trailing?.current.from || '')}–${formatPeriod(trailing?.current.to || '')}`;
+
   const series = useMemo(() => {
     if (granularity === 'year') {
       return analytics.years.map((y) => ({
@@ -76,6 +84,22 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
   const incomeShift = halfOverHalfChange(incomes);
   const unit = granularity === 'month' ? 'month' : 'year';
 
+  /**
+   * The most recent period against the one before it. The slope answers "which
+   * way is this going over the whole history"; this answers "and what just
+   * happened", which is the question the number on its own invites.
+   */
+  const lastStep = (values: number[]) => {
+    if (values.length < 2) return null;
+    const latest = values[values.length - 1];
+    const before = values[values.length - 2];
+    return { latest, before, change: latest - before, pct: before > 0 ? ((latest - before) / before) * 100 : null };
+  };
+  const expenseStep = lastStep(expenses);
+  const incomeStep = lastStep(incomes);
+  const lastLabel = labels[labels.length - 1];
+  const priorLabel = labels[labels.length - 2];
+
   if (series.length === 0) return null;
 
   return (
@@ -103,37 +127,56 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
           mb: 2
         }}
       >
-        <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-          <CardContent>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Spending trend
-            </Typography>
-            <Typography variant="h5" sx={{ fontWeight: 700, color: spendColor(expenseSlope) }}>
-              {expenseSlope >= 0 ? '+' : '−'}{money(Math.abs(expenseSlope))} / {unit}
-            </Typography>
-            {expenseShift !== null && (
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                {formatPct(expenseShift)} comparing the recent half with the earlier half
+        {[
+          {
+            label: 'Spending',
+            slope: expenseSlope,
+            shift: expenseShift,
+            step: expenseStep,
+            color: spendColor,
+            goodWhenUp: false
+          },
+          {
+            label: 'Income',
+            slope: incomeSlope,
+            shift: incomeShift,
+            step: incomeStep,
+            color: signColor,
+            goodWhenUp: true
+          }
+        ].map((card) => (
+          <Card key={card.label} elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+            <CardContent>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                {card.label} — average change per {unit}
               </Typography>
-            )}
-          </CardContent>
-        </Card>
+              <Typography variant="h5" sx={{ fontWeight: 700, color: card.color(card.slope) }}>
+                {card.slope >= 0 ? '+' : '−'}{money(Math.abs(card.slope))} / {unit}
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                the line of best fit across all {series.length} {unit}s, not a first-to-last comparison
+              </Typography>
 
-        <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-          <CardContent>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Income trend
-            </Typography>
-            <Typography variant="h5" sx={{ fontWeight: 700, color: signColor(incomeSlope) }}>
-              {incomeSlope >= 0 ? '+' : '−'}{money(Math.abs(incomeSlope))} / {unit}
-            </Typography>
-            {incomeShift !== null && (
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                {formatPct(incomeShift)} comparing the recent half with the earlier half
-              </Typography>
-            )}
-          </CardContent>
-        </Card>
+              {card.step && priorLabel && (
+                <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                    Most recent: {formatPeriod(priorLabel)} → {formatPeriod(lastLabel)}
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: card.color(card.step.change) }}>
+                    {money(card.step.before)} → {money(card.step.latest)}
+                    {card.step.pct !== null && ` (${formatPct(card.step.pct)})`}
+                  </Typography>
+                </Box>
+              )}
+
+              {card.shift !== null && (
+                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
+                  {formatPct(card.shift)} recent half against earlier half
+                </Typography>
+              )}
+            </CardContent>
+          </Card>
+        ))}
       </Box>
 
       <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', mb: 2 }}>
@@ -212,7 +255,18 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
                 <TableBody>
                   {[...analytics.years].reverse().map((y) => (
                     <TableRow key={y.year} hover>
-                      <TableCell sx={{ fontWeight: 600 }}>{y.year}</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>
+                        {y.year}
+                        {y.partial && (
+                          <Chip
+                            size="small"
+                            variant="outlined"
+                            label={`${y.months} mo`}
+                            sx={{ ml: 1 }}
+                            title="Part year — not comparable with a full one"
+                          />
+                        )}
+                      </TableCell>
                       <TableCell align="right">{money(y.income)}</TableCell>
                       <TableCell align="right" sx={{ color: signColor(y.incomeChange ?? 0) }}>
                         {y.incomeChangePct === null ? '—' : formatPct(y.incomeChangePct)}
@@ -246,7 +300,7 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
               Biggest movers in spending
             </Typography>
             <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-              Latest year against the one before
+              {trailingLabel}
             </Typography>
             <Box sx={{ mt: 1.5 }}>
               {[...analytics.categoryTrends]

@@ -46,10 +46,16 @@ function parseOffset(value: unknown, field: string): number | undefined {
 
 export const getTransactions = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
-  const { from, to, type, category, search, limit, skip } = req.query;
+  const { from, to, type, category, search, sort, direction, limit, skip } = req.query;
 
   if (type && type !== 'income' && type !== 'expense') {
     throw new BadRequestError('type must be income or expense');
+  }
+  if (sort && sort !== 'date' && sort !== 'amount') {
+    throw new BadRequestError('sort must be date or amount');
+  }
+  if (direction && direction !== 'asc' && direction !== 'desc') {
+    throw new BadRequestError('direction must be asc or desc');
   }
 
   const page = await transactionService.getTransactions(user.id, contextGroups(req), {
@@ -58,6 +64,8 @@ export const getTransactions = async (req: Request, res: Response): Promise<void
     type: type as TransactionType | undefined,
     category: category ? String(category) : undefined,
     search: search ? String(search) : undefined,
+    sort: sort === 'amount' ? 'amount' : sort === 'date' ? 'date' : undefined,
+    direction: direction === 'asc' ? 'asc' : direction === 'desc' ? 'desc' : undefined,
     limit: parsePositiveInt(limit, 'limit'),
     skip: parseOffset(skip, 'skip')
   });
@@ -131,4 +139,48 @@ export const importTransactions = async (req: Request, res: Response): Promise<v
       ? `Imported ${result.imported}; ${result.duplicates} already present`
       : `Imported ${result.imported} transactions`
   );
+};
+
+/** Recategorise one transaction — the only field an import lets you edit. */
+export const editCategory = async (req: Request, res: Response): Promise<void> => {
+  const user = req.user!;
+  const userGroups = req.userGroups || [];
+  const { id } = req.params;
+  const { category } = req.body || {};
+
+  if (!category || typeof category !== 'string' || !category.trim()) {
+    throw new BadRequestError('category is required');
+  }
+
+  const updated = await transactionService.updateCategory(
+    id as string,
+    category.trim(),
+    user.id,
+    userGroups
+  );
+
+  sendSuccess(res, updated, 'Category updated');
+};
+
+/** Recategorise every row matching a category, optionally narrowed by text. */
+export const bulkRecategorise = async (req: Request, res: Response): Promise<void> => {
+  const user = req.user!;
+  const { fromCategory, toCategory, search } = req.body || {};
+
+  if (!fromCategory || typeof fromCategory !== 'string') {
+    throw new BadRequestError('fromCategory is required');
+  }
+  if (!toCategory || typeof toCategory !== 'string' || !toCategory.trim()) {
+    throw new BadRequestError('toCategory is required');
+  }
+
+  const groups = contextGroups(req);
+  const updated = await transactionService.recategorise(
+    { fromCategory, search: search ? String(search) : undefined },
+    toCategory.trim(),
+    user.id,
+    groups
+  );
+
+  sendSuccess(res, { updated }, `Moved ${updated} transaction${updated === 1 ? '' : 's'} to ${toCategory}`);
 };

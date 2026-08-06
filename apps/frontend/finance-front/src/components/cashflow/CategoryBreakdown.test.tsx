@@ -18,6 +18,7 @@ import { Analytics } from '../../services/cashflowService';
 
 const year = (y: number) => ({
   year: y, income: 0, expense: 0, consumption: 0, invested: 0, savings: 0, savingsRate: null,
+  months: 12, from: `${y}-01`, to: `${y}-12`, partial: false,
   incomeChange: null, incomeChangePct: null, expenseChange: null, expenseChangePct: null
 });
 
@@ -25,13 +26,19 @@ const analytics: Analytics = {
   years: [year(2024), year(2025)],
   investmentCategories: ['Investments', 'Savings'],
   months: [],
+  trailing: {
+    current: {
+      income: 0, expense: 0, consumption: 0, invested: 0, savings: 0, savingsRate: null,
+      months: 12, from: '2025-01', to: '2025-12'
+    },
+    previous: null
+  },
   categoryTrends: [
-    { category: 'Groceries', byYear: { 2024: 3000, 2025: 4000 }, total: 7000, latest: 4000, previous: 3000, change: 1000, changePct: 33.3 },
-    { category: 'Transport', byYear: { 2024: 1000, 2025: 800 }, total: 1800, latest: 800, previous: 1000, change: -200, changePct: -20 },
-    { category: 'Investments', byYear: { 2025: 24000 }, total: 24000, latest: 24000, previous: 0, change: 24000, changePct: null }
+    { category: 'Groceries', byYear: { 2024: 3000, 2025: 4000 }, total: 7000, latest: 4000, previous: 3000, change: 1000, changePct: 33.3, perMonth: 333 },
+    { category: 'Transport', byYear: { 2024: 1000, 2025: 800 }, total: 1800, latest: 800, previous: 1000, change: -200, changePct: -20, perMonth: 67 },
+    { category: 'Investments', byYear: { 2025: 24000 }, total: 24000, latest: 24000, previous: 0, change: 24000, changePct: null, perMonth: 2000 }
   ],
   incomeSources: [],
-  monthlyAverages: [],
   currency: 'EUR'
 };
 
@@ -108,4 +115,97 @@ it('offers category chips before one is picked', () => {
   render(<CategoryBreakdown analytics={analytics} />);
 
   expect(screen.getByText('Transport · 1800 €')).toBeInTheDocument();
+});
+
+it('switches back from the history view to the share view', async () => {
+  render(<CategoryBreakdown analytics={analytics} />);
+
+  await userEvent.click(screen.getByRole('button', { name: 'Over time' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Share' }));
+
+  expect(screen.getByTestId('pie-chart')).toBeInTheDocument();
+});
+
+it('clears the detail view when the picker is reset', async () => {
+  render(<CategoryBreakdown analytics={analytics} />);
+
+  await userEvent.click(screen.getByLabelText('Category'));
+  await userEvent.click(screen.getByRole('option', { name: 'Transport' }));
+  expect(screen.getByText('Lifetime')).toBeInTheDocument();
+
+  await userEvent.click(screen.getByLabelText('Category'));
+  await userEvent.click(screen.getByRole('option', { name: 'Pick one…' }));
+
+  expect(screen.queryByText('Lifetime')).not.toBeInTheDocument();
+});
+
+it('reports the per-year slope of the chosen category', async () => {
+  render(<CategoryBreakdown analytics={analytics} />);
+
+  await userEvent.click(screen.getByLabelText('Category'));
+  await userEvent.click(screen.getByRole('option', { name: 'Groceries' }));
+
+  // 3000 → 4000 across two years
+  expect(screen.getByText('+1000 € / year')).toBeInTheDocument();
+});
+
+it('handles a year with no spending in the chosen category', async () => {
+  render(
+    <CategoryBreakdown
+      analytics={{
+        ...analytics,
+        categoryTrends: [
+          { category: 'Travel', byYear: { 2025: 300 }, total: 300, latest: 300, previous: 0, change: 300, changePct: null, perMonth: 25 }
+        ]
+      }}
+    />
+  );
+
+  await userEvent.click(screen.getByLabelText('Category'));
+  await userEvent.click(screen.getByRole('option', { name: 'Travel' }));
+
+  // 2024 has none, so the bar series carries a zero rather than a gap
+  expect(screen.getByTestId('bar-chart')).toHaveTextContent('Travel:0,300');
+});
+
+it('picks a category from the chips when none is chosen yet', async () => {
+  render(<CategoryBreakdown analytics={analytics} />);
+
+  await userEvent.click(screen.getByText('Transport · 1800 €'));
+
+  expect(screen.getByText('Lifetime')).toBeInTheDocument();
+});
+
+it('shows an absolute change when there is no base to divide by', async () => {
+  render(
+    <CategoryBreakdown
+      analytics={{
+        ...analytics,
+        categoryTrends: [
+          { category: 'Travel', byYear: { 2025: 300 }, total: 300, latest: 300, previous: 0, change: 300, changePct: null, perMonth: 25 }
+        ]
+      }}
+    />
+  );
+
+  await userEvent.click(screen.getByLabelText('Category'));
+  await userEvent.click(screen.getByRole('option', { name: 'Travel' }));
+
+  expect(screen.getByText('+300 €')).toBeInTheDocument();
+});
+
+it('handles a latest year with no spending at all', () => {
+  render(
+    <CategoryBreakdown
+      analytics={{
+        ...analytics,
+        categoryTrends: [
+          { category: 'Rent', byYear: { 2024: 100 }, total: 100, latest: 0, previous: 100, change: -100, changePct: -100, perMonth: 0 }
+        ]
+      }}
+    />
+  );
+
+  // Nothing in the newest year, so no slice has a share to report
+  expect(screen.getByText('Rent')).toBeInTheDocument();
 });

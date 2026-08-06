@@ -1,9 +1,9 @@
 import React from 'react';
-import { Card, CardContent, Typography, Box, Button, LinearProgress, Tooltip } from '@mui/material';
-import { AccountBalanceWallet, Link as LinkIcon } from '@mui/icons-material';
+import { Card, CardContent, Typography, Box, Button, LinearProgress, Tooltip, Chip } from '@mui/material';
+import { AccountBalanceWallet, ArrowForward } from '@mui/icons-material';
 import { Link } from 'react-router';
 import { DashboardData } from '../services/dashboardService';
-import { formatCurrency, formatPct } from '../utils/numberUtils';
+import { formatCurrency, formatPct, formatPeriod } from '../utils/numberUtils';
 
 interface CashflowCardProps {
   cashflow: NonNullable<DashboardData['cashflow']>;
@@ -13,66 +13,93 @@ interface CashflowCardProps {
 const signColor = (v: number) => (v > 0 ? 'success.main' : v < 0 ? 'error.main' : 'text.secondary');
 
 /**
- * The dashboard's answer to "why did net worth move?" — the split between money
- * saved and market movement, which neither the snapshot history nor the
- * holdings list can give on its own.
+ * The dashboard's cash-flow summary.
+ *
+ * Built on the trailing twelve months rather than the current month: the newest
+ * month is usually only part-imported, so a card keyed to it reports a collapse
+ * in income every time. A rolling year is always a complete, comparable figure.
  */
 const CashflowCard: React.FC<CashflowCardProps> = ({ cashflow, currency = 'EUR' }) => {
-  const { latestMonth, averageSavingsRate, growth } = cashflow;
+  const { trailing, previous, growth } = cashflow;
   const money = (v: number) => formatCurrency(v, currency);
 
-  // Share of the change attributable to contributions, for the split bar. Only
-  // meaningful when both parts push the same way — a month where savings went
-  // in but the market fell has no sensible 0–100 split.
+  const changeFrom = (now: number, before: number | undefined) =>
+    before === undefined || before === 0 ? null : ((now - before) / before) * 100;
+
+  const savingsChange = changeFrom(trailing.savings, previous?.savings);
+
+  // Share of the change attributable to contributions, for the split bar.
   const total = growth ? Math.abs(growth.contributions) + Math.abs(growth.marketGrowth) : 0;
   const contributionShare = total > 0 ? (Math.abs(growth!.contributions) / total) * 100 : 0;
 
   return (
     <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', height: '100%' }}>
       <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
           <AccountBalanceWallet sx={{ mr: 2, color: '#11998e' }} />
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>Cash Flow</Typography>
+          <Typography variant="h6" sx={{ fontWeight: 600, flexGrow: 1 }}>Cash Flow</Typography>
+          <Button component={Link} to="/cash-flow" size="small" endIcon={<ArrowForward />}>
+            Details
+          </Button>
         </Box>
+        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2.5 }}>
+          Last 12 months · {formatPeriod(trailing.from)} – {formatPeriod(trailing.to)}
+        </Typography>
 
-        {latestMonth && (
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 3 }}>
-            <Box>
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                Saved · {latestMonth.month}
-              </Typography>
-              <Typography variant="h6" sx={{ fontWeight: 700, color: signColor(latestMonth.savings) }}>
-                {money(latestMonth.savings)}
-              </Typography>
-            </Box>
-            <Box>
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>Savings rate</Typography>
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                {latestMonth.savingsRate === null ? '—' : formatPct(latestMonth.savingsRate)}
-              </Typography>
-            </Box>
-            {averageSavingsRate !== null && (
-              <Box>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>12-month average</Typography>
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatPct(averageSavingsRate)}</Typography>
-              </Box>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+            gap: 2,
+            mb: growth ? 3 : 0
+          }}
+        >
+          <Box>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>Income</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>{money(trailing.income)}</Typography>
+          </Box>
+          <Box>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>Spending</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>{money(trailing.consumption)}</Typography>
+          </Box>
+          <Box>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>Kept</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 700, color: signColor(trailing.savings) }}>
+              {money(trailing.savings)}
+            </Typography>
+            {savingsChange !== null && (
+              <Chip
+                size="small"
+                variant="outlined"
+                color={savingsChange >= 0 ? 'success' : 'error'}
+                label={`${formatPct(savingsChange)} vs prior year`}
+                sx={{ mt: 0.5 }}
+              />
             )}
           </Box>
-        )}
+          <Box>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>Savings rate</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              {trailing.savingsRate === null ? '—' : formatPct(trailing.savingsRate)}
+            </Typography>
+            {trailing.invested > 0 && (
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                {money(trailing.invested)} invested
+              </Typography>
+            )}
+          </Box>
+        </Box>
 
+        {/* Only carried when the period is fully covered by transactions —
+            see the dashboard service. */}
         {growth && (
           <Box>
             <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
-              Net worth moved {money(growth.netWorthChange)} from {growth.from} to {growth.to}
+              Net worth moved {money(growth.netWorthChange)} from {formatPeriod(growth.from)} to{' '}
+              {formatPeriod(growth.to)}
             </Typography>
 
-            <Tooltip
-              title={
-                growth.complete
-                  ? `${money(growth.contributions)} contributed · ${money(growth.marketGrowth)} market`
-                  : `No transactions recorded for ${growth.from}, so the split is not yet reliable`
-              }
-            >
+            <Tooltip title={`${money(growth.contributions)} contributed · ${money(growth.marketGrowth)} market`}>
               <LinearProgress
                 variant="determinate"
                 value={contributionShare}
@@ -81,7 +108,6 @@ const CashflowCard: React.FC<CashflowCardProps> = ({ cashflow, currency = 'EUR' 
                   borderRadius: 5,
                   mb: 1.5,
                   bgcolor: 'action.hover',
-                  opacity: growth.complete ? 1 : 0.5,
                   '& .MuiLinearProgress-bar': { bgcolor: '#11998e', borderRadius: 5 }
                 }}
               />
@@ -99,24 +125,8 @@ const CashflowCard: React.FC<CashflowCardProps> = ({ cashflow, currency = 'EUR' 
                 </Typography>
               </Box>
             </Box>
-
-            {!growth.complete && (
-              <Typography variant="caption" sx={{ color: 'warning.main', display: 'block', mt: 1.5 }}>
-                No transactions for {growth.from} — the whole change is shown as market movement.
-              </Typography>
-            )}
           </Box>
         )}
-
-        <Button
-          component={Link}
-          to="/cash-flow"
-          size="small"
-          startIcon={<LinkIcon />}
-          sx={{ mt: 2 }}
-        >
-          Open cash flow
-        </Button>
       </CardContent>
     </Card>
   );

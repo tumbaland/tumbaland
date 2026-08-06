@@ -2,8 +2,7 @@ import Transaction from '../models/Transaction';
 import { scopeFor } from '../utils/scope';
 import { INVESTMENT_CATEGORIES } from './bankStatement.service';
 
-export interface YearSummary {
-  year: number;
+export interface PeriodTotals {
   income: number;
   /** Everything that left the account, consumption and investing alike. */
   expense: number;
@@ -11,28 +10,44 @@ export interface YearSummary {
   consumption: number;
   /** Money moved into crypto, a broker or a savings product. */
   invested: number;
+  /** income − consumption: investing counts as kept, not spent. */
   savings: number;
-  /**
-   * Share of income not consumed. Investing is not spending, so a month that
-   * put 4 000 into a broker reads as saved rather than as a savings-rate crash.
-   */
   savingsRate: number | null;
+  /** Months the window covers, so a partial period can be labelled as one. */
+  months: number;
+  from: string;
+  to: string;
+}
+
+export interface YearSummary extends PeriodTotals {
+  year: number;
   /** Change against the previous year, null for the first year on record. */
   incomeChange: number | null;
   incomeChangePct: number | null;
   expenseChange: number | null;
   expenseChangePct: number | null;
+  /**
+   * True when the year has fewer than twelve months of data. Comparing a
+   * part-year total against a full one reads as a collapse in spending when
+   * nothing has changed, so the UI has to be able to say which is which.
+   */
+  partial: boolean;
 }
 
 export interface CategoryTrend {
   category: string;
-  /** Spend per year, keyed by year, for a sparkline. */
+  /** Spend per calendar year, for the stacked chart. */
   byYear: Record<number, number>;
+  /** Everything ever recorded in this category. */
   total: number;
+  /** Spend over the trailing window. */
   latest: number;
+  /** Spend over the window before it — the like-for-like comparison. */
   previous: number;
   change: number;
   changePct: number | null;
+  /** `latest` divided by the window length, which is what a budget compares to. */
+  perMonth: number;
 }
 
 export interface IncomeSource {
@@ -51,209 +66,275 @@ export interface PeriodPoint {
 
 export interface Analytics {
   years: YearSummary[];
-  /** Category names treated as investing rather than spending. */
-  investmentCategories: string[];
-  /**
-   * The same totals as `years` but per month, so the charts can switch
-   * granularity without a second request. Months with no activity are filled
-   * in as zero: a gap in the series would otherwise read as a flat line
-   * between two distant points rather than as a month with no spending.
-   */
   months: PeriodPoint[];
-  /** Biggest movers in spending between the two most recent complete years. */
+  /**
+   * The last twelve months of data and the twelve before them. Calendar years
+   * are the wrong comparison for most of the year — in March, "this year" is
+   * two months against twelve — so every headline figure and every category
+   * comparison uses these instead.
+   */
+  trailing: { current: PeriodTotals; previous: PeriodTotals | null };
   categoryTrends: CategoryTrend[];
   incomeSources: IncomeSource[];
-  /** Mean monthly spend per year, which is easier to compare than annual totals. */
-  monthlyAverages: Array<{ year: number; income: number; expense: number; months: number }>;
+  /** Category names treated as investing rather than spending. */
+  investmentCategories: string[];
   currency: string;
 }
+
+/** How many months the trailing comparison covers. */
+export const TRAILING_MONTHS = 12;
+
+/** Longest month series worth returning — see buildMonthSeries. */
+const MAX_MONTH_POINTS = 600;
 
 const pct = (change: number, base: number): number | null =>
   base > 0 ? (change / base) * 100 : null;
 
-interface MonthTotalRow {
-  _id: { year: number; month: number; type: string };
+interface MonthCategoryRow {
+  _id: { year: number; month: number; category: string; type: 'income' | 'expense' };
   total: number;
 }
 
-/**
- * Longest month series worth returning — fifty years. Zero-filling runs from the
- * first month with activity to the last, so one transaction carrying a corrupt
- * far-future date would otherwise generate tens of thousands of empty points
- * and hand the browser a chart it cannot draw.
- */
-const MAX_MONTH_POINTS = 600;
+const monthKey = (year: number, month: number) => `${year}-${String(month).padStart(2, '0')}`;
 
-/**
- * A continuous month-by-month series from the first month with activity to the
- * last, zero-filled. A chart drawn from sparse points would join two distant
- * months with a straight line and imply spending that never happened.
- */
-function buildMonthSeries(rows: MonthTotalRow[]): PeriodPoint[] {
-  if (rows.length === 0) return [];
+/** Every month key between two, inclusive, so a gap does not become a chart artefact. */
+function monthRange(first: string, last: string): string[] {
+  const [fy, fm] = first.split('-').map(Number);
+  const [ly, lm] = last.split('-').map(Number);
 
-  const totals = new Map<string, { income: number; expense: number }>();
-  for (const row of rows) {
-    const key = `${row._id.year}-${String(row._id.month).padStart(2, '0')}`;
-    const bucket = totals.get(key) || { income: 0, expense: 0 };
-    bucket[row._id.type as 'income' | 'expense'] = row.total;
-    totals.set(key, bucket);
+  const end = new Date(Date.UTC(ly, lm - 1, 1));
+  let start = new Date(Date.UTC(fy, fm - 1, 1));
+  if (Number.isNaN(+start) || Number.isNaN(+end) || start > end) return [];
+
+  // A single corrupt date decades out would otherwise zero-fill the whole gap.
+  // Clamping the *start* forward keeps the recent end — the part anyone looks
+  // at — where clamping the loop would have kept the ancient beginning instead.
+  const span = (end.getUTCFullYear() - start.getUTCFullYear()) * 12
+    + (end.getUTCMonth() - start.getUTCMonth()) + 1;
+  if (span > MAX_MONTH_POINTS) {
+    start = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - (MAX_MONTH_POINTS - 1), 1));
   }
 
-  const keys = [...totals.keys()].sort();
-  const [firstYear, firstMonth] = keys[0].split('-').map(Number);
-  const [lastYear, lastMonth] = keys[keys.length - 1].split('-').map(Number);
-
-  const series: PeriodPoint[] = [];
-  const cursor = new Date(Date.UTC(firstYear, firstMonth - 1, 1));
-  const end = new Date(Date.UTC(lastYear, lastMonth - 1, 1));
-
-  while (cursor <= end && series.length < MAX_MONTH_POINTS) {
-    const period = cursor.toISOString().slice(0, 7);
-    const { income, expense } = totals.get(period) || { income: 0, expense: 0 };
-    series.push({ period, income, expense, savings: income - expense });
+  const keys: string[] = [];
+  const cursor = start;
+  while (cursor <= end) {
+    keys.push(cursor.toISOString().slice(0, 7));
     cursor.setUTCMonth(cursor.getUTCMonth() + 1);
   }
+  return keys;
+}
 
-  // Truncating from the front keeps the recent end, which is the part anyone
-  // looks at, rather than fifty years of leading zeroes.
-  return series.length < MAX_MONTH_POINTS ? series : series.slice(-MAX_MONTH_POINTS);
+interface Bucket {
+  income: number;
+  expense: number;
+  invested: number;
+}
+
+const emptyBucket = (): Bucket => ({ income: 0, expense: 0, invested: 0 });
+
+function summarize(bucket: Bucket, months: number, from: string, to: string): PeriodTotals {
+  const consumption = bucket.expense - bucket.invested;
+  return {
+    income: bucket.income,
+    expense: bucket.expense,
+    consumption,
+    invested: bucket.invested,
+    savings: bucket.income - consumption,
+    // A rate against no income is undefined, not zero.
+    savingsRate: bucket.income > 0 ? ((bucket.income - consumption) / bucket.income) * 100 : null,
+    months,
+    from,
+    to
+  };
 }
 
 /**
- * Long-run view of the cash-flow history: how income and spending have moved
- * year on year, which categories are driving the change, and where the income
- * came from.
+ * Long-run view of the cash-flow history: how income and spending have moved,
+ * which categories are driving the change, and where the income came from.
  *
- * Everything is computed in Mongo rather than by pulling the rows out — the
- * history runs to thousands of transactions and only the aggregates are wanted.
+ * One aggregation supplies all of it. The history runs to thousands of rows and
+ * only the monthly per-category totals are needed; everything else is a fold
+ * over that, which keeps the comparisons consistent with each other.
  */
 export const getAnalytics = async (userId: string, groupId?: string): Promise<Analytics> => {
   const scope = scopeFor(userId, groupId);
 
-  const [byYearType, byCategoryYear, monthsPerYear, byMonthType] = await Promise.all([
-    Transaction.aggregate([
-      { $match: scope },
-      {
-        $group: {
-          _id: { year: { $year: '$date' }, type: '$type' },
-          total: { $sum: '$amount' }
-        }
+  const rows: MonthCategoryRow[] = await Transaction.aggregate([
+    { $match: scope },
+    {
+      $group: {
+        _id: {
+          year: { $year: '$date' },
+          month: { $month: '$date' },
+          category: '$category',
+          type: '$type'
+        },
+        total: { $sum: '$amount' }
       }
-    ]),
-    Transaction.aggregate([
-      { $match: scope },
-      {
-        $group: {
-          _id: { year: { $year: '$date' }, category: '$category', type: '$type' },
-          total: { $sum: '$amount' }
-        }
-      }
-    ]),
-    // How many distinct months each year actually has data for, so a partial
-    // year is averaged over the months it covers instead of a flat twelve.
-    Transaction.aggregate([
-      { $match: scope },
-      { $group: { _id: { year: { $year: '$date' }, month: { $month: '$date' } } } },
-      { $group: { _id: '$_id.year', months: { $sum: 1 } } }
-    ]),
-    Transaction.aggregate([
-      { $match: scope },
-      {
-        $group: {
-          _id: { year: { $year: '$date' }, month: { $month: '$date' }, type: '$type' },
-          total: { $sum: '$amount' }
-        }
-      }
-    ])
+    }
   ]);
 
-  // ---- per-year totals -----------------------------------------------------
-  const yearTotals = new Map<number, { income: number; expense: number }>();
-  for (const row of byYearType) {
-    const bucket = yearTotals.get(row._id.year) || { income: 0, expense: 0 };
-    bucket[row._id.type as 'income' | 'expense'] = row.total;
-    yearTotals.set(row._id.year, bucket);
+  const base = {
+    years: [] as YearSummary[],
+    months: [] as PeriodPoint[],
+    trailing: { current: summarize(emptyBucket(), 0, '', ''), previous: null },
+    categoryTrends: [] as CategoryTrend[],
+    incomeSources: [] as IncomeSource[],
+    investmentCategories: [...INVESTMENT_CATEGORIES],
+    currency: 'EUR'
+  };
+  if (rows.length === 0) return base;
+
+  // ---- fold the rows into the shapes everything else reads --------------
+  const byMonth = new Map<string, Bucket>();
+  const byYear = new Map<number, Bucket>();
+  const monthsPerYear = new Map<number, Set<number>>();
+  const spendByCategoryMonth = new Map<string, Map<string, number>>();
+  const spendByCategoryYear = new Map<string, Record<number, number>>();
+  const incomeByCategoryYear = new Map<string, Record<number, number>>();
+
+  for (const row of rows) {
+    const { year, month, category, type } = row._id;
+    const key = monthKey(year, month);
+    const isInvestment = type === 'expense' && INVESTMENT_CATEGORIES.has(category);
+
+    const monthBucket = byMonth.get(key) || emptyBucket();
+    const yearBucket = byYear.get(year) || emptyBucket();
+    monthBucket[type] += row.total;
+    yearBucket[type] += row.total;
+    if (isInvestment) {
+      monthBucket.invested += row.total;
+      yearBucket.invested += row.total;
+    }
+    byMonth.set(key, monthBucket);
+    byYear.set(year, yearBucket);
+
+    const seen = monthsPerYear.get(year) || new Set<number>();
+    seen.add(month);
+    monthsPerYear.set(year, seen);
+
+    if (type === 'expense') {
+      const perMonth = spendByCategoryMonth.get(category) || new Map<string, number>();
+      perMonth.set(key, (perMonth.get(key) || 0) + row.total);
+      spendByCategoryMonth.set(category, perMonth);
+
+      const perYear = spendByCategoryYear.get(category) || {};
+      perYear[year] = (perYear[year] || 0) + row.total;
+      spendByCategoryYear.set(category, perYear);
+    } else {
+      const perYear = incomeByCategoryYear.get(category) || {};
+      perYear[year] = (perYear[year] || 0) + row.total;
+      incomeByCategoryYear.set(category, perYear);
+    }
   }
 
-  // How much of each year's outgoings went into an asset rather than being spent
-  const investedByYear = new Map<number, number>();
-  for (const row of byCategoryYear) {
-    if (row._id.type !== 'expense' || !INVESTMENT_CATEGORIES.has(row._id.category)) continue;
-    investedByYear.set(row._id.year, (investedByYear.get(row._id.year) || 0) + row.total);
-  }
-
-  const orderedYears = [...yearTotals.keys()].sort((a, b) => a - b);
-  const years: YearSummary[] = orderedYears.map((year, index) => {
-    const { income, expense } = yearTotals.get(year)!;
-    const previous = index > 0 ? yearTotals.get(orderedYears[index - 1])! : null;
-    const invested = investedByYear.get(year) || 0;
-    const consumption = expense - invested;
-
-    const incomeChange = previous ? income - previous.income : null;
-    const expenseChange = previous ? expense - previous.expense : null;
-
+  // ---- month series -----------------------------------------------------
+  const presentMonths = [...byMonth.keys()].sort();
+  const allMonths = monthRange(presentMonths[0], presentMonths[presentMonths.length - 1]);
+  const months: PeriodPoint[] = allMonths.map((period) => {
+    const bucket = byMonth.get(period) || emptyBucket();
+    const consumption = bucket.expense - bucket.invested;
     return {
-      year,
-      income,
-      expense,
-      consumption,
-      invested,
-      savings: income - consumption,
-      savingsRate: income > 0 ? ((income - consumption) / income) * 100 : null,
-      incomeChange,
-      incomeChangePct: previous && incomeChange !== null ? pct(incomeChange, previous.income) : null,
-      expenseChange,
-      expenseChangePct: previous && expenseChange !== null ? pct(expenseChange, previous.expense) : null
+      period,
+      income: bucket.income,
+      expense: bucket.expense,
+      savings: bucket.income - consumption
     };
   });
 
-  // ---- category trends -----------------------------------------------------
-  const spendByCategory = new Map<string, Record<number, number>>();
-  const incomeByCategory = new Map<string, Record<number, number>>();
+  // ---- trailing windows -------------------------------------------------
+  // Anchored on the newest month that has data rather than on today: an import
+  // can lag by weeks, and a window ending in an empty month would report a
+  // collapse in both income and spending that never happened.
+  const currentWindow = allMonths.slice(-TRAILING_MONTHS);
+  const previousWindow = allMonths.slice(-TRAILING_MONTHS * 2, -TRAILING_MONTHS);
 
-  for (const row of byCategoryYear) {
-    const target = row._id.type === 'expense' ? spendByCategory : incomeByCategory;
-    const byYear = target.get(row._id.category) || {};
-    byYear[row._id.year] = row.total;
-    target.set(row._id.category, byYear);
-  }
+  const foldWindow = (window: string[]): Bucket =>
+    window.reduce((acc, key) => {
+      const bucket = byMonth.get(key) || emptyBucket();
+      acc.income += bucket.income;
+      acc.expense += bucket.expense;
+      acc.invested += bucket.invested;
+      return acc;
+    }, emptyBucket());
 
-  const latestYear = orderedYears[orderedYears.length - 1];
-  const previousYear = orderedYears[orderedYears.length - 2];
+  const trailing = {
+    current: summarize(
+      foldWindow(currentWindow),
+      currentWindow.length,
+      currentWindow[0],
+      currentWindow[currentWindow.length - 1]
+    ),
+    previous:
+      previousWindow.length > 0
+        ? summarize(
+            foldWindow(previousWindow),
+            previousWindow.length,
+            previousWindow[0],
+            previousWindow[previousWindow.length - 1]
+          )
+        : null
+  };
 
-  const categoryTrends: CategoryTrend[] = [...spendByCategory.entries()]
-    .map(([category, byYear]) => {
-      const latest = byYear[latestYear] || 0;
-      const previous = previousYear === undefined ? 0 : byYear[previousYear] || 0;
-      const total = Object.values(byYear).reduce((sum, v) => sum + v, 0);
+  // ---- years ------------------------------------------------------------
+  const orderedYears = [...byYear.keys()].sort((a, b) => a - b);
+  const years: YearSummary[] = orderedYears.map((year, index) => {
+    const bucket = byYear.get(year)!;
+    const covered = monthsPerYear.get(year)?.size ?? 0;
+    const previous = index > 0 ? byYear.get(orderedYears[index - 1])! : null;
+
+    const incomeChange = previous ? bucket.income - previous.income : null;
+    const expenseChange = previous ? bucket.expense - previous.expense : null;
+
+    return {
+      year,
+      ...summarize(bucket, covered, monthKey(year, 1), monthKey(year, 12)),
+      incomeChange,
+      incomeChangePct: incomeChange === null ? null : pct(incomeChange, previous!.income),
+      expenseChange,
+      expenseChangePct: expenseChange === null ? null : pct(expenseChange, previous!.expense),
+      partial: covered < 12
+    };
+  });
+
+  // ---- categories, compared on the trailing windows ----------------------
+  const sumWindow = (perMonth: Map<string, number>, window: string[]) =>
+    window.reduce((sum, key) => sum + (perMonth.get(key) || 0), 0);
+
+  const categoryTrends: CategoryTrend[] = [...spendByCategoryMonth.entries()]
+    .map(([category, perMonth]) => {
+      const latest = sumWindow(perMonth, currentWindow);
+      const previous = sumWindow(perMonth, previousWindow);
+      const total = [...perMonth.values()].reduce((sum, v) => sum + v, 0);
+
       return {
         category,
-        byYear,
+        byYear: spendByCategoryYear.get(category) || {},
         total,
         latest,
         previous,
         change: latest - previous,
-        changePct: pct(latest - previous, previous)
+        changePct: pct(latest - previous, previous),
+        perMonth: currentWindow.length > 0 ? latest / currentWindow.length : 0
       };
     })
-    .sort((a, b) => b.total - a.total);
+    .sort((a, b) => b.latest - a.latest);
 
-  const incomeSources: IncomeSource[] = [...incomeByCategory.entries()]
-    .map(([category, byYear]) => ({
+  const incomeSources: IncomeSource[] = [...incomeByCategoryYear.entries()]
+    .map(([category, perYear]) => ({
       category,
-      byYear,
-      total: Object.values(byYear).reduce((sum, v) => sum + v, 0)
+      byYear: perYear,
+      total: Object.values(perYear).reduce((sum, v) => sum + v, 0)
     }))
     .sort((a, b) => b.total - a.total);
 
-  // ---- monthly averages ----------------------------------------------------
-  const monthsByYear = new Map<number, number>(monthsPerYear.map((r) => [r._id, r.months]));
-  const monthlyAverages = orderedYears.map((year) => {
-    const { income, expense } = yearTotals.get(year)!;
-    const months = monthsByYear.get(year) || 12;
-    return { year, income: income / months, expense: expense / months, months };
-  });
-
-  return { years, investmentCategories: [...INVESTMENT_CATEGORIES], months: buildMonthSeries(byMonthType), categoryTrends, incomeSources, monthlyAverages, currency: 'EUR' };
+  return {
+    years,
+    months,
+    trailing,
+    categoryTrends,
+    incomeSources,
+    investmentCategories: [...INVESTMENT_CATEGORIES],
+    currency: 'EUR'
+  };
 };

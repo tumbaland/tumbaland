@@ -1,116 +1,192 @@
 jest.mock('../models/Transaction', () => ({ __esModule: true, default: { aggregate: jest.fn() } }));
 
 import Transaction from '../models/Transaction';
-import { getAnalytics } from './analytics.service';
+import { getAnalytics, TRAILING_MONTHS } from './analytics.service';
 
 const mockedAggregate = Transaction.aggregate as unknown as jest.Mock;
 
-/**
- * The service fires four aggregations in parallel; this feeds each in order:
- * per year+type totals, per year+category+type totals, months-with-data, and
- * per month+type totals.
- */
-const withAggregates = (
-  yearType: unknown[],
-  categoryYear: unknown[],
-  months: unknown[],
-  monthType: unknown[] = []
-) => {
-  mockedAggregate
-    .mockResolvedValueOnce(yearType)
-    .mockResolvedValueOnce(categoryYear)
-    .mockResolvedValueOnce(months)
-    .mockResolvedValueOnce(monthType);
-};
+/** One row of the single monthly-per-category aggregation the service runs. */
+const row = (
+  year: number,
+  month: number,
+  category: string,
+  type: 'income' | 'expense',
+  total: number
+) => ({ _id: { year, month, category, type }, total });
 
-const yt = (year: number, type: string, total: number) => ({ _id: { year, type }, total });
-const cy = (year: number, category: string, type: string, total: number) => ({
-  _id: { year, category, type },
-  total
-});
+const withRows = (...rows: unknown[]) => mockedAggregate.mockResolvedValue(rows);
+
+/** A full year of one category, so trailing windows have something to cover. */
+const yearOf = (year: number, category: string, type: 'income' | 'expense', perMonth: number) =>
+  Array.from({ length: 12 }, (_, i) => row(year, i + 1, category, type, perMonth));
 
 beforeEach(() => jest.clearAllMocks());
 
-describe('years', () => {
-  it('is empty with no transactions', async () => {
-    withAggregates([], [], []);
+describe('empty history', () => {
+  it('returns empty structures rather than throwing', async () => {
+    withRows();
 
     const analytics = await getAnalytics('u1');
 
     expect(analytics.years).toEqual([]);
+    expect(analytics.months).toEqual([]);
     expect(analytics.categoryTrends).toEqual([]);
+    expect(analytics.trailing.previous).toBeNull();
   });
 
-  it('summarises income, expense and savings per year', async () => {
-    withAggregates([yt(2025, 'income', 50000), yt(2025, 'expense', 20000)], [], [{ _id: 2025, months: 12 }]);
+  it('still reports which categories count as investing', async () => {
+    withRows();
+
+    expect((await getAnalytics('u1')).investmentCategories).toEqual(
+      expect.arrayContaining(['Investments', 'Savings'])
+    );
+  });
+});
+
+describe('years', () => {
+  it('summarises income, spending and savings', async () => {
+    withRows(...yearOf(2025, 'Salary', 'income', 5000), ...yearOf(2025, 'Groceries', 'expense', 2000));
 
     const [year] = (await getAnalytics('u1')).years;
 
-    expect(year).toMatchObject({ year: 2025, income: 50000, expense: 20000, savings: 30000 });
+    expect(year).toMatchObject({ year: 2025, income: 60000, expense: 24000, consumption: 24000 });
     expect(year.savingsRate).toBeCloseTo(60, 6);
+    expect(year.partial).toBe(false);
   });
 
-  it('leaves the first year on record without a comparison', async () => {
-    withAggregates([yt(2025, 'income', 100)], [], []);
+  it('marks a year with fewer than twelve months as partial', async () => {
+    // Two months of 2026 must not read as a collapse against a full 2025
+    withRows(row(2026, 1, 'Groceries', 'expense', 100), row(2026, 2, 'Groceries', 'expense', 100));
 
     const [year] = (await getAnalytics('u1')).years;
 
-    expect(year.incomeChange).toBeNull();
-    expect(year.expenseChangePct).toBeNull();
+    expect(year.partial).toBe(true);
+    expect(year.months).toBe(2);
   });
 
   it('compares each year against the one before', async () => {
-    withAggregates(
-      [
-        yt(2024, 'income', 40000), yt(2024, 'expense', 20000),
-        yt(2025, 'income', 50000), yt(2025, 'expense', 15000)
-      ],
-      [],
-      []
+    withRows(
+      ...yearOf(2024, 'Salary', 'income', 1000),
+      ...yearOf(2025, 'Salary', 'income', 1250)
     );
 
     const [, latest] = (await getAnalytics('u1')).years;
 
-    expect(latest.incomeChange).toBe(10000);
+    expect(latest.incomeChange).toBe(3000);
     expect(latest.incomeChangePct).toBeCloseTo(25, 6);
-    expect(latest.expenseChange).toBe(-5000);
-    expect(latest.expenseChangePct).toBeCloseTo(-25, 6);
   });
 
   it('orders years oldest first', async () => {
-    withAggregates([yt(2026, 'income', 1), yt(2024, 'income', 1), yt(2025, 'income', 1)], [], []);
+    withRows(
+      row(2026, 1, 'A', 'expense', 1),
+      row(2024, 1, 'A', 'expense', 1),
+      row(2025, 1, 'A', 'expense', 1)
+    );
 
     expect((await getAnalytics('u1')).years.map((y) => y.year)).toEqual([2024, 2025, 2026]);
   });
 
   it('reports the savings rate as unknown for a year with no income', async () => {
-    withAggregates([yt(2025, 'expense', 500)], [], []);
+    withRows(row(2025, 1, 'Groceries', 'expense', 500));
 
     expect((await getAnalytics('u1')).years[0].savingsRate).toBeNull();
   });
 });
 
+describe('trailing windows', () => {
+  it('covers the last twelve months of data and the twelve before', async () => {
+    withRows(
+      ...yearOf(2024, 'Salary', 'income', 1000),
+      ...yearOf(2025, 'Salary', 'income', 2000)
+    );
+
+    const { trailing } = await getAnalytics('u1');
+
+    expect(trailing.current).toMatchObject({ income: 24000, months: TRAILING_MONTHS, from: '2025-01', to: '2025-12' });
+    expect(trailing.previous).toMatchObject({ income: 12000, from: '2024-01', to: '2024-12' });
+  });
+
+  it('anchors on the newest month with data, not on today', async () => {
+    // An import that lags by months must not report an empty trailing window
+    withRows(...yearOf(2020, 'Salary', 'income', 100));
+
+    expect((await getAnalytics('u1')).trailing.current).toMatchObject({ to: '2020-12', income: 1200 });
+  });
+
+  it('has no previous window until there are two years of data', async () => {
+    withRows(...yearOf(2025, 'Salary', 'income', 100));
+
+    expect((await getAnalytics('u1')).trailing.previous).toBeNull();
+  });
+
+  it('covers fewer months when that is all there is', async () => {
+    withRows(row(2026, 1, 'Salary', 'income', 100), row(2026, 2, 'Salary', 'income', 100));
+
+    expect((await getAnalytics('u1')).trailing.current.months).toBe(2);
+  });
+
+  it('keeps investing out of consumption and out of the savings rate', async () => {
+    withRows(
+      ...yearOf(2025, 'Salary', 'income', 5000),
+      ...yearOf(2025, 'Groceries', 'expense', 1000),
+      ...yearOf(2025, 'Investments', 'expense', 3000)
+    );
+
+    const { current } = (await getAnalytics('u1')).trailing;
+
+    expect(current.expense).toBe(48000);
+    expect(current.consumption).toBe(12000);
+    expect(current.invested).toBe(36000);
+    expect(current.savings).toBe(48000);
+    expect(current.savingsRate).toBeCloseTo(80, 6);
+  });
+});
+
 describe('category trends', () => {
-  it('tracks spend per year and the change into the latest one', async () => {
-    withAggregates(
-      [yt(2024, 'expense', 1000), yt(2025, 'expense', 1500)],
-      [cy(2024, 'Groceries', 'expense', 1000), cy(2025, 'Groceries', 'expense', 1500)],
-      []
+  it('compares the trailing window against the one before, not calendar years', async () => {
+    withRows(
+      ...yearOf(2024, 'Groceries', 'expense', 100),
+      ...yearOf(2025, 'Groceries', 'expense', 150)
     );
 
     const [trend] = (await getAnalytics('u1')).categoryTrends;
 
-    expect(trend).toMatchObject({ category: 'Groceries', latest: 1500, previous: 1000, change: 500 });
+    expect(trend).toMatchObject({ category: 'Groceries', latest: 1800, previous: 1200, change: 600 });
     expect(trend.changePct).toBeCloseTo(50, 6);
-    expect(trend.byYear).toEqual({ 2024: 1000, 2025: 1500 });
   });
 
-  it('treats a category new in the latest year as all change', async () => {
-    withAggregates(
-      [yt(2024, 'expense', 10), yt(2025, 'expense', 300)],
-      [cy(2024, 'Rent', 'expense', 10), cy(2025, 'Travel', 'expense', 300)],
-      []
-    );
+  it('reports a per-month figure over the window, not a lifetime average', async () => {
+    // Ten years of history, but the figure has to describe the recent year
+    const rows = [];
+    for (let y = 2016; y <= 2025; y++) rows.push(...yearOf(y, 'Groceries', 'expense', y === 2025 ? 300 : 100));
+    withRows(...rows);
+
+    const [trend] = (await getAnalytics('u1')).categoryTrends;
+
+    expect(trend.perMonth).toBeCloseTo(300, 6);
+    expect(trend.total).toBe(14400);
+  });
+
+  it('does not let a part year look like a collapse', async () => {
+    // Two months into 2026 the calendar-year comparison would read −83%;
+    // the trailing window sees a steady 100 a month.
+    const rows = [
+      ...yearOf(2024, 'Groceries', 'expense', 100),
+      ...yearOf(2025, 'Groceries', 'expense', 100),
+      row(2026, 1, 'Groceries', 'expense', 100),
+      row(2026, 2, 'Groceries', 'expense', 100)
+    ];
+    withRows(...rows);
+
+    const [trend] = (await getAnalytics('u1')).categoryTrends;
+
+    expect(trend.latest).toBe(1200);
+    expect(trend.previous).toBe(1200);
+    expect(trend.changePct).toBeCloseTo(0, 6);
+  });
+
+  it('treats a category new in the window as all change', async () => {
+    withRows(...yearOf(2024, 'Rent', 'expense', 10), ...yearOf(2025, 'Travel', 'expense', 25));
 
     const travel = (await getAnalytics('u1')).categoryTrends.find((c) => c.category === 'Travel');
 
@@ -119,107 +195,48 @@ describe('category trends', () => {
     expect(travel?.changePct).toBeNull();
   });
 
-  it('orders by lifetime total, largest first', async () => {
-    withAggregates(
-      [yt(2025, 'expense', 1300)],
-      [cy(2025, 'Small', 'expense', 300), cy(2025, 'Big', 'expense', 1000)],
-      []
+  it('orders by recent spend, largest first', async () => {
+    withRows(
+      ...yearOf(2025, 'Small', 'expense', 10),
+      ...yearOf(2025, 'Big', 'expense', 500)
     );
 
     expect((await getAnalytics('u1')).categoryTrends.map((c) => c.category)).toEqual(['Big', 'Small']);
   });
 
   it('keeps income out of the spending trends', async () => {
-    withAggregates(
-      [yt(2025, 'income', 5000), yt(2025, 'expense', 100)],
-      [cy(2025, 'Salary', 'income', 5000), cy(2025, 'Rent', 'expense', 100)],
-      []
-    );
+    withRows(...yearOf(2025, 'Salary', 'income', 100), ...yearOf(2025, 'Rent', 'expense', 50));
 
     const analytics = await getAnalytics('u1');
 
     expect(analytics.categoryTrends.map((c) => c.category)).toEqual(['Rent']);
     expect(analytics.incomeSources.map((s) => s.category)).toEqual(['Salary']);
   });
+
+  it('still carries per-year figures for the stacked chart', async () => {
+    withRows(...yearOf(2024, 'Groceries', 'expense', 100), ...yearOf(2025, 'Groceries', 'expense', 200));
+
+    expect((await getAnalytics('u1')).categoryTrends[0].byYear).toEqual({ 2024: 1200, 2025: 2400 });
+  });
 });
 
 describe('income sources', () => {
   it('totals each source across years, largest first', async () => {
-    withAggregates(
-      [yt(2024, 'income', 1), yt(2025, 'income', 1)],
-      [
-        cy(2024, 'Salary', 'income', 30000),
-        cy(2025, 'Salary', 'income', 35000),
-        cy(2025, 'Freelance', 'income', 5000)
-      ],
-      []
+    withRows(
+      ...yearOf(2025, 'Salary', 'income', 3000),
+      ...yearOf(2025, 'Freelance', 'income', 400)
     );
 
     const [salary, freelance] = (await getAnalytics('u1')).incomeSources;
 
-    expect(salary).toMatchObject({ category: 'Salary', total: 65000 });
-    expect(salary.byYear).toEqual({ 2024: 30000, 2025: 35000 });
-    expect(freelance.total).toBe(5000);
-  });
-});
-
-describe('monthly averages', () => {
-  it('divides by the months that actually have data', async () => {
-    // A part year: 3 months of data must not be averaged over twelve
-    withAggregates([yt(2026, 'expense', 3000)], [], [{ _id: 2026, months: 3 }]);
-
-    expect((await getAnalytics('u1')).monthlyAverages[0]).toMatchObject({
-      year: 2026,
-      expense: 1000,
-      months: 3
-    });
-  });
-
-  it('assumes a full year when the month count is missing', async () => {
-    withAggregates([yt(2025, 'expense', 1200)], [], []);
-
-    expect((await getAnalytics('u1')).monthlyAverages[0].expense).toBe(100);
-  });
-});
-
-describe('scoping', () => {
-  it('matches the group when one is given', async () => {
-    withAggregates([], [], []);
-
-    await getAnalytics('u1', 'g1');
-
-    expect(mockedAggregate.mock.calls[0][0][0]).toEqual({ $match: { groupId: { $in: ['g1'] } } });
-  });
-
-  it('matches personal documents otherwise', async () => {
-    withAggregates([], [], []);
-
-    await getAnalytics('u1');
-
-    expect(mockedAggregate.mock.calls[0][0][0].$match).toMatchObject({ userId: 'u1' });
+    expect(salary).toMatchObject({ category: 'Salary', total: 36000 });
+    expect(freelance.total).toBe(4800);
   });
 });
 
 describe('month series', () => {
-  const withMonths = (monthRows: unknown[]) => {
-    mockedAggregate
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce(monthRows);
-  };
-  const mt = (year: number, month: number, type: string, total: number) => ({
-    _id: { year, month, type },
-    total
-  });
-
-  it('is empty with no transactions', async () => {
-    withMonths([]);
-    expect((await getAnalytics('u1')).months).toEqual([]);
-  });
-
   it('pairs income and expense per month', async () => {
-    withMonths([mt(2026, 3, 'income', 3000), mt(2026, 3, 'expense', 1200)]);
+    withRows(row(2026, 3, 'Salary', 'income', 3000), row(2026, 3, 'Groceries', 'expense', 1200));
 
     expect((await getAnalytics('u1')).months).toEqual([
       { period: '2026-03', income: 3000, expense: 1200, savings: 1800 }
@@ -227,7 +244,7 @@ describe('month series', () => {
   });
 
   it('zero-fills a month with no activity rather than leaving a gap', async () => {
-    withMonths([mt(2026, 1, 'expense', 100), mt(2026, 4, 'expense', 400)]);
+    withRows(row(2026, 1, 'A', 'expense', 100), row(2026, 4, 'A', 'expense', 400));
 
     const months = (await getAnalytics('u1')).months;
 
@@ -236,67 +253,55 @@ describe('month series', () => {
   });
 
   it('spans a year boundary', async () => {
-    withMonths([mt(2025, 11, 'expense', 10), mt(2026, 2, 'expense', 20)]);
+    withRows(row(2025, 11, 'A', 'expense', 10), row(2026, 2, 'A', 'expense', 20));
 
     expect((await getAnalytics('u1')).months.map((m) => m.period)).toEqual([
       '2025-11', '2025-12', '2026-01', '2026-02'
     ]);
   });
 
+  it('counts investing as kept, not spent, in the monthly savings figure', async () => {
+    withRows(
+      row(2026, 1, 'Salary', 'income', 3000),
+      row(2026, 1, 'Investments', 'expense', 1000)
+    );
+
+    expect((await getAnalytics('u1')).months[0]).toMatchObject({ expense: 1000, savings: 3000 });
+  });
+
   it('bounds the series so one corrupt far-future date cannot flood the chart', async () => {
-    // A mistyped year would otherwise zero-fill ~96 000 months
-    withMonths([mt(2020, 1, 'expense', 100), mt(9999, 12, 'expense', 100)]);
+    withRows(row(2020, 1, 'A', 'expense', 100), row(9999, 12, 'A', 'expense', 100));
 
     const months = (await getAnalytics('u1')).months;
 
     expect(months.length).toBeLessThanOrEqual(600);
-    expect(months[0].period).toBe('2020-01');
+    // Truncation keeps the recent end, which is the part anyone looks at
+    expect(months[months.length - 1].period).toBe('9999-12');
   });
 });
 
-describe('investing versus consumption', () => {
-  it('keeps money moved into an asset out of the savings-rate calculation', async () => {
-    // 5000 in, 1000 consumed, 3000 into a broker: kept 4000, not 1000
-    withAggregates(
-      [yt(2025, 'income', 5000), yt(2025, 'expense', 4000)],
-      [cy(2025, 'Groceries', 'expense', 1000), cy(2025, 'Investments', 'expense', 3000)],
-      []
-    );
+describe('scoping', () => {
+  it('matches the group when one is given', async () => {
+    withRows();
 
-    const [year] = (await getAnalytics('u1')).years;
+    await getAnalytics('u1', 'g1');
 
-    expect(year.expense).toBe(4000);
-    expect(year.consumption).toBe(1000);
-    expect(year.invested).toBe(3000);
-    expect(year.savings).toBe(4000);
-    expect(year.savingsRate).toBeCloseTo(80, 6);
+    expect(mockedAggregate.mock.calls[0][0][0]).toEqual({ $match: { groupId: { $in: ['g1'] } } });
   });
 
-  it('counts a savings deposit the same way', async () => {
-    withAggregates(
-      [yt(2025, 'income', 1000), yt(2025, 'expense', 500)],
-      [cy(2025, 'Savings', 'expense', 500)],
-      []
-    );
+  it('matches personal documents otherwise', async () => {
+    withRows();
 
-    expect((await getAnalytics('u1')).years[0]).toMatchObject({ consumption: 0, invested: 500, savings: 1000 });
+    await getAnalytics('u1');
+
+    expect(mockedAggregate.mock.calls[0][0][0].$match).toMatchObject({ userId: 'u1' });
   });
 
-  it('leaves a year with no investing unchanged', async () => {
-    withAggregates(
-      [yt(2025, 'income', 1000), yt(2025, 'expense', 400)],
-      [cy(2025, 'Groceries', 'expense', 400)],
-      []
-    );
+  it('runs a single aggregation rather than one per view', async () => {
+    withRows();
 
-    expect((await getAnalytics('u1')).years[0]).toMatchObject({ consumption: 400, invested: 0, savings: 600 });
-  });
+    await getAnalytics('u1');
 
-  it('publishes which categories count as investing', async () => {
-    withAggregates([], [], []);
-
-    expect((await getAnalytics('u1')).investmentCategories).toEqual(
-      expect.arrayContaining(['Investments', 'Savings'])
-    );
+    expect(mockedAggregate).toHaveBeenCalledTimes(1);
   });
 });

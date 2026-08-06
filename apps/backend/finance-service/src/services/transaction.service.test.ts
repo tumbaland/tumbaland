@@ -9,6 +9,7 @@ jest.mock('../models/Transaction', () => {
   ctor.findByIdAndDelete = jest.fn();
   ctor.distinct = jest.fn();
   ctor.aggregate = jest.fn();
+  ctor.updateMany = jest.fn();
   return { __esModule: true, default: ctor };
 });
 
@@ -16,6 +17,8 @@ import Transaction from '../models/Transaction';
 import {
   getTransactions,
   getCategories,
+  updateCategory,
+  recategorise,
   deleteTransaction,
   DEFAULT_TRANSACTION_LIMIT,
   MAX_TRANSACTION_LIMIT
@@ -50,7 +53,8 @@ describe('getTransactions', () => {
     await getTransactions('u1', []);
 
     expect(mockedFind).toHaveBeenCalledWith(personalScope);
-    expect(sort).toHaveBeenCalledWith({ date: -1 });
+    // Secondary key on _id keeps paging stable across rows sharing a date
+    expect(sort).toHaveBeenCalledWith({ date: -1, _id: -1 });
     expect(limit).toHaveBeenCalledWith(DEFAULT_TRANSACTION_LIMIT);
   });
 
@@ -117,5 +121,79 @@ describe('deleteTransaction', () => {
     await deleteTransaction('x1', 'u1', []);
 
     expect(mockedFindByIdAndDelete).toHaveBeenCalledWith('x1');
+  });
+});
+
+describe('sorting', () => {
+  it('sorts by amount when asked', async () => {
+    const { sort } = mockQuery();
+
+    await getTransactions('u1', [], { sort: 'amount', direction: 'asc' });
+
+    expect(sort).toHaveBeenCalledWith({ amount: 1, _id: -1 });
+  });
+
+  it('falls back to newest-first for an unknown field', async () => {
+    const { sort } = mockQuery();
+
+    await getTransactions('u1', [], { sort: 'nonsense' as never });
+
+    expect(sort).toHaveBeenCalledWith({ date: -1, _id: -1 });
+  });
+});
+
+describe('updateCategory', () => {
+  it('refuses a transaction belonging to someone else', async () => {
+    mockedFindById.mockResolvedValue({ _id: 'x1', userId: 'someone-else' });
+
+    await expect(updateCategory('x1', 'Rent', 'u1', [])).rejects.toMatchObject({ name: 'ForbiddenError' });
+  });
+
+  it('writes only the category', async () => {
+    mockedFindById.mockResolvedValue({ _id: 'x1', userId: 'u1' });
+    (Transaction.findByIdAndUpdate as unknown as jest.Mock).mockResolvedValue({});
+
+    await updateCategory('x1', 'Rent', 'u1', []);
+
+    expect(Transaction.findByIdAndUpdate).toHaveBeenCalledWith(
+      'x1', { category: 'Rent' }, { new: true, runValidators: true }
+    );
+  });
+});
+
+describe('recategorise', () => {
+  it('moves every row in the source category', async () => {
+    (Transaction.updateMany as unknown as jest.Mock).mockResolvedValue({ modifiedCount: 42 });
+
+    const moved = await recategorise({ fromCategory: 'Uncategorised' }, 'Groceries', 'u1', []);
+
+    expect(moved).toBe(42);
+    const [filter, update] = (Transaction.updateMany as unknown as jest.Mock).mock.calls[0];
+    expect(filter).toMatchObject({ ...personalScope, category: 'Uncategorised' });
+    expect(update).toEqual({ $set: { category: 'Groceries' } });
+  });
+
+  it('narrows by counterparty text when given one', async () => {
+    (Transaction.updateMany as unknown as jest.Mock).mockResolvedValue({ modifiedCount: 3 });
+
+    await recategorise({ fromCategory: 'Uncategorised', search: 'Binance' }, 'Investments', 'u1', []);
+
+    const [filter] = (Transaction.updateMany as unknown as jest.Mock).mock.calls[0];
+    expect(filter.note).toEqual({ $regex: 'Binance', $options: 'i' });
+  });
+
+  it('escapes regex metacharacters in the search text', async () => {
+    (Transaction.updateMany as unknown as jest.Mock).mockResolvedValue({ modifiedCount: 0 });
+
+    await recategorise({ fromCategory: 'Uncategorised', search: 'A.B*C' }, 'X', 'u1', []);
+
+    const [filter] = (Transaction.updateMany as unknown as jest.Mock).mock.calls[0];
+    expect(filter.note.$regex).toBe('A\\.B\\*C');
+  });
+
+  it('reports zero when nothing matched', async () => {
+    (Transaction.updateMany as unknown as jest.Mock).mockResolvedValue({});
+
+    expect(await recategorise({ fromCategory: 'Nope' }, 'X', 'u1', [])).toBe(0);
   });
 });

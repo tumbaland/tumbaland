@@ -2,7 +2,8 @@ import Snapshot, { ISnapshot } from '../models/Snapshot';
 import AssetClass, { AssetClassKind } from '../models/AssetClass';
 import { getAllHoldings } from './holding.service';
 import { BASE_CURRENCY } from './fxRate.service';
-import { getCashflowSummary, MonthSummary, GrowthBreakdown } from './cashflow.service';
+import { getCashflowSummary, GrowthBreakdown } from './cashflow.service';
+import { getAnalytics, PeriodTotals } from './analytics.service';
 
 export interface DashboardKPIs {
   /** Assets minus liabilities at the latest check-in. */
@@ -51,14 +52,17 @@ export interface DashboardData {
   assetColors: Record<string, string>;
   currency: string;
   /**
-   * Why net worth moved, not just that it did: the most recent month's income
-   * and savings rate, and the split of the latest change between money saved
-   * and market movement. Null until there are transactions to explain it with.
+   * Why net worth moved, not just that it did.
+   *
+   * Headline figures are the trailing twelve months rather than the latest
+   * month: the newest month is usually half-imported, so a card built on it
+   * shows a collapse in income that never happened. The growth split is only
+   * carried when it is actually complete — an unexplained split is worse than
+   * none.
    */
   cashflow: {
-    latestMonth: MonthSummary | null;
-    /** Mean savings rate across the months that have transactions. */
-    averageSavingsRate: number | null;
+    trailing: PeriodTotals;
+    previous: PeriodTotals | null;
     growth: GrowthBreakdown | null;
   } | null;
   holdings: {
@@ -249,15 +253,18 @@ export const getDashboardData = async (userId: string, groupId?: string): Promis
  * so this trims the summary down rather than shipping every category and month.
  */
 async function getCashflowKpis(userId: string, groupId?: string): Promise<DashboardData['cashflow']> {
-  const summary = await getCashflowSummary(userId, { groupId });
-  if (summary.months.length === 0) return null;
+  const [summary, analytics] = await Promise.all([
+    getCashflowSummary(userId, { groupId }),
+    getAnalytics(userId, groupId)
+  ]);
 
-  const rated = summary.months.filter((m) => m.savingsRate !== null);
+  if (analytics.months.length === 0) return null;
 
   return {
-    latestMonth: summary.months[summary.months.length - 1],
-    averageSavingsRate:
-      rated.length > 0 ? rated.reduce((sum, m) => sum + (m.savingsRate || 0), 0) / rated.length : null,
-    growth: summary.growth
+    trailing: analytics.trailing.current,
+    previous: analytics.trailing.previous,
+    // Only when it can actually be explained; the UI has nothing useful to say
+    // about a split covering a month with no transactions.
+    growth: summary.growth?.complete ? summary.growth : null
   };
 }

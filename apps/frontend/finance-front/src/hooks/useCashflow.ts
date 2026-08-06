@@ -5,6 +5,8 @@ import {
   getCashflowSummary,
   getAnalytics,
   importStatement,
+  updateCategory,
+  recategorise,
   deleteTransaction,
   TransactionPage,
   TransactionQuery
@@ -61,6 +63,22 @@ export const useDeleteTransaction = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteTransaction(id),
+    onSuccess: () => invalidateCashflow(queryClient)
+  });
+};
+
+export const useUpdateCategory = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, category }: { id: string; category: string }) => updateCategory(id, category),
+    onSuccess: () => invalidateCashflow(queryClient)
+  });
+};
+
+export const useRecategorise = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: recategorise,
     onSuccess: () => invalidateCashflow(queryClient)
   });
 };

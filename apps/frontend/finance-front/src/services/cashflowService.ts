@@ -54,6 +54,8 @@ export interface TransactionQuery {
   category?: string;
   /** Free text over the counterparty and description. */
   search?: string;
+  sort?: 'date' | 'amount';
+  direction?: 'asc' | 'desc';
   limit?: number;
   skip?: number;
 }
@@ -65,8 +67,7 @@ export interface TransactionPage {
   hasMore: boolean;
 }
 
-export interface YearSummary {
-  year: number;
+export interface PeriodTotals {
   income: number;
   /** Everything that left the account, consumption and investing alike. */
   expense: number;
@@ -76,10 +77,20 @@ export interface YearSummary {
   invested: number;
   savings: number;
   savingsRate: number | null;
+  /** Months the window covers, so a partial period can be labelled as one. */
+  months: number;
+  from: string;
+  to: string;
+}
+
+export interface YearSummary extends PeriodTotals {
+  year: number;
   incomeChange: number | null;
   incomeChangePct: number | null;
   expenseChange: number | null;
   expenseChangePct: number | null;
+  /** Fewer than twelve months of data — not comparable with a full year. */
+  partial: boolean;
 }
 
 export interface PeriodPoint {
@@ -93,21 +104,31 @@ export interface PeriodPoint {
 export interface CategoryTrend {
   category: string;
   byYear: Record<number, number>;
+  /** Everything ever recorded in this category. */
   total: number;
+  /** Spend over the trailing twelve months. */
   latest: number;
+  /** The twelve months before that — the like-for-like comparison. */
   previous: number;
   change: number;
   changePct: number | null;
+  /** `latest` divided by the window length. */
+  perMonth: number;
 }
 
 export interface Analytics {
   years: YearSummary[];
-  /** Category names treated as investing rather than spending. */
-  investmentCategories: string[];
   months: PeriodPoint[];
+  /**
+   * The last twelve months of data and the twelve before. Calendar years are
+   * the wrong comparison for most of the year, so the headline figures and the
+   * category comparisons use these.
+   */
+  trailing: { current: PeriodTotals; previous: PeriodTotals | null };
   categoryTrends: CategoryTrend[];
   incomeSources: Array<{ category: string; total: number; byYear: Record<number, number> }>;
-  monthlyAverages: Array<{ year: number; income: number; expense: number; months: number }>;
+  /** Category names treated as investing rather than spending. */
+  investmentCategories: string[];
   currency: string;
 }
 
@@ -131,6 +152,8 @@ export const getTransactions = async (query: TransactionQuery = {}): Promise<Tra
   if (query.type) params.type = query.type;
   if (query.category) params.category = query.category;
   if (query.search) params.search = query.search;
+  if (query.sort) params.sort = query.sort;
+  if (query.direction) params.direction = query.direction;
   if (query.limit !== undefined) params.limit = String(query.limit);
   if (query.skip !== undefined) params.skip = String(query.skip);
 
@@ -178,4 +201,27 @@ export const getCashflowSummary = async (groupId?: string, months?: number): Pro
 
 export const deleteTransaction = async (id: string): Promise<void> => {
   await financeApi.delete(`${TRANSACTIONS_URL}/${id}`);
+};
+
+export const updateCategory = async (id: string, category: string): Promise<Transaction> => {
+  const res = await financeApi.patch<ApiResponse<Transaction>>(`${TRANSACTIONS_URL}/${id}/category`, {
+    category
+  });
+  return res.data;
+};
+
+/** Move every row in one category to another, optionally narrowed by text. */
+export const recategorise = async (input: {
+  fromCategory: string;
+  toCategory: string;
+  search?: string;
+  groupId?: string;
+}): Promise<{ updated: number }> => {
+  const { groupId, ...body } = input;
+  const res = await financeApi.post<ApiResponse<{ updated: number }>>(
+    `${TRANSACTIONS_URL}/recategorise`,
+    body,
+    groupId ? { params: { groupId } } : undefined
+  );
+  return res.data;
 };

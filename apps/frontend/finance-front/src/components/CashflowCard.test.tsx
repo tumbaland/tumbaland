@@ -5,9 +5,22 @@ import { DashboardData } from '../services/dashboardService';
 
 type Cashflow = NonNullable<DashboardData['cashflow']>;
 
+const totals = (over = {}) => ({
+  income: 40000,
+  expense: 16000,
+  consumption: 16000,
+  invested: 0,
+  savings: 24000,
+  savingsRate: 60,
+  months: 12,
+  from: '2025-09',
+  to: '2026-08',
+  ...over
+});
+
 const base: Cashflow = {
-  latestMonth: { month: '2026-07', income: 4000, expense: 2500, savings: 1500, savingsRate: 37.5 },
-  averageSavingsRate: 32,
+  trailing: totals(),
+  previous: totals({ income: 30000, consumption: 14000, savings: 16000, from: '2024-09', to: '2025-08' }),
   growth: {
     from: '2026-07',
     to: '2026-08',
@@ -16,7 +29,7 @@ const base: Cashflow = {
     marketGrowth: 500,
     complete: true
   }
-};
+} as Cashflow;
 
 const renderCard = (cashflow: Cashflow = base, currency?: string) =>
   render(
@@ -25,32 +38,44 @@ const renderCard = (cashflow: Cashflow = base, currency?: string) =>
     </MemoryRouter>
   );
 
-it('shows the latest month savings and rate', () => {
+it('is built on a rolling year, and says so', () => {
+  // The current month is usually half-imported, so a card keyed to it would
+  // report a collapse in income every time
   renderCard();
 
-  expect(screen.getByText(/Saved · 2026-07/)).toBeInTheDocument();
-  expect(screen.getAllByText('1500 €').length).toBeGreaterThan(0);
-  expect(screen.getByText('+37.5%')).toBeInTheDocument();
+  expect(screen.getByText(/Last 12 months · Sept 2025 – Aug 2026/)).toBeInTheDocument();
 });
 
-it('shows the twelve-month average rate when there is one', () => {
+it('shows income, spending, kept and the rate', () => {
   renderCard();
 
-  expect(screen.getByText('12-month average')).toBeInTheDocument();
-  expect(screen.getByText('+32.0%')).toBeInTheDocument();
+  expect(screen.getByText('40 000 €')).toBeInTheDocument();
+  expect(screen.getByText('16 000 €')).toBeInTheDocument();
+  expect(screen.getByText('24 000 €')).toBeInTheDocument();
+  expect(screen.getByText('+60.0%')).toBeInTheDocument();
 });
 
-it('omits the average when it cannot be computed', () => {
-  renderCard({ ...base, averageSavingsRate: null });
+it('compares what was kept against the prior year', () => {
+  // 16 000 → 24 000
+  renderCard();
 
-  expect(screen.queryByText('12-month average')).not.toBeInTheDocument();
+  expect(screen.getByText('+50.0% vs prior year')).toBeInTheDocument();
 });
 
-it('shows a dash for a month with no income to save from', () => {
-  renderCard({
-    ...base,
-    latestMonth: { month: '2026-07', income: 0, expense: 400, savings: -400, savingsRate: null }
-  });
+it('omits the comparison when there is no prior year', () => {
+  renderCard({ ...base, previous: null });
+
+  expect(screen.queryByText(/vs prior year/)).not.toBeInTheDocument();
+});
+
+it('notes money moved into assets separately from spending', () => {
+  renderCard({ ...base, trailing: totals({ invested: 5000 }) });
+
+  expect(screen.getByText('5000 € invested')).toBeInTheDocument();
+});
+
+it('shows a dash when there is no income to compute a rate from', () => {
+  renderCard({ ...base, trailing: totals({ income: 0, savingsRate: null }) });
 
   expect(screen.getByText('—')).toBeInTheDocument();
 });
@@ -58,46 +83,28 @@ it('shows a dash for a month with no income to save from', () => {
 it('splits the net-worth change into contributions and market movement', () => {
   renderCard();
 
-  expect(screen.getByText(/Net worth moved 2000 €/)).toBeInTheDocument();
+  expect(screen.getByText(/Net worth moved 2000 € from Jul 2026 to Aug 2026/)).toBeInTheDocument();
   expect(screen.getByText('You contributed')).toBeInTheDocument();
-  // The month's savings and the contribution figure are the same amount here
-  expect(screen.getAllByText('1500 €')).toHaveLength(2);
   expect(screen.getByText('+500 €')).toBeInTheDocument();
 });
 
-it('warns when the period has no transactions to attribute the change to', () => {
-  renderCard({ ...base, growth: { ...base.growth!, complete: false } });
-
-  expect(screen.getByText(/No transactions for 2026-07/)).toBeInTheDocument();
-});
-
-it('does not warn when the period is fully covered', () => {
-  renderCard();
-
-  expect(screen.queryByText(/No transactions for/)).not.toBeInTheDocument();
-});
-
-it('renders without a growth breakdown', () => {
+it('shows no split at all when the server withheld one', () => {
+  // The dashboard service only sends a complete split, so there is nothing
+  // here to caveat — the absence is the message
   renderCard({ ...base, growth: null });
 
   expect(screen.queryByText('You contributed')).not.toBeInTheDocument();
   expect(screen.getByText('Cash Flow')).toBeInTheDocument();
 });
 
-it('renders without a latest month', () => {
-  renderCard({ ...base, latestMonth: null });
-
-  expect(screen.queryByText('Savings rate')).not.toBeInTheDocument();
-});
-
 it('formats amounts in the given currency', () => {
   renderCard(base, 'USD');
 
-  expect(screen.getAllByText('1500 $').length).toBeGreaterThan(0);
+  expect(screen.getByText('40 000 $')).toBeInTheDocument();
 });
 
 it('links through to the cash flow page', () => {
   renderCard();
 
-  expect(screen.getByRole('link', { name: /open cash flow/i })).toHaveAttribute('href', '/cash-flow');
+  expect(screen.getByRole('link', { name: /details/i })).toHaveAttribute('href', '/cash-flow');
 });

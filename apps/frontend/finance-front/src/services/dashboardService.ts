@@ -1,5 +1,6 @@
 import { financeApi } from './financeApi';
 import { ApiResponse } from '../types';
+import { PeriodTotals } from './cashflowService';
 
 export interface DashboardKPIs {
   netWorth: number;
@@ -46,14 +47,14 @@ export interface DashboardData {
    * transactions to explain it with.
    */
   cashflow: {
-    latestMonth: {
-      month: string;
-      income: number;
-      expense: number;
-      savings: number;
-      savingsRate: number | null;
-    } | null;
-    averageSavingsRate: number | null;
+    /**
+     * The trailing twelve months rather than the current one: the newest month
+     * is usually only part-imported, so a card keyed to it reports a collapse
+     * in income that never happened.
+     */
+    trailing: PeriodTotals;
+    previous: PeriodTotals | null;
+    /** Carried only when the period is fully covered by transactions. */
     growth: {
       from: string;
       to: string;

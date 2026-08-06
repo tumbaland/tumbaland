@@ -22,9 +22,11 @@ import {
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
+  Edit as EditIcon,
   UploadFile as UploadIcon,
   AccountBalanceWallet as WalletIcon
 } from '@mui/icons-material';
+import TableSortLabel from '@mui/material/TableSortLabel';
 import { useTenantFilter } from '@tumbaland/components';
 import {
   useTransactions,
@@ -37,6 +39,7 @@ import { Transaction } from '../services/cashflowService';
 import ImportDialog from '../components/cashflow/ImportDialog';
 import CashflowAnalytics from '../components/cashflow/CashflowAnalytics';
 import CategoryBreakdown from '../components/cashflow/CategoryBreakdown';
+import CategoryEditDialog from '../components/cashflow/CategoryEditDialog';
 import CashflowSummaryCards from '../components/cashflow/CashflowSummaryCards';
 import TransactionFilters, {
   FilterValues,
@@ -65,16 +68,21 @@ const CashFlowPage: React.FC = () => {
   const [page, setPage] = useState(0);
   const [importOpen, setImportOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
+  const [editTarget, setEditTarget] = useState<Transaction | null>(null);
+  const [sort, setSort] = useState<'date' | 'amount'>('date');
+  const [direction, setDirection] = useState<'asc' | 'desc'>('desc');
   const [snackbar, setSnackbar] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
 
   const query = useMemo(
     () => ({
       groupId: tenantGroupId,
       ...toQuery(filters),
+      sort,
+      direction,
       limit: PAGE_SIZE,
       skip: page * PAGE_SIZE
     }),
-    [tenantGroupId, filters, page]
+    [tenantGroupId, filters, page, sort, direction]
   );
 
   const { data, isLoading, error } = useTransactions(query);
@@ -91,6 +99,16 @@ const CashFlowPage: React.FC = () => {
     setFilters(next);
     setPage(0);
   };
+
+  /** Clicking the active column flips it; a new column starts newest/largest first. */
+  const applySort = (field: 'date' | 'amount') => {
+    if (field === sort) setDirection((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSort(field); setDirection('desc'); }
+    setPage(0);
+  };
+
+  const notify = (message: string, severity: 'success' | 'error') =>
+    setSnackbar({ message, severity });
 
   const handleDelete = async () => {
     if (!deleteTarget?._id) return;
@@ -163,7 +181,7 @@ const CashFlowPage: React.FC = () => {
 
           <Box role="tabpanel" hidden={tab !== 0}>
             {tab === 0 && summary && summary.months.length > 0 && (
-              <CashflowSummaryCards summary={summary} />
+              <CashflowSummaryCards summary={summary} analytics={analytics} />
             )}
           </Box>
 
@@ -210,9 +228,14 @@ const CashFlowPage: React.FC = () => {
                               {transaction.note ? ` · ${transaction.note.slice(0, 60)}` : ''}
                             </Typography>
                           </Box>
-                          <IconButton size="small" onClick={() => setDeleteTarget(transaction)}>
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
+                          <Box sx={{ display: 'flex', flexShrink: 0 }}>
+                            <IconButton size="small" title="Change category" onClick={() => setEditTarget(transaction)}>
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton size="small" onClick={() => setDeleteTarget(transaction)}>
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
                         </Box>
                         <Typography
                           variant="h6"
@@ -236,11 +259,27 @@ const CashFlowPage: React.FC = () => {
                     <Table size="small">
                       <TableHead>
                         <TableRow>
-                          <TableCell>Date</TableCell>
+                          <TableCell sortDirection={sort === 'date' ? direction : false}>
+                            <TableSortLabel
+                              active={sort === 'date'}
+                              direction={sort === 'date' ? direction : 'desc'}
+                              onClick={() => applySort('date')}
+                            >
+                              Date
+                            </TableSortLabel>
+                          </TableCell>
                           <TableCell>Category</TableCell>
                           <TableCell>Note</TableCell>
-                          <TableCell align="right">Amount</TableCell>
-                          <TableCell align="right" sx={{ width: 60 }} />
+                          <TableCell align="right" sortDirection={sort === 'amount' ? direction : false}>
+                            <TableSortLabel
+                              active={sort === 'amount'}
+                              direction={sort === 'amount' ? direction : 'desc'}
+                              onClick={() => applySort('amount')}
+                            >
+                              Amount
+                            </TableSortLabel>
+                          </TableCell>
+                          <TableCell align="right" sx={{ width: 96 }} />
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -253,6 +292,7 @@ const CashFlowPage: React.FC = () => {
                                 label={transaction.category}
                                 color={transaction.type === 'income' ? 'success' : 'default'}
                                 variant="outlined"
+                                onClick={() => setEditTarget(transaction)}
                               />
                             </TableCell>
                             <TableCell
@@ -277,6 +317,13 @@ const CashFlowPage: React.FC = () => {
                               {transaction.type === 'income' ? '+' : '−'}{formatCurrency(transaction.amount)}
                             </TableCell>
                             <TableCell align="right">
+                              <IconButton
+                                size="small"
+                                title="Change category"
+                                onClick={() => setEditTarget(transaction)}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
                               <IconButton size="small" onClick={() => setDeleteTarget(transaction)}>
                                 <DeleteIcon fontSize="small" />
                               </IconButton>
@@ -309,6 +356,15 @@ const CashFlowPage: React.FC = () => {
       )}
 
       <ImportDialog open={importOpen} onClose={() => setImportOpen(false)} tenantGroupId={tenantGroupId} />
+
+      <CategoryEditDialog
+        open={!!editTarget}
+        onClose={() => setEditTarget(null)}
+        transaction={editTarget}
+        categories={categories}
+        tenantGroupId={tenantGroupId}
+        notify={notify}
+      />
 
       <ConfirmationModal
         open={!!deleteTarget}

@@ -612,6 +612,18 @@ paths:
           schema:
             type: string
           description: Free text over the note, which carries counterparty and description.
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [date, amount]
+            default: date
+        - name: direction
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
         - name: limit
           in: query
           schema:
@@ -792,6 +804,67 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/Analytics'
+
+  /api/transactions/recategorise:
+    post:
+      summary: Move every row in one category to another
+      description: >-
+        Categorising a decade of imports one row at a time is not realistic — a
+        single unmatched merchant can account for hundreds of rows. Deliberately
+        narrowed to one source category plus an optional text match rather than
+        accepting an arbitrary filter, so a bulk change cannot reach anything
+        already sorted.
+      tags: [Cash Flow]
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fromCategory, toCategory]
+              properties:
+                fromCategory:
+                  type: string
+                toCategory:
+                  type: string
+                search:
+                  type: string
+                  description: Narrow to rows whose note contains this text.
+      responses:
+        '200':
+          description: How many rows moved
+        '400':
+          description: fromCategory or toCategory missing
+
+  /api/transactions/{id}/category:
+    patch:
+      summary: Change one transaction's category
+      description: >-
+        The only field an imported row can be edited through: everything else
+        came from the bank and re-importing would overwrite a local change,
+        whereas the category is ours.
+      tags: [Cash Flow]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [category]
+              properties:
+                category:
+                  type: string
+      responses:
+        '200':
+          description: Category updated
+        '400':
+          description: category missing
+        '404':
+          description: Transaction not found
 
   /api/transactions/{id}:
     delete:
@@ -1193,15 +1266,63 @@ components:
           type: string
 
 
+    PeriodTotals:
+      type: object
+      properties:
+        income:
+          type: number
+        expense:
+          type: number
+          description: Everything that left the account, consumption and investing alike
+        consumption:
+          type: number
+          description: What was actually consumed — expense less money moved into assets
+        invested:
+          type: number
+        savings:
+          type: number
+          description: income − consumption; investing counts as kept, not spent
+        savingsRate:
+          type: number
+          nullable: true
+        months:
+          type: integer
+        from:
+          type: string
+          example: '2025-09'
+        to:
+          type: string
+          example: '2026-08'
+
     Analytics:
       type: object
       properties:
+        trailing:
+          type: object
+          description: >-
+            The last twelve months of data and the twelve before. Calendar years
+            are the wrong comparison for most of the year — in March, "this
+            year" is two months against twelve — so the headline figures and
+            every category comparison use these. Anchored on the newest month
+            with data rather than on today, because an import can lag.
+          properties:
+            current:
+              $ref: '#/components/schemas/PeriodTotals'
+            previous:
+              allOf:
+                - $ref: '#/components/schemas/PeriodTotals'
+              nullable: true
         years:
           type: array
           items:
             type: object
             properties:
               year:
+                type: integer
+              partial:
+                type: boolean
+                description: Fewer than twelve months of data — not comparable with a full year
+              months:
                 type: integer
               income:
                 type: number
@@ -1264,6 +1385,9 @@ components:
               changePct:
                 type: number
                 nullable: true
+              perMonth:
+                type: number
+                description: Trailing-window spend divided by the window length
         incomeSources:
           type: array
           items:
