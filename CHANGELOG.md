@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.422](https://github.com/toomastahves/tumbaland/compare/app-v0.0.421...app-v0.0.422) (2026-08-06)
+
+### Bug Fixes
+
+* finance bugs ([1430cda](https://github.com/toomastahves/tumbaland/commit/1430cda26cd2c38cdafad8b3c4d461d7b81ca0ed))
 ## [0.0.421](https://github.com/toomastahves/tumbaland/compare/app-v0.0.420...app-v0.0.421) (2026-08-05)
 
 ### Features
