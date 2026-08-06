@@ -607,6 +607,11 @@ paths:
           in: query
           schema:
             type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Free text over the note, which carries counterparty and description.
         - name: limit
           in: query
           schema:
@@ -614,25 +619,48 @@ paths:
             minimum: 1
             maximum: 2000
             default: 500
+        - name: skip
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
       responses:
         '200':
-          description: Transactions, newest first
+          description: A page of transactions with totals over the whole filtered set
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              type: object
+                          totals:
+                            type: object
+                            description: >-
+                              Over everything the filter matches, not just this
+                              page — summing the page would report a number that
+                              changes as you scroll.
+                            properties:
+                              count:
+                                type: integer
+                              income:
+                                type: number
+                              expense:
+                                type: number
+                              net:
+                                type: number
+                          hasMore:
+                            type: boolean
         '400':
-          description: Invalid date, type or limit
-    post:
-      summary: Add a transaction
-      tags: [Cash Flow]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TransactionInput'
-      responses:
-        '201':
-          description: Transaction added
-        '403':
-          description: Not a member of the target group
+          description: Invalid date, type, limit or skip
 
   /api/transactions/categories:
     get:
@@ -677,27 +705,101 @@ paths:
         '400':
           description: Invalid months value
 
-  /api/transactions/{id}:
-    put:
-      summary: Update a transaction
+  /api/transactions/import:
+    post:
+      summary: Import a bank statement
+      description: >-
+        Body is the raw CSV of a SEB account statement, sent as `text/csv` —
+        a decade of one account runs well past the JSON body limit.
+
+        Re-importing a period that overlaps one already loaded is the expected
+        way to use this: rows are matched on the bank's archive reference, so an
+        overlap is recognised and counted as a duplicate rather than added
+        again. Transfers between the owner's own accounts, securities
+        settlements, dividends and pension contributions are deliberately left
+        out — see the `skipped` map for what and why.
       tags: [Cash Flow]
       parameters:
-        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/GroupId'
       requestBody:
         required: true
         content:
-          application/json:
+          text/csv:
             schema:
-              $ref: '#/components/schemas/TransactionInput'
+              type: string
       responses:
         '200':
-          description: Transaction updated
+          description: Import result
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          imported:
+                            type: integer
+                          duplicates:
+                            type: integer
+                            description: Rows already held from an overlapping import
+                          skipped:
+                            type: object
+                            additionalProperties:
+                              type: integer
+                          period:
+                            type: object
+                            nullable: true
+                            properties:
+                              from:
+                                type: string
+                                format: date
+                              to:
+                                type: string
+                                format: date
+                          rows:
+                            type: integer
+                          categories:
+                            type: array
+                            items:
+                              type: object
+        '400':
+          description: Empty file, or not a SEB account statement
         '403':
-          description: Access denied
-        '404':
-          description: Transaction not found
+          description: Not a member of the target group
+
+  /api/transactions/analytics:
+    get:
+      summary: Long-run cash-flow trends
+      description: >-
+        Income and spending year on year and month by month, which categories
+        moved most, and where income came from. Aggregated in the database — the
+        history runs to thousands of rows and only the totals are wanted.
+      tags: [Cash Flow]
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      responses:
+        '200':
+          description: Analytics
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Analytics'
+
+  /api/transactions/{id}:
     delete:
       summary: Delete a transaction
+      description: >-
+        Entries come from statement imports rather than by hand, so there is no
+        create or update route. Delete remains, for backing out a bad import —
+        re-importing the statement would bring the row back.
       tags: [Cash Flow]
       parameters:
         - $ref: '#/components/parameters/Id'
@@ -707,58 +809,6 @@ paths:
         '404':
           description: Transaction not found
 
-  /api/budgets:
-    get:
-      summary: List monthly budgets
-      tags: [Cash Flow]
-      parameters:
-        - $ref: '#/components/parameters/GroupId'
-      responses:
-        '200':
-          description: Budgets
-    post:
-      summary: Create a monthly budget
-      description: A recurring ceiling for one category. One budget per category per owner.
-      tags: [Cash Flow]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/BudgetInput'
-      responses:
-        '201':
-          description: Budget created
-        '409':
-          description: A budget already exists for that category
-
-  /api/budgets/{id}:
-    put:
-      summary: Update a budget
-      tags: [Cash Flow]
-      parameters:
-        - $ref: '#/components/parameters/Id'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/BudgetInput'
-      responses:
-        '200':
-          description: Budget updated
-        '404':
-          description: Budget not found
-    delete:
-      summary: Delete a budget
-      tags: [Cash Flow]
-      parameters:
-        - $ref: '#/components/parameters/Id'
-      responses:
-        '200':
-          description: Budget deleted
-        '404':
-          description: Budget not found
 
   /api/dashboard:
     get:
@@ -1142,17 +1192,87 @@ components:
         groupId:
           type: string
 
-    BudgetInput:
+
+    Analytics:
       type: object
-      required: [category, amount]
       properties:
-        category:
-          type: string
-        amount:
-          type: number
-          minimum: 0
-          description: Monthly ceiling, applied every month
-        groupId:
+        years:
+          type: array
+          items:
+            type: object
+            properties:
+              year:
+                type: integer
+              income:
+                type: number
+              expense:
+                type: number
+              savings:
+                type: number
+              savingsRate:
+                type: number
+                nullable: true
+              incomeChange:
+                type: number
+                nullable: true
+                description: Against the previous year; null for the first on record
+              incomeChangePct:
+                type: number
+                nullable: true
+              expenseChange:
+                type: number
+                nullable: true
+              expenseChangePct:
+                type: number
+                nullable: true
+        months:
+          type: array
+          description: >-
+            Continuous month series, zero-filled. A gap would otherwise be drawn
+            as a straight line between two distant months.
+          items:
+            type: object
+            properties:
+              period:
+                type: string
+                example: '2026-07'
+              income:
+                type: number
+              expense:
+                type: number
+              savings:
+                type: number
+        categoryTrends:
+          type: array
+          items:
+            type: object
+            properties:
+              category:
+                type: string
+              byYear:
+                type: object
+                additionalProperties:
+                  type: number
+              total:
+                type: number
+              latest:
+                type: number
+              previous:
+                type: number
+              change:
+                type: number
+              changePct:
+                type: number
+                nullable: true
+        incomeSources:
+          type: array
+          items:
+            type: object
+        monthlyAverages:
+          type: array
+          items:
+            type: object
+        currency:
           type: string
 
     CashflowSummary:
@@ -1172,13 +1292,6 @@ components:
               spent:
                 type: number
                 description: Monthly average across the months that have transactions
-              budget:
-                type: number
-                nullable: true
-              variance:
-                type: number
-                nullable: true
-                description: spent − budget; positive means over. Null without a budget.
         totals:
           $ref: '#/components/schemas/MonthSummary'
         growth:

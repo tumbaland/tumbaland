@@ -5,8 +5,8 @@ import { CashflowSummary } from '../../services/cashflowService';
 const base: CashflowSummary = {
   months: [{ month: '2026-07', income: 4000, expense: 2500, savings: 1500, savingsRate: 37.5 }],
   categories: [
-    { category: 'Rent', spent: 900, budget: 800, variance: 100 },
-    { category: 'Groceries', spent: 300, budget: null, variance: null }
+    { category: 'Rent', spent: 900 },
+    { category: 'Groceries', spent: 300 }
   ],
   totals: { month: 'all', income: 4000, expense: 2500, savings: 1500, savingsRate: 37.5 },
   growth: {
@@ -59,28 +59,12 @@ it('omits the growth section when there is nothing to compare', () => {
   expect(screen.queryByText('You contributed')).not.toBeInTheDocument();
 });
 
-it('lists categories with their budget comparison', () => {
+it('lists categories with their monthly average', () => {
   render(<CashflowSummaryCards summary={base} />);
 
   expect(screen.getByText('Rent')).toBeInTheDocument();
   expect(screen.getByText('900 €')).toBeInTheDocument();
-  expect(screen.getByText('/ 800 €')).toBeInTheDocument();
-});
-
-it('counts how many categories are over budget', () => {
-  render(<CashflowSummaryCards summary={base} />);
-
-  expect(screen.getByText(/1 over budget/)).toBeInTheDocument();
-});
-
-it('does not count an unbudgeted category as over budget', () => {
-  render(
-    <CashflowSummaryCards
-      summary={{ ...base, categories: [{ category: 'Groceries', spent: 900, budget: null, variance: null }] }}
-    />
-  );
-
-  expect(screen.queryByText(/over budget/)).not.toBeInTheDocument();
+  expect(screen.getByText('300 €')).toBeInTheDocument();
 });
 
 it('omits the category section when nothing has been categorised', () => {

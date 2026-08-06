@@ -3,15 +3,10 @@ import {
   getTransactions,
   getCategories,
   getCashflowSummary,
-  addTransaction,
-  updateTransaction,
+  getAnalytics,
+  importStatement,
   deleteTransaction,
-  getBudgets,
-  addBudget,
-  updateBudget,
-  deleteBudget,
-  Transaction,
-  Budget,
+  TransactionPage,
   TransactionQuery
 } from '../services/cashflowService';
 
@@ -22,14 +17,32 @@ import {
 const invalidateCashflow = (queryClient: ReturnType<typeof useQueryClient>) => {
   queryClient.invalidateQueries({ queryKey: ['transactions'] });
   queryClient.invalidateQueries({ queryKey: ['cashflowSummary'] });
+  queryClient.invalidateQueries({ queryKey: ['cashflowAnalytics'] });
   queryClient.invalidateQueries({ queryKey: ['transactionCategories'] });
   queryClient.invalidateQueries({ queryKey: ['dashboard'] });
 };
 
+export const useImportStatement = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ csv, groupId }: { csv: string; groupId?: string }) => importStatement(csv, groupId),
+    onSuccess: () => invalidateCashflow(queryClient)
+  });
+};
+
 export const useTransactions = (query: TransactionQuery = {}) =>
-  useQuery<Transaction[]>({
+  useQuery<TransactionPage>({
     queryKey: ['transactions', query],
-    queryFn: () => getTransactions(query)
+    queryFn: () => getTransactions(query),
+    // Keep the previous page on screen while the next one loads, so changing a
+    // filter does not blank the table and jump the scroll position.
+    placeholderData: (previous) => previous
+  });
+
+export const useAnalytics = (groupId?: string) =>
+  useQuery({
+    queryKey: ['cashflowAnalytics', groupId],
+    queryFn: () => getAnalytics(groupId)
   });
 
 export const useTransactionCategories = (groupId?: string) =>
@@ -44,63 +57,10 @@ export const useCashflowSummary = (groupId?: string, months?: number) =>
     queryFn: () => getCashflowSummary(groupId, months)
   });
 
-export const useCreateTransaction = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: Omit<Transaction, '_id'>) => addTransaction(data),
-    onSuccess: () => invalidateCashflow(queryClient)
-  });
-};
-
-export const useUpdateTransaction = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Transaction> }) => updateTransaction(id, data),
-    onSuccess: () => invalidateCashflow(queryClient)
-  });
-};
-
 export const useDeleteTransaction = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteTransaction(id),
     onSuccess: () => invalidateCashflow(queryClient)
-  });
-};
-
-const invalidateBudgets = (queryClient: ReturnType<typeof useQueryClient>) => {
-  queryClient.invalidateQueries({ queryKey: ['budgets'] });
-  // Budgets show up as the comparison line in the category summary
-  queryClient.invalidateQueries({ queryKey: ['cashflowSummary'] });
-  queryClient.invalidateQueries({ queryKey: ['transactionCategories'] });
-};
-
-export const useBudgets = (groupId?: string) =>
-  useQuery<Budget[]>({
-    queryKey: ['budgets', groupId],
-    queryFn: () => getBudgets(groupId)
-  });
-
-export const useCreateBudget = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: Omit<Budget, '_id'>) => addBudget(data),
-    onSuccess: () => invalidateBudgets(queryClient)
-  });
-};
-
-export const useUpdateBudget = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Budget> }) => updateBudget(id, data),
-    onSuccess: () => invalidateBudgets(queryClient)
-  });
-};
-
-export const useDeleteBudget = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => deleteBudget(id),
-    onSuccess: () => invalidateBudgets(queryClient)
   });
 };

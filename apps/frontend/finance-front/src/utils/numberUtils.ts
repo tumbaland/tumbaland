@@ -89,3 +89,31 @@ export function formatNumberWithCommas(value: number | string, decimals: number 
     maximumFractionDigits: decimals,
   });
 }
+
+/**
+ * A chart-axis label for a period key: "2026-07" → "Jul 2026", "2026" → "2026".
+ * Charts label points with the raw key, which is unreadable at a glance and
+ * gives a tooltip no month to show.
+ */
+export function formatPeriod(period: string): string {
+  const match = /^(\d{4})-(\d{2})$/.exec(period);
+  if (!match) return period;
+
+  const [, year, month] = match;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, 1));
+  return date.toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+}
+
+/**
+ * Axis tick labels, which have to stay short: 12 500 → "12.5k".
+ * Whole euros only — cents on an axis are noise at this scale.
+ */
+export function formatCompactCurrency(value: number, currency: string = 'EUR'): string {
+  const symbol = currency === 'EUR' ? '€' : currency === 'USD' ? '$' : currency;
+  const abs = Math.abs(value);
+  const sign = value < 0 ? '−' : '';
+
+  if (abs >= 1_000_000) return `${sign}${(abs / 1_000_000).toFixed(1)}M ${symbol}`;
+  if (abs >= 1_000) return `${sign}${(abs / 1_000).toFixed(abs >= 10_000 ? 0 : 1)}k ${symbol}`;
+  return `${sign}${Math.round(abs)} ${symbol}`;
+}

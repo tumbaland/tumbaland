@@ -3,13 +3,9 @@ import {
   getTransactions,
   getCategories,
   getCashflowSummary,
-  addTransaction,
-  updateTransaction,
-  deleteTransaction,
-  getBudgets,
-  addBudget,
-  updateBudget,
-  deleteBudget
+  getAnalytics,
+  importStatement,
+  deleteTransaction
 } from './cashflowService';
 
 function mockFetchOnce(body: unknown) {
@@ -25,7 +21,7 @@ const lastInit = () => (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][
 
 describe('transactions', () => {
   it('fetches with no filters', async () => {
-    mockFetchOnce({ success: true, data: [] });
+    mockFetchOnce({ success: true, data: { items: [], totals: {}, hasMore: false } });
 
     await getTransactions();
 
@@ -34,7 +30,7 @@ describe('transactions', () => {
   });
 
   it('sends every filter it is given', async () => {
-    mockFetchOnce({ success: true, data: [] });
+    mockFetchOnce({ success: true, data: { items: [], totals: {}, hasMore: false } });
 
     await getTransactions({
       groupId: 'g1',
@@ -42,7 +38,9 @@ describe('transactions', () => {
       to: '2026-06-01',
       type: 'expense',
       category: 'Rent',
-      limit: 50
+      search: 'rimi',
+      limit: 50,
+      skip: 100
     });
 
     const url = lastUrl();
@@ -52,6 +50,8 @@ describe('transactions', () => {
     expect(url).toContain('type=expense');
     expect(url).toContain('category=Rent');
     expect(url).toContain('limit=50');
+    expect(url).toContain('search=rimi');
+    expect(url).toContain('skip=100');
   });
 
   it('reads the categories in use', async () => {
@@ -87,22 +87,6 @@ describe('transactions', () => {
     expect(lastUrl()).not.toContain('months=');
   });
 
-  it('posts a new transaction', async () => {
-    mockFetchOnce({ success: true, data: {} });
-
-    await addTransaction({ date: '2026-01-05', amount: 40, type: 'expense', category: 'Rent' });
-
-    expect(JSON.parse(lastInit().body as string)).toMatchObject({ amount: 40, type: 'expense' });
-  });
-
-  it('puts an updated transaction', async () => {
-    mockFetchOnce({ success: true, data: {} });
-
-    await updateTransaction('x1', { amount: 60 });
-
-    expect(lastUrl()).toContain('/transactions/x1');
-  });
-
   it('deletes a transaction', async () => {
     mockFetchOnce({ success: true });
 
@@ -113,44 +97,33 @@ describe('transactions', () => {
   });
 });
 
-describe('budgets', () => {
-  it('reads budgets for the caller', async () => {
-    mockFetchOnce({ success: true, data: [{ category: 'Rent', amount: 800 }] });
+describe('analytics and import', () => {
+  it('reads the analytics report', async () => {
+    mockFetchOnce({ success: true, data: { years: [] } });
 
-    expect(await getBudgets()).toHaveLength(1);
-    expect(lastUrl()).toContain('/budgets');
-  });
+    await getAnalytics('g1');
 
-  it('passes the group when reading budgets', async () => {
-    mockFetchOnce({ success: true, data: [] });
-
-    await getBudgets('g1');
-
+    expect(lastUrl()).toContain('/transactions/analytics');
     expect(lastUrl()).toContain('groupId=g1');
   });
 
-  it('posts a new budget', async () => {
-    mockFetchOnce({ success: true, data: {} });
+  it('posts the statement as raw CSV, not JSON', async () => {
+    mockFetchOnce({ success: true, data: { imported: 2, duplicates: 0 } });
 
-    await addBudget({ category: 'Rent', amount: 800 });
+    await importStatement('Kliendi konto;a\nrow', 'g1');
 
-    expect(JSON.parse(lastInit().body as string)).toMatchObject({ category: 'Rent', amount: 800 });
+    const init = lastInit();
+    expect(lastUrl()).toContain('/transactions/import');
+    // Sent verbatim — JSON.stringify would quote it and escape every newline
+    expect(init.body).toBe('Kliendi konto;a\nrow');
+    expect((init.headers as Record<string, string>)['Content-Type']).toBe('text/csv');
   });
 
-  it('puts an updated budget', async () => {
-    mockFetchOnce({ success: true, data: {} });
+  it('omits the group when working personally', async () => {
+    mockFetchOnce({ success: true, data: { imported: 0, duplicates: 0 } });
 
-    await updateBudget('b1', { amount: 900 });
+    await importStatement('csv');
 
-    expect(lastUrl()).toContain('/budgets/b1');
-  });
-
-  it('deletes a budget', async () => {
-    mockFetchOnce({ success: true });
-
-    await deleteBudget('b1');
-
-    expect(lastUrl()).toContain('/budgets/b1');
-    expect(lastInit().method).toBe('DELETE');
+    expect(lastUrl()).not.toContain('groupId=');
   });
 });

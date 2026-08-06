@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Box,
   Button,
@@ -15,13 +15,14 @@ import {
   Snackbar,
   Alert,
   CircularProgress,
+  Tabs,
+  Tab,
   useTheme,
   useMediaQuery
 } from '@mui/material';
 import {
-  Add as AddIcon,
-  Edit as EditIcon,
   Delete as DeleteIcon,
+  UploadFile as UploadIcon,
   AccountBalanceWallet as WalletIcon
 } from '@mui/icons-material';
 import { useTenantFilter } from '@tumbaland/components';
@@ -29,81 +30,80 @@ import {
   useTransactions,
   useTransactionCategories,
   useCashflowSummary,
-  useBudgets,
-  useCreateTransaction,
-  useUpdateTransaction,
+  useAnalytics,
   useDeleteTransaction
 } from '../hooks/useCashflow';
 import { Transaction } from '../services/cashflowService';
-import TransactionDialog from '../components/cashflow/TransactionDialog';
-import BudgetManagerDialog from '../components/cashflow/BudgetManagerDialog';
+import ImportDialog from '../components/cashflow/ImportDialog';
+import CashflowAnalytics from '../components/cashflow/CashflowAnalytics';
+import CategoryBreakdown from '../components/cashflow/CategoryBreakdown';
 import CashflowSummaryCards from '../components/cashflow/CashflowSummaryCards';
+import TransactionFilters, {
+  FilterValues,
+  EMPTY_FILTERS,
+  toQuery
+} from '../components/cashflow/TransactionFilters';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { formatCurrency } from '../utils/numberUtils';
 
+const PAGE_SIZE = 100;
+
 /**
- * The cash-flow layer: what came in and went out, and what that explains about
- * the net-worth line on the dashboard.
+ * The cash-flow layer: what came in and went out, where it is heading, and what
+ * it explains about the net-worth line on the dashboard.
+ *
+ * Entries arrive by importing a bank statement rather than being typed — with
+ * thousands of rows a year, hand entry was never going to keep up.
  */
 const CashFlowPage: React.FC = () => {
   const tenantGroupId = useTenantFilter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const { data: transactions = [], isLoading, error } = useTransactions({ groupId: tenantGroupId });
-  const { data: categories = [] } = useTransactionCategories(tenantGroupId);
-  const { data: summary } = useCashflowSummary(tenantGroupId);
-  const { data: budgets = [] } = useBudgets(tenantGroupId);
-
-  const createMutation = useCreateTransaction();
-  const updateMutation = useUpdateTransaction();
-  const deleteMutation = useDeleteTransaction();
-
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<Transaction | null>(null);
-  const [budgetsOpen, setBudgetsOpen] = useState(false);
+  const [tab, setTab] = useState(0);
+  const [filters, setFilters] = useState<FilterValues>(EMPTY_FILTERS);
+  const [page, setPage] = useState(0);
+  const [importOpen, setImportOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
   const [snackbar, setSnackbar] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
 
-  const notify = (message: string, severity: 'success' | 'error') => setSnackbar({ message, severity });
+  const query = useMemo(
+    () => ({
+      groupId: tenantGroupId,
+      ...toQuery(filters),
+      limit: PAGE_SIZE,
+      skip: page * PAGE_SIZE
+    }),
+    [tenantGroupId, filters, page]
+  );
 
-  const handleSubmit = async (data: Omit<Transaction, '_id'>) => {
-    if (editing?._id) {
-      await updateMutation.mutateAsync({ id: editing._id, data });
-      notify('Transaction updated', 'success');
-    } else {
-      await createMutation.mutateAsync(data);
-      notify('Transaction added', 'success');
-    }
+  const { data, isLoading, error } = useTransactions(query);
+  const { data: categories = [] } = useTransactionCategories(tenantGroupId);
+  const { data: summary } = useCashflowSummary(tenantGroupId);
+  const { data: analytics } = useAnalytics(tenantGroupId);
+  const deleteMutation = useDeleteTransaction();
+
+  const transactions = data?.items ?? [];
+  const totals = data?.totals;
+
+  // Any filter change invalidates the page you were on.
+  const applyFilters = (next: FilterValues) => {
+    setFilters(next);
+    setPage(0);
   };
 
   const handleDelete = async () => {
     if (!deleteTarget?._id) return;
     try {
       await deleteMutation.mutateAsync(deleteTarget._id);
-      notify('Transaction deleted', 'success');
+      setSnackbar({ message: 'Transaction deleted', severity: 'success' });
     } catch {
-      notify('Failed to delete the transaction', 'error');
+      setSnackbar({ message: 'Failed to delete the transaction', severity: 'error' });
     }
     setDeleteTarget(null);
   };
 
-  const openCreate = () => {
-    setEditing(null);
-    setDialogOpen(true);
-  };
-
-  const openEdit = (transaction: Transaction) => {
-    setEditing(transaction);
-    setDialogOpen(true);
-  };
-
-  // Income reads positive and expense negative, so a column of amounts scans
-  // the way a bank statement does.
-  const signed = (transaction: Transaction) =>
-    transaction.type === 'income' ? transaction.amount : -transaction.amount;
-
-  if (isLoading) {
+  if (isLoading && !data) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
         <CircularProgress />
@@ -119,6 +119,8 @@ const CashFlowPage: React.FC = () => {
     );
   }
 
+  const nothingAtAll = !totals || (totals.count === 0 && !filters.search && !filters.category);
+
   return (
     <Box sx={{ p: { xs: 2, md: 4 } }}>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2, mb: 3 }}>
@@ -128,17 +130,12 @@ const CashFlowPage: React.FC = () => {
             What you earn and spend — and how much of your net-worth change it explains
           </Typography>
         </Box>
-        <Button startIcon={<WalletIcon />} onClick={() => setBudgetsOpen(true)}>
-          Budgets
-        </Button>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
-          Add transaction
+        <Button variant="contained" startIcon={<UploadIcon />} onClick={() => setImportOpen(true)}>
+          Import statement
         </Button>
       </Box>
 
-      {summary && summary.months.length > 0 && <CashflowSummaryCards summary={summary} />}
-
-      {transactions.length === 0 ? (
+      {nothingAtAll ? (
         <Paper
           elevation={0}
           sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, p: 6, textAlign: 'center' }}
@@ -148,116 +145,175 @@ const CashFlowPage: React.FC = () => {
             No transactions yet
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
-            Record what comes in and goes out, and the dashboard can tell you whether your net worth
-            grew because you saved or because the market moved.
+            Import a bank statement and the dashboard can tell you whether your net worth grew
+            because you saved or because the market moved.
           </Typography>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
-            Add your first transaction
+          <Button variant="contained" startIcon={<UploadIcon />} onClick={() => setImportOpen(true)}>
+            Import your first statement
           </Button>
         </Paper>
-      ) : isMobile ? (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-          {transactions.map((transaction) => (
-            <Paper
-              key={transaction._id}
-              elevation={0}
-              sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, p: 2 }}
-            >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <Box>
-                  <Typography sx={{ fontWeight: 600 }}>{transaction.category}</Typography>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    {transaction.date.slice(0, 10)}
-                    {transaction.note ? ` · ${transaction.note}` : ''}
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', flexShrink: 0 }}>
-                  <IconButton size="small" onClick={() => openEdit(transaction)}>
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton size="small" onClick={() => setDeleteTarget(transaction)}>
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-              </Box>
-              <Typography
-                variant="h6"
-                sx={{ fontWeight: 700, mt: 1, color: transaction.type === 'income' ? 'success.main' : 'error.main' }}
-              >
-                {transaction.type === 'income' ? '+' : '−'}{formatCurrency(transaction.amount)}
-              </Typography>
-            </Paper>
-          ))}
-        </Box>
       ) : (
-        <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Date</TableCell>
-                <TableCell>Category</TableCell>
-                <TableCell>Note</TableCell>
-                <TableCell align="right">Amount</TableCell>
-                <TableCell align="right" sx={{ width: 110 }}>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {transactions.map((transaction) => (
-                <TableRow key={transaction._id} hover>
-                  <TableCell>{transaction.date.slice(0, 10)}</TableCell>
-                  <TableCell>
-                    <Chip
-                      size="small"
-                      label={transaction.category}
-                      color={transaction.type === 'income' ? 'success' : 'default'}
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell sx={{ color: 'text.secondary' }}>{transaction.note || '—'}</TableCell>
-                  <TableCell
-                    align="right"
-                    sx={{ fontWeight: 600, color: transaction.type === 'income' ? 'success.main' : 'error.main' }}
+        <>
+          <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}>
+            <Tab label="Overview" />
+            <Tab label="Trends" />
+            <Tab label="Categories" />
+            <Tab label={`Transactions (${totals?.count.toLocaleString() ?? 0})`} />
+          </Tabs>
+
+          <Box role="tabpanel" hidden={tab !== 0}>
+            {tab === 0 && summary && summary.months.length > 0 && (
+              <CashflowSummaryCards summary={summary} />
+            )}
+          </Box>
+
+          <Box role="tabpanel" hidden={tab !== 1}>
+            {tab === 1 && analytics && <CashflowAnalytics analytics={analytics} />}
+          </Box>
+
+          <Box role="tabpanel" hidden={tab !== 2}>
+            {tab === 2 && analytics && <CategoryBreakdown analytics={analytics} />}
+          </Box>
+
+          <Box role="tabpanel" hidden={tab !== 3}>
+            {tab === 3 && (
+              <>
+                <TransactionFilters
+                  filters={filters}
+                  onChange={applyFilters}
+                  categories={categories}
+                  totals={totals}
+                />
+
+                {transactions.length === 0 ? (
+                  <Paper
+                    elevation={0}
+                    sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, p: 4, textAlign: 'center' }}
                   >
-                    {transaction.type === 'income' ? '+' : '−'}{formatCurrency(transaction.amount)}
-                  </TableCell>
-                  <TableCell align="right">
-                    <IconButton size="small" onClick={() => openEdit(transaction)}>
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => setDeleteTarget(transaction)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                    <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+                      Nothing matches these filters.
+                    </Typography>
+                  </Paper>
+                ) : isMobile ? (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    {transactions.map((transaction) => (
+                      <Paper
+                        key={transaction._id}
+                        elevation={0}
+                        sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, p: 2 }}
+                      >
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <Box>
+                            <Typography sx={{ fontWeight: 600 }}>{transaction.category}</Typography>
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                              {transaction.date.slice(0, 10)}
+                              {transaction.note ? ` · ${transaction.note.slice(0, 60)}` : ''}
+                            </Typography>
+                          </Box>
+                          <IconButton size="small" onClick={() => setDeleteTarget(transaction)}>
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                        <Typography
+                          variant="h6"
+                          sx={{
+                            fontWeight: 700,
+                            mt: 1,
+                            color: transaction.type === 'income' ? 'success.main' : 'error.main'
+                          }}
+                        >
+                          {transaction.type === 'income' ? '+' : '−'}{formatCurrency(transaction.amount)}
+                        </Typography>
+                      </Paper>
+                    ))}
+                  </Box>
+                ) : (
+                  <TableContainer
+                    component={Paper}
+                    elevation={0}
+                    sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3 }}
+                  >
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Date</TableCell>
+                          <TableCell>Category</TableCell>
+                          <TableCell>Note</TableCell>
+                          <TableCell align="right">Amount</TableCell>
+                          <TableCell align="right" sx={{ width: 60 }} />
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {transactions.map((transaction) => (
+                          <TableRow key={transaction._id} hover>
+                            <TableCell>{transaction.date.slice(0, 10)}</TableCell>
+                            <TableCell>
+                              <Chip
+                                size="small"
+                                label={transaction.category}
+                                color={transaction.type === 'income' ? 'success' : 'default'}
+                                variant="outlined"
+                              />
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                color: 'text.secondary',
+                                maxWidth: 420,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}
+                              title={transaction.note}
+                            >
+                              {transaction.note || '—'}
+                            </TableCell>
+                            <TableCell
+                              align="right"
+                              sx={{
+                                fontWeight: 600,
+                                color: transaction.type === 'income' ? 'success.main' : 'error.main'
+                              }}
+                            >
+                              {transaction.type === 'income' ? '+' : '−'}{formatCurrency(transaction.amount)}
+                            </TableCell>
+                            <TableCell align="right">
+                              <IconButton size="small" onClick={() => setDeleteTarget(transaction)}>
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
+
+                {(page > 0 || data?.hasMore) && (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2, mt: 2 }}>
+                    <Button disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>
+                      Previous
+                    </Button>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      {page * PAGE_SIZE + 1}–{page * PAGE_SIZE + transactions.length} of{' '}
+                      {totals?.count.toLocaleString()}
+                    </Typography>
+                    <Button disabled={!data?.hasMore} onClick={() => setPage((p) => p + 1)}>
+                      Next
+                    </Button>
+                  </Box>
+                )}
+              </>
+            )}
+          </Box>
+        </>
       )}
 
-      <TransactionDialog
-        open={dialogOpen}
-        onClose={() => { setDialogOpen(false); setEditing(null); }}
-        onSubmit={handleSubmit}
-        transaction={editing}
-        categories={categories}
-        tenantGroupId={tenantGroupId}
-        saving={createMutation.isPending || updateMutation.isPending}
-      />
-
-      <BudgetManagerDialog
-        open={budgetsOpen}
-        onClose={() => setBudgetsOpen(false)}
-        budgets={budgets}
-        categories={categories}
-        tenantGroupId={tenantGroupId}
-        notify={notify}
-      />
+      <ImportDialog open={importOpen} onClose={() => setImportOpen(false)} tenantGroupId={tenantGroupId} />
 
       <ConfirmationModal
         open={!!deleteTarget}
         title="Delete transaction"
-        message={`Delete the ${deleteTarget ? formatCurrency(Math.abs(signed(deleteTarget))) : ''} ${deleteTarget?.category} entry? This cannot be undone.`}
+        message={`Delete the ${deleteTarget ? formatCurrency(deleteTarget.amount) : ''} ${deleteTarget?.category} entry? Re-importing the statement would bring it back.`}
         confirmText="Delete"
         severity="error"
         onConfirm={handleDelete}

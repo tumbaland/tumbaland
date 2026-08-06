@@ -83,10 +83,3 @@ export const createTransactionSchema = z.object({
 
 export const updateTransactionSchema = createTransactionSchema.partial();
 
-export const createBudgetSchema = z.object({
-  category: z.string().trim().min(1),
-  amount: z.number().min(0),
-  groupId: z.string().optional()
-});
-
-export const updateBudgetSchema = createBudgetSchema.partial();

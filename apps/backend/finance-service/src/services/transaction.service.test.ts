@@ -8,37 +8,32 @@ jest.mock('../models/Transaction', () => {
   ctor.findByIdAndUpdate = jest.fn();
   ctor.findByIdAndDelete = jest.fn();
   ctor.distinct = jest.fn();
+  ctor.aggregate = jest.fn();
   return { __esModule: true, default: ctor };
 });
 
-jest.mock('../models/Budget', () => ({ __esModule: true, default: { distinct: jest.fn() } }));
-
 import Transaction from '../models/Transaction';
-import Budget from '../models/Budget';
 import {
   getTransactions,
   getCategories,
-  createTransaction,
-  updateTransaction,
   deleteTransaction,
   DEFAULT_TRANSACTION_LIMIT,
   MAX_TRANSACTION_LIMIT
 } from './transaction.service';
 
-const mockedCtor = Transaction as unknown as jest.Mock;
 const mockedFind = Transaction.find as unknown as jest.Mock;
 const mockedFindById = Transaction.findById as unknown as jest.Mock;
-const mockedFindByIdAndUpdate = Transaction.findByIdAndUpdate as unknown as jest.Mock;
 const mockedFindByIdAndDelete = Transaction.findByIdAndDelete as unknown as jest.Mock;
 const mockedDistinct = Transaction.distinct as unknown as jest.Mock;
-const mockedBudgetDistinct = Budget.distinct as unknown as jest.Mock;
 
-/** find().sort().limit() */
-const mockQuery = () => {
-  const limit = jest.fn().mockResolvedValue([]);
-  const sort = jest.fn().mockReturnValue({ limit });
+/** find().sort().skip().limit(), plus the totals aggregation */
+const mockQuery = (items: unknown[] = [], totals: unknown[] = []) => {
+  const limit = jest.fn().mockResolvedValue(items);
+  const skip = jest.fn().mockReturnValue({ limit });
+  const sort = jest.fn().mockReturnValue({ skip });
   mockedFind.mockReturnValue({ sort });
-  return { sort, limit };
+  (Transaction.aggregate as unknown as jest.Mock).mockResolvedValue(totals);
+  return { sort, skip, limit };
 };
 
 const personalScope = { userId: 'u1', $or: [{ groupId: { $exists: false } }, { groupId: null }] };
@@ -89,67 +84,16 @@ describe('getTransactions', () => {
 });
 
 describe('getCategories', () => {
-  it('merges used and budgeted categories, deduplicated and sorted', async () => {
-    mockedDistinct.mockResolvedValue(['Rent', 'Groceries']);
-    mockedBudgetDistinct.mockResolvedValue(['Rent', 'Travel']);
+  it('returns the categories in use, deduplicated and sorted', async () => {
+    mockedDistinct.mockResolvedValue(['Rent', 'Groceries', 'Rent']);
 
-    expect(await getCategories('u1', [])).toEqual(['Groceries', 'Rent', 'Travel']);
+    expect(await getCategories('u1', [])).toEqual(['Groceries', 'Rent']);
   });
 
   it('is empty when nothing has been categorised yet', async () => {
     mockedDistinct.mockResolvedValue([]);
-    mockedBudgetDistinct.mockResolvedValue([]);
 
     expect(await getCategories('u1', [])).toEqual([]);
-  });
-});
-
-describe('createTransaction', () => {
-  const input = { date: new Date('2026-01-05'), amount: 40, type: 'expense' as const, category: 'Rent' };
-
-  it('stamps the owner onto the saved document', async () => {
-    await createTransaction(input, 'u1', []);
-
-    expect(mockedCtor).toHaveBeenCalledWith(expect.objectContaining({ ...input, userId: 'u1' }));
-  });
-
-  it('refuses a group the caller does not belong to', async () => {
-    await expect(createTransaction({ ...input, groupId: 'g9' }, 'u1', ['g1'])).rejects.toMatchObject({
-      name: 'ForbiddenError'
-    });
-  });
-});
-
-describe('updateTransaction', () => {
-  const existing = { _id: 'x1', userId: 'u1', groupId: undefined };
-
-  it('throws NotFoundError for an unknown id', async () => {
-    mockedFindById.mockResolvedValue(null);
-
-    await expect(updateTransaction('nope', {}, 'u1', [])).rejects.toMatchObject({ name: 'NotFoundError' });
-  });
-
-  it('refuses a transaction belonging to someone else', async () => {
-    mockedFindById.mockResolvedValue({ ...existing, userId: 'someone-else' });
-
-    await expect(updateTransaction('x1', {}, 'u1', [])).rejects.toMatchObject({ name: 'ForbiddenError' });
-  });
-
-  it('refuses a move into a group the caller does not belong to', async () => {
-    mockedFindById.mockResolvedValue(existing);
-
-    await expect(updateTransaction('x1', { groupId: 'g9' }, 'u1', ['g1'])).rejects.toMatchObject({
-      name: 'ForbiddenError'
-    });
-  });
-
-  it('applies the patch with validators on', async () => {
-    mockedFindById.mockResolvedValue(existing);
-    mockedFindByIdAndUpdate.mockResolvedValue({ ...existing, amount: 90 });
-
-    await updateTransaction('x1', { amount: 90 }, 'u1', []);
-
-    expect(mockedFindByIdAndUpdate).toHaveBeenCalledWith('x1', { amount: 90 }, { new: true, runValidators: true });
   });
 });
 

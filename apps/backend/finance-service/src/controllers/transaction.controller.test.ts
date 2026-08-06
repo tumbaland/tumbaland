@@ -3,16 +3,7 @@ import { Request, Response } from 'express';
 jest.mock('../services/transaction.service', () => ({
   getTransactions: jest.fn(),
   getCategories: jest.fn(),
-  createTransaction: jest.fn(),
-  updateTransaction: jest.fn(),
   deleteTransaction: jest.fn()
-}));
-
-jest.mock('../services/budget.service', () => ({
-  getBudgets: jest.fn(),
-  createBudget: jest.fn(),
-  updateBudget: jest.fn(),
-  deleteBudget: jest.fn()
 }));
 
 jest.mock('../services/cashflow.service', () => ({
@@ -20,25 +11,26 @@ jest.mock('../services/cashflow.service', () => ({
   DEFAULT_MONTHS: 12
 }));
 
+jest.mock('../services/analytics.service', () => ({ getAnalytics: jest.fn() }));
+jest.mock('../services/transactionImport.service', () => ({ importStatement: jest.fn() }));
+
 import * as transactionService from '../services/transaction.service';
-import * as budgetService from '../services/budget.service';
 import { getCashflowSummary } from '../services/cashflow.service';
+import { getAnalytics } from '../services/analytics.service';
+import { importStatement } from '../services/transactionImport.service';
 import {
   getTransactions,
   getCategories,
   getSummary,
-  addTransaction,
-  editTransaction,
-  removeTransaction,
-  getBudgets,
-  addBudget,
-  editBudget,
-  removeBudget
+  getAnalyticsReport,
+  importTransactions,
+  removeTransaction
 } from './transaction.controller';
 
 const mockedTransactions = transactionService as jest.Mocked<typeof transactionService>;
-const mockedBudgets = budgetService as jest.Mocked<typeof budgetService>;
 const mockedSummary = getCashflowSummary as unknown as jest.Mock;
+const mockedAnalytics = getAnalytics as unknown as jest.Mock;
+const mockedImport = importStatement as unknown as jest.Mock;
 
 function mockRes(): Response {
   const res: Partial<Response> = {};
@@ -54,7 +46,7 @@ beforeEach(() => jest.clearAllMocks());
 
 describe('getTransactions', () => {
   it('scopes to the caller with no filters by default', async () => {
-    mockedTransactions.getTransactions.mockResolvedValue([] as never);
+    mockedTransactions.getTransactions.mockResolvedValue({ items: [], totals: { count: 0, income: 0, expense: 0, net: 0 }, hasMore: false } as never);
 
     await getTransactions(req(), mockRes());
 
@@ -63,16 +55,21 @@ describe('getTransactions', () => {
       to: undefined,
       type: undefined,
       category: undefined,
-      limit: undefined
+      search: undefined,
+      limit: undefined,
+      skip: undefined
     });
   });
 
   it('forwards the date range, type, category and limit', async () => {
-    mockedTransactions.getTransactions.mockResolvedValue([] as never);
+    mockedTransactions.getTransactions.mockResolvedValue({ items: [], totals: { count: 0, income: 0, expense: 0, net: 0 }, hasMore: false } as never);
 
     await getTransactions(
       req({
-        query: { from: '2026-01-01', to: '2026-06-01', type: 'expense', category: 'Rent', limit: '20' }
+        query: {
+          from: '2026-01-01', to: '2026-06-01', type: 'expense',
+          category: 'Rent', search: 'rimi', limit: '20', skip: '40'
+        }
       } as Partial<Request>),
       mockRes()
     );
@@ -82,7 +79,9 @@ describe('getTransactions', () => {
       to: new Date('2026-06-01'),
       type: 'expense',
       category: 'Rent',
-      limit: 20
+      search: 'rimi',
+      limit: 20,
+      skip: 40
     });
   });
 
@@ -150,24 +149,6 @@ describe('getSummary', () => {
 });
 
 describe('transaction writes', () => {
-  it('creates and answers 201', async () => {
-    mockedTransactions.createTransaction.mockResolvedValue({ _id: 'x1' } as never);
-    const res = mockRes();
-
-    await addTransaction(req({ body: { amount: 10 } } as Partial<Request>), res);
-
-    expect(mockedTransactions.createTransaction).toHaveBeenCalledWith({ amount: 10 }, 'u1', []);
-    expect(res.status).toHaveBeenCalledWith(201);
-  });
-
-  it('updates the identified transaction', async () => {
-    mockedTransactions.updateTransaction.mockResolvedValue({ _id: 'x1' } as never);
-
-    await editTransaction(req({ params: { id: 'x1' }, body: { amount: 20 } } as Partial<Request>), mockRes());
-
-    expect(mockedTransactions.updateTransaction).toHaveBeenCalledWith('x1', { amount: 20 }, 'u1', []);
-  });
-
   it('deletes the identified transaction', async () => {
     mockedTransactions.deleteTransaction.mockResolvedValue({} as never);
 
@@ -177,37 +158,59 @@ describe('transaction writes', () => {
   });
 });
 
-describe('budget writes', () => {
-  it('lists budgets in the caller context', async () => {
-    mockedBudgets.getBudgets.mockResolvedValue([] as never);
 
-    await getBudgets(req(), mockRes());
-
-    expect(mockedBudgets.getBudgets).toHaveBeenCalledWith('u1', []);
-  });
-
-  it('creates and answers 201', async () => {
-    mockedBudgets.createBudget.mockResolvedValue({ _id: 'b1' } as never);
+describe('getAnalyticsReport', () => {
+  it('returns the trend report for the caller context', async () => {
+    mockedAnalytics.mockResolvedValue({ years: [] });
     const res = mockRes();
 
-    await addBudget(req({ body: { category: 'Rent', amount: 800 } } as Partial<Request>), res);
+    await getAnalyticsReport(req({ query: { groupId: 'g1' }, userGroups: ['g1'] } as Partial<Request>), res);
 
-    expect(res.status).toHaveBeenCalledWith(201);
+    expect(mockedAnalytics).toHaveBeenCalledWith('u1', 'g1');
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: { years: [] } }));
   });
 
-  it('updates the identified budget', async () => {
-    mockedBudgets.updateBudget.mockResolvedValue({ _id: 'b1' } as never);
+  it('uses the personal context when no group is given', async () => {
+    mockedAnalytics.mockResolvedValue({ years: [] });
 
-    await editBudget(req({ params: { id: 'b1' }, body: { amount: 900 } } as Partial<Request>), mockRes());
+    await getAnalyticsReport(req(), mockRes());
 
-    expect(mockedBudgets.updateBudget).toHaveBeenCalledWith('b1', { amount: 900 }, 'u1', []);
+    expect(mockedAnalytics).toHaveBeenCalledWith('u1', undefined);
+  });
+});
+
+describe('importTransactions', () => {
+  it('passes the raw CSV body through with the caller context', async () => {
+    mockedImport.mockResolvedValue({ imported: 3, duplicates: 0, skipped: {}, period: null, rows: 3, categories: [] });
+
+    await importTransactions(
+      req({ body: 'csv-text', query: { groupId: 'g1' }, userGroups: ['g1'] } as Partial<Request>),
+      mockRes()
+    );
+
+    expect(mockedImport).toHaveBeenCalledWith('csv-text', {
+      userId: 'u1',
+      groupId: 'g1',
+      userGroups: ['g1']
+    });
   });
 
-  it('deletes the identified budget', async () => {
-    mockedBudgets.deleteBudget.mockResolvedValue({} as never);
+  it('reports how many rows were already present', async () => {
+    mockedImport.mockResolvedValue({ imported: 2, duplicates: 5, skipped: {}, period: null, rows: 7, categories: [] });
+    const res = mockRes();
 
-    await removeBudget(req({ params: { id: 'b1' } } as Partial<Request>), mockRes());
+    await importTransactions(req({ body: 'csv' } as Partial<Request>), res);
 
-    expect(mockedBudgets.deleteBudget).toHaveBeenCalledWith('b1', 'u1', []);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Imported 2; 5 already present' })
+    );
+  });
+
+  it('sends an empty string when the body never parsed as text', async () => {
+    mockedImport.mockResolvedValue({ imported: 0, duplicates: 0, skipped: {}, period: null, rows: 0, categories: [] });
+
+    await importTransactions(req({ body: undefined } as Partial<Request>), mockRes());
+
+    expect(mockedImport).toHaveBeenCalledWith('', expect.any(Object));
   });
 });

@@ -3,7 +3,9 @@ import {
   parseNumberWithCommas,
   formatCurrency,
   formatPct,
-  formatNumberWithCommas
+  formatNumberWithCommas,
+  formatPeriod,
+  formatCompactCurrency
 } from './numberUtils';
 
 describe('formatCurrency', () => {
@@ -77,5 +79,47 @@ describe('formatNumberWithCommas', () => {
 
   it('returns "0" for non-numeric input', () => {
     expect(formatNumberWithCommas('not-a-number')).toBe('0');
+  });
+});
+
+describe('formatPeriod', () => {
+  it('turns a month key into a readable label', () => {
+    expect(formatPeriod('2026-07')).toBe('Jul 2026');
+  });
+
+  it('reads the month in UTC, so a timezone cannot shift it', () => {
+    // A local-time parse of 2026-01 west of UTC would render as Dec 2025
+    expect(formatPeriod('2026-01')).toBe('Jan 2026');
+  });
+
+  it('leaves a year key alone', () => {
+    expect(formatPeriod('2026')).toBe('2026');
+  });
+
+  it('leaves anything unrecognised alone', () => {
+    expect(formatPeriod('all')).toBe('all');
+  });
+});
+
+describe('formatCompactCurrency', () => {
+  it('rounds to whole euros below a thousand', () => {
+    expect(formatCompactCurrency(1234.567)).toBe('1.2k €');
+    expect(formatCompactCurrency(567.89)).toBe('568 €');
+  });
+
+  it('drops the decimal past ten thousand, where it adds nothing', () => {
+    expect(formatCompactCurrency(12500)).toBe('13k €');
+  });
+
+  it('abbreviates millions', () => {
+    expect(formatCompactCurrency(2_400_000)).toBe('2.4M €');
+  });
+
+  it('marks a negative with a real minus sign', () => {
+    expect(formatCompactCurrency(-500)).toBe('−500 €');
+  });
+
+  it('honours another currency', () => {
+    expect(formatCompactCurrency(1500, 'USD')).toBe('1.5k $');
   });
 });

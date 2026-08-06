@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Card, CardContent, Typography, LinearProgress, Tooltip, Alert } from '@mui/material';
+import { Box, Card, CardContent, Typography, LinearProgress, Alert } from '@mui/material';
 import { CashflowSummary } from '../../services/cashflowService';
 import { formatCurrency, formatPct } from '../../utils/numberUtils';
 
@@ -18,7 +18,7 @@ const signColor = (v: number) => (v > 0 ? 'success.main' : v < 0 ? 'error.main' 
 const CashflowSummaryCards: React.FC<CashflowSummaryCardsProps> = ({ summary, currency = 'EUR' }) => {
   const { totals, growth, categories } = summary;
   const money = (v: number) => formatCurrency(v, currency);
-  const overBudget = categories.filter((c) => c.variance !== null && c.variance > 0);
+  const biggest = categories[0]?.spent || 0;
 
   return (
     <Box sx={{ mb: 3 }}>
@@ -96,36 +96,25 @@ const CashflowSummaryCards: React.FC<CashflowSummaryCardsProps> = ({ summary, cu
             </Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
               Monthly average across the months that have transactions
-              {overBudget.length > 0 && ` · ${overBudget.length} over budget`}
             </Typography>
 
-            {categories.map((category) => {
-              const share = category.budget ? Math.min(100, (category.spent / category.budget) * 100) : 0;
-              const over = category.variance !== null && category.variance > 0;
-              return (
-                <Box key={category.category} sx={{ mb: 1.5 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                    <Typography variant="body2">{category.category}</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600, color: over ? 'error.main' : 'text.primary' }}>
-                      {money(category.spent)}
-                      {category.budget !== null && (
-                        <Tooltip title={over ? `${money(category.variance || 0)} over` : 'Within budget'}>
-                          <span style={{ opacity: 0.7 }}> / {money(category.budget)}</span>
-                        </Tooltip>
-                      )}
-                    </Typography>
-                  </Box>
-                  {category.budget !== null && (
-                    <LinearProgress
-                      variant="determinate"
-                      value={share}
-                      color={over ? 'error' : 'primary'}
-                      sx={{ height: 6, borderRadius: 3, bgcolor: 'action.hover' }}
-                    />
-                  )}
+            {categories.map((category) => (
+              <Box key={category.category} sx={{ mb: 1.5 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                  <Typography variant="body2">{category.category}</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {money(category.spent)}
+                  </Typography>
                 </Box>
-              );
-            })}
+                {/* Bars are relative to the biggest category, so the shape of
+                    spending reads at a glance without a budget to compare to. */}
+                <LinearProgress
+                  variant="determinate"
+                  value={biggest > 0 ? (category.spent / biggest) * 100 : 0}
+                  sx={{ height: 6, borderRadius: 3, bgcolor: 'action.hover' }}
+                />
+              </Box>
+            ))}
           </CardContent>
         </Card>
       )}

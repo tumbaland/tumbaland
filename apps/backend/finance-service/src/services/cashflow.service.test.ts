@@ -1,16 +1,13 @@
 jest.mock('../models/Transaction', () => ({ __esModule: true, default: { find: jest.fn() } }));
-jest.mock('../models/Budget', () => ({ __esModule: true, default: { find: jest.fn() } }));
 jest.mock('../models/Snapshot', () => ({ __esModule: true, default: { find: jest.fn() } }));
 jest.mock('../models/AssetClass', () => ({ __esModule: true, default: { find: jest.fn() } }));
 
 import Transaction from '../models/Transaction';
-import Budget from '../models/Budget';
 import Snapshot from '../models/Snapshot';
 import AssetClass from '../models/AssetClass';
 import { getCashflowSummary } from './cashflow.service';
 
 const mockedTransactionFind = Transaction.find as unknown as jest.Mock;
-const mockedBudgetFind = Budget.find as unknown as jest.Mock;
 const mockedSnapshotFind = Snapshot.find as unknown as jest.Mock;
 const mockedAssetClassFind = AssetClass.find as unknown as jest.Mock;
 
@@ -41,7 +38,6 @@ const dayIn = (month: string) => `${month}-05T00:00:00.000Z`;
 beforeEach(() => {
   jest.clearAllMocks();
   mockedTransactionFind.mockReturnValue(sorted([]));
-  mockedBudgetFind.mockResolvedValue([]);
   mockedSnapshotFind.mockReturnValue(sortedLimited([]));
   mockedAssetClassFind.mockResolvedValue([]);
 });
@@ -89,14 +85,6 @@ describe('getCashflowSummary', () => {
     expect(summary.categories[0].spent).toBe(900);
   });
 
-  it('compares the monthly average against the budget', async () => {
-    mockedTransactionFind.mockReturnValue(sorted([expense(dayIn(thisMonth()), 900, 'Rent')]));
-    mockedBudgetFind.mockResolvedValue([{ category: 'Rent', amount: 800 }]);
-
-    const summary = await getCashflowSummary('u1');
-
-    expect(summary.categories[0]).toMatchObject({ spent: 900, budget: 800, variance: 100 });
-  });
 
   it('averages spend over the months that have data, not the whole window', async () => {
     // Two months of transactions, 900 spent in total → an average of 450
@@ -112,31 +100,14 @@ describe('getCashflowSummary', () => {
     expect(summary.categories[0].spent).toBe(450);
   });
 
-  it('lists a budgeted category that has no spend yet', async () => {
-    mockedTransactionFind.mockReturnValue(sorted([expense(dayIn(thisMonth()), 100, 'Rent')]));
-    mockedBudgetFind.mockResolvedValue([{ category: 'Travel', amount: 200 }]);
 
-    const summary = await getCashflowSummary('u1');
-
-    expect(summary.categories.find((c) => c.category === 'Travel')).toMatchObject({
-      spent: 0,
-      budget: 200,
-      variance: -200
-    });
-  });
-
-  it('leaves the variance unknown for a category with no budget', async () => {
-    mockedTransactionFind.mockReturnValue(sorted([expense(dayIn(thisMonth()), 100, 'Rent')]));
-
-    const summary = await getCashflowSummary('u1');
-
-    expect(summary.categories[0]).toMatchObject({ budget: null, variance: null });
-  });
 
   it('scopes to the group when one is given', async () => {
     await getCashflowSummary('u1', { groupId: 'g1' });
 
-    expect(mockedBudgetFind).toHaveBeenCalledWith({ groupId: { $in: ['g1'] } });
+    expect(mockedTransactionFind).toHaveBeenCalledWith(
+      expect.objectContaining({ groupId: { $in: ['g1'] } })
+    );
   });
 });
 

@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
 import { BadRequestError, ForbiddenError, sendSuccess } from '@tumbaland/backend-core';
 import * as transactionService from '../services/transaction.service';
-import * as budgetService from '../services/budget.service';
 import { getCashflowSummary, DEFAULT_MONTHS } from '../services/cashflow.service';
+import { getAnalytics } from '../services/analytics.service';
+import { importStatement } from '../services/transactionImport.service';
 import { TransactionType } from '../models/Transaction';
 
 function contextGroups(req: Request): string[] {
@@ -34,23 +35,34 @@ function parsePositiveInt(value: unknown, field: string): number | undefined {
   return parsed;
 }
 
+function parseOffset(value: unknown, field: string): number | undefined {
+  if (value === undefined) return undefined;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new BadRequestError(`${field} must be zero or a positive integer`);
+  }
+  return parsed;
+}
+
 export const getTransactions = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
-  const { from, to, type, category, limit } = req.query;
+  const { from, to, type, category, search, limit, skip } = req.query;
 
   if (type && type !== 'income' && type !== 'expense') {
     throw new BadRequestError('type must be income or expense');
   }
 
-  const transactions = await transactionService.getTransactions(user.id, contextGroups(req), {
+  const page = await transactionService.getTransactions(user.id, contextGroups(req), {
     from: parseDate(from, 'from'),
     to: parseDate(to, 'to'),
     type: type as TransactionType | undefined,
     category: category ? String(category) : undefined,
-    limit: parsePositiveInt(limit, 'limit')
+    search: search ? String(search) : undefined,
+    limit: parsePositiveInt(limit, 'limit'),
+    skip: parseOffset(skip, 'skip')
   });
 
-  sendSuccess(res, transactions);
+  sendSuccess(res, page);
 };
 
 export const getCategories = async (req: Request, res: Response): Promise<void> => {
@@ -74,25 +86,6 @@ export const getSummary = async (req: Request, res: Response): Promise<void> => 
   sendSuccess(res, summary);
 };
 
-export const addTransaction = async (req: Request, res: Response): Promise<void> => {
-  const user = req.user!;
-  const userGroups = req.userGroups || [];
-
-  const created = await transactionService.createTransaction(req.body, user.id, userGroups);
-
-  sendSuccess(res, created, 'Transaction added', 201);
-};
-
-export const editTransaction = async (req: Request, res: Response): Promise<void> => {
-  const user = req.user!;
-  const userGroups = req.userGroups || [];
-  const { id } = req.params;
-
-  const updated = await transactionService.updateTransaction(id as string, req.body, user.id, userGroups);
-
-  sendSuccess(res, updated, 'Transaction updated');
-};
-
 export const removeTransaction = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
   const userGroups = req.userGroups || [];
@@ -103,39 +96,39 @@ export const removeTransaction = async (req: Request, res: Response): Promise<vo
   sendSuccess(res, undefined, 'Transaction deleted');
 };
 
-export const getBudgets = async (req: Request, res: Response): Promise<void> => {
+/** Long-run trends: income and spending year on year, and what moved them. */
+export const getAnalyticsReport = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
+  const { groupId } = req.query;
+  const groups = contextGroups(req);
 
-  const budgets = await budgetService.getBudgets(user.id, contextGroups(req));
+  const analytics = await getAnalytics(user.id, groups.length > 0 ? (groupId as string) : undefined);
 
-  sendSuccess(res, budgets);
+  sendSuccess(res, analytics);
 };
 
-export const addBudget = async (req: Request, res: Response): Promise<void> => {
+/**
+ * Import a bank statement. The body is the raw CSV, which is why this route
+ * mounts its own text parser rather than relying on the JSON one.
+ */
+export const importTransactions = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
-  const userGroups = req.userGroups || [];
+  const { groupId } = req.query;
+  const groups = contextGroups(req);
 
-  const created = await budgetService.createBudget(req.body, user.id, userGroups);
+  const csv = typeof req.body === 'string' ? req.body : '';
 
-  sendSuccess(res, created, 'Budget created', 201);
-};
+  const result = await importStatement(csv, {
+    userId: user.id,
+    groupId: groups.length > 0 ? (groupId as string) : undefined,
+    userGroups: req.userGroups || []
+  });
 
-export const editBudget = async (req: Request, res: Response): Promise<void> => {
-  const user = req.user!;
-  const userGroups = req.userGroups || [];
-  const { id } = req.params;
-
-  const updated = await budgetService.updateBudget(id as string, req.body, user.id, userGroups);
-
-  sendSuccess(res, updated, 'Budget updated');
-};
-
-export const removeBudget = async (req: Request, res: Response): Promise<void> => {
-  const user = req.user!;
-  const userGroups = req.userGroups || [];
-  const { id } = req.params;
-
-  await budgetService.deleteBudget(id as string, user.id, userGroups);
-
-  sendSuccess(res, undefined, 'Budget deleted');
+  sendSuccess(
+    res,
+    result,
+    result.duplicates > 0
+      ? `Imported ${result.imported}; ${result.duplicates} already present`
+      : `Imported ${result.imported} transactions`
+  );
 };

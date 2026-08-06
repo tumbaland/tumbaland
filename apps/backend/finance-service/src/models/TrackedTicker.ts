@@ -36,7 +36,12 @@ const TrackedTickerSchema: Schema = new Schema({
   }
 });
 
-// Same user (or group) cannot track the same ticker twice
+// Same user (or group) cannot track the same ticker twice. Uniqueness must
+// stay scoped to the owner: an earlier version indexed `ticker` alone, which
+// meant one user tracking an instrument locked every other user out of it.
+// Mongoose adds the indexes a schema declares but never removes ones it has
+// stopped declaring, so narrowing a constraint here also needs an entry in
+// scripts/migration/drop-stale-indexes.js to retire the old index.
 TrackedTickerSchema.index({ ticker: 1, userId: 1, groupId: 1 }, { unique: true, sparse: true });
 
 export default mongoose.model<ITrackedTicker>('TrackedTicker', TrackedTickerSchema);

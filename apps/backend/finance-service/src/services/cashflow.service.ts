@@ -1,5 +1,4 @@
 import Transaction from '../models/Transaction';
-import Budget from '../models/Budget';
 import Snapshot, { ISnapshot } from '../models/Snapshot';
 import AssetClass from '../models/AssetClass';
 import { scopeFor } from '../utils/scope';
@@ -16,10 +15,8 @@ export interface MonthSummary {
 
 export interface CategorySummary {
   category: string;
+  /** Monthly average across the months that have transactions. */
   spent: number;
-  budget: number | null;
-  /** spent − budget: positive means over. Null without a budget to compare to. */
-  variance: number | null;
 }
 
 /**
@@ -84,10 +81,7 @@ export const getCashflowSummary = async (
   const now = new Date();
   const from = shiftMonths(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)), months - 1);
 
-  const [transactions, budgets] = await Promise.all([
-    Transaction.find({ ...scope, date: { $gte: from } }).sort({ date: 1 }),
-    Budget.find(scope)
-  ]);
+  const transactions = await Transaction.find({ ...scope, date: { $gte: from } }).sort({ date: 1 });
 
   const byMonth = new Map<string, { income: number; expense: number }>();
   const byCategory = new Map<string, number>();
@@ -116,23 +110,12 @@ export const getCashflowSummary = async (
       summarize(month, monthIncome, monthExpense)
     );
 
-  // Spend is compared against a monthly budget, so an average over the months
-  // that actually have data — not the whole window — is the like-for-like figure.
+  // A monthly average over the months that actually have data — not the whole
+  // window — is what makes categories comparable across periods.
   const activeMonths = Math.max(1, monthSummaries.length);
-  const budgetByCategory = new Map(budgets.map((b) => [b.category, b.amount]));
-  const categoryNames = new Set([...byCategory.keys(), ...budgetByCategory.keys()]);
 
-  const categories: CategorySummary[] = [...categoryNames]
-    .map((category) => {
-      const spent = (byCategory.get(category) || 0) / activeMonths;
-      const budget = budgetByCategory.get(category) ?? null;
-      return {
-        category,
-        spent,
-        budget,
-        variance: budget === null ? null : spent - budget
-      };
-    })
+  const categories: CategorySummary[] = [...byCategory.entries()]
+    .map(([category, total]) => ({ category, spent: total / activeMonths }))
     .sort((a, b) => b.spent - a.spent);
 
   const growth = await getGrowthBreakdown(userId, options.groupId, monthSummaries);
