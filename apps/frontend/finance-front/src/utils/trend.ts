@@ -48,18 +48,41 @@ export function mean(values: number[]): number {
   return values.length === 0 ? 0 : values.reduce((sum, v) => sum + v, 0) / values.length;
 }
 
+export interface Profile {
+  /** The middle month — what a normal one costs. */
+  median: number;
+  /** The quietest and heaviest month in the window. */
+  low: number;
+  high: number;
+  /** The most recent month in the window, and how it sat against the median. */
+  latest: number;
+  latestIndex: number;
+  values: number[];
+}
+
 /**
- * Percentage change from the first half of the series to the second. Comparing
- * halves rather than endpoints keeps one unusual month at either end from
- * deciding the answer.
+ * What a typical period looks like, from the last `count` of them.
+ *
+ * The median rather than the mean, because one annual insurance bill or one
+ * holiday drags a mean far enough that it describes no actual month. The range
+ * comes with it: a median on its own invites the reader to treat it as a
+ * budget, and knowing the spread is what stops that.
  */
-export function halfOverHalfChange(values: number[]): number | null {
-  if (values.length < 2) return null;
+export function profile(values: number[], count: number): Profile | null {
+  const window = count > 0 ? values.slice(-count) : [...values];
+  if (window.length === 0) return null;
 
-  const midpoint = Math.floor(values.length / 2);
-  const earlier = mean(values.slice(0, midpoint));
-  const later = mean(values.slice(midpoint));
+  const sorted = [...window].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  const median =
+    sorted.length % 2 === 0 ? (sorted[middle - 1] + sorted[middle]) / 2 : sorted[middle];
 
-  if (earlier === 0) return null;
-  return ((later - earlier) / earlier) * 100;
+  return {
+    median,
+    low: sorted[0],
+    high: sorted[sorted.length - 1],
+    latest: window[window.length - 1],
+    latestIndex: window.length - 1,
+    values: window
+  };
 }

@@ -94,6 +94,56 @@ describe('years', () => {
 });
 
 describe('trailing windows', () => {
+  describe('the month in progress', () => {
+    // Today is fixed to the 7th, so August 2026 has three weeks still to run
+    beforeEach(() => jest.useFakeTimers().setSystemTime(new Date('2026-08-07T10:00:00Z')));
+    afterEach(() => jest.useRealTimers());
+
+    it('is left out of the window, however much of it has been imported', async () => {
+      withRows(
+        ...yearOf(2025, 'Groceries', 'expense', 100),
+        ...Array.from({ length: 8 }, (_, i) => row(2026, i + 1, 'Groceries', 'expense', 100))
+      );
+
+      const { trailing } = await getAnalytics('u1');
+
+      // Aug 2026 is the newest month with data, so without the exclusion the
+      // window would end there and compare 11 whole months against 12
+      expect(trailing.current.to).toBe('2026-07');
+      expect(trailing.current.from).toBe('2025-08');
+      expect(trailing.current.months).toBe(12);
+    });
+
+    it('keeps both windows the same length, so a comparison is like for like', async () => {
+      withRows(
+        ...yearOf(2024, 'Groceries', 'expense', 100),
+        ...yearOf(2025, 'Groceries', 'expense', 100),
+        ...Array.from({ length: 8 }, (_, i) => row(2026, i + 1, 'Groceries', 'expense', 100))
+      );
+
+      const { trailing, categoryTrends } = await getAnalytics('u1');
+
+      expect(trailing.current.months).toBe(trailing.previous!.months);
+      // 12 complete months each side at 100 a month — no phantom decline
+      expect(categoryTrends[0].latest).toBe(categoryTrends[0].previous);
+      expect(categoryTrends[0].change).toBe(0);
+    });
+
+    it('still keeps a thin month that is genuinely over', async () => {
+      withRows(
+        ...yearOf(2025, 'Groceries', 'expense', 100),
+        row(2026, 7, 'Groceries', 'expense', 5)
+      );
+
+      const { trailing } = await getAnalytics('u1');
+
+      // July is finished; 5 € is what July cost, not an artefact. The window is
+      // Aug 2025 – Jul 2026: five months of 2025 at 100, then the 5 € July.
+      expect(trailing.current.to).toBe('2026-07');
+      expect(trailing.current.expense).toBe(505);
+    });
+  });
+
   it('covers the last twelve months of data and the twelve before', async () => {
     withRows(
       ...yearOf(2024, 'Salary', 'income', 1000),

@@ -15,9 +15,10 @@ import {
 } from '@mui/material';
 import { BarChart } from '@mui/x-charts/BarChart';
 import { LineChart } from '@mui/x-charts/LineChart';
-import { Analytics } from '../../services/cashflowService';
+import { Analytics, CategoryTrend } from '../../services/cashflowService';
 import { formatCurrency, formatPct, formatPeriod, formatCompactCurrency } from '../../utils/numberUtils';
-import { movingAverage, linearTrend, halfOverHalfChange } from '../../utils/trend';
+import { movingAverage, profile } from '../../utils/trend';
+import Sparkline from './Sparkline';
 
 interface CashflowAnalyticsProps {
   analytics: Analytics;
@@ -31,8 +32,23 @@ const TREND_COLOR = '#8b5cf6';
 const INVEST_COLOR = '#667eea';
 
 const signColor = (v: number) => (v > 0 ? 'success.main' : v < 0 ? 'error.main' : 'text.secondary');
-/** For spending, going up is the bad direction — the opposite of income. */
-const spendColor = (v: number) => (v > 0 ? 'error.main' : v < 0 ? 'success.main' : 'text.secondary');
+
+/**
+ * A percentage floor for the movers list.
+ *
+ * Below this the base is too small for a percentage to mean anything: a
+ * category that went from 6 € to 710 € is not up 717%, it is a category that
+ * did not exist last year and now costs 700 €. The euro change is always the
+ * headline; the percentage is a footnote it has to earn.
+ */
+const PERCENT_FLOOR = 250;
+
+const moverNote = (c: CategoryTrend): string | null => {
+  if (c.previous === 0) return 'new';
+  if (c.latest === 0) return 'stopped';
+  if (c.previous < PERCENT_FLOOR) return 'from a small base';
+  return c.changePct === null ? null : formatPct(c.changePct);
+};
 
 const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
   const [granularity, setGranularity] = useState<Granularity>('month');
@@ -86,27 +102,24 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
   const incomeTrend = useMemo(() => movingAverage(incomes, window), [incomes, window]);
   const expenseTrend = useMemo(() => movingAverage(expenses, window), [expenses, window]);
 
-  const expenseSlope = linearTrend(expenses);
-  const incomeSlope = linearTrend(incomes);
-  const expenseShift = halfOverHalfChange(expenses);
-  const incomeShift = halfOverHalfChange(incomes);
   const unit = granularity === 'month' ? 'month' : 'year';
 
   /**
-   * The most recent period against the one before it. The slope answers "which
-   * way is this going over the whole history"; this answers "and what just
-   * happened", which is the question the number on its own invites.
+   * What a normal period looks like, over the last twelve of them.
+   *
+   * This replaced a least-squares slope, a half-against-half percentage and a
+   * latest-against-previous step. All three were arithmetically right and none
+   * survived contact with the data: the slope averaged a student decade with a
+   * salaried one into "+15 € / month", and the step compared a finished month
+   * against a week of the current one and reported -96%.
    */
-  const lastStep = (values: number[]) => {
-    if (values.length < 2) return null;
-    const latest = values[values.length - 1];
-    const before = values[values.length - 2];
-    return { latest, before, change: latest - before, pct: before > 0 ? ((latest - before) / before) * 100 : null };
-  };
-  const expenseStep = lastStep(expenses);
-  const incomeStep = lastStep(incomes);
-  const lastLabel = labels[labels.length - 1];
-  const priorLabel = labels[labels.length - 2];
+  const profileWindow = granularity === 'month' ? 12 : 5;
+  const expenseProfile = useMemo(() => profile(expenses, profileWindow), [expenses, profileWindow]);
+  const incomeProfile = useMemo(() => profile(incomes, profileWindow), [incomes, profileWindow]);
+  const profiled = labels.slice(-profileWindow);
+  const profileRange = profiled.length
+    ? `${formatPeriod(profiled[0])} – ${formatPeriod(profiled[profiled.length - 1])}`
+    : '';
 
   if (series.length === 0) return null;
 
@@ -138,53 +151,57 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
         {[
           {
             label: 'Spending',
-            slope: expenseSlope,
-            shift: expenseShift,
-            step: expenseStep,
-            color: spendColor,
+            profile: expenseProfile,
+            color: EXPENSE_COLOR,
             goodWhenUp: false
           },
           {
             label: 'Income',
-            slope: incomeSlope,
-            shift: incomeShift,
-            step: incomeStep,
-            color: signColor,
+            profile: incomeProfile,
+            color: INCOME_COLOR,
             goodWhenUp: true
           }
-        ].map((card) => (
-          <Card key={card.label} elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-            <CardContent>
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                {card.label} — average change per {unit}
-              </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 700, color: card.color(card.slope) }}>
-                {card.slope >= 0 ? '+' : '−'}{money(Math.abs(card.slope))} / {unit}
-              </Typography>
-              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-                the line of best fit across all {series.length} {unit}s, not a first-to-last comparison
-              </Typography>
+        ].map((card) => {
+          if (!card.profile) return null;
+          const { median, low, high, latest, values } = card.profile;
+          // Against the middle month rather than the one before it: "was last
+          // month normal" is answerable, "was last month bigger than the month
+          // before" is noise on a series this jumpy.
+          const gap = latest - median;
+          const direction = gap > 0 ? 'above' : gap < 0 ? 'below' : 'right on';
+          const tone = gap === 0 ? 'text.secondary' : (gap > 0) === card.goodWhenUp ? 'success.main' : 'error.main';
 
-              {card.step && priorLabel && (
-                <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
+          return (
+            <Card key={card.label} elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+              <CardContent>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  {card.label} — a typical {unit}
+                </Typography>
+                <Typography variant="h5" sx={{ fontWeight: 700 }}>{money(median)}</Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                  middle of the last {values.length} {unit}s · {profileRange}
+                </Typography>
+
+                <Sparkline
+                  values={values}
+                  color={card.color}
+                  label={`${card.label} over the last ${values.length} ${unit}s, ending at ${money(latest)}`}
+                />
+
+                <Box sx={{ mt: 1, pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
                   <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-                    Most recent: {formatPeriod(priorLabel)} → {formatPeriod(lastLabel)}
+                    Quietest {money(low)} · heaviest {money(high)}
                   </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: card.color(card.step.change) }}>
-                    {money(card.step.before)} → {money(card.step.latest)}
-                    {card.step.pct !== null && ` (${formatPct(card.step.pct)})`}
+                  <Typography variant="body2" sx={{ fontWeight: 600, color: tone }}>
+                    {profiled.length > 0 && `${formatPeriod(profiled[profiled.length - 1])}: `}
+                    {money(latest)}
+                    {gap === 0 ? ' — right on typical' : ` — ${money(Math.abs(gap))} ${direction} typical`}
                   </Typography>
                 </Box>
-              )}
-
-              {card.shift !== null && (
-                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
-                  {formatPct(card.shift)} recent half against earlier half
-                </Typography>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </Box>
 
       <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', mb: 2 }}>
@@ -354,14 +371,15 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
                       </Typography>
                       <Chip
                         size="small"
-                        label={
-                          c.changePct === null
-                            ? `${c.change >= 0 ? '+' : ''}${money(c.change)}`
-                            : formatPct(c.changePct)
-                        }
+                        label={`${c.change >= 0 ? '+' : '−'}${money(Math.abs(c.change))}`}
                         color={c.change > 0 ? 'error' : c.change < 0 ? 'success' : 'default'}
                         variant="outlined"
                       />
+                      {moverNote(c) && (
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                          {moverNote(c)}
+                        </Typography>
+                      )}
                     </Box>
                   </Box>
                 ))}

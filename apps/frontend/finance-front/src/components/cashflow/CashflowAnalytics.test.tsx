@@ -124,21 +124,34 @@ it('draws a trailing average line alongside the bars', () => {
   expect(screen.getByTestId('line-chart')).toHaveTextContent('Spending average:1200,1300');
 });
 
-it('reports the spending trend per period, and says what the number is', () => {
+it('describes a typical period rather than a trend line', () => {
   render(<CashflowAnalytics analytics={analytics} />);
 
-  expect(screen.getByText('Spending — average change per month')).toBeInTheDocument();
-  // Rising 200/month across the two months
-  expect(screen.getByText(/\+200 € \/ month/)).toBeInTheDocument();
-  expect(screen.getAllByText(/line of best fit/).length).toBeGreaterThan(0);
+  expect(screen.getByText('Spending — a typical month')).toBeInTheDocument();
+  // The two months are 1200 and 1400, so the middle is 1300
+  expect(screen.getByText('1300 €')).toBeInTheDocument();
+  expect(screen.getAllByText(/middle of the last 2 months/).length).toBe(2);
 });
 
-it('shows the most recent period against the one before it', () => {
+it('gives the range beside the median, so it does not read as a budget', () => {
   render(<CashflowAnalytics analytics={analytics} />);
 
-  // Both the spending and the income card carry the comparison
-  expect(screen.getAllByText(/Most recent: Jan 2025 → Feb 2025/)).toHaveLength(2);
-  expect(screen.getByText(/1200 € → 1400 €/)).toBeInTheDocument();
+  expect(screen.getByText(/Quietest 1200 € · heaviest 1400 €/)).toBeInTheDocument();
+});
+
+it('compares the newest period against typical, not against the one before', () => {
+  // Against the previous month, a part-imported month reads as a collapse
+  render(<CashflowAnalytics analytics={analytics} />);
+
+  expect(screen.getByText(/Feb 2025: 1400 € — 100 € above typical/)).toBeInTheDocument();
+});
+
+it('draws the shape of the window under the number', () => {
+  render(<CashflowAnalytics analytics={analytics} />);
+
+  expect(
+    screen.getByLabelText('Spending over the last 2 months, ending at 1400 €')
+  ).toBeInTheDocument();
 });
 
 it('marks a part year in the year table as not comparable', () => {
@@ -160,13 +173,13 @@ it('says the movers are compared on trailing windows, not calendar years', () =>
   expect(screen.getByText(/against the 12 months before/)).toBeInTheDocument();
 });
 
-it('relabels the trend unit when switched to yearly', async () => {
+it('relabels the period when switched to yearly', async () => {
   render(<CashflowAnalytics analytics={analytics} />);
 
   await userEvent.click(screen.getByRole('button', { name: 'Yearly' }));
 
-  // Both the spending and income cards carry the unit
-  expect(screen.getAllByText(/\/ year/).length).toBe(2);
+  expect(screen.getByText('Spending — a typical year')).toBeInTheDocument();
+  expect(screen.getByText('Income — a typical year')).toBeInTheDocument();
 });
 
 it('shows the year-on-year table newest first', () => {
@@ -303,4 +316,69 @@ it('shows capital that came back beside what went in', () => {
 
   expect(screen.getByText('9026 €')).toBeInTheDocument();
   expect(screen.getByText('16 523 €')).toBeInTheDocument();
+});
+
+describe('biggest movers', () => {
+  const withTrends = (trends: Analytics['categoryTrends']) => ({ ...analytics, categoryTrends: trends });
+  const trend = (over: Partial<Analytics['categoryTrends'][0]>) => ({
+    category: 'X', byYear: {}, total: 0, latest: 0, previous: 0, change: 0, changePct: null, perMonth: 0, ...over
+  });
+
+  it('leads with the euro change, which is comparable across categories', () => {
+    render(<CashflowAnalytics analytics={analytics} />);
+
+    expect(screen.getByText('+500 €')).toBeInTheDocument();
+    expect(screen.getByText('−600 €')).toBeInTheDocument();
+  });
+
+  it('says "new" instead of a percentage off nothing', () => {
+    // Cash went 0 € → 3350 €, which the old card rendered as "+3350 €" ranked
+    // as if it were a percentage
+    render(
+      <CashflowAnalytics
+        analytics={withTrends([trend({ category: 'Cash', latest: 3350, previous: 0, change: 3350 })])}
+      />
+    );
+
+    expect(screen.getByText('new')).toBeInTheDocument();
+    expect(screen.getByText('+3350 €')).toBeInTheDocument();
+  });
+
+  it('says "stopped" when a category went to nothing', () => {
+    render(
+      <CashflowAnalytics
+        analytics={withTrends([
+          trend({ category: 'Gym', latest: 0, previous: 400, change: -400, changePct: -100 })
+        ])}
+      />
+    );
+
+    expect(screen.getByText('stopped')).toBeInTheDocument();
+  });
+
+  it('refuses a percentage off a base too small to carry one', () => {
+    // 87 € → 710 € is not "+717%", it is a category that barely existed
+    render(
+      <CashflowAnalytics
+        analytics={withTrends([
+          trend({ category: 'Subscriptions', latest: 710, previous: 87, change: 623, changePct: 716.1 })
+        ])}
+      />
+    );
+
+    expect(screen.getByText('from a small base')).toBeInTheDocument();
+    expect(screen.queryByText(/716|717/)).not.toBeInTheDocument();
+  });
+
+  it('keeps the percentage when the base is big enough to mean something', () => {
+    render(
+      <CashflowAnalytics
+        analytics={withTrends([
+          trend({ category: 'Transport', latest: 2496, previous: 2209, change: 287, changePct: 13.0 })
+        ])}
+      />
+    );
+
+    expect(screen.getByText('+13.0%')).toBeInTheDocument();
+  });
 });

@@ -114,6 +114,12 @@ interface MonthCategoryRow {
 
 const monthKey = (year: number, month: number) => `${year}-${String(month).padStart(2, '0')}`;
 
+/** The month in progress, which no import can have finished. */
+const currentMonth = (): string => {
+  const now = new Date();
+  return monthKey(now.getUTCFullYear(), now.getUTCMonth() + 1);
+};
+
 /** Every month key between two, inclusive, so a gap does not become a chart artefact. */
 function monthRange(first: string, last: string): string[] {
   const [fy, fm] = first.split('-').map(Number);
@@ -282,8 +288,15 @@ export const getAnalytics = async (userId: string, groupId?: string): Promise<An
   // Anchored on the newest month that has data rather than on today: an import
   // can lag by weeks, and a window ending in an empty month would report a
   // collapse in both income and spending that never happened.
-  const currentWindow = allMonths.slice(-TRAILING_MONTHS);
-  const previousWindow = allMonths.slice(-TRAILING_MONTHS * 2, -TRAILING_MONTHS);
+  //
+  // The month in progress is the exception. It cannot be complete whatever the
+  // import does, so counting it compares eleven-and-a-bit months against a full
+  // twelve — which showed up as every category falling and one that had only
+  // just been named dropping 99%. A month already past is kept however thin it
+  // looks, because that thinness is real.
+  const complete = allMonths.filter((month) => month < currentMonth());
+  const currentWindow = complete.slice(-TRAILING_MONTHS);
+  const previousWindow = complete.slice(-TRAILING_MONTHS * 2, -TRAILING_MONTHS);
 
   const foldWindow = (window: string[]): Bucket =>
     window.reduce((acc, key) => {

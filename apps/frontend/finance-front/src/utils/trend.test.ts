@@ -1,4 +1,4 @@
-import { movingAverage, linearTrend, mean, halfOverHalfChange } from './trend';
+import { movingAverage, linearTrend, mean, profile } from './trend';
 
 describe('movingAverage', () => {
   it('averages the trailing window', () => {
@@ -59,26 +59,44 @@ describe('mean', () => {
   });
 });
 
-describe('halfOverHalfChange', () => {
-  it('compares the later half with the earlier half', () => {
-    // 100,100 → 150,150 is a 50% rise
-    expect(halfOverHalfChange([100, 100, 150, 150])).toBeCloseTo(50, 6);
+describe('profile', () => {
+  it('takes the middle month, not the average', () => {
+    // One holiday must not become everyone's idea of a normal month
+    const p = profile([100, 100, 100, 100, 5000], 5)!;
+
+    expect(p.median).toBe(100);
   });
 
-  it('is negative when spending fell', () => {
-    expect(halfOverHalfChange([200, 200, 100, 100])).toBeCloseTo(-50, 6);
+  it('averages the two middle values on an even window', () => {
+    expect(profile([10, 20, 30, 40], 4)!.median).toBe(25);
   });
 
-  it('puts the middle point in the later half for an odd length', () => {
-    expect(halfOverHalfChange([100, 200, 200])).toBeCloseTo(100, 6);
+  it('reports the range, so the median is not read as a budget', () => {
+    const p = profile([80, 100, 250], 3)!;
+
+    expect(p.low).toBe(80);
+    expect(p.high).toBe(250);
   });
 
-  it('is null when there is nothing to compare', () => {
-    expect(halfOverHalfChange([5])).toBeNull();
-    expect(halfOverHalfChange([])).toBeNull();
+  it('keeps the most recent period, which is what gets compared', () => {
+    const p = profile([10, 20, 30], 3)!;
+
+    expect(p.latest).toBe(30);
+    expect(p.latestIndex).toBe(2);
   });
 
-  it('is null when the earlier half is zero, rather than infinite', () => {
-    expect(halfOverHalfChange([0, 0, 100, 100])).toBeNull();
+  it('only looks at the last n periods', () => {
+    const p = profile([1, 1, 1, 500, 600, 700], 3)!;
+
+    expect(p.values).toEqual([500, 600, 700]);
+    expect(p.median).toBe(600);
+  });
+
+  it('takes everything when there is less history than asked for', () => {
+    expect(profile([42], 12)!.values).toEqual([42]);
+  });
+
+  it('has nothing to say about an empty series', () => {
+    expect(profile([], 12)).toBeNull();
   });
 });
