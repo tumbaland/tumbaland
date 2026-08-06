@@ -8,7 +8,11 @@ vi.mock('../services/cashflowService', () => ({
   getCashflowSummary: vi.fn(),
   getAnalytics: vi.fn(),
   importStatement: vi.fn(),
-  deleteTransaction: vi.fn()
+  deleteTransaction: vi.fn(),
+  updateCategory: vi.fn(),
+  recategorise: vi.fn(),
+  exportTransactions: vi.fn(),
+  saveBlob: vi.fn()
 }));
 
 import * as cashflowService from '../services/cashflowService';
@@ -18,7 +22,10 @@ import {
   useCashflowSummary,
   useAnalytics,
   useImportStatement,
-  useDeleteTransaction
+  useDeleteTransaction,
+  useUpdateCategory,
+  useRecategorise,
+  useExportTransactions
 } from './useCashflow';
 
 function wrapper() {
@@ -103,4 +110,53 @@ it('invalidates everything downstream after an import', async () => {
   expect(invalidatedKeys(invalidate)).toEqual(
     expect.arrayContaining(['transactions', 'cashflowSummary', 'cashflowAnalytics', 'dashboard'])
   );
+});
+
+it('refreshes the figures after a category is corrected', async () => {
+  mocked.updateCategory.mockResolvedValue({ _id: 'x1', category: 'Groceries' });
+  const { Wrapper, queryClient } = wrapper();
+  const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+
+  const { result } = renderHook(() => useUpdateCategory(), { wrapper: Wrapper });
+  result.current.mutate({ id: 'x1', category: 'Groceries' });
+
+  await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  expect(mocked.updateCategory).toHaveBeenCalledWith('x1', 'Groceries');
+  expect(invalidatedKeys(invalidate)).toContain('transactions');
+});
+
+it('refreshes the figures after a bulk recategorise', async () => {
+  mocked.recategorise.mockResolvedValue({ updated: 9 });
+  const { Wrapper, queryClient } = wrapper();
+  const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+
+  const { result } = renderHook(() => useRecategorise(), { wrapper: Wrapper });
+  result.current.mutate({ fromCategory: 'Uncategorised', toCategory: 'Groceries' });
+
+  await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  expect(invalidatedKeys(invalidate)).toContain('cashflowSummary');
+});
+
+it('saves the exported file and reports its name', async () => {
+  mocked.exportTransactions.mockResolvedValue({ blob: new Blob(['id;category']), filename: 'transactions_uncategorised.csv' });
+  const { Wrapper } = wrapper();
+
+  const { result } = renderHook(() => useExportTransactions(), { wrapper: Wrapper });
+  result.current.mutate({ category: 'Uncategorised' });
+
+  await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  expect(mocked.exportTransactions).toHaveBeenCalledWith({ category: 'Uncategorised' });
+  expect(mocked.saveBlob).toHaveBeenCalledWith(expect.any(Blob), 'transactions_uncategorised.csv');
+  expect(result.current.data).toBe('transactions_uncategorised.csv');
+});
+
+it('does not save anything when the export fails', async () => {
+  mocked.exportTransactions.mockRejectedValue(new Error('Export failed: 500'));
+  const { Wrapper } = wrapper();
+
+  const { result } = renderHook(() => useExportTransactions(), { wrapper: Wrapper });
+  result.current.mutate({});
+
+  await waitFor(() => expect(result.current.isError).toBe(true));
+  expect(mocked.saveBlob).not.toHaveBeenCalled();
 });

@@ -1,4 +1,5 @@
 import { financeApi } from './financeApi';
+import { getGlobalConfig } from '../config/ConfigProvider';
 import { ApiResponse } from '../types';
 
 export type TransactionType = 'income' | 'expense';
@@ -73,8 +74,13 @@ export interface PeriodTotals {
   expense: number;
   /** What was actually consumed — `expense` less money moved into assets. */
   consumption: number;
-  /** Money moved into crypto, a broker or a savings product. */
+  /**
+   * Capital put into assets — gross, because "how much did I invest" asks what
+   * went in. Netting money coming back against it produced negative years.
+   */
   invested: number;
+  /** Capital that came back: sales, withdrawals, deposits maturing. */
+  divested: number;
   savings: number;
   savingsRate: number | null;
   /** Months the window covers, so a partial period can be labelled as one. */
@@ -97,7 +103,12 @@ export interface PeriodPoint {
   /** YYYY for a year, YYYY-MM for a month. */
   period: string;
   income: number;
+  /** Everything that left the account, capital included. */
   expense: number;
+  /** What was actually consumed — the figure a spending chart wants. */
+  consumption: number;
+  /** Capital put into assets in the period. */
+  invested: number;
   savings: number;
 }
 
@@ -132,7 +143,26 @@ export interface Analytics {
   currency: string;
 }
 
+/** What an edited export applies when it comes back. */
+export type TransactionFileFormat = 'seb' | 'tumbaland';
+
+export const FORMAT_LABELS: Record<TransactionFileFormat, string> = {
+  seb: 'SEB account statement',
+  tumbaland: 'Tumbaland export'
+};
+
+export interface CategoryImportResult {
+  format: 'tumbaland';
+  kind: 'categories';
+  updated: number;
+  unchanged: number;
+  notFound: number;
+  malformed: number;
+  categories: Array<{ category: string; count: number }>;
+}
+
 export interface ImportResult {
+  format: 'seb';
   imported: number;
   /** Rows already held from an overlapping import, recognised not duplicated. */
   duplicates: number;
@@ -141,6 +171,12 @@ export interface ImportResult {
   rows: number;
   categories: Array<{ category: string; count: number; amount: number }>;
 }
+
+/** Either shape can come back from the import endpoint — the file decides. */
+export type AnyImportResult = ImportResult | CategoryImportResult;
+
+export const isCategoryResult = (r: AnyImportResult): r is CategoryImportResult =>
+  (r as CategoryImportResult).kind === 'categories';
 
 const TRANSACTIONS_URL = '/transactions';
 
@@ -171,11 +207,11 @@ export const getAnalytics = async (groupId?: string): Promise<Analytics> => {
  * Upload a bank statement. Sent as raw CSV rather than JSON because a decade of
  * one account runs to hundreds of kilobytes, well past the JSON body limit.
  */
-export const importStatement = async (csv: string, groupId?: string): Promise<ImportResult> => {
+export const importStatement = async (csv: string, groupId?: string): Promise<AnyImportResult> => {
   // `request` rather than `post`: post JSON-stringifies its body, which would
   // wrap the whole file in quotes and escape every newline. The statement has
   // to reach the server as the bytes the bank produced.
-  const res = await financeApi.request<ApiResponse<ImportResult>>(`${TRANSACTIONS_URL}/import`, {
+  const res = await financeApi.request<ApiResponse<AnyImportResult>>(`${TRANSACTIONS_URL}/import`, {
     method: 'POST',
     body: csv,
     headers: { 'Content-Type': 'text/csv' },
@@ -224,4 +260,41 @@ export const recategorise = async (input: {
     groupId ? { params: { groupId } } : undefined
   );
   return res.data;
+};
+
+/**
+ * Download the rows the current filter matches, for categorising elsewhere.
+ *
+ * Goes through fetch directly rather than the JSON client: the response is a
+ * CSV attachment, and the browser needs the bytes, not a parsed body.
+ */
+export const exportTransactions = async (query: TransactionQuery = {}): Promise<{ blob: Blob; filename: string }> => {
+  const params = new URLSearchParams();
+  if (query.groupId) params.append('groupId', query.groupId);
+  if (query.from) params.append('from', query.from);
+  if (query.to) params.append('to', query.to);
+  if (query.type) params.append('type', query.type);
+  if (query.category) params.append('category', query.category);
+  if (query.search) params.append('search', query.search);
+
+  const url = `${getGlobalConfig().FINANCE_API_URL}/api${TRANSACTIONS_URL}/export?${params}`;
+  const response = await fetch(url, { credentials: 'include' });
+  if (!response.ok) throw new Error(`Export failed: ${response.status}`);
+
+  const disposition = response.headers.get('Content-Disposition') || '';
+  const match = /filename="?([^";]+)"?/.exec(disposition);
+
+  return { blob: await response.blob(), filename: match?.[1] || 'transactions.csv' };
+};
+
+/** Hand a blob to the browser as a download. */
+export const saveBlob = (blob: Blob, filename: string): void => {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 };

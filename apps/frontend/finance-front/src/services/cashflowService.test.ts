@@ -5,7 +5,9 @@ import {
   getCashflowSummary,
   getAnalytics,
   importStatement,
-  deleteTransaction
+  deleteTransaction,
+  exportTransactions,
+  saveBlob
 } from './cashflowService';
 
 function mockFetchOnce(body: unknown) {
@@ -125,5 +127,86 @@ describe('analytics and import', () => {
     await importStatement('csv');
 
     expect(lastUrl()).not.toContain('groupId=');
+  });
+});
+
+describe('export', () => {
+  const mockCsvOnce = (disposition: string | null) =>
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      blob: async () => new Blob(['id;category\n']),
+      headers: { get: () => disposition }
+    } as unknown as Response);
+
+  it('carries every filter the table is showing', async () => {
+    mockCsvOnce('attachment; filename="transactions_uncategorised.csv"');
+
+    await exportTransactions({
+      groupId: 'g1',
+      from: '2025-01-01',
+      to: '2025-12-31',
+      type: 'expense',
+      category: 'Uncategorised',
+      search: 'rimi'
+    });
+
+    const url = lastUrl();
+    expect(url).toContain('/transactions/export?');
+    expect(url).toContain('groupId=g1');
+    expect(url).toContain('from=2025-01-01');
+    expect(url).toContain('to=2025-12-31');
+    expect(url).toContain('type=expense');
+    expect(url).toContain('category=Uncategorised');
+    expect(url).toContain('search=rimi');
+  });
+
+  it('sends the session cookie, since the file is per user', async () => {
+    mockCsvOnce('attachment; filename="transactions_all.csv"');
+
+    await exportTransactions();
+
+    expect(lastInit().credentials).toBe('include');
+  });
+
+  it('takes the file name the server chose', async () => {
+    mockCsvOnce('attachment; filename="transactions_uncategorised.csv"');
+
+    const { filename } = await exportTransactions({ category: 'Uncategorised' });
+
+    expect(filename).toBe('transactions_uncategorised.csv');
+  });
+
+  it('falls back to a plain name when the header says nothing', async () => {
+    mockCsvOnce(null);
+
+    const { filename } = await exportTransactions();
+
+    expect(filename).toBe('transactions.csv');
+  });
+
+  it('raises the status when the export is refused', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ ok: false, status: 400 } as Response);
+
+    await expect(exportTransactions()).rejects.toThrow('Export failed: 400');
+  });
+});
+
+describe('saveBlob', () => {
+  it('clicks a download link and cleans up after itself', () => {
+    const createObjectURL = vi.fn().mockReturnValue('blob:x');
+    const revokeObjectURL = vi.fn();
+    Object.assign(URL, { createObjectURL, revokeObjectURL });
+    const click = vi.fn();
+    const link = { click, remove: vi.fn(), href: '', download: '' } as unknown as HTMLAnchorElement;
+    vi.spyOn(document, 'createElement').mockReturnValueOnce(link);
+    vi.spyOn(document.body, 'appendChild').mockImplementationOnce((n) => n);
+
+    saveBlob(new Blob(['a']), 'transactions.csv');
+
+    expect(link.download).toBe('transactions.csv');
+    expect(click).toHaveBeenCalled();
+    // Leaving the object URL alive holds the whole file in memory
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:x');
   });
 });

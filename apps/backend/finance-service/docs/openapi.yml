@@ -719,20 +719,40 @@ paths:
 
   /api/transactions/import:
     post:
-      summary: Import a bank statement
+      summary: Import a bank statement, or an edited export
       description: >-
-        Body is the raw CSV of a SEB account statement, sent as `text/csv` —
-        a decade of one account runs well past the JSON body limit.
+        Body is raw CSV sent as `text/csv` — a decade of one account runs well
+        past the JSON body limit.
 
-        Re-importing a period that overlaps one already loaded is the expected
-        way to use this: rows are matched on the bank's archive reference, so an
-        overlap is recognised and counted as a duplicate rather than added
-        again. Transfers between the owner's own accounts, securities
-        settlements, dividends and pension contributions are deliberately left
-        out — see the `skipped` map for what and why.
+        Two shapes are accepted and the shape is detected from the file itself,
+        so the caller does not have to say which it holds:
+
+        `seb` — a SEB account statement. Re-importing a period that overlaps one
+        already loaded is the expected way to use this: rows are matched on the
+        bank's archive reference, so an overlap is recognised and counted as a
+        duplicate rather than added again. Transfers between the owner's own
+        accounts and self-transfers are left out — see the `skipped` map for what
+        and why.
+
+        `tumbaland` — a file previously produced by
+        `GET /api/transactions/export`, with the categories edited. Only the
+        `category` column is read back; rows are matched by `id`. This is the
+        round trip for categorising in a spreadsheet: export what is
+        uncategorised, fill it in, send it back.
+
+        The response's `format` says which shape was read.
       tags: [Cash Flow]
       parameters:
         - $ref: '#/components/parameters/GroupId'
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [seb, tumbaland]
+          description: >-
+            Optional assertion about what the file is. When it disagrees with
+            the detected shape the request is rejected rather than guessed at:
+            reading a statement as a category list would silently do nothing.
       requestBody:
         required: true
         content:
@@ -741,7 +761,7 @@ paths:
               type: string
       responses:
         '200':
-          description: Import result
+          description: Import result — a statement result or a recategorise result
           content:
             application/json:
               schema:
@@ -750,37 +770,128 @@ paths:
                   - type: object
                     properties:
                       data:
-                        type: object
-                        properties:
-                          imported:
-                            type: integer
-                          duplicates:
-                            type: integer
-                            description: Rows already held from an overlapping import
-                          skipped:
-                            type: object
-                            additionalProperties:
-                              type: integer
-                          period:
-                            type: object
-                            nullable: true
+                        oneOf:
+                          - type: object
+                            title: Statement import
                             properties:
-                              from:
+                              format:
                                 type: string
-                                format: date
-                              to:
+                                enum: [seb]
+                              imported:
+                                type: integer
+                              duplicates:
+                                type: integer
+                                description: Rows already held from an overlapping import
+                              skipped:
+                                type: object
+                                additionalProperties:
+                                  type: integer
+                              period:
+                                type: object
+                                nullable: true
+                                properties:
+                                  from:
+                                    type: string
+                                    format: date
+                                  to:
+                                    type: string
+                                    format: date
+                              rows:
+                                type: integer
+                              categories:
+                                type: array
+                                items:
+                                  type: object
+                          - type: object
+                            title: Category import
+                            properties:
+                              format:
                                 type: string
-                                format: date
-                          rows:
-                            type: integer
-                          categories:
-                            type: array
-                            items:
-                              type: object
+                                enum: [tumbaland]
+                              kind:
+                                type: string
+                                enum: [categories]
+                              updated:
+                                type: integer
+                              unchanged:
+                                type: integer
+                                description: Rows already in the category the file gives
+                              notFound:
+                                type: integer
+                                description: Ids in the file matching nothing in this scope
+                              malformed:
+                                type: integer
+                                description: Rows with no usable id or category
+                              categories:
+                                type: array
+                                items:
+                                  type: object
         '400':
-          description: Empty file, or not a SEB account statement
+          description: >-
+            Empty file; a file that is neither shape; or a `format` that
+            disagrees with what the file actually is
         '403':
           description: Not a member of the target group
+
+  /api/transactions/export:
+    get:
+      summary: Export transactions as CSV
+      description: >-
+        The rows the same filters as `GET /api/transactions` would match,
+        as a semicolon-separated CSV attachment with a UTF-8 BOM — the shape
+        Excel and LibreOffice open without an import wizard.
+
+        The `id` column is what makes the round trip work: edit the `category`
+        column and send the file back to `POST /api/transactions/import` to
+        apply the changes. Exporting with `category=Uncategorised` is the
+        intended way to categorise a backlog in bulk.
+
+        Paging does not apply — the export covers the whole filtered set, capped
+        at 20000 rows.
+      tags: [Cash Flow]
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [income, expense]
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [tumbaland]
+            default: tumbaland
+          description: >-
+            Only the Tumbaland shape is produced. `seb` is rejected: emitting a
+            file that claims to be a bank statement would fabricate a record.
+      responses:
+        '200':
+          description: CSV attachment, named after the filter it came from
+          content:
+            text/csv:
+              schema:
+                type: string
+        '400':
+          description: Invalid date, type or format
 
   /api/transactions/analytics:
     get:

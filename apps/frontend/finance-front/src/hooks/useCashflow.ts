@@ -5,6 +5,8 @@ import {
   getCashflowSummary,
   getAnalytics,
   importStatement,
+  exportTransactions,
+  saveBlob,
   updateCategory,
   recategorise,
   deleteTransaction,
@@ -82,3 +84,16 @@ export const useRecategorise = () => {
     onSuccess: () => invalidateCashflow(queryClient)
   });
 };
+
+/**
+ * Download the rows the current filter matches. Not a query: it is an action
+ * with a side effect on the browser, and caching a file download makes no sense.
+ */
+export const useExportTransactions = () =>
+  useMutation({
+    mutationFn: async (query: TransactionQuery) => {
+      const { blob, filename } = await exportTransactions(query);
+      saveBlob(blob, filename);
+      return filename;
+    }
+  });

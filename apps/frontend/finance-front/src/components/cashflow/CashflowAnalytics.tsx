@@ -28,6 +28,7 @@ type Granularity = 'month' | 'year';
 const INCOME_COLOR = '#11998e';
 const EXPENSE_COLOR = '#e05260';
 const TREND_COLOR = '#8b5cf6';
+const INVEST_COLOR = '#667eea';
 
 const signColor = (v: number) => (v > 0 ? 'success.main' : v < 0 ? 'error.main' : 'text.secondary');
 /** For spending, going up is the bad direction — the opposite of income. */
@@ -46,18 +47,23 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
     ? `${formatPeriod(trailing.current.from)}–${formatPeriod(trailing.current.to)} against the 12 months before`
     : `${formatPeriod(trailing?.current.from || '')}–${formatPeriod(trailing?.current.to || '')}`;
 
+  // Spending means consumption, not everything that left the account. Plotting
+  // gross outflow under a "Spending" label made a year that bought 122k of ETFs
+  // read as 11k a month of spending.
   const series = useMemo(() => {
     if (granularity === 'year') {
       return analytics.years.map((y) => ({
         period: String(y.year),
         income: y.income,
-        expense: y.expense
+        expense: y.consumption,
+        invested: y.invested
       }));
     }
     return analytics.months.map((m) => ({
       period: m.period,
       income: m.income,
-      expense: m.expense
+      expense: m.consumption,
+      invested: m.invested
     }));
   }, [analytics, granularity]);
 
@@ -71,6 +77,8 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
   const axisMoney = (value: number | null) => (value === null ? '' : formatCompactCurrency(value, currency));
   const incomes = series.map((p) => p.income);
   const expenses = series.map((p) => p.expense);
+  const investments = series.map((p) => p.invested);
+  const hasInvesting = investments.some((v) => v > 0);
 
   // A year of months smooths the seasonality out; over years there is nothing
   // seasonal to smooth, so a 3-period window just shows direction.
@@ -181,8 +189,10 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
 
       <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', mb: 2 }}>
         <CardContent>
-          <Typography variant="subtitle2" sx={{ mb: 1 }}>
-            What each {unit} was
+          <Typography variant="subtitle2">What each {unit} was</Typography>
+          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
+            Spending is what was consumed. Money put into investments, savings or a
+            pension is shown separately — it left the account but was not spent.
           </Typography>
           <Box sx={{ overflowX: 'auto' }}>
             <BarChart
@@ -191,7 +201,10 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
               yAxis={[{ valueFormatter: axisMoney }]}
               series={[
                 { data: incomes, label: 'Income', color: INCOME_COLOR, valueFormatter: chartMoney },
-                { data: expenses, label: 'Spending', color: EXPENSE_COLOR, valueFormatter: chartMoney }
+                { data: expenses, label: 'Spending', color: EXPENSE_COLOR, valueFormatter: chartMoney },
+                ...(hasInvesting
+                  ? [{ data: investments, label: 'Invested', color: INVEST_COLOR, valueFormatter: chartMoney }]
+                  : [])
               ]}
               margin={{ left: 70 }}
             />
@@ -248,6 +261,7 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
                     <TableCell align="right">Spending</TableCell>
                     <TableCell align="right">vs prev</TableCell>
                     <TableCell align="right">Invested</TableCell>
+                    <TableCell align="right">Returned</TableCell>
                     <TableCell align="right">Saved</TableCell>
                     <TableCell align="right">Rate</TableCell>
                   </TableRow>
@@ -277,6 +291,9 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
                       </TableCell>
                       <TableCell align="right" sx={{ color: 'text.secondary' }}>
                         {y.invested ? money(y.invested) : '—'}
+                      </TableCell>
+                      <TableCell align="right" sx={{ color: 'text.secondary' }}>
+                        {y.divested ? money(y.divested) : '—'}
                       </TableCell>
                       <TableCell align="right" sx={{ fontWeight: 600, color: signColor(y.savings) }}>
                         {money(y.savings)}

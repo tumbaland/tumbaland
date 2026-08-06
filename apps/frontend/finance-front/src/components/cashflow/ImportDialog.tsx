@@ -18,7 +18,7 @@ import {
 } from '@mui/material';
 import { UploadFile, CheckCircle } from '@mui/icons-material';
 import { useImportStatement } from '../../hooks/useCashflow';
-import { ImportResult } from '../../services/cashflowService';
+import { AnyImportResult, isCategoryResult, FORMAT_LABELS } from '../../services/cashflowService';
 import { formatCurrency } from '../../utils/numberUtils';
 
 interface ImportDialogProps {
@@ -35,7 +35,7 @@ interface ImportDialogProps {
  */
 const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, tenantGroupId }) => {
   const importMutation = useImportStatement();
-  const [result, setResult] = useState<ImportResult | null>(null);
+  const [result, setResult] = useState<AnyImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
 
@@ -64,17 +64,28 @@ const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, tenantGroupI
     }
   };
 
-  const skippedEntries = Object.entries(result?.skipped || {});
+  const statement = result && !isCategoryResult(result) ? result : null;
+  const categories = result && isCategoryResult(result) ? result : null;
+  const skippedEntries = Object.entries(statement?.skipped || {});
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>Import bank statement</DialogTitle>
       <DialogContent>
         <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-          A SEB account statement export (CSV). Importing a period you have already loaded is
-          safe — rows are matched on the bank&apos;s archive reference, so an overlap is skipped
-          rather than duplicated.
+          Two kinds of file land here and the format decides what happens.
         </Typography>
+        <Box component="ul" sx={{ color: 'text.secondary', pl: 2.5, mt: 0, mb: 2 }}>
+          <Typography component="li" variant="body2">
+            <strong>A SEB account statement.</strong> Re-importing a period you already loaded is
+            safe — rows are matched on the bank&apos;s archive reference, so an overlap is skipped
+            rather than duplicated.
+          </Typography>
+          <Typography component="li" variant="body2">
+            <strong>An export from this page with the categories edited.</strong> Only the category
+            column is read back; everything else stays as the bank reported it.
+          </Typography>
+        </Box>
 
         <Button
           component="label"
@@ -114,36 +125,89 @@ const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, tenantGroupI
         )}
 
         {result && (
+          <Chip
+            size="small"
+            variant="outlined"
+            sx={{ mt: 2 }}
+            label={`Read as: ${FORMAT_LABELS[result.format]}`}
+          />
+        )}
+
+        {categories && (
           <Box sx={{ mt: 2 }}>
             <Alert
-              severity={result.imported > 0 ? 'success' : 'info'}
-              icon={result.imported > 0 ? <CheckCircle /> : undefined}
+              severity={categories.updated > 0 ? 'success' : 'info'}
+              icon={categories.updated > 0 ? <CheckCircle /> : undefined}
             >
               <AlertTitle>
-                {result.imported > 0
-                  ? `${result.imported} transaction${result.imported === 1 ? '' : 's'} imported`
-                  : 'Nothing new to import'}
+                {categories.updated > 0
+                  ? `${categories.updated} transaction${categories.updated === 1 ? '' : 's'} recategorised`
+                  : 'No categories changed'}
               </AlertTitle>
-              {result.period && (
+              {categories.unchanged > 0 && (
                 <Typography variant="body2">
-                  File covered {result.period.from} → {result.period.to} ({result.rows} rows)
+                  {categories.unchanged} row{categories.unchanged === 1 ? ' was' : 's were'} already
+                  in the category the file gives.
                 </Typography>
               )}
-              {result.duplicates > 0 && (
+              {categories.notFound > 0 && (
                 <Typography variant="body2">
-                  {result.duplicates} row{result.duplicates === 1 ? ' was' : 's were'} already
+                  {categories.notFound} id{categories.notFound === 1 ? '' : 's'} in the file
+                  {categories.notFound === 1 ? ' does' : ' do'} not match anything here.
+                </Typography>
+              )}
+              {categories.malformed > 0 && (
+                <Typography variant="body2">
+                  {categories.malformed} row{categories.malformed === 1 ? '' : 's'} had no usable id
+                  or category and {categories.malformed === 1 ? 'was' : 'were'} left alone.
+                </Typography>
+              )}
+            </Alert>
+
+            {categories.categories.length > 0 && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>Moved into</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {categories.categories.map((c) => (
+                    <Chip key={c.category} size="small" label={`${c.category}: ${c.count}`} />
+                  ))}
+                </Box>
+              </Box>
+            )}
+          </Box>
+        )}
+
+        {statement && (
+          <Box sx={{ mt: 2 }}>
+            <Alert
+              severity={statement.imported > 0 ? 'success' : 'info'}
+              icon={statement.imported > 0 ? <CheckCircle /> : undefined}
+            >
+              <AlertTitle>
+                {statement.imported > 0
+                  ? `${statement.imported} transaction${statement.imported === 1 ? '' : 's'} imported`
+                  : 'Nothing new to import'}
+              </AlertTitle>
+              {statement.period && (
+                <Typography variant="body2">
+                  File covered {statement.period.from} → {statement.period.to} ({statement.rows} rows)
+                </Typography>
+              )}
+              {statement.duplicates > 0 && (
+                <Typography variant="body2">
+                  {statement.duplicates} row{statement.duplicates === 1 ? ' was' : 's were'} already
                   held from an earlier import — skipped, not duplicated.
                 </Typography>
               )}
             </Alert>
 
-            {result.categories.length > 0 && (
+            {statement.categories.length > 0 && (
               <Box sx={{ mt: 2 }}>
                 <Typography variant="subtitle2" sx={{ mb: 1 }}>
                   What came in
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {result.categories.map((c) => (
+                  {statement.categories.map((c) => (
                     <Chip
                       key={c.category}
                       size="small"

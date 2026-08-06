@@ -10,6 +10,7 @@ const totals = (over = {}) => ({
   expense: 16000,
   consumption: 16000,
   invested: 0,
+  divested: 0,
   savings: 24000,
   savingsRate: 60,
   months: 12,

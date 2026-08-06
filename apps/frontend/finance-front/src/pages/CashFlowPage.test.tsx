@@ -13,6 +13,7 @@ const mockedUseAnalytics = vi.fn();
 const mockedDelete = vi.fn();
 const mockedUpdateCategory = vi.fn();
 const mockedRecategorise = vi.fn();
+const mockedExport = vi.fn();
 
 vi.mock('../hooks/useCashflow', () => ({
   useTransactions: (...args: unknown[]) => mockedUseTransactions(...args),
@@ -21,6 +22,7 @@ vi.mock('../hooks/useCashflow', () => ({
   useAnalytics: (...args: unknown[]) => mockedUseAnalytics(...args),
   useDeleteTransaction: () => ({ mutateAsync: mockedDelete }),
   useImportStatement: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useExportTransactions: () => ({ mutateAsync: mockedExport, isPending: false }),
   useUpdateCategory: () => ({ mutateAsync: mockedUpdateCategory, isPending: false }),
   useRecategorise: () => ({ mutateAsync: mockedRecategorise, isPending: false })
 }));
@@ -51,7 +53,7 @@ const analytics = {
   years: [
     {
       year: 2026, income: 3000, expense: 900, consumption: 900, invested: 0,
-      savings: 2100, savingsRate: 70, months: 12, from: '2026-01', to: '2026-12',
+      divested: 0, savings: 2100, savingsRate: 70, months: 12, from: '2026-01', to: '2026-12',
       incomeChange: null, incomeChangePct: null, expenseChange: null, expenseChangePct: null,
       partial: false
     }
@@ -334,4 +336,61 @@ it('shows the categories tab on demand', async () => {
   await userEvent.click(screen.getByRole('tab', { name: /categories/i }));
 
   expect(screen.getByText('Where the money goes')).toBeInTheDocument();
+});
+
+describe('exporting for categorising elsewhere', () => {
+  it('exports exactly what the filter matches', async () => {
+    mockedExport.mockResolvedValue('transactions_uncategorised.csv');
+
+    render(<CashFlowPage />);
+    await openTransactions();
+
+    await userEvent.click(screen.getByLabelText('Category'));
+    await userEvent.click(screen.getByRole('option', { name: 'Groceries' }));
+    await userEvent.click(screen.getByRole('button', { name: /export/i }));
+
+    await waitFor(() =>
+      expect(mockedExport).toHaveBeenCalledWith(expect.objectContaining({ category: 'Groceries' }))
+    );
+  });
+
+  it('says how many rows the button will take', async () => {
+    render(<CashFlowPage />);
+    await openTransactions();
+
+    expect(screen.getByRole('button', { name: /Export these 2 as CSV/ })).toBeInTheDocument();
+  });
+
+  it('confirms the file name it wrote', async () => {
+    mockedExport.mockResolvedValue('transactions_uncategorised.csv');
+
+    render(<CashFlowPage />);
+    await openTransactions();
+    await userEvent.click(screen.getByRole('button', { name: /export/i }));
+
+    expect(await screen.findByText('Exported transactions_uncategorised.csv')).toBeInTheDocument();
+  });
+
+  it('reports a failed export', async () => {
+    mockedExport.mockRejectedValue(new Error('nope'));
+
+    render(<CashFlowPage />);
+    await openTransactions();
+    await userEvent.click(screen.getByRole('button', { name: /export/i }));
+
+    expect(await screen.findByText('Failed to export')).toBeInTheDocument();
+  });
+
+  it('offers nothing to export when the filter matches nothing', async () => {
+    mockedUseTransactions.mockReturnValue({
+      data: page({ items: [], totals: { count: 0, income: 0, expense: 0, net: 0 } }),
+      isLoading: false,
+      error: null
+    });
+
+    render(<CashFlowPage />);
+
+    // No rows at all shows the empty state instead of the table
+    expect(screen.getByText('No transactions yet')).toBeInTheDocument();
+  });
 });

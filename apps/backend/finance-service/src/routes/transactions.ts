@@ -7,6 +7,7 @@ import {
   getSummary,
   getAnalyticsReport,
   importTransactions,
+  exportTransactionsCsv,
   editCategory,
   bulkRecategorise,
   removeTransaction
@@ -29,6 +30,9 @@ router.get('/categories', getCategories);
 router.get('/summary', getSummary);
 router.get('/analytics', getAnalyticsReport);
 router.post('/import', csvBody, importTransactions);
+// Export honours the same filters as the list: pulling out the uncategorised
+// rows, sorting them in a spreadsheet and handing the file back is the point.
+router.get('/export', exportTransactionsCsv);
 router.get('/', getTransactions);
 // Entries come from imports rather than by hand, so there is no create route
 // and no general update. The category is the exception: it is ours rather than

@@ -24,6 +24,7 @@ import {
   Delete as DeleteIcon,
   Edit as EditIcon,
   UploadFile as UploadIcon,
+  Download as DownloadIcon,
   AccountBalanceWallet as WalletIcon
 } from '@mui/icons-material';
 import TableSortLabel from '@mui/material/TableSortLabel';
@@ -33,7 +34,8 @@ import {
   useTransactionCategories,
   useCashflowSummary,
   useAnalytics,
-  useDeleteTransaction
+  useDeleteTransaction,
+  useExportTransactions
 } from '../hooks/useCashflow';
 import { Transaction } from '../services/cashflowService';
 import ImportDialog from '../components/cashflow/ImportDialog';
@@ -90,6 +92,7 @@ const CashFlowPage: React.FC = () => {
   const { data: summary } = useCashflowSummary(tenantGroupId);
   const { data: analytics } = useAnalytics(tenantGroupId);
   const deleteMutation = useDeleteTransaction();
+  const exportMutation = useExportTransactions();
 
   const transactions = data?.items ?? [];
   const totals = data?.totals;
@@ -109,6 +112,19 @@ const CashFlowPage: React.FC = () => {
 
   const notify = (message: string, severity: 'success' | 'error') =>
     setSnackbar({ message, severity });
+
+  /**
+   * Export exactly what the filter matches — filter to Uncategorised, export,
+   * fill the category column in a spreadsheet, and import the file back.
+   */
+  const handleExport = async () => {
+    try {
+      const filename = await exportMutation.mutateAsync({ groupId: tenantGroupId, ...toQuery(filters) });
+      notify(`Exported ${filename}`, 'success');
+    } catch {
+      notify('Failed to export', 'error');
+    }
+  };
 
   const handleDelete = async () => {
     if (!deleteTarget?._id) return;
@@ -202,6 +218,17 @@ const CashFlowPage: React.FC = () => {
                   categories={categories}
                   totals={totals}
                 />
+
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                  <Button
+                    size="small"
+                    startIcon={<DownloadIcon />}
+                    onClick={handleExport}
+                    disabled={exportMutation.isPending || !totals?.count}
+                  >
+                    Export {totals?.count ? `these ${totals.count.toLocaleString()}` : ''} as CSV
+                  </Button>
+                </Box>
 
                 {transactions.length === 0 ? (
                   <Paper

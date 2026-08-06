@@ -41,7 +41,7 @@ import CashflowAnalytics from './CashflowAnalytics';
 import { Analytics } from '../../services/cashflowService';
 
 const year = (y: number, income: number, expense: number, over: Record<string, unknown> = {}) => ({
-  year: y, income, expense, consumption: expense, invested: 0,
+  year: y, income, expense, consumption: expense, invested: 0, divested: 0,
   savings: income - expense,
   savingsRate: income > 0 ? ((income - expense) / income) * 100 : null,
   months: 12, from: `${y}-01`, to: `${y}-12`, partial: false,
@@ -51,11 +51,11 @@ const year = (y: number, income: number, expense: number, over: Record<string, u
 
 const trailing = {
   current: {
-    income: 50000, expense: 15000, consumption: 15000, invested: 0,
+    income: 50000, expense: 15000, consumption: 15000, invested: 0, divested: 0,
     savings: 35000, savingsRate: 70, months: 12, from: '2025-01', to: '2025-12'
   },
   previous: {
-    income: 40000, expense: 20000, consumption: 20000, invested: 0,
+    income: 40000, expense: 20000, consumption: 20000, invested: 0, divested: 0,
     savings: 20000, savingsRate: 50, months: 12, from: '2024-01', to: '2024-12'
   }
 };
@@ -67,8 +67,8 @@ const analytics: Analytics = {
     year(2025, 50000, 15000, { incomeChange: 10000, incomeChangePct: 25, expenseChange: -5000, expenseChangePct: -25 })
   ],
   months: [
-    { period: '2025-01', income: 4000, expense: 1200, savings: 2800 },
-    { period: '2025-02', income: 4000, expense: 1400, savings: 2600 }
+    { period: '2025-01', income: 4000, expense: 5200, consumption: 1200, invested: 4000, savings: 2800 },
+    { period: '2025-02', income: 4000, expense: 1400, consumption: 1400, invested: 0, savings: 2600 }
   ],
   categoryTrends: [
     { category: 'Groceries', byYear: { 2024: 1000, 2025: 1500 }, total: 2500, latest: 1500, previous: 1000, change: 500, changePct: 50, perMonth: 125 },
@@ -213,4 +213,46 @@ describe('chart formatting', () => {
 
     expect(screen.getByTestId('bar-xaxis')).toHaveTextContent('2024 | 2025');
   });
+});
+
+it('plots consumption under the Spending label, never the gross outflow', () => {
+  // A month that put 4000 into ETFs must not read as 5200 of spending
+  render(<CashflowAnalytics analytics={analytics} />);
+
+  expect(screen.getByTestId('bar-chart')).toHaveTextContent('Spending:1200,1400');
+  expect(screen.getByTestId('bar-chart')).not.toHaveTextContent('Spending:5200');
+});
+
+it('shows what was invested as its own series', () => {
+  render(<CashflowAnalytics analytics={analytics} />);
+
+  expect(screen.getByTestId('bar-chart')).toHaveTextContent('Invested:4000,0');
+  expect(screen.getByText(/left the account but was not spent/)).toBeInTheDocument();
+});
+
+it('leaves the invested series off when there is none', () => {
+  render(
+    <CashflowAnalytics
+      analytics={{
+        ...analytics,
+        months: analytics.months.map((m) => ({ ...m, expense: m.consumption, invested: 0 }))
+      }}
+    />
+  );
+
+  expect(screen.getByTestId('bar-chart')).not.toHaveTextContent('Invested');
+});
+
+it('shows capital that came back beside what went in', () => {
+  render(
+    <CashflowAnalytics
+      analytics={{
+        ...analytics,
+        years: [{ ...analytics.years[0], invested: 9026, divested: 16523 }]
+      }}
+    />
+  );
+
+  expect(screen.getByText('9026 €')).toBeInTheDocument();
+  expect(screen.getByText('16 523 €')).toBeInTheDocument();
 });

@@ -3,7 +3,14 @@ import { BadRequestError, ForbiddenError, sendSuccess } from '@tumbaland/backend
 import * as transactionService from '../services/transaction.service';
 import { getCashflowSummary, DEFAULT_MONTHS } from '../services/cashflow.service';
 import { getAnalytics } from '../services/analytics.service';
-import { importStatement } from '../services/transactionImport.service';
+import {
+  importStatement,
+  importCategories,
+  detectFormat,
+  FORMAT_LABELS,
+  TransactionFileFormat
+} from '../services/transactionImport.service';
+import { exportTransactions } from '../services/transactionExport.service';
 import { TransactionType } from '../models/Transaction';
 
 function contextGroups(req: Request): string[] {
@@ -116,21 +123,59 @@ export const getAnalyticsReport = async (req: Request, res: Response): Promise<v
 };
 
 /**
- * Import a bank statement. The body is the raw CSV, which is why this route
- * mounts its own text parser rather than relying on the JSON one.
+ * Import a CSV. The body is raw text, which is why this route mounts its own
+ * text parser rather than relying on the JSON one.
+ *
+ * Two shapes arrive here: a bank statement, and one of this app's own exports
+ * with the categories edited. They come through the same upload because that is
+ * what "import this file" means to whoever is holding it — the format decides
+ * what happens, not a separate button.
  */
 export const importTransactions = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
   const { groupId } = req.query;
   const groups = contextGroups(req);
-
   const csv = typeof req.body === 'string' ? req.body : '';
 
-  const result = await importStatement(csv, {
+  const options = {
     userId: user.id,
     groupId: groups.length > 0 ? (groupId as string) : undefined,
     userGroups: req.userGroups || []
-  });
+  };
+
+  const declared = req.query.format as TransactionFileFormat | undefined;
+  if (declared && declared !== 'seb' && declared !== 'tumbaland') {
+    throw new BadRequestError('format must be seb or tumbaland');
+  }
+
+  const detected = detectFormat(csv);
+  if (detected === null) {
+    throw new BadRequestError(
+      'Unrecognised file. Expected a SEB account statement (a "Kliendi konto" column) ' +
+      'or a Tumbaland export (an "id" and a "category" column).'
+    );
+  }
+  // A declared format that disagrees with the file is a mistake worth stopping
+  // on: reading a statement as a category list would silently do nothing.
+  if (declared && declared !== detected) {
+    throw new BadRequestError(
+      `This looks like a ${FORMAT_LABELS[detected]}, not a ${FORMAT_LABELS[declared]}.`
+    );
+  }
+
+  if (detected === 'tumbaland') {
+    const result = await importCategories(csv, options);
+    sendSuccess(
+      res,
+      result,
+      result.updated > 0
+        ? `Recategorised ${result.updated} transaction${result.updated === 1 ? '' : 's'}`
+        : 'No categories changed'
+    );
+    return;
+  }
+
+  const result = await importStatement(csv, options);
 
   sendSuccess(
     res,
@@ -139,6 +184,37 @@ export const importTransactions = async (req: Request, res: Response): Promise<v
       ? `Imported ${result.imported}; ${result.duplicates} already present`
       : `Imported ${result.imported} transactions`
   );
+};
+
+/**
+ * Export the rows a filter matches as CSV, for categorising in a spreadsheet
+ * and handing back through the import above.
+ */
+export const exportTransactionsCsv = async (req: Request, res: Response): Promise<void> => {
+  const user = req.user!;
+  const { from, to, type, category, search, format } = req.query;
+
+  if (type && type !== 'income' && type !== 'expense') {
+    throw new BadRequestError('type must be income or expense');
+  }
+  // Only this app's own shape is produced. Emitting something that claimed to
+  // be a bank statement would be fabricating a bank record, and the columns a
+  // statement carries are not all ours to invent.
+  if (format && format !== 'tumbaland') {
+    throw new BadRequestError('Only the tumbaland export format is produced');
+  }
+
+  const { csv, filename } = await exportTransactions(user.id, contextGroups(req), {
+    from: parseDate(from, 'from'),
+    to: parseDate(to, 'to'),
+    type: type as TransactionType | undefined,
+    category: category ? String(category) : undefined,
+    search: search ? String(search) : undefined
+  });
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send(csv);
 };
 
 /** Recategorise one transaction — the only field an import lets you edit. */

@@ -239,7 +239,7 @@ describe('month series', () => {
     withRows(row(2026, 3, 'Salary', 'income', 3000), row(2026, 3, 'Groceries', 'expense', 1200));
 
     expect((await getAnalytics('u1')).months).toEqual([
-      { period: '2026-03', income: 3000, expense: 1200, savings: 1800 }
+      { period: '2026-03', income: 3000, expense: 1200, consumption: 1200, invested: 0, savings: 1800 }
     ]);
   });
 
@@ -303,5 +303,52 @@ describe('scoping', () => {
     await getAnalytics('u1');
 
     expect(mockedAggregate).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('invested and returned', () => {
+  it('reports capital in gross, so a year cannot go negative', async () => {
+    // Money maturing from something bought before the statements begin has no
+    // matching outflow to net against; netting produced a phantom negative year
+    withRows(
+      ...yearOf(2025, 'Salary', 'income', 1000),
+      row(2025, 3, 'Pension', 'expense', 9026),
+      row(2025, 6, 'Savings', 'income', 16523)
+    );
+
+    const [year] = (await getAnalytics('u1')).years;
+
+    expect(year.invested).toBe(9026);
+    expect(year.divested).toBe(16523);
+    expect(year.invested).toBeGreaterThanOrEqual(0);
+  });
+
+  it('keeps capital out of the consumption figure', async () => {
+    // A year that bought 122k of ETFs must not read as 122k of spending
+    withRows(
+      ...yearOf(2025, 'Salary', 'income', 1000),
+      ...yearOf(2025, 'Groceries', 'expense', 500),
+      row(2025, 4, 'Investments', 'expense', 122425)
+    );
+
+    const [year] = (await getAnalytics('u1')).years;
+
+    expect(year.consumption).toBe(6000);
+    expect(year.expense).toBe(128425);
+    expect(year.invested).toBe(122425);
+  });
+
+  it('carries consumption and invested on the month series, not just gross expense', async () => {
+    // The spending chart reads consumption; plotting expense labelled it wrong
+    withRows(
+      row(2026, 1, 'Groceries', 'expense', 500),
+      row(2026, 1, 'Investments', 'expense', 4000)
+    );
+
+    expect((await getAnalytics('u1')).months[0]).toMatchObject({
+      expense: 4500,
+      consumption: 500,
+      invested: 4000
+    });
   });
 });

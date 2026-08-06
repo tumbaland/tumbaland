@@ -142,15 +142,23 @@ interface CategoryRule {
 
 export const CATEGORY_RULES: CategoryRule[] = [
   { category: 'Salary', type: 'income', match: /TEHNIKAÜLIKOOL|TALTECH/i },
-  { category: 'Freelance', type: 'income', match: /Brainbase/i },
+  { category: 'Freelance', type: 'income', match: /Brainbase|ESTNETI/i },
   { category: 'Tax refund', type: 'income', match: /RAHANDUSMINISTEERIUM/i },
-  { category: 'Interest', type: 'income', match: /Intresside väljamaks|BIGBANK/i },
 
-  // Money moved into an asset rather than consumed. It still leaves the
-  // account, so it stays an expense row — but it is not spending, and the
-  // analytics separate the two so the savings rate is not understated.
-  { category: 'Investments', type: 'expense', match: /Binance|COINBASE|Kraken|Bitstamp|Interactive Brokers|Lightyear/i },
-  { category: 'Savings', type: 'expense', match: /BIGBANK|Bigbank/i },
+  // Capital moving to and from an asset, in either direction. A term deposit
+  // maturing is the principal coming back, not interest — counting the whole
+  // "january payment" as income overstated earnings by tens of thousands — and
+  // a crypto withdrawal is the same money returning, not a salary.
+  { category: 'Investments', match: /Binance|COINBASE|Kraken|Bitstamp|Interactive Brokers|Lightyear/i },
+  { category: 'Savings', match: /BIGBANK|Bigbank/i },
+  { category: 'Pension', match: /PENSIONIKESKUS/i },
+  // Actual interest, which is earnings and stays in the income figure
+  { category: 'Interest', type: 'income', match: /Intresside väljamaks/i },
+  // Cash paid in over the counter. Named rather than lumped into "other
+  // income" because it is worth eyeballing: deposits here run several times
+  // the ATM withdrawals, so most of it arrived from outside rather than being
+  // unspent cash coming back, and it counts as income until shown otherwise.
+  { category: 'Cash deposit', type: 'income', match: /SISSEMAKSE/i },
 
   { category: 'Groceries', match: /RIMI|SELVER|PRISMA|MAXIMA|COOP|\bICA\b|LIDL|Grocery/i },
   { category: 'Housing', match: /KÜ |Korteriühistu|ELEKTRILEVI|EESTI ENERGIA|Utilitas|Tallinna Vesi/i },
@@ -168,16 +176,23 @@ export const CATEGORY_RULES: CategoryRule[] = [
 ];
 
 /**
- * Categories that move money into an asset instead of consuming it. They are
- * recorded as outgoings because that is what the bank shows, but counting them
- * as spending would understate the savings rate — money in a broker account is
- * still money kept. Pension and securities settlements never reach a
- * transaction at all; these do, because the destination is outside the app.
+ * Categories that move capital between the account and an asset.
+ *
+ * They appear in both directions — a purchase leaves the account, a sale or a
+ * maturing deposit comes back — and neither direction is spending or earning.
+ * The analytics net them into a single "invested" figure so the savings rate
+ * measures what it claims to: earnings kept rather than consumed.
  */
-export const INVESTMENT_CATEGORIES = new Set(['Investments', 'Savings']);
+export const INVESTMENT_CATEGORIES = new Set(['Investments', 'Savings', 'Pension']);
 
 export const isInvestmentCategory = (category: string): boolean =>
   INVESTMENT_CATEGORIES.has(category);
+
+/**
+ * Everything kept out of the income figure: capital returning is the same money
+ * coming back, not earnings.
+ */
+export const NON_EARNING_CATEGORIES = new Set([...INVESTMENT_CATEGORIES]);
 
 export const FALLBACK_CATEGORY: Record<TransactionType, string> = {
   income: 'Other income',
@@ -212,9 +227,16 @@ export function classifyRow(
   if (ownAccounts.has(row.counterpartyAccount) || OWNER_NAME.test(row.counterparty)) {
     return { kind: 'transfer' };
   }
-  if (SETTLEMENT.test(row.description)) return { kind: 'security' };
   if (DIVIDEND.test(row.description)) return { kind: 'dividend' };
-  if (PENSION.test(row.counterparty)) return { kind: 'pension' };
+
+  // A securities settlement and a pension contribution are cash movements as
+  // well as position changes: the money really did leave the account, and
+  // leaving them out made "invested per year" report a fraction of the truth.
+  // They land in a capital category, so they count as invested without ever
+  // being mistaken for spending. The trade importer reads settlements from the
+  // same statements independently — one event, two ledgers.
+  if (SETTLEMENT.test(row.description)) return { kind: 'security', category: 'Investments' };
+  if (PENSION.test(row.counterparty)) return { kind: 'pension', category: 'Pension' };
 
   return { kind: 'cashflow', category: categorize(row) };
 }

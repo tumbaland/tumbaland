@@ -7,6 +7,7 @@ const totals = (over: Partial<PeriodTotals> = {}): PeriodTotals => ({
   expense: 2500,
   consumption: 2500,
   invested: 0,
+  divested: 0,
   savings: 1500,
   savingsRate: 37.5,
   months: 12,

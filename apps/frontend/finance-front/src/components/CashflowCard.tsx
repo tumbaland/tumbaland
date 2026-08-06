@@ -85,6 +85,7 @@ const CashflowCard: React.FC<CashflowCardProps> = ({ cashflow, currency = 'EUR' 
             {trailing.invested > 0 && (
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                 {money(trailing.invested)} invested
+                {trailing.divested > 0 ? `, ${money(trailing.divested)} back out` : ''}
               </Typography>
             )}
           </Box>

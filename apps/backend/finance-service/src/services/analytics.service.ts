@@ -1,15 +1,27 @@
 import Transaction from '../models/Transaction';
 import { scopeFor } from '../utils/scope';
-import { INVESTMENT_CATEGORIES } from './bankStatement.service';
+import { INVESTMENT_CATEGORIES, NON_EARNING_CATEGORIES } from './bankStatement.service';
 
 export interface PeriodTotals {
+  /**
+   * What was actually earned. Capital coming back — a deposit maturing, a
+   * crypto withdrawal, the owner's own cash paid in — is excluded: it is the
+   * same money returning, and counting it inflated income by a quarter.
+   */
   income: number;
   /** Everything that left the account, consumption and investing alike. */
   expense: number;
   /** What was actually consumed — `expense` less money moved into assets. */
   consumption: number;
-  /** Money moved into crypto, a broker or a savings product. */
+  /**
+   * Capital put into assets: purchases, deposits and pension contributions.
+   * Gross, because "how much did I invest" is a question about what went in —
+   * netting a maturing deposit against it produced negative years whenever
+   * money came back from something bought before the statements begin.
+   */
   invested: number;
+  /** Capital that came back: sales, withdrawals, deposits maturing. */
+  divested: number;
   /** income − consumption: investing counts as kept, not spent. */
   savings: number;
   savingsRate: number | null;
@@ -60,7 +72,12 @@ export interface PeriodPoint {
   /** YYYY for a year, YYYY-MM for a month. */
   period: string;
   income: number;
+  /** Everything that left the account, capital included. */
   expense: number;
+  /** What was actually consumed — the figure a spending chart wants. */
+  consumption: number;
+  /** Capital put into assets in the period. */
+  invested: number;
   savings: number;
 }
 
@@ -125,20 +142,42 @@ function monthRange(first: string, last: string): string[] {
 }
 
 interface Bucket {
+  /** Earnings only — capital returning is excluded as it accumulates. */
   income: number;
   expense: number;
-  invested: number;
+  /**
+   * Capital out and capital back in, kept apart rather than netted on the way
+   * in. Consumption has to subtract the *gross* outflow: netting first would
+   * leave the capital that came back looking like it had been spent.
+   */
+  capitalOut: number;
+  capitalIn: number;
 }
 
-const emptyBucket = (): Bucket => ({ income: 0, expense: 0, invested: 0 });
+const emptyBucket = (): Bucket => ({ income: 0, expense: 0, capitalOut: 0, capitalIn: 0 });
+
+/** Fold one aggregated row into a bucket, splitting capital from earnings. */
+function accumulate(bucket: Bucket, category: string, type: 'income' | 'expense', total: number): void {
+  const isCapital = INVESTMENT_CATEGORIES.has(category);
+
+  if (type === 'expense') {
+    bucket.expense += total;
+    if (isCapital) bucket.capitalOut += total;
+    return;
+  }
+
+  if (isCapital) bucket.capitalIn += total;
+  if (!NON_EARNING_CATEGORIES.has(category)) bucket.income += total;
+}
 
 function summarize(bucket: Bucket, months: number, from: string, to: string): PeriodTotals {
-  const consumption = bucket.expense - bucket.invested;
+  const consumption = bucket.expense - bucket.capitalOut;
   return {
     income: bucket.income,
     expense: bucket.expense,
     consumption,
-    invested: bucket.invested,
+    invested: bucket.capitalOut,
+    divested: bucket.capitalIn,
     savings: bucket.income - consumption,
     // A rate against no income is undefined, not zero.
     savingsRate: bucket.income > 0 ? ((bucket.income - consumption) / bucket.income) * 100 : null,
@@ -196,16 +235,11 @@ export const getAnalytics = async (userId: string, groupId?: string): Promise<An
   for (const row of rows) {
     const { year, month, category, type } = row._id;
     const key = monthKey(year, month);
-    const isInvestment = type === 'expense' && INVESTMENT_CATEGORIES.has(category);
 
     const monthBucket = byMonth.get(key) || emptyBucket();
     const yearBucket = byYear.get(year) || emptyBucket();
-    monthBucket[type] += row.total;
-    yearBucket[type] += row.total;
-    if (isInvestment) {
-      monthBucket.invested += row.total;
-      yearBucket.invested += row.total;
-    }
+    accumulate(monthBucket, category, type, row.total);
+    accumulate(yearBucket, category, type, row.total);
     byMonth.set(key, monthBucket);
     byYear.set(year, yearBucket);
 
@@ -213,7 +247,7 @@ export const getAnalytics = async (userId: string, groupId?: string): Promise<An
     seen.add(month);
     monthsPerYear.set(year, seen);
 
-    if (type === 'expense') {
+    if (type === 'expense' && !INVESTMENT_CATEGORIES.has(category)) {
       const perMonth = spendByCategoryMonth.get(category) || new Map<string, number>();
       perMonth.set(key, (perMonth.get(key) || 0) + row.total);
       spendByCategoryMonth.set(category, perMonth);
@@ -221,7 +255,7 @@ export const getAnalytics = async (userId: string, groupId?: string): Promise<An
       const perYear = spendByCategoryYear.get(category) || {};
       perYear[year] = (perYear[year] || 0) + row.total;
       spendByCategoryYear.set(category, perYear);
-    } else {
+    } else if (type === 'income' && !NON_EARNING_CATEGORIES.has(category)) {
       const perYear = incomeByCategoryYear.get(category) || {};
       perYear[year] = (perYear[year] || 0) + row.total;
       incomeByCategoryYear.set(category, perYear);
@@ -233,11 +267,13 @@ export const getAnalytics = async (userId: string, groupId?: string): Promise<An
   const allMonths = monthRange(presentMonths[0], presentMonths[presentMonths.length - 1]);
   const months: PeriodPoint[] = allMonths.map((period) => {
     const bucket = byMonth.get(period) || emptyBucket();
-    const consumption = bucket.expense - bucket.invested;
+    const consumption = bucket.expense - bucket.capitalOut;
     return {
       period,
       income: bucket.income,
       expense: bucket.expense,
+      consumption,
+      invested: bucket.capitalOut,
       savings: bucket.income - consumption
     };
   });
@@ -254,7 +290,8 @@ export const getAnalytics = async (userId: string, groupId?: string): Promise<An
       const bucket = byMonth.get(key) || emptyBucket();
       acc.income += bucket.income;
       acc.expense += bucket.expense;
-      acc.invested += bucket.invested;
+      acc.capitalOut += bucket.capitalOut;
+      acc.capitalIn += bucket.capitalIn;
       return acc;
     }, emptyBucket());
 

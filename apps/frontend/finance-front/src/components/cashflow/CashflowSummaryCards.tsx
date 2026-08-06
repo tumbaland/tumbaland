@@ -54,7 +54,12 @@ const CashflowSummaryCards: React.FC<CashflowSummaryCardsProps> = ({
         {
           label: 'Spending',
           value: money(trailing.consumption),
-          sublabel: trailing.invested > 0 ? `plus ${money(trailing.invested)} invested` : undefined,
+          sublabel:
+            trailing.invested > 0
+              ? `plus ${money(trailing.invested)} invested${
+                  trailing.divested > 0 ? `, ${money(trailing.divested)} back out` : ''
+                }`
+              : undefined,
           change: changeFrom(trailing.consumption, previous?.consumption),
           goodWhenUp: false
         },

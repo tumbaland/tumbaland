@@ -17,7 +17,7 @@ import CategoryBreakdown from './CategoryBreakdown';
 import { Analytics } from '../../services/cashflowService';
 
 const year = (y: number) => ({
-  year: y, income: 0, expense: 0, consumption: 0, invested: 0, savings: 0, savingsRate: null,
+  year: y, income: 0, expense: 0, consumption: 0, invested: 0, divested: 0, savings: 0, savingsRate: null,
   months: 12, from: `${y}-01`, to: `${y}-12`, partial: false,
   incomeChange: null, incomeChangePct: null, expenseChange: null, expenseChangePct: null
 });
@@ -28,7 +28,7 @@ const analytics: Analytics = {
   months: [],
   trailing: {
     current: {
-      income: 0, expense: 0, consumption: 0, invested: 0, savings: 0, savingsRate: null,
+      income: 0, expense: 0, consumption: 0, invested: 0, divested: 0, savings: 0, savingsRate: null,
       months: 12, from: '2025-01', to: '2025-12'
     },
     previous: null

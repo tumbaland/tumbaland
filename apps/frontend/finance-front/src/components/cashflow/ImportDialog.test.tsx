@@ -10,6 +10,7 @@ vi.mock('../../hooks/useCashflow', () => ({
 import ImportDialog from './ImportDialog';
 
 const result = (over = {}) => ({
+  format: 'seb' as const,
   imported: 3,
   duplicates: 0,
   skipped: {},
@@ -127,4 +128,89 @@ it('resets when closed, so a stale result is not waiting next time', async () =>
 
   expect(onClose).toHaveBeenCalled();
   expect(screen.queryByText('3 transactions imported')).not.toBeInTheDocument();
+});
+
+it('says which format it read the file as', async () => {
+  mockedImport.mockResolvedValue(result());
+  renderDialog();
+
+  await upload();
+
+  expect(await screen.findByText('Read as: SEB account statement')).toBeInTheDocument();
+});
+
+it('explains that both a statement and an edited export are accepted', () => {
+  renderDialog();
+
+  expect(screen.getByText(/A SEB account statement\./)).toBeInTheDocument();
+  expect(screen.getByText(/with the categories edited/)).toBeInTheDocument();
+});
+
+describe('an edited export coming back', () => {
+  const categoryResult = (over = {}) => ({
+    format: 'tumbaland' as const,
+    kind: 'categories' as const,
+    updated: 12,
+    unchanged: 3,
+    notFound: 0,
+    malformed: 0,
+    categories: [{ category: 'Groceries', count: 12 }],
+    ...over
+  });
+
+  it('reports what it recategorised, not what it imported', async () => {
+    mockedImport.mockResolvedValue(categoryResult());
+    renderDialog();
+
+    await upload('id;category\nabc;Groceries');
+
+    expect(await screen.findByText('12 transactions recategorised')).toBeInTheDocument();
+    expect(screen.getByText('Read as: Tumbaland export')).toBeInTheDocument();
+    expect(screen.queryByText(/imported/)).not.toBeInTheDocument();
+  });
+
+  it('lists what rows moved into', async () => {
+    mockedImport.mockResolvedValue(categoryResult());
+    renderDialog();
+
+    await upload();
+
+    expect(await screen.findByText('Groceries: 12')).toBeInTheDocument();
+  });
+
+  it('notes rows that were already in that category', async () => {
+    mockedImport.mockResolvedValue(categoryResult());
+    renderDialog();
+
+    await upload();
+
+    expect(await screen.findByText(/3 rows were already in the category/)).toBeInTheDocument();
+  });
+
+  it('flags ids that match nothing here', async () => {
+    mockedImport.mockResolvedValue(categoryResult({ notFound: 2 }));
+    renderDialog();
+
+    await upload();
+
+    expect(await screen.findByText(/2 ids in the file do not match/)).toBeInTheDocument();
+  });
+
+  it('flags rows it could not read', async () => {
+    mockedImport.mockResolvedValue(categoryResult({ malformed: 5 }));
+    renderDialog();
+
+    await upload();
+
+    expect(await screen.findByText(/5 rows had no usable id or category/)).toBeInTheDocument();
+  });
+
+  it('says plainly when nothing changed', async () => {
+    mockedImport.mockResolvedValue(categoryResult({ updated: 0, categories: [] }));
+    renderDialog();
+
+    await upload();
+
+    expect(await screen.findByText('No categories changed')).toBeInTheDocument();
+  });
 });

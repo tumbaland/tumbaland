@@ -12,18 +12,26 @@ jest.mock('../services/cashflow.service', () => ({
 }));
 
 jest.mock('../services/analytics.service', () => ({ getAnalytics: jest.fn() }));
-jest.mock('../services/transactionImport.service', () => ({ importStatement: jest.fn() }));
+jest.mock('../services/transactionImport.service', () => ({
+  importStatement: jest.fn(),
+  importCategories: jest.fn(),
+  detectFormat: jest.fn(),
+  FORMAT_LABELS: { seb: 'SEB account statement', tumbaland: 'Tumbaland export' }
+}));
+jest.mock('../services/transactionExport.service', () => ({ exportTransactions: jest.fn() }));
 
 import * as transactionService from '../services/transaction.service';
 import { getCashflowSummary } from '../services/cashflow.service';
 import { getAnalytics } from '../services/analytics.service';
-import { importStatement } from '../services/transactionImport.service';
+import { importStatement, importCategories, detectFormat } from '../services/transactionImport.service';
+import { exportTransactions } from '../services/transactionExport.service';
 import {
   getTransactions,
   getCategories,
   getSummary,
   getAnalyticsReport,
   importTransactions,
+  exportTransactionsCsv,
   removeTransaction
 } from './transaction.controller';
 
@@ -31,6 +39,9 @@ const mockedTransactions = transactionService as jest.Mocked<typeof transactionS
 const mockedSummary = getCashflowSummary as unknown as jest.Mock;
 const mockedAnalytics = getAnalytics as unknown as jest.Mock;
 const mockedImport = importStatement as unknown as jest.Mock;
+const mockedImportCategories = importCategories as unknown as jest.Mock;
+const mockedDetect = detectFormat as unknown as jest.Mock;
+const mockedExport = exportTransactions as unknown as jest.Mock;
 
 function mockRes(): Response {
   const res: Partial<Response> = {};
@@ -180,6 +191,8 @@ describe('getAnalyticsReport', () => {
 });
 
 describe('importTransactions', () => {
+  beforeEach(() => mockedDetect.mockReturnValue('seb'));
+
   it('passes the raw CSV body through with the caller context', async () => {
     mockedImport.mockResolvedValue({ imported: 3, duplicates: 0, skipped: {}, period: null, rows: 3, categories: [] });
 
@@ -206,11 +219,94 @@ describe('importTransactions', () => {
     );
   });
 
-  it('sends an empty string when the body never parsed as text', async () => {
-    mockedImport.mockResolvedValue({ imported: 0, duplicates: 0, skipped: {}, period: null, rows: 0, categories: [] });
+  it('rejects a file that is neither shape', async () => {
+    mockedDetect.mockReturnValue(null);
 
-    await importTransactions(req({ body: undefined } as Partial<Request>), mockRes());
+    await expect(
+      importTransactions(req({ body: 'name,value\nfoo,1' } as Partial<Request>), mockRes())
+    ).rejects.toMatchObject({ name: 'BadRequestError' });
+  });
 
-    expect(mockedImport).toHaveBeenCalledWith('', expect.any(Object));
+  it('reads a Tumbaland export as categories instead', async () => {
+    mockedDetect.mockReturnValue('tumbaland');
+    mockedImportCategories.mockResolvedValue({
+      format: 'tumbaland', kind: 'categories', updated: 4, unchanged: 0, notFound: 0, malformed: 0, categories: []
+    });
+    const res = mockRes();
+
+    await importTransactions(req({ body: 'id;category' } as Partial<Request>), res);
+
+    expect(mockedImportCategories).toHaveBeenCalled();
+    expect(mockedImport).not.toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Recategorised 4 transactions' })
+    );
+  });
+
+  it('stops when the declared format disagrees with the file', async () => {
+    // Reading a statement as a category list would silently do nothing
+    mockedDetect.mockReturnValue('seb');
+
+    await expect(
+      importTransactions(req({ body: 'x', query: { format: 'tumbaland' } } as Partial<Request>), mockRes())
+    ).rejects.toMatchObject({ name: 'BadRequestError' });
+  });
+
+  it('rejects a format it does not produce', async () => {
+    await expect(
+      importTransactions(req({ body: 'x', query: { format: 'nonsense' } } as Partial<Request>), mockRes())
+    ).rejects.toMatchObject({ name: 'BadRequestError' });
+  });
+});
+
+describe('exportTransactionsCsv', () => {
+  const csvRes = () => {
+    const res = mockRes();
+    res.setHeader = jest.fn().mockReturnValue(res);
+    res.send = jest.fn().mockReturnValue(res);
+    return res;
+  };
+
+  beforeEach(() =>
+    mockedExport.mockResolvedValue({ csv: 'id;category\n', rows: 1, filename: 'transactions_all.csv' })
+  );
+
+  it('sends the CSV as a download', async () => {
+    const res = csvRes();
+
+    await exportTransactionsCsv(req(), res);
+
+    expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'text/csv; charset=utf-8');
+    expect(res.setHeader).toHaveBeenCalledWith(
+      'Content-Disposition',
+      'attachment; filename="transactions_all.csv"'
+    );
+    expect(res.send).toHaveBeenCalledWith('id;category\n');
+  });
+
+  it('passes the table filters through, which is the point of the export', async () => {
+    await exportTransactionsCsv(
+      req({ query: { category: 'Uncategorised', type: 'expense', search: 'rimi' } } as Partial<Request>),
+      csvRes()
+    );
+
+    expect(mockedExport).toHaveBeenCalledWith('u1', [], expect.objectContaining({
+      category: 'Uncategorised',
+      type: 'expense',
+      search: 'rimi'
+    }));
+  });
+
+  it('refuses to emit a format it does not produce', async () => {
+    // Emitting something claiming to be a bank statement would fabricate a record
+    await expect(
+      exportTransactionsCsv(req({ query: { format: 'seb' } } as Partial<Request>), csvRes())
+    ).rejects.toMatchObject({ name: 'BadRequestError' });
+  });
+
+  it('rejects an invalid type filter', async () => {
+    await expect(
+      exportTransactionsCsv(req({ query: { type: 'transfer' } } as Partial<Request>), csvRes())
+    ).rejects.toMatchObject({ name: 'BadRequestError' });
   });
 });
