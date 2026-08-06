@@ -196,19 +196,42 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
           </Typography>
           <Box sx={{ overflowX: 'auto' }}>
             <BarChart
+              className="chart-earned-spent"
               height={280}
               xAxis={[{ data: labels, scaleType: 'band', valueFormatter: periodLabel }]}
               yAxis={[{ valueFormatter: axisMoney }]}
               series={[
                 { data: incomes, label: 'Income', color: INCOME_COLOR, valueFormatter: chartMoney },
-                { data: expenses, label: 'Spending', color: EXPENSE_COLOR, valueFormatter: chartMoney },
-                ...(hasInvesting
-                  ? [{ data: investments, label: 'Invested', color: INVEST_COLOR, valueFormatter: chartMoney }]
-                  : [])
+                { data: expenses, label: 'Spending', color: EXPENSE_COLOR, valueFormatter: chartMoney }
               ]}
               margin={{ left: 70 }}
             />
           </Box>
+
+          {/* Investing runs several times larger than a month's spending — a
+              122k year of ETF buying on the same axis flattens income and
+              spending into a strip along the bottom, which is the comparison
+              this chart exists for. Its own axis below keeps both readable
+              without pretending two different scales are one. */}
+          {hasInvesting && (
+            <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
+                Invested — same {unit}s, its own scale
+              </Typography>
+              <Box sx={{ overflowX: 'auto' }}>
+                <BarChart
+                  className="chart-invested"
+                  height={160}
+                  xAxis={[{ data: labels, scaleType: 'band', valueFormatter: periodLabel }]}
+                  yAxis={[{ valueFormatter: axisMoney }]}
+                  series={[
+                    { data: investments, label: 'Invested', color: INVEST_COLOR, valueFormatter: chartMoney }
+                  ]}
+                  margin={{ left: 70 }}
+                />
+              </Box>
+            </Box>
+          )}
         </CardContent>
       </Card>
 
@@ -248,8 +271,16 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
       {analytics.years.length > 0 && (
         <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', mb: 2 }}>
           <CardContent>
-            <Typography variant="subtitle2" sx={{ mb: 1 }}>
-              Year on year
+            <Typography variant="subtitle2">Year on year</Typography>
+            {/* No percentage columns. A year-over-year percentage is only
+                meaningful when both years are complete and neither base is
+                unusually small, and here neither holds: the current year is
+                part-imported, and a year whose income landed mostly as capital
+                returning makes the next year read as +266%. The euro figures
+                read down the column without a false precision on top. */}
+            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
+              Amounts only — a part year against a full one is not a comparison worth
+              putting a percentage on.
             </Typography>
             <Box sx={{ overflowX: 'auto' }}>
               <Table size="small">
@@ -257,13 +288,10 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
                   <TableRow>
                     <TableCell>Year</TableCell>
                     <TableCell align="right">Income</TableCell>
-                    <TableCell align="right">vs prev</TableCell>
                     <TableCell align="right">Spending</TableCell>
-                    <TableCell align="right">vs prev</TableCell>
                     <TableCell align="right">Invested</TableCell>
                     <TableCell align="right">Returned</TableCell>
                     <TableCell align="right">Saved</TableCell>
-                    <TableCell align="right">Rate</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -282,13 +310,7 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
                         )}
                       </TableCell>
                       <TableCell align="right">{money(y.income)}</TableCell>
-                      <TableCell align="right" sx={{ color: signColor(y.incomeChange ?? 0) }}>
-                        {y.incomeChangePct === null ? '—' : formatPct(y.incomeChangePct)}
-                      </TableCell>
                       <TableCell align="right">{money(y.consumption)}</TableCell>
-                      <TableCell align="right" sx={{ color: spendColor(y.expenseChange ?? 0) }}>
-                        {y.expenseChangePct === null ? '—' : formatPct(y.expenseChangePct)}
-                      </TableCell>
                       <TableCell align="right" sx={{ color: 'text.secondary' }}>
                         {y.invested ? money(y.invested) : '—'}
                       </TableCell>
@@ -297,9 +319,6 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
                       </TableCell>
                       <TableCell align="right" sx={{ fontWeight: 600, color: signColor(y.savings) }}>
                         {money(y.savings)}
-                      </TableCell>
-                      <TableCell align="right">
-                        {y.savingsRate === null ? '—' : formatPct(y.savingsRate)}
                       </TableCell>
                     </TableRow>
                   ))}

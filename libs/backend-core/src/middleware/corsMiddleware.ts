@@ -29,7 +29,11 @@ export function createCorsMiddleware(options: CorsMiddlewareOptions = {}) {
       return callback(new Error('Not allowed by CORS: ' + origin));
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    // PATCH belongs here as much as PUT: leaving it out lets the preflight
+    // succeed and then has the browser block the request it just approved,
+    // which surfaces in the UI as a bare "failed to save" with a 204 in the
+    // network tab and no failing request to point at.
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-correlation-id', 'x-session-id'],
     exposedHeaders: options.exposedHeaders
   });

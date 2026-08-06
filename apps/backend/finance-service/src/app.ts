@@ -11,7 +11,11 @@ import dashboardRoutes from './routes/dashboard';
 import { healthCheck } from './controllers/healthController';
 import { errorHandler, createBaseApp, metricsHandler } from '@tumbaland/backend-core';
 
-const app = createBaseApp();
+// The CSV export names its file in Content-Disposition, and a cross-origin
+// response hides every header the server does not expose — without this the
+// browser silently saves every export as "transactions.csv" regardless of
+// which filter produced it.
+const app = createBaseApp({ corsOptions: { exposedHeaders: ['Content-Disposition'] } });
 
 // Routes
 app.use('/api/asset-classes', assetClassesRoutes);

@@ -158,9 +158,62 @@ describe('categorize', () => {
   });
 
   it('will not let an income rule claim a debit', () => {
-    // A refund from the employer is spending-shaped, so it must not read as salary
-    expect(categorize(row('TALLINNA TEHNIKAÜLIKOOL', 'expense'))).toBe('Uncategorised');
+    // Freelance income shaped as a payment out is not freelance income
+    expect(categorize(row('Brainbase', 'expense'))).toBe('Uncategorised');
+    expect(categorize(row('Brainbase', 'income'))).toBe('Freelance');
+  });
+
+  it('reads the university as pay coming in and tuition going out', () => {
     expect(categorize(row('TALLINNA TEHNIKAÜLIKOOL', 'income'))).toBe('Salary');
+    expect(categorize(row('TALLINNA TEHNIKAÜLIKOOL', 'expense'))).toBe('Education');
+  });
+
+  describe('however the bank spelled it', () => {
+    // Card terminals transliterate: Südameapteek arrives as SUDAMEAPTEEK from
+    // one and SYDAMEAPTEEK from another, while a transfer keeps the diacritic
+    it.each([['Südameapteek'], ['SUDAMEAPTEEK ULEMISTE'], ['SYDAMEAPTEEK YLEMISTE']])(
+      '%s is the same pharmacy',
+      (name) => expect(categorize(row(name))).toBe('Health')
+    );
+
+    it('matches a rule written in correct Estonian against a stripped name', () => {
+      expect(categorize(row('UHISTEENUSED AS'))).toBe('Housing');
+    });
+  });
+
+  describe('rules that used to catch the wrong rows', () => {
+    it('does not read any word ending in -ku as an apartment association', () => {
+      // KÜ folds to KU, which matched "Masku", "Kesku", "Lasnamäe kaupluku"…
+      expect(categorize(row('Masku Baltic OÜ'))).toBe('Home');
+      expect(categorize(row('K/Ü Järvevana tee 3'))).toBe('Housing');
+      expect(categorize(row('KÜ Sõpruse 201'))).toBe('Housing');
+    });
+
+    it('keeps the card fee out of housing', () => {
+      // "hooldustasu" is any maintenance fee, the bank's included
+      expect(categorize({ ...row('SEB'), description: 'Kaardi ...015522 hooldustasu kuus (12/2021)' }))
+        .toBe('Bank fees');
+      expect(categorize({ ...row('K/Ü Järvevana tee 3'), description: 'hooldustasu' })).toBe('Housing');
+    });
+
+    it('separates a Bolt ride from a Bolt Food order', () => {
+      expect(categorize(row('BOLT.EU/O/2503151203'))).toBe('Transport');
+      expect(categorize(row('Bolt Food'))).toBe('Restaurants');
+    });
+
+    it('reads ATAC as Rome transit rather than the French grocer', () => {
+      expect(categorize(row('ATAC TAP&GO'))).toBe('Transport');
+    });
+  });
+
+  it('treats an IBKR deposit through Citibank as capital, not a bank payment', () => {
+    expect(categorize({ ...row('CITIBANK EUROPE PLC, GERMANY BRANCH'), description: 'U4360253 / Toomas Tahves' }))
+      .toBe('Investments');
+  });
+
+  it('does not count a returned order as earnings', () => {
+    expect(categorize({ ...row('DLB TRADING OÜ', 'income'), description: 'Tag. tell. nr. 27190040' }))
+      .toBe('Refund');
   });
 
   it('falls back per direction', () => {

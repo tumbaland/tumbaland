@@ -160,19 +160,89 @@ export const CATEGORY_RULES: CategoryRule[] = [
   // unspent cash coming back, and it counts as income until shown otherwise.
   { category: 'Cash deposit', type: 'income', match: /SISSEMAKSE/i },
 
-  { category: 'Groceries', match: /RIMI|SELVER|PRISMA|MAXIMA|COOP|\bICA\b|LIDL|Grocery/i },
-  { category: 'Housing', match: /KÜ |Korteriühistu|ELEKTRILEVI|EESTI ENERGIA|Utilitas|Tallinna Vesi/i },
-  { category: 'Transport', match: /Circle K|Neste|Olerex|Alexela|BOLT|TAXI|Linnatransport|Elron|EUROPARK|VIKING MOTORS/i },
-  { category: 'Telecom', match: /STV AS|Telia|Elisa|Tele2/i },
-  { category: 'Travel', match: /AIR BALTIC|BOOKING|RYANAIR|Wizz|Hotel|AIRBNB|LUX EXPRESS|SONDER\.COM/i },
-  { category: 'Health', match: /Unimed|Apotheka|Benu|Südameapteek|Confido|Qvalitas|Stebby|MELIVA|MY FITNESS/i },
-  { category: 'Electronics', match: /Arvutitark|Euronics|Klick|On24|Photopoint/i },
-  { category: 'Home', match: /DEPO|Bauhof|K-Rauta|Ehituse ABC|JYSK|IKEA|Fauni/i },
-  { category: 'Restaurants', match: /Restoran|Kohvik|Cafe|Pizza|Sushi|McDonald|Burger|Wolt|Bolt Food/i },
-  { category: 'Cash', match: /BRINK'S|\bATM\b|Sularaha/i },
-  { category: 'Bank fees', match: /Teenustasu|Igapäevane pakett|Intressi tulumaks|VP H\.TASU/i },
+  // Funding the brokerage account. IBKR takes EUR deposits through Citibank's
+  // Germany branch and the row carries the U-prefixed IBKR account number, so
+  // this is capital moving to an asset rather than a payment to a bank.
+  { category: 'Investments', match: /CITIBANK EUROPE.*GERMANY/i },
+
+  // A returned order coming back is not earnings. Estonian invoicing language:
+  // "tagastus" is a refund, "krd.arve" a credit note.
+  { category: 'Refund', type: 'income', match: /raha tagastus|Tag\. tell|tagastus|krd\.arve|loobus kaubast/i },
+
+  // "hooldustasu" on its own is any maintenance fee — the Housing rule wants
+  // the apartment association's, so the card's monthly fee is claimed first.
+  { category: 'Bank fees', match: /Teenustasu|Igapäevane pakett|Intressi tulumaks|VP H\.TASU|Kaardi .*hooldustasu/i },
   { category: 'Tax', type: 'expense', match: /RAHANDUSMINISTEERIUM|MAKSU- JA TOLLIAMET/i },
-  { category: 'Subscriptions', match: /Spotify|Netflix|Google|Apple\.com|Microsoft|Amazon|Patreon|Steam/i }
+  { category: 'Cash', match: /BRINK'S|\bATM\b|Sularaha|VÄLJAMAKSE/i },
+
+  // Pharmacies, clinics and opticians. The terminal transliterates ü as either
+  // u or y, hence the character classes — see fold() below.
+  {
+    category: 'Health',
+    match:
+      /Unimed|Apotheka|\bBenu\b|S[üy]dameapteek|APTEEK|KESKUSE APTE|NETIAPTEEK|Farmacia|Confido|Qvalitas|Stebby|MELIVA|MY ?FITNESS|Hambakliinik|HAMBALASER|Arstikeskus|Polikliinik|POLIKLIINIKU|PROFDIAGNOSTIK|Mediron|INSTRUMENTARIUM|LENS OPTIKA|HARUAPTEEK/i
+  },
+  { category: 'Personal care', match: /Ilusalong|KOSMEETIKA|notino|L COSMETICS|\bI\.L\.U\.|CHLOE ILU/i },
+  { category: 'Pets', match: /LOOMAKLIINIK|Loomakliinik/i },
+  { category: 'Insurance', match: /IF P&C INSURANCE|ERGO Insurance|Salva Kindlustus|Kindlustus/i },
+
+  // Course platforms, conference fees and the university's own invoices — the
+  // Salary rule above already claims TalTech on the income side, so an invoice
+  // from the same name can only be something bought.
+  {
+    category: 'Education',
+    match: /UDEMY|INSTICC|COURSERA|ABEBOOKS|Raamatupood|TALLINNA TEHNIKA[ÜY]LIKOOL|TEHNIKA [ÜY]LIKOOLI RAAMA|LUCIDCHART/i
+  },
+  {
+    category: 'Entertainment',
+    match:
+      /HUMBLEBUNDLE|BLIZZARD|UBISOFT|ORIGIN\.COM|GREENMANGAMING|MACGAMESTORE|FANTASIAPELIT|APOLLO|MUSEI|MUSEUM|MUSEO|ACQUARIO|AHHAA|LOOMAAIA|BOWLINGU|SKYPARK|SIGHTSEEIN|CINAMON|FIENTA/i
+  },
+  // Clubs and studios billed as a membership or a term's tuition.
+  {
+    category: 'Hobbies',
+    match: /URBAN STYLE|TANTSUSTUUDIO|FREE FLOW STUDIO|SPORDIKLUBI|SURFIKLUBI|POPSPORT|KUNST - HOBI/i
+  },
+
+  { category: 'Housing', match: /\bKÜ\b|K\/Ü|Korteriühistu|ELEKTRILEVI|EESTI ENERGIA|Utilitas|Tallinna Vesi|ÜHISTEENUSED|TORU-JURI|hooldustasu/i },
+  { category: 'Telecom', match: /STV AS|Telia|Elisa|Tele2|ZONE MEDIA|NORDIC DIGITAL/i },
+  {
+    category: 'Transport',
+    match:
+      // Bolt is both the ride and the food delivery; without the lookahead the
+      // rides rule swallows every Bolt Food order into Transport.
+      /Circle K|Neste|Olerex|Alexela|Statoil|FAVORA|\bBOLT\b(?! ?Food)|TAXI|Linnatransport|Elron|EESTI LIINIRONGID|EUROPARK|CITYPARK|PARKIMISMAJ|VIKING MOTORS|SNCF|REGIE LIGNE|NATIONAL EXPRESS|AIRPORT BUS|AZIENDA MOBILITA|ATAC TAP|MOBILITA'? E TRASPO|\bHSL\b|AUTOBUSI|EMPRESA MALAGUENA DE T|TRANSP INTERMODAIS/i
+  },
+  {
+    category: 'Travel',
+    match:
+      /AIR ?BALTIC|BOOKING|RYANAIR|Wizz|Hotel|AIRBNB|LUX EXPRESS|SONDER\.COM|VIKING LINE|AEROPORTO|AEROPUERTO|APT FIUMICINO|DUTYFR|TAXFREE|GUEST HOUSE|RESIDENCE|WH SMITH STANSTED/i
+  },
+  { category: 'Electronics', match: /Arvutitark|Euronics|Klick|On24|Photopoint|OOMIPOOD|MOBILE TRADE|ORDI OÜ|1A\.EE|DATAGATE|HINNAVAATLUS/i },
+  { category: 'Home', match: /DEPO|Bauhof|K-Rauta|Ehituse ABC|JYSK|IKEA|Fauni|ESPAK|KESKO SENUKAI|KODUEKSTRA|MASKU|LILLEPOOD|LILLELETT|FLORISTERIA|FIORI PIETRO/i },
+
+  {
+    category: 'Groceries',
+    match:
+      /RIMI|SELVER|PRISMA|MAXIMA|COOP|\bICA\b|LIDL|Grocery|PROMO CASH|A1000MARKET|GROSSI TOIDUKAUBAD|GR\. TK\.|APELSIN|R-KIOSK|KONSUM|MAKSIMARKET|PARLIPOOD|NETOMARKET|SOLARISE TOIDUPOOD|VAANA-JOESUU POOD|CARREFOUR|\bCRF\b|TESCO|SAINSBURY|WAITROSE|\bALDI\b|CONAD|DESPAR|INTERMARCHE|MONOPRIX|SUPERMERCAT|SUPERMERCADO|HIPER CENTER|MARCHE U|PAM LOCAL|CO-OP GROUP FOOD|MINI MARKET/i
+  },
+  {
+    category: 'Restaurants',
+    match:
+      /Restoran|\bRESTO\b|Kohvik|KOHVISEMU|Cafe|CAFFE|Pizza|Sushi|McDonald|\bMCD\b|Burger|Wolt|Bolt Food|KOCHI AIDAD|FRESHFOOD|CHEFSFOOD|\bKFC\b|VAPIANO|CHOPSTICKS|TANAVATOIT|TOIDUTANAV|SHAURMA|SHAWARMA|KEBAB|KEBABOOM|\bDONER\b|GRILL|PELMEN|O'LEARYS|PAPER MILL|VANA VILLEM|RICOTTA|MAMUSKA|NS KING|PIANO [ÜY]LEMISTE|BUFFET|TAIYAKI|SAMSA|OLDE HANSA|ARNOLDS|SONNE|KANTRIBAAR|TONDI JAZZ|SUVEBAAR|BRIOCHE|FORNO|BAKERY|PAGARID|GELATERIA|GELATINA|HELADERIA|STARBUCKS|ILLY CAFFE|TAPAS|TRATTORIA|CANDY POP|TWISTSNACKS|MRS WAFFLE|MRS BAKERY|CACIO E PEPE|SABATINI|LA FABRICA|DA TONINO|SEE WOO|HONG KONG|BANGKOK|SHIROYA|GEO DONER|BONCHE|TRUMAN|LE FROG|BABYBACK RIBS|NJAMI|ROYAL FOOD/i
+  },
+
+  // Clothing, household goods and the general marketplaces. Anything bought
+  // rather than consumed, eaten or subscribed to.
+  {
+    category: 'Shopping',
+    match:
+      /ALIEXPRESS|ALIPAY|TEMU\.COM|AMZN MKTP|\bEBAY\b|GEARBEST|WISH\.COM|DLB TRADING|kaup24|MAKSEKESKUS|CHILLI DEALS|SAVELITA|H ?& ?M|NEW YORKER|RESERVED|\bHOUSE [ÜY]LEMISTE|HOUSEBRAND|SINSAY|CROPP|TERRANOVA|PEPCO|MINISO|\bTIGER\b|\bNORMAL\b|KAUBAMAJA|STOCKMANN|SPORTSDIRECT|SPORTLAND|EUROSPORT|RADEMAR|\bECCO\b|DENIM DREAM|TWO SIZES|NICE STORE|GOLDTIME|OVERALL EESTI|IDEAAL/i
+  },
+  {
+    category: 'Subscriptions',
+    match: /Spotify|Netflix|Google|Apple\.com|Microsoft|Amazon|Patreon|Steam|OPENAI|ANTHROPIC|BUMBLE|GOTINDER|DELFI MEEDIA/i
+  }
 ];
 
 /**
@@ -199,9 +269,27 @@ export const FALLBACK_CATEGORY: Record<TransactionType, string> = {
   expense: 'Uncategorised'
 };
 
+/**
+ * Strip diacritics so a rule matches however the bank spelled the name.
+ *
+ * Card rows arrive transliterated by the terminal — Südameapteek comes through
+ * as SUDAMEAPTEEK, Ülemiste as YLEMISTE — while transfer rows keep the real
+ * spelling. A rule written either way missed half its rows, which is why a
+ * pharmacy chain sat in Uncategorised for a decade.
+ *
+ * Applied to the patterns as well as the text, so rules stay readable in
+ * correct Estonian. Only letters are rewritten, so regex syntax survives.
+ */
+const fold = (text: string): string => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+const FOLDED_RULES = CATEGORY_RULES.map((rule) => ({
+  ...rule,
+  match: new RegExp(fold(rule.match.source), rule.match.flags)
+}));
+
 export function categorize(row: StatementRow): string {
-  const haystack = `${row.counterparty} ${row.description}`;
-  for (const rule of CATEGORY_RULES) {
+  const haystack = fold(`${row.counterparty} ${row.description}`);
+  for (const rule of FOLDED_RULES) {
     if (!rule.match.test(haystack)) continue;
     if (rule.type && rule.type !== row.direction) continue;
     return rule.category;

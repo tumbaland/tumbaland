@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 
@@ -13,18 +13,33 @@ type MockAxis = { data?: string[]; valueFormatter?: (v: never) => string };
  * tooltip and an axis would actually show is under test rather than assumed.
  */
 vi.mock('@mui/x-charts/BarChart', () => ({
-  BarChart: ({ series, xAxis, yAxis }: { series: MockSeries[]; xAxis?: MockAxis[]; yAxis?: MockAxis[] }) => (
-    <div>
-      <div data-testid="bar-chart">{series.map((s) => `${s.label}:${s.data.join(',')}`).join(' | ')}</div>
-      <div data-testid="bar-tooltip">
-        {series.map((s) => `${s.label}=${s.valueFormatter?.(s.data[0] ?? null) ?? ''}`).join(' | ')}
+  // There is more than one bar chart on the page, so the stub keys its test ids
+  // off the className the component passes — otherwise every query is ambiguous.
+  BarChart: ({
+    series,
+    xAxis,
+    yAxis,
+    className
+  }: {
+    series: MockSeries[];
+    xAxis?: MockAxis[];
+    yAxis?: MockAxis[];
+    className?: string;
+  }) => {
+    const id = className === 'chart-invested' ? 'invested' : 'bar';
+    return (
+      <div>
+        <div data-testid={`${id}-chart`}>{series.map((s) => `${s.label}:${s.data.join(',')}`).join(' | ')}</div>
+        <div data-testid={`${id}-tooltip`}>
+          {series.map((s) => `${s.label}=${s.valueFormatter?.(s.data[0] ?? null) ?? ''}`).join(' | ')}
+        </div>
+        <div data-testid={`${id}-xaxis`}>
+          {(xAxis?.[0]?.data || []).map((v) => xAxis?.[0]?.valueFormatter?.(v as never) ?? v).join(' | ')}
+        </div>
+        <div data-testid={`${id}-yaxis`}>{yAxis?.[0]?.valueFormatter?.(12500 as never) ?? ''}</div>
       </div>
-      <div data-testid="bar-xaxis">
-        {(xAxis?.[0]?.data || []).map((v) => xAxis?.[0]?.valueFormatter?.(v as never) ?? v).join(' | ')}
-      </div>
-      <div data-testid="bar-yaxis">{yAxis?.[0]?.valueFormatter?.(12500 as never) ?? ''}</div>
-    </div>
-  )
+    );
+  }
 }));
 vi.mock('@mui/x-charts/LineChart', () => ({
   LineChart: ({ series, xAxis }: { series: MockSeries[]; xAxis?: MockAxis[] }) => (
@@ -163,17 +178,32 @@ it('shows the year-on-year table newest first', () => {
   expect(dataRows[1]).toContain('2024');
 });
 
-it('shows year-on-year percentage changes', () => {
+it('gives the year-on-year table amounts, not percentages', () => {
+  // +266% off a year whose income mostly landed as capital returning says
+  // nothing, and a part year against a full one is not a comparison at all
   render(<CashflowAnalytics analytics={analytics} />);
 
-  expect(screen.getByText('+25.0%')).toBeInTheDocument();
-  expect(screen.getByText('-25.0%')).toBeInTheDocument();
+  const table = screen.getByText('Year on year').closest('.MuiCardContent-root') as HTMLElement;
+  expect(within(table).queryByText('+25.0%')).not.toBeInTheDocument();
+  expect(within(table).queryByText('-25.0%')).not.toBeInTheDocument();
+  expect(within(table).queryByRole('columnheader', { name: 'vs prev' })).not.toBeInTheDocument();
+  expect(within(table).queryByRole('columnheader', { name: 'Rate' })).not.toBeInTheDocument();
 });
 
-it('dashes the comparison for the earliest year', () => {
+it('keeps the euro columns that carry the story', () => {
   render(<CashflowAnalytics analytics={analytics} />);
 
-  expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+  const table = screen.getByText('Year on year').closest('.MuiCardContent-root') as HTMLElement;
+  for (const header of ['Year', 'Income', 'Spending', 'Invested', 'Returned', 'Saved']) {
+    expect(within(table).getByRole('columnheader', { name: header })).toBeInTheDocument();
+  }
+});
+
+it('dashes a year with nothing invested rather than showing a zero', () => {
+  render(<CashflowAnalytics analytics={analytics} />);
+
+  const table = screen.getByText('Year on year').closest('.MuiCardContent-root') as HTMLElement;
+  expect(within(table).getAllByText('—').length).toBeGreaterThan(0);
 });
 
 it('ranks the biggest movers by absolute change, not by total', () => {
@@ -223,14 +253,31 @@ it('plots consumption under the Spending label, never the gross outflow', () => 
   expect(screen.getByTestId('bar-chart')).not.toHaveTextContent('Spending:5200');
 });
 
-it('shows what was invested as its own series', () => {
+it('gives investing its own chart, so it cannot flatten income and spending', () => {
+  // A 122k year of ETF buying on a shared axis squashes a 1200 month of
+  // spending into the baseline, which is the comparison the chart is for
   render(<CashflowAnalytics analytics={analytics} />);
 
-  expect(screen.getByTestId('bar-chart')).toHaveTextContent('Invested:4000,0');
+  expect(screen.getByTestId('invested-chart')).toHaveTextContent('Invested:4000,0');
+  expect(screen.getByTestId('bar-chart')).not.toHaveTextContent('Invested');
   expect(screen.getByText(/left the account but was not spent/)).toBeInTheDocument();
 });
 
-it('leaves the invested series off when there is none', () => {
+it('lines the invested chart up with the same periods', () => {
+  render(<CashflowAnalytics analytics={analytics} />);
+
+  expect(screen.getByTestId('invested-xaxis')).toHaveTextContent(
+    screen.getByTestId('bar-xaxis').textContent as string
+  );
+});
+
+it('says the invested chart is on a scale of its own', () => {
+  render(<CashflowAnalytics analytics={analytics} />);
+
+  expect(screen.getByText(/its own scale/)).toBeInTheDocument();
+});
+
+it('drops the invested chart entirely when there is none', () => {
   render(
     <CashflowAnalytics
       analytics={{
@@ -240,6 +287,7 @@ it('leaves the invested series off when there is none', () => {
     />
   );
 
+  expect(screen.queryByTestId('invested-chart')).not.toBeInTheDocument();
   expect(screen.getByTestId('bar-chart')).not.toHaveTextContent('Invested');
 });
 
