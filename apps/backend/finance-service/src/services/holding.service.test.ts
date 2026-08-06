@@ -24,10 +24,13 @@ jest.mock('./fxRate.service', () => ({
   getRates: jest.fn()
 }));
 
+jest.mock('./trade.service', () => ({ getPositions: jest.fn() }));
+
 import Holding from '../models/Holding';
 import TrackedTicker from '../models/TrackedTicker';
 import TickerPriceHistory from '../models/TickerPriceHistory';
 import { getRates } from './fxRate.service';
+import { getPositions } from './trade.service';
 import { getAllHoldings, createHolding, updateHolding, deleteHolding } from './holding.service';
 
 const mockedHoldingFind = Holding.find as unknown as jest.Mock;
@@ -39,6 +42,7 @@ const mockedTrackedFind = TrackedTicker.find as unknown as jest.Mock;
 const mockedTrackedFindOne = TrackedTicker.findOne as unknown as jest.Mock;
 const mockedAggregate = TickerPriceHistory.aggregate as unknown as jest.Mock;
 const mockedGetRates = getRates as unknown as jest.Mock;
+const mockedGetPositions = getPositions as unknown as jest.Mock;
 
 function sortable(result: any[]) {
   return { sort: jest.fn().mockResolvedValue(result) };
@@ -49,6 +53,7 @@ beforeEach(() => {
   mockedAggregate.mockResolvedValue([]);
   mockedTrackedFind.mockResolvedValue([]);
   mockedGetRates.mockResolvedValue(new Map());
+  mockedGetPositions.mockResolvedValue(new Map());
 });
 
 describe('getAllHoldings', () => {

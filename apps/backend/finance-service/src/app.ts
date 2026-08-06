@@ -5,6 +5,9 @@ import snapshotsRoutes from './routes/snapshots';
 import tickerPriceHistoryRoutes from './routes/tickerPriceHistory';
 import trackedTickersRoutes from './routes/trackedTicker';
 import holdingsRoutes from './routes/holdings';
+import tradesRoutes from './routes/trades';
+import transactionsRoutes from './routes/transactions';
+import budgetsRoutes from './routes/budgets';
 import dashboardRoutes from './routes/dashboard';
 import { healthCheck } from './controllers/healthController';
 import { errorHandler, createBaseApp, metricsHandler } from '@tumbaland/backend-core';
@@ -17,6 +20,9 @@ app.use('/api/snapshots', snapshotsRoutes);
 app.use('/api/ticker-price-history', tickerPriceHistoryRoutes);
 app.use('/api/tracked-tickers', trackedTickersRoutes);
 app.use('/api/holdings', holdingsRoutes);
+app.use('/api/trades', tradesRoutes);
+app.use('/api/transactions', transactionsRoutes);
+app.use('/api/budgets', budgetsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
 // Serve OpenAPI docs as static files

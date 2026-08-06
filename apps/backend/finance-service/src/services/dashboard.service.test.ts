@@ -16,14 +16,18 @@ jest.mock('./fxRate.service', () => ({
   BASE_CURRENCY: 'EUR'
 }));
 
+jest.mock('./cashflow.service', () => ({ getCashflowSummary: jest.fn() }));
+
 import Snapshot from '../models/Snapshot';
 import AssetClass from '../models/AssetClass';
 import { getAllHoldings } from './holding.service';
+import { getCashflowSummary } from './cashflow.service';
 import { getDashboardData } from './dashboard.service';
 
 const mockedSnapshotFind = Snapshot.find as unknown as jest.Mock;
 const mockedAssetClassFind = AssetClass.find as unknown as jest.Mock;
 const mockedGetAllHoldings = getAllHoldings as unknown as jest.Mock;
+const mockedCashflow = getCashflowSummary as unknown as jest.Mock;
 
 // Snapshot.find(...).sort({ date: 1 }) — the service awaits the .sort() result.
 const mockSnapshots = (snapshots: unknown[]) => {
@@ -45,6 +49,7 @@ describe('getDashboardData', () => {
   beforeEach(() => {
     mockedAssetClassFind.mockResolvedValue(assetClasses);
     mockedGetAllHoldings.mockResolvedValue([]);
+    mockedCashflow.mockResolvedValue({ months: [], categories: [], totals: {}, growth: null });
   });
 
   it('returns zeroed KPIs and empty history when there are no snapshots', async () => {
@@ -63,6 +68,7 @@ describe('getDashboardData', () => {
     expect(result.liabilities).toEqual([]);
     expect(result.currency).toBe('EUR');
     expect(result.holdings).toBeNull();
+    expect(result.cashflow).toBeNull();
   });
 
   it('computes month, year, and total-gain KPIs across snapshots', async () => {
@@ -261,6 +267,7 @@ describe('getDashboardData — liabilities', () => {
   beforeEach(() => {
     mockedAssetClassFind.mockResolvedValue(assetClasses);
     mockedGetAllHoldings.mockResolvedValue([]);
+    mockedCashflow.mockResolvedValue({ months: [], categories: [], totals: {}, growth: null });
   });
 
   it('subtracts liability classes from net worth and reports both sides', async () => {

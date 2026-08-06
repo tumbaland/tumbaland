@@ -7,6 +7,7 @@ import { useDashboard } from '../hooks/useDashboard';
 import FinancialKPIs from '../components/FinancialKPIs';
 import PortfolioValueChart from '../components/PortfolioValueChart';
 import AllocationCard from '../components/AllocationCard';
+import CashflowCard from '../components/CashflowCard';
 import { formatCurrency, formatPct } from '../utils/numberUtils';
 
 const Dashboard: React.FC = () => {
@@ -70,6 +71,12 @@ const Dashboard: React.FC = () => {
               currency={currency}
             />
           </Box>
+
+          {data.cashflow && (
+            <Box sx={{ mb: { xs: 3, md: 4 } }}>
+              <CashflowCard cashflow={data.cashflow} currency={currency} />
+            </Box>
+          )}
 
           {data.holdings && (
             <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>

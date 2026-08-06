@@ -22,11 +22,18 @@ import {
   useTheme,
   useMediaQuery
 } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, ShowChart as ShowChartIcon } from '@mui/icons-material';
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  ShowChart as ShowChartIcon,
+  ReceiptLong as ReceiptLongIcon
+} from '@mui/icons-material';
 import { Holding } from '../../services/holdingService';
 import { useCreateHolding, useUpdateHolding, useDeleteHolding } from '../../hooks/useHoldings';
 import ConfirmationModal from '../ConfirmationModal';
 import TickerHistoryModal from '../TickerHistoryModal';
+import TradeHistoryDialog from './TradeHistoryDialog';
 import TickerSearch from './TickerSearch';
 import { parseNumericInput, formatCurrency, formatPrice, formatPct } from '../../utils/numberUtils';
 
@@ -70,6 +77,7 @@ const HoldingsTab: React.FC<HoldingsTabProps> = ({ holdings, tenantGroupId, noti
   const [form, setForm] = useState<HoldingForm>(emptyForm);
   const [deleteTarget, setDeleteTarget] = useState<Holding | null>(null);
   const [historyTicker, setHistoryTicker] = useState<string | null>(null);
+  const [tradesFor, setTradesFor] = useState<Holding | null>(null);
 
   const openCreate = () => {
     setEditingId(null);
@@ -149,9 +157,10 @@ const HoldingsTab: React.FC<HoldingsTabProps> = ({ holdings, tenantGroupId, noti
         acc.cost += h.costBasis ?? 0;
         if (h.currentValue !== undefined) acc.value += h.currentValue;
         if (h.valueIncrease !== undefined) acc.pl += h.valueIncrease;
+        acc.realized += h.realizedGain ?? 0;
         return acc;
       },
-      { cost: 0, value: 0, pl: 0 }
+      { cost: 0, value: 0, pl: 0, realized: 0 }
     );
 
   /** Per-share amounts stay in the instrument's own currency. */
@@ -187,6 +196,9 @@ const HoldingsTab: React.FC<HoldingsTabProps> = ({ holdings, tenantGroupId, noti
                   <Typography variant="body2" sx={{ color: 'text.secondary' }}>{h.displayName || '—'}</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', flexShrink: 0 }}>
+                  <IconButton size="small" onClick={() => setTradesFor(h)} title="Trade history">
+                    <ReceiptLongIcon fontSize="small" />
+                  </IconButton>
                   <IconButton size="small" onClick={() => setHistoryTicker(h.ticker)} title="Price history">
                     <ShowChartIcon fontSize="small" />
                   </IconButton>
@@ -278,7 +290,8 @@ const HoldingsTab: React.FC<HoldingsTabProps> = ({ holdings, tenantGroupId, noti
                 <TableCell align="right">Value ({baseCurrency})</TableCell>
                 <TableCell align="right">P/L ({baseCurrency})</TableCell>
                 <TableCell align="right">P/L %</TableCell>
-                <TableCell align="right" sx={{ width: 130 }}>Actions</TableCell>
+                <TableCell align="right">Realized</TableCell>
+                <TableCell align="right" sx={{ width: 165 }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -315,7 +328,21 @@ const HoldingsTab: React.FC<HoldingsTabProps> = ({ holdings, tenantGroupId, noti
                   <TableCell align="right" sx={{ color: plColor(h.percentIncrease) }}>
                     {h.percentIncrease !== undefined ? formatPct(h.percentIncrease) : '—'}
                   </TableCell>
+                  <TableCell align="right" sx={{ color: plColor(h.realizedGain) }}>
+                    {h.tradeCount ? (
+                      <Tooltip
+                        title={`${h.tradeCount} trade${h.tradeCount === 1 ? '' : 's'}${h.dividends ? ` · ${formatCurrency(h.dividends, baseCurrency)} dividends` : ''}`}
+                      >
+                        <span>
+                          {(h.realizedGain ?? 0) >= 0 ? '+' : ''}{formatCurrency(h.realizedGain ?? 0, baseCurrency)}
+                        </span>
+                      </Tooltip>
+                    ) : '—'}
+                  </TableCell>
                   <TableCell align="right">
+                    <IconButton size="small" onClick={() => setTradesFor(h)} title="Trade history">
+                      <ReceiptLongIcon fontSize="small" />
+                    </IconButton>
                     <IconButton size="small" onClick={() => setHistoryTicker(h.ticker)} title="Price history">
                       <ShowChartIcon fontSize="small" />
                     </IconButton>
@@ -330,7 +357,7 @@ const HoldingsTab: React.FC<HoldingsTabProps> = ({ holdings, tenantGroupId, noti
               ))}
               {holdings.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={10} sx={{ textAlign: 'center', py: 6 }}>
+                  <TableCell colSpan={11} sx={{ textAlign: 'center', py: 6 }}>
                     <Typography variant="body1" sx={{ color: 'text.secondary' }}>
                       No holdings yet — add your first ETF or stock position.
                     </Typography>
@@ -350,6 +377,9 @@ const HoldingsTab: React.FC<HoldingsTabProps> = ({ holdings, tenantGroupId, noti
                   </TableCell>
                   <TableCell align="right" sx={{ fontWeight: 700, color: plColor(totals.pl) }}>
                     {totals.cost > 0 ? formatPct((totals.pl / totals.cost) * 100) : '—'}
+                  </TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 700, color: plColor(totals.realized) }}>
+                    {totals.realized ? `${totals.realized >= 0 ? '+' : ''}${formatCurrency(totals.realized, baseCurrency)}` : '—'}
                   </TableCell>
                   <TableCell />
                 </TableRow>
@@ -461,6 +491,17 @@ const HoldingsTab: React.FC<HoldingsTabProps> = ({ holdings, tenantGroupId, noti
 
       {historyTicker && (
         <TickerHistoryModal open={!!historyTicker} onClose={() => setHistoryTicker(null)} ticker={historyTicker} />
+      )}
+
+      {tradesFor && (
+        <TradeHistoryDialog
+          open={!!tradesFor}
+          onClose={() => setTradesFor(null)}
+          ticker={tradesFor.ticker}
+          currency={tradesFor.currency}
+          tenantGroupId={tenantGroupId}
+          notify={notify}
+        />
       )}
     </Box>
   );

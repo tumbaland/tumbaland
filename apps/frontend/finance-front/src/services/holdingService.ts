@@ -22,6 +22,11 @@ export interface Holding {
   latestPriceDate?: string;
   athPrice?: number;
   costBasis?: number;
+  // Derived from the trade log (zero for holdings entered by hand)
+  realizedGain?: number;
+  dividends?: number;
+  tradeFees?: number;
+  tradeCount?: number;
   currentValue?: number;
   valueIncrease?: number;
   percentIncrease?: number;

@@ -482,6 +482,284 @@ paths:
         '403':
           description: Ticker is not tracked in this context
 
+  /api/trades:
+    get:
+      summary: List trades
+      description: >-
+        The event log a position is replayed from. Newest first, scoped to the
+        caller's personal or group context.
+      tags: [Trades]
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+        - name: ticker
+          in: query
+          schema:
+            type: string
+          description: Restrict to a single ticker.
+      responses:
+        '200':
+          description: Trades
+    post:
+      summary: Record a trade
+      description: >-
+        Also rewrites the matching holding, which is a materialized view of this
+        log. A position that closes at zero removes its holding.
+      tags: [Trades]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TradeInput'
+      responses:
+        '201':
+          description: Trade recorded
+        '400':
+          description: Field combination does not match the trade type
+        '403':
+          description: Not a member of the target group
+
+  /api/trades/position/{ticker}:
+    get:
+      summary: Replayed position for one ticker
+      description: >-
+        Quantity, average cost, realized P/L, dividends and fees, derived by
+        replaying every trade for the ticker using average cost.
+      tags: [Trades]
+      parameters:
+        - name: ticker
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/GroupId'
+      responses:
+        '200':
+          description: Position
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Position'
+
+  /api/trades/{id}:
+    put:
+      summary: Update a trade
+      description: Resyncs the affected holdings, both of them if the ticker changed.
+      tags: [Trades]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TradeInput'
+      responses:
+        '200':
+          description: Trade updated
+        '400':
+          description: Resulting document does not match its trade type
+        '403':
+          description: Access denied
+        '404':
+          description: Trade not found
+    delete:
+      summary: Delete a trade
+      description: Resyncs the holding from the remaining trades.
+      tags: [Trades]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Trade deleted
+        '403':
+          description: Access denied
+        '404':
+          description: Trade not found
+
+  /api/transactions:
+    get:
+      summary: List cash-flow transactions
+      tags: [Cash Flow]
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [income, expense]
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 2000
+            default: 500
+      responses:
+        '200':
+          description: Transactions, newest first
+        '400':
+          description: Invalid date, type or limit
+    post:
+      summary: Add a transaction
+      tags: [Cash Flow]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionInput'
+      responses:
+        '201':
+          description: Transaction added
+        '403':
+          description: Not a member of the target group
+
+  /api/transactions/categories:
+    get:
+      summary: Categories in use
+      description: Every category used by a transaction or named by a budget, sorted.
+      tags: [Cash Flow]
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      responses:
+        '200':
+          description: Category names
+
+  /api/transactions/summary:
+    get:
+      summary: Cash-flow summary
+      description: >-
+        Per-month income, expense and savings rate; spending per category
+        against its budget; and the split of the latest net-worth change between
+        money contributed and market movement.
+      tags: [Cash Flow]
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+        - name: months
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 12
+          description: How many months back to cover.
+      responses:
+        '200':
+          description: Summary
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CashflowSummary'
+        '400':
+          description: Invalid months value
+
+  /api/transactions/{id}:
+    put:
+      summary: Update a transaction
+      tags: [Cash Flow]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransactionInput'
+      responses:
+        '200':
+          description: Transaction updated
+        '403':
+          description: Access denied
+        '404':
+          description: Transaction not found
+    delete:
+      summary: Delete a transaction
+      tags: [Cash Flow]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Transaction deleted
+        '404':
+          description: Transaction not found
+
+  /api/budgets:
+    get:
+      summary: List monthly budgets
+      tags: [Cash Flow]
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      responses:
+        '200':
+          description: Budgets
+    post:
+      summary: Create a monthly budget
+      description: A recurring ceiling for one category. One budget per category per owner.
+      tags: [Cash Flow]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BudgetInput'
+      responses:
+        '201':
+          description: Budget created
+        '409':
+          description: A budget already exists for that category
+
+  /api/budgets/{id}:
+    put:
+      summary: Update a budget
+      tags: [Cash Flow]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BudgetInput'
+      responses:
+        '200':
+          description: Budget updated
+        '404':
+          description: Budget not found
+    delete:
+      summary: Delete a budget
+      tags: [Cash Flow]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Budget deleted
+        '404':
+          description: Budget not found
+
   /api/dashboard:
     get:
       summary: Get dashboard data
@@ -710,6 +988,18 @@ components:
         costBasis:
           type: number
           description: quantity x avgBuyPrice, in baseCurrency
+        realizedGain:
+          type: number
+          description: From the trade log, in baseCurrency; zero without trades
+        dividends:
+          type: number
+          description: From the trade log, in baseCurrency
+        tradeFees:
+          type: number
+          description: From the trade log, in baseCurrency
+        tradeCount:
+          type: integer
+          description: How many trades back this position; zero if entered by hand
         currentValue:
           type: number
           description: In baseCurrency
@@ -768,6 +1058,169 @@ components:
           description: Whether the daily price job fetches this ticker
         groupId:
           type: string
+
+    TradeInput:
+      type: object
+      required: [ticker, type, date]
+      properties:
+        ticker:
+          type: string
+        type:
+          type: string
+          enum: [buy, sell, dividend, fee]
+        date:
+          type: string
+          format: date
+        quantity:
+          type: number
+          minimum: 0
+          description: Shares — required for buy and sell
+        price:
+          type: number
+          minimum: 0
+          description: Per share — required for buy and sell
+        amount:
+          type: number
+          minimum: 0
+          description: Cash total — required for dividend and fee
+        fees:
+          type: number
+          minimum: 0
+          description: Transaction costs on a buy or sell
+        notes:
+          type: string
+        groupId:
+          type: string
+
+    Position:
+      type: object
+      description: >-
+        Derived by replaying a ticker's trades using average cost, so a sell's
+        realized gain does not depend on which lot the user believes they sold.
+      properties:
+        ticker:
+          type: string
+        quantity:
+          type: number
+        avgBuyPrice:
+          type: number
+          description: Average cost per remaining share, fees included
+        costBasis:
+          type: number
+        realizedGain:
+          type: number
+          description: Crystallised by sells, net of fees
+        dividends:
+          type: number
+          description: Income received; not deducted from cost basis
+        fees:
+          type: number
+        netInvested:
+          type: number
+          description: Cash in minus cash out
+        tradeCount:
+          type: integer
+
+    TransactionInput:
+      type: object
+      required: [date, amount, type, category]
+      properties:
+        date:
+          type: string
+          format: date
+        amount:
+          type: number
+          minimum: 0
+          description: Positive magnitude; direction is carried by `type`
+        type:
+          type: string
+          enum: [income, expense]
+        category:
+          type: string
+        note:
+          type: string
+        groupId:
+          type: string
+
+    BudgetInput:
+      type: object
+      required: [category, amount]
+      properties:
+        category:
+          type: string
+        amount:
+          type: number
+          minimum: 0
+          description: Monthly ceiling, applied every month
+        groupId:
+          type: string
+
+    CashflowSummary:
+      type: object
+      properties:
+        months:
+          type: array
+          items:
+            $ref: '#/components/schemas/MonthSummary'
+        categories:
+          type: array
+          items:
+            type: object
+            properties:
+              category:
+                type: string
+              spent:
+                type: number
+                description: Monthly average across the months that have transactions
+              budget:
+                type: number
+                nullable: true
+              variance:
+                type: number
+                nullable: true
+                description: spent − budget; positive means over. Null without a budget.
+        totals:
+          $ref: '#/components/schemas/MonthSummary'
+        growth:
+          type: object
+          nullable: true
+          description: Null until there are two check-ins to compare
+          properties:
+            from:
+              type: string
+            to:
+              type: string
+            netWorthChange:
+              type: number
+            contributions:
+              type: number
+            marketGrowth:
+              type: number
+              description: netWorthChange − contributions
+            complete:
+              type: boolean
+              description: >-
+                False when the period has no transactions, in which case
+                contributions are a lower bound and the remainder is not purely
+                market movement.
+
+    MonthSummary:
+      type: object
+      properties:
+        month:
+          type: string
+          example: '2026-07'
+        income:
+          type: number
+        expense:
+          type: number
+        savings:
+          type: number
+          description: income − expense
+        savingsRate:
+          type: number
+          nullable: true
+          description: Share of income saved. Null when no income came in.
 
     DashboardData:
       type: object
@@ -870,6 +1323,23 @@ components:
           type: string
           description: Base currency every amount in this payload is expressed in
           example: EUR
+        cashflow:
+          type: object
+          nullable: true
+          description: Null until there are transactions to explain the change with
+          properties:
+            latestMonth:
+              allOf:
+                - $ref: '#/components/schemas/MonthSummary'
+              nullable: true
+            averageSavingsRate:
+              type: number
+              nullable: true
+              description: Mean rate across the months that have transactions
+            growth:
+              type: object
+              nullable: true
+              description: See the growth block on /api/transactions/summary
         holdings:
           type: object
           nullable: true

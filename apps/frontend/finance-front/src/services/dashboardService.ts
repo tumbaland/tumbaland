@@ -41,6 +41,28 @@ export interface DashboardData {
   assetColors: Record<string, string>;
   /** Base currency every total on this payload is expressed in. */
   currency: string;
+  /**
+   * Why net worth moved, not just that it did. Null until there are
+   * transactions to explain it with.
+   */
+  cashflow: {
+    latestMonth: {
+      month: string;
+      income: number;
+      expense: number;
+      savings: number;
+      savingsRate: number | null;
+    } | null;
+    averageSavingsRate: number | null;
+    growth: {
+      from: string;
+      to: string;
+      netWorthChange: number;
+      contributions: number;
+      marketGrowth: number;
+      complete: boolean;
+    } | null;
+  } | null;
   holdings: {
     count: number;
     totalValue: number;

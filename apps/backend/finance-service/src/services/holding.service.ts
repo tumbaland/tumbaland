@@ -3,6 +3,8 @@ import TrackedTicker from '../models/TrackedTicker';
 import TickerPriceHistory from '../models/TickerPriceHistory';
 import { canAccessResource, ForbiddenError, NotFoundError } from '@tumbaland/backend-core';
 import { BASE_CURRENCY, getRates } from './fxRate.service';
+import { getPositions } from './trade.service';
+import { EMPTY_POSITION } from './position.service';
 
 export interface HoldingInput {
   ticker: string;
@@ -56,6 +58,10 @@ export const getAllHoldings = async (userId: string, userGroups: string[] = []) 
   // and with net-worth values.
   const rates = await getRates([...currencyMap.values()], BASE_CURRENCY);
 
+  // Realized P/L and dividends only exist for tickers with a trade log; a
+  // holding entered by hand simply has no history to derive them from.
+  const positions = await getPositions(userId, userGroups);
+
   return holdings.map((h) => {
     const stats = statsMap.get(h.ticker);
     const latestPrice = stats?.latestPrice;
@@ -75,12 +81,20 @@ export const getAllHoldings = async (userId: string, userGroups: string[] = []) 
     const percentIncrease =
       latestPrice !== undefined ? ((latestPrice - h.avgBuyPrice) / h.avgBuyPrice) * 100 : undefined;
 
+    const position = positions.get(h.ticker) || EMPTY_POSITION;
+
     return {
       ...h.toObject(),
       displayName: nameMap.get(h.ticker),
       currency,
       baseCurrency: BASE_CURRENCY,
       fxRate,
+      // Derived from the trade log, in base currency, and zero for holdings
+      // that have none.
+      realizedGain: convert(position.realizedGain) ?? 0,
+      dividends: convert(position.dividends) ?? 0,
+      tradeFees: convert(position.fees) ?? 0,
+      tradeCount: position.tradeCount,
       // Set when the instrument is quoted in a currency we have no rate for:
       // its value is left out of the totals rather than silently miscounted.
       missingFxRate: fxRate === undefined,
