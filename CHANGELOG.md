@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.423](https://github.com/toomastahves/tumbaland/compare/app-v0.0.422...app-v0.0.423) (2026-08-06)
+
+### Features
+
+* add cash flow ([2eacd77](https://github.com/toomastahves/tumbaland/commit/2eacd77e048dc4daf4f19a54572f87b887d66dac))
+* add cash flow dashboard ([47aade7](https://github.com/toomastahves/tumbaland/commit/47aade76bbf3dc6d896d5537be0466271465df61))
 ## [0.0.422](https://github.com/toomastahves/tumbaland/compare/app-v0.0.421...app-v0.0.422) (2026-08-06)
 
 ### Bug Fixes
