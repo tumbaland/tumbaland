@@ -7,11 +7,22 @@ import { formatCurrency } from '../utils/numberUtils';
 
 interface AllocationCardProps {
   allocation: DashboardData['allocation'];
+  liabilities?: DashboardData['liabilities'];
+  currency?: string;
 }
 
-/** Where the latest net worth sits: donut + per-class bars. */
-const AllocationCard: React.FC<AllocationCardProps> = ({ allocation }) => {
-  if (allocation.length === 0) return null;
+/**
+ * Where the latest net worth sits: donut + per-class bars.
+ *
+ * The donut covers assets only — a negative slice has no meaning in a pie, and
+ * percentages are shares of gross assets — with debts listed separately below.
+ */
+const AllocationCard: React.FC<AllocationCardProps> = ({
+  allocation,
+  liabilities = [],
+  currency = 'EUR'
+}) => {
+  if (allocation.length === 0 && liabilities.length === 0) return null;
 
   return (
     <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', height: '100%' }}>
@@ -23,6 +34,7 @@ const AllocationCard: React.FC<AllocationCardProps> = ({ allocation }) => {
           </Typography>
         </Box>
 
+        {allocation.length > 0 && (
         <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
           <PieChart
             series={[{
@@ -36,6 +48,7 @@ const AllocationCard: React.FC<AllocationCardProps> = ({ allocation }) => {
             hideLegend
           />
         </Box>
+        )}
 
         {allocation.map((a) => (
           <Box key={a.assetClassId} sx={{ mb: 1.5 }}>
@@ -45,7 +58,7 @@ const AllocationCard: React.FC<AllocationCardProps> = ({ allocation }) => {
                 <Typography variant="body2">{a.name}</Typography>
               </Box>
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                {formatCurrency(a.value)} · {a.percentage.toFixed(1)}%
+                {formatCurrency(a.value, currency)} · {a.percentage.toFixed(1)}%
               </Typography>
             </Box>
             <LinearProgress
@@ -60,6 +73,25 @@ const AllocationCard: React.FC<AllocationCardProps> = ({ allocation }) => {
             />
           </Box>
         ))}
+
+        {liabilities.length > 0 && (
+          <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1.5 }}>
+              Liabilities
+            </Typography>
+            {liabilities.map((l) => (
+              <Box key={l.assetClassId} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.75 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: l.color }} />
+                  <Typography variant="body2">{l.name}</Typography>
+                </Box>
+                <Typography variant="body2" sx={{ fontWeight: 600, color: 'error.main' }}>
+                  −{formatCurrency(l.value, currency)}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        )}
       </CardContent>
     </Card>
   );

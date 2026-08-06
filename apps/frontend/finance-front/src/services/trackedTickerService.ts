@@ -6,6 +6,8 @@ export interface TrackedTicker {
   ticker: string;
   displayName: string;
   description?: string;
+  /** ISO code this instrument is quoted in; unset on tickers added before the field existed. */
+  currency?: string;
   dateAdded?: string;
   isActive: boolean;
   groupId?: string;

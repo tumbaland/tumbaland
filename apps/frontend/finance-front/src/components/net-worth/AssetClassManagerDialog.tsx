@@ -10,7 +10,8 @@ import {
   ListItem,
   ListItemText,
   IconButton,
-  Typography
+  Typography,
+  Chip
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 import AssetClassModal, { AssetClassFormValues } from '../AssetClassModal';
@@ -31,7 +32,13 @@ interface AssetClassManagerDialogProps {
   isClassInUse: (id: string) => boolean;
 }
 
-const emptyForm: AssetClassFormValues = { name: '', description: '', color: '#3b82f6', groupId: undefined };
+const emptyForm: AssetClassFormValues = {
+  name: '',
+  description: '',
+  color: '#3b82f6',
+  kind: 'asset',
+  groupId: undefined
+};
 
 /** Add/rename/recolor asset classes without leaving the Net Worth page. */
 const AssetClassManagerDialog: React.FC<AssetClassManagerDialogProps> = ({
@@ -58,13 +65,22 @@ const AssetClassManagerDialog: React.FC<AssetClassManagerDialogProps> = ({
 
   const openEdit = (ac: AssetClass) => {
     setEditingId(ac._id);
-    setForm({ name: ac.name, description: ac.description || '', color: ac.color || '#3b82f6', groupId: ac.groupId });
+    setForm({
+      name: ac.name,
+      description: ac.description || '',
+      color: ac.color || '#3b82f6',
+      kind: ac.kind || 'asset',
+      groupId: ac.groupId
+    });
     setEditorOpen(true);
   };
 
   const handleSubmit = async (f: AssetClassFormValues) => {
     if (editingId) {
-      await updateMutation.mutateAsync({ id: editingId, data: { name: f.name, description: f.description, color: f.color } });
+      await updateMutation.mutateAsync({
+        id: editingId,
+        data: { name: f.name, description: f.description, color: f.color, kind: f.kind }
+      });
     } else {
       await createMutation.mutateAsync({ ...f, groupId: tenantGroupId });
     }
@@ -104,7 +120,15 @@ const AssetClassManagerDialog: React.FC<AssetClassManagerDialogProps> = ({
                 }
               >
                 <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: ac.color || '#667eea', mr: 1.5 }} />
-                <ListItemText primary={ac.name} secondary={ac.description} />
+                <ListItemText
+                  primary={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {ac.name}
+                      {ac.kind === 'liability' && <Chip size="small" label="Liability" color="warning" variant="outlined" />}
+                    </Box>
+                  }
+                  secondary={ac.description}
+                />
               </ListItem>
             ))}
             {assetClasses.length === 0 && (

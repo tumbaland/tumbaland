@@ -83,7 +83,7 @@ it('opens the edit editor pre-filled and updates on submit', async () => {
 
   expect(mockedUpdateMutateAsync).toHaveBeenCalledWith({
     id: 'a1',
-    data: { name: 'Stocks', description: 'Equities', color: '#111111' }
+    data: { name: 'Stocks', description: 'Equities', color: '#111111', kind: 'asset' }
   });
 });
 

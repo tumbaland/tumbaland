@@ -10,10 +10,18 @@ export interface Holding {
   buyDate?: string;
   notes?: string;
   groupId?: string;
-  // Enriched by the backend from tracked ticker price history
+  // Enriched by the backend from tracked ticker price history.
+  // Per-share figures (avgBuyPrice, latestPrice, athPrice) are in `currency`;
+  // the totals (costBasis, currentValue, valueIncrease) are in `baseCurrency`.
+  currency?: string;
+  baseCurrency?: string;
+  fxRate?: number;
+  /** True when no FX rate was available, so totals are omitted. */
+  missingFxRate?: boolean;
   latestPrice?: number;
   latestPriceDate?: string;
   athPrice?: number;
+  costBasis?: number;
   currentValue?: number;
   valueIncrease?: number;
   percentIncrease?: number;

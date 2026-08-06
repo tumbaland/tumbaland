@@ -3,7 +3,8 @@ import {
   getTickerPriceHistory,
   fetchTickerPriceHistory,
   deleteTickerPriceHistory,
-  fetchAllTickerPriceHistory
+  fetchAllTickerPriceHistory,
+  getQuota
 } from './tickerPriceHistoryService';
 
 function mockFetchOnce(body: unknown) {
@@ -14,7 +15,7 @@ describe('tickerPriceHistoryService', () => {
   it('fetches history for a ticker', async () => {
     mockFetchOnce({ success: true, data: [{ ticker: 'AAPL', date: '2024-01-01', price: 100 }] });
 
-    const result = await getTickerPriceHistory('AAPL');
+    const result = await getTickerPriceHistory({ ticker: 'AAPL' });
 
     expect(result).toEqual([{ ticker: 'AAPL', date: '2024-01-01', price: 100 }]);
     const [url] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
@@ -26,6 +27,36 @@ describe('tickerPriceHistoryService', () => {
     await getTickerPriceHistory();
     const [url] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(String(url)).not.toContain('?ticker=');
+  });
+
+  it('sends the date range and limit as query params', async () => {
+    mockFetchOnce({ success: true, data: [] });
+
+    await getTickerPriceHistory({ ticker: 'AAPL', from: '2026-01-01', to: '2026-06-01', limit: 50 });
+
+    const [url] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(String(url)).toContain('ticker=AAPL');
+    expect(String(url)).toContain('from=2026-01-01');
+    expect(String(url)).toContain('to=2026-06-01');
+    expect(String(url)).toContain('limit=50');
+  });
+
+  it('omits params that were not given', async () => {
+    mockFetchOnce({ success: true, data: [] });
+
+    await getTickerPriceHistory({ ticker: 'AAPL' });
+
+    const [url] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(String(url)).not.toContain('from=');
+    expect(String(url)).not.toContain('limit=');
+  });
+
+  it('reads the remaining provider quota', async () => {
+    mockFetchOnce({ success: true, data: { limit: 25, used: 3, remaining: 22, date: '2026-08-06' } });
+
+    expect(await getQuota()).toEqual({ limit: 25, used: 3, remaining: 22, date: '2026-08-06' });
+    const [url] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(String(url)).toContain('/ticker-price-history/quota');
   });
 
   it('triggers a fetch for one ticker', async () => {

@@ -28,7 +28,7 @@ export const useCreateAssetClass = () => {
 export const useUpdateAssetClass = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Pick<AssetClass, 'name' | 'description' | 'color'>> }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<Pick<AssetClass, 'name' | 'description' | 'color' | 'kind'>> }) =>
       updateAssetClass(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['assetClasses'] });

@@ -45,6 +45,8 @@ function setMobile(isMobile: boolean) {
 
 afterEach(() => setMobile(false));
 
+// The backend supplies costBasis/currentValue already converted into
+// baseCurrency; per-share amounts stay in the instrument's own currency.
 const holdings: Holding[] = [
   {
     _id: 'h1',
@@ -52,13 +54,26 @@ const holdings: Holding[] = [
     displayName: 'Apple',
     quantity: 10,
     avgBuyPrice: 100,
+    currency: 'EUR',
+    baseCurrency: 'EUR',
+    fxRate: 1,
     latestPrice: 150,
     latestPriceDate: '2024-05-01',
+    costBasis: 1000,
     currentValue: 1500,
     valueIncrease: 500,
     percentIncrease: 50
   },
-  { _id: 'h2', ticker: 'BND', quantity: 5, avgBuyPrice: 80 }
+  {
+    _id: 'h2',
+    ticker: 'BND',
+    quantity: 5,
+    avgBuyPrice: 80,
+    currency: 'EUR',
+    baseCurrency: 'EUR',
+    fxRate: 1,
+    costBasis: 400
+  }
 ];
 
 beforeEach(() => vi.clearAllMocks());
@@ -223,4 +238,94 @@ it('cancels the add-holding dialog', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
   expect(screen.queryByLabelText('Ticker')).not.toBeInTheDocument();
+});
+
+it('shows per-share prices in the instrument currency and totals in the base currency', () => {
+  render(
+    <HoldingsTab
+      holdings={[
+        {
+          _id: 'h3',
+          ticker: 'VOO',
+          displayName: 'Vanguard S&P 500',
+          quantity: 10,
+          avgBuyPrice: 400,
+          currency: 'USD',
+          baseCurrency: 'EUR',
+          fxRate: 0.9,
+          latestPrice: 500,
+          costBasis: 3600,
+          currentValue: 4500,
+          valueIncrease: 900,
+          percentIncrease: 25
+        }
+      ]}
+      notify={vi.fn()}
+    />
+  );
+
+  // Native currency for the per-share figures
+  expect(screen.getByText('500,00 $')).toBeInTheDocument();
+  // Base currency for the totals
+  expect(screen.getAllByText('4500 €').length).toBeGreaterThan(0);
+});
+
+it('warns about and excludes holdings with no exchange rate', () => {
+  render(
+    <HoldingsTab
+      holdings={[
+        { _id: 'h1', ticker: 'AAPL', quantity: 1, avgBuyPrice: 10, currency: 'EUR', baseCurrency: 'EUR', costBasis: 10 },
+        {
+          _id: 'h4',
+          ticker: 'TSE',
+          quantity: 1,
+          avgBuyPrice: 100,
+          currency: 'JPY',
+          baseCurrency: 'EUR',
+          missingFxRate: true,
+          latestPrice: 120,
+          percentIncrease: 20
+        }
+      ]}
+      notify={vi.fn()}
+    />
+  );
+
+  expect(screen.getByText(/no exchange rate yet for jpy/i)).toBeInTheDocument();
+  // The unconvertible position is left out of the cost total
+  expect(screen.getAllByText('10 €').length).toBeGreaterThan(0);
+});
+
+it('submits buy date and notes when adding a holding', async () => {
+  mockedCreateMutateAsync.mockResolvedValue({});
+  render(<HoldingsTab holdings={[]} notify={vi.fn()} />);
+
+  await userEvent.click(screen.getByRole('button', { name: /add holding/i }));
+  await userEvent.type(screen.getByLabelText(/^Ticker/), 'AAPL');
+  await userEvent.type(screen.getByLabelText(/^Quantity/), '3');
+  await userEvent.type(screen.getByLabelText(/average buy price/i), '99');
+  await userEvent.type(screen.getByLabelText(/buy date/i), '2024-03-01');
+  await userEvent.type(screen.getByLabelText(/notes/i), 'ISA account');
+  await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+  expect(mockedCreateMutateAsync).toHaveBeenCalledWith(
+    expect.objectContaining({ ticker: 'AAPL', buyDate: '2024-03-01', notes: 'ISA account' })
+  );
+});
+
+it('pre-fills buy date and notes when editing', async () => {
+  render(
+    <HoldingsTab
+      holdings={[
+        { _id: 'h1', ticker: 'AAPL', quantity: 1, avgBuyPrice: 10, buyDate: '2024-03-01T00:00:00.000Z', notes: 'ISA' }
+      ]}
+      notify={vi.fn()}
+    />
+  );
+
+  const editButtons = screen.getAllByRole('button').filter((b) => b.querySelector('[data-testid="EditIcon"]'));
+  await userEvent.click(editButtons[0]);
+
+  expect(screen.getByLabelText(/buy date/i)).toHaveValue('2024-03-01');
+  expect(screen.getByLabelText(/notes/i)).toHaveValue('ISA');
 });

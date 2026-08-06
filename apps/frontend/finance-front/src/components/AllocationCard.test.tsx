@@ -19,3 +19,43 @@ it('renders a row per asset class with its value and percentage', () => {
   expect(screen.getByText(/80\.0%/)).toBeInTheDocument();
   expect(screen.getByText(/20\.0%/)).toBeInTheDocument();
 });
+
+it('lists liabilities separately from the asset donut', () => {
+  render(
+    <AllocationCard
+      allocation={[
+        { assetClassId: 'a1', name: 'Stocks', color: '#111', value: 300, gain: 0, percentage: 100 }
+      ]}
+      liabilities={[{ assetClassId: 'a3', name: 'Mortgage', color: '#333', value: 100 }]}
+    />
+  );
+
+  expect(screen.getByText('Liabilities')).toBeInTheDocument();
+  expect(screen.getByText('Mortgage')).toBeInTheDocument();
+  expect(screen.getByText('−100 €')).toBeInTheDocument();
+});
+
+it('omits the liabilities section when there are none', () => {
+  render(
+    <AllocationCard
+      allocation={[
+        { assetClassId: 'a1', name: 'Stocks', color: '#111', value: 300, gain: 0, percentage: 100 }
+      ]}
+    />
+  );
+
+  expect(screen.queryByText('Liabilities')).not.toBeInTheDocument();
+});
+
+it('formats values in the given base currency', () => {
+  render(
+    <AllocationCard
+      allocation={[
+        { assetClassId: 'a1', name: 'Stocks', color: '#111', value: 300, gain: 0, percentage: 100 }
+      ]}
+      currency="USD"
+    />
+  );
+
+  expect(screen.getByText(/300 \$/)).toBeInTheDocument();
+});

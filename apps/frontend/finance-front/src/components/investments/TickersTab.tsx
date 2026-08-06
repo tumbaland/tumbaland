@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Button,
@@ -35,7 +35,7 @@ import {
   useUpdateTrackedTicker,
   useDeleteTrackedTicker
 } from '../../hooks/useTrackedTicker';
-import { fetchAllTickerPriceHistory } from '../../services/tickerPriceHistoryService';
+import { fetchAllTickerPriceHistory, getQuota, QuotaStatus } from '../../services/tickerPriceHistoryService';
 import ConfirmationModal from '../ConfirmationModal';
 import TickerHistoryModal from '../TickerHistoryModal';
 import TickerSearch from './TickerSearch';
@@ -49,11 +49,12 @@ interface TickersTabProps {
 interface TickerForm {
   ticker: string;
   displayName: string;
+  currency: string;
   description: string;
   isActive: boolean;
 }
 
-const emptyForm: TickerForm = { ticker: '', displayName: '', description: '', isActive: true };
+const emptyForm: TickerForm = { ticker: '', displayName: '', currency: '', description: '', isActive: true };
 
 /**
  * Instruments whose prices are fetched daily (19:00) from Alpha Vantage.
@@ -82,7 +83,13 @@ const TickersTab: React.FC<TickersTabProps> = ({ tickers, tenantGroupId, notify 
 
   const openEdit = (t: TrackedTicker) => {
     setEditingId(t._id!);
-    setForm({ ticker: t.ticker, displayName: t.displayName, description: t.description || '', isActive: t.isActive });
+    setForm({
+      ticker: t.ticker,
+      displayName: t.displayName,
+      currency: t.currency || '',
+      description: t.description || '',
+      isActive: t.isActive
+    });
     setDialogOpen(true);
   };
 
@@ -116,6 +123,13 @@ const TickersTab: React.FC<TickersTabProps> = ({ tickers, tenantGroupId, notify 
     setDeleteTarget(null);
   };
 
+  // The provider's daily quota is shared by everyone on this deployment, so
+  // showing what is left turns "it failed, try again" into "there are no calls
+  // left today".
+  const [quota, setQuota] = useState<QuotaStatus | null>(null);
+  const refreshQuota = () => { getQuota().then(setQuota).catch(() => setQuota(null)); };
+  useEffect(refreshQuota, []);
+
   const handleFetchHistory = async (ticker: string) => {
     setFetching(ticker);
     try {
@@ -125,15 +139,27 @@ const TickersTab: React.FC<TickersTabProps> = ({ tickers, tenantGroupId, notify 
       notify(`Failed to fetch prices for ${ticker} — Alpha Vantage rate limit may be exhausted`, 'error');
     } finally {
       setFetching(null);
+      refreshQuota();
     }
   };
 
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 2, flexWrap: 'wrap' }}>
-        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          Active tickers get a daily price update at 19:00. Holdings track their ticker automatically.
-        </Typography>
+        <Box>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            Active tickers get a daily price update at 19:00. Holdings track their ticker automatically.
+          </Typography>
+          {quota && (
+            <Typography
+              variant="caption"
+              sx={{ color: quota.remaining === 0 ? 'error.main' : 'text.secondary' }}
+            >
+              {quota.remaining} of {quota.limit} Alpha Vantage calls left today
+              {quota.remaining === 0 && ' — fetches will fail until 00:00 UTC'}
+            </Typography>
+          )}
+        </Box>
         <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
           Track ticker
         </Button>
@@ -194,6 +220,7 @@ const TickersTab: React.FC<TickersTabProps> = ({ tickers, tenantGroupId, notify 
               <TableRow>
                 <TableCell>Ticker</TableCell>
                 <TableCell>Name</TableCell>
+                <TableCell>Currency</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>Added</TableCell>
                 <TableCell align="right" sx={{ width: 170 }}>Actions</TableCell>
@@ -204,6 +231,7 @@ const TickersTab: React.FC<TickersTabProps> = ({ tickers, tenantGroupId, notify 
                 <TableRow key={t._id} hover>
                   <TableCell sx={{ fontWeight: 600 }}>{t.ticker}</TableCell>
                   <TableCell>{t.displayName}</TableCell>
+                  <TableCell>{t.currency || '—'}</TableCell>
                   <TableCell>
                     <Chip size="small" label={t.isActive ? 'Active' : 'Paused'} color={t.isActive ? 'success' : 'default'} />
                   </TableCell>
@@ -231,7 +259,7 @@ const TickersTab: React.FC<TickersTabProps> = ({ tickers, tenantGroupId, notify 
               ))}
               {tickers.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} sx={{ textAlign: 'center', py: 6 }}>
+                  <TableCell colSpan={6} sx={{ textAlign: 'center', py: 6 }}>
                     <Typography variant="body1" sx={{ color: 'text.secondary' }}>
                       No tracked tickers — add a holding or track a ticker to start collecting prices.
                     </Typography>
@@ -249,7 +277,11 @@ const TickersTab: React.FC<TickersTabProps> = ({ tickers, tenantGroupId, notify 
         <DialogContent>
           {!editingId && (
             <Box sx={{ mb: 2, mt: 1 }}>
-              <TickerSearch onSelect={(r) => setForm((f) => ({ ...f, ticker: r.symbol, displayName: r.name }))} />
+              <TickerSearch
+                onSelect={(r) =>
+                  setForm((f) => ({ ...f, ticker: r.symbol, displayName: r.name, currency: r.currency || '' }))
+                }
+              />
             </Box>
           )}
           <TextField
@@ -268,6 +300,16 @@ const TickersTab: React.FC<TickersTabProps> = ({ tickers, tenantGroupId, notify 
             required
             value={form.displayName}
             onChange={(e) => setForm((f) => ({ ...f, displayName: e.target.value }))}
+            slotProps={{ inputLabel: { shrink: true } }}
+          />
+          <TextField
+            margin="dense"
+            label="Currency"
+            fullWidth
+            value={form.currency}
+            onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value.toUpperCase().slice(0, 3) }))}
+            placeholder="EUR"
+            helperText="Currency this instrument is quoted in — used to convert its prices into your base currency."
             slotProps={{ inputLabel: { shrink: true } }}
           />
           <TextField

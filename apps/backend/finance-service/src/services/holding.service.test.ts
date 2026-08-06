@@ -19,9 +19,15 @@ jest.mock('../models/TickerPriceHistory', () => ({
   default: { aggregate: jest.fn() }
 }));
 
+jest.mock('./fxRate.service', () => ({
+  BASE_CURRENCY: 'EUR',
+  getRates: jest.fn()
+}));
+
 import Holding from '../models/Holding';
 import TrackedTicker from '../models/TrackedTicker';
 import TickerPriceHistory from '../models/TickerPriceHistory';
+import { getRates } from './fxRate.service';
 import { getAllHoldings, createHolding, updateHolding, deleteHolding } from './holding.service';
 
 const mockedHoldingFind = Holding.find as unknown as jest.Mock;
@@ -32,6 +38,7 @@ const mockedTrackedCtor = TrackedTicker as unknown as jest.Mock;
 const mockedTrackedFind = TrackedTicker.find as unknown as jest.Mock;
 const mockedTrackedFindOne = TrackedTicker.findOne as unknown as jest.Mock;
 const mockedAggregate = TickerPriceHistory.aggregate as unknown as jest.Mock;
+const mockedGetRates = getRates as unknown as jest.Mock;
 
 function sortable(result: any[]) {
   return { sort: jest.fn().mockResolvedValue(result) };
@@ -41,6 +48,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockedAggregate.mockResolvedValue([]);
   mockedTrackedFind.mockResolvedValue([]);
+  mockedGetRates.mockResolvedValue(new Map());
 });
 
 describe('getAllHoldings', () => {
@@ -73,10 +81,78 @@ describe('getAllHoldings', () => {
     expect(result[0]).toMatchObject({
       displayName: 'Apple Inc.',
       latestPrice: 150,
+      costBasis: 1000,
       currentValue: 1500,
       valueIncrease: 500,
-      percentIncrease: 50
+      percentIncrease: 50,
+      currency: 'EUR',
+      baseCurrency: 'EUR',
+      fxRate: 1,
+      missingFxRate: false
     });
+  });
+
+  it('converts a foreign-currency holding into the base currency', async () => {
+    const holding = { ticker: 'VOO', quantity: 10, avgBuyPrice: 400, toObject: () => ({ ticker: 'VOO' }) };
+    mockedHoldingFind.mockReturnValue(sortable([holding]));
+    mockedAggregate.mockResolvedValue([{ _id: 'VOO', latestPrice: 500, athPrice: 520 }]);
+    mockedTrackedFind.mockResolvedValue([{ ticker: 'VOO', displayName: 'Vanguard S&P 500', currency: 'USD' }]);
+    mockedGetRates.mockResolvedValue(new Map([['USD', 0.9]]));
+
+    const result = await getAllHoldings('user-1', []);
+
+    expect(result[0]).toMatchObject({
+      currency: 'USD',
+      baseCurrency: 'EUR',
+      fxRate: 0.9,
+      missingFxRate: false,
+      // Per-share amounts stay in the instrument's own currency
+      latestPrice: 500,
+      // Totals are converted: 10 x 500 x 0.9, 10 x 400 x 0.9, and the gain
+      currentValue: 4500,
+      costBasis: 3600,
+      valueIncrease: 900
+    });
+  });
+
+  it('leaves the percentage gain unconverted, since it is currency-independent', async () => {
+    const holding = { ticker: 'VOO', quantity: 10, avgBuyPrice: 400, toObject: () => ({ ticker: 'VOO' }) };
+    mockedHoldingFind.mockReturnValue(sortable([holding]));
+    mockedAggregate.mockResolvedValue([{ _id: 'VOO', latestPrice: 500 }]);
+    mockedTrackedFind.mockResolvedValue([{ ticker: 'VOO', displayName: 'VOO', currency: 'USD' }]);
+    mockedGetRates.mockResolvedValue(new Map([['USD', 0.9]]));
+
+    const result = await getAllHoldings('user-1', []);
+
+    expect(result[0].percentIncrease).toBe(25);
+  });
+
+  it('omits the totals rather than mixing currencies when no rate is available', async () => {
+    const holding = { ticker: 'VOO', quantity: 10, avgBuyPrice: 400, toObject: () => ({ ticker: 'VOO' }) };
+    mockedHoldingFind.mockReturnValue(sortable([holding]));
+    mockedAggregate.mockResolvedValue([{ _id: 'VOO', latestPrice: 500 }]);
+    mockedTrackedFind.mockResolvedValue([{ ticker: 'VOO', displayName: 'VOO', currency: 'USD' }]);
+    mockedGetRates.mockResolvedValue(new Map());
+
+    const result = await getAllHoldings('user-1', []);
+
+    expect(result[0]).toMatchObject({ currency: 'USD', missingFxRate: true });
+    expect(result[0].currentValue).toBeUndefined();
+    expect(result[0].costBasis).toBeUndefined();
+    expect(result[0].valueIncrease).toBeUndefined();
+    // Still comparable across currencies
+    expect(result[0].percentIncrease).toBe(25);
+  });
+
+  it('treats a ticker with no recorded currency as already being in the base currency', async () => {
+    const holding = { ticker: 'OLD', quantity: 2, avgBuyPrice: 50, toObject: () => ({ ticker: 'OLD' }) };
+    mockedHoldingFind.mockReturnValue(sortable([holding]));
+    mockedAggregate.mockResolvedValue([{ _id: 'OLD', latestPrice: 60 }]);
+    mockedTrackedFind.mockResolvedValue([{ ticker: 'OLD', displayName: 'Legacy' }]);
+
+    const result = await getAllHoldings('user-1', []);
+
+    expect(result[0]).toMatchObject({ currency: 'EUR', fxRate: 1, missingFxRate: false, currentValue: 120 });
   });
 
   it('leaves computed price fields undefined when there is no price history for the ticker', async () => {

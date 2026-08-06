@@ -134,7 +134,7 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
   useEffect(() => {
     if (open && ticker) {
       setLoading(true);
-      getTickerPriceHistory(ticker)
+      getTickerPriceHistory({ ticker })
         .then((data) => setHistory(data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())))
         .catch(() => setError('Failed to load history'))
         .finally(() => setLoading(false));
@@ -266,7 +266,7 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
                 setError(null);
                 try {
                   await fetchAllTickerPriceHistory(ticker);
-                  const data = await getTickerPriceHistory(ticker);
+                  const data = await getTickerPriceHistory({ ticker });
                   setHistory(data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
                 } catch {
                   setError('Failed to fetch historical records');
@@ -450,7 +450,7 @@ const TickerHistoryModal: React.FC<TickerHistoryModalProps> = ({ open, onClose, 
                   try {
                     await fetchAllTickerPriceHistory(ticker);
                     // Refetch history after import
-                    const data = await getTickerPriceHistory(ticker);
+                    const data = await getTickerPriceHistory({ ticker });
                     setHistory(data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
                   } catch (err) {
                     setError('Failed to fetch all records');

@@ -180,3 +180,62 @@ it('opens and closes the asset class manager', async () => {
   await userEvent.click(screen.getByText('close classes'));
   expect(screen.queryByText('class manager')).not.toBeInTheDocument();
 });
+
+describe('liabilities', () => {
+  const withDebt = [
+    {
+      _id: 's2',
+      date: '2024-06-01T00:00:00.000Z',
+      entries: [
+        { assetClassId: 'a1', value: 1200, gain: 100 },
+        { assetClassId: 'a3', value: 400, gain: 0 } // mortgage
+      ],
+      userId: 'u1',
+      createdAt: '',
+      updatedAt: ''
+    },
+    {
+      _id: 's1',
+      date: '2024-05-01T00:00:00.000Z',
+      entries: [
+        { assetClassId: 'a1', value: 1000, gain: 50 },
+        { assetClassId: 'a3', value: 500, gain: 0 }
+      ],
+      userId: 'u1',
+      createdAt: '',
+      updatedAt: ''
+    }
+  ];
+
+  beforeEach(() => {
+    mockedUseAssetClasses.mockReturnValue({
+      data: [
+        ...assetClasses,
+        { _id: 'a3', name: 'Mortgage', kind: 'liability', userId: 'u1', createdAt: '', updatedAt: '' }
+      ]
+    });
+    mockedUseSnapshots.mockReturnValue({ data: withDebt, isLoading: false, error: null });
+  });
+
+  it('reports net worth after subtracting what is owed', () => {
+    render(<NetWorthPage />);
+
+    // 1200 − 400, not 1600
+    expect(screen.getAllByText('800 €').length).toBeGreaterThan(0);
+  });
+
+  it('measures month-on-month change on the net figure', () => {
+    render(<NetWorthPage />);
+
+    // 800 this month vs 500 last month
+    expect(screen.getAllByText('+300 €').length).toBeGreaterThan(0);
+  });
+
+  it('marks a liability as negative in the expanded breakdown', async () => {
+    render(<NetWorthPage />);
+
+    await userEvent.click(screen.getAllByText('2024-06')[0]);
+
+    expect(screen.getByText(/Mortgage: −400 €/)).toBeInTheDocument();
+  });
+});

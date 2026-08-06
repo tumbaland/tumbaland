@@ -19,13 +19,28 @@ export function parseNumericInput(value: string): number {
   return parseFloat(s.replace(/ /g, ''));
 }
 
-/** Formats a number as EUR without decimals, e.g. 12 504 € */
-export function formatCurrency(value: number): string {
+/**
+ * Formats an amount in the given ISO currency without decimals, e.g. 12 504 €.
+ * The currency must be passed for anything that is not in the base currency —
+ * instrument prices arrive in the instrument's own currency, and labelling a
+ * dollar amount with a euro sign is how mixed-currency totals go unnoticed.
+ */
+export function formatCurrency(value: number, currency: string = 'EUR'): string {
   return new Intl.NumberFormat('et-EE', {
     style: 'currency',
-    currency: 'EUR',
+    currency,
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
+  }).format(value);
+}
+
+/** Like {@link formatCurrency} but keeping decimals, for per-share prices. */
+export function formatPrice(value: number, currency: string = 'EUR'): string {
+  return new Intl.NumberFormat('et-EE', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 3
   }).format(value);
 }
 

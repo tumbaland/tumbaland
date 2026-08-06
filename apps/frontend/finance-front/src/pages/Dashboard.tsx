@@ -30,6 +30,7 @@ const Dashboard: React.FC = () => {
   }
 
   const hasData = data && data.netWorthHistory.length > 0;
+  const currency = data?.currency || 'EUR';
 
   return (
     <Box sx={{ minHeight: '100vh', py: { xs: 2, md: 4 }, px: { xs: 2, md: 4 } }}>
@@ -44,7 +45,7 @@ const Dashboard: React.FC = () => {
 
       {hasData && (
         <>
-          <FinancialKPIs kpis={data.kpis} />
+          <FinancialKPIs kpis={data.kpis} currency={currency} />
 
           <Box
             sx={{
@@ -63,7 +64,11 @@ const Dashboard: React.FC = () => {
               }))}
               assetColors={data.assetColors}
             />
-            <AllocationCard allocation={data.allocation} />
+            <AllocationCard
+              allocation={data.allocation}
+              liabilities={data.liabilities}
+              currency={currency}
+            />
           </Box>
 
           {data.holdings && (
@@ -79,7 +84,9 @@ const Dashboard: React.FC = () => {
                   <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
                     <Box>
                       <Typography variant="body2" sx={{ color: 'text.secondary' }}>Market value</Typography>
-                      <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatCurrency(data.holdings.totalValue)}</Typography>
+                      <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                        {formatCurrency(data.holdings.totalValue, currency)}
+                      </Typography>
                     </Box>
                     <Box>
                       <Typography variant="body2" sx={{ color: 'text.secondary' }}>Unrealized P/L</Typography>
@@ -87,7 +94,7 @@ const Dashboard: React.FC = () => {
                         variant="h6"
                         sx={{ fontWeight: 700, color: data.holdings.gain >= 0 ? 'success.main' : 'error.main' }}
                       >
-                        {data.holdings.gain >= 0 ? '+' : ''}{formatCurrency(data.holdings.gain)} ({formatPct(data.holdings.gainPct)})
+                        {data.holdings.gain >= 0 ? '+' : ''}{formatCurrency(data.holdings.gain, currency)} ({formatPct(data.holdings.gainPct)})
                       </Typography>
                     </Box>
                     <Button component={Link} to="/investments" variant="outlined" size="small">
@@ -95,6 +102,12 @@ const Dashboard: React.FC = () => {
                     </Button>
                   </Box>
                 </Box>
+                {data.holdings.unconverted > 0 && (
+                  <Alert severity="warning" sx={{ mt: 2 }}>
+                    {data.holdings.unconverted} holding{data.holdings.unconverted === 1 ? ' is' : 's are'} quoted
+                    in a currency with no exchange rate yet, so they are not included in these totals.
+                  </Alert>
+                )}
               </CardContent>
             </Card>
           )}

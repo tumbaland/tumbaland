@@ -5,8 +5,14 @@ import CheckInDialog from './CheckInDialog';
 import { AssetClass } from '../../types';
 
 const assetClasses: AssetClass[] = [
-  { _id: 'a1', name: 'Stocks', color: '#111111', userId: 'u1', createdAt: '', updatedAt: '' },
+  { _id: 'a1', name: 'Stocks', color: '#111111', kind: 'asset', userId: 'u1', createdAt: '', updatedAt: '' },
+  // No kind stored: treated as an asset
   { _id: 'a2', name: 'Cash', userId: 'u1', createdAt: '', updatedAt: '' }
+];
+
+const withMortgage: AssetClass[] = [
+  ...assetClasses,
+  { _id: 'a3', name: 'Mortgage', kind: 'liability', userId: 'u1', createdAt: '', updatedAt: '' }
 ];
 
 function setMobile(isMobile: boolean) {
@@ -157,4 +163,61 @@ it('renders stacked cards in the mobile layout, supporting value/gain entry ther
 
   await userEvent.click(screen.getByRole('button', { name: /save check-in/i }));
   expect(onSubmit).toHaveBeenCalledWith('2024-05', [{ assetClassId: 'a1', value: 1000, gain: 25 }]);
+});
+
+it('subtracts a liability from the running net worth total', async () => {
+  renderDialog({
+    assetClasses: withMortgage,
+    initialEntries: new Map([
+      ['a1', { value: 1000, gain: 0 }],
+      ['a3', { value: 400, gain: 0 }]
+    ])
+  });
+
+  expect(screen.getByText('Assets')).toBeInTheDocument();
+  expect(screen.getByText('1000 €')).toBeInTheDocument();
+  expect(screen.getByText('−400 €')).toBeInTheDocument();
+  // Net worth = 1000 − 400
+  expect(screen.getByText('600 €')).toBeInTheDocument();
+});
+
+it('hides the assets/liabilities split when nothing is owed', () => {
+  renderDialog({ initialEntries: new Map([['a1', { value: 1000, gain: 0 }]]) });
+
+  expect(screen.queryByText('Assets')).not.toBeInTheDocument();
+  expect(screen.getByText('Net worth')).toBeInTheDocument();
+});
+
+it('offers no gain field for a liability, since debt has no cost basis', () => {
+  renderDialog({ assetClasses: withMortgage });
+
+  // One gain input per asset class, none for the mortgage
+  expect(screen.getAllByPlaceholderText('0')).toHaveLength(2);
+  expect(screen.getAllByPlaceholderText('—')).toHaveLength(3);
+});
+
+it('orders liabilities after assets and marks them as owed', () => {
+  renderDialog({ assetClasses: withMortgage });
+
+  // The liability row carries an "owed" chip inside the same cell as its name.
+  const names = screen.getAllByText(/^(Stocks|Cash|Mortgage)/).map((el) => el.textContent);
+  expect(names).toEqual(['Stocks', 'Cash', 'Mortgageowed']);
+  expect(screen.getByText('owed')).toBeInTheDocument();
+});
+
+it('submits liability values as positive magnitudes', async () => {
+  const { onSubmit } = renderDialog({
+    assetClasses: withMortgage,
+    initialEntries: new Map([
+      ['a1', { value: 1000, gain: 0 }],
+      ['a3', { value: 400, gain: 0 }]
+    ])
+  });
+
+  await userEvent.click(screen.getByRole('button', { name: /save check-in/i }));
+
+  expect(onSubmit).toHaveBeenCalledWith(
+    '2024-05',
+    expect.arrayContaining([{ assetClassId: 'a3', value: 400, gain: 0 }])
+  );
 });

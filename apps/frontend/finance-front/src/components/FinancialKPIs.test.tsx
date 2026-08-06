@@ -4,6 +4,8 @@ import { DashboardKPIs } from '../services/dashboardService';
 
 const baseKpis: DashboardKPIs = {
   netWorth: 100000,
+  assets: 100000,
+  liabilities: 0,
   asOf: '2024-05-01',
   monthChange: 500,
   monthChangePct: 0.5,
@@ -34,4 +36,31 @@ it('shows a flat trend for a zero change', () => {
   render(<FinancialKPIs kpis={baseKpis} />);
   // totalGain is 0 → signed() prefixes '+', trendColor/trendIcon both hit the "flat" branch
   expect(screen.getByText('+0 €')).toBeInTheDocument();
+});
+
+it('shows a dash rather than a zero when there is no period to compare against', () => {
+  render(<FinancialKPIs kpis={{ ...baseKpis, monthChange: null, monthChangePct: null }} />);
+
+  expect(screen.getByText('—')).toBeInTheDocument();
+  expect(screen.getByText(/no check-in to compare/)).toBeInTheDocument();
+});
+
+it('omits the percentage detail when only the percentage is unknown', () => {
+  render(<FinancialKPIs kpis={{ ...baseKpis, monthChangePct: null }} />);
+
+  expect(screen.getByText('+500 €')).toBeInTheDocument();
+  expect(screen.queryByText('+0.5%')).not.toBeInTheDocument();
+});
+
+it('breaks net worth into assets and debt once a liability exists', () => {
+  render(<FinancialKPIs kpis={{ ...baseKpis, netWorth: 60000, assets: 100000, liabilities: 40000 }} />);
+
+  expect(screen.getByText(/100 000 € assets/)).toBeInTheDocument();
+  expect(screen.getByText(/40 000 € debt/)).toBeInTheDocument();
+});
+
+it('formats amounts in the base currency it is given', () => {
+  render(<FinancialKPIs kpis={baseKpis} currency="USD" />);
+
+  expect(screen.getByText('+500 $')).toBeInTheDocument();
 });

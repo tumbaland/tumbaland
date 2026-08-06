@@ -24,6 +24,7 @@ export const createTrackedTicker = async (
     ticker: string;
     displayName: string;
     description?: string;
+    currency?: string;
     isActive?: boolean;
     groupId?: string;
   },
@@ -46,7 +47,14 @@ export const createTrackedTicker = async (
 
 export const updateTrackedTicker = async (
   id: string,
-  data: { ticker?: string; displayName?: string; description?: string; isActive?: boolean; groupId?: string },
+  data: {
+    ticker?: string;
+    displayName?: string;
+    description?: string;
+    currency?: string;
+    isActive?: boolean;
+    groupId?: string;
+  },
   userId: string,
   userGroups: string[] = []
 ) => {

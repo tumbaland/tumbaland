@@ -1,5 +1,6 @@
 import { logger, TooManyRequestsError } from '@tumbaland/backend-core';
 import TickerPriceHistory from '../models/TickerPriceHistory';
+import { consumeQuota, releaseQuota } from './apiQuota.service';
 
 const BASE_URL = 'https://www.alphavantage.co/query';
 
@@ -16,6 +17,30 @@ function isThrottled(data: Record<string, unknown>): boolean {
 
 function getThrottleMessage(data: Record<string, unknown>): string {
   return String(data['Note'] || data['Information'] || 'Rate limit hit');
+}
+
+/**
+ * Every call to the provider goes through here so exactly one place reserves
+ * daily quota. The reservation happens *before* the request: releasing it again
+ * only when `fetch` itself throws, because anything that came back with a
+ * response — including a throttle notice — was already counted by the provider.
+ */
+async function request(url: string): Promise<Record<string, unknown>> {
+  await consumeQuota();
+
+  let response: Response;
+  try {
+    response = await fetch(url);
+  } catch (err) {
+    await releaseQuota();
+    throw err;
+  }
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+
+  return response.json();
 }
 
 export interface StockPriceData {
@@ -39,14 +64,7 @@ export interface TickerSearchResult {
 // Fetch the latest quote for a symbol using GLOBAL_QUOTE (1 call, returns OHLCV + trading date).
 // More efficient than TIME_SERIES_DAILY which downloads 100 days just to read the first row.
 export async function fetchStockPrice(symbol: string): Promise<StockPriceData | null> {
-  const url = `${BASE_URL}?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${getApiKey()}`;
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  const data = await response.json();
+  const data = await request(`${BASE_URL}?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${getApiKey()}`);
 
   if (isThrottled(data)) {
     logger.warn('Alpha Vantage rate limit hit', { symbol, message: getThrottleMessage(data) });
@@ -69,14 +87,7 @@ export async function fetchStockPrice(symbol: string): Promise<StockPriceData | 
 // Fetch historic OHLCV prices for a symbol and save to DB.
 // Returns last ~100 trading days (compact). outputsize=full requires a premium plan.
 export async function fetchAndSaveAllStockHistory(symbol: string): Promise<number> {
-  const url = `${BASE_URL}?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${getApiKey()}`;
-
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  const data = await response.json();
+  const data = await request(`${BASE_URL}?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${getApiKey()}`);
 
   if (isThrottled(data)) {
     throw new TooManyRequestsError(`Alpha Vantage rate limit: ${getThrottleMessage(data)}`);
@@ -108,14 +119,9 @@ export async function fetchAndSaveAllStockHistory(symbol: string): Promise<numbe
 // Search for ticker symbols by keyword using Alpha Vantage SYMBOL_SEARCH.
 // Costs 1 API call. Free plan: 25 calls/day total.
 export async function searchTickers(query: string): Promise<TickerSearchResult[]> {
-  const url = `${BASE_URL}?function=SYMBOL_SEARCH&keywords=${encodeURIComponent(query)}&apikey=${getApiKey()}`;
-
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  const data = await response.json();
+  const data = await request(
+    `${BASE_URL}?function=SYMBOL_SEARCH&keywords=${encodeURIComponent(query)}&apikey=${getApiKey()}`
+  );
 
   if (isThrottled(data)) {
     throw new TooManyRequestsError(`Alpha Vantage rate limit: ${getThrottleMessage(data)}`);
@@ -130,4 +136,26 @@ export async function searchTickers(query: string): Promise<TickerSearchResult[]
     currency: m['8. currency'],
     matchScore: m['9. matchScore']
   }));
+}
+
+/**
+ * Current exchange rate for a currency pair (1 unit of `from` in `to`).
+ * Costs 1 API call.
+ */
+export async function fetchExchangeRate(from: string, to: string): Promise<number | null> {
+  const data = await request(
+    `${BASE_URL}?function=CURRENCY_EXCHANGE_RATE&from_currency=${from}&to_currency=${to}&apikey=${getApiKey()}`
+  );
+
+  if (isThrottled(data)) {
+    logger.warn('Alpha Vantage rate limit hit', { from, to, message: getThrottleMessage(data) });
+    return null;
+  }
+
+  const quote = data['Realtime Currency Exchange Rate'] as Record<string, string> | undefined;
+  const rate = quote?.['5. Exchange Rate'];
+  if (!rate) return null;
+
+  const parsed = parseFloat(rate);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }

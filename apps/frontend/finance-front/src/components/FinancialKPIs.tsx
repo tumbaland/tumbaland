@@ -6,6 +6,8 @@ import { formatCurrency, formatPct } from '../utils/numberUtils';
 
 interface FinancialKPIsProps {
   kpis: DashboardKPIs;
+  /** Base currency all KPI amounts are expressed in. */
+  currency?: string;
 }
 
 interface Tile {
@@ -25,37 +27,59 @@ const trendIcon = (v: number) =>
 
 const trendColor = (v: number) => (v > 0 ? 'success.main' : v < 0 ? 'error.main' : 'text.primary');
 
-const signed = (v: number) => `${v >= 0 ? '+' : ''}${formatCurrency(v)}`;
+const signed = (v: number, currency: string) =>
+  `${v >= 0 ? '+' : ''}${formatCurrency(v, currency)}`;
 
-const FinancialKPIs: React.FC<FinancialKPIsProps> = ({ kpis }) => {
+const FinancialKPIs: React.FC<FinancialKPIsProps> = ({ kpis, currency = 'EUR' }) => {
+  const money = (v: number) => formatCurrency(v, currency);
+
+  // A missing comparison period reads as "—": there is no check-in that far
+  // back, which is not the same as no change.
+  const changeTile = (
+    label: string,
+    change: number | null,
+    pct: number | null,
+    icon: React.ReactNode,
+    accent: string
+  ): Tile => ({
+    label,
+    sublabel: change === null ? 'no check-in to compare' : undefined,
+    value: change === null ? '—' : signed(change, currency),
+    detail: pct === null ? undefined : formatPct(pct),
+    icon,
+    accent,
+    valueColor: change === null ? 'text.secondary' : trendColor(change)
+  });
+
   const tiles: Tile[] = [
     {
       label: 'Net worth',
       sublabel: kpis.asOf ? `as of ${kpis.asOf.slice(0, 7)}` : undefined,
-      value: formatCurrency(kpis.netWorth),
+      value: money(kpis.netWorth),
+      detail: kpis.liabilities > 0
+        ? `${money(kpis.assets)} assets − ${money(kpis.liabilities)} debt`
+        : undefined,
       icon: <AccountBalance sx={{ fontSize: { xs: 24, md: 28 } }} />,
       accent: '#667eea'
     },
-    {
-      label: 'Past month',
-      value: signed(kpis.monthChange),
-      detail: formatPct(kpis.monthChangePct),
-      icon: trendIcon(kpis.monthChange),
-      accent: '#11998e',
-      valueColor: trendColor(kpis.monthChange)
-    },
-    {
-      label: 'Past year',
-      value: signed(kpis.yearChange),
-      detail: formatPct(kpis.yearChangePct),
-      icon: <CalendarMonth sx={{ fontSize: { xs: 24, md: 28 } }} />,
-      accent: '#8b5cf6',
-      valueColor: trendColor(kpis.yearChange)
-    },
+    changeTile(
+      'Past month',
+      kpis.monthChange,
+      kpis.monthChangePct,
+      trendIcon(kpis.monthChange ?? 0),
+      '#11998e'
+    ),
+    changeTile(
+      'Past year',
+      kpis.yearChange,
+      kpis.yearChangePct,
+      <CalendarMonth sx={{ fontSize: { xs: 24, md: 28 } }} />,
+      '#8b5cf6'
+    ),
     {
       label: 'Total gain',
       sublabel: 'vs invested',
-      value: signed(kpis.totalGain),
+      value: signed(kpis.totalGain, currency),
       detail: formatPct(kpis.totalGainPct),
       icon: <Savings sx={{ fontSize: { xs: 24, md: 28 } }} />,
       accent: '#eab308',

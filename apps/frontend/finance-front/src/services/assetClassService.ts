@@ -18,7 +18,10 @@ export const deleteAssetClass = async (id: string): Promise<void> => {
   return response.data;
 };
 
-export const updateAssetClass = async (id: string, data: Partial<Pick<AssetClass, 'name' | 'description'>>): Promise<AssetClass> => {
+export const updateAssetClass = async (
+  id: string,
+  data: Partial<Pick<AssetClass, 'name' | 'description' | 'color' | 'kind'>>
+): Promise<AssetClass> => {
   const response = await financeApi.put<ApiResponse<AssetClass>>(`/asset-classes/${id}`, data);
   return response.data;
 };

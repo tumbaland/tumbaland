@@ -11,6 +11,8 @@ import FrontierSection from '../components/planner/FrontierSection';
 import ProjectionSection from '../components/planner/ProjectionSection';
 
 const SIMULATIONS = 2000;
+/** How far back to pull daily closes for the covariance estimate. */
+const HISTORY_YEARS = 2;
 
 // Merged replacement for the old Portfolio Optimizer + Stock Growth Calculator
 // pages: the frontier simulation's return/volatility estimates feed the
@@ -32,18 +34,27 @@ const PortfolioPlanner: React.FC = () => {
     return m;
   }, [trackedTickers]);
 
-  // Load all price history in one call, group by ticker
+  // Load price history for the held tickers only, grouped by ticker. The
+  // simulation needs roughly the last two years of daily closes, so the range
+  // is bounded too — the full collection is unbounded and mostly irrelevant here.
   useEffect(() => {
     if (holdings.length === 0) return;
-    const portfolioTickers = new Set(holdings.map(p => p.ticker));
+    const portfolioTickers = [...new Set(holdings.map(p => p.ticker))];
     setLoadingPrices(true);
     setPriceError(null);
 
-    getTickerPriceHistory()
-      .then(all => {
+    const from = new Date();
+    from.setFullYear(from.getFullYear() - HISTORY_YEARS);
+    const fromDate = from.toISOString().slice(0, 10);
+
+    Promise.all(
+      portfolioTickers.map(ticker => getTickerPriceHistory({ ticker, from: fromDate }))
+    )
+      .then(perTicker => {
+        const all = perTicker.flat();
         const rawMap: Record<string, { date: string; price: number }[]> = {};
         all
-          .filter(d => portfolioTickers.has(d.ticker) && d.price > 0)
+          .filter(d => d.price > 0)
           .forEach(d => {
             if (!rawMap[d.ticker]) rawMap[d.ticker] = [];
             rawMap[d.ticker].push({ date: d.date, price: d.price });

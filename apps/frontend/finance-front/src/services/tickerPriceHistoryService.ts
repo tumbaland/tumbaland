@@ -12,11 +12,44 @@ export interface TickerPriceHistory {
   volume?: number;
 }
 
+export interface PriceHistoryQuery {
+  ticker?: string;
+  /** Inclusive YYYY-MM-DD bounds. */
+  from?: string;
+  to?: string;
+  limit?: number;
+}
+
+export interface QuotaStatus {
+  limit: number;
+  used: number;
+  remaining: number;
+  date: string;
+}
+
 const API_URL = '/ticker-price-history';
 
-export const getTickerPriceHistory = async (ticker?: string): Promise<TickerPriceHistory[]> => {
-  const url = ticker ? `${API_URL}?ticker=${ticker}` : API_URL;
-  const res = await financeApi.get<ApiResponse<TickerPriceHistory[]>>(url);
+/**
+ * Price history for the caller's tracked tickers. Always narrow with a ticker
+ * or a date range where possible: the collection grows by (tickers × trading
+ * days) forever, and the server caps what one call can return.
+ */
+export const getTickerPriceHistory = async (
+  query: PriceHistoryQuery = {}
+): Promise<TickerPriceHistory[]> => {
+  const params: Record<string, string> = {};
+  if (query.ticker) params.ticker = query.ticker;
+  if (query.from) params.from = query.from;
+  if (query.to) params.to = query.to;
+  if (query.limit !== undefined) params.limit = String(query.limit);
+
+  const res = await financeApi.get<ApiResponse<TickerPriceHistory[]>>(API_URL, { params });
+  return res.data;
+};
+
+/** Remaining Alpha Vantage calls for today, shared across the deployment. */
+export const getQuota = async (): Promise<QuotaStatus> => {
+  const res = await financeApi.get<ApiResponse<QuotaStatus>>(`${API_URL}/quota`);
   return res.data;
 };
 

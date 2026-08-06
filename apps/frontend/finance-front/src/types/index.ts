@@ -18,11 +18,19 @@ export interface AuthResponse {
 }
 
 // Asset Class types
+export type AssetClassKind = 'asset' | 'liability';
+
 export interface AssetClass {
   _id: string;
   name: string;
   description?: string;
   color?: string;
+  /**
+   * Liability classes subtract from net worth; values stay positive.
+   * Optional because classes created before this field existed have no value
+   * stored — treat a missing kind as 'asset'.
+   */
+  kind?: AssetClassKind;
   userId: string;
   groupId?: string;
   createdAt: string;

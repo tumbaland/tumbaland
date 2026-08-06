@@ -8,7 +8,7 @@ vi.mock('./GroupSelector', () => ({ default: () => <div>group selector</div> }))
 import AssetClassModal, { AssetClassFormValues } from './AssetClassModal';
 
 function renderModal(overrides: Partial<{ title: string; form: Partial<AssetClassFormValues> }> = {}) {
-  const form: AssetClassFormValues = { name: '', description: '', color: '', groupId: undefined, ...overrides.form };
+  const form: AssetClassFormValues = { name: '', description: '', color: '', kind: 'asset', groupId: undefined, ...overrides.form };
   // setForm's updater closes over the SyntheticEvent, whose `target` is the live DOM node — if we
   // deferred calling it until after the test's `await` settles, the controlled input would already
   // have snapped its value back to the (unchanged) `form` prop. Apply the updater immediately, the
@@ -106,4 +106,25 @@ it('calls onClose and onSubmit', async () => {
 
   await userEvent.click(screen.getByRole('button', { name: 'Add' }));
   expect(onSubmit).toHaveBeenCalledWith(form);
+});
+
+it('switches the class between asset and liability', async () => {
+  const { setForm, results } = renderModal();
+
+  await userEvent.click(screen.getByRole('button', { name: /liability/i }));
+
+  expect(setForm).toHaveBeenCalled();
+  expect(results.at(-1)?.kind).toBe('liability');
+});
+
+it('explains what a liability does to net worth', () => {
+  renderModal({ form: { kind: 'liability' } });
+
+  expect(screen.getByText(/subtracted from net worth/i)).toBeInTheDocument();
+});
+
+it('describes an asset class as adding to net worth', () => {
+  renderModal();
+
+  expect(screen.getByText(/adds to net worth/i)).toBeInTheDocument();
 });

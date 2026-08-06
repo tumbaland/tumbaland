@@ -3,11 +3,14 @@ import { ApiResponse } from '../types';
 
 export interface DashboardKPIs {
   netWorth: number;
+  assets: number;
+  liabilities: number;
   asOf: string | null;
-  monthChange: number;
-  monthChangePct: number;
-  yearChange: number;
-  yearChangePct: number;
+  /** Null when there is no check-in exactly one month / one year back. */
+  monthChange: number | null;
+  monthChangePct: number | null;
+  yearChange: number | null;
+  yearChangePct: number | null;
   totalGain: number;
   totalGainPct: number;
 }
@@ -17,6 +20,8 @@ export interface DashboardData {
   netWorthHistory: Array<{
     date: string;
     total: number;
+    assets: number;
+    liabilities: number;
     byClass: Record<string, number>;
   }>;
   allocation: Array<{
@@ -27,13 +32,23 @@ export interface DashboardData {
     gain: number;
     percentage: number;
   }>;
+  liabilities: Array<{
+    assetClassId: string;
+    name: string;
+    color: string;
+    value: number;
+  }>;
   assetColors: Record<string, string>;
+  /** Base currency every total on this payload is expressed in. */
+  currency: string;
   holdings: {
     count: number;
     totalValue: number;
     totalCost: number;
     gain: number;
     gainPct: number;
+    /** Holdings excluded from the totals for want of an FX rate. */
+    unconverted: number;
   } | null;
 }
 

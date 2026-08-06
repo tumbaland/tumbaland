@@ -13,12 +13,15 @@ vi.mock('../../hooks/useTrackedTicker', () => ({
 }));
 
 vi.mock('../../services/tickerPriceHistoryService', () => ({
-  fetchAllTickerPriceHistory: vi.fn()
+  fetchAllTickerPriceHistory: vi.fn(),
+  // The tab shows how much provider quota is left; nothing here asserts on it,
+  // so it resolves to a full day.
+  getQuota: vi.fn().mockResolvedValue({ limit: 25, used: 0, remaining: 25, date: '2026-08-06' })
 }));
 
 vi.mock('./TickerSearch', () => ({
   default: ({ onSelect }: { onSelect: (r: any) => void }) => (
-    <button onClick={() => onSelect({ symbol: 'MSFT', name: 'Microsoft' })}>pick MSFT</button>
+    <button onClick={() => onSelect({ symbol: 'MSFT', name: 'Microsoft', currency: 'USD' })}>pick MSFT</button>
   )
 }));
 
@@ -53,7 +56,15 @@ function setMobile(isMobile: boolean) {
 afterEach(() => setMobile(false));
 
 const tickers: TrackedTicker[] = [
-  { _id: 't1', ticker: 'AAPL', displayName: 'Apple', isActive: true, dateAdded: '2024-01-01T00:00:00.000Z' },
+  {
+    _id: 't1',
+    ticker: 'AAPL',
+    displayName: 'Apple',
+    currency: 'USD',
+    isActive: true,
+    dateAdded: '2024-01-01T00:00:00.000Z'
+  },
+  // No currency and no dateAdded: both render as an em dash
   { _id: 't2', ticker: 'BND', displayName: 'Vanguard Bond', isActive: false }
 ];
 
@@ -71,7 +82,9 @@ it('renders ticker rows with active/paused status and a formatted or dashed date
   expect(screen.getByText('Active')).toBeInTheDocument();
   expect(screen.getByText('Paused')).toBeInTheDocument();
   expect(screen.getByText('2024-01-01')).toBeInTheDocument();
-  expect(screen.getByText('—')).toBeInTheDocument();
+  expect(screen.getByText('USD')).toBeInTheDocument();
+  // BND has neither a currency nor an added date
+  expect(screen.getAllByText('—')).toHaveLength(2);
 });
 
 it('validates required fields before submitting', async () => {
@@ -97,6 +110,8 @@ it('creates a tracked ticker, including a group id when tenant-scoped', async ()
   expect(mockedCreateMutateAsync).toHaveBeenCalledWith({
     ticker: 'MSFT',
     displayName: 'Microsoft',
+    // Taken from the search result, so prices convert correctly
+    currency: 'USD',
     description: '',
     isActive: true,
     groupId: 'g1'
@@ -135,7 +150,7 @@ it('edits an existing ticker, pre-filling the form and toggling the active switc
 
   expect(mockedUpdateMutateAsync).toHaveBeenCalledWith({
     id: 't1',
-    data: { ticker: 'AAPL', displayName: 'Apple', description: '', isActive: false }
+    data: { ticker: 'AAPL', displayName: 'Apple', currency: 'USD', description: '', isActive: false }
   });
   expect(notify).toHaveBeenCalledWith('Ticker updated', 'success');
 });

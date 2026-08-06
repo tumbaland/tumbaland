@@ -348,34 +348,108 @@ paths:
 
   /api/ticker-price-history:
     get:
-      summary: Get all price history records
+      summary: Get price history for the caller's tracked tickers
+      description: >-
+        Returns rows only for tickers tracked in the caller's current context
+        (personal, or the group they belong to). Results are capped at `limit`
+        rows (default 1000, maximum 5000), so narrow the query with `ticker`
+        and a date range rather than paging through everything.
       tags: [Ticker Price History]
+      parameters:
+        - name: ticker
+          in: query
+          schema:
+            type: string
+          description: Restrict to a single ticker.
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Inclusive lower bound on the price date.
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Inclusive upper bound on the price date.
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5000
+            default: 1000
       responses:
         '200':
           description: Price history records
+        '400':
+          description: Invalid date or limit
+
+  /api/ticker-price-history/quota:
+    get:
+      summary: Remaining Alpha Vantage calls for today
+      description: >-
+        The provider quota is shared by the whole deployment, not per user, and
+        is fixed at 25 calls per day. Endpoints that call the provider fail with
+        429 once it reaches zero.
+      tags: [Ticker Price History]
+      responses:
+        '200':
+          description: Quota status
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          limit:
+                            type: integer
+                          used:
+                            type: integer
+                          remaining:
+                            type: integer
+                          date:
+                            type: string
+                            format: date
 
   /api/ticker-price-history/fetch:
     post:
-      summary: Fetch and save latest prices
-      description: Fetches the latest quote for one ticker, or for all tracked tickers when body is empty.
+      summary: Fetch and save the latest price for a tracked ticker
+      description: >-
+        Spends one call from the shared daily Alpha Vantage quota. The ticker
+        must already be tracked in the caller's context. Rate limited per client
+        to 25 requests per hour; the shared daily quota of 25 is the hard limit.
       tags: [Ticker Price History]
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               type: object
+              required: [ticker]
               properties:
                 ticker:
                   type: string
       responses:
         '200':
           description: Prices fetched and saved
+        '403':
+          description: Ticker is not tracked in this context
         '429':
-          description: Alpha Vantage rate limit exhausted
+          description: Daily quota exhausted or client rate limit hit
 
   /api/ticker-price-history/fetch-all:
     post:
-      summary: Fetch ~100 days of history for a ticker
+      summary: Fetch ~100 days of history for a tracked ticker
+      description: >-
+        Spends one call from the shared daily Alpha Vantage quota. The ticker
+        must already be tracked in the caller's context. Rate limited per client
+        to 25 requests per hour; the shared daily quota of 25 is the hard limit.
       tags: [Ticker Price History]
       requestBody:
         required: true
@@ -390,18 +464,23 @@ paths:
       responses:
         '200':
           description: History fetched and saved
+        '403':
+          description: Ticker is not tracked in this context
         '429':
-          description: Alpha Vantage rate limit exhausted
+          description: Daily quota exhausted or client rate limit hit
 
   /api/ticker-price-history/{id}:
     delete:
       summary: Delete a price record
+      description: Allowed only for records whose ticker the caller tracks.
       tags: [Ticker Price History]
       parameters:
         - $ref: '#/components/parameters/Id'
       responses:
         '200':
           description: Record deleted
+        '403':
+          description: Ticker is not tracked in this context
 
   /api/dashboard:
     get:
@@ -501,6 +580,14 @@ components:
         color:
           type: string
           example: '#ec4899'
+        kind:
+          type: string
+          enum: [asset, liability]
+          default: asset
+          description: >-
+            Liability classes subtract from net worth. Their snapshot values are
+            still stored as positive magnitudes. Absent on classes created
+            before this field existed; treat a missing value as `asset`.
         userId:
           type: string
         groupId:
@@ -522,6 +609,10 @@ components:
           type: string
         color:
           type: string
+        kind:
+          type: string
+          enum: [asset, liability]
+          default: asset
         groupId:
           type: string
 
@@ -534,7 +625,10 @@ components:
         value:
           type: number
           minimum: 0
-          description: Current value of the asset class
+          description: >-
+            Current value of the asset class, as a positive magnitude. For a
+            liability class this is the balance owed, which the dashboard
+            subtracts from net worth.
         gain:
           type: number
           default: 0
@@ -588,6 +682,24 @@ components:
         displayName:
           type: string
           description: From the matching tracked ticker
+        currency:
+          type: string
+          description: >-
+            Currency the per-share amounts (avgBuyPrice, latestPrice, athPrice)
+            are quoted in, taken from the tracked ticker.
+          example: USD
+        baseCurrency:
+          type: string
+          description: Currency the totals (costBasis, currentValue, valueIncrease) are in.
+          example: EUR
+        fxRate:
+          type: number
+          description: Rate applied to convert currency into baseCurrency; absent when unknown.
+        missingFxRate:
+          type: boolean
+          description: >-
+            True when no exchange rate was available, in which case the
+            converted totals are omitted rather than reported unconverted.
         latestPrice:
           type: number
         latestPriceDate:
@@ -595,12 +707,18 @@ components:
           format: date-time
         athPrice:
           type: number
+        costBasis:
+          type: number
+          description: quantity x avgBuyPrice, in baseCurrency
         currentValue:
           type: number
+          description: In baseCurrency
         valueIncrease:
           type: number
+          description: In baseCurrency
         percentIncrease:
           type: number
+          description: Currency-independent, so present even without an exchange rate
 
     HoldingInput:
       type: object
@@ -611,6 +729,13 @@ components:
         displayName:
           type: string
           description: Used to name the auto-created tracked ticker
+        currency:
+          type: string
+          description: >-
+            ISO 4217 code the instrument is quoted in, stored on the tracked
+            ticker. Leave unset to treat its prices as already being in the
+            base currency.
+          example: USD
         quantity:
           type: number
         avgBuyPrice:
@@ -633,6 +758,10 @@ components:
           type: string
         description:
           type: string
+        currency:
+          type: string
+          description: ISO 4217 code the instrument is quoted in
+          example: USD
         isActive:
           type: boolean
           default: true
@@ -648,18 +777,34 @@ components:
           properties:
             netWorth:
               type: number
+              description: assets - liabilities at the latest check-in
+            assets:
+              type: number
+            liabilities:
+              type: number
+              description: Positive magnitude of what is owed
             asOf:
               type: string
               format: date-time
               nullable: true
             monthChange:
               type: number
+              nullable: true
+              description: >-
+                Change against the check-in exactly one calendar month earlier.
+                Null when there is no check-in at that offset — a gap in the
+                history is not a change of zero.
             monthChangePct:
               type: number
+              nullable: true
+              description: Null when the baseline is missing or not positive
             yearChange:
               type: number
+              nullable: true
+              description: As monthChange, against twelve months earlier
             yearChangePct:
               type: number
+              nullable: true
             totalGain:
               type: number
             totalGainPct:
@@ -674,8 +819,14 @@ components:
                 format: date-time
               total:
                 type: number
+                description: assets - liabilities
+              assets:
+                type: number
+              liabilities:
+                type: number
               byClass:
                 type: object
+                description: Per-class value, negative for liability classes
                 additionalProperties:
                   type: number
         allocation:
@@ -695,10 +846,30 @@ components:
                 type: number
               percentage:
                 type: number
+                description: Share of gross assets, not of net worth
+          description: Asset classes only; liability classes are listed separately
+        liabilities:
+          type: array
+          items:
+            type: object
+            properties:
+              assetClassId:
+                type: string
+              name:
+                type: string
+              color:
+                type: string
+              value:
+                type: number
+                description: Positive magnitude owed
         assetColors:
           type: object
           additionalProperties:
             type: string
+        currency:
+          type: string
+          description: Base currency every amount in this payload is expressed in
+          example: EUR
         holdings:
           type: object
           nullable: true
@@ -713,3 +884,6 @@ components:
               type: number
             gainPct:
               type: number
+            unconverted:
+              type: integer
+              description: Holdings left out of these totals for want of an exchange rate

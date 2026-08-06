@@ -1,5 +1,18 @@
 import React from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Box, Typography } from '@mui/material';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button,
+  Box,
+  Typography,
+  ToggleButton,
+  ToggleButtonGroup
+} from '@mui/material';
+import { TrendingUp, CreditCard } from '@mui/icons-material';
+import { AssetClassKind } from '../types';
 import GroupSelector from './GroupSelector';
 
 const PREDEFINED_COLORS = [
@@ -19,6 +32,7 @@ export interface AssetClassFormValues {
   name: string;
   description: string;
   color: string;
+  kind: AssetClassKind;
   groupId?: string;
 }
 
@@ -71,6 +85,33 @@ const AssetClassModal: React.FC<{
         onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
         slotProps={{ inputLabel: { shrink: true } }}
       />
+
+      <Box sx={{ mt: 2 }}>
+        <Typography variant="subtitle2" sx={{ mb: 1 }}>
+          Type
+        </Typography>
+        <ToggleButtonGroup
+          exclusive
+          fullWidth
+          size="small"
+          value={form.kind}
+          onChange={(_, kind: AssetClassKind | null) => kind && setForm((f) => ({ ...f, kind }))}
+        >
+          <ToggleButton value="asset">
+            <TrendingUp fontSize="small" sx={{ mr: 1 }} />
+            Asset
+          </ToggleButton>
+          <ToggleButton value="liability">
+            <CreditCard fontSize="small" sx={{ mr: 1 }} />
+            Liability
+          </ToggleButton>
+        </ToggleButtonGroup>
+        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
+          {form.kind === 'liability'
+            ? 'Enter what you owe as a positive number — it is subtracted from net worth.'
+            : 'Adds to net worth.'}
+        </Typography>
+      </Box>
 
       <Box sx={{ mt: 2 }}>
         <Typography variant="subtitle2" sx={{ mb: 1 }}>

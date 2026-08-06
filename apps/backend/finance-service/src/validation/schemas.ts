@@ -1,8 +1,16 @@
 import { z } from 'zod';
 
+/** ISO 4217: three letters, stored and compared uppercase. */
+const currencySchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(/^[A-Z]{3}$/, 'currency must be a 3-letter ISO code');
+
 export const createHoldingSchema = z.object({
   ticker: z.string().min(1),
   displayName: z.string().optional(),
+  currency: currencySchema.optional(),
   quantity: z.number(),
   avgBuyPrice: z.number(),
   buyDate: z.iso.date().optional(),
@@ -16,6 +24,7 @@ export const createTrackedTickerSchema = z.object({
   ticker: z.string().min(1),
   displayName: z.string().min(1),
   description: z.string().optional(),
+  currency: currencySchema.optional(),
   isActive: z.boolean().optional(),
   groupId: z.string().optional()
 });
@@ -26,6 +35,7 @@ export const createAssetClassSchema = z.object({
   name: z.string().trim().min(1),
   description: z.string().optional(),
   color: z.string().optional(),
+  kind: z.enum(['asset', 'liability']).optional(),
   groupId: z.string().optional()
 });
 

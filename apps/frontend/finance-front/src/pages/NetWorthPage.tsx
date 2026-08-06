@@ -67,23 +67,37 @@ const NetWorthPage: React.FC = () => {
     [assetClasses]
   );
 
+  const isLiability = useMemo(
+    () => (assetClassId: string) => classById.get(assetClassId)?.kind === 'liability',
+    [classById]
+  );
+
+  // Liability entries are stored as positive magnitudes and subtracted here, so
+  // the column really is net worth rather than gross assets.
+  const netOf = useMemo(
+    () => (s: Snapshot) =>
+      s.entries.reduce((sum, e) => sum + (isLiability(e.assetClassId) ? -e.value : e.value), 0),
+    [isLiability]
+  );
+
   // Snapshots arrive sorted date desc from the API
   const rows = useMemo(() => {
     return snapshots.map((s, i) => {
-      const total = s.entries.reduce((sum, e) => sum + e.value, 0);
+      const total = netOf(s);
       const gain = s.entries.reduce((sum, e) => sum + e.gain, 0);
       const prev = snapshots[i + 1];
-      const prevTotal = prev ? prev.entries.reduce((sum, e) => sum + e.value, 0) : undefined;
+      const prevTotal = prev ? netOf(prev) : undefined;
       return {
         snapshot: s,
         month: snapshotMonth(s),
         total,
         gain,
         change: prevTotal !== undefined ? total - prevTotal : undefined,
-        changePct: prevTotal ? ((total - prevTotal) / prevTotal) * 100 : undefined
+        // A percentage against a zero or negative baseline is meaningless.
+        changePct: prevTotal !== undefined && prevTotal > 0 ? ((total - prevTotal) / prevTotal) * 100 : undefined
       };
     });
-  }, [snapshots]);
+  }, [snapshots, netOf]);
 
   const latest = rows[0];
 
@@ -123,14 +137,15 @@ const NetWorthPage: React.FC = () => {
       .sort((a, b) => b.value - a.value)
       .map((e) => {
         const ac = classById.get(e.assetClassId);
+        const owed = ac?.kind === 'liability';
         return (
           <Chip
             key={e.assetClassId}
             size="small"
             sx={{ borderLeft: `4px solid ${ac?.color || '#667eea'}` }}
             label={
-              `${ac?.name || 'Unknown'}: ${formatCurrency(e.value)}` +
-              (e.gain ? ` (${e.gain > 0 ? '+' : ''}${formatCurrency(e.gain)} gain)` : '')
+              `${ac?.name || 'Unknown'}: ${owed ? '−' : ''}${formatCurrency(e.value)}` +
+              (!owed && e.gain ? ` (${e.gain > 0 ? '+' : ''}${formatCurrency(e.gain)} gain)` : '')
             }
           />
         );
