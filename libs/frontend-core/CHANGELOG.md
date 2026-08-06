@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.7.0](https://github.com/toomastahves/tumbaland/compare/frontend-core-v1.6.1...frontend-core-v1.7.0) (2026-08-06)
+
+### Features
+
+* add cash flow ([2eacd77](https://github.com/toomastahves/tumbaland/commit/2eacd77e048dc4daf4f19a54572f87b887d66dac))
+* add cash flow dashboard ([47aade7](https://github.com/toomastahves/tumbaland/commit/47aade76bbf3dc6d896d5537be0466271465df61))
+* add csv export ([f4a36bf](https://github.com/toomastahves/tumbaland/commit/f4a36bf6ace09f045cd4fd2327b36a10a8ef63f3))
+* add location tracking and map ([44be557](https://github.com/toomastahves/tumbaland/commit/44be55712f06cf294e95783677fa1ff22c35de2c))
+* add streaks ([dc76445](https://github.com/toomastahves/tumbaland/commit/dc76445e21b9de97ae58f040fe77df06fab76921))
+* fix library versions ([cebc9ea](https://github.com/toomastahves/tumbaland/commit/cebc9eaf85fe8cbc451d3b5cc7c6426f07762cf9))
+* imrpove cash flow ux ([cd4e2a5](https://github.com/toomastahves/tumbaland/commit/cd4e2a5d55857f7c4cca049022cc8df1897000dc))
+* prefix tumbaland containers ([dab2215](https://github.com/toomastahves/tumbaland/commit/dab221585f48e5415275cee280592a7ccaa7bb5b))
+* setup beszel ([16db18c](https://github.com/toomastahves/tumbaland/commit/16db18c85281783c4a3a8c6e0d81444e83294c9a))
+* setup self hosted github runners ([3646438](https://github.com/toomastahves/tumbaland/commit/3646438137dcd2465f6368c0f043e3fc32be2d0e))
+* upgrade deps ([4631449](https://github.com/toomastahves/tumbaland/commit/463144984aa80a63c892141d212e0389d5390aa1))
+
+### Bug Fixes
+
+* cash flow update ([bd2811b](https://github.com/toomastahves/tumbaland/commit/bd2811b521a38068d812e5513a149cdce47c8a1a))
+* db connection retries ([5c52ae8](https://github.com/toomastahves/tumbaland/commit/5c52ae80b30ebfc8dcb43155a4c8fd2496f4c133))
+* db retry logic ([b259339](https://github.com/toomastahves/tumbaland/commit/b25933936d0f9900f57392c2d05019ad489092b2))
+* failing tests ([0b48e3f](https://github.com/toomastahves/tumbaland/commit/0b48e3f517742f43c78311ff791b6a45ff746cc2))
+* finance bugs ([1430cda](https://github.com/toomastahves/tumbaland/commit/1430cda26cd2c38cdafad8b3c4d461d7b81ca0ed))
+* proxy config ([3ea8d95](https://github.com/toomastahves/tumbaland/commit/3ea8d95f2914b78c1ff78a28ecf882824d7a8df7))
 ## [1.6.1](https://github.com/toomastahves/tumbaland/compare/frontend-core-v1.6.0...frontend-core-v1.6.1) (2026-07-28)
 ## [1.6.0](https://github.com/toomastahves/tumbaland/compare/frontend-core-v1.5.0...frontend-core-v1.6.0) (2026-07-28)
 

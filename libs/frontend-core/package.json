@@ -1,6 +1,6 @@
 {
   "name": "@tumbaland/frontend-core",
-  "version": "1.6.1",
+  "version": "1.7.0",
   "description": "Shared frontend auth/group/API-client logic for Tumbaland frontends",
   "author": "Tumbaland",
   "license": "MIT",
