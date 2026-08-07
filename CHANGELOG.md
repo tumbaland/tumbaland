@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.427](https://github.com/toomastahves/tumbaland/compare/app-v0.0.426...app-v0.0.427) (2026-08-07)
+
+### Features
+
+* add configurable mapping categories ([6445505](https://github.com/toomastahves/tumbaland/commit/6445505cdb40ae380f443bfa64b04c327051603e))
 ## [0.0.426](https://github.com/toomastahves/tumbaland/compare/app-v0.0.425...app-v0.0.426) (2026-08-07)
 
 ### Features
