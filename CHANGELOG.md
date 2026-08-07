@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.429](https://github.com/toomastahves/tumbaland/compare/app-v0.0.428...app-v0.0.429) (2026-08-07)
+
+### Features
+
+* change cron time ([b9be724](https://github.com/toomastahves/tumbaland/commit/b9be7242bf52f147318119e0fa733ad47da62fdf))
 ## [0.0.428](https://github.com/toomastahves/tumbaland/compare/app-v0.0.427...app-v0.0.428) (2026-08-07)
 
 ### Features
