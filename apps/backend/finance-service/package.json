@@ -10,13 +10,7 @@
     "test": "jest",
     "test:coverage": "jest --coverage",
     "lint": "eslint .",
-    "backup:export": "node scripts/backup/export-finance-data.js",
-    "typecheck": "tsc --noEmit",
-    "analyze:bank": "node scripts/analysis/analyze-bank-csv.js",
-    "import:bank-transactions": "node scripts/migration/import-bank-csv.js",
-    "import:bank-trades": "node scripts/migration/import-bank-trades.js",
-    "migrate:drop-stale-indexes": "node scripts/migration/drop-stale-indexes.js",
-    "import:pension": "node scripts/migration/import-pension-contributions.js"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@tumbaland/backend-core": "1.23.0",

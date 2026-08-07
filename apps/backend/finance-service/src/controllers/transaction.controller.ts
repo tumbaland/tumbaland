@@ -3,8 +3,10 @@ import { BadRequestError, ForbiddenError, sendSuccess } from '@tumbaland/backend
 import * as transactionService from '../services/transaction.service';
 import { getCashflowSummary, DEFAULT_MONTHS } from '../services/cashflow.service';
 import { getAnalytics } from '../services/analytics.service';
+import { decodeStatement } from '../services/pensionStatement.service';
 import {
   importStatement,
+  importPensionStatement,
   importCategories,
   detectFormat,
   FORMAT_LABELS,
@@ -135,7 +137,11 @@ export const importTransactions = async (req: Request, res: Response): Promise<v
   const user = req.user!;
   const { groupId } = req.query;
   const groups = contextGroups(req);
-  const csv = typeof req.body === 'string' ? req.body : '';
+  // Raw bytes, decoded here rather than by the body parser: the Pensionikeskus
+  // export is ISO-8859-1 and every other file is UTF-8. Decoded as the wrong
+  // one, "Osakute märkimine" becomes mojibake — and since that string is what
+  // selects the rows, the import finds nothing and reports success.
+  const csv = decodeStatement(Buffer.isBuffer(req.body) ? req.body : String(req.body ?? ''));
 
   const options = {
     userId: user.id,
@@ -144,15 +150,16 @@ export const importTransactions = async (req: Request, res: Response): Promise<v
   };
 
   const declared = req.query.format as TransactionFileFormat | undefined;
-  if (declared && declared !== 'seb' && declared !== 'tumbaland') {
-    throw new BadRequestError('format must be seb or tumbaland');
+  if (declared && !(declared in FORMAT_LABELS)) {
+    throw new BadRequestError(`format must be one of ${Object.keys(FORMAT_LABELS).join(', ')}`);
   }
 
   const detected = detectFormat(csv);
   if (detected === null) {
     throw new BadRequestError(
-      'Unrecognised file. Expected a SEB account statement (a "Kliendi konto" column) ' +
-      'or a Tumbaland export (an "id" and a "category" column).'
+      'Unrecognised file. Expected a SEB account statement (a "Kliendi konto" column), ' +
+      'a Pensionikeskus statement (a "Sammas" column), or a Tumbaland export ' +
+      '(an "id" and a "category" column).'
     );
   }
   // A declared format that disagrees with the file is a mistake worth stopping
@@ -171,6 +178,21 @@ export const importTransactions = async (req: Request, res: Response): Promise<v
       result.updated > 0
         ? `Recategorised ${result.updated} transaction${result.updated === 1 ? '' : 's'}`
         : 'No categories changed'
+    );
+    return;
+  }
+
+  if (detected === 'pensionikeskus') {
+    const result = await importPensionStatement(csv, options);
+    const covered = result.coveredByBank > 0
+      ? `; ${result.coveredByBank} already paid by bank transfer`
+      : '';
+    sendSuccess(
+      res,
+      result,
+      result.imported > 0
+        ? `Imported ${result.imported} contribution${result.imported === 1 ? '' : 's'}${covered}`
+        : `Nothing new to import${covered || '; all contributions already held'}`
     );
     return;
   }

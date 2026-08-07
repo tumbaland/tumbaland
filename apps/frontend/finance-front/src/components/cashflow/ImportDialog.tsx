@@ -14,11 +14,20 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableRow
+  TableRow,
+  TextField,
+  MenuItem
 } from '@mui/material';
 import { UploadFile, CheckCircle } from '@mui/icons-material';
 import { useImportStatement } from '../../hooks/useCashflow';
-import { AnyImportResult, isCategoryResult, FORMAT_LABELS } from '../../services/cashflowService';
+import {
+  AnyImportResult,
+  ImportResult,
+  TransactionFileFormat,
+  isCategoryResult,
+  isPensionResult,
+  FORMAT_LABELS
+} from '../../services/cashflowService';
 import { formatCurrency } from '../../utils/numberUtils';
 
 interface ImportDialogProps {
@@ -38,6 +47,13 @@ const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, tenantGroupI
   const [result, setResult] = useState<AnyImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  /**
+   * Empty means "work it out from the file", which is the default because it is
+   * reliable and saves a decision. Choosing a format turns it into an assertion
+   * the server checks: pick wrong and the upload is refused rather than the
+   * file being read as something it is not.
+   */
+  const [format, setFormat] = useState<TransactionFileFormat | ''>('');
 
   const reset = () => {
     setResult(null);
@@ -47,6 +63,7 @@ const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, tenantGroupI
 
   const handleClose = () => {
     reset();
+    setFormat('');
     onClose();
   };
 
@@ -56,16 +73,23 @@ const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, tenantGroupI
     setFileName(file.name);
 
     try {
-      const csv = await file.text();
-      const imported = await importMutation.mutateAsync({ csv, groupId: tenantGroupId });
+      // Bytes, not text: file.text() decodes as UTF-8, which corrupts the
+      // Latin-1 Pensionikeskus export before the server ever sees it.
+      const csv = await file.arrayBuffer();
+      const imported = await importMutation.mutateAsync({
+        csv,
+        groupId: tenantGroupId,
+        format: format || undefined
+      });
       setResult(imported);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Import failed');
     }
   };
 
-  const statement = result && !isCategoryResult(result) ? result : null;
   const categories = result && isCategoryResult(result) ? result : null;
+  const pension = result && isPensionResult(result) ? result : null;
+  const statement = result && !categories && !pension ? (result as ImportResult) : null;
   const skippedEntries = Object.entries(statement?.skipped || {});
 
   return (
@@ -73,7 +97,8 @@ const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, tenantGroupI
       <DialogTitle>Import bank statement</DialogTitle>
       <DialogContent>
         <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-          Two kinds of file land here and the format decides what happens.
+          Three kinds of file land here and the format decides what happens — you do not have to
+        say which is which.
         </Typography>
         <Box component="ul" sx={{ color: 'text.secondary', pl: 2.5, mt: 0, mb: 2 }}>
           <Typography component="li" variant="body2">
@@ -82,10 +107,39 @@ const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, tenantGroupI
             rather than duplicated.
           </Typography>
           <Typography component="li" variant="body2">
+            <strong>A Pensionikeskus account statement.</strong> One file covers every pillar and
+            fund manager. II pillar is imported — it comes out of gross pay and no bank statement
+            can see it. III pillar was paid by bank transfer you have already imported, so those
+            are matched against it and left alone.
+          </Typography>
+          <Typography component="li" variant="body2">
             <strong>An export from this page with the categories edited.</strong> Only the category
             column is read back; everything else stays as the bank reported it.
           </Typography>
         </Box>
+
+        <TextField
+          select
+          fullWidth
+          size="small"
+          label="File type"
+          value={format}
+          onChange={(e) => setFormat(e.target.value as TransactionFileFormat | '')}
+          disabled={importMutation.isPending}
+          helperText={
+            format
+              ? `The file will be refused if it is not a ${FORMAT_LABELS[format]}.`
+              : 'Worked out from the file. Choose one to have it checked instead.'
+          }
+          sx={{ mb: 2 }}
+        >
+          <MenuItem value="">Detect automatically</MenuItem>
+          {(Object.keys(FORMAT_LABELS) as TransactionFileFormat[]).map((key) => (
+            <MenuItem key={key} value={key}>
+              {FORMAT_LABELS[key]}
+            </MenuItem>
+          ))}
+        </TextField>
 
         <Button
           component="label"
@@ -131,6 +185,56 @@ const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, tenantGroupI
             sx={{ mt: 2 }}
             label={`Read as: ${FORMAT_LABELS[result.format]}`}
           />
+        )}
+
+        {pension && (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+              {pension.imported > 0
+                ? `${pension.imported} contribution${pension.imported === 1 ? '' : 's'} imported`
+                : 'Nothing new to import'}
+            </Typography>
+            <Chip
+              size="small"
+              variant="outlined"
+              label={`Read as: ${FORMAT_LABELS[pension.format]}`}
+              sx={{ mb: 1 }}
+            />
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              {pension.contributions} contribution{pension.contributions === 1 ? '' : 's'} in the file
+              {pension.period ? `, ${pension.period.from} to ${pension.period.to}` : ''}.
+            </Typography>
+
+            {pension.byPillar.map((p) => (
+              <Box key={p.pillar} sx={{ mt: 1 }}>
+                <Typography variant="body2">
+                  <strong>{p.pillar} pillar</strong> — {p.count} contribution
+                  {p.count === 1 ? '' : 's'}, {p.amount.toFixed(0)} €
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  {p.action}
+                </Typography>
+              </Box>
+            ))}
+
+            {pension.coveredByBank > 0 && (
+              <Alert severity="info" sx={{ mt: 1.5 }}>
+                {pension.coveredByBank} contribution{pension.coveredByBank === 1 ? '' : 's'} already
+                reached the fund as a bank transfer you have imported. Counting them here would
+                double them.
+              </Alert>
+            )}
+            {pension.duplicates > 0 && (
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
+                {pension.duplicates} already imported from an earlier statement.
+              </Typography>
+            )}
+            {pension.funds.length > 0 && (
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
+                Funds: {pension.funds.join(', ')}
+              </Typography>
+            )}
+          </Box>
         )}
 
         {categories && (

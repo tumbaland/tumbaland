@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { TransactionFileFormat } from '../services/cashflowService';
 import {
   getTransactions,
   getCategories,
@@ -29,7 +30,15 @@ const invalidateCashflow = (queryClient: ReturnType<typeof useQueryClient>) => {
 export const useImportStatement = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ csv, groupId }: { csv: string; groupId?: string }) => importStatement(csv, groupId),
+    mutationFn: ({
+      csv,
+      groupId,
+      format
+    }: {
+      csv: string | ArrayBuffer;
+      groupId?: string;
+      format?: TransactionFileFormat;
+    }) => importStatement(csv, groupId, format),
     onSuccess: () => invalidateCashflow(queryClient)
   });
 };

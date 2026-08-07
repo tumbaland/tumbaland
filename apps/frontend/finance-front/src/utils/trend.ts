@@ -86,3 +86,29 @@ export function profile(values: number[], count: number): Profile | null {
     values: window
   };
 }
+
+/**
+ * Totals over a sliding window — the trailing-twelve-months figure at every
+ * point in the series.
+ *
+ * Only complete windows are returned, so the series starts where the first full
+ * one ends. Including the partial windows at the front would draw a ramp out of
+ * nothing and read as a period of explosive growth that never happened.
+ *
+ * Every point covers the same number of periods, which is exactly what calendar
+ * buckets lack: a year or month still in progress is a stub, and setting it
+ * beside a finished one makes every figure look like a collapse.
+ */
+export function rollingSum(values: number[], window: number): number[] {
+  if (window < 1 || values.length < window) return [];
+
+  const out: number[] = [];
+  let total = values.slice(0, window).reduce((sum, v) => sum + v, 0);
+  out.push(total);
+
+  for (let i = window; i < values.length; i++) {
+    total += values[i] - values[i - window];
+    out.push(total);
+  }
+  return out;
+}

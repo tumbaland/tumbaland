@@ -43,9 +43,12 @@ it('sends the file contents and shows what came in', async () => {
 
   await upload('Kliendi konto;a\nrow-data');
 
+  // Sent as bytes, not text: decoding client-side would corrupt a Latin-1 file
   await waitFor(() =>
-    expect(mockedImport).toHaveBeenCalledWith({ csv: 'Kliendi konto;a\nrow-data', groupId: 'g1' })
+    expect(mockedImport).toHaveBeenCalledWith({ csv: expect.any(ArrayBuffer), groupId: 'g1' })
   );
+  const sent = mockedImport.mock.calls[0][0].csv as ArrayBuffer;
+  expect(new TextDecoder().decode(sent)).toBe('Kliendi konto;a\nrow-data');
   expect(await screen.findByText('3 transactions imported')).toBeInTheDocument();
   expect(screen.getByText(/2026-08-01 → 2026-08-31/)).toBeInTheDocument();
 });
@@ -166,7 +169,8 @@ describe('an edited export coming back', () => {
 
     expect(await screen.findByText('12 transactions recategorised')).toBeInTheDocument();
     expect(screen.getByText('Read as: Tumbaland export')).toBeInTheDocument();
-    expect(screen.queryByText(/imported/)).not.toBeInTheDocument();
+    // The statement panel's own heading, not the standing help text above it
+    expect(screen.queryByText(/transactions imported/)).not.toBeInTheDocument();
   });
 
   it('lists what rows moved into', async () => {
@@ -212,5 +216,168 @@ describe('an edited export coming back', () => {
     await upload();
 
     expect(await screen.findByText('No categories changed')).toBeInTheDocument();
+  });
+});
+
+describe('a Pensionikeskus statement', () => {
+  const pensionResult = (over = {}) => ({
+    format: 'pensionikeskus' as const,
+    kind: 'pension' as const,
+    imported: 7,
+    duplicates: 0,
+    coveredByBank: 3,
+    contributions: 10,
+    skipped: {},
+    period: { from: '2026-01-05', to: '2026-07-14' },
+    funds: ['LHV Pensionifond Indeks III', 'SEB pensionifond indeks'],
+    byPillar: [
+      { pillar: 'II' as const, count: 7, amount: 4249, action: 'Imported — never appears on a bank statement' },
+      { pillar: 'III' as const, count: 3, amount: 6000, action: 'Already paid by bank transfer; only unmatched ones imported' }
+    ],
+    ...over
+  });
+
+  it('reports contributions rather than transactions', async () => {
+    mockedImport.mockResolvedValue(pensionResult());
+    renderDialog();
+
+    await upload();
+
+    expect(await screen.findByText('7 contributions imported')).toBeInTheDocument();
+    expect(screen.getAllByText('Read as: Pensionikeskus account statement').length).toBeGreaterThan(0);
+  });
+
+  it('breaks the result down by pillar, since the two are handled oppositely', async () => {
+    mockedImport.mockResolvedValue(pensionResult());
+    renderDialog();
+
+    await upload();
+
+    // Exact strings: /II pillar/ as a regex also matches "III pillar"
+    expect(await screen.findByText('II pillar')).toBeInTheDocument();
+    expect(screen.getByText('III pillar')).toBeInTheDocument();
+    expect(screen.getByText(/never appears on a bank statement/)).toBeInTheDocument();
+    expect(screen.getByText(/only unmatched ones imported/)).toBeInTheDocument();
+  });
+
+  it('explains why the III pillar ones were left alone', async () => {
+    // Otherwise "10 in the file, 7 imported" reads as three going missing
+    mockedImport.mockResolvedValue(pensionResult());
+    renderDialog();
+
+    await upload();
+
+    expect(await screen.findByText(/Counting them here would double them/)).toBeInTheDocument();
+  });
+
+  it('says plainly when a re-import adds nothing', async () => {
+    mockedImport.mockResolvedValue(pensionResult({ imported: 0, duplicates: 7 }));
+    renderDialog();
+
+    await upload();
+
+    expect(await screen.findByText('Nothing new to import')).toBeInTheDocument();
+    expect(screen.getByText(/7 already imported from an earlier statement/)).toBeInTheDocument();
+  });
+
+  it('names the funds it saw', async () => {
+    mockedImport.mockResolvedValue(pensionResult());
+    renderDialog();
+
+    await upload();
+
+    expect(
+      await screen.findByText(/LHV Pensionifond Indeks III, SEB pensionifond indeks/)
+    ).toBeInTheDocument();
+  });
+
+  it('tells the reader a pension statement is accepted at all', () => {
+    renderDialog();
+
+    expect(screen.getByText(/A Pensionikeskus account statement\./)).toBeInTheDocument();
+  });
+});
+
+describe('choosing the file type', () => {
+  const pickFormat = async (label: string) => {
+    await userEvent.click(screen.getByLabelText('File type'));
+    await userEvent.click(await screen.findByRole('option', { name: label }));
+  };
+
+  it('detects the format by default, asserting nothing', async () => {
+    mockedImport.mockResolvedValue(result());
+    renderDialog();
+
+    await upload();
+
+    expect(mockedImport).toHaveBeenCalledWith(expect.objectContaining({ format: undefined }));
+  });
+
+  it('says the format will be worked out when nothing is chosen', () => {
+    renderDialog();
+
+    expect(screen.getByText(/Worked out from the file/)).toBeInTheDocument();
+  });
+
+  it('offers every format the importer reads', async () => {
+    renderDialog();
+    await userEvent.click(screen.getByLabelText('File type'));
+
+    for (const label of [
+      'Detect automatically',
+      'SEB account statement',
+      'Pensionikeskus account statement',
+      'Tumbaland export'
+    ]) {
+      expect(await screen.findByRole('option', { name: label })).toBeInTheDocument();
+    }
+  });
+
+  it('sends the chosen format so the server can check it', async () => {
+    mockedImport.mockResolvedValue(result());
+    renderDialog();
+
+    await pickFormat('Pensionikeskus account statement');
+    await upload();
+
+    expect(mockedImport).toHaveBeenCalledWith(
+      expect.objectContaining({ format: 'pensionikeskus' })
+    );
+  });
+
+  it('warns that a mismatched file will be refused', async () => {
+    renderDialog();
+
+    await pickFormat('SEB account statement');
+
+    expect(
+      screen.getByText('The file will be refused if it is not a SEB account statement.')
+    ).toBeInTheDocument();
+  });
+
+  it('surfaces the server refusing a file of the wrong type', async () => {
+    // Reading a statement as a category list would silently do nothing
+    mockedImport.mockRejectedValue(
+      new Error('This looks like a SEB account statement, not a Tumbaland export.')
+    );
+    renderDialog();
+
+    await pickFormat('Tumbaland export');
+    await upload();
+
+    expect(
+      await screen.findByText(/This looks like a SEB account statement/)
+    ).toBeInTheDocument();
+  });
+
+  it('keeps the choice between files, for uploading several of a kind', async () => {
+    mockedImport.mockResolvedValue(result());
+    renderDialog();
+
+    await pickFormat('SEB account statement');
+    await upload();
+    await upload();
+
+    expect(mockedImport).toHaveBeenLastCalledWith(expect.objectContaining({ format: 'seb' }));
   });
 });

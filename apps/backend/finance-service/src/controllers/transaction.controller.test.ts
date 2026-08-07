@@ -15,15 +15,28 @@ jest.mock('../services/analytics.service', () => ({ getAnalytics: jest.fn() }));
 jest.mock('../services/transactionImport.service', () => ({
   importStatement: jest.fn(),
   importCategories: jest.fn(),
+  importPensionStatement: jest.fn(),
   detectFormat: jest.fn(),
-  FORMAT_LABELS: { seb: 'SEB account statement', tumbaland: 'Tumbaland export' }
+  FORMAT_LABELS: {
+    seb: 'SEB account statement',
+    tumbaland: 'Tumbaland export',
+    pensionikeskus: 'Pensionikeskus account statement'
+  }
+}));
+jest.mock('../services/pensionStatement.service', () => ({
+  decodeStatement: (body: unknown) => (Buffer.isBuffer(body) ? body.toString('utf8') : String(body ?? ''))
 }));
 jest.mock('../services/transactionExport.service', () => ({ exportTransactions: jest.fn() }));
 
 import * as transactionService from '../services/transaction.service';
 import { getCashflowSummary } from '../services/cashflow.service';
 import { getAnalytics } from '../services/analytics.service';
-import { importStatement, importCategories, detectFormat } from '../services/transactionImport.service';
+import {
+  importStatement,
+  importCategories,
+  importPensionStatement,
+  detectFormat
+} from '../services/transactionImport.service';
 import { exportTransactions } from '../services/transactionExport.service';
 import {
   getTransactions,
@@ -40,6 +53,7 @@ const mockedSummary = getCashflowSummary as unknown as jest.Mock;
 const mockedAnalytics = getAnalytics as unknown as jest.Mock;
 const mockedImport = importStatement as unknown as jest.Mock;
 const mockedImportCategories = importCategories as unknown as jest.Mock;
+const mockedImportPension = importPensionStatement as unknown as jest.Mock;
 const mockedDetect = detectFormat as unknown as jest.Mock;
 const mockedExport = exportTransactions as unknown as jest.Mock;
 
@@ -250,6 +264,51 @@ describe('importTransactions', () => {
     await expect(
       importTransactions(req({ body: 'x', query: { format: 'tumbaland' } } as Partial<Request>), mockRes())
     ).rejects.toMatchObject({ name: 'BadRequestError' });
+  });
+
+  it('routes a Pensionikeskus statement to the pension import', async () => {
+    mockedDetect.mockReturnValue('pensionikeskus');
+    mockedImportPension.mockResolvedValue({
+      format: 'pensionikeskus', kind: 'pension', imported: 7, duplicates: 0, coveredByBank: 3,
+      contributions: 10, skipped: {}, period: null, funds: [], byPillar: []
+    });
+    const res = mockRes();
+
+    await importTransactions(req({ body: 'Sammas' } as Partial<Request>), res);
+
+    expect(mockedImportPension).toHaveBeenCalled();
+    expect(mockedImport).not.toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Imported 7 contributions; 3 already paid by bank transfer'
+      })
+    );
+  });
+
+  it('says plainly when a pension statement adds nothing', async () => {
+    mockedDetect.mockReturnValue('pensionikeskus');
+    mockedImportPension.mockResolvedValue({
+      format: 'pensionikeskus', kind: 'pension', imported: 0, duplicates: 7, coveredByBank: 3,
+      contributions: 10, skipped: {}, period: null, funds: [], byPillar: []
+    });
+    const res = mockRes();
+
+    await importTransactions(req({ body: 'Sammas' } as Partial<Request>), res);
+
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Nothing new to import; 3 already paid by bank transfer'
+      })
+    );
+  });
+
+  it('decodes a Latin-1 body rather than handing through mojibake', async () => {
+    mockedDetect.mockReturnValue('seb');
+    mockedImport.mockResolvedValue({ imported: 1, duplicates: 0, skipped: {}, period: null, rows: 1, categories: [] });
+
+    await importTransactions(req({ body: Buffer.from('csv-text', 'utf8') } as Partial<Request>), mockRes());
+
+    expect(mockedImport).toHaveBeenCalledWith('csv-text', expect.any(Object));
   });
 
   it('rejects a format it does not produce', async () => {

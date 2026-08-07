@@ -106,10 +106,20 @@ it('invalidates everything downstream after an import', async () => {
   const { result } = renderHook(() => useImportStatement(), { wrapper: Wrapper });
   await result.current.mutateAsync({ csv: 'data', groupId: 'g1' });
 
-  expect(mocked.importStatement).toHaveBeenCalledWith('data', 'g1');
+  expect(mocked.importStatement).toHaveBeenCalledWith('data', 'g1', undefined);
   expect(invalidatedKeys(invalidate)).toEqual(
     expect.arrayContaining(['transactions', 'cashflowSummary', 'cashflowAnalytics', 'dashboard'])
   );
+});
+
+it('passes a declared format through for the server to check', async () => {
+  mocked.importStatement.mockResolvedValue({ imported: 3, duplicates: 0 });
+  const { Wrapper } = wrapper();
+
+  const { result } = renderHook(() => useImportStatement(), { wrapper: Wrapper });
+  await result.current.mutateAsync({ csv: 'data', groupId: 'g1', format: 'pensionikeskus' });
+
+  expect(mocked.importStatement).toHaveBeenCalledWith('data', 'g1', 'pensionikeskus');
 });
 
 it('refreshes the figures after a category is corrected', async () => {

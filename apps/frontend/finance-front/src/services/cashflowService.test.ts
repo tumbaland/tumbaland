@@ -210,3 +210,42 @@ describe('saveBlob', () => {
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:x');
   });
 });
+
+describe('declaring the file type on import', () => {
+  it('sends no format when none is chosen, leaving the server to detect', async () => {
+    mockFetchOnce({ success: true, data: { imported: 1 } });
+
+    await importStatement('csv');
+
+    expect(lastUrl()).not.toContain('format=');
+  });
+
+  it('sends the declared format alongside the group', async () => {
+    mockFetchOnce({ success: true, data: { imported: 1 } });
+
+    await importStatement('csv', 'g1', 'pensionikeskus');
+
+    expect(lastUrl()).toContain('groupId=g1');
+    expect(lastUrl()).toContain('format=pensionikeskus');
+  });
+
+  it('sends a format with no group', async () => {
+    mockFetchOnce({ success: true, data: { imported: 1 } });
+
+    await importStatement('csv', undefined, 'seb');
+
+    expect(lastUrl()).toContain('format=seb');
+    expect(lastUrl()).not.toContain('groupId=');
+  });
+
+  it('sends the bytes it was handed rather than re-encoding them', async () => {
+    // A Latin-1 file decoded here would reach the server already corrupted
+    mockFetchOnce({ success: true, data: { imported: 1 } });
+    const bytes = new TextEncoder().encode('Osakute').buffer;
+
+    await importStatement(bytes);
+
+    expect(lastInit().body).toBeInstanceOf(Uint8Array);
+    expect(new TextDecoder().decode(lastInit().body as Uint8Array)).toBe('Osakute');
+  });
+});

@@ -143,12 +143,13 @@ export interface Analytics {
   currency: string;
 }
 
-/** What an edited export applies when it comes back. */
-export type TransactionFileFormat = 'seb' | 'tumbaland';
+/** The file shapes the import endpoint reads. */
+export type TransactionFileFormat = 'seb' | 'tumbaland' | 'pensionikeskus';
 
 export const FORMAT_LABELS: Record<TransactionFileFormat, string> = {
   seb: 'SEB account statement',
-  tumbaland: 'Tumbaland export'
+  tumbaland: 'Tumbaland export',
+  pensionikeskus: 'Pensionikeskus account statement'
 };
 
 export interface CategoryImportResult {
@@ -172,11 +173,28 @@ export interface ImportResult {
   categories: Array<{ category: string; count: number; amount: number }>;
 }
 
-/** Either shape can come back from the import endpoint — the file decides. */
-export type AnyImportResult = ImportResult | CategoryImportResult;
+export interface PensionImportResult {
+  format: 'pensionikeskus';
+  kind: 'pension';
+  imported: number;
+  duplicates: number;
+  /** III pillar contributions already held as the bank transfer that paid them. */
+  coveredByBank: number;
+  contributions: number;
+  skipped: Record<string, number>;
+  period: { from: string; to: string } | null;
+  funds: string[];
+  byPillar: Array<{ pillar: 'II' | 'III'; count: number; amount: number; action: string }>;
+}
+
+/** Any shape can come back from the import endpoint — the file decides. */
+export type AnyImportResult = ImportResult | CategoryImportResult | PensionImportResult;
 
 export const isCategoryResult = (r: AnyImportResult): r is CategoryImportResult =>
   (r as CategoryImportResult).kind === 'categories';
+
+export const isPensionResult = (r: AnyImportResult): r is PensionImportResult =>
+  (r as PensionImportResult).kind === 'pension';
 
 const TRANSACTIONS_URL = '/transactions';
 
@@ -207,15 +225,34 @@ export const getAnalytics = async (groupId?: string): Promise<Analytics> => {
  * Upload a bank statement. Sent as raw CSV rather than JSON because a decade of
  * one account runs to hundreds of kilobytes, well past the JSON body limit.
  */
-export const importStatement = async (csv: string, groupId?: string): Promise<AnyImportResult> => {
+export const importStatement = async (
+  csv: string | ArrayBuffer,
+  groupId?: string,
+  /**
+   * What the caller believes the file is. Left out, the server works it out
+   * from the contents; supplied, it is an assertion the server checks and
+   * rejects on mismatch rather than reading the file as the wrong thing.
+   */
+  format?: TransactionFileFormat
+): Promise<AnyImportResult> => {
   // `request` rather than `post`: post JSON-stringifies its body, which would
   // wrap the whole file in quotes and escape every newline. The statement has
   // to reach the server as the bytes the bank produced.
+  //
+  // Bytes rather than text for the same reason: the Pensionikeskus export is
+  // ISO-8859-1, and reading it with file.text() decodes it as UTF-8 and
+  // corrupts the Estonian row names before it ever leaves the browser. The
+  // server sniffs the encoding, so only one place has to know the rule.
   const res = await financeApi.request<ApiResponse<AnyImportResult>>(`${TRANSACTIONS_URL}/import`, {
     method: 'POST',
-    body: csv,
+    // Tested on the string rather than with `instanceof ArrayBuffer`: a buffer
+    // that crossed a realm boundary fails that check and would be posted as
+    // "[object ArrayBuffer]".
+    body: typeof csv === 'string' ? csv : new Uint8Array(csv),
     headers: { 'Content-Type': 'text/csv' },
-    ...(groupId ? { params: { groupId } } : {})
+    ...(groupId || format
+      ? { params: { ...(groupId ? { groupId } : {}), ...(format ? { format } : {}) } }
+      : {})
   });
   return res.data;
 };

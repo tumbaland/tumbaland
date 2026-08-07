@@ -23,7 +23,13 @@ router.use(authenticateToken);
  * only claims `application/json`, so a text parser scoped to this route
  * composes with it rather than fighting it.
  */
-const csvBody = express.text({ type: ['text/csv', 'text/plain'], limit: '15mb' });
+// Raw rather than text: the Pensionikeskus export is ISO-8859-1, and letting
+// the body parser assume UTF-8 corrupts the Estonian row names the import
+// matches on. The controller sniffs the encoding instead.
+const csvBody = express.raw({
+  type: ['text/csv', 'text/plain', 'application/octet-stream'],
+  limit: '15mb'
+});
 
 // These must precede /:id so they are not read as transaction ids
 router.get('/categories', getCategories);

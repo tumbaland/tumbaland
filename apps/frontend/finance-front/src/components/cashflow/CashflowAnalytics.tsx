@@ -17,14 +17,17 @@ import { BarChart } from '@mui/x-charts/BarChart';
 import { LineChart } from '@mui/x-charts/LineChart';
 import { Analytics, CategoryTrend } from '../../services/cashflowService';
 import { formatCurrency, formatPct, formatPeriod, formatCompactCurrency } from '../../utils/numberUtils';
-import { movingAverage, profile } from '../../utils/trend';
+import { movingAverage, profile, rollingSum } from '../../utils/trend';
 import Sparkline from './Sparkline';
 
 interface CashflowAnalyticsProps {
   analytics: Analytics;
 }
 
-type Granularity = 'month' | 'year';
+type Granularity = 'month' | 'rolling' | 'year';
+
+/** How many months a rolling window covers. */
+const ROLLING_MONTHS = 12;
 
 const INCOME_COLOR = '#11998e';
 const EXPENSE_COLOR = '#e05260';
@@ -42,6 +45,15 @@ const signColor = (v: number) => (v > 0 ? 'success.main' : v < 0 ? 'error.main' 
  * headline; the percentage is a footnote it has to earn.
  */
 const PERCENT_FLOOR = 250;
+
+/** The period that has not finished yet, in the key format the series uses. */
+const periodInProgress = (granularity: Granularity): string => {
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  return granularity === 'year'
+    ? String(year)
+    : `${year}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+};
 
 const moverNote = (c: CategoryTrend): string | null => {
   if (c.previous === 0) return 'new';
@@ -75,11 +87,30 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
         invested: y.invested
       }));
     }
-    return analytics.months.map((m) => ({
+
+    const months = analytics.months;
+    if (granularity !== 'rolling') {
+      return months.map((m) => ({
+        period: m.period,
+        income: m.income,
+        expense: m.consumption,
+        invested: m.invested
+      }));
+    }
+
+    // Each point is the twelve months ending there. Labelled by that closing
+    // month, because "the year to July 2026" is the thing being measured.
+    const roll = (pick: (m: (typeof months)[0]) => number) =>
+      rollingSum(months.map(pick), ROLLING_MONTHS);
+    const income = roll((m) => m.income);
+    const expense = roll((m) => m.consumption);
+    const invested = roll((m) => m.invested);
+
+    return months.slice(ROLLING_MONTHS - 1).map((m, i) => ({
       period: m.period,
-      income: m.income,
-      expense: m.consumption,
-      invested: m.invested
+      income: income[i],
+      expense: expense[i],
+      invested: invested[i]
     }));
   }, [analytics, granularity]);
 
@@ -102,7 +133,10 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
   const incomeTrend = useMemo(() => movingAverage(incomes, window), [incomes, window]);
   const expenseTrend = useMemo(() => movingAverage(expenses, window), [expenses, window]);
 
+  const rolling = granularity === 'rolling';
   const unit = granularity === 'month' ? 'month' : 'year';
+  /** What one point covers, for the labels. */
+  const pointLabel = rolling ? '12 months' : unit;
 
   /**
    * What a normal period looks like, over the last twelve of them.
@@ -113,10 +147,35 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
    * salaried one into "+15 € / month", and the step compared a finished month
    * against a week of the current one and reported -96%.
    */
-  const profileWindow = granularity === 'month' ? 12 : 5;
-  const expenseProfile = useMemo(() => profile(expenses, profileWindow), [expenses, profileWindow]);
-  const incomeProfile = useMemo(() => profile(incomes, profileWindow), [incomes, profileWindow]);
-  const profiled = labels.slice(-profileWindow);
+  const profileWindow = granularity === 'year' ? 5 : 12;
+
+  /**
+   * Everything except the period in progress.
+   *
+   * A month that is seven days old has neither its salary nor most of its
+   * spending in it yet. Left in, it became the quietest month on record, pulled
+   * the median down with it, and made the comparison read "121 €, 1377 € below
+   * typical" — which says nothing about spending and everything about the date.
+   */
+  // A rolling window always covers twelve whole months, so only the calendar
+  // views can end on a stub.
+  const complete =
+    !rolling && labels[labels.length - 1] === periodInProgress(granularity)
+      ? series.length - 1
+      : series.length;
+  const finishedExpenses = expenses.slice(0, complete);
+  const finishedIncomes = incomes.slice(0, complete);
+  const finishedLabels = labels.slice(0, complete);
+
+  const expenseProfile = useMemo(
+    () => profile(finishedExpenses, profileWindow),
+    [finishedExpenses, profileWindow]
+  );
+  const incomeProfile = useMemo(
+    () => profile(finishedIncomes, profileWindow),
+    [finishedIncomes, profileWindow]
+  );
+  const profiled = finishedLabels.slice(-profileWindow);
   const profileRange = profiled.length
     ? `${formatPeriod(profiled[0])} – ${formatPeriod(profiled[profiled.length - 1])}`
     : '';
@@ -136,6 +195,7 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
           onChange={(_, next: Granularity | null) => next && setGranularity(next)}
         >
           <ToggleButton value="month">Monthly</ToggleButton>
+          <ToggleButton value="rolling">Rolling 12m</ToggleButton>
           <ToggleButton value="year">Yearly</ToggleButton>
         </ToggleButtonGroup>
       </Box>
@@ -175,16 +235,21 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
             <Card key={card.label} elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
               <CardContent>
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  {card.label} — a typical {unit}
+                  {card.label} — a typical {pointLabel}
                 </Typography>
                 <Typography variant="h5" sx={{ fontWeight: 700 }}>{money(median)}</Typography>
                 <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-                  middle of the last {values.length} {unit}s · {profileRange}
+                  middle of the last {values.length} {rolling ? 'windows' : `full ${unit}s`} ·{' '}
+                  {profileRange}
                 </Typography>
 
                 <Sparkline
-                  values={values}
+                  points={values.map((value, i) => ({
+                    label: formatPeriod(profiled[i] ?? ''),
+                    value
+                  }))}
                   color={card.color}
+                  format={money}
                   label={`${card.label} over the last ${values.length} ${unit}s, ending at ${money(latest)}`}
                 />
 
@@ -193,7 +258,8 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
                     Quietest {money(low)} · heaviest {money(high)}
                   </Typography>
                   <Typography variant="body2" sx={{ fontWeight: 600, color: tone }}>
-                    {profiled.length > 0 && `${formatPeriod(profiled[profiled.length - 1])}: `}
+                    {rolling ? 'Year to' : `Last full ${unit},`}
+                    {profiled.length > 0 && ` ${formatPeriod(profiled[profiled.length - 1])}`}:{' '}
                     {money(latest)}
                     {gap === 0 ? ' — right on typical' : ` — ${money(Math.abs(gap))} ${direction} typical`}
                   </Typography>
@@ -206,23 +272,43 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
 
       <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', mb: 2 }}>
         <CardContent>
-          <Typography variant="subtitle2">What each {unit} was</Typography>
+          <Typography variant="subtitle2">
+            {rolling ? 'The twelve months ending each month' : `What each ${unit} was`}
+          </Typography>
           <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
             Spending is what was consumed. Money put into investments, savings or a
             pension is shown separately — it left the account but was not spent.
+            {rolling && ' Every point covers a full year, so any two are comparable.'}
           </Typography>
           <Box sx={{ overflowX: 'auto' }}>
-            <BarChart
-              className="chart-earned-spent"
-              height={280}
-              xAxis={[{ data: labels, scaleType: 'band', valueFormatter: periodLabel }]}
-              yAxis={[{ valueFormatter: axisMoney }]}
-              series={[
-                { data: incomes, label: 'Income', color: INCOME_COLOR, valueFormatter: chartMoney },
-                { data: expenses, label: 'Spending', color: EXPENSE_COLOR, valueFormatter: chartMoney }
-              ]}
-              margin={{ left: 70 }}
-            />
+            {/* Rolling windows overlap by eleven months, so they are drawn as a
+                line. Bars would imply each one is a period of its own and invite
+                the reader to add them up. */}
+            {rolling ? (
+              <LineChart
+                className="chart-earned-spent"
+                height={280}
+                xAxis={[{ data: labels, scaleType: 'point', valueFormatter: periodLabel }]}
+                yAxis={[{ valueFormatter: axisMoney }]}
+                series={[
+                  { data: incomes, label: 'Income', color: INCOME_COLOR, showMark: false, valueFormatter: chartMoney },
+                  { data: expenses, label: 'Spending', color: EXPENSE_COLOR, showMark: false, valueFormatter: chartMoney }
+                ]}
+                margin={{ left: 70 }}
+              />
+            ) : (
+              <BarChart
+                className="chart-earned-spent"
+                height={280}
+                xAxis={[{ data: labels, scaleType: 'band', valueFormatter: periodLabel }]}
+                yAxis={[{ valueFormatter: axisMoney }]}
+                series={[
+                  { data: incomes, label: 'Income', color: INCOME_COLOR, valueFormatter: chartMoney },
+                  { data: expenses, label: 'Spending', color: EXPENSE_COLOR, valueFormatter: chartMoney }
+                ]}
+                margin={{ left: 70 }}
+              />
+            )}
           </Box>
 
           {/* Investing runs several times larger than a month's spending — a
@@ -233,7 +319,7 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
           {hasInvesting && (
             <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
               <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
-                Invested — same {unit}s, its own scale
+                Invested — same {rolling ? 'windows' : `${unit}s`}, its own scale
               </Typography>
               <Box sx={{ overflowX: 'auto' }}>
                 <BarChart
@@ -252,6 +338,8 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
         </CardContent>
       </Card>
 
+      {/* A moving average of a rolling total smooths what is already smooth. */}
+      {!rolling && (
       <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', mb: 2 }}>
         <CardContent>
           <Typography variant="subtitle2">Where it is heading</Typography>
@@ -284,6 +372,7 @@ const CashflowAnalytics: React.FC<CashflowAnalyticsProps> = ({ analytics }) => {
           </Box>
         </CardContent>
       </Card>
+      )}
 
       {analytics.years.length > 0 && (
         <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', mb: 2 }}>

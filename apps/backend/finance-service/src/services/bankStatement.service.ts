@@ -141,15 +141,50 @@ interface CategoryRule {
 }
 
 export const CATEGORY_RULES: CategoryRule[] = [
-  { category: 'Salary', type: 'income', match: /TEHNIKAÜLIKOOL|TALTECH/i },
-  { category: 'Freelance', type: 'income', match: /Brainbase|ESTNETI/i },
+  // Wages, however the payer worded it. "Töötasu" and "Palgamakse" are the
+  // Estonian terms and say outright what the payment is, so they hold for an
+  // employer nobody has named a rule after yet.
+  { category: 'Salary', type: 'income', match: /Töötasu|Palgamakse/i },
+  // Employers by name, for the ones that reference only an invoice number.
+  // ESTNETI OÜ is Betsson's paying entity (Jul 2019 – Oct 2020); Brainbase
+  // followed (Nov 2020 – Jun 2022). Both were jobs, not contract work — filing
+  // them as freelance made a continuous decade of employment look broken up.
+  { category: 'Salary', type: 'income', match: /TEHNIKAÜLIKOOL|TALTECH|Brainbase|ESTNETI/i },
   { category: 'Tax refund', type: 'income', match: /RAHANDUSMINISTEERIUM/i },
 
-  // Capital moving to and from an asset, in either direction. A term deposit
-  // maturing is the principal coming back, not interest — counting the whole
-  // "january payment" as income overstated earnings by tens of thousands — and
-  // a crypto withdrawal is the same money returning, not a salary.
+  // Capital moving to and from an asset, in either direction: a term deposit
+  // maturing is the principal coming back, and a crypto withdrawal is the same
+  // money returning, neither of them earnings.
+  //
+  // The counterparty's name alone does not settle it, and reading it that way
+  // is what went wrong with Bigbank below — a name can be an employer and a
+  // deposit provider at once.
   { category: 'Investments', match: /Binance|COINBASE|Kraken|Bitstamp|Interactive Brokers|Lightyear/i },
+  // Paysafe owns Skrill and Neteller, and this is the crypto money coming back
+  // by a different road than it left by. Reading it as income left €4,000 sent
+  // to Binance in May 2021 with no return leg — the only unexplained inflow in
+  // ten years of statements — and showed a crypto holding that does not exist.
+  // Counting it closes the position at €622 ahead of what went in.
+  //
+  // The bank data cannot prove the link: every other Binance withdrawal came
+  // through Clear Junction saying "Withdrawal from Binance", while this one
+  // arrives from Luxembourg carrying only a transaction reference. It rests on
+  // the amounts reconciling and on the account holder's own account of it.
+  { category: 'Investments', match: /Paysafe/i },
+  // Bigbank was an employer from Aug 2022 to Jul 2023 and a deposit provider
+  // besides, and the two arrive from different accounts. Reading the whole
+  // name as capital buried a year of salary: "tasu" is a fee, "lõpparve" the
+  // final wage settlement, and both were being netted out of income as though
+  // a term deposit had matured.
+  //
+  // \btasu\b and not /tasu/ — the bank's own "Teenustasu" and "hooldustasu"
+  // must not read as pay.
+  { category: 'Salary', type: 'income', match: /BIGBANK.*\btasu\b|BIGBANK.*lõpparve/i },
+  // Reimbursements and the employer-funded wellness benefit reverse spending
+  // rather than adding to pay.
+  { category: 'Refund', type: 'income', match: /Cost report.*TAHVES|compensated by Bigbank/i },
+  // What is left is the deposit relationship: a term deposit going out and the
+  // principal, or an early termination, coming back.
   { category: 'Savings', match: /BIGBANK|Bigbank/i },
   { category: 'Pension', match: /PENSIONIKESKUS/i },
   // Actual interest, which is earnings and stays in the income figure
@@ -196,7 +231,7 @@ export const CATEGORY_RULES: CategoryRule[] = [
   {
     category: 'Entertainment',
     match:
-      /HUMBLEBUNDLE|BLIZZARD|UBISOFT|ORIGIN\.COM|GREENMANGAMING|MACGAMESTORE|FANTASIAPELIT|APOLLO|MUSEI|MUSEUM|MUSEO|ACQUARIO|AHHAA|LOOMAAIA|BOWLINGU|SKYPARK|SIGHTSEEIN|CINAMON|FIENTA/i
+      /HUMBLEBUNDLE|BLIZZARD|UBISOFT|ORIGIN\.COM|GREENMANGAMING|MACGAMESTORE|FANTASIAPELIT|APOLLO|MUSEI|MUSEUM|MUSEO|ACQUARIO DI|BOOKSHOP ACQUARIO|AHHAA|LOOMAAIA|BOWLINGU|SKYPARK|SIGHTSEEIN|CINAMON|FIENTA/i
   },
   // Clubs and studios billed as a membership or a term's tuition.
   {

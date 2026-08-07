@@ -130,7 +130,7 @@ it('describes a typical period rather than a trend line', () => {
   expect(screen.getByText('Spending — a typical month')).toBeInTheDocument();
   // The two months are 1200 and 1400, so the middle is 1300
   expect(screen.getByText('1300 €')).toBeInTheDocument();
-  expect(screen.getAllByText(/middle of the last 2 months/).length).toBe(2);
+  expect(screen.getAllByText(/middle of the last 2 full months/).length).toBe(2);
 });
 
 it('gives the range beside the median, so it does not read as a budget', () => {
@@ -143,7 +143,9 @@ it('compares the newest period against typical, not against the one before', () 
   // Against the previous month, a part-imported month reads as a collapse
   render(<CashflowAnalytics analytics={analytics} />);
 
-  expect(screen.getByText(/Feb 2025: 1400 € — 100 € above typical/)).toBeInTheDocument();
+  expect(
+    screen.getByText(/Last full month, Feb 2025: 1400 € — 100 € above typical/)
+  ).toBeInTheDocument();
 });
 
 it('draws the shape of the window under the number', () => {
@@ -380,5 +382,144 @@ describe('biggest movers', () => {
     );
 
     expect(screen.getByText('+13.0%')).toBeInTheDocument();
+  });
+});
+
+describe('the month in progress', () => {
+  // A month seven days old has neither its salary nor most of its spending yet
+  const withMonths = (months: Array<{ period: string; consumption: number; income: number }>) => ({
+    ...analytics,
+    months: months.map((m) => ({
+      period: m.period,
+      income: m.income,
+      expense: m.consumption,
+      consumption: m.consumption,
+      invested: 0,
+      savings: m.income - m.consumption
+    }))
+  });
+
+  beforeEach(() => vi.setSystemTime(new Date('2026-08-07T00:00:00Z')));
+  afterEach(() => vi.useRealTimers());
+
+  const series = [
+    { period: '2026-06', consumption: 1400, income: 5000 },
+    { period: '2026-07', consumption: 1600, income: 5000 },
+    { period: '2026-08', consumption: 121, income: 0 }
+  ];
+
+  it('keeps a part-imported month out of the median', () => {
+    render(<CashflowAnalytics analytics={withMonths(series)} />);
+
+    // 1400 and 1600, not 121/1400/1600 which would give 1400
+    expect(screen.getByText('1500 €')).toBeInTheDocument();
+  });
+
+  it('keeps it out of the quietest-month range', () => {
+    // "Quietest 121 €" was the calendar talking, not spending
+    render(<CashflowAnalytics analytics={withMonths(series)} />);
+
+    expect(screen.getByText(/Quietest 1400 € · heaviest 1600 €/)).toBeInTheDocument();
+  });
+
+  it('compares the last finished month, not the one under way', () => {
+    render(<CashflowAnalytics analytics={withMonths(series)} />);
+
+    expect(screen.getByText(/Last full month, Jul 2026: 1600 €/)).toBeInTheDocument();
+    expect(screen.queryByText(/Aug 2026: 121 €/)).not.toBeInTheDocument();
+  });
+
+  it('says the window is of full months', () => {
+    render(<CashflowAnalytics analytics={withMonths(series)} />);
+
+    expect(screen.getAllByText(/middle of the last 2 full months/).length).toBe(2);
+  });
+
+  it('still plots the month in progress, which is a record of what happened', () => {
+    render(<CashflowAnalytics analytics={withMonths(series)} />);
+
+    expect(screen.getByTestId('bar-chart')).toHaveTextContent('Spending:1400,1600,121');
+  });
+});
+
+describe('rolling twelve-month windows', () => {
+  // Fourteen months, so there are three complete windows
+  const monthly = Array.from({ length: 14 }, (_, i) => ({
+    period: `2025-${String(i + 1).padStart(2, '0')}`.replace('2025-13', '2026-01').replace('2025-14', '2026-02'),
+    income: 1000,
+    expense: 100,
+    consumption: 100,
+    invested: 0,
+    savings: 900
+  }));
+  const rollingAnalytics = { ...analytics, months: monthly };
+
+  const showRolling = async () => {
+    render(<CashflowAnalytics analytics={rollingAnalytics} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Rolling 12m' }));
+  };
+
+  it('offers rolling beside the calendar views', () => {
+    render(<CashflowAnalytics analytics={rollingAnalytics} />);
+
+    expect(screen.getByRole('button', { name: 'Rolling 12m' })).toBeInTheDocument();
+  });
+
+  it('totals twelve months into every point', async () => {
+    await showRolling();
+
+    // 12 × 1000 income and 12 × 100 spending, at each of the three windows
+    expect(screen.getByTestId('line-chart')).toHaveTextContent('Income:12000,12000,12000');
+    expect(screen.getByTestId('line-chart')).toHaveTextContent('Spending:1200,1200,1200');
+  });
+
+  it('drops the partial windows at the start rather than drawing a ramp', async () => {
+    await showRolling();
+
+    // 14 months give 3 complete windows, not 14
+    expect(screen.getByTestId('line-chart').textContent).toContain('12000,12000,12000');
+    expect(screen.getByTestId('line-chart').textContent).not.toContain('1000,2000');
+  });
+
+  it('draws overlapping windows as a line, never as bars', async () => {
+    // Bars would imply each window is a period of its own and invite adding them
+    await showRolling();
+
+    expect(screen.getByTestId('line-chart')).toBeInTheDocument();
+    expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
+  });
+
+  it('labels each point by the month the window closes on', async () => {
+    await showRolling();
+
+    expect(screen.getByTestId('line-xaxis')).toHaveTextContent('Dec 2025');
+  });
+
+  it('says every point is comparable, which is the reason to use it', async () => {
+    await showRolling();
+
+    expect(screen.getByText(/Every point covers a full year/)).toBeInTheDocument();
+  });
+
+  it('describes a typical window rather than a typical month', async () => {
+    await showRolling();
+
+    expect(screen.getByText('Spending — a typical 12 months')).toBeInTheDocument();
+    expect(screen.getByText('Income — a typical 12 months')).toBeInTheDocument();
+    // Both cards carry the closing month
+    expect(screen.getAllByText(/Year to/)).toHaveLength(2);
+  });
+
+  it('drops the trailing-average chart, which would smooth what is already smooth', async () => {
+    await showRolling();
+
+    expect(screen.queryByText('Where it is heading')).not.toBeInTheDocument();
+  });
+
+  it('keeps the newest window, since a rolling one is never a stub', async () => {
+    // The calendar views drop a month in progress; a rolling window cannot be one
+    await showRolling();
+
+    expect(screen.getAllByText(/middle of the last 3 windows/)).toHaveLength(2);
   });
 });

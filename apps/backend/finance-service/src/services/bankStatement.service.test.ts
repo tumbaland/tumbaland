@@ -157,10 +157,21 @@ describe('categorize', () => {
     expect(categorize(row('RIMI'))).toBe('Groceries');
   });
 
+  it('reads the Estonian word for wages, whoever the payer is', () => {
+    // An employer with no rule of its own still says what the payment is
+    expect(categorize({ ...row('ESTNETI OÜ', 'income'), description: 'Töötasu 08.2019' })).toBe('Salary');
+    expect(categorize({ ...row('SOME OÜ', 'income'), description: 'Palgamakse juuli 2024' })).toBe('Salary');
+  });
+
+  it('files every past employer as pay, not as contract work', () => {
+    expect(categorize(row('ESTNETI OÜ', 'income'))).toBe('Salary');
+    expect(categorize(row('Brainbase OÜ', 'income'))).toBe('Salary');
+  });
+
   it('will not let an income rule claim a debit', () => {
-    // Freelance income shaped as a payment out is not freelance income
+    // Wages shaped as a payment out are not wages
     expect(categorize(row('Brainbase', 'expense'))).toBe('Uncategorised');
-    expect(categorize(row('Brainbase', 'income'))).toBe('Freelance');
+    expect(categorize(row('Brainbase', 'income'))).toBe('Salary');
   });
 
   it('reads the university as pay coming in and tuition going out', () => {
@@ -204,6 +215,52 @@ describe('categorize', () => {
     it('reads ATAC as Rome transit rather than the French grocer', () => {
       expect(categorize(row('ATAC TAP&GO'))).toBe('Transport');
     });
+  });
+
+  describe('a counterparty that is both an employer and a bank', () => {
+    // Bigbank paid a salary Aug 2022 – Jul 2023 and held term deposits. Reading
+    // the name as capital netted a year of pay out of the income series and
+    // left "Savings" with more coming back than ever went in.
+    const bigbank = (description: string, direction: 'income' | 'expense' = 'income') =>
+      categorize({ ...row('BIGBANK AS', direction), description });
+
+    it('reads a monthly fee as pay', () => {
+      expect(bigbank('jaanuari tasu/january payment')).toBe('Salary');
+      expect(bigbank('augusti tasu/august payment')).toBe('Salary');
+    });
+
+    it('reads the final wage settlement as pay', () => {
+      expect(bigbank('lõpparve')).toBe('Salary');
+    });
+
+    it('does not mistake the bank\'s own fees for pay', () => {
+      // "Teenustasu" and "hooldustasu" both end in tasu without being one
+      expect(categorize({ ...row('SEB', 'expense'), description: 'Teenustasu' })).toBe('Bank fees');
+      expect(
+        categorize({ ...row('SEB', 'expense'), description: 'Kaardi ...015522 hooldustasu kuus' })
+      ).toBe('Bank fees');
+    });
+
+    it('keeps the deposit relationship as capital', () => {
+      expect(bigbank('Bigbank AS TD-EEC-23000762')).toBe('Savings');
+      expect(bigbank('Termination payout')).toBe('Savings');
+      expect(bigbank('BIGKEE2B', 'expense')).toBe('Savings');
+    });
+
+    it('treats reimbursements as reversing spending, not as pay', () => {
+      expect(bigbank('Cost report 59865, TOOMAS TAHVES, Date 2023-04-14')).toBe('Refund');
+      expect(
+        categorize({ ...row('Stebby OÜ', 'income'), description: '158011 refund - compensated by Bigbank AS' })
+      ).toBe('Refund');
+    });
+  });
+
+  it('treats the Skrill/Neteller off-ramp as crypto returning, not as income', () => {
+    // Without this, 4000 EUR sent to Binance in May 2021 has no return leg and
+    // the books claim a crypto holding that was already cashed out
+    expect(
+      categorize({ ...row('Paysafe Payment Solutions Limited', 'income'), description: 'TRN1100000125967728.' })
+    ).toBe('Investments');
   });
 
   it('treats an IBKR deposit through Citibank as capital, not a bank payment', () => {

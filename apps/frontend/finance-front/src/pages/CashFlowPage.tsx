@@ -217,6 +217,7 @@ const CashFlowPage: React.FC = () => {
                   onChange={applyFilters}
                   categories={categories}
                   totals={totals}
+                  years={(analytics?.years || []).map((y) => y.year)}
                 />
 
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>

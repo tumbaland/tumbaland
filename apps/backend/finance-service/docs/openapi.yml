@@ -734,6 +734,27 @@ paths:
         accounts and self-transfers are left out — see the `skipped` map for what
         and why.
 
+        `pensionikeskus` — an account statement from
+        https://public.pensionikeskus.ee, the central Estonian pension registry.
+        One export covers every pillar and every fund manager, and the `Sammas`
+        column states the pillar outright, so nothing is guessed from a fund
+        name. Each contribution appears three times in the file — cash arriving,
+        cash leaving for the fund, units bought — and only the unit purchase is
+        read, so a contribution counts once. The euro amount is price × units;
+        the file states neither directly.
+
+        II pillar is imported as a *pair*: the money into the fund and the same
+        amount as the gross pay it came out of. It is deducted before pay
+        reaches a bank account, so no account statement can ever record it, and
+        writing only the outgoing leg would show money leaving an account that
+        never received it. III pillar is paid by bank transfer that the account
+        statement already records, so each one is matched against that transfer
+        (same amount, within seven days) and only genuinely unmatched
+        contributions are written.
+
+        The file is ISO-8859-1 rather than UTF-8; the body is read as raw bytes
+        and the encoding sniffed, so callers should send the file unmodified.
+
         `tumbaland` — a file previously produced by
         `GET /api/transactions/export`, with the categories edited. Only the
         `category` column is read back; rows are matched by `id`. This is the
@@ -748,7 +769,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [seb, tumbaland]
+            enum: [seb, tumbaland, pensionikeskus]
           description: >-
             Optional assertion about what the file is. When it disagrees with
             the detected shape the request is rejected rather than guessed at:
@@ -759,9 +780,16 @@ paths:
           text/csv:
             schema:
               type: string
+              format: binary
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
       responses:
         '200':
-          description: Import result — a statement result or a recategorise result
+          description: >-
+            Import result — a statement result, a recategorise result, or a
+            pension result. `format` says which shape was read.
           content:
             application/json:
               schema:
@@ -803,6 +831,53 @@ paths:
                                 items:
                                   type: object
                           - type: object
+                            title: Pension import
+                            properties:
+                              format:
+                                type: string
+                                enum: [pensionikeskus]
+                              kind:
+                                type: string
+                                enum: [pension]
+                              imported:
+                                type: integer
+                                description: Contributions written as new transactions
+                              duplicates:
+                                type: integer
+                                description: Already held from an earlier overlapping import
+                              coveredByBank:
+                                type: integer
+                                description: >-
+                                  III pillar contributions already present as the
+                                  bank transfer that paid for them, so importing
+                                  them would count the same money twice
+                              contributions:
+                                type: integer
+                                description: Every unit purchase the file contained
+                              skipped:
+                                type: object
+                                additionalProperties:
+                                  type: integer
+                              period:
+                                type: object
+                                nullable: true
+                                properties:
+                                  from: { type: string, format: date }
+                                  to: { type: string, format: date }
+                              funds:
+                                type: array
+                                items:
+                                  type: string
+                              byPillar:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    pillar: { type: string, enum: [II, III] }
+                                    count: { type: integer }
+                                    amount: { type: number }
+                                    action: { type: string }
+                          - type: object
                             title: Category import
                             properties:
                               format:
@@ -828,8 +903,9 @@ paths:
                                   type: object
         '400':
           description: >-
-            Empty file; a file that is neither shape; or a `format` that
-            disagrees with what the file actually is
+            Empty file; a file that is none of the three shapes; a pension
+            statement with no unit purchases in it; or a `format` that disagrees
+            with what the file actually is
         '403':
           description: Not a member of the target group
 
