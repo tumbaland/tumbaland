@@ -25,7 +25,8 @@ import {
   Edit as EditIcon,
   UploadFile as UploadIcon,
   Download as DownloadIcon,
-  AccountBalanceWallet as WalletIcon
+  AccountBalanceWallet as WalletIcon,
+  Rule as RuleIcon
 } from '@mui/icons-material';
 import TableSortLabel from '@mui/material/TableSortLabel';
 import { useTenantFilter } from '@tumbaland/components';
@@ -42,6 +43,7 @@ import ImportDialog from '../components/cashflow/ImportDialog';
 import CashflowAnalytics from '../components/cashflow/CashflowAnalytics';
 import CategoryBreakdown from '../components/cashflow/CategoryBreakdown';
 import CategoryEditDialog from '../components/cashflow/CategoryEditDialog';
+import CategoryRulesDialog from '../components/cashflow/CategoryRulesDialog';
 import CashflowSummaryCards from '../components/cashflow/CashflowSummaryCards';
 import TransactionFilters, {
   FilterValues,
@@ -69,6 +71,7 @@ const CashFlowPage: React.FC = () => {
   const [filters, setFilters] = useState<FilterValues>(EMPTY_FILTERS);
   const [page, setPage] = useState(0);
   const [importOpen, setImportOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
   const [editTarget, setEditTarget] = useState<Transaction | null>(null);
   const [sort, setSort] = useState<'date' | 'amount'>('date');
@@ -164,6 +167,9 @@ const CashFlowPage: React.FC = () => {
             What you earn and spend — and how much of your net-worth change it explains
           </Typography>
         </Box>
+        <Button startIcon={<RuleIcon />} onClick={() => setRulesOpen(true)}>
+          Category rules
+        </Button>
         <Button variant="contained" startIcon={<UploadIcon />} onClick={() => setImportOpen(true)}>
           Import statement
         </Button>
@@ -384,6 +390,19 @@ const CashFlowPage: React.FC = () => {
       )}
 
       <ImportDialog open={importOpen} onClose={() => setImportOpen(false)} tenantGroupId={tenantGroupId} />
+
+      {/* Mounted only while open: the dialog loads the rule list, and rendering
+          it unconditionally would fetch that on every visit to this page for
+          the sake of a button most visits never press. */}
+      {rulesOpen && (
+        <CategoryRulesDialog
+          open
+          onClose={() => setRulesOpen(false)}
+          categories={categories}
+          tenantGroupId={tenantGroupId}
+          notify={notify}
+        />
+      )}
 
       <CategoryEditDialog
         open={!!editTarget}

@@ -7,6 +7,8 @@ import trackedTickersRoutes from './routes/trackedTicker';
 import holdingsRoutes from './routes/holdings';
 import tradesRoutes from './routes/trades';
 import transactionsRoutes from './routes/transactions';
+import categoryRulesRoutes from './routes/categoryRules';
+import statementSettingsRoutes from './routes/statementSettings';
 import dashboardRoutes from './routes/dashboard';
 import { healthCheck } from './controllers/healthController';
 import { errorHandler, createBaseApp, metricsHandler } from '@tumbaland/backend-core';
@@ -25,6 +27,8 @@ app.use('/api/tracked-tickers', trackedTickersRoutes);
 app.use('/api/holdings', holdingsRoutes);
 app.use('/api/trades', tradesRoutes);
 app.use('/api/transactions', transactionsRoutes);
+app.use('/api/category-rules', categoryRulesRoutes);
+app.use('/api/statement-settings', statementSettingsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
 // Serve OpenAPI docs as static files

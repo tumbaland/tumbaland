@@ -8,7 +8,12 @@ import {
   classifyRow,
   categorize,
   StatementRow,
-  isInvestmentCategory
+  isInvestmentCategory,
+  compileRules,
+  matchCustomRule,
+  ownerNameTest,
+  fold,
+  FALLBACK_CATEGORIES
 } from './bankStatement.service';
 
 const HEADER =
@@ -127,161 +132,93 @@ describe('findOwnAccounts', () => {
       description: '', currency: 'EUR', ...o
     }));
 
+  // Built from names the way the import does, from the owner's settings. An
+  // invented name, so this file puts no real person back into the repository.
+  const ownerName = ownerNameTest(['SMITH ALEX', 'ALEX SMITH']);
+
   it('includes the accounts the statements are for', () => {
     expect(findOwnAccounts(rows([{ account: 'A' }, { account: 'B' }]))).toEqual(new Set(['A', 'B']));
   });
 
   it('adds a counterparty account addressed by the owner name', () => {
-    const found = findOwnAccounts(rows([{ counterpartyAccount: 'C', counterparty: 'TAHVES TOOMAS' }]));
+    const found = findOwnAccounts(
+      rows([{ counterpartyAccount: 'C', counterparty: 'SMITH ALEX' }]),
+      ownerName
+    );
     expect(found.has('C')).toBe(true);
   });
 
   it('matches the owner name written in either order', () => {
-    const found = findOwnAccounts(rows([{ counterpartyAccount: 'C', counterparty: 'TOOMAS TAHVES' }]));
+    const found = findOwnAccounts(
+      rows([{ counterpartyAccount: 'C', counterparty: 'ALEX SMITH' }]),
+      ownerName
+    );
     expect(found.has('C')).toBe(true);
   });
 
   it('leaves a third party out', () => {
-    const found = findOwnAccounts(rows([{ counterpartyAccount: 'C', counterparty: 'RIMI' }]));
+    const found = findOwnAccounts(
+      rows([{ counterpartyAccount: 'C', counterparty: 'A SUPERMARKET' }]),
+      ownerName
+    );
     expect(found.has('C')).toBe(false);
   });
-});
 
-describe('categorize', () => {
-  const row = (counterparty: string, direction: 'income' | 'expense' = 'expense'): StatementRow => ({
-    account: 'A', date: new Date(), dateText: '', counterpartyAccount: '',
-    counterparty, direction, amount: 1, externalId: 'x', description: '', currency: 'EUR'
-  });
-
-  it('matches a merchant rule', () => {
-    expect(categorize(row('RIMI'))).toBe('Groceries');
-  });
-
-  it('reads the Estonian word for wages, whoever the payer is', () => {
-    // An employer with no rule of its own still says what the payment is
-    expect(categorize({ ...row('ESTNETI OÜ', 'income'), description: 'Töötasu 08.2019' })).toBe('Salary');
-    expect(categorize({ ...row('SOME OÜ', 'income'), description: 'Palgamakse juuli 2024' })).toBe('Salary');
-  });
-
-  it('files every past employer as pay, not as contract work', () => {
-    expect(categorize(row('ESTNETI OÜ', 'income'))).toBe('Salary');
-    expect(categorize(row('Brainbase OÜ', 'income'))).toBe('Salary');
-  });
-
-  it('will not let an income rule claim a debit', () => {
-    // Wages shaped as a payment out are not wages
-    expect(categorize(row('Brainbase', 'expense'))).toBe('Uncategorised');
-    expect(categorize(row('Brainbase', 'income'))).toBe('Salary');
-  });
-
-  it('reads the university as pay coming in and tuition going out', () => {
-    expect(categorize(row('TALLINNA TEHNIKAÜLIKOOL', 'income'))).toBe('Salary');
-    expect(categorize(row('TALLINNA TEHNIKAÜLIKOOL', 'expense'))).toBe('Education');
-  });
-
-  describe('however the bank spelled it', () => {
-    // Card terminals transliterate: Südameapteek arrives as SUDAMEAPTEEK from
-    // one and SYDAMEAPTEEK from another, while a transfer keeps the diacritic
-    it.each([['Südameapteek'], ['SUDAMEAPTEEK ULEMISTE'], ['SYDAMEAPTEEK YLEMISTE']])(
-      '%s is the same pharmacy',
-      (name) => expect(categorize(row(name))).toBe('Health')
+  it('falls back to account numbers when no owner name is recorded', () => {
+    const found = findOwnAccounts(
+      rows([{ account: 'A' }, { counterpartyAccount: 'C', counterparty: 'SMITH ALEX' }]),
+      null
     );
-
-    it('matches a rule written in correct Estonian against a stripped name', () => {
-      expect(categorize(row('UHISTEENUSED AS'))).toBe('Housing');
-    });
-  });
-
-  describe('rules that used to catch the wrong rows', () => {
-    it('does not read any word ending in -ku as an apartment association', () => {
-      // KÜ folds to KU, which matched "Masku", "Kesku", "Lasnamäe kaupluku"…
-      expect(categorize(row('Masku Baltic OÜ'))).toBe('Home');
-      expect(categorize(row('K/Ü Järvevana tee 3'))).toBe('Housing');
-      expect(categorize(row('KÜ Sõpruse 201'))).toBe('Housing');
-    });
-
-    it('keeps the card fee out of housing', () => {
-      // "hooldustasu" is any maintenance fee, the bank's included
-      expect(categorize({ ...row('SEB'), description: 'Kaardi ...015522 hooldustasu kuus (12/2021)' }))
-        .toBe('Bank fees');
-      expect(categorize({ ...row('K/Ü Järvevana tee 3'), description: 'hooldustasu' })).toBe('Housing');
-    });
-
-    it('separates a Bolt ride from a Bolt Food order', () => {
-      expect(categorize(row('BOLT.EU/O/2503151203'))).toBe('Transport');
-      expect(categorize(row('Bolt Food'))).toBe('Restaurants');
-    });
-
-    it('reads ATAC as Rome transit rather than the French grocer', () => {
-      expect(categorize(row('ATAC TAP&GO'))).toBe('Transport');
-    });
-  });
-
-  describe('a counterparty that is both an employer and a bank', () => {
-    // Bigbank paid a salary Aug 2022 – Jul 2023 and held term deposits. Reading
-    // the name as capital netted a year of pay out of the income series and
-    // left "Savings" with more coming back than ever went in.
-    const bigbank = (description: string, direction: 'income' | 'expense' = 'income') =>
-      categorize({ ...row('BIGBANK AS', direction), description });
-
-    it('reads a monthly fee as pay', () => {
-      expect(bigbank('jaanuari tasu/january payment')).toBe('Salary');
-      expect(bigbank('augusti tasu/august payment')).toBe('Salary');
-    });
-
-    it('reads the final wage settlement as pay', () => {
-      expect(bigbank('lõpparve')).toBe('Salary');
-    });
-
-    it('does not mistake the bank\'s own fees for pay', () => {
-      // "Teenustasu" and "hooldustasu" both end in tasu without being one
-      expect(categorize({ ...row('SEB', 'expense'), description: 'Teenustasu' })).toBe('Bank fees');
-      expect(
-        categorize({ ...row('SEB', 'expense'), description: 'Kaardi ...015522 hooldustasu kuus' })
-      ).toBe('Bank fees');
-    });
-
-    it('keeps the deposit relationship as capital', () => {
-      expect(bigbank('Bigbank AS TD-EEC-23000762')).toBe('Savings');
-      expect(bigbank('Termination payout')).toBe('Savings');
-      expect(bigbank('BIGKEE2B', 'expense')).toBe('Savings');
-    });
-
-    it('treats reimbursements as reversing spending, not as pay', () => {
-      expect(bigbank('Cost report 59865, TOOMAS TAHVES, Date 2023-04-14')).toBe('Refund');
-      expect(
-        categorize({ ...row('Stebby OÜ', 'income'), description: '158011 refund - compensated by Bigbank AS' })
-      ).toBe('Refund');
-    });
-  });
-
-  it('treats the Skrill/Neteller off-ramp as crypto returning, not as income', () => {
-    // Without this, 4000 EUR sent to Binance in May 2021 has no return leg and
-    // the books claim a crypto holding that was already cashed out
-    expect(
-      categorize({ ...row('Paysafe Payment Solutions Limited', 'income'), description: 'TRN1100000125967728.' })
-    ).toBe('Investments');
-  });
-
-  it('treats an IBKR deposit through Citibank as capital, not a bank payment', () => {
-    expect(categorize({ ...row('CITIBANK EUROPE PLC, GERMANY BRANCH'), description: 'U4360253 / Toomas Tahves' }))
-      .toBe('Investments');
-  });
-
-  it('does not count a returned order as earnings', () => {
-    expect(categorize({ ...row('DLB TRADING OÜ', 'income'), description: 'Tag. tell. nr. 27190040' }))
-      .toBe('Refund');
-  });
-
-  it('falls back per direction', () => {
-    expect(categorize(row('Nobody'))).toBe('Uncategorised');
-    expect(categorize(row('Nobody', 'income'))).toBe('Other income');
+    expect(found).toEqual(new Set(['A']));
   });
 });
+
+describe('ownerNameTest', () => {
+  it('is null when no names are recorded, so nothing is claimed as own', () => {
+    expect(ownerNameTest([])).toBeNull();
+    expect(ownerNameTest()).toBeNull();
+  });
+
+  it('is null when the names are all blank', () => {
+    expect(ownerNameTest(['', '   '])).toBeNull();
+  });
+
+  it('ignores case and surrounding text', () => {
+    const isOwner = ownerNameTest(['Alex Smith'])!;
+    expect(isOwner('ALEX SMITH')).toBe(true);
+    expect(isOwner('MR ALEX SMITH JR')).toBe(true);
+    expect(isOwner('ALEXANDRA SMITHERS')).toBe(false);
+  });
+
+  it('tolerates however the bank spaced the name', () => {
+    const isOwner = ownerNameTest(['ALEX SMITH'])!;
+    expect(isOwner('ALEX   SMITH')).toBe(true);
+    expect(isOwner('  ALEX SMITH  ')).toBe(true);
+  });
+
+  it('needs both orderings listed, because the bank writes it both ways', () => {
+    const oneWay = ownerNameTest(['ALEX SMITH'])!;
+    expect(oneWay('SMITH ALEX')).toBe(false);
+
+    const bothWays = ownerNameTest(['ALEX SMITH', 'SMITH ALEX'])!;
+    expect(bothWays('SMITH ALEX')).toBe(true);
+  });
+
+  it('matches a name written with accents against the transliterated form', () => {
+    const isOwner = ownerNameTest(['Ülle Käär'])!;
+    expect(isOwner('ULLE KAAR')).toBe(true);
+  });
+
+  it('leaves a third party alone', () => {
+    expect(ownerNameTest(['ALEX SMITH'])!('A SUPERMARKET')).toBe(false);
+  });
+});
+
 
 describe('classifyRow', () => {
   const rowsOf = (csv: string) => readStatement(csv);
   const own = new Set(['EE-OWN']);
+  const ownerName = ownerNameTest(['SMITH ALEX', 'ALEX SMITH']);
 
   it('marks a transfer to an own account', () => {
     const [row] = rowsOf(statement(line({ cpAccount: 'EE-OWN' })));
@@ -289,8 +226,13 @@ describe('classifyRow', () => {
   });
 
   it('marks a transfer by owner name even without an account', () => {
-    const [row] = rowsOf(statement(line({ cp: 'TAHVES TOOMAS' })));
-    expect(classifyRow(row, new Set()).kind).toBe('transfer');
+    const [row] = rowsOf(statement(line({ cp: 'ALEX SMITH' })));
+    expect(classifyRow(row, new Set(), [], ownerName).kind).toBe('transfer');
+  });
+
+  it('treats a name as an ordinary counterparty when none is configured', () => {
+    const [row] = rowsOf(statement(line({ cp: 'ALEX SMITH' })));
+    expect(classifyRow(row, new Set(), [], null).kind).toBe('cashflow');
   });
 
   it('marks a securities settlement', () => {
@@ -313,39 +255,168 @@ describe('classifyRow', () => {
     expect(classifyRow(row, own).kind).toBe('pension');
   });
 
-  it('treats everything else as cash flow, with a category', () => {
+  it('treats everything else as cash flow, falling back when no rule claims it', () => {
     const [row] = rowsOf(statement(line()));
-    expect(classifyRow(row, own)).toEqual({ kind: 'cashflow', category: 'Groceries' });
+    expect(classifyRow(row, own)).toEqual({ kind: 'cashflow', category: 'Uncategorised' });
   });
 });
 
 describe('investment categories', () => {
-  const row = (counterparty: string): StatementRow => ({
-    account: 'A', date: new Date(), dateText: '', counterpartyAccount: '',
-    counterparty, direction: 'expense', amount: 1, externalId: 'x', description: '', currency: 'EUR'
-  });
-
-  it('recognises a crypto exchange as investing, not spending', () => {
-    expect(categorize(row('Binance'))).toBe('Investments');
-    expect(categorize(row('COINBASE VCKKPA9JJ'))).toBe('Investments');
-  });
-
-  it('recognises a deposit bank as saving', () => {
-    expect(categorize(row('Bigbank AS'))).toBe('Savings');
-  });
-
-  it('marks those categories as non-consumption', () => {
+  it('marks the capital categories as non-consumption', () => {
     expect(isInvestmentCategory('Investments')).toBe(true);
     expect(isInvestmentCategory('Savings')).toBe(true);
+    expect(isInvestmentCategory('Pension')).toBe(true);
     expect(isInvestmentCategory('Groceries')).toBe(false);
   });
+});
 
-  it('categorises tax paid out, without claiming the refund coming in', () => {
-    expect(categorize(row('RAHANDUSMINISTEERIUM'))).toBe('Tax');
-    expect(categorize({ ...row('RAHANDUSMINISTEERIUM'), direction: 'income' })).toBe('Tax refund');
+describe('rules the owner wrote', () => {
+  const row = (counterparty: string, direction: 'income' | 'expense' = 'expense'): StatementRow => ({
+    account: 'A', date: new Date(), dateText: '', counterpartyAccount: '',
+    counterparty, direction, amount: 1, externalId: 'x', description: '', currency: 'EUR'
   });
 
-  it('catches the securities custody fee', () => {
-    expect(categorize({ ...row('SEB'), description: 'VP H.TASU 12.2023' })).toBe('Bank fees');
+  describe('compileRules', () => {
+    it('folds the diacritics off a pattern and lowercases it', () => {
+      expect(compileRules([{ pattern: ' Külapood ', category: 'Health' }])).toEqual([
+        { pattern: ' Külapood ', needle: 'kulapood', category: 'Health', type: undefined }
+      ]);
+    });
+
+    it('drops a pattern with nothing to match on', () => {
+      expect(compileRules([{ pattern: '   ', category: 'Health' }])).toEqual([]);
+    });
+
+    it('keeps the direction restriction', () => {
+      expect(compileRules([{ pattern: 'ACME', category: 'X', type: 'income' }])[0].type).toBe('income');
+    });
+  });
+
+  describe('matchCustomRule', () => {
+    const rules = compileRules([
+      { pattern: 'BOLT FOOD', category: 'Restaurants' },
+      { pattern: 'BOLT', category: 'Transport' },
+      { pattern: 'ACME', category: 'Consulting', type: 'income' }
+    ]);
+
+    it('returns the first rule that claims the text', () => {
+      expect(matchCustomRule(rules, 'BOLT FOOD OU', 'expense')?.category).toBe('Restaurants');
+      expect(matchCustomRule(rules, 'BOLT OU', 'expense')?.category).toBe('Transport');
+    });
+
+    it('ignores case', () => {
+      expect(matchCustomRule(rules, 'bolt food ou', 'expense')?.category).toBe('Restaurants');
+    });
+
+    it('skips a rule written for the other direction', () => {
+      expect(matchCustomRule(rules, 'ACME OU', 'expense')).toBeNull();
+      expect(matchCustomRule(rules, 'ACME OU', 'income')?.category).toBe('Consulting');
+    });
+
+    it('is null when nothing matches', () => {
+      expect(matchCustomRule(rules, 'SELVER', 'expense')).toBeNull();
+    });
+
+    it('is null when there are no rules', () => {
+      expect(matchCustomRule([], 'BOLT', 'expense')).toBeNull();
+    });
+  });
+
+  describe('categorize with rules', () => {
+    it('files a merchant the owner has a rule for', () => {
+      const rules = compileRules([{ pattern: 'VELOMARKET', category: 'Bicycle' }]);
+      expect(categorize(row('VELOMARKET OU'), rules)).toBe('Bicycle');
+    });
+
+    it('matches however the terminal transliterated the name', () => {
+      const rules = compileRules([{ pattern: 'Külapood', category: 'Groceries' }]);
+      expect(categorize(row('KULAPOOD TARTU'), rules)).toBe('Groceries');
+    });
+
+    it('lets an earlier rule win over a later one that also matches', () => {
+      // The whole reason order is the owner's to set
+      const rules = compileRules([
+        { pattern: 'GOOGLE CLOUD', category: 'Infrastructure' },
+        { pattern: 'GOOGLE', category: 'Subscriptions' }
+      ]);
+      expect(categorize(row('GOOGLE CLOUD EMEA'), rules)).toBe('Infrastructure');
+      expect(categorize(row('GOOGLE PLAY'), rules)).toBe('Subscriptions');
+    });
+
+    it('falls back when no rule claims the row', () => {
+      const rules = compileRules([{ pattern: 'VELOMARKET', category: 'Bicycle' }]);
+      expect(categorize(row('A SUPERMARKET'), rules)).toBe('Uncategorised');
+    });
+
+    it('has a separate fallback for money coming in', () => {
+      expect(categorize(row('SOMETHING NEW', 'income'), [])).toBe('Other income');
+    });
+
+    it('files everything as unsorted when the owner has no rules at all', () => {
+      // What a fresh install does. Nothing is guessed on a stranger's behalf.
+      expect(categorize(row('A SUPERMARKET'))).toBe('Uncategorised');
+    });
+
+    it('reads a regex rule as a pattern rather than as literal text', () => {
+      const rules = compileRules([
+        { pattern: '\\bBOLT\\b(?! ?Food)', matchType: 'regex', category: 'Transport' }
+      ]);
+      expect(categorize(row('BOLT OU'), rules)).toBe('Transport');
+      expect(categorize(row('BOLT FOOD OU'), rules)).toBe('Uncategorised');
+    });
+
+    it('skips a regex that will not compile rather than failing the import', () => {
+      const rules = compileRules([
+        { pattern: '(unclosed', matchType: 'regex', category: 'Broken' },
+        { pattern: 'VELOMARKET', category: 'Bicycle' }
+      ]);
+      expect(rules).toHaveLength(1);
+      expect(categorize(row('VELOMARKET OU'), rules)).toBe('Bicycle');
+    });
+
+    it('folds diacritics off a regex pattern too, so it matches a transliterated row', () => {
+      const rules = compileRules([
+        { pattern: 'K[üy]lapood|Muugikoht', matchType: 'regex', category: 'Groceries' }
+      ]);
+      expect(categorize(row('KULAPOOD TARTU'), rules)).toBe('Groceries');
+      expect(categorize(row('KYLAPOOD TARTU'), rules)).toBe('Groceries');
+    });
+  });
+
+  describe('classifyRow with rules', () => {
+    const rowsOf = (csv: string) => readStatement(csv);
+
+    it('applies a rule to an ordinary row', () => {
+      const rules = compileRules([{ pattern: 'RIMI', category: 'Household' }]);
+      const [row] = rowsOf(statement(line()));
+
+      expect(classifyRow(row, new Set(), rules)).toEqual({ kind: 'cashflow', category: 'Household' });
+    });
+
+    it('cannot make a transfer between own accounts into spending', () => {
+      const rules = compileRules([{ pattern: 'SMITH', category: 'Salary' }]);
+      const [row] = rowsOf(statement(line({ cp: 'ALEX SMITH' })));
+
+      expect(classifyRow(row, new Set(), rules, ownerNameTest(['ALEX SMITH'])).kind).toBe('transfer');
+    });
+
+    it('cannot reclassify a securities settlement', () => {
+      const rules = compileRules([{ pattern: 'DL98687175', category: 'Groceries' }]);
+      const [row] = rowsOf(statement(line({ desc: 'DL98687175/VUSA/35/72.8/Buy/ Saksamaa' })));
+
+      expect(classifyRow(row, new Set(), rules)).toEqual({ kind: 'security', category: 'Investments' });
+    });
+  });
+
+  describe('fold', () => {
+    it('strips diacritics without touching anything else', () => {
+      expect(fold('Külapood Ülemiste')).toBe('Kulapood Ulemiste');
+    });
+  });
+
+  describe('FALLBACK_CATEGORIES', () => {
+    it('is the pair a row lands in when nothing claimed it', () => {
+      expect([...FALLBACK_CATEGORIES].sort()).toEqual(['Other income', 'Uncategorised']);
+    });
   });
 });

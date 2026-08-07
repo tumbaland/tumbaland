@@ -14,6 +14,7 @@ const mockedDelete = vi.fn();
 const mockedUpdateCategory = vi.fn();
 const mockedRecategorise = vi.fn();
 const mockedExport = vi.fn();
+const mockedRules = vi.fn();
 
 vi.mock('../hooks/useCashflow', () => ({
   useTransactions: (...args: unknown[]) => mockedUseTransactions(...args),
@@ -25,6 +26,19 @@ vi.mock('../hooks/useCashflow', () => ({
   useExportTransactions: () => ({ mutateAsync: mockedExport, isPending: false }),
   useUpdateCategory: () => ({ mutateAsync: mockedUpdateCategory, isPending: false }),
   useRecategorise: () => ({ mutateAsync: mockedRecategorise, isPending: false })
+}));
+
+vi.mock('../hooks/useStatementSettings', () => ({
+  useStatementSettings: () => ({ data: { ownerNames: [] } }),
+  useUpdateStatementSettings: () => ({ mutateAsync: vi.fn(), isPending: false })
+}));
+
+vi.mock('../hooks/useCategoryRules', () => ({
+  useCategoryRules: (...args: unknown[]) => mockedRules(...args),
+  useCreateCategoryRule: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useDeleteCategoryRule: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useMoveCategoryRule: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useApplyCategoryRules: () => ({ mutateAsync: vi.fn(), isPending: false })
 }));
 
 import CashFlowPage from './CashFlowPage';
@@ -100,6 +114,7 @@ beforeEach(() => {
   mockedUseTransactions.mockReturnValue({ data: page(), isLoading: false, error: null });
   mockedUseSummary.mockReturnValue({ data: summary });
   mockedUseAnalytics.mockReturnValue({ data: analytics });
+  mockedRules.mockReturnValue({ data: [], isLoading: false });
 });
 
 afterEach(() => setMobile(false));
@@ -392,5 +407,36 @@ describe('exporting for categorising elsewhere', () => {
 
     // No rows at all shows the empty state instead of the table
     expect(screen.getByText('No transactions yet')).toBeInTheDocument();
+  });
+});
+
+describe('category rules', () => {
+  it('opens the rules dialog from the header', async () => {
+    render(<CashFlowPage />);
+
+    await userEvent.click(screen.getByRole('button', { name: /Category rules/ }));
+
+    expect(await screen.findByRole('dialog', { name: 'Category rules' })).toBeInTheDocument();
+  });
+
+  it('does not load the rules until the dialog is opened', async () => {
+    render(<CashFlowPage />);
+
+    expect(mockedRules).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('button', { name: /Category rules/ }));
+
+    await waitFor(() => expect(mockedRules).toHaveBeenCalled());
+  });
+
+  it('offers the rules even before a single statement has been imported', () => {
+    mockedUseTransactions.mockReturnValue({
+      data: { items: [], totals: { count: 0, income: 0, expense: 0, net: 0 }, hasMore: false },
+      isLoading: false
+    });
+    render(<CashFlowPage />);
+
+    expect(screen.getByText(/No transactions yet/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Category rules/ })).toBeInTheDocument();
   });
 });

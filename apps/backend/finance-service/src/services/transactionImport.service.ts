@@ -9,6 +9,8 @@ import {
   parseCsv,
   RowKind
 } from './bankStatement.service';
+import { getCompiledRules } from './categoryRule.service';
+import { getOwnerNameTest } from './statementSettings.service';
 import {
   readPensionStatement,
   isPensionStatement,
@@ -101,13 +103,22 @@ export const importStatement = async (
     throw new BadRequestError('No data rows found in the file');
   }
 
-  const ownAccounts = findOwnAccounts(rows);
+  const userGroups = options.groupId ? [options.groupId] : [];
+  // How this owner's own name appears on their statements, so a transfer
+  // between two of their accounts is not counted as income or spending.
+  const isOwner = await getOwnerNameTest(options.userId, userGroups);
+  const ownAccounts = findOwnAccounts(rows, isOwner);
   const skipped: Record<string, number> = {};
   const note = (reason: string) => { skipped[reason] = (skipped[reason] || 0) + 1; };
 
+  // Loaded once for the whole file. These are the corrections the owner has
+  // already made, and applying them here is what stops a merchant the built-in
+  // rules do not know from arriving in Uncategorised every single month.
+  const rules = await getCompiledRules(options.userId, userGroups);
+
   const candidates = [];
   for (const row of rows) {
-    const classified = classifyRow(row, ownAccounts);
+    const classified = classifyRow(row, ownAccounts, rules, isOwner);
     if (!IMPORTED_KINDS.includes(classified.kind)) {
       note(SKIP_REASONS[classified.kind as 'transfer' | 'dividend']);
       continue;

@@ -3,7 +3,19 @@ jest.mock('../models/Transaction', () => ({
   default: { find: jest.fn(), bulkWrite: jest.fn(), insertMany: jest.fn() }
 }));
 
+jest.mock('../models/CategoryRule', () => ({
+  __esModule: true,
+  default: { find: jest.fn() }
+}));
+
+jest.mock('../models/StatementSettings', () => ({
+  __esModule: true,
+  default: { findOne: jest.fn() }
+}));
+
 import Transaction from '../models/Transaction';
+import CategoryRule from '../models/CategoryRule';
+import StatementSettings from '../models/StatementSettings';
 import {
   importStatement,
   importCategories,
@@ -14,6 +26,18 @@ import {
 const mockedFind = Transaction.find as unknown as jest.Mock;
 const mockedBulkWrite = Transaction.bulkWrite as unknown as jest.Mock;
 const mockedInsertMany = Transaction.insertMany as unknown as jest.Mock;
+const mockedRuleFind = CategoryRule.find as unknown as jest.Mock;
+const mockedSettingsFind = StatementSettings.findOne as unknown as jest.Mock;
+
+/** How this owner's name appears on their statements. */
+const withOwnerNames = (ownerNames: string[]) =>
+  mockedSettingsFind.mockReturnValue({ lean: jest.fn().mockResolvedValue({ ownerNames }) });
+
+/** The categorisation rules this owner has taught the app. */
+const withRules = (
+  rules: Array<{ pattern: string; category: string; type?: string; matchType?: string }>
+) =>
+  mockedRuleFind.mockReturnValue({ sort: jest.fn().mockResolvedValue(rules) });
 
 const HEADER =
   'Kliendi konto;Dokumendi number;Kuupäev;Saaja/maksja konto;Saaja/maksja nimi;' +
@@ -38,6 +62,8 @@ const alreadyHeld = (ids: string[]) =>
 beforeEach(() => {
   jest.clearAllMocks();
   alreadyHeld([]);
+  withRules([]);
+  withOwnerNames(['ALEX SMITH', 'SMITH ALEX']);
   mockedBulkWrite.mockResolvedValue({});
 });
 
@@ -103,6 +129,11 @@ describe('importing', () => {
   });
 
   it('groups what it imported by category', async () => {
+    withRules([
+      { pattern: 'RIMI', category: 'Groceries' },
+      { pattern: 'Circle K', category: 'Transport' }
+    ]);
+
     const result = await importStatement(
       statement(line(), line({ archive: 'RO2', cp: 'Circle K', amount: '40,00' })),
       { userId: 'u1' }
@@ -112,6 +143,104 @@ describe('importing', () => {
       { category: 'Transport', count: 1, amount: 40 },
       { category: 'Groceries', count: 1, amount: 15.59 }
     ]);
+  });
+
+  it('files a row no rule claims as unsorted, ready to be picked up later', async () => {
+    const result = await importStatement(statement(line()), { userId: 'u1' });
+
+    expect(result.categories).toEqual([{ category: 'Uncategorised', count: 1, amount: 15.59 }]);
+  });
+});
+
+describe('the owner\'s own rules', () => {
+  it('files a merchant the owner has a rule for', async () => {
+    withRules([{ pattern: 'VELOMARKET', category: 'Bicycle' }]);
+
+    const result = await importStatement(
+      statement(line({ cp: 'VELOMARKET OU', amount: '89,00' })),
+      { userId: 'u1' }
+    );
+
+    expect(result.categories).toEqual([{ category: 'Bicycle', count: 1, amount: 89 }]);
+  });
+
+  it('reads a regex rule as a pattern rather than as literal text', async () => {
+    withRules([
+      { pattern: '\\bBOLT\\b(?! ?Food)', matchType: 'regex', category: 'Transport' }
+    ]);
+
+    const result = await importStatement(
+      statement(
+        line({ cp: 'BOLT OU', amount: '9,00' }),
+        line({ archive: 'RO2', cp: 'BOLT FOOD OU', amount: '18,00' })
+      ),
+      { userId: 'u1' }
+    );
+
+    expect(result.categories).toEqual([
+      { category: 'Uncategorised', count: 1, amount: 18 },
+      { category: 'Transport', count: 1, amount: 9 }
+    ]);
+  });
+
+  it('matches however the terminal spelled the name', async () => {
+    withRules([{ pattern: 'Külapood', category: 'Groceries' }]);
+
+    const result = await importStatement(
+      statement(line({ cp: 'KULAPOOD TARTU', amount: '9,00' })),
+      { userId: 'u1' }
+    );
+
+    expect(result.categories).toEqual([{ category: 'Groceries', count: 1, amount: 9 }]);
+  });
+
+  it('honours a rule restricted to one direction', async () => {
+    withRules([{ pattern: 'ACME', category: 'Consulting', type: 'income' }]);
+
+    const result = await importStatement(
+      statement(
+        line({ cp: 'ACME OU', amount: '100,00', dc: 'C' }),
+        line({ archive: 'RO2', cp: 'ACME OU', amount: '20,00', dc: 'D' })
+      ),
+      { userId: 'u1' }
+    );
+
+    expect(result.categories).toEqual([
+      { category: 'Consulting', count: 1, amount: 100 },
+      { category: 'Uncategorised', count: 1, amount: 20 }
+    ]);
+  });
+
+  it('runs the earlier rule first, so a specific one can beat a broad one', async () => {
+    withRules([
+      { pattern: 'BOLT FOOD', category: 'Restaurants' },
+      { pattern: 'BOLT', category: 'Transport' }
+    ]);
+
+    const result = await importStatement(
+      statement(line({ cp: 'BOLT FOOD OU', amount: '18,00' })),
+      { userId: 'u1' }
+    );
+
+    expect(result.categories).toEqual([{ category: 'Restaurants', count: 1, amount: 18 }]);
+  });
+
+  it('cannot turn a transfer between own accounts into a transaction', async () => {
+    withRules([{ pattern: 'SMITH', category: 'Salary' }]);
+
+    const result = await importStatement(
+      statement(line({ cp: 'ALEX SMITH' })),
+      { userId: 'u1' }
+    );
+
+    expect(result.imported).toBe(0);
+    expect(result.skipped['Transfer between your own accounts']).toBe(1);
+  });
+
+  it('reads the rules for the group being imported into', async () => {
+    await importStatement(statement(line()), { userId: 'u1', groupId: 'g1', userGroups: ['g1'] });
+
+    expect(mockedRuleFind).toHaveBeenCalledWith({ groupId: { $in: ['g1'] } });
   });
 });
 
@@ -149,7 +278,7 @@ describe('overlapping imports', () => {
 
 describe('rows left out', () => {
   it('skips a transfer between own accounts', async () => {
-    const result = await importStatement(statement(line({ cp: 'TAHVES TOOMAS' })), { userId: 'u1' });
+    const result = await importStatement(statement(line({ cp: 'ALEX SMITH' })), { userId: 'u1' });
 
     expect(result.imported).toBe(0);
     expect(result.skipped['Transfer between your own accounts']).toBe(1);
@@ -186,7 +315,7 @@ describe('rows left out', () => {
   it('still keeps dividends and own-account transfers out', async () => {
     const result = await importStatement(
       statement(
-        line({ cp: 'TAHVES TOOMAS' }),
+        line({ cp: 'ALEX SMITH' }),
         line({ archive: 'RO2', desc: 'Vanguard,IE00B3XXRP09,dividendimakse,.28,15.12.23,IE' })
       ),
       { userId: 'u1' }
@@ -222,7 +351,7 @@ describe('rows left out', () => {
   });
 
   it('returns early, without querying, when nothing survives', async () => {
-    const result = await importStatement(statement(line({ cp: 'TAHVES TOOMAS' })), { userId: 'u1' });
+    const result = await importStatement(statement(line({ cp: 'ALEX SMITH' })), { userId: 'u1' });
 
     expect(mockedFind).not.toHaveBeenCalled();
     expect(result.categories).toEqual([]);

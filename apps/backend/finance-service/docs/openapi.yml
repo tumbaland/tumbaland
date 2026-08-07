@@ -1070,6 +1070,155 @@ paths:
           description: Transaction not found
 
 
+  /api/category-rules:
+    get:
+      summary: The owner's categorisation rules, in the order they run
+      description: >-
+        These decide where an imported transaction lands. They used to be a list
+        compiled into the service — which named the owner's employers, bank and
+        merchants in source, and meant a merchant it did not know stayed
+        uncategorised until someone shipped a release. Now they are per-owner
+        data. The first rule that matches wins, so order is load-bearing.
+      tags: [Cash Flow]
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      responses:
+        '200':
+          description: Rules, lowest priority first
+    post:
+      summary: Teach the app a categorisation
+      description: >-
+        Writing a rule for text that already has one replaces it rather than
+        failing — the second correction is the one the owner means. `matchType`
+        defaults to `text`, a diacritic-folded case-insensitive substring test,
+        which is all the UI writes; `regex` exists for the rules migrated out of
+        source, whose lookaheads no substring can express.
+      tags: [Cash Flow]
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pattern, category]
+              properties:
+                pattern:
+                  type: string
+                matchType:
+                  type: string
+                  enum: [text, regex]
+                  default: text
+                category:
+                  type: string
+                type:
+                  type: string
+                  enum: [income, expense]
+                  description: Restricts the rule to one direction; omit for either.
+                note:
+                  type: string
+      responses:
+        '201':
+          description: Rule created
+        '200':
+          description: An existing rule for the same text was replaced
+        '400':
+          description: Missing field, unknown match type, or an uncompilable regex
+
+  /api/category-rules/apply:
+    post:
+      summary: Run the rules over transactions already imported
+      description: >-
+        A new rule otherwise only takes effect on the next statement, leaving the
+        backlog that prompted it untouched. `onlyUncategorised` defaults to true
+        so a rule written today cannot quietly undo a category set by hand.
+      tags: [Cash Flow]
+      parameters:
+        - $ref: '#/components/parameters/GroupId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                onlyUncategorised:
+                  type: boolean
+                  default: true
+      responses:
+        '200':
+          description: How many rows were examined and how many moved
+
+  /api/category-rules/{id}:
+    put:
+      summary: Edit a rule
+      description: >-
+        `type: null` clears the direction restriction, which is distinct from
+        omitting it — omitting leaves the restriction as it was, so a rename
+        cannot silently widen a rule to both directions.
+      tags: [Cash Flow]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pattern:
+                  type: string
+                category:
+                  type: string
+                type:
+                  type: string
+                  enum: [income, expense]
+                  nullable: true
+                note:
+                  type: string
+      responses:
+        '200':
+          description: Rule updated
+        '400':
+          description: Blank pattern, or a rename that breaks a regex rule
+        '404':
+          description: Rule not found
+    delete:
+      summary: Delete a rule
+      tags: [Cash Flow]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Rule deleted
+        '404':
+          description: Rule not found
+
+  /api/category-rules/{id}/move:
+    post:
+      summary: Move a rule one place earlier or later
+      description: >-
+        The first rule that matches wins, so a specific rule has to be orderable
+        ahead of a broader one.
+      tags: [Cash Flow]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/GroupId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [direction]
+              properties:
+                direction:
+                  type: string
+                  enum: [up, down]
+      responses:
+        '200':
+          description: The rules in their new order
+
   /api/dashboard:
     get:
       summary: Get dashboard data

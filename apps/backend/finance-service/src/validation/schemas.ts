@@ -83,3 +83,46 @@ export const createTransactionSchema = z.object({
 
 export const updateTransactionSchema = createTransactionSchema.partial();
 
+/**
+ * `matchType` defaults to a folded substring test, so a pattern is the merchant
+ * name as it reads on the statement — which is all the UI ever writes. `regex`
+ * is for the rules migrated out of source, whose lookaheads and word boundaries
+ * no substring can express.
+ */
+export const createCategoryRuleSchema = z.object({
+  pattern: z.string().trim().min(1, 'pattern is required'),
+  matchType: z.enum(['text', 'regex']).default('text'),
+  category: z.string().trim().min(1, 'category is required'),
+  type: z.enum(['income', 'expense']).optional(),
+  note: z.string().trim().optional()
+});
+
+/**
+ * `type: null` clears the direction restriction — distinct from omitting it,
+ * which leaves the restriction as it was.
+ */
+export const updateCategoryRuleSchema = z.object({
+  pattern: z.string().trim().min(1).optional(),
+  category: z.string().trim().min(1).optional(),
+  type: z.enum(['income', 'expense']).nullable().optional(),
+  note: z.string().trim().optional()
+});
+
+export const moveCategoryRuleSchema = z.object({
+  direction: z.enum(['up', 'down'])
+});
+
+export const applyCategoryRulesSchema = z.object({
+  // Defaulted on rather than off: re-filing rows the owner sorted by hand is
+  // the destructive reading, and it should have to be asked for.
+  onlyUncategorised: z.boolean().default(true)
+});
+
+
+/**
+ * Plain names, not patterns — matching folds accents, ignores case and
+ * collapses whitespace, so nothing typed here is ever compiled.
+ */
+export const updateStatementSettingsSchema = z.object({
+  ownerNames: z.array(z.string().trim().min(1)).max(20)
+});

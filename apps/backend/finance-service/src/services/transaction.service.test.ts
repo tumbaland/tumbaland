@@ -176,10 +176,10 @@ describe('recategorise', () => {
   it('narrows by counterparty text when given one', async () => {
     (Transaction.updateMany as unknown as jest.Mock).mockResolvedValue({ modifiedCount: 3 });
 
-    await recategorise({ fromCategory: 'Uncategorised', search: 'Binance' }, 'Investments', 'u1', []);
+    await recategorise({ fromCategory: 'Uncategorised', search: 'VELOMARKET' }, 'Investments', 'u1', []);
 
     const [filter] = (Transaction.updateMany as unknown as jest.Mock).mock.calls[0];
-    expect(filter.note).toEqual({ $regex: 'Binance', $options: 'i' });
+    expect(filter.note).toEqual({ $regex: 'VELOMARKET', $options: 'i' });
   });
 
   it('escapes regex metacharacters in the search text', async () => {

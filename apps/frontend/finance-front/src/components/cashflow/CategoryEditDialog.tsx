@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import { Transaction } from '../../services/cashflowService';
 import { useUpdateCategory, useRecategorise } from '../../hooks/useCashflow';
+import { useCreateCategoryRule } from '../../hooks/useCategoryRules';
 import { formatCurrency } from '../../utils/numberUtils';
 
 interface CategoryEditDialogProps {
@@ -37,11 +38,15 @@ export function counterpartyOf(note: string | undefined): string {
 }
 
 /**
- * Recategorise one transaction, or every row from the same merchant at once.
+ * Recategorise one transaction, every row from the same merchant, and — the
+ * point of the dialog — teach the app to keep doing it.
  *
  * Imports leave a long tail of uncategorised rows, and a single merchant can
  * account for hundreds of them. Fixing those one at a time is not realistic, so
- * the bulk path is offered right where the mistake is noticed.
+ * the bulk path is offered right where the mistake is noticed. But a bulk move
+ * only rewrites rows that already exist: without a rule the same merchant
+ * arrives uncategorised again next month, and the backlog comes back. Both are
+ * offered together because they answer two halves of one question.
  */
 const CategoryEditDialog: React.FC<CategoryEditDialogProps> = ({
   open,
@@ -53,9 +58,11 @@ const CategoryEditDialog: React.FC<CategoryEditDialogProps> = ({
 }) => {
   const updateMutation = useUpdateCategory();
   const bulkMutation = useRecategorise();
+  const ruleMutation = useCreateCategoryRule();
 
   const [category, setCategory] = useState('');
   const [applyToAll, setApplyToAll] = useState(false);
+  const [remember, setRemember] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const counterparty = useMemo(() => counterpartyOf(transaction?.note), [transaction]);
@@ -64,6 +71,9 @@ const CategoryEditDialog: React.FC<CategoryEditDialogProps> = ({
     if (!open) return;
     setCategory(transaction?.category || '');
     setApplyToAll(false);
+    // On by default. Someone correcting a category almost always wants it to
+    // stick, and the cost of an unwanted rule is one click to delete it.
+    setRemember(true);
     setError(null);
   }, [open, transaction]);
 
@@ -89,13 +99,31 @@ const CategoryEditDialog: React.FC<CategoryEditDialogProps> = ({
         await updateMutation.mutateAsync({ id: transaction._id, category: next });
         notify(`Moved to ${next}`, 'success');
       }
-      onClose();
     } catch {
       setError('Failed to update the category');
+      return;
     }
+
+    // Saved separately, and after the move, so a rule that fails to write
+    // cannot roll back a recategorisation that already succeeded. The message
+    // says which half happened rather than implying both did.
+    if (remember && counterparty) {
+      try {
+        await ruleMutation.mutateAsync({
+          pattern: counterparty,
+          category: next,
+          groupId: tenantGroupId
+        });
+        notify(`${counterparty} will be filed as ${next} from now on`, 'success');
+      } catch {
+        notify(`Category changed, but the rule for ${counterparty} could not be saved`, 'error');
+      }
+    }
+
+    onClose();
   };
 
-  const saving = updateMutation.isPending || bulkMutation.isPending;
+  const saving = updateMutation.isPending || bulkMutation.isPending || ruleMutation.isPending;
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
@@ -135,17 +163,37 @@ const CategoryEditDialog: React.FC<CategoryEditDialogProps> = ({
         />
 
         {counterparty && (
-          <FormControlLabel
-            sx={{ mt: 1 }}
-            control={
-              <Checkbox checked={applyToAll} onChange={(e) => setApplyToAll(e.target.checked)} />
-            }
-            label={
-              <Typography variant="body2">
-                Apply to every <strong>{transaction?.category}</strong> row from {counterparty}
-              </Typography>
-            }
-          />
+          <Box sx={{ display: 'flex', flexDirection: 'column', mt: 1 }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                  slotProps={{ input: { 'aria-label': 'Remember this for future imports' } }}
+                />
+              }
+              label={
+                <Typography variant="body2">
+                  Remember: file {counterparty} as <strong>{category.trim() || '…'}</strong> in
+                  future imports
+                </Typography>
+              }
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={applyToAll}
+                  onChange={(e) => setApplyToAll(e.target.checked)}
+                  slotProps={{ input: { 'aria-label': 'Apply to existing rows from this merchant' } }}
+                />
+              }
+              label={
+                <Typography variant="body2">
+                  Apply to every <strong>{transaction?.category}</strong> row from {counterparty}
+                </Typography>
+              }
+            />
+          </Box>
         )}
 
         {applyToAll && (

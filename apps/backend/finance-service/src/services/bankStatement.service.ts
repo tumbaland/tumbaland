@@ -1,4 +1,5 @@
 import { TransactionType } from '../models/Transaction';
+import { MatchType } from '../models/CategoryRule';
 
 /**
  * Reader for SEB internet-bank CSV account statements.
@@ -105,16 +106,43 @@ export function readStatement(text: string): StatementRow[] {
 // Classification
 // ---------------------------------------------------------------------------
 
-/**
- * The account holder's name, in either order — the bank writes it both ways
- * depending on the channel, and matching only one lets a transfer between the
- * owner's own accounts through as if it were real spending.
- */
-export const OWNER_NAME = /(TAHVES\s+TOOMAS|TOOMAS\s+TAHVES)/i;
-
 const PENSION = /PENSIONIKESKUS/i;
 const SETTLEMENT = /^DL[A-Z0-9]+\//i;
 const DIVIDEND = /dividendimak/i;
+
+/**
+ * Tests whether a counterparty is the account holder themselves.
+ *
+ * Always supplied by the caller, which reads the names from the owner's
+ * settings. Never a constant here and never read from the environment: it is a
+ * real person's name, so it belongs neither in a repository nor in one global
+ * value shared by every owner the service serves.
+ */
+export type OwnerNameTest = (counterparty: string) => boolean;
+
+/** Fold accents, drop case, collapse runs of whitespace. */
+const normalizeName = (text: string): string =>
+  fold(text).toUpperCase().replace(/\s+/g, ' ').trim();
+
+/**
+ * Build the test from the names an owner has recorded.
+ *
+ * Plain substring matching rather than a pattern: a name is a name, and this
+ * way nothing the owner types is ever compiled. With no names recorded the test
+ * is null, and own-account detection falls back to the account numbers the
+ * statement carries on its own — which still catches every transfer between two
+ * accounts the statements cover, and misses only an account of the owner's that
+ * appears solely as a counterparty.
+ */
+export function ownerNameTest(names: string[] = []): OwnerNameTest | null {
+  const wanted = names.map(normalizeName).filter(Boolean);
+  if (wanted.length === 0) return null;
+
+  return (counterparty: string) => {
+    const haystack = normalizeName(counterparty);
+    return wanted.some((name) => haystack.includes(name));
+  };
+}
 
 /**
  * Every account belonging to the statement's owner, gathered from both sides:
@@ -124,161 +152,40 @@ const DIVIDEND = /dividendimak/i;
  * A transfer between two own accounts appears twice — once as a debit, once as
  * a credit — so counting either leg as income or spending corrupts the totals.
  */
-export function findOwnAccounts(rows: StatementRow[]): Set<string> {
+export function findOwnAccounts(
+  rows: StatementRow[],
+  isOwner: OwnerNameTest | null = null
+): Set<string> {
   const accounts = new Set(rows.map((r) => r.account).filter(Boolean));
+  if (!isOwner) return accounts;
+
   for (const row of rows) {
-    if (row.counterpartyAccount && OWNER_NAME.test(row.counterparty)) {
+    if (row.counterpartyAccount && isOwner(row.counterparty)) {
       accounts.add(row.counterpartyAccount);
     }
   }
   return accounts;
 }
 
-interface CategoryRule {
-  category: string;
-  type?: TransactionType;
-  match: RegExp;
-}
-
-export const CATEGORY_RULES: CategoryRule[] = [
-  // Wages, however the payer worded it. "Töötasu" and "Palgamakse" are the
-  // Estonian terms and say outright what the payment is, so they hold for an
-  // employer nobody has named a rule after yet.
-  { category: 'Salary', type: 'income', match: /Töötasu|Palgamakse/i },
-  // Employers by name, for the ones that reference only an invoice number.
-  // ESTNETI OÜ is Betsson's paying entity (Jul 2019 – Oct 2020); Brainbase
-  // followed (Nov 2020 – Jun 2022). Both were jobs, not contract work — filing
-  // them as freelance made a continuous decade of employment look broken up.
-  { category: 'Salary', type: 'income', match: /TEHNIKAÜLIKOOL|TALTECH|Brainbase|ESTNETI/i },
-  { category: 'Tax refund', type: 'income', match: /RAHANDUSMINISTEERIUM/i },
-
-  // Capital moving to and from an asset, in either direction: a term deposit
-  // maturing is the principal coming back, and a crypto withdrawal is the same
-  // money returning, neither of them earnings.
-  //
-  // The counterparty's name alone does not settle it, and reading it that way
-  // is what went wrong with Bigbank below — a name can be an employer and a
-  // deposit provider at once.
-  { category: 'Investments', match: /Binance|COINBASE|Kraken|Bitstamp|Interactive Brokers|Lightyear/i },
-  // Paysafe owns Skrill and Neteller, and this is the crypto money coming back
-  // by a different road than it left by. Reading it as income left €4,000 sent
-  // to Binance in May 2021 with no return leg — the only unexplained inflow in
-  // ten years of statements — and showed a crypto holding that does not exist.
-  // Counting it closes the position at €622 ahead of what went in.
-  //
-  // The bank data cannot prove the link: every other Binance withdrawal came
-  // through Clear Junction saying "Withdrawal from Binance", while this one
-  // arrives from Luxembourg carrying only a transaction reference. It rests on
-  // the amounts reconciling and on the account holder's own account of it.
-  { category: 'Investments', match: /Paysafe/i },
-  // Bigbank was an employer from Aug 2022 to Jul 2023 and a deposit provider
-  // besides, and the two arrive from different accounts. Reading the whole
-  // name as capital buried a year of salary: "tasu" is a fee, "lõpparve" the
-  // final wage settlement, and both were being netted out of income as though
-  // a term deposit had matured.
-  //
-  // \btasu\b and not /tasu/ — the bank's own "Teenustasu" and "hooldustasu"
-  // must not read as pay.
-  { category: 'Salary', type: 'income', match: /BIGBANK.*\btasu\b|BIGBANK.*lõpparve/i },
-  // Reimbursements and the employer-funded wellness benefit reverse spending
-  // rather than adding to pay.
-  { category: 'Refund', type: 'income', match: /Cost report.*TAHVES|compensated by Bigbank/i },
-  // What is left is the deposit relationship: a term deposit going out and the
-  // principal, or an early termination, coming back.
-  { category: 'Savings', match: /BIGBANK|Bigbank/i },
-  { category: 'Pension', match: /PENSIONIKESKUS/i },
-  // Actual interest, which is earnings and stays in the income figure
-  { category: 'Interest', type: 'income', match: /Intresside väljamaks/i },
-  // Cash paid in over the counter. Named rather than lumped into "other
-  // income" because it is worth eyeballing: deposits here run several times
-  // the ATM withdrawals, so most of it arrived from outside rather than being
-  // unspent cash coming back, and it counts as income until shown otherwise.
-  { category: 'Cash deposit', type: 'income', match: /SISSEMAKSE/i },
-
-  // Funding the brokerage account. IBKR takes EUR deposits through Citibank's
-  // Germany branch and the row carries the U-prefixed IBKR account number, so
-  // this is capital moving to an asset rather than a payment to a bank.
-  { category: 'Investments', match: /CITIBANK EUROPE.*GERMANY/i },
-
-  // A returned order coming back is not earnings. Estonian invoicing language:
-  // "tagastus" is a refund, "krd.arve" a credit note.
-  { category: 'Refund', type: 'income', match: /raha tagastus|Tag\. tell|tagastus|krd\.arve|loobus kaubast/i },
-
-  // "hooldustasu" on its own is any maintenance fee — the Housing rule wants
-  // the apartment association's, so the card's monthly fee is claimed first.
-  { category: 'Bank fees', match: /Teenustasu|Igapäevane pakett|Intressi tulumaks|VP H\.TASU|Kaardi .*hooldustasu/i },
-  { category: 'Tax', type: 'expense', match: /RAHANDUSMINISTEERIUM|MAKSU- JA TOLLIAMET/i },
-  { category: 'Cash', match: /BRINK'S|\bATM\b|Sularaha|VÄLJAMAKSE/i },
-
-  // Pharmacies, clinics and opticians. The terminal transliterates ü as either
-  // u or y, hence the character classes — see fold() below.
-  {
-    category: 'Health',
-    match:
-      /Unimed|Apotheka|\bBenu\b|S[üy]dameapteek|APTEEK|KESKUSE APTE|NETIAPTEEK|Farmacia|Confido|Qvalitas|Stebby|MELIVA|MY ?FITNESS|Hambakliinik|HAMBALASER|Arstikeskus|Polikliinik|POLIKLIINIKU|PROFDIAGNOSTIK|Mediron|INSTRUMENTARIUM|LENS OPTIKA|HARUAPTEEK/i
-  },
-  { category: 'Personal care', match: /Ilusalong|KOSMEETIKA|notino|L COSMETICS|\bI\.L\.U\.|CHLOE ILU/i },
-  { category: 'Pets', match: /LOOMAKLIINIK|Loomakliinik/i },
-  { category: 'Insurance', match: /IF P&C INSURANCE|ERGO Insurance|Salva Kindlustus|Kindlustus/i },
-
-  // Course platforms, conference fees and the university's own invoices — the
-  // Salary rule above already claims TalTech on the income side, so an invoice
-  // from the same name can only be something bought.
-  {
-    category: 'Education',
-    match: /UDEMY|INSTICC|COURSERA|ABEBOOKS|Raamatupood|TALLINNA TEHNIKA[ÜY]LIKOOL|TEHNIKA [ÜY]LIKOOLI RAAMA|LUCIDCHART/i
-  },
-  {
-    category: 'Entertainment',
-    match:
-      /HUMBLEBUNDLE|BLIZZARD|UBISOFT|ORIGIN\.COM|GREENMANGAMING|MACGAMESTORE|FANTASIAPELIT|APOLLO|MUSEI|MUSEUM|MUSEO|ACQUARIO DI|BOOKSHOP ACQUARIO|AHHAA|LOOMAAIA|BOWLINGU|SKYPARK|SIGHTSEEIN|CINAMON|FIENTA/i
-  },
-  // Clubs and studios billed as a membership or a term's tuition.
-  {
-    category: 'Hobbies',
-    match: /URBAN STYLE|TANTSUSTUUDIO|FREE FLOW STUDIO|SPORDIKLUBI|SURFIKLUBI|POPSPORT|KUNST - HOBI/i
-  },
-
-  { category: 'Housing', match: /\bKÜ\b|K\/Ü|Korteriühistu|ELEKTRILEVI|EESTI ENERGIA|Utilitas|Tallinna Vesi|ÜHISTEENUSED|TORU-JURI|hooldustasu/i },
-  { category: 'Telecom', match: /STV AS|Telia|Elisa|Tele2|ZONE MEDIA|NORDIC DIGITAL/i },
-  {
-    category: 'Transport',
-    match:
-      // Bolt is both the ride and the food delivery; without the lookahead the
-      // rides rule swallows every Bolt Food order into Transport.
-      /Circle K|Neste|Olerex|Alexela|Statoil|FAVORA|\bBOLT\b(?! ?Food)|TAXI|Linnatransport|Elron|EESTI LIINIRONGID|EUROPARK|CITYPARK|PARKIMISMAJ|VIKING MOTORS|SNCF|REGIE LIGNE|NATIONAL EXPRESS|AIRPORT BUS|AZIENDA MOBILITA|ATAC TAP|MOBILITA'? E TRASPO|\bHSL\b|AUTOBUSI|EMPRESA MALAGUENA DE T|TRANSP INTERMODAIS/i
-  },
-  {
-    category: 'Travel',
-    match:
-      /AIR ?BALTIC|BOOKING|RYANAIR|Wizz|Hotel|AIRBNB|LUX EXPRESS|SONDER\.COM|VIKING LINE|AEROPORTO|AEROPUERTO|APT FIUMICINO|DUTYFR|TAXFREE|GUEST HOUSE|RESIDENCE|WH SMITH STANSTED/i
-  },
-  { category: 'Electronics', match: /Arvutitark|Euronics|Klick|On24|Photopoint|OOMIPOOD|MOBILE TRADE|ORDI OÜ|1A\.EE|DATAGATE|HINNAVAATLUS/i },
-  { category: 'Home', match: /DEPO|Bauhof|K-Rauta|Ehituse ABC|JYSK|IKEA|Fauni|ESPAK|KESKO SENUKAI|KODUEKSTRA|MASKU|LILLEPOOD|LILLELETT|FLORISTERIA|FIORI PIETRO/i },
-
-  {
-    category: 'Groceries',
-    match:
-      /RIMI|SELVER|PRISMA|MAXIMA|COOP|\bICA\b|LIDL|Grocery|PROMO CASH|A1000MARKET|GROSSI TOIDUKAUBAD|GR\. TK\.|APELSIN|R-KIOSK|KONSUM|MAKSIMARKET|PARLIPOOD|NETOMARKET|SOLARISE TOIDUPOOD|VAANA-JOESUU POOD|CARREFOUR|\bCRF\b|TESCO|SAINSBURY|WAITROSE|\bALDI\b|CONAD|DESPAR|INTERMARCHE|MONOPRIX|SUPERMERCAT|SUPERMERCADO|HIPER CENTER|MARCHE U|PAM LOCAL|CO-OP GROUP FOOD|MINI MARKET/i
-  },
-  {
-    category: 'Restaurants',
-    match:
-      /Restoran|\bRESTO\b|Kohvik|KOHVISEMU|Cafe|CAFFE|Pizza|Sushi|McDonald|\bMCD\b|Burger|Wolt|Bolt Food|KOCHI AIDAD|FRESHFOOD|CHEFSFOOD|\bKFC\b|VAPIANO|CHOPSTICKS|TANAVATOIT|TOIDUTANAV|SHAURMA|SHAWARMA|KEBAB|KEBABOOM|\bDONER\b|GRILL|PELMEN|O'LEARYS|PAPER MILL|VANA VILLEM|RICOTTA|MAMUSKA|NS KING|PIANO [ÜY]LEMISTE|BUFFET|TAIYAKI|SAMSA|OLDE HANSA|ARNOLDS|SONNE|KANTRIBAAR|TONDI JAZZ|SUVEBAAR|BRIOCHE|FORNO|BAKERY|PAGARID|GELATERIA|GELATINA|HELADERIA|STARBUCKS|ILLY CAFFE|TAPAS|TRATTORIA|CANDY POP|TWISTSNACKS|MRS WAFFLE|MRS BAKERY|CACIO E PEPE|SABATINI|LA FABRICA|DA TONINO|SEE WOO|HONG KONG|BANGKOK|SHIROYA|GEO DONER|BONCHE|TRUMAN|LE FROG|BABYBACK RIBS|NJAMI|ROYAL FOOD/i
-  },
-
-  // Clothing, household goods and the general marketplaces. Anything bought
-  // rather than consumed, eaten or subscribed to.
-  {
-    category: 'Shopping',
-    match:
-      /ALIEXPRESS|ALIPAY|TEMU\.COM|AMZN MKTP|\bEBAY\b|GEARBEST|WISH\.COM|DLB TRADING|kaup24|MAKSEKESKUS|CHILLI DEALS|SAVELITA|H ?& ?M|NEW YORKER|RESERVED|\bHOUSE [ÜY]LEMISTE|HOUSEBRAND|SINSAY|CROPP|TERRANOVA|PEPCO|MINISO|\bTIGER\b|\bNORMAL\b|KAUBAMAJA|STOCKMANN|SPORTSDIRECT|SPORTLAND|EUROSPORT|RADEMAR|\bECCO\b|DENIM DREAM|TWO SIZES|NICE STORE|GOLDTIME|OVERALL EESTI|IDEAAL/i
-  },
-  {
-    category: 'Subscriptions',
-    match: /Spotify|Netflix|Google|Apple\.com|Microsoft|Amazon|Patreon|Steam|OPENAI|ANTHROPIC|BUMBLE|GOTINDER|DELFI MEEDIA/i
-  }
-];
+/**
+ * Where the categorisation rules went.
+ *
+ * They used to be an array right here: forty-odd regular expressions naming the
+ * owner's employers and the dates they worked there, their pharmacy, their
+ * bank, and every merchant they buy from. That is one person's financial and
+ * employment history sitting in a source file, which is fine in a private
+ * repository and a disclosure in a public one.
+ *
+ * They now live in the `categoryrules` collection, per owner, editable from the
+ * Cash Flow page — so this file is generic code again, and a correction takes
+ * effect on the next import instead of on the next deploy.
+ *
+ * `scripts/migration/export-category-rules.js` lifted the original list out;
+ * `import-category-rules.js` loads it back. A fresh install ships with no rules
+ * at all and files everything as Uncategorised until the owner writes some,
+ * which is the honest default: a stranger's merchant list is not a sensible
+ * guess about anyone else's spending.
+ */
 
 /**
  * Categories that move capital between the account and an asset.
@@ -305,31 +212,120 @@ export const FALLBACK_CATEGORY: Record<TransactionType, string> = {
 };
 
 /**
+ * The categories a row lands in when nothing claimed it — the backlog a new
+ * rule is usually written to clear.
+ */
+export const FALLBACK_CATEGORIES = new Set(Object.values(FALLBACK_CATEGORY));
+
+/**
  * Strip diacritics so a rule matches however the bank spelled the name.
  *
- * Card rows arrive transliterated by the terminal — Südameapteek comes through
- * as SUDAMEAPTEEK, Ülemiste as YLEMISTE — while transfer rows keep the real
- * spelling. A rule written either way missed half its rows, which is why a
- * pharmacy chain sat in Uncategorised for a decade.
+ * Card rows arrive transliterated by the terminal — a name spelled Külapood
+ * comes through as KULAPOOD, and Ülemiste as YLEMISTE — while transfer rows
+ * keep the real spelling. A rule written either way misses half its rows, which
+ * is how a merchant can sit in Uncategorised for years.
  *
  * Applied to the patterns as well as the text, so rules stay readable in
  * correct Estonian. Only letters are rewritten, so regex syntax survives.
  */
-const fold = (text: string): string => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+export const fold = (text: string): string => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-const FOLDED_RULES = CATEGORY_RULES.map((rule) => ({
-  ...rule,
-  match: new RegExp(fold(rule.match.source), rule.match.flags)
-}));
+/**
+ * A stored rule, prepared for matching.
+ *
+ * `pattern` is kept alongside the compiled form so a caller can report which
+ * rule fired in the words it was written in.
+ */
+export interface CompiledRule {
+  pattern: string;
+  /** Substring rules: folded and lowercased. Regex rules: the folded source. */
+  needle: string;
+  /** Set for regex rules only. */
+  expression?: RegExp;
+  category: string;
+  type?: TransactionType;
+}
 
-export function categorize(row: StatementRow): string {
-  const haystack = fold(`${row.counterparty} ${row.description}`);
-  for (const rule of FOLDED_RULES) {
-    if (!rule.match.test(haystack)) continue;
-    if (rule.type && rule.type !== row.direction) continue;
-    return rule.category;
+export interface RuleSource {
+  pattern: string;
+  matchType?: MatchType;
+  category: string;
+  type?: TransactionType;
+}
+
+/**
+ * Prepare stored rules for matching, dropping any that cannot match.
+ *
+ * A regex that no longer parses is skipped rather than thrown on: one bad rule
+ * must not take down an import of ten thousand rows, and the alternative is an
+ * error naming a pattern the owner cannot see from the failure.
+ */
+export function compileRules(rules: RuleSource[]): CompiledRule[] {
+  const compiled: CompiledRule[] = [];
+
+  for (const rule of rules) {
+    const folded = fold(rule.pattern).trim();
+    if (!folded) continue;
+
+    if (rule.matchType === 'regex') {
+      try {
+        compiled.push({
+          pattern: rule.pattern,
+          needle: folded,
+          expression: new RegExp(folded, 'i'),
+          category: rule.category,
+          type: rule.type
+        });
+      } catch {
+        continue;
+      }
+      continue;
+    }
+
+    compiled.push({
+      pattern: rule.pattern,
+      needle: folded.toLowerCase(),
+      category: rule.category,
+      type: rule.type
+    });
   }
-  return FALLBACK_CATEGORY[row.direction];
+
+  return compiled;
+}
+
+/**
+ * The first stored rule that claims this text, or null.
+ *
+ * `haystack` must already be folded \u2014 callers match many rows against the same
+ * rules and folding per row per rule would repeat the work needlessly.
+ */
+export function matchCustomRule(
+  rules: CompiledRule[],
+  haystack: string,
+  direction: TransactionType
+): CompiledRule | null {
+  const lowered = haystack.toLowerCase();
+  for (const rule of rules) {
+    if (rule.type && rule.type !== direction) continue;
+    const hit = rule.expression ? rule.expression.test(haystack) : lowered.includes(rule.needle);
+    if (hit) return rule;
+  }
+  return null;
+}
+
+/**
+ * Which category a row belongs to.
+ *
+ * The owner's rules are the whole story \u2014 the first that claims the row wins,
+ * which is why their order is theirs to set \u2014 and anything nothing claims lands
+ * in the fallback for its direction, where the Cash Flow page can offer it up
+ * to be sorted.
+ */
+export function categorize(row: StatementRow, rules: CompiledRule[] = []): string {
+  const haystack = fold(`${row.counterparty} ${row.description}`);
+
+  const match = matchCustomRule(rules, haystack, row.direction);
+  return match ? match.category : FALLBACK_CATEGORY[row.direction];
 }
 
 export type RowKind = 'cashflow' | 'transfer' | 'security' | 'dividend' | 'pension';
@@ -345,9 +341,17 @@ export type RowKind = 'cashflow' | 'transfer' | 'security' | 'dividend' | 'pensi
  */
 export function classifyRow(
   row: StatementRow,
-  ownAccounts: Set<string>
+  ownAccounts: Set<string>,
+  /**
+   * Stored rules decide the *category* of an ordinary row, not what kind of row
+   * it is: whether something is a transfer between the owner's own accounts or
+   * a securities settlement is a structural fact about the statement, and a
+   * category rule has no business overruling it.
+   */
+  rules: CompiledRule[] = [],
+  isOwner: OwnerNameTest | null = null
 ): { kind: RowKind; category?: string } {
-  if (ownAccounts.has(row.counterpartyAccount) || OWNER_NAME.test(row.counterparty)) {
+  if (ownAccounts.has(row.counterpartyAccount) || isOwner?.(row.counterparty)) {
     return { kind: 'transfer' };
   }
   if (DIVIDEND.test(row.description)) return { kind: 'dividend' };
@@ -361,5 +365,5 @@ export function classifyRow(
   if (SETTLEMENT.test(row.description)) return { kind: 'security', category: 'Investments' };
   if (PENSION.test(row.counterparty)) return { kind: 'pension', category: 'Pension' };
 
-  return { kind: 'cashflow', category: categorize(row) };
+  return { kind: 'cashflow', category: categorize(row, rules) };
 }
