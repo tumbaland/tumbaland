@@ -33,6 +33,8 @@ export interface CategorySummary {
 export interface GrowthBreakdown {
   from: string;
   to: string;
+  /** Months the span covers — a short history is not a year, and says so. */
+  months: number;
   netWorthChange: number;
   contributions: number;
   marketGrowth: number;
@@ -44,7 +46,10 @@ export interface CashflowSummary {
   months: MonthSummary[];
   categories: CategorySummary[];
   totals: MonthSummary;
+  /** The last pair of check-ins — one month of movement. */
   growth: GrowthBreakdown | null;
+  /** The same split over the trailing year, matching the headline figures. */
+  growthTrailing: GrowthBreakdown | null;
 }
 
 export interface TransactionQuery {

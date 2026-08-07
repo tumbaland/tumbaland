@@ -1,4 +1,7 @@
-jest.mock('../models/Transaction', () => ({ __esModule: true, default: { find: jest.fn() } }));
+jest.mock('../models/Transaction', () => ({
+  __esModule: true,
+  default: { find: jest.fn(), aggregate: jest.fn() }
+}));
 jest.mock('../models/Snapshot', () => ({ __esModule: true, default: { find: jest.fn() } }));
 jest.mock('../models/AssetClass', () => ({ __esModule: true, default: { find: jest.fn() } }));
 
@@ -8,6 +11,7 @@ import AssetClass from '../models/AssetClass';
 import { getCashflowSummary } from './cashflow.service';
 
 const mockedTransactionFind = Transaction.find as unknown as jest.Mock;
+const mockedTransactionAggregate = Transaction.aggregate as unknown as jest.Mock;
 const mockedSnapshotFind = Snapshot.find as unknown as jest.Mock;
 const mockedAssetClassFind = AssetClass.find as unknown as jest.Mock;
 
@@ -35,9 +39,17 @@ const expense = (date: string, amount: number, category = 'Groceries') => ({
 const thisMonth = () => new Date().toISOString().slice(0, 7);
 const dayIn = (month: string) => `${month}-05T00:00:00.000Z`;
 
+/** One row of the by-month savings aggregation the trailing split runs. */
+const savedIn = (month: string, income: number, expense: number) => ({
+  _id: month,
+  income,
+  expense
+});
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockedTransactionFind.mockReturnValue(sorted([]));
+  mockedTransactionAggregate.mockResolvedValue([]);
   mockedSnapshotFind.mockReturnValue(sortedLimited([]));
   mockedAssetClassFind.mockResolvedValue([]);
 });
@@ -192,5 +204,142 @@ describe('growth breakdown', () => {
 
     // (12000 − 1000) − (10000 − 2000)
     expect(growth?.netWorthChange).toBe(3000);
+  });
+
+  it('says how many months the pair covers', async () => {
+    const now = new Date();
+    const latest = thisMonth();
+    const previous = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1))
+      .toISOString()
+      .slice(0, 7);
+
+    mockedSnapshotFind.mockReturnValue(snapshotsAt(previous, latest, 10_000, 12_000));
+
+    expect((await getCashflowSummary('u1')).growth?.months).toBe(1);
+  });
+});
+
+describe('trailing growth breakdown', () => {
+  /** A month key `back` months before the current one. */
+  const monthsAgo = (back: number) => {
+    const now = new Date();
+    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - back, 1)).toISOString().slice(0, 7);
+  };
+
+  const checkIn = (month: string, net: number) => ({
+    date: new Date(`${month}-01T00:00:00.000Z`),
+    entries: [{ assetClassId: 'a1', value: net, gain: 0 }]
+  });
+
+  /** Check-ins newest first, the order the query returns them in. */
+  const history = (...checkIns: ReturnType<typeof checkIn>[]) => sortedLimited(checkIns);
+
+  it('is null with fewer than two check-ins to compare', async () => {
+    mockedSnapshotFind.mockReturnValue(sortedLimited([{ date: new Date(), entries: [] }]));
+
+    expect((await getCashflowSummary('u1')).growthTrailing).toBeNull();
+  });
+
+  it('opens a year back rather than a month back', async () => {
+    mockedSnapshotFind.mockReturnValue(
+      history(checkIn(monthsAgo(0), 60_000), checkIn(monthsAgo(1), 58_000), checkIn(monthsAgo(12), 30_000))
+    );
+
+    const { growthTrailing } = await getCashflowSummary('u1');
+
+    expect(growthTrailing).toMatchObject({
+      from: monthsAgo(12),
+      to: monthsAgo(0),
+      months: 12,
+      netWorthChange: 30_000
+    });
+  });
+
+  it('adds up every month of the span, not just the last one', async () => {
+    mockedSnapshotFind.mockReturnValue(
+      history(checkIn(monthsAgo(0), 60_000), checkIn(monthsAgo(12), 30_000))
+    );
+    mockedTransactionAggregate.mockResolvedValue(
+      Array.from({ length: 12 }, (_, i) => savedIn(monthsAgo(i + 1), 3000, 2000))
+    );
+
+    const { growthTrailing } = await getCashflowSummary('u1');
+
+    expect(growthTrailing).toMatchObject({
+      contributions: 12_000,
+      marketGrowth: 18_000,
+      complete: true
+    });
+  });
+
+  it('reads the contributions from the span itself, not from the summary window', async () => {
+    mockedSnapshotFind.mockReturnValue(
+      history(checkIn(monthsAgo(0), 60_000), checkIn(monthsAgo(12), 30_000))
+    );
+
+    await getCashflowSummary('u1');
+
+    expect(mockedTransactionAggregate).toHaveBeenCalledWith([
+      expect.objectContaining({
+        $match: expect.objectContaining({
+          date: {
+            $gte: new Date(`${monthsAgo(12)}-01T00:00:00.000Z`),
+            $lt: new Date(`${monthsAgo(0)}-01T00:00:00.000Z`)
+          }
+        })
+      }),
+      expect.objectContaining({ $group: expect.anything() })
+    ]);
+  });
+
+  it('flags the split as incomplete when a month of the span has no transactions', async () => {
+    mockedSnapshotFind.mockReturnValue(
+      history(checkIn(monthsAgo(0), 60_000), checkIn(monthsAgo(12), 30_000))
+    );
+    // Eleven of the twelve months imported.
+    mockedTransactionAggregate.mockResolvedValue(
+      Array.from({ length: 11 }, (_, i) => savedIn(monthsAgo(i + 1), 3000, 2000))
+    );
+
+    const { growthTrailing } = await getCashflowSummary('u1');
+
+    expect(growthTrailing).toMatchObject({ contributions: 11_000, complete: false });
+  });
+
+  it('falls back to the nearest check-in when the one a year back is missing', async () => {
+    mockedSnapshotFind.mockReturnValue(
+      history(checkIn(monthsAgo(0), 60_000), checkIn(monthsAgo(9), 40_000))
+    );
+
+    const { growthTrailing } = await getCashflowSummary('u1');
+
+    expect(growthTrailing).toMatchObject({ from: monthsAgo(9), months: 9, netWorthChange: 20_000 });
+  });
+
+  it('nets liabilities out of both ends, as the monthly split does', async () => {
+    mockedAssetClassFind.mockResolvedValue([{ _id: 'debt', name: 'Mortgage', kind: 'liability' }]);
+    mockedSnapshotFind.mockReturnValue(
+      sortedLimited([
+        {
+          date: new Date(`${monthsAgo(0)}-01T00:00:00.000Z`),
+          entries: [
+            { assetClassId: 'a1', value: 60_000, gain: 0 },
+            { assetClassId: 'debt', value: 5000, gain: 0 }
+          ]
+        },
+        {
+          date: new Date(`${monthsAgo(12)}-01T00:00:00.000Z`),
+          entries: [
+            { assetClassId: 'a1', value: 30_000, gain: 0 },
+            { assetClassId: 'debt', value: 10_000, gain: 0 }
+          ]
+        }
+      ])
+    );
+
+    const { growthTrailing } = await getCashflowSummary('u1');
+
+    // (60000 − 5000) − (30000 − 10000)
+    expect(growthTrailing?.netWorthChange).toBe(35_000);
   });
 });

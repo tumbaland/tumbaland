@@ -41,9 +41,19 @@ const base: CashflowSummary = {
   growth: {
     from: '2026-07',
     to: '2026-08',
+    months: 1,
     netWorthChange: 2000,
     contributions: 1500,
     marketGrowth: 500,
+    complete: true
+  },
+  growthTrailing: {
+    from: '2025-08',
+    to: '2026-08',
+    months: 12,
+    netWorthChange: 24_000,
+    contributions: 18_000,
+    marketGrowth: 6000,
     complete: true
   }
 };
@@ -55,7 +65,7 @@ describe('range labelling', () => {
   it('says which period every figure covers', () => {
     renderCards();
 
-    expect(screen.getByText('Last 12 months')).toBeInTheDocument();
+    expect(screen.getByText('12-month summary')).toBeInTheDocument();
     expect(screen.getByText(/Sept 2025 – Aug 2026/)).toBeInTheDocument();
   });
 
@@ -72,9 +82,24 @@ describe('headline figures', () => {
 
     expect(screen.getByText('4000 €')).toBeInTheDocument();
     expect(screen.getByText('2500 €')).toBeInTheDocument();
-    // Also the contribution figure in the net-worth split below
-    expect(screen.getAllByText('1500 €').length).toBeGreaterThan(0);
+    expect(screen.getByText('1500 €')).toBeInTheDocument();
     expect(screen.getByText('+37.5%')).toBeInTheDocument();
+  });
+
+  it('titles every card by what it measures, in the same shape', () => {
+    renderCards();
+
+    expect(screen.getByText('Total income')).toBeInTheDocument();
+    expect(screen.getByText('Total spending')).toBeInTheDocument();
+    expect(screen.getByText('Cash kept')).toBeInTheDocument();
+    expect(screen.getByText('Savings rate')).toBeInTheDocument();
+  });
+
+  it('spells out what the two derived figures mean', () => {
+    renderCards();
+
+    expect(screen.getByText('Income minus spending')).toBeInTheDocument();
+    expect(screen.getByText('Share of income kept')).toBeInTheDocument();
   });
 
   it('compares each against the previous window', () => {
@@ -90,7 +115,7 @@ describe('headline figures', () => {
       trailing: { current: totals({ consumption: 2000, invested: 500 }), previous: null }
     });
 
-    expect(screen.getByText(/plus 500 € invested/)).toBeInTheDocument();
+    expect(screen.getByText('500 € invested')).toBeInTheDocument();
   });
 
   it('shows a dash for a savings rate with no income behind it', () => {
@@ -99,31 +124,22 @@ describe('headline figures', () => {
     });
 
     expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.getByText('no income recorded')).toBeInTheDocument();
+    expect(screen.getByText('No income recorded')).toBeInTheDocument();
   });
 });
 
 describe('net-worth split', () => {
-  it('explains the move when the period is fully covered', () => {
+  it('opens on the same twelve months as the figures above it', () => {
     renderCards();
 
-    expect(screen.getByText(/Why net worth moved · Jul 2026 → Aug 2026/)).toBeInTheDocument();
-    expect(screen.getByText('You contributed')).toBeInTheDocument();
-    expect(screen.getByText('+500 €')).toBeInTheDocument();
-  });
-
-  it('says what is missing rather than showing a split it cannot stand behind', () => {
-    renderCards({ ...base, growth: { ...base.growth!, complete: false } });
-
-    expect(screen.queryByText('You contributed')).not.toBeInTheDocument();
-    expect(screen.getByText(/needs a net-worth check-in for Jul 2026/)).toBeInTheDocument();
+    expect(screen.getByText('Net worth movement')).toBeInTheDocument();
+    expect(screen.getByText('Aug 2025 → Aug 2026 · 12 months')).toBeInTheDocument();
   });
 
   it('shows nothing at all when there is no pair to compare', () => {
-    renderCards({ ...base, growth: null });
+    renderCards({ ...base, growth: null, growthTrailing: null });
 
-    expect(screen.queryByText('You contributed')).not.toBeInTheDocument();
-    expect(screen.queryByText(/needs a net-worth check-in/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Net worth movement')).not.toBeInTheDocument();
   });
 });
 

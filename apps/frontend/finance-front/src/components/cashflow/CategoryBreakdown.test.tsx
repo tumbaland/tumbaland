@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 
@@ -102,13 +102,26 @@ it('drills into one category from the picker', async () => {
   expect(screen.getByText('−200 € / year')).toBeInTheDocument();
 });
 
+/** The card a query belongs to — category names repeat across them. */
+const card = (title: string | RegExp) =>
+  screen.getByText(title).closest('.MuiCardContent-root') as HTMLElement;
+
 it('drills in by clicking a category in the share list', async () => {
   render(<CategoryBreakdown analytics={analytics} />);
 
-  await userEvent.click(screen.getByText('Groceries'));
+  await userEvent.click(within(card('2025 spending by category')).getByText('Groceries'));
 
   expect(screen.getByText('Lifetime')).toBeInTheDocument();
   expect(screen.getByText('7000 €')).toBeInTheDocument();
+});
+
+it('carries the movers table, which the trends tab used to clutter', () => {
+  render(<CategoryBreakdown analytics={analytics} />);
+
+  const movers = card('Biggest movers in spending');
+  expect(within(movers).getByRole('columnheader', { name: 'Variance' })).toBeInTheDocument();
+  // Investing is not spending, here as everywhere else on this tab
+  expect(within(movers).queryByText('Investments')).not.toBeInTheDocument();
 });
 
 it('offers category chips before one is picked', () => {
@@ -191,7 +204,7 @@ it('shows an absolute change when there is no base to divide by', async () => {
   await userEvent.click(screen.getByLabelText('Category'));
   await userEvent.click(screen.getByRole('option', { name: 'Travel' }));
 
-  expect(screen.getByText('+300 €')).toBeInTheDocument();
+  expect(within(card('One category in detail')).getByText('+300 €')).toBeInTheDocument();
 });
 
 it('handles a latest year with no spending at all', () => {
@@ -207,5 +220,5 @@ it('handles a latest year with no spending at all', () => {
   );
 
   // Nothing in the newest year, so no slice has a share to report
-  expect(screen.getByText('Rent')).toBeInTheDocument();
+  expect(within(card('2025 spending by category')).getByText('Rent')).toBeInTheDocument();
 });

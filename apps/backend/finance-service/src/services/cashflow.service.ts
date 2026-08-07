@@ -26,6 +26,8 @@ export interface CategorySummary {
 export interface GrowthBreakdown {
   from: string; // YYYY-MM
   to: string; // YYYY-MM
+  /** Months the span covers, so a short history can be labelled as one. */
+  months: number;
   netWorthChange: number;
   contributions: number;
   /** netWorthChange − contributions. */
@@ -38,12 +40,25 @@ export interface GrowthBreakdown {
   complete: boolean;
 }
 
+export interface GrowthBreakdowns {
+  /** The last pair of check-ins — why net worth moved this month. */
+  monthly: GrowthBreakdown | null;
+  /**
+   * The same split over roughly the last year of check-ins, which is the scope
+   * the headline cash-flow figures are on. A single month of market movement is
+   * noise; a year of it is a return.
+   */
+  trailing: GrowthBreakdown | null;
+}
+
 export interface CashflowSummary {
   months: MonthSummary[];
   categories: CategorySummary[];
   /** Rolled up over the whole requested window. */
   totals: MonthSummary;
   growth: GrowthBreakdown | null;
+  /** The same split over the trailing year — the default view on the page. */
+  growthTrailing: GrowthBreakdown | null;
 }
 
 const monthKey = (date: Date) => date.toISOString().slice(0, 7);
@@ -51,6 +66,19 @@ const monthKey = (date: Date) => date.toISOString().slice(0, 7);
 /** First of the month, UTC, `monthsBack` months before `from`. */
 function shiftMonths(from: Date, monthsBack: number): Date {
   return new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() - monthsBack, 1));
+}
+
+/** Whole months from `from` to `to`, which is what a span of check-ins covers. */
+function monthsApart(from: Date, to: Date): number {
+  return (
+    (to.getUTCFullYear() - from.getUTCFullYear()) * 12 + (to.getUTCMonth() - from.getUTCMonth())
+  );
+}
+
+/** Every month key in [from, to) — the months whose cash flow moved the position. */
+function monthsBetween(from: Date, to: Date): string[] {
+  const span = monthsApart(from, to);
+  return Array.from({ length: span }, (_, i) => monthKey(shiftMonths(to, span - i)));
 }
 
 function summarize(month: string, income: number, expense: number): MonthSummary {
@@ -124,25 +152,61 @@ export const getCashflowSummary = async (
     months: monthSummaries,
     categories,
     totals: summarize('all', income, expense),
-    growth
+    growth: growth.monthly,
+    growthTrailing: growth.trailing
   };
 };
 
+/** How many months back the trailing net-worth split reaches for its opening check-in. */
+export const TRAILING_MONTHS = 12;
+
 /**
- * Split the net-worth change between the two most recent check-ins into money
- * saved and market movement.
+ * Money put aside, month by month, over [from, to).
  *
- * Uses consecutive snapshots rather than a fixed window because the whole point
- * is to explain a movement the user just saw on the dashboard.
+ * Read from the transactions directly rather than from the summary window: that
+ * window counts back from today, but the check-ins this is matched against can
+ * end on a different month — finance data often runs a month ahead — and any
+ * month the window missed would silently count as nothing saved.
+ */
+const savingsByMonth = async (
+  scope: Record<string, unknown>,
+  from: Date,
+  to: Date
+): Promise<Map<string, number>> => {
+  const rows: Array<{ _id: string; income: number; expense: number }> = await Transaction.aggregate([
+    { $match: { ...scope, date: { $gte: from, $lt: to } } },
+    {
+      $group: {
+        _id: { $dateToString: { format: '%Y-%m', date: '$date', timezone: 'UTC' } },
+        income: { $sum: { $cond: [{ $eq: ['$type', 'income'] }, '$amount', 0] } },
+        expense: { $sum: { $cond: [{ $eq: ['$type', 'income'] }, 0, '$amount'] } }
+      }
+    }
+  ]);
+
+  return new Map(rows.map((row) => [row._id, row.income - row.expense]));
+};
+
+/**
+ * Split a net-worth change into money put aside and market movement, over two
+ * spans: the last pair of check-ins, and roughly the last year of them.
+ *
+ * The pair explains a movement the user just saw on the dashboard. The year is
+ * the scope everything else on the page is on, and the one worth judging: a
+ * month of market movement is noise, and a month of contributions is whatever
+ * the salary date happened to land on.
  */
 export const getGrowthBreakdown = async (
   userId: string,
   groupId: string | undefined,
   monthSummaries: MonthSummary[]
-): Promise<GrowthBreakdown | null> => {
+): Promise<GrowthBreakdowns> => {
   const scope = scopeFor(userId, groupId);
-  const snapshots = await Snapshot.find(scope).sort({ date: -1 }).limit(2);
-  if (snapshots.length < 2) return null;
+  // Enough check-ins to reach a year back even with a month or two missing.
+  const snapshots = await Snapshot.find(scope)
+    .sort({ date: -1 })
+    .limit(TRAILING_MONTHS + 2);
+  if (snapshots.length < 2) return { monthly: null, trailing: null };
 
   const [latest, previous] = snapshots;
   const assetClasses = await AssetClass.find(scope);
@@ -156,19 +220,49 @@ export const getGrowthBreakdown = async (
       0
     );
 
+  const split = (
+    opening: ISnapshot,
+    contributions: number,
+    complete: boolean
+  ): GrowthBreakdown => {
+    const netWorthChange = netOf(latest) - netOf(opening);
+    return {
+      from: monthKey(opening.date),
+      to: monthKey(latest.date),
+      months: monthsApart(opening.date, latest.date),
+      netWorthChange,
+      contributions,
+      marketGrowth: netWorthChange - contributions,
+      complete
+    };
+  };
+
   // The check-in is dated the first of the month and reports the position at
   // that point, so the money that moved it is the previous month's cash flow.
   const contributionMonth = monthKey(previous.date);
   const summary = monthSummaries.find((m) => m.month === contributionMonth);
-  const netWorthChange = netOf(latest) - netOf(previous);
-  const contributions = summary?.savings ?? 0;
+  const monthly = split(previous, summary?.savings ?? 0, summary !== undefined);
+
+  // The check-in nearest a year before the latest, rather than one exactly
+  // twelve months back: a missed month would otherwise drop the whole view.
+  const target = shiftMonths(latest.date, TRAILING_MONTHS);
+  const opening = snapshots
+    .slice(1)
+    .reduce((best, s) =>
+      Math.abs(s.date.getTime() - target.getTime()) < Math.abs(best.date.getTime() - target.getTime())
+        ? s
+        : best
+    );
+
+  const months = monthsBetween(opening.date, latest.date);
+  const saved = await savingsByMonth(scope, opening.date, latest.date);
 
   return {
-    from: monthKey(previous.date),
-    to: monthKey(latest.date),
-    netWorthChange,
-    contributions,
-    marketGrowth: netWorthChange - contributions,
-    complete: summary !== undefined
+    monthly,
+    trailing: split(
+      opening,
+      months.reduce((sum, month) => sum + (saved.get(month) ?? 0), 0),
+      months.every((month) => saved.has(month))
+    )
   };
 };

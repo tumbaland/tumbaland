@@ -16,6 +16,7 @@ import { PieChart } from '@mui/x-charts';
 import { Analytics } from '../../services/cashflowService';
 import { formatCurrency, formatPct, formatCompactCurrency } from '../../utils/numberUtils';
 import { linearTrend } from '../../utils/trend';
+import CategoryMovers from './CategoryMovers';
 
 interface CategoryBreakdownProps {
   analytics: Analytics;
@@ -174,7 +175,7 @@ const CategoryBreakdown: React.FC<CategoryBreakdownProps> = ({ analytics }) => {
         </Card>
       )}
 
-      <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+      <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', mb: 2 }}>
         <CardContent>
           <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 2, mb: 1 }}>
             <Typography variant="subtitle2" sx={{ flexGrow: 1 }}>
@@ -253,6 +254,12 @@ const CategoryBreakdown: React.FC<CategoryBreakdownProps> = ({ analytics }) => {
           )}
         </CardContent>
       </Card>
+
+      {/* Which categories moved lives with the categories, not on the trends
+          tab: it is a comparison between two periods of the same thing. It sits
+          last because it is the long list — the shares and the one category you
+          came to look at should not be below a scroll of table. */}
+      <CategoryMovers trends={consumption} trailing={analytics.trailing} currency={currency} />
     </Box>
   );
 };

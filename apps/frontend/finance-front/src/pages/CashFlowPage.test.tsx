@@ -151,7 +151,7 @@ it('points at importing when there is nothing recorded', () => {
 it('opens on the overview, labelling the range the figures cover', () => {
   render(<CashFlowPage />);
 
-  expect(screen.getByText('Last 12 months')).toBeInTheDocument();
+  expect(screen.getByText('12-month summary')).toBeInTheDocument();
   expect(screen.getByText(/Sept 2025 – Aug 2026/)).toBeInTheDocument();
   expect(screen.getByText('Savings rate')).toBeInTheDocument();
 });

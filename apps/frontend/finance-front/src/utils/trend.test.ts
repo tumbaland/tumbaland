@@ -1,27 +1,4 @@
-import { movingAverage, linearTrend, mean, profile, rollingSum } from './trend';
-
-describe('movingAverage', () => {
-  it('averages the trailing window', () => {
-    expect(movingAverage([1, 2, 3, 4], 2)).toEqual([1, 1.5, 2.5, 3.5]);
-  });
-
-  it('averages fewer periods at the start rather than dropping them', () => {
-    // Same length as the input, so the line starts where the bars do
-    expect(movingAverage([10, 20, 30], 12)).toEqual([10, 15, 20]);
-  });
-
-  it('is the identity for a window of one', () => {
-    expect(movingAverage([3, 1, 4], 1)).toEqual([3, 1, 4]);
-  });
-
-  it('copies the values for a nonsensical window', () => {
-    expect(movingAverage([3, 1, 4], 0)).toEqual([3, 1, 4]);
-  });
-
-  it('handles an empty series', () => {
-    expect(movingAverage([], 3)).toEqual([]);
-  });
-});
+import { linearTrend, mean, profile } from './trend';
 
 describe('linearTrend', () => {
   it('is the per-period slope of a straight line', () => {
@@ -98,35 +75,5 @@ describe('profile', () => {
 
   it('has nothing to say about an empty series', () => {
     expect(profile([], 12)).toBeNull();
-  });
-});
-
-describe('rollingSum', () => {
-  it('totals each complete window', () => {
-    expect(rollingSum([1, 2, 3, 4, 5], 3)).toEqual([6, 9, 12]);
-  });
-
-  it('starts where the first full window ends, not at the first value', () => {
-    // A ramp out of partial windows reads as growth that never happened
-    expect(rollingSum([10, 10, 10, 10], 3)).toHaveLength(2);
-  });
-
-  it('has nothing to say until there is a full window', () => {
-    expect(rollingSum([1, 2], 3)).toEqual([]);
-  });
-
-  it('keeps every window the same length, which is the point of it', () => {
-    expect(new Set(rollingSum([5, 5, 5, 5, 5, 5], 4))).toEqual(new Set([20]));
-  });
-
-  it('does not drift as values are added and removed', () => {
-    // Computed incrementally, so any error would accumulate along the series
-    const rolled = rollingSum([1.1, 2.2, 3.3, 4.4, 5.5, 6.6], 3);
-
-    expect(rolled[rolled.length - 1]).toBeCloseTo(16.5, 6);
-  });
-
-  it('refuses a window of zero rather than looping', () => {
-    expect(rollingSum([1, 2, 3], 0)).toEqual([]);
   });
 });

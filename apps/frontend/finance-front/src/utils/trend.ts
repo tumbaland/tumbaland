@@ -1,25 +1,12 @@
 /**
  * Trend helpers for the cash-flow charts.
  *
- * Bars show what each period actually was; a line over them shows the
- * direction of travel. Monthly spending is noisy enough — an annual insurance
- * bill, a holiday — that the bars alone do not answer "is this going up?".
+ * The charts plot what each period actually was; these describe it. Monthly
+ * spending is noisy enough — an annual insurance bill, a holiday — that the
+ * plotted figures alone do not answer "was that a normal month?". Smoothing
+ * was the earlier answer to that and it hid the figures it was smoothing, so
+ * what is left here summarises the series rather than redrawing it.
  */
-
-/**
- * Trailing mean over `window` periods. The first points average fewer periods
- * rather than being dropped, so the line starts where the bars do instead of
- * leaving an unexplained gap at the left edge.
- */
-export function movingAverage(values: number[], window: number): number[] {
-  if (window < 1) return [...values];
-
-  return values.map((_, index) => {
-    const start = Math.max(0, index - window + 1);
-    const slice = values.slice(start, index + 1);
-    return slice.reduce((sum, v) => sum + v, 0) / slice.length;
-  });
-}
 
 /**
  * Slope of the least-squares line through the values, in units per period.
@@ -85,30 +72,4 @@ export function profile(values: number[], count: number): Profile | null {
     latestIndex: window.length - 1,
     values: window
   };
-}
-
-/**
- * Totals over a sliding window — the trailing-twelve-months figure at every
- * point in the series.
- *
- * Only complete windows are returned, so the series starts where the first full
- * one ends. Including the partial windows at the front would draw a ramp out of
- * nothing and read as a period of explosive growth that never happened.
- *
- * Every point covers the same number of periods, which is exactly what calendar
- * buckets lack: a year or month still in progress is a stub, and setting it
- * beside a finished one makes every figure look like a collapse.
- */
-export function rollingSum(values: number[], window: number): number[] {
-  if (window < 1 || values.length < window) return [];
-
-  const out: number[] = [];
-  let total = values.slice(0, window).reduce((sum, v) => sum + v, 0);
-  out.push(total);
-
-  for (let i = window; i < values.length; i++) {
-    total += values[i] - values[i - window];
-    out.push(total);
-  }
-  return out;
 }

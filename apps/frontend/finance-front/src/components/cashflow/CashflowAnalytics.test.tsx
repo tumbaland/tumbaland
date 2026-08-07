@@ -42,12 +42,16 @@ vi.mock('@mui/x-charts/BarChart', () => ({
   }
 }));
 vi.mock('@mui/x-charts/LineChart', () => ({
-  LineChart: ({ series, xAxis }: { series: MockSeries[]; xAxis?: MockAxis[] }) => (
+  LineChart: ({ series, xAxis, yAxis }: { series: MockSeries[]; xAxis?: MockAxis[]; yAxis?: MockAxis[] }) => (
     <div>
       <div data-testid="line-chart">{series.map((s) => `${s.label}:${s.data.join(',')}`).join(' | ')}</div>
+      <div data-testid="line-tooltip">
+        {series.map((s) => `${s.label}=${s.valueFormatter?.(s.data[0] ?? null) ?? ''}`).join(' | ')}
+      </div>
       <div data-testid="line-xaxis">
         {(xAxis?.[0]?.data || []).map((v) => xAxis?.[0]?.valueFormatter?.(v as never) ?? v).join(' | ')}
       </div>
+      <div data-testid="line-yaxis">{yAxis?.[0]?.valueFormatter?.(12500 as never) ?? ''}</div>
     </div>
   )
 }));
@@ -104,8 +108,8 @@ it('renders nothing when there is no series', () => {
 it('starts on monthly and charts the month series', () => {
   render(<CashflowAnalytics analytics={analytics} />);
 
-  expect(screen.getByTestId('bar-chart')).toHaveTextContent('Income:4000,4000');
-  expect(screen.getByTestId('bar-chart')).toHaveTextContent('Spending:1200,1400');
+  expect(screen.getByTestId('line-chart')).toHaveTextContent('Income:4000,4000');
+  expect(screen.getByTestId('line-chart')).toHaveTextContent('Spending:1200,1400');
 });
 
 it('switches to the yearly series', async () => {
@@ -117,11 +121,29 @@ it('switches to the yearly series', async () => {
   expect(screen.getByTestId('bar-chart')).toHaveTextContent('Spending:20000,15000');
 });
 
-it('draws a trailing average line alongside the bars', () => {
+it('offers only the two calendar scopes, with no rolling view to duplicate them', () => {
   render(<CashflowAnalytics analytics={analytics} />);
 
-  // 1200 then (1200+1400)/2
-  expect(screen.getByTestId('line-chart')).toHaveTextContent('Spending average:1200,1300');
+  expect(screen.getByRole('button', { name: 'Monthly' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Yearly' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Rolling 12m' })).not.toBeInTheDocument();
+});
+
+it('plots the months exactly rather than smoothing them into an average', () => {
+  // A trailing average hid what any given month actually was, which is the one
+  // thing this chart is asked for
+  render(<CashflowAnalytics analytics={analytics} />);
+
+  expect(screen.queryByText('Where it is heading')).not.toBeInTheDocument();
+  expect(screen.getByTestId('line-chart')).not.toHaveTextContent('average');
+  expect(screen.getByTestId('line-chart')).toHaveTextContent('Spending:1200,1400');
+});
+
+it('carries net cash flow, so one hover answers all three questions', () => {
+  render(<CashflowAnalytics analytics={analytics} />);
+
+  expect(screen.getByTestId('line-chart')).toHaveTextContent('Net cash flow:2800,2600');
+  expect(screen.getByText(/hover a month for its income, spending and what was kept/)).toBeInTheDocument();
 });
 
 it('describes a typical period rather than a trend line', () => {
@@ -169,10 +191,10 @@ it('marks a part year in the year table as not comparable', () => {
   expect(screen.getByText('3 mo')).toBeInTheDocument();
 });
 
-it('says the movers are compared on trailing windows, not calendar years', () => {
+it('leaves the movers to the categories tab, where the comparison belongs', () => {
   render(<CashflowAnalytics analytics={analytics} />);
 
-  expect(screen.getByText(/against the 12 months before/)).toBeInTheDocument();
+  expect(screen.queryByText('Biggest movers in spending')).not.toBeInTheDocument();
 });
 
 it('relabels the period when switched to yearly', async () => {
@@ -221,34 +243,25 @@ it('dashes a year with nothing invested rather than showing a zero', () => {
   expect(within(table).getAllByText('—').length).toBeGreaterThan(0);
 });
 
-it('ranks the biggest movers by absolute change, not by total', () => {
-  render(<CashflowAnalytics analytics={analytics} />);
-
-  expect(screen.getByText('Biggest movers in spending')).toBeInTheDocument();
-  // Travel moved 600 against Groceries' 500, so it leads despite a smaller total
-  const movers = screen.getAllByText(/^(Groceries|Travel)$/).map((el) => el.textContent);
-  expect(movers[0]).toBe('Travel');
-});
-
 describe('chart formatting', () => {
   it('labels a month axis point readably rather than as a raw key', () => {
     render(<CashflowAnalytics analytics={analytics} />);
 
-    expect(screen.getByTestId('bar-xaxis')).toHaveTextContent('Jan 2025 | Feb 2025');
-    expect(screen.getByTestId('line-xaxis')).toHaveTextContent('Jan 2025');
+    expect(screen.getByTestId('line-xaxis')).toHaveTextContent('Jan 2025 | Feb 2025');
   });
 
   it('shows whole euros in the tooltip, not raw floats', () => {
     render(<CashflowAnalytics analytics={analytics} />);
 
-    expect(screen.getByTestId('bar-tooltip')).toHaveTextContent('Income=4000 €');
-    expect(screen.getByTestId('bar-tooltip')).toHaveTextContent('Spending=1200 €');
+    expect(screen.getByTestId('line-tooltip')).toHaveTextContent('Income=4000 €');
+    expect(screen.getByTestId('line-tooltip')).toHaveTextContent('Spending=1200 €');
+    expect(screen.getByTestId('line-tooltip')).toHaveTextContent('Net cash flow=2800 €');
   });
 
   it('abbreviates the value axis so ticks stay short', () => {
     render(<CashflowAnalytics analytics={analytics} />);
 
-    expect(screen.getByTestId('bar-yaxis')).toHaveTextContent('13k €');
+    expect(screen.getByTestId('line-yaxis')).toHaveTextContent('13k €');
   });
 
   it('leaves a year label alone when switched to yearly', async () => {
@@ -264,8 +277,8 @@ it('plots consumption under the Spending label, never the gross outflow', () => 
   // A month that put 4000 into ETFs must not read as 5200 of spending
   render(<CashflowAnalytics analytics={analytics} />);
 
-  expect(screen.getByTestId('bar-chart')).toHaveTextContent('Spending:1200,1400');
-  expect(screen.getByTestId('bar-chart')).not.toHaveTextContent('Spending:5200');
+  expect(screen.getByTestId('line-chart')).toHaveTextContent('Spending:1200,1400');
+  expect(screen.getByTestId('line-chart')).not.toHaveTextContent('Spending:5200');
 });
 
 it('gives investing its own chart, so it cannot flatten income and spending', () => {
@@ -274,7 +287,7 @@ it('gives investing its own chart, so it cannot flatten income and spending', ()
   render(<CashflowAnalytics analytics={analytics} />);
 
   expect(screen.getByTestId('invested-chart')).toHaveTextContent('Invested:4000,0');
-  expect(screen.getByTestId('bar-chart')).not.toHaveTextContent('Invested');
+  expect(screen.getByTestId('line-chart')).not.toHaveTextContent('Invested');
   expect(screen.getByText(/left the account but was not spent/)).toBeInTheDocument();
 });
 
@@ -282,7 +295,7 @@ it('lines the invested chart up with the same periods', () => {
   render(<CashflowAnalytics analytics={analytics} />);
 
   expect(screen.getByTestId('invested-xaxis')).toHaveTextContent(
-    screen.getByTestId('bar-xaxis').textContent as string
+    screen.getByTestId('line-xaxis').textContent as string
   );
 });
 
@@ -303,7 +316,7 @@ it('drops the invested chart entirely when there is none', () => {
   );
 
   expect(screen.queryByTestId('invested-chart')).not.toBeInTheDocument();
-  expect(screen.getByTestId('bar-chart')).not.toHaveTextContent('Invested');
+  expect(screen.getByTestId('line-chart')).not.toHaveTextContent('Invested');
 });
 
 it('shows capital that came back beside what went in', () => {
@@ -318,71 +331,6 @@ it('shows capital that came back beside what went in', () => {
 
   expect(screen.getByText('9026 €')).toBeInTheDocument();
   expect(screen.getByText('16 523 €')).toBeInTheDocument();
-});
-
-describe('biggest movers', () => {
-  const withTrends = (trends: Analytics['categoryTrends']) => ({ ...analytics, categoryTrends: trends });
-  const trend = (over: Partial<Analytics['categoryTrends'][0]>) => ({
-    category: 'X', byYear: {}, total: 0, latest: 0, previous: 0, change: 0, changePct: null, perMonth: 0, ...over
-  });
-
-  it('leads with the euro change, which is comparable across categories', () => {
-    render(<CashflowAnalytics analytics={analytics} />);
-
-    expect(screen.getByText('+500 €')).toBeInTheDocument();
-    expect(screen.getByText('−600 €')).toBeInTheDocument();
-  });
-
-  it('says "new" instead of a percentage off nothing', () => {
-    // Cash went 0 € → 3350 €, which the old card rendered as "+3350 €" ranked
-    // as if it were a percentage
-    render(
-      <CashflowAnalytics
-        analytics={withTrends([trend({ category: 'Cash', latest: 3350, previous: 0, change: 3350 })])}
-      />
-    );
-
-    expect(screen.getByText('new')).toBeInTheDocument();
-    expect(screen.getByText('+3350 €')).toBeInTheDocument();
-  });
-
-  it('says "stopped" when a category went to nothing', () => {
-    render(
-      <CashflowAnalytics
-        analytics={withTrends([
-          trend({ category: 'Gym', latest: 0, previous: 400, change: -400, changePct: -100 })
-        ])}
-      />
-    );
-
-    expect(screen.getByText('stopped')).toBeInTheDocument();
-  });
-
-  it('refuses a percentage off a base too small to carry one', () => {
-    // 87 € → 710 € is not "+717%", it is a category that barely existed
-    render(
-      <CashflowAnalytics
-        analytics={withTrends([
-          trend({ category: 'Subscriptions', latest: 710, previous: 87, change: 623, changePct: 716.1 })
-        ])}
-      />
-    );
-
-    expect(screen.getByText('from a small base')).toBeInTheDocument();
-    expect(screen.queryByText(/716|717/)).not.toBeInTheDocument();
-  });
-
-  it('keeps the percentage when the base is big enough to mean something', () => {
-    render(
-      <CashflowAnalytics
-        analytics={withTrends([
-          trend({ category: 'Transport', latest: 2496, previous: 2209, change: 287, changePct: 13.0 })
-        ])}
-      />
-    );
-
-    expect(screen.getByText('+13.0%')).toBeInTheDocument();
-  });
 });
 
 describe('the month in progress', () => {
@@ -438,88 +386,7 @@ describe('the month in progress', () => {
   it('still plots the month in progress, which is a record of what happened', () => {
     render(<CashflowAnalytics analytics={withMonths(series)} />);
 
-    expect(screen.getByTestId('bar-chart')).toHaveTextContent('Spending:1400,1600,121');
+    expect(screen.getByTestId('line-chart')).toHaveTextContent('Spending:1400,1600,121');
   });
 });
 
-describe('rolling twelve-month windows', () => {
-  // Fourteen months, so there are three complete windows
-  const monthly = Array.from({ length: 14 }, (_, i) => ({
-    period: `2025-${String(i + 1).padStart(2, '0')}`.replace('2025-13', '2026-01').replace('2025-14', '2026-02'),
-    income: 1000,
-    expense: 100,
-    consumption: 100,
-    invested: 0,
-    savings: 900
-  }));
-  const rollingAnalytics = { ...analytics, months: monthly };
-
-  const showRolling = async () => {
-    render(<CashflowAnalytics analytics={rollingAnalytics} />);
-    await userEvent.click(screen.getByRole('button', { name: 'Rolling 12m' }));
-  };
-
-  it('offers rolling beside the calendar views', () => {
-    render(<CashflowAnalytics analytics={rollingAnalytics} />);
-
-    expect(screen.getByRole('button', { name: 'Rolling 12m' })).toBeInTheDocument();
-  });
-
-  it('totals twelve months into every point', async () => {
-    await showRolling();
-
-    // 12 × 1000 income and 12 × 100 spending, at each of the three windows
-    expect(screen.getByTestId('line-chart')).toHaveTextContent('Income:12000,12000,12000');
-    expect(screen.getByTestId('line-chart')).toHaveTextContent('Spending:1200,1200,1200');
-  });
-
-  it('drops the partial windows at the start rather than drawing a ramp', async () => {
-    await showRolling();
-
-    // 14 months give 3 complete windows, not 14
-    expect(screen.getByTestId('line-chart').textContent).toContain('12000,12000,12000');
-    expect(screen.getByTestId('line-chart').textContent).not.toContain('1000,2000');
-  });
-
-  it('draws overlapping windows as a line, never as bars', async () => {
-    // Bars would imply each window is a period of its own and invite adding them
-    await showRolling();
-
-    expect(screen.getByTestId('line-chart')).toBeInTheDocument();
-    expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
-  });
-
-  it('labels each point by the month the window closes on', async () => {
-    await showRolling();
-
-    expect(screen.getByTestId('line-xaxis')).toHaveTextContent('Dec 2025');
-  });
-
-  it('says every point is comparable, which is the reason to use it', async () => {
-    await showRolling();
-
-    expect(screen.getByText(/Every point covers a full year/)).toBeInTheDocument();
-  });
-
-  it('describes a typical window rather than a typical month', async () => {
-    await showRolling();
-
-    expect(screen.getByText('Spending — a typical 12 months')).toBeInTheDocument();
-    expect(screen.getByText('Income — a typical 12 months')).toBeInTheDocument();
-    // Both cards carry the closing month
-    expect(screen.getAllByText(/Year to/)).toHaveLength(2);
-  });
-
-  it('drops the trailing-average chart, which would smooth what is already smooth', async () => {
-    await showRolling();
-
-    expect(screen.queryByText('Where it is heading')).not.toBeInTheDocument();
-  });
-
-  it('keeps the newest window, since a rolling one is never a stub', async () => {
-    // The calendar views drop a month in progress; a rolling window cannot be one
-    await showRolling();
-
-    expect(screen.getAllByText(/middle of the last 3 windows/)).toHaveLength(2);
-  });
-});
