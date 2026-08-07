@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.428](https://github.com/toomastahves/tumbaland/compare/app-v0.0.427...app-v0.0.428) (2026-08-07)
+
+### Features
+
+* improve cash flow ux ([767909b](https://github.com/toomastahves/tumbaland/commit/767909b51a0b8387ed040e5d9de56921b1c6b2fd))
 ## [0.0.427](https://github.com/toomastahves/tumbaland/compare/app-v0.0.426...app-v0.0.427) (2026-08-07)
 
 ### Features
