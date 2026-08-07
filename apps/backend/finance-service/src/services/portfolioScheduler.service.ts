@@ -87,8 +87,8 @@ export async function runDailyPortfolioUpdate(): Promise<void> {
 }
 
 export function startDailyPortfolioUpdate() {
-  // Runs every day at 19:00 (7 PM).
+  // Runs every day at 22:00 (10 PM).
   // Uses TIME_SERIES_DAILY compact (last ~100 trading days) so any gaps from
   // missed cron runs are automatically backfilled on the next successful run.
-  cron.schedule('0 19 * * *', runDailyPortfolioUpdate);
+  cron.schedule('0 22 * * *', runDailyPortfolioUpdate);
 }
