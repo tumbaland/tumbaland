@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.426](https://github.com/toomastahves/tumbaland/compare/app-v0.0.425...app-v0.0.426) (2026-08-07)
+
+### Features
+
+* improve import ([d630ac2](https://github.com/toomastahves/tumbaland/commit/d630ac22c4d24ae9444d760521153b6775edb356))
 ## [0.0.425](https://github.com/toomastahves/tumbaland/compare/app-v0.0.424...app-v0.0.425) (2026-08-06)
 
 ### Features
