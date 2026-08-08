@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.431](https://github.com/toomastahves/tumbaland/compare/app-v0.0.430...app-v0.0.431) (2026-08-08)
+
+### Features
+
+* make tumbaland visible in search engine ([69a6233](https://github.com/toomastahves/tumbaland/commit/69a6233e440ca560dc346320821e63af29147cd5))
 ## [0.0.430](https://github.com/toomastahves/tumbaland/compare/app-v0.0.429...app-v0.0.430) (2026-08-08)
 
 ### Features
