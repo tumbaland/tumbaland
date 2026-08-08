@@ -13,6 +13,21 @@ vi.mock('../services/authService', () => ({
 
 import Layout from './Layout';
 import { ConfigContext } from '../config/ConfigProvider';
+import { authService } from '../services/authService';
+
+type AuthResult = Awaited<ReturnType<typeof authService.checkAuth>>;
+
+/**
+ * Both HeaderNav and Layout's own useAuthState call checkAuth, and HeaderNav's
+ * effect fires first, so per-test sessions have to be set with
+ * mockResolvedValue rather than a single mockResolvedValueOnce.
+ */
+function setSession(authenticated: boolean) {
+  vi.mocked(authService.checkAuth).mockResolvedValue({
+    authenticated,
+    user: authenticated ? { email: 'a@b.c' } : null
+  } as AuthResult);
+}
 
 function renderAt(path: string, config: Record<string, string> = {}) {
   return render(
@@ -27,6 +42,7 @@ function renderAt(path: string, config: Record<string, string> = {}) {
 }
 
 beforeEach(() => {
+  setSession(false);
   window.matchMedia = ((query: string) => ({
     matches: false,
     media: query,
@@ -82,6 +98,22 @@ it('boots the iframe on a nested route and keeps the src stable as the child nav
       'https://relationship.example/?embedded=1&embedPath=%2Fjournal'
     )
   );
+});
+
+it('hides the side menu from signed-out visitors', async () => {
+  renderAt('/');
+  await waitFor(() => expect(screen.getByText('page content')).toBeInTheDocument());
+  expect(screen.queryByLabelText('Album')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Finance')).not.toBeInTheDocument();
+});
+
+it('shows the side menu once a session is confirmed', async () => {
+  setSession(true);
+
+  renderAt('/');
+
+  expect(await screen.findByLabelText('Album')).toBeInTheDocument();
+  expect(screen.getByLabelText('Finance')).toBeInTheDocument();
 });
 
 it('shows an unauthorized page instead of the iframe when not authenticated', async () => {

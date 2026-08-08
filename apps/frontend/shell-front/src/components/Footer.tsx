@@ -4,17 +4,24 @@ import { GitHub, Circle } from '@mui/icons-material';
 
 interface FooterProps {
   isVisible: boolean;
+  /**
+   * Whether the fixed 60px SideMenu is on screen. It is hidden for signed-out
+   * visitors, and the footer would otherwise sit in dead space beside it.
+   */
+  offsetForSideMenu?: boolean;
 }
 
-const Footer: React.FC<FooterProps> = ({ isVisible }) => {
+const Footer: React.FC<FooterProps> = ({ isVisible, offsetForSideMenu = true }) => {
   if (!isVisible) {
     return null;
   }
 
+  const sideMenuWidth = offsetForSideMenu ? '60px' : 0;
+
   return (
     <Box
       sx={{
-        width: { xs: '100%', sm: 'calc(100% - 60px)' }, // Account for sidebar width on desktop
+        width: { xs: '100%', sm: `calc(100% - ${offsetForSideMenu ? '60px' : '0px'})` }, // Account for sidebar width on desktop
         height: '32px',
         backgroundColor: 'rgba(255, 255, 255, 0.4)',
         backdropFilter: 'blur(8px)',
@@ -25,7 +32,7 @@ const Footer: React.FC<FooterProps> = ({ isVisible }) => {
         justifyContent: 'space-between',
         px: { xs: 1.5, sm: 2 },
         position: 'relative',
-        left: { xs: 0, sm: '60px' }, // Move footer to the right of sidebar on desktop
+        left: { xs: 0, sm: sideMenuWidth }, // Move footer to the right of sidebar on desktop
         zIndex: 15
       }}
     >

@@ -8,6 +8,8 @@ import Footer from './Footer';
 import { getAppByRoute } from '../config/apps';
 import { useConfig } from '../config/ConfigProvider';
 import { authService } from '../services/authService';
+import { recordLastVisited } from '../services/lastVisited';
+import { useAuthState } from '../hooks/useAuthState';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 
@@ -23,6 +25,12 @@ export default function Layout({ children }: LayoutProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const frameRef = useRef<HTMLIFrameElement>(null);
+
+  // The side menu only links to apps that require a session, so signed-out
+  // visitors (who see the public landing page at `/`) get no app chrome at all.
+  // It stays hidden while the check is in flight so the landing page never
+  // flashes a nav bar it is about to lose.
+  const { authenticated } = useAuthState();
 
   const currentApp = getAppByRoute(location.pathname);
   const appUrl = currentApp?.urlKey ? config[currentApp.urlKey] : undefined;
@@ -66,6 +74,13 @@ export default function Layout({ children }: LayoutProps) {
     }
   }, [appKey]);
 
+  // Remember the module being viewed so the home page can offer a way back.
+  useEffect(() => {
+    if (currentApp) {
+      recordLastVisited(location.pathname);
+    }
+  }, [currentApp, location.pathname]);
+
   return (
     <div
       style={{
@@ -99,7 +114,7 @@ export default function Layout({ children }: LayoutProps) {
       <HeaderNav currentRoute={location.pathname} />
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        <SideMenu currentRoute={location.pathname} />
+        {authenticated && <SideMenu currentRoute={location.pathname} />}
         <div
           style={{
             flex: 1,
@@ -107,7 +122,7 @@ export default function Layout({ children }: LayoutProps) {
             alignItems: 'stretch',
             justifyContent: 'center',
             position: 'relative',
-            marginLeft: showIframe ? (isMobile ? 0 : 60) : 0,
+            marginLeft: showIframe && authenticated && !isMobile ? 60 : 0,
             transition: 'margin-left 0.3s',
             overflow: 'auto'
           }}
@@ -150,7 +165,7 @@ export default function Layout({ children }: LayoutProps) {
         </div>
       </div>
 
-      <Footer isVisible={location.pathname !== '/'} />
+      <Footer isVisible={location.pathname !== '/'} offsetForSideMenu={authenticated} />
     </div>
   );
 }
