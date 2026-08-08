@@ -49,9 +49,9 @@ afterEach(() => {
 });
 
 describe('startDailyPortfolioUpdate', () => {
-  it('registers a cron job for 19:00 daily', () => {
+  it('registers a cron job for 22:00 daily', () => {
     startDailyPortfolioUpdate();
-    expect(cron.schedule).toHaveBeenCalledWith('0 19 * * *', runDailyPortfolioUpdate);
+    expect(cron.schedule).toHaveBeenCalledWith('0 22 * * *', runDailyPortfolioUpdate);
   });
 });
 

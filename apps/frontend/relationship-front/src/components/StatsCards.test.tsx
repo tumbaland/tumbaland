@@ -15,6 +15,7 @@ import StatsCards from './StatsCards';
 const mockedUseStatistics = useStatistics as unknown as ReturnType<typeof vi.fn>;
 
 beforeEach(() => vi.clearAllMocks());
+afterEach(() => vi.useRealTimers());
 
 it('shows a spinner while loading', () => {
   mockedUseStatistics.mockReturnValue({ statistics: null, loading: true, error: null });
@@ -57,7 +58,15 @@ it('renders base cards plus a card per highlighted type, with a formatted first-
 });
 
 it('counts from a configured start date instead of the first entry', () => {
-  const twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10);
+  // The clock is pinned, and the start date is written out rather than derived
+  // from it. The component parses `YYYY-MM-DD` as *local* midnight, so a date
+  // built from `toISOString()` (which is UTC) was a day off for any run
+  // happening while the local date and the UTC date disagree — this test failed
+  // for three hours every night in UTC+3, and would fail all day west of UTC.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-08-09T12:00:00'));
+  const twoDaysAgo = '2026-08-07';
+
   mockedUseStatistics.mockReturnValue({
     statistics: {
       totalHours: 0,

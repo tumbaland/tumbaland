@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Card, CardActions, CardContent, Button, Typography, Divider, Avatar } from '@mui/material';
+import { Box, Card, CardActions, CardContent, Button, Typography, Divider, Avatar, Chip } from '@mui/material';
 import { useNavigate } from 'react-router';
 import { paymentApi } from '../services/paymentApi';
 import { Plan, Subscription } from '../types';
@@ -33,13 +33,20 @@ const PlansPage: React.FC = () => {
   if (loading) return <Loader message="Loading plans" fullHeight={false} />;
   if (error) return <Box sx={{ mt: 4, textAlign: 'center' }}>Error loading plans: {error}</Box>;
 
+  // A non-public plan reaches this page only when the caller is on it, so its
+  // presence identifies a granted account. Buying anything while on one would
+  // change nothing — a comp grant outranks a purchased plan — so the other
+  // cards say so instead of offering a checkout that has no effect.
+  const grantedPlan = plans.find(plan => plan.isPublic === false);
+  const onGrantedPlan = Boolean(grantedPlan && subscription?.planCode === grantedPlan.code);
+
   // Everything shown on a card comes from the plan document itself. The page previously
   // rendered a hardcoded matrix of upload/storage/retention/collaborator limits mapped onto
   // plan codes by regex — none of which is enforced anywhere in the product. Advertising
   // limits that don't exist is the one thing here with legal exposure attached, so the card
   // shows only what the plan actually says about itself.
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto', py: 2 }}>
+    <Box sx={{ maxWidth: 1320, mx: 'auto', py: 2 }}>
       {/* Header */}
       <Box sx={{ textAlign: 'center', mb: 4, px: 2 }}>
         <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, color: 'text.primary' }}>
@@ -58,7 +65,16 @@ const PlansPage: React.FC = () => {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
+          // One column per plan on desktop, however many there are: a staff
+          // member sees four cards and a customer three, and a fixed
+          // `repeat(3, ...)` would drop the fourth onto a lonely second row.
+          // `minmax(0, 1fr)` rather than `1fr` so long feature text shrinks the
+          // column instead of overflowing it.
+          gridTemplateColumns: {
+            xs: '1fr',
+            sm: 'repeat(2, minmax(0, 1fr))',
+            lg: `repeat(${plans.length || 1}, minmax(0, 1fr))`
+          },
           gap: 3,
           px: 2
         }}
@@ -67,6 +83,10 @@ const PlansPage: React.FC = () => {
           const isFree = !plan.priceMonthlyCents;
           const isCurrentPlan = subscription?.planCode === plan.code;
           const features = plan.features ?? [];
+          // The API returns a non-public plan only to someone who is on it, so
+          // its presence here means it is this user's plan. It cannot be bought,
+          // so it gets a badge instead of a call to action.
+          const isGrantedPlan = plan.isPublic === false;
 
           return (
             <Card
@@ -99,9 +119,14 @@ const PlansPage: React.FC = () => {
                     {isFree ? <Star /> : <CheckCircle />}
                   </Avatar>
                   <Box>
-                    <Typography variant="h6" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
-                      {plan.name}
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="h6" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
+                        {plan.name}
+                      </Typography>
+                      {isGrantedPlan && (
+                        <Chip label="Granted" size="small" color="secondary" variant="outlined" />
+                      )}
+                    </Box>
                     {plan.description && (
                       <Typography variant="caption" sx={{
                         color: "text.secondary"
@@ -113,7 +138,7 @@ const PlansPage: React.FC = () => {
                 </Box>
 
                 <Typography variant="h4" sx={{ mb: 3, fontWeight: 700, color: 'text.primary' }}>
-                  {plan.priceMonthlyCents ? `${(plan.priceMonthlyCents / 100).toFixed(2)} €` : 'Free'}
+                  {isGrantedPlan ? 'Complimentary' : plan.priceMonthlyCents ? `${(plan.priceMonthlyCents / 100).toFixed(2)} €` : 'Free'}
                   {(plan.priceMonthlyCents || 0) > 0 && <Typography component="span" variant="body2" sx={{
                     color: "text.secondary"
                   }}>/mo</Typography>}
@@ -152,6 +177,10 @@ const PlansPage: React.FC = () => {
                     }}
                   >
                     Current Plan
+                  </Button>
+                ) : onGrantedPlan ? (
+                  <Button fullWidth variant="outlined" disabled>
+                    Covered by {grantedPlan?.name}
                   </Button>
                 ) : plan.priceMonthlyCents === 0 && subscription && (subscription.planCode !== plan.code) ? (
                   <Button

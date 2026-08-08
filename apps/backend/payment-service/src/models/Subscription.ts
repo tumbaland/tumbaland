@@ -14,6 +14,20 @@ export interface ISubscription extends Document {
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   latestInvoiceId?: string;
+  /**
+   * A subscription granted by an admin rather than bought — staff, friends,
+   * support gestures. Stripe knows nothing about it, so nothing here ever
+   * invoices; entitlements resolve exactly as they do for a paying customer.
+   *
+   * Flagged rather than inferred from a missing `stripeSubscriptionId`, because
+   * a genuine subscription is briefly in that state too (`incomplete`, mid
+   * checkout) — and because revenue reporting has to be able to exclude these.
+   */
+  isComp?: boolean;
+  grantedBy?: string;
+  grantReason?: string;
+  /** Optional end of a grant. Past this instant it stops granting anything. */
+  expiresAt?: Date;
   createdAt: Date; updatedAt: Date;
 }
 
@@ -27,7 +41,11 @@ const SubscriptionSchema = new Schema<ISubscription>({
   canceledAt: { type: Date },
   stripeCustomerId: { type: String },
   stripeSubscriptionId: { type: String },
-  latestInvoiceId: { type: String }
+  latestInvoiceId: { type: String },
+  isComp: { type: Boolean, default: false },
+  grantedBy: { type: String },
+  grantReason: { type: String },
+  expiresAt: { type: Date }
 },{ timestamps: true });
 
 SubscriptionSchema.index({ userEmail: 1, status: 1 });

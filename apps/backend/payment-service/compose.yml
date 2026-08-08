@@ -17,6 +17,8 @@ services:
       - PAYMENT_URL=${PAYMENT_URL}
       - JWT_SECRET=${JWT_SECRET}
       - CORS_ORIGIN=${CORS_ORIGIN}
+      # Gates /internal/entitlements, which every other service reads.
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN}
     init: true
     networks:
       - tumbanet

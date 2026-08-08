@@ -1,6 +1,6 @@
 {
   "name": "@tumbaland/backend-core",
-  "version": "1.23.0",
+  "version": "1.24.0",
   "description": "Core shared functionality for Tumbaland backend services",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -36,6 +36,7 @@
     "@types/morgan": "^1.9.10",
     "@types/node": "^26.1.0",
     "commit-and-tag-version": "^13.1.2",
+    "mongodb-memory-server": "^11.2.0",
     "typescript": "^6.0.3"
   },
   "dependencies": {

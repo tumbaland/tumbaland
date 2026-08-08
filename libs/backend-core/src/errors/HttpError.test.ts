@@ -1,4 +1,4 @@
-import { HttpError, BadRequestError, UnauthorizedError, ForbiddenError, NotFoundError, ConflictError, TooManyRequestsError } from './HttpError';
+import { HttpError, BadRequestError, UnauthorizedError, ForbiddenError, NotFoundError, ConflictError, TooManyRequestsError, PaymentRequiredError } from './HttpError';
 
 describe('HttpError', () => {
   it('carries the given status code and message', () => {
@@ -10,6 +10,44 @@ describe('HttpError', () => {
 
   it('sets name to the concrete subclass name', () => {
     expect(new HttpError(400, 'x').name).toBe('HttpError');
+  });
+
+  it('carries optional details for the error handler to serialize', () => {
+    expect(new HttpError(400, 'x').details).toBeUndefined();
+    expect(new HttpError(400, 'x', { field: 'title' }).details).toEqual({ field: 'title' });
+  });
+});
+
+describe('PaymentRequiredError', () => {
+  it('is a 402 — "you may, for money" — and never a 403', () => {
+    const error = new PaymentRequiredError('Storage limit reached', {
+      code: 'QUOTA_EXCEEDED',
+      meter: 'storageBytes',
+      used: 10,
+      limit: 10,
+      planCode: 'free',
+      upgradeTo: 'personal'
+    });
+
+    expect(error.statusCode).toBe(402);
+    expect(error).toBeInstanceOf(HttpError);
+    expect(error.details).toEqual({
+      code: 'QUOTA_EXCEEDED',
+      meter: 'storageBytes',
+      used: 10,
+      limit: 10,
+      planCode: 'free',
+      upgradeTo: 'personal'
+    });
+  });
+
+  it('copies the details, so a caller reusing its object cannot mutate the error', () => {
+    const details = { code: 'QUOTA_EXCEEDED', meter: 'seats' };
+    const error = new PaymentRequiredError('Seat limit reached', details);
+
+    details.meter = 'aiJobs';
+
+    expect(error.details?.meter).toBe('seats');
   });
 });
 

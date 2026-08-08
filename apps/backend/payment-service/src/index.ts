@@ -7,6 +7,10 @@ import app from './app';
 
 // Fail fast if the JWT secret is missing — auth must never run with a default
 requireEnv('JWT_SECRET');
+// Same for the internal token: without it /internal/entitlements answers 500
+// to every service, and each of them fails closed to free limits — a silent,
+// deployment-wide downgrade of everyone who paid.
+requireEnv('INTERNAL_SERVICE_TOKEN');
 
 const PORT = process.env.PORT || 5005;
 

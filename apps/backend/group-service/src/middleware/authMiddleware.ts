@@ -1,16 +1,22 @@
 import { Request, Response, NextFunction } from 'express';
-import { authenticateToken as coreAuthenticateToken } from '@tumbaland/backend-core';
+import { authenticateToken as coreAuthenticateToken, internalServiceTokenBypass } from '@tumbaland/backend-core';
 
 /**
  * Wraps the shared JWT check with a bypass for internal service-to-service
- * calls (identified by the x-internal-token header) — those aren't a user
- * JWT at all, and are authenticated separately by validateInternalServiceToken
- * in internalServiceAuth.ts, mounted downstream in groupRoutes.ts.
+ * calls, which aren't a user JWT at all.
+ *
+ * The bypass *verifies the internal token here*. It used to skip JWT
+ * verification whenever the `x-internal-token` header was merely present,
+ * leaving the real check to `validateInternalServiceToken` mounted downstream
+ * in groupRoutes.ts — so any route that didn't mount that second middleware
+ * was reachable unauthenticated by sending the header with any value.
  */
 export function authenticateToken(req: Request, res: Response, next: NextFunction): void {
-  if (req.headers['x-internal-token']) {
-    next();
-    return;
-  }
-  coreAuthenticateToken(req, res, next);
+  internalServiceTokenBypass(req, res, () => {
+    if (req.isInternalService) {
+      next();
+      return;
+    }
+    coreAuthenticateToken(req, res, next);
+  });
 }

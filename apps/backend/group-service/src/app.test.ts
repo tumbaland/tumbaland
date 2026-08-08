@@ -53,6 +53,6 @@ describe('internal service token bypass', () => {
       .send({ name: 'Test Group' });
 
     expect(res.status).toBe(401);
-    expect(res.body).toEqual({ success: false, message: 'Invalid internal service token' });
+    expect(res.body).toEqual({ success: false, message: 'Invalid or missing internal service token' });
   });
 });

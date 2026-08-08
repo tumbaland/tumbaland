@@ -1,7 +1,7 @@
 import express from 'express';
 import request from 'supertest';
 import { errorHandler } from './errorHandler';
-import { NotFoundError, ForbiddenError } from '../errors/HttpError';
+import { NotFoundError, ForbiddenError, PaymentRequiredError } from '../errors/HttpError';
 
 jest.mock('../logging/logger', () => ({
   __esModule: true,
@@ -25,6 +25,18 @@ function buildApp() {
     next(namedError('ValidationError', 'CollageModel validation failed: title: Path `title` is required.'))
   );
   app.get('/cast', (_req, _res, next) => next(namedError('CastError', 'Cast to ObjectId failed for value "abc"')));
+  app.get('/over-quota', (_req, _res, next) =>
+    next(
+      new PaymentRequiredError('Storage limit reached', {
+        code: 'QUOTA_EXCEEDED',
+        meter: 'storageBytes',
+        used: 1073741824,
+        limit: 1073741824,
+        planCode: 'free',
+        upgradeTo: 'personal'
+      })
+    )
+  );
   app.use(errorHandler);
   return app;
 }
@@ -141,6 +153,36 @@ describe('errorHandler', () => {
 
       expect(res.status).toBe(400);
       expect(res.body.error).toBe('CastError');
+    });
+  });
+
+  describe('PaymentRequiredError', () => {
+    it('serializes the details the upgrade dialog needs alongside the envelope', async () => {
+      const app = buildApp();
+
+      const res = await request(app).get('/over-quota');
+
+      expect(res.status).toBe(402);
+      expect(res.body).toEqual({
+        success: false,
+        error: 'PaymentRequiredError',
+        message: 'Storage limit reached',
+        code: 'QUOTA_EXCEEDED',
+        meter: 'storageBytes',
+        used: 1073741824,
+        limit: 1073741824,
+        planCode: 'free',
+        upgradeTo: 'personal'
+      });
+    });
+
+    it('logs a paywall hit as routine control flow, not as a server fault', async () => {
+      const app = buildApp();
+
+      await request(app).get('/over-quota');
+
+      expect(logger.error).not.toHaveBeenCalled();
+      expect(logger.warn).toHaveBeenCalledWith('Request failed:', expect.objectContaining({ statusCode: 402 }));
     });
   });
 });

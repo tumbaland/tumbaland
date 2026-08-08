@@ -21,10 +21,22 @@ export { connectDB, disconnectDB } from './database/connection';
 export { requireEnv } from './config/env';
 
 // Errors
-export { HttpError, BadRequestError, UnauthorizedError, ForbiddenError, NotFoundError, ConflictError, TooManyRequestsError } from './errors/HttpError';
+export { HttpError, BadRequestError, UnauthorizedError, ForbiddenError, NotFoundError, ConflictError, TooManyRequestsError, PaymentRequiredError } from './errors/HttpError';
+export type { PaymentRequiredDetails } from './errors/HttpError';
+
+// Entitlements (plan limits, usage meters, enforcement)
+export * from './entitlements';
 
 // Middleware
 export { authenticateToken } from './middleware/authMiddleware';
+export {
+  requireInternalServiceToken,
+  internalServiceTokenBypass,
+  allowUserOrInternalService,
+  verifyInternalToken,
+  INTERNAL_TOKEN_HEADER,
+  SERVICE_ID_HEADER
+} from './middleware/internalServiceAuth';
 export { createCorsMiddleware } from './middleware/corsMiddleware';
 export { errorHandler } from './middleware/errorHandler';
 export { requestLogger, requestLoggerWithMetrics, simpleRequestLogger } from './middleware/requestLogger';

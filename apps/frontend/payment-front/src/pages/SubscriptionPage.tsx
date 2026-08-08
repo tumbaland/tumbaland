@@ -89,13 +89,17 @@ const SubscriptionPage: React.FC = () => {
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
                   Current Plan: {sub.planCode}
                 </Typography>
-                <Chip
-                  label={sub.status}
-                  color={sub.status === 'active' ? 'success' : sub.status === 'canceling' ? 'warning' : 'default'}
-                  size="small"
-                  variant="outlined"
-                  sx={{ mt: 0.5 }}
-                />
+                <Box sx={{ display: 'flex', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
+                  <Chip
+                    label={sub.status}
+                    color={sub.status === 'active' ? 'success' : sub.status === 'canceling' ? 'warning' : 'default'}
+                    size="small"
+                    variant="outlined"
+                  />
+                  {sub.isComp && (
+                    <Chip label="Complimentary" color="secondary" size="small" variant="outlined" />
+                  )}
+                </Box>
               </Box>
             </Box>
 
@@ -121,7 +125,23 @@ const SubscriptionPage: React.FC = () => {
                   </Typography>
                 </Box>
               )}
+
+              {sub.isComp && sub.expiresAt && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Event sx={{ color: 'text.secondary', fontSize: 20 }} />
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    Access until: <Box component="span" sx={{ color: 'text.primary', fontWeight: 500 }}>{new Date(sub.expiresAt).toLocaleDateString()}</Box>
+                  </Typography>
+                </Box>
+              )}
             </Box>
+
+            {sub.isComp && (
+              <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+                This plan was granted to you{sub.grantReason ? ` — ${sub.grantReason}` : ''}. There is nothing to
+                pay and nothing to cancel.
+              </Typography>
+            )}
 
             <Divider sx={{ my: 2 }} />
 
@@ -129,7 +149,10 @@ const SubscriptionPage: React.FC = () => {
               <Button
                 variant="outlined"
                 color="error"
-                disabled={sub.status === 'canceled' || sub.status === 'canceling'}
+                // A comp grant has no billing to stop. Cancelling would only
+                // revoke the holder's own access, which is never what the
+                // button is meant to do — revoking is an admin action.
+                disabled={sub.isComp || sub.status === 'canceled' || sub.status === 'canceling'}
                 onClick={cancel}
                 startIcon={<Cancel />}
               >

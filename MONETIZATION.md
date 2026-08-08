@@ -11,9 +11,14 @@ inside `payment-service` / `payment-front`. Paying today buys a row in Mongo and
 Stripe has only ever run against test data — there are no real customers, so nothing in this plan
 carries a migration burden for existing paying users. Phase 4.4's grandfathering item is moot.
 
-**Phase 0 is done.** Phase 1 is next and unblocked.
+**Phases 0 and 1 are done, plus Phase 2's meter store.** Phase 2's backfill is next.
 
 Work top to bottom. Each phase is unsafe to start before the one above it lands.
+
+**Before deploying any of Phase 1:** services install `@tumbaland/backend-core` from npm inside
+their Dockerfile (see `scripts/sync-lib-versions.mjs`), so the entitlement code has to be released
+— `npm run release --workspace=@tumbaland/backend-core` — before payment-service is rebuilt. Local
+dev resolves the lib through the workspace symlink and needs nothing.
 
 ---
 
@@ -39,6 +44,83 @@ short in-process TTL cache. Enforcement points are writes and dispatches — low
 60-second cache makes the network cost negligible while bounding staleness to one minute.
 
 The frontend does **not** need a JWT claim either: `GET /api/subscriptions/me` already exists.
+
+---
+
+## Architecture decision: limits live in the database, not in a code table
+
+The original 1.1 sketch put a `PLAN_LIMITS` table in code. That is wrong for the thing it describes.
+A limit is a *commercial* dial — "is 50 GB the right number for €6" is a question answered by looking
+at usage, repeatedly — and pinning it to a deploy guarantees it drifts from whatever the pricing page
+says. So:
+
+- **`Plan.limits` in Mongo is the authority.** Admin-editable at runtime through
+  `PATCH /api/plans/:code` and `PUT /api/plans/:code/limits`, both already behind `requireAdmin`.
+- **Code owns the vocabulary, not the values.** `libs/backend-core/src/entitlements/definitions.ts`
+  holds the meter/feature *keys*, their units and periods, and `DEFAULT_PLAN_LIMITS`.
+- **`normalizeLimits(stored, planCode)` merges the two**: stored values win, missing keys fall back
+  to the plan's defaults, unknown keys are dropped. So a meter added in code works everywhere the
+  moment it exists, with no Plan document backfill, and a typo in an admin form cannot invent a
+  meter that nothing enforces.
+- **Defaults are still the floor.** They are what an untouched plan resolves to and what the client
+  falls back to when payment-service is unreachable — which is why `free`'s defaults must stay
+  conservative.
+- **`ENTITLEMENT_CATALOG`** (served at `GET /api/plans/catalog`) is the metadata an admin UI builds
+  its form from: key, label, unit, period, description, plus the defaults and the `-1` sentinel. An
+  admin front therefore needs no hardcoded meter names, and a new meter appears in the form by
+  itself.
+
+The pricing page reads `effectiveLimits` off the same `GET /api/plans` response the middleware
+enforces from, which is what makes Phase 0's "stop advertising limits that don't exist" structural
+rather than a promise.
+
+---
+
+## Architecture decision: three layers, and no exemption branch
+
+Limits resolve through three stored, partial layers, each overriding the last:
+
+1. **Code defaults** — `DEFAULT_PLAN_LIMITS`, the bootstrap and the outage fallback.
+2. **`Plan.limits`** — what an admin sets for *everyone on a plan*.
+3. **`EntitlementOverride`** — what an admin sets for *one person*.
+
+`applyLimits(base, partial)` is the single step all three share, so the merge rules (unknown keys
+dropped, missing keys inherited, negatives become `UNLIMITED`) cannot diverge between them.
+
+**Two different tools, deliberately not merged:**
+
+- A **comp grant** is an ordinary Subscription with `isComp: true` and no Stripe ids — "this person
+  is on this plan and pays nothing". It shows in the UI as their plan.
+- An **override** is a per-user adjustment on top of whatever plan they hold — "this friend gets
+  20 GB instead of 1". Invisible; the plan is unchanged.
+
+Using a comp grant for the second would distort subscription reporting; using an override for the
+first would leave the account showing as free.
+
+**Both are documents, not environment variables.** An `ENTITLEMENTS_EXEMPT_EMAILS` env allowlist is
+the cheaper version of this and was rejected: it is invisible to the admin UI, needs a redeploy to
+change, and — worst — creates a code path where enforcement is skipped entirely. The people running
+the product would then never exercise the paywall and would never notice it was broken. A comp grant
+runs the identical resolution, middleware and metering as a paying customer; the only difference is
+that the numbers it resolves to are `-1`.
+
+Every grant and override carries `grantedBy`, a `reason`, and an optional `expiresAt`. The expiry
+matters: a temporary bump nobody remembers to revoke silently becomes permanent, and
+`resolveEntitlements` filters both collections on it, so a lapsed grant stops granting on its own.
+
+### The staff plan
+
+`staff` is a real plan with `isPublic: false` — active, granting, and never for sale. It is excluded
+from the public catalog and from `upgradeTo` targets, but `GET /api/plans` adds it back **for the
+people who are on it**, so a staff account's pricing page shows their actual plan instead of
+silently reading as free. A comp grant also outranks a paid subscription in `pickBest`, because the
+staff plan is priced at zero and ranking purely by price would let any paid plan the same account
+holds quietly beat an explicit admin grant.
+
+Seeded, along with the maintainer grants, by a one-shot migration (`003-staff-plan-grants`) which
+was then removed — the API is the durable interface: `POST /api/subscriptions/grants` for a comp
+grant, `PUT /api/entitlement-overrides/:email` for a per-user adjustment. The `migrations`
+collection retains both rows as the record that they ran.
 
 ---
 
@@ -130,134 +212,157 @@ these ship. No new revenue from this phase; it removes liability.
 
 ---
 
-## Phase 1 — Entitlement backbone
+## Phase 1 — Entitlement backbone ✅ SHIPPED
 
-Ships dark. No behaviour change, fully tested before anything depends on it.
+Shipped dark: `ENTITLEMENTS_MODE` defaults to `observe`, nothing calls the enforcement middleware
+yet, and no user-visible behaviour changed. 402s exist but no route can produce one until Phase 3
+wires a chokepoint.
 
-### 1.1 Shared entitlement definitions
+### 1.1 Shared entitlement definitions ✅
 
-- [ ] **New: `libs/backend-core/src/entitlements/definitions.ts`**
+- [x] **New: `libs/backend-core/src/entitlements/definitions.ts`** — the meter/feature key registry,
+      `PlanLimits`, `DEFAULT_PLAN_LIMITS`, `resolveLimits`, `normalizeLimits`, `fitsWithin`,
+      `ENTITLEMENT_CATALOG`. **Changed from the original plan:** the per-plan numbers live on the
+      Plan document, not in a `PLAN_LIMITS` code table — see the architecture note above. What
+      remains in code is the vocabulary and the bootstrap defaults.
 
-      Single source of truth for what each plan grants. Both enforcement and the pricing page read
-      this, so the pricing page becomes structurally incapable of lying.
+      `resolveLimits` falling back to free on an unknown code is unchanged and deliberate: a typo'd
+      or newly-added plan code must never silently grant unlimited.
 
-      ```ts
-      export type MeterKey =
-        | 'storageBytes'      // cumulative
-        | 'aiJobs'            // per calendar month
-        | 'trackedTickers'    // cumulative
-        | 'seats';            // cumulative
+- [x] **`Plan.limits` on the model, admin CRUD, catalog endpoint.** Not in the original plan; it is
+      what "configurable" required.
 
-      // Deliberately small. The portfolio planner is NOT a feature flag — it is
-      // gated by `retentionDays` via the price-history range (see 3.2), because
-      // the planner runs entirely client-side and a boolean flag would be
-      // bypassable from devtools.
-      export type FeatureKey = 'cleanExport';
+      | Route | Who | What |
+      |---|---|---|
+      | `GET /api/plans` | any user | public plans + `effectiveLimits`, plus the caller's own hidden plan |
+      | `GET /api/plans/all` | admin | all plans, inactive and non-public included |
+      | `GET /api/plans/catalog` | admin | meter/feature vocabulary for an admin form |
+      | `PATCH /api/plans/:code` | admin | name, description, prices, features, isActive, isPublic, limits |
+      | `PUT /api/plans/:code/limits` | admin | limits only; merges by default, `?replace=true` to reset |
+      | `GET /api/subscriptions/me/entitlements` | any user | own plan, limits **and live usage** |
+      | `GET/POST /api/subscriptions/grants` · `DELETE /api/subscriptions/grants/:email` | admin | comp grants |
+      | `GET/PUT/DELETE /api/entitlement-overrides/:email` | admin | per-user limit adjustments |
 
-      export interface PlanLimits {
-        meters: Record<MeterKey, number>;        // -1 = unlimited
-        features: Record<FeatureKey, boolean>;
-        retentionDays: number;                   // -1 = unlimited
-      }
+      Zod validation is strict on meter and feature keys, so an unknown key is a 400 naming it
+      rather than a silently dropped field and a limit everyone believes is live.
 
-      export const PLAN_LIMITS: Record<string, PlanLimits> = { /* see Appendix A */ };
-      export const FALLBACK_PLAN = 'free';
+      **All four plan documents now carry explicit limits**, written by a one-shot migration
+      (`002-seed-plan-limits`) that was then removed, per its purpose. Not strictly required — an
+      unset `limits` already resolves to the same numbers through the defaults — but it makes the
+      values visible and diffable in the database, and every later admin edit is a diff against
+      something concrete. Recover the script from git history if the numbers ever need resetting.
 
-      export function resolveLimits(planCode?: string): PlanLimits {
-        return PLAN_LIMITS[planCode ?? FALLBACK_PLAN] ?? PLAN_LIMITS[FALLBACK_PLAN];
-      }
-      ```
+### 1.2 Entitlement endpoint on payment-service ✅
 
-      `resolveLimits` falling back to free on an unknown code is deliberate: a typo'd or
-      newly-added plan code must never silently grant unlimited.
+- [x] **`payment-service/src/services/entitlementService.ts` + `controllers/entitlementController.ts`**,
+      mounted at `GET /internal/entitlements?email=` behind the internal-service-token middleware.
+      Returns `{ email, planCode, status, limits, upgradeTo, isComp, hasOverride }`.
 
-### 1.2 Entitlement endpoint on payment-service
+      `upgradeTo` was added beyond the original shape: it is the cheapest active plan priced above
+      the current one, read from the database, so the 402 body can name a real upgrade target
+      without any service hardcoding the plan ladder.
 
-- [ ] **New: `payment-service/src/controllers/entitlementController.ts`** +
-      `GET /internal/entitlements?email=` mounted behind the internal-service-token middleware.
-
-      Resolves the user's highest-priced subscription with status in
-      `['active', 'past_due', 'canceling']` and returns:
-
-      ```json
-      { "email": "...", "planCode": "personal", "status": "active",
-        "limits": { "meters": {...}, "features": {...}, "retentionDays": -1 } }
-      ```
+      Mounted **before** the rate limiter, alongside the Stripe webhook. Every service asks this
+      route whether a user may write, from one container IP each; an IP-counted limiter would
+      throttle deployment-wide enforcement, and since the client fails closed, a 429 here would read
+      as "everyone is on the free plan".
 
       `past_due` counts as entitled during the grace period — see Phase 5 dunning. Cutting access
       the instant a card fails converts recoverable involuntary churn into real churn.
 
-- [ ] **Harden the internal-token middleware first.** `TODO.md` already flags this:
-      `group-service/src/middleware/authMiddleware.ts` skips JWT verification whenever an
-      `x-internal-token` header is merely *present*, deferring the real check to a second middleware
-      mounted per-router. Adding a new internal endpoint to a second service is the moment to
-      consolidate both implementations into `@tumbaland/backend-core` and have the bypass verify the
-      token itself. Use `crypto.timingSafeEqual` — also already flagged in `TODO.md`.
+- [x] **Hardened the internal-token middleware.** `libs/backend-core/src/middleware/internalServiceAuth.ts`
+      now holds `requireInternalServiceToken`, `internalServiceTokenBypass` and
+      `allowUserOrInternalService`; group-service and auth-service re-export the shared versions.
+      Comparison is `crypto.timingSafeEqual` on equal-length buffers, and the bypass verifies the
+      token itself instead of treating the header's presence as authentication — the old behaviour
+      made any route that forgot to mount the second middleware reachable with
+      `x-internal-token: anything`.
 
-### 1.3 Entitlement client in backend-core
+### 1.3 Entitlement client in backend-core ✅
 
-- [ ] **New: `libs/backend-core/src/entitlements/client.ts`**
+- [x] **`libs/backend-core/src/entitlements/client.ts`** — `getEntitlements`,
+      `invalidateEntitlements`, `clearEntitlementsCache`. 60s TTL, bounded at 5000 entries with
+      oldest-first eviction, concurrent callers for one email collapsed into a single request.
+
+      Fail-closed on payment-service being unreachable: returns `resolveLimits(FALLBACK_PLAN)` with
+      `stale: true` and logs at `error`. Fail-open would give the product away during an outage;
+      fail-closed degrades paying users to free limits for at most 60 seconds. Neither is great —
+      the correct mitigation is that reads are never gated, only writes, so the blast radius is
+      "cannot upload for a minute", not "cannot use the app."
+
+      **Fallbacks are never cached**, or an outage would pin a paying user to free limits for a full
+      minute after it ended.
+
+- [x] **`libs/backend-core/src/entitlements/middleware.ts`**
 
       ```ts
-      // 60s TTL, bounded Map. Staleness window is one minute in both directions.
-      export async function getEntitlements(email: string): Promise<Entitlements>;
-      export function invalidateEntitlements(email: string): void;
+      requireEntitlement('cleanExport')                       // → 402 when the plan lacks the feature
+      requireQuota('storageBytes', { amount: r => r.body.sizeBytes })  // → 402 when it would exceed
+      retentionFloor(email)                                   // → Date | null, for $match filters
+      loadEntitlements(req)                                   // request-scoped, one lookup per request
       ```
 
-      Fail-closed on payment-service being unreachable: return `resolveLimits(FALLBACK_PLAN)` and
-      log at `error`. Fail-open would give the product away during an outage; fail-closed degrades
-      paying users to free limits for at most 60 seconds. Neither is great — the correct mitigation
-      is that reads are never gated, only writes, so the blast radius is "cannot upload for a
-      minute", not "cannot use the app."
+      `consumeQuota` is a service function rather than middleware (`entitlements/usage.ts`): the
+      increment belongs at the point the resource actually comes into existence, inside the
+      controller's own success path, not before it in the chain.
 
-- [ ] **New: `libs/backend-core/src/entitlements/middleware.ts`**
+      Every middleware takes an optional `subject` resolver, for the group chokepoint where the
+      quota belongs to the owner rather than the caller.
 
-      ```ts
-      requireEntitlement('planner')        // → 402 when the plan lacks the feature
-      requireQuota('storageBytes', bytes)  // → 402 when it would exceed
-      consumeQuota('aiJobs', 1)            // atomic reserve; release on failure
-      retentionFloor(email)                // → Date | null, for $match filters
-      ```
+### 1.4 The 402 contract ✅
 
-- [ ] **Export all of the above from `libs/backend-core/src/index.ts`.**
-
-### 1.4 The 402 contract
-
-- [ ] **Return `402 Payment Required`, never `403`.** 403 means "you may not"; 402 means "you may,
-      for money" — and the frontend needs to tell those apart to decide between an error toast and
-      an upgrade dialog. Body shape:
+- [x] **`PaymentRequiredError` in `libs/backend-core/src/errors/HttpError.ts`**, and `HttpError`
+      grew an optional `details` bag that `errorHandler` spreads into the body (before the envelope
+      fields, so a stray key can't shadow `success`/`error`/`message`). Body shape as specified:
 
       ```json
-      { "success": false, "code": "QUOTA_EXCEEDED", "message": "Storage limit reached",
+      { "success": false, "code": "QUOTA_EXCEEDED", "message": "Limit reached for storageBytes",
         "meter": "storageBytes", "used": 1073741824, "limit": 1073741824,
         "planCode": "free", "upgradeTo": "personal" }
       ```
 
-      Every field the upgrade dialog renders comes from this response, so the dialog needs no
-      knowledge of which call failed.
+      Feature denials use the same envelope with `code: "FEATURE_NOT_IN_PLAN"` and a `feature` field.
 
-- [ ] **New `PaymentRequiredError` in `libs/backend-core/src/errors/HttpError.ts`**, carrying the
-      extra fields, and extend `errorHandler` to serialize them. The existing hierarchy has no 402.
+### 1.5 Tests ✅
 
-### 1.5 Tests
+- [x] **`entitlements/usage.test.ts` runs against `mongodb-memory-server`, not mocks** — added as a
+      devDependency of `backend-core`. The concurrency cases are the reason: twelve simultaneous
+      `consumeQuota` calls against a limit of five admit exactly five, and the counter ends at five
+      because every rejected reservation rolled its own increment back. None of that means anything
+      against a mocked `$inc`.
 
-- [ ] **Integration tests against `mongodb-memory-server`, not mocks.** `TODO.md` documents that
-      `tickerPriceHistory.service.test.ts` reports 100% line coverage while mocking Mongoose
-      entirely, and a real upsert bug survived it. Quota code has the same failure mode with worse
-      consequences: a mocked `$inc` always looks correct, and a broken one either gives the product
-      away or bills people for capacity they can't use.
+      Covered: the boundary under concurrency, release-on-failure, release never going negative and
+      never losing a concurrent release, month rollover, unlimited meters, email casing, all three
+      modes, unknown plan code → free, `canceling` and `past_due` count as entitled, plan deleted
+      under a live subscription → free rather than unlimited, payment-service unreachable, cache TTL
+      and eviction, and the token middleware's rejection of a bogus internal token.
 
-      Cover: concurrent `consumeQuota` at the boundary, release-on-failure, month rollover,
-      unknown plan code → free, `canceling` counts as entitled, payment-service unreachable.
+      Plus, for the override layers: a comp grant outranking a paid subscription, no upsell to a
+      comped account, overrides layering over the plan without disturbing untouched meters, expiry
+      filtering on both collections, and the pricing page showing a hidden plan to its holder and to
+      nobody else.
+
+### 1.6 Overrides — shipped alongside
+
+- [x] **Comp grants and per-user overrides**, per the three-layer architecture note above:
+      `EntitlementOverride` model, `isComp`/`grantedBy`/`grantReason`/`expiresAt` on `Subscription`,
+      `Plan.isPublic`, admin endpoints for both, and `payment-front` rendering a granted plan as
+      "Complimentary" with the Cancel button disabled.
+
+- [x] **The maintainer accounts are on it.** `staff` plan created (all meters `-1`, retention `-1`,
+      `isPublic: false`) and granted to `toomastahves@hotmail.com` and `violettrar@gmail.com`.
+      Verified end-to-end against the live database: both resolve to unlimited on every meter, an
+      unknown email still resolves to the free plan's limits.
+
+      Applied as migrations `002-seed-plan-limits` and `003-staff-plan-grants`; both scripts were
+      removed afterwards and both rows are in the `migrations` collection.
 
 ---
 
 ## Phase 2 — Per-user metering
 
-- [ ] **Generalize `finance-service/src/services/apiQuota.service.ts` into backend-core.** It is
-      already a correct atomic reserve-and-release quota — the `$inc`-then-check race reasoning is
-      documented in the file and is right. It just counts Alpha Vantage calls globally instead of
-      per user. Keep the semantics, change the key.
+- [x] **Generalized `finance-service/src/services/apiQuota.service.ts` into backend-core.** Shipped
+      with Phase 1, because the enforcement middleware needs somewhere to read usage from.
 
       ```ts
       // libs/backend-core/src/entitlements/UsageMeter.ts
@@ -265,6 +370,16 @@ Ships dark. No behaviour change, fully tested before anything depends on it.
       // period: 'ALL' for cumulative meters, 'YYYY-MM' for monthly
       // unique compound index on { subjectId, meter, period }
       ```
+
+      `entitlements/usage.ts` exposes `getUsage`, `getUsageSnapshot`, `checkQuota`, `consumeQuota`,
+      `releaseQuota`, `setUsage`. The `$inc`-then-check race reasoning carried over unchanged.
+
+      **One semantic differs from the provider quota it generalizes:** a rejected reservation rolls
+      its own increment back before throwing. The provider version leaves an over-limit count to sit
+      until the day rolls over, which is harmless for a daily bucket. A per-user cumulative meter
+      never rolls over, so a leaked increment is permanent and surfaces months later as a user who
+      cannot upload while well under their limit. In `observe` mode the increment is deliberately
+      *kept* — rolling it back would under-report exactly the users the limits are calibrated on.
 
       Leave `finance-service`'s provider-quota usage intact — it solves a different problem (a
       deployment-wide external ceiling) and should keep its own model.
@@ -287,9 +402,15 @@ Deploy every enforcement point recording usage and logging what *would* have bee
 nothing. Run two weeks. The proposed limits in Appendix A are guesses — this is how they stop being
 guesses.
 
-- [ ] **`ENTITLEMENTS_MODE` env var: `off` | `observe` | `enforce`.** Default `observe`. In observe
-      mode `requireQuota` / `requireEntitlement` log a structured `entitlement.would_block` event
-      with meter, used, limit, plan, and route, then call `next()`.
+- [x] **`ENTITLEMENTS_MODE` env var: `off` | `observe` | `enforce`.** Shipped with Phase 1. Default
+      `observe`; an invalid value warns once and falls back to observe; read per call so a restart
+      with a new value is all it takes. In observe mode `requireQuota` / `requireEntitlement` /
+      `consumeQuota` log a structured `entitlement.would_block` event with meter, used, limit, plan,
+      route and whether the entitlement was a stale fallback, then continue.
+
+      `retentionFloor` returns `null` outside `enforce`, so observe mode produces no data on the
+      retention gate — that limit has to be set from product judgement rather than from
+      `would_block` volume.
 
 - [ ] **Wire the six chokepoints** (all in observe mode):
 
@@ -533,12 +654,15 @@ Google-only and auto-approving, so the *authenticated* funnel is frictionless �
 
 ## Appendix A — Proposed limits
 
-Starting values. Replace from Phase 3 data before enforcing.
+Starting values, and **only defaults** since Phase 1: they live in
+`DEFAULT_PLAN_LIMITS` and are what a Plan document resolves to before an admin has edited it. The
+authority is `Plan.limits` in Mongo. Update the numbers there, from Phase 3 data, without a deploy —
+and update this table when you do, since it is still what the defaults ship as.
 
 | Meter | `free` | `personal` €6/mo · €60/yr | `family` €12/mo · €120/yr |
 |---|---|---|---|
 | `storageBytes` | 1 GB | 50 GB | 250 GB pooled |
-| `aiJobs` (per month) | 25 total, lifetime | 200 | 600 |
+| `aiJobs` (per month) | 25 | 200 | 600 |
 | `trackedTickers` | 3 | 25 | 100 |
 | `seats` | 1 | 1 | 5 |
 | `retentionDays` | 90 | unlimited | unlimited |

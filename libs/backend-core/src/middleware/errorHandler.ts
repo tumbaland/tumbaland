@@ -6,6 +6,8 @@ interface KnownError {
   statusCode: number;
   name: string;
   message: string;
+  /** Extra body fields carried by errors the client must act on (e.g. a 402's meter/limit/upgradeTo). */
+  details?: Record<string, unknown>;
 }
 
 /**
@@ -18,7 +20,7 @@ interface KnownError {
  */
 function classifyError(error: Error): KnownError | null {
   if (error instanceof HttpError) {
-    return { statusCode: error.statusCode, name: error.name, message: error.message };
+    return { statusCode: error.statusCode, name: error.name, message: error.message, details: error.details };
   }
   if (error.name === 'ValidationError' || error.name === 'CastError') {
     return { statusCode: 400, name: error.name, message: error.message };
@@ -78,6 +80,9 @@ export const errorHandler: ErrorRequestHandler = (
 
   if (known) {
     res.status(known.statusCode).json({
+      // Spread first so a stray details key can't shadow the envelope fields
+      // every client already relies on.
+      ...known.details,
       success: false,
       error: known.name,
       message: known.message

@@ -121,3 +121,41 @@ it('navigates when switching to the free plan', async () => {
 
   expect(mockedNavigate).toHaveBeenCalledWith('/subscription/checkout?plan=free');
 });
+
+describe('a granted (non-public) plan', () => {
+  // The API returns a non-public plan only to the account that holds it, so its
+  // presence on this page means it is the caller's own plan.
+  const staffPlan = { _id: 'p4', code: 'staff', name: 'Staff', priceMonthlyCents: 0, isPublic: false, features: ['Everything, without limits'] };
+
+  it('is shown to the member it belongs to, marked as granted and complimentary', async () => {
+    mockedListPlans.mockResolvedValue([...plans, staffPlan]);
+    mockedGetMySubscription.mockResolvedValue({ _id: 's1', planCode: 'staff', status: 'active' });
+    renderPage();
+
+    expect(await screen.findByText('Staff')).toBeInTheDocument();
+    expect(screen.getByText('Granted')).toBeInTheDocument();
+    expect(screen.getByText('Complimentary')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Current Plan' })).toBeDisabled();
+  });
+
+  it('offers no checkout on the other plans, since buying one would change nothing', async () => {
+    mockedListPlans.mockResolvedValue([...plans, staffPlan]);
+    mockedGetMySubscription.mockResolvedValue({ _id: 's1', planCode: 'staff', status: 'active' });
+    renderPage();
+
+    const covered = await screen.findAllByRole('button', { name: /covered by staff/i });
+    expect(covered).toHaveLength(plans.length);
+    covered.forEach(button => expect(button).toBeDisabled());
+    expect(screen.queryByRole('button', { name: 'Change Plan' })).not.toBeInTheDocument();
+  });
+
+  it('leaves the ordinary catalog untouched for everyone else', async () => {
+    mockedListPlans.mockResolvedValue(plans);
+    mockedGetMySubscription.mockResolvedValue({ _id: 's1', planCode: 'pro', status: 'active' });
+    renderPage();
+
+    expect(await screen.findByRole('button', { name: 'Current Plan' })).toBeDisabled();
+    expect(screen.queryByText('Granted')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /covered by/i })).not.toBeInTheDocument();
+  });
+});

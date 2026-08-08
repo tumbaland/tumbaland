@@ -111,3 +111,38 @@ it('shows subscription history excluding the current subscription, covering acti
   // s4 has neither renewsAt nor canceledAt (2) = 4 total.
   expect(screen.getAllByText('—').length).toBe(4);
 });
+
+describe('a complimentary subscription', () => {
+  const comp = {
+    _id: 's-comp',
+    planCode: 'staff',
+    status: 'active',
+    isComp: true,
+    grantReason: 'Maintainer account',
+    expiresAt: '2026-12-31T00:00:00.000Z'
+  };
+
+  it('is labelled as granted, with its reason and expiry', async () => {
+    mockedGetMySubscription.mockResolvedValue(comp);
+    render(<SubscriptionPage />);
+
+    expect(await screen.findByText('Complimentary')).toBeInTheDocument();
+    expect(screen.getByText(/granted to you — Maintainer account/i)).toBeInTheDocument();
+    expect(screen.getByText(/access until/i)).toBeInTheDocument();
+  });
+
+  it('disables Cancel — there is no billing to stop, and revoking is an admin action', async () => {
+    mockedGetMySubscription.mockResolvedValue(comp);
+    render(<SubscriptionPage />);
+
+    expect(await screen.findByRole('button', { name: /cancel subscription/i })).toBeDisabled();
+  });
+
+  it('leaves a paid subscription cancellable', async () => {
+    mockedGetMySubscription.mockResolvedValue({ _id: 's1', planCode: 'personal', status: 'active' });
+    render(<SubscriptionPage />);
+
+    expect(await screen.findByRole('button', { name: /cancel subscription/i })).toBeEnabled();
+    expect(screen.queryByText('Complimentary')).not.toBeInTheDocument();
+  });
+});

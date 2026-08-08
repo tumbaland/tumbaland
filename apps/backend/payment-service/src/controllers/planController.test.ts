@@ -8,11 +8,24 @@ jest.mock('../models/Plan', () => ({
     insertMany: jest.fn()
   }
 }));
+jest.mock('../models/Subscription', () => ({ Subscription: { find: jest.fn() } }));
 
+import { DEFAULT_PLAN_LIMITS, UNLIMITED } from '@tumbaland/backend-core';
 import { Plan } from '../models/Plan';
-import { listPlans, createPlan, createPlansBulk, updatePlanStripePrices } from './planController';
+import { Subscription } from '../models/Subscription';
+import {
+  listPlans,
+  listAllPlans,
+  createPlan,
+  createPlansBulk,
+  updatePlan,
+  updatePlanLimits,
+  updatePlanStripePrices,
+  getEntitlementCatalog
+} from './planController';
 
 const mocked = Plan as jest.Mocked<typeof Plan>;
+const mockedSubscription = Subscription as jest.Mocked<typeof Subscription>;
 
 function mockRes(): Response {
   const res: Partial<Response> = {};
@@ -21,17 +34,113 @@ function mockRes(): Response {
   return res as Response;
 }
 
-beforeEach(() => jest.clearAllMocks());
+/** `Plan.find(...).sort(...)` for the catalog query. */
+function mockCatalog(plans: unknown[]): void {
+  mocked.find.mockReturnValue({ sort: jest.fn().mockResolvedValue(plans) } as any);
+}
+
+/** `Subscription.find(...).distinct('planCode')` for the caller's own plans. */
+function mockMyPlanCodes(codes: string[]): void {
+  mockedSubscription.find.mockReturnValue({ distinct: jest.fn().mockResolvedValue(codes) } as any);
+}
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockMyPlanCodes([]);
+});
 
 describe('listPlans', () => {
-  it('lists active plans sorted by price', async () => {
-    mocked.find.mockReturnValue({ sort: jest.fn().mockResolvedValue([{ code: 'free' }]) } as any);
+  it('lists active, public plans sorted by price', async () => {
+    mockCatalog([{ code: 'free' }]);
     const res = mockRes();
 
     await listPlans({} as Request, res);
 
-    expect(mocked.find).toHaveBeenCalledWith({ isActive: true });
-    expect(res.json).toHaveBeenCalledWith({ success: true, plans: [{ code: 'free' }] });
+    expect(mocked.find).toHaveBeenCalledWith({ isActive: true, isPublic: { $ne: false } });
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      plans: [expect.objectContaining({ code: 'free' })]
+    });
+  });
+
+  it('appends the caller\'s own hidden plan after the catalog, so a staff account does not read as free', async () => {
+    mocked.find.mockReturnValueOnce({
+      sort: jest.fn().mockResolvedValue([{ code: 'free', priceMonthlyCents: 0 }, { code: 'family', priceMonthlyCents: 1200 }])
+    } as any);
+    mockMyPlanCodes(['staff']);
+    // A granted plan is priced at zero, so sorting it in would land it next to
+    // Free, in the middle of a ladder it isn't part of. It goes last.
+    mocked.find.mockReturnValueOnce({
+      sort: jest.fn().mockResolvedValue([{ code: 'staff', priceMonthlyCents: 0, isPublic: false }])
+    } as any);
+    const res = mockRes();
+
+    await listPlans({ user: { email: 'Staff@Example.com' } } as Request, res);
+
+    expect(mockedSubscription.find).toHaveBeenCalledWith(expect.objectContaining({ userEmail: 'staff@example.com' }));
+    const [{ plans }] = (res.json as jest.Mock).mock.calls[0];
+    expect(plans.map((p: { code: string }) => p.code)).toEqual(['free', 'family', 'staff']);
+  });
+
+  it('does not re-fetch when the caller is on a plan already in the catalog', async () => {
+    mockCatalog([{ code: 'free' }]);
+    mockMyPlanCodes(['free']);
+    const res = mockRes();
+
+    await listPlans({ user: { email: 'user@example.com' } } as Request, res);
+
+    expect(mocked.find).toHaveBeenCalledTimes(1);
+    const [{ plans }] = (res.json as jest.Mock).mock.calls[0];
+    expect(plans).toHaveLength(1);
+  });
+
+  it('shows an anonymous caller the public catalog only', async () => {
+    mockCatalog([{ code: 'free' }]);
+
+    await listPlans({} as Request, mockRes());
+
+    expect(mockedSubscription.find).not.toHaveBeenCalled();
+  });
+
+  it('resolves the limits the pricing page renders, so a card cannot advertise a number nothing enforces', async () => {
+    mocked.find.mockReturnValue({
+      sort: jest.fn().mockResolvedValue([{ code: 'personal', limits: { meters: { storageBytes: 999 } } }])
+    } as any);
+    const res = mockRes();
+
+    await listPlans({} as Request, res);
+
+    const [{ plans }] = (res.json as jest.Mock).mock.calls[0];
+    expect(plans[0].effectiveLimits.meters.storageBytes).toBe(999);
+    // Anything the document leaves unset resolves from that plan's defaults.
+    expect(plans[0].effectiveLimits.meters.seats).toBe(DEFAULT_PLAN_LIMITS.personal.meters.seats);
+  });
+});
+
+describe('listAllPlans', () => {
+  it('includes inactive plans, which are exactly the ones an admin is editing', async () => {
+    mocked.find.mockReturnValue({ sort: jest.fn().mockResolvedValue([{ code: 'retired', isActive: false }]) } as any);
+    const res = mockRes();
+
+    await listAllPlans({} as Request, res);
+
+    expect(mocked.find).toHaveBeenCalledWith({});
+    const [{ plans }] = (res.json as jest.Mock).mock.calls[0];
+    expect(plans[0]).toMatchObject({ code: 'retired', isActive: false });
+    expect(plans[0].effectiveLimits).toBeDefined();
+  });
+});
+
+describe('getEntitlementCatalog', () => {
+  it('returns the meter and feature vocabulary an admin form builds itself from', () => {
+    const res = mockRes();
+
+    getEntitlementCatalog({} as Request, res);
+
+    const [{ catalog }] = (res.json as jest.Mock).mock.calls[0];
+    expect(catalog.meters.map((m: { key: string }) => m.key)).toContain('storageBytes');
+    expect(catalog.features.map((f: { key: string }) => f.key)).toContain('cleanExport');
+    expect(catalog.unlimited).toBe(UNLIMITED);
   });
 });
 
@@ -103,6 +212,106 @@ describe('createPlansBulk', () => {
     await createPlansBulk({ body: [{ code: 'a' }, { code: 'b' }] } as unknown as Request, res);
 
     expect(res.status).toHaveBeenCalledWith(201);
+  });
+});
+
+describe('updatePlan', () => {
+  it('throws NotFoundError when the plan does not exist', async () => {
+    mocked.findOne.mockResolvedValue(null);
+
+    await expect(
+      updatePlan({ params: { code: 'missing' }, body: { name: 'x' } } as unknown as Request, mockRes())
+    ).rejects.toMatchObject({ name: 'NotFoundError' });
+  });
+
+  it('applies only the fields present in the body', async () => {
+    const plan: any = { code: 'personal', name: 'Personal', isActive: true, save: jest.fn() };
+    mocked.findOne.mockResolvedValue(plan);
+
+    await updatePlan(
+      { params: { code: 'personal' }, body: { priceMonthlyCents: 700, isActive: false } } as unknown as Request,
+      mockRes()
+    );
+
+    expect(plan.priceMonthlyCents).toBe(700);
+    expect(plan.isActive).toBe(false);
+    expect(plan.name).toBe('Personal');
+    expect(plan.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('merges limits rather than replacing them', async () => {
+    const plan: any = {
+      code: 'personal',
+      limits: { meters: { storageBytes: 100, seats: 2 } },
+      save: jest.fn()
+    };
+    mocked.findOne.mockResolvedValue(plan);
+
+    await updatePlan(
+      { params: { code: 'personal' }, body: { limits: { meters: { seats: 5 } } } } as unknown as Request,
+      mockRes()
+    );
+
+    expect(plan.limits.meters).toEqual({ storageBytes: 100, seats: 5 });
+  });
+});
+
+describe('updatePlanLimits', () => {
+  it('throws NotFoundError when the plan does not exist', async () => {
+    mocked.findOne.mockResolvedValue(null);
+
+    await expect(
+      updatePlanLimits({ params: { code: 'missing' }, query: {}, body: {} } as unknown as Request, mockRes())
+    ).rejects.toMatchObject({ name: 'NotFoundError' });
+  });
+
+  it('merges a partial payload, so a form that only knows one meter cannot reset the rest', async () => {
+    const plan: any = {
+      code: 'family',
+      limits: { meters: { storageBytes: 100, seats: 5 }, features: { cleanExport: true }, retentionDays: 400 },
+      save: jest.fn()
+    };
+    mocked.findOne.mockResolvedValue(plan);
+    const res = mockRes();
+
+    await updatePlanLimits(
+      { params: { code: 'family' }, query: {}, body: { meters: { storageBytes: 250 } } } as unknown as Request,
+      res
+    );
+
+    expect(plan.limits).toEqual({
+      meters: { storageBytes: 250, seats: 5 },
+      features: { cleanExport: true },
+      retentionDays: 400
+    });
+    expect(plan.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('drops the stored limits first when asked to replace', async () => {
+    const plan: any = { code: 'family', limits: { meters: { storageBytes: 100, seats: 5 } }, save: jest.fn() };
+    mocked.findOne.mockResolvedValue(plan);
+
+    await updatePlanLimits(
+      { params: { code: 'family' }, query: { replace: 'true' }, body: { meters: { seats: 3 } } } as unknown as Request,
+      mockRes()
+    );
+
+    expect(plan.limits.meters).toEqual({ seats: 3 });
+  });
+
+  it('echoes the resolved numbers, including the ones defaults filled in', async () => {
+    const plan: any = { code: 'family', save: jest.fn() };
+    mocked.findOne.mockResolvedValue(plan);
+    const res = mockRes();
+
+    await updatePlanLimits(
+      { params: { code: 'family' }, query: {}, body: { retentionDays: UNLIMITED } } as unknown as Request,
+      res
+    );
+
+    const [{ effectiveLimits }] = (res.json as jest.Mock).mock.calls[0];
+    expect(effectiveLimits.retentionDays).toBe(UNLIMITED);
+    expect(effectiveLimits.meters.seats).toBe(DEFAULT_PLAN_LIMITS.family.meters.seats);
   });
 });
 
