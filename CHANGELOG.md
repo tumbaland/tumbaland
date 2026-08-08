@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.433](https://github.com/toomastahves/tumbaland/compare/app-v0.0.432...app-v0.0.433) (2026-08-08)
+
+### Features
+
+* setup payment gates ([81c7c5a](https://github.com/toomastahves/tumbaland/commit/81c7c5aadede9c401d2c4fc12383c3d9282c7a36))
 ## [0.0.432](https://github.com/toomastahves/tumbaland/compare/app-v0.0.431...app-v0.0.432) (2026-08-08)
 
 ### Features
