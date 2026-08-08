@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router';
 import { paymentApi } from '../services/paymentApi';
 import { Plan, Subscription } from '../types';
 import { Loader } from '@tumbaland/components';
-import { Star, CheckCircle, Storage, CloudUpload, People, History, SmartToy } from '@mui/icons-material';
+import { Star, CheckCircle } from '@mui/icons-material';
 
 const PlansPage: React.FC = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -33,36 +33,11 @@ const PlansPage: React.FC = () => {
   if (loading) return <Loader message="Loading plans" fullHeight={false} />;
   if (error) return <Box sx={{ mt: 4, textAlign: 'center' }}>Error loading plans: {error}</Box>;
 
-  // Derive simple feature matrix; real implementation could come from backend with structured attributes
-  const featureMatrix: { key: string; label: string; tooltip?: string; tiers: Record<string, string | boolean>; }[] = [
-    { key: 'uploads', label: 'Daily uploads', tiers: { free: '5', pro: '100', elite: '1000+' } },
-    { key: 'storage', label: 'Storage', tiers: { free: '0.5 GB', pro: '50 GB', elite: '500 GB+' } },
-    { key: 'privacy', label: 'Private content', tiers: { free: false, pro: true, elite: true } },
-    { key: 'history', label: 'History retention', tiers: { free: '30d', pro: '1 year', elite: 'Full' } },
-    { key: 'ai', label: 'AI / Automation', tiers: { free: 'Limited', pro: 'Standard', elite: 'Advanced' } },
-    { key: 'collab', label: 'Collaborators', tiers: { free: 'Solo', pro: '2', elite: 'Team (10)' } },
-  ];
-
-  // Helper map for quick access
-  const matrixByKey = Object.fromEntries(featureMatrix.map(r => [r.key, r]));
-  const tierAlias = (code: string) => {
-    const c = code.toLowerCase();
-    if (/(^|-)starter|free/.test(c)) return 'free';
-    if (/(pro)/.test(c)) return 'pro';
-    if (/(elite|max)/.test(c)) return 'elite';
-    return 'free'; // default fallback
-  };
-  const cardFeatureOrder = ['uploads','storage','privacy','history','ai','collab'];
-  const renderValue = (key: string, planCode: string) => {
-    const tier = tierAlias(planCode);
-    const row = matrixByKey[key];
-    if (!row) return '—';
-    const v = row.tiers[tier];
-    if (typeof v === 'boolean') return v ? 'Yes' : 'No';
-    return v || '—';
-  };
-
-
+  // Everything shown on a card comes from the plan document itself. The page previously
+  // rendered a hardcoded matrix of upload/storage/retention/collaborator limits mapped onto
+  // plan codes by regex — none of which is enforced anywhere in the product. Advertising
+  // limits that don't exist is the one thing here with legal exposure attached, so the card
+  // shows only what the plan actually says about itself.
   return (
     <Box sx={{ maxWidth: 1200, mx: 'auto', py: 2 }}>
       {/* Header */}
@@ -89,9 +64,9 @@ const PlansPage: React.FC = () => {
         }}
       >
         {plans.map((plan: Plan) => {
-          const alias = tierAlias(plan.code);
+          const isFree = !plan.priceMonthlyCents;
           const isCurrentPlan = subscription?.planCode === plan.code;
-          const isPopular = alias === 'pro';
+          const features = plan.features ?? [];
 
           return (
             <Card
@@ -111,46 +86,29 @@ const PlansPage: React.FC = () => {
                 }
               }}
             >
-              {isPopular && (
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: 12,
-                    right: 12,
-                    bgcolor: 'primary.main',
-                    color: 'white',
-                    px: 1,
-                    py: 0.5,
-                    borderRadius: 1,
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    zIndex: 1
-                  }}
-                >
-                  POPULAR
-                </Box>
-              )}
               <CardContent sx={{ p: 3 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                   <Avatar
                     sx={{
-                      bgcolor: alias === 'free' ? 'grey.100' : alias === 'pro' ? 'primary.light' : 'secondary.light',
-                      color: alias === 'free' ? 'grey.700' : alias === 'pro' ? 'primary.main' : 'secondary.main',
+                      bgcolor: isFree ? 'grey.100' : 'primary.light',
+                      color: isFree ? 'grey.700' : 'primary.main',
                       width: 48,
                       height: 48
                     }}
                   >
-                    {alias === 'free' ? <Star /> : alias === 'pro' ? <CheckCircle /> : <SmartToy />}
+                    {isFree ? <Star /> : <CheckCircle />}
                   </Avatar>
                   <Box>
                     <Typography variant="h6" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
                       {plan.name}
                     </Typography>
-                    <Typography variant="caption" sx={{
-                      color: "text.secondary"
-                    }}>
-                      {alias === 'free' ? 'For starters' : alias === 'pro' ? 'For professionals' : 'For power users'}
-                    </Typography>
+                    {plan.description && (
+                      <Typography variant="caption" sx={{
+                        color: "text.secondary"
+                      }}>
+                        {plan.description}
+                      </Typography>
+                    )}
                   </Box>
                 </Box>
 
@@ -164,36 +122,17 @@ const PlansPage: React.FC = () => {
                 <Divider sx={{ my: 2 }} />
 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                  {cardFeatureOrder.map(k => {
-                    const icon = k === 'uploads' ? <CloudUpload sx={{ fontSize: 18, color: 'text.secondary' }} /> :
-                               k === 'storage' ? <Storage sx={{ fontSize: 18, color: 'text.secondary' }} /> :
-                               k === 'privacy' ? <CheckCircle sx={{ fontSize: 18, color: 'text.secondary' }} /> :
-                               k === 'history' ? <History sx={{ fontSize: 18, color: 'text.secondary' }} /> :
-                               k === 'ai' ? <SmartToy sx={{ fontSize: 18, color: 'text.secondary' }} /> :
-                               <People sx={{ fontSize: 18, color: 'text.secondary' }} />;
-
-                    return (
-                      <Box key={k} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        {icon}
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            color: "text.secondary",
-                            flex: 1
-                          }}>
-                          <Box component="span" sx={{ color: 'text.primary', fontWeight: 500 }}>{matrixByKey[k].label}:</Box> {renderValue(k, alias)}
-                        </Typography>
-                      </Box>
-                    );
-                  })}
-
-                  {alias === 'elite' && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 1 }}>
-                      <Star sx={{ fontSize: 18, color: 'warning.main' }} />
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: 'warning.main' }}>
-                        Exclusive Award: TumbaBubu plush 🧸
+                  {features.length > 0 ? features.map(feature => (
+                    <Box key={feature} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                      <CheckCircle sx={{ fontSize: 18, mt: '2px', color: 'text.secondary' }} />
+                      <Typography variant="body2" sx={{ color: 'text.secondary', flex: 1 }}>
+                        {feature}
                       </Typography>
                     </Box>
+                  )) : (
+                    <Typography variant="body2" sx={{ color: 'text.disabled', fontStyle: 'italic' }}>
+                      No features listed for this plan yet.
+                    </Typography>
                   )}
                 </Box>
               </CardContent>
@@ -227,7 +166,7 @@ const PlansPage: React.FC = () => {
                     fullWidth
                     variant="contained"
                     onClick={() => navigate(`/subscription/checkout?plan=${encodeURIComponent(plan.code)}`)}
-                    color={alias === 'elite' ? 'secondary' : 'primary'}
+                    color="primary"
                   >
                     {subscription ? 'Change Plan' : 'Get Started'}
                   </Button>

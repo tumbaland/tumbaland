@@ -94,9 +94,11 @@ describe('POST /api/subscriptions/checkout-session', () => {
     expect(mockedSessionsCreate).not.toHaveBeenCalled();
   });
 
-  it('reactivates an existing free subscription instead of creating a new one', async () => {
+  it('reactivates an existing free subscription instead of creating a new one, clearing any pending end date', async () => {
     mockedPlanFindOne.mockResolvedValue({ code: 'free', priceMonthlyCents: 0 });
-    const existingSub: any = { userEmail: 'user@example.com', planCode: 'free', status: 'active', save: jest.fn().mockResolvedValue(undefined) };
+    // A `canceling` record carries a cancelAt the UI renders as "Ends: <date>". Reactivating
+    // without clearing it keeps advertising an expiry that no longer applies.
+    const existingSub: any = { userEmail: 'user@example.com', planCode: 'free', status: 'canceling', cancelAt: new Date('2026-09-01'), save: jest.fn().mockResolvedValue(undefined) };
     mockedSubFindOne.mockResolvedValue(existingSub);
     mockedSubFind.mockResolvedValue([]);
 
@@ -106,6 +108,8 @@ describe('POST /api/subscriptions/checkout-session', () => {
       .send({ planCode: 'free' });
 
     expect(res.status).toBe(201);
+    expect(existingSub.status).toBe('active');
+    expect(existingSub.cancelAt).toBeUndefined();
     expect(existingSub.save).toHaveBeenCalledTimes(1);
     expect(mockedSubCreate).not.toHaveBeenCalled();
   });
@@ -209,6 +213,75 @@ describe('POST /api/stripe/webhook — checkout.session.completed', () => {
     expect(res.status).toBe(200);
     expect(mockedSubFindById).not.toHaveBeenCalled();
   });
+
+  // Marking the superseded record 'canceled' locally without telling Stripe leaves the old
+  // subscription invoicing forever — the user pays for both plans while the database shows one.
+  it('cancels the superseded lower-priced subscription at Stripe, not just locally', async () => {
+    const upgraded: any = { status: 'incomplete', save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'elite', id: 'sub-elite' };
+    const superseded: any = { status: 'active', planCode: 'pro', id: 'sub-pro', stripeSubscriptionId: 'sub_stripe_pro', save: jest.fn().mockResolvedValue(undefined) };
+    mockedSubFindById.mockResolvedValue(upgraded);
+    mockedPlanFindOne.mockImplementation(async ({ code }: { code: string }) =>
+      code === 'elite' ? { code: 'elite', priceMonthlyCents: 5000 } : { code: 'pro', priceMonthlyCents: 1000 }
+    );
+    mockedSubFind.mockResolvedValue([superseded]);
+    mockedPaymentFindOne.mockResolvedValue(null);
+
+    const res = await postWebhookEvent('evt_checkout_supersede_1', 'checkout.session.completed', {
+      id: 'cs_supersede_1',
+      metadata: { subscriptionId: 'sub-elite' },
+      subscription: 'sub_stripe_elite',
+      customer: 'cus_1'
+    });
+
+    expect(res.status).toBe(200);
+    expect(stripe.subscriptions.cancel).toHaveBeenCalledWith('sub_stripe_pro');
+    expect(superseded.status).toBe('canceled');
+    expect(superseded.save).toHaveBeenCalledTimes(1);
+  });
+
+  // A subscription still winding down is still billing until the period ends, so it has to be
+  // in the supersede query — otherwise switching plans leaves it live at Stripe.
+  it('supersedes a canceling subscription too', async () => {
+    const upgraded: any = { status: 'incomplete', save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'elite', id: 'sub-elite' };
+    mockedSubFindById.mockResolvedValue(upgraded);
+    mockedPlanFindOne.mockResolvedValue({ code: 'elite', priceMonthlyCents: 5000 });
+    mockedSubFind.mockResolvedValue([]);
+    mockedPaymentFindOne.mockResolvedValue(null);
+
+    await postWebhookEvent('evt_checkout_supersede_2', 'checkout.session.completed', {
+      id: 'cs_supersede_2',
+      metadata: { subscriptionId: 'sub-elite' },
+      subscription: 'sub_stripe_elite'
+    });
+
+    expect(mockedSubFind).toHaveBeenCalledWith(
+      expect.objectContaining({ status: { $in: expect.arrayContaining(['canceling']) } })
+    );
+  });
+
+  // A failed Stripe cancel still supersedes the record locally, but must be loud: the old
+  // subscription keeps invoicing until someone acts on it.
+  it('still supersedes locally when the Stripe cancel fails', async () => {
+    const upgraded: any = { status: 'incomplete', save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'elite', id: 'sub-elite' };
+    const superseded: any = { status: 'active', planCode: 'pro', id: 'sub-pro', stripeSubscriptionId: 'sub_stripe_pro', save: jest.fn().mockResolvedValue(undefined) };
+    mockedSubFindById.mockResolvedValue(upgraded);
+    mockedPlanFindOne.mockImplementation(async ({ code }: { code: string }) =>
+      code === 'elite' ? { code: 'elite', priceMonthlyCents: 5000 } : { code: 'pro', priceMonthlyCents: 1000 }
+    );
+    mockedSubFind.mockResolvedValue([superseded]);
+    mockedPaymentFindOne.mockResolvedValue(null);
+    (stripe.subscriptions.cancel as jest.Mock).mockRejectedValueOnce(new Error('stripe down'));
+
+    const res = await postWebhookEvent('evt_checkout_supersede_3', 'checkout.session.completed', {
+      id: 'cs_supersede_3',
+      metadata: { subscriptionId: 'sub-elite' },
+      subscription: 'sub_stripe_elite'
+    });
+
+    expect(res.status).toBe(200);
+    expect(superseded.status).toBe('canceled');
+    expect(superseded.save).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('POST /api/stripe/webhook — invoice.payment_succeeded', () => {
@@ -281,6 +354,36 @@ describe('POST /api/stripe/webhook — customer.subscription.deleted', () => {
 
     await postWebhookEvent('evt_deleted_2', 'customer.subscription.deleted', { id: 'sub_stripe_2' });
 
+    expect(sub.save).not.toHaveBeenCalled();
+  });
+
+  // This event is the only thing that ends a `canceling` subscription — it fires when the
+  // paid period Stripe was told to run out actually runs out.
+  it('flips a canceling subscription to canceled at period end', async () => {
+    const sub: any = { status: 'canceling', save: jest.fn().mockResolvedValue(undefined) };
+    mockedSubFindOne.mockResolvedValue(sub);
+
+    await postWebhookEvent('evt_deleted_3', 'customer.subscription.deleted', { id: 'sub_stripe_3' });
+
+    expect(sub.status).toBe('canceled');
+    expect(sub.canceledAt).toBeInstanceOf(Date);
+    expect(sub.save).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('POST /api/stripe/webhook — invoice.payment_failed vs canceling', () => {
+  // A subscription winding down will fail its final renewal by design. Flipping it to
+  // past_due there would silently un-cancel it and put it back into dunning.
+  it('does not drag a canceling subscription back into past_due', async () => {
+    const sub: any = { status: 'canceling', save: jest.fn() };
+    mockedSubFindOne.mockResolvedValue(sub);
+
+    const res = await postWebhookEvent('evt_failed_canceling', 'invoice.payment_failed', {
+      subscription: 'sub_stripe_canceling'
+    });
+
+    expect(res.status).toBe(200);
+    expect(sub.status).toBe('canceling');
     expect(sub.save).not.toHaveBeenCalled();
   });
 });

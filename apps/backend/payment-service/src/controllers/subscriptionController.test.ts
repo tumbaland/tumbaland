@@ -60,7 +60,7 @@ describe('GET /api/subscriptions/me', () => {
     expect(res.body.subscription.plan.priceMonthlyCents).toBe(1500);
     expect(mockedFind).toHaveBeenCalledWith({
       userEmail: 'user@example.com',
-      status: { $in: ['active', 'past_due', 'incomplete'] }
+      status: { $in: ['active', 'past_due', 'canceling', 'incomplete'] }
     });
   });
 
@@ -73,6 +73,19 @@ describe('GET /api/subscriptions/me', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.subscription.status).toBe('active');
+  });
+
+  // A subscription winding down still has paid-for time left on it, so it must outrank a
+  // past_due one at the same price — that is what keeps access alive until the period ends.
+  it('ranks canceling above past_due at the same price', async () => {
+    const pastDue = { status: 'past_due', plan: { priceMonthlyCents: 1000 }, createdAt: new Date('2026-01-01') };
+    const canceling = { status: 'canceling', plan: { priceMonthlyCents: 1000 }, createdAt: new Date('2026-01-01') };
+    mockedFind.mockReturnValue({ populate: jest.fn().mockResolvedValue([pastDue, canceling]) });
+
+    const res = await request(app).get('/api/subscriptions/me').set('Cookie', authCookie());
+
+    expect(res.status).toBe(200);
+    expect(res.body.subscription.status).toBe('canceling');
   });
 });
 
@@ -100,7 +113,9 @@ describe('POST /api/subscriptions/cancel', () => {
     expect(res.body).toEqual({ success: false, error: 'NotFoundError', message: 'No cancellable subscription' });
   });
 
-  it('cancels via Stripe (cancel_at_period_end) and marks the subscription canceled locally', async () => {
+  // Stripe was asked to stop at period end, so the user keeps the access they already paid
+  // for. Marking `canceled` here would revoke it immediately, mid-paid-period.
+  it('cancels via Stripe (cancel_at_period_end) and marks the subscription canceling, not canceled', async () => {
     const sub: any = {
       id: 'sub-doc-1',
       status: 'active',
@@ -114,8 +129,9 @@ describe('POST /api/subscriptions/cancel', () => {
 
     expect(res.status).toBe(200);
     expect(mockedStripeUpdate).toHaveBeenCalledWith('sub_stripe_1', { cancel_at_period_end: true });
-    expect(sub.status).toBe('canceled');
-    expect(sub.canceledAt).toBeInstanceOf(Date);
+    expect(sub.status).toBe('canceling');
+    expect(sub.canceledAt).toBeUndefined();
+    expect(sub.cancelAt).toEqual(new Date(1893456000 * 1000));
     expect(sub.save).toHaveBeenCalledTimes(1);
     expect(res.body).toMatchObject({
       success: true,
@@ -123,7 +139,9 @@ describe('POST /api/subscriptions/cancel', () => {
     });
   });
 
-  it('falls back to a local-only cancel when the Stripe call fails', async () => {
+  // A local-only cancel here would revoke access while Stripe kept invoicing — worse than
+  // reporting the failure, so the record must be left exactly as it was.
+  it('leaves the subscription untouched and reports 502 when the Stripe call fails', async () => {
     const sub: any = {
       id: 'sub-doc-2',
       status: 'active',
@@ -135,14 +153,10 @@ describe('POST /api/subscriptions/cancel', () => {
 
     const res = await request(app).post('/api/subscriptions/cancel').set('Cookie', authCookie());
 
-    expect(res.status).toBe(202);
-    expect(res.body).toMatchObject({
-      success: true,
-      warning: 'stripe_cancel_failed_local_only',
-      subscription: { id: 'sub-doc-2', status: 'canceled', stripeSubscriptionId: 'sub_stripe_2' }
-    });
-    expect(sub.status).toBe('canceled');
-    expect(sub.save).toHaveBeenCalledTimes(1);
+    expect(res.status).toBe(502);
+    expect(res.body).toMatchObject({ success: false, code: 'STRIPE_CANCEL_FAILED' });
+    expect(sub.status).toBe('active');
+    expect(sub.save).not.toHaveBeenCalled();
   });
 
   it('cancels locally without calling Stripe when there is no stripeSubscriptionId (incomplete checkout)', async () => {

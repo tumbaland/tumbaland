@@ -4,7 +4,10 @@ export interface ISubscription extends Document {
   userEmail: string;
   planCode: string; // denormalized for quick filter
   plan: Types.ObjectId;
-  status: 'active' | 'past_due' | 'canceled' | 'incomplete';
+  // `canceling` = cancellation requested, Stripe will not renew, but the period the user
+  // already paid for is still running. Entitlement resolution treats it as entitled;
+  // the customer.subscription.deleted webhook flips it to `canceled` when the period ends.
+  status: 'active' | 'past_due' | 'canceled' | 'canceling' | 'incomplete';
   renewsAt?: Date; // next renewal
   cancelAt?: Date;
   canceledAt?: Date;
@@ -18,7 +21,7 @@ const SubscriptionSchema = new Schema<ISubscription>({
   userEmail: { type: String, required: true, index: true, lowercase: true, trim: true },
   planCode: { type: String, required: true },
   plan: { type: Schema.Types.ObjectId, ref: 'Plan', required: true },
-  status: { type: String, enum: ['active','past_due','canceled','incomplete'], default: 'incomplete' },
+  status: { type: String, enum: ['active','past_due','canceled','canceling','incomplete'], default: 'incomplete' },
   renewsAt: { type: Date },
   cancelAt: { type: Date },
   canceledAt: { type: Date },

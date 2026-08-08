@@ -16,7 +16,8 @@ export interface Subscription {
   _id?: string;
   userEmail?: string;
   planCode: string;
-  status: 'active' | 'past_due' | 'canceled' | 'incomplete';
+  // `canceling` = cancellation requested; access runs to the end of the paid period.
+  status: 'active' | 'past_due' | 'canceled' | 'canceling' | 'incomplete';
   renewsAt?: string;
   cancelAt?: string;
   canceledAt?: string;

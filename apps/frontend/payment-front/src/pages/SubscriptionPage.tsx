@@ -28,7 +28,15 @@ const SubscriptionPage: React.FC = () => {
   useEffect(() => { load(); }, []);
 
   const cancel = async () => {
-    await paymentApi.cancelSubscription();
+    setMessage(null);
+    try {
+      await paymentApi.cancelSubscription();
+    } catch (e: unknown) {
+      // The backend leaves the subscription untouched when Stripe rejects the cancel, so
+      // surfacing the failure is what lets the user retry rather than assume it worked.
+      setMessage(e instanceof Error ? e.message : 'Failed to cancel subscription');
+      return;
+    }
     load();
   };
 
@@ -83,7 +91,7 @@ const SubscriptionPage: React.FC = () => {
                 </Typography>
                 <Chip
                   label={sub.status}
-                  color={sub.status === 'active' ? 'success' : 'default'}
+                  color={sub.status === 'active' ? 'success' : sub.status === 'canceling' ? 'warning' : 'default'}
                   size="small"
                   variant="outlined"
                   sx={{ mt: 0.5 }}
@@ -121,7 +129,7 @@ const SubscriptionPage: React.FC = () => {
               <Button
                 variant="outlined"
                 color="error"
-                disabled={sub.status === 'canceled'}
+                disabled={sub.status === 'canceled' || sub.status === 'canceling'}
                 onClick={cancel}
                 startIcon={<Cancel />}
               >
@@ -200,7 +208,7 @@ const SubscriptionPage: React.FC = () => {
                           label={s.status}
                           size="small"
                           variant="outlined"
-                          color={s.status === 'active' ? 'success' : s.status === 'canceled' ? 'error' : 'default'}
+                          color={s.status === 'active' ? 'success' : s.status === 'canceled' ? 'error' : s.status === 'canceling' ? 'warning' : 'default'}
                         />
                       </TableCell>
                       <TableCell>{s.renewsAt ? new Date(s.renewsAt).toLocaleDateString() : '—'}</TableCell>

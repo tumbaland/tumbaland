@@ -21,8 +21,8 @@ const mockedGetMySubscription = paymentApi.getMySubscription as unknown as Retur
 
 const plans = [
   { _id: 'p1', code: 'free', name: 'Free', priceMonthlyCents: 0 },
-  { _id: 'p2', code: 'pro', name: 'Pro', priceMonthlyCents: 1999 },
-  { _id: 'p3', code: 'elite', name: 'Elite', priceMonthlyCents: 4999 }
+  { _id: 'p2', code: 'pro', name: 'Pro', priceMonthlyCents: 1999, description: 'For professionals', features: ['50 GB storage', 'Priority support'] },
+  { _id: 'p3', code: 'elite', name: 'Elite', priceMonthlyCents: 4999, features: ['500 GB storage'] }
 ];
 
 function renderPage() {
@@ -62,15 +62,33 @@ it('tolerates getMySubscription failing (falls back to no subscription)', async 
   expect(await screen.findAllByText('Get Started')).toHaveLength(3);
 });
 
-it('shows "Get Started" for every plan with no subscription, and the elite exclusive award', async () => {
+it('shows "Get Started" for every plan with no subscription', async () => {
   mockedListPlans.mockResolvedValue(plans);
   mockedGetMySubscription.mockResolvedValue(null);
   renderPage();
 
   expect(await screen.findAllByText('Get Started')).toHaveLength(3);
-  expect(screen.getByText(/exclusive award/i)).toBeInTheDocument();
   expect(screen.getAllByText('Free').length).toBeGreaterThan(0);
   expect(screen.getByText('19.99 €')).toBeInTheDocument();
+});
+
+it('renders the features and description stored on the plan', async () => {
+  mockedListPlans.mockResolvedValue(plans);
+  mockedGetMySubscription.mockResolvedValue(null);
+  renderPage();
+
+  expect(await screen.findByText('50 GB storage')).toBeInTheDocument();
+  expect(screen.getByText('Priority support')).toBeInTheDocument();
+  expect(screen.getByText('500 GB storage')).toBeInTheDocument();
+  expect(screen.getByText('For professionals')).toBeInTheDocument();
+});
+
+it('renders a placeholder for a plan with no features rather than inventing limits', async () => {
+  mockedListPlans.mockResolvedValue([{ _id: 'p9', code: 'mystery', name: 'Mystery', priceMonthlyCents: 500 }]);
+  mockedGetMySubscription.mockResolvedValue(null);
+  renderPage();
+
+  expect(await screen.findByText(/no features listed/i)).toBeInTheDocument();
 });
 
 it('disables the button and labels it "Current Plan" for the active plan, and shows "Change Plan" for others', async () => {
@@ -102,12 +120,4 @@ it('navigates when switching to the free plan', async () => {
   await userEvent.click(await screen.findByRole('button', { name: 'Switch to Free' }));
 
   expect(mockedNavigate).toHaveBeenCalledWith('/subscription/checkout?plan=free');
-});
-
-it('falls back to the "free" tier alias for an unrecognized plan code', async () => {
-  mockedListPlans.mockResolvedValue([{ _id: 'p9', code: 'mystery', name: 'Mystery', priceMonthlyCents: 500 }]);
-  mockedGetMySubscription.mockResolvedValue(null);
-  renderPage();
-
-  expect(await screen.findByText('For starters')).toBeInTheDocument();
 });

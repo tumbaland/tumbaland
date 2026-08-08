@@ -8,6 +8,7 @@ const statusColor: Record<Subscription['status'], ChipProps['color']> = {
   active: 'success',
   past_due: 'warning',
   incomplete: 'info',
+  canceling: 'warning',
   canceled: 'default'
 };
 

@@ -22,13 +22,16 @@ export const createCheckoutSession = async (req: Request, res: Response): Promis
 
   // Free plan shortcut: if price is zero OR falsy OR no stripePriceId, activate immediately without Stripe
   if (!plan.priceMonthlyCents || plan.priceMonthlyCents === 0 || !plan.stripePriceId) {
-    let sub = await Subscription.findOne({ userEmail: email, planCode: plan.code, status: { $in: ['active','incomplete','past_due'] } });
+    let sub = await Subscription.findOne({ userEmail: email, planCode: plan.code, status: { $in: ['active','incomplete','past_due','canceling'] } });
     if (!sub) {
       sub = await Subscription.create({ userEmail: email, planCode: plan.code, plan: plan._id, status: 'active', renewsAt: addMonths(new Date(), 1) });
       // Skip creating a payment record for free plan (amount 0) to avoid clutter
     } else {
       sub.status = 'active';
       sub.renewsAt = addMonths(new Date(), 1);
+      // Reactivating a `canceling` record must clear its pending end date, or the UI keeps
+      // advertising an expiry that no longer applies.
+      sub.cancelAt = undefined;
       await sub.save();
     }
     // When switching to free, cancel all other higher-priced subs immediately
@@ -124,7 +127,9 @@ export const stripeWebhook = async (req: Request, res: Response): Promise<void> 
       const stripeSubId = getInvoiceSubscriptionId(invoice);
       if (stripeSubId) {
         const sub = await Subscription.findOne({ stripeSubscriptionId: stripeSubId });
-        if (sub && sub.status !== 'canceled') {
+        // A `canceling` subscription is winding down by design — a failed renewal invoice on
+        // it must not resurrect it into a dunning state, or cancellation silently un-cancels.
+        if (sub && sub.status !== 'canceled' && sub.status !== 'canceling') {
           sub.status = 'past_due';
           await sub.save();
         }
@@ -265,18 +270,46 @@ async function ensureSubscriptionPayment(
   }
 }
 
-// Cancel (set status=canceled) any other active/past_due/incomplete subs for same user that are lower priced than the newly activated one.
+// Cancel the subscription at Stripe so it stops invoicing. Marking the local document
+// `canceled` without doing this leaves the Stripe subscription live and billing, which is
+// how a user switching plans ends up paying for both. Kept out of the callers' outer
+// try/catch on purpose: a Stripe failure must be distinguishable in logs from a failure to
+// read a Plan document, because only one of them charges the customer money.
+async function cancelAtStripe(sub: HydratedDocument<ISubscription>, origin: string): Promise<void> {
+  if (!sub.stripeSubscriptionId) return;
+  try {
+    ensureStripe();
+    await stripe.subscriptions.cancel(sub.stripeSubscriptionId);
+    logger.info(`[${origin}] stripe subscription canceled`, { subId: sub.id, stripeSubscriptionId: sub.stripeSubscriptionId });
+  } catch (err) {
+    // Already canceled at Stripe is fine; anything else keeps invoicing and must be loud.
+    logger.error(`[${origin}] STRIPE CANCEL FAILED - subscription may still be billing`, {
+      subId: sub.id,
+      userEmail: sub.userEmail,
+      planCode: sub.planCode,
+      stripeSubscriptionId: sub.stripeSubscriptionId,
+      error: err instanceof Error ? err.message : String(err)
+    });
+  }
+}
+
+// Statuses that still grant access and/or still bill. A subscription in any of these must be
+// superseded when the user moves to another plan.
+const SUPERSEDABLE_STATUSES: ISubscription['status'][] = ['active', 'past_due', 'incomplete', 'canceling'];
+
+// Cancel (set status=canceled) any other active/past_due/incomplete/canceling subs for same user that are lower priced than the newly activated one.
 async function deactivateLowerPricedSubs(primary: HydratedDocument<ISubscription>) {
   try {
     const primaryPlan = await Plan.findOne({ code: primary.planCode });
     if (!primaryPlan) return;
-    const others = await Subscription.find({ userEmail: primary.userEmail, _id: { $ne: primary._id }, status: { $in: ['active','past_due','incomplete'] } });
+    const others = await Subscription.find({ userEmail: primary.userEmail, _id: { $ne: primary._id }, status: { $in: SUPERSEDABLE_STATUSES } });
     if (!others.length) return;
     for (const other of others) {
       const otherPlan = await Plan.findOne({ code: other.planCode });
       const otherPrice = otherPlan?.priceMonthlyCents || 0;
       if (otherPrice < primaryPlan.priceMonthlyCents) {
         if (other.status !== 'canceled') {
+          await cancelAtStripe(other, 'deactivateLowerPricedSubs');
           other.status = 'canceled';
           other.canceledAt = new Date();
           await other.save();
@@ -294,20 +327,13 @@ async function deactivateHigherPricedSubs(primary: HydratedDocument<ISubscriptio
   try {
     const primaryPlan = await Plan.findOne({ code: primary.planCode });
     if (!primaryPlan) return;
-    const others = await Subscription.find({ userEmail: primary.userEmail, _id: { $ne: primary._id }, status: { $in: ['active','past_due','incomplete'] } });
+    const others = await Subscription.find({ userEmail: primary.userEmail, _id: { $ne: primary._id }, status: { $in: SUPERSEDABLE_STATUSES } });
     if (!others.length) return;
     for (const other of others) {
       const otherPlan = await Plan.findOne({ code: other.planCode });
       const otherPrice = otherPlan?.priceMonthlyCents || 0;
       if (otherPrice > (primaryPlan.priceMonthlyCents || 0)) {
-        if (other.stripeSubscriptionId) {
-          try {
-            ensureStripe();
-            await stripe.subscriptions.cancel(other.stripeSubscriptionId);
-          } catch (e) {
-            logger.warn('[deactivateHigherPricedSubs] stripe cancel failed', { subId: other.id, err: e instanceof Error ? e.message : e });
-          }
-        }
+        await cancelAtStripe(other, 'deactivateHigherPricedSubs');
         other.status = 'canceled';
         other.canceledAt = new Date();
         await other.save();

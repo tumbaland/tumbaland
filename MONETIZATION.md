@@ -8,6 +8,11 @@ admin plan CRUD). No other service reads subscription state. A grep for
 `subscription|entitlement|quota|planCode|isPremium|tier` across all sixteen apps returns hits only
 inside `payment-service` / `payment-front`. Paying today buys a row in Mongo and nothing else.
 
+Stripe has only ever run against test data — there are no real customers, so nothing in this plan
+carries a migration burden for existing paying users. Phase 4.4's grandfathering item is moot.
+
+**Phase 0 is done.** Phase 1 is next and unblocked.
+
 Work top to bottom. Each phase is unsafe to start before the one above it lands.
 
 ---
@@ -37,67 +42,91 @@ The frontend does **not** need a JWT claim either: `GET /api/subscriptions/me` a
 
 ---
 
-## Phase 0 — Stop the bleeding
+## Phase 0 — Stop the bleeding ✅ SHIPPED
 
-Two defects can charge a customer incorrectly today. Nothing else in this document should start
-until these ship. No new revenue from this phase; it removes liability.
+Two defects could charge a customer incorrectly. Nothing else in this document should start until
+these ship. No new revenue from this phase; it removes liability.
 
-- [ ] **Cancel the old Stripe subscription when switching plans.**
-      `payment-service/src/controllers/stripeController.ts` — `deactivateLowerPricedSubs()` and
-      `deactivateHigherPricedSubs()` both set `status = 'canceled'` on the Mongo document and never
-      call Stripe. The Stripe subscription stays live and keeps invoicing. A user moving Pro → Elite
-      is billed for both, indefinitely, while the database shows one active plan.
+- [x] **Cancel the old Stripe subscription when switching plans.**
+      `payment-service/src/controllers/stripeController.ts` — `deactivateLowerPricedSubs()` set
+      `status = 'canceled'` on the Mongo document and never called Stripe, so the Stripe
+      subscription stayed live and kept invoicing. A user moving Pro → Elite was billed for both,
+      indefinitely, while the database showed one active plan. (`deactivateHigherPricedSubs()`
+      already called Stripe — only the upgrade path was affected.)
 
-      In both helpers, before `other.save()`:
+      Both helpers now go through a shared `cancelAtStripe()` that lives outside their outer
+      `try/catch`, so a failure to cancel at Stripe logs distinctly from a failure to read a Plan
+      document — one of those charges the customer money and the other does not.
 
-      ```ts
-      if (other.stripeSubscriptionId) {
-        try {
-          await stripe.subscriptions.cancel(other.stripeSubscriptionId);
-        } catch (err) {
-          // Already canceled at Stripe is fine; anything else must be loud —
-          // failing silently here is how double-billing happens.
-          logger.error('[deactivate] Stripe cancel failed', {
-            stripeSubscriptionId: other.stripeSubscriptionId,
-            error: (err as Error)?.message
-          });
-        }
-      }
-      ```
+- [x] **Add a `canceling` status so access survives the paid period.**
+      `cancelSubscription` asked Stripe for `cancel_at_period_end: true` (correct) and then
+      immediately set the local record to `canceled` with `canceledAt = now`.
 
-      Note the existing `try/catch` in both helpers swallows everything into a single
-      `logger.error` at the top level. Tighten that — a failure to cancel at Stripe must be
-      distinguishable in logs from a failure to read a Plan document.
-
-- [ ] **Add a `canceling` status so access survives the paid period.**
-      `payment-service/src/controllers/subscriptionController.ts` — `cancelSubscription` asks Stripe
-      for `cancel_at_period_end: true` (correct) and then immediately sets the local record to
-      `canceled` with `canceledAt = now`. The code comment already concedes this: *"or you could
-      introduce a 'canceling' state; keeping simple."* It is invisible today because nothing reads
-      status. It becomes a real bug the moment Phase 3 lands.
-
-      - Add `'canceling'` to the `ISubscription` status enum in `models/Subscription.ts`.
+      - `'canceling'` added to the `ISubscription` status enum and the schema enum.
       - `cancelSubscription` sets `status = 'canceling'` and `cancelAt`, leaving `canceledAt` unset.
-      - The `customer.subscription.deleted` webhook is what flips `canceling` → `canceled`.
-      - Entitlement resolution (Phase 1) treats `canceling` as entitled.
-      - `deactivate*` queries that filter `status: { $in: [...] }` must include `'canceling'` —
-        there are four such filters across `stripeController.ts` and `subscriptionController.ts`.
+      - `customer.subscription.deleted` flips `canceling` → `canceled` (already did, via its
+        `status !== 'canceled'` guard — now covered by a test that pins the transition).
+      - `invoice.payment_failed` no longer drags a `canceling` sub back into `past_due`; a
+        subscription winding down fails its final renewal by design, and flipping it would
+        silently un-cancel it.
+      - Supersede queries share one `SUPERSEDABLE_STATUSES` constant that includes `'canceling'`.
+        `getMySubscription` includes it and ranks it above `past_due`. `cancelSubscription`'s own
+        lookup deliberately excludes it — that request has already been accepted.
+      - Reactivating a `canceling` record via the free-plan shortcut clears `cancelAt`.
+      - Entitlement resolution (Phase 1) must treat `canceling` as entitled.
 
-- [ ] **Make the pricing page stop advertising limits that don't exist.**
-      `payment-front/src/pages/PlansPage.tsx` builds its comparison table from a local
-      `featureMatrix` array (5/100/1000 daily uploads, 0.5/50/500 GB storage, private content,
-      30d/1yr/full retention, AI tiers, 2/10 collaborators) and maps plan codes onto it with a regex
-      in `tierAlias()`. None of it is enforced anywhere.
+      **Also changed, beyond the original item:** when Stripe rejects the cancel,
+      `cancelSubscription` no longer marks the record canceled locally and returns 202. Stripe
+      still holds a live subscription that keeps invoicing, so a local-only cancel revoked access
+      *while continuing to charge* — strictly worse than the double-billing it was meant to soften.
+      It now leaves the record untouched and returns **502 `STRIPE_CANCEL_FAILED`**, and
+      `SubscriptionPage` surfaces that instead of throwing an unhandled rejection.
 
-      Interim fix: render `plan.features` (the field already on the `Plan` model, currently ignored)
-      and delete `featureMatrix` / `tierAlias`. Phase 4 replaces this properly with the shared
-      entitlement definition. Do the interim fix now — the gap between advertised and delivered is
-      the part with legal exposure attached.
+- [x] **Make the pricing page stop advertising limits that don't exist.**
+      `PlansPage.tsx` built its comparison table from a local `featureMatrix` (5/100/1000 daily
+      uploads, 0.5/50/500 GB storage, private content, 30d/1yr/full retention, AI tiers, 2/10
+      collaborators) mapped onto plan codes by regex in `tierAlias()`. None of it was enforced
+      anywhere.
 
-- [ ] **Backfill: audit existing subscriptions for the double-billing defect.**
-      Before deploying the fix, list every user with more than one non-`canceled` subscription, and
-      cross-check against Stripe for live subscriptions belonging to users whose local record says
-      canceled. Refund proactively where found. Script it under `scripts/`, don't do it by hand.
+      `featureMatrix` and `tierAlias` are deleted. Cards now render `plan.features` and
+      `plan.description` from the Plan document, falling back to "No features listed for this plan
+      yet." Also removed with them, since all three were regex-derived claims: the POPULAR badge,
+      the "For starters / professionals / power users" subtitles, and the "Exclusive Award:
+      TumbaBubu plush 🧸" line — if the plush is real, it belongs in that plan's `features` array
+      where an admin controls it. Phase 4 replaces this with the shared entitlement definition.
+
+- [x] **Backfill: audit existing subscriptions for the double-billing defect.**
+      Done by inspection instead of a script — the whole database held one subscription, one
+      payment and three plans, all belonging to the maintainer. No third-party customer was ever
+      billed, so there was nothing to refund.
+
+      Worth recording, because it is the defect this phase fixes, caught in the wild: the single
+      subscription (`tumbapro`, Stripe `sub_1Rv2OkF75xQeeDGeUULGPsk9`, customer
+      `cus_SqjsxjFxcPK03o`) was marked `canceled` locally on 2025-12-26 with `canceledAt` set and
+      `cancelAt` absent — the signature of the old Stripe-failed fallback, which marked the record
+      canceled locally while the Stripe subscription stayed live. Its one payment was a live-mode
+      charge (`cs_live_…`, €9.00, 2025-08-11), not test mode. Confirmed already dead at Stripe.
+
+      All three collections were then dropped and reseeded — see below.
+
+- [x] **Reset the billing collections and seed the canonical plans.**
+      `subscriptions`, `payments` and `plans` were deleted and three plans seeded on the codes
+      Appendix B settles on. Ran as a one-shot migration which was then removed, per its purpose;
+      the `migrations` collection retains a `001-reset-billing-data` row as the record that it
+      happened. Recover the code from git history if a similar reset is ever needed.
+
+      The old plan documents used ad-hoc codes (`free`, `tumbapro`, `tumbamax`) with
+      implementation-flavoured feature strings (`uploads_daily_5`, `optimizer_advanced`,
+      `mc_custom_distributions`) that nothing enforced. Since Phase 1 keys `PLAN_LIMITS` by exact
+      code and resolves anything unknown to free, migrating those codes forward would have been
+      more work than reseeding — and Appendix B's migration item is now satisfied.
+
+      Seeded: `free` €0, `personal` €600/mo · €6000/yr, `family` €1200/mo · €12000/yr (cents).
+      **`features` is empty on all three, deliberately** — nothing is enforced until Phase 4, and
+      populating it now would recreate the exact defect this phase just removed from `PlansPage`.
+      Phase 4.1 fills it from the shared entitlement definition. `stripePriceId` is unset on the
+      paid plans, so paid checkout will 400 until it is set via
+      `PATCH /api/plans/:code/stripe-prices`; the free plan works today via the free-plan shortcut.
 
 ---
 
@@ -387,8 +416,10 @@ Gating without surfacing is indistinguishable from breakage.
 
 - [ ] **`ENTITLEMENTS_MODE=enforce`**, one service at a time, starting with finance (smallest user
       overlap, clearest value).
-- [ ] **Grandfather existing users onto Personal for 90 days and tell them plainly.** The goodwill
-      is worth more than the first month of revenue.
+- [ ] ~~**Grandfather existing users onto Personal for 90 days and tell them plainly.**~~ Moot —
+      Stripe has only ever handled test data, so there are no existing paying users to grandfather.
+      Existing *free* users still get metered for the first time, so the "what happens when you hit
+      a limit" copy in 5.1 is doing this job instead.
 
 ---
 
@@ -532,6 +563,9 @@ Existing plan documents use arbitrary codes matched by regex in `PlansPage.tsx`
 (`/(^|-)starter|free/`, `/(pro)/`, `/(elite|max)/`). Phase 1 makes `PLAN_LIMITS` keyed by exact
 code, so:
 
-- [ ] **Settle on exactly three codes — `free`, `personal`, `family` — and migrate existing `Plan`
-      documents.** Any code not in `PLAN_LIMITS` resolves to free. Write the migration before
-      Phase 1 ships, not after someone's plan silently degrades.
+- [x] **Settle on exactly three codes — `free`, `personal`, `family` — and migrate existing `Plan`
+      documents.** Done in Phase 0. The old codes (`free`, `tumbapro`, `tumbamax`) were dropped
+      rather than mapped forward — there was one subscription in the database and it belonged to
+      the maintainer, so a reseed was cheaper and left no rows on codes absent from `PLAN_LIMITS`.
+      Any code not in `PLAN_LIMITS` still resolves to free, which remains the safe default for
+      anything added later.
