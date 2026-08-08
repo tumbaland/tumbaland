@@ -1,0 +1,20 @@
+# https://tumbaland.eu/robots.txt
+#
+# Without this file nginx's SPA fallback answered /robots.txt with index.html,
+# so crawlers fetched an HTML document served as text/html where a plain-text
+# policy was expected. Cloudflare prepends its own managed directives to this
+# response; those allow search crawlers and only block AI-training bots, so the
+# two are compatible.
+
+User-agent: *
+Allow: /
+
+# Auth-gated app routes: crawling them only ever yields the login redirect.
+Disallow: /account
+Disallow: /payments
+Disallow: /groups
+Disallow: /album
+Disallow: /finance
+Disallow: /relationship
+
+Sitemap: https://tumbaland.eu/sitemap.xml

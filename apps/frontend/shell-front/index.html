@@ -57,6 +57,31 @@
   </head>
   <body>
     <div id="public-root"></div>
+    <!--
+      The app renders client-side, so the initial HTML body is otherwise empty.
+      Googlebot executes JS and will see the real page, but crawlers and preview
+      bots that don't execute JS need something to read. Kept outside #public-root so React
+      never has to clear it and users never see it flash.
+    -->
+    <noscript>
+      <h1>Tumbaland — photos, money, and time in one private place</h1>
+      <p>
+        Albums that tag themselves, net worth that updates itself, and a journal that remembers
+        where your days went. Keep it for yourself, or share it with your household.
+      </p>
+      <h2>What you get</h2>
+      <ul>
+        <li><strong>Album</strong> — photos you can actually find, with AI tagging and a collage editor.</li>
+        <li><strong>Finance</strong> — net worth over time, holdings and trades, and statement import.</li>
+        <li><strong>Relationship</strong> — journal entries with maps, heatmaps and monthly totals.</li>
+        <li><strong>Groups</strong> — share an album, a budget or a journal with up to five people.</li>
+      </ul>
+      <h2>Pricing</h2>
+      <p>
+        Free tier with no expiry and no card. Personal is €6 a month, Family €12 a month for up to
+        five people. Tumbaland needs JavaScript enabled to sign in.
+      </p>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
