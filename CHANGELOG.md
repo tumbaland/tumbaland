@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.430](https://github.com/toomastahves/tumbaland/compare/app-v0.0.429...app-v0.0.430) (2026-08-08)
+
+### Features
+
+* rework landing page ([832542e](https://github.com/toomastahves/tumbaland/commit/832542e12f0f47f21c18c2fd7d95288765bba2f6))
 ## [0.0.429](https://github.com/toomastahves/tumbaland/compare/app-v0.0.428...app-v0.0.429) (2026-08-07)
 
 ### Features
