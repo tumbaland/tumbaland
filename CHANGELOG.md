@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.432](https://github.com/toomastahves/tumbaland/compare/app-v0.0.431...app-v0.0.432) (2026-08-08)
+
+### Features
+
+* upgade payments to v2 ([b3c419a](https://github.com/toomastahves/tumbaland/commit/b3c419a01eb040a8abe59c9f33d3dded6558e89b))
 ## [0.0.431](https://github.com/toomastahves/tumbaland/compare/app-v0.0.430...app-v0.0.431) (2026-08-08)
 
 ### Features
