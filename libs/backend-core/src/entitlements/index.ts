@@ -26,13 +26,15 @@ export type {
   PartialPlanLimits
 } from './definitions';
 
-export type { Entitlements, EntitlementsMode } from './types';
-export { getEntitlementsMode, resetEntitlementsModeWarning } from './mode';
+export type { Entitlements } from './types';
 
 export { UsageMeter, currentPeriod } from './UsageMeter';
 export type { IUsageMeter } from './UsageMeter';
 export { getUsage, getUsageSnapshot, checkQuota, consumeQuota, releaseQuota, setUsage } from './usage';
 export type { QuotaRequest } from './usage';
+
+export { reconcileUsageMeters, runUsageReconciliation, RECONCILED_METERS } from './reconcile';
+export type { ReconcileOptions, ReconcileReport, MeterChange, OrphanedMeter } from './reconcile';
 
 export { getEntitlements, invalidateEntitlements, clearEntitlementsCache } from './client';
 

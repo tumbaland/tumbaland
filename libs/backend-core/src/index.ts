@@ -27,6 +27,9 @@ export type { PaymentRequiredDetails } from './errors/HttpError';
 // Entitlements (plan limits, usage meters, enforcement)
 export * from './entitlements';
 
+// Group ownership (the quota subject for anything pooled)
+export * from './groups';
+
 // Middleware
 export { authenticateToken } from './middleware/authMiddleware';
 export {

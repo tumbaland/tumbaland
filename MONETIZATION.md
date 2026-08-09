@@ -11,7 +11,7 @@ inside `payment-service` / `payment-front`. Paying today buys a row in Mongo and
 Stripe has only ever run against test data — there are no real customers, so nothing in this plan
 carries a migration burden for existing paying users. Phase 4.4's grandfathering item is moot.
 
-**Phases 0 and 1 are done, plus Phase 2's meter store.** Phase 2's backfill is next.
+**Phases 0, 1 and 2 are done.** Phase 3's chokepoints are next.
 
 Work top to bottom. Each phase is unsafe to start before the one above it lands.
 
@@ -124,6 +124,52 @@ collection retains both rows as the record that they ran.
 
 ---
 
+## Architecture decision: a meter bills to the group owner, and `subjectId` is an email
+
+`UsageMeter.subjectId` is an email, but **`Album.userId` and `TrackedTicker.userId` are not** — they
+are `req.user.id`, which `authController` sets to the auth-service `User._id`. Anything that
+attributes album or ticker rows to a meter has to join through the `users` collection first. Group
+membership, by contrast, is already keyed by email. This is why the backfill needs a user map at all
+and why nothing can be attributed from the album/finance collections alone.
+
+**Pooled resources bill to the group owner**, not to the member who happened to create the row:
+
+- Appendix A already sells Family storage as *"250 GB pooled"*. Pooled means one meter, and the only
+  identity a group has is its owner.
+- Chokepoint 5 (`seats`) charges the owner by construction — the owner is who bought the seats. If
+  storage charged the uploader instead, a Family group would be a plan whose headline number nobody
+  can actually spend: every shared upload would come out of the uploader's *personal* free 1 GB.
+- It makes expansion revenue work the way the plan claims it does. A group is a thing one person pays
+  for and several people use.
+
+The owner is `members[].role === 'owner'` — that is what every authorization check in
+`group-service/src/services/groupService.ts` tests, and `updateRole` can hand the role to someone
+else, so the `createdBy` field goes stale. `createdBy` is the fallback when a group somehow has no
+owner row.
+
+**Soft-deleted groups still bill storage and tickers, but not seats.** The split is not arbitrary:
+the bytes of a soft-deleted group's photos are still in MinIO and still cost money, and its tickers
+are still fetched daily — `portfolioScheduler.service.ts` selects on `{ isActive: true }` and never
+looks at group state. Its seats grant nobody access to anything, so charging for them would be
+charging for nothing.
+
+Two consequences for Phase 3, both new work that this decision creates:
+
+- `album-service` and `finance-service` must resolve a group to its owner's email to pick the quota
+  subject. Neither has a group-service client today; the JWT carries `groups` (ids) but no owner.
+  `GET /groups/:id` already sits behind the internal-service token, so the client is the missing
+  piece, and it wants the same short TTL cache as the entitlement client for the same reason.
+- The `subject` resolver that `requireQuota` already takes is exactly the hook for this, which is
+  why it exists.
+
+**`trackedTickers` counts distinct active symbols per subject, not rows.** The unique index is
+`{ ticker, userId, groupId }`, so one person can hold the same symbol personally *and* through a
+group; the Alpha Vantage spend that the limit exists to recover is
+`TrackedTicker.distinct('ticker', { isActive: true })`, one call per symbol per day no matter how
+many rows point at it. Counting rows would bill for a cost that is not incurred.
+
+---
+
 ## Phase 0 — Stop the bleeding ✅ SHIPPED
 
 Two defects could charge a customer incorrectly. Nothing else in this document should start until
@@ -214,9 +260,9 @@ these ship. No new revenue from this phase; it removes liability.
 
 ## Phase 1 — Entitlement backbone ✅ SHIPPED
 
-Shipped dark: `ENTITLEMENTS_MODE` defaults to `observe`, nothing calls the enforcement middleware
-yet, and no user-visible behaviour changed. 402s exist but no route can produce one until Phase 3
-wires a chokepoint.
+Shipped dark, and still dark for a structural reason rather than a configured one: nothing calls the
+enforcement middleware yet. 402s exist but no route can produce one until Phase 3 wires a
+chokepoint. There is no mode switch — see the note below.
 
 ### 1.1 Shared entitlement definitions ✅
 
@@ -378,41 +424,169 @@ wires a chokepoint.
       its own increment back before throwing. The provider version leaves an over-limit count to sit
       until the day rolls over, which is harmless for a daily bucket. A per-user cumulative meter
       never rolls over, so a leaked increment is permanent and surfaces months later as a user who
-      cannot upload while well under their limit. In `observe` mode the increment is deliberately
-      *kept* — rolling it back would under-report exactly the users the limits are calibrated on.
+      cannot upload while well under their limit.
 
       Leave `finance-service`'s provider-quota usage intact — it solves a different problem (a
       deployment-wide external ceiling) and should keep its own model.
 
-- [ ] **Backfill existing usage before enforcing.** `storageBytes`, `trackedTickers` and `seats` are
-      cumulative — they need seeding from current data or every existing user starts at zero and
-      silently exceeds later. `album-service/src/services/statisticsService.ts` already aggregates
-      `totalStorage` per user; reuse that aggregation as the backfill source. Script under
-      `scripts/`, idempotent, runnable per-user.
+- [x] **Decided the group-storage ownership rule: the group owner pays.** Written up in the
+      architecture note above, because it turned out to decide more than storage. It is not an edge
+      case — *every* album and *every* tracked ticker in the live database belongs to one group, so
+      this rule decides where 100% of current usage lands, and the alternative (bill the uploader)
+      would have put 8.88 GB of shared photos against a personal 1 GB free tier while the Family
+      plan's "250 GB pooled" stayed unspendable.
 
-- [ ] **Decide the group-storage ownership rule and write it down.** Photos in a group album count
-      against *someone's* quota. Recommendation: the group owner's, since Family is the plan that
-      sells seats. This needs deciding before the backfill, not after.
+      The same rule settles the two meters that sit next to it: `seats` counts distinct people
+      across the live groups a subject owns, and `trackedTickers` counts distinct active *symbols*
+      rather than rows, because a symbol costs one Alpha Vantage call per day however many rows
+      point at it.
+
+- [x] **Backfill existing usage before enforcing — as a scheduled reconciliation, not a one-shot.**
+      `libs/backend-core/src/entitlements/reconcile.ts`, run nightly at 03:30 by payment-service
+      (`services/usageReconciliation.service.ts`) and on demand through
+      `npm run reconcile:usage --workspace=payment-service` — dry-run by default, `--apply` to write,
+      `--user=<email>` to scope it.
+
+      **Why it can be recomputed at all, and why that makes a cron the right shape:** every meter it
+      touches is *derived*. `storageBytes` is the sum of photo sizes, `trackedTickers` the count of
+      distinct active symbols, `seats` the members of the groups a subject owns — in each case the
+      underlying collection is the record and the counter is only a cache of it, kept hot because a
+      quota check cannot afford the aggregation. So drift is always repairable, and the repair is
+      cheap enough to run unattended.
+
+      `aiJobs` is excluded, and its exclusion is the same rule read backwards: nothing but the
+      counter records that a GPU job happened, so there is no truth to recompute it from. That is
+      precisely why `consumeQuota` rolls its increment back on rejection — a leaked increment there
+      is permanent, where on a derived meter it survives only until the next run.
+
+      **Scheduled from payment-service** even though the source data belongs to album-, finance- and
+      group-service: it is a billing concern, payment-service already owns entitlement truth, and
+      every service shares one database so the reads are local wherever it runs. Splitting it across
+      the three data owners would mean three partial jobs that can disagree.
+
+      **It races live writes, deliberately.** A `consumeQuota` landing between the aggregation and
+      the write is lost. That is tolerable for exactly the reason above — the next run re-derives the
+      same number and converges — so it is scheduled at a quiet hour (well clear of finance-service's
+      22:00 price update) rather than defended with a lock the codebase has no mechanism for.
+
+      A run that corrects anything logs `entitlement.reconciled` at **`warn`**, not `info`: a
+      correction means the counter *had* gone wrong and users were being metered against a wrong
+      number until the job ran, so a recurring one is a leak in `consumeQuota`/`releaseQuota` worth
+      chasing rather than routine housekeeping.
+
+      **Reads the photos collection, not `Album.totalSize`.** The plan said to reuse
+      `statisticsService`'s aggregation; that aggregation reads the denormalized counter, which is
+      exactly the field a drifting `$inc` would have corrupted — reconciling against it would import
+      the drift instead of correcting it. The script sums `photos.size` and *reports* any album
+      whose counter disagrees. (At the time of writing: zero drift across 43 albums and 2566
+      photos.)
+
+      **Not recorded in `migrations` and not deleted after running**, unlike the one-shots in Phase
+      0/1 — it is not a migration, and treating it as one would have thrown away the repair. Safe to
+      re-run because it computes absolute values and writes only the meters that disagree, so a
+      second run in a row is a verified no-op.
+
+      Two rules it encodes deliberately:
+
+      - It will **correct an existing meter down to zero**, but never *creates* a zero row — absence
+        already reads as zero everywhere, so seeding zeros would be noise, while leaving a stale
+        count alive would outlive the data it counted.
+      - It **never deletes** a meter whose subject it no longer recognizes (a removed user, an
+        ownership change). Those are printed for review. A reconciliation script that silently drops
+        billing state is worse than the drift it fixes.
+
+      Unattributable data — an album in a permanently-deleted group, a `userId` matching no user,
+      photos pointing at a missing album — is billed to the uploader where one can still be
+      identified and reported as `UNATTRIBUTED` where it cannot, rather than quietly vanishing from
+      the totals.
+
+      First run against the live database: `toomastahves@hotmail.com` → `storageBytes` 9539827715
+      (8.88 GB), `trackedTickers` 6, `seats` 2; the other two accounts resolve to zero on every
+      meter. Both maintainer accounts are on the `staff` plan, so nothing is near a ceiling.
 
 ---
 
-## Phase 3 — Observe mode
+## Phase 3 — Wire the chokepoints
 
-Deploy every enforcement point recording usage and logging what *would* have been blocked, blocking
-nothing. Run two weeks. The proposed limits in Appendix A are guesses — this is how they stop being
-guesses.
+- [x] **~~`ENTITLEMENTS_MODE` env var: `off` | `observe` | `enforce`.~~ Removed. Enforcement is
+      unconditional.** Shipped with Phase 1, deleted before any chokepoint used it.
 
-- [x] **`ENTITLEMENTS_MODE` env var: `off` | `observe` | `enforce`.** Shipped with Phase 1. Default
-      `observe`; an invalid value warns once and falls back to observe; read per call so a restart
-      with a new value is all it takes. In observe mode `requireQuota` / `requireEntitlement` /
-      `consumeQuota` log a structured `entitlement.would_block` event with meter, used, limit, plan,
-      route and whether the entitlement was a stale fallback, then continue.
+      The mode existed to buy a calibration period: run two weeks in `observe`, count
+      `entitlement.would_block` per meter, and replace Appendix A's guesses with numbers. That
+      premise does not hold here. The deployment has **three** user accounts, two of them maintainers
+      on the `staff` plan with every meter at `-1` and the third holding no data at all. Two weeks of
+      observation would have produced an empty log and the same guesses, at the cost of a
+      three-valued switch on every gate — three branches per call site, a code path where enforcement
+      is skipped entirely, and the standing risk that the paywall is silently off in production
+      because a variable was unset. That is the same argument the architecture note above makes
+      against an `ENTITLEMENTS_EXEMPT_EMAILS` allowlist, and it lands the same way.
 
-      `retentionFloor` returns `null` outside `enforce`, so observe mode produces no data on the
-      retention gate — that limit has to be set from product judgement rather than from
-      `would_block` volume.
+      So the limits in Appendix A stay product judgement, which is what they were always going to be
+      here, and the numbers move through `PUT /api/plans/:code/limits` at runtime — no deploy, no
+      restart, which is precisely what makes a calibration *mode* unnecessary. The lever that decides
+      whether a limit bites is now structural: whether a chokepoint calls it.
 
-- [ ] **Wire the six chokepoints** (all in observe mode):
+      What replaced it: every rejection logs a structured **`entitlement.blocked`** event — meter,
+      subject, used, limit, plan, route, and whether the entitlement was a stale fallback — next to
+      the 402 it throws. The 402 reaches the user; only this line reaches the operator. The `stale`
+      flag is the one worth alerting on: a run of blocks against fallback limits means payment-service
+      is down and paying users are being held to free, which is a different incident from a limit set
+      too tight.
+
+- [x] **Prerequisite: services can resolve a group to its owner.** Created by the ownership decision
+      in Phase 2 — three of the six chokepoints bill a group's usage to its owner, and no service
+      outside group-service could name that owner. The JWT carries `groups` (ids) and nothing else.
+
+      - **`GET /internal/groups/:id/owner`** on group-service, behind `requireInternalServiceToken`,
+        mounted at `/internal` **ahead of the rate limiter** for the same reason payment-service's
+        entitlement route is: every chokepoint asks it from one container IP per service, so an
+        IP-counted limiter would throttle deployment-wide enforcement — and since the client falls
+        back to billing the caller, a 429 here would quietly bill the wrong person.
+
+        Deliberately not `getOne`: this answers without the caller being a member (album-service asks
+        on behalf of an uploader it is about to gate), and returns three scalars rather than the whole
+        group document, which carries invite tokens.
+
+      - **`libs/backend-core/src/groups/client.ts`** — `getGroupOwner`, `invalidateGroupOwner`,
+        `clearGroupOwnerCache`. Same 60s TTL, 5000-entry bound and in-flight collapsing as the
+        entitlement client. Neither a 404 nor a failure is cached: a 404 is nearly always a bad id and
+        would spend a cache slot on garbage, and a cached failure would keep billing the wrong subject
+        for a minute after recovery.
+
+      - **`groups/subject.ts` → `groupOwnerSubject(req => req.body.groupId)`** plugs straight into the
+        `subject` resolver `requireQuota` already accepts. Personal rows bill to the caller; group rows
+        bill to the owner; an unresolvable owner bills the caller and logs at `error`. Refusing the
+        write instead would be harsher than what the entitlement client does for the same class of
+        outage, and the error direction is bounded in the shape that matters — the common case is a
+        member on a cheap plan uploading into a group owned by someone on Family, so the fallback
+        checks against the *smaller* allowance.
+
+      - **Env wiring, which was missing entirely.** None of the consuming services received a payment
+        URL, so the entitlement client shipped in Phase 1 would have logged "not configured" and
+        failed every user closed to free the moment a chokepoint called it. Wired album, finance,
+        group and relationship, plus `SERVICE_NAME` on all four so `x-service-id` and the metrics
+        labels stop reading `unknown-service`.
+
+      - **New: `GROUP_INTERNAL_URL` and `PAYMENT_INTERNAL_URL`, separate from the public
+        `*_API_URL`.** `GROUP_API_URL` and `PAYMENT_API_URL` cannot be pointed at the container
+        network, because the frontend entrypoints template those same variables into the
+        `config.json` the **browser** downloads — album-front, finance-front and relationship-front
+        for the group URL, payment-front for the payment one. One variable, two consumers with
+        incompatible needs.
+
+        Both clients now read `*_INTERNAL_URL` and fall back to the public variable, so local dev and
+        any un-migrated deployment keep working — they just take the long way round, out through the
+        proxy and back, carrying the internal service token across the public edge.
+
+        **This also fixes a live defect unrelated to entitlements:** `.env.production` had
+        `PAYMENT_API_URL=http://payment-service:5005`, which payment-front was handing to the browser
+        as the base URL for the subscription and checkout pages. No browser can resolve a Docker
+        service name. Corrected to the public hostname, with the internal address moved to
+        `PAYMENT_INTERNAL_URL`. **Both new variables need setting as GitHub repo `vars`** —
+        `deploy-all.yml` and `deploy-single-service.yml` now emit them into `.env.app`, and an unset
+        var silently yields the fallback rather than an error.
+
+- [ ] **Wire the six chokepoints:**
 
       | # | Chokepoint | Service | File | Check |
       |---|---|---|---|---|
@@ -487,15 +661,18 @@ collection on every request. Adding a date floor is the same edit.
       splitting it. Do that split first, extract a shared pipeline builder, and apply the floor
       there — six hand-placed floors will drift.
 
-- [ ] **After two weeks, review `entitlement.would_block` volume per meter and set the real limits.**
-      A meter that would block a large share of free users is either priced wrong or is a bad
-      paywall. Update Appendix A from data.
+- [ ] **Review `entitlement.blocked` volume per meter once there are real users, and move the limits
+      from data.** A meter that blocks a large share of free users is either priced wrong or is a bad
+      paywall. `Plan.limits` is editable at runtime, so this is a `PUT /api/plans/:code/limits` and
+      not a release — update Appendix A to match when you do it.
 
 ---
 
-## Phase 4 — Enforce, and make the meters visible
+## Phase 4 — Make the meters visible
 
-Gating without surfacing is indistinguishable from breakage.
+Gating without surfacing is indistinguishable from breakage — and since enforcement is unconditional,
+Phase 3 lands *already blocking*. That makes this phase concurrent with Phase 3 rather than after it:
+a chokepoint wired without the meter beside it is a feature that silently stops working.
 
 ### 4.1 Shared components — `@tumbaland/components`
 
@@ -533,10 +710,13 @@ Gating without surfacing is indistinguishable from breakage.
       toggle with the saving as a real number, mark the current plan, buttons that say what will
       happen ("Switch to Family", not "Subscribe").
 
-### 4.4 Flip the switch
+### 4.4 Rollout
 
-- [ ] **`ENTITLEMENTS_MODE=enforce`**, one service at a time, starting with finance (smallest user
-      overlap, clearest value).
+- [ ] ~~**`ENTITLEMENTS_MODE=enforce`, one service at a time.**~~ There is no switch to flip. The
+      rollout unit is the chokepoint, not the service: wiring one gate turns exactly that limit on,
+      everywhere, immediately. Order them the same way regardless — start with finance, which has the
+      smallest user overlap and the clearest value — and ship each gate together with its
+      `<UsageMeter>` from 4.3, since a user who cannot see the ceiling experiences the 402 as a bug.
 - [ ] ~~**Grandfather existing users onto Personal for 90 days and tell them plainly.**~~ Moot —
       Stripe has only ever handled test data, so there are no existing paying users to grandfather.
       Existing *free* users still get metered for the first time, so the "what happens when you hit

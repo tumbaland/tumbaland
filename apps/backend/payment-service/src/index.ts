@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { connectDB, logger, registerShutdown, requireEnv } from '@tumbaland/backend-core';
+import { startUsageReconciliation } from './services/usageReconciliation.service';
 import app from './app';
 
 // Fail fast if the JWT secret is missing — auth must never run with a default
@@ -19,6 +20,11 @@ const PORT = process.env.PORT || 5005;
 // failing every request. Exiting hands recovery to the container restart policy.
 const start = async (): Promise<void> => {
   await connectDB('payment-service');
+
+  // Armed after the connection is up — the job aggregates across four
+  // services' collections, so scheduling it earlier would just point queries
+  // at a disconnected mongoose.
+  startUsageReconciliation();
 
   const server = app.listen(PORT, () =>
     logger.info('Payment service started successfully', { port: PORT })

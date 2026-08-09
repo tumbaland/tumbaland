@@ -4,7 +4,6 @@ import { PaymentRequiredError, UnauthorizedError } from '../errors/HttpError';
 import { FeatureKey, MeterKey, UNLIMITED } from './definitions';
 import { getEntitlements } from './client';
 import { checkQuota } from './usage';
-import { getEntitlementsMode } from './mode';
 import { Entitlements } from './types';
 
 declare global {
@@ -51,23 +50,17 @@ export async function loadEntitlements(req: Request, resolve: SubjectResolver = 
 export function requireEntitlement(feature: FeatureKey, options: EntitlementOptions = {}): RequestHandler {
   return async (req, _res, next) => {
     try {
-      const mode = getEntitlementsMode();
-      if (mode === 'off') return next();
-
       const entitlements = await loadEntitlements(req, options.subject);
       if (entitlements.limits.features[feature]) return next();
 
-      if (mode === 'observe') {
-        logger.info('entitlement.would_block', {
-          event: 'entitlement.would_block',
-          feature,
-          subjectId: entitlements.email,
-          planCode: entitlements.planCode,
-          route: req.originalUrl,
-          stale: entitlements.stale === true
-        });
-        return next();
-      }
+      logger.info('entitlement.blocked', {
+        event: 'entitlement.blocked',
+        feature,
+        subjectId: entitlements.email,
+        planCode: entitlements.planCode,
+        route: req.originalUrl,
+        stale: entitlements.stale === true
+      });
 
       throw new PaymentRequiredError(`Your plan does not include ${feature}`, {
         code: 'FEATURE_NOT_IN_PLAN',
@@ -98,8 +91,6 @@ export interface QuotaOptions extends EntitlementOptions {
 export function requireQuota(meter: MeterKey, options: QuotaOptions = {}): RequestHandler {
   return async (req, _res, next) => {
     try {
-      if (getEntitlementsMode() === 'off') return next();
-
       const entitlements = await loadEntitlements(req, options.subject);
       const amount = typeof options.amount === 'function' ? options.amount(req) : (options.amount ?? 1);
 
@@ -126,8 +117,6 @@ export function requireQuota(meter: MeterKey, options: QuotaOptions = {}): Reque
  * price history it depends on is not.
  */
 export async function retentionFloor(email: string, now: Date = new Date()): Promise<Date | null> {
-  if (getEntitlementsMode() !== 'enforce') return null;
-
   const { limits } = await getEntitlements(email);
   const days = limits.retentionDays;
   if (days === UNLIMITED || days < 0) return null;

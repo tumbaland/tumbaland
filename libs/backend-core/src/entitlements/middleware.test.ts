@@ -35,7 +35,7 @@ function mockReq(overrides: Partial<Request> = {}): Request {
 }
 
 beforeEach(() => {
-  process.env = { ...ORIGINAL_ENV, ENTITLEMENTS_MODE: 'enforce' };
+  process.env = { ...ORIGINAL_ENV };
   jest.clearAllMocks();
   mockGetEntitlements.mockResolvedValue(entitlements());
 });
@@ -89,24 +89,10 @@ describe('requireEntitlement', () => {
     );
   });
 
-  it('logs instead of blocking in observe mode', async () => {
-    process.env.ENTITLEMENTS_MODE = 'observe';
-    const next = jest.fn();
+  it('logs the denial alongside throwing it', async () => {
+    await requireEntitlement('cleanExport')(mockReq(), {} as Response, jest.fn());
 
-    await requireEntitlement('cleanExport')(mockReq(), {} as Response, next);
-
-    expect(next).toHaveBeenCalledWith();
-    expect(logger.info).toHaveBeenCalledWith('entitlement.would_block', expect.objectContaining({ feature: 'cleanExport' }));
-  });
-
-  it('does not even look entitlements up when the mode is off', async () => {
-    process.env.ENTITLEMENTS_MODE = 'off';
-    const next = jest.fn();
-
-    await requireEntitlement('cleanExport')(mockReq(), {} as Response, next);
-
-    expect(next).toHaveBeenCalledWith();
-    expect(mockGetEntitlements).not.toHaveBeenCalled();
+    expect(logger.info).toHaveBeenCalledWith('entitlement.blocked', expect.objectContaining({ feature: 'cleanExport' }));
   });
 });
 
@@ -143,15 +129,6 @@ describe('requireQuota', () => {
     expect(next).toHaveBeenCalledWith(denial);
   });
 
-  it('is inert when the mode is off', async () => {
-    process.env.ENTITLEMENTS_MODE = 'off';
-    const next = jest.fn();
-
-    await requireQuota('storageBytes')(mockReq(), {} as Response, next);
-
-    expect(mockCheckQuota).not.toHaveBeenCalled();
-    expect(next).toHaveBeenCalledWith();
-  });
 });
 
 describe('retentionFloor', () => {
@@ -171,9 +148,11 @@ describe('retentionFloor', () => {
     expect(await retentionFloor('user@example.com', now)).toBeNull();
   });
 
-  it('never truncates history outside enforce mode', async () => {
-    process.env.ENTITLEMENTS_MODE = 'observe';
+  it('still applies the floor when the limits are a stale fallback', async () => {
+    mockGetEntitlements.mockResolvedValue(entitlements({ stale: true }));
 
-    expect(await retentionFloor('user@example.com', now)).toBeNull();
+    // Fail closed, same as every other gate: an outage clips history to the
+    // free tier for a minute rather than handing the full archive out.
+    expect(await retentionFloor('user@example.com', now)).toEqual(new Date('2026-05-11T00:00:00.000Z'));
   });
 });

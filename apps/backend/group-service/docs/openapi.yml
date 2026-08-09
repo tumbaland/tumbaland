@@ -20,6 +20,8 @@ tags:
     description: Group member management and role operations
   - name: Group Membership
     description: Group membership status and checking operations
+  - name: Internal
+    description: Service-to-service endpoints. Not reachable with a user JWT.
   - name: Health
     description: Health check and monitoring endpoints
 
@@ -889,4 +891,76 @@ paths:
                 $ref: '#/components/schemas/Error'
       security:
         - bearerAuth: []
+        - internalAuth: []
+
+  # Internal service-to-service endpoints
+  /internal/groups/{id}/owner:
+    get:
+      tags: [Internal]
+      summary: Resolve a group's billing owner
+      description: |
+        Returns the member who currently holds the `owner` role, which is the
+        quota subject for anything held in the group: storage and tracked
+        tickers in a group bill to its owner rather than to the member who
+        created the row, because Family sells a pooled allowance.
+
+        Falls back to `createdBy` when no member holds the role, and picks the
+        lowest email when several do, so repeated calls bill the same person.
+
+        Answers for soft-deleted groups too — their photos still occupy storage
+        — and reports that state in `deleted`.
+
+        Service-to-service only: the internal token is verified here rather
+        than merely being present, and no user JWT is accepted.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Group ID
+      responses:
+        '200':
+          description: Owner resolved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  groupId:
+                    type: string
+                    example: "689a8219e15515e8f6539ad2"
+                  ownerEmail:
+                    type: string
+                    format: email
+                    example: "owner@example.com"
+                  memberCount:
+                    type: integer
+                    example: 2
+                  deleted:
+                    type: boolean
+                    description: True when the group is soft-deleted.
+                    example: false
+        '401':
+          description: Missing or invalid internal service token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Group not found, or the group has no resolvable owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
         - internalAuth: []

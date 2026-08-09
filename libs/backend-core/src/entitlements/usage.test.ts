@@ -50,7 +50,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  process.env = { ...ORIGINAL_ENV, ENTITLEMENTS_MODE: 'enforce' };
+  process.env = { ...ORIGINAL_ENV };
   await UsageMeter.deleteMany({});
   // The unique index is what makes the concurrent upserts below collapse onto
   // one document instead of racing into duplicates.
@@ -136,32 +136,34 @@ describe('consumeQuota', () => {
   });
 });
 
-describe('modes', () => {
-  it('records nothing and blocks nothing when off', async () => {
-    process.env.ENTITLEMENTS_MODE = 'off';
-    await setUsage('user@example.com', 'aiJobs', 5);
-
-    await expect(
-      consumeQuota({ subjectId: 'user@example.com', meter: 'aiJobs', entitlements: entitlements() })
-    ).resolves.toBeUndefined();
-    expect(await getUsage('user@example.com', 'aiJobs')).toBe(5);
-  });
-
-  it('keeps the increment and logs would_block instead of rejecting when observing', async () => {
-    process.env.ENTITLEMENTS_MODE = 'observe';
+describe('rejection logging', () => {
+  it('logs the block alongside throwing, so an operator sees what a user saw', async () => {
     await setUsage('user@example.com', 'aiJobs', 5);
 
     await expect(
       consumeQuota({ subjectId: 'user@example.com', meter: 'aiJobs', entitlements: entitlements(), route: '/ai/dispatch' })
-    ).resolves.toBeUndefined();
+    ).rejects.toMatchObject({ statusCode: 402 });
 
-    // Observe mode exists to measure real demand — rolling the count back would
-    // under-report exactly the users the limits are being calibrated against.
-    expect(await getUsage('user@example.com', 'aiJobs')).toBe(6);
     expect(logger.info).toHaveBeenCalledWith(
-      'entitlement.would_block',
+      'entitlement.blocked',
       expect.objectContaining({ meter: 'aiJobs', used: 5, limit: 5, route: '/ai/dispatch' })
     );
+  });
+
+  it('flags a block that came from stale fallback limits rather than the real plan', async () => {
+    await setUsage('user@example.com', 'aiJobs', 5);
+
+    await expect(
+      consumeQuota({
+        subjectId: 'user@example.com',
+        meter: 'aiJobs',
+        entitlements: entitlements({ stale: true })
+      })
+    ).rejects.toMatchObject({ statusCode: 402 });
+
+    // A run of these means payment-service is down and paying users are being
+    // held to free limits — a different incident from a limit set too tight.
+    expect(logger.info).toHaveBeenCalledWith('entitlement.blocked', expect.objectContaining({ stale: true }));
   });
 });
 
@@ -175,26 +177,20 @@ describe('checkQuota', () => {
     expect(await getUsage('user@example.com', 'storageBytes')).toBe(400);
   });
 
-  it('logs would_block instead of rejecting when observing', async () => {
-    process.env.ENTITLEMENTS_MODE = 'observe';
+  it('rejects, and writes nothing, when the requested amount would overrun', async () => {
     await setUsage('user@example.com', 'storageBytes', 400);
 
     await expect(
       checkQuota({ subjectId: 'user@example.com', meter: 'storageBytes', amount: 601, entitlements: entitlements() })
-    ).resolves.toBeUndefined();
+    ).rejects.toMatchObject({ statusCode: 402 });
+
+    // Read-only by contract: the increment belongs to the point the resource
+    // actually comes into existence, not to the gate in front of it.
+    expect(await getUsage('user@example.com', 'storageBytes')).toBe(400);
     expect(logger.info).toHaveBeenCalledWith(
-      'entitlement.would_block',
+      'entitlement.blocked',
       expect.objectContaining({ meter: 'storageBytes', used: 400, limit: 1000 })
     );
-  });
-
-  it('is inert when the mode is off, even over the limit', async () => {
-    process.env.ENTITLEMENTS_MODE = 'off';
-    await setUsage('user@example.com', 'storageBytes', 5000);
-
-    await expect(
-      checkQuota({ subjectId: 'user@example.com', meter: 'storageBytes', amount: 1, entitlements: entitlements() })
-    ).resolves.toBeUndefined();
   });
 
   it('skips the usage read entirely for an unlimited meter', async () => {

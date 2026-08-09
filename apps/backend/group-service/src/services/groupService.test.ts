@@ -3,6 +3,7 @@ jest.mock('../models/Group', () => ({
     create: jest.fn(),
     find: jest.fn(),
     findOne: jest.fn(),
+    findById: jest.fn(),
     findByIdAndDelete: jest.fn(),
     updateOne: jest.fn()
   }
@@ -14,6 +15,7 @@ import * as groupService from './groupService';
 const mockedCreate = Group.create as unknown as jest.Mock;
 const mockedFind = Group.find as unknown as jest.Mock;
 const mockedFindOne = Group.findOne as unknown as jest.Mock;
+const mockedFindById = Group.findById as unknown as jest.Mock;
 const mockedFindByIdAndDelete = Group.findByIdAndDelete as unknown as jest.Mock;
 const mockedUpdateOne = Group.updateOne as unknown as jest.Mock;
 
@@ -310,5 +312,64 @@ describe('permanentlyDeleteGroup', () => {
     await groupService.permanentlyDeleteGroup('group-1', 'owner@example.com');
 
     expect(mockedFindByIdAndDelete).toHaveBeenCalledWith('group-1');
+  });
+});
+
+describe('getGroupOwner', () => {
+  it('resolves the member holding the owner role', async () => {
+    mockedFindById.mockResolvedValue(
+      makeGroup({ members: [{ email: 'member@example.com', role: 'member' }, { email: 'owner@example.com', role: 'owner' }] })
+    );
+
+    const result = await groupService.getGroupOwner('group-1');
+
+    expect(result).toEqual({ groupId: 'group-1', ownerEmail: 'owner@example.com', memberCount: 2, deleted: false });
+  });
+
+  it('prefers the owner role over createdBy, which goes stale when the role is transferred', async () => {
+    const group = makeGroup({ members: [{ email: 'new-owner@example.com', role: 'owner' }] });
+    group.createdBy = 'founder@example.com';
+    mockedFindById.mockResolvedValue(group);
+
+    expect((await groupService.getGroupOwner('group-1')).ownerEmail).toBe('new-owner@example.com');
+  });
+
+  it('falls back to createdBy when no member holds the owner role', async () => {
+    const group = makeGroup({ members: [{ email: 'admin@example.com', role: 'admin' }] });
+    group.createdBy = 'founder@example.com';
+    mockedFindById.mockResolvedValue(group);
+
+    expect((await groupService.getGroupOwner('group-1')).ownerEmail).toBe('founder@example.com');
+  });
+
+  it('picks deterministically when a group somehow has several owners', async () => {
+    mockedFindById.mockResolvedValue(
+      makeGroup({ members: [{ email: 'zoe@example.com', role: 'owner' }, { email: 'ada@example.com', role: 'owner' }] })
+    );
+
+    // Lowest email, so a retry bills the same person twice rather than two
+    // people once — document order is not stable enough to bill from.
+    expect((await groupService.getGroupOwner('group-1')).ownerEmail).toBe('ada@example.com');
+  });
+
+  it('still answers for a soft-deleted group, whose photos still occupy storage', async () => {
+    mockedFindById.mockResolvedValue(makeGroup({ deletedAt: new Date('2026-01-01') }));
+
+    const result = await groupService.getGroupOwner('group-1');
+
+    expect(result.ownerEmail).toBe('owner@example.com');
+    expect(result.deleted).toBe(true);
+  });
+
+  it('rejects an unknown group', async () => {
+    mockedFindById.mockResolvedValue(null);
+
+    await expect(groupService.getGroupOwner('nope')).rejects.toMatchObject({ name: 'NotFoundError' });
+  });
+
+  it('rejects a group with neither an owner nor a createdBy', async () => {
+    mockedFindById.mockResolvedValue(makeGroup({ members: [] }));
+
+    await expect(groupService.getGroupOwner('group-1')).rejects.toMatchObject({ name: 'NotFoundError' });
   });
 });

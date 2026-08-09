@@ -11,11 +11,17 @@ services:
     environment:
       - PORT=5006
       - NODE_ENV=production
+      - SERVICE_NAME=group-service
       - MONGODB_URI=${MONGODB_URI}
       - JWT_SECRET=${JWT_SECRET}
+      # Also gates /internal/groups/:id/owner, which album- and finance-service
+      # read to pick the quota subject for anything held in a group.
       - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN}
       - AUTH_API_URL=${AUTH_API_URL}
       - CORS_ORIGIN=${CORS_ORIGIN}
+      # Entitlements: the seats chokepoint checks an added member against the
+      # group owner's plan. No group URL — this service owns that data.
+      - PAYMENT_INTERNAL_URL=${PAYMENT_INTERNAL_URL}
     init: true
     networks:
       - tumbanet

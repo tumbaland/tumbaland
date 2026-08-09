@@ -116,6 +116,9 @@ jobs:
           echo "CORS_ORIGIN=${{ vars.CORS_ORIGIN }}" >> .env.app
           echo "ALPHA_VANTAGE_API_KEY=${{ secrets.ALPHA_VANTAGE_API_KEY }}" >> .env.app
           echo "GROUP_API_URL=${{ vars.GROUP_API_URL }}" >> .env.app
+          # Container-network address for service-to-service calls. The public var above
+          # is handed to the browser by the frontends, so it cannot be pointed inward.
+          echo "GROUP_INTERNAL_URL=${{ vars.GROUP_INTERNAL_URL }}" >> .env.app
           echo "ALBUM_API_URL=${{ vars.ALBUM_API_URL }}" >> .env.app
           echo "AUTH_SERVICE_URL=${{ vars.AUTH_SERVICE_URL }}" >> .env.app
           echo "AUTH_FRONT_URL=${{ vars.AUTH_FRONT_URL }}" >> .env.app
@@ -128,6 +131,7 @@ jobs:
           echo "OBJECT_DETECTION_API_URL=${{ vars.OBJECT_DETECTION_API_URL }}" >> .env.app
           echo "SEGMENTATION_API_URL=${{ vars.SEGMENTATION_API_URL }}" >> .env.app
           echo "PAYMENT_API_URL=${{ vars.PAYMENT_API_URL }}" >> .env.app
+          echo "PAYMENT_INTERNAL_URL=${{ vars.PAYMENT_INTERNAL_URL }}" >> .env.app
           echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" >> .env.app
           echo "STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}" >> .env.app
           echo "PAYMENT_FRONT_URL=${{ vars.PAYMENT_FRONT_URL }}" >> .env.app

@@ -11,11 +11,22 @@ services:
     environment:
       - PORT=4003
       - NODE_ENV=production
+      - SERVICE_NAME=finance-service
       - MONGODB_URI=${MONGODB_URI}
       - JWT_SECRET=${JWT_SECRET}
       - ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY}
       - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN}
       - CORS_ORIGIN=${CORS_ORIGIN}
+      # Entitlements are enforced unconditionally, so both of these are
+      # load-bearing: without the payment URL the shared client fails closed and
+      # every user is held to free limits, and without the group URL a group's
+      # tracked tickers bill to whoever added them instead of the group owner.
+      #
+      # The *_INTERNAL_URL forms, not the public ones: these are container-to-
+      # container calls carrying the internal service token, and the public
+      # variables are the ones the frontends hand to the browser.
+      - PAYMENT_INTERNAL_URL=${PAYMENT_INTERNAL_URL}
+      - GROUP_INTERNAL_URL=${GROUP_INTERNAL_URL}
     init: true
     networks:
       - tumbanet

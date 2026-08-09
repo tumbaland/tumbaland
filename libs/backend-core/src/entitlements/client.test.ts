@@ -150,6 +150,36 @@ describe('when payment-service cannot be reached', () => {
   });
 });
 
+describe('base URL selection', () => {
+  it('prefers the container-network address over the public hostname', async () => {
+    process.env.PAYMENT_INTERNAL_URL = 'http://payment-service:5005';
+    process.env.PAYMENT_API_URL = 'https://payment-api.tumbaland.eu';
+    (global.fetch as jest.Mock).mockResolvedValue(paidResponse());
+
+    await getEntitlements('user@example.com');
+
+    // payment-front templates the public variable into the browser's
+    // config.json, so it cannot be pointed inward — hence the second variable.
+    expect(global.fetch).toHaveBeenCalledWith(
+      'http://payment-service:5005/internal/entitlements?email=user%40example.com',
+      expect.anything()
+    );
+  });
+
+  it('falls back to the public URL, so local dev and un-migrated deploys still work', async () => {
+    delete process.env.PAYMENT_INTERNAL_URL;
+    process.env.PAYMENT_API_URL = 'https://payment-api.tumbaland.eu';
+    (global.fetch as jest.Mock).mockResolvedValue(paidResponse());
+
+    await getEntitlements('user@example.com');
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://payment-api.tumbaland.eu/internal/entitlements?email=user%40example.com',
+      expect.anything()
+    );
+  });
+});
+
 describe('cache bounds', () => {
   it('evicts the oldest entries instead of growing without limit', async () => {
     (global.fetch as jest.Mock).mockResolvedValue(paidResponse());

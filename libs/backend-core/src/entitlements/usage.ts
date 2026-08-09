@@ -3,7 +3,6 @@ import { PaymentRequiredError } from '../errors/HttpError';
 import { UsageMeter, currentPeriod } from './UsageMeter';
 import { MeterKey, METER_KEYS, UNLIMITED, fitsWithin } from './definitions';
 import { Entitlements } from './types';
-import { getEntitlementsMode } from './mode';
 
 export interface QuotaRequest {
   /** Who the usage is billed to — see `IUsageMeter.subjectId`. */
@@ -12,7 +11,7 @@ export interface QuotaRequest {
   /** How much this request wants. Bytes for `storageBytes`, otherwise a count. */
   amount?: number;
   entitlements: Entitlements;
-  /** Attached to the observe-mode log line so a would-block can be traced to a route. */
+  /** Attached to the rejection log so a 402 can be traced back to a route. */
   route?: string;
 }
 
@@ -52,9 +51,15 @@ function quotaError(req: QuotaRequest, used: number, limit: number): PaymentRequ
   });
 }
 
-function logWouldBlock(req: QuotaRequest, used: number, limit: number): void {
-  logger.info('entitlement.would_block', {
-    event: 'entitlement.would_block',
+/**
+ * Every rejection is logged, not just thrown. The 402 reaches the user, but
+ * only this line reaches the operator — and the two questions worth asking of a
+ * paywall (which meter fires most, and how often it fires on a *stale* fallback
+ * rather than on real limits) are answerable from nothing else.
+ */
+function logBlocked(req: QuotaRequest, used: number, limit: number): void {
+  logger.info('entitlement.blocked', {
+    event: 'entitlement.blocked',
     meter: req.meter,
     subjectId: req.subjectId,
     amount: req.amount ?? 1,
@@ -75,19 +80,13 @@ function logWouldBlock(req: QuotaRequest, used: number, limit: number): void {
  * the underlying data. Use `consumeQuota` where the count is the only record.
  */
 export async function checkQuota(req: QuotaRequest): Promise<void> {
-  const mode = getEntitlementsMode();
-  if (mode === 'off') return;
-
   const limit = req.entitlements.limits.meters[req.meter] ?? UNLIMITED;
   if (limit === UNLIMITED) return;
 
   const used = await getUsage(req.subjectId, req.meter);
   if (fitsWithin(limit, used, req.amount ?? 1)) return;
 
-  if (mode === 'observe') {
-    logWouldBlock(req, used, limit);
-    return;
-  }
+  logBlocked(req, used, limit);
   throw quotaError(req, used, limit);
 }
 
@@ -106,9 +105,6 @@ export async function checkQuota(req: QuotaRequest): Promise<void> {
  * who cannot upload despite being well under their limit.
  */
 export async function consumeQuota(req: QuotaRequest): Promise<void> {
-  const mode = getEntitlementsMode();
-  if (mode === 'off') return;
-
   const amount = req.amount ?? 1;
   const limit = req.entitlements.limits.meters[req.meter] ?? UNLIMITED;
   const period = currentPeriod(req.meter);
@@ -124,13 +120,7 @@ export async function consumeQuota(req: QuotaRequest): Promise<void> {
 
   const usedBefore = usage.count - amount;
 
-  if (mode === 'observe') {
-    // Keep the increment: observe mode exists to measure real demand, and a
-    // rolled-back count would under-report exactly the users who matter.
-    logWouldBlock(req, usedBefore, limit);
-    return;
-  }
-
+  logBlocked(req, usedBefore, limit);
   await releaseQuota(subjectId, req.meter, amount);
   throw quotaError(req, usedBefore, limit);
 }

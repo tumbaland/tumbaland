@@ -56,3 +56,28 @@ describe('internal service token bypass', () => {
     expect(res.body).toEqual({ success: false, message: 'Invalid or missing internal service token' });
   });
 });
+
+describe('GET /internal/groups/:id/owner', () => {
+  beforeAll(() => {
+    process.env.INTERNAL_SERVICE_TOKEN = 'test-internal-token';
+  });
+
+  it('rejects a request with no internal token', async () => {
+    const res = await request(app).get('/internal/groups/group-1/owner');
+
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({ success: false, message: 'Invalid or missing internal service token' });
+  });
+
+  it('rejects a wrong internal token, rather than trusting the header being present', async () => {
+    const res = await request(app).get('/internal/groups/group-1/owner').set('x-internal-token', 'wrong-token');
+
+    expect(res.status).toBe(401);
+  });
+
+  it('does not accept a user JWT in place of the service token', async () => {
+    const res = await request(app).get('/internal/groups/group-1/owner').set('Authorization', 'Bearer whatever');
+
+    expect(res.status).toBe(401);
+  });
+});

@@ -153,6 +153,53 @@ export function memberRole(group: IGroup, email: string): GroupRole | undefined 
   return group.members.find((m) => m.email === email.toLowerCase())?.role as GroupRole | undefined;
 }
 
+export interface GroupOwner {
+  groupId: string;
+  ownerEmail: string;
+  memberCount: number;
+  /** Soft-deleted groups still answer — their photos still occupy storage. */
+  deleted: boolean;
+}
+
+/**
+ * Who a group's pooled usage bills to.
+ *
+ * Read by the entitlement chokepoints in album-service and finance-service over
+ * the internal-service channel: storage and tracked tickers in a group belong
+ * to the group's owner, not to whichever member created the row, because that
+ * is the only reading under which Family's "250 GB pooled" is a number anyone
+ * can actually spend.
+ *
+ * Ownership is `members[].role === 'owner'` rather than `createdBy` — that is
+ * what every authorization check here tests, and `updateMemberRole` can hand
+ * the role to someone else while `createdBy` stays as it was written. Groups
+ * with no owner row at all fall back to `createdBy`; groups with several
+ * resolve to the lowest email so a retry bills the same person twice rather
+ * than two people once.
+ *
+ * Deliberately *not* filtered on `deletedAt`: a soft-deleted group's photos are
+ * still in MinIO and still cost money, so its storage still has to bill to
+ * someone. The flag is returned so a caller that cares can decide.
+ */
+export async function getGroupOwner(groupId: string): Promise<GroupOwner> {
+  const group = await Group.findById(groupId);
+  if (!group) throw new NotFoundError('Group not found');
+
+  const owners = group.members
+    .filter((m) => m.role === 'owner')
+    .map((m) => m.email)
+    .sort();
+  const ownerEmail = owners[0] ?? group.createdBy;
+  if (!ownerEmail) throw new NotFoundError('Group has no owner');
+
+  return {
+    groupId: String(group._id),
+    ownerEmail: ownerEmail.toLowerCase(),
+    memberCount: group.members.length,
+    deleted: group.deletedAt !== null && group.deletedAt !== undefined
+  };
+}
+
 export async function updateMemberRole(
   groupId: string,
   actingEmail: string,

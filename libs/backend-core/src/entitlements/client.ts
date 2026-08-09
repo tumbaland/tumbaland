@@ -72,8 +72,25 @@ interface EntitlementResponse {
   upgradeTo?: string;
 }
 
+/**
+ * Prefers the container-network address over the public hostname.
+ *
+ * `PAYMENT_API_URL` cannot simply be pointed inward: payment-front's entrypoint
+ * templates that same variable into the `config.json` the *browser* downloads,
+ * so a Docker-internal value there breaks the subscription and checkout pages.
+ * One variable, two consumers with incompatible needs — this is the server-side
+ * half of it.
+ *
+ * Falling back keeps local dev (where only `PAYMENT_API_URL` is set) and any
+ * un-migrated deployment working; it just takes the long way round, out through
+ * the proxy and back, carrying the internal token across the public edge.
+ */
+function internalPaymentUrl(): string | undefined {
+  return process.env.PAYMENT_INTERNAL_URL || process.env.PAYMENT_API_URL;
+}
+
 async function fetchEntitlements(email: string): Promise<Entitlements> {
-  const baseUrl = process.env.PAYMENT_API_URL;
+  const baseUrl = internalPaymentUrl();
   const token = process.env.INTERNAL_SERVICE_TOKEN;
   const serviceId = process.env.SERVICE_NAME || 'unknown-service';
 

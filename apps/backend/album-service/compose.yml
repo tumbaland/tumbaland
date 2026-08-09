@@ -11,10 +11,21 @@ services:
     environment:
       - PORT=4002
       - NODE_ENV=production
+      - SERVICE_NAME=album-service
       - MONGODB_URI=${MONGODB_URI}
       - JWT_SECRET=${JWT_SECRET}
       - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN}
       - CORS_ORIGIN=${CORS_ORIGIN}
+      # Entitlements are enforced unconditionally, so both of these are
+      # load-bearing: without the payment URL the shared client fails closed and
+      # every user is held to free limits, and without the group URL a group
+      # album's storage bills to the uploader instead of the group owner.
+      #
+      # The *_INTERNAL_URL forms, not the public ones: these are container-to-
+      # container calls carrying the internal service token, and the public
+      # variables are the ones the frontends hand to the browser.
+      - PAYMENT_INTERNAL_URL=${PAYMENT_INTERNAL_URL}
+      - GROUP_INTERNAL_URL=${GROUP_INTERNAL_URL}
       # File service configuration
       - FILE_SERVICE_URL=${FILE_SERVICE_URL}
       - FILE_SERVICE_API_KEY=${FILE_SERVICE_API_KEY}

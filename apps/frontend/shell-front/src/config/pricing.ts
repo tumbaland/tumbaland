@@ -9,9 +9,11 @@
  * is exactly the failure this plan is fixing — `PlansPage`'s hardcoded
  * `featureMatrix` advertised six limits that no service ever enforced.
  *
- * Until `ENTITLEMENTS_MODE=enforce` is live, `PRICING_STATUS` stays 'preview'
- * and the page says so. Do not flip it to 'live' before the meters actually
- * meter — advertising limits you don't enforce is the liability, not the gap.
+ * Until the chokepoints in MONETIZATION.md Phase 3 are wired, `PRICING_STATUS`
+ * stays 'preview' and the page says so. Enforcement itself is unconditional —
+ * there is no mode switch — so what gates a limit is simply whether a
+ * chokepoint calls it. Do not flip this to 'live' before the meters actually
+ * meter: advertising limits you don't enforce is the liability, not the gap.
  */
 
 export type PlanCode = 'free' | 'personal' | 'family';

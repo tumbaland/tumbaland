@@ -11,10 +11,15 @@ services:
     environment:
       - PORT=4001
       - NODE_ENV=production
+      - SERVICE_NAME=relationship-service
       - MONGODB_URI=${MONGODB_URI}
       - JWT_SECRET=${JWT_SECRET}
       - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN}
       - CORS_ORIGIN=${CORS_ORIGIN}
+      # Entitlements: statistics and journal reads are clipped by the plan's
+      # retention floor. No group URL — retention is a per-caller limit, not a
+      # pooled meter, so there is no group subject to resolve.
+      - PAYMENT_INTERNAL_URL=${PAYMENT_INTERNAL_URL}
     init: true
     networks:
       - tumbanet

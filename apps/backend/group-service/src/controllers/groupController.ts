@@ -150,6 +150,20 @@ export const removeMember = async (req: Request, res: Response): Promise<void> =
   sendSuccess(res, group);
 };
 
+/**
+ * `GET /internal/groups/:id/owner` — service-to-service only.
+ *
+ * The quota subject for anything held in a group. Kept off `/api/groups` and
+ * out of `getOne`'s shape on purpose: this answers without the caller having to
+ * be a member (album-service asks on behalf of an uploader it is about to gate,
+ * and a member's own email is not part of the question), and it returns three
+ * scalars instead of the whole group document, which carries invite tokens.
+ */
+export const getOwner = async (req: Request, res: Response): Promise<void> => {
+  const owner = await svc.getGroupOwner(req.params.id as string);
+  res.json({ success: true, ...owner });
+};
+
 export const membership = async (req: Request, res: Response): Promise<void> => {
   const email = userEmail(req);
   const result = await svc.checkMembership(req.params.id as string, email);
