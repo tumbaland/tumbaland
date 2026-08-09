@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.437](https://github.com/toomastahves/tumbaland/compare/app-v0.0.436...app-v0.0.437) (2026-08-09)
+
+### Bug Fixes
+
+* failing finance front test ([4ffb8e0](https://github.com/toomastahves/tumbaland/commit/4ffb8e0f1c60163f17acc5eb5c82f43935ec5811))
 ## [0.0.436](https://github.com/toomastahves/tumbaland/compare/app-v0.0.435...app-v0.0.436) (2026-08-09)
 
 ### Features
