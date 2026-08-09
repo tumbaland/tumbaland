@@ -1,4 +1,17 @@
 # Tumbalog
+## [0.0.434](https://github.com/toomastahves/tumbaland/compare/app-v0.0.433...app-v0.0.434) (2026-08-09)
+
+### Features
+
+* release libraries ([443d0e1](https://github.com/toomastahves/tumbaland/commit/443d0e18bdaf4d87cd4119bb251a981f65e6e2ad))
+
+### Bug Fixes
+
+* auth issues ([c9c2d1f](https://github.com/toomastahves/tumbaland/commit/c9c2d1ff38e7ab52285940e30d49250d83bdfec8))
+
+### Chores
+
+* **release:** 1.8.0 ([c7d5788](https://github.com/toomastahves/tumbaland/commit/c7d578841965099a421e8eb2f5ff1db02c27173e))
 ## [0.0.433](https://github.com/toomastahves/tumbaland/compare/app-v0.0.432...app-v0.0.433) (2026-08-08)
 
 ### Features
