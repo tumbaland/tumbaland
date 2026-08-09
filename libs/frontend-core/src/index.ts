@@ -9,6 +9,16 @@ export type { AuthServiceConfig, AuthService, AppAuthConfig } from './authServic
 export { createGroupService } from './groupService';
 export type { GroupServiceConfig, GroupService } from './groupService';
 
+export { createEntitlementsService, isUnlimited, usageRatio, UNLIMITED } from './entitlementsService';
+export type {
+  EntitlementsServiceConfig,
+  EntitlementsService,
+  Entitlements,
+  PlanLimits,
+  MeterKey,
+  FeatureKey
+} from './entitlementsService';
+
 export type { User, AuthResponse, Group, ApiResponse } from './types';
 
 export { TENANT_STORAGE_KEY, clearSessionScopedStorage } from './sessionStorage';

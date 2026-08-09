@@ -21,6 +21,8 @@ import { useNavigate } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useStatistics } from '../hooks/useStatistics';
 import { getUserGroups } from '../services/groupService';
+import { getMyEntitlements } from '../services/entitlementsService';
+import { getGlobalConfig } from '../config/ConfigProvider';
 import StatisticsOverview from '../components/dashboard/StatisticsOverview';
 import TimeSeriesChart from '../components/dashboard/TimeSeriesChart';
 import StorageChart from '../components/dashboard/StorageChart';
@@ -40,6 +42,34 @@ const DashboardPage: React.FC = () => {
     queryFn: () => getUserGroups(),
     staleTime: 5 * 60 * 1000
   });
+  // Plan limits and live meter readings for the storage bar. `retry: false`
+  // and a swallowed error on purpose: the meter is decoration on a page that
+  // works without it, so payment-service being down must not cost the user
+  // their dashboard.
+  const { data: entitlements } = useQuery({
+    queryKey: ['myEntitlements'],
+    queryFn: () => getMyEntitlements(),
+    staleTime: 60 * 1000,
+    retry: false
+  });
+
+  // The shell owns the URL and hosts each front in an iframe, so an upgrade
+  // link navigates the *top* window to the shell's pricing route rather than
+  // the embedded one, which would render the plans page inside this frame.
+  //
+  // Config is read inside the handler, not at render: `getGlobalConfig` throws
+  // when no provider has mounted, and a usage bar must never be the reason a
+  // dashboard fails to render.
+  const goToPlans = React.useCallback(() => {
+    let shellFrontUrl: string | undefined;
+    try {
+      shellFrontUrl = getGlobalConfig().SHELL_FRONT_URL;
+    } catch {
+      return;
+    }
+    if (shellFrontUrl && window.top?.location) window.top.location.href = `${shellFrontUrl}/payments`;
+  }, []);
+
   const groupNames = React.useMemo(
     () => Object.fromEntries((groups ?? []).map((g) => [g._id, g.name])),
     [groups]
@@ -214,6 +244,9 @@ const DashboardPage: React.FC = () => {
               name: album.name,
               totalSize: album.totalSize
             }))}
+            storageLimit={entitlements?.limits?.meters?.storageBytes}
+            meteredStorage={entitlements?.usage?.storageBytes}
+            onUpgrade={goToPlans}
           />
           <AIAnalysisChart data={statistics.aiAnalysis} />
         </Box>

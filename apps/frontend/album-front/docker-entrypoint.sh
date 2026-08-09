@@ -12,7 +12,8 @@ cat > /usr/share/nginx/html/config.json << EOF
   "GROUP_API_URL": "${GROUP_API_URL}",
   "ACCOUNT_FRONT_URL": "${ACCOUNT_FRONT_URL}",
   "SHELL_FRONT_URL": "${SHELL_FRONT_URL}",
-  "PUBLIC_API_URL": "${PUBLIC_API_URL}"
+  "PUBLIC_API_URL": "${PUBLIC_API_URL}",
+  "PAYMENT_API_URL": "${PAYMENT_API_URL}"
 }
 EOF
 

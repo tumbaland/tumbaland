@@ -50,3 +50,32 @@ it('renders the largest-albums breakdown, sized relative to the biggest album', 
   expect(bars[0]).toHaveAttribute('aria-valuenow', '100');
   expect(bars[1]).toHaveAttribute('aria-valuenow', '50');
 });
+
+it('meters storage against the plan limit when entitlements are available', () => {
+  const GB = 1024 * 1024 * 1024;
+  render(<StorageChart totalStorage={GB} averagePhotoSize={0} storageLimit={50 * GB} meteredStorage={9 * GB} />);
+
+  // The billed figure, not the dashboard's own total: for a group album the
+  // quota belongs to the group owner and covers more than this user can see.
+  expect(screen.getByText('9 GB of 50 GB')).toBeInTheDocument();
+});
+
+it('omits the meter entirely when entitlements could not be loaded', () => {
+  render(<StorageChart totalStorage={1024} averagePhotoSize={0} />);
+
+  // payment-service being down must cost the meter, not the dashboard.
+  expect(screen.queryByText(/of /)).not.toBeInTheDocument();
+  expect(screen.getByText('Storage Usage')).toBeInTheDocument();
+});
+
+it('falls back to the visible total when no billed figure was supplied', () => {
+  render(<StorageChart totalStorage={2048} averagePhotoSize={0} storageLimit={4096} />);
+
+  expect(screen.getByText('2 KB of 4 KB')).toBeInTheDocument();
+});
+
+it('shows an unlimited plan as unlimited rather than an empty bar', () => {
+  render(<StorageChart totalStorage={1024} averagePhotoSize={0} storageLimit={-1} meteredStorage={1024} />);
+
+  expect(screen.getByText('Unlimited on your plan')).toBeInTheDocument();
+});

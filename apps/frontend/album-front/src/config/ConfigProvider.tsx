@@ -11,6 +11,8 @@ export interface AppConfig {
   ACCOUNT_FRONT_URL?: string;
   SHELL_FRONT_URL?: string;
   PUBLIC_API_URL?: string;
+  /** payment-service, for the dashboard's storage meter. */
+  PAYMENT_API_URL?: string;
 }
 
 const factory = createConfigProvider<AppConfig>({
@@ -27,7 +29,8 @@ const factory = createConfigProvider<AppConfig>({
     ALBUM_FRONT_URL: import.meta.env.VITE_ALBUM_FRONT_URL,
     ACCOUNT_FRONT_URL: import.meta.env.VITE_ACCOUNT_FRONT_URL,
     SHELL_FRONT_URL: import.meta.env.VITE_SHELL_FRONT_URL,
-    PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL
+    PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL,
+    PAYMENT_API_URL: import.meta.env.VITE_PAYMENT_API_URL
   })
 });
 

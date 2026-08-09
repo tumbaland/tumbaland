@@ -11,6 +11,7 @@ interface ImportMetaEnv {
   readonly VITE_ACCOUNT_FRONT_URL: string;
   readonly VITE_SHELL_FRONT_URL: string;
   readonly VITE_PUBLIC_API_URL: string;
+  readonly VITE_PAYMENT_API_URL: string;
 }
 
 interface ImportMeta {

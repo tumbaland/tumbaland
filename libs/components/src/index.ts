@@ -7,6 +7,9 @@ export { LoginButton } from './components/LoginButton';
 export { NotificationsMenu } from './components/NotificationsMenu/NotificationsMenu';
 export { AuthHeader } from './components/AuthHeader';
 
+// Entitlements: the usage bar and the hook that feeds it
+export { UsageMeter, formatBytes, useEntitlements } from './components/UsageMeter';
+
 // Tenant selection: provider, selector, and hooks shared across domain frontends
 export {
   TenantSelector,
@@ -33,6 +36,7 @@ export type {
   AuthHeaderTenantSelectorProps
 } from './components/AuthHeader';
 export type { TenantOption, TenantSelectorProps, UseTenantResult } from './components/tenant';
+export type { UsageMeterProps, UseEntitlementsResult } from './components/UsageMeter';
 
 // Config provider factory
 export { createConfigProvider } from './config/createConfigProvider';

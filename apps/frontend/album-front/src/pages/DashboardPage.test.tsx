@@ -12,13 +12,28 @@ vi.mock('@tumbaland/components', async (importOriginal) => {
 
 vi.mock('../hooks/useStatistics', () => ({ useStatistics: vi.fn() }));
 vi.mock('../services/groupService', () => ({ getUserGroups: vi.fn() }));
+vi.mock('../services/entitlementsService', () => ({ getMyEntitlements: vi.fn() }));
 
 import { useStatistics } from '../hooks/useStatistics';
 import { getUserGroups } from '../services/groupService';
+import { getMyEntitlements } from '../services/entitlementsService';
 import DashboardPage from './DashboardPage';
 
 const mockedUseStatistics = useStatistics as unknown as ReturnType<typeof vi.fn>;
 const mockedGetUserGroups = getUserGroups as unknown as ReturnType<typeof vi.fn>;
+const mockedGetMyEntitlements = getMyEntitlements as unknown as ReturnType<typeof vi.fn>;
+
+const entitlements = {
+  email: 'user@example.com',
+  planCode: 'free',
+  status: null,
+  limits: {
+    meters: { storageBytes: 1024 * 1024 * 1024, aiJobs: 25, trackedTickers: 3, seats: 1 },
+    features: { cleanExport: false },
+    retentionDays: 90
+  },
+  usage: { storageBytes: 1024, aiJobs: 0, trackedTickers: 0, seats: 1 }
+};
 
 const statistics = {
   overview: { totalAlbums: 3, totalPhotos: 100, totalStorage: 1024, averagePhotoSize: 100 },
@@ -44,6 +59,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockUseTenantFilter.mockReturnValue(undefined);
   mockedGetUserGroups.mockResolvedValue([]);
+  mockedGetMyEntitlements.mockResolvedValue(entitlements);
 });
 
 it('shows a progress bar (not the charts) while loading', () => {

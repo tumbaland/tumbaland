@@ -7,6 +7,7 @@ import {
   LinearProgress
 } from '@mui/material';
 import { Storage as StorageIcon } from '@mui/icons-material';
+import { UsageMeter } from '@tumbaland/components';
 import { formatBytes } from '../../utils/formatBytes';
 
 export interface StorageChartAlbum {
@@ -20,12 +21,26 @@ interface StorageChartProps {
   averagePhotoSize: number;
   /** Top albums by storage used, largest first (see statisticsService.getTopAlbumsByStorage). */
   topAlbums?: StorageChartAlbum[];
+  /**
+   * The plan's storage ceiling in bytes, `-1` for unlimited, or `undefined`
+   * when entitlements could not be loaded — in which case no meter is drawn.
+   */
+  storageLimit?: number;
+  /** Bytes billed to the account, which for a group album is the owner's total, not this user's. */
+  meteredStorage?: number;
+  onUpgrade?: () => void;
 }
 
-const StorageChart: React.FC<StorageChartProps> = ({ totalStorage, averagePhotoSize, topAlbums = [] }) => {
-  // Relative to the largest album in the list, not a storage cap — there is
-  // no plan-level storage limit, so this bar visualizes distribution across
-  // albums rather than usage against a quota.
+const StorageChart: React.FC<StorageChartProps> = ({
+  totalStorage,
+  averagePhotoSize,
+  topAlbums = [],
+  storageLimit,
+  meteredStorage,
+  onUpgrade
+}) => {
+  // The per-album bars below are relative to the largest album, not to the
+  // plan — they show distribution. The quota bar is the <UsageMeter> above.
   const largestAlbumSize = topAlbums[0]?.totalSize || 0;
 
   return (
@@ -65,6 +80,27 @@ const StorageChart: React.FC<StorageChartProps> = ({ totalStorage, averagePhotoS
             </Typography>
           </Box>
         </Box>
+
+        {/*
+          Metered against the account's *billed* total rather than the figure
+          above it. The two differ whenever albums live in a group: the
+          dashboard shows what this user can see, while the quota belongs to the
+          group's owner and covers everything the group holds. Showing the
+          dashboard number against the plan's ceiling would quietly under-report
+          how close the account is to being blocked.
+        */}
+        {storageLimit !== undefined && (
+          <Box sx={{ mb: 3 }}>
+            <UsageMeter
+              label="Storage"
+              used={meteredStorage ?? totalStorage}
+              limit={storageLimit}
+              unit="bytes"
+              onUpgrade={onUpgrade}
+              upgradeLabel="See plans"
+            />
+          </Box>
+        )}
 
         {topAlbums.length > 0 && (
           <Box>

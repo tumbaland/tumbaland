@@ -676,9 +676,37 @@ a chokepoint wired without the meter beside it is a feature that silently stops 
 
 ### 4.1 Shared components — `@tumbaland/components`
 
-- [ ] **`<UsageMeter>`** — labelled bar, used/limit, colour ramp to amber past 80%. One component,
-      six placements. Highest-converting item in this document: people upgrade when they can see the
-      ceiling coming, not when they hit it.
+- [x] **`<UsageMeter>`** — labelled bar, used/limit, colour ramp to amber past 80%, an upgrade CTA
+      that appears only once the ceiling is in sight. One component, six placements.
+
+      **Purely presentational — it takes numbers and never fetches them.** That is what lets the same
+      component serve the album dashboard, the ticker list, the group member list and the pricing
+      table without any of them having to agree on a data layer.
+
+      An unlimited meter renders *no bar at all*, just its usage figure: a full bar would read as "at
+      your limit" and an empty one implies a ceiling that does not exist. Both maintainer accounts
+      are on `staff`, so this is the state the people running the product see every day — getting it
+      wrong would have made the meter look broken to exactly the people who could notice.
+
+      `formatBytes` here is binary (1 KB = 1024 B) to match `DEFAULT_PLAN_LIMITS`, which sets storage
+      as `1 * GB` = 1073741824. Decimal formatting would render a 1 GB plan as "1.07 GB".
+
+      Fed by two new pieces:
+
+      - **`createEntitlementsService`** in `@tumbaland/frontend-core`, reading
+        `GET /api/subscriptions/me/entitlements`. It restates the meter *keys* — a browser bundle
+        cannot import backend-core, which pulls in mongoose — but **never the numbers**, which arrive
+        from the API resolved by the same `normalizeLimits` the middleware enforces from. Duplicating
+        keys costs a rename; duplicating limits would recreate the Phase 0 defect exactly.
+        A response without `limits` is rejected rather than returned half-built, so the failure
+        happens once, here, instead of at every call site's property access.
+      - **`useEntitlements`** in `@tumbaland/components`, for the five fronts *without*
+        `@tanstack/react-query` (account, group, payment, relationship, shell). album-front and
+        finance-front have react-query and should use `useQuery`, which gives them caching this does
+        not try to reimplement.
+
+      **A failed lookup is never an error state.** The meter is decoration on a page that works
+      without it, so payment-service being unreachable costs the bar, not the dashboard.
 - [ ] **`<PaywallGate>`** — wraps a locked feature, renders it blurred-but-visible behind an inline
       unlock card. Show the planner's real chart under the gate. Nobody pays for a feature they've
       never seen.
@@ -696,9 +724,19 @@ a chokepoint wired without the meter beside it is a feature that silently stops 
 
 ### 4.3 Placements
 
-- [ ] **album-front** — `components/dashboard/StorageChart.tsx` already renders usage with no
-      denominator. Add the limit, the meter, the CTA. Smallest diff with real conversion impact in
-      the plan.
+- [x] **album-front** — `components/dashboard/StorageChart.tsx` rendered usage with no denominator,
+      under a comment asserting "there is no plan-level storage limit". Now carries the meter, the
+      limit and a CTA into the shell's pricing route.
+
+      **It meters `usage.storageBytes`, not the dashboard's own `totalStorage`.** The two differ
+      whenever albums live in a group: the dashboard shows what this user can see, while the quota
+      belongs to the group's owner and covers everything the group holds. Metering the visible figure
+      would under-report how close the account is to being blocked — which, given every album in the
+      live database is group-owned, would have been wrong for every real user.
+
+      Needed `PAYMENT_API_URL` threaded through album-front's four config surfaces (ConfigProvider,
+      `vite-env.d.ts`, `docker-entrypoint.sh`, `compose.yml`) — the front had no way to reach
+      payment-service at all. The same wiring is the prerequisite for the remaining placements.
 - [ ] **finance-front** — meter on `components/investments/TickersTab.tsx`. On
       `pages/PortfolioPlanner.tsx`, render the upgrade state when the returned price history is
       shorter than `HISTORY_YEARS` demands (per 3.2) — not a wrapper gate, since the real
