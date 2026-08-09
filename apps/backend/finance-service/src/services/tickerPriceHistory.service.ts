@@ -19,6 +19,12 @@ export interface PriceHistoryQuery {
   from?: Date;
   to?: Date;
   limit?: number;
+  /**
+   * Oldest date the caller's plan permits, or `null` for unlimited. Applied as a
+   * floor *underneath* `from`, so a caller can narrow their window but never
+   * widen it past what they are entitled to.
+   */
+  retentionFrom?: Date | null;
 }
 
 /** Cap on rows returned in one call, and the default when no limit is given. */
@@ -72,10 +78,20 @@ export async function getTickerPriceHistory(
     : allowed;
   if (tickers.length === 0) return [];
 
+  // The retention floor wins over a wider `from`: the plan decides how far back
+  // reads may reach, and a client asking for two years cannot opt out of it by
+  // asking. This is the whole planner gate — the frontier's covariance estimate
+  // is meaningless on ninety days of closes, and unlike a client-side
+  // `<PaywallGate>` there is nothing here to bypass from devtools, because the
+  // rows are simply not returned.
+  const lowerBound = [query.from, query.retentionFrom ?? undefined]
+    .filter((d): d is Date => d instanceof Date)
+    .reduce<Date | undefined>((latest, d) => (!latest || d > latest ? d : latest), undefined);
+
   const filter: Record<string, unknown> = { ticker: { $in: tickers } };
-  if (query.from || query.to) {
+  if (lowerBound || query.to) {
     filter.date = {
-      ...(query.from ? { $gte: query.from } : {}),
+      ...(lowerBound ? { $gte: lowerBound } : {}),
       ...(query.to ? { $lte: query.to } : {})
     };
   }

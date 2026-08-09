@@ -11,8 +11,22 @@ jest.mock('../services/apiQuota.service', () => ({
   getRemainingQuota: jest.fn()
 }));
 
+// Only the two entitlement lookups are stubbed; everything else (sendSuccess,
+// the error classes, the logger) stays real so the controller is exercised as
+// it actually runs.
+jest.mock('@tumbaland/backend-core', () => ({
+  ...jest.requireActual('@tumbaland/backend-core'),
+  retentionFloor: jest.fn(),
+  getGroupOwner: jest.fn()
+}));
+
+import { retentionFloor, getGroupOwner } from '@tumbaland/backend-core';
 import * as tickerPriceService from '../services/tickerPriceHistory.service';
 import * as quotaService from '../services/apiQuota.service';
+
+const mockedRetentionFloor = retentionFloor as jest.Mock;
+const mockedGetGroupOwner = getGroupOwner as jest.Mock;
+const RETENTION = new Date('2026-05-11T00:00:00.000Z');
 import {
   getTickerPriceHistory,
   fetchAndSaveTickerPrices,
@@ -33,9 +47,20 @@ function mockRes(): Response {
 
 /** A request as authenticateToken leaves it. */
 const req = (overrides: Partial<Request> = {}) =>
-  ({ user: { id: 'u1' }, userGroups: [], query: {}, params: {}, body: {}, ...overrides }) as unknown as Request;
+  ({
+    user: { id: 'u1', email: 'caller@example.com' },
+    userGroups: [],
+    query: {},
+    params: {},
+    body: {},
+    ...overrides
+  }) as unknown as Request;
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockedRetentionFloor.mockResolvedValue(RETENTION);
+  mockedGetGroupOwner.mockResolvedValue(null);
+});
 
 describe('getTickerPriceHistory', () => {
   it('passes the caller identity through so the service can scope the read', async () => {
@@ -60,7 +85,8 @@ describe('getTickerPriceHistory', () => {
       ticker: 'AAPL',
       from: new Date('2026-01-01'),
       to: new Date('2026-06-01'),
-      limit: 50
+      limit: 50,
+      retentionFrom: RETENTION
     });
   });
 
@@ -73,7 +99,8 @@ describe('getTickerPriceHistory', () => {
       ticker: undefined,
       from: undefined,
       to: undefined,
-      limit: undefined
+      limit: undefined,
+      retentionFrom: RETENTION
     });
   });
 
@@ -149,5 +176,47 @@ describe('getQuota', () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ data: { limit: 25, used: 3, remaining: 22, date: '2026-08-06' } })
     );
+  });
+});
+
+describe('retention subjects', () => {
+  it('resolves retention from the caller alone in personal context', async () => {
+    mocked.getTickerPriceHistory.mockResolvedValue([] as never);
+
+    await getTickerPriceHistory(req(), mockRes());
+
+    expect(mockedRetentionFloor).toHaveBeenCalledWith(['caller@example.com']);
+    expect(mockedGetGroupOwner).not.toHaveBeenCalled();
+  });
+
+  it('adds the group owners, so a paid group lifts the floor for its members', async () => {
+    mocked.getTickerPriceHistory.mockResolvedValue([] as never);
+    mockedGetGroupOwner.mockResolvedValue({ ownerEmail: 'owner@example.com' });
+
+    await getTickerPriceHistory(req({ userGroups: ['g1'] } as Partial<Request>), mockRes());
+
+    expect(mockedRetentionFloor).toHaveBeenCalledWith(['caller@example.com', 'owner@example.com']);
+  });
+
+  it('does not bill the same subject twice when the caller owns the group', async () => {
+    mocked.getTickerPriceHistory.mockResolvedValue([] as never);
+    mockedGetGroupOwner.mockResolvedValue({ ownerEmail: 'caller@example.com' });
+
+    await getTickerPriceHistory(req({ userGroups: ['g1'] } as Partial<Request>), mockRes());
+
+    expect(mockedRetentionFloor).toHaveBeenCalledWith(['caller@example.com']);
+  });
+
+  it('still serves the read when a group owner cannot be resolved', async () => {
+    // History is a read, and reads are never gated to the point of denial —
+    // the floor just degrades to the caller's own plan.
+    mocked.getTickerPriceHistory.mockResolvedValue([] as never);
+    mockedGetGroupOwner.mockRejectedValue(new Error('group-service unreachable'));
+
+    const res = mockRes();
+    await getTickerPriceHistory(req({ userGroups: ['g1'] } as Partial<Request>), res);
+
+    expect(mockedRetentionFloor).toHaveBeenCalledWith(['caller@example.com']);
+    expect(res.json).toHaveBeenCalled();
   });
 });

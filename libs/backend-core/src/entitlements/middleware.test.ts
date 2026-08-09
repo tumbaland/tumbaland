@@ -156,3 +156,41 @@ describe('retentionFloor', () => {
     expect(await retentionFloor('user@example.com', now)).toEqual(new Date('2026-05-11T00:00:00.000Z'));
   });
 });
+
+describe('retentionFloor across several subjects', () => {
+  const now = new Date('2026-08-09T00:00:00.000Z');
+
+  it('takes the most generous floor, so a paid group lifts it for every member', () => {
+    mockGetEntitlements.mockImplementation(async (email: string) =>
+      email === 'owner@example.com'
+        ? entitlements({ planCode: 'family', limits: normalizeLimits({ retentionDays: UNLIMITED }, 'family') })
+        : entitlements()
+    );
+
+    // A free member reading a Family group's data must not be clipped to 90
+    // days of a household's history the household paid to keep.
+    return expect(retentionFloor(['member@example.com', 'owner@example.com'], now)).resolves.toBeNull();
+  });
+
+  it('picks the floor that reaches furthest back when none is unlimited', async () => {
+    mockGetEntitlements.mockImplementation(async (email: string) =>
+      entitlements({ limits: normalizeLimits({ retentionDays: email === 'owner@example.com' ? 365 : 90 }, 'free') })
+    );
+
+    expect(await retentionFloor(['member@example.com', 'owner@example.com'], now)).toEqual(
+      new Date('2025-08-09T00:00:00.000Z')
+    );
+  });
+
+  it('still accepts a single email', async () => {
+    mockGetEntitlements.mockResolvedValue(entitlements());
+
+    expect(await retentionFloor('user@example.com', now)).toEqual(new Date('2026-05-11T00:00:00.000Z'));
+  });
+
+  it('falls back to the free floor when no subject can be identified', async () => {
+    // An unidentifiable caller must never resolve to unlimited history.
+    expect(await retentionFloor([], now)).toEqual(new Date('2026-05-11T00:00:00.000Z'));
+    expect(mockGetEntitlements).not.toHaveBeenCalled();
+  });
+});

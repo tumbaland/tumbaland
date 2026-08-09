@@ -29,16 +29,26 @@ const trackedTickers = [
   { _id: 't2', ticker: 'MSFT', displayName: 'Microsoft Corp', isActive: true }
 ];
 
-// 25 days of gently trending, slightly noisy prices — enough to clear the
-// `prices.length >= 20` gate and produce a non-degenerate covariance matrix.
-function series(base: number, seed: number): { date: string; price: number }[] {
+// Gently trending, slightly noisy prices. Two independent gates have to clear:
+// `prices.length >= 20` (enough observations for a non-degenerate covariance
+// matrix) and a date span of at least MIN_HISTORY_DAYS — the retention gate
+// clips by *date*, so the span is what detects a plan-truncated range. Samples
+// are therefore spread across `spanDays` rather than bunched into one month.
+function series(base: number, seed: number, spanDays = 800, points = 25): { date: string; price: number }[] {
   const out: { date: string; price: number }[] = [];
+  const start = new Date('2024-01-01T00:00:00.000Z').getTime();
+  const step = (spanDays / (points - 1)) * 86_400_000;
   let price = base;
-  for (let i = 0; i < 25; i++) {
+  for (let i = 0; i < points; i++) {
     price *= 1 + (Math.sin(i + seed) * 0.01 + 0.001);
-    out.push({ date: `2024-05-${String(i + 1).padStart(2, '0')}`, price });
+    out.push({ date: new Date(start + i * step).toISOString().slice(0, 10), price });
   }
   return out;
+}
+
+/** The same shape, but clipped to a free plan's 90-day retention window. */
+function truncatedSeries(base: number, seed: number) {
+  return series(base, seed, 90);
 }
 
 const fullHistory = [
@@ -261,6 +271,7 @@ it('shows the inflation field directly, with no fee field or hidden section', as
 it('downloads a CSV of the projection', async () => {
   const createObjectURL = vi.fn().mockReturnValue('blob:mock');
   const revokeObjectURL = vi.fn();
+  const realURL = URL;
   vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL });
   const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
@@ -274,5 +285,46 @@ it('downloads a CSV of the projection', async () => {
   expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock');
 
   clickSpy.mockRestore();
-  vi.unstubAllGlobals();
+  // Restore only what this test stubbed. `vi.unstubAllGlobals()` would also
+  // drop the `localStorage` stub that `test/setup.ts` installs once at module
+  // load, silently breaking every test declared after this one.
+  vi.stubGlobal('URL', realURL);
+});
+
+describe('retention-truncated price history', () => {
+  const truncated = [
+    ...truncatedSeries(150, 1).map((d) => ({ ticker: 'AAPL', ...d })),
+    ...truncatedSeries(300, 2).map((d) => ({ ticker: 'MSFT', ...d }))
+  ];
+
+  it('refuses to draw a frontier from a 90-day window and says why', async () => {
+    mockedGetHistory.mockResolvedValue(truncated);
+    render(<PortfolioPlanner />);
+    // Tabs only exist once loading finishes.
+    await screen.findByText('Apple Inc');
+    await switchTab('Frontier');
+
+    // A covariance estimate off ninety closes is not a rougher answer, it is a
+    // confidently wrong one — so the chart is withheld rather than degraded.
+    expect(await screen.findByText(/Not enough price history to plan with/i, {}, FIND)).toBeInTheDocument();
+    expect(screen.queryByText(/Max Sharpe/i)).not.toBeInTheDocument();
+  });
+
+  it('offers the upgrade route from the notice', async () => {
+    mockedGetHistory.mockResolvedValue(truncated);
+    render(<PortfolioPlanner />);
+    await screen.findByText('Apple Inc');
+    await switchTab('Frontier');
+    await screen.findByText(/Not enough price history to plan with/i, {}, FIND);
+
+    expect(screen.getByRole('button', { name: /see plans/i })).toBeInTheDocument();
+  });
+
+  it('draws the frontier normally once the range is long enough', async () => {
+    mockedGetHistory.mockResolvedValue(fullHistory);
+    render(<PortfolioPlanner />);
+    await screen.findByText('Efficient Frontier');
+
+    expect(screen.queryByText(/Not enough price history to plan with/i)).not.toBeInTheDocument();
+  });
 });

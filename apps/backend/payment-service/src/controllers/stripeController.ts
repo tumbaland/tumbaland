@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import Stripe from 'stripe';
-import { BadRequestError, logger, NotFoundError } from '@tumbaland/backend-core';
+import { BadRequestError, HttpError, logger, NotFoundError } from '@tumbaland/backend-core';
 import { stripe, ensureStripe } from '../services/stripeService';
 import { Plan } from '../models/Plan';
 import { HydratedDocument } from 'mongoose';
@@ -20,8 +20,19 @@ export const createCheckoutSession = async (req: Request, res: Response): Promis
   const plan = await Plan.findOne({ code: planCode, isActive: true });
   if (!plan) { throw new NotFoundError('Plan not found'); }
 
-  // Free plan shortcut: if price is zero OR falsy OR no stripePriceId, activate immediately without Stripe
-  if (!plan.priceMonthlyCents || plan.priceMonthlyCents === 0 || !plan.stripePriceId) {
+  // A plan is free because its **price** is zero — never because its Stripe
+  // wiring is missing.
+  //
+  // This condition used to also match `!plan.stripePriceId`, which meant a
+  // priced plan that had not been given a Stripe price yet was activated here
+  // for free: `status: 'active'`, renewing monthly, no charge. Since no plan in
+  // the database carries a `stripePriceId` until an admin sets one, that made
+  // every paid plan claimable at €0 by anyone who could reach this route. It
+  // also made the `!priceId` guard below unreachable.
+  //
+  // A priced plan with no price id is a misconfiguration, and the only safe way
+  // to fail on it is loudly — see below.
+  if (!plan.priceMonthlyCents || plan.priceMonthlyCents === 0) {
     let sub = await Subscription.findOne({ userEmail: email, planCode: plan.code, status: { $in: ['active','incomplete','past_due','canceling'] } });
     if (!sub) {
       sub = await Subscription.create({ userEmail: email, planCode: plan.code, plan: plan._id, status: 'active', renewsAt: addMonths(new Date(), 1) });
@@ -41,19 +52,44 @@ export const createCheckoutSession = async (req: Request, res: Response): Promis
     return;
   }
 
+  // Refuse before creating anything. A priced plan with no Stripe price cannot
+  // be sold, and the failure belongs to the deployment, not to the caller —
+  // hence 503 and an error log naming the plan, rather than a 400 that blames
+  // a user who asked for a perfectly valid plan.
+  const priceId = plan.stripePriceId;
+  if (!priceId) {
+    logger.error('[checkout-session] Priced plan has no stripePriceId; refusing to sell it', {
+      planCode: plan.code,
+      priceMonthlyCents: plan.priceMonthlyCents
+    });
+    throw new HttpError(503, 'This plan is not available for purchase right now.');
+  }
+
   // Find or create a pending subscription (incomplete)
   let sub = await Subscription.findOne({ userEmail: email, planCode: plan.code, status: 'incomplete' });
   if (!sub) {
     sub = await Subscription.create({ userEmail: email, planCode: plan.code, plan: plan._id, status: 'incomplete' });
   }
 
-  const priceId = plan.stripePriceId;
-  if (!priceId) { throw new BadRequestError('Plan missing stripePriceId'); }
-
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
     payment_method_types: ['card'],
     line_items: [ { price: priceId, quantity: 1 } ],
+    // VAT on digital services is due in the *customer's* country, from the
+    // first sale, and needs evidence of where they are. Stripe Tax computes and
+    // collects it; the billing address is what it computes from, so it has to
+    // be required rather than optional. `tax_id_collection` lets a business
+    // enter a VAT number and be reverse-charged instead of taxed.
+    //
+    // Subscription-mode sessions always produce invoices, so nothing extra is
+    // needed for the invoice/receipt trail.
+    //
+    // Requires Stripe Tax to be enabled and an origin address registered in the
+    // Stripe dashboard — without that, Stripe rejects the session outright.
+    // That is deliberate: silently selling untaxed is the worse failure.
+    automatic_tax: { enabled: true },
+    billing_address_collection: 'required',
+    tax_id_collection: { enabled: true },
     success_url: successUrl || `${process.env.PAYMENT_URL}/subscription/checkout?status=success&session_id={CHECKOUT_SESSION_ID}&plan=${encodeURIComponent(plan.code)}`,
     cancel_url: cancelUrl || `${process.env.PAYMENT_URL}/subscription/checkout?status=cancel&plan=${encodeURIComponent(plan.code)}`,
     client_reference_id: sub.id,

@@ -114,10 +114,11 @@ describe('POST /api/subscriptions/checkout-session', () => {
     expect(mockedSubCreate).not.toHaveBeenCalled();
   });
 
-  it('treats a plan with a price but no stripePriceId as a free-plan activation (the free-plan shortcut checks !stripePriceId too)', async () => {
-    // Note: `if (!priceMonthlyCents || priceMonthlyCents === 0 || !plan.stripePriceId)` above
-    // already routes any missing-stripePriceId plan through the free-plan path, so the later
-    // `if (!priceId) throw new BadRequestError(...)` guard is unreachable in practice.
+  it('refuses to sell a priced plan that has no stripePriceId, rather than granting it free', async () => {
+    // This is the defect the condition above used to have: `|| !plan.stripePriceId`
+    // routed a *priced* plan through the free-plan path, so any plan an admin had
+    // not yet given a Stripe price to was claimable at zero — which was every plan
+    // in the database.
     mockedPlanFindOne.mockResolvedValue({ code: 'pro', priceMonthlyCents: 1000, stripePriceId: undefined });
     mockedSubFindOne.mockResolvedValue(null);
     mockedSubCreate.mockResolvedValue({ id: 'sub1' });
@@ -128,8 +129,49 @@ describe('POST /api/subscriptions/checkout-session', () => {
       .set('Cookie', authCookie())
       .send({ planCode: 'pro' });
 
+    expect(res.status).toBe(503);
+    expect(res.body.success).toBe(false);
+    // Nothing is created and nothing is granted on the way out.
+    expect(mockedSubCreate).not.toHaveBeenCalled();
+    expect(mockedSessionsCreate).not.toHaveBeenCalled();
+  });
+
+  it('still treats a genuinely zero-priced plan as free even when it carries a stripePriceId', async () => {
+    // Free is decided by price, not by Stripe wiring.
+    mockedPlanFindOne.mockResolvedValue({ code: 'free', priceMonthlyCents: 0, stripePriceId: 'price_leftover' });
+    mockedSubFindOne.mockResolvedValue(null);
+    mockedSubCreate.mockResolvedValue({ id: 'sub1' });
+    mockedSubFind.mockResolvedValue([]);
+
+    const res = await request(app)
+      .post('/api/subscriptions/checkout-session')
+      .set('Cookie', authCookie())
+      .send({ planCode: 'free' });
+
     expect(res.status).toBe(201);
     expect(res.body).toMatchObject({ free: true });
+    expect(mockedSessionsCreate).not.toHaveBeenCalled();
+  });
+
+  it('collects tax and a billing address, since VAT is due where the customer is', async () => {
+    mockedPlanFindOne.mockResolvedValue({ code: 'pro', priceMonthlyCents: 1000, stripePriceId: 'price_123' });
+    mockedSubFindOne.mockResolvedValue(null);
+    mockedSubCreate.mockResolvedValue({ id: 'sub1' });
+    mockedSessionsCreate.mockResolvedValue({ id: 'cs_test_1', url: 'https://checkout.stripe.com/pay/cs_test_1' });
+
+    await request(app)
+      .post('/api/subscriptions/checkout-session')
+      .set('Cookie', authCookie())
+      .send({ planCode: 'pro' });
+
+    expect(mockedSessionsCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        automatic_tax: { enabled: true },
+        // Stripe Tax computes from the address, so it cannot be optional.
+        billing_address_collection: 'required',
+        tax_id_collection: { enabled: true }
+      })
+    );
   });
 
   it('creates a real Stripe checkout session for a paid plan', async () => {

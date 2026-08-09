@@ -236,3 +236,54 @@ describe('deleteTickerPriceRecord', () => {
     expect(mockedFindByIdAndDelete).not.toHaveBeenCalled();
   });
 });
+
+describe('retention floor', () => {
+  const RETENTION = new Date('2026-05-11T00:00:00.000Z');
+
+  beforeEach(() => mockedTrackedDistinct.mockResolvedValue(['AAPL']));
+
+  it('applies the plan floor when the caller asks for no range', async () => {
+    mockQuery([]);
+
+    await getTickerPriceHistory('u1', [], { retentionFrom: RETENTION });
+
+    expect(mockedFind).toHaveBeenCalledWith({ ticker: { $in: ['AAPL'] }, date: { $gte: RETENTION } });
+  });
+
+  it('overrides a wider `from`, so a client cannot ask its way past the plan', async () => {
+    mockQuery([]);
+
+    // The planner always asks for two years; on the free tier it gets ninety
+    // days, which is the whole gate — there is nothing here to bypass, because
+    // the rows are simply not returned.
+    await getTickerPriceHistory('u1', [], { from: new Date('2024-08-09T00:00:00.000Z'), retentionFrom: RETENTION });
+
+    expect(mockedFind).toHaveBeenCalledWith({ ticker: { $in: ['AAPL'] }, date: { $gte: RETENTION } });
+  });
+
+  it('keeps a narrower `from`, so a caller can still zoom in', async () => {
+    const narrower = new Date('2026-07-01T00:00:00.000Z');
+    mockQuery([]);
+
+    await getTickerPriceHistory('u1', [], { from: narrower, retentionFrom: RETENTION });
+
+    expect(mockedFind).toHaveBeenCalledWith({ ticker: { $in: ['AAPL'] }, date: { $gte: narrower } });
+  });
+
+  it('adds no date filter at all for an unlimited plan', async () => {
+    mockQuery([]);
+
+    await getTickerPriceHistory('u1', [], { retentionFrom: null });
+
+    expect(mockedFind).toHaveBeenCalledWith({ ticker: { $in: ['AAPL'] } });
+  });
+
+  it('still honours `to` alongside the floor', async () => {
+    const to = new Date('2026-08-01T00:00:00.000Z');
+    mockQuery([]);
+
+    await getTickerPriceHistory('u1', [], { to, retentionFrom: RETENTION });
+
+    expect(mockedFind).toHaveBeenCalledWith({ ticker: { $in: ['AAPL'] }, date: { $gte: RETENTION, $lte: to } });
+  });
+});

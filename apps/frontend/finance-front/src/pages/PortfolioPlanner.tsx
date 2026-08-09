@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Box, Typography, CircularProgress, Alert, Tabs, Tab } from '@mui/material';
+import { Box, Typography, CircularProgress, Alert, AlertTitle, Button, Tabs, Tab } from '@mui/material';
 import { useTenantFilter } from '@tumbaland/components';
 import { useHoldings } from '../hooks/useHoldings';
 import { useTrackedTickers } from '../hooks/useTrackedTicker';
 import { usePersistedState } from '../hooks/usePersistedState';
 import { getTickerPriceHistory } from '../services/tickerPriceHistoryService';
+import { getGlobalConfig } from '../config/ConfigProvider';
 import { FrontierSim, runFrontierSimulation } from '../utils/frontierSim';
 import HoldingsTable, { HoldingStat } from '../components/planner/HoldingsTable';
 import FrontierSection from '../components/planner/FrontierSection';
@@ -13,6 +14,17 @@ import ProjectionSection from '../components/planner/ProjectionSection';
 const SIMULATIONS = 2000;
 /** How far back to pull daily closes for the covariance estimate. */
 const HISTORY_YEARS = 2;
+/**
+ * Below this much actual history the frontier is not worth computing.
+ *
+ * The server clips price history to the plan's retention window, so a free
+ * account asking for two years receives ninety days. A covariance estimate off
+ * ninety daily closes is not a weaker answer, it is a misleading one — and a
+ * confidently wrong efficient frontier is worse than a locked feature. So the
+ * page checks what it actually got rather than what it asked for, which also
+ * covers the honest case of an instrument that simply has not been tracked long.
+ */
+const MIN_HISTORY_DAYS = 365;
 
 // Merged replacement for the old Portfolio Optimizer + Stock Growth Calculator
 // pages: the frontier simulation's return/volatility estimates feed the
@@ -25,6 +37,8 @@ const PortfolioPlanner: React.FC = () => {
   const [pricesByTicker, setPricesByTicker] = useState<Record<string, number[]>>({});
   const [loadingPrices, setLoadingPrices] = useState(false);
   const [priceError, setPriceError] = useState<string | null>(null);
+  /** Span of the longest series actually returned, in days. `null` until loaded. */
+  const [historySpanDays, setHistorySpanDays] = useState<number | null>(null);
   const [riskFreeRate, setRiskFreeRate] = usePersistedState('finance-planner-risk-free-rate', '3'); // % per year
   const [tab, setTab] = useState(0);
 
@@ -61,13 +75,20 @@ const PortfolioPlanner: React.FC = () => {
           });
 
         const sorted: Record<string, number[]> = {};
+        let longestSpanDays = 0;
         Object.entries(rawMap).forEach(([ticker, entries]) => {
-          const prices = entries
-            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-            .map(e => e.price);
+          const chronological = entries.sort(
+            (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+          );
+          const prices = chronological.map(e => e.price);
           if (prices.length >= 20) sorted[ticker] = prices;
+
+          const oldest = new Date(chronological[0].date).getTime();
+          const newest = new Date(chronological[chronological.length - 1].date).getTime();
+          longestSpanDays = Math.max(longestSpanDays, (newest - oldest) / 86_400_000);
         });
         setPricesByTicker(sorted);
+        setHistorySpanDays(Math.round(longestSpanDays));
       })
       .catch(() => setPriceError('Failed to load price history'))
       .finally(() => setLoadingPrices(false));
@@ -90,8 +111,30 @@ const PortfolioPlanner: React.FC = () => {
     );
   };
 
+  /**
+   * Whether the returned series is long enough to estimate a covariance from.
+   * `null` means "not loaded yet", which must not read as insufficient.
+   */
+  const hasEnoughHistory = historySpanDays === null || historySpanDays >= MIN_HISTORY_DAYS;
+
+  // The shell owns the URL and embeds each front in an iframe, so an upgrade
+  // link navigates the *top* window. Config is read inside the handler because
+  // `getGlobalConfig` throws when no provider has mounted, and a paywall notice
+  // must never be the reason this page fails to render.
+  const goToPlans = React.useCallback(() => {
+    let shellFrontUrl: string | undefined;
+    try {
+      shellFrontUrl = getGlobalConfig().SHELL_FRONT_URL;
+    } catch {
+      return;
+    }
+    if (shellFrontUrl && window.top?.location) window.top.location.href = `${shellFrontUrl}/payments`;
+  }, []);
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { if (Object.keys(pricesByTicker).length >= 2) runSim(); }, [pricesByTicker]);
+  useEffect(() => {
+    if (Object.keys(pricesByTicker).length >= 2 && hasEnoughHistory) runSim();
+  }, [pricesByTicker]);
 
   // Target risk level chosen by the user via slider — persisted so a returning
   // user's plan doesn't reset to Max Sharpe on every visit.
@@ -182,6 +225,32 @@ const PortfolioPlanner: React.FC = () => {
             nameByTicker={nameByTicker}
             simulations={SIMULATIONS}
           />
+        ) : holdings.length > 0 && !hasEnoughHistory ? (
+          /*
+            Deliberately not a frontier computed from what little came back. The
+            server clips price history to the plan's retention window, so a free
+            account asking for two years receives ninety days — and a covariance
+            estimate off ninety closes produces a confident, wrong answer. Say
+            what is missing and why instead.
+          */
+          <Alert
+            severity="info"
+            action={
+              <Button color="inherit" size="small" onClick={goToPlans}>
+                See plans
+              </Button>
+            }
+          >
+            <AlertTitle>Not enough price history to plan with</AlertTitle>
+            The efficient frontier needs about {HISTORY_YEARS} years of daily closes to estimate how
+            your holdings move together. Your history reaches back {historySpanDays} days, so a
+            frontier computed from it would be confidently wrong rather than merely rough — which is
+            why it is not shown.
+            <br />
+            <br />
+            Plans with full history keep every close ever fetched. If you have only tracked these
+            instruments recently, the range will also fill in on its own.
+          </Alert>
         ) : (
           holdings.length > 0 && Object.keys(pricesByTicker).length < 2 && (
             <Alert severity="info">

@@ -1,7 +1,40 @@
 import { Request, Response } from 'express';
-import { BadRequestError, sendSuccess } from '@tumbaland/backend-core';
+import { BadRequestError, getGroupOwner, logger, retentionFloor, sendSuccess } from '@tumbaland/backend-core';
 import * as tickerPriceService from '../services/tickerPriceHistory.service';
 import { getRemainingQuota } from '../services/apiQuota.service';
+
+/**
+ * Whose retention applies to this read: the caller, plus the owners of any
+ * groups whose tickers are in scope.
+ *
+ * Price rows are shared market data scoped by the *tracked ticker* list, so a
+ * group-context read returns the group's instruments. Resolving retention from
+ * the caller alone would show a free member of a paid Family group ninety days
+ * of a household's history the household paid to keep — `retentionFloor` takes
+ * the most generous of the subjects for exactly that reason.
+ *
+ * A group whose owner cannot be resolved is skipped rather than failing the
+ * read: history is a *read*, and reads are never gated to the point of denial.
+ * The caller is always in the list, so the floor degrades to their own plan.
+ */
+async function retentionSubjects(req: Request): Promise<string[]> {
+  const caller = req.user?.email;
+  const subjects = new Set<string>(caller ? [caller.toLowerCase()] : []);
+
+  for (const groupId of req.userGroups ?? []) {
+    try {
+      const owner = await getGroupOwner(groupId);
+      if (owner) subjects.add(owner.ownerEmail);
+    } catch (err) {
+      logger.warn('Could not resolve group owner for retention', {
+        groupId,
+        error: (err as Error)?.message
+      });
+    }
+  }
+
+  return Array.from(subjects);
+}
 
 function parseDate(value: unknown, field: string): Date | undefined {
   if (value === undefined) return undefined;
@@ -34,7 +67,8 @@ export const getTickerPriceHistory = async (req: Request, res: Response): Promis
     ticker: ticker ? String(ticker) : undefined,
     from: parseDate(from, 'from'),
     to: parseDate(to, 'to'),
-    limit: parseLimit(limit)
+    limit: parseLimit(limit),
+    retentionFrom: await retentionFloor(await retentionSubjects(req))
   });
 
   sendSuccess(res, records);
