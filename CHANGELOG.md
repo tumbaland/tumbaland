@@ -1,4 +1,11 @@
 # Tumbalog
+## [0.0.435](https://github.com/toomastahves/tumbaland/compare/app-v0.0.434...app-v0.0.435) (2026-08-09)
+
+### Features
+
+* add usage limits ([18b80b2](https://github.com/toomastahves/tumbaland/commit/18b80b2cde03f17110b401d219fb0e4275d4dfc0))
+* apply price history retention days ([f8d6d9f](https://github.com/toomastahves/tumbaland/commit/f8d6d9fb1cf16d8a3fc8087fe8a2a6d26f38c7a3))
+* count usage ([955ba78](https://github.com/toomastahves/tumbaland/commit/955ba7898c7ca93fd20d35f6831bb22b270e3b56))
 ## [0.0.434](https://github.com/toomastahves/tumbaland/compare/app-v0.0.433...app-v0.0.434) (2026-08-09)
 
 ### Features
