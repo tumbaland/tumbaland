@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.438](https://github.com/toomastahves/tumbaland/compare/app-v0.0.437...app-v0.0.438) (2026-08-09)
+
+### Features
+
+* implement finance limits ([ce84b1c](https://github.com/toomastahves/tumbaland/commit/ce84b1c081240764c49bbdf23c3dee0866c97f59))
 ## [0.0.437](https://github.com/toomastahves/tumbaland/compare/app-v0.0.436...app-v0.0.437) (2026-08-09)
 
 ### Bug Fixes
