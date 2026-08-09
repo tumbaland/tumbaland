@@ -2,6 +2,19 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 
+/**
+ * This page runs a 2,000-iteration Monte Carlo on every render, and most tests
+ * here wait on the frontier it produces. CI runs the suite under v8 coverage
+ * instrumentation on a shared two-core runner, where this file reported 242s
+ * wall against ~15s locally — enough for vitest's 5s default to expire on the
+ * simulation rather than on any real failure.
+ *
+ * Scoped to this file rather than raised globally: everything else in the suite
+ * should still fail fast, and 20s is generous for the simulation while still
+ * catching a genuine hang.
+ */
+vi.setConfig({ testTimeout: 20_000, hookTimeout: 20_000 });
+
 vi.mock('@tumbaland/components', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tumbaland/components')>();
   return { ...actual, useTenantFilter: () => undefined };
@@ -310,14 +323,19 @@ describe('retention-truncated price history', () => {
     expect(screen.queryByText(/Max Sharpe/i)).not.toBeInTheDocument();
   });
 
-  it('offers the upgrade route from the notice', async () => {
+  it('offers the upgrade route from the notice, and survives config not being mounted', async () => {
     mockedGetHistory.mockResolvedValue(truncated);
     render(<PortfolioPlanner />);
     await screen.findByText('Apple Inc');
     await switchTab('Frontier');
     await screen.findByText(/Not enough price history to plan with/i, {}, FIND);
 
-    expect(screen.getByRole('button', { name: /see plans/i })).toBeInTheDocument();
+    // `getGlobalConfig` throws when no ConfigProvider has mounted, as here.
+    // Clicking must swallow that: a paywall notice is never allowed to be the
+    // reason this page falls over.
+    await userEvent.click(screen.getByRole('button', { name: /see plans/i }));
+
+    expect(screen.getByText(/Not enough price history to plan with/i)).toBeInTheDocument();
   });
 
   it('draws the frontier normally once the range is long enough', async () => {
