@@ -132,6 +132,56 @@ describe('createAuthService', () => {
       expect(afterLogout.authenticated).toBe(false);
     });
 
+    it('drops session-scoped storage so the next account does not inherit this one context', async () => {
+      localStorage.setItem('selectedTenant', JSON.stringify({ id: 'g1', name: 'Group A', type: 'group' }));
+      const authService = createAuthService(config);
+
+      mockFetchOnce({ success: true });
+      const originalLocation = window.location;
+      Object.defineProperty(window, 'location', { writable: true, value: { ...originalLocation, reload: vi.fn() } });
+
+      await authService.logout();
+      Object.defineProperty(window, 'location', { writable: true, value: originalLocation });
+
+      expect(localStorage.getItem('selectedTenant')).toBeNull();
+    });
+
+    it('tells the shell its session ended when signing out inside the shell iframe', async () => {
+      const parentPostMessage = vi.fn();
+      const originalParent = window.parent;
+      Object.defineProperty(window, 'parent', {
+        writable: true,
+        configurable: true,
+        value: { postMessage: parentPostMessage }
+      });
+      const originalLocation = window.location;
+      Object.defineProperty(window, 'location', { writable: true, value: { ...originalLocation, reload: vi.fn() } });
+
+      mockFetchOnce({ success: true });
+      await createAuthService(config).logout();
+
+      Object.defineProperty(window, 'location', { writable: true, value: originalLocation });
+      Object.defineProperty(window, 'parent', { writable: true, configurable: true, value: originalParent });
+
+      // Without this the shell keeps its own cached "authenticated" for up to
+      // five minutes and still renders the signed-in home page.
+      expect(parentPostMessage).toHaveBeenCalledWith({ source: 'tumbaland-app', type: 'app:logout' }, '*');
+    });
+
+    it('does not post a logout message when not framed', async () => {
+      const postMessageSpy = vi.spyOn(window, 'postMessage');
+      const originalLocation = window.location;
+      Object.defineProperty(window, 'location', { writable: true, value: { ...originalLocation, reload: vi.fn() } });
+
+      mockFetchOnce({ success: true });
+      await createAuthService(config).logout();
+
+      Object.defineProperty(window, 'location', { writable: true, value: originalLocation });
+
+      expect(postMessageSpy).not.toHaveBeenCalled();
+      postMessageSpy.mockRestore();
+    });
+
     it('returns false and does not clear the cache when the response is not ok', async () => {
       mockFetchOnce({ success: true, authenticated: true, user: null });
       const authService = createAuthService(config);

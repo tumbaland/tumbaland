@@ -1,4 +1,4 @@
-import { logger } from '@tumbaland/frontend-core';
+import { logger, TENANT_STORAGE_KEY } from '@tumbaland/frontend-core';
 import { TenantOption } from './TenantProvider';
 
 /**
@@ -19,7 +19,7 @@ export const useTenantFilter = (): string | undefined => {
  */
 const getTenantFromStorage = (): TenantOption | null => {
   try {
-    const saved = localStorage.getItem('selectedTenant');
+    const saved = localStorage.getItem(TENANT_STORAGE_KEY);
     if (saved) {
       return JSON.parse(saved) as TenantOption;
     }

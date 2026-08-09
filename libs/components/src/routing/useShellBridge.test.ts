@@ -80,6 +80,44 @@ describe('useShellBridge', () => {
     expect(onNavigate).not.toHaveBeenCalled();
   });
 
+  it('reports a logout inside the frame up to the shell', () => {
+    const frame = makeFrame();
+    const onChildLogout = vi.fn();
+
+    renderHook(() =>
+      useShellBridge({
+        frameRef: frame.ref,
+        appRoute: '/album',
+        appUrl: APP_URL,
+        shellPath: '/album',
+        onNavigate: vi.fn(),
+        onChildLogout
+      })
+    );
+
+    dispatchMessage({ source: APP_SOURCE, type: 'app:logout' }, APP_URL, frame.contentWindow);
+    expect(onChildLogout).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores a logout claim from another origin', () => {
+    const frame = makeFrame();
+    const onChildLogout = vi.fn();
+
+    renderHook(() =>
+      useShellBridge({
+        frameRef: frame.ref,
+        appRoute: '/album',
+        appUrl: APP_URL,
+        shellPath: '/album',
+        onNavigate: vi.fn(),
+        onChildLogout
+      })
+    );
+
+    dispatchMessage({ source: APP_SOURCE, type: 'app:logout' }, 'https://evil.example', frame.contentWindow);
+    expect(onChildLogout).not.toHaveBeenCalled();
+  });
+
   it('pushes shell-initiated navigation down into the frame', () => {
     const frame = makeFrame();
 

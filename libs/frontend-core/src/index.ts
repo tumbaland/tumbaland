@@ -11,6 +11,8 @@ export type { GroupServiceConfig, GroupService } from './groupService';
 
 export type { User, AuthResponse, Group, ApiResponse } from './types';
 
+export { TENANT_STORAGE_KEY, clearSessionScopedStorage } from './sessionStorage';
+
 // Monitoring: headless logging, error capture, correlation IDs, and web-vitals
 export {
   initMonitoring,

@@ -89,6 +89,55 @@ describe('POST /auth/refresh', () => {
     const newToken = accessTokenCookie!.split(';')[0].split('=')[1];
     expect(newToken).not.toBe(token);
   });
+
+  it('keeps the groups already in the token when group-service cannot be reached', async () => {
+    process.env.GROUP_API_URL = 'http://group-service.internal';
+    process.env.INTERNAL_SERVICE_TOKEN = 'test-internal-token';
+    const token = generateJWT({
+      id: '1',
+      email: 'user@example.com',
+      name: 'User',
+      groups: ['group-1'],
+      tokenVersion: 1
+    });
+    mockedFindOne.mockResolvedValue({ email: 'user@example.com', tokenVersion: 1, isApproved: true });
+    global.fetch = jest.fn().mockRejectedValue(new Error('network down'));
+
+    const res = await request(app).post('/auth/refresh').set('Cookie', `access_token=${token}`);
+
+    // Blanking the claim here would mint a seven-day token that 403s every
+    // group-scoped request, with nothing to distinguish it from lost access.
+    expect(res.status).toBe(200);
+    expect(res.body.groups).toEqual(['group-1']);
+    const setCookie = res.headers['set-cookie'] as unknown as string[];
+    const cookieToken = setCookie.find((c) => c.startsWith('access_token='))!.split(';')[0].split('=')[1];
+    expect(decodeJWT(cookieToken)?.groups).toEqual(['group-1']);
+
+    delete process.env.GROUP_API_URL;
+    delete process.env.INTERNAL_SERVICE_TOKEN;
+  });
+
+  it('still adopts the fresh list when group-service does answer', async () => {
+    process.env.GROUP_API_URL = 'http://group-service.internal';
+    process.env.INTERNAL_SERVICE_TOKEN = 'test-internal-token';
+    const token = generateJWT({
+      id: '1',
+      email: 'user@example.com',
+      name: 'User',
+      groups: ['group-1'],
+      tokenVersion: 1
+    });
+    mockedFindOne.mockResolvedValue({ email: 'user@example.com', tokenVersion: 1, isApproved: true });
+    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ success: true, data: ['group-2'] }) });
+
+    const res = await request(app).post('/auth/refresh').set('Cookie', `access_token=${token}`);
+
+    // Removals must still take effect — the fallback is for unreachable, not stale.
+    expect(res.body.groups).toEqual(['group-2']);
+
+    delete process.env.GROUP_API_URL;
+    delete process.env.INTERNAL_SERVICE_TOKEN;
+  });
 });
 
 describe('POST /auth/internal/invalidate-tokens', () => {

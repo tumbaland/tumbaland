@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { TenantOption, TenantProvider, useTenantListener, useTenantContext } from './TenantProvider';
-import { getCorrelationId, getSessionId, logger } from '@tumbaland/frontend-core';
+import { getCorrelationId, getSessionId, logger, TENANT_STORAGE_KEY } from '@tumbaland/frontend-core';
 
 // Re-export for convenience
 export { TenantProvider, useTenantListener, useTenantContext, type TenantOption };
@@ -26,24 +26,48 @@ interface GroupApiResponse {
   }>;
 }
 
-const STORAGE_KEY = 'selectedTenant';
+// Owned here, but declared in frontend-core so `logout()` can clear it — see
+// the note on session-scoped storage there.
+const STORAGE_KEY = TENANT_STORAGE_KEY;
+
+/**
+ * The persisted selection, stamped with the account that made it.
+ *
+ * localStorage is per-origin, not per-account: sign out and sign in as
+ * someone else in the same browser and the previous account's selection is
+ * still sitting there. `useTenantFilter` reads it synchronously on first
+ * render, so every group-scoped request in the app goes out with a groupId
+ * the new account is not a member of, and the service answers 403 (which is
+ * exactly what it should do). The stamp lets us recognize a selection that
+ * belongs to someone else and drop it.
+ */
+interface StoredTenant extends TenantOption {
+  userEmail?: string;
+}
+
+/** The stamp is storage bookkeeping; consumers see a plain TenantOption. */
+const toOption = ({ id, name, type }: StoredTenant): TenantOption => ({ id, name, type });
 
 // Global cache to prevent multiple simultaneous requests across all hook instances
 let globalGroupsFetchCache: Promise<TenantOption[]> | null = null;
 let globalGroupsCacheTimestamp: number = 0;
-let globalGroupsApiUrl: string = '';
+let globalGroupsCacheKey: string = '';
 let requestCounter = 0; // Debug counter
 const CACHE_DURATION = 30000; // 30 seconds
 
-// Global function to fetch groups - shared across all hook instances
-const fetchGroupsGlobally = async (groupApiUrl: string): Promise<TenantOption[]> => {
+// Global function to fetch groups - shared across all hook instances. Keyed by
+// user as well as URL: the cache outlives a sign-out, and handing the incoming
+// account the previous one's group list is how a stale selection gets
+// "validated" and survives.
+const fetchGroupsGlobally = async (groupApiUrl: string, userEmail?: string): Promise<TenantOption[]> => {
   requestCounter++;
   logger.debug('fetchGroupsGlobally called', { requestNumber: requestCounter, groupApiUrl });
 
-  // Check if we have a valid cached request for the same API URL
+  // Check if we have a valid cached request for the same API URL and user
   const now = Date.now();
+  const cacheKey = `${userEmail ?? ''}|${groupApiUrl}`;
   if (globalGroupsFetchCache &&
-      globalGroupsApiUrl === groupApiUrl &&
+      globalGroupsCacheKey === cacheKey &&
       (now - globalGroupsCacheTimestamp) < CACHE_DURATION) {
     logger.debug('Using cached groups request', { groupApiUrl });
     return globalGroupsFetchCache;
@@ -102,7 +126,7 @@ const fetchGroupsGlobally = async (groupApiUrl: string): Promise<TenantOption[]>
   // Cache the request
   globalGroupsFetchCache = fetchRequest();
   globalGroupsCacheTimestamp = now;
-  globalGroupsApiUrl = groupApiUrl;
+  globalGroupsCacheKey = cacheKey;
 
   // Clear cache after request completes (success or failure). `.finally()`
   // returns a new derived promise that rejects if the request did — nothing
@@ -114,7 +138,7 @@ const fetchGroupsGlobally = async (groupApiUrl: string): Promise<TenantOption[]>
       setTimeout(() => {
         if (globalGroupsFetchCache && (Date.now() - globalGroupsCacheTimestamp) >= CACHE_DURATION) {
           globalGroupsFetchCache = null;
-          globalGroupsApiUrl = '';
+          globalGroupsCacheKey = '';
         }
       }, CACHE_DURATION);
     })
@@ -137,11 +161,11 @@ export const useTenant = (
   const [error, setError] = useState<string | null>(null);
 
   // Load saved tenant selection from localStorage
-  const loadSavedTenant = useCallback(() => {
+  const loadSavedTenant = useCallback((): StoredTenant | null => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        const tenant = JSON.parse(saved) as TenantOption;
+        const tenant = JSON.parse(saved) as StoredTenant;
         return tenant;
       }
     } catch (err) {
@@ -150,19 +174,20 @@ export const useTenant = (
     return null;
   }, []);
 
-  // Save tenant selection to localStorage
+  // Save tenant selection to localStorage, stamped with the current account
   const saveTenant = useCallback((tenant: TenantOption) => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(tenant));
+      const stored: StoredTenant = { ...tenant, userEmail };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
     } catch (err) {
       logger.warn('Failed to save tenant selection', { error: err });
     }
-  }, []);
+  }, [userEmail]);
 
   // Fetch available groups from API using user authentication
   const fetchGroups = useCallback(async (): Promise<TenantOption[]> => {
-    return fetchGroupsGlobally(groupApiUrl);
-  }, [groupApiUrl]);
+    return fetchGroupsGlobally(groupApiUrl, userEmail);
+  }, [groupApiUrl, userEmail]);
 
   // Refresh tenants list
   const refreshTenants = useCallback(async () => {
@@ -190,34 +215,48 @@ export const useTenant = (
 
       // Set default selection if none exists
       const savedTenant = loadSavedTenant();
-      if (savedTenant) {
-        // Verify saved tenant still exists
-        const tenantExists = allTenants.some(t => t.id === savedTenant.id);
-        if (tenantExists) {
-          setSelectedTenantState(savedTenant);
-        } else {
-          // Fallback to personal if saved tenant no longer exists
-          setSelectedTenantState(personalTenant);
-          saveTenant(personalTenant);
-        }
+      // A selection made by a different account is not ours to keep, even if
+      // this account happens to belong to that group too — an unstamped one
+      // predates this check and is validated by membership alone.
+      const belongsToThisUser = !savedTenant?.userEmail || savedTenant.userEmail === userEmail;
+      const stillAMember = allTenants.some(t => t.id === savedTenant?.id);
+
+      if (savedTenant && belongsToThisUser && stillAMember) {
+        setSelectedTenantState(toOption(savedTenant));
       } else {
-        // Default to personal account
+        // Fall back to personal: the saved tenant is gone, or was someone else's
         setSelectedTenantState(personalTenant);
         saveTenant(personalTenant);
+
+        // Sibling components read the raw storage value synchronously on mount
+        // (useTenantFilter), so by now they have already fired their requests
+        // against the discarded groupId and are showing 403s. Reload for the
+        // same reason switching tenant by hand reloads — it is the only way
+        // this app re-reads the context. Storage now says personal, so the
+        // next pass takes the branch above and this does not loop.
+        if (savedTenant?.type === 'group') {
+          logger.debug('Discarded a tenant selection this account cannot use; reloading');
+          window.location.reload();
+        }
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load contexts';
       logger.error('Error in refreshTenants', err);
       setError(errorMessage);
 
-      // Fallback to personal account only
+      // The groups call failed, so we cannot tell a stale selection from a
+      // valid one. Keep showing what storage says rather than claiming
+      // "Personal" while useTenantFilter keeps sending the saved groupId —
+      // that mismatch is what made the UI look like it had switched context
+      // when it had not. TenantSelector renders the error state instead.
       const personalTenant: TenantOption = {
         id: 'personal',
         name: 'Personal',
         type: 'personal'
       };
       setAvailableTenants([personalTenant]);
-      setSelectedTenantState(personalTenant);
+      const savedTenant = loadSavedTenant();
+      setSelectedTenantState(savedTenant ? toOption(savedTenant) : personalTenant);
     } finally {
       setLoading(false);
     }

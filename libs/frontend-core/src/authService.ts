@@ -1,4 +1,5 @@
 import { getCorrelationId, getSessionId, logger } from './monitoring';
+import { clearSessionScopedStorage } from './sessionStorage';
 import { AuthResponse, User } from './types';
 
 export interface AuthServiceConfig {
@@ -8,6 +9,29 @@ export interface AuthServiceConfig {
 }
 
 const AUTH_CACHE_TTL = 5 * 60 * 1000;
+
+/**
+ * Tell the shell its session just ended.
+ *
+ * Each app runs in the shell's iframe with its own copy of this module, so a
+ * logout inside the frame clears only the frame's cache and reloads only the
+ * frame. The shell keeps serving its own five-minute-old `authenticated:
+ * true` from memory, which is why signing out and clicking home still showed
+ * the signed-in page instead of the landing page.
+ *
+ * The message carries nothing, so `'*'` gives nothing away; the shell is the
+ * side that authenticates it, by origin and by frame (see `useShellBridge`).
+ */
+function notifyShellOfLogout(): void {
+  if (typeof window === 'undefined' || window.parent === window.self) return;
+  try {
+    // Contract lives in @tumbaland/components `routing/messages` — a lower
+    // layer cannot import it, so the literal is repeated here.
+    window.parent.postMessage({ source: 'tumbaland-app', type: 'app:logout' }, '*');
+  } catch (error) {
+    logger.warn('Failed to notify shell of logout', { error });
+  }
+}
 
 function authHeaders(): HeadersInit {
   return {
@@ -99,6 +123,8 @@ export function createAuthService(config: AuthServiceConfig) {
         if (data.success) {
           authCache = null;
           authCacheTime = 0;
+          clearSessionScopedStorage();
+          notifyShellOfLogout();
           window.location.reload();
         }
         return data.success;

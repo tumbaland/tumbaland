@@ -27,6 +27,20 @@ export interface AppLocationMessage {
 }
 
 /**
+ * Child -> shell: the user signed out in here, the cookie is gone.
+ *
+ * The shell cannot see this on its own — the frame reloads itself, the shell
+ * does not, and its cached auth check keeps it looking signed in for up to
+ * five minutes. Sent by `logout()` in @tumbaland/frontend-core, which cannot
+ * import this module (components depends on frontend-core, not the reverse),
+ * so the literals there must match these.
+ */
+export interface AppLogoutMessage {
+  source: typeof APP_SOURCE;
+  type: 'app:logout';
+}
+
+/**
  * Child -> shell: escape hatch for flows that must leave the frame (payment
  * checkout redirects). Predates this contract, so it carries its own `source`.
  */
@@ -51,6 +65,9 @@ export const isAppLocationMessage = (value: unknown): value is AppLocationMessag
   value.type === 'app:location' &&
   typeof value.app === 'string' &&
   typeof value.path === 'string';
+
+export const isAppLogoutMessage = (value: unknown): value is AppLogoutMessage =>
+  isRecord(value) && value.source === APP_SOURCE && value.type === 'app:logout';
 
 export const isNavigateTopMessage = (value: unknown): value is NavigateTopMessage =>
   isRecord(value) && value.type === 'tumbaland:navigate-top' && typeof value.url === 'string';

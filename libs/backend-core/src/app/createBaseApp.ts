@@ -25,6 +25,12 @@ export interface CreateBaseAppOptions {
   tracing?: boolean;
   /** Use requestLoggerWithMetrics (adds Prometheus histograms) instead of the plain requestLogger. Default true. */
   metrics?: boolean;
+  /**
+   * Value for Express's `trust proxy`. Defaults to trusting private/loopback
+   * addresses — see the note on tumbaland-proxy below. Pass `false` for a
+   * service exposed directly to clients with no proxy in front of it.
+   */
+  trustProxy?: Parameters<Express['set']>[1];
 }
 
 /**
@@ -47,6 +53,24 @@ export interface CreateBaseAppOptions {
  * Services with non-standard body parsing (a webhook needing the raw body,
  * or conditional parsing per-route) should pass `parseJson`/`parseCookies:
  * false` and mount those themselves at the exact point they need to.
+ *
+ * `trust proxy` is on by default because nothing here is reached directly:
+ * every service sits behind tumbaland-proxy, which sets `X-Forwarded-For`.
+ * Left at Express's default (`false`) that header is ignored, which
+ * express-rate-limit reports as `ERR_ERL_UNEXPECTED_X_FORWARDED_FOR` — and
+ * it is right to: the limiter would then key every request in the cluster on
+ * the proxy's own container IP, so one busy client could exhaust the window
+ * for everyone.
+ *
+ * The value is `loopback, linklocal, uniquelocal` (private ranges) rather
+ * than a hop count, because the chain length differs per ingress path: a
+ * direct hit arrives as `client` + the proxy's own socket address, while
+ * traffic through the Cloudflare tunnel arrives as `client, 127.0.0.1` (the
+ * local cloudflared) + that same socket address. Express walks the chain
+ * right-to-left and stops at the first address it does not trust, so both
+ * paths land on the real client; a fixed number would be wrong for one of
+ * them. All the intermediaries are private addresses and the client is not,
+ * which is exactly the split this preset encodes.
  */
 export function createBaseApp(options: CreateBaseAppOptions = {}): Express {
   const {
@@ -55,10 +79,13 @@ export function createBaseApp(options: CreateBaseAppOptions = {}): Express {
     parseJson = true,
     parseCookies = true,
     tracing = true,
-    metrics = true
+    metrics = true,
+    trustProxy = 'loopback, linklocal, uniquelocal'
   } = options;
 
   const app = express();
+
+  app.set('trust proxy', trustProxy);
 
   app.get('/health/live', healthLive);
 

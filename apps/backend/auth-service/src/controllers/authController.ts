@@ -106,36 +106,54 @@ export const invalidateUserTokens = async (req: Request, res: Response): Promise
   });
 };
 
-const getUserGroups = async (email: string): Promise<string[]> => {
+/**
+ * Group memberships for the JWT's `groups` claim, which every service
+ * authorizes group-scoped requests against.
+ *
+ * `fallback` is what to claim when group-service cannot be reached. Returning
+ * an empty list there is not a safe default: it mints a token that looks
+ * valid for seven days and 403s every group-scoped request, and the user has
+ * no way to tell that from having lost access. Callers that already hold a
+ * verified token pass its existing claim, so a blip re-issues what the user
+ * already had instead of silently stripping it.
+ */
+const getUserGroups = async (email: string, fallback: string[] = []): Promise<string[]> => {
   // Fetch fresh data from group service
-  let userGroups: string[] = [];
   try {
     const groupServiceUrl = process.env.GROUP_API_URL;
     const internalToken = process.env.INTERNAL_SERVICE_TOKEN;
 
-    if (groupServiceUrl && internalToken) {
-      const groupResponse = await fetch(`${groupServiceUrl}/api/groups/mine/ids?userEmail=${encodeURIComponent(email)}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-internal-token': internalToken,
-          'x-service-id': 'auth-service'
-        },
-        signal: AbortSignal.timeout(3000)
-      });
-
-      if (groupResponse.ok) {
-        const groupResult = await groupResponse.json();
-        if (groupResult.success) {
-          userGroups = groupResult.data || [];
-        }
-      }
+    if (!groupServiceUrl || !internalToken) {
+      logger.error('Cannot resolve group claim: GROUP_API_URL or INTERNAL_SERVICE_TOKEN is unset', { email });
+      return fallback;
     }
-  } catch (error) {
-    logger.warn('Failed to fetch user groups for JWT', { error: (error as Error)?.message });
-  }
 
-  return userGroups;
+    const groupResponse = await fetch(`${groupServiceUrl}/api/groups/mine/ids?userEmail=${encodeURIComponent(email)}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-internal-token': internalToken,
+        'x-service-id': 'auth-service'
+      },
+      signal: AbortSignal.timeout(3000)
+    });
+
+    if (!groupResponse.ok) {
+      logger.error('Group service rejected the group claim lookup', { email, status: groupResponse.status });
+      return fallback;
+    }
+
+    const groupResult = await groupResponse.json();
+    if (!groupResult.success) {
+      logger.error('Group service reported failure for the group claim lookup', { email });
+      return fallback;
+    }
+
+    return groupResult.data || [];
+  } catch (error) {
+    logger.error('Failed to fetch user groups for JWT', { email, error: (error as Error)?.message });
+    return fallback;
+  }
 };
 
 const getUserRoles = async (email: string): Promise<string[]> => {
@@ -149,9 +167,10 @@ export const verifyAuth = async (req: Request, res: Response): Promise<void> => 
     throw new UnauthorizedError('No authenticated user');
   }
 
-  // Fetch fresh user groups and roles
+  // Fetch fresh user groups and roles, keeping the claim we already issued if
+  // group-service is unreachable rather than handing back a token with none.
   const [userGroups, userRoles] = await Promise.all([
-    getUserGroups(currentUser.email),
+    getUserGroups(currentUser.email, currentUser.groups),
     getUserRoles(currentUser.email)
   ]);
 
@@ -196,9 +215,10 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     throw new UnauthorizedError('No authenticated user');
   }
 
-  // Fetch fresh user groups and roles
+  // Fetch fresh user groups and roles, keeping the claim we already issued if
+  // group-service is unreachable rather than handing back a token with none.
   const [userGroups, userRoles] = await Promise.all([
-    getUserGroups(currentUser.email),
+    getUserGroups(currentUser.email, currentUser.groups),
     getUserRoles(currentUser.email)
   ]);
 

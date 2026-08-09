@@ -58,6 +58,14 @@ export default function Layout({ children }: LayoutProps) {
     if (title) document.title = title;
   }, []);
 
+  // Signing out inside a framed app ends the shell's session too. A router
+  // navigation would keep this document — and its cached auth check — alive,
+  // so leave for `/` the hard way and let the shell boot signed out.
+  const handleChildLogout = useCallback(() => {
+    authService.clearAuthCache();
+    window.location.assign('/');
+  }, []);
+
   useShellBridge({
     frameRef,
     appRoute: currentApp?.route,
@@ -65,7 +73,8 @@ export default function Layout({ children }: LayoutProps) {
     shellPath: location.pathname,
     shellSearch: location.search,
     onNavigate: handleChildNavigate,
-    onTitleChange: handleChildTitle
+    onTitleChange: handleChildTitle,
+    onChildLogout: handleChildLogout
   });
 
   useEffect(() => {

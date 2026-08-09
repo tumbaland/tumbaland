@@ -1,6 +1,12 @@
 import { RefObject, useCallback, useEffect, useMemo, useRef } from 'react';
 import { extractChildPath, joinShellPath, normalizeEmbedPath, safeUrl, toOrigin } from './embedContext';
-import { SHELL_SOURCE, ShellNavigateMessage, isAppLocationMessage, isNavigateTopMessage } from './messages';
+import {
+  SHELL_SOURCE,
+  ShellNavigateMessage,
+  isAppLocationMessage,
+  isAppLogoutMessage,
+  isNavigateTopMessage
+} from './messages';
 
 export interface ShellBridgeOptions {
   frameRef: RefObject<HTMLIFrameElement | null>;
@@ -15,6 +21,8 @@ export interface ShellBridgeOptions {
   onNavigate: (shellPath: string, options: { replace: boolean }) => void;
   /** Reflect the child's page title into the browser tab. */
   onTitleChange?: (title: string) => void;
+  /** The framed app signed the user out; the shell's own session is over too. */
+  onChildLogout?: () => void;
 }
 
 /**
@@ -32,7 +40,8 @@ export const useShellBridge = ({
   shellPath,
   shellSearch = '',
   onNavigate,
-  onTitleChange
+  onTitleChange,
+  onChildLogout
 }: ShellBridgeOptions): void => {
   const appOrigin = useMemo(() => toOrigin(appUrl), [appUrl]);
   // Path the child just reported, so we don't push it straight back down.
@@ -72,6 +81,11 @@ export const useShellBridge = ({
         return;
       }
 
+      if (isAppLogoutMessage(event.data)) {
+        onChildLogout?.();
+        return;
+      }
+
       if (isNavigateTopMessage(event.data)) {
         const target = safeUrl(event.data.url);
         if (!target) return;
@@ -87,7 +101,7 @@ export const useShellBridge = ({
 
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [appOrigin, appRoute, frameRef, handleAppLocation]);
+  }, [appOrigin, appRoute, frameRef, handleAppLocation, onChildLogout]);
 
   useEffect(() => {
     if (!appOrigin || !appRoute) return;

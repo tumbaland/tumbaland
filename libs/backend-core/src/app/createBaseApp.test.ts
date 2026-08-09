@@ -63,6 +63,37 @@ describe('createBaseApp', () => {
     expect(res.status).toBe(200);
   });
 
+  it('trusts the proxy, so X-Forwarded-For identifies the client rather than being ignored', async () => {
+    const app = createBaseApp();
+    app.get('/whoami', (req, res) => res.json({ ip: req.ip }));
+
+    const res = await request(app).get('/whoami').set('X-Forwarded-For', '203.0.113.7');
+
+    expect(res.body.ip).toBe('203.0.113.7');
+  });
+
+  it('keeps rate-limit buckets per client, not one shared bucket behind the proxy', async () => {
+    const app = createBaseApp({ rateLimiter: (await import('../middleware/security')).createRateLimiter({ windowMs: 60_000, max: 1 }) });
+    app.get('/ping', (_req, res) => res.json({ ok: true }));
+
+    const clientA = await request(app).get('/ping').set('X-Forwarded-For', '203.0.113.7');
+    const clientB = await request(app).get('/ping').set('X-Forwarded-For', '198.51.100.4');
+    const clientAAgain = await request(app).get('/ping').set('X-Forwarded-For', '203.0.113.7');
+
+    expect(clientA.status).toBe(200);
+    expect(clientB.status).toBe(200); // a different client is unaffected by A exhausting its window
+    expect(clientAAgain.status).toBe(429);
+  });
+
+  it('ignores X-Forwarded-For when trustProxy is disabled', async () => {
+    const app = createBaseApp({ trustProxy: false });
+    app.get('/whoami', (req, res) => res.json({ ip: req.ip }));
+
+    const res = await request(app).get('/whoami').set('X-Forwarded-For', '203.0.113.7');
+
+    expect(res.body.ip).not.toBe('203.0.113.7');
+  });
+
   it('mounts /health/live ahead of the rate limiter, so it never gets 429s a busy service would', async () => {
     const app = createBaseApp({ rateLimiter: (await import('../middleware/security')).createRateLimiter({ windowMs: 60_000, max: 1 }) });
     app.get('/ping', (_req, res) => res.json({ ok: true }));
