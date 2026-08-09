@@ -36,6 +36,7 @@ import TickerHistoryModal from '../TickerHistoryModal';
 import TradeHistoryDialog from './TradeHistoryDialog';
 import TickerSearch from './TickerSearch';
 import { parseNumericInput, formatCurrency, formatPrice, formatPct } from '../../utils/numberUtils';
+import { paywallMessage } from '../../utils/paywall';
 
 interface HoldingsTabProps {
   holdings: Holding[];
@@ -129,8 +130,10 @@ const HoldingsTab: React.FC<HoldingsTabProps> = ({ holdings, tenantGroupId, noti
         notify('Holding added — its ticker is now tracked for daily prices', 'success');
       }
       setDialogOpen(false);
-    } catch {
-      notify('Failed to save holding', 'error');
+    } catch (err) {
+      // Adding a holding starts tracking its ticker, so it can be refused by
+      // the tracked-ticker limit — which must read as a price, not a failure.
+      notify(paywallMessage(err, 'Failed to save holding'), 'error');
     }
   };
 

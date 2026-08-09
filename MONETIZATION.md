@@ -5,10 +5,12 @@ tracks code health, this one tracks the paywall.
 
 **Current state (2026-08-09).** The entitlement backbone is finished and tested: plan limits resolve
 from the database through a cached internal API, usage meters are recorded and reconciled nightly,
-the 402 contract exists, and the first `<UsageMeter>` is live on the album dashboard. **The first
-chokepoint is enforced** — retention clips price history, which makes the portfolio planner a paid
-feature. Everything else is still identical across plans. Stripe has only ever taken one live charge
-(the maintainer's); there are no customers, so nothing here carries a migration burden.
+the 402 contract exists, and `<UsageMeter>` is live on the album dashboard and the tracked-ticker
+list. **Two chokepoints are enforced**: retention clips price history, which makes the portfolio
+planner a paid feature, and the `trackedTickers` limit now refuses a symbol past the plan's ceiling —
+on both paths that track one. Storage and seats still record without enforcing, and the rest of the
+plans are identical. Stripe has only ever taken one live charge (the maintainer's); there are no
+customers, so nothing here carries a migration burden.
 
 Phases 0–2 are shipped. Phase 3 (chokepoints) and Phase 4 (visibility) are the active work, and are
 concurrent — see Phase 4's preamble for why.
@@ -28,10 +30,9 @@ service or front is rebuilt. Local dev resolves through the workspace symlink an
 Assessed against the running system, not against this document's checkboxes.
 
 The giveaway that used to head this list (checkout handing out paid plans for free against a live
-Stripe key) is fixed, along with VAT collection, and the first chokepoint now enforces. What remains
-before charging: paid checkout is **closed** until Stripe prices exist, the legal surface is a stub,
-and one enforced limit is thin grounds for a subscription — two more chokepoints make the difference
-between plans real.
+Stripe key) is fixed, along with VAT collection, and two chokepoints now enforce. What remains before
+charging: paid checkout is **closed** until Stripe prices exist, the legal surface is a stub, and
+storage — the biggest number on the pricing page — is still unenforced.
 
 ### Tier 0 — do not charge anyone until these are done
 
@@ -80,9 +81,10 @@ between plans real.
 - [x] **Retention (chokepoint 4) is enforced** — the first gate with anything standing on it. Price
       history is clipped to the plan's window, which is what makes the portfolio planner a paid
       feature, and the planner now refuses to draw a frontier from a truncated range. See 3.2.
-- [ ] **Wire the next two:** **tracked tickers (3)** — smallest diff, and the limit maps to a real
-      external cost you can defend; then **storage (1)** — biggest number, but needs `sizeBytes` in
-      the upload schema and the delete-side decrement to land with it.
+- [x] **Tracked tickers (chokepoint 3) is enforced**, on both creation paths, with its meter on the
+      tickers tab and a 402 that names the limit rather than reading as a save failure. See 3.3.
+- [ ] **Wire storage (1)** — biggest number, but needs `sizeBytes` in the upload schema and the
+      delete-side decrement to land with it.
 
 - [ ] **Render the pricing table from the API, not `shell-front/src/config/pricing.ts`.** The landing
       page and its pricing table exist, but `LIMIT_ROWS` is a hardcoded list of seven limits,
@@ -326,16 +328,16 @@ dropped rather than mapped forward; anything unknown resolves to free.
       |---|---|---|---|---|
       | 1 | Signed upload URL | album | `controllers/photoController.ts` → `getUploadSignedUrlRequest` | `requireQuota('storageBytes', size)` |
       | 2 | AI analysis dispatch | album | **does not exist yet — see 3.1** | `consumeQuota('aiJobs', 1)` |
-      | 3 | Add tracked ticker | finance | `routes/trackedTicker.ts` → `POST /` | `requireQuota('trackedTickers', 1)` |
+      | 3 | ✅ Add tracked ticker | finance | `services/trackedTickerUsage.ts` | reserve/release — **shipped, see 3.3** |
       | 4 | ✅ Ticker price history range | finance | `controllers/tickerPriceHistory.controller.ts` | `retentionFloor()` — **shipped, see 3.2** |
       | 5 | Add group member | group | `controllers/groupController.ts` | `requireQuota('seats', 1)` vs owner's plan |
       | 6 | Statistics + journal reads | relationship | `services/statistics.service.ts` | `retentionFloor()` as `$match` |
       | 7 | Clean export | album | **does not exist yet — see 3.0** | `requireEntitlement('cleanExport')` |
 
-      **Recorded is not enforced.** `storageBytes`, `trackedTickers` and `seats` all carry accurate
-      live numbers — the nightly reconciliation keeps them true and the album dashboard renders one —
-      but nothing reads them at a write, and no service calls `consumeQuota`. Until the gates above
-      land, the free plan and Family differ in exactly one respect: how far back price history reaches.
+      **Recorded is not enforced.** `storageBytes` and `seats` still carry accurate live numbers —
+      the nightly reconciliation keeps them true and the album dashboard renders one — while nothing
+      reads them at a write. Until those gates land, the free plan and Family differ in two respects:
+      how far back price history reaches, and how many symbols may be tracked.
 
 - [ ] **Gate on the signed-URL request, not on `createPhoto`.** Chokepoint 1 is the only place the
       file size is known *before* bytes are written. `createPhoto` runs after the client has already
@@ -428,11 +430,33 @@ covariance estimate is meaningless without roughly that much daily history.
       read, and reads are never gated to the point of denial — the floor degrades to the caller's own
       plan.
 
-- [x] **The planner refuses to draw a frontier from a truncated range.** It checks the span of what
-      actually came back against `MIN_HISTORY_DAYS` (365) and renders an upgrade notice instead of a
-      chart. Deliberately a *data-sufficiency* check rather than a "was I truncated?" check: it is
-      robust without a server signal, and it also covers the honest case of an instrument nobody has
-      tracked for long. A confidently wrong efficient frontier is worse than a locked feature.
+- [x] **The planner refuses to draw a frontier from a truncated range.** Deliberately a
+      *data-sufficiency* check rather than a "was I truncated?" check: it is robust without a server
+      signal, and it also covers the honest case of an instrument nobody has tracked for long. A
+      confidently wrong efficient frontier is worse than a locked feature.
+
+      **Corrected the same day it shipped, after it blocked a `staff` account.** Three things were
+      wrong with the first version, and the third is the one worth remembering.
+
+      - **365 days was unreachable.** Alpha Vantage's free tier serves only the *compact* series
+        (~100 trading days; `outputsize=full` is premium), so a freshly tracked instrument cannot
+        reach a year of history until a year of daily updates has accrued. The gate therefore
+        blocked every account, paying or not — the flagship paywall was refusing the people who had
+        paid. The threshold is now 120 days plus a `10 × assets` observation rule, the latter being
+        the part that actually protects the estimate.
+      - **It measured the wrong series.** It took the span of the *longest* holding, while the
+        covariance is only as good as the days all holdings share. `covariance` pairs its inputs by
+        position, so a ten-year series and a six-month one were being scored index-against-index —
+        2015 returns against 2026 returns. `alignSeries` now intersects on dates, `returnIndices`
+        drops any "return" taken across a gap longer than a long weekend, and the gate measures that
+        overlap. A single recently-added holding legitimately caps the whole estimate.
+      - **The notice blamed the plan unconditionally.** "Plans with full history keep every close
+        ever fetched", shown with a *See plans* button, to an account whose retention is already
+        unlimited and whose real problem was that its instruments had been re-keyed in June. It now
+        reads the caller's own `retentionDays` and only frames it as an upgrade when retention is
+        what clipped the range; otherwise it says so plainly. **A paywall shown to someone who
+        cannot buy their way out of it is worse than no paywall** — it is a bug report at best and a
+        false claim at worst.
 
 - [x] `retentionDays` therefore gates the planner *and* the relationship history — one meter, two
       products. Simplifies the pricing story; note it in the landing copy.
@@ -440,6 +464,63 @@ covariance estimate is meaningless without roughly that much daily history.
 **Correction:** this section used to claim the endpoint did an unbounded `find().sort()`. That was
 fixed independently — the service already filters, projects the tracked-ticker scope, sorts on the
 `{ ticker, date }` index and caps rows at `DEFAULT_PRICE_HISTORY_LIMIT`.
+
+**A renamed ticker orphans its history, and nothing notices.** Price rows are keyed by ticker string
+and reads are scoped to *currently tracked* symbols, so when the tracked tickers were re-added under
+Alpha Vantage's exchange suffix in June 2026 (`VUSA.DE` → `VUSA.DEX`), 5,612 rows going back to 2015
+became unreachable while the new symbols restarted from ~100 trading days. That, not retention, is
+what left the live account with 203 days of history.
+`scripts/migration/merge-renamed-ticker-history.js` re-keys the orphans (dry-run by default,
+`--apply`), correcting the weekend-dated rows the daily job wrote between 2025-06-29 and the
+`toUtcDateOnly` fix, never overwriting a row the live series already has. Run 2026-08-09: 5,339 rows
+moved, restoring VUSA to 2015, VWCE to 2019 and XNAS to 2021.
+
+The structural lesson is worth more than the repair: **a symbol is a foreign key, and the product has
+no rename path.** Until one exists, re-adding a ticker under a new symbol silently costs the account
+its history — and with `retentionDays` gating the planner, that reads to the user as a paywall.
+
+### 3.3 Tracked tickers ✅ SHIPPED
+
+The limit with the most defensible story on the pricing page: Alpha Vantage's free tier is 25 calls
+per day *for the whole deployment*, and the daily job spends one per distinct active symbol, so this
+is the meter where subscription revenue buys the thing that makes the feature work.
+
+- [x] **It is not `requireQuota` on the route, and that is the interesting part.** The meter counts
+      *distinct active symbols*, not rows — one call per symbol per day however many rows hold it — so
+      whether a write costs a slot is a question about what the subject already tracks, which a
+      generic middleware cannot ask. `services/trackedTickerUsage.ts` owns it instead: resolve the
+      billing subject, ask the collection whether the symbol is already covered, and only then
+      `consumeQuota`. Two things fall out of that. Adding a symbol a group already follows is *free*
+      rather than refused at the ceiling, which is what the reconciliation would have said anyway. And
+      because the logic is a service call rather than route middleware, it also guards the **other**
+      creation path: `createHolding` tracks its ticker automatically, so a gate on
+      `POST /tracked-tickers` alone would have been bypassable by adding a holding instead.
+
+- [x] **Reserve before the write, release after it.** `consumeQuota` runs first — atomic, so the loser
+      of two concurrent adds at the ceiling is the one rejected — and its increment is rolled back if
+      the write then fails (a duplicate key, a `ForbiddenError`). Deletes, pauses, renames and moves
+      between groups all resync: each asks, *after* the write, whether anything still covers the old
+      symbol, so a second row in the same scope keeps the slot held and the last one hands it back.
+
+- [x] **Cross-scope dedupe, as far as the caller can see.** A symbol held both personally and in a
+      group the caller owns bills once, matching how the nightly reconciliation counts it: the scope
+      resolver walks the caller's own groups through the cached `getGroupOwner`. What it cannot see is
+      the *other* scopes of a group owner who is not the caller — a member adding a symbol the owner
+      already tracks personally spends a slot the reconciliation later gives back. That is a bounded
+      one-slot over-count on a derived meter, absorbed by the job that exists for exactly this;
+      closing it would need a "groups owned by X" internal endpoint plus an email→userId lookup.
+
+- [x] **Shipped with its meter, per 4.4.** `<UsageMeter>` sits directly above the *Track ticker*
+      button, fed by the same `GET /api/subscriptions/me/entitlements` the album dashboard uses, and
+      every ticker mutation invalidates it so the bar moves with the write. It meters `usage
+      .trackedTickers` — the account's pooled symbol count — not the rows in the visible table, which
+      show one group context.
+
+- [x] **A 402 must not read as "Failed to save ticker".** `utils/paywall.ts` renders the 402 body into
+      the snackbar both investment tabs already have ("You have reached the tracked tickers limit (3)
+      on your free plan. Upgrade to personal for more."). It is deliberately small and local: the
+      shared `<UpgradeDialog>` of 4.2 replaces it, and until that exists the alternative is a paywall
+      indistinguishable from a bug. Both tabs use it, because adding a *holding* can now 402 too.
 
 ---
 
@@ -472,8 +553,8 @@ wired without the meter beside it is a feature that silently stops working.
 
 album-front's storage meter is done. Remaining:
 
-- [ ] **finance-front** — meter on `components/investments/TickersTab.tsx`. On
-      `pages/PortfolioPlanner.tsx`, render the upgrade state when the returned price history is
+- [x] **finance-front** — meter on `components/investments/TickersTab.tsx` (see 3.3), and
+      `pages/PortfolioPlanner.tsx` renders the upgrade state when the returned price history is
       shorter than `HISTORY_YEARS` demands (per 3.2) — not a wrapper gate, since the real enforcement
       is server-side on the data.
 - [ ] **relationship-front** — when retention clips a chart, label it ("showing 90 of 540 days"). A
@@ -484,7 +565,9 @@ album-front's storage meter is done. Remaining:
       Family", not "Subscribe").
 
 Each front needs `PAYMENT_API_URL` threaded through its four config surfaces (ConfigProvider,
-`vite-env.d.ts`, `docker-entrypoint.sh`, `compose.yml`), as album-front now has.
+`vite-env.d.ts`, `docker-entrypoint.sh`, `compose.yml`) plus its `.env.example` for local dev — album
+and finance fronts now have all five. The deploy workflows already write `PAYMENT_API_URL` into
+`.env.app`, so a front that declares it in `compose.yml` picks it up with no pipeline change.
 
 ### 4.4 Rollout
 

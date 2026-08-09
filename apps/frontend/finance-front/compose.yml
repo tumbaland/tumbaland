@@ -13,6 +13,7 @@ services:
       ACCOUNT_FRONT_URL: ${ACCOUNT_FRONT_URL}
       SHELL_FRONT_URL: ${SHELL_FRONT_URL}
       PUBLIC_API_URL: ${PUBLIC_API_URL}
+      PAYMENT_API_URL: ${PAYMENT_API_URL}
     ports:
       - '3003:80'
     init: true

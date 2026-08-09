@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 
 jest.mock('../services/trackedTicker.service', () => ({
   getAllTrackedTickers: jest.fn(),
+  getTrackedTickerById: jest.fn(),
   createTrackedTicker: jest.fn(),
   updateTrackedTicker: jest.fn(),
   deleteTrackedTicker: jest.fn()
@@ -9,8 +10,19 @@ jest.mock('../services/trackedTicker.service', () => ({
 
 jest.mock('../services/alphaVantage.service', () => ({ searchTickers: jest.fn() }));
 
+// The metering itself is covered in trackedTickerUsage.test.ts; here the
+// wrappers run the write through so the controller is exercised end to end,
+// and the assertions are about what the controller *tells* them to bill.
+jest.mock('../services/trackedTickerUsage', () => ({
+  tickerActor: jest.fn(() => ({ email: 'user@example.com', userId: 'user-1', groups: [] })),
+  withTickerSlot: jest.fn((_actor, _target, write) => write()),
+  withTickerUpdate: jest.fn((_actor, _before, _changes, write) => write()),
+  releaseTickerSlot: jest.fn()
+}));
+
 import * as trackedTickerService from '../services/trackedTicker.service';
 import { searchTickers } from '../services/alphaVantage.service';
+import { releaseTickerSlot, withTickerSlot, withTickerUpdate } from '../services/trackedTickerUsage';
 import {
   searchTrackedTickers,
   getTrackedTickers,
@@ -91,10 +103,24 @@ describe('addTrackedTicker', () => {
 
     expect(res.status).toHaveBeenCalledWith(201);
   });
+
+  it('meters the symbol being added, in the group it is added to', async () => {
+    mocked.createTrackedTicker.mockResolvedValue({ _id: 't1' } as any);
+    const res = mockRes();
+
+    await addTrackedTicker(baseReq({ body: { ticker: 'AAPL', groupId: 'g1' }, userGroups: ['g1'] }), res);
+
+    expect(withTickerSlot).toHaveBeenCalledWith(
+      expect.anything(),
+      { ticker: 'AAPL', groupId: 'g1', isActive: undefined },
+      expect.any(Function)
+    );
+  });
 });
 
 describe('editTrackedTicker', () => {
   it('returns 404 when the ticker does not exist', async () => {
+    mocked.getTrackedTickerById.mockResolvedValue(null as any);
     mocked.updateTrackedTicker.mockResolvedValue(null);
     const res = mockRes();
 
@@ -104,12 +130,33 @@ describe('editTrackedTicker', () => {
   });
 
   it('updates the tracked ticker', async () => {
+    mocked.getTrackedTickerById.mockResolvedValue({ _id: 't1', ticker: 'AAPL', isActive: true } as any);
     mocked.updateTrackedTicker.mockResolvedValue({ _id: 't1' } as any);
     const res = mockRes();
 
     await editTrackedTicker(baseReq({ params: { id: 't1' } }), res);
 
     expect(mocked.updateTrackedTicker).toHaveBeenCalled();
+  });
+
+  it('hands the usage sync the row as it was before the edit', async () => {
+    mocked.getTrackedTickerById.mockResolvedValue({
+      _id: 't1',
+      ticker: 'AAPL',
+      groupId: 'g1',
+      isActive: true
+    } as any);
+    mocked.updateTrackedTicker.mockResolvedValue({ _id: 't1' } as any);
+    const res = mockRes();
+
+    await editTrackedTicker(baseReq({ params: { id: 't1' }, body: { isActive: false } }), res);
+
+    expect(withTickerUpdate).toHaveBeenCalledWith(
+      expect.anything(),
+      { id: 't1', ticker: 'AAPL', groupId: 'g1', isActive: true },
+      { isActive: false },
+      expect.any(Function)
+    );
   });
 });
 
@@ -121,5 +168,27 @@ describe('removeTrackedTicker', () => {
     await removeTrackedTicker(baseReq({ params: { id: 't1' } }), res);
 
     expect(mocked.deleteTrackedTicker).toHaveBeenCalledWith('t1', 'user-1', []);
+  });
+
+  it('offers the freed symbol back to the meter', async () => {
+    mocked.deleteTrackedTicker.mockResolvedValue({ ticker: 'AAPL', groupId: 'g1', isActive: true } as any);
+    const res = mockRes();
+
+    await removeTrackedTicker(baseReq({ params: { id: 't1' } }), res);
+
+    expect(releaseTickerSlot).toHaveBeenCalledWith(expect.anything(), {
+      ticker: 'AAPL',
+      groupId: 'g1',
+      isActive: true
+    });
+  });
+
+  it('meters nothing when there was no row to delete', async () => {
+    mocked.deleteTrackedTicker.mockResolvedValue(null as any);
+    const res = mockRes();
+
+    await removeTrackedTicker(baseReq({ params: { id: 't1' } }), res);
+
+    expect(releaseTickerSlot).not.toHaveBeenCalled();
   });
 });

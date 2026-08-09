@@ -24,6 +24,13 @@ vi.mock('../hooks/useHoldings', () => ({ useHoldings: vi.fn() }));
 vi.mock('../hooks/useTrackedTicker', () => ({ useTrackedTickers: vi.fn() }));
 vi.mock('../services/tickerPriceHistoryService', () => ({ getTickerPriceHistory: vi.fn() }));
 
+// The page reads its own retention window to decide whether a short history is
+// a paywall or just young data. Stubbed at the query, so no QueryClientProvider
+// is needed; the other two hooks on this page are mocked outright.
+vi.mock('@tanstack/react-query', () => ({ useQuery: vi.fn() }));
+vi.mock('../services/entitlementsService', () => ({ getMyEntitlements: vi.fn() }));
+
+import { useQuery } from '@tanstack/react-query';
 import { useHoldings } from '../hooks/useHoldings';
 import { useTrackedTickers } from '../hooks/useTrackedTicker';
 import { getTickerPriceHistory } from '../services/tickerPriceHistoryService';
@@ -32,6 +39,10 @@ import PortfolioPlanner from './PortfolioPlanner';
 const mockedUseHoldings = useHoldings as unknown as ReturnType<typeof vi.fn>;
 const mockedUseTrackedTickers = useTrackedTickers as unknown as ReturnType<typeof vi.fn>;
 const mockedGetHistory = getTickerPriceHistory as unknown as ReturnType<typeof vi.fn>;
+const mockedUseQuery = useQuery as unknown as ReturnType<typeof vi.fn>;
+
+/** What `GET /me/entitlements` resolves to for these tests. */
+const onPlan = (retentionDays: number) => ({ data: { limits: { retentionDays } } });
 
 const holdings = [
   { _id: 'h1', ticker: 'AAPL', quantity: 10, avgBuyPrice: 100 },
@@ -42,19 +53,28 @@ const trackedTickers = [
   { _id: 't2', ticker: 'MSFT', displayName: 'Microsoft Corp', isActive: true }
 ];
 
-// Gently trending, slightly noisy prices. Two independent gates have to clear:
-// `prices.length >= 20` (enough observations for a non-degenerate covariance
-// matrix) and a date span of at least MIN_HISTORY_DAYS — the retention gate
-// clips by *date*, so the span is what detects a plan-truncated range. Samples
-// are therefore spread across `spanDays` rather than bunched into one month.
-function series(base: number, seed: number, spanDays = 800, points = 25): { date: string; price: number }[] {
+// Gently trending, slightly noisy prices, one close per weekday — the shape the
+// daily job actually produces. Consecutive days matter to the simulation now:
+// it drops any "return" taken across a gap longer than a long weekend, so a
+// sparse fixture would be discarded rather than merely coarse.
+//
+// Two independent gates then have to clear: enough observations for a
+// non-degenerate covariance matrix, and an overlap of at least
+// MIN_ALIGNED_DAYS. Retention clips by *date*, so the span is what detects a
+// plan-truncated range.
+function series(base: number, seed: number, spanDays = 800): { date: string; price: number }[] {
   const out: { date: string; price: number }[] = [];
-  const start = new Date('2024-01-01T00:00:00.000Z').getTime();
-  const step = (spanDays / (points - 1)) * 86_400_000;
+  const day = new Date('2024-01-01T00:00:00.000Z');
+  const end = day.getTime() + spanDays * 86_400_000;
   let price = base;
-  for (let i = 0; i < points; i++) {
-    price *= 1 + (Math.sin(i + seed) * 0.01 + 0.001);
-    out.push({ date: new Date(start + i * step).toISOString().slice(0, 10), price });
+  let i = 0;
+  while (day.getTime() <= end) {
+    if (![0, 6].includes(day.getUTCDay())) {
+      price *= 1 + (Math.sin(i + seed) * 0.01 + 0.001);
+      out.push({ date: day.toISOString().slice(0, 10), price });
+      i++;
+    }
+    day.setUTCDate(day.getUTCDate() + 1);
   }
   return out;
 }
@@ -112,6 +132,9 @@ beforeEach(() => {
   mockedUseHoldings.mockReturnValue({ data: holdings, isLoading: false });
   mockedUseTrackedTickers.mockReturnValue({ data: trackedTickers });
   mockedGetHistory.mockResolvedValue(fullHistory);
+  // Unlimited retention by default: nothing these tests do is a paywall unless
+  // they say so.
+  mockedUseQuery.mockReturnValue(onPlan(-1));
 });
 
 it('shows a spinner while holdings or prices are loading', () => {
@@ -311,6 +334,7 @@ describe('retention-truncated price history', () => {
   ];
 
   it('refuses to draw a frontier from a 90-day window and says why', async () => {
+    mockedUseQuery.mockReturnValue(onPlan(90));
     mockedGetHistory.mockResolvedValue(truncated);
     render(<PortfolioPlanner />);
     // Tabs only exist once loading finishes.
@@ -319,23 +343,63 @@ describe('retention-truncated price history', () => {
 
     // A covariance estimate off ninety closes is not a rougher answer, it is a
     // confidently wrong one — so the chart is withheld rather than degraded.
-    expect(await screen.findByText(/Not enough price history to plan with/i, {}, FIND)).toBeInTheDocument();
+    expect(await screen.findByText(/Not enough overlapping price history/i, {}, FIND)).toBeInTheDocument();
     expect(screen.queryByText(/Max Sharpe/i)).not.toBeInTheDocument();
   });
 
-  it('offers the upgrade route from the notice, and survives config not being mounted', async () => {
+  it('names the plan as the cause only when retention is what clipped the range', async () => {
+    mockedUseQuery.mockReturnValue(onPlan(90));
     mockedGetHistory.mockResolvedValue(truncated);
     render(<PortfolioPlanner />);
     await screen.findByText('Apple Inc');
     await switchTab('Frontier');
-    await screen.findByText(/Not enough price history to plan with/i, {}, FIND);
+    await screen.findByText(/Not enough overlapping price history/i, {}, FIND);
+
+    expect(screen.getByText(/Your plan keeps 90 days of price history/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /see plans/i })).toBeInTheDocument();
+  });
+
+  it('does not sell an upgrade to an account whose retention is already unlimited', async () => {
+    // The state that actually shipped: a maintainer on the staff plan, whose
+    // reads were never clipped — the instruments were simply re-keyed in June
+    // and the series restarted. Offering them "more history for money" would be
+    // selling something they already have.
+    mockedUseQuery.mockReturnValue(onPlan(-1));
+    mockedGetHistory.mockResolvedValue(truncated);
+    render(<PortfolioPlanner />);
+    await screen.findByText('Apple Inc');
+    await switchTab('Frontier');
+    await screen.findByText(/Not enough overlapping price history/i, {}, FIND);
+
+    expect(screen.getByText(/Your plan is not what limits this/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /see plans/i })).not.toBeInTheDocument();
+  });
+
+  it('says nothing about plans when entitlements could not be loaded', async () => {
+    mockedUseQuery.mockReturnValue({ data: undefined });
+    mockedGetHistory.mockResolvedValue(truncated);
+    render(<PortfolioPlanner />);
+    await screen.findByText('Apple Inc');
+    await switchTab('Frontier');
+    await screen.findByText(/Not enough overlapping price history/i, {}, FIND);
+
+    expect(screen.queryByRole('button', { name: /see plans/i })).not.toBeInTheDocument();
+  });
+
+  it('offers the upgrade route from the notice, and survives config not being mounted', async () => {
+    mockedUseQuery.mockReturnValue(onPlan(90));
+    mockedGetHistory.mockResolvedValue(truncated);
+    render(<PortfolioPlanner />);
+    await screen.findByText('Apple Inc');
+    await switchTab('Frontier');
+    await screen.findByText(/Not enough overlapping price history/i, {}, FIND);
 
     // `getGlobalConfig` throws when no ConfigProvider has mounted, as here.
     // Clicking must swallow that: a paywall notice is never allowed to be the
     // reason this page falls over.
     await userEvent.click(screen.getByRole('button', { name: /see plans/i }));
 
-    expect(screen.getByText(/Not enough price history to plan with/i)).toBeInTheDocument();
+    expect(screen.getByText(/Not enough overlapping price history/i)).toBeInTheDocument();
   });
 
   it('draws the frontier normally once the range is long enough', async () => {
@@ -343,6 +407,20 @@ describe('retention-truncated price history', () => {
     render(<PortfolioPlanner />);
     await screen.findByText('Efficient Frontier');
 
-    expect(screen.queryByText(/Not enough price history to plan with/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Not enough overlapping price history/i)).not.toBeInTheDocument();
+  });
+
+  it('measures the overlap, not the longest series: one young holding gates the rest', async () => {
+    // Exactly the shipped shape — three instruments with years of history and
+    // one added last month. The frontier is only as good as the days they share.
+    mockedGetHistory.mockResolvedValue([
+      ...series(150, 1).map((d) => ({ ticker: 'AAPL', ...d })),
+      ...series(300, 2, 60).map((d) => ({ ticker: 'MSFT', ...d }))
+    ]);
+    render(<PortfolioPlanner />);
+    await screen.findByText('Apple Inc');
+    await switchTab('Frontier');
+
+    expect(await screen.findByText(/Not enough overlapping price history/i, {}, FIND)).toBeInTheDocument();
   });
 });

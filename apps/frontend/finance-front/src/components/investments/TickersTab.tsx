@@ -29,7 +29,9 @@ import {
   ShowChart as ShowChartIcon,
   CloudDownload as CloudDownloadIcon
 } from '@mui/icons-material';
+import { UsageMeter } from '@tumbaland/components';
 import { TrackedTicker } from '../../services/trackedTickerService';
+import { paywallMessage } from '../../utils/paywall';
 import {
   useCreateTrackedTicker,
   useUpdateTrackedTicker,
@@ -44,6 +46,18 @@ interface TickersTabProps {
   tickers: TrackedTicker[];
   tenantGroupId?: string;
   notify: (message: string, severity: 'success' | 'error') => void;
+  /**
+   * The plan's ceiling on tracked tickers, `-1` for unlimited, or `undefined`
+   * when entitlements could not be loaded — in which case no meter is drawn.
+   */
+  tickerLimit?: number;
+  /**
+   * Symbols billed to the account. Not `tickers.length`: the meter counts
+   * distinct active symbols across everything the account pays for, which for a
+   * group is the owner's whole pool, while the table shows one context.
+   */
+  meteredTickers?: number;
+  onUpgrade?: () => void;
 }
 
 interface TickerForm {
@@ -61,7 +75,14 @@ const emptyForm: TickerForm = { ticker: '', displayName: '', currency: '', descr
  * Tickers are added automatically when a holding is created; this tab is for
  * watching instruments you don't own yet and for pulling price history.
  */
-const TickersTab: React.FC<TickersTabProps> = ({ tickers, tenantGroupId, notify }) => {
+const TickersTab: React.FC<TickersTabProps> = ({
+  tickers,
+  tenantGroupId,
+  notify,
+  tickerLimit,
+  meteredTickers,
+  onUpgrade
+}) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const createMutation = useCreateTrackedTicker();
@@ -107,8 +128,9 @@ const TickersTab: React.FC<TickersTabProps> = ({ tickers, tenantGroupId, notify 
         notify('Ticker added', 'success');
       }
       setDialogOpen(false);
-    } catch {
-      notify('Failed to save ticker', 'error');
+    } catch (err) {
+      // A plan limit is not a failure — name it, or the paywall reads as a bug.
+      notify(paywallMessage(err, 'Failed to save ticker'), 'error');
     }
   };
 
@@ -164,6 +186,25 @@ const TickersTab: React.FC<TickersTabProps> = ({ tickers, tenantGroupId, notify 
           Track ticker
         </Button>
       </Box>
+
+      {/*
+        Beside the button it gates. Each tracked symbol spends from the
+        deployment-wide market-data budget, so this is the limit most likely to
+        stop a write — and a ceiling nobody can see turns a 402 into a bug
+        report.
+      */}
+      {tickerLimit !== undefined && (
+        <Box sx={{ mb: 2, maxWidth: 420 }}>
+          <UsageMeter
+            label="Tracked tickers"
+            used={meteredTickers ?? tickers.length}
+            limit={tickerLimit}
+            unit="count"
+            onUpgrade={onUpgrade}
+            upgradeLabel="See plans"
+          />
+        </Box>
+      )}
 
       {isMobile ? (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>

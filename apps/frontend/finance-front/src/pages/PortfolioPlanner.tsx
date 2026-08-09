@@ -4,9 +4,11 @@ import { useTenantFilter } from '@tumbaland/components';
 import { useHoldings } from '../hooks/useHoldings';
 import { useTrackedTickers } from '../hooks/useTrackedTicker';
 import { usePersistedState } from '../hooks/usePersistedState';
+import { useQuery } from '@tanstack/react-query';
 import { getTickerPriceHistory } from '../services/tickerPriceHistoryService';
+import { getMyEntitlements } from '../services/entitlementsService';
 import { getGlobalConfig } from '../config/ConfigProvider';
-import { FrontierSim, runFrontierSimulation } from '../utils/frontierSim';
+import { AlignedSeries, FrontierSim, PricePoint, alignSeries, runFrontierSimulation } from '../utils/frontierSim';
 import HoldingsTable, { HoldingStat } from '../components/planner/HoldingsTable';
 import FrontierSection from '../components/planner/FrontierSection';
 import ProjectionSection from '../components/planner/ProjectionSection';
@@ -15,16 +17,23 @@ const SIMULATIONS = 2000;
 /** How far back to pull daily closes for the covariance estimate. */
 const HISTORY_YEARS = 2;
 /**
- * Below this much actual history the frontier is not worth computing.
+ * Below this much history the frontier is not worth computing.
  *
- * The server clips price history to the plan's retention window, so a free
- * account asking for two years receives ninety days. A covariance estimate off
- * ninety daily closes is not a weaker answer, it is a misleading one — and a
- * confidently wrong efficient frontier is worse than a locked feature. So the
- * page checks what it actually got rather than what it asked for, which also
- * covers the honest case of an instrument that simply has not been tracked long.
+ * Both numbers are measured on the *aligned* series — the days on which every
+ * holding traded — because that overlap, not the longest single series, is what
+ * the covariance is estimated from. A holding added last month caps the whole
+ * estimate, however deep the others reach.
+ *
+ * The span was 365 and is 120 because 365 was unreachable: Alpha Vantage's free
+ * tier serves only the compact series (~100 trading days), so a freshly tracked
+ * instrument cannot exceed a year of history until a year of daily updates has
+ * accrued — the gate blocked every account, paying or not, rather than only
+ * clipped ones. The per-asset rule is the part that actually protects the
+ * estimate: a covariance matrix over k assets fitted on fewer than ~10k
+ * observations is noise dressed as a recommendation.
  */
-const MIN_HISTORY_DAYS = 365;
+const MIN_ALIGNED_DAYS = 120;
+const MIN_OBSERVATIONS_PER_ASSET = 10;
 
 // Merged replacement for the old Portfolio Optimizer + Stock Growth Calculator
 // pages: the frontier simulation's return/volatility estimates feed the
@@ -34,11 +43,21 @@ const PortfolioPlanner: React.FC = () => {
   const { data: holdings = [], isLoading: holdingsLoading } = useHoldings(tenantGroupId);
   const { data: trackedTickers = [] } = useTrackedTickers(tenantGroupId);
 
-  const [pricesByTicker, setPricesByTicker] = useState<Record<string, number[]>>({});
+  const [pricesByTicker, setPricesByTicker] = useState<Record<string, PricePoint[]>>({});
   const [loadingPrices, setLoadingPrices] = useState(false);
   const [priceError, setPriceError] = useState<string | null>(null);
-  /** Span of the longest series actually returned, in days. `null` until loaded. */
-  const [historySpanDays, setHistorySpanDays] = useState<number | null>(null);
+  /** False until the first load resolves, so "no data yet" cannot read as "too little". */
+  const [pricesLoaded, setPricesLoaded] = useState(false);
+
+  // The caller's own retention window, which decides whether a short history is
+  // something they can buy their way out of. `retry: false` and no error
+  // branch: an unreachable payment-service must not cost anyone the planner.
+  const { data: entitlements } = useQuery({
+    queryKey: ['myEntitlements'],
+    queryFn: () => getMyEntitlements(),
+    staleTime: 60 * 1000,
+    retry: false
+  });
   const [riskFreeRate, setRiskFreeRate] = usePersistedState('finance-planner-risk-free-rate', '3'); // % per year
   const [tab, setTab] = useState(0);
 
@@ -65,30 +84,26 @@ const PortfolioPlanner: React.FC = () => {
       portfolioTickers.map(ticker => getTickerPriceHistory({ ticker, from: fromDate }))
     )
       .then(perTicker => {
-        const all = perTicker.flat();
-        const rawMap: Record<string, { date: string; price: number }[]> = {};
-        all
+        const rawMap: Record<string, PricePoint[]> = {};
+        perTicker
+          .flat()
           .filter(d => d.price > 0)
           .forEach(d => {
             if (!rawMap[d.ticker]) rawMap[d.ticker] = [];
             rawMap[d.ticker].push({ date: d.date, price: d.price });
           });
 
-        const sorted: Record<string, number[]> = {};
-        let longestSpanDays = 0;
+        // Dates are carried through rather than discarded here: the sim aligns
+        // the series on the days they share, which a bare price array cannot
+        // express. The 20-point floor is per ticker; the real sufficiency test
+        // runs on the overlap below.
+        const sorted: Record<string, PricePoint[]> = {};
         Object.entries(rawMap).forEach(([ticker, entries]) => {
-          const chronological = entries.sort(
-            (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-          );
-          const prices = chronological.map(e => e.price);
-          if (prices.length >= 20) sorted[ticker] = prices;
-
-          const oldest = new Date(chronological[0].date).getTime();
-          const newest = new Date(chronological[chronological.length - 1].date).getTime();
-          longestSpanDays = Math.max(longestSpanDays, (newest - oldest) / 86_400_000);
+          const chronological = entries.sort((a, b) => a.date.localeCompare(b.date));
+          if (chronological.length >= 20) sorted[ticker] = chronological;
         });
         setPricesByTicker(sorted);
-        setHistorySpanDays(Math.round(longestSpanDays));
+        setPricesLoaded(true);
       })
       .catch(() => setPriceError('Failed to load price history'))
       .finally(() => setLoadingPrices(false));
@@ -111,11 +126,31 @@ const PortfolioPlanner: React.FC = () => {
     );
   };
 
+  /** The days every holding traded on — what the covariance is actually fitted to. */
+  const aligned: AlignedSeries = useMemo(() => alignSeries(pricesByTicker), [pricesByTicker]);
+
   /**
-   * Whether the returned series is long enough to estimate a covariance from.
-   * `null` means "not loaded yet", which must not read as insufficient.
+   * Whether the overlap is long enough to estimate a covariance from. Before
+   * the first load resolves this must read as "yes": an empty page is not a
+   * page with too little history.
    */
-  const hasEnoughHistory = historySpanDays === null || historySpanDays >= MIN_HISTORY_DAYS;
+  const hasEnoughHistory =
+    !pricesLoaded ||
+    (aligned.spanDays >= MIN_ALIGNED_DAYS &&
+      aligned.dates.length >= MIN_OBSERVATIONS_PER_ASSET * aligned.tickers.length);
+
+  /**
+   * Whether the plan is what is holding the history back.
+   *
+   * Retention clips reads to a window ending today, so a clipped series spans
+   * almost exactly `retentionDays`. An account with unlimited retention (or one
+   * whose data simply starts later than its window allows) is not looking at a
+   * paywall, and telling them to upgrade would be selling something they
+   * already have.
+   */
+  const retentionDays = entitlements?.limits?.retentionDays;
+  const clippedByPlan =
+    typeof retentionDays === 'number' && retentionDays > 0 && aligned.spanDays >= retentionDays - 7;
 
   // The shell owns the URL and embeds each front in an iframe, so an upgrade
   // link navigates the *top* window. Config is read inside the handler because
@@ -157,7 +192,9 @@ const PortfolioPlanner: React.FC = () => {
     return holdings
       .map(p => {
         const prices = pricesByTicker[p.ticker];
-        const latestPrice = prices ? prices[prices.length - 1] : null;
+        // Each holding's own newest close — unlike the frontier, a row's
+        // current value has no reason to wait for the other tickers.
+        const latestPrice = prices?.length ? prices[prices.length - 1].price : null;
         const returnPct = latestPrice != null
           ? ((latestPrice - p.avgBuyPrice) / p.avgBuyPrice) * 100
           : null;
@@ -227,29 +264,46 @@ const PortfolioPlanner: React.FC = () => {
           />
         ) : holdings.length > 0 && !hasEnoughHistory ? (
           /*
-            Deliberately not a frontier computed from what little came back. The
-            server clips price history to the plan's retention window, so a free
-            account asking for two years receives ninety days — and a covariance
-            estimate off ninety closes produces a confident, wrong answer. Say
-            what is missing and why instead.
+            Deliberately not a frontier computed from what little came back — a
+            covariance estimated off a few dozen overlapping closes produces a
+            confident, wrong answer.
+
+            Two different things produce that state and they must not be told
+            the same way. A free account's reads are clipped to its retention
+            window, and *that* is a paywall. An account whose instruments were
+            simply tracked recently — or re-keyed, which resets a series — is
+            waiting for data, and showing it an upgrade button would be selling
+            it something it already has. Only `clippedByPlan` gets the CTA.
           */
           <Alert
             severity="info"
             action={
-              <Button color="inherit" size="small" onClick={goToPlans}>
-                See plans
-              </Button>
+              clippedByPlan ? (
+                <Button color="inherit" size="small" onClick={goToPlans}>
+                  See plans
+                </Button>
+              ) : undefined
             }
           >
-            <AlertTitle>Not enough price history to plan with</AlertTitle>
-            The efficient frontier needs about {HISTORY_YEARS} years of daily closes to estimate how
-            your holdings move together. Your history reaches back {historySpanDays} days, so a
-            frontier computed from it would be confidently wrong rather than merely rough — which is
-            why it is not shown.
+            <AlertTitle>Not enough overlapping price history to plan with</AlertTitle>
+            The efficient frontier is estimated from the days on which <em>all</em> your holdings
+            traded. Those overlap for {aligned.spanDays} days ({aligned.dates.length} closes across{' '}
+            {aligned.tickers.length} holdings), which is too little to tell how they move together —
+            so the frontier is not shown rather than shown wrong.
             <br />
             <br />
-            Plans with full history keep every close ever fetched. If you have only tracked these
-            instruments recently, the range will also fill in on its own.
+            {clippedByPlan ? (
+              <>
+                Your plan keeps {retentionDays} days of price history, which is what the range above
+                is bounded by. Plans with full history keep every close ever fetched.
+              </>
+            ) : (
+              <>
+                Your plan is not what limits this — that much history simply has not been collected
+                yet. A newly tracked instrument starts with about 100 trading days and fills in
+                daily, and the newest holding sets the overlap for all of them.
+              </>
+            )}
           </Alert>
         ) : (
           holdings.length > 0 && Object.keys(pricesByTicker).length < 2 && (

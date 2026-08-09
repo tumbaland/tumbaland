@@ -28,6 +28,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 const LOW_DATA_THRESHOLD_DAYS = 252;
 import { FrontierSim, SimPoint } from '../../utils/frontierSim';
 import FrontierChart from './FrontierChart';
+import CalculationBreakdown from './CalculationBreakdown';
 
 interface FrontierSectionProps {
   sim: FrontierSim;
@@ -370,6 +371,13 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
             </Paper>
           ))}
       </Box>
+
+      {/*
+        Directly under the cards whose numbers it explains. The estimate carries
+        an error bar wide enough to matter on a short sample, and a percentage
+        with no working shown gives the reader no way to notice that.
+      */}
+      <CalculationBreakdown sim={sim} nameByTicker={nameByTicker} />
     </>
   );
 };

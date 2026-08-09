@@ -68,7 +68,13 @@ export function yearsToGoal(rows: YearlyProjection[], goal: number): number | un
 // blend it toward a long-run equity anchor, trusting history more as the
 // sample grows: ~3 years of data earns it equal weight with the anchor.
 export const LONG_RUN_RETURN_PCT = 8;
-const ANCHOR_DAYS = 756; // 3 years of trading days
+/**
+ * Sample size at which history and the anchor carry equal weight — three years
+ * of trading days. Exported because the planner shows the blend it produces:
+ * a projection that quietly overrides the number on the previous tab is worse
+ * than one that explains why it did.
+ */
+export const ANCHOR_DAYS = 756;
 
 export function shrinkExpectedReturn(
   histPct: number,

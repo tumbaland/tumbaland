@@ -7,7 +7,16 @@ jest.mock('../services/holding.service', () => ({
   deleteHolding: jest.fn()
 }));
 
+// createHolding tracks its ticker as a side effect, so it goes through the
+// same meter. The wrapper runs the write through; the metering itself is
+// covered in trackedTickerUsage.test.ts.
+jest.mock('../services/trackedTickerUsage', () => ({
+  tickerActor: jest.fn(() => ({ email: 'user@example.com', userId: 'user-1', groups: [] })),
+  withTickerSlot: jest.fn((_actor, _target, write) => write())
+}));
+
 import * as holdingService from '../services/holding.service';
+import { withTickerSlot } from '../services/trackedTickerUsage';
 import { getHoldings, addHolding, editHolding, removeHolding } from './holding.controller';
 
 const mocked = holdingService as jest.Mocked<typeof holdingService>;
@@ -60,6 +69,19 @@ describe('addHolding', () => {
 
     expect(mocked.createHolding).toHaveBeenCalledWith({ ticker: 'AAPL' }, 'user-1', []);
     expect(res.status).toHaveBeenCalledWith(201);
+  });
+
+  it('meters the ticker the holding starts tracking', async () => {
+    mocked.createHolding.mockResolvedValue({ _id: 'h1' } as any);
+    const res = mockRes();
+
+    await addHolding(baseReq({ body: { ticker: 'AAPL', groupId: 'g1' }, userGroups: ['g1'] }), res);
+
+    expect(withTickerSlot).toHaveBeenCalledWith(
+      expect.anything(),
+      { ticker: 'AAPL', groupId: 'g1' },
+      expect.any(Function)
+    );
   });
 });
 

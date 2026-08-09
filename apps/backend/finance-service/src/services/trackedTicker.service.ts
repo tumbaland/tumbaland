@@ -19,6 +19,15 @@ export const getAllTrackedTickers = async (userId: string, userGroups: string[] 
   }
 };
 
+/**
+ * The raw row, for the usage sync to compare a pending update against.
+ *
+ * No permission check, deliberately: nothing here reaches the caller — the
+ * update it precedes does its own authorization and refuses before anything is
+ * written.
+ */
+export const getTrackedTickerById = async (id: string) => TrackedTicker.findById(id);
+
 export const createTrackedTicker = async (
   data: {
     ticker: string;

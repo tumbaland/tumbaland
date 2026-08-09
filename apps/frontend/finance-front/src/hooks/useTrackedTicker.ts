@@ -21,6 +21,10 @@ export const useCreateTrackedTicker = () => {
     mutationFn: addTrackedTicker,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trackedTickers'] });
+      // The meter moves with the write: adding, pausing or removing a symbol
+      // changes what the account is billed for, and a usage bar that only
+      // refreshes on reload reads as broken.
+      queryClient.invalidateQueries({ queryKey: ['myEntitlements'] });
     },
   });
 };
@@ -32,6 +36,7 @@ export const useUpdateTrackedTicker = () => {
       updateTrackedTicker(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trackedTickers'] });
+      queryClient.invalidateQueries({ queryKey: ['myEntitlements'] });
     },
   });
 };
@@ -42,6 +47,7 @@ export const useDeleteTrackedTicker = () => {
     mutationFn: deleteTrackedTicker,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trackedTickers'] });
+      queryClient.invalidateQueries({ queryKey: ['myEntitlements'] });
     },
   });
 };

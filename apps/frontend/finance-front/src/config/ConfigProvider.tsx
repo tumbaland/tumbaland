@@ -8,6 +8,8 @@ export interface AppConfig {
   ACCOUNT_FRONT_URL?: string;
   SHELL_FRONT_URL?: string;
   PUBLIC_API_URL?: string;
+  /** payment-service, for plan limits and live meter readings. */
+  PAYMENT_API_URL?: string;
 }
 
 const factory = createConfigProvider<AppConfig>({
@@ -21,7 +23,8 @@ const factory = createConfigProvider<AppConfig>({
     GROUP_API_URL: import.meta.env.VITE_GROUP_API_URL,
     ACCOUNT_FRONT_URL: import.meta.env.VITE_ACCOUNT_FRONT_URL,
     SHELL_FRONT_URL: import.meta.env.VITE_SHELL_FRONT_URL,
-    PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL
+    PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL,
+    PAYMENT_API_URL: import.meta.env.VITE_PAYMENT_API_URL
   })
 });
 

@@ -131,6 +131,34 @@ it('shows an error notification when creating fails', async () => {
   expect(notify).toHaveBeenCalledWith('Failed to save ticker', 'error');
 });
 
+it('names the plan limit when the add is refused with a 402', async () => {
+  mockedCreateMutateAsync.mockRejectedValue({
+    status: 402,
+    body: { meter: 'trackedTickers', limit: 3, planCode: 'free', upgradeTo: 'personal' }
+  });
+  const notify = vi.fn();
+  render(<TickersTab tickers={[]} notify={notify} />);
+
+  await userEvent.click(screen.getByRole('button', { name: /track ticker/i }));
+  await userEvent.click(screen.getByText('pick MSFT'));
+  await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+  expect(notify).toHaveBeenCalledWith(expect.stringContaining('tracked tickers limit (3)'), 'error');
+});
+
+it('draws the usage meter against the billed count, not the visible rows', () => {
+  render(<TickersTab tickers={tickers} notify={vi.fn()} tickerLimit={3} meteredTickers={2} />);
+
+  // The group's pool, not this context's two rows.
+  expect(screen.getByText('2 of 3')).toBeInTheDocument();
+});
+
+it('draws no meter when entitlements could not be loaded', () => {
+  render(<TickersTab tickers={tickers} notify={vi.fn()} />);
+
+  expect(screen.queryByText(/Tracked tickers/)).not.toBeInTheDocument();
+});
+
 it('edits an existing ticker, pre-filling the form and toggling the active switch', async () => {
   mockedUpdateMutateAsync.mockResolvedValue({});
   const notify = vi.fn();

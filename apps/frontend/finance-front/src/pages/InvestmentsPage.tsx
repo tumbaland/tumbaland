@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { Box, Typography, Tabs, Tab, Snackbar, Alert, CircularProgress } from '@mui/material';
+import { useQuery } from '@tanstack/react-query';
 import { useTenantFilter } from '@tumbaland/components';
 import { useHoldings } from '../hooks/useHoldings';
 import { useTrackedTickers } from '../hooks/useTrackedTicker';
+import { getMyEntitlements } from '../services/entitlementsService';
+import { getGlobalConfig } from '../config/ConfigProvider';
 import HoldingsTab from '../components/investments/HoldingsTab';
 import TickersTab from '../components/investments/TickersTab';
 
@@ -17,6 +20,34 @@ const InvestmentsPage: React.FC = () => {
 
   const { data: holdings = [], isLoading: holdingsLoading } = useHoldings(tenantGroupId);
   const { data: tickers = [], isLoading: tickersLoading } = useTrackedTickers(tenantGroupId);
+
+  // Plan limits and live meter readings for the tracked-ticker bar. `retry:
+  // false` and no error branch on purpose: the meter is decoration on a page
+  // that works without it, so payment-service being down must not cost the user
+  // their portfolio.
+  const { data: entitlements } = useQuery({
+    queryKey: ['myEntitlements'],
+    queryFn: () => getMyEntitlements(),
+    staleTime: 60 * 1000,
+    retry: false
+  });
+
+  // The shell owns the URL and hosts each front in an iframe, so an upgrade
+  // link navigates the *top* window to the shell's pricing route rather than
+  // the embedded one.
+  //
+  // Config is read inside the handler, not at render: `getGlobalConfig` throws
+  // when no provider has mounted, and a usage bar must never be the reason a
+  // page fails to render.
+  const goToPlans = React.useCallback(() => {
+    let shellFrontUrl: string | undefined;
+    try {
+      shellFrontUrl = getGlobalConfig().SHELL_FRONT_URL;
+    } catch {
+      return;
+    }
+    if (shellFrontUrl && window.top?.location) window.top.location.href = `${shellFrontUrl}/payments`;
+  }, []);
 
   const notify = (message: string, severity: 'success' | 'error') => setSnackbar({ message, severity });
 
@@ -43,7 +74,14 @@ const InvestmentsPage: React.FC = () => {
       ) : tab === 0 ? (
         <HoldingsTab holdings={holdings} tenantGroupId={tenantGroupId} notify={notify} />
       ) : (
-        <TickersTab tickers={tickers} tenantGroupId={tenantGroupId} notify={notify} />
+        <TickersTab
+          tickers={tickers}
+          tenantGroupId={tenantGroupId}
+          notify={notify}
+          tickerLimit={entitlements?.limits?.meters?.trackedTickers}
+          meteredTickers={entitlements?.usage?.trackedTickers}
+          onUpgrade={goToPlans}
+        />
       )}
 
       <Snackbar

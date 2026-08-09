@@ -2,11 +2,18 @@ import { Request, Response } from 'express';
 import { BadRequestError, ForbiddenError, sendSuccess, sendError } from '@tumbaland/backend-core';
 import {
   getAllTrackedTickers,
+  getTrackedTickerById,
   createTrackedTicker,
   updateTrackedTicker,
   deleteTrackedTicker
 } from '../services/trackedTicker.service';
 import { searchTickers } from '../services/alphaVantage.service';
+import {
+  releaseTickerSlot,
+  tickerActor,
+  withTickerSlot,
+  withTickerUpdate
+} from '../services/trackedTickerUsage';
 
 /**
  * Search ticker symbols via Alpha Vantage SYMBOL_SEARCH (costs 1 API call)
@@ -47,25 +54,50 @@ export const getTrackedTickers = async (req: Request, res: Response): Promise<vo
 
 /**
  * Create tracked ticker
+ *
+ * Metered: a symbol the account does not already follow costs a slot from the
+ * plan's `trackedTickers` allowance, and the write is refused with a 402 when
+ * that would overrun. See `trackedTickerUsage`.
  */
 export const addTrackedTicker = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
   const userGroups = req.userGroups || [];
 
-  const created = await createTrackedTicker(req.body, user.id, userGroups);
+  const created = await withTickerSlot(
+    tickerActor(req),
+    { ticker: req.body.ticker, groupId: req.body.groupId, isActive: req.body.isActive },
+    () => createTrackedTicker(req.body, user.id, userGroups)
+  );
 
   sendSuccess(res, created, 'Ticker added successfully', 201);
 };
 
 /**
  * Update tracked ticker
+ *
+ * Renaming the symbol, moving it between groups and pausing it all change what
+ * the account is billed for, so the meter is resynced around the write.
  */
 export const editTrackedTicker = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
   const userGroups = req.userGroups || [];
   const { id } = req.params;
 
-  const updated = await updateTrackedTicker(id as string, req.body, user.id, userGroups);
+  const before = await getTrackedTickerById(id as string);
+
+  const updated = await withTickerUpdate(
+    tickerActor(req),
+    before
+      ? {
+          id: String(before._id),
+          ticker: before.ticker,
+          groupId: before.groupId,
+          isActive: before.isActive
+        }
+      : null,
+    req.body,
+    () => updateTrackedTicker(id as string, req.body, user.id, userGroups)
+  );
 
   if (!updated) {
     sendError(res, 'Tracked ticker not found', 404);
@@ -77,13 +109,25 @@ export const editTrackedTicker = async (req: Request, res: Response): Promise<vo
 
 /**
  * Delete tracked ticker
+ *
+ * Hands the slot back, unless another row still tracks the same symbol for the
+ * same account — a meter that only counts up surfaces months later as a user
+ * who cannot add a ticker despite tracking none.
  */
 export const removeTrackedTicker = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
   const userGroups = req.userGroups || [];
   const { id } = req.params;
 
-  await deleteTrackedTicker(id as string, user.id, userGroups);
+  const deleted = await deleteTrackedTicker(id as string, user.id, userGroups);
+
+  if (deleted) {
+    await releaseTickerSlot(tickerActor(req), {
+      ticker: deleted.ticker,
+      groupId: deleted.groupId,
+      isActive: deleted.isActive
+    });
+  }
 
   sendSuccess(res, undefined, 'Ticker deleted successfully');
 };

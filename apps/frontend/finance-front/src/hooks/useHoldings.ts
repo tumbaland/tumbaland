@@ -14,8 +14,10 @@ export const useCreateHolding = () => {
     mutationFn: addHolding,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['holdings'] });
-      // Creating a holding auto-tracks its ticker on the backend
+      // Creating a holding auto-tracks its ticker on the backend, which also
+      // spends from the plan's tracked-ticker allowance.
       queryClient.invalidateQueries({ queryKey: ['trackedTickers'] });
+      queryClient.invalidateQueries({ queryKey: ['myEntitlements'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
