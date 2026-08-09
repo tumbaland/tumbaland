@@ -18,8 +18,8 @@
     "@mui/material": "^9.2.0",
     "@mui/x-charts": "^9.7.0",
     "@tanstack/react-query": "^5.101.2",
-    "@tumbaland/components": "1.19.0",
-    "@tumbaland/frontend-core": "1.8.0",
+    "@tumbaland/components": "1.20.0",
+    "@tumbaland/frontend-core": "1.9.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router": "^8.3.0"
