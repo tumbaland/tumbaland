@@ -223,4 +223,28 @@ it('states the weekly basis and annualizes by 52 rather than 252', async () => {
   // Scoped to the formula block: "sample" also appears in the section heading.
   expect(screen.getByText(/history weight/)).toHaveTextContent('615 trading days');
   expect(screen.getByText(/history weight/)).toHaveTextContent('0.45');
+
+  // The conversion is printed as the exact ratio, because 127 × 5 is 635 and
+  // the panel would be showing a sum that does not come out.
+  expect(screen.getByText(/history weight/)).toHaveTextContent('127 weekly × 252/52');
+
+  // Every basis-dependent noun follows the basis. A weekly fit describing its
+  // own inputs as "daily" is the one error this panel cannot afford, since its
+  // entire purpose is to let the reader audit the annualization.
+  expect(screen.getByText(/covariance matrix of weekly returns/i)).toBeInTheDocument();
+  expect(screen.getByText(/portfolio's weekly variance/i)).toBeInTheDocument();
+  expect(screen.getByText(/Correlations of weekly returns/i)).toBeInTheDocument();
+});
+
+it('describes a daily fit in daily terms throughout', async () => {
+  render(<CalculationBreakdown sim={sim()} nameByTicker={names} />);
+  await open();
+
+  expect(screen.getByText(/covariance matrix of daily returns/i)).toBeInTheDocument();
+  expect(screen.getByText(/portfolio's daily variance/i)).toBeInTheDocument();
+  expect(screen.getByText(/Correlations of daily returns/i)).toBeInTheDocument();
+
+  // A daily sample is already in trading days, so no conversion is shown.
+  expect(screen.getByText(/history weight/)).toHaveTextContent('105 daily');
+  expect(screen.getByText(/history weight/)).not.toHaveTextContent('× 252/252');
 });

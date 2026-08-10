@@ -197,7 +197,7 @@ export interface SimBreakdown {
    */
   equivalentTradingDays: number;
   assets: AssetBreakdown[];
-  /** Correlations between daily returns — what a frontier is actually made of. */
+  /** Correlations between returns on `basis` — what a frontier is actually made of. */
   correlations: number[][];
   /** For the portfolio the user actually holds; `null` without quantities. */
   current: PortfolioBreakdown | null;

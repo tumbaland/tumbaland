@@ -55,17 +55,55 @@ export function daysSince(iso: string | null | undefined, now: Date = new Date()
   return Math.max(0, Math.floor((now.getTime() - then) / DAY_MS));
 }
 
+/** UTC day index for a timestamp. Day 0 is 1970-01-01, a Thursday. */
+const utcDay = (ms: number) => Math.floor(ms / DAY_MS);
+
+/** Weekdays (Mon–Fri) in the half-open range of UTC day indices [from, to). */
+function weekdaysBetween(from: number, to: number): number {
+  if (to <= from) return 0;
+  const fullWeeks = Math.floor((to - from) / 7);
+  let count = fullWeeks * 5;
+  // At most six days remain after the whole weeks, so this stays cheap even for
+  // a series that stopped updating years ago.
+  for (let d = from + fullWeeks * 7; d < to; d++) {
+    const weekday = (d + 4) % 7; // 0 = Sunday
+    if (weekday >= 1 && weekday <= 5) count++;
+  }
+  return count;
+}
+
+/**
+ * Trading sessions that have closed and been missed since a bar — today's is
+ * excluded, because until the evening job runs there is no bar for it to be
+ * behind on.
+ */
+export function sessionsSince(iso: string | null | undefined, now: Date = new Date()): number | null {
+  if (!iso) return null;
+  const then = Date.parse(iso);
+  if (Number.isNaN(then)) return null;
+  return weekdaysBetween(utcDay(then) + 1, utcDay(now.getTime()));
+}
+
 /**
  * Freshness in the terms a market actually has them: a close from Friday read
  * on Sunday is current, not two days stale, so the wording stays vague enough
  * to be true over a weekend.
+ *
+ * Counting calendar days is what made every Monday report "3 days ago" for a
+ * Friday close that was the newest bar in existence — an outage the data never
+ * had. A weekend is not missing data, so it cannot count as age; only sessions
+ * that closed without producing a bar can. Past a couple of weeks the exact
+ * session count stops being what anyone wants to read, and calendar wording
+ * takes over.
  */
 export function freshnessLabel(iso: string | null | undefined, now: Date = new Date()): string {
   const days = daysSince(iso, now);
   if (days === null) return 'never';
   if (days === 0) return 'today';
-  if (days === 1) return 'yesterday';
-  if (days <= 6) return `${days} days ago`;
+
+  const sessions = sessionsSince(iso, now) ?? 0;
+  if (sessions === 0) return 'up to date';
+  if (sessions <= 4) return `${sessions} session${sessions === 1 ? '' : 's'} behind`;
   if (days <= 13) return 'last week';
   if (days < 60) return `${Math.round(days / 7)} weeks ago`;
   return `${Math.round(days / 30)} months ago`;
@@ -73,13 +111,15 @@ export function freshnessLabel(iso: string | null | undefined, now: Date = new D
 
 /**
  * Daily closes stop on weekends and holidays, so "stale" has to allow for a
- * long weekend before it means anything. Weekly closes arrive once a week, and
- * are given a fortnight before they count as stale.
+ * long weekend before it means anything — counting sessions rather than days
+ * gets that for free, and gets exchange holidays right too, which a fixed
+ * calendar tolerance never could. Weekly closes arrive once a week, and are
+ * given a fortnight before they count as stale.
  */
 export function isStale(last: string | null | undefined, interval: 'daily' | 'weekly', now = new Date()): boolean {
   const days = daysSince(last, now);
   if (days === null) return false; // "never" is a separate state, not staleness
-  return interval === 'daily' ? days > 4 : days > 14;
+  return interval === 'daily' ? (sessionsSince(last, now) ?? 0) > 1 : days > 14;
 }
 
 const shortDate = (iso: string | null) => (iso ? iso.slice(0, 10) : '—');

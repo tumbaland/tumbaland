@@ -85,6 +85,11 @@ const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({ sim, nameBy
   const shrunk = current ? shrinkExpectedReturn(current.arithmeticPct, sampleDays) : null;
   const historyWeight = sampleDays / (sampleDays + ANCHOR_DAYS);
 
+  // Shown as the exact ratio rather than a rounded multiplier: 252/52 is 4.85,
+  // and a panel whose whole claim is "check the arithmetic yourself" cannot
+  // print "127 × 5 = 615". Daily needs no factor at all, so it gets none.
+  const periodFactor = periodsPerYear === TRADING_DAYS ? '' : ` × ${TRADING_DAYS}/${periodsPerYear}`;
+
   return (
     <Accordion disableGutters sx={{ mt: 3, borderRadius: 2, '&:before': { display: 'none' } }} elevation={0} variant="outlined">
       <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -182,7 +187,7 @@ const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({ sim, nameBy
               </Formula>
               <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1.5 }}>
                 Σ is the covariance matrix of {period} returns: <code>w′Σw</code> is the
-                portfolio&apos;s {perPeriod}ly variance, which is smaller than the weighted average of the individual
+                portfolio&apos;s {period} variance, which is smaller than the weighted average of the individual
                 variances whenever the holdings do not move together. That reduction is the only
                 thing diversification buys, and it is what the frontier is a picture of.
               </Typography>
@@ -232,7 +237,7 @@ const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({ sim, nameBy
             <Section title="6. What the projection actually uses">
               <Formula>
                 {[
-                  `sample           = ${window.observations} ${period} × ${(TRADING_DAYS / periodsPerYear).toFixed(0)}`.padEnd(42) +
+                  `sample           = ${window.observations} ${period}${periodFactor}`.padEnd(42) +
                     `= ${sampleDays} trading days`,
                   `history weight   = n ÷ (n + ${ANCHOR_DAYS})`.padEnd(42) + `= ${historyWeight.toFixed(2)}`,
                   `projection input = ${historyWeight.toFixed(2)} × ${current.arithmeticPct.toFixed(1)}% + ${(1 - historyWeight).toFixed(2)} × ${LONG_RUN_RETURN_PCT}%`,
@@ -252,7 +257,7 @@ const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({ sim, nameBy
 
         <Section title={`${current ? '7' : '3'}. How the holdings move together`}>
           <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.5 }}>
-            Correlations of daily returns over the same window. Values near 1 mean the pair adds risk
+            Correlations of {period} returns over the same window. Values near 1 mean the pair adds risk
             without adding diversification — the frontier can only improve on a portfolio to the
             extent these are below 1.
           </Typography>

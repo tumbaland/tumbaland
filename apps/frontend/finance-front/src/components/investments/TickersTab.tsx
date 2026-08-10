@@ -227,7 +227,7 @@ const TickersTab: React.FC<TickersTabProps> = ({
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 2, flexWrap: 'wrap' }}>
         <Box>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Active tickers get a daily price update at 19:00. Holdings track their ticker automatically.
+            Active tickers get a daily price update at 22:00. Holdings track their ticker automatically.
           </Typography>
           {quota && (
             <Typography
