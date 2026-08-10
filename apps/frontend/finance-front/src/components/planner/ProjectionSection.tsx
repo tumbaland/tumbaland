@@ -111,7 +111,10 @@ const ProjectionSection: React.FC<ProjectionSectionProps> = ({ sim, targetPortfo
   // A history-derived expected return gets shrunk toward the long-run anchor
   // before driving a multi-decade projection — see shrinkExpectedReturn.
   const growthPct = basisPoint && sim
-    ? shrinkExpectedReturn(basisPoint.ret, sim.dataPoints)
+    // Trading-day equivalents, not raw observations: a weekly fit has five
+    // times fewer data points for the same stretch of market, and counting
+    // points would shrink a decade of weekly history as if it were a fortnight.
+    ? shrinkExpectedReturn(basisPoint.ret, sim.breakdown.equivalentTradingDays)
     : parseFloat(growth);
   const volatilityPct = basisPoint ? basisPoint.vol : parseFloat(volatility);
 

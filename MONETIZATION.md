@@ -438,12 +438,20 @@ covariance estimate is meaningless without roughly that much daily history.
       **Corrected the same day it shipped, after it blocked a `staff` account.** Three things were
       wrong with the first version, and the third is the one worth remembering.
 
-      - **365 days was unreachable.** Alpha Vantage's free tier serves only the *compact* series
-        (~100 trading days; `outputsize=full` is premium), so a freshly tracked instrument cannot
-        reach a year of history until a year of daily updates has accrued. The gate therefore
-        blocked every account, paying or not — the flagship paywall was refusing the people who had
-        paid. The threshold is now 120 days plus a `10 × assets` observation rule, the latter being
-        the part that actually protects the estimate.
+      - **365 days of *daily* history was unreachable.** `TIME_SERIES_DAILY` serves only the
+        compact ~100 trading days on the free tier, and `outputsize=full` is refused outright:
+        *"The outputsize=full parameter value is a premium feature for the TIME_SERIES_DAILY
+        endpoint."* So a freshly tracked instrument could not reach a year of daily history until a
+        year of daily updates had accrued, and the gate blocked every account, paying or not — the
+        flagship paywall refusing the people who had paid. The threshold is now 120 days plus a
+        `10 × assets` observation rule, the latter being the part that actually protects the
+        estimate.
+
+        **The depth was reachable all along, on a different endpoint.** `TIME_SERIES_WEEKLY` takes
+        no `outputsize` and returns the entire series free — verified against the live key: 622
+        weekly closes for VUSA.DEX back to 2015, one call. Weekly closes are now a first-class
+        interval (see below), which is what makes the planner's covariance estimate defensible
+        rather than merely permitted.
       - **It measured the wrong series.** It took the span of the *longest* holding, while the
         covariance is only as good as the days all holdings share. `covariance` pairs its inputs by
         position, so a ten-year series and a six-month one were being scored index-against-index —
@@ -478,6 +486,28 @@ moved, restoring VUSA to 2015, VWCE to 2019 and XNAS to 2021.
 The structural lesson is worth more than the repair: **a symbol is a foreign key, and the product has
 no rename path.** Until one exists, re-adding a ticker under a new symbol silently costs the account
 its history — and with `retentionDays` gating the planner, that reads to the user as a paywall.
+
+### 3.2.1 Weekly history, and the sync surface
+
+`TickerPriceHistory.interval` (`daily` | `weekly`) splits the two series that must never be read
+together — a weekly return annualized as a daily one overstates the figure about fivefold. Uniqueness
+moved to `{ ticker, interval, date }`; `scripts/migration/set-price-interval.js` stamps legacy rows
+and creates that index, and `drop-stale-indexes.js` retires the old one. Both ran 2026-08-09: 6,433
+rows stamped, index swapped.
+
+`POST /ticker-price-history/fetch-weekly` and `npm run backfill:weekly --workspace=finance-service`
+share one implementation. First backfill: 2,632 weekly closes across six symbols — H410 12.8 years,
+VUSA 11.5, VGEU 11.4, VWCE 7.0, XNAS 5.5, EXUS 2.4 (genuinely young). The planner's shared window on
+a weekly basis is **2.4 years / 128 observations**, against 150 days / 106 on the daily one.
+
+`GET /ticker-price-history/coverage` reports rows, range and last update per interval per ticker, and
+`<DataSyncDialog>` renders it. That endpoint exists because three states look identical on a short
+chart and want different actions: *listed recently*, *the daily job stopped*, and *nobody ever
+fetched history*. The last of those is the common one and is one click from fixed.
+
+- [ ] **The planner still reads the daily series.** Choosing the basis with more observations, and
+      annualizing weekly returns by 52 rather than 252, is the remaining step — the data is now
+      there, the estimate does not yet use it.
 
 ### 3.3 Tracked tickers ✅ SHIPPED
 

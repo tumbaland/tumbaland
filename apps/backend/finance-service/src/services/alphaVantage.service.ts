@@ -1,5 +1,5 @@
 import { logger, TooManyRequestsError } from '@tumbaland/backend-core';
-import TickerPriceHistory from '../models/TickerPriceHistory';
+import TickerPriceHistory, { PriceInterval } from '../models/TickerPriceHistory';
 import { consumeQuota, releaseQuota } from './apiQuota.service';
 
 const BASE_URL = 'https://www.alphavantage.co/query';
@@ -84,24 +84,26 @@ export async function fetchStockPrice(symbol: string): Promise<StockPriceData | 
   };
 }
 
-// Fetch historic OHLCV prices for a symbol and save to DB.
-// Returns last ~100 trading days (compact). outputsize=full requires a premium plan.
-export async function fetchAndSaveAllStockHistory(symbol: string): Promise<number> {
-  const data = await request(`${BASE_URL}?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${getApiKey()}`);
-
-  if (isThrottled(data)) {
-    throw new TooManyRequestsError(`Alpha Vantage rate limit: ${getThrottleMessage(data)}`);
-  }
-
-  const timeSeries = data['Time Series (Daily)'] as Record<string, Record<string, string>> | undefined;
-  if (!timeSeries) return 0;
-
+/**
+ * Writes one provider time series into the price history.
+ *
+ * Shared by the daily and weekly fetches because the two responses differ only
+ * in which key holds the series and which interval the rows belong to — and a
+ * second copy of this loop is how the two series start disagreeing about date
+ * normalization.
+ */
+async function saveTimeSeries(
+  symbol: string,
+  timeSeries: Record<string, Record<string, string>>,
+  interval: PriceInterval
+): Promise<number> {
   let saved = 0;
   for (const [date, entry] of Object.entries(timeSeries)) {
     await TickerPriceHistory.findOneAndUpdate(
-      { ticker: symbol, date: new Date(date) },
+      { ticker: symbol, interval, date: new Date(date) },
       {
         ticker: symbol,
+        interval,
         date: new Date(date),
         price: parseFloat(entry['4. close']),
         open: parseFloat(entry['1. open']),
@@ -114,6 +116,47 @@ export async function fetchAndSaveAllStockHistory(symbol: string): Promise<numbe
     saved++;
   }
   return saved;
+}
+
+// Fetch historic OHLCV prices for a symbol and save to DB.
+// Returns last ~100 trading days (compact). outputsize=full requires a premium plan.
+export async function fetchAndSaveAllStockHistory(symbol: string): Promise<number> {
+  const data = await request(`${BASE_URL}?function=TIME_SERIES_DAILY&symbol=${symbol}&apikey=${getApiKey()}`);
+
+  if (isThrottled(data)) {
+    throw new TooManyRequestsError(`Alpha Vantage rate limit: ${getThrottleMessage(data)}`);
+  }
+
+  const timeSeries = data['Time Series (Daily)'] as Record<string, Record<string, string>> | undefined;
+  if (!timeSeries) return 0;
+
+  return saveTimeSeries(symbol, timeSeries, 'daily');
+}
+
+/**
+ * Fetch the *entire* weekly series for a symbol — typically 10–20 years — and
+ * save it as the weekly interval.
+ *
+ * This is the only way to get real depth out of the free tier. `TIME_SERIES_DAILY`
+ * is capped at the compact ~100 trading days, and asking it for `outputsize=full`
+ * returns no data at all, only: "The outputsize=full parameter value is a premium
+ * feature for the TIME_SERIES_DAILY endpoint." `TIME_SERIES_WEEKLY` takes no
+ * `outputsize` parameter and returns everything by default, on the same free key.
+ *
+ * Costs one call, exactly like the daily fetch, so a symbol tracked today can
+ * have a decade of covariance history for the same price as a hundred days.
+ */
+export async function fetchAndSaveWeeklyHistory(symbol: string): Promise<number> {
+  const data = await request(`${BASE_URL}?function=TIME_SERIES_WEEKLY&symbol=${symbol}&apikey=${getApiKey()}`);
+
+  if (isThrottled(data)) {
+    throw new TooManyRequestsError(`Alpha Vantage rate limit: ${getThrottleMessage(data)}`);
+  }
+
+  const timeSeries = data['Weekly Time Series'] as Record<string, Record<string, string>> | undefined;
+  if (!timeSeries) return 0;
+
+  return saveTimeSeries(symbol, timeSeries, 'weekly');
 }
 
 // Search for ticker symbols by keyword using Alpha Vantage SYMBOL_SEARCH.

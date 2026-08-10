@@ -15,6 +15,7 @@ import TickerPriceHistory from '../models/TickerPriceHistory';
 import {
   fetchStockPrice,
   fetchAndSaveAllStockHistory,
+  fetchAndSaveWeeklyHistory,
   searchTickers,
   fetchExchangeRate
 } from './alphaVantage.service';
@@ -120,11 +121,60 @@ describe('fetchAndSaveAllStockHistory', () => {
 
     expect(saved).toBe(2);
     expect(mockedUpsert).toHaveBeenCalledTimes(2);
+    // The upsert key carries the interval: without it a daily re-fetch would no
+    // longer match rows written before weekly closes existed, and would insert
+    // duplicates of every date it already held.
     expect(mockedUpsert).toHaveBeenCalledWith(
-      { ticker: 'AAPL', date: new Date('2024-05-01') },
-      expect.objectContaining({ ticker: 'AAPL', price: 10.5, open: 10, high: 11, low: 9, volume: 100 }),
+      { ticker: 'AAPL', interval: 'daily', date: new Date('2024-05-01') },
+      expect.objectContaining({ ticker: 'AAPL', interval: 'daily', price: 10.5, open: 10, high: 11, low: 9, volume: 100 }),
       { upsert: true, new: true }
     );
+  });
+
+  it('stores the whole weekly series under its own interval', async () => {
+    mockFetchJson({
+      'Weekly Time Series': {
+        '2015-01-20': { '1. open': '10', '2. high': '11', '3. low': '9', '4. close': '10.5', '5. volume': '100' },
+        '2026-08-07': { '1. open': '90', '2. high': '95', '3. low': '89', '4. close': '94', '5. volume': '900' }
+      }
+    });
+    mockedUpsert.mockResolvedValue({});
+
+    const saved = await fetchAndSaveWeeklyHistory('AAPL');
+
+    expect(saved).toBe(2);
+    expect(mockedUpsert).toHaveBeenCalledWith(
+      { ticker: 'AAPL', interval: 'weekly', date: new Date('2015-01-20') },
+      expect.objectContaining({ ticker: 'AAPL', interval: 'weekly', price: 10.5 }),
+      { upsert: true, new: true }
+    );
+  });
+
+  it('asks the weekly endpoint, which needs no outputsize to return everything', async () => {
+    mockFetchJson({ 'Weekly Time Series': {} });
+
+    await fetchAndSaveWeeklyHistory('AAPL');
+
+    const url = (global.fetch as jest.Mock).mock.calls[0][0] as string;
+    expect(url).toContain('function=TIME_SERIES_WEEKLY');
+    // `outputsize=full` is refused as a premium feature on the daily endpoint;
+    // the weekly one returns the full series by default, so asking would be
+    // both pointless and a way to reintroduce the refusal.
+    expect(url).not.toContain('outputsize');
+  });
+
+  it('returns 0 when the weekly response carries no series', async () => {
+    mockFetchJson({ Note: undefined });
+
+    await expect(fetchAndSaveWeeklyHistory('AAPL')).resolves.toBe(0);
+  });
+
+  it('surfaces a throttle notice on the weekly endpoint as a rate-limit error', async () => {
+    mockFetchJson({ Information: 'rate limited' });
+
+    await expect(fetchAndSaveWeeklyHistory('AAPL')).rejects.toMatchObject({
+      name: 'TooManyRequestsError'
+    });
   });
 
   it('returns 0 when there is no time series', async () => {

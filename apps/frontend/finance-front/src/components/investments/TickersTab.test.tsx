@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 
@@ -14,9 +14,12 @@ vi.mock('../../hooks/useTrackedTicker', () => ({
 
 vi.mock('../../services/tickerPriceHistoryService', () => ({
   fetchAllTickerPriceHistory: vi.fn(),
+  fetchTickerPriceHistory: vi.fn(),
+  fetchWeeklyTickerPriceHistory: vi.fn(),
   // The tab shows how much provider quota is left; nothing here asserts on it,
   // so it resolves to a full day.
-  getQuota: vi.fn().mockResolvedValue({ limit: 25, used: 0, remaining: 25, date: '2026-08-06' })
+  getQuota: vi.fn().mockResolvedValue({ limit: 25, used: 0, remaining: 25, date: '2026-08-06' }),
+  getTickerCoverage: vi.fn()
 }));
 
 vi.mock('./TickerSearch', () => ({
@@ -34,11 +37,37 @@ vi.mock('../TickerHistoryModal', () => ({
   )
 }));
 
-import { fetchAllTickerPriceHistory } from '../../services/tickerPriceHistoryService';
+import {
+  fetchAllTickerPriceHistory,
+  fetchTickerPriceHistory,
+  fetchWeeklyTickerPriceHistory,
+  getTickerCoverage
+} from '../../services/tickerPriceHistoryService';
 import TickersTab from './TickersTab';
 import { TrackedTicker } from '../../services/trackedTickerService';
 
 const mockedFetchAll = fetchAllTickerPriceHistory as unknown as ReturnType<typeof vi.fn>;
+const mockedFetchLatest = fetchTickerPriceHistory as unknown as ReturnType<typeof vi.fn>;
+const mockedFetchWeekly = fetchWeeklyTickerPriceHistory as unknown as ReturnType<typeof vi.fn>;
+const mockedCoverage = getTickerCoverage as unknown as ReturnType<typeof vi.fn>;
+
+/** Coverage as the API reports it: a deep weekly series and a fresh daily one. */
+const coverageFor = (overrides: Record<string, unknown> = {}) => [
+  {
+    ticker: 'AAPL',
+    daily: { count: 143, first: '2026-01-16T00:00:00.000Z', last: new Date().toISOString() },
+    weekly: { count: 622, first: '2015-01-20T00:00:00.000Z', last: new Date().toISOString() },
+    ...overrides
+  },
+  { ticker: 'BND', daily: { count: 0, first: null, last: null }, weekly: { count: 0, first: null, last: null } }
+];
+
+/** Opens the sync dialog for the first ticker in the list. */
+async function openSync() {
+  const syncButtons = screen.getAllByRole('button').filter((b) => b.querySelector('[data-testid="SyncIcon"]'));
+  await userEvent.click(syncButtons[0]);
+  return screen.findByRole('dialog');
+}
 
 function setMobile(isMobile: boolean) {
   window.matchMedia = ((query: string) => ({
@@ -68,23 +97,38 @@ const tickers: TrackedTicker[] = [
   { _id: 't2', ticker: 'BND', displayName: 'Vanguard Bond', isActive: false }
 ];
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockedCoverage.mockResolvedValue(coverageFor());
+});
 
 it('shows an empty state when there are no tracked tickers', () => {
   render(<TickersTab tickers={[]} notify={vi.fn()} />);
   expect(screen.getByText(/no tracked tickers/i)).toBeInTheDocument();
 });
 
-it('renders ticker rows with active/paused status and a formatted or dashed date', () => {
+it('renders ticker rows with active/paused status and a currency or a dash', () => {
   render(<TickersTab tickers={tickers} notify={vi.fn()} />);
 
   expect(screen.getByText('Apple')).toBeInTheDocument();
   expect(screen.getByText('Active')).toBeInTheDocument();
   expect(screen.getByText('Paused')).toBeInTheDocument();
-  expect(screen.getByText('2024-01-01')).toBeInTheDocument();
   expect(screen.getByText('USD')).toBeInTheDocument();
-  // BND has neither a currency nor an added date
-  expect(screen.getAllByText('—')).toHaveLength(2);
+  // BND has no currency, so its cell dashes. Scoped to the row rather than
+  // counted across the table: the freshness column also dashes until coverage
+  // loads, and a bare count would pin that timing rather than this behaviour.
+  // (The date a ticker was added moved into the sync dialog, where it explains
+  // a short series instead of competing for width here.)
+  const bnd = screen.getByText('BND').closest('tr')!;
+  expect(within(bnd).getAllByText('—').length).toBeGreaterThan(0);
+});
+
+it('shows when the instrument started being tracked, in the sync dialog', async () => {
+  render(<TickersTab tickers={tickers} notify={vi.fn()} />);
+
+  await openSync();
+
+  expect(screen.getByText(/tracked since 2024-01-01/)).toBeInTheDocument();
 });
 
 it('validates required fields before submitting', async () => {
@@ -196,30 +240,106 @@ it('deletes a ticker after confirming, and shows an error notification on failur
   expect(notify).toHaveBeenCalledWith('Failed to delete ticker', 'error');
 });
 
-it('fetches price history for a ticker and notifies on success', async () => {
+it('fetches daily price history from the sync dialog and notifies on success', async () => {
   mockedFetchAll.mockResolvedValue(undefined);
   const notify = vi.fn();
   render(<TickersTab tickers={tickers} notify={notify} />);
 
-  const fetchButtons = screen.getAllByRole('button').filter((b) => b.querySelector('[data-testid="CloudDownloadIcon"]'));
-  await userEvent.click(fetchButtons[0]);
+  await openSync();
+  await userEvent.click(screen.getByRole('button', { name: /last ~100 days/i }));
 
   expect(mockedFetchAll).toHaveBeenCalledWith('AAPL');
-  expect(notify).toHaveBeenCalledWith('Price history fetched for AAPL', 'success');
+  expect(notify).toHaveBeenCalledWith('Daily price history fetched for AAPL', 'success');
 });
 
-it('notifies with a rate-limit hint when fetching price history fails', async () => {
+it('fetches the full weekly series, reporting how many closes arrived', async () => {
+  mockedFetchWeekly.mockResolvedValue({ ticker: 'AAPL', recordsCount: 622 });
+  const notify = vi.fn();
+  render(<TickersTab tickers={tickers} notify={notify} />);
+
+  await openSync();
+  await userEvent.click(screen.getByRole('button', { name: /full weekly history/i }));
+
+  expect(mockedFetchWeekly).toHaveBeenCalledWith('AAPL');
+  expect(notify).toHaveBeenCalledWith('Fetched 622 weekly closes for AAPL', 'success');
+});
+
+it('fetches just the latest close', async () => {
+  mockedFetchLatest.mockResolvedValue(undefined);
+  const notify = vi.fn();
+  render(<TickersTab tickers={tickers} notify={notify} />);
+
+  await openSync();
+  await userEvent.click(screen.getByRole('button', { name: /latest price/i }));
+
+  expect(mockedFetchLatest).toHaveBeenCalledWith('AAPL');
+  expect(notify).toHaveBeenCalledWith('Latest price fetched for AAPL', 'success');
+});
+
+it('notifies with a shared-allowance hint when a sync fails', async () => {
   mockedFetchAll.mockRejectedValue(new Error('fail'));
   const notify = vi.fn();
   render(<TickersTab tickers={tickers} notify={notify} />);
 
-  const fetchButtons = screen.getAllByRole('button').filter((b) => b.querySelector('[data-testid="CloudDownloadIcon"]'));
-  await userEvent.click(fetchButtons[0]);
+  await openSync();
+  await userEvent.click(screen.getByRole('button', { name: /last ~100 days/i }));
 
   expect(notify).toHaveBeenCalledWith(
-    expect.stringContaining('Failed to fetch prices for AAPL'),
+    expect.stringContaining('Failed to sync AAPL'),
     'error'
   );
+});
+
+it('shows how much history is stored and when it was last updated', async () => {
+  render(<TickersTab tickers={tickers} notify={vi.fn()} />);
+
+  // The table summarises freshness per ticker...
+  expect(await screen.findAllByText('today')).not.toHaveLength(0);
+  // ...and flags the instrument with no long history as actionable.
+  expect(screen.getByText('11.6 yrs')).toBeInTheDocument();
+  expect(screen.getByText('not fetched')).toBeInTheDocument();
+
+  await openSync();
+  expect(screen.getByText(/622 closes/)).toBeInTheDocument();
+  expect(screen.getByText(/143 closes/)).toBeInTheDocument();
+});
+
+it('flags a daily series that has stopped updating', async () => {
+  mockedCoverage.mockResolvedValue([
+    {
+      ticker: 'AAPL',
+      daily: { count: 143, first: '2026-01-16T00:00:00.000Z', last: '2026-06-04T00:00:00.000Z' },
+      weekly: { count: 0, first: null, last: null }
+    },
+    { ticker: 'BND', daily: { count: 0, first: null, last: null }, weekly: { count: 0, first: null, last: null } }
+  ]);
+  render(<TickersTab tickers={tickers} notify={vi.fn()} />);
+
+  // Stale rather than "no data": the difference between a broken job and a new
+  // instrument is the whole point of showing this.
+  expect(await screen.findByText(/months ago/)).toBeInTheDocument();
+});
+
+it('recommends the weekly fetch when no long history is stored', async () => {
+  mockedCoverage.mockResolvedValue([
+    {
+      ticker: 'AAPL',
+      daily: { count: 143, first: '2026-01-16T00:00:00.000Z', last: new Date().toISOString() },
+      weekly: { count: 0, first: null, last: null }
+    }
+  ]);
+  render(<TickersTab tickers={tickers} notify={vi.fn()} />);
+
+  await openSync();
+
+  expect(screen.getByText(/No long history stored for this instrument/i)).toBeInTheDocument();
+});
+
+it('renders the table even when coverage cannot be loaded', async () => {
+  mockedCoverage.mockRejectedValue(new Error('offline'));
+  render(<TickersTab tickers={tickers} notify={vi.fn()} />);
+
+  expect(await screen.findByText('Apple')).toBeInTheDocument();
 });
 
 it('opens and closes the price history modal', async () => {
@@ -242,10 +362,6 @@ it('renders ticker cards in the mobile layout, supporting fetch/edit/delete/hist
   expect(screen.getByText('Apple')).toBeInTheDocument();
   expect(screen.getByText('Active')).toBeInTheDocument();
 
-  const fetchButtons = screen.getAllByRole('button').filter((b) => b.querySelector('[data-testid="CloudDownloadIcon"]'));
-  await userEvent.click(fetchButtons[0]);
-  expect(mockedFetchAll).toHaveBeenCalledWith('AAPL');
-
   const historyButtons = screen.getAllByRole('button').filter((b) => b.querySelector('[data-testid="ShowChartIcon"]'));
   await userEvent.click(historyButtons[0]);
   expect(screen.getByText('history for AAPL')).toBeInTheDocument();
@@ -254,6 +370,14 @@ it('renders ticker cards in the mobile layout, supporting fetch/edit/delete/hist
   const editButtons = screen.getAllByRole('button').filter((b) => b.querySelector('[data-testid="EditIcon"]'));
   await userEvent.click(editButtons[0]);
   expect(screen.getByLabelText(/^Ticker/)).toHaveValue('AAPL');
+  await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+  // Sync last: it opens a dialog, and a modal left open blocks every card
+  // interaction behind it.
+  await openSync();
+  await userEvent.click(screen.getByRole('button', { name: /last ~100 days/i }));
+  expect(mockedFetchAll).toHaveBeenCalledWith('AAPL');
 });
 
 it('cancels the delete confirmation without deleting', async () => {

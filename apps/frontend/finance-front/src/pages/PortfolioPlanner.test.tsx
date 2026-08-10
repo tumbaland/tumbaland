@@ -131,7 +131,11 @@ beforeEach(() => {
   localStorage.clear();
   mockedUseHoldings.mockReturnValue({ data: holdings, isLoading: false });
   mockedUseTrackedTickers.mockReturnValue({ data: trackedTickers });
-  mockedGetHistory.mockResolvedValue(fullHistory);
+  // Both series are requested; unless a test says otherwise the weekly one is
+  // empty, so the daily basis is chosen exactly as before.
+  mockedGetHistory.mockImplementation(({ interval }: { interval?: string } = {}) =>
+    Promise.resolve(interval === 'weekly' ? [] : fullHistory)
+  );
   // Unlimited retention by default: nothing these tests do is a paywall unless
   // they say so.
   mockedUseQuery.mockReturnValue(onPlan(-1));
@@ -166,8 +170,10 @@ it('falls back to a manual-assumptions projection when there are no holdings', a
 it('renders holdings, the efficient frontier and a history-derived projection once prices load', async () => {
   render(<PortfolioPlanner />);
 
-  expect(await screen.findByText('Apple Inc')).toBeInTheDocument();
-  expect(screen.getByText('Microsoft Corp')).toBeInTheDocument();
+  // `getAllByText`: the holdings table names each instrument, and so does the
+  // calculation breakdown that explains where the frontier's numbers came from.
+  expect(await screen.findAllByText('Apple Inc')).not.toHaveLength(0);
+  expect(screen.getAllByText('Microsoft Corp')).not.toHaveLength(0);
   expect(screen.queryByText(/no price history for/i)).not.toBeInTheDocument();
 
   expect(await screen.findByText('Efficient Frontier')).toBeInTheDocument();
@@ -422,5 +428,54 @@ describe('retention-truncated price history', () => {
     await switchTab('Frontier');
 
     expect(await screen.findByText(/Not enough overlapping price history/i, {}, FIND)).toBeInTheDocument();
+  });
+});
+
+describe('choosing the estimation basis', () => {
+  /** Weekly closes, one per Friday, spanning `weeks` weeks. */
+  function weeklySeries(base: number, seed: number, count: number) {
+    const out: { date: string; price: number }[] = [];
+    const day = new Date('2024-03-22T00:00:00.000Z');
+    let price = base;
+    for (let i = 0; i < count; i++) {
+      price *= 1 + (Math.sin(i + seed) * 0.02 + 0.002);
+      out.push({ date: day.toISOString().slice(0, 10), price });
+      day.setUTCDate(day.getUTCDate() + 7);
+    }
+    return out;
+  }
+
+  it('estimates from weekly closes when they carry more usable observations', async () => {
+    // The shipped shape: five months of daily history against two and a half
+    // years of weekly. The frontier should be fitted to the latter.
+    const shortDaily = [
+      ...series(150, 1, 150).map((d) => ({ ticker: 'AAPL', ...d })),
+      ...series(300, 2, 150).map((d) => ({ ticker: 'MSFT', ...d }))
+    ];
+    const longWeekly = [
+      ...weeklySeries(150, 1, 128).map((d) => ({ ticker: 'AAPL', ...d })),
+      ...weeklySeries(300, 2, 128).map((d) => ({ ticker: 'MSFT', ...d }))
+    ];
+    mockedGetHistory.mockImplementation(({ interval }: { interval?: string } = {}) =>
+      Promise.resolve(interval === 'weekly' ? longWeekly : shortDaily)
+    );
+
+    render(<PortfolioPlanner />);
+    await screen.findByText('Efficient Frontier');
+    await userEvent.click(screen.getByText(/how these numbers are calculated/i));
+
+    // The chip naming the sample, and the formula that annualizes it, must
+    // agree — a mismatch between them is the fivefold error this guards.
+    expect(await screen.findAllByText(/weekly returns/)).not.toHaveLength(0);
+    expect(screen.getByText(/Σ wᵢ·μᵢ × 52\b/)).toBeInTheDocument();
+  });
+
+  it('stays on daily closes when they are the deeper series', async () => {
+    render(<PortfolioPlanner />);
+    await screen.findByText('Efficient Frontier');
+    await userEvent.click(screen.getByText(/how these numbers are calculated/i));
+
+    expect(await screen.findAllByText(/daily returns/)).not.toHaveLength(0);
+    expect(screen.getByText(/Σ wᵢ·μᵢ × 252/)).toBeInTheDocument();
   });
 });

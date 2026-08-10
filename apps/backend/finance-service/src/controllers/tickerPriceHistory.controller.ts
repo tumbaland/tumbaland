@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { BadRequestError, getGroupOwner, logger, retentionFloor, sendSuccess } from '@tumbaland/backend-core';
 import * as tickerPriceService from '../services/tickerPriceHistory.service';
+import { PriceInterval } from '../models/TickerPriceHistory';
 import { getRemainingQuota } from '../services/apiQuota.service';
 
 /**
@@ -45,6 +46,20 @@ function parseDate(value: unknown, field: string): Date | undefined {
   return date;
 }
 
+/**
+ * Rejects an unknown interval rather than silently serving the default: a
+ * caller asking for `weekly` and receiving daily closes would annualize them
+ * with the wrong factor and never know.
+ */
+function parseInterval(value: unknown): PriceInterval | undefined {
+  if (value === undefined) return undefined;
+  const interval = String(value);
+  if (interval !== 'daily' && interval !== 'weekly') {
+    throw new BadRequestError('interval must be daily or weekly');
+  }
+  return interval;
+}
+
 function parseLimit(value: unknown): number | undefined {
   if (value === undefined) return undefined;
   const limit = Number(value);
@@ -61,13 +76,14 @@ function parseLimit(value: unknown): number | undefined {
 export const getTickerPriceHistory = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
   const userGroups = req.userGroups || [];
-  const { ticker, from, to, limit } = req.query;
+  const { ticker, from, to, limit, interval } = req.query;
 
   const records = await tickerPriceService.getTickerPriceHistory(user.id, userGroups, {
     ticker: ticker ? String(ticker) : undefined,
     from: parseDate(from, 'from'),
     to: parseDate(to, 'to'),
     limit: parseLimit(limit),
+    interval: parseInterval(interval),
     retentionFrom: await retentionFloor(await retentionSubjects(req))
   });
 
@@ -101,6 +117,23 @@ export const fetchAndSaveAllTickerHistory = async (req: Request, res: Response):
 };
 
 /**
+ * Fetch and save the full weekly history for a ticker.
+ *
+ * Separate from the daily fetch because it is a different series with a
+ * different meaning, not a bigger version of the same one — see
+ * `fetchAndSaveWeeklyHistory`.
+ */
+export const fetchAndSaveWeeklyTickerHistory = async (req: Request, res: Response): Promise<void> => {
+  const user = req.user!;
+  const userGroups = req.userGroups || [];
+  const { ticker } = req.body;
+
+  const savedCount = await tickerPriceService.fetchWeeklyTickerHistory(ticker, user.id, userGroups);
+
+  sendSuccess(res, { ticker, recordsCount: savedCount }, `Fetched ${savedCount} weekly closes for ${ticker}`);
+};
+
+/**
  * Delete ticker price history record
  */
 export const deleteTickerPriceHistory = async (req: Request, res: Response): Promise<void> => {
@@ -115,6 +148,19 @@ export const deleteTickerPriceHistory = async (req: Request, res: Response): Pro
   await tickerPriceService.deleteTickerPriceRecord(id as string, user.id, userGroups);
 
   sendSuccess(res, { id }, 'Price history record deleted successfully');
+};
+
+/**
+ * How much history each tracked ticker has, and how fresh it is — what the
+ * sync panel renders.
+ */
+export const getCoverage = async (req: Request, res: Response): Promise<void> => {
+  const user = req.user!;
+  const userGroups = req.userGroups || [];
+
+  const coverage = await tickerPriceService.getTickerCoverage(user.id, userGroups);
+
+  sendSuccess(res, coverage);
 };
 
 /**

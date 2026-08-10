@@ -1,6 +1,6 @@
-import TickerPriceHistory from '../models/TickerPriceHistory';
+import TickerPriceHistory, { PriceInterval } from '../models/TickerPriceHistory';
 import TrackedTicker from '../models/TrackedTicker';
-import { fetchStockPrice, fetchAndSaveAllStockHistory } from './alphaVantage.service';
+import { fetchStockPrice, fetchAndSaveAllStockHistory, fetchAndSaveWeeklyHistory } from './alphaVantage.service';
 import { BadRequestError, ForbiddenError } from '@tumbaland/backend-core';
 
 interface TickerPriceResponse {
@@ -19,6 +19,13 @@ export interface PriceHistoryQuery {
   from?: Date;
   to?: Date;
   limit?: number;
+  /**
+   * Which series to read. Defaults to `daily`, so every existing caller keeps
+   * the series it was written against — weekly rows are opt-in, and the two are
+   * never mixed: annualizing a weekly return as a daily one inflates it about
+   * fivefold.
+   */
+  interval?: PriceInterval;
   /**
    * Oldest date the caller's plan permits, or `null` for unlimited. Applied as a
    * floor *underneath* `from`, so a caller can narrow their window but never
@@ -88,7 +95,15 @@ export async function getTickerPriceHistory(
     .filter((d): d is Date => d instanceof Date)
     .reduce<Date | undefined>((latest, d) => (!latest || d > latest ? d : latest), undefined);
 
-  const filter: Record<string, unknown> = { ticker: { $in: tickers } };
+  // `$in: [..., null]` rather than a bare equality: rows written before the
+  // field existed carry no `interval` at all, and matching on 'daily' alone
+  // would return nothing for every chart in the product. Unlike `$ne`, this
+  // still uses the { ticker, interval, date } index.
+  const interval = query.interval ?? 'daily';
+  const filter: Record<string, unknown> = {
+    ticker: { $in: tickers },
+    interval: interval === 'daily' ? { $in: ['daily', null] } : interval
+  };
   if (lowerBound || query.to) {
     filter.date = {
       ...(lowerBound ? { $gte: lowerBound } : {}),
@@ -117,6 +132,81 @@ export async function getTickerPriceHistory(
   }));
 }
 
+export interface IntervalCoverage {
+  /** Rows stored for this interval. */
+  count: number;
+  /** Oldest and newest close held, ISO dates. `null` when nothing is stored. */
+  first: string | null;
+  last: string | null;
+}
+
+export interface TickerCoverage {
+  ticker: string;
+  daily: IntervalCoverage;
+  weekly: IntervalCoverage;
+}
+
+const EMPTY_COVERAGE: IntervalCoverage = { count: 0, first: null, last: null };
+
+/**
+ * How much price history exists per tracked ticker, and how fresh it is.
+ *
+ * The sync UI is otherwise guessing: a user looking at a chart cannot tell
+ * whether a short series means the instrument is new, the daily job stopped, or
+ * nobody ever fetched history — and those need three different actions. One
+ * aggregation over the collection answers all three, and it is grouped rather
+ * than fetched because the collection is unbounded.
+ *
+ * Scoped to the caller's tracked tickers exactly like the reads: price rows
+ * carry no owner of their own.
+ */
+export async function getTickerCoverage(
+  userId: string,
+  userGroups: string[] = []
+): Promise<TickerCoverage[]> {
+  const allowed = await accessibleTickers(userId, userGroups);
+  if (allowed.length === 0) return [];
+
+  const rows = await TickerPriceHistory.aggregate<{
+    _id: { ticker: string; interval: string | null };
+    count: number;
+    first: Date;
+    last: Date;
+  }>([
+    { $match: { ticker: { $in: allowed } } },
+    {
+      $group: {
+        // Rows written before the field existed are daily by definition; see
+        // the note on the read filter.
+        _id: { ticker: '$ticker', interval: { $ifNull: ['$interval', 'daily'] } },
+        count: { $sum: 1 },
+        first: { $min: '$date' },
+        last: { $max: '$date' }
+      }
+    }
+  ]);
+
+  const byTicker = new Map<string, TickerCoverage>(
+    allowed.map((ticker) => [
+      ticker,
+      { ticker, daily: { ...EMPTY_COVERAGE }, weekly: { ...EMPTY_COVERAGE } }
+    ])
+  );
+
+  for (const row of rows) {
+    const entry = byTicker.get(row._id.ticker);
+    if (!entry) continue;
+    const interval = row._id.interval === 'weekly' ? 'weekly' : 'daily';
+    entry[interval] = {
+      count: row.count,
+      first: row.first ? row.first.toISOString() : null,
+      last: row.last ? row.last.toISOString() : null
+    };
+  }
+
+  return Array.from(byTicker.values()).sort((a, b) => a.ticker.localeCompare(b.ticker));
+}
+
 /**
  * Fetch and save the latest price for a ticker the caller tracks.
  */
@@ -133,9 +223,10 @@ export async function fetchAndSaveTickerPrices(
   if (priceData) {
     const today = toUtcDateOnly(new Date());
     const record = await TickerPriceHistory.findOneAndUpdate(
-      { ticker: tickerParam, date: today },
+      { ticker: tickerParam, interval: 'daily', date: today },
       {
         ticker: tickerParam,
+        interval: 'daily',
         date: today,
         price: priceData.close,
         open: priceData.open,
@@ -181,6 +272,25 @@ export async function fetchAllTickerHistory(
   }
   await assertTracked(ticker, userId, userGroups);
   return fetchAndSaveAllStockHistory(ticker);
+}
+
+/**
+ * Fetch a ticker's whole weekly series — usually 10–20 years — for one API call.
+ *
+ * The same price as the ~100-day daily fetch, and the only way to get real
+ * depth from the free tier, so this is what a newly tracked instrument should
+ * be seeded with. Stored as its own interval; nothing reads the two together.
+ */
+export async function fetchWeeklyTickerHistory(
+  ticker: string,
+  userId: string,
+  userGroups: string[] = []
+): Promise<number> {
+  if (!ticker) {
+    throw new BadRequestError('Ticker is required');
+  }
+  await assertTracked(ticker, userId, userGroups);
+  return fetchAndSaveWeeklyHistory(ticker);
 }
 
 /**

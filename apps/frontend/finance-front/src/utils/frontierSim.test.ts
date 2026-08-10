@@ -1,5 +1,8 @@
 import {
+  MAX_GAP_DAYS,
   MAX_RETURN_GAP_DAYS,
+  PERIODS_PER_YEAR,
+  TRADING_WEEKS,
   PricePoint,
   TRADING_DAYS,
   alignSeries,
@@ -293,5 +296,126 @@ describe('runFrontierSimulation breakdown', () => {
 
     expect(sim.breakdown.current).toBeNull();
     expect(sim.breakdown.assets.every(a => a.weight === null && a.contributionPct === null)).toBe(true);
+  });
+});
+
+
+/** Consecutive Fridays, as a weekly series arrives. */
+function weeks(count: number, start = '2024-03-22'): string[] {
+  const dates: string[] = [];
+  const day = new Date(`${start}T00:00:00.000Z`);
+  for (let i = 0; i < count; i++) {
+    dates.push(day.toISOString().slice(0, 10));
+    day.setUTCDate(day.getUTCDate() + 7);
+  }
+  return dates;
+}
+
+function weeklySeries(base: number, seed: number, count = 130): PricePoint[] {
+  const out: number[] = [];
+  let price = base;
+  for (let i = 0; i < count; i++) {
+    price *= 1 + (Math.sin(i + seed) * 0.02 + 0.002);
+    out.push(price);
+  }
+  return dated(out, weeks(count));
+}
+
+describe('return basis', () => {
+  const quantityByTicker = { AAPL: 10, MSFT: 5 };
+  const weekly = { AAPL: weeklySeries(150, 1), MSFT: weeklySeries(300, 2) };
+
+  it('annualizes weekly returns by 52, not 252', () => {
+    const sim = runFrontierSimulation({
+      pricesByTicker: weekly,
+      quantityByTicker,
+      riskFreeRatePct: 0,
+      simulations: 50,
+      basis: 'weekly'
+    })!;
+
+    expect(sim.breakdown.basis).toBe('weekly');
+    expect(sim.breakdown.periodsPerYear).toBe(TRADING_WEEKS);
+
+    // The same series read as daily would report a figure about 252/52 larger —
+    // which is precisely the mistake the basis exists to prevent.
+    const asDaily = runFrontierSimulation({
+      pricesByTicker: weekly,
+      quantityByTicker,
+      riskFreeRatePct: 0,
+      simulations: 50,
+      basis: 'daily'
+    })!;
+
+    expect(asDaily.breakdown.current!.arithmeticPct / sim.breakdown.current!.arithmeticPct).toBeCloseTo(
+      PERIODS_PER_YEAR.daily / PERIODS_PER_YEAR.weekly,
+      6
+    );
+  });
+
+  it('converts the sample to trading-day equivalents', () => {
+    const sim = runFrontierSimulation({
+      pricesByTicker: weekly,
+      quantityByTicker,
+      riskFreeRatePct: 0,
+      simulations: 20,
+      basis: 'weekly'
+    })!;
+
+    // 129 weekly returns are ~2.5 years of market, not ~6 months. Anything that
+    // weighs "how much history is this" must see the former.
+    expect(sim.breakdown.equivalentTradingDays).toBe(
+      Math.round((sim.breakdown.window.observations * PERIODS_PER_YEAR.daily) / TRADING_WEEKS)
+    );
+    expect(sim.breakdown.equivalentTradingDays).toBeGreaterThan(sim.breakdown.window.observations * 4);
+  });
+
+  it('tolerates a holiday fortnight on a weekly series that the daily rule rejects', () => {
+    // Weekly closes normally sit 7 days apart — inside the daily tolerance too.
+    // The bases diverge at 14 days, which is a missing week for a weekly series
+    // and a fortnight-long hole for a daily one.
+    const dates = ['2026-01-02', '2026-01-09', '2026-01-23'];
+
+    expect(returnIndices(dates, MAX_GAP_DAYS.daily)).toEqual([1]);
+    expect(returnIndices(dates, MAX_GAP_DAYS.weekly)).toEqual([1, 2]);
+  });
+
+  it('still drops a missing fortnight from a weekly series', () => {
+    const indices = returnIndices(['2026-01-02', '2026-01-09', '2026-02-06'], MAX_GAP_DAYS.weekly);
+
+    expect(indices).toEqual([1]);
+  });
+
+  it('defaults to daily when no basis is named', () => {
+    const sim = runFrontierSimulation({
+      pricesByTicker: { AAPL: series(150, 1), MSFT: series(300, 2) },
+      quantityByTicker,
+      riskFreeRatePct: 0,
+      simulations: 20
+    })!;
+
+    expect(sim.breakdown.basis).toBe('daily');
+    expect(sim.breakdown.periodsPerYear).toBe(252);
+    expect(sim.breakdown.equivalentTradingDays).toBe(sim.breakdown.window.observations);
+    expect(MAX_RETURN_GAP_DAYS).toBe(MAX_GAP_DAYS.daily);
+  });
+
+  it('reports a narrower interval for the same portfolio on a longer sample', () => {
+    const long = runFrontierSimulation({
+      pricesByTicker: weekly,
+      quantityByTicker,
+      riskFreeRatePct: 0,
+      simulations: 20,
+      basis: 'weekly'
+    })!;
+    const short = runFrontierSimulation({
+      pricesByTicker: { AAPL: weeklySeries(150, 1, 30), MSFT: weeklySeries(300, 2, 30) },
+      quantityByTicker,
+      riskFreeRatePct: 0,
+      simulations: 20,
+      basis: 'weekly'
+    })!;
+
+    expect(long.breakdown.current!.standardErrorPct).toBeLessThan(short.breakdown.current!.standardErrorPct);
   });
 });

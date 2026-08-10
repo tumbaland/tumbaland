@@ -5,6 +5,39 @@
 import { mean, covariance } from './portfolioMath';
 
 export const TRADING_DAYS = 252;
+export const TRADING_WEEKS = 52;
+
+/**
+ * Which series the estimate is fitted to.
+ *
+ * Not a display preference: it changes the arithmetic. A weekly return
+ * annualized by 252 instead of 52 overstates the figure roughly fivefold, so
+ * the basis travels with the data everywhere it is used.
+ *
+ * Weekly exists because the provider's free tier caps daily history at ~100
+ * trading days while serving the entire weekly series — for many instruments
+ * that is five months against a decade, and a covariance estimate cares far
+ * more about how much history it has seen than about how finely it was sampled.
+ */
+export type ReturnBasis = 'daily' | 'weekly';
+
+export const PERIODS_PER_YEAR: Record<ReturnBasis, number> = {
+  daily: TRADING_DAYS,
+  weekly: TRADING_WEEKS
+};
+
+/**
+ * How long a hole may be before the "return" across it stops being one period.
+ *
+ * Daily closes sit 1–3 days apart, so ten days clears any holiday run. Weekly
+ * closes sit seven days apart, and a fortnight means a week is missing — the
+ * tolerance is per basis because a gap that is routine for one is a data
+ * problem for the other.
+ */
+export const MAX_GAP_DAYS: Record<ReturnBasis, number> = {
+  daily: 10,
+  weekly: 16
+};
 
 /**
  * A close, with the day it belongs to. Dates are what make a covariance
@@ -19,14 +52,8 @@ export interface PricePoint {
   price: number;
 }
 
-/**
- * A hole longer than this is a data gap, not a weekend, and the "return" across
- * it is a multi-week move that would be annualized as if it were one day. Ten
- * days clears any exchange holiday run while catching a genuinely missing
- * stretch — instruments here have been re-keyed mid-history before, which
- * leaves exactly such a hole.
- */
-export const MAX_RETURN_GAP_DAYS = 10;
+/** Kept as the daily default for callers that do not name a basis. */
+export const MAX_RETURN_GAP_DAYS = MAX_GAP_DAYS.daily;
 
 export interface AlignedSeries {
   tickers: string[];
@@ -80,7 +107,7 @@ export function alignSeries(pricesByTicker: Record<string, PricePoint[]>): Align
  * Computed once from the shared date axis and applied to every ticker, so the
  * return vectors stay index-aligned with each other.
  */
-export function returnIndices(dates: string[], maxGapDays = MAX_RETURN_GAP_DAYS): number[] {
+export function returnIndices(dates: string[], maxGapDays: number = MAX_GAP_DAYS.daily): number[] {
   const indices: number[] = [];
   for (let i = 1; i < dates.length; i++) {
     const gap = (Date.parse(dates[i]) - Date.parse(dates[i - 1])) / 86_400_000;
@@ -112,9 +139,12 @@ export interface AssetBreakdown {
   ticker: string;
   /** Share of portfolio value on the last shared day, `null` when quantities are unknown. */
   weight: number | null;
-  /** Mean of its daily returns over the sample — the raw quantity everything else scales. */
-  meanDaily: number;
-  /** `meanDaily × 252`, as a percentage: the same annualization the frontier uses. */
+  /**
+   * Mean of its returns over one period of the chosen basis — daily or weekly.
+   * The raw quantity everything else scales.
+   */
+  meanPeriod: number;
+  /** `meanPeriod × periodsPerYear`, as a percentage: the annualization the frontier uses. */
   annualizedPct: number;
   /** `√(variance × 252)`, as a percentage. */
   volPct: number;
@@ -150,8 +180,22 @@ export interface PortfolioBreakdown {
 }
 
 export interface SimBreakdown {
-  /** The days every holding traded, which is what the estimate is fitted to. */
+  /** Which series the estimate was fitted to, and therefore how it was annualized. */
+  basis: ReturnBasis;
+  /** 252 or 52 — the factor every annualized figure below was multiplied by. */
+  periodsPerYear: number;
+  /** The dates every holding traded, which is what the estimate is fitted to. */
   window: { from: string; to: string; observations: number; spanDays: number };
+  /**
+   * The sample expressed in trading days, so callers can weigh it without
+   * knowing the basis.
+   *
+   * Anything that judges "how much history is this" by counting observations
+   * silently discounts a weekly fit fivefold — 128 weekly closes are two and a
+   * half years of market, not two and a half months. The projection's shrinkage
+   * is exactly such a caller.
+   */
+  equivalentTradingDays: number;
   assets: AssetBreakdown[];
   /** Correlations between daily returns — what a frontier is actually made of. */
   correlations: number[][];
@@ -173,18 +217,20 @@ export function describePortfolio(
   means: number[],
   cov: number[][],
   riskFreeRatePct: number,
-  observations: number
+  observations: number,
+  basis: ReturnBasis = 'daily'
 ): PortfolioBreakdown {
-  const rfDaily = riskFreeRatePct / 100 / TRADING_DAYS;
-  const { ret, vol, sharpe } = portfolioStats(weights, means, cov, rfDaily);
+  const periods = PERIODS_PER_YEAR[basis];
+  const rfPeriod = riskFreeRatePct / 100 / periods;
+  const { ret, vol, sharpe } = portfolioStats(weights, means, cov, rfPeriod, periods);
 
-  let dailyVar = 0;
+  let periodVar = 0;
   for (let i = 0; i < weights.length; i++)
-    for (let j = 0; j < weights.length; j++) dailyVar += weights[i] * weights[j] * cov[i][j];
+    for (let j = 0; j < weights.length; j++) periodVar += weights[i] * weights[j] * cov[i][j];
 
-  const varianceDragPct = ((dailyVar * TRADING_DAYS) / 2) * 100;
+  const varianceDragPct = ((periodVar * periods) / 2) * 100;
   const standardErrorPct = observations > 0
-    ? Math.sqrt(Math.max(0, dailyVar) / observations) * TRADING_DAYS * 100
+    ? Math.sqrt(Math.max(0, periodVar) / observations) * periods * 100
     : 0;
 
   return {
@@ -203,20 +249,25 @@ export function dailyReturns(prices: number[], indices?: number[]): number[] {
   return at.map(i => (prices[i] - prices[i - 1]) / prices[i - 1]);
 }
 
+/**
+ * `rfPeriod` and `periods` must describe the same period as `means` and `cov` —
+ * per-day for a daily fit, per-week for a weekly one.
+ */
 export function portfolioStats(
   weights: number[],
   means: number[],
   cov: number[][],
-  rfDaily: number
+  rfPeriod: number,
+  periods: number = TRADING_DAYS
 ): { ret: number; vol: number; sharpe: number } {
-  const dailyRet = weights.reduce((s, w, i) => s + w * means[i], 0);
-  let dailyVar = 0;
+  const periodRet = weights.reduce((s, w, i) => s + w * means[i], 0);
+  let periodVar = 0;
   for (let i = 0; i < weights.length; i++)
     for (let j = 0; j < weights.length; j++)
-      dailyVar += weights[i] * weights[j] * cov[i][j];
-  const ret = dailyRet * TRADING_DAYS * 100;
-  const vol = Math.sqrt(Math.max(0, dailyVar * TRADING_DAYS)) * 100;
-  const sharpe = vol > 0 ? (ret - rfDaily * TRADING_DAYS * 100) / vol : 0;
+      periodVar += weights[i] * weights[j] * cov[i][j];
+  const ret = periodRet * periods * 100;
+  const vol = Math.sqrt(Math.max(0, periodVar * periods)) * 100;
+  const sharpe = vol > 0 ? (ret - rfPeriod * periods * 100) / vol : 0;
   return { ret, vol, sharpe };
 }
 
@@ -232,23 +283,26 @@ export function runFrontierSimulation(opts: {
   quantityByTicker: Record<string, number>;
   riskFreeRatePct: number;
   simulations?: number;
+  /** Which series `pricesByTicker` holds. Decides the annualization factor. */
+  basis?: ReturnBasis;
 }): FrontierSim | null {
-  const { pricesByTicker, quantityByTicker, riskFreeRatePct, simulations = 2000 } = opts;
+  const { pricesByTicker, quantityByTicker, riskFreeRatePct, simulations = 2000, basis = 'daily' } = opts;
+  const periods = PERIODS_PER_YEAR[basis];
   const { tickers, dates, prices: aligned } = alignSeries(pricesByTicker);
   if (tickers.length < 2) return null;
 
-  const at = returnIndices(dates);
+  const at = returnIndices(dates, MAX_GAP_DAYS[basis]);
   if (at.length < 2) return null;
 
   const returnSeries = aligned.map(series => dailyReturns(series, at));
   const means = returnSeries.map(r => mean(r));
   const cov = tickers.map((_, i) => tickers.map((_, j) => covariance(returnSeries[i], returnSeries[j])));
-  const rfDaily = riskFreeRatePct / 100 / TRADING_DAYS;
+  const rfPeriod = riskFreeRatePct / 100 / periods;
 
   const points: SimPoint[] = [];
   for (let s = 0; s < simulations; s++) {
     const w = randomWeights(tickers.length);
-    points.push({ ...portfolioStats(w, means, cov, rfDaily), weights: w });
+    points.push({ ...portfolioStats(w, means, cov, rfPeriod, periods), weights: w });
   }
 
   const maxSharpe = points.reduce((b, p) => (p.sharpe > b.sharpe ? p : b), points[0]);
@@ -262,13 +316,16 @@ export function runFrontierSimulation(opts: {
   let current: SimPoint | null = null;
   if (totalVal > 0) {
     const w = values.map(v => v / totalVal);
-    current = { ...portfolioStats(w, means, cov, rfDaily), weights: w };
+    current = { ...portfolioStats(w, means, cov, rfPeriod, periods), weights: w };
   }
 
   const dataPoints = at.length;
 
   const variances = tickers.map((_, i) => cov[i][i]);
   const breakdown: SimBreakdown = {
+    basis,
+    periodsPerYear: periods,
+    equivalentTradingDays: Math.round((at.length * TRADING_DAYS) / periods),
     window: {
       from: dates[0],
       to: dates[dates.length - 1],
@@ -278,13 +335,13 @@ export function runFrontierSimulation(opts: {
     assets: tickers.map((ticker, i) => {
       const series = aligned[i];
       const weight = totalVal > 0 ? values[i] / totalVal : null;
-      const annualizedPct = means[i] * TRADING_DAYS * 100;
+      const annualizedPct = means[i] * periods * 100;
       return {
         ticker,
         weight,
-        meanDaily: means[i],
+        meanPeriod: means[i],
         annualizedPct,
-        volPct: Math.sqrt(Math.max(0, variances[i] * TRADING_DAYS)) * 100,
+        volPct: Math.sqrt(Math.max(0, variances[i] * periods)) * 100,
         windowReturnPct: ((series[series.length - 1] - series[0]) / series[0]) * 100,
         contributionPct: weight === null ? null : weight * annualizedPct
       };
@@ -296,7 +353,7 @@ export function runFrontierSimulation(opts: {
       })
     ),
     current: current
-      ? describePortfolio(current.weights, means, cov, riskFreeRatePct, at.length)
+      ? describePortfolio(current.weights, means, cov, riskFreeRatePct, at.length, basis)
       : null,
     riskFreeRatePct
   };

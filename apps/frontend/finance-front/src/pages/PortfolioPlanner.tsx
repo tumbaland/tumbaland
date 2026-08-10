@@ -8,7 +8,16 @@ import { useQuery } from '@tanstack/react-query';
 import { getTickerPriceHistory } from '../services/tickerPriceHistoryService';
 import { getMyEntitlements } from '../services/entitlementsService';
 import { getGlobalConfig } from '../config/ConfigProvider';
-import { AlignedSeries, FrontierSim, PricePoint, alignSeries, runFrontierSimulation } from '../utils/frontierSim';
+import {
+  AlignedSeries,
+  FrontierSim,
+  MAX_GAP_DAYS,
+  PricePoint,
+  ReturnBasis,
+  alignSeries,
+  returnIndices,
+  runFrontierSimulation
+} from '../utils/frontierSim';
 import HoldingsTable, { HoldingStat } from '../components/planner/HoldingsTable';
 import FrontierSection from '../components/planner/FrontierSection';
 import ProjectionSection from '../components/planner/ProjectionSection';
@@ -24,13 +33,16 @@ const HISTORY_YEARS = 2;
  * the covariance is estimated from. A holding added last month caps the whole
  * estimate, however deep the others reach.
  *
- * The span was 365 and is 120 because 365 was unreachable: Alpha Vantage's free
- * tier serves only the compact series (~100 trading days), so a freshly tracked
- * instrument cannot exceed a year of history until a year of daily updates has
- * accrued — the gate blocked every account, paying or not, rather than only
- * clipped ones. The per-asset rule is the part that actually protects the
- * estimate: a covariance matrix over k assets fitted on fewer than ~10k
- * observations is noise dressed as a recommendation.
+ * The span was 365 and is 120 because 365 was unreachable *on daily closes*:
+ * the provider's free tier serves only the compact ~100 trading days and
+ * refuses `outputsize=full` as a premium feature, so a freshly tracked
+ * instrument cannot exceed a year of daily history until a year of daily
+ * updates has accrued — the gate blocked every account, paying or not, rather
+ * than only clipped ones. (Its weekly endpoint does return a decade for free,
+ * which is why weekly closes are now stored; this page does not read them yet.)
+ * The per-asset rule is the part that actually protects the estimate: a
+ * covariance matrix over k assets fitted on fewer than ~10k observations is
+ * noise dressed as a recommendation.
  */
 const MIN_ALIGNED_DAYS = 120;
 const MIN_OBSERVATIONS_PER_ASSET = 10;
@@ -43,7 +55,11 @@ const PortfolioPlanner: React.FC = () => {
   const { data: holdings = [], isLoading: holdingsLoading } = useHoldings(tenantGroupId);
   const { data: trackedTickers = [] } = useTrackedTickers(tenantGroupId);
 
-  const [pricesByTicker, setPricesByTicker] = useState<Record<string, PricePoint[]>>({});
+  /** Both series, kept side by side so the basis can be chosen from the data. */
+  const [seriesByBasis, setSeriesByBasis] = useState<Record<ReturnBasis, Record<string, PricePoint[]>>>({
+    daily: {},
+    weekly: {}
+  });
   const [loadingPrices, setLoadingPrices] = useState(false);
   const [priceError, setPriceError] = useState<string | null>(null);
   /** False until the first load resolves, so "no data yet" cannot read as "too little". */
@@ -80,10 +96,24 @@ const PortfolioPlanner: React.FC = () => {
     from.setFullYear(from.getFullYear() - HISTORY_YEARS);
     const fromDate = from.toISOString().slice(0, 10);
 
-    Promise.all(
-      portfolioTickers.map(ticker => getTickerPriceHistory({ ticker, from: fromDate }))
-    )
-      .then(perTicker => {
+    /**
+     * Both series are loaded, because which one gives the better estimate is a
+     * property of the data rather than a setting. Weekly closes reach back a
+     * decade where the provider's free tier caps daily history at ~100 trading
+     * days; daily wins once enough of it has accrued. See `chosen` below.
+     */
+    const load = (basis: ReturnBasis) =>
+      Promise.all(
+        portfolioTickers.map(ticker =>
+          getTickerPriceHistory({
+            ticker,
+            // Weekly is only worth loading for its depth, so it is not clipped
+            // to the daily window.
+            ...(basis === 'daily' ? { from: fromDate } : {}),
+            interval: basis
+          })
+        )
+      ).then(perTicker => {
         const rawMap: Record<string, PricePoint[]> = {};
         perTicker
           .flat()
@@ -102,7 +132,12 @@ const PortfolioPlanner: React.FC = () => {
           const chronological = entries.sort((a, b) => a.date.localeCompare(b.date));
           if (chronological.length >= 20) sorted[ticker] = chronological;
         });
-        setPricesByTicker(sorted);
+        return sorted;
+      });
+
+    Promise.all([load('daily'), load('weekly')])
+      .then(([daily, weekly]) => {
+        setSeriesByBasis({ daily, weekly });
         setPricesLoaded(true);
       })
       .catch(() => setPriceError('Failed to load price history'))
@@ -121,13 +156,41 @@ const PortfolioPlanner: React.FC = () => {
         pricesByTicker,
         quantityByTicker,
         riskFreeRatePct: parseFloat(riskFreeRate) || 0,
-        simulations: SIMULATIONS
+        simulations: SIMULATIONS,
+        basis
       })
     );
   };
 
-  /** The days every holding traded on — what the covariance is actually fitted to. */
-  const aligned: AlignedSeries = useMemo(() => alignSeries(pricesByTicker), [pricesByTicker]);
+  /**
+   * Which series to estimate from, and the overlap it yields.
+   *
+   * **The basis with more usable observations wins**, because that is what the
+   * estimate's error bar is made of. It picks weekly for a portfolio holding an
+   * instrument listed last year — a decade of weekly closes beats five months of
+   * daily ones — and flips back to daily on its own once enough daily history
+   * has accrued, since three years of daily closes is 756 observations against
+   * the same period's 156 weekly. No setting, and nothing to keep in sync.
+   */
+  const { basis, aligned, pricesByTicker } = useMemo(() => {
+    const usable = (candidate: ReturnBasis) => {
+      const series = seriesByBasis[candidate];
+      const alignment = alignSeries(series);
+      return {
+        basis: candidate,
+        aligned: alignment,
+        pricesByTicker: series,
+        // Gap-spanning steps are dropped by the sim, so they are not counted here.
+        observations: returnIndices(alignment.dates, MAX_GAP_DAYS[candidate]).length
+      };
+    };
+
+    const daily = usable('daily');
+    const weekly = usable('weekly');
+    return weekly.observations > daily.observations ? weekly : daily;
+  }, [seriesByBasis]);
+
+  const alignedSeries: AlignedSeries = aligned;
 
   /**
    * Whether the overlap is long enough to estimate a covariance from. Before
@@ -136,8 +199,8 @@ const PortfolioPlanner: React.FC = () => {
    */
   const hasEnoughHistory =
     !pricesLoaded ||
-    (aligned.spanDays >= MIN_ALIGNED_DAYS &&
-      aligned.dates.length >= MIN_OBSERVATIONS_PER_ASSET * aligned.tickers.length);
+    (alignedSeries.spanDays >= MIN_ALIGNED_DAYS &&
+      alignedSeries.dates.length >= MIN_OBSERVATIONS_PER_ASSET * alignedSeries.tickers.length);
 
   /**
    * Whether the plan is what is holding the history back.
@@ -150,7 +213,7 @@ const PortfolioPlanner: React.FC = () => {
    */
   const retentionDays = entitlements?.limits?.retentionDays;
   const clippedByPlan =
-    typeof retentionDays === 'number' && retentionDays > 0 && aligned.spanDays >= retentionDays - 7;
+    typeof retentionDays === 'number' && retentionDays > 0 && alignedSeries.spanDays >= retentionDays - 7;
 
   // The shell owns the URL and embeds each front in an iframe, so an upgrade
   // link navigates the *top* window. Config is read inside the handler because
@@ -287,9 +350,9 @@ const PortfolioPlanner: React.FC = () => {
           >
             <AlertTitle>Not enough overlapping price history to plan with</AlertTitle>
             The efficient frontier is estimated from the days on which <em>all</em> your holdings
-            traded. Those overlap for {aligned.spanDays} days ({aligned.dates.length} closes across{' '}
-            {aligned.tickers.length} holdings), which is too little to tell how they move together —
-            so the frontier is not shown rather than shown wrong.
+            traded. Those overlap for {alignedSeries.spanDays} days ({alignedSeries.dates.length}{' '}
+            {basis} closes across {alignedSeries.tickers.length} holdings), which is too little to
+            tell how they move together — so the frontier is not shown rather than shown wrong.
             <br />
             <br />
             {clippedByPlan ? (
@@ -300,8 +363,9 @@ const PortfolioPlanner: React.FC = () => {
             ) : (
               <>
                 Your plan is not what limits this — that much history simply has not been collected
-                yet. A newly tracked instrument starts with about 100 trading days and fills in
-                daily, and the newest holding sets the overlap for all of them.
+                yet. The newest holding sets the overlap for all of them. Fetching the full weekly
+                history for each instrument, from the sync button on the Tracked tickers tab, is
+                usually the fastest way to widen it.
               </>
             )}
           </Alert>

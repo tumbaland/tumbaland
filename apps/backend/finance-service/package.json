@@ -10,6 +10,7 @@
     "test": "jest",
     "test:coverage": "jest --coverage",
     "lint": "eslint .",
+    "backfill:weekly": "ts-node src/scripts/backfill-weekly-history.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

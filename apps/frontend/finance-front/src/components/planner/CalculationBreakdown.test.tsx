@@ -16,12 +16,15 @@ const sim = (overrides: Partial<FrontierSim['breakdown']> = {}): FrontierSim =>
     current: { ret: 34, vol: 13.9, sharpe: 2.23, weights: [0.6, 0.4] },
     dataPoints: 105,
     breakdown: {
+      basis: 'daily',
+      periodsPerYear: 252,
+      equivalentTradingDays: 105,
       window: { from: '2026-03-10', to: '2026-08-07', observations: 105, spanDays: 150 },
       assets: [
         {
           ticker: 'VWCE.DEX',
           weight: 0.6,
-          meanDaily: 0.00123,
+          meanPeriod: 0.00123,
           annualizedPct: 30.9,
           volPct: 13.2,
           windowReturnPct: 13.4,
@@ -30,7 +33,7 @@ const sim = (overrides: Partial<FrontierSim['breakdown']> = {}): FrontierSim =>
         {
           ticker: 'XNAS.DEX',
           weight: 0.4,
-          meanDaily: 0.00175,
+          meanPeriod: 0.00175,
           annualizedPct: 44.2,
           volPct: 18.1,
           windowReturnPct: 19.3,
@@ -174,7 +177,7 @@ it('shows only the per-holding inputs when there are no weights to apply', async
           {
             ticker: 'VWCE.DEX',
             weight: null,
-            meanDaily: 0.00123,
+            meanPeriod: 0.00123,
             annualizedPct: 30.9,
             volPct: 13.2,
             windowReturnPct: 13.4,
@@ -190,4 +193,34 @@ it('shows only the per-holding inputs when there are no weights to apply', async
   expect(screen.queryByText(/from those inputs to the headline figures/i)).not.toBeInTheDocument();
   expect(screen.getByText(/how the holdings move together/i)).toBeInTheDocument();
   expect(screen.getAllByText('—').length).toBeGreaterThan(0);
+});
+
+it('states the weekly basis and annualizes by 52 rather than 252', async () => {
+  render(
+    <CalculationBreakdown
+      sim={
+        {
+          ...sim(),
+          breakdown: {
+            ...sim().breakdown,
+            basis: 'weekly',
+            periodsPerYear: 52,
+            equivalentTradingDays: 615,
+            window: { from: '2024-03-22', to: '2026-08-07', observations: 127, spanDays: 868 }
+          }
+        } as FrontierSim
+      }
+      nameByTicker={names}
+    />
+  );
+  await open();
+
+  expect(screen.getByText('127 weekly returns')).toBeInTheDocument();
+  expect(screen.getByText(/Σ wᵢ·μᵢ × 52/)).toBeInTheDocument();
+  expect(screen.getByText(/Estimated from weekly closes/i)).toBeInTheDocument();
+  // 127 weekly closes are 615 trading days of market, not 127 — the difference
+  // decides how far the projection shrinks the estimate toward its anchor.
+  // Scoped to the formula block: "sample" also appears in the section heading.
+  expect(screen.getByText(/history weight/)).toHaveTextContent('615 trading days');
+  expect(screen.getByText(/history weight/)).toHaveTextContent('0.45');
 });

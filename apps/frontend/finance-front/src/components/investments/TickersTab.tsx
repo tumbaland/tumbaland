@@ -27,7 +27,7 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   ShowChart as ShowChartIcon,
-  CloudDownload as CloudDownloadIcon
+  Sync as SyncIcon
 } from '@mui/icons-material';
 import { UsageMeter } from '@tumbaland/components';
 import { TrackedTicker } from '../../services/trackedTickerService';
@@ -37,10 +37,19 @@ import {
   useUpdateTrackedTicker,
   useDeleteTrackedTicker
 } from '../../hooks/useTrackedTicker';
-import { fetchAllTickerPriceHistory, getQuota, QuotaStatus } from '../../services/tickerPriceHistoryService';
+import {
+  fetchAllTickerPriceHistory,
+  fetchTickerPriceHistory,
+  fetchWeeklyTickerPriceHistory,
+  getQuota,
+  getTickerCoverage,
+  QuotaStatus,
+  TickerCoverage
+} from '../../services/tickerPriceHistoryService';
 import ConfirmationModal from '../ConfirmationModal';
 import TickerHistoryModal from '../TickerHistoryModal';
 import TickerSearch from './TickerSearch';
+import DataSyncDialog, { SyncAction, freshnessLabel, isStale } from './DataSyncDialog';
 
 interface TickersTabProps {
   tickers: TrackedTicker[];
@@ -94,7 +103,8 @@ const TickersTab: React.FC<TickersTabProps> = ({
   const [form, setForm] = useState<TickerForm>(emptyForm);
   const [deleteTarget, setDeleteTarget] = useState<TrackedTicker | null>(null);
   const [historyTicker, setHistoryTicker] = useState<string | null>(null);
-  const [fetching, setFetching] = useState<string | null>(null);
+  const [syncTicker, setSyncTicker] = useState<string | null>(null);
+  const [busyAction, setBusyAction] = useState<SyncAction | null>(null);
 
   const openCreate = () => {
     setEditingId(null);
@@ -149,20 +159,67 @@ const TickersTab: React.FC<TickersTabProps> = ({
   // showing what is left turns "it failed, try again" into "there are no calls
   // left today".
   const [quota, setQuota] = useState<QuotaStatus | null>(null);
-  const refreshQuota = () => { getQuota().then(setQuota).catch(() => setQuota(null)); };
-  useEffect(refreshQuota, []);
+  const [coverage, setCoverage] = useState<Record<string, TickerCoverage>>({});
 
-  const handleFetchHistory = async (ticker: string) => {
-    setFetching(ticker);
+  const refreshQuota = () => { getQuota().then(setQuota).catch(() => setQuota(null)); };
+  const refreshCoverage = () => {
+    getTickerCoverage()
+      .then(rows => setCoverage(Object.fromEntries(rows.map(r => [r.ticker, r]))))
+      // Coverage is decoration on a table that works without it; a failed
+      // lookup leaves the column blank rather than breaking the page.
+      .catch(() => setCoverage({}));
+  };
+
+  useEffect(() => {
+    refreshQuota();
+    refreshCoverage();
+  }, []);
+
+  /**
+   * One handler for all three, because they differ only in which call they make
+   * and what they report — and the surrounding concerns (which action is busy,
+   * refreshing quota and coverage afterwards, turning a provider rejection into
+   * a sentence) are identical and were previously duplicated per button.
+   */
+  const handleSync = async (action: SyncAction) => {
+    if (!syncTicker) return;
+    setBusyAction(action);
     try {
-      await fetchAllTickerPriceHistory(ticker);
-      notify(`Price history fetched for ${ticker}`, 'success');
+      if (action === 'latest') {
+        await fetchTickerPriceHistory(syncTicker);
+        notify(`Latest price fetched for ${syncTicker}`, 'success');
+      } else if (action === 'daily') {
+        await fetchAllTickerPriceHistory(syncTicker);
+        notify(`Daily price history fetched for ${syncTicker}`, 'success');
+      } else {
+        const result = await fetchWeeklyTickerPriceHistory(syncTicker);
+        notify(`Fetched ${result.recordsCount} weekly closes for ${syncTicker}`, 'success');
+      }
     } catch {
-      notify(`Failed to fetch prices for ${ticker} — Alpha Vantage rate limit may be exhausted`, 'error');
+      notify(
+        `Failed to sync ${syncTicker} — the shared Alpha Vantage allowance may be exhausted for today`,
+        'error'
+      );
     } finally {
-      setFetching(null);
+      setBusyAction(null);
       refreshQuota();
+      refreshCoverage();
     }
+  };
+
+  /** Freshness of the daily series, as the table's own summary of sync state. */
+  const lastUpdated = (ticker: string) => {
+    const c = coverage[ticker];
+    if (!c) return null;
+    const hasHistory = c.daily.count > 0 || c.weekly.count > 0;
+    return {
+      label: hasHistory ? freshnessLabel(c.daily.last ?? c.weekly.last) : 'no data',
+      stale: hasHistory ? isStale(c.daily.last, 'daily') : true,
+      weeklyYears:
+        c.weekly.first && c.weekly.last
+          ? (Date.parse(c.weekly.last) - Date.parse(c.weekly.first)) / (365.25 * 86_400_000)
+          : 0
+    };
   };
 
   return (
@@ -221,20 +278,20 @@ const TickersTab: React.FC<TickersTabProps> = ({
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mt: 1.5 }}>
                 <Box>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>Added</Typography>
-                  <Typography variant="body2">{t.dateAdded ? t.dateAdded.slice(0, 10) : '—'}</Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>Prices updated</Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{ color: lastUpdated(t.ticker)?.stale ? 'warning.main' : 'text.primary' }}
+                  >
+                    {lastUpdated(t.ticker)?.label ?? '—'}
+                  </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', flexShrink: 0 }}>
                   <IconButton size="small" onClick={() => setHistoryTicker(t.ticker)} title="Price history">
                     <ShowChartIcon fontSize="small" />
                   </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => handleFetchHistory(t.ticker)}
-                    disabled={fetching !== null}
-                    title="Fetch last ~100 days of prices now"
-                  >
-                    <CloudDownloadIcon fontSize="small" />
+                  <IconButton size="small" onClick={() => setSyncTicker(t.ticker)} title="Price data & sync">
+                    <SyncIcon fontSize="small" />
                   </IconButton>
                   <IconButton size="small" onClick={() => openEdit(t)}>
                     <EditIcon fontSize="small" />
@@ -263,8 +320,9 @@ const TickersTab: React.FC<TickersTabProps> = ({
                 <TableCell>Name</TableCell>
                 <TableCell>Currency</TableCell>
                 <TableCell>Status</TableCell>
-                <TableCell>Added</TableCell>
-                <TableCell align="right" sx={{ width: 170 }}>Actions</TableCell>
+                <TableCell>Prices updated</TableCell>
+                <TableCell>Long history</TableCell>
+                <TableCell align="right" sx={{ width: 150 }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -276,18 +334,42 @@ const TickersTab: React.FC<TickersTabProps> = ({
                   <TableCell>
                     <Chip size="small" label={t.isActive ? 'Active' : 'Paused'} color={t.isActive ? 'success' : 'default'} />
                   </TableCell>
-                  <TableCell>{t.dateAdded ? t.dateAdded.slice(0, 10) : '—'}</TableCell>
+                  <TableCell>
+                    {(() => {
+                      const state = lastUpdated(t.ticker);
+                      if (!state) return '—';
+                      return (
+                        <Typography
+                          variant="body2"
+                          sx={{ color: state.stale ? 'warning.main' : 'text.primary', fontWeight: state.stale ? 600 : 400 }}
+                        >
+                          {state.label}
+                        </Typography>
+                      );
+                    })()}
+                  </TableCell>
+                  <TableCell>
+                    {/*
+                      The planner's risk estimate is only as good as the longest
+                      history every holding shares, and on the free provider tier
+                      that depth exists only if someone fetched the weekly series.
+                      Surfacing it here is what makes the gap actionable.
+                    */}
+                    {(() => {
+                      const years = lastUpdated(t.ticker)?.weeklyYears ?? 0;
+                      return years >= 0.5 ? (
+                        <Chip size="small" color="success" variant="outlined" label={`${years.toFixed(1)} yrs`} />
+                      ) : (
+                        <Chip size="small" label="not fetched" onClick={() => setSyncTicker(t.ticker)} />
+                      );
+                    })()}
+                  </TableCell>
                   <TableCell align="right">
                     <IconButton size="small" onClick={() => setHistoryTicker(t.ticker)} title="Price history">
                       <ShowChartIcon fontSize="small" />
                     </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleFetchHistory(t.ticker)}
-                      disabled={fetching !== null}
-                      title="Fetch last ~100 days of prices now"
-                    >
-                      <CloudDownloadIcon fontSize="small" />
+                    <IconButton size="small" onClick={() => setSyncTicker(t.ticker)} title="Price data & sync">
+                      <SyncIcon fontSize="small" />
                     </IconButton>
                     <IconButton size="small" onClick={() => openEdit(t)}>
                       <EditIcon fontSize="small" />
@@ -300,7 +382,7 @@ const TickersTab: React.FC<TickersTabProps> = ({
               ))}
               {tickers.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} sx={{ textAlign: 'center', py: 6 }}>
+                  <TableCell colSpan={7} sx={{ textAlign: 'center', py: 6 }}>
                     <Typography variant="body1" sx={{ color: 'text.secondary' }}>
                       No tracked tickers — add a holding or track a ticker to start collecting prices.
                     </Typography>
@@ -390,6 +472,18 @@ const TickersTab: React.FC<TickersTabProps> = ({
       {historyTicker && (
         <TickerHistoryModal open={!!historyTicker} onClose={() => setHistoryTicker(null)} ticker={historyTicker} />
       )}
+
+      <DataSyncDialog
+        open={!!syncTicker}
+        ticker={syncTicker}
+        displayName={tickers.find(t => t.ticker === syncTicker)?.displayName}
+        dateAdded={tickers.find(t => t.ticker === syncTicker)?.dateAdded}
+        coverage={syncTicker ? coverage[syncTicker] : undefined}
+        quota={quota}
+        busy={busyAction}
+        onSync={handleSync}
+        onClose={() => setSyncTicker(null)}
+      />
     </Box>
   );
 };

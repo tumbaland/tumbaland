@@ -1,6 +1,12 @@
 jest.mock('../models/TickerPriceHistory', () => ({
   __esModule: true,
-  default: { find: jest.fn(), findById: jest.fn(), findOneAndUpdate: jest.fn(), findByIdAndDelete: jest.fn() }
+  default: {
+    find: jest.fn(),
+    findById: jest.fn(),
+    findOneAndUpdate: jest.fn(),
+    findByIdAndDelete: jest.fn(),
+    aggregate: jest.fn()
+  }
 }));
 
 jest.mock('../models/TrackedTicker', () => ({
@@ -10,16 +16,19 @@ jest.mock('../models/TrackedTicker', () => ({
 
 jest.mock('./alphaVantage.service', () => ({
   fetchStockPrice: jest.fn(),
-  fetchAndSaveAllStockHistory: jest.fn()
+  fetchAndSaveAllStockHistory: jest.fn(),
+  fetchAndSaveWeeklyHistory: jest.fn()
 }));
 
 import TickerPriceHistory from '../models/TickerPriceHistory';
 import TrackedTicker from '../models/TrackedTicker';
-import { fetchStockPrice, fetchAndSaveAllStockHistory } from './alphaVantage.service';
+import { fetchStockPrice, fetchAndSaveAllStockHistory, fetchAndSaveWeeklyHistory } from './alphaVantage.service';
 import {
   getTickerPriceHistory,
+  getTickerCoverage,
   fetchAndSaveTickerPrices,
   fetchAllTickerHistory,
+  fetchWeeklyTickerHistory,
   deleteTickerPriceRecord,
   DEFAULT_PRICE_HISTORY_LIMIT,
   MAX_PRICE_HISTORY_LIMIT
@@ -55,7 +64,7 @@ describe('getTickerPriceHistory', () => {
       userId: 'u1',
       $or: [{ groupId: { $exists: false } }, { groupId: null }]
     });
-    expect(mockedFind).toHaveBeenCalledWith({ ticker: { $in: ['AAPL', 'MSFT'] } });
+    expect(mockedFind).toHaveBeenCalledWith(expect.objectContaining({ ticker: { $in: ['AAPL', 'MSFT'] } }));
   });
 
   it('scopes to group tickers when working in a group context', async () => {
@@ -87,7 +96,7 @@ describe('getTickerPriceHistory', () => {
 
     await getTickerPriceHistory('u1', [], { ticker: 'AAPL' });
 
-    expect(mockedFind).toHaveBeenCalledWith({ ticker: { $in: ['AAPL'] } });
+    expect(mockedFind).toHaveBeenCalledWith(expect.objectContaining({ ticker: { $in: ['AAPL'] } }));
   });
 
   it('pushes the date range into the query', async () => {
@@ -98,10 +107,9 @@ describe('getTickerPriceHistory', () => {
 
     await getTickerPriceHistory('u1', [], { from, to });
 
-    expect(mockedFind).toHaveBeenCalledWith({
-      ticker: { $in: ['AAPL'] },
-      date: { $gte: from, $lte: to }
-    });
+    expect(mockedFind).toHaveBeenCalledWith(
+      expect.objectContaining({ ticker: { $in: ['AAPL'] }, date: { $gte: from, $lte: to } })
+    );
   });
 
   it('sorts in Mongo by ticker asc then date desc and applies the default cap', async () => {
@@ -247,7 +255,7 @@ describe('retention floor', () => {
 
     await getTickerPriceHistory('u1', [], { retentionFrom: RETENTION });
 
-    expect(mockedFind).toHaveBeenCalledWith({ ticker: { $in: ['AAPL'] }, date: { $gte: RETENTION } });
+    expect(mockedFind).toHaveBeenCalledWith(expect.objectContaining({ ticker: { $in: ['AAPL'] }, date: { $gte: RETENTION } }));
   });
 
   it('overrides a wider `from`, so a client cannot ask its way past the plan', async () => {
@@ -258,7 +266,7 @@ describe('retention floor', () => {
     // the rows are simply not returned.
     await getTickerPriceHistory('u1', [], { from: new Date('2024-08-09T00:00:00.000Z'), retentionFrom: RETENTION });
 
-    expect(mockedFind).toHaveBeenCalledWith({ ticker: { $in: ['AAPL'] }, date: { $gte: RETENTION } });
+    expect(mockedFind).toHaveBeenCalledWith(expect.objectContaining({ ticker: { $in: ['AAPL'] }, date: { $gte: RETENTION } }));
   });
 
   it('keeps a narrower `from`, so a caller can still zoom in', async () => {
@@ -267,7 +275,7 @@ describe('retention floor', () => {
 
     await getTickerPriceHistory('u1', [], { from: narrower, retentionFrom: RETENTION });
 
-    expect(mockedFind).toHaveBeenCalledWith({ ticker: { $in: ['AAPL'] }, date: { $gte: narrower } });
+    expect(mockedFind).toHaveBeenCalledWith(expect.objectContaining({ ticker: { $in: ['AAPL'] }, date: { $gte: narrower } }));
   });
 
   it('adds no date filter at all for an unlimited plan', async () => {
@@ -275,7 +283,9 @@ describe('retention floor', () => {
 
     await getTickerPriceHistory('u1', [], { retentionFrom: null });
 
-    expect(mockedFind).toHaveBeenCalledWith({ ticker: { $in: ['AAPL'] } });
+    // No `date` key at all, not merely a wide one.
+    expect(mockedFind.mock.calls[0][0]).not.toHaveProperty('date');
+    expect(mockedFind).toHaveBeenCalledWith(expect.objectContaining({ ticker: { $in: ['AAPL'] } }));
   });
 
   it('still honours `to` alongside the floor', async () => {
@@ -284,6 +294,127 @@ describe('retention floor', () => {
 
     await getTickerPriceHistory('u1', [], { to, retentionFrom: RETENTION });
 
-    expect(mockedFind).toHaveBeenCalledWith({ ticker: { $in: ['AAPL'] }, date: { $gte: RETENTION, $lte: to } });
+    expect(mockedFind).toHaveBeenCalledWith(expect.objectContaining({ ticker: { $in: ['AAPL'] }, date: { $gte: RETENTION, $lte: to } }));
+  });
+});
+
+
+describe('interval separation', () => {
+  beforeEach(() => {
+    (TrackedTicker.distinct as unknown as jest.Mock).mockResolvedValue(['AAPL']);
+    mockedFind.mockReturnValue({
+      sort: () => ({ limit: () => ({ lean: () => Promise.resolve([]) }) })
+    });
+  });
+
+  it('reads daily by default, and matches rows written before the field existed', async () => {
+    await getTickerPriceHistory('u1', [], {});
+
+    // A bare `interval: 'daily'` would exclude every legacy row and empty every
+    // chart in the product.
+    expect(mockedFind).toHaveBeenCalledWith(
+      expect.objectContaining({ interval: { $in: ['daily', null] } })
+    );
+  });
+
+  it('reads weekly only when asked, and never mixes it with daily', async () => {
+    await getTickerPriceHistory('u1', [], { interval: 'weekly' });
+
+    expect(mockedFind).toHaveBeenCalledWith(expect.objectContaining({ interval: 'weekly' }));
+  });
+});
+
+describe('fetchWeeklyTickerHistory', () => {
+  beforeEach(() => {
+    (TrackedTicker.distinct as unknown as jest.Mock).mockResolvedValue(['AAPL']);
+    (fetchAndSaveWeeklyHistory as jest.Mock).mockResolvedValue(622);
+  });
+
+  it('fetches the whole weekly series for a ticker the caller tracks', async () => {
+    await expect(fetchWeeklyTickerHistory('AAPL', 'u1', [])).resolves.toBe(622);
+    expect(fetchAndSaveWeeklyHistory).toHaveBeenCalledWith('AAPL');
+  });
+
+  it('refuses a ticker the caller does not track', async () => {
+    (TrackedTicker.distinct as unknown as jest.Mock).mockResolvedValue(['MSFT']);
+
+    await expect(fetchWeeklyTickerHistory('AAPL', 'u1', [])).rejects.toMatchObject({
+      name: 'ForbiddenError'
+    });
+    expect(fetchAndSaveWeeklyHistory).not.toHaveBeenCalled();
+  });
+
+  it('requires a ticker', async () => {
+    await expect(fetchWeeklyTickerHistory('', 'u1', [])).rejects.toMatchObject({ name: 'BadRequestError' });
+  });
+});
+
+describe('getTickerCoverage', () => {
+  const aggregate = TickerPriceHistory.aggregate as unknown as jest.Mock;
+
+  beforeEach(() => {
+    (TrackedTicker.distinct as unknown as jest.Mock).mockResolvedValue(['AAPL', 'BND']);
+  });
+
+  it('reports counts and ranges per interval, per tracked ticker', async () => {
+    aggregate.mockResolvedValue([
+      {
+        _id: { ticker: 'AAPL', interval: 'daily' },
+        count: 143,
+        first: new Date('2026-01-16T00:00:00.000Z'),
+        last: new Date('2026-08-07T00:00:00.000Z')
+      },
+      {
+        _id: { ticker: 'AAPL', interval: 'weekly' },
+        count: 622,
+        first: new Date('2015-01-20T00:00:00.000Z'),
+        last: new Date('2026-08-07T00:00:00.000Z')
+      }
+    ]);
+
+    const coverage = await getTickerCoverage('u1', []);
+    const aapl = coverage.find(c => c.ticker === 'AAPL')!;
+
+    expect(aapl.daily.count).toBe(143);
+    expect(aapl.weekly.count).toBe(622);
+    expect(aapl.weekly.first).toBe('2015-01-20T00:00:00.000Z');
+  });
+
+  it('reports a tracked ticker with no stored prices as empty rather than omitting it', async () => {
+    aggregate.mockResolvedValue([]);
+
+    const coverage = await getTickerCoverage('u1', []);
+
+    // "Nothing stored" is the state the sync UI most needs to show; dropping the
+    // row would render it as if the ticker did not exist.
+    expect(coverage.map(c => c.ticker)).toEqual(['AAPL', 'BND']);
+    expect(coverage[0].daily).toEqual({ count: 0, first: null, last: null });
+  });
+
+  it('counts rows written before the interval field as daily', async () => {
+    aggregate.mockResolvedValue([
+      { _id: { ticker: 'AAPL', interval: 'daily' }, count: 9, first: new Date(0), last: new Date(0) }
+    ]);
+
+    const coverage = await getTickerCoverage('u1', []);
+
+    expect(coverage.find(c => c.ticker === 'AAPL')!.daily.count).toBe(9);
+    // The aggregation must coalesce the missing field rather than group it separately.
+    expect(aggregate).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          $group: expect.objectContaining({
+            _id: expect.objectContaining({ interval: { $ifNull: ['$interval', 'daily'] } })
+          })
+        })
+      ])
+    );
+  });
+
+  it('returns nothing when the caller tracks nothing', async () => {
+    (TrackedTicker.distinct as unknown as jest.Mock).mockResolvedValue([]);
+
+    await expect(getTickerCoverage('u1', [])).resolves.toEqual([]);
+    expect(aggregate).not.toHaveBeenCalled();
   });
 });

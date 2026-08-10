@@ -16,7 +16,7 @@ import {
   Typography
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import { FrontierSim } from '../../utils/frontierSim';
+import { FrontierSim, TRADING_DAYS } from '../../utils/frontierSim';
 import { ANCHOR_DAYS, LONG_RUN_RETURN_PCT, shrinkExpectedReturn } from '../../utils/growthProjection';
 
 /**
@@ -70,13 +70,20 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
 );
 
 const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({ sim, nameByTicker }) => {
-  const { window, assets, correlations, current, riskFreeRatePct } = sim.breakdown;
+  const { basis, periodsPerYear, window, assets, correlations, current, riskFreeRatePct } = sim.breakdown;
+
+  // Everything on this panel is stated in the units it was estimated in, so the
+  // reader can check the multiplication rather than take the annualized number
+  // on trust.
+  const period = basis === 'weekly' ? 'weekly' : 'daily';
+  const perPeriod = basis === 'weekly' ? 'week' : 'day';
 
   // Everything below describes the portfolio actually held. Without quantities
   // there are no weights, so there is no portfolio arithmetic to show — only
   // the per-holding inputs.
-  const shrunk = current ? shrinkExpectedReturn(current.arithmeticPct, window.observations) : null;
-  const historyWeight = window.observations / (window.observations + ANCHOR_DAYS);
+  const sampleDays = sim.breakdown.equivalentTradingDays;
+  const shrunk = current ? shrinkExpectedReturn(current.arithmeticPct, sampleDays) : null;
+  const historyWeight = sampleDays / (sampleDays + ANCHOR_DAYS);
 
   return (
     <Accordion disableGutters sx={{ mt: 3, borderRadius: 2, '&:before': { display: 'none' } }} elevation={0} variant="outlined">
@@ -87,13 +94,21 @@ const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({ sim, nameBy
       <AccordionDetails>
         <Section title="1. The sample everything is estimated from">
           <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.5 }}>
-            Only the days on which <em>every</em> holding traded can be used, because a covariance
-            needs both assets observed on the same day. That overlap is the entire evidence base for
+            Only the dates on which <em>every</em> holding traded can be used, because a covariance
+            needs both assets observed on the same date. That overlap is the entire evidence base for
             the numbers below — no figure here knows anything about the market outside it.
+            {basis === 'weekly' && (
+              <>
+                {' '}
+                <b>Estimated from weekly closes</b>, which reach far further back than the daily
+                series: an estimate is worth more for having seen several years than for having
+                sampled one of them finely.
+              </>
+            )}
           </Typography>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             <Chip size="small" label={`${window.from} → ${window.to}`} />
-            <Chip size="small" label={`${window.observations} daily returns`} />
+            <Chip size="small" label={`${window.observations} ${period} returns`} />
             <Chip size="small" label={`${window.spanDays} calendar days`} />
             <Chip
               size="small"
@@ -111,10 +126,10 @@ const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({ sim, nameBy
                   <TableCell>Holding</TableCell>
                   <TableCell align="right">Weight&nbsp;w</TableCell>
                   <TableCell align="right">Over the window</TableCell>
-                  <TableCell align="right">Mean daily&nbsp;μ</TableCell>
-                  <TableCell align="right">μ × 252</TableCell>
+                  <TableCell align="right">Mean per {perPeriod}&nbsp;μ</TableCell>
+                  <TableCell align="right">μ × {periodsPerYear}</TableCell>
                   <TableCell align="right">Volatility</TableCell>
-                  <TableCell align="right">w × μ × 252</TableCell>
+                  <TableCell align="right">w × μ × {periodsPerYear}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -128,7 +143,7 @@ const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({ sim, nameBy
                     </TableCell>
                     <TableCell align="right">{asset.weight === null ? '—' : pct(asset.weight * 100)}</TableCell>
                     <TableCell align="right">{pct(asset.windowReturnPct)}</TableCell>
-                    <TableCell align="right">{(asset.meanDaily * 100).toFixed(3)}%</TableCell>
+                    <TableCell align="right">{(asset.meanPeriod * 100).toFixed(3)}%</TableCell>
                     <TableCell align="right">{pct(asset.annualizedPct)}</TableCell>
                     <TableCell align="right">{pct(asset.volPct)}</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 600 }}>
@@ -148,9 +163,9 @@ const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({ sim, nameBy
             </Table>
           </TableContainer>
           <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 1 }}>
-            Weights are each holding&apos;s share of portfolio value on the last shared day. &quot;Over the
-            window&quot; is the plain first-to-last price change; μ × 252 annualizes the <em>average</em>{' '}
-            day instead, which is why the two differ.
+            Weights are each holding&apos;s share of portfolio value on the last shared date. &quot;Over
+            the window&quot; is the plain first-to-last price change; μ × {periodsPerYear} annualizes the{' '}
+            <em>average</em> {perPeriod} instead, which is why the two differ.
           </Typography>
         </Section>
 
@@ -159,15 +174,15 @@ const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({ sim, nameBy
             <Section title="3. From those inputs to the headline figures">
               <Formula>
                 {[
-                  `expected return  = Σ wᵢ·μᵢ × 252        = ${pct(current.arithmeticPct)}`,
-                  `volatility       = √(w′Σw × 252)        = ${pct(current.volPct)}`,
+                  `expected return  = Σ wᵢ·μᵢ × ${periodsPerYear}`.padEnd(42) + `= ${pct(current.arithmeticPct)}`,
+                  `volatility       = √(w′Σw × ${periodsPerYear})`.padEnd(42) + `= ${pct(current.volPct)}`,
                   `Sharpe           = (${current.arithmeticPct.toFixed(1)} − ${riskFreeRatePct.toFixed(1)}) ÷ ${current.volPct.toFixed(1)}`.padEnd(42) +
                     `= ${current.sharpe.toFixed(2)}`
                 ].join('\n')}
               </Formula>
               <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1.5 }}>
-                Σ is the covariance matrix of daily returns: <code>w′Σw</code> is the portfolio&apos;s
-                daily variance, which is smaller than the weighted average of the individual
+                Σ is the covariance matrix of {period} returns: <code>w′Σw</code> is the
+                portfolio&apos;s {perPeriod}ly variance, which is smaller than the weighted average of the individual
                 variances whenever the holdings do not move together. That reduction is the only
                 thing diversification buys, and it is what the frontier is a picture of.
               </Typography>
@@ -192,7 +207,7 @@ const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({ sim, nameBy
             <Section title="5. How much to trust it">
               <Formula>
                 {[
-                  `standard error   = σ ÷ √n × 252         = ± ${pp(current.standardErrorPct)}`,
+                  `standard error   = σ ÷ √n × ${periodsPerYear}`.padEnd(42) + `= ± ${pp(current.standardErrorPct)}`,
                   `95% interval     = ${current.arithmeticPct.toFixed(1)}% ± 1.96 × ${current.standardErrorPct.toFixed(1)}pp`,
                   `                 = ${pct(current.ci95[0])} … ${pct(current.ci95[1])}`
                 ].join('\n')}
@@ -217,6 +232,8 @@ const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({ sim, nameBy
             <Section title="6. What the projection actually uses">
               <Formula>
                 {[
+                  `sample           = ${window.observations} ${period} × ${(TRADING_DAYS / periodsPerYear).toFixed(0)}`.padEnd(42) +
+                    `= ${sampleDays} trading days`,
                   `history weight   = n ÷ (n + ${ANCHOR_DAYS})`.padEnd(42) + `= ${historyWeight.toFixed(2)}`,
                   `projection input = ${historyWeight.toFixed(2)} × ${current.arithmeticPct.toFixed(1)}% + ${(1 - historyWeight).toFixed(2)} × ${LONG_RUN_RETURN_PCT}%`,
                   `                 = ${pct(shrunk ?? 0)}`
@@ -226,7 +243,8 @@ const CalculationBreakdown: React.FC<CalculationBreakdownProps> = ({ sim, nameBy
                 The Projection tab does not compound the figure above. It blends it toward a {LONG_RUN_RETURN_PCT}%
                 long-run equity anchor in proportion to how much history stands behind it — {ANCHOR_DAYS}{' '}
                 trading days (about three years) earns history equal weight. On this sample the
-                historical estimate carries {(historyWeight * 100).toFixed(0)}% of the answer.
+                historical estimate carries {(historyWeight * 100).toFixed(0)}% of the answer
+                {basis === 'weekly' && ' — weekly closes are converted to trading-day equivalents first, so a long weekly history is not discounted for being sampled coarsely'}.
               </Typography>
             </Section>
           </>

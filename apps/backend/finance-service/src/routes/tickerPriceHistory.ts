@@ -5,6 +5,8 @@ import {
   fetchAndSaveTickerPrices,
   deleteTickerPriceHistory,
   fetchAndSaveAllTickerHistory,
+  fetchAndSaveWeeklyTickerHistory,
+  getCoverage,
   getQuota
 } from '../controllers/tickerPriceHistory.controller';
 import { tickerFetchSchema } from '../validation/schemas';
@@ -33,10 +35,21 @@ router.post(
   fetchAndSaveAllTickerHistory
 );
 
+// Fetch and save the full weekly history for a ticker (one call, ~10-20 years)
+router.post(
+  '/fetch-weekly',
+  authenticateToken,
+  providerCallLimiter,
+  validate(tickerFetchSchema),
+  fetchAndSaveWeeklyTickerHistory
+);
+
 // Get price history for the caller's tracked tickers
 router.get('/', authenticateToken, getTickerPriceHistory);
 // Remaining provider quota for today
 router.get('/quota', authenticateToken, getQuota);
+// How much history each tracked ticker holds, and how fresh it is
+router.get('/coverage', authenticateToken, getCoverage);
 // Fetch and save latest prices
 router.post(
   '/fetch',
