@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.440](https://github.com/toomastahves/tumbaland/compare/app-v0.0.439...app-v0.0.440) (2026-08-10)
+
+### Bug Fixes
+
+* bugs in planner ([424a1b2](https://github.com/toomastahves/tumbaland/commit/424a1b2b70a9c70e97b7726cc839088c36888390))
 ## [0.0.439](https://github.com/toomastahves/tumbaland/compare/app-v0.0.438...app-v0.0.439) (2026-08-10)
 
 ### Features
