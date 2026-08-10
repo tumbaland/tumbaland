@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.439](https://github.com/toomastahves/tumbaland/compare/app-v0.0.438...app-v0.0.439) (2026-08-10)
+
+### Features
+
+* add weekly data fetching ([43b75a8](https://github.com/toomastahves/tumbaland/commit/43b75a8354ab1bc670d029ca826c6e0872d85942))
 ## [0.0.438](https://github.com/toomastahves/tumbaland/compare/app-v0.0.437...app-v0.0.438) (2026-08-09)
 
 ### Features
