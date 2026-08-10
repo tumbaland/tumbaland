@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.441](https://github.com/toomastahves/tumbaland/compare/app-v0.0.440...app-v0.0.441) (2026-08-10)
+
+### Features
+
+* update finance service cron times ([475352d](https://github.com/toomastahves/tumbaland/commit/475352d1f7d77b65724866f5e6b37096cf843bc8))
 ## [0.0.440](https://github.com/toomastahves/tumbaland/compare/app-v0.0.439...app-v0.0.440) (2026-08-10)
 
 ### Bug Fixes
