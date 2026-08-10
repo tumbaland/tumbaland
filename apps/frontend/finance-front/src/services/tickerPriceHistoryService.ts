@@ -62,6 +62,11 @@ export interface IntervalCoverage {
   /** ISO timestamps, or null when nothing is stored for that interval. */
   first: string | null;
   last: string | null;
+  /**
+   * When a fetch last wrote this series — a real instant, unlike `last`, which
+   * is a session date at midnight UTC. Null for rows predating timestamps.
+   */
+  fetchedAt: string | null;
 }
 
 export interface TickerCoverage {

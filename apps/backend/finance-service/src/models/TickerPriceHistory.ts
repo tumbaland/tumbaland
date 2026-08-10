@@ -23,20 +23,33 @@ export interface ITickerPriceHistory extends Document {
   low?: number;
   volume?: number;
   interval: PriceInterval;
+  /** When this row was last written by a fetch. See the schema note below. */
+  updatedAt?: Date;
+  createdAt?: Date;
 }
 
-const TickerPriceHistorySchema: Schema = new Schema({
-  date: { type: Date, required: true },
-  ticker: { type: String, required: true },
-  price: { type: Number, required: true },
-  open: { type: Number },
-  high: { type: Number },
-  low: { type: Number },
-  volume: { type: Number },
-  // Defaulted rather than required: every row written before weekly existed is
-  // a daily close, and a default keeps them valid without a data migration.
-  interval: { type: String, enum: ['daily', 'weekly'], default: 'daily', required: true }
-});
+const TickerPriceHistorySchema: Schema = new Schema(
+  {
+    date: { type: Date, required: true },
+    ticker: { type: String, required: true },
+    price: { type: Number, required: true },
+    open: { type: Number },
+    high: { type: Number },
+    low: { type: Number },
+    volume: { type: Number },
+    // Defaulted rather than required: every row written before weekly existed is
+    // a daily close, and a default keeps them valid without a data migration.
+    interval: { type: String, enum: ['daily', 'weekly'], default: 'daily', required: true }
+  },
+  {
+    // `date` is the session the bar belongs to; `updatedAt` is when we last
+    // heard from the provider about it. Conflating the two is what made the UI
+    // report a healthy nightly fetch as "3 days ago" every Monday — the job had
+    // run, the provider simply had no newer session to give. Only a real write
+    // timestamp can tell "the fetch is failing" from "the market was shut".
+    timestamps: true
+  }
+);
 
 // Enforces one record per ticker per interval per day at the schema level, so a
 // caller that gets the date normalization wrong gets a duplicate-key error

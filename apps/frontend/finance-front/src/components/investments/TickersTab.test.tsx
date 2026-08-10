@@ -55,12 +55,25 @@ const mockedCoverage = getTickerCoverage as unknown as ReturnType<typeof vi.fn>;
 const coverageFor = (overrides: Record<string, unknown> = {}) => [
   {
     ticker: 'AAPL',
-    daily: { count: 143, first: '2026-01-16T00:00:00.000Z', last: new Date().toISOString() },
-    weekly: { count: 622, first: '2015-01-20T00:00:00.000Z', last: new Date().toISOString() },
+    daily: { count: 143, first: '2026-01-16T00:00:00.000Z', last: new Date().toISOString(), fetchedAt: '2026-08-11T01:00:07.000Z' },
+    weekly: { count: 622, first: '2015-01-20T00:00:00.000Z', last: new Date().toISOString(), fetchedAt: '2026-08-11T01:00:07.000Z' },
     ...overrides
   },
-  { ticker: 'BND', daily: { count: 0, first: null, last: null }, weekly: { count: 0, first: null, last: null } }
+  { ticker: 'BND', daily: { count: 0, first: null, last: null, fetchedAt: null }, weekly: { count: 0, first: null, last: null, fetchedAt: null } }
 ];
+
+/**
+ * A session date as the table renders it: the viewer's locale format, held in
+ * UTC. Derived rather than hardcoded so the assertions hold under any locale
+ * the test runner happens to have.
+ */
+const asShownDate = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: 'UTC'
+  });
 
 /** Opens the sync dialog for the first ticker in the list. */
 async function openSync() {
@@ -293,8 +306,8 @@ it('notifies with a shared-allowance hint when a sync fails', async () => {
 it('shows how much history is stored and when it was last updated', async () => {
   render(<TickersTab tickers={tickers} notify={vi.fn()} />);
 
-  // The table summarises freshness per ticker...
-  expect(await screen.findAllByText('today')).not.toHaveLength(0);
+  // The table dates the newest bar per ticker...
+  expect(await screen.findAllByText(asShownDate(new Date().toISOString()))).not.toHaveLength(0);
   // ...and flags the instrument with no long history as actionable.
   expect(screen.getByText('11.6 yrs')).toBeInTheDocument();
   expect(screen.getByText('not fetched')).toBeInTheDocument();
@@ -304,28 +317,55 @@ it('shows how much history is stored and when it was last updated', async () => 
   expect(screen.getByText(/143 closes/)).toBeInTheDocument();
 });
 
+it('separates when we last fetched from the session we last got', async () => {
+  // One column pretending to be both is what made a healthy nightly job read
+  // as three days stale: over a weekend the fetch time moves and the session
+  // date does not, and only showing them apart makes that legible.
+  mockedCoverage.mockResolvedValue([
+    {
+      ticker: 'AAPL',
+      daily: { count: 143, first: '2026-01-16T00:00:00.000Z', last: '2026-08-07T00:00:00.000Z', fetchedAt: '2026-08-11T01:00:07.000Z' },
+      weekly: { count: 0, first: null, last: null, fetchedAt: null }
+    }
+  ]);
+  render(<TickersTab tickers={tickers} notify={vi.fn()} />);
+
+  const cell = await screen.findByText(asShownDate('2026-08-07T00:00:00.000Z'));
+  const row = cell.closest('tr') as HTMLElement;
+
+  // The fetch is an instant, reported to the second, and it is a later moment
+  // than the session it retrieved.
+  expect(within(row).getByText(/\d{1,2}:\d{2}:\d{2}/)).toBeInTheDocument();
+
+  // No relative phrasing survives anywhere in the row. Scoped to the row
+  // because "today" legitimately appears in the quota line above the table.
+  expect(within(row).queryByText(/ago|last close|up to date|behind|yesterday|today/i)).toBeNull();
+});
+
 it('flags a daily series that has stopped updating', async () => {
   mockedCoverage.mockResolvedValue([
     {
       ticker: 'AAPL',
-      daily: { count: 143, first: '2026-01-16T00:00:00.000Z', last: '2026-06-04T00:00:00.000Z' },
-      weekly: { count: 0, first: null, last: null }
+      daily: { count: 143, first: '2026-01-16T00:00:00.000Z', last: '2026-06-04T00:00:00.000Z', fetchedAt: '2026-08-11T01:00:07.000Z' },
+      weekly: { count: 0, first: null, last: null, fetchedAt: null }
     },
-    { ticker: 'BND', daily: { count: 0, first: null, last: null }, weekly: { count: 0, first: null, last: null } }
+    { ticker: 'BND', daily: { count: 0, first: null, last: null, fetchedAt: null }, weekly: { count: 0, first: null, last: null, fetchedAt: null } }
   ]);
   render(<TickersTab tickers={tickers} notify={vi.fn()} />);
 
-  // Stale rather than "no data": the difference between a broken job and a new
-  // instrument is the whole point of showing this.
-  expect(await screen.findByText(/months ago/)).toBeInTheDocument();
+  // Dated rather than "no data": the difference between a broken job and a new
+  // instrument is the whole point of showing this, and the date says which
+  // session it stopped at instead of leaving the reader to work it out.
+  expect(await screen.findByText(asShownDate('2026-06-04T00:00:00.000Z'))).toBeInTheDocument();
+  expect(screen.getByText('no data')).toBeInTheDocument(); // the untouched BND row
 });
 
 it('recommends the weekly fetch when no long history is stored', async () => {
   mockedCoverage.mockResolvedValue([
     {
       ticker: 'AAPL',
-      daily: { count: 143, first: '2026-01-16T00:00:00.000Z', last: new Date().toISOString() },
-      weekly: { count: 0, first: null, last: null }
+      daily: { count: 143, first: '2026-01-16T00:00:00.000Z', last: new Date().toISOString(), fetchedAt: '2026-08-11T01:00:07.000Z' },
+      weekly: { count: 0, first: null, last: null, fetchedAt: null }
     }
   ]);
   render(<TickersTab tickers={tickers} notify={vi.fn()} />);

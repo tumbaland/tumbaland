@@ -138,6 +138,16 @@ export interface IntervalCoverage {
   /** Oldest and newest close held, ISO dates. `null` when nothing is stored. */
   first: string | null;
   last: string | null;
+  /**
+   * When a fetch last wrote any row of this series — a real instant, unlike
+   * `last`, which is a session date at midnight UTC.
+   *
+   * These answer different questions and were previously confused for each
+   * other: over a weekend `last` stops moving while `fetchedAt` keeps updating
+   * nightly, which is exactly how a working job is told from a stalled one.
+   * `null` for rows written before the collection carried timestamps.
+   */
+  fetchedAt: string | null;
 }
 
 export interface TickerCoverage {
@@ -146,7 +156,7 @@ export interface TickerCoverage {
   weekly: IntervalCoverage;
 }
 
-const EMPTY_COVERAGE: IntervalCoverage = { count: 0, first: null, last: null };
+const EMPTY_COVERAGE: IntervalCoverage = { count: 0, first: null, last: null, fetchedAt: null };
 
 /**
  * How much price history exists per tracked ticker, and how fresh it is.
@@ -172,6 +182,7 @@ export async function getTickerCoverage(
     count: number;
     first: Date;
     last: Date;
+    fetchedAt: Date | null;
   }>([
     { $match: { ticker: { $in: allowed } } },
     {
@@ -181,7 +192,10 @@ export async function getTickerCoverage(
         _id: { ticker: '$ticker', interval: { $ifNull: ['$interval', 'daily'] } },
         count: { $sum: 1 },
         first: { $min: '$date' },
-        last: { $max: '$date' }
+        last: { $max: '$date' },
+        // The newest write across the series, not of the newest bar: a run that
+        // re-reads a hundred unchanged sessions still proves the job is alive.
+        fetchedAt: { $max: '$updatedAt' }
       }
     }
   ]);
@@ -200,7 +214,8 @@ export async function getTickerCoverage(
     entry[interval] = {
       count: row.count,
       first: row.first ? row.first.toISOString() : null,
-      last: row.last ? row.last.toISOString() : null
+      last: row.last ? row.last.toISOString() : null,
+      fetchedAt: row.fetchedAt ? row.fetchedAt.toISOString() : null
     };
   }
 

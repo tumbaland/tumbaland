@@ -380,6 +380,41 @@ describe('getTickerCoverage', () => {
     expect(aapl.weekly.first).toBe('2015-01-20T00:00:00.000Z');
   });
 
+  it('reports when a fetch last ran separately from the session it retrieved', async () => {
+    // The distinction the UI was missing: a Monday-night run that finds no new
+    // session still moves `fetchedAt` while `last` stays on Friday. Without it
+    // a working job is indistinguishable from a stalled one.
+    aggregate.mockResolvedValue([
+      {
+        _id: { ticker: 'AAPL', interval: 'daily' },
+        count: 143,
+        first: new Date('2026-01-16T00:00:00.000Z'),
+        last: new Date('2026-08-07T00:00:00.000Z'),
+        fetchedAt: new Date('2026-08-10T22:00:07.000Z')
+      }
+    ]);
+
+    const aapl = (await getTickerCoverage('u1', [])).find(c => c.ticker === 'AAPL')!;
+
+    expect(aapl.daily.last).toBe('2026-08-07T00:00:00.000Z');
+    expect(aapl.daily.fetchedAt).toBe('2026-08-10T22:00:07.000Z');
+  });
+
+  it('has no fetch time for rows written before the collection was timestamped', async () => {
+    aggregate.mockResolvedValue([
+      {
+        _id: { ticker: 'AAPL', interval: 'daily' },
+        count: 9,
+        first: new Date(0),
+        last: new Date(0),
+        fetchedAt: null
+      }
+    ]);
+
+    const aapl = (await getTickerCoverage('u1', [])).find(c => c.ticker === 'AAPL')!;
+    expect(aapl.daily.fetchedAt).toBeNull();
+  });
+
   it('reports a tracked ticker with no stored prices as empty rather than omitting it', async () => {
     aggregate.mockResolvedValue([]);
 
@@ -388,7 +423,7 @@ describe('getTickerCoverage', () => {
     // "Nothing stored" is the state the sync UI most needs to show; dropping the
     // row would render it as if the ticker did not exist.
     expect(coverage.map(c => c.ticker)).toEqual(['AAPL', 'BND']);
-    expect(coverage[0].daily).toEqual({ count: 0, first: null, last: null });
+    expect(coverage[0].daily).toEqual({ count: 0, first: null, last: null, fetchedAt: null });
   });
 
   it('counts rows written before the interval field as daily', async () => {

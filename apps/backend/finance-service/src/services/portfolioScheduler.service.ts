@@ -87,8 +87,24 @@ export async function runDailyPortfolioUpdate(): Promise<void> {
 }
 
 export function startDailyPortfolioUpdate() {
-  // Runs every day at 22:00 (10 PM).
+  // 04:00 UTC — the morning after the session it collects, not the evening of.
+  //
+  // The container runs UTC, so this is deliberate on two counts:
+  //
+  // 1. Provider lag. Xetra closes 15:30 UTC, but Alpha Vantage's free tier does
+  //    not publish every symbol at the same time. A 22:00 UTC run — 6.5 hours
+  //    after the close — was observed getting the day's bar for two of six
+  //    tracked symbols and Friday's stale bar for the other four. 04:00 gives
+  //    the provider 12.5 hours instead, and the compact window backfills any
+  //    symbol still missing on the next run regardless.
+  //
+  // 2. Quota ordering. The provider's 25 calls/day reset at 00:00 UTC and are
+  //    shared with every manual fetch a user makes. Running near the end of the
+  //    UTC day meant the job competed with a day of hand-triggered syncs that
+  //    had already spent the budget; running at 04:00 it claims its handful
+  //    first, while the people sharing that budget are asleep.
+  //
   // Uses TIME_SERIES_DAILY compact (last ~100 trading days) so any gaps from
   // missed cron runs are automatically backfilled on the next successful run.
-  cron.schedule('0 22 * * *', runDailyPortfolioUpdate);
+  cron.schedule('0 4 * * *', runDailyPortfolioUpdate);
 }

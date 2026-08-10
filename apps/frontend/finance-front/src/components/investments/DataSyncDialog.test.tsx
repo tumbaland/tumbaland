@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { freshnessLabel, isStale, sessionsSince } from './DataSyncDialog';
+import { closeDate, fetchedAtLabel, isStale, sessionsSince } from './DataSyncDialog';
 
 /**
  * Freshness is measured in trading sessions, not calendar days, and the cases
@@ -35,32 +35,47 @@ describe('sessionsSince', () => {
   });
 });
 
-describe('freshnessLabel', () => {
-  it("does not age a Friday close over the weekend it cannot trade through", () => {
-    // The regression this replaces: every Monday read "3 days ago" for the
-    // newest bar that existed anywhere.
-    expect(freshnessLabel(FRIDAY_CLOSE, at('2026-08-08T12:00:00Z'))).toBe('up to date');
-    expect(freshnessLabel(FRIDAY_CLOSE, at('2026-08-09T12:00:00Z'))).toBe('up to date');
-    expect(freshnessLabel(FRIDAY_CLOSE, at('2026-08-10T12:00:00Z'))).toBe('up to date');
+describe('closeDate', () => {
+  it('names the exact session, in the viewer\'s locale format', () => {
+    const shown = closeDate(FRIDAY_CLOSE) as string;
+    expect(shown).toContain('2026');
+    expect(shown).toMatch(/\b0?7\b/); // the day
+    expect(shown).toMatch(/\b0?8\b/); // the month
   });
 
-  it("says so plainly when the bar is today's", () => {
-    expect(freshnessLabel(FRIDAY_CLOSE, at('2026-08-07T18:00:00Z'))).toBe('today');
+  it('holds the session date in UTC, so it cannot drift a day behind the chart', () => {
+    // A bar's date is a calendar date, not an instant. Converted to local time,
+    // a viewer west of Greenwich would be shown the 6th for a session the chart
+    // plots on the 7th — so both ends of the UTC day must render identically.
+    expect(closeDate('2026-08-07T00:00:00.000Z')).toBe(closeDate('2026-08-07T23:59:59.000Z'));
+    expect(closeDate(FRIDAY_CLOSE)).not.toMatch(/\b0?6\b/);
   });
 
-  it('reports the deficit in sessions once the job actually misses one', () => {
-    expect(freshnessLabel(FRIDAY_CLOSE, at('2026-08-11T12:00:00Z'))).toBe('1 session behind');
-    expect(freshnessLabel(FRIDAY_CLOSE, at('2026-08-13T12:00:00Z'))).toBe('3 sessions behind');
+  it('has nothing to show for an instrument with no close', () => {
+    expect(closeDate(null)).toBeNull();
+    expect(closeDate('not a date')).toBeNull();
+  });
+});
+
+describe('fetchedAtLabel', () => {
+  it('reports the fetch to the second', () => {
+    const shown = fetchedAtLabel('2026-08-10T22:00:07.000Z') as string;
+    expect(shown).toContain('2026');
+    // Seconds are the point: they separate a run that just happened from one
+    // that did not, which a date alone cannot show.
+    expect(shown).toMatch(/\d{1,2}:\d{2}:\d{2}/);
   });
 
-  it('falls back to calendar wording once a session count stops being readable', () => {
-    expect(freshnessLabel(FRIDAY_CLOSE, at('2026-08-19T12:00:00Z'))).toBe('last week');
-    expect(freshnessLabel(FRIDAY_CLOSE, at('2026-09-07T12:00:00Z'))).toBe('4 weeks ago');
-    expect(freshnessLabel(FRIDAY_CLOSE, at('2026-11-07T12:00:00Z'))).toBe('3 months ago');
+  it('is an instant, so it does move with the viewer\'s zone', () => {
+    // Unlike a session date, "when did my machine last get data" is a real
+    // moment and belongs in local time.
+    const utc = new Date('2026-08-10T22:00:07.000Z');
+    expect(fetchedAtLabel(utc.toISOString())).toContain(String(utc.getHours()).padStart(2, '0'));
   });
 
-  it('distinguishes an instrument that never had a price', () => {
-    expect(freshnessLabel(null)).toBe('never');
+  it('has nothing to show before the first fetch', () => {
+    expect(fetchedAtLabel(null)).toBeNull();
+    expect(fetchedAtLabel('not a date')).toBeNull();
   });
 });
 

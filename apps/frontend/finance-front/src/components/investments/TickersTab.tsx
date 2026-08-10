@@ -49,7 +49,7 @@ import {
 import ConfirmationModal from '../ConfirmationModal';
 import TickerHistoryModal from '../TickerHistoryModal';
 import TickerSearch from './TickerSearch';
-import DataSyncDialog, { SyncAction, freshnessLabel, isStale } from './DataSyncDialog';
+import DataSyncDialog, { SyncAction, closeDate, fetchedAtLabel, isStale } from './DataSyncDialog';
 
 interface TickersTabProps {
   tickers: TrackedTicker[];
@@ -211,10 +211,21 @@ const TickersTab: React.FC<TickersTabProps> = ({
   const lastUpdated = (ticker: string) => {
     const c = coverage[ticker];
     if (!c) return null;
-    const hasHistory = c.daily.count > 0 || c.weekly.count > 0;
     return {
-      label: hasHistory ? freshnessLabel(c.daily.last ?? c.weekly.last) : 'no data',
-      stale: hasHistory ? isStale(c.daily.last, 'daily') : true,
+      // Two separate facts, because one column pretending to be both is what
+      // made a working nightly job read as three days stale: `fetchedAt` is
+      // when we last asked the provider, `date` is the newest session it had
+      // to give. Over a weekend the first moves and the second does not.
+      //
+      // Both read the *daily* series alone. Weekly is a one-off backfill for
+      // depth — its fetch time dates whenever someone last pressed the button,
+      // and its newest bar is a week-ending close, so letting either stand in
+      // for the daily series would misreport exactly what these columns exist
+      // to report. The nightly job maintains daily, and its compact ~100-day
+      // response is what silently refills any gap left by an outage.
+      fetchedAt: fetchedAtLabel(c.daily.fetchedAt),
+      date: c.daily.count > 0 ? closeDate(c.daily.last) : null,
+      stale: c.daily.count > 0 ? isStale(c.daily.last, 'daily') : true,
       weeklyYears:
         c.weekly.first && c.weekly.last
           ? (Date.parse(c.weekly.last) - Date.parse(c.weekly.first)) / (365.25 * 86_400_000)
@@ -227,7 +238,8 @@ const TickersTab: React.FC<TickersTabProps> = ({
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 2, flexWrap: 'wrap' }}>
         <Box>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Active tickers get a daily price update at 22:00. Holdings track their ticker automatically.
+            Active tickers get a daily price update at 04:00 UTC, the morning after each session —
+            the provider publishes some symbols hours late. Holdings track their ticker automatically.
           </Typography>
           {quota && (
             <Typography
@@ -278,13 +290,24 @@ const TickersTab: React.FC<TickersTabProps> = ({
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', mt: 1.5 }}>
                 <Box>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>Prices updated</Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{ color: lastUpdated(t.ticker)?.stale ? 'warning.main' : 'text.primary' }}
-                  >
-                    {lastUpdated(t.ticker)?.label ?? '—'}
-                  </Typography>
+                  {(() => {
+                    const state = lastUpdated(t.ticker);
+                    return (
+                      <>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>Last fetch</Typography>
+                        <Typography variant="body2">{state?.fetchedAt ?? '—'}</Typography>
+                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
+                          Latest close
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{ color: state?.stale ? 'warning.main' : 'text.primary' }}
+                        >
+                          {state ? (state.date ?? 'no data') : '—'}
+                        </Typography>
+                      </>
+                    );
+                  })()}
                 </Box>
                 <Box sx={{ display: 'flex', flexShrink: 0 }}>
                   <IconButton size="small" onClick={() => setHistoryTicker(t.ticker)} title="Price history">
@@ -320,7 +343,8 @@ const TickersTab: React.FC<TickersTabProps> = ({
                 <TableCell>Name</TableCell>
                 <TableCell>Currency</TableCell>
                 <TableCell>Status</TableCell>
-                <TableCell>Prices updated</TableCell>
+                <TableCell>Last fetch</TableCell>
+                <TableCell>Latest close</TableCell>
                 <TableCell>Long history</TableCell>
                 <TableCell align="right" sx={{ width: 150 }}>Actions</TableCell>
               </TableRow>
@@ -335,15 +359,24 @@ const TickersTab: React.FC<TickersTabProps> = ({
                     <Chip size="small" label={t.isActive ? 'Active' : 'Paused'} color={t.isActive ? 'success' : 'default'} />
                   </TableCell>
                   <TableCell>
+                    <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>
+                      {lastUpdated(t.ticker)?.fetchedAt ?? '—'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
                     {(() => {
                       const state = lastUpdated(t.ticker);
                       if (!state) return '—';
                       return (
                         <Typography
                           variant="body2"
-                          sx={{ color: state.stale ? 'warning.main' : 'text.primary', fontWeight: state.stale ? 600 : 400 }}
+                          sx={{
+                            whiteSpace: 'nowrap',
+                            color: state.stale ? 'warning.main' : 'text.primary',
+                            fontWeight: state.stale ? 600 : 400
+                          }}
                         >
-                          {state.label}
+                          {state.date ?? 'no data'}
                         </Typography>
                       );
                     })()}

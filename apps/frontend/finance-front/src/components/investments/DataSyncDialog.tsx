@@ -85,28 +85,43 @@ export function sessionsSince(iso: string | null | undefined, now: Date = new Da
 }
 
 /**
- * Freshness in the terms a market actually has them: a close from Friday read
- * on Sunday is current, not two days stale, so the wording stays vague enough
- * to be true over a weekend.
+ * A session date, in the viewer's locale format.
  *
- * Counting calendar days is what made every Monday report "3 days ago" for a
- * Friday close that was the newest bar in existence — an outage the data never
- * had. A weekend is not missing data, so it cannot count as age; only sessions
- * that closed without producing a bar can. Past a couple of weeks the exact
- * session count stops being what anyone wants to read, and calendar wording
- * takes over.
+ * Held in UTC on purpose: a bar's date is a calendar date, not an instant, and
+ * converting it to local time would show the 6th to a viewer west of Greenwich
+ * for a session the chart plots on the 7th. Only the *format* is localized.
  */
-export function freshnessLabel(iso: string | null | undefined, now: Date = new Date()): string {
-  const days = daysSince(iso, now);
-  if (days === null) return 'never';
-  if (days === 0) return 'today';
+export function closeDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return null;
+  return new Date(t).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: 'UTC'
+  });
+}
 
-  const sessions = sessionsSince(iso, now) ?? 0;
-  if (sessions === 0) return 'up to date';
-  if (sessions <= 4) return `${sessions} session${sessions === 1 ? '' : 's'} behind`;
-  if (days <= 13) return 'last week';
-  if (days < 60) return `${Math.round(days / 7)} weeks ago`;
-  return `${Math.round(days / 30)} months ago`;
+/**
+ * When a fetch last ran, to the second, in the viewer's own locale and zone.
+ *
+ * This one *is* an instant, so unlike {@link closeDate} it is shown in local
+ * time — the question it answers is "when did my machine last get data", and
+ * seconds are what distinguish a run that just happened from one that did not.
+ */
+export function fetchedAtLabel(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return null;
+  return new Date(t).toLocaleString(undefined, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
 }
 
 /**
@@ -122,7 +137,7 @@ export function isStale(last: string | null | undefined, interval: 'daily' | 'we
   return interval === 'daily' ? (sessionsSince(last, now) ?? 0) > 1 : days > 14;
 }
 
-const shortDate = (iso: string | null) => (iso ? iso.slice(0, 10) : '—');
+const shortDate = (iso: string | null) => closeDate(iso) ?? '—';
 
 function yearsBetween(first: string | null, last: string | null): number | null {
   if (!first || !last) return null;
@@ -155,7 +170,7 @@ const CoverageRow: React.FC<{
               size="small"
               color={stale ? 'warning' : 'success'}
               variant={stale ? 'filled' : 'outlined'}
-              label={`updated ${freshnessLabel(data?.last)}`}
+              label={`updated ${closeDate(data?.last) ?? 'never'}`}
             />
           </>
         )}

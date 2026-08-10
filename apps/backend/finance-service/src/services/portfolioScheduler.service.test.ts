@@ -49,9 +49,13 @@ afterEach(() => {
 });
 
 describe('startDailyPortfolioUpdate', () => {
-  it('registers a cron job for 22:00 daily', () => {
+  // 04:00 UTC, not the evening of the session: the provider had published only
+  // two of six tracked symbols 6.5 hours after the Xetra close, and the shared
+  // 25-call budget resets at 00:00 UTC, so an early run claims its calls before
+  // a day of manual syncs can spend them.
+  it('registers a cron job for 04:00 UTC daily', () => {
     startDailyPortfolioUpdate();
-    expect(cron.schedule).toHaveBeenCalledWith('0 22 * * *', runDailyPortfolioUpdate);
+    expect(cron.schedule).toHaveBeenCalledWith('0 4 * * *', runDailyPortfolioUpdate);
   });
 });
 
