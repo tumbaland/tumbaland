@@ -47,6 +47,8 @@ it('shows an empty state when there are no activity types', async () => {
   mockedGetTypes.mockResolvedValue({ data: [], pagination: {} as any });
   render(<ActivityTypesManagement />);
   expect(await screen.findByText('No Activity Types Found')).toBeInTheDocument();
+  // the empty state is the only place to start from, so it carries the button too
+  expect(screen.getByRole('button', { name: 'Add Activity Type' })).toBeInTheDocument();
 });
 
 it('shows an empty state when loading fails', async () => {
@@ -66,13 +68,14 @@ it('renders a row per activity type with its value type and color chips', async 
   expect(screen.getAllByText('-').length).toBeGreaterThan(0); // Running has no color
 });
 
-it('opens the create dialog and creates a new type', async () => {
+it('opens the create dialog from its own button and creates a new type', async () => {
   mockedGetTypes.mockResolvedValue({ data: types, pagination: {} as any });
   mockedCreate.mockResolvedValue(undefined);
-  render(<ActivityTypesManagement />);
+  const onChanged = vi.fn();
+  render(<ActivityTypesManagement onChanged={onChanged} />);
   await screen.findByText('Reading');
 
-  window.dispatchEvent(new Event('openCreateActivityTypeDialog'));
+  await userEvent.click(screen.getByRole('button', { name: 'Add Activity Type' }));
   expect(await screen.findByText('Create Activity Type')).toBeInTheDocument();
 
   await userEvent.type(screen.getByLabelText(/^Name/), 'Gaming');
@@ -80,12 +83,14 @@ it('opens the create dialog and creates a new type', async () => {
 
   await waitFor(() => expect(mockedCreate).toHaveBeenCalled());
   expect(mockedGetTypes).toHaveBeenCalledTimes(2);
+  expect(onChanged).toHaveBeenCalled();
 });
 
 it('opens the edit dialog with the selected type and updates it', async () => {
   mockedGetTypes.mockResolvedValue({ data: types, pagination: {} as any });
   mockedUpdate.mockResolvedValue(undefined);
-  render(<ActivityTypesManagement />);
+  const onChanged = vi.fn();
+  render(<ActivityTypesManagement onChanged={onChanged} />);
   await screen.findByText('Reading');
 
   await userEvent.click(screen.getAllByLabelText('Edit')[0]);
@@ -94,19 +99,22 @@ it('opens the edit dialog with the selected type and updates it', async () => {
 
   await userEvent.click(screen.getByRole('button', { name: 'Update' }));
   await waitFor(() => expect(mockedUpdate).toHaveBeenCalledWith('t1', expect.anything()));
+  await waitFor(() => expect(onChanged).toHaveBeenCalled());
 });
 
 it('deletes a type after confirmation', async () => {
   mockedGetTypes.mockResolvedValue({ data: types, pagination: {} as any });
   mockedDelete.mockResolvedValue(undefined);
   vi.spyOn(window, 'confirm').mockReturnValue(true);
-  render(<ActivityTypesManagement />);
+  const onChanged = vi.fn();
+  render(<ActivityTypesManagement onChanged={onChanged} />);
   await screen.findByText('Reading');
 
   await userEvent.click(screen.getAllByLabelText('Delete')[0]);
 
   await waitFor(() => expect(mockedDelete).toHaveBeenCalledWith('t1'));
   expect(mockedGetTypes).toHaveBeenCalledTimes(2);
+  expect(onChanged).toHaveBeenCalled();
 });
 
 it('does not delete when confirmation is declined', async () => {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { logger } from '@tumbaland/frontend-core';
 import {
   Box,
+  Button,
   Typography,
   Table,
   TableBody,
@@ -19,6 +20,7 @@ import {
   alpha
 } from '@mui/material';
 import {
+  Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Circle as CircleIcon
@@ -36,9 +38,11 @@ import ActivityTypeDialog from './ActivityTypeDialog';
 
 interface ActivityTypesManagementProps {
   groupId?: string;
+  /** Called after a type is created, updated or deleted, so callers can refresh their own copy. */
+  onChanged?: () => void;
 }
 
-const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ groupId }) => {
+const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ groupId, onChanged }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [activityTypes, setActivityTypes] = useState<ActivityType[]>([]);
@@ -77,6 +81,7 @@ const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ group
     try {
       await deleteActivityType(id);
       await loadActivityTypes();
+      onChanged?.();
     } catch (error) {
       alert('Failed to delete activity type: ' + (error instanceof Error ? error.message : error));
     }
@@ -89,23 +94,33 @@ const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ group
       await createActivityType(data as CreateActivityTypeRequest);
     }
     await loadActivityTypes();
+    onChanged?.();
   };
 
   useEffect(() => {
     loadActivityTypes();
   }, [groupId]);
 
-  useEffect(() => {
-    const handleOpenCreateDialog = () => {
-      handleCreate();
-    };
+  const addButton = (
+    <Button
+      variant="contained"
+      startIcon={<AddIcon />}
+      onClick={handleCreate}
+      sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+    >
+      Add Activity Type
+    </Button>
+  );
 
-    window.addEventListener('openCreateActivityTypeDialog', handleOpenCreateDialog);
-
-    return () => {
-      window.removeEventListener('openCreateActivityTypeDialog', handleOpenCreateDialog);
-    };
-  }, []);
+  const dialog = (
+    <ActivityTypeDialog
+      open={dialogOpen}
+      onClose={() => setDialogOpen(false)}
+      onSubmit={handleDialogSubmit}
+      initialData={editingType}
+      defaultGroupId={groupId}
+    />
+  );
 
   if (loading && activityTypes.length === 0) {
     return (
@@ -128,28 +143,34 @@ const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ group
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          p: 8,
+          gap: 2,
+          p: 6,
           bgcolor: 'background.paper',
           borderRadius: 2,
           border: '1px dashed',
           borderColor: 'divider'
         }}>
-        <Typography variant="h6" gutterBottom sx={{
-          color: "text.secondary"
-        }}>
-          No Activity Types Found
-        </Typography>
-        <Typography variant="body2" sx={{
-          color: "text.secondary"
-        }}>
-          Create your first activity type to get started.
-        </Typography>
+        <Box sx={{ textAlign: 'center' }}>
+          <Typography variant="h6" gutterBottom sx={{
+            color: "text.secondary"
+          }}>
+            No Activity Types Found
+          </Typography>
+          <Typography variant="body2" sx={{
+            color: "text.secondary"
+          }}>
+            Create your first activity type to get started.
+          </Typography>
+        </Box>
+        {addButton}
+        {dialog}
       </Box>
     );
   }
 
   return (
     <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>{addButton}</Box>
       {isMobile ? (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           {activityTypes.map((type) => (
@@ -283,13 +304,7 @@ const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ group
           </Table>
         </TableContainer>
       )}
-      <ActivityTypeDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        onSubmit={handleDialogSubmit}
-        initialData={editingType}
-        defaultGroupId={groupId}
-      />
+      {dialog}
     </Box>
   );
 };

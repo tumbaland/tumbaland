@@ -17,6 +17,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import DownloadIcon from '@mui/icons-material/Download';
 import EditCalendarIcon from '@mui/icons-material/EditCalendar';
 import PlaceIcon from '@mui/icons-material/Place';
+import TuneIcon from '@mui/icons-material/Tune';
 import { useSearchParams } from 'react-router';
 import { useTenantFilter } from '@tumbaland/components';
 import { logger } from '@tumbaland/frontend-core';
@@ -24,6 +25,7 @@ import { ActivityType, Day, DaysResponse } from '../services/types';
 import { getDays } from '../services/days';
 import { getActivityTypes } from '../services/activityTypes';
 import DayEditorDialog from '../components/DayEditorDialog';
+import ActivityTypesDialog from '../components/ActivityTypesDialog';
 
 const PAGE_SIZE = 30;
 /** Bigger pages for the export, so a long history takes few round trips. */
@@ -107,17 +109,28 @@ const JournalPage: React.FC = () => {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorDate, setEditorDate] = useState(todayKey());
   const [editorDateEditable, setEditorDateEditable] = useState(false);
+  const [typesDialogOpen, setTypesDialogOpen] = useState(false);
 
   useEffect(() => {
     const handle = setTimeout(() => setDebouncedSearch(search.trim()), 350);
     return () => clearTimeout(handle);
   }, [search]);
 
-  useEffect(() => {
-    getActivityTypes({ groupId: tenantGroupId })
-      .then((response) => setTypes(response.data))
-      .catch((e) => logger.error('Failed to load activity types', e));
+  const loadTypes = useCallback(async () => {
+    try {
+      const response = await getActivityTypes({ groupId: tenantGroupId });
+      setTypes(response.data);
+      // A type the filter points at may have just been deleted in the manage
+      // dialog — fall back to "all" so the list doesn't come back empty.
+      setTypeFilter((current) => (current && !response.data.some((t) => t._id === current) ? '' : current));
+    } catch (e) {
+      logger.error('Failed to load activity types', e);
+    }
   }, [tenantGroupId]);
+
+  useEffect(() => {
+    void loadTypes();
+  }, [loadTypes]);
 
   const fetchPage = useCallback(
     async (pageToLoad: number, limit: number = PAGE_SIZE): Promise<DaysResponse> =>
@@ -328,6 +341,14 @@ const JournalPage: React.FC = () => {
             </MenuItem>
           ))}
         </TextField>
+        <Button
+          startIcon={<TuneIcon />}
+          onClick={() => setTypesDialogOpen(true)}
+          size="small"
+          sx={{ textTransform: 'none' }}
+        >
+          Manage types
+        </Button>
         <Box sx={{ flex: 1 }} />
         <Button
           startIcon={<DownloadIcon />}
@@ -414,6 +435,18 @@ const JournalPage: React.FC = () => {
         dateEditable={editorDateEditable}
         onClose={() => setEditorOpen(false)}
         onSaved={() => void reload()}
+      />
+
+      <ActivityTypesDialog
+        open={typesDialogOpen}
+        onClose={() => setTypesDialogOpen(false)}
+        groupId={tenantGroupId}
+        onChanged={() => {
+          // Days carry their type's name and colour, so a rename, recolour or
+          // delete has to be reflected in the entries already on screen.
+          void loadTypes();
+          void reload();
+        }}
       />
     </Box>
   );

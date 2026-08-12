@@ -252,7 +252,7 @@ const DayEditorDialog: React.FC<DayEditorDialogProps> = ({
           </Box>
         ) : sortedTypes.length === 0 ? (
           <Alert severity="info" sx={{ borderRadius: 2 }}>
-            No activity types yet — create some under Activity Types first.
+            No activity types yet — add some with &ldquo;Manage types&rdquo; on the journal first.
           </Alert>
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', pt: 1 }}>

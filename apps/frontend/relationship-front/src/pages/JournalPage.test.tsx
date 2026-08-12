@@ -24,6 +24,16 @@ vi.mock('../components/DayEditorDialog', () => ({
       </div>
     ) : null
 }));
+vi.mock('../components/ActivityTypesDialog', () => ({
+  default: ({ open, groupId, onClose, onChanged }: any) =>
+    open ? (
+      <div>
+        <div>ActivityTypesDialog for {groupId}</div>
+        <button onClick={onClose}>close-types</button>
+        <button onClick={onChanged}>change-types</button>
+      </div>
+    ) : null
+}));
 
 import { getDays } from '../services/days';
 import { getActivityTypes } from '../services/activityTypes';
@@ -159,6 +169,50 @@ it('filters by activity type', async () => {
   await userEvent.click(await screen.findByText('Reading'));
 
   await waitFor(() => expect(mockedGetDays).toHaveBeenCalledWith(expect.objectContaining({ typeId: 't1' })));
+});
+
+it('manages activity types in a dialog opened from the journal', async () => {
+  mockedGetDays.mockResolvedValue({ days: [], page: 1, totalPages: 1, total: 0 });
+  renderPage();
+  await screen.findByText('Nothing logged yet');
+
+  await userEvent.click(screen.getByRole('button', { name: 'Manage types' }));
+  expect(screen.getByText('ActivityTypesDialog for g1')).toBeInTheDocument();
+
+  await userEvent.click(screen.getByText('close-types'));
+  expect(screen.queryByText('ActivityTypesDialog for g1')).not.toBeInTheDocument();
+});
+
+it('refreshes the types and the days after a type is changed', async () => {
+  mockedGetDays.mockResolvedValue({ days: [], page: 1, totalPages: 1, total: 0 });
+  renderPage();
+  await screen.findByText('Nothing logged yet');
+
+  await userEvent.click(screen.getByRole('button', { name: 'Manage types' }));
+  await userEvent.click(screen.getByText('change-types'));
+
+  await waitFor(() => expect(mockedGetActivityTypes).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(mockedGetDays).toHaveBeenCalledTimes(2));
+});
+
+// Filtering by a type that gets deleted in the manage dialog would otherwise
+// leave the journal permanently empty with no obvious way back.
+it('drops the activity filter when that type no longer exists', async () => {
+  mockedGetDays.mockResolvedValue({ days: [], page: 1, totalPages: 1, total: 0 });
+  renderPage();
+  await screen.findByText('Nothing logged yet');
+
+  await userEvent.click(await screen.findByLabelText('Activity'));
+  await userEvent.click(await screen.findByText('Reading'));
+  await waitFor(() => expect(mockedGetDays).toHaveBeenCalledWith(expect.objectContaining({ typeId: 't1' })));
+
+  mockedGetActivityTypes.mockResolvedValue({ data: [], pagination: {} as any });
+  await userEvent.click(screen.getByRole('button', { name: 'Manage types' }));
+  await userEvent.click(screen.getByText('change-types'));
+
+  await waitFor(() =>
+    expect(mockedGetDays).toHaveBeenLastCalledWith(expect.objectContaining({ typeId: undefined }))
+  );
 });
 
 it('loads more days via the Load older days button', async () => {

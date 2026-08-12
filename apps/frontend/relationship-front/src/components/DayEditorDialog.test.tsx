@@ -85,7 +85,7 @@ it('shows an error message when loading the day fails', async () => {
 it('shows a prompt when there are no activity types', async () => {
   mockedGetTypes.mockResolvedValue({ data: [], pagination: {} as any });
   render(<DayEditorDialog open date="2024-01-01" onClose={vi.fn()} onSaved={vi.fn()} />);
-  expect(await screen.findByText(/create some under activity types first/i)).toBeInTheDocument();
+  expect(await screen.findByText(/add some with .Manage types. on the journal first/i)).toBeInTheDocument();
 });
 
 it('renders the formatted date as the title when not date-editable', async () => {
