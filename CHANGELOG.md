@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.442](https://github.com/toomastahves/tumbaland/compare/app-v0.0.441...app-v0.0.442) (2026-08-12)
+
+### Features
+
+* replace types page with modal ([553ff63](https://github.com/toomastahves/tumbaland/commit/553ff6322f193471ca214af4e94cdc049864284f))
 ## [0.0.441](https://github.com/toomastahves/tumbaland/compare/app-v0.0.440...app-v0.0.441) (2026-08-10)
 
 ### Features
