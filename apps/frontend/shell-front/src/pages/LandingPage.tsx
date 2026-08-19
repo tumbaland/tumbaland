@@ -9,6 +9,7 @@ import { PrivacySection } from '../components/landing/PrivacySection';
 import { PricingTable } from '../components/landing/PricingTable';
 import { FaqSection } from '../components/landing/FaqSection';
 import { LandingFooter } from '../components/landing/LandingFooter';
+import { usePlans } from '../hooks/usePlans';
 
 /**
  * The public front page, shown at `/` to signed-out visitors. Signed-in users
@@ -19,6 +20,11 @@ import { LandingFooter } from '../components/landing/LandingFooter';
  * payment-front's PlansPage is the real checkout surface.
  */
 export function LandingPage() {
+  // Fetched once here rather than inside each section: the price table and the
+  // free-tier answer in the FAQ quote the same limits, and they must be the
+  // same limits — the ones the services enforce.
+  const plansState = usePlans();
+
   const handleSignIn = useCallback(() => {
     authService.redirectToLogin();
   }, []);
@@ -73,8 +79,8 @@ export function LandingPage() {
           <ProductPreview />
         </Box>
         <PrivacySection />
-        <PricingTable onChoosePlan={handleChoosePlan} />
-        <FaqSection />
+        <PricingTable onChoosePlan={handleChoosePlan} {...plansState} />
+        <FaqSection plans={plansState.plans} />
         <LandingFooter onSignIn={handleSignIn} />
       </Box>
     </Box>

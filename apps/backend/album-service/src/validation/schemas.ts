@@ -49,7 +49,13 @@ export const updatePhotoSchema = z.object({
 export const uploadSignedUrlSchema = z.object({
   filename: z.string().min(1, 'filename is required'),
   mimetype: z.string().min(1, 'mimetype is required'),
-  albumId: z.string().min(1, 'albumId is required')
+  albumId: z.string().min(1, 'albumId is required'),
+  // The storage quota gate (MONETIZATION.md Phase 3, chokepoint 1) sits on this
+  // request because it is the last moment a file's size is known before its
+  // bytes are written. Required rather than optional: an omitted size would be
+  // a free pass, and a client that does not send it is one that has not been
+  // updated, not one that should upload unmetered.
+  sizeBytes: z.number().int().positive('sizeBytes is required')
 });
 
 export const updatePhotoAIAnalysisSchema = z.object({

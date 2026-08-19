@@ -177,3 +177,47 @@ export async function setUsage(
     { upsert: true, setDefaultsOnInsert: true }
   );
 }
+
+/**
+ * Record usage that has already happened, without a limit check.
+ *
+ * The storage gate runs on the *signed-URL request* — the only point where a
+ * file's size is known before its bytes are written — so by the time the photo
+ * record is created the object is already in MinIO. Neither of the existing
+ * primitives fits that moment: `checkQuota` records nothing, and `consumeQuota`
+ * would reject and roll back, leaving the meter understating bytes that are
+ * genuinely stored while the user is refused a record for storage they have
+ * already paid for.
+ *
+ * So this increments past the limit deliberately. A cumulative meter can only
+ * be pushed over by a race or a stale entitlement, both bounded by one upload,
+ * and the gate then refuses the *next* one — which is the correct behaviour:
+ * the ceiling stops new writes, it does not un-store bytes.
+ *
+ * Never throws, for the same reason `releaseQuota` does not: the resource
+ * exists, the caller is on its success path, and a failed counter update is
+ * repaired by the nightly reconciliation this meter is derived for.
+ */
+export async function recordUsage(
+  subjectId: string,
+  meter: MeterKey,
+  amount = 1,
+  now?: Date
+): Promise<void> {
+  if (amount <= 0) return;
+
+  try {
+    await UsageMeter.updateOne(
+      { subjectId: subjectId.toLowerCase(), meter, period: currentPeriod(meter, now) },
+      { $inc: { count: amount } },
+      { upsert: true, setDefaultsOnInsert: true }
+    );
+  } catch (err) {
+    logger.warn('Failed to record usage', {
+      subjectId,
+      meter,
+      amount,
+      error: (err as Error)?.message
+    });
+  }
+}

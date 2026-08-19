@@ -1,3 +1,10 @@
+// The plan catalog is the one route in this suite that reads the database, and
+// with no connection a mongoose query buffers until the test times out. Stubbed
+// so the assertion below is about the middleware, which is what it is testing.
+jest.mock('./models/Plan', () => ({
+  Plan: { find: jest.fn(() => ({ sort: jest.fn().mockResolvedValue([]) })) }
+}));
+
 import request from 'supertest';
 import app from './app';
 
@@ -27,6 +34,24 @@ describe('GET /api/subscriptions/me', () => {
 
     expect(res.status).toBe(401);
     expect(res.body).toEqual({ success: false, message: 'Access token required' });
+  });
+});
+
+describe('GET /api/plans', () => {
+  it('does not reject an anonymous caller — the landing page renders prices before signup', async () => {
+    // Mongo is not connected in this suite, so the query fails and the error
+    // handler answers. What matters here is that it is not a 401: the route is
+    // optionally authenticated, and a pricing table nobody can read without an
+    // account is worth nothing.
+    const res = await request(app).get('/api/plans');
+
+    expect(res.status).not.toBe(401);
+  });
+
+  it('does not reject a caller carrying a stale token either', async () => {
+    const res = await request(app).get('/api/plans').set('Authorization', 'Bearer not-a-real-token');
+
+    expect(res.status).not.toBe(401);
   });
 });
 

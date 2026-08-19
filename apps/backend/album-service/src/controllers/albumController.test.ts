@@ -8,12 +8,20 @@ jest.mock('../services/albumService', () => ({
     getAlbumById: jest.fn(),
     updateAlbum: jest.fn(),
     deleteAlbum: jest.fn(),
+    getAlbumStorage: jest.fn(),
     setCoverPhoto: jest.fn(),
     removeCoverPhoto: jest.fn()
   }
 }));
 
+jest.mock('../services/storageUsage', () => ({
+  storageActor: jest.fn(() => ({ email: 'caller@example.com', userId: 'user-1' })),
+  releaseStoredBytes: jest.fn(),
+  transferStoredBytes: jest.fn()
+}));
+
 import albumService from '../services/albumService';
+import { releaseStoredBytes, transferStoredBytes } from '../services/storageUsage';
 import {
   createAlbum,
   getAlbums,
@@ -25,6 +33,8 @@ import {
 } from './albumController';
 
 const mocked = albumService as jest.Mocked<typeof albumService>;
+const mockedRelease = releaseStoredBytes as jest.Mock;
+const mockedTransfer = transferStoredBytes as jest.Mock;
 
 function mockRes(): Response {
   const res: Partial<Response> = {};
@@ -96,16 +106,45 @@ describe('updateAlbum', () => {
 
     expect(mocked.updateAlbum).toHaveBeenCalledWith('a1', expect.objectContaining({ name: 'New' }), expect.anything());
   });
+
+  it('does not read the storage scope for an edit that cannot move bytes', async () => {
+    mocked.updateAlbum.mockResolvedValue({ _id: 'a1', name: 'New' } as any);
+
+    await updateAlbum(baseReq({ params: { id: 'a1' }, body: { name: 'New' } }), mockRes());
+
+    expect(mocked.getAlbumStorage).not.toHaveBeenCalled();
+    expect(mockedTransfer).not.toHaveBeenCalled();
+  });
+
+  it('moves the album bytes between meters when it changes group', async () => {
+    // Pooled storage bills to the group owner, so a move changes who pays.
+    mocked.getAlbumStorage.mockResolvedValue({ userId: 'user-1', groupId: undefined, bytes: 4_000 });
+    mocked.updateAlbum.mockResolvedValue({ _id: 'a1', userId: 'user-1', groupId: 'group-1' } as any);
+
+    await updateAlbum(baseReq({ params: { id: 'a1' }, body: { groupId: 'group-1' } }), mockRes());
+
+    expect(mockedTransfer).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ groupId: undefined }),
+      expect.objectContaining({ groupId: 'group-1' }),
+      4_000
+    );
+  });
 });
 
 describe('deleteAlbum', () => {
-  it('deletes the album', async () => {
-    mocked.deleteAlbum.mockResolvedValue(undefined);
+  it('deletes the album and hands its bytes back to the meter', async () => {
+    mocked.deleteAlbum.mockResolvedValue({ userId: 'user-1', groupId: 'group-1', bytes: 9_000 });
     const res = mockRes();
 
     await deleteAlbum(baseReq({ params: { id: 'a1' } }), res);
 
     expect(mocked.deleteAlbum).toHaveBeenCalledWith('a1');
+    expect(mockedRelease).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ groupId: 'group-1' }),
+      9_000
+    );
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
   });
 });

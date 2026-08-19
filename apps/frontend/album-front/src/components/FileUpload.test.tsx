@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { vi } from 'vitest';
 
 vi.mock('../services/photoService', () => ({
@@ -10,12 +11,16 @@ vi.mock('../services/photoService', () => ({
   }
 }));
 
+vi.mock('../services/entitlementsService', () => ({ getMyEntitlements: vi.fn() }));
+
 import { photoService } from '../services/photoService';
+import { getMyEntitlements } from '../services/entitlementsService';
 import FileUpload from './FileUpload';
 
 const mockedGetUploadSignedUrl = photoService.getUploadSignedUrl as unknown as ReturnType<typeof vi.fn>;
 const mockedUploadFileToSignedUrl = photoService.uploadFileToSignedUrl as unknown as ReturnType<typeof vi.fn>;
 const mockedCreatePhoto = photoService.createPhoto as unknown as ReturnType<typeof vi.fn>;
+const mockedGetMyEntitlements = getMyEntitlements as unknown as ReturnType<typeof vi.fn>;
 
 /** Defaults to a successful load (matches most real images); a test can flip
  * FakeImage.nextFails to exercise the onerror branch instead. */
@@ -40,6 +45,11 @@ class FakeImage {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockedGetMyEntitlements.mockResolvedValue({
+    planCode: 'free',
+    limits: { meters: { storageBytes: 1_073_741_824 } },
+    usage: { storageBytes: 536_870_912 }
+  });
   FakeImage.nextFails = false;
   vi.stubGlobal('Image', FakeImage as unknown as typeof Image);
   vi.stubGlobal('URL', { ...URL, createObjectURL: vi.fn().mockReturnValue('blob:mock'), revokeObjectURL: vi.fn() });
@@ -52,7 +62,12 @@ afterEach(() => {
 function renderDialog(overrides: Partial<{ onClose: () => void; onUploadComplete: () => void }> = {}) {
   const onClose = overrides.onClose ?? vi.fn();
   const onUploadComplete = overrides.onUploadComplete ?? vi.fn();
-  render(<FileUpload albumId="album-1" open onClose={onClose} onUploadComplete={onUploadComplete} />);
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <FileUpload albumId="album-1" open onClose={onClose} onUploadComplete={onUploadComplete} />
+    </QueryClientProvider>
+  );
   return { onClose, onUploadComplete };
 }
 
@@ -127,6 +142,42 @@ it('uploads selected files end-to-end and calls onUploadComplete', async () => {
   expect(mockedCreatePhoto).toHaveBeenCalledWith(
     expect.objectContaining({ filename: 'photo.jpg', albumId: 'album-1', width: 800, height: 600 })
   );
+  // The storage gate runs on this request, so it needs the size.
+  expect(mockedGetUploadSignedUrl).toHaveBeenCalledWith('photo.jpg', 'image/jpeg', 'album-1', 4);
+});
+
+it('shows the storage ceiling in the dialog, where the bytes are spent', async () => {
+  // A gate wired without its meter beside it is a feature that silently stops
+  // working — the first sign of the limit would be a refused upload.
+  renderDialog();
+
+  expect(await screen.findByText(/512 MB.*1 GB/i)).toBeInTheDocument();
+});
+
+it('draws no meter when entitlements cannot be loaded', async () => {
+  mockedGetMyEntitlements.mockRejectedValue(new Error('payment-service down'));
+  renderDialog();
+
+  await waitFor(() => expect(mockedGetMyEntitlements).toHaveBeenCalled());
+  expect(screen.queryByText(/storage/i)).not.toBeInTheDocument();
+});
+
+it('shows a 402 as the limit it is, not as a failed upload', async () => {
+  // "Failed to upload photo.jpg" for a plan limit reads as a bug rather than a
+  // price — the one failure mode this phase exists to avoid.
+  mockedGetUploadSignedUrl.mockRejectedValue(
+    Object.assign(new Error('Payment Required'), {
+      status: 402,
+      body: { code: 'QUOTA_EXCEEDED', meter: 'storageBytes', limit: 1_073_741_824, planCode: 'free', upgradeTo: 'personal' }
+    })
+  );
+  renderDialog();
+
+  const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+  await userEvent.upload(input, makeFile());
+  await userEvent.click(screen.getByRole('button', { name: /upload 1 file/i }));
+
+  expect(await screen.findByText(/reached the storage limit \(1 GB\) on your free plan/i)).toBeInTheDocument();
 });
 
 it('omits dimensions when the image fails to load', async () => {

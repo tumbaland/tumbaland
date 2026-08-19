@@ -158,7 +158,10 @@ const SubscriptionCheckoutPage: React.FC = () => {
     try {
       const res = await paymentApi.createCheckoutSession(plan.code);
       logger.debug('checkout-session response', res);
-      if (res.free && res.subscription?.status === 'active') {
+      // Free activation, or a switch applied to the subscription they already
+      // have: both are already done server-side, so there is nothing to check
+      // out — go straight to the subscription page showing the new plan.
+      if ((res.free || res.changed) && res.subscription?.status === 'active') {
         const target = res.url || '/subscription';
         navigateTop(target);
         return;

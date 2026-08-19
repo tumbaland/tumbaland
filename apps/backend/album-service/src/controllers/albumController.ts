@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { sendSuccess } from '@tumbaland/backend-core';
 import albumService from '../services/albumService';
+import { releaseStoredBytes, storageActor, transferStoredBytes } from '../services/storageUsage';
 
 /**
  * Create a new album
@@ -69,11 +70,20 @@ export const updateAlbum = async (req: Request, res: Response): Promise<void> =>
   const { id } = req.params;
   const { name, description, isPublic, tags, coverPhotoId, groupId } = req.body;
 
+  // Moving an album into or out of a group moves who pays for its bytes:
+  // group storage is pooled and bills to the owner. Read the scope first —
+  // afterwards the old one is gone — and settle the meters once the move lands.
+  const before = groupId !== undefined ? await albumService.getAlbumStorage(id as string) : null;
+
   const album = await albumService.updateAlbum(
     id as string,
     { name, description, isPublic, tags, coverPhotoId, groupId },
     { userId: user.id, userGroups }
   );
+
+  if (before && album) {
+    await transferStoredBytes(storageActor(req), before, album, before.bytes);
+  }
 
   sendSuccess(res, album, 'Album updated successfully');
 };
@@ -84,7 +94,10 @@ export const updateAlbum = async (req: Request, res: Response): Promise<void> =>
 export const deleteAlbum = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
 
-  await albumService.deleteAlbum(id as string);
+  const freed = await albumService.deleteAlbum(id as string);
+
+  // Every photo in the album went with it; hand the bytes back.
+  await releaseStoredBytes(storageActor(req), freed, freed.bytes);
 
   sendSuccess(res, undefined, 'Album and all photos deleted successfully');
 };

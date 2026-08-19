@@ -76,13 +76,15 @@ it('gets an upload signed url', async () => {
     data: { uploadUrl: 'https://minio.example/upload', minioFileId: 'file-1', albumId: 'album-1', expiresInMinutes: 15 }
   });
 
-  const result = await photoService.getUploadSignedUrl('photo.jpg', 'image/jpeg', 'album-1');
+  const result = await photoService.getUploadSignedUrl('photo.jpg', 'image/jpeg', 'album-1', 4_096);
 
   expect(result).toMatchObject({ uploadUrl: 'https://minio.example/upload', expiresInMinutes: 15 });
   const [, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+  // The size travels with the request: it is what the storage quota is checked
+  // against, before any bytes are written.
   expect(init).toMatchObject({
     method: 'POST',
-    body: JSON.stringify({ filename: 'photo.jpg', mimetype: 'image/jpeg', albumId: 'album-1' })
+    body: JSON.stringify({ filename: 'photo.jpg', mimetype: 'image/jpeg', albumId: 'album-1', sizeBytes: 4_096 })
   });
 });
 

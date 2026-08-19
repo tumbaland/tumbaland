@@ -10,12 +10,60 @@ vi.mock('../services/authService', () => ({
   }
 }));
 
+// The pricing table reads the catalog from payment-service — the numbers on the
+// cards are the numbers the services enforce, so the fixture below stands in
+// for `GET /api/plans` rather than for a hardcoded table.
+vi.mock('../services/plansService', () => ({ getPlans: vi.fn() }));
+
 import LandingPage from './LandingPage';
-import { LIMIT_ROWS, PLANS } from '../config/pricing';
+import { getPlans } from '../services/plansService';
+import { limitLinesFor } from '../config/pricing';
 import { PRODUCTS } from '../components/landing/ProductsSection';
+
+const GB = 1024 ** 3;
+
+const CATALOG = [
+  {
+    code: 'free',
+    name: 'Free',
+    priceMonthlyCents: 0,
+    priceYearlyCents: 0,
+    effectiveLimits: {
+      meters: { storageBytes: GB, aiJobs: 25, trackedTickers: 3, seats: 1 },
+      features: { cleanExport: false },
+      retentionDays: 90
+    }
+  },
+  {
+    code: 'personal',
+    name: 'Personal',
+    priceMonthlyCents: 600,
+    priceYearlyCents: 6000,
+    effectiveLimits: {
+      meters: { storageBytes: 50 * GB, aiJobs: 200, trackedTickers: 25, seats: 1 },
+      features: { cleanExport: true },
+      retentionDays: -1
+    }
+  },
+  {
+    code: 'family',
+    name: 'Family',
+    priceMonthlyCents: 1200,
+    priceYearlyCents: 12000,
+    effectiveLimits: {
+      meters: { storageBytes: 250 * GB, aiJobs: 600, trackedTickers: 100, seats: 5 },
+      features: { cleanExport: true },
+      retentionDays: -1
+    }
+  }
+];
+
+const mockedGetPlans = getPlans as ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   redirectToLogin.mockReset();
+  mockedGetPlans.mockReset();
+  mockedGetPlans.mockResolvedValue(CATALOG);
 });
 
 it('says what the product is in the headline, not just what it feels like', () => {
@@ -65,18 +113,30 @@ it('names the three sensitive things once, not twice', () => {
   expect(screen.getAllByText(/balance sheet/i)).toHaveLength(1);
 });
 
-it('renders a card for every plan with its monthly price', () => {
+it('renders a card for every plan the API returns, with its monthly price', async () => {
   render(<LandingPage />);
-  PLANS.forEach((plan) => {
-    expect(screen.getByRole('heading', { name: plan.name })).toBeInTheDocument();
-  });
+  for (const plan of CATALOG) {
+    expect(await screen.findByRole('heading', { name: plan.name })).toBeInTheDocument();
+  }
   expect(screen.getByText('€6')).toBeInTheDocument();
   expect(screen.getByText('€12')).toBeInTheDocument();
+});
+
+it('says pricing is unavailable rather than falling back to numbers of its own', async () => {
+  // A hardcoded table is the defect this section was rebuilt to remove: the
+  // moment the page can invent a ceiling, the card and the middleware are two
+  // different claims again.
+  mockedGetPlans.mockRejectedValue(new Error('payment-service down'));
+  render(<LandingPage />);
+
+  expect(await screen.findByText(/Pricing is temporarily unavailable/)).toBeInTheDocument();
+  expect(screen.queryByText('€6')).not.toBeInTheDocument();
 });
 
 it('switches every paid price to the yearly figure', async () => {
   const user = userEvent.setup();
   render(<LandingPage />);
+  await screen.findByRole('heading', { name: 'Personal' });
 
   await user.click(screen.getByRole('button', { name: /Yearly/ }));
 
@@ -106,7 +166,7 @@ it('sends every plan button to sign-in, since there is no account to bill yet', 
   const user = userEvent.setup();
   render(<LandingPage />);
 
-  await user.click(screen.getByRole('button', { name: 'Choose Personal' }));
+  await user.click(await screen.findByRole('button', { name: 'Choose Personal' }));
   expect(redirectToLogin).toHaveBeenCalledTimes(1);
 
   await user.click(screen.getByRole('button', { name: 'Start free' }));
@@ -137,12 +197,12 @@ it('scrolls to pricing rather than navigating away', async () => {
   expect(redirectToLogin).not.toHaveBeenCalled();
 });
 
-it('lists what each plan includes, and omits rather than dashes what it does not', () => {
+it('lists what each plan includes, and omits rather than dashes what it does not', async () => {
   render(<LandingPage />);
 
-  const personalCard = screen.getByRole('heading', { name: 'Personal' }).closest('div.MuiPaper-root');
-  LIMIT_ROWS.forEach((row) => {
-    expect(within(personalCard as HTMLElement).getByText(row.values.personal!)).toBeInTheDocument();
+  const personalCard = (await screen.findByRole('heading', { name: 'Personal' })).closest('div.MuiPaper-root');
+  limitLinesFor(CATALOG[1].effectiveLimits).forEach((line) => {
+    expect(within(personalCard as HTMLElement).getByText(line.text)).toBeInTheDocument();
   });
 
   // The planner is not on Free, so that card simply has one line fewer.
@@ -150,4 +210,35 @@ it('lists what each plan includes, and omits rather than dashes what it does not
   expect(within(freeCard as HTMLElement).queryByText('Portfolio planner')).not.toBeInTheDocument();
   expect(within(freeCard as HTMLElement).queryByText('—')).not.toBeInTheDocument();
   expect(within(freeCard as HTMLElement).getByText('1 GB photos')).toBeInTheDocument();
+});
+
+it('quotes the free tier\'s real limits in the FAQ, not a written-out copy of them', async () => {
+  const user = userEvent.setup();
+  render(<LandingPage />);
+  await screen.findByRole('heading', { name: 'Free' });
+
+  await user.click(screen.getByRole('button', { name: /Do I have to pay anything/ }));
+
+  expect(await screen.findByText(/1 gb photos, 90 days of history, 3 tracked tickers/i)).toBeVisible();
+});
+
+it('drops the figures from the FAQ rather than inventing them when the catalog is down', async () => {
+  mockedGetPlans.mockRejectedValue(new Error('payment-service down'));
+  const user = userEvent.setup();
+  render(<LandingPage />);
+  await screen.findByText(/Pricing is temporarily unavailable/);
+
+  await user.click(screen.getByRole('button', { name: /Do I have to pay anything/ }));
+
+  const answer = await screen.findByText(/no expiry and no card/i);
+  expect(answer).toBeVisible();
+  expect(answer.textContent).not.toMatch(/\d/);
+});
+
+it('advertises no AI or watermark line, because nothing enforces either', async () => {
+  render(<LandingPage />);
+  await screen.findByRole('heading', { name: 'Family' });
+
+  expect(screen.queryByText(/AI (photo )?scans?/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/watermarked/i)).not.toBeInTheDocument();
 });

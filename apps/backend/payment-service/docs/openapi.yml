@@ -348,6 +348,15 @@ components:
         free:
           type: boolean
           nullable: true
+          description: The plan costs nothing and was activated without Stripe.
+          example: false
+        changed:
+          type: boolean
+          nullable: true
+          description: >-
+            The caller's existing subscription was switched onto this plan in
+            place, with the difference prorated. No checkout to visit, so `url`
+            points at the subscription page rather than at Stripe.
           example: false
         subscription:
           $ref: '#/components/schemas/Subscription'
@@ -510,10 +519,19 @@ paths:
     get:
       tags:
         - Plans
-      summary: List active plans
+      summary: List public plans
       description: |
-        Retrieves all active plans sorted by monthly price.
-        Used to display available subscription options to users.
+        The public plan catalog, sorted by monthly price, each plan carrying
+        `effectiveLimits` — the limits after code defaults fill whatever the
+        plan document leaves unset. This is what the landing page's pricing
+        table renders, so the ceiling on a card and the ceiling that produces a
+        402 are one value read from one place.
+
+        **Optionally authenticated.** A signed-out visitor gets the public
+        catalog; a signed-in caller additionally gets the non-public plan they
+        are actually on (staff, comped), since a pricing page that shows a user
+        every plan except their own reads as "you are on free". An invalid or
+        expired token is treated as no token rather than as a 401.
       responses:
         '200':
           description: Plans retrieved successfully
@@ -528,8 +546,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
       security:
+        - {}
         - bearerAuth: []
-        - internalAuth: []
 
     post:
       tags:
@@ -783,11 +801,24 @@ paths:
     post:
       tags:
         - Subscriptions
-      summary: Create Stripe checkout session
+      summary: Start a subscription, or switch the one the customer has
       description: |
-        Creates a Stripe checkout session for subscription purchase.
-        For free plans (price 0), activates subscription immediately without Stripe.
-        Handles plan upgrades/downgrades automatically.
+        Three outcomes, decided by what the caller already holds:
+
+        * **New paid subscription** — a Stripe checkout session (`201`, with `url`).
+        * **Plan switch** (`200`, with `changed: true` and no `url`) — when the caller
+          already has a live Stripe subscription, its price is swapped **in place**
+          with `proration_behavior: create_prorations`. There is never a second
+          subscription: selling one alongside the first is what let a downgrade bill
+          both plans, since the old supersession rule only cancelled *cheaper* ones.
+          Prorations settle the difference in either direction, so an upgrade is
+          charged for the remainder of the period and a downgrade credits it.
+          Choosing the plan already held is a `400`, unless it is winding down — in
+          which case the pending cancellation is withdrawn.
+        * **Free plan** (`201`, `free: true`) — activated without Stripe, and any paid
+          subscription is set to **stop at period end** rather than cancelled outright.
+          Switching to free is a cancellation, and the customer keeps the period they
+          have already paid for.
       requestBody:
         required: true
         content:
@@ -795,8 +826,14 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateCheckoutSessionRequest'
       responses:
+        '200':
+          description: Existing subscription switched onto the requested plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutSessionResponse'
         '201':
-          description: Checkout session created successfully
+          description: Checkout session created, or free plan activated
           content:
             application/json:
               schema:

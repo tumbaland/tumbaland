@@ -8,6 +8,8 @@ export interface AppConfig {
   PAYMENT_FRONT_URL?: string;
   GROUP_FRONT_URL?: string;
   PUBLIC_API_URL?: string;
+  /** payment-service, for the pricing table's plans and limits. */
+  PAYMENT_API_URL?: string;
   ACCOUNT_FRONT_URL?: string;
   AUTH_SERVICE_URL?: string;
   AUTH_FRONT_URL?: string;
@@ -24,6 +26,7 @@ const factory = createConfigProvider<AppConfig>({
     PAYMENT_FRONT_URL: import.meta.env.VITE_PAYMENT_FRONT_URL,
     GROUP_FRONT_URL: import.meta.env.VITE_GROUP_FRONT_URL,
     PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL,
+    PAYMENT_API_URL: import.meta.env.VITE_PAYMENT_API_URL,
     ACCOUNT_FRONT_URL: import.meta.env.VITE_ACCOUNT_FRONT_URL,
     AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL,
     AUTH_FRONT_URL: import.meta.env.VITE_AUTH_FRONT_URL

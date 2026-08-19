@@ -60,8 +60,11 @@ export const paymentApi = {
   listPlans(): Promise<Plan[]> {
     return api<Plan[]>('/plans');
   },
-  createCheckoutSession(planCode: string, successUrl?: string, cancelUrl?: string): Promise<{ sessionId?: string; url?: string; free?: boolean; subscription?: Subscription; }> {
-    return api<{ sessionId?: string; url?: string; free?: boolean; subscription?: Subscription; }>('/subscriptions/checkout-session', {
+  createCheckoutSession(planCode: string, successUrl?: string, cancelUrl?: string): Promise<{ sessionId?: string; url?: string; free?: boolean; changed?: boolean; subscription?: Subscription; }> {
+    // `changed: true` means the customer already had a subscription and it was
+    // switched onto this plan in place — there is no Stripe checkout to visit,
+    // because there is no second subscription to buy.
+    return api<{ sessionId?: string; url?: string; free?: boolean; changed?: boolean; subscription?: Subscription; }>('/subscriptions/checkout-session', {
       method: 'POST',
       body: { planCode, successUrl, cancelUrl }
     });

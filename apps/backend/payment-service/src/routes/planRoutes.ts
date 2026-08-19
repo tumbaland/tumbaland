@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken as authenticate, validate } from '@tumbaland/backend-core';
+import { authenticateToken as authenticate, optionalAuth, validate } from '@tumbaland/backend-core';
 import {
   listPlans,
   listAllPlans,
@@ -21,7 +21,11 @@ import {
 
 const router = Router();
 
-router.get('/', authenticate, listPlans);
+// Optionally authenticated: the landing page shows prices to signed-out
+// visitors, and a pricing table nobody can read before creating an account is
+// worth nothing. Signing in only *adds* to the response — the hidden plan the
+// caller is actually on (see `listPlans`).
+router.get('/', optionalAuth, listPlans);
 // Admin surface. `/catalog` and `/all` are what an admin UI loads to render a
 // limits editor: the vocabulary, then the current values.
 router.get('/catalog', authenticate, requireAdmin, getEntitlementCatalog);

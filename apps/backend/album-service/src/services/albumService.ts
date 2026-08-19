@@ -98,6 +98,13 @@ export interface AlbumPermissionContext {
   groupServiceError?: boolean;
 }
 
+/** An album's stored bytes and the scope that decides whose meter holds them. */
+export interface AlbumStorage {
+  userId: string;
+  groupId?: string;
+  bytes: number;
+}
+
 class AlbumService {
   /**
    * Create a new album with validation
@@ -335,9 +342,32 @@ class AlbumService {
   }
 
   /**
-   * Delete album and all associated photos and files
+   * What an album's stored bytes are, and whose meter they belong to.
+   *
+   * Summed from the photos rather than read off `Album.totalSize`: that counter
+   * is denormalized and can drift, and the nightly reconciliation deliberately
+   * meters the photo sum instead, so anything that moves bytes between meters
+   * has to agree with it or the two will fight.
    */
-  async deleteAlbum(albumId: string): Promise<void> {
+  async getAlbumStorage(albumId: string): Promise<AlbumStorage | null> {
+    const album = await Album.findById(albumId);
+    if (!album) return null;
+
+    const [totals] = await Photo.aggregate<{ bytes: number }>([
+      { $match: { albumId } },
+      { $group: { _id: null, bytes: { $sum: '$size' } } }
+    ]);
+
+    return { userId: album.userId, groupId: album.groupId, bytes: totals?.bytes ?? 0 };
+  }
+
+  /**
+   * Delete album and all associated photos and files.
+   *
+   * Reports the bytes it freed so the caller can hand them back to the storage
+   * meter (MONETIZATION.md Phase 3, chokepoint 1).
+   */
+  async deleteAlbum(albumId: string): Promise<AlbumStorage> {
     const album = await Album.findById(albumId);
     if (!album) {
       throw new NotFoundError('Album not found');
@@ -360,11 +390,15 @@ class AlbumService {
       }
     }
 
+    const freedBytes = photos.reduce((sum, photo) => sum + (photo.size ?? 0), 0);
+
     // Delete all photos from database
     await Photo.deleteMany({ albumId });
 
     // Delete the album
     await Album.findByIdAndDelete(albumId);
+
+    return { userId: album.userId, groupId: album.groupId, bytes: freedBytes };
   }
 
   /**

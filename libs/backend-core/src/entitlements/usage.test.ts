@@ -18,7 +18,7 @@ jest.mock('../logging/logger', () => ({
 
 import logger from '../logging/logger';
 import { UsageMeter, currentPeriod } from './UsageMeter';
-import { checkQuota, consumeQuota, getUsage, getUsageSnapshot, releaseQuota, setUsage } from './usage';
+import { checkQuota, consumeQuota, getUsage, getUsageSnapshot, recordUsage, releaseQuota, setUsage } from './usage';
 import { Entitlements } from './types';
 import { UNLIMITED, normalizeLimits } from './definitions';
 
@@ -238,6 +238,53 @@ describe('releaseQuota', () => {
   it('is a no-op when no counter exists', async () => {
     await expect(releaseQuota('nobody@example.com', 'seats', 1)).resolves.toBeUndefined();
     expect(await getUsage('nobody@example.com', 'seats')).toBe(0);
+  });
+});
+
+describe('recordUsage', () => {
+  it('increments a meter that does not exist yet', async () => {
+    await recordUsage('user@example.com', 'storageBytes', 4_096);
+
+    expect(await getUsage('user@example.com', 'storageBytes')).toBe(4_096);
+  });
+
+  it('records past the limit rather than refusing bytes already on disk', async () => {
+    // The gate ran at the signed-URL request; these bytes are in MinIO whatever
+    // the counter says. Rolling the increment back — what consumeQuota would do
+    // — would understate real storage and let the next upload through too.
+    await setUsage('user@example.com', 'storageBytes', 900);
+
+    await recordUsage('user@example.com', 'storageBytes', 500);
+
+    expect(await getUsage('user@example.com', 'storageBytes')).toBe(1_400);
+    // And the next request is the one that is refused.
+    await expect(
+      checkQuota({ subjectId: 'user@example.com', meter: 'storageBytes', amount: 1, entitlements: entitlements() })
+    ).rejects.toMatchObject({ statusCode: 402 });
+  });
+
+  it('does not lose concurrent increments', async () => {
+    await Promise.all(Array.from({ length: 10 }, () => recordUsage('user@example.com', 'storageBytes', 10)));
+
+    expect(await getUsage('user@example.com', 'storageBytes')).toBe(100);
+  });
+
+  it('ignores a non-positive amount instead of writing a no-op row', async () => {
+    await recordUsage('user@example.com', 'storageBytes', 0);
+    await recordUsage('user@example.com', 'storageBytes', -50);
+
+    expect(await UsageMeter.countDocuments({ subjectId: 'user@example.com' })).toBe(0);
+  });
+
+  it('never throws — the resource exists and the caller is on its success path', async () => {
+    const failing = jest
+      .spyOn(UsageMeter, 'updateOne')
+      .mockRejectedValueOnce(new Error('connection lost') as never);
+
+    await expect(recordUsage('user@example.com', 'storageBytes', 10)).resolves.toBeUndefined();
+    expect(logger.warn).toHaveBeenCalledWith('Failed to record usage', expect.objectContaining({ meter: 'storageBytes' }));
+
+    failing.mockRestore();
   });
 });
 

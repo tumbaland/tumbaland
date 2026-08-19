@@ -277,9 +277,13 @@ class PhotoService {
   }
 
   /**
-   * Delete photo and associated files
+   * Delete photo and associated files.
+   *
+   * Returns the deleted document so the caller can hand its bytes back to the
+   * storage meter (MONETIZATION.md Phase 3, chokepoint 1) without re-reading a
+   * row that no longer exists.
    */
-  async deletePhoto(photoId: string): Promise<void> {
+  async deletePhoto(photoId: string): Promise<IPhoto> {
     const photo = await Photo.findById(photoId);
     if (!photo) {
       throw new NotFoundError('Photo not found');
@@ -309,6 +313,8 @@ class PhotoService {
       album.coverPhotoId = undefined;
       await album.save();
     }
+
+    return photo;
   }
 
   /**

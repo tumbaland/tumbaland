@@ -1,7 +1,44 @@
 import { describe, expect, it } from 'vitest';
-import { LIMIT_ROWS, PLANS, PlanCode, formatPrice, priceFor, yearlySavingMonths } from './pricing';
+import { CatalogPlan } from '@tumbaland/frontend-core';
+import {
+  PLAN_COPY,
+  formatPrice,
+  hasYearlyPricing,
+  isHighlighted,
+  limitLinesFor,
+  priceFor,
+  taglineFor,
+  yearlySavingMonths
+} from './pricing';
 
-const CODES: PlanCode[] = ['free', 'personal', 'family'];
+const GB = 1024 ** 3;
+
+const limits = (overrides: Partial<{
+  storageBytes: number;
+  aiJobs: number;
+  trackedTickers: number;
+  seats: number;
+  retentionDays: number;
+  cleanExport: boolean;
+}> = {}) => ({
+  meters: {
+    storageBytes: overrides.storageBytes ?? GB,
+    aiJobs: overrides.aiJobs ?? 25,
+    trackedTickers: overrides.trackedTickers ?? 3,
+    seats: overrides.seats ?? 1
+  },
+  features: { cleanExport: overrides.cleanExport ?? false },
+  retentionDays: overrides.retentionDays ?? 90
+});
+
+const plan = (overrides: Partial<CatalogPlan> = {}): CatalogPlan => ({
+  code: 'personal',
+  name: 'Personal',
+  priceMonthlyCents: 600,
+  priceYearlyCents: 6000,
+  effectiveLimits: limits(),
+  ...overrides
+});
 
 describe('formatPrice', () => {
   it('renders free as €0 without decimals', () => {
@@ -15,73 +52,118 @@ describe('formatPrice', () => {
 });
 
 describe('priceFor', () => {
-  const personal = PLANS.find((p) => p.code === 'personal')!;
-
-  it('returns the monthly price for a monthly interval', () => {
-    expect(priceFor(personal, 'month')).toBe(personal.priceMonthlyCents);
+  it('returns the price for the chosen interval', () => {
+    expect(priceFor(plan(), 'month')).toBe(600);
+    expect(priceFor(plan(), 'year')).toBe(6000);
   });
 
-  it('returns the yearly price for a yearly interval', () => {
-    expect(priceFor(personal, 'year')).toBe(personal.priceYearlyCents);
+  it('treats a missing yearly price as zero rather than NaN', () => {
+    expect(priceFor(plan({ priceYearlyCents: undefined }), 'year')).toBe(0);
   });
 });
 
 describe('yearlySavingMonths', () => {
-  it('is zero for the free plan rather than dividing by zero', () => {
-    const free = PLANS.find((p) => p.code === 'free')!;
-    expect(yearlySavingMonths(free)).toBe(0);
+  it('is zero for a free plan rather than dividing by zero', () => {
+    expect(yearlySavingMonths(plan({ priceMonthlyCents: 0, priceYearlyCents: 0 }))).toBe(0);
   });
 
   it('reports two months free when a year costs ten months', () => {
-    const personal = PLANS.find((p) => p.code === 'personal')!;
-    expect(yearlySavingMonths(personal)).toBe(2);
+    expect(yearlySavingMonths(plan())).toBe(2);
   });
 });
 
-describe('plan and limit definitions', () => {
-  it('defines exactly the three plan codes the backend will key limits by', () => {
-    expect(PLANS.map((p) => p.code)).toEqual(CODES);
+describe('hasYearlyPricing', () => {
+  it('is false when nothing can be bought yearly, so no toggle is offered', () => {
+    expect(hasYearlyPricing([plan({ priceYearlyCents: 0 })])).toBe(false);
   });
 
-  it('marks exactly one plan as the highlighted default', () => {
-    expect(PLANS.filter((p) => p.highlight)).toHaveLength(1);
+  it('is true as soon as one plan has a yearly price', () => {
+    expect(hasYearlyPricing([plan({ priceYearlyCents: 0 }), plan()])).toBe(true);
+  });
+});
+
+describe('copy', () => {
+  it('uses the shipped tagline for a plan we wrote copy for', () => {
+    expect(taglineFor(plan({ code: 'family' }))).toBe(PLAN_COPY.family.tagline);
   });
 
-  it('prices a year below twelve months for every paid plan', () => {
-    PLANS.filter((p) => p.priceMonthlyCents > 0).forEach((plan) => {
-      expect(plan.priceYearlyCents).toBeLessThan(plan.priceMonthlyCents * 12);
-    });
+  it('falls back to the plan\'s own description, so an admin can add a plan without a deploy', () => {
+    expect(taglineFor(plan({ code: 'studio', description: 'For a studio.' }))).toBe('For a studio.');
   });
 
-  it('always gives the paid plans a value, so a tier can never look empty', () => {
-    LIMIT_ROWS.forEach((row) => {
-      expect(row.values.personal).toBeTruthy();
-      expect(row.values.family).toBeTruthy();
-    });
+  it('renders no tagline rather than inventing one', () => {
+    expect(taglineFor(plan({ code: 'studio' }))).toBe('');
   });
 
-  it('phrases every value as something the tier has, never as a dash', () => {
-    LIMIT_ROWS.forEach((row) => {
-      CODES.forEach((code) => {
-        const value = row.values[code];
-        // null omits the line entirely; a dash would render as a visible gap.
-        expect(value === null || !/^[—–-]$/.test(value)).toBe(true);
-      });
-    });
+  it('highlights exactly one of the shipped plans', () => {
+    const highlighted = ['free', 'personal', 'family'].filter((code) => isHighlighted(plan({ code })));
+    expect(highlighted).toEqual(['personal']);
+  });
+});
+
+describe('limitLinesFor', () => {
+  it('derives every line from the limits the services enforce', () => {
+    const lines = limitLinesFor(limits({ storageBytes: 50 * GB, trackedTickers: 25, retentionDays: -1 }));
+
+    expect(lines.map((l) => l.text)).toEqual([
+      '50 GB photos',
+      'Full history',
+      '25 tracked tickers',
+      'Portfolio planner',
+      '1 person'
+    ]);
   });
 
-  it('leaves the free tier a usable list rather than a wall of omissions', () => {
-    const freeLines = LIMIT_ROWS.filter((row) => row.values.free).length;
-    expect(freeLines).toBeGreaterThanOrEqual(LIMIT_ROWS.length - 1);
+  it('calls storage shared when the plan seats more than one person', () => {
+    const lines = limitLinesFor(limits({ storageBytes: 250 * GB, seats: 5 }));
+
+    expect(lines[0].text).toBe('250 GB shared photos');
+    expect(lines.at(-1)!.text).toBe('Up to 5 people');
   });
 
-  it('uses unique row keys', () => {
-    const keys = LIMIT_ROWS.map((r) => r.key);
+  it('states the retention window for a plan that has one', () => {
+    expect(limitLinesFor(limits({ retentionDays: 90 }))[1].text).toBe('90 days of history');
+  });
+
+  it('offers the planner only where retention does not clip it', () => {
+    // Retention *is* the planner gate — the simulation needs roughly two years
+    // of closes — so the line is derived from it rather than hardcoded.
+    expect(limitLinesFor(limits({ retentionDays: 90 })).some((l) => l.key === 'planner')).toBe(false);
+    expect(limitLinesFor(limits({ retentionDays: -1 })).some((l) => l.key === 'planner')).toBe(true);
+  });
+
+  it('renders sub-gigabyte storage in megabytes', () => {
+    expect(limitLinesFor(limits({ storageBytes: 512 * 1024 ** 2 }))[0].text).toBe('512 MB photos');
+  });
+
+  it('says unlimited rather than printing -1', () => {
+    const lines = limitLinesFor(limits({ storageBytes: -1, trackedTickers: -1, seats: -1 }));
+
+    // Unlimited seats also makes the storage pooled, which is the staff plan.
+    expect(lines.map((l) => l.text)).toContain('Unlimited shared photos');
+    expect(lines.map((l) => l.text)).toContain('Unlimited tracked tickers');
+    expect(lines.map((l) => l.text)).toContain('Unlimited people');
+  });
+
+  it('advertises neither AI analysis nor clean export, because nothing enforces them', () => {
+    // MONETIZATION.md 3.0 and 3.1: the browser calls the AI services directly
+    // and no watermarking code exists, so a number on the card would be a claim
+    // the product cannot hold itself to.
+    const keys = limitLinesFor(limits({ aiJobs: 600, cleanExport: true })).map((l) => l.key);
+
+    expect(keys).not.toContain('ai');
+    expect(keys).not.toContain('export');
+  });
+
+  it('uses unique line keys', () => {
+    const keys = limitLinesFor(limits({ retentionDays: -1 })).map((l) => l.key);
     expect(new Set(keys).size).toBe(keys.length);
   });
 
-  it('flags AI analysis as not yet enforceable (MONETIZATION.md §3.1)', () => {
-    const ai = LIMIT_ROWS.find((r) => r.key === 'ai');
-    expect(ai?.comingSoon).toBe(true);
+  it('never renders a dash, which would read as a missing feature', () => {
+    limitLinesFor(limits()).forEach((line) => {
+      expect(line.text).not.toMatch(/^[—–-]$/);
+      expect(line.text).toBeTruthy();
+    });
   });
 });

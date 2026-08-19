@@ -1,10 +1,32 @@
 import { Accordion, AccordionDetails, AccordionSummary, Box, Typography } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { CatalogPlan, limitLinesFor } from '../../config/pricing';
 import { SectionHeading } from './SectionHeading';
 
 interface Faq {
   q: string;
   a: string;
+}
+
+/**
+ * The free tier's own numbers, read from the catalog rather than written out.
+ *
+ * This sentence used to spell them ("one gigabyte, three tracked tickers,
+ * ninety days"), which is the same defect as a hardcoded price table with a
+ * longer fuse: an admin moving a limit at runtime would leave the FAQ quietly
+ * lying. When the catalog has not loaded the sentence simply drops its list —
+ * the promise it makes ("no expiry, no card") does not depend on the figures.
+ */
+function freeTierAnswer(free?: CatalogPlan): string {
+  const opening = 'No. The free tier has no expiry and no card';
+  const closing = 'It is not a trial that turns into a bill.';
+  if (!free) return `${opening}, and every feature in the app. ${closing}`;
+
+  const lines = limitLinesFor(free.effectiveLimits)
+    .filter(line => line.key !== 'seats' && line.key !== 'planner')
+    .map(line => line.text.toLowerCase());
+
+  return `${opening}: ${lines.join(', ')}, and every feature in the app. ${closing}`;
 }
 
 /**
@@ -14,10 +36,6 @@ interface Faq {
  * answers the same things at the moment someone is actually weighing the cost.
  */
 const FAQS: Faq[] = [
-  {
-    q: 'Do I have to pay anything?',
-    a: 'No. The free tier has no expiry and no card: one gigabyte of photos, three tracked tickers, ninety days of history, and every feature in the app. It is not a trial that turns into a bill.'
-  },
   {
     q: 'Why are there limits at all?',
     a: 'Three things cost money per use rather than per user: storing photos, running the AI analysis on a GPU, and market data. That last one is a hard ceiling — our data provider allows a fixed number of price lookups per day across the whole service, so each tracked ticker is a genuinely finite resource. The paid tiers buy more of it.'
@@ -40,13 +58,23 @@ const FAQS: Faq[] = [
   }
 ];
 
-export function FaqSection() {
+interface FaqSectionProps {
+  /** The catalog, so the free-tier answer quotes the limits actually enforced. */
+  plans?: CatalogPlan[];
+}
+
+export function FaqSection({ plans = [] }: FaqSectionProps) {
+  const faqs: Faq[] = [
+    { q: 'Do I have to pay anything?', a: freeTierAnswer(plans.find(plan => plan.code === 'free')) },
+    ...FAQS
+  ];
+
   return (
     <Box component="section" sx={{ py: { xs: 5, md: 7 }, px: 2 }}>
       <SectionHeading eyebrow="Straight answers" title="Questions worth asking first" />
 
       <Box sx={{ maxWidth: 760, mx: 'auto' }}>
-        {FAQS.map((faq) => (
+        {faqs.map((faq) => (
           <Accordion
             key={faq.q}
             disableGutters

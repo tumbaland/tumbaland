@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import { authenticateToken } from './authMiddleware';
+import { authenticateToken, optionalAuth } from './authMiddleware';
 import { UserPayload } from '../types/auth';
 
 function mockReq(overrides: Partial<Request> = {}): Request {
@@ -100,5 +100,74 @@ describe('authenticateToken', () => {
     authenticateToken(req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
+  });
+});
+
+describe('optionalAuth', () => {
+  const ORIGINAL_ENV = process.env;
+  const next = jest.fn();
+
+  beforeEach(() => {
+    process.env = { ...ORIGINAL_ENV, JWT_SECRET: 'test-secret' };
+    next.mockClear();
+  });
+
+  afterAll(() => {
+    process.env = ORIGINAL_ENV;
+  });
+
+  const payload: UserPayload = { id: '1', email: 'user@example.com', name: 'Test User' };
+
+  it('attaches the user when the token is valid', () => {
+    const req = mockReq({ cookies: { access_token: jwt.sign(payload, 'test-secret') } });
+
+    optionalAuth(req, mockRes(), next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(req.user).toMatchObject({ email: 'user@example.com' });
+  });
+
+  it('reads a bearer token too', () => {
+    const req = mockReq({ headers: { authorization: `Bearer ${jwt.sign(payload, 'test-secret')}` } });
+
+    optionalAuth(req, mockRes(), next);
+
+    expect(req.user).toMatchObject({ email: 'user@example.com' });
+  });
+
+  it('continues anonymously when there is no token', () => {
+    const req = mockReq();
+    const res = mockRes();
+
+    optionalAuth(req, res, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(req.user).toBeUndefined();
+    expect(res.status).not.toHaveBeenCalled();
+  });
+
+  it('treats an expired or forged token as no token rather than as a 401', () => {
+    // The caller asked for public data. Refusing it because a stale cookie is
+    // lying around would break the landing page for exactly the people most
+    // likely to have one.
+    const req = mockReq({ cookies: { access_token: jwt.sign(payload, 'wrong-secret') } });
+    const res = mockRes();
+
+    optionalAuth(req, res, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(req.user).toBeUndefined();
+    expect(res.status).not.toHaveBeenCalled();
+  });
+
+  it('continues anonymously when JWT_SECRET is not configured', () => {
+    delete process.env.JWT_SECRET;
+    const req = mockReq({ cookies: { access_token: 'anything' } });
+    const res = mockRes();
+
+    optionalAuth(req, res, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.status).not.toHaveBeenCalled();
   });
 });

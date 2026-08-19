@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { PaymentRequiredError } from '@tumbaland/backend-core';
 
 jest.mock('../services/photoService', () => ({
   __esModule: true,
@@ -21,9 +22,17 @@ jest.mock('../services/fileServiceClient', () => ({
 
 jest.mock('../models/Album', () => ({ __esModule: true, default: { findById: jest.fn() } }));
 
+jest.mock('../services/storageUsage', () => ({
+  storageActor: jest.fn(() => ({ email: 'caller@example.com', userId: 'user-1' })),
+  assertStorageHeadroom: jest.fn(),
+  recordStoredBytes: jest.fn(),
+  releaseStoredBytes: jest.fn()
+}));
+
 import photoService from '../services/photoService';
 import { getUploadSignedUrl, generateFileId } from '../services/fileServiceClient';
 import Album from '../models/Album';
+import { assertStorageHeadroom, recordStoredBytes, releaseStoredBytes } from '../services/storageUsage';
 import {
   createPhoto,
   getPhotosByAlbum,
@@ -40,6 +49,9 @@ const mockedPhotoService = photoService as jest.Mocked<typeof photoService>;
 const mockedGetUploadSignedUrl = getUploadSignedUrl as jest.Mock;
 const mockedGenerateFileId = generateFileId as jest.Mock;
 const mockedAlbumFindById = Album.findById as unknown as jest.Mock;
+const mockedHeadroom = assertStorageHeadroom as jest.Mock;
+const mockedRecord = recordStoredBytes as jest.Mock;
+const mockedRelease = releaseStoredBytes as jest.Mock;
 
 function mockRes(): Response {
   const res: Partial<Response> = {};
@@ -67,6 +79,19 @@ describe('createPhoto', () => {
       'group-1'
     );
     expect(res.status).toHaveBeenCalledWith(201);
+  });
+
+  it('records the stored bytes against the album\'s meter', async () => {
+    mockedAlbumFindById.mockResolvedValue({ userId: 'user-1', groupId: 'group-1' });
+    mockedPhotoService.createPhoto.mockResolvedValue({ _id: 'p1', size: 5_000 } as any);
+
+    await createPhoto(baseReq({ body: { albumId: 'a1', size: 5_000 } }), mockRes());
+
+    expect(mockedRecord).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ groupId: 'group-1' }),
+      5_000
+    );
   });
 });
 
@@ -107,13 +132,32 @@ describe('updatePhoto', () => {
 });
 
 describe('deletePhoto', () => {
-  it('deletes the photo', async () => {
-    mockedPhotoService.deletePhoto.mockResolvedValue(undefined);
+  it('deletes the photo and hands its bytes back to the meter', async () => {
+    mockedPhotoService.deletePhoto.mockResolvedValue({ albumId: 'a1', size: 2_048 } as any);
+    mockedAlbumFindById.mockResolvedValue({ userId: 'user-1', groupId: 'group-1' });
     const res = mockRes();
 
     await deletePhoto(baseReq({ params: { id: 'p1' } }), res);
 
     expect(mockedPhotoService.deletePhoto).toHaveBeenCalledWith('p1');
+    expect(mockedRelease).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ groupId: 'group-1' }),
+      2_048
+    );
+  });
+
+  it('still reports success when the album is already gone', async () => {
+    // The album delete path frees its own bytes, so there is nothing to release
+    // and nothing here should turn that into a 500 for the caller.
+    mockedPhotoService.deletePhoto.mockResolvedValue({ albumId: 'a1', size: 2_048 } as any);
+    mockedAlbumFindById.mockResolvedValue(null);
+    const res = mockRes();
+
+    await deletePhoto(baseReq({ params: { id: 'p1' } }), res);
+
+    expect(mockedRelease).not.toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
   });
 });
 
@@ -151,6 +195,37 @@ describe('getUploadSignedUrlRequest', () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ uploadUrl: 'https://upload.example' }) })
     );
+  });
+
+  it('checks the storage quota against the album before issuing a URL', async () => {
+    mockedAlbumFindById.mockResolvedValue({ userId: 'user-1', groupId: 'group-1' });
+    mockedGenerateFileId.mockReturnValue('file-1');
+    mockedGetUploadSignedUrl.mockResolvedValue('https://upload.example');
+
+    await getUploadSignedUrlRequest(
+      baseReq({ body: { filename: 'p.jpg', mimetype: 'image/jpeg', albumId: 'a1', sizeBytes: 12_345 } }),
+      mockRes()
+    );
+
+    expect(mockedHeadroom).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ groupId: 'group-1' }),
+      12_345
+    );
+  });
+
+  it('issues no URL when the quota gate refuses — the bytes are never written', async () => {
+    mockedAlbumFindById.mockResolvedValue({ userId: 'user-1' });
+    mockedHeadroom.mockRejectedValueOnce(new PaymentRequiredError('Limit reached for storageBytes', { code: 'QUOTA_EXCEEDED', meter: 'storageBytes' }));
+
+    await expect(
+      getUploadSignedUrlRequest(
+        baseReq({ body: { filename: 'p.jpg', mimetype: 'image/jpeg', albumId: 'a1', sizeBytes: 12_345 } }),
+        mockRes()
+      )
+    ).rejects.toMatchObject({ statusCode: 402 });
+
+    expect(mockedGetUploadSignedUrl).not.toHaveBeenCalled();
   });
 });
 

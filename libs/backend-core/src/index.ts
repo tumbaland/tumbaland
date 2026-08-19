@@ -31,7 +31,7 @@ export * from './entitlements';
 export * from './groups';
 
 // Middleware
-export { authenticateToken } from './middleware/authMiddleware';
+export { authenticateToken, optionalAuth } from './middleware/authMiddleware';
 export {
   requireInternalServiceToken,
   internalServiceTokenBypass,

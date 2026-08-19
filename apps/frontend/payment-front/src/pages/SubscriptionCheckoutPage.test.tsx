@@ -98,6 +98,21 @@ it('activates a free plan and navigates to the returned url', async () => {
   restore();
 });
 
+it('goes straight to the subscription page when the plan was switched in place', async () => {
+  // An existing customer changing plan has nothing to check out: the subscription
+  // they already have was moved onto the new price, with the difference prorated.
+  mockedListPlans.mockResolvedValue([proPlan]);
+  mockedCreateCheckoutSession.mockResolvedValue({ changed: true, url: '/subscription', subscription: { status: 'active' } });
+  const { assign, restore } = stubLocation();
+  renderAt('/subscription/checkout?plan=pro');
+
+  await userEvent.click(await screen.findByRole('checkbox'));
+  await userEvent.click(screen.getByRole('button', { name: /proceed/i }));
+
+  await waitFor(() => expect(assign).toHaveBeenCalledWith(expect.stringContaining('/subscription')));
+  restore();
+});
+
 it('redirects to a Stripe checkout url for a paid plan', async () => {
   mockedListPlans.mockResolvedValue([proPlan]);
   mockedCreateCheckoutSession.mockResolvedValue({ url: 'https://checkout.stripe.com/pay/abc', sessionId: 'cs_123' });

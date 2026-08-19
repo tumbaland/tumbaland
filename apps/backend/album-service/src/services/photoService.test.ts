@@ -285,7 +285,9 @@ describe('deletePhoto', () => {
     mockedDeleteFile.mockRejectedValue(new Error('down'));
     mockedAlbumFindOne.mockResolvedValue(null);
 
-    await expect(photoService.deletePhoto('p1')).resolves.toBeUndefined();
+    // Still returns the deleted document: the caller needs its size to hand
+    // the bytes back to the storage meter.
+    await expect(photoService.deletePhoto('p1')).resolves.toMatchObject({ size: 100 });
     expect(mockedFindByIdAndDelete).toHaveBeenCalledWith('p1');
   });
 

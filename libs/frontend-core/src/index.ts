@@ -19,6 +19,9 @@ export type {
   FeatureKey
 } from './entitlementsService';
 
+export { createPlansService } from './plansService';
+export type { CatalogPlan, PlansServiceConfig, PlansService } from './plansService';
+
 export type { User, AuthResponse, Group, ApiResponse } from './types';
 
 export { TENANT_STORAGE_KEY, clearSessionScopedStorage } from './sessionStorage';

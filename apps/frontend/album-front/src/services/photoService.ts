@@ -42,16 +42,23 @@ export const photoService = {
     return response.data;
   },
 
-  // Get upload signed URL from album service (MinIO)
+  // Get upload signed URL from album service (MinIO).
+  //
+  // `sizeBytes` is what the storage quota is checked against: this request is
+  // the last point where the size is known before the bytes are written, so a
+  // plan that has run out of storage is refused here with a 402 rather than
+  // after the file has already landed in MinIO.
   async getUploadSignedUrl(
     filename: string,
     mimetype: string,
-    albumId: string
+    albumId: string,
+    sizeBytes: number
   ): Promise<UploadSignedUrlResponse & { expiresInMinutes: number }> {
     const response = await albumApi.post<ApiResponse<UploadSignedUrlResponse & { expiresInMinutes: number }>>('/photos/upload-url', {
       filename,
       mimetype,
-      albumId
+      albumId,
+      sizeBytes
     });
     return response.data;
   },

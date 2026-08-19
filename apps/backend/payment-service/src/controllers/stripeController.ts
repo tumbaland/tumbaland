@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import Stripe from 'stripe';
 import { BadRequestError, HttpError, logger, NotFoundError } from '@tumbaland/backend-core';
 import { stripe, ensureStripe } from '../services/stripeService';
-import { Plan } from '../models/Plan';
+import { Plan, IPlan } from '../models/Plan';
 import { HydratedDocument } from 'mongoose';
 import { Subscription, ISubscription } from '../models/Subscription';
 import { Payment } from '../models/Payment';
@@ -45,8 +45,12 @@ export const createCheckoutSession = async (req: Request, res: Response): Promis
       sub.cancelAt = undefined;
       await sub.save();
     }
-    // When switching to free, cancel all other higher-priced subs immediately
-    await deactivateHigherPricedSubs(sub);
+    // Switching to free is a cancellation, and it now behaves like one: the paid
+    // subscription is set to stop at period end, so the customer keeps what they
+    // have already been charged for. It used to cancel at Stripe outright,
+    // revoking access on the click and forfeiting the rest of a paid month —
+    // the opposite of what the cancel button does for the same intent.
+    await supersedeOtherSubscriptions(sub);
     // Provide a direct redirect target so frontend can uniformly redirect using url.
     res.status(201).json({ success: true, free: true, subscription: sub, url: '/subscription' });
     return;
@@ -63,6 +67,25 @@ export const createCheckoutSession = async (req: Request, res: Response): Promis
       priceMonthlyCents: plan.priceMonthlyCents
     });
     throw new HttpError(503, 'This plan is not available for purchase right now.');
+  }
+
+  // A customer who already pays us is *switching*, not buying a second time.
+  //
+  // Selling them another subscription is what produced the downgrade
+  // double-billing: two live subscriptions, and a supersession rule that only
+  // looked one way down the price list. Changing the price on the subscription
+  // they have means there is never more than one, and Stripe's prorations
+  // settle the difference in either direction.
+  const existing = await findLiveStripeSubscription(email);
+  if (existing) {
+    if (existing.planCode === plan.code && existing.status !== 'canceling') {
+      throw new BadRequestError(`You are already on the ${plan.name} plan.`);
+    }
+
+    const changed = await changePlanInPlace(existing, plan, priceId);
+    await supersedeOtherSubscriptions(changed);
+    res.status(200).json({ success: true, changed: true, subscription: changed, url: '/subscription' });
+    return;
   }
 
   // Find or create a pending subscription (incomplete)
@@ -152,7 +175,7 @@ export const stripeWebhook = async (req: Request, res: Response): Promise<void> 
           sub.stripeCustomerId = session.customer as string;
           sub.renewsAt = computeRenewsAtFromSession(session);
           await sub.save();
-          await deactivateLowerPricedSubs(sub);
+          await supersedeOtherSubscriptions(sub);
           await ensureSubscriptionPayment(sub, session, 'checkout.session.completed');
         }
       }
@@ -185,6 +208,37 @@ export const stripeWebhook = async (req: Request, res: Response): Promise<void> 
           }
           await ensureSubscriptionPayment(sub, invoice, 'invoice.payment_succeeded', invoice.id, invoice.amount_paid, invoice.currency);
         }
+      }
+      break;
+    }
+    case 'customer.subscription.updated': {
+      // Plan switches now happen *on* the subscription rather than through a new
+      // checkout, and a pending cancellation is a field on it — so this is the
+      // event that keeps the local record honest. It is also what will carry the
+      // billing portal's changes once 5.2 lands, where the user acts entirely
+      // outside this service.
+      const subscription = event.data.object;
+      const sub = await Subscription.findOne({ stripeSubscriptionId: subscription.id });
+      if (sub && sub.status !== 'canceled') {
+        const priceId = subscription.items?.data?.[0]?.price?.id;
+        const plan = priceId ? await Plan.findOne({ stripePriceId: priceId }) : null;
+        if (plan && plan.code !== sub.planCode) {
+          sub.planCode = plan.code;
+          sub.plan = plan._id as never;
+        }
+
+        if (subscription.cancel_at_period_end) {
+          sub.status = 'canceling';
+          sub.cancelAt = periodEnd(subscription) ?? sub.cancelAt;
+        } else {
+          // Stripe reports `past_due` and `unpaid` for dunning; anything else
+          // active-like resolves to active. A local `canceling` that Stripe no
+          // longer reports as cancelling has been resumed.
+          sub.status = subscription.status === 'past_due' || subscription.status === 'unpaid' ? 'past_due' : 'active';
+          sub.cancelAt = undefined;
+          sub.renewsAt = periodEnd(subscription) ?? sub.renewsAt;
+        }
+        await sub.save();
       }
       break;
     }
@@ -224,7 +278,7 @@ export const getCheckoutSessionStatus = async (req: Request, res: Response): Pro
       subscriptionDoc.stripeCustomerId = (session.customer as string) || subscriptionDoc.stripeCustomerId;
       subscriptionDoc.renewsAt = computeRenewsAtFromSession(session);
       await subscriptionDoc.save();
-      await deactivateLowerPricedSubs(subscriptionDoc);
+      await supersedeOtherSubscriptions(subscriptionDoc);
       await ensureSubscriptionPayment(subscriptionDoc, session, 'auto_heal');
     }
   }
@@ -246,6 +300,12 @@ function addMonths(date: Date, count: number): Date {
 function getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | undefined {
   const sub = (invoice as unknown as { subscription?: string | { id: string } }).subscription;
   return typeof sub === 'string' ? sub : sub?.id;
+}
+
+function periodEnd(sub: Stripe.Subscription): Date | undefined {
+  const legacy = (sub as unknown as { current_period_end?: number }).current_period_end;
+  const seconds = sub.cancel_at ?? legacy ?? sub.items?.data?.[0]?.current_period_end;
+  return seconds ? new Date(seconds * 1000) : undefined;
 }
 
 function computeRenewsAtFromSession(session: Stripe.Checkout.Session): Date | undefined {
@@ -333,50 +393,154 @@ async function cancelAtStripe(sub: HydratedDocument<ISubscription>, origin: stri
 // superseded when the user moves to another plan.
 const SUPERSEDABLE_STATUSES: ISubscription['status'][] = ['active', 'past_due', 'incomplete', 'canceling'];
 
-// Cancel (set status=canceled) any other active/past_due/incomplete/canceling subs for same user that are lower priced than the newly activated one.
-async function deactivateLowerPricedSubs(primary: HydratedDocument<ISubscription>) {
+/** Statuses whose period the customer has actually paid for. */
+const PAID_STATUSES: ISubscription['status'][] = ['active', 'past_due'];
+
+/**
+ * The live Stripe-backed subscription a plan switch should modify, if any.
+ *
+ * Comp grants are excluded deliberately: they are admin grants with no Stripe
+ * side, and treating one as "the subscription to change" would have an ordinary
+ * purchase silently consume a staff or friend grant.
+ */
+async function findLiveStripeSubscription(
+  email: string
+): Promise<HydratedDocument<ISubscription> | null> {
+  return Subscription.findOne({
+    userEmail: email.toLowerCase(),
+    isComp: { $ne: true },
+    stripeSubscriptionId: { $exists: true, $nin: [null, ''] },
+    status: { $in: PAID_STATUSES.concat('canceling') }
+  });
+}
+
+/**
+ * Stop a subscription at the end of the period the customer already paid for.
+ *
+ * This is the *only* way a paid subscription should ever end by the customer's
+ * own action. Cancelling at Stripe outright — which the switch-to-free path
+ * used to do — revokes access the moment they click, forfeits the remainder of
+ * a month they have already been charged for, and directly contradicts what the
+ * cancel button and the pricing FAQ both promise.
+ */
+async function scheduleCancellation(sub: HydratedDocument<ISubscription>, origin: string): Promise<void> {
+  if (!sub.stripeSubscriptionId) {
+    // Nothing at Stripe to wind down: a comp grant or a never-completed checkout.
+    sub.status = 'canceled';
+    sub.canceledAt = new Date();
+    await sub.save();
+    return;
+  }
+
   try {
-    const primaryPlan = await Plan.findOne({ code: primary.planCode });
-    if (!primaryPlan) return;
-    const others = await Subscription.find({ userEmail: primary.userEmail, _id: { $ne: primary._id }, status: { $in: SUPERSEDABLE_STATUSES } });
-    if (!others.length) return;
-    for (const other of others) {
-      const otherPlan = await Plan.findOne({ code: other.planCode });
-      const otherPrice = otherPlan?.priceMonthlyCents || 0;
-      if (otherPrice < primaryPlan.priceMonthlyCents) {
-        if (other.status !== 'canceled') {
-          await cancelAtStripe(other, 'deactivateLowerPricedSubs');
-          other.status = 'canceled';
-          other.canceledAt = new Date();
-          await other.save();
-          logger.info('[deactivateLowerPricedSubs] canceled lower plan', { otherId: other.id, otherPlan: other.planCode, primaryPlan: primary.planCode });
-        }
-      }
-    }
+    ensureStripe();
+    const updated = await stripe.subscriptions.update(sub.stripeSubscriptionId, { cancel_at_period_end: true });
+    sub.cancelAt = periodEnd(updated) ?? sub.cancelAt;
+    sub.status = 'canceling';
+    await sub.save();
+    logger.info(`[${origin}] subscription set to cancel at period end`, { subId: sub.id, cancelAt: sub.cancelAt });
   } catch (err) {
-    logger.error('[deactivateLowerPricedSubs] error', { error: (err as Error)?.message });
+    // Leave the record alone. Stripe still holds a live subscription that will keep
+    // invoicing, so a local-only cancel would revoke access while continuing to charge.
+    logger.error(`[${origin}] STRIPE CANCEL FAILED - subscription may still be billing`, {
+      subId: sub.id,
+      userEmail: sub.userEmail,
+      planCode: sub.planCode,
+      stripeSubscriptionId: sub.stripeSubscriptionId,
+      error: err instanceof Error ? err.message : String(err)
+    });
+    throw err;
   }
 }
 
-// Cancel any higher-priced active/past_due subscriptions when downgrading (e.g., to free)
-async function deactivateHigherPricedSubs(primary: HydratedDocument<ISubscription>) {
+/**
+ * Wind down every *other* subscription once one becomes the user's plan.
+ *
+ * Deliberately not price-directional. The two functions this replaces cancelled
+ * only the subscriptions priced below (on activation) or above (on switching to
+ * free) the new one, which left the paid → paid downgrade uncovered: a Family
+ * customer moving to Personal activated the cheaper subscription while Family,
+ * being dearer, was never touched and kept invoicing. That is Phase 0's
+ * double-billing defect in the other direction, and the price comparison is what
+ * produced it — a user has one paid plan, whichever way they move.
+ *
+ * Comp grants are skipped: an admin grant is not superseded by a purchase.
+ */
+async function supersedeOtherSubscriptions(primary: HydratedDocument<ISubscription>): Promise<void> {
   try {
-    const primaryPlan = await Plan.findOne({ code: primary.planCode });
-    if (!primaryPlan) return;
-    const others = await Subscription.find({ userEmail: primary.userEmail, _id: { $ne: primary._id }, status: { $in: SUPERSEDABLE_STATUSES } });
-    if (!others.length) return;
+    const others = await Subscription.find({
+      userEmail: primary.userEmail,
+      _id: { $ne: primary._id },
+      isComp: { $ne: true },
+      status: { $in: SUPERSEDABLE_STATUSES }
+    });
+
     for (const other of others) {
-      const otherPlan = await Plan.findOne({ code: other.planCode });
-      const otherPrice = otherPlan?.priceMonthlyCents || 0;
-      if (otherPrice > (primaryPlan.priceMonthlyCents || 0)) {
-        await cancelAtStripe(other, 'deactivateHigherPricedSubs');
+      // An `incomplete` row was never paid for, so there is no period to protect
+      // — dropping it immediately is what keeps abandoned checkouts from piling up.
+      if (!PAID_STATUSES.includes(other.status)) {
+        await cancelAtStripe(other, 'supersedeOtherSubscriptions');
         other.status = 'canceled';
         other.canceledAt = new Date();
         await other.save();
-        logger.info('[deactivateHigherPricedSubs] canceled higher-priced sub', { otherId: other.id, otherPlan: other.planCode, primaryPlan: primary.planCode });
+        continue;
       }
+
+      await scheduleCancellation(other, 'supersedeOtherSubscriptions').catch(() => {
+        // Already logged as loudly as it deserves; the primary switch stands.
+      });
     }
   } catch (err) {
-    logger.error('[deactivateHigherPricedSubs] error', { error: (err as Error)?.message });
+    logger.error('[supersedeOtherSubscriptions] error', { error: (err as Error)?.message });
   }
+}
+
+/**
+ * Move an existing Stripe subscription onto another plan, rather than selling a
+ * second one alongside it.
+ *
+ * A plan switch is a change to the subscription the customer already has, and
+ * modelling it as a fresh checkout is what made both billing defects possible.
+ * Swapping the price in place means there is only ever one subscription to
+ * reason about, and `create_prorations` settles the difference in whichever
+ * direction it runs: an upgrade is charged for the remainder of the period, a
+ * downgrade credits it against what comes next. Nobody pays twice, and nobody
+ * loses a period they have already bought.
+ */
+async function changePlanInPlace(
+  sub: HydratedDocument<ISubscription>,
+  plan: HydratedDocument<IPlan> | IPlan,
+  priceId: string
+): Promise<HydratedDocument<ISubscription>> {
+  ensureStripe();
+
+  const current = await stripe.subscriptions.retrieve(sub.stripeSubscriptionId!);
+  const itemId = current.items?.data?.[0]?.id;
+  if (!itemId) {
+    throw new HttpError(502, 'Could not read your current subscription from our payment provider.');
+  }
+
+  const updated = await stripe.subscriptions.update(sub.stripeSubscriptionId!, {
+    items: [{ id: itemId, price: priceId }],
+    proration_behavior: 'create_prorations',
+    // Switching plans is also the clearest possible statement that the customer
+    // is staying, so a pending cancellation is withdrawn rather than left to
+    // silently end the plan they just chose.
+    cancel_at_period_end: false
+  });
+
+  sub.planCode = plan.code;
+  sub.plan = (plan as IPlan)._id as never;
+  sub.status = 'active';
+  sub.cancelAt = undefined;
+  sub.renewsAt = periodEnd(updated) ?? sub.renewsAt;
+  await sub.save();
+
+  logger.info('[changePlanInPlace] switched plan on existing subscription', {
+    subId: sub.id,
+    planCode: plan.code,
+    stripeSubscriptionId: sub.stripeSubscriptionId
+  });
+
+  return sub;
 }

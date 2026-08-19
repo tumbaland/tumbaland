@@ -3,17 +3,21 @@
 Turning the existing Stripe integration into actual revenue. Companion to `TODO.md` — that file
 tracks code health, this one tracks the paywall.
 
-**Current state (2026-08-09).** The entitlement backbone is finished and tested: plan limits resolve
+**Current state (2026-08-20).** The entitlement backbone is finished and tested: plan limits resolve
 from the database through a cached internal API, usage meters are recorded and reconciled nightly,
-the 402 contract exists, and `<UsageMeter>` is live on the album dashboard and the tracked-ticker
-list. **Two chokepoints are enforced**: retention clips price history, which makes the portfolio
-planner a paid feature, and the `trackedTickers` limit now refuses a symbol past the plan's ceiling —
-on both paths that track one. Storage and seats still record without enforcing, and the rest of the
-plans are identical. Stripe has only ever taken one live charge (the maintainer's); there are no
-customers, so nothing here carries a migration burden.
+the 402 contract exists, `<UsageMeter>` is live on the album dashboard, the upload dialog and the
+tracked-ticker list, and the landing page's prices and limits come from the API rather than from a
+hardcoded table. **Three chokepoints are enforced**: retention clips price history, which makes
+the portfolio planner a paid feature; the `trackedTickers` limit refuses a symbol past the plan's
+ceiling on both paths that track one; and `storageBytes` now refuses an upload that would not fit,
+at the signed-URL request, with the bytes handed back on delete. Seats still record without
+enforcing, and the rest of the plans are identical. Stripe has only ever taken one live charge (the
+maintainer's); there are no customers, so nothing here carries a migration burden.
 
-Phases 0–2 are shipped. Phase 3 (chokepoints) and Phase 4 (visibility) are the active work, and are
-concurrent — see Phase 4's preamble for why.
+Phases 0–2 are shipped, Phase 5.1's front page is largely built, and Phase 3 (chokepoints) with
+Phase 4 (visibility) are the active work — concurrent, see Phase 4's preamble for why. Phase 0's
+plan-switch defects were finished off separately, once a review found the downgrade direction had
+never been covered.
 
 **Read "Go-live gate" before charging anyone.** The things standing between here and a first real
 customer are mostly *not* in Phases 3–6.
@@ -30,41 +34,38 @@ service or front is rebuilt. Local dev resolves through the workspace symlink an
 Assessed against the running system, not against this document's checkboxes.
 
 The giveaway that used to head this list (checkout handing out paid plans for free against a live
-Stripe key) is fixed, along with VAT collection, and two chokepoints now enforce. What remains before
-charging: paid checkout is **closed** until Stripe prices exist, the legal surface is a stub, and
-storage — the biggest number on the pricing page — is still unenforced.
+Stripe key) is fixed, along with VAT collection; three chokepoints now enforce, storage included; and
+the pricing table renders the limits the services actually hold people to. What remains before
+charging: paid checkout is **closed** until Stripe prices exist, the legal surface is a stub with no
+mechanisms behind it, and the tracked-ticker numbers on the pricing page cannot be delivered on the
+current data key. The two subscription-switch defects that headed this list are fixed — see What's
+built.
+
+**Read the billing items more suspiciously than the entitlement ones.** Everything about entitlements
+here was written while building it and matches the code. The Stripe half predates the code, and the
+last two defects found there were found by reading `stripeController.ts`, not by reading this file,
+which described those paths as settled.
 
 ### Tier 0 — do not charge anyone until these are done
 
-- [x] **Fixed the free-plan shortcut in `createCheckoutSession`.** The condition read
-      `if (!plan.priceMonthlyCents || plan.priceMonthlyCents === 0 || !plan.stripePriceId)` and, on a
-      match, created an **`active`** subscription with `renewsAt` a month out and no Stripe involved.
-      Since no plan in the database carries a `stripePriceId` until an admin sets one, any signed-in
-      user could `POST /api/subscriptions/checkout-session {"planCode":"family"}` and receive Family,
-      free, renewing. The route is behind `authenticate` and nothing else. It also made the
-      `!priceId` guard below it dead code.
+- [ ] **The tracked-ticker limits cannot be delivered on the current data key.** Alpha Vantage's free
+      tier is `DAILY_LIMIT = 25` calls *for the whole deployment*, and the daily job spends one per
+      distinct active symbol. Appendix A sells 25 symbols on Personal and 100 on Family: the first
+      Personal customer consumes the entire deployment's daily quota, and one Family customer needs
+      four times it.
 
-      A plan is now free because **its price is zero**, never because its Stripe wiring is missing. A
-      priced plan with no `stripePriceId` is refused **before anything is created**, with a `503` and
-      an error log naming the plan — 503 rather than 400 because the fault is the deployment's, not
-      the caller's, and the checkout page already renders the message in an error alert.
-
-      A test previously pinned the old behaviour as intended, comment and all; it now asserts the
-      refusal, alongside one proving a genuinely zero-priced plan is still free even if it carries a
-      leftover price id.
+      Two ways out, and they are commercial, not technical: upgrade the data key before the first
+      sale and price the plans against what it costs, or cut the advertised numbers to what 25
+      calls/day actually supports. What is not available is selling either number as it stands.
+      Instrumentation tracks the headroom afterwards; this is the decision that has to precede it.
 
 - [ ] **Set `stripePriceId` on `personal` and `family`** via `PATCH /api/plans/:code/stripe-prices`.
       **Until this is done every paid plan returns 503** — which is the intended state, but it does
       mean paid checkout is closed rather than merely unfinished.
 
-- [x] **VAT collected at checkout.** The session now passes `automatic_tax: { enabled: true }`,
-      `billing_address_collection: 'required'` (Stripe Tax computes from the address, so it cannot be
-      optional) and `tax_id_collection: { enabled: true }` so a business can be reverse-charged.
-      Subscription-mode sessions already produce invoices, so the receipt trail needs nothing extra.
-
-      **Requires Stripe Tax to be enabled and an origin address registered in the dashboard** — until
-      then Stripe rejects the session outright. That is deliberate: silently selling untaxed is the
-      worse failure. Still yours to do outside the code: register for **OSS** before the first
+- [ ] **Stripe Tax must be enabled and an origin address registered in the dashboard.** Checkout
+      passes `automatic_tax`, so until that is done Stripe rejects the session outright — deliberate,
+      since silently selling untaxed is the worse failure. Register for **OSS** before the first
       non-domestic EU sale.
 
 - [ ] **The legal surface, which is currently a stub.** `TermsPage.tsx` is 63 lines of boilerplate
@@ -76,33 +77,40 @@ storage — the biggest number on the pricing page — is still unenforced.
       (GDPR — you hold photos, journals and financial data), a working contact route, and withdrawal
       terms that match what you actually do.
 
+      **And the mechanisms the policy would promise do not exist.** auth-service has no account
+      deletion and nothing exports a user's data, so erasure (Art. 17) and portability (Art. 20) are
+      unimplemented. Publishing the policy first is worse than publishing neither: it converts a gap
+      into a written commitment. Ship delete-my-account and an export alongside the page, not after
+      it.
+
 ### Tier 1 — without these, the paywall is fiction
 
-- [x] **Retention (chokepoint 4) is enforced** — the first gate with anything standing on it. Price
-      history is clipped to the plan's window, which is what makes the portfolio planner a paid
-      feature, and the planner now refuses to draw a frontier from a truncated range. See 3.2.
-- [x] **Tracked tickers (chokepoint 3) is enforced**, on both creation paths, with its meter on the
-      tickers tab and a 402 that names the limit rather than reading as a save failure. See 3.3.
-- [ ] **Wire storage (1)** — biggest number, but needs `sizeBytes` in the upload schema and the
-      delete-side decrement to land with it.
+- [ ] **Release `@tumbaland/backend-core` and `@tumbaland/frontend-core` before their consumers are
+      rebuilt.** The storage gate calls `recordUsage` and payment-service's plan route calls
+      `optionalAuth`, both new backend-core exports; shell-front's pricing table calls
+      `createPlansService`, a new frontend-core one. Services and fronts install the libs from npm
+      inside their Dockerfile, so until the libs are published this work is written but not
+      deployed.
 
-- [ ] **Render the pricing table from the API, not `shell-front/src/config/pricing.ts`.** The landing
-      page and its pricing table exist, but `LIMIT_ROWS` is a hardcoded list of seven limits,
-      self-described as an interim source. Shipping that at the moment money changes hands recreates
-      the exact Phase 0 defect, only now with a payment attached. `GET /api/plans` already returns
-      `effectiveLimits`. `PRICING_STATUS` stays `'preview'` until this and the chokepoints land.
+- [ ] **Billing self-service, minus the part that already works** (5.2). Cancelling *is* built —
+      `POST /api/subscriptions/cancel` and a button on `SubscriptionPage` — and this file used to
+      claim otherwise. What a customer still cannot do alone is **update a card**, **find an
+      invoice**, or understand why their subscription says `past_due`: the status renders as a bare
+      chip label on their own page and nothing explains it or links to a fix. Each of those is a
+      chargeback and a complaint, and both cost more than the subscription.
 
-- [ ] **Let people stop paying without emailing you** (5.2). There is no billing portal, and
-      `past_due` appears in the UI only as a chip colour on the admin list. A customer who can pay but
-      cannot cancel, update a card, or find an invoice is a chargeback and a complaint, and both cost
-      more than the subscription.
+- [ ] **Nobody on the team has ever hit a paywall.** Both maintainers hold `staff`, every meter
+      unlimited, so no one sees a meter fill, a bar turn amber, or a 402 in the wild. A single
+      free-plan test account is the cheapest possible check that the gates read as prices rather than
+      as bugs — which is the whole premise of Phase 4, currently untested by anyone who could notice
+      it failing.
 
 ### Tier 2 — real value, but they can follow the first customer
 
 - [ ] Annual billing (5.3). `priceYearlyCents` is set on both paid plans and cannot be bought.
 - [ ] Trial (Phase 6). Worth far more now that meters are visible.
-- [ ] The AI dispatch path (3.1). Until it exists, keep `aiJobs` off the pricing page — it is
-      currently *on* it, in `pricing.ts`, badged "coming soon".
+- [ ] The AI dispatch path (3.1). Also the standing security hole: the AI services take no auth at
+      all today.
 - [ ] Instrumentation. Cheap, and answers whether any of this converts.
 
 ---
@@ -275,7 +283,7 @@ middleware reachable with `x-internal-token: anything`.
 
 **Phase 2 — metering (shipped).** `UsageMeter` (`{ subjectId, meter, period, count }`, unique compound
 index, `ALL` or `YYYY-MM`) and `usage.ts` (`getUsage`, `getUsageSnapshot`, `checkQuota`,
-`consumeQuota`, `releaseQuota`, `setUsage`). `consumeQuota` increments then checks the
+`consumeQuota`, `recordUsage`, `releaseQuota`, `setUsage`). `consumeQuota` increments then checks the
 *post-increment* value, so the loser of a race is the one rejected, and rolls back before throwing.
 Tested against `mongodb-memory-server`, not mocks — twelve concurrent calls against a limit of five
 admit exactly five and the counter ends at five.
@@ -315,6 +323,84 @@ Placed on album-front's dashboard, metering `usage.storageBytes` rather than the
 `totalStorage`: those differ whenever albums live in a group, and since every album in the live
 database is group-owned, metering the visible figure would under-report for every real user.
 
+**Phase 3 — three chokepoints (shipped).** Retention (`retentionFloor` on `getTickerPriceHistory`,
+resolved across the caller *and* the owners of the groups in scope, taking the most generous floor),
+tracked tickers (`services/trackedTickerUsage.ts`) and storage (`services/storageUsage.ts`). Three
+things generalize to the gates still unwired:
+
+- **A quota that counts something other than rows belongs in a service, not in `requireQuota`.**
+  `trackedTickers` counts distinct active symbols, so whether a write costs a slot is a database
+  question a generic middleware cannot ask — and putting it in a service also covered the second
+  creation path (`createHolding` tracks its ticker automatically). Storage is a service for the same
+  shape of reason: the billing subject depends on the album's group, which the route has not loaded.
+- **Reserve before the write, settle after it, and pick the primitive by what already exists.**
+  Tickers use `consumeQuota` (atomic, so the loser of two concurrent adds at the ceiling is the one
+  rejected) with rollback on a failed write, and release on delete/pause/rename/move once the
+  collection shows the new state. Storage cannot: the gate runs at the signed-URL request, the only
+  point where a file's size is known *before* its bytes exist, so the increment happens later at
+  `createPhoto` via `recordUsage`, which never rejects — refusing there would decline a record for
+  bytes already in MinIO. The overrun that buys is bounded and self-correcting: the *next* upload is
+  refused.
+- **A subject that was inferred rather than resolved is checked against but never written to.** An
+  unreachable group-service bills the caller for the check (the conservative direction, and no
+  harsher than what the entitlement client does for the same outage) but touches no meter — charging
+  the wrong account is worse than a counter that lags, because every meter here is derived and
+  reconciliation re-derives it nightly.
+
+Each shipped with its meter and a 402 that names the limit: `utils/paywall.ts` in finance-front and
+album-front renders the body into the error surface each page already had, since a 402 that reads as
+"Failed to save" is indistinguishable from a bug. Both copies go away when `<UpgradeDialog>` (4.2)
+lands.
+
+**Phase 5.1 — the pricing table reads the API (shipped).** `shell-front/src/config/pricing.ts` held a
+hardcoded `LIMIT_ROWS` of seven limits; the landing page now renders `GET /api/plans`, whose
+`effectiveLimits` are resolved by the same `normalizeLimits` the middleware enforces from, so a card's
+ceiling and the ceiling that produces a 402 are one value. What the file still owns is presentation —
+taglines, which card is highlighted, how a number becomes a sentence — with an unknown plan falling
+back to its own `description`, so an admin can add a plan without a frontend deploy.
+
+Three things worth keeping:
+
+- **`GET /api/plans` is now optionally authenticated** (`optionalAuth` in backend-core). A pricing
+  table nobody can read without an account is worth nothing, and signing in only *adds* the hidden
+  plan the caller is on. An expired token is treated as no token rather than as a 401 — refusing
+  public data over a stale cookie breaks the page for exactly the people most likely to have one.
+- **A failed catalog is a state, not a fallback.** The section says pricing is temporarily
+  unavailable rather than rendering numbers of its own; the moment the page can invent a ceiling,
+  the card and the middleware are two different claims again.
+- **`aiJobs` and `cleanExport` are no longer advertised**, closing the open items in 3.0 and 3.1:
+  neither has a chokepoint, so a number on the card was a claim nothing held the product to. The
+  free-tier answer in the FAQ is derived from the free plan's own limits for the same reason — it
+  used to spell them out in words.
+
+**Phase 0 completed — one subscription per customer (shipped).** Phase 0 fixed double-billing in the
+upgrade direction and left the mirror image live: `deactivateLowerPricedSubs` cancelled only the
+subscriptions priced *below* the new one, so a Family customer moving to Personal activated the
+cheaper subscription while Family, being dearer, kept invoicing. The price comparison was the bug.
+
+- **A plan switch now changes the subscription the customer has, instead of selling another one.**
+  `createCheckoutSession` detects a live Stripe subscription and swaps the price in place with
+  `proration_behavior: 'create_prorations'`, returning `changed: true` and no checkout URL. One
+  subscription exists at any time, and prorations settle the difference in whichever direction the
+  switch runs — an upgrade is charged for the remainder of the period, a downgrade credits it. This
+  removes the class of bug rather than the instance: there is no second subscription for a
+  supersession rule to get wrong.
+- **Supersession is no longer price-directional.** `supersedeOtherSubscriptions` replaces both
+  `deactivateLowerPricedSubs` and `deactivateHigherPricedSubs`, winds a *paid* row down at period
+  end rather than cancelling it outright, drops an `incomplete` one immediately (nothing was paid,
+  so there is no period to protect), and **skips comp grants** — buying a plan used to consume a
+  staff or friend grant, because a zero-priced grant is "lower priced" than everything.
+- **Switching to free is a cancellation and now behaves like one.** It used to call
+  `stripe.subscriptions.cancel()`: access gone on the click, the rest of a paid month forfeited,
+  while the cancel button for the same intent kept the period. Both paths now set
+  `cancel_at_period_end` and land on `canceling`.
+- **A failed wind-down leaves the record untouched**, matching the user-facing cancel path. Marking
+  it canceled locally while Stripe keeps charging is the "access revoked, billing alive" failure
+  Phase 0 removed from one path and left in another.
+- **`customer.subscription.updated` is handled**, which is what keeps the local record honest now
+  that plan changes happen on the subscription rather than through a checkout — and is the event the
+  billing portal (5.2) will speak through.
+
 **Plan codes** are settled as `free` / `personal` / `family` (+ hidden `staff`). Old codes were
 dropped rather than mapped forward; anything unknown resolves to free.
 
@@ -322,31 +408,33 @@ dropped rather than mapped forward; anything unknown resolves to free.
 
 ## Phase 3 — Wire the chokepoints
 
-- [ ] **Wire the six chokepoints:**
+Three of the seven are wired (storage, tracked tickers, retention — see What's built). The rest:
+
+- [ ] **Wire the remaining chokepoints:**
 
       | # | Chokepoint | Service | File | Check |
       |---|---|---|---|---|
-      | 1 | Signed upload URL | album | `controllers/photoController.ts` → `getUploadSignedUrlRequest` | `requireQuota('storageBytes', size)` |
       | 2 | AI analysis dispatch | album | **does not exist yet — see 3.1** | `consumeQuota('aiJobs', 1)` |
-      | 3 | ✅ Add tracked ticker | finance | `services/trackedTickerUsage.ts` | reserve/release — **shipped, see 3.3** |
-      | 4 | ✅ Ticker price history range | finance | `controllers/tickerPriceHistory.controller.ts` | `retentionFloor()` — **shipped, see 3.2** |
       | 5 | Add group member | group | `controllers/groupController.ts` | `requireQuota('seats', 1)` vs owner's plan |
       | 6 | Statistics + journal reads | relationship | `services/statistics.service.ts` | `retentionFloor()` as `$match` |
       | 7 | Clean export | album | **does not exist yet — see 3.0** | `requireEntitlement('cleanExport')` |
 
-      **Recorded is not enforced.** `storageBytes` and `seats` still carry accurate live numbers —
-      the nightly reconciliation keeps them true and the album dashboard renders one — while nothing
-      reads them at a write. Until those gates land, the free plan and Family differ in two respects:
-      how far back price history reaches, and how many symbols may be tracked.
+      **Recorded is not enforced** — `seats` still carries an accurate live number that nothing reads
+      at a write. Until that gate lands, the free plan and Family differ in three respects: how far
+      back price history reaches, how many symbols may be tracked, and how many bytes may be stored.
 
-- [ ] **Gate on the signed-URL request, not on `createPhoto`.** Chokepoint 1 is the only place the
-      file size is known *before* bytes are written. `createPhoto` runs after the client has already
-      uploaded to MinIO — blocking there means you've paid the storage cost and then refused the
-      record. `uploadSignedUrlSchema` in `album-service/src/validation/schemas.ts` needs a
-      `sizeBytes` field, and the client must send it.
+- [ ] **Decide the over-cap policy before wiring seats (5).** A five-member Family group downgrading
+      to Personal is over its cap the moment the plan changes, and unlike storage there is no
+      "already spent" reading of it — the members are still there, still in the group, every day.
+      The only answer consistent with *"downgrading hides data, never destroys it"* is **enforce on
+      add, never evict**: the group keeps its members, and the next invite is what gets refused.
+      Write that down here rather than letting the middleware decide it by omission, because the
+      other reading — dropping members at renewal — is the kind of thing a paying household never
+      forgives.
 
-- [ ] **Decrement `storageBytes` on photo and album delete.** A cumulative meter that only counts up
-      is a bug that surfaces as an angry support email six months in.
+- [ ] **Thumbnails are unmetered.** Reconciliation counts `photos.size` only, so a second counter for
+      them would be corrected back every night. Real MinIO usage is understated by the thumbnail
+      share — worth answering as a *limit* number in Appendix A rather than as another meter.
 
 - [ ] **Chokepoint 6 needs the retention floor in one place, not six.**
       `relationship-service/src/services/statistics.service.ts` is 899 lines with six aggregation
@@ -362,10 +450,10 @@ dropped rather than mapped forward; anything unknown resolves to free.
 ### 3.0 `cleanExport` has no chokepoint at all
 
 Not one of the six, and that is an omission rather than a decision. `cleanExport` is a defined
-`FeatureKey`, it is set on all four plans in `DEFAULT_PLAN_LIMITS`, and `pricing.ts` already
-advertises *"Collage export, watermarked"* on the free tier — while **no watermarking code exists
-anywhere and nothing calls `requireEntitlement('cleanExport')`.** That is the Phase 0 defect
-returning: a limit advertised and unenforced.
+`FeatureKey` and it is set on all four plans in `DEFAULT_PLAN_LIMITS`, while **no watermarking code
+exists anywhere and nothing calls `requireEntitlement('cleanExport')`.** The pricing page used to
+advertise *"Collage export, watermarked"* on the free tier, which was the Phase 0 defect returning —
+a limit advertised and unenforced. That line is gone; the unenforceable feature flag is not.
 
 It is also not straightforwardly fixable, for the same structural reason as the planner in 3.2:
 collage export is entirely client-side. `components/collage/exportCollage.ts` renders the stage to a
@@ -384,8 +472,8 @@ Two honest options, and they should be chosen deliberately rather than drifted i
 - [ ] **Accept it as a client-side courtesy** — watermark in the browser, and price the plans as
       though the feature is free. Honest only if the pricing page stops selling it as a paid line.
 
-- [ ] **Until one of them lands, take the watermark line off the pricing page**, exactly as `aiJobs`
-      is being held back. Advertising it is the part with legal exposure, not the missing feature.
+      The watermark line is **off the pricing page** as of the API-rendered pricing table —
+      advertising it was the part with legal exposure, not the missing feature.
 
 ### 3.1 Prerequisite: AI analysis has no server-side chokepoint
 
@@ -405,73 +493,10 @@ So `aiJobs` cannot be metered until a dispatch path exists. Two options:
 Metering at result submission is **not** a substitute — the GPU cost is already spent, and a client
 that never submits results consumes unlimited compute for free.
 
-Until one lands, treat `aiJobs` as advertised-but-unenforced and **leave it off the pricing page**.
+Until one lands, `aiJobs` is advertised-but-unenforced, and it is **off the pricing page** as of the
+API-rendered pricing table.
 
-### 3.2 The planner gate is the price-history range ✅ SHIPPED
-
-`PortfolioPlanner.tsx` computes everything client-side and `finance-service` has **no** planner route,
-so a `<PaywallGate>` on that page would be cosmetic — anyone can bypass it from devtools. The real
-server-side handle is the data the simulation needs: `HISTORY_YEARS = 2`, and the frontier's
-covariance estimate is meaningless without roughly that much daily history.
-
-- [x] **`retentionFloor()` applied to `getTickerPriceHistory`.** The floor sits *underneath* the
-      caller's `from`, so a client can narrow its window but never widen it past the plan. Free
-      resolves to 90 days and the rows are simply not returned — there is nothing here to bypass.
-
-- [x] **Retention resolves across several subjects, taking the most generous.** This is new and it
-      matters: retention is not a counter, so unlike a quota it has no single payer. Resolving it
-      from the caller alone would show a free member of a paid Family group ninety days of a
-      household's history the household paid to keep — the opposite of what "shared across a
-      household" sells. `retentionFloor` now accepts `string | string[]`, and the controller passes
-      the caller plus the owners of the groups in scope. An empty list resolves to the *free* floor,
-      never to unlimited.
-
-      A group whose owner cannot be resolved is skipped rather than failing the read: history is a
-      read, and reads are never gated to the point of denial — the floor degrades to the caller's own
-      plan.
-
-- [x] **The planner refuses to draw a frontier from a truncated range.** Deliberately a
-      *data-sufficiency* check rather than a "was I truncated?" check: it is robust without a server
-      signal, and it also covers the honest case of an instrument nobody has tracked for long. A
-      confidently wrong efficient frontier is worse than a locked feature.
-
-      **Corrected the same day it shipped, after it blocked a `staff` account.** Three things were
-      wrong with the first version, and the third is the one worth remembering.
-
-      - **365 days of *daily* history was unreachable.** `TIME_SERIES_DAILY` serves only the
-        compact ~100 trading days on the free tier, and `outputsize=full` is refused outright:
-        *"The outputsize=full parameter value is a premium feature for the TIME_SERIES_DAILY
-        endpoint."* So a freshly tracked instrument could not reach a year of daily history until a
-        year of daily updates had accrued, and the gate blocked every account, paying or not — the
-        flagship paywall refusing the people who had paid. The threshold is now 120 days plus a
-        `10 × assets` observation rule, the latter being the part that actually protects the
-        estimate.
-
-        **The depth was reachable all along, on a different endpoint.** `TIME_SERIES_WEEKLY` takes
-        no `outputsize` and returns the entire series free — verified against the live key: 622
-        weekly closes for VUSA.DEX back to 2015, one call. Weekly closes are now a first-class
-        interval (see below), which is what makes the planner's covariance estimate defensible
-        rather than merely permitted.
-      - **It measured the wrong series.** It took the span of the *longest* holding, while the
-        covariance is only as good as the days all holdings share. `covariance` pairs its inputs by
-        position, so a ten-year series and a six-month one were being scored index-against-index —
-        2015 returns against 2026 returns. `alignSeries` now intersects on dates, `returnIndices`
-        drops any "return" taken across a gap longer than a long weekend, and the gate measures that
-        overlap. A single recently-added holding legitimately caps the whole estimate.
-      - **The notice blamed the plan unconditionally.** "Plans with full history keep every close
-        ever fetched", shown with a *See plans* button, to an account whose retention is already
-        unlimited and whose real problem was that its instruments had been re-keyed in June. It now
-        reads the caller's own `retentionDays` and only frames it as an upgrade when retention is
-        what clipped the range; otherwise it says so plainly. **A paywall shown to someone who
-        cannot buy their way out of it is worse than no paywall** — it is a bug report at best and a
-        false claim at worst.
-
-- [x] `retentionDays` therefore gates the planner *and* the relationship history — one meter, two
-      products. Simplifies the pricing story; note it in the landing copy.
-
-**Correction:** this section used to claim the endpoint did an unbounded `find().sort()`. That was
-fixed independently — the service already filters, projects the tracked-ticker scope, sorts on the
-`{ ticker, date }` index and caps rows at `DEFAULT_PRICE_HISTORY_LIMIT`.
+### 3.2 Standing hazard: a symbol is a foreign key
 
 **A renamed ticker orphans its history, and nothing notices.** Price rows are keyed by ticker string
 and reads are scoped to *currently tracked* symbols, so when the tracked tickers were re-added under
@@ -509,49 +534,6 @@ fetched history*. The last of those is the common one and is one click from fixe
       annualizing weekly returns by 52 rather than 252, is the remaining step — the data is now
       there, the estimate does not yet use it.
 
-### 3.3 Tracked tickers ✅ SHIPPED
-
-The limit with the most defensible story on the pricing page: Alpha Vantage's free tier is 25 calls
-per day *for the whole deployment*, and the daily job spends one per distinct active symbol, so this
-is the meter where subscription revenue buys the thing that makes the feature work.
-
-- [x] **It is not `requireQuota` on the route, and that is the interesting part.** The meter counts
-      *distinct active symbols*, not rows — one call per symbol per day however many rows hold it — so
-      whether a write costs a slot is a question about what the subject already tracks, which a
-      generic middleware cannot ask. `services/trackedTickerUsage.ts` owns it instead: resolve the
-      billing subject, ask the collection whether the symbol is already covered, and only then
-      `consumeQuota`. Two things fall out of that. Adding a symbol a group already follows is *free*
-      rather than refused at the ceiling, which is what the reconciliation would have said anyway. And
-      because the logic is a service call rather than route middleware, it also guards the **other**
-      creation path: `createHolding` tracks its ticker automatically, so a gate on
-      `POST /tracked-tickers` alone would have been bypassable by adding a holding instead.
-
-- [x] **Reserve before the write, release after it.** `consumeQuota` runs first — atomic, so the loser
-      of two concurrent adds at the ceiling is the one rejected — and its increment is rolled back if
-      the write then fails (a duplicate key, a `ForbiddenError`). Deletes, pauses, renames and moves
-      between groups all resync: each asks, *after* the write, whether anything still covers the old
-      symbol, so a second row in the same scope keeps the slot held and the last one hands it back.
-
-- [x] **Cross-scope dedupe, as far as the caller can see.** A symbol held both personally and in a
-      group the caller owns bills once, matching how the nightly reconciliation counts it: the scope
-      resolver walks the caller's own groups through the cached `getGroupOwner`. What it cannot see is
-      the *other* scopes of a group owner who is not the caller — a member adding a symbol the owner
-      already tracks personally spends a slot the reconciliation later gives back. That is a bounded
-      one-slot over-count on a derived meter, absorbed by the job that exists for exactly this;
-      closing it would need a "groups owned by X" internal endpoint plus an email→userId lookup.
-
-- [x] **Shipped with its meter, per 4.4.** `<UsageMeter>` sits directly above the *Track ticker*
-      button, fed by the same `GET /api/subscriptions/me/entitlements` the album dashboard uses, and
-      every ticker mutation invalidates it so the bar moves with the write. It meters `usage
-      .trackedTickers` — the account's pooled symbol count — not the rows in the visible table, which
-      show one group context.
-
-- [x] **A 402 must not read as "Failed to save ticker".** `utils/paywall.ts` renders the 402 body into
-      the snackbar both investment tabs already have ("You have reached the tracked tickers limit (3)
-      on your free plan. Upgrade to personal for more."). It is deliberately small and local: the
-      shared `<UpgradeDialog>` of 4.2 replaces it, and until that exists the alternative is a paywall
-      indistinguishable from a bug. Both tabs use it, because adding a *holding* can now 402 too.
-
 ---
 
 ## Phase 4 — Make the meters visible
@@ -564,12 +546,17 @@ wired without the meter beside it is a feature that silently stops working.
 
 `<UsageMeter>` and `useEntitlements` are done (see What's built). Remaining:
 
-- [ ] **`<PaywallGate>`** — wraps a locked feature, rendering it blurred-but-visible behind an inline
-      unlock card. Show the planner's real chart under the gate. Nobody pays for a feature they've
-      never seen.
 - [ ] **`<UpgradeDialog>`** — driven entirely by a 402 body, so it names the exact meter that blocked
-      and the exact plan that lifts it.
+      and the exact plan that lifts it. It also retires the two copies of `utils/paywall.ts` that
+      finance-front and album-front carry today.
 - [ ] **`<PlanBadge>`** — into `shell-front/src/components/AccountMenu.tsx`.
+
+**`<PaywallGate>` is dropped, not deferred.** It was specified around the planner, and the planner
+shipped something better: enforcement sits on the *data* — retention clips the history the simulation
+needs — behind a notice that distinguishes a paywall from an instrument nobody has tracked long
+enough. A blurred-chart wrapper has no remaining consumer, and every candidate for one is a read,
+which this design never gates. Re-add it only alongside a named feature that is both genuinely gated
+and worth showing through glass.
 
 ### 4.2 402 handling in the API client
 
@@ -581,12 +568,9 @@ wired without the meter beside it is a feature that silently stops working.
 
 ### 4.3 Placements
 
-album-front's storage meter is done. Remaining:
+album-front (dashboard chart, upload dialog) and finance-front (tickers tab, planner) are done.
+Remaining:
 
-- [x] **finance-front** — meter on `components/investments/TickersTab.tsx` (see 3.3), and
-      `pages/PortfolioPlanner.tsx` renders the upgrade state when the returned price history is
-      shorter than `HISTORY_YEARS` demands (per 3.2) — not a wrapper gate, since the real enforcement
-      is server-side on the data.
 - [ ] **relationship-front** — when retention clips a chart, label it ("showing 90 of 540 days"). A
       silently short chart reads as a bug; a labelled one reads as an upgrade.
 - [ ] **group-front** — seat counter on the members list, gate the invite button at the cap.
@@ -595,8 +579,8 @@ album-front's storage meter is done. Remaining:
       Family", not "Subscribe").
 
 Each front needs `PAYMENT_API_URL` threaded through its four config surfaces (ConfigProvider,
-`vite-env.d.ts`, `docker-entrypoint.sh`, `compose.yml`) plus its `.env.example` for local dev — album
-and finance fronts now have all five. The deploy workflows already write `PAYMENT_API_URL` into
+`vite-env.d.ts`, `docker-entrypoint.sh`, `compose.yml`) plus its `.env.example` for local dev — album,
+finance and shell fronts now have all five. The deploy workflows already write `PAYMENT_API_URL` into
 `.env.app`, so a front that declares it in `compose.yml` picks it up with no pipeline change.
 
 ### 4.4 Rollout
@@ -604,9 +588,9 @@ and finance fronts now have all five. The deploy workflows already write `PAYMEN
 - [ ] There is no switch to flip. The rollout unit is the **chokepoint**: wiring one gate turns that
       limit on, everywhere, immediately. Order them as Tier 1 above, and ship each gate together with
       its meter — a user who cannot see the ceiling experiences the 402 as a bug.
-- [ ] ~~Grandfather existing users onto Personal for 90 days.~~ Moot — no existing paying users.
-      Existing *free* users still get metered for the first time, so the "what happens when you hit a
-      limit" copy in 5.1 is doing this job instead.
+      Grandfathering is moot — there are no existing paying users. Existing *free* users still get
+      metered for the first time, so the "what happens when you hit a limit" copy in 5.1 is doing
+      that job instead.
 
 ---
 
@@ -618,20 +602,16 @@ and finance fronts now have all five. The deploy workflows already write `PAYMEN
 and `/` branches on auth — signed-out visitors get the landing page, signed-in users the dashboard.
 Remaining:
 
-- [ ] **Render the pricing table from the API** rather than `config/pricing.ts` (see Tier 1).
-- [ ] **Write the paywall explanation honestly, above the price table.** The highest-trust thing a
-      small paid product can do is explain its limits before charging. Three short paragraphs:
+The honest-limits explanation shipped as `FaqSection`, deliberately *below* the price table rather
+than above it: as three paragraphs it asked a stranger to read about our GPU bill before they knew
+what the product was, and as questions it answers the same things at the moment someone is weighing
+the cost. The free tier's figures come from the free plan's own limits, so the answer cannot drift
+from what is enforced. Remaining:
 
-      - **What's free forever.** Concretely — 1 GB, 3 tickers, 90 days of history, full album and
-        journal features. Not "generous free tier."
-      - **What costs money and why.** Storage and AI analysis cost real money per photo. Market data
-        has a hard external ceiling — Alpha Vantage's free tier is 25 calls/day *across the whole
-        deployment* — so tracked tickers convert subscription revenue directly into the thing that
-        makes the feature work. Saying that reframes the limit as honest cost recovery, and it is true.
-      - **What happens when you hit a limit or stop paying.** Nothing is deleted. Reads stay open;
-        only new writes are capped. Downgrading hides data, never destroys it. Cancelling keeps access
-        to the end of the period paid for. Each is a specific fear that stops people subscribing to a
-        small indie product, and `canceling` plus "reads are never gated" makes all three true.
+- [ ] **Make the FAQ's remaining promise true before charging.** *"You keep everything you paid for
+      until the end of the period you paid for"* is now true on every path. *"Nothing you already
+      saved disappears"* still has no seats policy behind it — Phase 3 above — and the copy is what
+      turns that from an intention into a promise.
 
 - [ ] **Show live meters in the pricing table for signed-in users.** "You're using 340 MB of 1 GB"
       next to the free column converts better than any copy. `<UsageMeter>` and the entitlements
@@ -647,10 +627,29 @@ Remaining:
       session. You inherit card updates, invoice history, dunning emails and cancellation handling —
       and delete the code path that held Phase 0's second defect. Keep `PaymentsHistoryPage` as a
       read-only view of the local ledger.
-- [ ] **Surface `past_due`.** The webhook sets it and no user-facing UI mentions it. Persistent banner
-      with a fix-payment link, a defined grace period (recommend 7 days, entitled throughout), then
-      downgrade to free. Involuntary churn is roughly a third of all churn for small subscription
-      products, and by far the cheapest to win back.
+
+      **It does not absolve the switch logic.** Which of a user's subscriptions supersede which is
+      ours no matter who renders the cancel button, and that is precisely where both Tier 0 billing
+      defects live. Fix those first; the portal is a convenience layer over a model that has to be
+      right underneath it.
+- [ ] **Surface `past_due`.** The webhook sets it, and the only place it reaches a user is as a bare
+      chip label on their own subscription page — the word, with no explanation and nothing to click.
+      Needed: a persistent banner with a fix-payment link, a defined grace period (recommend 7 days,
+      entitled throughout), then downgrade to free. Involuntary churn is roughly a third of all churn
+      for small subscription products, and by far the cheapest to win back.
+
+      **The dunning emails are Stripe's, and that is the only reason this is affordable.** There is
+      no transactional email anywhere in the backend — no provider, no templates, no send path — so
+      anything this product wants to say on its own (see Phase 6) needs that built first. Leaning on
+      Stripe for card-expiry and retry notices is the cheap half; do not let the plan assume the
+      other half exists.
+
+- [ ] **Persist the webhook idempotency guard, or delete it.** `webhookEventStore` is an in-memory
+      `Set`: it does not survive a restart and is not shared between replicas, so a Stripe retry
+      landing after a deploy is reprocessed. The real defence today is that the handlers are mostly
+      idempotent — status assignments, and a ledger insert deduped on `invoiceId` — which is worth
+      either backing with a persisted store or documenting as the actual contract. What it must not
+      stay is a guard that reads as stronger than it is.
 
 ### 5.3 Annual billing
 
@@ -668,7 +667,11 @@ Remaining:
       works precisely because the meters are visible: someone who spends two weeks at 250 GB with a
       full planner and shared albums, then watches `<UsageMeter>` show what they're about to lose,
       converts far better than someone shown a pricing table on day one.
-- [ ] **Trial-ending email at day 11** with actual usage numbers in it.
+- [ ] **Trial-ending email at day 11** with actual usage numbers in it. **Blocked on infrastructure
+      that does not exist**: there is no transactional email provider, template or send path anywhere
+      in the backend, so this is "choose a provider, wire it, then write one email" — not a
+      three-line job on top of the trial. Stripe's own trial-ending notice is free and covers the
+      billing fact; what it cannot say is *you are storing 180 GB and about to keep 1*.
 
 ---
 
@@ -686,7 +689,8 @@ Remaining:
       Everything recovered here is revenue already earned.
 - [ ] **Alpha Vantage headroom vs. paid tracked tickers.** The one number where a product limit and an
       infrastructure limit are the same thing: when paid tickers approach the daily call ceiling, the
-      data key must be upgraded *before* the next signup.
+      data key must be upgraded *before* the next signup. This is the *ongoing* watch; the advertised
+      numbers already exceed the free key's whole daily quota, which is a Tier 0 decision above.
 
 ---
 
@@ -700,10 +704,10 @@ without a deploy, and update this table when you do.
 |---|---|---|---|
 | `storageBytes` | 1 GB | 50 GB | 250 GB pooled |
 | `aiJobs` (per month) | 25 | 200 | 600 |
-| `trackedTickers` | 3 | 25 | 100 |
+| `trackedTickers` | 3 | 25 ⚠ | 100 ⚠ |
 | `seats` | 1 | 1 | 5 |
 | `retentionDays` | 90 | unlimited | unlimited |
-| `cleanExport` | ✗ (watermarked) | ✓ | ✓ |
+| `cleanExport` | ✗ (nothing watermarks) | ✓ | ✓ |
 
 `retentionDays` does the most work: it gates the relationship history *and*, via the price-history
 range, the portfolio planner. **The planner is the best paywall in the codebase** — the most
@@ -711,8 +715,14 @@ sophisticated thing built, an obvious commercial analogue, and locking it costs 
 because casual users never open it. Retention is also self-strengthening: someone with eighteen months
 logged who can see ninety days has a reason to pay that grows every month they stay.
 
+⚠ **`trackedTickers` is priced above what the deployment can serve.** The daily job spends one Alpha
+Vantage call per distinct active symbol against a free-tier ceiling of 25 *for the whole deployment*,
+so Personal's 25 is one customer's worth of the entire quota and Family's 100 is four customers'
+worth of it. Either number has to move, or the data key does, before the first sale — see Tier 0.
+The live account tracks six symbols, which is why nothing has broken yet.
+
 `aiJobs` is listed but **not sellable until 3.1 lands**, and `cleanExport` is **not enforceable at all
-today** — see 3.0. Both should stay off the pricing page until they are real.
+today** — see 3.0. Neither is advertised any more: the API-rendered pricing table omits both.
 
 Album storage is deliberately *not* the primary paywall. People expect photo storage free from Google;
 finance is where willingness to pay lives, and groups is where expansion revenue lives.

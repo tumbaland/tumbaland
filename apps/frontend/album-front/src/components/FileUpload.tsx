@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { logger } from '@tumbaland/frontend-core';
 import {
   Box,
@@ -21,7 +22,10 @@ import {
   Delete as DeleteIcon,
   PhotoLibrary as PhotoLibraryIcon
 } from '@mui/icons-material';
+import { UsageMeter } from '@tumbaland/components';
 import { photoService } from '../services/photoService';
+import { getMyEntitlements } from '../services/entitlementsService';
+import { isPaymentRequired, paywallMessage } from '../utils/paywall';
 
 interface FileUploadProps {
   albumId: string;
@@ -40,6 +44,23 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  // The storage ceiling, shown where the bytes are actually spent. A gate
+  // wired without its meter beside it is a feature that silently stops
+  // working: without this the first sign of the limit is a refused upload.
+  //
+  // `retry: false` and a swallowed error on purpose — the meter is decoration
+  // on a dialog that works without it, and payment-service being down must not
+  // cost anyone their upload button.
+  const { data: entitlements } = useQuery({
+    queryKey: ['myEntitlements'],
+    queryFn: () => getMyEntitlements(),
+    staleTime: 60 * 1000,
+    retry: false,
+    enabled: open
+  });
+  const storageLimit = entitlements?.limits?.meters?.storageBytes;
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -107,8 +128,15 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
       for (const fileItem of files) {
         const file = fileItem.file;
         try {
-          // Get signed URL for upload from album service (MinIO)
-          const signedUrlResponse = await photoService.getUploadSignedUrl(file.name, file.type, albumId);
+          // Get signed URL for upload from album service (MinIO). The size goes
+          // with the request because the storage quota is checked here, before
+          // any bytes are written.
+          const signedUrlResponse = await photoService.getUploadSignedUrl(
+            file.name,
+            file.type,
+            albumId,
+            file.size
+          );
 
           // Upload file directly to MinIO
           await photoService.uploadFileToSignedUrl(signedUrlResponse.uploadUrl, file);
@@ -131,6 +159,12 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
           setUploadProgress((completed / files.length) * 100);
         } catch (err) {
           logger.error(`Failed to upload ${file.name}`, err);
+          // A plan limit is not a failure — name it, or the paywall reads as a
+          // bug. Everything else keeps the filename, which is what makes a
+          // partial batch diagnosable.
+          if (isPaymentRequired(err)) {
+            throw new Error(paywallMessage(err, `Failed to upload ${file.name}`));
+          }
           throw new Error(`Failed to upload ${file.name}`);
         }
       }
@@ -142,6 +176,9 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
       setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
       setUploading(false);
+      // Whatever happened, some bytes may have landed — move the bar with the
+      // write rather than leaving a stale reading until the next page load.
+      queryClient.invalidateQueries({ queryKey: ['myEntitlements'] });
     }
   };
 
@@ -284,6 +321,17 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
                   background: 'linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%)'
                 }
               }} 
+            />
+          </Box>
+        )}
+
+        {storageLimit !== undefined && (
+          <Box sx={{ mt: 2 }}>
+            <UsageMeter
+              label="Storage"
+              used={entitlements?.usage?.storageBytes ?? 0}
+              limit={storageLimit}
+              unit="bytes"
             />
           </Box>
         )}

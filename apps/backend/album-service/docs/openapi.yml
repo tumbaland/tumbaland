@@ -480,10 +480,20 @@ components:
         albumId:
           type: string
           example: "507f1f77bcf86cd799439011"
+        sizeBytes:
+          type: integer
+          minimum: 1
+          description: >-
+            Size of the file about to be uploaded. Checked against the plan's
+            storage allowance before a URL is issued — this is the last point
+            where the size is known before the bytes are written. A group
+            album's bytes are billed to the group owner (pooled storage).
+          example: 2481152
       required:
         - filename
         - mimetype
         - albumId
+        - sizeBytes
 
     UploadSignedUrlResponse:
       type: object
@@ -1419,6 +1429,15 @@ paths:
                 $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '402':
+          description: >-
+            The upload would exceed the plan's storage allowance. No URL is
+            issued and no bytes are written. The body names the meter, the
+            ceiling and the plan that lifts it.
           content:
             application/json:
               schema:

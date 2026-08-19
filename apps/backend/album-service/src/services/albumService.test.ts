@@ -17,7 +17,8 @@ jest.mock('../models/Photo', () => ({
   default: {
     find: jest.fn(),
     findOne: jest.fn(),
-    deleteMany: jest.fn()
+    deleteMany: jest.fn(),
+    aggregate: jest.fn()
   }
 }));
 
@@ -42,6 +43,7 @@ const mockedCountDocuments = Album.countDocuments as unknown as jest.Mock;
 const mockedPhotoFind = Photo.find as unknown as jest.Mock;
 const mockedPhotoFindOne = Photo.findOne as unknown as jest.Mock;
 const mockedPhotoDeleteMany = Photo.deleteMany as unknown as jest.Mock;
+const mockedPhotoAggregate = Photo.aggregate as unknown as jest.Mock;
 const mockedDeleteFile = deleteFile as unknown as jest.Mock;
 const mockedGetPhotoSignedUrl = getPhotoSignedUrl as unknown as jest.Mock;
 const mockedGetPhotoSignedUrlsBatch = getPhotoSignedUrlsBatch as unknown as jest.Mock;
@@ -118,14 +120,45 @@ describe('deleteAlbum', () => {
   });
 
   it('still deletes the photos and album even if a file delete fails', async () => {
-    mockedFindById.mockResolvedValue({ _id: 'album-1' });
-    mockedPhotoFind.mockResolvedValue([{ minioFileId: 'file-1' }]);
+    mockedFindById.mockResolvedValue({ _id: 'album-1', userId: 'user-1' });
+    mockedPhotoFind.mockResolvedValue([{ minioFileId: 'file-1', size: 700 }]);
     mockedDeleteFile.mockRejectedValue(new Error('storage unavailable'));
 
-    await expect(albumService.deleteAlbum('album-1')).resolves.toBeUndefined();
+    // The bytes are reported as freed even though MinIO refused: the rows are
+    // gone, so the meter must follow them or it counts storage nobody holds.
+    await expect(albumService.deleteAlbum('album-1')).resolves.toMatchObject({ bytes: 700 });
 
     expect(mockedPhotoDeleteMany).toHaveBeenCalledWith({ albumId: 'album-1' });
     expect(mockedFindByIdAndDelete).toHaveBeenCalledWith('album-1');
+  });
+});
+
+describe('getAlbumStorage', () => {
+  it('sums the photos rather than trusting the denormalized album counter', async () => {
+    // Album.totalSize is exactly the field a drifting $inc would have corrupted,
+    // and the nightly reconciliation meters the photo sum — reading the counter
+    // here would set the two against each other.
+    mockedFindById.mockResolvedValue({ _id: 'album-1', userId: 'user-1', groupId: 'group-1', totalSize: 999 });
+    mockedPhotoAggregate.mockResolvedValue([{ bytes: 7_500 }]);
+
+    await expect(albumService.getAlbumStorage('album-1')).resolves.toEqual({
+      userId: 'user-1',
+      groupId: 'group-1',
+      bytes: 7_500
+    });
+  });
+
+  it('reports zero for an album with no photos', async () => {
+    mockedFindById.mockResolvedValue({ _id: 'album-1', userId: 'user-1' });
+    mockedPhotoAggregate.mockResolvedValue([]);
+
+    await expect(albumService.getAlbumStorage('album-1')).resolves.toMatchObject({ bytes: 0 });
+  });
+
+  it('returns null for a missing album', async () => {
+    mockedFindById.mockResolvedValue(null);
+
+    await expect(albumService.getAlbumStorage('gone')).resolves.toBeNull();
   });
 });
 

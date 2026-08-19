@@ -1,135 +1,146 @@
 /**
- * Plan and limit definitions rendered by the landing page.
+ * Presentation for the pricing table. **No limits, and no prices.**
  *
- * INTERIM SOURCE — see MONETIZATION.md §1.1. This file exists so the landing
- * page has something to render before the entitlement backbone lands. Once
- * `@tumbaland/backend-core/entitlements` ships its `PLAN_LIMITS` definition,
- * this module must be deleted and both this page and payment-front's
- * `PlansPage` must read that instead. Two hand-maintained copies of the limits
- * is exactly the failure this plan is fixing — `PlansPage`'s hardcoded
- * `featureMatrix` advertised six limits that no service ever enforced.
+ * Those come from `GET /api/plans`, already resolved by the same
+ * `normalizeLimits` the entitlement middleware enforces from, so the ceiling on
+ * a card and the ceiling that produces a 402 are one value read from one place.
+ * This file used to hold both, and shipping that at the moment money changes
+ * hands would have recreated the Phase 0 defect with a payment attached —
+ * `PlansPage` advertised six limits no service enforced.
  *
- * Until the chokepoints in MONETIZATION.md Phase 3 are wired, `PRICING_STATUS`
- * stays 'preview' and the page says so. Enforcement itself is unconditional —
- * there is no mode switch — so what gates a limit is simply whether a
- * chokepoint calls it. Do not flip this to 'live' before the meters actually
- * meter: advertising limits you don't enforce is the liability, not the gap.
+ * What stays here is what is genuinely presentation: a plan's tagline, which
+ * card is highlighted, how a number becomes a sentence, and — importantly —
+ * *which* limits may be advertised at all.
  */
 
-export type PlanCode = 'free' | 'personal' | 'family';
+import { CatalogPlan, PlanLimits, UNLIMITED, isUnlimited } from '@tumbaland/frontend-core';
 
 export type BillingInterval = 'month' | 'year';
 
-/** Flip to 'live' only when MONETIZATION.md Phase 4 has shipped. */
+/**
+ * The page still says everything is free while paid checkout is closed: no plan
+ * carries a `stripePriceId` yet, so a priced plan 503s at checkout. Flip to
+ * 'live' when the Stripe prices are set (MONETIZATION.md, Tier 0).
+ */
 export const PRICING_STATUS: 'preview' | 'live' = 'preview';
 
-export interface Plan {
-  code: PlanCode;
-  name: string;
+/**
+ * Copy for the plans we ship. Keyed by code and *optional*: a plan an admin
+ * adds later renders from its own `description`, so the catalog is never
+ * gated on a frontend deploy.
+ */
+interface PlanCopy {
   tagline: string;
-  /** Cents, so there is never a float in a price. */
-  priceMonthlyCents: number;
-  priceYearlyCents: number;
   highlight?: boolean;
 }
 
-export const PLANS: Plan[] = [
-  {
-    code: 'free',
-    name: 'Free',
-    tagline: 'Everything, at a smaller scale. No card, no expiry.',
-    priceMonthlyCents: 0,
-    priceYearlyCents: 0
-  },
-  {
-    code: 'personal',
-    name: 'Personal',
-    tagline: 'Full history and the portfolio planner, for one person.',
-    priceMonthlyCents: 600,
-    priceYearlyCents: 6000,
-    highlight: true
-  },
-  {
-    code: 'family',
-    name: 'Family',
-    tagline: 'The same, shared across a household of up to five.',
-    priceMonthlyCents: 1200,
-    priceYearlyCents: 12000
-  }
-];
+export const PLAN_COPY: Record<string, PlanCopy> = {
+  free: { tagline: 'Everything, at a smaller scale. No card, no expiry.' },
+  personal: { tagline: 'Full history and the portfolio planner, for one person.', highlight: true },
+  family: { tagline: 'The same, shared across a household of up to five.' }
+};
 
-export interface LimitRow {
-  key: string;
-  label: string;
-  /**
-   * Display-ready phrase per plan. Written as what the tier *has*, never as a
-   * dash — a column of "—" makes the free tier read as a crippled version of
-   * the product rather than a usable one. `null` omits the line entirely.
-   */
-  values: Record<PlanCode, string | null>;
-  /**
-   * True when the limit is published but not yet enforceable. AI jobs have no
-   * server-side dispatch path to meter (MONETIZATION.md §3.1), so the page
-   * badges it rather than quoting a number it cannot hold itself to.
-   */
-  comingSoon?: boolean;
+export function taglineFor(plan: CatalogPlan): string {
+  return PLAN_COPY[plan.code]?.tagline ?? plan.description ?? '';
 }
 
-export const LIMIT_ROWS: LimitRow[] = [
-  {
+export function isHighlighted(plan: CatalogPlan): boolean {
+  return PLAN_COPY[plan.code]?.highlight === true;
+}
+
+export interface LimitLine {
+  key: string;
+  /** Display-ready phrase. Written as what the tier *has*, never as a dash. */
+  text: string;
+}
+
+function formatBytes(bytes: number): string {
+  if (isUnlimited(bytes)) return 'Unlimited';
+  const gb = bytes / 1024 ** 3;
+  if (gb >= 1) return `${Number(gb.toFixed(gb < 10 ? 1 : 0))} GB`;
+  const mb = bytes / 1024 ** 2;
+  return `${Math.round(mb)} MB`;
+}
+
+/**
+ * The limit lines for one plan's card, derived from what the plan actually
+ * grants.
+ *
+ * **Two enforced-elsewhere rules decide what is *absent* here**, and both are
+ * deliberate omissions rather than oversights:
+ *
+ * - `aiJobs` is not advertised. There is no server-side dispatch path to meter
+ *   it (MONETIZATION.md 3.1) — the browser calls the AI services directly — so
+ *   a number on the card would be a claim nothing holds the product to.
+ * - `cleanExport` is not advertised. Collage export is entirely client-side and
+ *   no watermarking code exists (3.0), so the free tier's "watermarked" line
+ *   described something that never happened.
+ *
+ * Both return the moment their chokepoint lands. Advertising them meanwhile is
+ * the part with legal exposure, not the missing feature.
+ */
+export function limitLinesFor(limits: PlanLimits): LimitLine[] {
+  const lines: LimitLine[] = [];
+  const { meters, retentionDays } = limits;
+  const pooled = meters.seats > 1 || isUnlimited(meters.seats);
+
+  lines.push({
     key: 'storage',
-    label: 'Photo storage',
-    values: { free: '1 GB photos', personal: '50 GB photos', family: '250 GB shared photos' }
-  },
-  {
+    text: `${formatBytes(meters.storageBytes)} ${pooled ? 'shared photos' : 'photos'}`
+  });
+
+  lines.push({
     key: 'history',
-    label: 'History',
-    values: { free: '90 days of history', personal: 'Full history', family: 'Full history' }
-  },
-  {
+    text: isUnlimited(retentionDays) ? 'Full history' : `${retentionDays} days of history`
+  });
+
+  lines.push({
     key: 'tickers',
-    label: 'Tracked tickers',
-    values: { free: '3 tracked tickers', personal: '25 tracked tickers', family: '100 tracked tickers' }
-  },
-  {
-    key: 'planner',
-    label: 'Portfolio planner',
-    values: { free: null, personal: 'Portfolio planner', family: 'Portfolio planner' }
-  },
-  {
-    key: 'seats',
-    label: 'People',
-    values: { free: '1 person', personal: '1 person', family: 'Up to 5 people' }
-  },
-  {
-    key: 'export',
-    label: 'Collage export',
-    values: {
-      free: 'Collage export, watermarked',
-      personal: 'Full-res collage export',
-      family: 'Full-res collage export'
-    }
-  },
-  {
-    key: 'ai',
-    label: 'AI photo analysis',
-    values: { free: '25 AI photo scans', personal: '200 AI scans a month', family: '600 AI scans a month' },
-    comingSoon: true
+    text: isUnlimited(meters.trackedTickers)
+      ? 'Unlimited tracked tickers'
+      : `${meters.trackedTickers} tracked tickers`
+  });
+
+  // The planner needs roughly two years of daily closes to estimate a
+  // covariance, so retention *is* the planner gate — one meter, two products.
+  // Deriving the line from `retentionDays` keeps the card honest if that
+  // number is ever edited at runtime.
+  if (isUnlimited(retentionDays)) {
+    lines.push({ key: 'planner', text: 'Portfolio planner' });
   }
-];
+
+  lines.push({
+    key: 'seats',
+    text: isUnlimited(meters.seats)
+      ? 'Unlimited people'
+      : meters.seats === 1
+        ? '1 person'
+        : `Up to ${meters.seats} people`
+  });
+
+  return lines;
+}
 
 export function formatPrice(cents: number): string {
   if (cents === 0) return '€0';
   return `€${(cents / 100).toFixed(0)}`;
 }
 
-export function priceFor(plan: Plan, interval: BillingInterval): number {
-  return interval === 'month' ? plan.priceMonthlyCents : plan.priceYearlyCents;
+export function priceFor(plan: CatalogPlan, interval: BillingInterval): number {
+  return interval === 'month' ? plan.priceMonthlyCents : (plan.priceYearlyCents ?? 0);
 }
 
 /** Months of a monthly plan you'd pay for if you bought a year up front. */
-export function yearlySavingMonths(plan: Plan): number {
-  if (plan.priceMonthlyCents === 0) return 0;
+export function yearlySavingMonths(plan: CatalogPlan): number {
+  if (!plan.priceMonthlyCents || !plan.priceYearlyCents) return 0;
   const fullYear = plan.priceMonthlyCents * 12;
   return Math.round((fullYear - plan.priceYearlyCents) / plan.priceMonthlyCents);
 }
+
+/** True when a plan has a yearly price worth offering a toggle for. */
+export function hasYearlyPricing(plans: CatalogPlan[]): boolean {
+  return plans.some(plan => (plan.priceYearlyCents ?? 0) > 0);
+}
+
+export { UNLIMITED, isUnlimited };
+export type { CatalogPlan, PlanLimits };
