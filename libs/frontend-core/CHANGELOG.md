@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.10.0](https://github.com/toomastahves/tumbaland/compare/frontend-core-v1.7.0...frontend-core-v1.10.0) (2026-08-19)
+
+### Features
+
+* add configurable mapping categories ([6445505](https://github.com/toomastahves/tumbaland/commit/6445505cdb40ae380f443bfa64b04c327051603e))
+* add usage limits ([18b80b2](https://github.com/toomastahves/tumbaland/commit/18b80b2cde03f17110b401d219fb0e4275d4dfc0))
+* add weekly data fetching ([43b75a8](https://github.com/toomastahves/tumbaland/commit/43b75a8354ab1bc670d029ca826c6e0872d85942))
+* apply price history retention days ([f8d6d9f](https://github.com/toomastahves/tumbaland/commit/f8d6d9fb1cf16d8a3fc8087fe8a2a6d26f38c7a3))
+* change cron time ([b9be724](https://github.com/toomastahves/tumbaland/commit/b9be7242bf52f147318119e0fa733ad47da62fdf))
+* count usage ([955ba78](https://github.com/toomastahves/tumbaland/commit/955ba7898c7ca93fd20d35f6831bb22b270e3b56))
+* implement finance limits ([ce84b1c](https://github.com/toomastahves/tumbaland/commit/ce84b1c081240764c49bbdf23c3dee0866c97f59))
+* improve analytics ([4afe745](https://github.com/toomastahves/tumbaland/commit/4afe7450108f6ccc7ff5f6209a35489211bad2bd))
+* improve cash flow ux ([767909b](https://github.com/toomastahves/tumbaland/commit/767909b51a0b8387ed040e5d9de56921b1c6b2fd))
+* improve import ([d630ac2](https://github.com/toomastahves/tumbaland/commit/d630ac22c4d24ae9444d760521153b6775edb356))
+* make tumbaland visible in search engine ([69a6233](https://github.com/toomastahves/tumbaland/commit/69a6233e440ca560dc346320821e63af29147cd5))
+* release libraries ([aa77169](https://github.com/toomastahves/tumbaland/commit/aa77169fa816de04fa0439359b61db264ceca163))
+* release libraries ([443d0e1](https://github.com/toomastahves/tumbaland/commit/443d0e18bdaf4d87cd4119bb251a981f65e6e2ad))
+* release libraries ([bf41581](https://github.com/toomastahves/tumbaland/commit/bf415812f57499edb6b06db6544acc3d0a85628f))
+* replace types page with modal ([553ff63](https://github.com/toomastahves/tumbaland/commit/553ff6322f193471ca214af4e94cdc049864284f))
+* rework landing page ([832542e](https://github.com/toomastahves/tumbaland/commit/832542e12f0f47f21c18c2fd7d95288765bba2f6))
+* setup payment gates ([81c7c5a](https://github.com/toomastahves/tumbaland/commit/81c7c5aadede9c401d2c4fc12383c3d9282c7a36))
+* update finance service cron times ([475352d](https://github.com/toomastahves/tumbaland/commit/475352d1f7d77b65724866f5e6b37096cf843bc8))
+* upgade payments to v2 ([b3c419a](https://github.com/toomastahves/tumbaland/commit/b3c419a01eb040a8abe59c9f33d3dded6558e89b))
+
+### Bug Fixes
+
+* auth issues ([c9c2d1f](https://github.com/toomastahves/tumbaland/commit/c9c2d1ff38e7ab52285940e30d49250d83bdfec8))
+* bugs in planner ([424a1b2](https://github.com/toomastahves/tumbaland/commit/424a1b2b70a9c70e97b7726cc839088c36888390))
+* failing finance front test ([4ffb8e0](https://github.com/toomastahves/tumbaland/commit/4ffb8e0f1c60163f17acc5eb5c82f43935ec5811))
 ## [1.9.0](https://github.com/toomastahves/tumbaland/compare/frontend-core-v1.7.0...frontend-core-v1.9.0) (2026-08-09)
 
 ### Features
