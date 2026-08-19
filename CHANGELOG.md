@@ -1,4 +1,13 @@
 # Tumbalog
+## [0.0.443](https://github.com/toomastahves/tumbaland/compare/app-v0.0.442...app-v0.0.443) (2026-08-19)
+
+### Features
+
+* continue monetization ([4210114](https://github.com/toomastahves/tumbaland/commit/4210114753fec3f5a4fee042d6c57cb1bdd21f83))
+
+### Chores
+
+* **release:** 1.10.0 ([39f9faa](https://github.com/toomastahves/tumbaland/commit/39f9faa6cb8b78b739b5ed66077df64fef656dd3))
 ## [0.0.442](https://github.com/toomastahves/tumbaland/compare/app-v0.0.441...app-v0.0.442) (2026-08-12)
 
 ### Features
