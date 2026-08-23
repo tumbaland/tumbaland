@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.448](https://github.com/toomastahves/tumbaland/compare/app-v0.0.447...app-v0.0.448) (2026-08-23)
+
+### Features
+
+* rework monetization ([91ff36e](https://github.com/toomastahves/tumbaland/commit/91ff36e491a229bfa2587c2d591fecff25bc6c56))
 ## [0.0.447](https://github.com/toomastahves/tumbaland/compare/app-v0.0.446...app-v0.0.447) (2026-08-23)
 
 ### Features
