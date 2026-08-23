@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.444](https://github.com/toomastahves/tumbaland/compare/app-v0.0.443...app-v0.0.444) (2026-08-23)
+
+### Features
+
+* add image crop ([e2f7c92](https://github.com/toomastahves/tumbaland/commit/e2f7c92c032da7516140cb17107272c5d421fb3f))
 ## [0.0.443](https://github.com/toomastahves/tumbaland/compare/app-v0.0.442...app-v0.0.443) (2026-08-19)
 
 ### Features
