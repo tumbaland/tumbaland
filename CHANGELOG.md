@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.445](https://github.com/toomastahves/tumbaland/compare/app-v0.0.444...app-v0.0.445) (2026-08-23)
+
+### Features
+
+* add album tags ([503fb79](https://github.com/toomastahves/tumbaland/commit/503fb792a7f34ed575836d1aa2455146a5f4d7d3))
 ## [0.0.444](https://github.com/toomastahves/tumbaland/compare/app-v0.0.443...app-v0.0.444) (2026-08-23)
 
 ### Features
