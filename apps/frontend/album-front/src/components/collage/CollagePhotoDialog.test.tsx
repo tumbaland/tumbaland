@@ -134,3 +134,123 @@ it('closes without saving on Cancel', async () => {
   expect(onSave).not.toHaveBeenCalled();
   expect(onClose).toHaveBeenCalledTimes(1);
 });
+
+it('keeps an existing crop and reports it in the summary', () => {
+  render(
+    <CollagePhotoDialog
+      open
+      photo={{ ...photo, crop: { x: 0.1, y: 0.1, width: 0.5, height: 0.25 } }}
+      photoSrc="https://cdn.example/photo.jpg"
+      onClose={vi.fn()}
+      onSave={vi.fn()}
+      onDelete={vi.fn()}
+    />
+  );
+
+  expect(screen.getByText('Showing 50% × 25% of the photo')).toBeInTheDocument();
+  expect(screen.getByTestId('crop-region')).toBeInTheDocument();
+});
+
+it('invites a crop when the photo has none', () => {
+  render(
+    <CollagePhotoDialog
+      open
+      photo={photo}
+      photoSrc="https://cdn.example/photo.jpg"
+      onClose={vi.fn()}
+      onSave={vi.fn()}
+      onDelete={vi.fn()}
+    />
+  );
+
+  expect(screen.getByText('Drag on the photo to crop it')).toBeInTheDocument();
+  expect(screen.queryByTestId('crop-region')).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Clear crop' })).toBeDisabled();
+});
+
+it('clears an existing crop and reshapes the box back to the full image', async () => {
+  const onSave = vi.fn();
+  render(
+    <CollagePhotoDialog
+      open
+      photo={{ ...photo, crop: { x: 0.1, y: 0.1, width: 0.5, height: 0.25 } }}
+      photoSrc="https://cdn.example/photo.jpg"
+      onClose={vi.fn()}
+      onSave={onSave}
+      onDelete={vi.fn()}
+    />
+  );
+
+  const img = screen.getByRole('img', { name: 'preview' });
+  Object.defineProperty(img, 'naturalWidth', { value: 800, configurable: true });
+  Object.defineProperty(img, 'naturalHeight', { value: 400, configurable: true });
+  fireEvent.load(img);
+
+  await userEvent.click(screen.getByRole('button', { name: 'Clear crop' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+  // whole image is 2:1, so the 100-wide box becomes 50 tall
+  expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ crop: undefined, height: 50 }));
+});
+
+it('saves a crop drawn on the preview and matches the box to its shape', async () => {
+  const onSave = vi.fn();
+  render(
+    <CollagePhotoDialog
+      open
+      photo={photo}
+      photoSrc="https://cdn.example/photo.jpg"
+      onClose={vi.fn()}
+      onSave={onSave}
+      onDelete={vi.fn()}
+    />
+  );
+
+  const img = screen.getByRole('img', { name: 'preview' });
+  Object.defineProperty(img, 'naturalWidth', { value: 800, configurable: true });
+  Object.defineProperty(img, 'naturalHeight', { value: 800, configurable: true });
+  fireEvent.load(img);
+
+  const surface = screen.getByTestId('crop-surface');
+  Object.defineProperty(surface, 'offsetWidth', { value: 200, configurable: true });
+  Object.defineProperty(surface, 'offsetHeight', { value: 200, configurable: true });
+  surface.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 200 }) as DOMRect;
+
+  fireEvent.pointerDown(surface, { clientX: 0, clientY: 0 });
+  fireEvent.pointerMove(surface, { clientX: 100, clientY: 50 });
+  fireEvent.pointerUp(surface);
+
+  await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+  const patch = onSave.mock.calls[0][0];
+  expect(patch.crop.x).toBeCloseTo(0);
+  expect(patch.crop.width).toBeCloseTo(0.5);
+  expect(patch.crop.height).toBeCloseTo(0.25);
+  // square source, so a 2:1 region on a 100-wide box is 50 tall
+  expect(patch.height).toBeCloseTo(50);
+});
+
+it('leaves the box height alone when only the caption changed', async () => {
+  const onSave = vi.fn();
+  render(
+    <CollagePhotoDialog
+      open
+      photo={photo}
+      photoSrc="https://cdn.example/photo.jpg"
+      onClose={vi.fn()}
+      onSave={onSave}
+      onDelete={vi.fn()}
+    />
+  );
+
+  fireEvent.load(screen.getByRole('img', { name: 'preview' }));
+  await userEvent.type(screen.getByDisplayValue('Original caption'), '!');
+  await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+  expect(onSave).toHaveBeenCalledWith({
+    caption: 'Original caption!',
+    rotation: 0,
+    frame: undefined,
+    crop: undefined
+  });
+});

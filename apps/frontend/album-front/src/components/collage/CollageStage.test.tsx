@@ -224,3 +224,22 @@ it('resizes a text item without preserving aspect ratio, even without the shift 
   expect(getComputedStyle(textBox).width).toBe('340px');
   expect(getComputedStyle(textBox).height).toBe('70px');
 });
+
+it('shows only the crop region of a cropped photo', () => {
+  const doc: CollageDoc = {
+    ...baseDoc,
+    photos: [{ ...baseDoc.photos[0], crop: { x: 0.25, y: 0.5, width: 0.5, height: 0.25 } }]
+  };
+  render(<Harness doc={doc} />);
+
+  const img = screen.getByRole('img', { name: 'Beach day' });
+  // blown up by 1/crop, then shifted so the region starts at the box origin
+  expect(img).toHaveStyle({ width: '200%', height: '400%', left: '-50%', top: '-200%' });
+});
+
+it('fills the box with the whole image when the photo has no crop', () => {
+  render(<Harness doc={baseDoc} />);
+
+  const img = screen.getByRole('img', { name: 'Beach day' });
+  expect(img).toHaveStyle({ width: '100%', height: '100%' });
+});

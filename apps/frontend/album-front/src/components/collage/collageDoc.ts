@@ -15,6 +15,18 @@ import { CollageConfig } from '../../types/collage';
  * textSections) survive a round-trip.
  */
 
+/**
+ * Region of the source image to show, as fractions (0..1) of its natural size.
+ * Absent means the whole image. Kept resolution-independent so the same crop
+ * works for the thumbnail on the canvas and the full-size original on export.
+ */
+export interface CollageCrop {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface CollagePhotoItem {
   id: string;
   photoId: string;
@@ -26,6 +38,8 @@ export interface CollagePhotoItem {
   caption: string;
   /** undefined = inherit the document-level frameEnabled setting */
   frame?: boolean;
+  /** undefined = show the whole image */
+  crop?: CollageCrop;
 }
 
 export interface CollageTextItem {
@@ -49,9 +63,15 @@ export interface CollageDoc {
 }
 
 export const DEFAULT_CANVAS = { width: 1600, height: 900 };
-export const DEFAULT_BACKGROUND = '#111111';
+export const DEFAULT_BACKGROUND = '#f1f5f9';
 export const DEFAULT_FRAME_COLOR = '#ffffff';
 export const DEFAULT_TEXT_COLOR = '#e91e63';
+/**
+ * Surface behind the canvas in the editor and the viewer. Deliberately not
+ * black: an empty or still-loading collage on a black backdrop is
+ * indistinguishable from a blank page.
+ */
+export const EDITOR_BACKDROP = '#1e293b';
 export const DEFAULT_TEXT_SIZE = 32;
 
 export const newItemId = (): string =>
@@ -62,6 +82,32 @@ export const newItemId = (): string =>
 const toNumber = (value: unknown, fallback: number): number => {
   const n = typeof value === 'string' ? parseFloat(value) : (value as number);
   return typeof n === 'number' && Number.isFinite(n) ? n : fallback;
+};
+
+/** Smallest crop the UI will produce, as a fraction of the source image. */
+export const MIN_CROP_SIZE = 0.05;
+
+const clamp01 = (n: number): number => Math.min(1, Math.max(0, n));
+
+/**
+ * Read a stored crop, keeping it only when it is a real sub-region: malformed
+ * values and full-image crops both collapse to undefined so the rest of the
+ * code has a single "no crop" case to handle.
+ */
+export const normalizeCrop = (value?: Partial<CollageCrop> | null): CollageCrop | undefined => {
+  if (!value || typeof value !== 'object') return undefined;
+
+  const x = clamp01(toNumber(value.x, 0));
+  const y = clamp01(toNumber(value.y, 0));
+  // a missing or unreadable size falls through the MIN_CROP_SIZE guard below
+  // rather than defaulting to "as much as fits", which would invent a crop
+  const width = Math.min(clamp01(toNumber(value.width, 0)), 1 - x);
+  const height = Math.min(clamp01(toNumber(value.height, 0)), 1 - y);
+
+  if (width < MIN_CROP_SIZE || height < MIN_CROP_SIZE) return undefined;
+  if (x === 0 && y === 0 && width === 1 && height === 1) return undefined;
+
+  return { x, y, width, height };
 };
 
 export const normalizeCollageConfig = (config?: CollageConfig | null): CollageDoc => {
@@ -89,7 +135,8 @@ export const normalizeCollageConfig = (config?: CollageConfig | null): CollageDo
           height: toNumber(p.height, 120),
           rotation: toNumber(p.rotation, 0),
           caption: typeof p.caption === 'string' ? p.caption : '',
-          frame
+          frame,
+          crop: normalizeCrop(p.crop)
         };
       })
     : [];
@@ -139,6 +186,7 @@ export const serializeCollageDoc = (doc: CollageDoc, existingConfig?: CollageCon
       width: p.width,
       height: p.height,
       rotation: p.rotation,
+      crop: p.crop,
       frame: p.frame,
       frameVisible: p.frame ?? doc.frameEnabled,
       transparentBackground: p.frame === undefined ? undefined : !p.frame

@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
   normalizeCollageConfig,
+  normalizeCrop,
   serializeCollageDoc,
   photoHasFrame,
   DEFAULT_TEXT_COLOR,
-  DEFAULT_TEXT_SIZE
+  DEFAULT_TEXT_SIZE,
+  MIN_CROP_SIZE
 } from './collageDoc';
 import { CollageConfig } from '../../types/collage';
 
@@ -122,5 +124,46 @@ describe('serializeCollageDoc', () => {
     expect(doc2.texts[0].fontSize).toBe(64);
     expect(doc2.texts[0].color).toBe('#00ff00');
     expect(doc2.photos[1].frame).toBe(false);
+  });
+});
+
+describe('crops', () => {
+  it('keeps a stored crop that is a real sub-region', () => {
+    const doc = normalizeCollageConfig({
+      ...legacyV1Config,
+      photos: [{ photoId: 'photo-1', width: 100, height: 100, crop: { x: 0.1, y: 0.2, width: 0.5, height: 0.4 } }]
+    } as unknown as CollageConfig);
+
+    expect(doc.photos[0].crop).toEqual({ x: 0.1, y: 0.2, width: 0.5, height: 0.4 });
+  });
+
+  it('drops a crop that covers the whole image', () => {
+    expect(normalizeCrop({ x: 0, y: 0, width: 1, height: 1 })).toBeUndefined();
+  });
+
+  it('drops crops that are missing, malformed, or below the minimum size', () => {
+    expect(normalizeCrop(undefined)).toBeUndefined();
+    expect(normalizeCrop({ x: 0.1, y: 0.1, width: NaN, height: 0.5 })).toBeUndefined();
+    expect(normalizeCrop({ x: 0.1, y: 0.1, width: MIN_CROP_SIZE / 2, height: 0.5 })).toBeUndefined();
+  });
+
+  it('clamps a crop into the image and to its remaining space', () => {
+    const crop = normalizeCrop({ x: -0.5, y: 0.8, width: 2, height: 0.9 });
+
+    expect(crop?.x).toBe(0);
+    expect(crop?.y).toBe(0.8);
+    expect(crop?.width).toBe(1);
+    expect(crop?.height).toBeCloseTo(0.2);
+  });
+
+  it('round-trips a crop through serialize and normalize', () => {
+    const doc = normalizeCollageConfig(legacyV1Config);
+    const crop = { x: 0.25, y: 0.25, width: 0.5, height: 0.5 };
+    doc.photos[0].crop = crop;
+
+    const config = serializeCollageDoc(doc, legacyV1Config);
+
+    expect(config.photos[0].crop).toEqual(crop);
+    expect(normalizeCollageConfig(config).photos[0].crop).toEqual(crop);
   });
 });

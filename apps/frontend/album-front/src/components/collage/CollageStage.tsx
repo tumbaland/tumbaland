@@ -1,8 +1,15 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { CSSProperties, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Box } from '@mui/material';
 import BrokenImageIcon from '@mui/icons-material/BrokenImage';
 import { CollageEditor } from '../../hooks/useCollageEditor';
-import { CollageDoc, CollagePhotoItem, CollageTextItem, photoHasFrame } from './collageDoc';
+import {
+  CollageCrop,
+  CollageDoc,
+  CollagePhotoItem,
+  CollageTextItem,
+  EDITOR_BACKDROP,
+  photoHasFrame
+} from './collageDoc';
 
 export interface ResolvedPhoto {
   src?: string;
@@ -39,6 +46,22 @@ interface Gesture {
 const SNAP_THRESHOLD = 8;
 const FRAME_PADDING = 12;
 
+/**
+ * Sizes an <img> so that only its crop region shows through the parent's
+ * overflow: the image is blown up by 1/crop and shifted so the region's
+ * top-left corner sits at the parent's origin.
+ */
+const cropImageStyle = (crop?: CollageCrop): CSSProperties => {
+  if (!crop) return { width: '100%', height: '100%' };
+  return {
+    position: 'absolute',
+    width: `${100 / crop.width}%`,
+    height: `${100 / crop.height}%`,
+    left: `${(-crop.x / crop.width) * 100}%`,
+    top: `${(-crop.y / crop.height) * 100}%`
+  };
+};
+
 const StagePhoto: React.FC<{
   doc: CollageDoc;
   photo: CollagePhotoItem;
@@ -73,17 +96,15 @@ const StagePhoto: React.FC<{
       onPointerDown={readOnly ? undefined : (e) => onPointerDown(e, photo.id)}
       onDoubleClick={readOnly ? undefined : onDoubleClick}
     >
-      <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+      <Box sx={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', borderRadius: '4px' }}>
         {src ? (
           <img
             src={src}
             alt={resolved?.title || 'collage photo'}
             draggable={false}
             style={{
-              width: '100%',
-              height: '100%',
+              ...cropImageStyle(photo.crop),
               objectFit: 'cover',
-              borderRadius: 4,
               display: 'block',
               pointerEvents: 'none'
             }}
@@ -406,7 +427,7 @@ const CollageStage: React.FC<CollageStageProps> = ({
         overflow: 'auto',
         display: 'flex',
         minWidth: 0,
-        bgcolor: readOnly ? '#000' : 'rgba(0,0,0,0.35)'
+        bgcolor: readOnly ? EDITOR_BACKDROP : 'rgba(0,0,0,0.25)'
       }}
       onPointerDown={(e) => {
         if (e.target === e.currentTarget && !readOnly) editor.select(null);

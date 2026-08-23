@@ -14,6 +14,8 @@ export interface CollageConfigPhoto {
   /** v2: explicit per-photo frame override (undefined = inherit) */
   id?: string;
   frame?: boolean;
+  /** v2: sub-region of the source image to show, as fractions of its natural size */
+  crop?: { x: number; y: number; width: number; height: number };
   /** v1 frame fields */
   frameVisible?: boolean;
   transparentBackground?: boolean;

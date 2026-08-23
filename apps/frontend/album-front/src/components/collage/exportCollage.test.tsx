@@ -189,3 +189,22 @@ it('downloadBlob creates an object URL, triggers a click, and revokes the URL', 
   expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock');
   clickSpy.mockRestore();
 });
+
+it('draws only the crop region of a cropped photo', async () => {
+  const doc: CollageDoc = {
+    ...baseDoc,
+    photos: [{ ...baseDoc.photos[0], crop: { x: 0.5, y: 0.25, width: 0.5, height: 0.5 } }]
+  };
+
+  await exportCollageToPng(doc, resolvePhoto);
+
+  // source image is 800x600, so the region is 400x300 starting at 400,150;
+  // the region is wider than the 100x80 box, so cover trims its sides
+  const [, sx, sy, sw, sh, dx, dy, dw, dh] = ctx.drawImage.mock.calls[0];
+  expect(sw).toBeCloseTo(375);
+  expect(sh).toBeCloseTo(300);
+  expect(sx).toBeCloseTo(400 + (400 - 375) / 2);
+  expect(sy).toBeCloseTo(150);
+  // the context is already translated to the item's centre
+  expect([dx, dy, dw, dh]).toEqual([-50, -40, 100, 80]);
+});

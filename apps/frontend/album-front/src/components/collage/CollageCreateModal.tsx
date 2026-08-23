@@ -21,6 +21,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import { CollageInput } from '../../types/collage';
 import { useAlbums } from '../../hooks/useAlbums';
 import { useTenantFilter } from '@tumbaland/components';
+import { DEFAULT_BACKGROUND, DEFAULT_FRAME_COLOR } from './collageDoc';
 
 interface CollageCreateModalProps {
   open: boolean;
@@ -37,8 +38,8 @@ const defaultConfig = {
   photos: [],
   texts: [],
   title: { text: '', subtitle: '' },
-  backgroundColor: '#111111',
-  borderColor: '#ffffff',
+  backgroundColor: DEFAULT_BACKGROUND,
+  borderColor: DEFAULT_FRAME_COLOR,
   photoTransparencyMode: false
 };
 

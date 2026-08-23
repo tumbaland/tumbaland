@@ -11,19 +11,39 @@ import {
   TextField,
   Typography
 } from '@mui/material';
-import { CollagePhotoItem } from './collageDoc';
+import { CollageCrop, CollagePhotoItem, normalizeCrop } from './collageDoc';
+import CollageCropSelector from './CollageCropSelector';
 
 interface CollagePhotoDialogProps {
   open: boolean;
   photo: CollagePhotoItem | null;
   photoSrc?: string;
   onClose: () => void;
-  onSave: (patch: Pick<CollagePhotoItem, 'caption' | 'rotation' | 'frame'>) => void;
+  onSave: (
+    patch: Pick<CollagePhotoItem, 'caption' | 'rotation' | 'frame'> &
+      Partial<Pick<CollagePhotoItem, 'crop' | 'height'>>
+  ) => void;
   onDelete: () => void;
 }
 
 /** value used to encode "inherit the global frame setting" in the select */
 const INHERIT = 'inherit';
+
+/**
+ * Height that shows the whole cropped region at the item's current width.
+ * Without it the canvas box keeps its old shape and object-fit: cover would
+ * trim part of the region the user just selected.
+ */
+const heightForCrop = (
+  width: number,
+  natural: { width: number; height: number },
+  crop?: CollageCrop
+): number | undefined => {
+  const regionWidth = (crop?.width ?? 1) * natural.width;
+  const regionHeight = (crop?.height ?? 1) * natural.height;
+  if (regionWidth <= 0 || regionHeight <= 0) return undefined;
+  return (width * regionHeight) / regionWidth;
+};
 
 const CollagePhotoDialog: React.FC<CollagePhotoDialogProps> = ({
   open,
@@ -36,51 +56,70 @@ const CollagePhotoDialog: React.FC<CollagePhotoDialogProps> = ({
   const [caption, setCaption] = useState('');
   const [rotation, setRotation] = useState(0);
   const [frame, setFrame] = useState<string>(INHERIT);
+  const [crop, setCrop] = useState<CollageCrop | undefined>(undefined);
+  const [naturalSize, setNaturalSize] = useState<{ width: number; height: number } | null>(null);
 
   useEffect(() => {
     if (photo) {
       setCaption(photo.caption);
       setRotation(photo.rotation);
       setFrame(photo.frame === undefined ? INHERIT : photo.frame ? 'on' : 'off');
+      setCrop(photo.crop);
     }
   }, [photo]);
 
   const handleSave = () => {
+    const nextCrop = normalizeCrop(crop);
+    const cropChanged = JSON.stringify(nextCrop ?? null) !== JSON.stringify(photo?.crop ?? null);
+    // Reshape the box to the crop only when the crop actually changed, so
+    // editing just a caption never moves the photo around on the canvas.
+    const height =
+      cropChanged && photo && naturalSize ? heightForCrop(photo.width, naturalSize, nextCrop) : undefined;
+
     onSave({
       caption: caption.trim(),
       rotation,
-      frame: frame === INHERIT ? undefined : frame === 'on'
+      frame: frame === INHERIT ? undefined : frame === 'on',
+      crop: nextCrop,
+      ...(height ? { height } : {})
     });
     onClose();
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>Photo settings</DialogTitle>
       <DialogContent>
         {photoSrc && (
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'center',
-              mb: 2,
-              bgcolor: 'rgba(128,128,128,0.12)',
-              borderRadius: 1,
-              p: 1
-            }}
-          >
-            <img
-              src={photoSrc}
-              alt="preview"
-              style={{
-                maxWidth: '100%',
-                maxHeight: 160,
-                borderRadius: 4,
-                transform: `rotate(${rotation}deg)`,
-                transition: 'transform 0.15s'
+          <>
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                bgcolor: 'rgba(128,128,128,0.12)',
+                borderRadius: 1,
+                p: 1
               }}
-            />
-          </Box>
+            >
+              <CollageCropSelector
+                src={photoSrc}
+                rotation={rotation}
+                crop={crop}
+                onChange={setCrop}
+                onNaturalSize={setNaturalSize}
+              />
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1, mb: 1 }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary', flex: 1 }}>
+                {crop
+                  ? `Showing ${Math.round(crop.width * 100)}% × ${Math.round(crop.height * 100)}% of the photo`
+                  : 'Drag on the photo to crop it'}
+              </Typography>
+              <Button size="small" onClick={() => setCrop(undefined)} disabled={!crop}>
+                Clear crop
+              </Button>
+            </Box>
+          </>
         )}
         <TextField
           autoFocus

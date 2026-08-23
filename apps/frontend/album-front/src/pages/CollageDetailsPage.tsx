@@ -16,6 +16,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import { useCollageDetails, useCollageMutations } from '../hooks/useCollage';
 import { useCollageEditor } from '../hooks/useCollageEditor';
 import {
+  EDITOR_BACKDROP,
   normalizeCollageConfig,
   serializeCollageDoc
 } from '../components/collage/collageDoc';
@@ -25,6 +26,12 @@ import CollagePhotoTray, { AlbumPhoto } from '../components/collage/CollagePhoto
 import CollagePhotoDialog from '../components/collage/CollagePhotoDialog';
 import CollageTextDialog from '../components/collage/CollageTextDialog';
 import { downloadBlob, exportCollageToPng } from '../components/collage/exportCollage';
+
+/**
+ * Longest edge of a newly placed photo, as a fraction of the canvas' shorter
+ * side. Small enough that several photos fit before anyone has to resize.
+ */
+const PLACED_PHOTO_SCALE = 0.22;
 
 /** Full-screen collage editor / viewer. Route: /collages/:id[?mode=view] */
 const CollageDetailsPage: React.FC = () => {
@@ -88,7 +95,7 @@ const CollageDetailsPage: React.FC = () => {
     (photo: AlbumPhoto, at?: { x: number; y: number }) => {
       if (!doc) return;
       const place = (naturalW: number, naturalH: number) => {
-        const target = Math.min(doc.canvas.width, doc.canvas.height) * 0.35;
+        const target = Math.min(doc.canvas.width, doc.canvas.height) * PLACED_PHOTO_SCALE;
         const ratio = naturalW > 0 && naturalH > 0 ? naturalW / naturalH : 4 / 3;
         const width = ratio >= 1 ? target : target * ratio;
         const height = ratio >= 1 ? target / ratio : target;
@@ -216,7 +223,7 @@ const CollageDetailsPage: React.FC = () => {
 
   if (collageQuery.isPending) {
     return (
-      <Box sx={{ position: 'fixed', inset: 0, zIndex: 1300, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#000' }}>
+      <Box sx={{ position: 'fixed', inset: 0, zIndex: 1300, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: EDITOR_BACKDROP }}>
         <CircularProgress />
       </Box>
     );
@@ -243,7 +250,7 @@ const CollageDetailsPage: React.FC = () => {
         zIndex: 1300,
         display: 'flex',
         flexDirection: 'column',
-        bgcolor: '#000'
+        bgcolor: EDITOR_BACKDROP
       }}
     >
       {!isViewMode && doc && (

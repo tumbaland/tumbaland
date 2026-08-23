@@ -1,4 +1,4 @@
-import { CollageDoc, photoHasFrame } from './collageDoc';
+import { CollageCrop, CollageDoc, photoHasFrame } from './collageDoc';
 import { ResolvePhoto } from './CollageStage';
 
 /**
@@ -19,27 +19,36 @@ const loadImage = (src: string): Promise<HTMLImageElement> =>
     img.src = src;
   });
 
-/** drawImage with CSS object-fit: cover semantics */
+/**
+ * drawImage with CSS object-fit: cover semantics, restricted to the photo's
+ * crop region so the export matches what the canvas shows.
+ */
 const drawCover = (
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
   x: number,
   y: number,
   w: number,
-  h: number
+  h: number,
+  crop?: CollageCrop
 ) => {
-  const srcRatio = img.naturalWidth / img.naturalHeight;
+  const cropX = (crop?.x ?? 0) * img.naturalWidth;
+  const cropY = (crop?.y ?? 0) * img.naturalHeight;
+  const cropW = (crop?.width ?? 1) * img.naturalWidth;
+  const cropH = (crop?.height ?? 1) * img.naturalHeight;
+
+  const srcRatio = cropW / cropH;
   const destRatio = w / h;
-  let sx = 0;
-  let sy = 0;
-  let sw = img.naturalWidth;
-  let sh = img.naturalHeight;
+  let sx = cropX;
+  let sy = cropY;
+  let sw = cropW;
+  let sh = cropH;
   if (srcRatio > destRatio) {
     sw = sh * destRatio;
-    sx = (img.naturalWidth - sw) / 2;
+    sx = cropX + (cropW - sw) / 2;
   } else {
     sh = sw / destRatio;
-    sy = (img.naturalHeight - sh) / 2;
+    sy = cropY + (cropH - sh) / 2;
   }
   ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
 };
@@ -96,7 +105,7 @@ export const exportCollageToPng = async (doc: CollageDoc, resolvePhoto: ResolveP
     }
 
     if (img) {
-      drawCover(ctx, img, imgX, imgY, imgW, imgH);
+      drawCover(ctx, img, imgX, imgY, imgW, imgH, photo.crop);
     } else {
       ctx.fillStyle = 'rgba(128,128,128,0.4)';
       ctx.fillRect(imgX, imgY, imgW, imgH);
