@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.446](https://github.com/toomastahves/tumbaland/compare/app-v0.0.445...app-v0.0.446) (2026-08-23)
+
+### Bug Fixes
+
+* make signed urls cachable ([5f5af65](https://github.com/toomastahves/tumbaland/commit/5f5af65b20efbaf1dba05333a441dfb6e971cbad))
 ## [0.0.445](https://github.com/toomastahves/tumbaland/compare/app-v0.0.444...app-v0.0.445) (2026-08-23)
 
 ### Features
