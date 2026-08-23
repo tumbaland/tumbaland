@@ -51,8 +51,8 @@ export const PRODUCTS: Product[] = [
     color: '#7c3aed',
     icon: GroupsIcon,
     headline: 'Optional, and off by default',
-    lede: 'Share an album, a budget, or a journal. Up to five people on one plan.',
-    points: ['Nothing is shared until you invite someone', 'Everyone sees the same history', 'Up to five people on one plan']
+    lede: 'Share an album, a budget, or a journal. Up to five people, never priced per head.',
+    points: ['Nothing is shared until you invite someone', 'Everyone sees the same history', 'Up to five people, never priced per head']
   }
 ];
 

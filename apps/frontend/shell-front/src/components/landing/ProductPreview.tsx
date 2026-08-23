@@ -166,7 +166,7 @@ export function ProductPreview() {
 
           {/* Activity heatmap panel, spanning both columns */}
           <Panel sx={{ gridColumn: { sm: '1 / -1' } }}>
-            <Label>Time together — last 12 weeks</Label>
+            <Label>Time together, last 12 weeks</Label>
             <Box sx={{ display: 'flex', gap: '3px', mt: 0.5 }}>
               {Array.from({ length: 12 }).map((_, week) => (
                 <Box key={week} sx={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1 }}>

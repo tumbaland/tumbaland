@@ -33,11 +33,11 @@ export function LandingFooter({ onSignIn }: LandingFooterProps) {
             mb: 1.5
           }}
         >
-          Start with the free tier. Decide later.
+          It&apos;s free. That&apos;s the whole offer.
         </Typography>
         <Typography sx={{ color: '#475569', fontSize: '1rem', lineHeight: 1.6, mb: 3.5 }}>
-          Sign in with Google and everything is there immediately — no setup, no card, and no
-          countdown running in the background.
+          Sign in with Google and it is all there. No setup, no card, nothing counting down.
+          Supporting is a separate choice, and never a required one.
         </Typography>
         <Button
           variant="contained"

@@ -25,7 +25,7 @@ function entitlements(overrides: Partial<Entitlements> = {}): Entitlements {
     planCode: 'free',
     status: null,
     limits: normalizeLimits(undefined, 'free'),
-    upgradeTo: 'personal',
+    upgradeTo: 'support',
     ...overrides
   };
 }
@@ -68,7 +68,7 @@ describe('loadEntitlements', () => {
 
 describe('requireEntitlement', () => {
   it('passes a plan that includes the feature', async () => {
-    mockGetEntitlements.mockResolvedValue(entitlements({ planCode: 'personal', limits: normalizeLimits(undefined, 'personal') }));
+    mockGetEntitlements.mockResolvedValue(entitlements({ planCode: 'support', limits: normalizeLimits(undefined, 'support') }));
     const next = jest.fn();
 
     await requireEntitlement('cleanExport')(mockReq(), {} as Response, next);
@@ -84,7 +84,7 @@ describe('requireEntitlement', () => {
     expect(next).toHaveBeenCalledWith(
       expect.objectContaining({
         statusCode: 402,
-        details: { code: 'FEATURE_NOT_IN_PLAN', feature: 'cleanExport', planCode: 'free', upgradeTo: 'personal' }
+        details: { code: 'FEATURE_NOT_IN_PLAN', feature: 'cleanExport', planCode: 'free', upgradeTo: 'support' }
       })
     );
   });
@@ -142,7 +142,7 @@ describe('retentionFloor', () => {
 
   it('returns null for an unlimited plan, so no $match is added', async () => {
     mockGetEntitlements.mockResolvedValue(
-      entitlements({ planCode: 'family', limits: normalizeLimits({ retentionDays: UNLIMITED }, 'family') })
+      entitlements({ planCode: 'support', limits: normalizeLimits({ retentionDays: UNLIMITED }, 'support') })
     );
 
     expect(await retentionFloor('user@example.com', now)).toBeNull();
@@ -163,7 +163,7 @@ describe('retentionFloor across several subjects', () => {
   it('takes the most generous floor, so a paid group lifts it for every member', () => {
     mockGetEntitlements.mockImplementation(async (email: string) =>
       email === 'owner@example.com'
-        ? entitlements({ planCode: 'family', limits: normalizeLimits({ retentionDays: UNLIMITED }, 'family') })
+        ? entitlements({ planCode: 'support', limits: normalizeLimits({ retentionDays: UNLIMITED }, 'support') })
         : entitlements()
     );
 

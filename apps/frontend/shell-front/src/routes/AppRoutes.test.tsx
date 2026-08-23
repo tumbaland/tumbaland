@@ -42,7 +42,7 @@ it('serves the landing page to signed-out visitors', async () => {
   renderRoutes();
 
   await waitFor(() =>
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/photos/i)
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/photo albums/i)
   );
   expect(screen.queryByText('dashboard')).not.toBeInTheDocument();
 });

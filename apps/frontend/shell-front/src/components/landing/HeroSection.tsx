@@ -3,10 +3,14 @@ import GoogleIcon from '@mui/icons-material/Google';
 
 interface HeroSectionProps {
   onSignIn: () => void;
-  onSeePricing: () => void;
+  /**
+   * Scrolls to the FAQ, which is where "why is it free" is actually answered —
+   * deliberately not a jump to the prices, and not past the answer to the ask.
+   */
+  onWhyFree: () => void;
 }
 
-export function HeroSection({ onSignIn, onSeePricing }: HeroSectionProps) {
+export function HeroSection({ onSignIn, onWhyFree }: HeroSectionProps) {
   return (
     <Box component="section" sx={{ pt: { xs: 5, md: 8 }, pb: { xs: 3, md: 4 }, px: 2 }}>
       {/* Wordmark, in the app's own script face so the landing page and the
@@ -45,7 +49,7 @@ export function HeroSection({ onSignIn, onSeePricing }: HeroSectionProps) {
           mb: 2.5
         }}
       >
-        Everything you track about your life — photos, money, and time — in one private place.
+        Photo albums, finance tracking and a journal. One private place.
       </Typography>
 
       <Typography
@@ -60,7 +64,7 @@ export function HeroSection({ onSignIn, onSeePricing }: HeroSectionProps) {
         }}
       >
         Albums that tag themselves. Net worth that updates itself. A journal that remembers where
-        your days went. Keep it for yourself, or share it with your household.
+        your days went. Free to use, for as long as you like.
       </Typography>
 
       <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', flexWrap: 'wrap', mb: 2 }}>
@@ -89,7 +93,7 @@ export function HeroSection({ onSignIn, onSeePricing }: HeroSectionProps) {
         <Button
           variant="text"
           size="large"
-          onClick={onSeePricing}
+          onClick={onWhyFree}
           sx={{
             textTransform: 'none',
             fontSize: '1rem',
@@ -101,12 +105,12 @@ export function HeroSection({ onSignIn, onSeePricing }: HeroSectionProps) {
             '&:hover': { backgroundColor: 'rgba(147,51,234,0.09)' }
           }}
         >
-          See pricing
+          Why it&apos;s free
         </Button>
       </Box>
 
       <Typography sx={{ fontSize: 13.5, color: '#64748b', textAlign: 'center' }}>
-        Free forever · No card · Private until you share
+        Free · Private until you share
       </Typography>
     </Box>
   );

@@ -16,7 +16,7 @@ import {
 
 describe('resolveLimits', () => {
   it('returns the defaults for a known plan code', () => {
-    expect(resolveLimits('personal')).toEqual(DEFAULT_PLAN_LIMITS.personal);
+    expect(resolveLimits('support')).toEqual(DEFAULT_PLAN_LIMITS.support);
   });
 
   it('falls back to free for an unknown code, never to unlimited', () => {
@@ -36,12 +36,12 @@ describe('resolveLimits', () => {
 
 describe('normalizeLimits', () => {
   it('applies stored values over the plan defaults', () => {
-    const limits = normalizeLimits({ meters: { storageBytes: 123 }, retentionDays: 30 }, 'personal');
+    const limits = normalizeLimits({ meters: { storageBytes: 123 }, retentionDays: 30 }, 'support');
 
     expect(limits.meters.storageBytes).toBe(123);
     expect(limits.retentionDays).toBe(30);
     // Untouched keys keep the plan's defaults rather than resetting to free.
-    expect(limits.meters.trackedTickers).toBe(DEFAULT_PLAN_LIMITS.personal.meters.trackedTickers);
+    expect(limits.meters.trackedTickers).toBe(DEFAULT_PLAN_LIMITS.support.meters.trackedTickers);
   });
 
   it('drops keys that no code enforces', () => {
@@ -66,17 +66,17 @@ describe('normalizeLimits', () => {
   it('ignores non-numeric and non-boolean junk instead of producing NaN limits', () => {
     const limits = normalizeLimits(
       { meters: { seats: 'lots' as unknown as number }, features: { cleanExport: 'yes' as unknown as boolean } },
-      'family'
+      'support'
     );
 
-    expect(limits.meters.seats).toBe(DEFAULT_PLAN_LIMITS.family.meters.seats);
+    expect(limits.meters.seats).toBe(DEFAULT_PLAN_LIMITS.support.meters.seats);
     expect(limits.features.cleanExport).toBe(true);
   });
 
   it('returns the plan defaults for an empty or missing payload', () => {
-    expect(normalizeLimits(undefined, 'family')).toEqual(DEFAULT_PLAN_LIMITS.family);
-    expect(normalizeLimits(null, 'family')).toEqual(DEFAULT_PLAN_LIMITS.family);
-    expect(normalizeLimits({}, 'family')).toEqual(DEFAULT_PLAN_LIMITS.family);
+    expect(normalizeLimits(undefined, 'support')).toEqual(DEFAULT_PLAN_LIMITS.support);
+    expect(normalizeLimits(null, 'support')).toEqual(DEFAULT_PLAN_LIMITS.support);
+    expect(normalizeLimits({}, 'support')).toEqual(DEFAULT_PLAN_LIMITS.support);
   });
 
   it('resolves an unknown plan code to free even when limits are stored', () => {

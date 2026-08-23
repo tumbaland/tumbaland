@@ -191,7 +191,7 @@ it('shows an error notification when creating fails', async () => {
 it('names the plan limit when the add is refused with a 402', async () => {
   mockedCreateMutateAsync.mockRejectedValue({
     status: 402,
-    body: { meter: 'trackedTickers', limit: 3, planCode: 'free', upgradeTo: 'personal' }
+    body: { meter: 'trackedTickers', limit: 3, planCode: 'free', upgradeTo: 'support' }
   });
   const notify = vi.fn();
   render(<TickersTab tickers={[]} notify={notify} />);

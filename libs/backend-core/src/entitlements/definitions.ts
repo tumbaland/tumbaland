@@ -138,13 +138,20 @@ export const DEFAULT_PLAN_LIMITS: Readonly<Record<string, PlanLimits>> = {
     features: { cleanExport: false },
     retentionDays: 90
   },
-  personal: {
-    meters: { storageBytes: 50 * GB, aiJobs: 200, trackedTickers: 25, seats: 1 },
-    features: { cleanExport: true },
-    retentionDays: UNLIMITED
-  },
-  family: {
-    meters: { storageBytes: 250 * GB, aiJobs: 600, trackedTickers: 100, seats: 5 },
+  /**
+   * The single paid plan, and it is a *support* tier rather than a product
+   * edition. `personal` and `family` were consolidated into it: two paid tiers
+   * imply a business deciding what to withhold from which customer, which is
+   * the wrong shape for a project asking people to chip in. One tier that
+   * grants everything removes that question entirely.
+   *
+   * Limits are the old `family` numbers — pooled seats, unlimited retention —
+   * except storage, which is 50 GB rather than 250. 250 GB was priced for a
+   * household paying €12; at €5 it is more object storage than the support is
+   * covering.
+   */
+  support: {
+    meters: { storageBytes: 50 * GB, aiJobs: 600, trackedTickers: 100, seats: 5 },
     features: { cleanExport: true },
     retentionDays: UNLIMITED
   },

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Alert, Box, Button, Chip, Paper, Skeleton, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import CheckIcon from '@mui/icons-material/Check';
-import CelebrationIcon from '@mui/icons-material/Celebration';
+import FavoriteIcon from '@mui/icons-material/Favorite';
 import {
   BillingInterval,
   CatalogPlan,
@@ -17,32 +17,54 @@ import {
 import { PlansState } from '../../hooks/usePlans';
 import { SectionHeading } from './SectionHeading';
 
-interface PricingTableProps extends PlansState {
+interface SupportSectionProps extends PlansState {
   onChoosePlan: (code: string) => void;
 }
 
-export function PricingTable({ onChoosePlan, plans, loading, failed }: PricingTableProps) {
+/**
+ * The money section, and the whole page's answer to "what does this cost".
+ *
+ * It used to be a three-column pricing table with the middle card highlighted
+ * and a "Most people" badge on it — the standard SaaS shape, which tells a
+ * visitor the free column is the crippled one and the real product starts at
+ * €6. That is not what this is.
+ *
+ * The copy rule for everything below: **the site is free, and support is
+ * welcome.** Not "free tier versus paid tier", not "paid only if you want to
+ * chip in" — both quietly restate that there is a transaction on offer and the
+ * free version is the lesser half of it. Support is something someone may
+ * choose to do for a project they like; it is never the price of anything.
+ *
+ * So: the free card is highlighted, the support card's button names the
+ * gesture rather than a purchase, and the section sits *after* the FAQ rather
+ * than in the middle of the page. The numbers are unchanged and still come from
+ * `GET /api/plans` — softening the ask is not a licence to soften what a plan
+ * actually grants.
+ */
+export function SupportSection({ onChoosePlan, plans, loading, failed }: SupportSectionProps) {
   const [interval, setInterval] = useState<BillingInterval>('month');
 
   const handleInterval = (_e: React.MouseEvent<HTMLElement>, next: BillingInterval | null) => {
     if (next) setInterval(next);
   };
 
-  const personal = plans.find((p) => p.code === 'personal') ?? plans.find((p) => p.priceMonthlyCents > 0);
-  const savedMonths = personal ? yearlySavingMonths(personal) : 0;
+  // Any paid plan will do — there is one, `support`, and looking it up by
+  // price rather than by code keeps the toggle working if an admin adds another.
+  const paidPlan = plans.find((p) => p.priceMonthlyCents > 0);
+  const savedMonths = paidPlan ? yearlySavingMonths(paidPlan) : 0;
   const showIntervalToggle = hasYearlyPricing(plans);
 
   return (
-    <Box component="section" id="pricing" sx={{ py: { xs: 6, md: 8 }, px: 2, scrollMarginTop: 24 }}>
+    <Box component="section" id="support" sx={{ py: { xs: 6, md: 8 }, px: 2, scrollMarginTop: 24 }}>
       <SectionHeading
-        eyebrow="Pricing"
-        title="Real numbers, published early"
-        subtitle="One subscription covers the whole household."
+        eyebrow="Support"
+        title="The site is free. Support is welcome."
+        subtitle="Everything here works without paying, and it stays that way. If it is useful to you and you want to help cover what it costs to run, there is a way. Supporters also get a lot more room."
       />
 
       {PRICING_STATUS === 'preview' && (
         <Alert
-          icon={<CelebrationIcon fontSize="inherit" />}
+          icon={<FavoriteIcon fontSize="inherit" />}
           sx={{
             maxWidth: 620,
             mx: 'auto',
@@ -55,14 +77,15 @@ export function PricingTable({ onChoosePlan, plans, loading, failed }: PricingTa
             '& .MuiAlert-icon': { color: '#16a34a' }
           }}
         >
-          <strong>Everything is free right now.</strong> Paid tiers are coming later.
+          <strong>Supporting isn&apos;t open yet.</strong> The figures below are published early so
+          you can see them. Nothing is charged either way.
         </Alert>
       )}
 
       {/*
         A failure is said out loud rather than papered over with a hardcoded
         table. The numbers on these cards are the numbers the services enforce;
-        the moment the page can invent them, they are two different things
+        the moment the page can invent them, they are two different claims
         again — which is the defect this section was rebuilt to remove.
       */}
       {failed && (
@@ -70,7 +93,7 @@ export function PricingTable({ onChoosePlan, plans, loading, failed }: PricingTa
           severity="info"
           sx={{ maxWidth: 620, mx: 'auto', mb: 4, borderRadius: 3, justifyContent: 'center' }}
         >
-          Pricing is temporarily unavailable. Everything on the free tier keeps working.
+          Plan details are temporarily unavailable. Everything else keeps working.
         </Alert>
       )}
 
@@ -127,15 +150,20 @@ export function PricingTable({ onChoosePlan, plans, loading, failed }: PricingTa
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
+          // auto-fit rather than a fixed column count: there are two plans
+          // today, and the catalog is admin-editable at runtime.
+          gridTemplateColumns: { xs: '1fr', md: 'repeat(auto-fit, minmax(300px, 1fr))' },
           gap: 2.5,
-          maxWidth: 1080,
+          maxWidth: 820,
           mx: 'auto',
-          alignItems: 'start'
+          // Stretch, not `start`: the two cards carry a different number of
+          // limit lines (free has no planner row), and letting each take its
+          // natural height leaves them visibly mismatched side by side.
+          alignItems: 'stretch'
         }}
       >
         {loading &&
-          [0, 1, 2].map((i) => (
+          [0, 1].map((i) => (
             <Skeleton
               key={i}
               variant="rectangular"
@@ -148,6 +176,7 @@ export function PricingTable({ onChoosePlan, plans, loading, failed }: PricingTa
         {plans.map((plan: CatalogPlan) => {
           const cents = priceFor(plan, interval);
           const highlight = isHighlighted(plan);
+          const paid = plan.priceMonthlyCents > 0;
           return (
             <Paper
               key={plan.code}
@@ -170,9 +199,11 @@ export function PricingTable({ onChoosePlan, plans, loading, failed }: PricingTa
                 gap: 1.5
               }}
             >
+              {/* The badge on the free card, not on the dearest one a visitor
+                  might otherwise read as the "real" product. */}
               {highlight && (
                 <Chip
-                  label="Most people"
+                  label="Where everyone starts"
                   size="small"
                   sx={{
                     position: 'absolute',
@@ -232,7 +263,7 @@ export function PricingTable({ onChoosePlan, plans, loading, failed }: PricingTa
                     : { borderColor: 'rgba(147,51,234,0.35)', color: '#9333ea' })
                 }}
               >
-                {plan.priceMonthlyCents === 0 ? 'Start free' : `Choose ${plan.name}`}
+                {paid ? 'Become a supporter' : 'Start free'}
               </Button>
 
               {/* Only what the tier includes, and only limits something
@@ -264,11 +295,12 @@ export function PricingTable({ onChoosePlan, plans, loading, failed }: PricingTa
           lineHeight: 1.6
         }}
       >
-        Prices include VAT where applicable. Yearly plans bill once and cancel at the end of the
-        paid year.
+        No upsell after this, and nothing changes for anyone who never supports. Support covers the
+        three bills the limits come from: photo storage, GPU time, and the market data key. Amounts
+        include VAT where applicable.
       </Typography>
     </Box>
   );
 }
 
-export default PricingTable;
+export default SupportSection;

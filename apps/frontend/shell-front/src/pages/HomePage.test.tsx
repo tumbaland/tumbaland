@@ -10,6 +10,10 @@ vi.mock('react-router', async () => {
   return { ...actual, useNavigate: () => navigate };
 });
 
+// The plan card fetches entitlements on mount; the home page's own tests care
+// about modules and greetings, not about payment-service being reachable.
+vi.mock('../components/home/PlanUsageCard', () => ({ PlanUsageCard: () => null }));
+
 vi.mock('../hooks/useTodo', () => ({
   useTodo: () => ({ todo: 'Water the plants', isLoading: false, error: null, fetchTodo: vi.fn() })
 }));

@@ -18,11 +18,11 @@ describe('paywallMessage', () => {
 
   it('names the meter, the ceiling and the plan that lifts it', () => {
     const message = paywallMessage(
-      quotaError({ code: 'QUOTA_EXCEEDED', meter: 'trackedTickers', used: 3, limit: 3, planCode: 'free', upgradeTo: 'personal' }),
+      quotaError({ code: 'QUOTA_EXCEEDED', meter: 'trackedTickers', used: 3, limit: 3, planCode: 'free', upgradeTo: 'support' }),
       'Failed to save ticker'
     );
 
-    expect(message).toBe('You have reached the tracked tickers limit (3) on your free plan. Upgrade to personal for more.');
+    expect(message).toBe('You have reached the tracked tickers limit (3) on your free plan. Upgrade to support for more.');
   });
 
   it('degrades gracefully when the body carries no detail', () => {

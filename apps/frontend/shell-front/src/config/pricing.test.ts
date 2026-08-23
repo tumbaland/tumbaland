@@ -32,10 +32,10 @@ const limits = (overrides: Partial<{
 });
 
 const plan = (overrides: Partial<CatalogPlan> = {}): CatalogPlan => ({
-  code: 'personal',
-  name: 'Personal',
-  priceMonthlyCents: 600,
-  priceYearlyCents: 6000,
+  code: 'support',
+  name: 'Support',
+  priceMonthlyCents: 500,
+  priceYearlyCents: 5000,
   effectiveLimits: limits(),
   ...overrides
 });
@@ -53,8 +53,8 @@ describe('formatPrice', () => {
 
 describe('priceFor', () => {
   it('returns the price for the chosen interval', () => {
-    expect(priceFor(plan(), 'month')).toBe(600);
-    expect(priceFor(plan(), 'year')).toBe(6000);
+    expect(priceFor(plan(), 'month')).toBe(500);
+    expect(priceFor(plan(), 'year')).toBe(5000);
   });
 
   it('treats a missing yearly price as zero rather than NaN', () => {
@@ -84,7 +84,7 @@ describe('hasYearlyPricing', () => {
 
 describe('copy', () => {
   it('uses the shipped tagline for a plan we wrote copy for', () => {
-    expect(taglineFor(plan({ code: 'family' }))).toBe(PLAN_COPY.family.tagline);
+    expect(taglineFor(plan({ code: 'support' }))).toBe(PLAN_COPY.support.tagline);
   });
 
   it('falls back to the plan\'s own description, so an admin can add a plan without a deploy', () => {
@@ -95,9 +95,12 @@ describe('copy', () => {
     expect(taglineFor(plan({ code: 'studio' }))).toBe('');
   });
 
-  it('highlights exactly one of the shipped plans', () => {
-    const highlighted = ['free', 'personal', 'family'].filter((code) => isHighlighted(plan({ code })));
-    expect(highlighted).toEqual(['personal']);
+  it('highlights free, and only free', () => {
+    // The badge belongs on the tier everyone actually uses. On the paid card it
+    // read as "the free column is the sample", which is the opposite of what
+    // this section now says.
+    const highlighted = ['free', 'support'].filter((code) => isHighlighted(plan({ code })));
+    expect(highlighted).toEqual(['free']);
   });
 });
 

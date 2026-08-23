@@ -3,7 +3,7 @@ import { METER_KEYS, FEATURE_KEYS, PartialPlanLimits } from '@tumbaland/backend-
 
 export interface IPlan extends Document {
   name: string;
-  code: string; // unique key: free, personal, family
+  code: string; // unique key: free, support (+ hidden staff)
   description?: string;
   priceMonthlyCents: number; // 0 for free (base interval for now)
   priceYearlyCents?: number; // optional discounted billing amount (informational unless you add a yearly Stripe price later)

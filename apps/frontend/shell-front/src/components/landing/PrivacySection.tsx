@@ -35,7 +35,7 @@ const ASSURANCES: Assurance[] = [
     key: 'export',
     icon: DownloadIcon,
     title: 'Your data comes back out',
-    body: 'CSV exports and full-resolution downloads work on every tier, paid or not.'
+    body: 'CSV exports and full-resolution downloads work for everyone, supporter or not.'
   },
   {
     key: 'open',

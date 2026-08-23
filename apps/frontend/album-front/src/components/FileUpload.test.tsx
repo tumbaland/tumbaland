@@ -168,7 +168,7 @@ it('shows a 402 as the limit it is, not as a failed upload', async () => {
   mockedGetUploadSignedUrl.mockRejectedValue(
     Object.assign(new Error('Payment Required'), {
       status: 402,
-      body: { code: 'QUOTA_EXCEEDED', meter: 'storageBytes', limit: 1_073_741_824, planCode: 'free', upgradeTo: 'personal' }
+      body: { code: 'QUOTA_EXCEEDED', meter: 'storageBytes', limit: 1_073_741_824, planCode: 'free', upgradeTo: 'support' }
     })
   );
   renderDialog();

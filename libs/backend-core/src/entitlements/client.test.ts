@@ -17,10 +17,10 @@ function jsonResponse(body: unknown, status = 200): Response {
 function paidResponse() {
   return jsonResponse({
     success: true,
-    planCode: 'personal',
+    planCode: 'support',
     status: 'active',
     limits: { meters: { storageBytes: 12345 } },
-    upgradeTo: 'family'
+    upgradeTo: 'support'
   });
 }
 
@@ -53,12 +53,12 @@ describe('getEntitlements', () => {
         headers: expect.objectContaining({ 'x-internal-token': 'test-internal-token', 'x-service-id': 'album-service' })
       })
     );
-    expect(result.planCode).toBe('personal');
-    expect(result.upgradeTo).toBe('family');
+    expect(result.planCode).toBe('support');
+    expect(result.upgradeTo).toBe('support');
     expect(result.limits.meters.storageBytes).toBe(12345);
     // Keys the payload omitted are filled from that plan's defaults rather than
     // arriving undefined and comparing as NaN inside a quota check.
-    expect(result.limits.meters.seats).toBe(DEFAULT_PLAN_LIMITS.personal.meters.seats);
+    expect(result.limits.meters.seats).toBe(DEFAULT_PLAN_LIMITS.support.meters.seats);
     expect(result.stale).toBeUndefined();
   });
 
@@ -135,7 +135,7 @@ describe('when payment-service cannot be reached', () => {
     const recovered = await getEntitlements('user@example.com');
 
     expect(failed.stale).toBe(true);
-    expect(recovered.planCode).toBe('personal');
+    expect(recovered.planCode).toBe('support');
   });
 
   it('fails closed without calling out at all when the channel is unconfigured', async () => {

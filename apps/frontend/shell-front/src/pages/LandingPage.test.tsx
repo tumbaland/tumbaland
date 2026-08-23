@@ -35,23 +35,12 @@ const CATALOG = [
     }
   },
   {
-    code: 'personal',
-    name: 'Personal',
-    priceMonthlyCents: 600,
-    priceYearlyCents: 6000,
+    code: 'support',
+    name: 'Support',
+    priceMonthlyCents: 500,
+    priceYearlyCents: 5000,
     effectiveLimits: {
-      meters: { storageBytes: 50 * GB, aiJobs: 200, trackedTickers: 25, seats: 1 },
-      features: { cleanExport: true },
-      retentionDays: -1
-    }
-  },
-  {
-    code: 'family',
-    name: 'Family',
-    priceMonthlyCents: 1200,
-    priceYearlyCents: 12000,
-    effectiveLimits: {
-      meters: { storageBytes: 250 * GB, aiJobs: 600, trackedTickers: 100, seats: 5 },
+      meters: { storageBytes: 50 * GB, aiJobs: 600, trackedTickers: 100, seats: 5 },
       features: { cleanExport: true },
       retentionDays: -1
     }
@@ -66,12 +55,15 @@ beforeEach(() => {
   mockedGetPlans.mockResolvedValue(CATALOG);
 });
 
-it('says what the product is in the headline, not just what it feels like', () => {
+it('names the actual modules in the headline, not just what it feels like', () => {
   render(<LandingPage />);
   const h1 = screen.getByRole('heading', { level: 1 });
-  expect(h1).toHaveTextContent(/photos/i);
-  expect(h1).toHaveTextContent(/money/i);
+  expect(h1).toHaveTextContent(/photo/i);
+  expect(h1).toHaveTextContent(/finance/i);
   expect(h1).toHaveTextContent(/one private place/i);
+
+  // "your money" reads as though we hold it. We track it; we never touch it.
+  expect(h1).not.toHaveTextContent(/your money/i);
 });
 
 it('holds the product visual back until after the pillars are explained', () => {
@@ -101,8 +93,8 @@ it('names each module the same way the app nav does', () => {
 it('answers the privacy objection before asking for money', () => {
   render(<LandingPage />);
   const privacy = screen.getByRole('heading', { name: /Before you hand it anything/ });
-  const pricing = screen.getByRole('heading', { name: /Real numbers/ });
-  expect(privacy.compareDocumentPosition(pricing) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  const support = screen.getByRole('heading', { name: /The site is free/ });
+  expect(privacy.compareDocumentPosition(support) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
   expect(screen.getByRole('heading', { name: /Private until you share/ })).toBeInTheDocument();
   expect(screen.getByRole('heading', { name: /No password to leak/ })).toBeInTheDocument();
@@ -118,8 +110,7 @@ it('renders a card for every plan the API returns, with its monthly price', asyn
   for (const plan of CATALOG) {
     expect(await screen.findByRole('heading', { name: plan.name })).toBeInTheDocument();
   }
-  expect(screen.getByText('€6')).toBeInTheDocument();
-  expect(screen.getByText('€12')).toBeInTheDocument();
+  expect(screen.getByText('€5')).toBeInTheDocument();
 });
 
 it('says pricing is unavailable rather than falling back to numbers of its own', async () => {
@@ -129,44 +120,92 @@ it('says pricing is unavailable rather than falling back to numbers of its own',
   mockedGetPlans.mockRejectedValue(new Error('payment-service down'));
   render(<LandingPage />);
 
-  expect(await screen.findByText(/Pricing is temporarily unavailable/)).toBeInTheDocument();
-  expect(screen.queryByText('€6')).not.toBeInTheDocument();
+  expect(await screen.findByText(/Plan details are temporarily unavailable/)).toBeInTheDocument();
+  expect(screen.queryByText('€5')).not.toBeInTheDocument();
 });
 
 it('switches every paid price to the yearly figure', async () => {
   const user = userEvent.setup();
   render(<LandingPage />);
-  await screen.findByRole('heading', { name: 'Personal' });
+  await screen.findByRole('heading', { name: 'Support' });
 
   await user.click(screen.getByRole('button', { name: /Yearly/ }));
 
-  expect(screen.getByText('€60')).toBeInTheDocument();
-  expect(screen.getByText('€120')).toBeInTheDocument();
-  expect(screen.queryByText('€6')).not.toBeInTheDocument();
+  expect(screen.getByText('€50')).toBeInTheDocument();
+  expect(screen.queryByText('€5')).not.toBeInTheDocument();
 });
 
 it('frames the unreleased pricing as free rather than as an unfinished product', () => {
   render(<LandingPage />);
-  expect(screen.getByText(/Everything is free right now/)).toBeInTheDocument();
+  expect(screen.getByText(/Supporting isn't open yet/)).toBeInTheDocument();
 });
 
-it('keeps the cost explanation as scannable questions after the price table', async () => {
+it('explains why limits exist before it asks anyone to support', async () => {
   const user = userEvent.setup();
   render(<LandingPage />);
 
+  // The support cards sit below the FAQ: a visitor meets the ask having
+  // already been told they do not have to answer it.
   const question = screen.getByRole('button', { name: /What happens when I hit a limit/ });
-  const pricing = screen.getByRole('heading', { name: /Real numbers/ });
-  expect(pricing.compareDocumentPosition(question) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  const support = screen.getByRole('heading', { name: /The site is free/ });
+  expect(question.compareDocumentPosition(support) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
   await user.click(question);
-  expect(await screen.findByText(/Reading your own data is never behind the paywall/)).toBeVisible();
+  expect(await screen.findByText(/Reading your own data is never behind a payment/)).toBeVisible();
+});
+
+it('keeps the FAQ to the questions a stranger actually has', async () => {
+  // It grew a question per objection until it read as a page-long defence of
+  // charging money, under a product that does not charge.
+  render(<LandingPage />);
+  await screen.findByRole('heading', { name: 'Support' });
+
+  expect(screen.getAllByRole('button', { expanded: false })).toHaveLength(5);
+  expect(screen.getByRole('button', { name: /Do I have to pay anything/ })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Why would I support/ })).toBeInTheDocument();
+});
+
+it('pitches the paid tier as support rather than as the real product', async () => {
+  render(<LandingPage />);
+
+  // The badge is on free. On the paid card it read as "the free column is
+  // the sample", which is the opposite of what this page says.
+  const freeCard = (await screen.findByRole('heading', { name: 'Free' })).closest('div.MuiPaper-root');
+  expect(within(freeCard as HTMLElement).getByText('Where everyone starts')).toBeInTheDocument();
+
+  const supportCard = screen.getByRole('heading', { name: 'Support' }).closest('div.MuiPaper-root');
+  expect(within(supportCard as HTMLElement).queryByText(/Most people/)).not.toBeInTheDocument();
+  expect(within(supportCard as HTMLElement).getByRole('button', { name: 'Become a supporter' })).toBeInTheDocument();
+});
+
+it('lists only enforced limits on a card, and nothing else', async () => {
+  // Both cards carry the limit lines and nothing more — an extra line on one
+  // card is what left the two visibly mismatched in height.
+  render(<LandingPage />);
+  const supportCard = (await screen.findByRole('heading', { name: 'Support' })).closest('div.MuiPaper-root');
+
+  const lines = limitLinesFor(CATALOG[1].effectiveLimits);
+  const checks = within(supportCard as HTMLElement).getAllByTestId('CheckIcon');
+  expect(checks).toHaveLength(lines.length);
+});
+
+it('offers one paid tier, not a lineup of editions', async () => {
+  // Two paid columns ask a visitor which edition they are entitled to. One
+  // tier that grants everything leaves only the question actually being asked.
+  render(<LandingPage />);
+  await screen.findByRole('heading', { name: 'Support' });
+
+  const priced = CATALOG.filter((plan) => plan.priceMonthlyCents > 0);
+  expect(priced).toHaveLength(1);
+  expect(screen.queryByRole('heading', { name: 'Personal' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Family' })).not.toBeInTheDocument();
 });
 
 it('sends every plan button to sign-in, since there is no account to bill yet', async () => {
   const user = userEvent.setup();
   render(<LandingPage />);
 
-  await user.click(await screen.findByRole('button', { name: 'Choose Personal' }));
+  await user.click(await screen.findByRole('button', { name: 'Become a supporter' }));
   expect(redirectToLogin).toHaveBeenCalledTimes(1);
 
   await user.click(screen.getByRole('button', { name: 'Start free' }));
@@ -185,13 +224,13 @@ it('sends the hero and footer calls to action to sign-in', async () => {
   expect(redirectToLogin).toHaveBeenCalledTimes(2);
 });
 
-it('scrolls to pricing rather than navigating away', async () => {
+it('scrolls to the answers rather than navigating away', async () => {
   const scrollIntoView = vi.fn();
   Element.prototype.scrollIntoView = scrollIntoView;
   const user = userEvent.setup();
   render(<LandingPage />);
 
-  await user.click(screen.getByRole('button', { name: /See pricing/ }));
+  await user.click(screen.getByRole('button', { name: /Why it's free/ }));
 
   expect(scrollIntoView).toHaveBeenCalled();
   expect(redirectToLogin).not.toHaveBeenCalled();
@@ -200,9 +239,9 @@ it('scrolls to pricing rather than navigating away', async () => {
 it('lists what each plan includes, and omits rather than dashes what it does not', async () => {
   render(<LandingPage />);
 
-  const personalCard = (await screen.findByRole('heading', { name: 'Personal' })).closest('div.MuiPaper-root');
+  const supportCard = (await screen.findByRole('heading', { name: 'Support' })).closest('div.MuiPaper-root');
   limitLinesFor(CATALOG[1].effectiveLimits).forEach((line) => {
-    expect(within(personalCard as HTMLElement).getByText(line.text)).toBeInTheDocument();
+    expect(within(supportCard as HTMLElement).getByText(line.text)).toBeInTheDocument();
   });
 
   // The planner is not on Free, so that card simply has one line fewer.
@@ -226,18 +265,18 @@ it('drops the figures from the FAQ rather than inventing them when the catalog i
   mockedGetPlans.mockRejectedValue(new Error('payment-service down'));
   const user = userEvent.setup();
   render(<LandingPage />);
-  await screen.findByText(/Pricing is temporarily unavailable/);
+  await screen.findByText(/Plan details are temporarily unavailable/);
 
   await user.click(screen.getByRole('button', { name: /Do I have to pay anything/ }));
 
-  const answer = await screen.findByText(/no expiry and no card/i);
+  const answer = await screen.findByText(/no card and no expiry/i);
   expect(answer).toBeVisible();
   expect(answer.textContent).not.toMatch(/\d/);
 });
 
 it('advertises no AI or watermark line, because nothing enforces either', async () => {
   render(<LandingPage />);
-  await screen.findByRole('heading', { name: 'Family' });
+  await screen.findByRole('heading', { name: 'Support' });
 
   expect(screen.queryByText(/AI (photo )?scans?/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/watermarked/i)).not.toBeInTheDocument();

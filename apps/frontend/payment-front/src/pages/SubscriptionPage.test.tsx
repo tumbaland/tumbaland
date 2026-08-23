@@ -139,7 +139,7 @@ describe('a complimentary subscription', () => {
   });
 
   it('leaves a paid subscription cancellable', async () => {
-    mockedGetMySubscription.mockResolvedValue({ _id: 's1', planCode: 'personal', status: 'active' });
+    mockedGetMySubscription.mockResolvedValue({ _id: 's1', planCode: 'support', status: 'active' });
     render(<SubscriptionPage />);
 
     expect(await screen.findByRole('button', { name: /cancel subscription/i })).toBeEnabled();

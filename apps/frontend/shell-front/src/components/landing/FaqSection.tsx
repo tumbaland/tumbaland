@@ -18,7 +18,7 @@ interface Faq {
  * the promise it makes ("no expiry, no card") does not depend on the figures.
  */
 function freeTierAnswer(free?: CatalogPlan): string {
-  const opening = 'No. The free tier has no expiry and no card';
+  const opening = 'No. Nothing here is behind a payment, and there is no card and no expiry';
   const closing = 'It is not a trial that turns into a bill.';
   if (!free) return `${opening}, and every feature in the app. ${closing}`;
 
@@ -30,31 +30,36 @@ function freeTierAnswer(free?: CatalogPlan): string {
 }
 
 /**
- * The honest-limits explanation, moved below the price table and cut into
- * questions. As three paragraphs above the prices it asked a stranger to read
- * about our GPU bill before they knew what the product was; as an FAQ it
- * answers the same things at the moment someone is actually weighing the cost.
+ * The honest-limits explanation, cut into questions.
+ *
+ * As three paragraphs it asked a stranger to read about our GPU bill before
+ * they knew what the product was. As an FAQ it answers the same things at the
+ * point someone is deciding whether to sign up — and since the support section
+ * now sits *below* this one, these answers are what a visitor has read before
+ * they are asked for anything.
+ *
+ * **Five questions, not nine.** It grew a question per objection until it read
+ * as a page-long defence of charging money, which is a strange thing to put
+ * under a free product. What is left is the four a stranger actually has —
+ * does this cost anything, why are there limits, what happens at one, and why
+ * would I support — plus the state of the project.
  */
 const FAQS: Faq[] = [
   {
     q: 'Why are there limits at all?',
-    a: 'Three things cost money per use rather than per user: storing photos, running the AI analysis on a GPU, and market data. That last one is a hard ceiling — our data provider allows a fixed number of price lookups per day across the whole service, so each tracked ticker is a genuinely finite resource. The paid tiers buy more of it.'
+    a: 'Three things cost money every time they are used: storing photos, running the AI analysis on a GPU, and market data. Our data provider allows a fixed number of price lookups per day for the whole service, so each tracked ticker is genuinely finite. The limits are what keep this free for everyone. Without them the first heavy account closes it for the rest.'
   },
   {
     q: 'What happens when I hit a limit?',
-    a: 'You stop being able to add more of that one thing. Reading your own data is never behind the paywall, so nothing you already saved disappears or locks — you just cannot add the next photo until you free up space or upgrade.'
+    a: 'You stop being able to add more of that one thing. Reading your own data is never behind a payment, so nothing you already saved disappears or locks. That holds if you support and later stop. Every account sees its own meters on the home page, so the ceiling is visible long before you reach it.'
   },
   {
-    q: 'And if I cancel, or stop paying?',
-    a: 'Nothing is deleted, ever. You keep everything you paid for until the end of the period you paid for, and after that the account drops to free limits. Downgrading hides data rather than destroying it, and it all comes back if you upgrade again.'
-  },
-  {
-    q: 'Can I use it on my own?',
-    a: 'Yes. Groups are entirely optional and off unless you create one. Plenty of this is worth keeping for one person — the Family plan exists for households that want a shared history rather than two half-histories.'
+    q: 'Why would I support, then?',
+    a: 'Because it costs money to run and you would like it to keep running. This is a small project, not a company with a funding round behind it. A handful of people covering the storage and data bills is the difference between it being here in two years and not. Supporters also get a lot more room.'
   },
   {
     q: 'Is it finished?',
-    a: 'Mostly. All four modules are in daily use, and the paid tiers are the part still being built — which is why everything is free right now and the prices above are published early rather than charged.'
+    a: 'Mostly. All four modules are in daily use. Supporting is the part still being built, which is why nothing is charged today and the figures below are published early. The site itself is not waiting on any of it.'
   }
 ];
 
@@ -70,7 +75,7 @@ export function FaqSection({ plans = [] }: FaqSectionProps) {
   ];
 
   return (
-    <Box component="section" sx={{ py: { xs: 5, md: 7 }, px: 2 }}>
+    <Box component="section" id="faq" sx={{ py: { xs: 5, md: 7 }, px: 2, scrollMarginTop: 24 }}>
       <SectionHeading eyebrow="Straight answers" title="Questions worth asking first" />
 
       <Box sx={{ maxWidth: 760, mx: 'auto' }}>

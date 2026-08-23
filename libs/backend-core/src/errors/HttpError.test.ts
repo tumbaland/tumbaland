@@ -26,7 +26,7 @@ describe('PaymentRequiredError', () => {
       used: 10,
       limit: 10,
       planCode: 'free',
-      upgradeTo: 'personal'
+      upgradeTo: 'support'
     });
 
     expect(error.statusCode).toBe(402);
@@ -37,7 +37,7 @@ describe('PaymentRequiredError', () => {
       used: 10,
       limit: 10,
       planCode: 'free',
-      upgradeTo: 'personal'
+      upgradeTo: 'support'
     });
   });
 

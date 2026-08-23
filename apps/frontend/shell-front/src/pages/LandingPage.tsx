@@ -6,7 +6,7 @@ import { HeroSection } from '../components/landing/HeroSection';
 import { ProductsSection } from '../components/landing/ProductsSection';
 import { ProductPreview } from '../components/landing/ProductPreview';
 import { PrivacySection } from '../components/landing/PrivacySection';
-import { PricingTable } from '../components/landing/PricingTable';
+import { SupportSection } from '../components/landing/SupportSection';
 import { FaqSection } from '../components/landing/FaqSection';
 import { LandingFooter } from '../components/landing/LandingFooter';
 import { usePlans } from '../hooks/usePlans';
@@ -15,13 +15,20 @@ import { usePlans } from '../hooks/usePlans';
  * The public front page, shown at `/` to signed-out visitors. Signed-in users
  * get the dashboard instead (see routes/AppRoutes.tsx).
  *
+ * **The money lives at the bottom.** The price table used to sit in the middle
+ * of the page, which made the pitch "here is a product, and here is what it
+ * costs" when the actual offer is "here is a product, it is free, and you can
+ * chip in if you want it to stay running". Support now comes after the FAQ has
+ * explained why limits exist at all, so a visitor meets the ask having already
+ * been told they do not have to answer it.
+ *
  * Every plan choice routes to sign-in rather than to checkout: there is no
  * subscription to create until there is an account to attach it to, and
  * payment-front's PlansPage is the real checkout surface.
  */
 export function LandingPage() {
-  // Fetched once here rather than inside each section: the price table and the
-  // free-tier answer in the FAQ quote the same limits, and they must be the
+  // Fetched once here rather than inside each section: the support cards and
+  // the free-tier answer in the FAQ quote the same limits, and they must be the
   // same limits — the ones the services enforce.
   const plansState = usePlans();
 
@@ -29,8 +36,8 @@ export function LandingPage() {
     authService.redirectToLogin();
   }, []);
 
-  const handleSeePricing = useCallback(() => {
-    document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const handleWhyFree = useCallback(() => {
+    document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 
   const handleChoosePlan = useCallback(() => {
@@ -70,7 +77,7 @@ export function LandingPage() {
       </Box>
 
       <Box sx={{ position: 'relative', zIndex: 1, maxWidth: 1200, mx: 'auto', pb: 2 }}>
-        <HeroSection onSignIn={handleSignIn} onSeePricing={handleSeePricing} />
+        <HeroSection onSignIn={handleSignIn} onWhyFree={handleWhyFree} />
         <ProductsSection />
         {/* Sits below the pillars deliberately: the visual lands better once the
             reader knows what the four modules are than it does interrupting the
@@ -79,8 +86,8 @@ export function LandingPage() {
           <ProductPreview />
         </Box>
         <PrivacySection />
-        <PricingTable onChoosePlan={handleChoosePlan} {...plansState} />
         <FaqSection plans={plansState.plans} />
+        <SupportSection onChoosePlan={handleChoosePlan} {...plansState} />
         <LandingFooter onSignIn={handleSignIn} />
       </Box>
     </Box>

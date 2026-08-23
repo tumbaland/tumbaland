@@ -33,7 +33,7 @@ function buildApp() {
         used: 1073741824,
         limit: 1073741824,
         planCode: 'free',
-        upgradeTo: 'personal'
+        upgradeTo: 'support'
       })
     )
   );
@@ -172,7 +172,7 @@ describe('errorHandler', () => {
         used: 1073741824,
         limit: 1073741824,
         planCode: 'free',
-        upgradeTo: 'personal'
+        upgradeTo: 'support'
       });
     });
 

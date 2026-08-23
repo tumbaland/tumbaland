@@ -1,5 +1,5 @@
 /**
- * Presentation for the pricing table. **No limits, and no prices.**
+ * Presentation for the support section. **No limits, and no prices.**
  *
  * Those come from `GET /api/plans`, already resolved by the same
  * `normalizeLimits` the entitlement middleware enforces from, so the ceiling on
@@ -18,9 +18,10 @@ import { CatalogPlan, PlanLimits, UNLIMITED, isUnlimited } from '@tumbaland/fron
 export type BillingInterval = 'month' | 'year';
 
 /**
- * The page still says everything is free while paid checkout is closed: no plan
- * carries a `stripePriceId` yet, so a priced plan 503s at checkout. Flip to
- * 'live' when the Stripe prices are set (MONETIZATION.md, Tier 0).
+ * Paid checkout is closed: no plan carries a `stripePriceId` yet, so a priced
+ * plan 503s at checkout, and the section says so rather than letting someone
+ * click into a dead end. Flip to 'live' when the Stripe prices are set
+ * (MONETIZATION.md, Tier 0).
  */
 export const PRICING_STATUS: 'preview' | 'live' = 'preview';
 
@@ -34,10 +35,19 @@ interface PlanCopy {
   highlight?: boolean;
 }
 
+/**
+ * Two plans, and `highlight` is on **free**.
+ *
+ * `personal` and `family` were consolidated into one `support` tier. Two paid
+ * columns ask a visitor to work out which edition of the product they are
+ * entitled to, which is a question a business asks; one tier that grants
+ * everything leaves only the question actually being asked, which is whether
+ * they want to chip in. The badge sits on free for the same reason — on the
+ * dearest card it read as "the free column is the sample".
+ */
 export const PLAN_COPY: Record<string, PlanCopy> = {
-  free: { tagline: 'Everything, at a smaller scale. No card, no expiry.' },
-  personal: { tagline: 'Full history and the portfolio planner, for one person.', highlight: true },
-  family: { tagline: 'The same, shared across a household of up to five.' }
+  free: { tagline: 'Everything the app does, at a personal scale. No card, no expiry.', highlight: true },
+  support: { tagline: 'The same app with far more room, and you help keep it running.' }
 };
 
 export function taglineFor(plan: CatalogPlan): string {

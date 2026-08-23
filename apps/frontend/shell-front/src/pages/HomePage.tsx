@@ -6,6 +6,7 @@ import BgImageBox from '../components/BgImageBox';
 import { GreetingHeader } from '../components/home/GreetingHeader';
 import { ModuleCard } from '../components/home/ModuleCard';
 import { DailyTodo } from '../components/home/DailyTodo';
+import { PlanUsageCard } from '../components/home/PlanUsageCard';
 import { HOME_MODULES, moduleForRoute } from '../components/home/modules';
 import { getLastVisited } from '../services/lastVisited';
 import { User } from '../types';
@@ -76,6 +77,8 @@ export function HomePage({ user }: HomePageProps) {
             <ModuleCard key={module.key} module={module} onOpen={handleOpen} />
           ))}
         </Box>
+
+        <PlanUsageCard />
 
         <DailyTodo />
       </Box>

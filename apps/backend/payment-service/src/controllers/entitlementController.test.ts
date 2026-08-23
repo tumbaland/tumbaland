@@ -22,10 +22,10 @@ function mockRes(): Response {
 
 const resolved = {
   email: 'user@example.com',
-  planCode: 'personal',
+  planCode: 'free',
   status: 'active',
-  limits: normalizeLimits(undefined, 'personal'),
-  upgradeTo: 'family'
+  limits: normalizeLimits(undefined, 'free'),
+  upgradeTo: 'support'
 };
 
 beforeEach(() => {
