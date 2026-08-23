@@ -98,3 +98,50 @@ describe('POST /internal/download-urls (batch)', () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe('signed download URL stability', () => {
+  const downloadUrl = async (fileId: string, expiresInMinutes?: number) => {
+    const res = await request(app)
+      .post('/internal/download-url')
+      .set('x-internal-api-key', API_KEY)
+      .send({ fileId, expiresInMinutes });
+    return res.body.data.downloadUrl as string;
+  };
+
+  it('returns the same URL for the same file across requests, so the browser can cache it', async () => {
+    const first = await downloadUrl('a/b/photo.jpg');
+    const second = await downloadUrl('a/b/photo.jpg');
+
+    expect(second).toBe(first);
+  });
+
+  it('gives the single and batch endpoints matching URLs for the same file', async () => {
+    const single = await downloadUrl('a/b/photo.jpg');
+    const batch = await request(app)
+      .post('/internal/download-urls')
+      .set('x-internal-api-key', API_KEY)
+      .send({ fileIds: ['a/b/photo.jpg'] });
+
+    expect(batch.body.data.urls['a/b/photo.jpg'].downloadUrl).toBe(single);
+  });
+
+  it('still hands out a token with most of its nominal life left', async () => {
+    const url = new URL(await downloadUrl('a.jpg', 60));
+    const expires = Number(url.searchParams.get('expires'));
+    const remainingMinutes = (expires - Date.now()) / 60000;
+
+    expect(remainingMinutes).toBeGreaterThanOrEqual(45);
+    expect(remainingMinutes).toBeLessThanOrEqual(60);
+    expect(verifyToken('download', 'a.jpg', expires, url.searchParams.get('token')!)).toBe(true);
+  });
+
+  it('leaves upload URLs alone — they are one-shot, and shortening their life risks a slow upload', async () => {
+    const res = await request(app)
+      .post('/internal/upload-url')
+      .set('x-internal-api-key', API_KEY)
+      .send({ fileId: 'a.jpg', expiresInMinutes: 15 });
+
+    const expires = Number(new URL(res.body.data.uploadUrl).searchParams.get('expires'));
+    expect((expires - Date.now()) / 60000).toBeGreaterThan(14.9);
+  });
+});

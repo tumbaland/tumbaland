@@ -22,7 +22,12 @@ const normalizeParams = (params?: PhotoQueryParams) => {
   );
 };
 
-export const usePhotos = (albumId: string, params?: PhotoQueryParams) => {
+export interface UsePhotosOptions {
+  /** Skip the fetch entirely (on top of the albumId check). Default true. */
+  enabled?: boolean;
+}
+
+export const usePhotos = (albumId: string, params?: PhotoQueryParams, options?: UsePhotosOptions) => {
   const queryClient = useQueryClient();
   const tagsKey = params?.tags?.join(',');
   const memoizedParams = useMemo(
@@ -33,7 +38,7 @@ export const usePhotos = (albumId: string, params?: PhotoQueryParams) => {
   const query = useQuery<PaginatedResponse<Photo>>({
     queryKey: photoKeys.list(albumId, memoizedParams),
     queryFn: () => photoService.loadPhotosWithThumbnails(albumId, memoizedParams as PhotoQueryParams),
-    enabled: Boolean(albumId),
+    enabled: Boolean(albumId) && options?.enabled !== false,
     placeholderData: keepPreviousData
   });
 

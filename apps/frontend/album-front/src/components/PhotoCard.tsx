@@ -131,6 +131,7 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
               component="img"
               image={photo.thumbnailUrl}
               alt={photo.title || photo.originalName}
+              loading="lazy"
               sx={{
                 position: 'absolute',
                 top: 0,
@@ -162,6 +163,7 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
               component="img"
               image={photo.signedUrl}
               alt={photo.title || photo.originalName}
+              loading="lazy"
               sx={{
                 position: 'absolute',
                 top: 0,

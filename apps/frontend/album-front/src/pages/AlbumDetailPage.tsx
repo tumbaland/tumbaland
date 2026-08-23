@@ -86,12 +86,21 @@ const AlbumDetailPage: React.FC = () => {
   });
 
   // Unpaginated album photo list, so the quick-view modal can step through
-  // every photo (not just the current page's) with Previous/Next.
-  const { photos: allPhotos } = usePhotos(albumId || '', {
-    search: debouncedSearchTerm || undefined,
-    tags: selectedTags,
-    tagMatch
-  });
+  // every photo (not just the current page's) with Previous/Next. When the
+  // current page already holds the whole album — a small album, or page size
+  // "All" — this is the same list twice, so skip it rather than re-listing
+  // every photo (and re-signing a URL per file) for nothing.
+  const pageHoldsWholeAlbum = pagination.total > 0 && photos.length >= pagination.total;
+  const { photos: fullPhotoList } = usePhotos(
+    albumId || '',
+    {
+      search: debouncedSearchTerm || undefined,
+      tags: selectedTags,
+      tagMatch
+    },
+    { enabled: !pageHoldsWholeAlbum }
+  );
+  const allPhotos = pageHoldsWholeAlbum || fullPhotoList.length === 0 ? photos : fullPhotoList;
 
   const { tags: albumTags } = useAlbumTags(albumId || '');
   const { bulkUpdateTags } = useBulkTagMutation(albumId || '');

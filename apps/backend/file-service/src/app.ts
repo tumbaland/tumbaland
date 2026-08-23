@@ -9,10 +9,14 @@ import routes from './routes/routes';
 //   legitimate bursts (a 100-photo collage needs URLs for 200 files), so it
 //   is exempt.
 // - Public signed-URL routes are HMAC-token guarded; the limiter is just
-//   abuse protection. One collage view loads ~2 files per photo, so the
-//   default 300/15min starves the browser — allow a much larger budget.
+//   abuse protection. A browser opening one large album legitimately asks for
+//   hundreds of files in a few seconds, so the budget is generous — and the
+//   window is a minute rather than 15, because the failure mode of getting
+//   this wrong is a wall of broken images that has to clear on its own. A
+//   minute of throttling is a hiccup; a quarter of an hour is an outage.
 const fileHostRateLimiter = createRateLimiter({
-  max: 5000,
+  windowMs: 60 * 1000,
+  max: 1000,
   skip: (req) => req.path.startsWith('/internal/')
 });
 
