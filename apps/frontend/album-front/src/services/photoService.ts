@@ -1,5 +1,33 @@
 import { albumApi } from './albumApi';
-import { Photo, CreatePhotoData, PaginatedResponse, ApiResponse, UploadSignedUrlResponse } from '../types';
+import {
+  Photo,
+  CreatePhotoData,
+  PaginatedResponse,
+  ApiResponse,
+  UploadSignedUrlResponse,
+  BulkTagResult,
+  TagCount,
+  TagMatch
+} from '../types';
+
+export interface PhotoQueryParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  tags?: string[];
+  tagMatch?: TagMatch;
+}
+
+/**
+ * `tags` travels as a comma-joined value; the array itself would serialize as
+ * `tags[]=` through the api client's param handling.
+ */
+const toRequestParams = (params?: PhotoQueryParams) => {
+  if (!params) return undefined;
+  const { tags, tagMatch, ...rest } = params;
+  if (!tags || tags.length === 0) return rest;
+  return { ...rest, tags: tags.join(','), tagMatch: tagMatch ?? 'all' };
+};
 
 export const photoService = {
   // Create a new photo record
@@ -9,15 +37,26 @@ export const photoService = {
   },
 
   // Get photos by album
-  async getPhotosByAlbum(
-    albumId: string,
-    params?: {
-      page?: number;
-      limit?: number;
-      search?: string;
-    }
-  ): Promise<PaginatedResponse<Photo>> {
-    const response = await albumApi.get<ApiResponse<PaginatedResponse<Photo>>>(`/photos/album/${albumId}`, { params });
+  async getPhotosByAlbum(albumId: string, params?: PhotoQueryParams): Promise<PaginatedResponse<Photo>> {
+    const response = await albumApi.get<ApiResponse<PaginatedResponse<Photo>>>(`/photos/album/${albumId}`, {
+      params: toRequestParams(params)
+    });
+    return response.data;
+  },
+
+  // List every tag used in an album, most used first
+  async getAlbumTags(albumId: string): Promise<TagCount[]> {
+    const response = await albumApi.get<ApiResponse<{ tags: TagCount[] }>>(`/photos/album/${albumId}/tags`);
+    return response.data.tags;
+  },
+
+  // Add and/or remove tags across many photos in one request
+  async bulkUpdateTags(photoIds: string[], changes: { add?: string[]; remove?: string[] }): Promise<BulkTagResult> {
+    const response = await albumApi.put<ApiResponse<BulkTagResult>>('/photos/tags', {
+      photoIds,
+      add: changes.add,
+      remove: changes.remove
+    });
     return response.data;
   },
 
@@ -97,11 +136,7 @@ export const photoService = {
   // Utility: Load photos with signed URLs (album service now provides them directly)
   async loadPhotosWithThumbnails(
     albumId: string,
-    params?: {
-      page?: number;
-      limit?: number;
-      search?: string;
-    }
+    params?: PhotoQueryParams
   ): Promise<PaginatedResponse<Photo & { thumbnailUrl?: string; fileUrl?: string }>> {
     // Get photos from album service - it now includes signed URLs directly
     const photosResponse = await this.getPhotosByAlbum(albumId, params);

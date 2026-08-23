@@ -40,7 +40,7 @@ it('saves the trimmed title and description, then closes', async () => {
   await userEvent.type(screen.getByLabelText(/photo title/i), '  New title  ');
   await userEvent.click(screen.getByRole('button', { name: /save changes/i }));
 
-  expect(onSave).toHaveBeenCalledWith('photo-1', { title: 'New title', description: undefined });
+  expect(onSave).toHaveBeenCalledWith('photo-1', { title: 'New title', description: undefined, tags: [] });
   expect(onClose).toHaveBeenCalledTimes(1);
 });
 
@@ -51,7 +51,7 @@ it('sends undefined for blank fields rather than empty strings', async () => {
 
   await userEvent.click(screen.getByRole('button', { name: /save changes/i }));
 
-  expect(onSave).toHaveBeenCalledWith('photo-1', { title: undefined, description: undefined });
+  expect(onSave).toHaveBeenCalledWith('photo-1', { title: undefined, description: undefined, tags: [] });
 });
 
 it('logs and stays open (does not call onClose) when onSave rejects', async () => {

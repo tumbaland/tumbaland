@@ -12,18 +12,28 @@ import {
   CircularProgress
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
-import { Photo } from '../types';
+import { Photo, TagCount } from '../types';
+import TagInput from './TagInput';
 
 interface EditPhotoDialogProps {
   open: boolean;
   photo: Photo | null;
+  /** Album vocabulary offered as tag suggestions. */
+  suggestions?: TagCount[];
   onClose: () => void;
-  onSave: (photoId: string, data: { title?: string; description?: string }) => Promise<void>;
+  onSave: (photoId: string, data: { title?: string; description?: string; tags?: string[] }) => Promise<void>;
 }
 
-const EditPhotoDialog: React.FC<EditPhotoDialogProps> = ({ open, photo, onClose, onSave }) => {
+const EditPhotoDialog: React.FC<EditPhotoDialogProps> = ({
+  open,
+  photo,
+  suggestions = [],
+  onClose,
+  onSave
+}) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   // Update local state when photo changes
@@ -31,9 +41,11 @@ const EditPhotoDialog: React.FC<EditPhotoDialogProps> = ({ open, photo, onClose,
     if (photo) {
       setTitle(photo.title || '');
       setDescription(photo.description || '');
+      setTags(photo.tags || []);
     } else {
       setTitle('');
       setDescription('');
+      setTags([]);
     }
   }, [photo]);
 
@@ -44,7 +56,8 @@ const EditPhotoDialog: React.FC<EditPhotoDialogProps> = ({ open, photo, onClose,
     try {
       await onSave(photo._id, {
         title: title.trim() || undefined,
-        description: description.trim() || undefined
+        description: description.trim() || undefined,
+        tags
       });
       onClose();
     } catch (error) {
@@ -149,6 +162,16 @@ const EditPhotoDialog: React.FC<EditPhotoDialogProps> = ({ open, photo, onClose,
                 }
               }}
             />
+
+            <Box sx={{ mb: 3 }}>
+              <TagInput
+                value={tags}
+                onChange={setTags}
+                suggestions={suggestions}
+                disabled={saving}
+                helperText="Press Enter or comma to add a tag"
+              />
+            </Box>
 
             <TextField
               margin="dense"

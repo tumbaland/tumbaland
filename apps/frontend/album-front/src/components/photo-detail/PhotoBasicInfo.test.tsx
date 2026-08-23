@@ -1,4 +1,6 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { vi } from 'vitest';
 import PhotoBasicInfo from './PhotoBasicInfo';
 import { makePhoto } from '../../test/fixtures';
 
@@ -80,4 +82,62 @@ it('wires swipe gestures on the image container to onSwipeNext/onSwipePrevious',
   fireEvent.touchStart(swipeContainer, { touches: [{ clientX: 100, clientY: 100 }] });
   fireEvent.touchEnd(swipeContainer, { changedTouches: [{ clientX: 200, clientY: 100 }] });
   expect(onSwipePrevious).toHaveBeenCalledTimes(1);
+});
+
+describe('inline tag editing', () => {
+  const editableProps = {
+    formatFileSize: () => '1 KB',
+    formatDate: () => 'Jan 1, 2024'
+  };
+
+  it('shows no tags section at all when tags are not editable and there are none', () => {
+    render(<PhotoBasicInfo photo={makePhoto({ tags: [] })} {...editableProps} />);
+
+    expect(screen.queryByText('Tags')).not.toBeInTheDocument();
+  });
+
+  it('offers an "Add tags" affordance when editing is enabled', () => {
+    render(<PhotoBasicInfo photo={makePhoto({ tags: [] })} {...editableProps} onSaveTags={vi.fn()} />);
+
+    expect(screen.getByText('Add tags')).toBeInTheDocument();
+  });
+
+  it('saves an added tag alongside the existing ones', async () => {
+    const onSaveTags = vi.fn().mockResolvedValue(undefined);
+    render(
+      <PhotoBasicInfo photo={makePhoto({ tags: ['beach'] })} {...editableProps} onSaveTags={onSaveTags} />
+    );
+
+    await userEvent.click(screen.getByText('Edit'));
+    await userEvent.type(screen.getByRole('combobox'), 'sunset{Enter}');
+    await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
+
+    await waitFor(() => expect(onSaveTags).toHaveBeenCalledWith(['beach', 'sunset']));
+  });
+
+  it('discards the draft when the edit is cancelled', async () => {
+    const onSaveTags = vi.fn().mockResolvedValue(undefined);
+    render(
+      <PhotoBasicInfo photo={makePhoto({ tags: ['beach'] })} {...editableProps} onSaveTags={onSaveTags} />
+    );
+
+    await userEvent.click(screen.getByText('Edit'));
+    await userEvent.type(screen.getByRole('combobox'), 'sunset{Enter}');
+    await userEvent.click(screen.getByRole('button', { name: /cancel/i }));
+
+    expect(onSaveTags).not.toHaveBeenCalled();
+    expect(screen.queryByText('sunset')).not.toBeInTheDocument();
+  });
+
+  it('stays in edit mode when saving fails', async () => {
+    const onSaveTags = vi.fn().mockRejectedValue(new Error('offline'));
+    render(<PhotoBasicInfo photo={makePhoto({ tags: [] })} {...editableProps} onSaveTags={onSaveTags} />);
+
+    await userEvent.click(screen.getByText('Add tags'));
+    await userEvent.type(screen.getByRole('combobox'), 'beach{Enter}');
+    await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
+
+    await waitFor(() => expect(onSaveTags).toHaveBeenCalled());
+    expect(screen.getByRole('combobox')).toBeInTheDocument();
+  });
 });

@@ -6,18 +6,29 @@ import {
   getPhotoById,
   updatePhoto,
   deletePhoto,
+  getAlbumTags,
+  bulkUpdateTags,
   getUploadSignedUrlRequest,
   updatePhotoAIAnalysis,
   getPhotosForAIAnalysis,
   getPhotoByFileId
 } from '../controllers/photoController';
-import { createPhotoSchema, updatePhotoSchema, uploadSignedUrlSchema, updatePhotoAIAnalysisSchema } from '../validation/schemas';
+import {
+  createPhotoSchema,
+  updatePhotoSchema,
+  uploadSignedUrlSchema,
+  updatePhotoAIAnalysisSchema,
+  bulkUpdateTagsSchema
+} from '../validation/schemas';
 
 const router = express.Router();
 
 // Photo routes
 router.post('/', authenticateToken, validate(createPhotoSchema), createPhoto);
 router.get('/album/:albumId', authenticateToken, getPhotosByAlbum);
+router.get('/album/:albumId/tags', authenticateToken, getAlbumTags);
+// Must precede PUT /:id — otherwise '/tags' is swallowed as an :id.
+router.put('/tags', authenticateToken, validate(bulkUpdateTagsSchema), bulkUpdateTags);
 router.get('/:id', authenticateToken, getPhotoById);
 router.get('/by-file/:fileId', getPhotoByFileId); // Public route for file service
 router.put('/:id', authenticateToken, validate(updatePhotoSchema), updatePhoto);

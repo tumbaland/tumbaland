@@ -1,8 +1,11 @@
-import React from 'react';
-import { Box, Typography, Divider, Chip } from '@mui/material';
-import { Photo } from '../../types';
+import React, { useEffect, useState } from 'react';
+import { Box, Typography, Divider, Chip, Button, CircularProgress } from '@mui/material';
+import LocalOfferIcon from '@mui/icons-material/LocalOffer';
+import { logger } from '@tumbaland/frontend-core';
+import { Photo, TagCount } from '../../types';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { useProgressiveImage } from '../../hooks/useProgressiveImage';
+import TagInput from '../TagInput';
 
 interface PhotoBasicInfoProps {
   photo: Photo;
@@ -10,6 +13,10 @@ interface PhotoBasicInfoProps {
   formatDate: (dateString: string) => string;
   onSwipeNext?: () => void;
   onSwipePrevious?: () => void;
+  /** Album vocabulary offered as tag suggestions. */
+  tagSuggestions?: TagCount[];
+  /** When given, the tags block becomes editable in place. */
+  onSaveTags?: (tags: string[]) => Promise<void>;
 }
 
 const PhotoBasicInfo: React.FC<PhotoBasicInfoProps> = ({
@@ -17,10 +24,35 @@ const PhotoBasicInfo: React.FC<PhotoBasicInfoProps> = ({
   formatFileSize,
   formatDate,
   onSwipeNext,
-  onSwipePrevious
+  onSwipePrevious,
+  tagSuggestions = [],
+  onSaveTags
 }) => {
   const swipeHandlers = useSwipeNavigation(onSwipeNext ?? (() => {}), onSwipePrevious ?? (() => {}));
   const { displaySrc } = useProgressiveImage(photo.signedUrl, photo.thumbnailUrl || photo.thumbnailSignedUrl);
+  const [editingTags, setEditingTags] = useState(false);
+  const [draftTags, setDraftTags] = useState<string[]>(photo.tags || []);
+  const [savingTags, setSavingTags] = useState(false);
+
+  // Arrow-key navigation swaps the photo under this panel; drop any half-typed
+  // tag rather than carrying it onto the next photo.
+  useEffect(() => {
+    setEditingTags(false);
+    setDraftTags(photo.tags || []);
+  }, [photo._id, photo.tags]);
+
+  const handleSaveTags = async () => {
+    if (!onSaveTags) return;
+    setSavingTags(true);
+    try {
+      await onSaveTags(draftTags);
+      setEditingTags(false);
+    } catch (error) {
+      logger.error('Failed to save tags', error);
+    } finally {
+      setSavingTags(false);
+    }
+  };
   return (
     <Box sx={{ display: 'flex', gap: 4, flexDirection: { xs: 'column', lg: 'row' } }}>
       {/* Photo Display */}
@@ -140,7 +172,7 @@ const PhotoBasicInfo: React.FC<PhotoBasicInfoProps> = ({
             {photo.originalName}
           </Typography>
         </Box>
-        {photo.tags && photo.tags.length > 0 && (
+        {(onSaveTags || (photo.tags && photo.tags.length > 0)) && (
           <Box sx={{ mt: 3 }}>
             <Typography
               variant="body2"
@@ -151,11 +183,67 @@ const PhotoBasicInfo: React.FC<PhotoBasicInfoProps> = ({
               }}>
               Tags
             </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {photo.tags.map((tag, index) => (
-                <Chip key={index} label={tag} size="small" variant="outlined" sx={{ borderRadius: 1.5 }} />
-              ))}
-            </Box>
+
+            {editingTags ? (
+              <Box>
+                <TagInput
+                  value={draftTags}
+                  onChange={setDraftTags}
+                  suggestions={tagSuggestions}
+                  disabled={savingTags}
+                  size="small"
+                  autoFocus
+                  label=""
+                  helperText="Press Enter or comma to add a tag"
+                />
+                <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={handleSaveTags}
+                    disabled={savingTags}
+                    startIcon={savingTags ? <CircularProgress size={14} color="inherit" /> : null}
+                    sx={{ textTransform: 'none', borderRadius: 2 }}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      setDraftTags(photo.tags || []);
+                      setEditingTags(false);
+                    }}
+                    disabled={savingTags}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    Cancel
+                  </Button>
+                </Box>
+              </Box>
+            ) : (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+                {(photo.tags || []).map((tag, index) => (
+                  <Chip
+                    key={index}
+                    label={tag}
+                    size="small"
+                    variant="outlined"
+                    sx={{ borderRadius: 1.5 }}
+                    onClick={onSaveTags ? () => setEditingTags(true) : undefined}
+                  />
+                ))}
+                {onSaveTags && (
+                  <Chip
+                    icon={<LocalOfferIcon sx={{ fontSize: 16 }} />}
+                    label={photo.tags && photo.tags.length > 0 ? 'Edit' : 'Add tags'}
+                    size="small"
+                    variant="outlined"
+                    onClick={() => setEditingTags(true)}
+                    sx={{ borderRadius: 1.5, borderStyle: 'dashed', color: 'text.secondary' }}
+                  />
+                )}
+              </Box>
+            )}
           </Box>
         )}
       </Box>

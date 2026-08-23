@@ -9,6 +9,8 @@ jest.mock('../models/Photo', () => {
   ctor.find = jest.fn();
   ctor.findByIdAndUpdate = jest.fn();
   ctor.findByIdAndDelete = jest.fn();
+  ctor.aggregate = jest.fn();
+  ctor.updateMany = jest.fn();
   return { __esModule: true, default: ctor };
 });
 
@@ -45,6 +47,8 @@ const mockedFindOne = Photo.findOne as unknown as jest.Mock;
 const mockedFind = Photo.find as unknown as jest.Mock;
 const mockedFindByIdAndUpdate = Photo.findByIdAndUpdate as unknown as jest.Mock;
 const mockedFindByIdAndDelete = Photo.findByIdAndDelete as unknown as jest.Mock;
+const mockedAggregate = Photo.aggregate as unknown as jest.Mock;
+const mockedUpdateMany = Photo.updateMany as unknown as jest.Mock;
 const mockedAlbumFindById = Album.findById as unknown as jest.Mock;
 const mockedAlbumFindOne = Album.findOne as unknown as jest.Mock;
 const mockedAlbumUpdateOne = Album.updateOne as unknown as jest.Mock;
@@ -164,6 +168,39 @@ describe('getPhotosByAlbum', () => {
 
     const result = await photoService.getPhotosByAlbum('a1', {});
     expect(result.photos[0].signedUrl).toBeUndefined();
+  });
+
+  it('narrows the query to photos carrying every selected tag', async () => {
+    mockedAlbumFindById.mockResolvedValue({ _id: 'a1' });
+    mockedFind.mockReturnValue(chainable([]));
+    (Photo.countDocuments as unknown as jest.Mock) = jest.fn().mockResolvedValue(0);
+    mockedGetPhotoSignedUrlsBatch.mockResolvedValue({});
+
+    await photoService.getPhotosByAlbum('a1', { tags: ['Beach', ' sunset '] });
+
+    expect(mockedFind).toHaveBeenCalledWith({ albumId: 'a1', tags: { $all: ['beach', 'sunset'] } });
+  });
+
+  it('widens the query to the union of the selected tags when tagMatch is any', async () => {
+    mockedAlbumFindById.mockResolvedValue({ _id: 'a1' });
+    mockedFind.mockReturnValue(chainable([]));
+    (Photo.countDocuments as unknown as jest.Mock) = jest.fn().mockResolvedValue(0);
+    mockedGetPhotoSignedUrlsBatch.mockResolvedValue({});
+
+    await photoService.getPhotosByAlbum('a1', { tags: ['beach', 'sunset'], tagMatch: 'any' });
+
+    expect(mockedFind).toHaveBeenCalledWith({ albumId: 'a1', tags: { $in: ['beach', 'sunset'] } });
+  });
+
+  it('does not filter when the tag list is empty or only whitespace', async () => {
+    mockedAlbumFindById.mockResolvedValue({ _id: 'a1' });
+    mockedFind.mockReturnValue(chainable([]));
+    (Photo.countDocuments as unknown as jest.Mock) = jest.fn().mockResolvedValue(0);
+    mockedGetPhotoSignedUrlsBatch.mockResolvedValue({});
+
+    await photoService.getPhotosByAlbum('a1', { tags: ['  ', ''] });
+
+    expect(mockedFind).toHaveBeenCalledWith({ albumId: 'a1' });
   });
 
   it('also fetches thumbnail signed URLs for photos that have a thumbnail', async () => {
@@ -353,5 +390,84 @@ describe('getPhotosForAIAnalysis', () => {
 
     expect(limit).toHaveBeenCalledWith(25);
     expect(result).toEqual([{ _id: 'p1' }]);
+  });
+});
+
+
+describe('getAlbumTags', () => {
+  it('throws NotFoundError when the album does not exist', async () => {
+    mockedAlbumFindById.mockResolvedValue(null);
+    await expect(photoService.getAlbumTags('68d8f4b1c2a3b4d5e6f70123')).rejects.toMatchObject({
+      name: 'NotFoundError'
+    });
+  });
+
+  it('throws NotFoundError rather than a cast error for a malformed album id', async () => {
+    await expect(photoService.getAlbumTags('not-an-id')).rejects.toMatchObject({ name: 'NotFoundError' });
+  });
+
+  it('returns each tag with its usage count', async () => {
+    mockedAlbumFindById.mockResolvedValue({ _id: 'a1' });
+    mockedAggregate.mockResolvedValue([
+      { _id: 'beach', count: 4 },
+      { _id: 'sunset', count: 1 }
+    ]);
+
+    await expect(photoService.getAlbumTags('68d8f4b1c2a3b4d5e6f70123')).resolves.toEqual([
+      { tag: 'beach', count: 4 },
+      { tag: 'sunset', count: 1 }
+    ]);
+  });
+});
+
+describe('bulkUpdateTags', () => {
+  const photoId = '68d8f4b1c2a3b4d5e6f70123';
+
+  it('is a no-op when there are no photos or no tag changes', async () => {
+    await expect(photoService.bulkUpdateTags({ photoIds: [], add: ['beach'] })).resolves.toEqual({
+      matched: 0,
+      modified: 0,
+      tags: []
+    });
+    await expect(photoService.bulkUpdateTags({ photoIds: [photoId] })).resolves.toEqual({
+      matched: 0,
+      modified: 0,
+      tags: []
+    });
+    expect(mockedUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it('adds normalized tags with $addToSet so re-tagging does not duplicate', async () => {
+    mockedUpdateMany.mockResolvedValue({ matchedCount: 2, modifiedCount: 2 });
+    mockedFindById.mockReturnValue({ select: jest.fn().mockResolvedValue(null) });
+
+    const result = await photoService.bulkUpdateTags({ photoIds: [photoId], add: ['Beach', 'beach ', ''] });
+
+    expect(mockedUpdateMany).toHaveBeenCalledTimes(1);
+    expect(mockedUpdateMany.mock.calls[0][1]).toEqual({ $addToSet: { tags: { $each: ['beach'] } } });
+    expect(result).toMatchObject({ matched: 2, modified: 2 });
+  });
+
+  it('pulls removed tags and returns the album\'s refreshed tag list', async () => {
+    mockedUpdateMany.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+    mockedFindById.mockReturnValue({
+      select: jest.fn().mockResolvedValue({ albumId: '68d8f4b1c2a3b4d5e6f70999' })
+    });
+    mockedAlbumFindById.mockResolvedValue({ _id: '68d8f4b1c2a3b4d5e6f70999' });
+    mockedAggregate.mockResolvedValue([{ _id: 'sunset', count: 3 }]);
+
+    const result = await photoService.bulkUpdateTags({ photoIds: [photoId], remove: ['Beach'] });
+
+    expect(mockedUpdateMany.mock.calls[0][1]).toEqual({ $pull: { tags: { $in: ['beach'] } } });
+    expect(result.tags).toEqual([{ tag: 'sunset', count: 3 }]);
+  });
+
+  it('ignores ids that are not valid ObjectIds', async () => {
+    await expect(photoService.bulkUpdateTags({ photoIds: ['not-an-id'], add: ['beach'] })).resolves.toEqual({
+      matched: 0,
+      modified: 0,
+      tags: []
+    });
+    expect(mockedUpdateMany).not.toHaveBeenCalled();
   });
 });

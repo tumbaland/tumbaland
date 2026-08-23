@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Photo, PaginatedResponse } from '../types';
-import { photoService } from '../services/photoService';
+import { photoService, PhotoQueryParams } from '../services/photoService';
+import { albumTagKeys } from './useAlbumTags';
 
 const photoKeys = {
   all: ['photos'] as const,
@@ -9,34 +10,29 @@ const photoKeys = {
   list: (albumId: string, params: Record<string, unknown>) => [...photoKeys.album(albumId), params] as const
 };
 
-const normalizeParams = (params?: {
-  page?: number;
-  limit?: number;
-  search?: string;
-}) => {
+const normalizeParams = (params?: PhotoQueryParams) => {
   if (!params) return {};
   return Object.fromEntries(
-    Object.entries(params).filter(([, value]) => value !== undefined && value !== null)
+    Object.entries(params).filter(([, value]) => {
+      if (value === undefined || value === null) return false;
+      // An empty tag selection means "no filter" — keep it out of the query key
+      // so clearing the filter reuses the unfiltered result already in cache.
+      return !(Array.isArray(value) && value.length === 0);
+    })
   );
 };
 
-export const usePhotos = (
-  albumId: string,
-  params?: {
-    page?: number;
-    limit?: number;
-    search?: string;
-  }
-) => {
+export const usePhotos = (albumId: string, params?: PhotoQueryParams) => {
   const queryClient = useQueryClient();
+  const tagsKey = params?.tags?.join(',');
   const memoizedParams = useMemo(
     () => normalizeParams(params),
-    [params?.page, params?.limit, params?.search]
+    [params?.page, params?.limit, params?.search, tagsKey, params?.tagMatch]
   );
 
   const query = useQuery<PaginatedResponse<Photo>>({
     queryKey: photoKeys.list(albumId, memoizedParams),
-    queryFn: () => photoService.loadPhotosWithThumbnails(albumId, memoizedParams),
+    queryFn: () => photoService.loadPhotosWithThumbnails(albumId, memoizedParams as PhotoQueryParams),
     enabled: Boolean(albumId),
     placeholderData: keepPreviousData
   });
@@ -48,6 +44,11 @@ export const usePhotos = (
     onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: photoKeys.album(albumId) });
       queryClient.invalidateQueries({ queryKey: ['photo', variables.id] });
+      // An edit that touched tags changes the album's vocabulary and what the
+      // filter row shows counts for.
+      if (variables.data.tags) {
+        queryClient.invalidateQueries({ queryKey: albumTagKeys.album(albumId) });
+      }
     }
   });
 

@@ -23,6 +23,9 @@ const e2eEnv = {
 
 export default defineConfig({
   testDir: './e2e',
+  // Warms every dev server so a cold Vite compile is not charged to the first
+  // test's timeout. See e2e/globalSetup.ts.
+  globalSetup: './e2e/globalSetup.ts',
   timeout: 30_000,
   expect: {
     timeout: 10_000

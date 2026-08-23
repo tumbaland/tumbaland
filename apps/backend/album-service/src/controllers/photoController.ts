@@ -6,6 +6,20 @@ import { assertStorageHeadroom, recordStoredBytes, releaseStoredBytes, storageAc
 import Album from '../models/Album';
 
 /**
+ * Accepts both `?tags=a,b` and repeated `?tags=a&tags=b`, since the two forms
+ * are equally natural to build on the client.
+ */
+const parseTagsParam = (raw: unknown): string[] | undefined => {
+  if (raw === undefined || raw === null) return undefined;
+  const values = Array.isArray(raw) ? raw : [raw];
+  const tags = values
+    .flatMap((value) => String(value).split(','))
+    .map((tag) => tag.trim())
+    .filter((tag) => tag.length > 0);
+  return tags.length > 0 ? tags : undefined;
+};
+
+/**
  * Create a new photo record
  */
 export const createPhoto = async (req: Request, res: Response): Promise<void> => {
@@ -27,15 +41,39 @@ export const createPhoto = async (req: Request, res: Response): Promise<void> =>
  */
 export const getPhotosByAlbum = async (req: Request, res: Response): Promise<void> => {
   const { albumId } = req.params;
-  const { page, limit, search } = req.query;
+  const { page, limit, search, tags, tagMatch } = req.query;
 
   const result = await photoService.getPhotosByAlbum(albumId as string, {
     page: page ? Number(page) : 1,
     limit: limit ? Number(limit) : undefined,
-    search: search as string
+    search: search as string,
+    tags: parseTagsParam(tags),
+    tagMatch: tagMatch === 'any' ? 'any' : 'all'
   });
 
   sendSuccess(res, { photos: result.photos, pagination: result.pagination });
+};
+
+/**
+ * List the tags used by an album's photos, with usage counts
+ */
+export const getAlbumTags = async (req: Request, res: Response): Promise<void> => {
+  const { albumId } = req.params;
+
+  const tags = await photoService.getAlbumTags(albumId as string);
+
+  sendSuccess(res, { tags });
+};
+
+/**
+ * Add and/or remove tags across a set of photos
+ */
+export const bulkUpdateTags = async (req: Request, res: Response): Promise<void> => {
+  const { photoIds, add, remove } = req.body;
+
+  const result = await photoService.bulkUpdateTags({ photoIds, add, remove });
+
+  sendSuccess(res, result, 'Tags updated successfully');
 };
 
 /**

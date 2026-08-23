@@ -77,6 +77,7 @@ interface PhotosGridProps {
   onDeletePhoto: (photo: Photo) => void;
   onSetCoverPhoto: (photo: Photo) => void;
   onViewPhotoDetails: (photo: Photo) => void;
+  onEditPhotoTags?: (photo: Photo) => void;
   onUploadPhotos: () => void;
   selectMode?: boolean;
   selectedIds?: Set<string>;
@@ -94,6 +95,7 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
   onDeletePhoto,
   onSetCoverPhoto,
   onViewPhotoDetails,
+  onEditPhotoTags,
   onUploadPhotos,
   selectMode = false,
   selectedIds,
@@ -238,6 +240,7 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
               onDelete={onDeletePhoto}
               onSetCover={onSetCoverPhoto}
               onViewDetails={onViewPhotoDetails}
+              onEditTags={onEditPhotoTags}
               isCoverPhoto={album?.coverPhotoId === photo._id}
               selectMode={selectMode}
               selected={selectedIds?.has(photo._id)}

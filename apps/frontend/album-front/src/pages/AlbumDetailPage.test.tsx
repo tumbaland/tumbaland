@@ -26,9 +26,15 @@ vi.mock('../components/FileUpload', () => ({
 }));
 
 vi.mock('../hooks/usePhotos', () => ({ usePhotos: vi.fn() }));
+vi.mock('../hooks/useAlbumTags', () => ({
+  useAlbumTags: vi.fn(),
+  useBulkTagMutation: vi.fn(),
+  albumTagKeys: { all: ['photo-tags'], album: (albumId: string) => ['photo-tags', albumId] }
+}));
 vi.mock('../services/albumService', () => ({ albumService: { getAlbumById: vi.fn(), setCoverPhoto: vi.fn() } }));
 
 import { usePhotos } from '../hooks/usePhotos';
+import { useAlbumTags, useBulkTagMutation } from '../hooks/useAlbumTags';
 import { albumService } from '../services/albumService';
 import { makeAlbum, makePhoto } from '../test/fixtures';
 import AlbumDetailPage from './AlbumDetailPage';
@@ -37,6 +43,9 @@ import AlbumDetailPage from './AlbumDetailPage';
 // no longer satisfies ReturnType's `(...args: any) => any` constraint. Type the
 // override against the real hook's return type instead of the mock's.
 const mockedUsePhotos = vi.mocked(usePhotos);
+const mockedUseAlbumTags = vi.mocked(useAlbumTags);
+const mockedUseBulkTagMutation = vi.mocked(useBulkTagMutation);
+const bulkUpdateTags = vi.fn().mockResolvedValue({ matched: 1, modified: 1, tags: [] });
 const mockedGetAlbumById = albumService.getAlbumById as unknown as ReturnType<typeof vi.fn>;
 
 function renderPage() {
@@ -68,6 +77,9 @@ function basePhotosReturn(overrides: Partial<ReturnType<typeof usePhotos>> = {})
 beforeEach(() => {
   vi.clearAllMocks();
   mockedUsePhotos.mockReturnValue(basePhotosReturn());
+  mockedUseAlbumTags.mockReturnValue({ tags: [], loading: false, error: null });
+  bulkUpdateTags.mockResolvedValue({ matched: 1, modified: 1, tags: [] });
+  mockedUseBulkTagMutation.mockReturnValue({ bulkUpdateTags, saving: false });
   mockedGetAlbumById.mockResolvedValue(makeAlbum({ _id: 'album-1', name: 'Trip' }));
 });
 
@@ -190,7 +202,9 @@ it('edits a photo via the card menu and dialog', async () => {
   await userEvent.type(titleInput, 'Renamed');
   await userEvent.click(screen.getByRole('button', { name: /save changes/i }));
 
-  await waitFor(() => expect(updatePhoto).toHaveBeenCalledWith('p1', { title: 'Renamed', description: undefined }));
+  await waitFor(() =>
+    expect(updatePhoto).toHaveBeenCalledWith('p1', { title: 'Renamed', description: undefined, tags: [] })
+  );
 });
 
 it('sets a cover photo via the card menu', async () => {
@@ -354,4 +368,88 @@ it('refreshes photos when an upload completes, and closes the dialog independent
 
   await userEvent.click(screen.getByText('simulate close upload'));
   expect(screen.queryByText('file upload')).not.toBeInTheDocument();
+});
+
+
+describe('tagging and tag filtering', () => {
+  const taggedPhotos = [
+    makePhoto({ _id: 'p1', title: 'Sunset', tags: ['beach'] }),
+    makePhoto({ _id: 'p2', title: 'Pier', tags: [] })
+  ];
+
+  function withPhotos() {
+    mockedUsePhotos.mockReturnValue(
+      basePhotosReturn({ photos: taggedPhotos, pagination: { page: 1, limit: 24, total: 2, pages: 1 } })
+    );
+  }
+
+  it('shows no tag filter row when the album has no tags', async () => {
+    withPhotos();
+    renderPage();
+    await screen.findByRole('heading', { name: 'Trip' });
+
+    expect(screen.queryByText(/filter by tag/i)).not.toBeInTheDocument();
+  });
+
+  it('passes the selected tag through to usePhotos', async () => {
+    withPhotos();
+    mockedUseAlbumTags.mockReturnValue({ tags: [{ tag: 'beach', count: 1 }], loading: false, error: null });
+
+    renderPage();
+    await screen.findByRole('heading', { name: 'Trip' });
+
+    await userEvent.click(screen.getByText('beach (1)'));
+
+    await waitFor(() =>
+      expect(mockedUsePhotos).toHaveBeenCalledWith(
+        'album-1',
+        expect.objectContaining({ tags: ['beach'], tagMatch: 'all' })
+      )
+    );
+  });
+
+  it('opens the tag dialog from a card and saves the added tag', async () => {
+    withPhotos();
+    renderPage();
+    await screen.findByRole('heading', { name: 'Trip' });
+
+    await userEvent.click(screen.getAllByText('Add tags')[0]);
+    await userEvent.type(screen.getByRole('combobox'), 'pier{Enter}');
+    await userEvent.click(screen.getByRole('button', { name: /save tags/i }));
+
+    await waitFor(() =>
+      expect(bulkUpdateTags).toHaveBeenCalledWith({ photoIds: ['p2'], add: ['pier'], remove: [] })
+    );
+  });
+
+  it('tags the whole selection from the select-mode toolbar', async () => {
+    withPhotos();
+    renderPage();
+    await screen.findByRole('heading', { name: 'Trip' });
+
+    await userEvent.click(screen.getByRole('button', { name: /^select$/i }));
+    await userEvent.click(screen.getByRole('button', { name: /select all on page/i }));
+    await userEvent.click(screen.getByRole('button', { name: /^tag$/i }));
+
+    expect(screen.getByText('Tag 2 photos')).toBeInTheDocument();
+
+    await userEvent.type(screen.getByRole('combobox'), 'trip{Enter}');
+    await userEvent.click(screen.getByRole('button', { name: /save tags/i }));
+
+    await waitFor(() =>
+      expect(bulkUpdateTags).toHaveBeenCalledWith({ photoIds: ['p1', 'p2'], add: ['trip'], remove: [] })
+    );
+    // Leaves select mode once the selection has been tagged.
+    await waitFor(() => expect(screen.queryByText('2 selected')).not.toBeInTheDocument());
+  });
+
+  it('keeps the Tag button disabled while nothing is selected', async () => {
+    withPhotos();
+    renderPage();
+    await screen.findByRole('heading', { name: 'Trip' });
+
+    await userEvent.click(screen.getByRole('button', { name: /^select$/i }));
+
+    expect(screen.getByRole('button', { name: /^tag$/i })).toBeDisabled();
+  });
 });

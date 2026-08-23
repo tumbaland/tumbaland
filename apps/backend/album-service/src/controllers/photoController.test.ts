@@ -6,6 +6,8 @@ jest.mock('../services/photoService', () => ({
   default: {
     createPhoto: jest.fn(),
     getPhotosByAlbum: jest.fn(),
+    getAlbumTags: jest.fn(),
+    bulkUpdateTags: jest.fn(),
     getPhotoById: jest.fn(),
     updatePhoto: jest.fn(),
     deletePhoto: jest.fn(),
@@ -36,6 +38,8 @@ import { assertStorageHeadroom, recordStoredBytes, releaseStoredBytes } from '..
 import {
   createPhoto,
   getPhotosByAlbum,
+  getAlbumTags,
+  bulkUpdateTags,
   getPhotoById,
   updatePhoto,
   deletePhoto,
@@ -95,6 +99,70 @@ describe('createPhoto', () => {
   });
 });
 
+describe('tag endpoints', () => {
+  it('accepts a comma-separated tags param', async () => {
+    mockedPhotoService.getPhotosByAlbum.mockResolvedValue({ photos: [], pagination: { page: 1, total: 0, pages: 0 } });
+
+    await getPhotosByAlbum(baseReq({ params: { albumId: 'a1' }, query: { tags: 'beach, sunset' } }), mockRes());
+
+    expect(mockedPhotoService.getPhotosByAlbum).toHaveBeenCalledWith(
+      'a1',
+      expect.objectContaining({ tags: ['beach', 'sunset'], tagMatch: 'all' })
+    );
+  });
+
+  it('accepts a repeated tags param', async () => {
+    mockedPhotoService.getPhotosByAlbum.mockResolvedValue({ photos: [], pagination: { page: 1, total: 0, pages: 0 } });
+
+    await getPhotosByAlbum(
+      baseReq({ params: { albumId: 'a1' }, query: { tags: ['beach', 'sunset'], tagMatch: 'any' } }),
+      mockRes()
+    );
+
+    expect(mockedPhotoService.getPhotosByAlbum).toHaveBeenCalledWith(
+      'a1',
+      expect.objectContaining({ tags: ['beach', 'sunset'], tagMatch: 'any' })
+    );
+  });
+
+  it('falls back to matching all tags for an unrecognised tagMatch', async () => {
+    mockedPhotoService.getPhotosByAlbum.mockResolvedValue({ photos: [], pagination: { page: 1, total: 0, pages: 0 } });
+
+    await getPhotosByAlbum(baseReq({ params: { albumId: 'a1' }, query: { tags: 'beach', tagMatch: 'weird' } }), mockRes());
+
+    expect(mockedPhotoService.getPhotosByAlbum).toHaveBeenCalledWith(
+      'a1',
+      expect.objectContaining({ tagMatch: 'all' })
+    );
+  });
+
+  it('returns the album tag list', async () => {
+    mockedPhotoService.getAlbumTags.mockResolvedValue([{ tag: 'beach', count: 2 }]);
+    const res = mockRes();
+
+    await getAlbumTags(baseReq({ params: { albumId: 'a1' } }), res);
+
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { tags: [{ tag: 'beach', count: 2 }] } })
+    );
+  });
+
+  it('passes the bulk tag payload through to the service', async () => {
+    mockedPhotoService.bulkUpdateTags.mockResolvedValue({ matched: 2, modified: 2, tags: [] });
+
+    await bulkUpdateTags(
+      baseReq({ body: { photoIds: ['p1', 'p2'], add: ['beach'], remove: ['old'] } }),
+      mockRes()
+    );
+
+    expect(mockedPhotoService.bulkUpdateTags).toHaveBeenCalledWith({
+      photoIds: ['p1', 'p2'],
+      add: ['beach'],
+      remove: ['old']
+    });
+  });
+});
+
 describe('getPhotosByAlbum', () => {
   it('parses pagination query params', async () => {
     mockedPhotoService.getPhotosByAlbum.mockResolvedValue({
@@ -105,7 +173,13 @@ describe('getPhotosByAlbum', () => {
 
     await getPhotosByAlbum(baseReq({ params: { albumId: 'a1' }, query: { page: '2', limit: '5' } }), res);
 
-    expect(mockedPhotoService.getPhotosByAlbum).toHaveBeenCalledWith('a1', { page: 2, limit: 5, search: undefined });
+    expect(mockedPhotoService.getPhotosByAlbum).toHaveBeenCalledWith('a1', {
+      page: 2,
+      limit: 5,
+      search: undefined,
+      tags: undefined,
+      tagMatch: 'all'
+    });
   });
 });
 

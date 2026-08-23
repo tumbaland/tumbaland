@@ -10,9 +10,15 @@ import {
   Typography,
   SelectChangeEvent
 } from '@mui/material';
-import { Delete as DeleteIcon, Checklist as ChecklistIcon, Close as CloseIcon } from '@mui/icons-material';
+import {
+  Delete as DeleteIcon,
+  Checklist as ChecklistIcon,
+  Close as CloseIcon,
+  LocalOffer as LocalOfferIcon
+} from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router';
 import { usePhotos } from '../hooks/usePhotos';
+import { useAlbumTags, useBulkTagMutation } from '../hooks/useAlbumTags';
 import { usePhotoViewer } from '../hooks/usePhotoViewer';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { albumService } from '../services/albumService';
@@ -25,7 +31,9 @@ import AlbumFloatingActionButton from '../components/AlbumFloatingActionButton';
 import FileUpload from '../components/FileUpload';
 import ConfirmDialog from '../components/ConfirmDialog';
 import EditPhotoDialog from '../components/EditPhotoDialog';
-import { Photo } from '../types';
+import PhotoTagFilter from '../components/PhotoTagFilter';
+import TagPhotosDialog from '../components/TagPhotosDialog';
+import { Photo, TagMatch } from '../types';
 
 const AlbumDetailPage: React.FC = () => {
   const { albumId } = useParams<{ albumId: string }>();
@@ -43,6 +51,9 @@ const AlbumDetailPage: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [tagMatch, setTagMatch] = useState<TagMatch>('all');
+  const [photosToTag, setPhotosToTag] = useState<Photo[] | null>(null);
   const queryClient = useQueryClient();
   const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
   const albumQuery = useQuery({
@@ -69,14 +80,21 @@ const AlbumDetailPage: React.FC = () => {
   } = usePhotos(albumId || '', {
     page: currentPage,
     limit: pageSize === 0 ? undefined : pageSize, // 0 means "All"
-    search: debouncedSearchTerm || undefined
+    search: debouncedSearchTerm || undefined,
+    tags: selectedTags,
+    tagMatch
   });
 
   // Unpaginated album photo list, so the quick-view modal can step through
   // every photo (not just the current page's) with Previous/Next.
   const { photos: allPhotos } = usePhotos(albumId || '', {
-    search: debouncedSearchTerm || undefined
+    search: debouncedSearchTerm || undefined,
+    tags: selectedTags,
+    tagMatch
   });
+
+  const { tags: albumTags } = useAlbumTags(albumId || '');
+  const { bulkUpdateTags } = useBulkTagMutation(albumId || '');
 
   const {
     selectedPhoto,
@@ -156,12 +174,37 @@ const AlbumDetailPage: React.FC = () => {
     setPhotoToEdit(null);
   };
 
-  const handleSaveEditPhoto = async (photoId: string, data: { title?: string; description?: string }) => {
+  const handleSaveEditPhoto = async (photoId: string, data: { title?: string; description?: string; tags?: string[] }) => {
     try {
       await updatePhoto(photoId, data);
     } catch (err) {
       logger.error('Failed to update photo', err);
       alert('Failed to update photo');
+    }
+  };
+
+  const handleEditPhotoTags = (photo: Photo) => {
+    setPhotosToTag([photo]);
+  };
+
+  const handleTagSelected = () => {
+    const selected = photos.filter((photo) => selectedIds.has(photo._id));
+    if (selected.length > 0) setPhotosToTag(selected);
+  };
+
+  const handleApplyTags = async (photoIds: string[], changes: { add: string[]; remove: string[] }) => {
+    try {
+      await bulkUpdateTags({ photoIds, ...changes });
+      // Leaving select mode on would strand the user on a selection whose tags
+      // they just finished editing.
+      if (photoIds.length > 1) {
+        setSelectMode(false);
+        setSelectedIds(new Set());
+      }
+    } catch (err) {
+      logger.error('Failed to update tags', err);
+      alert('Failed to update tags');
+      throw err;
     }
   };
 
@@ -191,10 +234,10 @@ const AlbumDetailPage: React.FC = () => {
     queryClient.invalidateQueries({ queryKey: ['albums'] });
   };
 
-  // Reset to first page when search changes
+  // Reset to first page when the search or tag filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearchTerm]);
+  }, [debouncedSearchTerm, selectedTags, tagMatch]);
   const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
     setCurrentPage(value);
   };
@@ -237,6 +280,14 @@ const AlbumDetailPage: React.FC = () => {
         onSearchChange={setSearchTerm}
       />
 
+      <PhotoTagFilter
+        tags={albumTags}
+        selected={selectedTags}
+        match={tagMatch}
+        onChange={setSelectedTags}
+        onMatchChange={setTagMatch}
+      />
+
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
         {selectMode ? (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
@@ -245,6 +296,14 @@ const AlbumDetailPage: React.FC = () => {
             </Typography>
             <Button size="small" onClick={handleSelectAllOnPage}>
               Select all on page
+            </Button>
+            <Button
+              size="small"
+              startIcon={<LocalOfferIcon />}
+              disabled={selectedIds.size === 0}
+              onClick={handleTagSelected}
+            >
+              Tag
             </Button>
             <Button
               size="small"
@@ -286,6 +345,7 @@ const AlbumDetailPage: React.FC = () => {
         onDeletePhoto={handleDeletePhoto}
         onSetCoverPhoto={handleSetCoverPhoto}
         onViewPhotoDetails={handleViewPhotoDetails}
+        onEditPhotoTags={handleEditPhotoTags}
         onUploadPhotos={() => setShowUploadDialog(true)}
         selectMode={selectMode}
         selectedIds={selectedIds}
@@ -349,10 +409,20 @@ const AlbumDetailPage: React.FC = () => {
         loading={bulkDeleting}
       />
 
+      {/* Tag Photos Dialog (one photo, or the whole selection) */}
+      <TagPhotosDialog
+        open={Boolean(photosToTag)}
+        photos={photosToTag ?? []}
+        suggestions={albumTags}
+        onClose={() => setPhotosToTag(null)}
+        onApply={handleApplyTags}
+      />
+
       {/* Edit Photo Dialog */}
       <EditPhotoDialog
         open={showEditDialog}
         photo={photoToEdit}
+        suggestions={albumTags}
         onClose={handleCloseEditPhoto}
         onSave={handleSaveEditPhoto}
       />

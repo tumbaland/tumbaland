@@ -171,3 +171,54 @@ describe('loadPhotosWithThumbnails', () => {
     expect(result.photos).toEqual([]);
   });
 });
+
+it('sends selected tags as a comma-joined param with the match mode', async () => {
+  mockFetchOnce({ success: true, data: { photos: [], pagination: { page: 1, limit: 10, total: 0, pages: 0 } } });
+
+  await photoService.getPhotosByAlbum('album-1', { page: 1, tags: ['beach', 'sunset'], tagMatch: 'any' });
+
+  const [url] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+  expect(String(url)).toContain('tags=beach%2Csunset');
+  expect(String(url)).toContain('tagMatch=any');
+});
+
+it('omits the tag params entirely when nothing is selected', async () => {
+  mockFetchOnce({ success: true, data: { photos: [], pagination: { page: 1, limit: 10, total: 0, pages: 0 } } });
+
+  await photoService.getPhotosByAlbum('album-1', { page: 1, tags: [] });
+
+  const [url] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+  expect(String(url)).not.toContain('tags=');
+  expect(String(url)).not.toContain('tagMatch=');
+});
+
+it('defaults the match mode to all when tags are given without one', async () => {
+  mockFetchOnce({ success: true, data: { photos: [], pagination: { page: 1, limit: 10, total: 0, pages: 0 } } });
+
+  await photoService.getPhotosByAlbum('album-1', { tags: ['beach'] });
+
+  const [url] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+  expect(String(url)).toContain('tagMatch=all');
+});
+
+it('unwraps the album tag list', async () => {
+  mockFetchOnce({ success: true, data: { tags: [{ tag: 'beach', count: 3 }] } });
+
+  await expect(photoService.getAlbumTags('album-1')).resolves.toEqual([{ tag: 'beach', count: 3 }]);
+});
+
+it('PUTs a bulk tag change and unwraps the result', async () => {
+  mockFetchOnce({ success: true, data: { matched: 2, modified: 2, tags: [{ tag: 'beach', count: 2 }] } });
+
+  const result = await photoService.bulkUpdateTags(['p1', 'p2'], { add: ['beach'], remove: ['old'] });
+
+  const [url, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+  expect(String(url)).toContain('/photos/tags');
+  expect(init).toMatchObject({ method: 'PUT' });
+  expect(JSON.parse((init as RequestInit).body as string)).toEqual({
+    photoIds: ['p1', 'p2'],
+    add: ['beach'],
+    remove: ['old']
+  });
+  expect(result.modified).toBe(2);
+});

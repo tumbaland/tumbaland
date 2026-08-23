@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { vi } from 'vitest';
 
 const mockedNavigate = vi.fn();
@@ -16,6 +17,10 @@ vi.mock('../components/ObjectDetectionView', () => ({ default: () => <div>object
 vi.mock('../components/SegmentationView', () => ({ default: () => <div>segmentation view</div> }));
 
 vi.mock('../hooks/usePhotos', () => ({ usePhotos: vi.fn() }));
+vi.mock('../hooks/useAlbumTags', () => ({
+  useAlbumTags: () => ({ tags: [], loading: false, error: null }),
+  albumTagKeys: { all: ['photo-tags'], album: (albumId: string) => ['photo-tags', albumId] }
+}));
 vi.mock('../services/albumService', () => ({ albumService: { getAlbumById: vi.fn() } }));
 vi.mock('../services/photoService', () => ({
   photoService: { getPhotoById: vi.fn(), updatePhoto: vi.fn(), deletePhoto: vi.fn() }
@@ -32,11 +37,14 @@ const mockedGetAlbumById = albumService.getAlbumById as unknown as ReturnType<ty
 const mockedGetPhotoById = photoService.getPhotoById as unknown as ReturnType<typeof vi.fn>;
 
 function renderPage(photoId = 'photo-2') {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <MemoryRouter initialEntries={[`/albums/album-1/photos/${photoId}`]}>
-      <Routes>
-        <Route path="/albums/:albumId/photos/:photoId" element={<PhotoDetailPage />} />
-      </Routes>
+      <QueryClientProvider client={queryClient}>
+        <Routes>
+          <Route path="/albums/:albumId/photos/:photoId" element={<PhotoDetailPage />} />
+        </Routes>
+      </QueryClientProvider>
     </MemoryRouter>
   );
 }
@@ -130,7 +138,9 @@ it('opens the edit dialog and saves changes', async () => {
   await userEvent.type(titleInput, 'Renamed');
   await userEvent.click(screen.getByRole('button', { name: /save changes/i }));
 
-  await waitFor(() => expect(photoService.updatePhoto).toHaveBeenCalledWith('photo-2', { title: 'Renamed' }));
+  await waitFor(() =>
+    expect(photoService.updatePhoto).toHaveBeenCalledWith('photo-2', { title: 'Renamed', tags: [] })
+  );
 });
 
 it('deletes the photo and navigates back to the album', async () => {

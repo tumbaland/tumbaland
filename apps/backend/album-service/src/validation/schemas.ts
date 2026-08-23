@@ -46,6 +46,14 @@ export const updatePhotoSchema = z.object({
   metadata: z.record(z.string(), z.unknown()).optional()
 });
 
+export const bulkUpdateTagsSchema = z.object({
+  photoIds: z.array(z.string()).min(1, 'photoIds must contain at least one photo'),
+  add: z.array(z.string()).optional(),
+  remove: z.array(z.string()).optional()
+}).refine((data) => (data.add?.length || 0) > 0 || (data.remove?.length || 0) > 0, {
+  message: 'Must provide tags to add or remove'
+});
+
 export const uploadSignedUrlSchema = z.object({
   filename: z.string().min(1, 'filename is required'),
   mimetype: z.string().min(1, 'mimetype is required'),

@@ -2,6 +2,7 @@ import React from 'react';
 import { Card, CardMedia, CardContent, Typography, IconButton, Box, Menu, MenuItem, Chip } from '@mui/material';
 import {
   MoreVert as MoreVertIcon,
+  LocalOffer as LocalOfferIcon,
   Image as ImageIcon,
   Star as StarIcon,
   Videocam as VideocamIcon,
@@ -17,6 +18,7 @@ interface PhotoCardProps {
   onDelete?: (photo: Photo) => void;
   onSetCover?: (photo: Photo) => void;
   onViewDetails?: (photo: Photo) => void;
+  onEditTags?: (photo: Photo) => void;
   isCoverPhoto?: boolean;
   selectMode?: boolean;
   selected?: boolean;
@@ -30,6 +32,7 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
   onDelete,
   onSetCover,
   onViewDetails,
+  onEditTags,
   isCoverPhoto = false,
   selectMode = false,
   selected = false,
@@ -64,6 +67,12 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
 
   const handleViewDetails = () => {
     if (onViewDetails) onViewDetails(photo);
+    handleMenuClose();
+  };
+
+  const handleEditTags = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (onEditTags) onEditTags(photo);
     handleMenuClose();
   };
 
@@ -223,7 +232,7 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
             Cover
           </Box>
         )}
-        {!selectMode && (onEdit || onDelete || onSetCover) && (
+        {!selectMode && (onEdit || onDelete || onSetCover || onEditTags) && (
           <IconButton
             size="small"
             onClick={handleMenuClick}
@@ -292,20 +301,50 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
           {photo.width && photo.height && ` • ${photo.width}×${photo.height}`}
         </Typography>
 
-        {photo.tags && photo.tags.length > 0 && (
+        {photo.tags && photo.tags.length > 0 ? (
           <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
             {photo.tags.slice(0, 2).map((tag, index) => (
-              <Chip key={index} label={tag} size="small" variant="outlined" sx={{ fontSize: '0.7rem' }} />
+              <Chip
+                key={index}
+                label={tag}
+                size="small"
+                variant="outlined"
+                sx={{ fontSize: '0.7rem' }}
+                onClick={onEditTags ? handleEditTags : undefined}
+              />
             ))}
             {photo.tags.length > 2 && (
-              <Chip label={`+${photo.tags.length - 2}`} size="small" variant="outlined" sx={{ fontSize: '0.7rem' }} />
+              <Chip
+                label={`+${photo.tags.length - 2}`}
+                size="small"
+                variant="outlined"
+                sx={{ fontSize: '0.7rem' }}
+                onClick={onEditTags ? handleEditTags : undefined}
+              />
             )}
           </Box>
+        ) : (
+          // An untagged photo is where tagging actually has to start, so the
+          // card offers the entry point instead of hiding it in the menu.
+          onEditTags &&
+          !selectMode && (
+            <Box sx={{ mt: 1 }}>
+              <Chip
+                icon={<LocalOfferIcon sx={{ fontSize: 14 }} />}
+                label="Add tags"
+                size="small"
+                variant="outlined"
+                onClick={handleEditTags}
+                sx={{ fontSize: '0.7rem', borderStyle: 'dashed', color: 'text.secondary' }}
+              />
+            </Box>
+          )
         )}
       </CardContent>{' '}
       <Menu anchorEl={anchorEl} open={open} onClose={handleMenuClose} onClick={(e) => e.stopPropagation()}>
         {onViewDetails && <MenuItem onClick={handleViewDetails}>View Details</MenuItem>}
         {onSetCover && !isCoverPhoto && <MenuItem onClick={handleSetCover}>Set as Cover Photo</MenuItem>}
+        {onEditTags && <MenuItem onClick={handleEditTags}>Edit Tags</MenuItem>}
         {onEdit && <MenuItem onClick={handleEdit}>Edit Photo</MenuItem>}
         {onDelete && <MenuItem onClick={handleDelete}>Delete Photo</MenuItem>}
       </Menu>

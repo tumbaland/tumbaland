@@ -97,6 +97,21 @@ export interface CreatePhotoData {
   metadata?: Photo['metadata'];
 }
 
+/** A tag with how many photos in the album carry it. */
+export interface TagCount {
+  tag: string;
+  count: number;
+}
+
+/** 'all' narrows with every added tag; 'any' widens to their union. */
+export type TagMatch = 'any' | 'all';
+
+export interface BulkTagResult {
+  matched: number;
+  modified: number;
+  tags: TagCount[];
+}
+
 export interface PaginationInfo {
   page: number;
   limit: number;

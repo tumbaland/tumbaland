@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { logger } from '@tumbaland/frontend-core';
 import {
   Box,
@@ -19,6 +20,7 @@ import { Photo, Album } from '../types';
 import { albumService } from '../services/albumService';
 import { photoService } from '../services/photoService';
 import { usePhotos } from '../hooks/usePhotos';
+import { useAlbumTags, albumTagKeys } from '../hooks/useAlbumTags';
 import { downloadPhoto } from '../utils/downloadPhoto';
 import EditPhotoDialog from '../components/EditPhotoDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -40,8 +42,11 @@ const PhotoDetailPage: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [tabValue, setTabValue] = useState(0);
 
+  const queryClient = useQueryClient();
+
   // Full, unpaginated album photo order — used to find the previous/next photo
   const { photos: albumPhotos } = usePhotos(albumId || '');
+  const { tags: albumTags } = useAlbumTags(albumId || '');
   const currentPhotoIndex = albumPhotos.findIndex((p) => p._id === photoId);
   const previousPhoto = currentPhotoIndex > 0 ? albumPhotos[currentPhotoIndex - 1] : null;
   const nextPhoto =
@@ -127,15 +132,36 @@ const PhotoDetailPage: React.FC = () => {
     }
   };
 
-  const handleSaveEdit = async (photoId: string, data: { title?: string; description?: string }) => {
+
+  // This page holds the photo in local state, so the album's cached lists (and
+  // its tag vocabulary) would otherwise keep showing the pre-edit values when
+  // the user navigates back.
+  const invalidatePhotoCaches = (tagsChanged: boolean) => {
+    if (!albumId) return;
+    queryClient.invalidateQueries({ queryKey: ['photos', albumId] });
+    if (tagsChanged) {
+      queryClient.invalidateQueries({ queryKey: albumTagKeys.album(albumId) });
+    }
+  };
+
+  const handleSaveEdit = async (photoId: string, data: { title?: string; description?: string; tags?: string[] }) => {
     try {
       const response = await photoService.updatePhoto(photoId, data);
       setPhoto(response);
+      invalidatePhotoCaches(data.tags !== undefined);
       setShowEditDialog(false);
     } catch (err) {
       logger.error('Failed to update photo', err);
       alert('Failed to update photo');
     }
+  };
+
+
+  const handleSaveTags = async (tags: string[]) => {
+    if (!photo) return;
+    const response = await photoService.updatePhoto(photo._id, { tags });
+    setPhoto(response);
+    invalidatePhotoCaches(true);
   };
 
   const handleDownload = () => {
@@ -238,6 +264,8 @@ const PhotoDetailPage: React.FC = () => {
             formatDate={formatDate}
             onSwipeNext={nextPhoto ? handleNextPhoto : undefined}
             onSwipePrevious={previousPhoto ? handlePreviousPhoto : undefined}
+            tagSuggestions={albumTags}
+            onSaveTags={handleSaveTags}
           />
         </TabPanel>
         <TabPanel value={tabValue} index={1}>
@@ -256,7 +284,13 @@ const PhotoDetailPage: React.FC = () => {
         </TabPanel>
       </Box>
       {/* Edit Dialog */}
-      <EditPhotoDialog open={showEditDialog} photo={photo} onClose={() => setShowEditDialog(false)} onSave={handleSaveEdit} />
+      <EditPhotoDialog
+        open={showEditDialog}
+        photo={photo}
+        suggestions={albumTags}
+        onClose={() => setShowEditDialog(false)}
+        onSave={handleSaveEdit}
+      />
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog open={showDeleteDialog} onClose={() => setShowDeleteDialog(false)} onConfirm={handleConfirmDelete} title="Delete Photo" message="Are you sure you want to delete this photo? This action cannot be undone." confirmText="Delete Photo" cancelText="Cancel" variant="danger" loading={deleting} />
     </Container>

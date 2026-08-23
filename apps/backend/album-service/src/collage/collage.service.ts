@@ -16,6 +16,7 @@ interface AggregatedPhoto {
   description?: string;
   width?: number;
   height?: number;
+  tags: string[];
 }
 
 interface AlbumWithPhotosAggRow {
@@ -158,7 +159,10 @@ export const getCollageWithPhotos = async (
               title: '$$photo.title',
               description: '$$photo.description',
               width: '$$photo.width',
-              height: '$$photo.height'
+              height: '$$photo.height',
+              // Carried through so the editor's photo tray can filter a
+              // multi-album pile down to the tags the collage is about.
+              tags: { $ifNull: ['$$photo.tags', []] }
             }
           }
         }
