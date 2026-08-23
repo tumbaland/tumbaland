@@ -24,10 +24,21 @@ it('shows a placeholder icon when there is no thumbnail or full image', () => {
   expect(screen.queryByRole('img')).not.toBeInTheDocument();
 });
 
-it('shows the file size and resolution caption', () => {
-  const photo = makePhoto({ thumbnailUrl: '/thumb.jpg', size: 123456, width: 1920, height: 1080 });
+it('captions the card with the upload date, not the file specs', () => {
+  const photo = makePhoto({
+    thumbnailUrl: '/thumb.jpg',
+    size: 123456,
+    width: 1920,
+    height: 1080,
+    createdAt: '2024-03-12T10:00:00.000Z'
+  });
   render(<PhotoCard photo={photo} onView={vi.fn()} />);
-  expect(screen.getByText('120.56 KB • 1920×1080')).toBeInTheDocument();
+
+  // Locale decides the date's shape, so match the label and the year rather
+  // than pinning a formatted string.
+  expect(screen.getByText(/^Uploaded\b.*2024/)).toBeInTheDocument();
+  expect(screen.queryByText(/1920×1080/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/\bKB\b/)).not.toBeInTheDocument();
 });
 
 it('shows up to 2 tags plus a "+N" overflow chip', () => {

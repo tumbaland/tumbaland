@@ -11,6 +11,13 @@ import {
 } from '@mui/icons-material';
 import { Photo } from '../types';
 
+const formatUploadDate = (dateString: string) =>
+  new Date(dateString).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+
 interface PhotoCardProps {
   photo: Photo;
   onView: (photo: Photo) => void;
@@ -74,14 +81,6 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
     event.stopPropagation();
     if (onEditTags) onEditTags(photo);
     handleMenuClose();
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   return (
@@ -299,8 +298,7 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
             display: 'block',
             fontSize: '0.75rem'
           }}>
-          {formatFileSize(photo.size)}
-          {photo.width && photo.height && ` • ${photo.width}×${photo.height}`}
+          Uploaded {formatUploadDate(photo.createdAt)}
         </Typography>
 
         {photo.tags && photo.tags.length > 0 ? (

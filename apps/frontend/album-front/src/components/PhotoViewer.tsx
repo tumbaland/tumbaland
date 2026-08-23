@@ -12,12 +12,56 @@ import {
   Close as CloseIcon,
   NavigateBefore as NavigateBeforeIcon,
   NavigateNext as NavigateNextIcon,
-  Download as DownloadIcon
+  Download as DownloadIcon,
+  InfoOutlined as InfoOutlinedIcon
 } from '@mui/icons-material';
 import { Photo } from '../types';
 import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 import { useProgressiveImage } from '../hooks/useProgressiveImage';
 import { downloadPhoto } from '../utils/downloadPhoto';
+import { formatBytes } from '../utils/formatBytes';
+
+const formatDateTime = (dateString: string) =>
+  new Date(dateString).toLocaleString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+/**
+ * Size, resolution and EXIF for the open photo. The grid card only carries
+ * the upload date now — a thumbnail is for recognising a photo, not for
+ * reading its specs — so this is where those details live.
+ */
+const buildDetails = (photo: Photo, resolution: string | null): Array<{ label: string; value: string }> => {
+  const { camera, location, dateTaken } = photo.metadata;
+  const settings = camera?.settings;
+
+  const cameraName = [camera?.make, camera?.model].filter(Boolean).join(' ');
+  const shotSettings = [
+    settings?.iso && `ISO ${settings.iso}`,
+    settings?.aperture,
+    settings?.shutterSpeed,
+    settings?.focalLength
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const place =
+    location?.address ?? (location ? `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}` : undefined);
+
+  return [
+    { label: 'Resolution', value: resolution },
+    { label: 'Size', value: formatBytes(photo.size) },
+    { label: 'Type', value: photo.mimetype },
+    { label: 'Uploaded', value: formatDateTime(photo.createdAt) },
+    { label: 'Taken', value: dateTaken ? formatDateTime(dateTaken) : null },
+    { label: 'Camera', value: cameraName || null },
+    { label: 'Settings', value: shotSettings || null },
+    { label: 'Location', value: place ?? null }
+  ].filter((row): row is { label: string; value: string } => Boolean(row.value));
+};
 
 interface PhotoViewerProps {
   photos: Photo[];
@@ -39,11 +83,19 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
   onNext
 }) => {
   const [imgDimensions, setImgDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [showInfo, setShowInfo] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isPortrait = window.innerHeight > window.innerWidth;
   const swipeHandlers = useSwipeNavigation(onNext, onPrevious);
-  const { displaySrc } = useProgressiveImage(selectedPhoto?.signedUrl, selectedPhoto?.thumbnailUrl);
+  const { displaySrc, isFullLoaded } = useProgressiveImage(selectedPhoto?.signedUrl, selectedPhoto?.thumbnailUrl);
+
+  // Measured dimensions belong to the photo that was showing when onLoad
+  // fired; carrying them into the next one would report the wrong resolution
+  // (and, on mobile, rotate a portrait shot as though it were landscape).
+  useEffect(() => {
+    setImgDimensions(null);
+  }, [selectedPhoto?._id]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -78,6 +130,17 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
   };
 
   if (!selectedPhoto) return null;
+
+  // Prefer the stored dimensions; fall back to what the browser measured, but
+  // only once the full image is in — while the thumbnail is showing, the
+  // measured size is the thumbnail's.
+  const resolution =
+    selectedPhoto.width && selectedPhoto.height
+      ? `${selectedPhoto.width}×${selectedPhoto.height}`
+      : isFullLoaded && imgDimensions
+        ? `${imgDimensions.width}×${imgDimensions.height}`
+        : null;
+  const details = buildDetails(selectedPhoto, resolution);
 
   return (
     <Dialog
@@ -124,6 +187,24 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
             zIndex: 1
           }}
         />
+
+        {/* Info Toggle */}
+        <IconButton
+          onClick={() => setShowInfo((prev) => !prev)}
+          aria-label={showInfo ? 'Hide photo details' : 'Show photo details'}
+          aria-pressed={showInfo}
+          sx={{
+            position: 'absolute',
+            top: 16,
+            right: 128,
+            color: 'white',
+            bgcolor: showInfo ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.5)',
+            zIndex: 3,
+            '&:hover': { bgcolor: showInfo ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.7)' }
+          }}
+        >
+          <InfoOutlinedIcon />
+        </IconButton>
 
         {/* Download Button */}
         <IconButton
@@ -199,6 +280,45 @@ const PhotoViewer: React.FC<PhotoViewerProps> = ({
           >
             <NavigateNextIcon fontSize="large" />
           </IconButton>
+        )}
+
+        {/* Details Panel */}
+        {showInfo && (
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: 64,
+              left: { xs: 8, sm: 16 },
+              right: { xs: 8, sm: 'auto' },
+              maxWidth: { sm: 380 },
+              maxHeight: '45vh',
+              overflowY: 'auto',
+              color: 'white',
+              bgcolor: 'rgba(0, 0, 0, 0.65)',
+              backdropFilter: 'blur(6px)',
+              WebkitBackdropFilter: 'blur(6px)',
+              px: 2,
+              py: 1.5,
+              borderRadius: 2,
+              zIndex: 3
+            }}
+          >
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, wordBreak: 'break-word' }}>
+              {selectedPhoto.title || selectedPhoto.originalName}
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 2, rowGap: 0.5 }}>
+              {details.map(({ label, value }) => (
+                <React.Fragment key={label}>
+                  <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                    {label}
+                  </Typography>
+                  <Typography variant="caption" sx={{ wordBreak: 'break-word' }}>
+                    {value}
+                  </Typography>
+                </React.Fragment>
+              ))}
+            </Box>
+          </Box>
         )}
 
         {/* Photo Counter */}

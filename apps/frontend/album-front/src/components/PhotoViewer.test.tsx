@@ -129,3 +129,68 @@ it('does not navigate past the ends via click zones', () => {
   fireEvent.click(img, { clientX: 50 }); // left third, but already the first photo
   expect(onPrevious).not.toHaveBeenCalled();
 });
+
+describe('photo details panel', () => {
+  const detailed = makePhoto({
+    _id: 'p2',
+    title: 'Second',
+    thumbnailUrl: '/p2-thumb.jpg',
+    signedUrl: '/p2-full.jpg',
+    size: 2621440,
+    width: 4032,
+    height: 3024,
+    createdAt: '2024-03-12T10:00:00.000Z',
+    metadata: {
+      dateTaken: '2024-03-01T08:30:00.000Z',
+      camera: { make: 'Canon', model: 'EOS R6', settings: { iso: 400, aperture: 'f/2.8', shutterSpeed: '1/250' } },
+      location: { latitude: 59.437, longitude: 24.7536, address: 'Tallinn, Estonia' }
+    }
+  });
+
+  it('keeps the details hidden until the info button is used', () => {
+    renderViewer({ selectedPhoto: detailed });
+    expect(screen.queryByText('4032×3024')).not.toBeInTheDocument();
+  });
+
+  it('shows size, resolution and EXIF once opened', async () => {
+    renderViewer({ selectedPhoto: detailed });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show photo details' }));
+
+    expect(screen.getByText('4032×3024')).toBeInTheDocument();
+    expect(screen.getByText('2.5 MB')).toBeInTheDocument();
+    expect(screen.getByText('Canon EOS R6')).toBeInTheDocument();
+    expect(screen.getByText('ISO 400 · f/2.8 · 1/250')).toBeInTheDocument();
+    expect(screen.getByText('Tallinn, Estonia')).toBeInTheDocument();
+  });
+
+  it('closes again on a second press', async () => {
+    renderViewer({ selectedPhoto: detailed });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show photo details' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Hide photo details' }));
+
+    expect(screen.queryByText('4032×3024')).not.toBeInTheDocument();
+  });
+
+  it('omits rows the photo has no value for', async () => {
+    renderViewer({ selectedPhoto: makePhoto({ _id: 'p2', size: 1024, metadata: {} }) });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show photo details' }));
+
+    expect(screen.getByText('1 KB')).toBeInTheDocument();
+    expect(screen.queryByText('Camera')).not.toBeInTheDocument();
+    expect(screen.queryByText('Location')).not.toBeInTheDocument();
+    expect(screen.queryByText('Resolution')).not.toBeInTheDocument();
+  });
+
+  it('falls back to coordinates when the location has no address', async () => {
+    renderViewer({
+      selectedPhoto: makePhoto({ _id: 'p2', metadata: { location: { latitude: 59.437, longitude: 24.7536 } } })
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show photo details' }));
+
+    expect(screen.getByText('59.43700, 24.75360')).toBeInTheDocument();
+  });
+});
