@@ -8,7 +8,10 @@ import {
   CollagePhotoItem,
   CollageTextItem,
   EDITOR_BACKDROP,
-  photoHasFrame
+  isQuarterTurned,
+  orientationTurns,
+  photoHasFrame,
+  sourceCrop
 } from './collageDoc';
 
 export interface ResolvedPhoto {
@@ -62,6 +65,29 @@ const cropImageStyle = (crop?: CollageCrop): CSSProperties => {
   };
 };
 
+/**
+ * Box the image is drawn into before its quarter turns are applied. Turning it
+ * by 90 or 270 swaps the axes, so the pre-turn box is the content box on its
+ * side; rotating that lands it back exactly on the content box.
+ */
+const orientedLayer = (
+  content: { width: number; height: number },
+  orientation?: number
+): CSSProperties => {
+  const turned = isQuarterTurned(orientation);
+  const width = turned ? content.height : content.width;
+  const height = turned ? content.width : content.height;
+  return {
+    position: 'absolute',
+    width,
+    height,
+    left: (content.width - width) / 2,
+    top: (content.height - height) / 2,
+    overflow: 'hidden',
+    transform: `rotate(${orientationTurns(orientation) * 90}deg)`
+  };
+};
+
 const StagePhoto: React.FC<{
   doc: CollageDoc;
   photo: CollagePhotoItem;
@@ -73,6 +99,8 @@ const StagePhoto: React.FC<{
 }> = ({ doc, photo, resolved, selected, readOnly, onPointerDown, onDoubleClick }) => {
   const framed = photoHasFrame(doc, photo);
   const src = resolved?.src || resolved?.thumbSrc;
+  const inset = framed ? FRAME_PADDING * 2 : 0;
+  const content = { width: photo.width - inset, height: photo.height - inset };
   return (
     <Box
       data-item-id={photo.id}
@@ -98,17 +126,19 @@ const StagePhoto: React.FC<{
     >
       <Box sx={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', borderRadius: '4px' }}>
         {src ? (
-          <img
-            src={src}
-            alt={resolved?.title || 'collage photo'}
-            draggable={false}
-            style={{
-              ...cropImageStyle(photo.crop),
-              objectFit: 'cover',
-              display: 'block',
-              pointerEvents: 'none'
-            }}
-          />
+          <Box sx={orientedLayer(content, photo.orientation)}>
+            <img
+              src={src}
+              alt={resolved?.title || 'collage photo'}
+              draggable={false}
+              style={{
+                ...cropImageStyle(sourceCrop(photo)),
+                objectFit: 'cover',
+                display: 'block',
+                pointerEvents: 'none'
+              }}
+            />
+          </Box>
         ) : (
           <Box
             sx={{

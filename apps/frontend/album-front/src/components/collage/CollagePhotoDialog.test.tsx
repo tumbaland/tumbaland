@@ -52,9 +52,9 @@ it('renders the preview image with the current rotation when photoSrc is given',
     />
   );
 
-  const img = screen.getByRole('img', { name: 'preview' });
-  expect(img).toHaveAttribute('src', 'https://cdn.example/photo.jpg');
-  expect(img).toHaveStyle({ transform: 'rotate(45deg)' });
+  expect(screen.getByRole('img', { name: 'preview' })).toHaveAttribute('src', 'https://cdn.example/photo.jpg');
+  // the item's tilt is carried by the preview wrapper, so the crop overlay tilts with it
+  expect(screen.getByTestId('crop-preview')).toHaveStyle({ transform: 'rotate(45deg)' });
 });
 
 it('omits the preview image when there is no photoSrc', () => {
@@ -253,4 +253,145 @@ it('leaves the box height alone when only the caption changed', async () => {
     frame: undefined,
     crop: undefined
   });
+});
+
+it('turns the picture a quarter clockwise and saves it as an orientation', async () => {
+  const onSave = vi.fn();
+  render(
+    <CollagePhotoDialog
+      open
+      photo={photo}
+      photoSrc="https://cdn.example/photo.jpg"
+      onClose={vi.fn()}
+      onSave={onSave}
+      onDelete={vi.fn()}
+    />
+  );
+
+  await userEvent.click(screen.getByRole('button', { name: 'Rotate right' }));
+
+  expect(screen.getByText('Turned 90°')).toBeInTheDocument();
+  expect(screen.getByRole('img', { name: 'preview' })).toHaveStyle({ transform: 'rotate(90deg)' });
+
+  await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+  expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ orientation: 90 }));
+});
+
+it('reaches 180° by rotating twice and wraps back to upright on the fourth turn', async () => {
+  const onSave = vi.fn();
+  render(
+    <CollagePhotoDialog
+      open
+      photo={photo}
+      photoSrc="https://cdn.example/photo.jpg"
+      onClose={vi.fn()}
+      onSave={onSave}
+      onDelete={vi.fn()}
+    />
+  );
+
+  const rotateRight = screen.getByRole('button', { name: 'Rotate right' });
+  await userEvent.click(rotateRight);
+  await userEvent.click(rotateRight);
+  expect(screen.getByText('Turned 180°')).toBeInTheDocument();
+
+  await userEvent.click(rotateRight);
+  await userEvent.click(rotateRight);
+  expect(screen.getByText('Upright')).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+  expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ orientation: undefined }));
+});
+
+it('rotates counter-clockwise into 270°', async () => {
+  const onSave = vi.fn();
+  render(
+    <CollagePhotoDialog
+      open
+      photo={photo}
+      photoSrc="https://cdn.example/photo.jpg"
+      onClose={vi.fn()}
+      onSave={onSave}
+      onDelete={vi.fn()}
+    />
+  );
+
+  await userEvent.click(screen.getByRole('button', { name: 'Rotate left' }));
+
+  expect(screen.getByText('Turned 270°')).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+  expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ orientation: 270 }));
+});
+
+it('prefills the stored orientation and offers to reset it', async () => {
+  const onSave = vi.fn();
+  render(
+    <CollagePhotoDialog
+      open
+      photo={{ ...photo, orientation: 180 }}
+      photoSrc="https://cdn.example/photo.jpg"
+      onClose={vi.fn()}
+      onSave={onSave}
+      onDelete={vi.fn()}
+    />
+  );
+
+  expect(screen.getByText('Turned 180°')).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole('button', { name: 'Reset' }));
+  expect(screen.getByText('Upright')).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+  expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ orientation: undefined }));
+});
+
+it('carries an existing crop through a quarter turn so it frames the same spot', async () => {
+  const onSave = vi.fn();
+  render(
+    <CollagePhotoDialog
+      open
+      // top-left quarter of the picture
+      photo={{ ...photo, crop: { x: 0, y: 0, width: 0.5, height: 0.5 } }}
+      photoSrc="https://cdn.example/photo.jpg"
+      onClose={vi.fn()}
+      onSave={onSave}
+      onDelete={vi.fn()}
+    />
+  );
+
+  await userEvent.click(screen.getByRole('button', { name: 'Rotate right' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+  // turning the picture clockwise moves its top-left quarter to the top-right
+  expect(onSave).toHaveBeenCalledWith(
+    expect.objectContaining({
+      orientation: 90,
+      crop: { x: 0.5, y: 0, width: 0.5, height: 0.5 }
+    })
+  );
+});
+
+it('reshapes the box to the turned photo even when the crop is untouched', async () => {
+  const onSave = vi.fn();
+  render(
+    <CollagePhotoDialog
+      open
+      photo={photo}
+      photoSrc="https://cdn.example/photo.jpg"
+      onClose={vi.fn()}
+      onSave={onSave}
+      onDelete={vi.fn()}
+    />
+  );
+
+  const img = screen.getByRole('img', { name: 'preview' });
+  Object.defineProperty(img, 'naturalWidth', { value: 800, configurable: true });
+  Object.defineProperty(img, 'naturalHeight', { value: 400, configurable: true });
+  fireEvent.load(img);
+
+  await userEvent.click(screen.getByRole('button', { name: 'Rotate right' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+  // a 2:1 photo on its side is 1:2, so the 100-wide box becomes 200 tall
+  expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ orientation: 90, height: 200 }));
 });

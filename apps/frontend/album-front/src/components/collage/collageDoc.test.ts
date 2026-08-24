@@ -6,7 +6,12 @@ import {
   photoHasFrame,
   DEFAULT_TEXT_COLOR,
   DEFAULT_TEXT_SIZE,
-  MIN_CROP_SIZE
+  MIN_CROP_SIZE,
+  isQuarterTurned,
+  normalizeOrientation,
+  orientationTurns,
+  rotateCropClockwise,
+  sourceCrop
 } from './collageDoc';
 import { CollageConfig } from '../../types/collage';
 
@@ -165,5 +170,74 @@ describe('crops', () => {
 
     expect(config.photos[0].crop).toEqual(crop);
     expect(normalizeCollageConfig(config).photos[0].crop).toEqual(crop);
+  });
+});
+
+describe('orientation', () => {
+  it('snaps a stored orientation to a quarter turn and drops upright', () => {
+    expect(normalizeOrientation(90)).toBe(90);
+    expect(normalizeOrientation(180)).toBe(180);
+    expect(normalizeOrientation(0)).toBeUndefined();
+    expect(normalizeOrientation(undefined)).toBeUndefined();
+    expect(normalizeOrientation(360)).toBeUndefined();
+    // off-quarter and negative values still land on a legal turn
+    expect(normalizeOrientation(89)).toBe(90);
+    expect(normalizeOrientation(-90)).toBe(270);
+  });
+
+  it('counts quarter turns and knows which ones swap the axes', () => {
+    expect(orientationTurns(270)).toBe(3);
+    expect(orientationTurns(-90)).toBe(3);
+    expect(isQuarterTurned(90)).toBe(true);
+    expect(isQuarterTurned(180)).toBe(false);
+    expect(isQuarterTurned(undefined)).toBe(false);
+  });
+
+  it('carries a crop around the picture as it turns', () => {
+    const topLeft = { x: 0, y: 0, width: 0.5, height: 0.5 };
+
+    // turning the picture clockwise sends its top-left quarter to the top-right
+    expect(rotateCropClockwise(topLeft, 1)).toEqual({ x: 0.5, y: 0, width: 0.5, height: 0.5 });
+    expect(rotateCropClockwise(topLeft, 2)).toEqual({ x: 0.5, y: 0.5, width: 0.5, height: 0.5 });
+    expect(rotateCropClockwise(topLeft, 3)).toEqual({ x: 0, y: 0.5, width: 0.5, height: 0.5 });
+    expect(rotateCropClockwise(topLeft, 4)).toEqual(topLeft);
+    expect(rotateCropClockwise(topLeft, -1)).toEqual({ x: 0, y: 0.5, width: 0.5, height: 0.5 });
+    expect(rotateCropClockwise(undefined, 1)).toBeUndefined();
+  });
+
+  it('swaps the crop axes on a quarter turn', () => {
+    expect(rotateCropClockwise({ x: 0.1, y: 0.2, width: 0.3, height: 0.4 }, 1)).toEqual({
+      x: 1 - 0.2 - 0.4,
+      y: 0.1,
+      width: 0.4,
+      height: 0.3
+    });
+  });
+
+  it('maps a crop back onto the untouched source file', () => {
+    const crop = { x: 0.5, y: 0, width: 0.5, height: 0.5 };
+    // the crop was drawn on a picture turned 90° clockwise, so on the file
+    // itself it is the top-left quarter again
+    expect(sourceCrop({ crop, orientation: 90 })).toEqual({ x: 0, y: 0, width: 0.5, height: 0.5 });
+    expect(sourceCrop({ crop, orientation: 0 })).toEqual(crop);
+    expect(sourceCrop({ crop: undefined, orientation: 90 })).toBeUndefined();
+  });
+
+  it('round-trips an orientation through normalize and serialize', () => {
+    const doc = normalizeCollageConfig({
+      photos: [{ photoId: 'p1', width: 10, height: 10, orientation: 270 }]
+    } as unknown as CollageConfig);
+
+    expect(doc.photos[0].orientation).toBe(270);
+    expect(serializeCollageDoc(doc).photos[0].orientation).toBe(270);
+  });
+
+  it('leaves an upright photo without an orientation', () => {
+    const doc = normalizeCollageConfig({
+      photos: [{ photoId: 'p1', width: 10, height: 10 }]
+    } as unknown as CollageConfig);
+
+    expect(doc.photos[0].orientation).toBeUndefined();
+    expect(serializeCollageDoc(doc).photos[0].orientation).toBeUndefined();
   });
 });

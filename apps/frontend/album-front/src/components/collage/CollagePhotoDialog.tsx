@@ -9,9 +9,20 @@ import {
   MenuItem,
   Slider,
   TextField,
+  Tooltip,
   Typography
 } from '@mui/material';
-import { CollageCrop, CollagePhotoItem, normalizeCrop } from './collageDoc';
+import Rotate90DegreesCcwIcon from '@mui/icons-material/Rotate90DegreesCcw';
+import Rotate90DegreesCwIcon from '@mui/icons-material/Rotate90DegreesCw';
+import {
+  CollageCrop,
+  CollagePhotoItem,
+  isQuarterTurned,
+  normalizeCrop,
+  normalizeOrientation,
+  orientationTurns,
+  rotateCropClockwise
+} from './collageDoc';
 import CollageCropSelector from './CollageCropSelector';
 
 interface CollagePhotoDialogProps {
@@ -21,7 +32,7 @@ interface CollagePhotoDialogProps {
   onClose: () => void;
   onSave: (
     patch: Pick<CollagePhotoItem, 'caption' | 'rotation' | 'frame'> &
-      Partial<Pick<CollagePhotoItem, 'crop' | 'height'>>
+      Partial<Pick<CollagePhotoItem, 'crop' | 'orientation' | 'height'>>
   ) => void;
   onDelete: () => void;
 }
@@ -32,15 +43,20 @@ const INHERIT = 'inherit';
 /**
  * Height that shows the whole cropped region at the item's current width.
  * Without it the canvas box keeps its old shape and object-fit: cover would
- * trim part of the region the user just selected.
+ * trim part of the region the user just selected. The crop is measured on the
+ * oriented picture, so a quarter turn swaps the source's own dimensions first.
  */
 const heightForCrop = (
   width: number,
   natural: { width: number; height: number },
-  crop?: CollageCrop
+  crop?: CollageCrop,
+  orientation?: number
 ): number | undefined => {
-  const regionWidth = (crop?.width ?? 1) * natural.width;
-  const regionHeight = (crop?.height ?? 1) * natural.height;
+  const turned = isQuarterTurned(orientation);
+  const naturalWidth = turned ? natural.height : natural.width;
+  const naturalHeight = turned ? natural.width : natural.height;
+  const regionWidth = (crop?.width ?? 1) * naturalWidth;
+  const regionHeight = (crop?.height ?? 1) * naturalHeight;
   if (regionWidth <= 0 || regionHeight <= 0) return undefined;
   return (width * regionHeight) / regionWidth;
 };
@@ -57,6 +73,7 @@ const CollagePhotoDialog: React.FC<CollagePhotoDialogProps> = ({
   const [rotation, setRotation] = useState(0);
   const [frame, setFrame] = useState<string>(INHERIT);
   const [crop, setCrop] = useState<CollageCrop | undefined>(undefined);
+  const [orientation, setOrientation] = useState<number | undefined>(undefined);
   const [naturalSize, setNaturalSize] = useState<{ width: number; height: number } | null>(null);
 
   useEffect(() => {
@@ -65,22 +82,38 @@ const CollagePhotoDialog: React.FC<CollagePhotoDialogProps> = ({
       setRotation(photo.rotation);
       setFrame(photo.frame === undefined ? INHERIT : photo.frame ? 'on' : 'off');
       setCrop(photo.crop);
+      setOrientation(photo.orientation);
     }
   }, [photo]);
 
+  /**
+   * Turns the picture a quarter at a time, carrying any crop along with it so
+   * the selection keeps framing the same part of the photo instead of jumping
+   * to a different corner every time the user rotates.
+   */
+  const turnBy = (turns: number) => {
+    setOrientation(normalizeOrientation(orientationTurns(orientation) * 90 + turns * 90));
+    setCrop((current) => rotateCropClockwise(current, turns));
+  };
+
   const handleSave = () => {
     const nextCrop = normalizeCrop(crop);
-    const cropChanged = JSON.stringify(nextCrop ?? null) !== JSON.stringify(photo?.crop ?? null);
-    // Reshape the box to the crop only when the crop actually changed, so
-    // editing just a caption never moves the photo around on the canvas.
+    const changed =
+      JSON.stringify(nextCrop ?? null) !== JSON.stringify(photo?.crop ?? null) ||
+      orientationTurns(orientation) !== orientationTurns(photo?.orientation);
+    // Reshape the box to the crop only when the crop or orientation actually
+    // changed, so editing just a caption never moves the photo on the canvas.
     const height =
-      cropChanged && photo && naturalSize ? heightForCrop(photo.width, naturalSize, nextCrop) : undefined;
+      changed && photo && naturalSize
+        ? heightForCrop(photo.width, naturalSize, nextCrop, orientation)
+        : undefined;
 
     onSave({
       caption: caption.trim(),
       rotation,
       frame: frame === INHERIT ? undefined : frame === 'on',
       crop: nextCrop,
+      orientation: normalizeOrientation(orientation),
       ...(height ? { height } : {})
     });
     onClose();
@@ -104,10 +137,45 @@ const CollagePhotoDialog: React.FC<CollagePhotoDialogProps> = ({
               <CollageCropSelector
                 src={photoSrc}
                 rotation={rotation}
+                orientation={orientation}
                 crop={crop}
                 onChange={setCrop}
                 onNaturalSize={setNaturalSize}
               />
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+              <Tooltip title="Rotate left">
+                <Button
+                  size="small"
+                  variant="outlined"
+                  aria-label="Rotate left"
+                  onClick={() => turnBy(-1)}
+                  sx={{ minWidth: 40 }}
+                >
+                  <Rotate90DegreesCcwIcon fontSize="small" />
+                </Button>
+              </Tooltip>
+              <Tooltip title="Rotate right">
+                <Button
+                  size="small"
+                  variant="outlined"
+                  aria-label="Rotate right"
+                  onClick={() => turnBy(1)}
+                  sx={{ minWidth: 40 }}
+                >
+                  <Rotate90DegreesCwIcon fontSize="small" />
+                </Button>
+              </Tooltip>
+              <Typography variant="caption" sx={{ color: 'text.secondary', flex: 1 }}>
+                {orientation ? `Turned ${orientation}°` : 'Upright'}
+              </Typography>
+              <Button
+                size="small"
+                onClick={() => turnBy(-orientationTurns(orientation))}
+                disabled={!orientation}
+              >
+                Reset
+              </Button>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1, mb: 1 }}>
               <Typography variant="caption" sx={{ color: 'text.secondary', flex: 1 }}>

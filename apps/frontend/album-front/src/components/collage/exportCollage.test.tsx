@@ -208,3 +208,44 @@ it('draws only the crop region of a cropped photo', async () => {
   // the context is already translated to the item's centre
   expect([dx, dy, dw, dh]).toEqual([-50, -40, 100, 80]);
 });
+
+it('turns a sideways photo upright, drawing its box on its side', async () => {
+  const doc: CollageDoc = {
+    ...baseDoc,
+    photos: [{ ...baseDoc.photos[0], orientation: 90 }]
+  };
+
+  await exportCollageToPng(doc, resolvePhoto);
+
+  // the 100x80 box is rotated a quarter turn, so the image is drawn 80x100
+  expect(ctx.rotate).toHaveBeenCalledWith(Math.PI / 2);
+  const [, , , , , dx, dy, dw, dh] = ctx.drawImage.mock.calls[0];
+  expect([dx, dy, dw, dh]).toEqual([-40, -50, 80, 100]);
+});
+
+it('samples a turned photo’s crop from the untouched source image', async () => {
+  const doc: CollageDoc = {
+    ...baseDoc,
+    // right half of the turned picture == top half of the 800x600 file
+    photos: [{ ...baseDoc.photos[0], orientation: 90, crop: { x: 0.5, y: 0, width: 0.5, height: 1 } }]
+  };
+
+  await exportCollageToPng(doc, resolvePhoto);
+
+  // that region is the full 800 wide by 300 tall; the destination box is on
+  // its side at 80x100, so cover keeps the region's full height and trims its
+  // sides down to 240
+  const [, sx, sy, sw, sh] = ctx.drawImage.mock.calls[0];
+  expect(sw).toBeCloseTo(240);
+  expect(sh).toBeCloseTo(300);
+  expect(sx).toBeCloseTo((800 - 240) / 2);
+  expect(sy).toBeCloseTo(0);
+});
+
+it('leaves an unturned photo on the plain draw path', async () => {
+  await exportCollageToPng(baseDoc, resolvePhoto);
+
+  // only the item's own (zero) rotation is applied — no extra quarter turn
+  expect(ctx.rotate).toHaveBeenCalledTimes(1);
+  expect(ctx.rotate).toHaveBeenCalledWith(0);
+});

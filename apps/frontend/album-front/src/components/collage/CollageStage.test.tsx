@@ -243,3 +243,40 @@ it('fills the box with the whole image when the photo has no crop', () => {
   const img = screen.getByRole('img', { name: 'Beach day' });
   expect(img).toHaveStyle({ width: '100%', height: '100%' });
 });
+
+it('turns a sideways photo upright inside its box', () => {
+  const doc: CollageDoc = {
+    ...baseDoc,
+    photos: [{ ...baseDoc.photos[0], orientation: 90 }]
+  };
+  render(<Harness doc={doc} />);
+
+  const layer = screen.getByRole('img', { name: 'Beach day' }).parentElement!;
+  // the 200x150 box on its side, re-centred so the turn lands back on the box
+  expect(layer).toHaveStyle({
+    width: '150px',
+    height: '200px',
+    left: '25px',
+    top: '-25px',
+    transform: 'rotate(90deg)'
+  });
+});
+
+it('leaves an unturned photo sitting square in its box', () => {
+  render(<Harness doc={baseDoc} />);
+
+  const layer = screen.getByRole('img', { name: 'Beach day' }).parentElement!;
+  expect(layer).toHaveStyle({ width: '200px', height: '150px', transform: 'rotate(0deg)' });
+});
+
+it('maps a turned photo’s crop back onto the source image', () => {
+  const doc: CollageDoc = {
+    ...baseDoc,
+    // right half of the *turned* picture, which is the top half of the file
+    photos: [{ ...baseDoc.photos[0], orientation: 90, crop: { x: 0.5, y: 0, width: 0.5, height: 1 } }]
+  };
+  render(<Harness doc={doc} />);
+
+  const img = screen.getByRole('img', { name: 'Beach day' });
+  expect(img).toHaveStyle({ width: '100%', height: '200%', left: '-0%', top: '-0%' });
+});

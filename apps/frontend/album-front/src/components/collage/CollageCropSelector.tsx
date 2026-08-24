@@ -1,11 +1,13 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Box } from '@mui/material';
-import { CollageCrop, MIN_CROP_SIZE } from './collageDoc';
+import { CollageCrop, MIN_CROP_SIZE, isQuarterTurned } from './collageDoc';
 
 interface CollageCropSelectorProps {
   src: string;
   /** item rotation, mirrored onto the preview so the crop box lines up with it */
   rotation: number;
+  /** quarter turns baked into the picture; the crop is measured after them */
+  orientation?: number;
   crop?: CollageCrop;
   onChange: (crop?: CollageCrop) => void;
   /** reported once the preview loads, so callers can reason about aspect ratio */
@@ -20,6 +22,9 @@ interface Gesture {
   /** crop as it was when the gesture started; restored if the gesture is a no-op */
   start?: CollageCrop;
 }
+
+/** Box the oriented preview is fitted into. */
+const MAX_PREVIEW = { width: 340, height: 220 };
 
 const clamp = (n: number, min: number, max: number): number => Math.min(max, Math.max(min, n));
 
@@ -61,12 +66,40 @@ const localPoint = (
 const CollageCropSelector: React.FC<CollageCropSelectorProps> = ({
   src,
   rotation,
+  orientation,
   crop,
   onChange,
   onNaturalSize
 }) => {
   const surfaceRef = useRef<HTMLDivElement>(null);
   const gestureRef = useRef<Gesture | null>(null);
+  const [natural, setNatural] = useState<{ width: number; height: number } | null>(null);
+
+  const turned = isQuarterTurned(orientation);
+  // The preview is laid out at the *oriented* aspect ratio so that the crop
+  // overlay, which covers it edge to edge, measures the picture the user sees.
+  // Until the image reports its size there is nothing to compute a box from,
+  // so the image lays itself out as before and the overlay follows it.
+  const oriented = natural && {
+    width: turned ? natural.height : natural.width,
+    height: turned ? natural.width : natural.height
+  };
+  const fit =
+    oriented && oriented.width > 0 && oriented.height > 0
+      ? Math.min(MAX_PREVIEW.width / oriented.width, MAX_PREVIEW.height / oriented.height, 1)
+      : null;
+  const display = oriented && fit ? { width: oriented.width * fit, height: oriented.height * fit } : null;
+  // pre-turn footprint of the image inside that box
+  const imageBox = display && {
+    width: turned ? display.height : display.width,
+    height: turned ? display.width : display.height
+  };
+
+  const handleLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const size = { width: e.currentTarget.naturalWidth, height: e.currentTarget.naturalHeight };
+    setNatural(size);
+    onNaturalSize?.(size);
+  };
 
   const handlePointerDown = (e: React.PointerEvent) => {
     const surface = surfaceRef.current;
@@ -133,31 +166,37 @@ const CollageCropSelector: React.FC<CollageCropSelectorProps> = ({
 
   return (
     <Box
+      data-testid="crop-preview"
       sx={{
         position: 'relative',
         display: 'inline-block',
         maxWidth: '100%',
         touchAction: 'none',
-        userSelect: 'none'
+        userSelect: 'none',
+        ...(display ? { width: display.width, height: display.height } : {}),
+        transform: `rotate(${rotation}deg)`,
+        transition: 'transform 0.15s'
       }}
     >
       <img
         src={src}
         alt="preview"
         draggable={false}
-        onLoad={(e) =>
-          onNaturalSize?.({
-            width: e.currentTarget.naturalWidth,
-            height: e.currentTarget.naturalHeight
-          })
-        }
+        onLoad={handleLoad}
         style={{
           display: 'block',
-          maxWidth: '100%',
-          maxHeight: 220,
           borderRadius: 4,
-          transform: `rotate(${rotation}deg)`,
-          transition: 'transform 0.15s'
+          transform: `rotate(${orientation || 0}deg)`,
+          transition: 'transform 0.15s',
+          ...(display && imageBox
+            ? {
+                position: 'absolute',
+                width: imageBox.width,
+                height: imageBox.height,
+                left: (display.width - imageBox.width) / 2,
+                top: (display.height - imageBox.height) / 2
+              }
+            : { maxWidth: '100%', maxHeight: MAX_PREVIEW.height })
         }}
       />
       <Box
@@ -172,9 +211,7 @@ const CollageCropSelector: React.FC<CollageCropSelectorProps> = ({
           inset: 0,
           overflow: 'hidden',
           borderRadius: '4px',
-          cursor: 'crosshair',
-          transform: `rotate(${rotation}deg)`,
-          transition: 'transform 0.15s'
+          cursor: 'crosshair'
         }}
       >
         {crop && (

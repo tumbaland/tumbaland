@@ -17,11 +17,25 @@ function sizeSurface() {
 }
 
 /** Controlled wrapper, since the selector reports every change to its parent. */
-function Harness({ initialCrop, rotation = 0 }: { initialCrop?: CollageCrop; rotation?: number }) {
+function Harness({
+  initialCrop,
+  rotation = 0,
+  orientation
+}: {
+  initialCrop?: CollageCrop;
+  rotation?: number;
+  orientation?: number;
+}) {
   const [crop, setCrop] = useState<CollageCrop | undefined>(initialCrop);
   return (
     <>
-      <CollageCropSelector src="https://cdn.example/a.jpg" rotation={rotation} crop={crop} onChange={setCrop} />
+      <CollageCropSelector
+        src="https://cdn.example/a.jpg"
+        rotation={rotation}
+        orientation={orientation}
+        crop={crop}
+        onChange={setCrop}
+      />
       <output data-testid="crop-value">{crop ? `${crop.x},${crop.y},${crop.width},${crop.height}` : 'none'}</output>
     </>
   );
@@ -160,4 +174,46 @@ it('ignores pointer moves that did not start with a pointer down', () => {
   fireEvent.pointerMove(surface, { clientX: 140, clientY: 70 });
 
   expect(cropValue()).toBe('none');
+});
+
+/** Loads the preview at a known natural size so the oriented layout kicks in. */
+function loadPreview(width: number, height: number) {
+  const img = screen.getByRole('img', { name: 'preview' });
+  Object.defineProperty(img, 'naturalWidth', { value: width, configurable: true });
+  Object.defineProperty(img, 'naturalHeight', { value: height, configurable: true });
+  fireEvent.load(img);
+  return img;
+}
+
+it('lays the preview out at the oriented aspect ratio', () => {
+  render(<CollageCropSelector src="https://cdn.example/a.jpg" rotation={0} orientation={90} onChange={vi.fn()} />);
+
+  // a 440x220 photo on its side is 220x440, halved to fit the 220px-tall box
+  const img = loadPreview(440, 220);
+
+  expect(screen.getByTestId('crop-preview')).toHaveStyle({ width: '110px', height: '220px' });
+  // the image itself keeps its own 2:1 footprint underneath the turn
+  expect(img).toHaveStyle({ width: '220px', height: '110px', transform: 'rotate(90deg)' });
+});
+
+it('keeps the preview at its own aspect ratio when the photo is upright', () => {
+  render(<CollageCropSelector src="https://cdn.example/a.jpg" rotation={0} onChange={vi.fn()} />);
+
+  const img = loadPreview(600, 300);
+
+  expect(screen.getByTestId('crop-preview')).toHaveStyle({ width: '340px', height: '170px' });
+  expect(img).toHaveStyle({ transform: 'rotate(0deg)' });
+});
+
+it('measures the crop against the oriented preview, not the source image', () => {
+  render(<Harness orientation={90} />);
+  loadPreview(600, 300);
+  const surface = sizeSurface();
+
+  // the surface is 200x100 here, and the drag covers its left half
+  fireEvent.pointerDown(surface, { clientX: 0, clientY: 0 });
+  fireEvent.pointerMove(surface, { clientX: 100, clientY: 100 });
+  fireEvent.pointerUp(surface);
+
+  expectCrop(0, 0, 0.5, 1);
 });

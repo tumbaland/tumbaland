@@ -11,6 +11,8 @@ export interface CollageConfigPhoto {
   width: number;
   height: number;
   rotation?: number;
+  /** v2: quarter turns baked into the image itself, in degrees (0/90/180/270) */
+  orientation?: number;
   /** v2: explicit per-photo frame override (undefined = inherit) */
   id?: string;
   frame?: boolean;

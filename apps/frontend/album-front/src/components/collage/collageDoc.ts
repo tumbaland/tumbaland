@@ -16,9 +16,13 @@ import { CollageConfig } from '../../types/collage';
  */
 
 /**
- * Region of the source image to show, as fractions (0..1) of its natural size.
+ * Region of the image to show, as fractions (0..1) of its natural size.
  * Absent means the whole image. Kept resolution-independent so the same crop
  * works for the thumbnail on the canvas and the full-size original on export.
+ *
+ * Measured against the *oriented* image, i.e. after the item's `orientation`
+ * quarter turns are applied — that is the picture the user drew the crop on.
+ * Renderers undo those turns with sourceCrop() before touching the file.
  */
 export interface CollageCrop {
   x: number;
@@ -35,6 +39,12 @@ export interface CollagePhotoItem {
   width: number;
   height: number;
   rotation: number;
+  /**
+   * Quarter turns baked into the picture, in degrees (0/90/180/270). Fixes a
+   * photo that was shot or uploaded sideways; unlike `rotation` it turns the
+   * image inside its box rather than tilting the box on the canvas.
+   */
+  orientation?: number;
   caption: string;
   /** undefined = inherit the document-level frameEnabled setting */
   frame?: boolean;
@@ -110,6 +120,43 @@ export const normalizeCrop = (value?: Partial<CollageCrop> | null): CollageCrop 
   return { x, y, width, height };
 };
 
+/** Quarter turns (0-3, clockwise) an orientation in degrees stands for. */
+export const orientationTurns = (orientation?: number | null): number => {
+  const degrees = toNumber(orientation, 0);
+  return ((Math.round(degrees / 90) % 4) + 4) % 4;
+};
+
+/** True when the orientation swaps the image's width and height. */
+export const isQuarterTurned = (orientation?: number | null): boolean =>
+  orientationTurns(orientation) % 2 === 1;
+
+/** Stored orientation, snapped to a quarter turn; upright collapses to undefined. */
+export const normalizeOrientation = (value?: number | null): number | undefined => {
+  const turns = orientationTurns(value);
+  return turns === 0 ? undefined : turns * 90;
+};
+
+/**
+ * The same region of a picture, re-expressed after the picture itself is
+ * turned `turns` quarter turns clockwise. Used both to keep a crop pinned to
+ * what it framed while the user rotates, and to undo the turns for renderers.
+ */
+export const rotateCropClockwise = (crop: CollageCrop | undefined, turns: number): CollageCrop | undefined => {
+  if (!crop) return undefined;
+  let out = crop;
+  for (let step = ((Math.round(turns) % 4) + 4) % 4; step > 0; step -= 1) {
+    out = { x: 1 - out.y - out.height, y: out.x, width: out.height, height: out.width };
+  }
+  return out;
+};
+
+/**
+ * A photo's crop expressed against the untouched source file, which is what
+ * every renderer ultimately samples from.
+ */
+export const sourceCrop = (photo: Pick<CollagePhotoItem, 'crop' | 'orientation'>): CollageCrop | undefined =>
+  rotateCropClockwise(photo.crop, -orientationTurns(photo.orientation));
+
 export const normalizeCollageConfig = (config?: CollageConfig | null): CollageDoc => {
   const cfg: Partial<CollageConfig> = config ?? {};
 
@@ -134,6 +181,7 @@ export const normalizeCollageConfig = (config?: CollageConfig | null): CollageDo
           width: toNumber(p.width, 120),
           height: toNumber(p.height, 120),
           rotation: toNumber(p.rotation, 0),
+          orientation: normalizeOrientation(p.orientation),
           caption: typeof p.caption === 'string' ? p.caption : '',
           frame,
           crop: normalizeCrop(p.crop)
@@ -186,6 +234,7 @@ export const serializeCollageDoc = (doc: CollageDoc, existingConfig?: CollageCon
       width: p.width,
       height: p.height,
       rotation: p.rotation,
+      orientation: p.orientation,
       crop: p.crop,
       frame: p.frame,
       frameVisible: p.frame ?? doc.frameEnabled,

@@ -1,4 +1,12 @@
-import { CollageCrop, CollageDoc, photoHasFrame } from './collageDoc';
+import {
+  CollageCrop,
+  CollageDoc,
+  CollagePhotoItem,
+  isQuarterTurned,
+  orientationTurns,
+  photoHasFrame,
+  sourceCrop
+} from './collageDoc';
 import { ResolvePhoto } from './CollageStage';
 
 /**
@@ -53,6 +61,37 @@ const drawCover = (
   ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
 };
 
+/**
+ * drawCover for a photo that carries quarter turns: the destination box is
+ * turned about its centre and drawn on its side, so the picture lands upright
+ * inside the item exactly as the canvas shows it.
+ */
+const drawOriented = (
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  photo: CollagePhotoItem
+) => {
+  const turns = orientationTurns(photo.orientation);
+  const crop = sourceCrop(photo);
+  if (turns === 0) {
+    drawCover(ctx, img, x, y, w, h, crop);
+    return;
+  }
+
+  const turned = isQuarterTurned(photo.orientation);
+  const width = turned ? h : w;
+  const height = turned ? w : h;
+  ctx.save();
+  ctx.translate(x + w / 2, y + h / 2);
+  ctx.rotate((turns * 90 * Math.PI) / 180);
+  drawCover(ctx, img, -width / 2, -height / 2, width, height, crop);
+  ctx.restore();
+};
+
 export const exportCollageToPng = async (doc: CollageDoc, resolvePhoto: ResolvePhoto): Promise<Blob> => {
   const canvas = document.createElement('canvas');
   canvas.width = doc.canvas.width * EXPORT_SCALE;
@@ -105,7 +144,7 @@ export const exportCollageToPng = async (doc: CollageDoc, resolvePhoto: ResolveP
     }
 
     if (img) {
-      drawCover(ctx, img, imgX, imgY, imgW, imgH, photo.crop);
+      drawOriented(ctx, img, imgX, imgY, imgW, imgH, photo);
     } else {
       ctx.fillStyle = 'rgba(128,128,128,0.4)';
       ctx.fillRect(imgX, imgY, imgW, imgH);
