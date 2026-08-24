@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.450](https://github.com/toomastahves/tumbaland/compare/app-v0.0.449...app-v0.0.450) (2026-08-24)
+
+### Features
+
+* add rotations ([52f7396](https://github.com/toomastahves/tumbaland/commit/52f73960b6eea44f384a9d61706bdda8bfa6d610))
 ## [0.0.449](https://github.com/toomastahves/tumbaland/compare/app-v0.0.448...app-v0.0.449) (2026-08-23)
 
 ### Features
