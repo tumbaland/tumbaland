@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.451](https://github.com/toomastahves/tumbaland/compare/app-v0.0.450...app-v0.0.451) (2026-08-25)
+
+### Bug Fixes
+
+* **album-front:** don't crash the photo viewer for photos with no metadata ([#64](https://github.com/toomastahves/tumbaland/issues/64)) ([5199d30](https://github.com/toomastahves/tumbaland/commit/5199d307f9da8a225b53e52083896aeff40876e7))
 ## [0.0.450](https://github.com/toomastahves/tumbaland/compare/app-v0.0.449...app-v0.0.450) (2026-08-24)
 
 ### Features
