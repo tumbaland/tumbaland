@@ -193,4 +193,20 @@ describe('photo details panel', () => {
 
     expect(screen.getByText('59.43700, 24.75360')).toBeInTheDocument();
   });
+
+  it('does not crash opening a photo with no metadata at all (created before the field existed)', async () => {
+    // A Mongoose single-nested-subdocument path that was never set
+    // serializes with the key absent entirely, not as `{}` — this is the
+    // shape a real "legacy" photo comes back as, unlike every other test
+    // above which always supplies at least an empty metadata object.
+    const legacyPhoto = makePhoto({ _id: 'p2', size: 1024, metadata: undefined });
+
+    expect(() => renderViewer({ selectedPhoto: legacyPhoto })).not.toThrow();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show photo details' }));
+
+    expect(screen.getByText('1 KB')).toBeInTheDocument();
+    expect(screen.queryByText('Camera')).not.toBeInTheDocument();
+    expect(screen.queryByText('Location')).not.toBeInTheDocument();
+  });
 });
