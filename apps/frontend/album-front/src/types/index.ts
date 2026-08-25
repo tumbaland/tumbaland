@@ -37,7 +37,10 @@ export interface Photo {
   thumbnailSignedUrlExpiresAt?: string;
   thumbnailSignedUrlExpiresInMinutes?: number;
   thumbnailUrl?: string; // Add thumbnail URL for efficient grid loading
-  metadata: {
+  // Optional: a Mongoose single-nested-subdocument path that was never set
+  // (e.g. a photo created before this field existed) serializes as absent
+  // from the API response, not as `{}` — see PhotoViewer's buildDetails.
+  metadata?: {
     dateTaken?: string;
     location?: {
       latitude: number;

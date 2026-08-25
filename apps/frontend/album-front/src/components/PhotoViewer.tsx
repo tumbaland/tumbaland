@@ -36,7 +36,10 @@ const formatDateTime = (dateString: string) =>
  * reading its specs — so this is where those details live.
  */
 const buildDetails = (photo: Photo, resolution: string | null): Array<{ label: string; value: string }> => {
-  const { camera, location, dateTaken } = photo.metadata;
+  // A photo whose metadata was never actually set (e.g. created before this
+  // field existed) serializes with no `metadata` key at all rather than
+  // `{}` — destructuring it directly crashed the whole viewer on open.
+  const { camera, location, dateTaken } = photo.metadata ?? {};
   const settings = camera?.settings;
 
   const cameraName = [camera?.make, camera?.model].filter(Boolean).join(' ');
