@@ -220,6 +220,56 @@ export const getTransactions = async (query: TransactionQuery = {}): Promise<Tra
   return res.data;
 };
 
+export type Cadence = 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly';
+
+export interface RecurringPayment {
+  /** stable across refreshes: the normalised merchant it was grouped on */
+  key: string;
+  /** the merchant as the statement spells it */
+  merchant: string;
+  category: string;
+  cadence: Cadence;
+  /** median days between charges */
+  intervalDays: number;
+  occurrences: number;
+  /** share of the gaps that fit the cadence, 0-1 */
+  regularity: number;
+  /** median charge */
+  amount: number;
+  /** (max - min) / median: how much the charge moves around */
+  amountVariation: number;
+  monthlyEquivalent: number;
+  yearlyEquivalent: number;
+  firstCharge: string;
+  lastCharge: string;
+  nextExpected: string;
+  /** negative once the expected date has passed */
+  daysUntilNext: number;
+  status: 'active' | 'due' | 'lapsed';
+  priceChange: { previousAmount: number; currentAmount: number; changedOn: string } | null;
+}
+
+export interface RecurringReport {
+  from: string;
+  to: string;
+  /** what the still-running subscriptions cost */
+  monthlyTotal: number;
+  yearlyTotal: number;
+  lapsedCount: number;
+  /** most expensive per month first */
+  payments: RecurringPayment[];
+}
+
+/** The subscriptions inferred from the statement — nothing here is declared. */
+export const getRecurring = async (groupId?: string, months?: number): Promise<RecurringReport> => {
+  const params: Record<string, string> = {};
+  if (groupId) params.groupId = groupId;
+  if (months !== undefined) params.months = String(months);
+
+  const res = await financeApi.get<ApiResponse<RecurringReport>>(`${TRANSACTIONS_URL}/recurring`, { params });
+  return res.data;
+};
+
 export const getAnalytics = async (groupId?: string): Promise<Analytics> => {
   const params = groupId ? { groupId } : undefined;
   const res = await financeApi.get<ApiResponse<Analytics>>(`${TRANSACTIONS_URL}/analytics`, { params });

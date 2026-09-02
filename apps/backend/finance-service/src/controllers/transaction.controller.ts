@@ -3,6 +3,10 @@ import { BadRequestError, ForbiddenError, sendSuccess } from '@tumbaland/backend
 import * as transactionService from '../services/transaction.service';
 import { getCashflowSummary, DEFAULT_MONTHS } from '../services/cashflow.service';
 import { getAnalytics } from '../services/analytics.service';
+import {
+  getRecurringPayments,
+  DEFAULT_MONTHS as RECURRING_MONTHS
+} from '../services/recurring.service';
 import { decodeStatement } from '../services/pensionStatement.service';
 import {
   importStatement,
@@ -101,6 +105,19 @@ export const getSummary = async (req: Request, res: Response): Promise<void> => 
   });
 
   sendSuccess(res, summary);
+};
+
+export const getRecurring = async (req: Request, res: Response): Promise<void> => {
+  const user = req.user!;
+  const { groupId, months } = req.query;
+  const groups = contextGroups(req);
+
+  const recurring = await getRecurringPayments(user.id, {
+    months: parsePositiveInt(months, 'months') ?? RECURRING_MONTHS,
+    groupId: groups.length > 0 ? (groupId as string) : undefined
+  });
+
+  sendSuccess(res, recurring);
 };
 
 export const removeTransaction = async (req: Request, res: Response): Promise<void> => {

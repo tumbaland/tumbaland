@@ -5,6 +5,7 @@ import {
   getCategories,
   getCashflowSummary,
   getAnalytics,
+  getRecurring,
   importStatement,
   exportTransactions,
   saveBlob,
@@ -23,6 +24,7 @@ const invalidateCashflow = (queryClient: ReturnType<typeof useQueryClient>) => {
   queryClient.invalidateQueries({ queryKey: ['transactions'] });
   queryClient.invalidateQueries({ queryKey: ['cashflowSummary'] });
   queryClient.invalidateQueries({ queryKey: ['cashflowAnalytics'] });
+  queryClient.invalidateQueries({ queryKey: ['cashflowRecurring'] });
   queryClient.invalidateQueries({ queryKey: ['transactionCategories'] });
   queryClient.invalidateQueries({ queryKey: ['dashboard'] });
 };
@@ -56,6 +58,12 @@ export const useAnalytics = (groupId?: string) =>
   useQuery({
     queryKey: ['cashflowAnalytics', groupId],
     queryFn: () => getAnalytics(groupId)
+  });
+
+export const useRecurring = (groupId?: string) =>
+  useQuery({
+    queryKey: ['cashflowRecurring', groupId],
+    queryFn: () => getRecurring(groupId)
   });
 
 export const useTransactionCategories = (groupId?: string) =>

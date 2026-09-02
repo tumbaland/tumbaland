@@ -35,6 +35,7 @@ import {
   useTransactionCategories,
   useCashflowSummary,
   useAnalytics,
+  useRecurring,
   useDeleteTransaction,
   useExportTransactions
 } from '../hooks/useCashflow';
@@ -42,6 +43,7 @@ import { Transaction } from '../services/cashflowService';
 import ImportDialog from '../components/cashflow/ImportDialog';
 import CashflowAnalytics from '../components/cashflow/CashflowAnalytics';
 import CategoryBreakdown from '../components/cashflow/CategoryBreakdown';
+import RecurringPayments from '../components/cashflow/RecurringPayments';
 import CategoryEditDialog from '../components/cashflow/CategoryEditDialog';
 import CategoryRulesDialog from '../components/cashflow/CategoryRulesDialog';
 import CashflowSummaryCards from '../components/cashflow/CashflowSummaryCards';
@@ -94,6 +96,7 @@ const CashFlowPage: React.FC = () => {
   const { data: categories = [] } = useTransactionCategories(tenantGroupId);
   const { data: summary } = useCashflowSummary(tenantGroupId);
   const { data: analytics } = useAnalytics(tenantGroupId);
+  const { data: recurring } = useRecurring(tenantGroupId);
   const deleteMutation = useDeleteTransaction();
   const exportMutation = useExportTransactions();
 
@@ -198,6 +201,7 @@ const CashFlowPage: React.FC = () => {
             <Tab label="Overview" />
             <Tab label="Trends" />
             <Tab label="Categories" />
+            <Tab label="Recurring" />
             <Tab label={`Transactions (${totals?.count.toLocaleString() ?? 0})`} />
           </Tabs>
 
@@ -216,7 +220,13 @@ const CashFlowPage: React.FC = () => {
           </Box>
 
           <Box role="tabpanel" hidden={tab !== 3}>
-            {tab === 3 && (
+            {tab === 3 && recurring && (
+              <RecurringPayments report={recurring} currency={analytics?.currency} />
+            )}
+          </Box>
+
+          <Box role="tabpanel" hidden={tab !== 4}>
+            {tab === 4 && (
               <>
                 <TransactionFilters
                   filters={filters}

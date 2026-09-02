@@ -12,6 +12,10 @@ jest.mock('../services/cashflow.service', () => ({
 }));
 
 jest.mock('../services/analytics.service', () => ({ getAnalytics: jest.fn() }));
+jest.mock('../services/recurring.service', () => ({
+  getRecurringPayments: jest.fn(),
+  DEFAULT_MONTHS: 24
+}));
 jest.mock('../services/transactionImport.service', () => ({
   importStatement: jest.fn(),
   importCategories: jest.fn(),
@@ -31,6 +35,7 @@ jest.mock('../services/transactionExport.service', () => ({ exportTransactions: 
 import * as transactionService from '../services/transaction.service';
 import { getCashflowSummary } from '../services/cashflow.service';
 import { getAnalytics } from '../services/analytics.service';
+import { getRecurringPayments } from '../services/recurring.service';
 import {
   importStatement,
   importCategories,
@@ -43,6 +48,7 @@ import {
   getCategories,
   getSummary,
   getAnalyticsReport,
+  getRecurring,
   importTransactions,
   exportTransactionsCsv,
   removeTransaction
@@ -51,6 +57,7 @@ import {
 const mockedTransactions = transactionService as jest.Mocked<typeof transactionService>;
 const mockedSummary = getCashflowSummary as unknown as jest.Mock;
 const mockedAnalytics = getAnalytics as unknown as jest.Mock;
+const mockedRecurring = getRecurringPayments as unknown as jest.Mock;
 const mockedImport = importStatement as unknown as jest.Mock;
 const mockedImportCategories = importCategories as unknown as jest.Mock;
 const mockedImportPension = importPensionStatement as unknown as jest.Mock;
@@ -367,5 +374,42 @@ describe('exportTransactionsCsv', () => {
     await expect(
       exportTransactionsCsv(req({ query: { type: 'transfer' } } as Partial<Request>), csvRes())
     ).rejects.toMatchObject({ name: 'BadRequestError' });
+  });
+});
+
+describe('getRecurring', () => {
+  const report = { from: '2024-09-01', to: '2026-09-03', monthlyTotal: 0, yearlyTotal: 0, lapsedCount: 0, payments: [] };
+
+  beforeEach(() => mockedRecurring.mockResolvedValue(report));
+
+  it('looks back two years by default and stays personal without a group', async () => {
+    const res = mockRes();
+
+    await getRecurring(req(), res);
+
+    expect(mockedRecurring).toHaveBeenCalledWith('u1', { months: 24, groupId: undefined });
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: report }));
+  });
+
+  it('scopes to a group the caller belongs to', async () => {
+    await getRecurring(req({ query: { groupId: 'g1' }, userGroups: ['g1'] }), mockRes());
+    expect(mockedRecurring).toHaveBeenCalledWith('u1', { months: 24, groupId: 'g1' });
+  });
+
+  it('refuses a group the caller does not belong to', async () => {
+    await expect(getRecurring(req({ query: { groupId: 'g9' }, userGroups: [] }), mockRes())).rejects.toMatchObject({
+      name: 'ForbiddenError'
+    });
+  });
+
+  it('forwards an explicit window', async () => {
+    await getRecurring(req({ query: { months: '12' } }), mockRes());
+    expect(mockedRecurring).toHaveBeenCalledWith('u1', { months: 12, groupId: undefined });
+  });
+
+  it('rejects a window that is not a positive integer', async () => {
+    await expect(getRecurring(req({ query: { months: '0' } }), mockRes())).rejects.toMatchObject({
+      name: 'BadRequestError'
+    });
   });
 });

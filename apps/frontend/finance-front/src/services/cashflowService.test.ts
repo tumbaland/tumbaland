@@ -4,6 +4,7 @@ import {
   getCategories,
   getCashflowSummary,
   getAnalytics,
+  getRecurring,
   importStatement,
   deleteTransaction,
   exportTransactions,
@@ -247,5 +248,28 @@ describe('declaring the file type on import', () => {
 
     expect(lastInit().body).toBeInstanceOf(Uint8Array);
     expect(new TextDecoder().decode(lastInit().body as Uint8Array)).toBe('Osakute');
+  });
+});
+
+describe('recurring payments', () => {
+  const report = { from: '2024-09-01', to: '2026-09-03', monthlyTotal: 0, yearlyTotal: 0, lapsedCount: 0, payments: [] };
+
+  it('fetches the personal scope with no window override', async () => {
+    mockFetchOnce({ success: true, data: report });
+
+    const result = await getRecurring();
+
+    expect(lastUrl()).toContain('/transactions/recurring');
+    expect(lastUrl()).not.toContain('groupId');
+    expect(result).toEqual(report);
+  });
+
+  it('passes the group and window through', async () => {
+    mockFetchOnce({ success: true, data: report });
+
+    await getRecurring('g1', 12);
+
+    expect(lastUrl()).toContain('groupId=g1');
+    expect(lastUrl()).toContain('months=12');
   });
 });

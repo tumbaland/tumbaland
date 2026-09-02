@@ -7,6 +7,7 @@ vi.mock('../services/cashflowService', () => ({
   getCategories: vi.fn(),
   getCashflowSummary: vi.fn(),
   getAnalytics: vi.fn(),
+  getRecurring: vi.fn(),
   importStatement: vi.fn(),
   deleteTransaction: vi.fn(),
   updateCategory: vi.fn(),
@@ -21,6 +22,7 @@ import {
   useTransactionCategories,
   useCashflowSummary,
   useAnalytics,
+  useRecurring,
   useImportStatement,
   useDeleteTransaction,
   useUpdateCategory,
@@ -169,4 +171,16 @@ it('does not save anything when the export fails', async () => {
 
   await waitFor(() => expect(result.current.isError).toBe(true));
   expect(mocked.saveBlob).not.toHaveBeenCalled();
+});
+
+describe('useRecurring', () => {
+  it('fetches the recurring report for the current scope', async () => {
+    const report = { from: '2024-09-01', to: '2026-09-03', monthlyTotal: 12.17, yearlyTotal: 145.98, lapsedCount: 0, payments: [] };
+    (cashflowService.getRecurring as ReturnType<typeof vi.fn>).mockResolvedValue(report);
+
+    const { result } = renderHook(() => useRecurring('g1'), { wrapper: wrapper().Wrapper });
+
+    await waitFor(() => expect(result.current.data).toEqual(report));
+    expect(cashflowService.getRecurring).toHaveBeenCalledWith('g1');
+  });
 });

@@ -6,6 +6,7 @@ import {
   getCategories,
   getSummary,
   getAnalyticsReport,
+  getRecurring,
   importTransactions,
   exportTransactionsCsv,
   editCategory,
@@ -35,6 +36,7 @@ const csvBody = express.raw({
 router.get('/categories', getCategories);
 router.get('/summary', getSummary);
 router.get('/analytics', getAnalyticsReport);
+router.get('/recurring', getRecurring);
 router.post('/import', csvBody, importTransactions);
 // Export honours the same filters as the list: pulling out the uncategorised
 // rows, sorting them in a spreadsheet and handing the file back is the point.

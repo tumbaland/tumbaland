@@ -10,6 +10,7 @@ vi.mock('@tumbaland/components', async (importOriginal) => {
 const mockedUseTransactions = vi.fn();
 const mockedUseSummary = vi.fn();
 const mockedUseAnalytics = vi.fn();
+const mockedUseRecurring = vi.fn();
 const mockedDelete = vi.fn();
 const mockedUpdateCategory = vi.fn();
 const mockedRecategorise = vi.fn();
@@ -21,6 +22,7 @@ vi.mock('../hooks/useCashflow', () => ({
   useTransactionCategories: () => ({ data: ['Groceries', 'Salary'] }),
   useCashflowSummary: (...args: unknown[]) => mockedUseSummary(...args),
   useAnalytics: (...args: unknown[]) => mockedUseAnalytics(...args),
+  useRecurring: (...args: unknown[]) => mockedUseRecurring(...args),
   useDeleteTransaction: () => ({ mutateAsync: mockedDelete }),
   useImportStatement: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useExportTransactions: () => ({ mutateAsync: mockedExport, isPending: false }),
@@ -96,6 +98,23 @@ const analytics = {
   currency: 'EUR'
 };
 
+const recurring = {
+  from: '2024-09-01',
+  to: '2026-09-03',
+  monthlyTotal: 12.17,
+  yearlyTotal: 145.98,
+  lapsedCount: 0,
+  payments: [
+    {
+      key: 'spotify ab', merchant: 'SPOTIFY AB', category: 'Subscriptions', cadence: 'monthly' as const,
+      intervalDays: 30, occurrences: 6, regularity: 1, amount: 11.99, amountVariation: 0,
+      monthlyEquivalent: 12.17, yearlyEquivalent: 145.98, firstCharge: '2026-04-01',
+      lastCharge: '2026-09-01', nextExpected: '2026-10-01', daysUntilNext: 28,
+      status: 'active' as const, priceChange: null
+    }
+  ]
+};
+
 function setMobile(isMobile: boolean) {
   window.matchMedia = ((query: string) => ({
     matches: isMobile, media: query, onchange: null,
@@ -114,6 +133,7 @@ beforeEach(() => {
   mockedUseTransactions.mockReturnValue({ data: page(), isLoading: false, error: null });
   mockedUseSummary.mockReturnValue({ data: summary });
   mockedUseAnalytics.mockReturnValue({ data: analytics });
+  mockedUseRecurring.mockReturnValue({ data: recurring });
   mockedRules.mockReturnValue({ data: [], isLoading: false });
 });
 
@@ -439,4 +459,13 @@ describe('category rules', () => {
     expect(screen.getByText(/No transactions yet/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Category rules/ })).toBeInTheDocument();
   });
+});
+
+it('lists the detected subscriptions on the Recurring tab', async () => {
+  render(<CashFlowPage />);
+
+  await userEvent.click(screen.getByRole('tab', { name: /recurring/i }));
+
+  expect(screen.getByText('SPOTIFY AB')).toBeInTheDocument();
+  expect(mockedUseRecurring).toHaveBeenCalled();
 });
