@@ -8,8 +8,10 @@ import {
   getWeeklyHeatmapData,
   getCumulativeTimelineData,
   getStreakStatistics,
+  getMilestones,
   StatisticsFilters
 } from '../services/statistics.service';
+import { getDashboardSettings } from '../services/dashboardSettings.service';
 
 function parseYearParam(year: unknown): number | undefined {
   if (!year) return undefined;
@@ -74,6 +76,34 @@ export const getStreaks = async (req: Request, res: Response): Promise<void> => 
   res.json({
     success: true,
     data: streaks,
+    generatedAt: new Date().toISOString()
+  });
+};
+
+/**
+ * Round numbers just reached and just ahead.
+ *
+ * Reads the scope's dashboard settings first: the same start date the
+ * days-together card counts from decides when an anniversary falls, and types
+ * hidden from the dashboard stay out of the milestones too, so the two views
+ * never disagree about what counts.
+ */
+export const getMilestonesData = async (req: Request, res: Response): Promise<void> => {
+  const { groupId } = req.query;
+  const settings = await getDashboardSettings(
+    req.user!.id,
+    req.userGroups || [],
+    groupId as string | undefined
+  );
+
+  const milestones = await getMilestones(scopeFilters(req), {
+    startDate: settings.startDate,
+    hiddenTypeIds: settings.hiddenTypeIds
+  });
+
+  res.json({
+    success: true,
+    data: milestones,
     generatedAt: new Date().toISOString()
   });
 };

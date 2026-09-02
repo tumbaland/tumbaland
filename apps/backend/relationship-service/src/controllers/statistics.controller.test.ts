@@ -7,10 +7,16 @@ jest.mock('../services/statistics.service', () => ({
   getMonthlyActivityBreakdown: jest.fn(),
   getWeeklyHeatmapData: jest.fn(),
   getCumulativeTimelineData: jest.fn(),
-  getStreakStatistics: jest.fn()
+  getStreakStatistics: jest.fn(),
+  getMilestones: jest.fn()
+}));
+
+jest.mock('../services/dashboardSettings.service', () => ({
+  getDashboardSettings: jest.fn()
 }));
 
 import * as StatisticsService from '../services/statistics.service';
+import { getDashboardSettings } from '../services/dashboardSettings.service';
 import {
   getStatistics,
   getMonthlyHoursData,
@@ -18,7 +24,8 @@ import {
   getMonthlyActivityBreakdownData,
   getWeeklyHeatmapDataController,
   getCumulativeTimelineDataController,
-  getStreaks
+  getStreaks,
+  getMilestonesData
 } from './statistics.controller';
 
 function mockRes(): Response {
@@ -163,5 +170,42 @@ describe('year-param controllers', () => {
     const nextYearPlusOne = new Date().getFullYear() + 2;
     const req = { query: { year: String(nextYearPlusOne) }, user: { id: 'u1' } } as unknown as Request;
     await expect(getMonthlyStatisticsData(req, mockRes())).rejects.toMatchObject({ name: 'BadRequestError' });
+  });
+});
+
+describe('getMilestonesData', () => {
+  const settings = { highlightTypeIds: [], hiddenTypeIds: ['t9'], startDate: '2024-10-27' };
+
+  beforeEach(() => {
+    (getDashboardSettings as jest.Mock).mockResolvedValue(settings);
+    (StatisticsService.getMilestones as jest.Mock).mockResolvedValue({ recent: [], upcoming: [] });
+  });
+
+  it('passes the scope dashboard settings through so both views agree', async () => {
+    const req = { query: { groupId: 'g1' }, user: { id: 'u1' }, userGroups: ['g1'] } as unknown as Request;
+    const res = mockRes();
+
+    await getMilestonesData(req, res);
+
+    expect(getDashboardSettings).toHaveBeenCalledWith('u1', ['g1'], 'g1');
+    expect(StatisticsService.getMilestones).toHaveBeenCalledWith(
+      { userId: 'u1', groupId: 'g1' },
+      { startDate: '2024-10-27', hiddenTypeIds: ['t9'] }
+    );
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true, data: { recent: [], upcoming: [] } })
+    );
+  });
+
+  it('reads personal settings and personal entries when no group is given', async () => {
+    const req = { query: {}, user: { id: 'u1' }, userGroups: ['g1'] } as unknown as Request;
+
+    await getMilestonesData(req, mockRes());
+
+    expect(getDashboardSettings).toHaveBeenCalledWith('u1', ['g1'], undefined);
+    expect(StatisticsService.getMilestones).toHaveBeenCalledWith(
+      { userId: 'u1', userGroupIds: ['g1'], personalOnly: true },
+      expect.anything()
+    );
   });
 });

@@ -3,6 +3,7 @@ import { Box, Button, Typography } from '@mui/material';
 import TuneIcon from '@mui/icons-material/Tune';
 import StatsCards from '../components/StatsCards';
 import StreakCards from '../components/StreakCards';
+import MilestonesCard from '../components/MilestonesCard';
 import RecentActivitiesCards from '../components/RecentActivitiesCards';
 import HoursBarChart from '../components/HoursBarChart';
 import TotalHoursChart from '../components/TotalHoursChart';
@@ -73,6 +74,11 @@ const Dashboard: React.FC = () => {
         {/* Streaks and staleness nudges */}
         <Box sx={{ width: '100%' }}>
           <StreakCards hiddenTypeIds={settings.hiddenTypeIds} />
+        </Box>
+
+        {/* Milestones just reached and coming up */}
+        <Box sx={{ width: '100%' }}>
+          <MilestonesCard />
         </Box>
 
         {/* Recent Activities */}

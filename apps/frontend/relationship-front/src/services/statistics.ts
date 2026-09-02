@@ -65,6 +65,39 @@ export interface StreakStatistics {
   types: TypeCadence[];
 }
 
+export type MilestoneKind = 'days-together' | 'anniversary' | 'type-count' | 'total-count';
+
+export interface Milestone {
+  kind: MilestoneKind;
+  /** stable across refreshes, so it can key a list */
+  key: string;
+  label: string;
+  target: number;
+  unit: 'days' | 'years' | 'entries';
+  typeId?: string;
+  color?: string;
+  /** reached milestones: the day it happened, and how long ago that was */
+  achievedOn?: string;
+  daysAgo?: number;
+  /** upcoming count milestones: how many more entries it takes */
+  remaining?: number;
+  /** upcoming: the exact day for date milestones, the projected day for counts */
+  expectedOn?: string;
+  daysAway?: number;
+  /** true when expectedOn is projected from the current pace rather than certain */
+  projected?: boolean;
+}
+
+export interface MilestonesResult {
+  /** the day the "together" counts run from: the configured start, else the first entry */
+  since: string | null;
+  daysTogether: number | null;
+  /** reached recently, most recent first */
+  recent: Milestone[];
+  /** expected soon, soonest first */
+  upcoming: Milestone[];
+}
+
 export interface MonthlyHoursData {
   month: string;
   year: number;
@@ -203,6 +236,27 @@ export const getStreaks = async (groupId?: string): Promise<StreakStatistics> =>
 };
 
 /**
+ * Get milestones just reached and coming up. Like streaks this is never
+ * timeframe-scoped, and the server applies the scope's dashboard settings
+ * (start date, hidden types) so the numbers match the rest of the dashboard.
+ * @param groupId - Optional: group ID to filter by
+ */
+export const getMilestones = async (groupId?: string): Promise<MilestonesResult> => {
+  try {
+    const params: Record<string, string | number> = {};
+    if (groupId) params.groupId = groupId;
+
+    const response = await relationshipApi.get<ApiResponse<MilestonesResult>>('/statistics/milestones', {
+      params
+    });
+    return response.data;
+  } catch (error) {
+    logger.error('Error fetching milestones', error);
+    throw new Error(statisticsErrorMessage(error, 'Failed to fetch milestones'));
+  }
+};
+
+/**
  * Get monthly hours statistics
  * @param year - Optional: specific year to filter by
  * @param groupId - Optional: group ID to filter by
@@ -310,6 +364,7 @@ export const getCumulativeTimelineData = async (year?: number, groupId?: string)
 export const statisticsApi = {
   getStatistics,
   getStreaks,
+  getMilestones,
   getMonthlyHours,
   getMonthlyStatistics,
   getMonthlyActivityBreakdown,

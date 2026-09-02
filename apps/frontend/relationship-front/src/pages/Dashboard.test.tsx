@@ -22,6 +22,7 @@ vi.mock('../hooks/useDashboardSettings', () => ({
 
 vi.mock('../components/StatsCards', () => ({ default: () => <div>StatsCards</div> }));
 vi.mock('../components/StreakCards', () => ({ default: () => <div>StreakCards</div> }));
+vi.mock('../components/MilestonesCard', () => ({ default: () => <div>MilestonesCard</div> }));
 vi.mock('../components/RecentActivitiesCards', () => ({ default: () => <div>RecentActivitiesCards</div> }));
 vi.mock('../components/HoursBarChart', () => ({ default: () => <div>HoursBarChart</div> }));
 vi.mock('../components/TotalHoursChart', () => ({ default: () => <div>TotalHoursChart</div> }));
@@ -40,6 +41,7 @@ it('renders the dashboard title and all sub-components', () => {
   expect(screen.getByText('Dashboard')).toBeInTheDocument();
   expect(screen.getByText('StatsCards')).toBeInTheDocument();
   expect(screen.getByText('StreakCards')).toBeInTheDocument();
+  expect(screen.getByText('MilestonesCard')).toBeInTheDocument();
   expect(screen.getByText('RecentActivitiesCards')).toBeInTheDocument();
   expect(screen.getByText('HoursBarChart')).toBeInTheDocument();
   expect(screen.getByText('TotalHoursChart')).toBeInTheDocument();

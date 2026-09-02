@@ -7,7 +7,8 @@ import {
   getMonthlyActivityBreakdownData,
   getWeeklyHeatmapDataController,
   getCumulativeTimelineDataController,
-  getStreaks
+  getStreaks,
+  getMilestonesData
 } from '../controllers/statistics.controller';
 
 const router = express.Router();
@@ -28,6 +29,13 @@ router.get('/', getStatistics);
  * @query groupId - Optional: group to scope to (defaults to personal entries)
  */
 router.get('/streaks', getStreaks);
+
+/**
+ * @route GET /api/statistics/milestones
+ * @desc Round numbers just reached and the next ones coming up
+ * @query groupId - Optional: group to scope to (defaults to personal entries)
+ */
+router.get('/milestones', getMilestonesData);
 
 /**
  * @route GET /api/statistics/monthly-hours
