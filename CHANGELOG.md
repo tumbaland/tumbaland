@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.452](https://github.com/toomastahves/tumbaland/compare/app-v0.0.451...app-v0.0.452) (2026-09-02)
+
+### Features
+
+* add milestones ([bd7cddd](https://github.com/toomastahves/tumbaland/commit/bd7cddd815cc55688d58ebc4002c194bf797dafd))
 ## [0.0.451](https://github.com/toomastahves/tumbaland/compare/app-v0.0.450...app-v0.0.451) (2026-08-25)
 
 ### Bug Fixes
