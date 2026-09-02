@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.453](https://github.com/toomastahves/tumbaland/compare/app-v0.0.452...app-v0.0.453) (2026-09-02)
+
+### Features
+
+* add on this day ([bec1755](https://github.com/toomastahves/tumbaland/commit/bec17550bca381778df9d7d75541a913f9ae3de4))
+* add recurring cash flow ([b33cbc2](https://github.com/toomastahves/tumbaland/commit/b33cbc2b76d1138a7db63d2d5c5b6bb2ca78bd70))
 ## [0.0.452](https://github.com/toomastahves/tumbaland/compare/app-v0.0.451...app-v0.0.452) (2026-09-02)
 
 ### Features
