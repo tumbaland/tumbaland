@@ -1,5 +1,6 @@
 import { albumApi } from './albumApi';
 import {
+  Memories,
   Photo,
   CreatePhotoData,
   PaginatedResponse,
@@ -9,6 +10,14 @@ import {
   TagCount,
   TagMatch
 } from '../types';
+
+export type MemoriesQueryParams = {
+  groupId?: string;
+  /** days either side of today that still count as "this day"; server default 3 */
+  windowDays?: number;
+  /** photos per year; server default 12 */
+  limitPerYear?: number;
+};
 
 export interface PhotoQueryParams {
   page?: number;
@@ -41,6 +50,12 @@ export const photoService = {
     const response = await albumApi.get<ApiResponse<PaginatedResponse<Photo>>>(`/photos/album/${albumId}`, {
       params: toRequestParams(params)
     });
+    return response.data;
+  },
+
+  // Photos from this day in earlier years, newest year first
+  async getMemories(params?: MemoriesQueryParams): Promise<Memories> {
+    const response = await albumApi.get<ApiResponse<Memories>>('/photos/memories', { params });
     return response.data;
   },
 

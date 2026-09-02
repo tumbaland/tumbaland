@@ -17,6 +17,11 @@ jest.mock('../services/photoService', () => ({
   }
 }));
 
+jest.mock('../services/memoriesService', () => ({
+  __esModule: true,
+  default: { getMemories: jest.fn() }
+}));
+
 jest.mock('../services/fileServiceClient', () => ({
   getUploadSignedUrl: jest.fn(),
   generateFileId: jest.fn()
@@ -32,6 +37,7 @@ jest.mock('../services/storageUsage', () => ({
 }));
 
 import photoService from '../services/photoService';
+import memoriesService from '../services/memoriesService';
 import { getUploadSignedUrl, generateFileId } from '../services/fileServiceClient';
 import Album from '../models/Album';
 import { assertStorageHeadroom, recordStoredBytes, releaseStoredBytes } from '../services/storageUsage';
@@ -46,10 +52,12 @@ import {
   getUploadSignedUrlRequest,
   updatePhotoAIAnalysis,
   getPhotosForAIAnalysis,
-  getPhotoByFileId
+  getPhotoByFileId,
+  getMemories
 } from './photoController';
 
 const mockedPhotoService = photoService as jest.Mocked<typeof photoService>;
+const mockedMemoriesService = memoriesService as jest.Mocked<typeof memoriesService>;
 const mockedGetUploadSignedUrl = getUploadSignedUrl as jest.Mock;
 const mockedGenerateFileId = generateFileId as jest.Mock;
 const mockedAlbumFindById = Album.findById as unknown as jest.Mock;
@@ -336,5 +344,48 @@ describe('getPhotoByFileId', () => {
     await getPhotoByFileId(baseReq({ params: { fileId: 'file-1' } }), res);
 
     expect(mockedPhotoService.getPhotoByFileId).toHaveBeenCalledWith('file-1');
+  });
+});
+
+describe('getMemories', () => {
+  const emptyResult = { date: '2026-09-03', windowDays: 3, totalPhotos: 0, years: [] };
+
+  beforeEach(() => mockedMemoriesService.getMemories.mockResolvedValue(emptyResult));
+
+  it('passes the scope and the caller\'s groups through', async () => {
+    const req = baseReq({ query: { groupId: 'g1' }, userGroups: ['g1'] } as Partial<Request>);
+    const res = mockRes();
+
+    await getMemories(req, res);
+
+    expect(mockedMemoriesService.getMemories).toHaveBeenCalledWith(
+      { groupId: 'g1', windowDays: 3, limitPerYear: 12 },
+      { userId: 'user-1', userGroups: ['g1'] }
+    );
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: emptyResult }));
+  });
+
+  it('defaults the window and the per-year cap when they are not given', async () => {
+    await getMemories(baseReq(), mockRes());
+    expect(mockedMemoriesService.getMemories).toHaveBeenCalledWith(
+      { groupId: undefined, windowDays: 3, limitPerYear: 12 },
+      { userId: 'user-1', userGroups: [] }
+    );
+  });
+
+  it('clamps a window and a cap the caller does not pay for', async () => {
+    await getMemories(baseReq({ query: { windowDays: '400', limitPerYear: '0' } }), mockRes());
+    expect(mockedMemoriesService.getMemories).toHaveBeenCalledWith(
+      expect.objectContaining({ windowDays: 30, limitPerYear: 1 }),
+      expect.anything()
+    );
+  });
+
+  it('ignores an unparseable window rather than sending NaN to the query', async () => {
+    await getMemories(baseReq({ query: { windowDays: 'yesterday' } }), mockRes());
+    expect(mockedMemoriesService.getMemories).toHaveBeenCalledWith(
+      expect.objectContaining({ windowDays: 3 }),
+      expect.anything()
+    );
   });
 });

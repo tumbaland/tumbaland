@@ -11,7 +11,8 @@ import {
   getUploadSignedUrlRequest,
   updatePhotoAIAnalysis,
   getPhotosForAIAnalysis,
-  getPhotoByFileId
+  getPhotoByFileId,
+  getMemories
 } from '../controllers/photoController';
 import {
   createPhotoSchema,
@@ -29,6 +30,9 @@ router.get('/album/:albumId', authenticateToken, getPhotosByAlbum);
 router.get('/album/:albumId/tags', authenticateToken, getAlbumTags);
 // Must precede PUT /:id — otherwise '/tags' is swallowed as an :id.
 router.put('/tags', authenticateToken, validate(bulkUpdateTagsSchema), bulkUpdateTags);
+// Must precede GET /:id, for the same reason PUT /tags does — a literal path
+// segment registered after a param route is never reached.
+router.get('/memories', authenticateToken, getMemories);
 router.get('/:id', authenticateToken, getPhotoById);
 router.get('/by-file/:fileId', getPhotoByFileId); // Public route for file service
 router.put('/:id', authenticateToken, validate(updatePhotoSchema), updatePhoto);

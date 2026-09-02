@@ -32,6 +32,7 @@ import CreateAlbumDialog from '../components/CreateAlbumDialog';
 import AlbumsGrid from '../components/AlbumsGrid';
 import AlbumsEmptyState from '../components/AlbumsEmptyState';
 import AlbumsHeader from '../components/AlbumsHeader';
+import OnThisDay from '../components/OnThisDay';
 
 const AlbumsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -185,6 +186,10 @@ const AlbumsPage: React.FC = () => {
           {albumsError}
         </Alert>
       )}
+
+      {/* Photos from this day in earlier years; renders nothing on a day with
+          no history, so it costs the page nothing when there is none. */}
+      <OnThisDay groupId={tenantGroupId} />
 
       {albums.length === 0 ? (
         <AlbumsEmptyState

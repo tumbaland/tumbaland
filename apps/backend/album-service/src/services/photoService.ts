@@ -40,7 +40,7 @@ interface PhotoQuery {
   tags?: { $in: string[] } | { $all: string[] };
 }
 
-interface PhotoWithSignedUrls {
+export interface PhotoWithSignedUrls {
   _id: unknown;
   filename: string;
   originalName: string;
@@ -233,27 +233,7 @@ class PhotoService {
 
     const [photos, total] = await Promise.all([photosQuery, Photo.countDocuments(query)]);
 
-    // Fetch signed URLs in batch
-    let signedUrlMap: Record<string, SignedUrlData> = {};
-    try {
-      signedUrlMap = await getPhotoSignedUrlsBatch(photos, false, 60);
-    } catch (error) {
-      logger.error('Failed to fetch batch signed URLs for album photos', { error: (error as Error)?.message });
-    }
-
-    // Get thumbnail URLs for photos that have thumbnails
-    const photosWithThumbnails = photos.filter((photo) => photo.minioThumbnailFileId);
-    let thumbnailSignedUrlMap: Record<string, SignedUrlData> = {};
-
-    if (photosWithThumbnails.length > 0) {
-      try {
-        thumbnailSignedUrlMap = await getPhotoSignedUrlsBatch(photosWithThumbnails, true, 60);
-      } catch (error) {
-        logger.error('Failed to fetch batch signed URLs for thumbnails', { error: (error as Error)?.message });
-      }
-    }
-
-    const photosWithUrls = photos.map((photo) => this.enrichPhotoWithUrls(photo, signedUrlMap, thumbnailSignedUrlMap));
+    const photosWithUrls = await this.attachSignedUrls(photos);
 
     return {
       photos: photosWithUrls,
@@ -497,6 +477,38 @@ class PhotoService {
         logger.error('Failed to generate thumbnail', { error: (error as Error)?.message });
       }
     });
+  }
+
+  /**
+   * Attach original + thumbnail signed URLs to a set of photos, in two batch
+   * calls rather than one round trip per photo. Shared by every listing that
+   * hands photos to a client — an album page, a memories strip — so they all
+   * get the same URL shape and the same "a URL failure degrades, never fails
+   * the request" behaviour.
+   */
+  async attachSignedUrls(photos: HydratedDocument<IPhoto>[]): Promise<PhotoWithSignedUrls[]> {
+    if (photos.length === 0) return [];
+
+    let signedUrlMap: Record<string, SignedUrlData> = {};
+    try {
+      signedUrlMap = await getPhotoSignedUrlsBatch(photos, false, 60);
+    } catch (error) {
+      logger.error('Failed to fetch batch signed URLs for photos', { error: (error as Error)?.message });
+    }
+
+    // Only photos that actually have a thumbnail are worth a second batch call.
+    const photosWithThumbnails = photos.filter((photo) => photo.minioThumbnailFileId);
+    let thumbnailSignedUrlMap: Record<string, SignedUrlData> = {};
+
+    if (photosWithThumbnails.length > 0) {
+      try {
+        thumbnailSignedUrlMap = await getPhotoSignedUrlsBatch(photosWithThumbnails, true, 60);
+      } catch (error) {
+        logger.error('Failed to fetch batch signed URLs for thumbnails', { error: (error as Error)?.message });
+      }
+    }
+
+    return photos.map((photo) => this.enrichPhotoWithUrls(photo, signedUrlMap, thumbnailSignedUrlMap));
   }
 
   /**

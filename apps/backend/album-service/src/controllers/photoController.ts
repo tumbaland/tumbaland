@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { NotFoundError, UnauthorizedError, sendSuccess } from '@tumbaland/backend-core';
 import photoService from '../services/photoService';
+import memoriesService from '../services/memoriesService';
 import { getUploadSignedUrl, generateFileId } from '../services/fileServiceClient';
 import { assertStorageHeadroom, recordStoredBytes, releaseStoredBytes, storageActor } from '../services/storageUsage';
 import Album from '../models/Album';
@@ -52,6 +53,36 @@ export const getPhotosByAlbum = async (req: Request, res: Response): Promise<voi
   });
 
   sendSuccess(res, { photos: result.photos, pagination: result.pagination });
+};
+
+/**
+ * Clamp a numeric query param into a sane range, ignoring anything unparseable.
+ * The window and the per-year cap both size a query the caller does not pay
+ * for, so neither is taken at face value.
+ */
+const parseBoundedNumber = (raw: unknown, fallback: number, min: number, max: number): number => {
+  const value = Number(raw);
+  if (raw === undefined || raw === null || raw === '' || Number.isNaN(value)) return fallback;
+  return Math.min(max, Math.max(min, Math.trunc(value)));
+};
+
+/**
+ * Photos from this day in earlier years
+ */
+export const getMemories = async (req: Request, res: Response): Promise<void> => {
+  const user = req.user!;
+  const { groupId, windowDays, limitPerYear } = req.query;
+
+  const memories = await memoriesService.getMemories(
+    {
+      groupId: groupId as string | undefined,
+      windowDays: parseBoundedNumber(windowDays, 3, 0, 30),
+      limitPerYear: parseBoundedNumber(limitPerYear, 12, 1, 50)
+    },
+    { userId: user.id, userGroups: req.userGroups || [] }
+  );
+
+  sendSuccess(res, memories);
 };
 
 /**

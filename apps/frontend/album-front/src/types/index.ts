@@ -77,6 +77,32 @@ export interface Photo {
   updatedAt: string;
 }
 
+export interface MemoryPhoto extends Photo {
+  /** the album the photo lives in, so the strip can say where it came from */
+  albumName: string;
+  /** the day this photo is remembered on (YYYY-MM-DD) */
+  memoryDate: string;
+  /** 'taken' when the file carried a capture date, 'uploaded' when it did not */
+  dateSource: 'taken' | 'uploaded';
+}
+
+export interface MemoryYear {
+  year: number;
+  yearsAgo: number;
+  /** photos this year has on the day — may exceed `photos.length` */
+  photoCount: number;
+  photos: MemoryPhoto[];
+}
+
+export interface Memories {
+  /** the day the window is centred on (YYYY-MM-DD) */
+  date: string;
+  windowDays: number;
+  totalPhotos: number;
+  /** most recent year first */
+  years: MemoryYear[];
+}
+
 export interface CreateAlbumData {
   name: string;
   description?: string;

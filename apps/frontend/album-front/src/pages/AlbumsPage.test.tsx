@@ -16,6 +16,9 @@ vi.mock('@tumbaland/components', async (importOriginal) => {
 
 vi.mock('../hooks/useAlbums', () => ({ useAlbums: vi.fn() }));
 
+// Its own tests cover the strip; here it would only drag a query client in.
+vi.mock('../components/OnThisDay', () => ({ default: () => <div>OnThisDay</div> }));
+
 import { useAlbums } from '../hooks/useAlbums';
 import { makeAlbum } from '../test/fixtures';
 import AlbumsPage from './AlbumsPage';

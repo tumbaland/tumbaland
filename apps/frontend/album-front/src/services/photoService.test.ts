@@ -222,3 +222,25 @@ it('PUTs a bulk tag change and unwraps the result', async () => {
   });
   expect(result.modified).toBe(2);
 });
+
+it('fetches memories for the personal scope', async () => {
+  mockFetchOnce({ success: true, data: { date: '2026-09-03', windowDays: 3, totalPhotos: 0, years: [] } });
+
+  const result = await photoService.getMemories();
+
+  const [url] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+  expect(String(url)).toContain('/photos/memories');
+  expect(String(url)).not.toContain('groupId');
+  expect(result.years).toEqual([]);
+});
+
+it('passes the group and window through when fetching memories', async () => {
+  mockFetchOnce({ success: true, data: { date: '2026-09-03', windowDays: 7, totalPhotos: 2, years: [] } });
+
+  await photoService.getMemories({ groupId: 'g1', windowDays: 7, limitPerYear: 5 });
+
+  const [url] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+  expect(String(url)).toContain('groupId=g1');
+  expect(String(url)).toContain('windowDays=7');
+  expect(String(url)).toContain('limitPerYear=5');
+});
