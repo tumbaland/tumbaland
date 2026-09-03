@@ -5,6 +5,8 @@ export interface AppConfig {
   AUTH_FRONT_URL?: string;
   PUBLIC_API_URL?: string;
   SHELL_FRONT_URL?: string;
+  /** Needed by the API keys tab, to offer the groups a key can be pinned to. */
+  GROUP_API_URL?: string;
 }
 
 const factory = createConfigProvider<AppConfig>({
@@ -17,7 +19,8 @@ const factory = createConfigProvider<AppConfig>({
     AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL,
     AUTH_FRONT_URL: import.meta.env.VITE_AUTH_FRONT_URL,
     PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL,
-    SHELL_FRONT_URL: import.meta.env.VITE_SHELL_FRONT_URL
+    SHELL_FRONT_URL: import.meta.env.VITE_SHELL_FRONT_URL,
+    GROUP_API_URL: import.meta.env.VITE_GROUP_API_URL
   })
 });
 

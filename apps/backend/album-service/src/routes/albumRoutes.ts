@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken, validate } from '@tumbaland/backend-core';
+import { authenticateAgent, requireScope, validate } from '@tumbaland/backend-core';
 import {
   createAlbum,
   deleteAlbum,
@@ -14,17 +14,17 @@ import { createAlbumSchema, updateAlbumSchema, setCoverPhotoSchema } from '../va
 const router = express.Router();
 
 // Authentication also populates req.userGroups from the JWT.
-router.use(authenticateToken);
+router.use(authenticateAgent());
 
 // Album routes
-router.post('/', validate(createAlbumSchema), createAlbum);
-router.get('/', getAlbums);
-router.get('/:id', getAlbumById);
-router.put('/:id', validate(updateAlbumSchema), updateAlbum);
-router.delete('/:id', deleteAlbum);
+router.post('/', requireScope('album:write'), validate(createAlbumSchema), createAlbum);
+router.get('/', requireScope('album:read'), getAlbums);
+router.get('/:id', requireScope('album:read'), getAlbumById);
+router.put('/:id', requireScope('album:write'), validate(updateAlbumSchema), updateAlbum);
+router.delete('/:id', requireScope('album:write'), deleteAlbum);
 
 // Cover photo routes
-router.put('/:id/cover', validate(setCoverPhotoSchema), setCoverPhoto);
-router.delete('/:id/cover', removeCoverPhoto);
+router.put('/:id/cover', requireScope('album:write'), validate(setCoverPhotoSchema), setCoverPhoto);
+router.delete('/:id/cover', requireScope('album:write'), removeCoverPhoto);
 
 export default router;

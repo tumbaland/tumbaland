@@ -2,34 +2,42 @@ import React from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router';
 import { Box, Tabs, Tab } from '@mui/material';
 import ProfileTab from '../components/tabs/ProfileTab';
+import ApiKeysTab from '../components/tabs/ApiKeysTab';
 
 const AccountPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Determine active tab based on current path
+  // One list drives both the labels and the routing, so a tab cannot end up
+  // selecting a path that renders something else.
+  const tabs = [
+    { path: '/profile', label: 'Profile' },
+    { path: '/api-keys', label: 'API keys' }
+  ];
+
   const getActiveTab = () => {
-    if (location.pathname.includes('/security')) return 1;
-    if (location.pathname.includes('/data')) return 2;
-    return 0; // default to profile
+    const index = tabs.findIndex((tab) => location.pathname.includes(tab.path));
+    return index === -1 ? 0 : index;
   };
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    const paths = ['/profile', '/security', '/data'];
-    navigate(paths[newValue]);
+    navigate(tabs[newValue].path);
   };
 
   return (
     <Box sx={{ width: '100%', mt: 2 }}>
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tabs value={getActiveTab()} onChange={handleTabChange} aria-label="account tabs">
-          <Tab label="Profile" />
+          {tabs.map((tab) => (
+            <Tab key={tab.path} label={tab.label} />
+          ))}
         </Tabs>
       </Box>
       <Box sx={{ mt: 3 }}>
         <Routes>
           <Route path="" element={<Navigate to="profile" replace />} />
           <Route path="profile" element={<ProfileTab />} />
+          <Route path="api-keys" element={<ApiKeysTab />} />
         </Routes>
       </Box>
     </Box>

@@ -106,6 +106,7 @@ jobs:
         run: |
           echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" > .env.app
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env.app
+          echo "API_KEY_ENCRYPTION_SECRET=${{ secrets.API_KEY_ENCRYPTION_SECRET }}" >> .env.app
           echo "INTERNAL_SERVICE_TOKEN=${{ secrets.INTERNAL_SERVICE_TOKEN }}" >> .env.app
           echo "GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}" >> .env.app
           echo "COOKIE_DOMAIN=${{ vars.COOKIE_DOMAIN }}" >> .env.app

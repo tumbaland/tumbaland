@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken, validate } from '@tumbaland/backend-core';
+import { authenticateAgent, requireScope, validate } from '@tumbaland/backend-core';
 import {
   getStatementSettings,
   updateStatementSettings
@@ -8,9 +8,9 @@ import { updateStatementSettingsSchema } from '../validation/schemas';
 
 const router = Router();
 
-router.use(authenticateToken);
+router.use(authenticateAgent());
 
-router.get('/', getStatementSettings);
-router.put('/', validate(updateStatementSettingsSchema), updateStatementSettings);
+router.get('/', requireScope('finance:read'), getStatementSettings);
+router.put('/', requireScope('finance:write'), validate(updateStatementSettingsSchema), updateStatementSettings);
 
 export default router;

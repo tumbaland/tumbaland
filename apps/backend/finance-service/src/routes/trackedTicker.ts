@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken, validate, createRateLimiter } from '@tumbaland/backend-core';
+import { authenticateAgent, requireScope, validate, createRateLimiter } from '@tumbaland/backend-core';
 import {
   getTrackedTickers,
   addTrackedTicker,
@@ -18,10 +18,10 @@ const router = Router();
 const searchLimiter = createRateLimiter({ windowMs: 60 * 60 * 1000, max: DAILY_LIMIT });
 
 // Must be before /:id routes to avoid Express treating "search" as an id
-router.get('/search', authenticateToken, searchLimiter, searchTrackedTickers);
-router.get('/', authenticateToken, getTrackedTickers);
-router.post('/', authenticateToken, validate(createTrackedTickerSchema), addTrackedTicker);
-router.put('/:id', authenticateToken, validate(updateTrackedTickerSchema), editTrackedTicker);
-router.delete('/:id', authenticateToken, removeTrackedTicker);
+router.get('/search', authenticateAgent(), requireScope('finance:read'), searchLimiter, searchTrackedTickers);
+router.get('/', authenticateAgent(), requireScope('finance:read'), getTrackedTickers);
+router.post('/', authenticateAgent(), requireScope('finance:write'), validate(createTrackedTickerSchema), addTrackedTicker);
+router.put('/:id', authenticateAgent(), requireScope('finance:write'), validate(updateTrackedTickerSchema), editTrackedTicker);
+router.delete('/:id', authenticateAgent(), requireScope('finance:write'), removeTrackedTicker);
 
 export default router;

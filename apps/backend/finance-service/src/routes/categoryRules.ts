@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken, validate } from '@tumbaland/backend-core';
+import { authenticateAgent, requireScope, validate } from '@tumbaland/backend-core';
 import {
   getCategoryRules,
   createCategoryRule,
@@ -17,15 +17,15 @@ import {
 
 const router = Router();
 
-router.use(authenticateToken);
+router.use(authenticateAgent());
 
 // Must precede /:id so it is not read as a rule id
-router.post('/apply', validate(applyCategoryRulesSchema), applyCategoryRules);
+router.post('/apply', requireScope('finance:write'), validate(applyCategoryRulesSchema), applyCategoryRules);
 
-router.get('/', getCategoryRules);
-router.post('/', validate(createCategoryRuleSchema), createCategoryRule);
-router.put('/:id', validate(updateCategoryRuleSchema), updateCategoryRule);
-router.post('/:id/move', validate(moveCategoryRuleSchema), moveCategoryRule);
-router.delete('/:id', deleteCategoryRule);
+router.get('/', requireScope('finance:read'), getCategoryRules);
+router.post('/', requireScope('finance:write'), validate(createCategoryRuleSchema), createCategoryRule);
+router.put('/:id', requireScope('finance:write'), validate(updateCategoryRuleSchema), updateCategoryRule);
+router.post('/:id/move', requireScope('finance:write'), validate(moveCategoryRuleSchema), moveCategoryRule);
+router.delete('/:id', requireScope('finance:write'), deleteCategoryRule);
 
 export default router;

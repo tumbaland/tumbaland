@@ -1,14 +1,14 @@
 import { Router } from 'express';
-import { authenticateToken, validate } from '@tumbaland/backend-core';
+import { authenticateAgent, requireScope, validate } from '@tumbaland/backend-core';
 import { getDashboardSettings, saveDashboardSettings } from '../controllers/dashboardSettings.controller';
 import { saveDashboardSettingsSchema } from '../validation/schemas';
 
 const router = Router();
 
 // Authentication also populates req.userGroups from the JWT.
-router.use(authenticateToken);
+router.use(authenticateAgent());
 
-router.get('/', getDashboardSettings);
-router.put('/', validate(saveDashboardSettingsSchema), saveDashboardSettings);
+router.get('/', requireScope('relationship:read'), getDashboardSettings);
+router.put('/', requireScope('relationship:write'), validate(saveDashboardSettingsSchema), saveDashboardSettings);
 
 export default router;

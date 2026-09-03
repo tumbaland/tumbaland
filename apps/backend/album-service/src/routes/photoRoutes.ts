@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken, validate } from '@tumbaland/backend-core';
+import { authenticateAgent, requireScope, validate } from '@tumbaland/backend-core';
 import {
   createPhoto,
   getPhotosByAlbum,
@@ -25,24 +25,24 @@ import {
 const router = express.Router();
 
 // Photo routes
-router.post('/', authenticateToken, validate(createPhotoSchema), createPhoto);
-router.get('/album/:albumId', authenticateToken, getPhotosByAlbum);
-router.get('/album/:albumId/tags', authenticateToken, getAlbumTags);
+router.post('/', authenticateAgent(), requireScope('album:write'), validate(createPhotoSchema), createPhoto);
+router.get('/album/:albumId', authenticateAgent(), requireScope('album:read'), getPhotosByAlbum);
+router.get('/album/:albumId/tags', authenticateAgent(), requireScope('album:read'), getAlbumTags);
 // Must precede PUT /:id — otherwise '/tags' is swallowed as an :id.
-router.put('/tags', authenticateToken, validate(bulkUpdateTagsSchema), bulkUpdateTags);
+router.put('/tags', authenticateAgent(), requireScope('album:write'), validate(bulkUpdateTagsSchema), bulkUpdateTags);
 // Must precede GET /:id, for the same reason PUT /tags does — a literal path
 // segment registered after a param route is never reached.
-router.get('/memories', authenticateToken, getMemories);
-router.get('/:id', authenticateToken, getPhotoById);
+router.get('/memories', authenticateAgent(), requireScope('album:read'), getMemories);
+router.get('/:id', authenticateAgent(), requireScope('album:read'), getPhotoById);
 router.get('/by-file/:fileId', getPhotoByFileId); // Public route for file service
-router.put('/:id', authenticateToken, validate(updatePhotoSchema), updatePhoto);
-router.delete('/:id', authenticateToken, deletePhoto);
+router.put('/:id', authenticateAgent(), requireScope('album:write'), validate(updatePhotoSchema), updatePhoto);
+router.delete('/:id', authenticateAgent(), requireScope('album:write'), deletePhoto);
 
 // AI Analysis routes
-router.put('/:id/ai-analysis', authenticateToken, validate(updatePhotoAIAnalysisSchema), updatePhotoAIAnalysis);
-router.get('/album/:albumId/ai-analysis', authenticateToken, getPhotosForAIAnalysis);
+router.put('/:id/ai-analysis', authenticateAgent(), requireScope('album:write'), validate(updatePhotoAIAnalysisSchema), updatePhotoAIAnalysis);
+router.get('/album/:albumId/ai-analysis', authenticateAgent(), requireScope('album:read'), getPhotosForAIAnalysis);
 
 // Upload routes
-router.post('/upload-url', authenticateToken, validate(uploadSignedUrlSchema), getUploadSignedUrlRequest);
+router.post('/upload-url', authenticateAgent(), requireScope('album:write'), validate(uploadSignedUrlSchema), getUploadSignedUrlRequest);
 
 export default router;

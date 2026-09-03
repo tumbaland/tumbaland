@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken, validate } from '@tumbaland/backend-core';
+import { authenticateAgent, requireScope, validate } from '@tumbaland/backend-core';
 import {
   getAssetClasses,
   createAssetClass,
@@ -11,11 +11,11 @@ import { createAssetClassSchema, updateAssetClassSchema } from '../validation/sc
 const router = Router();
 
 // Apply authentication middleware (groups are now extracted from JWT)
-router.use(authenticateToken);
+router.use(authenticateAgent());
 
-router.get('/', getAssetClasses);
-router.post('/', validate(createAssetClassSchema), createAssetClass);
-router.delete('/:id', deleteAssetClass);
-router.put('/:id', validate(updateAssetClassSchema), updateAssetClass);
+router.get('/', requireScope('finance:read'), getAssetClasses);
+router.post('/', requireScope('finance:write'), validate(createAssetClassSchema), createAssetClass);
+router.delete('/:id', requireScope('finance:write'), deleteAssetClass);
+router.put('/:id', requireScope('finance:write'), validate(updateAssetClassSchema), updateAssetClass);
 
 export default router;

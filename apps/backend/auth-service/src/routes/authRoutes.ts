@@ -2,10 +2,24 @@ import { Router, Request, Response } from 'express';
 import { strictRateLimiter, validate, NotFoundError } from '@tumbaland/backend-core';
 import { validateToken, logout, verifyAuth, refreshToken, invalidateUserTokens } from '../controllers/authController';
 import { getProfile, updateProfile } from '../controllers/profileController';
+import {
+  requireApiKeysConfigured,
+  getApiKeys,
+  postApiKey,
+  postApiKeyReveal,
+  postApiKeyRevoke,
+  removeApiKey
+} from '../controllers/apiKeyController';
 import { authenticateToken, requireRole, requireApproved } from '../middleware/authMiddleware';
 import { requireInternalService } from '../middleware/internalServiceAuth';
 import { User } from '../models/User';
-import { validateTokenSchema, invalidateTokensSchema, updateProfileSchema, approveUserSchema } from '../validation/schemas';
+import {
+  validateTokenSchema,
+  invalidateTokensSchema,
+  updateProfileSchema,
+  approveUserSchema,
+  createApiKeySchema
+} from '../validation/schemas';
 
 const router = Router();
 
@@ -25,6 +39,17 @@ router.put('/profile', authenticateToken, requireApproved, validate(updateProfil
 
 // Verify route now fully protected
 router.get('/verify', authenticateToken, requireApproved, verifyAuth);
+
+// API keys — issuing credentials that act for the user, so always an interactive
+// session (`authenticateToken` is JWT-only) and never reachable with a key
+// itself. Revealing is strictly rate-limited: it is the one route that hands
+// back a working secret, which makes it the one worth guessing at.
+router.use('/api-keys', requireApiKeysConfigured);
+router.get('/api-keys', authenticateToken, requireApproved, getApiKeys);
+router.post('/api-keys', authenticateToken, requireApproved, validate(createApiKeySchema), postApiKey);
+router.post('/api-keys/:id/reveal', authenticateToken, requireApproved, strictRateLimiter, postApiKeyReveal);
+router.post('/api-keys/:id/revoke', authenticateToken, requireApproved, postApiKeyRevoke);
+router.delete('/api-keys/:id', authenticateToken, requireApproved, removeApiKey);
 
 // Internal service endpoints for token management — service-to-service only, never user-facing.
 router.post('/internal/invalidate-tokens', requireInternalService, validate(invalidateTokensSchema), invalidateUserTokens);

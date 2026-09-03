@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken, validate } from '@tumbaland/backend-core';
+import { authenticateAgent, requireScope, validate } from '@tumbaland/backend-core';
 import {
   createActivityType,
   getActivityTypes,
@@ -13,16 +13,16 @@ import { createActivityTypeSchema, updateActivityTypeSchema, reorderActivityType
 const router = Router();
 
 // Authentication also populates req.userGroups from the JWT.
-router.use(authenticateToken);
+router.use(authenticateAgent());
 
 // CRUD routes
-router.post('/', validate(createActivityTypeSchema), createActivityType);
-router.get('/', getActivityTypes);
-router.get('/:id', getActivityTypeById);
-router.put('/:id', validate(updateActivityTypeSchema), updateActivityType);
-router.delete('/:id', deleteActivityType);
+router.post('/', requireScope('relationship:write'), validate(createActivityTypeSchema), createActivityType);
+router.get('/', requireScope('relationship:read'), getActivityTypes);
+router.get('/:id', requireScope('relationship:read'), getActivityTypeById);
+router.put('/:id', requireScope('relationship:write'), validate(updateActivityTypeSchema), updateActivityType);
+router.delete('/:id', requireScope('relationship:write'), deleteActivityType);
 
 // Special routes
-router.post('/reorder', validate(reorderActivityTypesSchema), reorderActivityTypes);
+router.post('/reorder', requireScope('relationship:write'), validate(reorderActivityTypesSchema), reorderActivityTypes);
 
 export default router;

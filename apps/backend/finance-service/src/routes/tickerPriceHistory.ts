@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken, validate, createRateLimiter } from '@tumbaland/backend-core';
+import { authenticateAgent, requireScope, validate, createRateLimiter } from '@tumbaland/backend-core';
 import {
   getTickerPriceHistory,
   fetchAndSaveTickerPrices,
@@ -29,7 +29,8 @@ const providerCallLimiter = createRateLimiter({ windowMs: 60 * 60 * 1000, max: D
 // Fetch and save all historic prices for a ticker
 router.post(
   '/fetch-all',
-  authenticateToken,
+  authenticateAgent(),
+  requireScope('finance:write'),
   providerCallLimiter,
   validate(tickerFetchSchema),
   fetchAndSaveAllTickerHistory
@@ -38,27 +39,29 @@ router.post(
 // Fetch and save the full weekly history for a ticker (one call, ~10-20 years)
 router.post(
   '/fetch-weekly',
-  authenticateToken,
+  authenticateAgent(),
+  requireScope('finance:write'),
   providerCallLimiter,
   validate(tickerFetchSchema),
   fetchAndSaveWeeklyTickerHistory
 );
 
 // Get price history for the caller's tracked tickers
-router.get('/', authenticateToken, getTickerPriceHistory);
+router.get('/', authenticateAgent(), requireScope('finance:read'), getTickerPriceHistory);
 // Remaining provider quota for today
-router.get('/quota', authenticateToken, getQuota);
+router.get('/quota', authenticateAgent(), requireScope('finance:read'), getQuota);
 // How much history each tracked ticker holds, and how fresh it is
-router.get('/coverage', authenticateToken, getCoverage);
+router.get('/coverage', authenticateAgent(), requireScope('finance:read'), getCoverage);
 // Fetch and save latest prices
 router.post(
   '/fetch',
-  authenticateToken,
+  authenticateAgent(),
+  requireScope('finance:write'),
   providerCallLimiter,
   validate(tickerFetchSchema),
   fetchAndSaveTickerPrices
 );
 // Delete a price history record by id
-router.delete('/:id', authenticateToken, deleteTickerPriceHistory);
+router.delete('/:id', authenticateAgent(), requireScope('finance:write'), deleteTickerPriceHistory);
 
 export default router;

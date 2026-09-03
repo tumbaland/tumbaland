@@ -30,6 +30,9 @@ export * from './entitlements';
 // Group ownership (the quota subject for anything pooled)
 export * from './groups';
 
+// API keys (non-browser clients: MCP servers, scripts, agents)
+export * from './apiKeys';
+
 // Middleware
 export { authenticateToken, optionalAuth } from './middleware/authMiddleware';
 export {

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken, validate } from '@tumbaland/backend-core';
+import { authenticateAgent, requireScope, validate } from '@tumbaland/backend-core';
 import {
   createActivity,
   getActivities,
@@ -16,17 +16,17 @@ import { createActivitySchema, updateActivitySchema } from '../validation/schema
 const router = Router();
 
 // Authentication also populates req.userGroups from the JWT.
-router.use(authenticateToken);
+router.use(authenticateAgent());
 
 // CRUD routes
-router.post('/', validate(createActivitySchema), createActivity);
-router.get('/', getActivities);
-router.get('/recent', getRecentActivities);
-router.get('/recent-summary', getRecentActivitiesSummary);
-router.get('/types', getActivityTypes);
-router.get('/descriptions', getActivityDescriptions);
-router.get('/:id', getActivityById);
-router.put('/:id', validate(updateActivitySchema), updateActivity);
-router.delete('/:id', deleteActivity);
+router.post('/', requireScope('relationship:write'), validate(createActivitySchema), createActivity);
+router.get('/', requireScope('relationship:read'), getActivities);
+router.get('/recent', requireScope('relationship:read'), getRecentActivities);
+router.get('/recent-summary', requireScope('relationship:read'), getRecentActivitiesSummary);
+router.get('/types', requireScope('relationship:read'), getActivityTypes);
+router.get('/descriptions', requireScope('relationship:read'), getActivityDescriptions);
+router.get('/:id', requireScope('relationship:read'), getActivityById);
+router.put('/:id', requireScope('relationship:write'), validate(updateActivitySchema), updateActivity);
+router.delete('/:id', requireScope('relationship:write'), deleteActivity);
 
 export default router;

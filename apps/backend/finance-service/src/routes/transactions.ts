@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import express from 'express';
-import { authenticateToken } from '@tumbaland/backend-core';
+import { authenticateAgent, requireScope } from '@tumbaland/backend-core';
 import {
   getTransactions,
   getCategories,
@@ -16,7 +16,7 @@ import {
 
 const router = Router();
 
-router.use(authenticateToken);
+router.use(authenticateAgent());
 
 /**
  * Statements arrive as raw CSV, well past the default 100kb JSON limit — a
@@ -33,20 +33,20 @@ const csvBody = express.raw({
 });
 
 // These must precede /:id so they are not read as transaction ids
-router.get('/categories', getCategories);
-router.get('/summary', getSummary);
-router.get('/analytics', getAnalyticsReport);
-router.get('/recurring', getRecurring);
-router.post('/import', csvBody, importTransactions);
+router.get('/categories', requireScope('finance:read'), getCategories);
+router.get('/summary', requireScope('finance:read'), getSummary);
+router.get('/analytics', requireScope('finance:read'), getAnalyticsReport);
+router.get('/recurring', requireScope('finance:read'), getRecurring);
+router.post('/import', requireScope('finance:write'), csvBody, importTransactions);
 // Export honours the same filters as the list: pulling out the uncategorised
 // rows, sorting them in a spreadsheet and handing the file back is the point.
-router.get('/export', exportTransactionsCsv);
-router.get('/', getTransactions);
+router.get('/export', requireScope('finance:read'), exportTransactionsCsv);
+router.get('/', requireScope('finance:read'), getTransactions);
 // Entries come from imports rather than by hand, so there is no create route
 // and no general update. The category is the exception: it is ours rather than
 // the bank's, and the uncategorised backlog has to be fillable.
-router.post('/recategorise', bulkRecategorise);
-router.patch('/:id/category', editCategory);
-router.delete('/:id', removeTransaction);
+router.post('/recategorise', requireScope('finance:write'), bulkRecategorise);
+router.patch('/:id/category', requireScope('finance:write'), editCategory);
+router.delete('/:id', requireScope('finance:write'), removeTransaction);
 
 export default router;
