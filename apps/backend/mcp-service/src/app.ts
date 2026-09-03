@@ -62,6 +62,23 @@ export function createApp() {
   const app = express();
   app.use(express.json({ limit: '1mb' }));
 
+  /**
+   * The root is not part of the protocol — MCP lives entirely at /mcp — but it
+   * is the first thing anyone types when checking whether the service is up,
+   * and Express's default HTML "Error" page answers that question badly.
+   */
+  app.get('/', (_req: Request, res: Response) => {
+    res.json({
+      name: SERVER_NAME,
+      version: SERVER_VERSION,
+      description: 'Tumbaland MCP server. Connect an assistant to log and read your journal.',
+      endpoint: `${canonicalUrl()}/mcp`,
+      transport: 'streamable-http',
+      authentication: 'Bearer token — a Tumbaland API key from account settings',
+      documentation: 'https://modelcontextprotocol.io'
+    });
+  });
+
   app.get('/health/live', (_req: Request, res: Response) => {
     res.json({ status: 'ok', service: 'mcp-service' });
   });
@@ -132,6 +149,15 @@ export function createApp() {
         });
       }
     }
+  });
+
+  // Anything else: JSON, not Express's HTML error page. A client that wandered
+  // off the path is far more likely to be parsing JSON than rendering markup.
+  app.use((req: Request, res: Response) => {
+    res.status(404).json({
+      error: 'not_found',
+      message: `No route for ${req.method} ${req.path}. The MCP endpoint is POST /mcp.`
+    });
   });
 
   return app;

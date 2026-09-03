@@ -162,3 +162,33 @@ describe('log_day is additive', () => {
     expect(JSON.stringify(logDay.inputSchema.properties.replace)).toMatch(/destructive/i);
   });
 });
+
+describe('the root and unknown paths', () => {
+  it('describes the server at the root, rather than an HTML error page', async () => {
+    // This is what anyone types first to check the service is up.
+    const res = await request(app).get('/');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ name: 'tumbaland', transport: 'streamable-http' });
+    expect(res.body.endpoint).toMatch(/\/mcp$/);
+  });
+
+  it('does not need credentials for the root, since it reveals nothing', async () => {
+    const res = await request(app).get('/');
+    expect(res.status).not.toBe(401);
+    expect(JSON.stringify(res.body)).not.toMatch(/tmb_live/);
+  });
+
+  it('answers an unknown path with JSON, not markup', async () => {
+    const res = await request(app).get('/nope');
+
+    expect(res.status).toBe(404);
+    expect(res.headers['content-type']).toMatch(/json/);
+    expect(res.body.message).toContain('POST /mcp');
+  });
+
+  it('answers an unknown method on the MCP path with JSON too', async () => {
+    const res = await request(app).get('/mcp');
+    expect(res.headers['content-type']).toMatch(/json/);
+  });
+});

@@ -114,8 +114,13 @@ async function call<T>(
 }
 
 export const tumbaland = {
-  listActivityTypes: (apiKey: string): Promise<ActivityType[]> =>
-    call<ActivityType[]>(apiKey, 'GET', '/activity-types'),
+  // The list endpoints return a named collection alongside pagination, not a
+  // bare array — `{ types: [...] }` and `{ activities: [...] }`. Unwrapped here
+  // so the tools only ever see the list they asked for.
+  listActivityTypes: async (apiKey: string): Promise<ActivityType[]> => {
+    const result = await call<{ types?: ActivityType[] }>(apiKey, 'GET', '/activity-types');
+    return result?.types ?? [];
+  },
 
   createActivity: (
     apiKey: string,
@@ -137,10 +142,19 @@ export const tumbaland = {
     return result?.days?.find((day) => day.date === date)?.entries ?? [];
   },
 
-  listActivities: (
+  listActivities: async (
     apiKey: string,
     params: { from?: string; to?: string; typeId?: string; limit?: number }
-  ): Promise<Activity[]> => call<Activity[]>(apiKey, 'GET', '/activities', undefined, params),
+  ): Promise<Activity[]> => {
+    const result = await call<{ activities?: Activity[] }>(
+      apiKey,
+      'GET',
+      '/activities',
+      undefined,
+      params
+    );
+    return result?.activities ?? [];
+  },
 
   getStatistics: (apiKey: string, timeframe: string): Promise<unknown> =>
     call(apiKey, 'GET', '/statistics', undefined, { timeframe }),
