@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.456](https://github.com/toomastahves/tumbaland/compare/app-v0.0.455...app-v0.0.456) (2026-09-03)
+
+### Features
+
+* add api keys ([144a89f](https://github.com/toomastahves/tumbaland/commit/144a89f012ade6c4548efb6e8da6b7d5b31161a9))
 ## [0.0.455](https://github.com/toomastahves/tumbaland/compare/app-v0.0.454...app-v0.0.455) (2026-09-03)
 
 ### Features
