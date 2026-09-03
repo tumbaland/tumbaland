@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.454](https://github.com/toomastahves/tumbaland/compare/app-v0.0.453...app-v0.0.454) (2026-09-03)
+
+### Features
+
+* add trends ([bafa97a](https://github.com/toomastahves/tumbaland/commit/bafa97a7086d468ddd03b0cad39d8ff38fd9e537))
 ## [0.0.453](https://github.com/toomastahves/tumbaland/compare/app-v0.0.452...app-v0.0.453) (2026-09-02)
 
 ### Features
