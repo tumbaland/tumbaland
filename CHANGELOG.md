@@ -1,4 +1,13 @@
 # Tumbalog
+## [0.0.459](https://github.com/toomastahves/tumbaland/compare/app-v0.0.458...app-v0.0.459) (2026-09-03)
+
+### Features
+
+* disable audit and fund info in pipeline ([d2350be](https://github.com/toomastahves/tumbaland/commit/d2350bec3b7c7ec05431798556251f0b71394fb2))
+
+### Bug Fixes
+
+* add group to api keys ([02cc432](https://github.com/toomastahves/tumbaland/commit/02cc4329edebb78a70b2448236d6485d0c2c8c3c))
 ## [0.0.458](https://github.com/toomastahves/tumbaland/compare/app-v0.0.457...app-v0.0.458) (2026-09-03)
 
 ### Features
