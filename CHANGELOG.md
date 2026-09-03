@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.458](https://github.com/toomastahves/tumbaland/compare/app-v0.0.457...app-v0.0.458) (2026-09-03)
+
+### Features
+
+* add tests ([fbe8078](https://github.com/toomastahves/tumbaland/commit/fbe807854b5c29d69de785348c5e0d50b8384bbd))
 ## [0.0.457](https://github.com/toomastahves/tumbaland/compare/app-v0.0.456...app-v0.0.457) (2026-09-03)
 
 ### Features
