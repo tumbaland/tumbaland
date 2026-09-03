@@ -110,6 +110,39 @@ describe('authMiddleware', () => {
       expect((req as any).dbUser).toBe(dbUser);
     });
 
+    it('copies the token’s groups onto req.userGroups', async () => {
+      // Handlers read membership off `req.userGroups`, the contract
+      // backend-core's middleware sets. Leaving it unset here made every caller
+      // look like they belonged to no groups, so pinning an API key to a group
+      // was refused with "You are not a member of that group".
+      const token = generateJWT({
+        id: '1',
+        email: 'user@example.com',
+        name: 'User',
+        groups: ['g1', 'g2']
+      });
+      const req = mockReq({ cookies: { access_token: token } } as any);
+      const next = jest.fn();
+      mockedFindOne.mockResolvedValue({ email: 'user@example.com', isApproved: true });
+
+      await authenticateToken(req, mockRes(), next);
+
+      expect(next).toHaveBeenCalledTimes(1);
+      expect(req.userGroups).toEqual(['g1', 'g2']);
+    });
+
+    it('sets req.userGroups to an empty array when the token carries no groups', async () => {
+      const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User' });
+      const req = mockReq({ cookies: { access_token: token } } as any);
+      mockedFindOne.mockResolvedValue({ email: 'user@example.com', isApproved: true });
+
+      await authenticateToken(req, mockRes(), jest.fn());
+
+      // Never undefined: a handler doing `req.userGroups.includes(...)` must not
+      // throw for a user who happens to be in no groups.
+      expect(req.userGroups).toEqual([]);
+    });
+
     it('accepts a token with no tokenVersion claim (falsy tokenVersion skips the check)', async () => {
       const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User' });
       const req = mockReq({ cookies: { access_token: token } } as any);

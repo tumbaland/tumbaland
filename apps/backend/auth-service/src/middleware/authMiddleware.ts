@@ -44,6 +44,10 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     }
 
     req.user = decoded;
+    // Mirror backend-core's authenticateToken, which every other service uses:
+    // handlers read group membership off `req.userGroups`, and leaving it unset
+    // here made it look like the caller belonged to no groups at all.
+    req.userGroups = decoded.groups ?? [];
 
     // attach db user (if needed elsewhere)
     req.dbUser = dbUser;
@@ -60,6 +64,7 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
     if (token) {
       const decoded = verifyJWT(token);
       req.user = decoded;
+      req.userGroups = decoded.groups ?? [];
       // Upsert but do not block on approval
       await User.findOneAndUpdate(
         { email: decoded.email.toLowerCase() },
