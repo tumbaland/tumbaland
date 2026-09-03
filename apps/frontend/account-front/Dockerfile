@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Copy source code and build
 COPY package*.json ./
-RUN npm i
+RUN npm i --no-audit --no-fund
 COPY . .
 RUN npm run build
 

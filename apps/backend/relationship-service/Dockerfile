@@ -1,14 +1,14 @@
 FROM node:26-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm i
+RUN npm i --no-audit --no-fund
 COPY . .
 RUN npm run build
 
 FROM node:26-alpine AS production
 WORKDIR /app
 COPY --from=builder /app/package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --no-audit --no-fund
 COPY --from=builder --chown=node:node /app/dist ./dist
 COPY --from=builder --chown=node:node /app/docs ./docs
 USER node
