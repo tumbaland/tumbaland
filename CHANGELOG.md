@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.455](https://github.com/toomastahves/tumbaland/compare/app-v0.0.454...app-v0.0.455) (2026-09-03)
+
+### Features
+
+* fix photo exif data ([ab2e0b7](https://github.com/toomastahves/tumbaland/commit/ab2e0b78360ddaa51fb32c31cf802e6220487074))
 ## [0.0.454](https://github.com/toomastahves/tumbaland/compare/app-v0.0.453...app-v0.0.454) (2026-09-03)
 
 ### Features
