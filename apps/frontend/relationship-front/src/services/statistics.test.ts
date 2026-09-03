@@ -7,7 +7,8 @@ import {
   getWeeklyHeatmapData,
   getCumulativeTimelineData,
   getStreaks,
-  getMilestones
+  getMilestones,
+  getTrends
 } from './statistics';
 
 function mockFetchOnce(body: unknown, init: { ok?: boolean; status?: number } = {}) {
@@ -171,5 +172,40 @@ describe('getCumulativeTimelineData', () => {
   it('throws a generic error on a non-Error rejection', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce({});
     await expect(getCumulativeTimelineData()).rejects.toThrow('Failed to fetch cumulative timeline data');
+  });
+});
+
+describe('getTrends', () => {
+  const payload = {
+    windowDays: 30,
+    currentStart: '2026-02-09',
+    currentEnd: '2026-03-10',
+    previousStart: '2026-01-10',
+    previousEnd: '2026-02-08',
+    totals: {},
+    types: []
+  };
+
+  it('omits the window and groupId when neither is given', async () => {
+    mockFetchOnce({ success: true, data: payload });
+    await getTrends();
+    const [url] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(String(url)).toContain('/statistics/trends');
+    expect(String(url)).not.toContain('window');
+    expect(String(url)).not.toContain('groupId');
+  });
+
+  it('passes the window and groupId through and returns the payload', async () => {
+    mockFetchOnce({ success: true, data: payload });
+    const result = await getTrends(7, 'g1');
+    expect(result).toEqual(payload);
+    const [url] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(String(url)).toContain('window=7');
+    expect(String(url)).toContain('groupId=g1');
+  });
+
+  it('falls back to a generic message for a non-Error rejection', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce('not an error');
+    await expect(getTrends()).rejects.toThrow('Failed to fetch trends');
   });
 });

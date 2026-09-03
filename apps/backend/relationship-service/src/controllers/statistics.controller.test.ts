@@ -8,7 +8,8 @@ jest.mock('../services/statistics.service', () => ({
   getWeeklyHeatmapData: jest.fn(),
   getCumulativeTimelineData: jest.fn(),
   getStreakStatistics: jest.fn(),
-  getMilestones: jest.fn()
+  getMilestones: jest.fn(),
+  getTrends: jest.fn()
 }));
 
 jest.mock('../services/dashboardSettings.service', () => ({
@@ -25,7 +26,8 @@ import {
   getWeeklyHeatmapDataController,
   getCumulativeTimelineDataController,
   getStreaks,
-  getMilestonesData
+  getMilestonesData,
+  getTrendsData
 } from './statistics.controller';
 
 function mockRes(): Response {
@@ -207,5 +209,46 @@ describe('getMilestonesData', () => {
       { userId: 'u1', userGroupIds: ['g1'], personalOnly: true },
       expect.anything()
     );
+  });
+});
+
+describe('getTrendsData', () => {
+  const settings = { highlightTypeIds: [], hiddenTypeIds: ['t9'], startDate: null };
+
+  beforeEach(() => {
+    (getDashboardSettings as jest.Mock).mockResolvedValue(settings);
+    (StatisticsService.getTrends as jest.Mock).mockResolvedValue({ types: [] });
+  });
+
+  it('defaults to a 30-day window and hides the same types the dashboard hides', async () => {
+    const req = { query: { groupId: 'g1' }, user: { id: 'u1' }, userGroups: ['g1'] } as unknown as Request;
+    const res = mockRes();
+
+    await getTrendsData(req, res);
+
+    expect(getDashboardSettings).toHaveBeenCalledWith('u1', ['g1'], 'g1');
+    expect(StatisticsService.getTrends).toHaveBeenCalledWith(
+      { userId: 'u1', groupId: 'g1' },
+      { windowDays: 30, hiddenTypeIds: ['t9'] }
+    );
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true, data: { types: [] } })
+    );
+  });
+
+  it('passes a requested window through', async () => {
+    const req = { query: { window: '7' }, user: { id: 'u1' }, userGroups: [] } as unknown as Request;
+
+    await getTrendsData(req, mockRes());
+
+    expect(StatisticsService.getTrends).toHaveBeenCalledWith(
+      { userId: 'u1', userGroupIds: [], personalOnly: true },
+      { windowDays: 7, hiddenTypeIds: ['t9'] }
+    );
+  });
+
+  it.each(['3', '365', 'week'])('rejects an out-of-range or unparseable window=%s', async (window) => {
+    const req = { query: { window }, user: { id: 'u1' }, userGroups: [] } as unknown as Request;
+    await expect(getTrendsData(req, mockRes())).rejects.toMatchObject({ name: 'BadRequestError' });
   });
 });

@@ -98,6 +98,45 @@ export interface MilestonesResult {
   upcoming: Milestone[];
 }
 
+/** How a window compares to the one before it. */
+export type TrendDirection = 'up' | 'down' | 'flat' | 'new' | 'stopped';
+
+export interface TrendTotals {
+  entries: number;
+  hours: number;
+  /** distinct days carrying at least one entry inside the window */
+  activeDays: number;
+}
+
+export interface TypeTrend {
+  typeId: string;
+  slug: string;
+  name: string;
+  color?: string;
+  valueType?: string;
+  current: TrendTotals;
+  previous: TrendTotals;
+  entriesDelta: number;
+  hoursDelta: number;
+  activeDaysDelta: number;
+  /** percent change against the previous window; null when there is no baseline */
+  entriesChangePct: number | null;
+  hoursChangePct: number | null;
+  direction: TrendDirection;
+}
+
+export interface TrendsResult {
+  windowDays: number;
+  /** YYYY-MM-DD bounds, both inclusive */
+  currentStart: string;
+  currentEnd: string;
+  previousStart: string;
+  previousEnd: string;
+  totals: Omit<TypeTrend, 'typeId' | 'slug' | 'name' | 'color' | 'valueType'>;
+  /** one row per type logged in either window, biggest mover first */
+  types: TypeTrend[];
+}
+
 export interface MonthlyHoursData {
   month: string;
   year: number;
@@ -257,6 +296,28 @@ export const getMilestones = async (groupId?: string): Promise<MilestonesResult>
 };
 
 /**
+ * Get the last `windowDays` days against the window before them. The server
+ * applies the scope's hidden types, so the rows match the rest of the dashboard.
+ * @param windowDays - Optional: length of each window in days, 7-180 (default: 30)
+ * @param groupId - Optional: group ID to filter by
+ */
+export const getTrends = async (windowDays?: number, groupId?: string): Promise<TrendsResult> => {
+  try {
+    const params: Record<string, string | number> = {};
+    if (windowDays) params.window = windowDays;
+    if (groupId) params.groupId = groupId;
+
+    const response = await relationshipApi.get<ApiResponse<TrendsResult>>('/statistics/trends', {
+      params
+    });
+    return response.data;
+  } catch (error) {
+    logger.error('Error fetching trends', error);
+    throw new Error(statisticsErrorMessage(error, 'Failed to fetch trends'));
+  }
+};
+
+/**
  * Get monthly hours statistics
  * @param year - Optional: specific year to filter by
  * @param groupId - Optional: group ID to filter by
@@ -365,6 +426,7 @@ export const statisticsApi = {
   getStatistics,
   getStreaks,
   getMilestones,
+  getTrends,
   getMonthlyHours,
   getMonthlyStatistics,
   getMonthlyActivityBreakdown,

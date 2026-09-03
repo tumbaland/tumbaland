@@ -9,6 +9,7 @@ import {
   getCumulativeTimelineData,
   getStreakStatistics,
   getMilestones,
+  getTrends,
   StatisticsFilters
 } from '../services/statistics.service';
 import { getDashboardSettings } from '../services/dashboardSettings.service';
@@ -104,6 +105,47 @@ export const getMilestonesData = async (req: Request, res: Response): Promise<vo
   res.json({
     success: true,
     data: milestones,
+    generatedAt: new Date().toISOString()
+  });
+};
+
+const MIN_TREND_WINDOW = 7;
+const MAX_TREND_WINDOW = 180;
+
+/**
+ * How the last window compares to the one before it.
+ *
+ * Reads the scope's dashboard settings for the same reason the milestones
+ * endpoint does: a type hidden from the dashboard should not turn up here as
+ * the week's biggest mover.
+ */
+export const getTrendsData = async (req: Request, res: Response): Promise<void> => {
+  const { groupId, window } = req.query;
+
+  let windowDays = 30;
+  if (window) {
+    windowDays = parseInt(window as string);
+    if (isNaN(windowDays) || windowDays < MIN_TREND_WINDOW || windowDays > MAX_TREND_WINDOW) {
+      throw new BadRequestError(
+        `Window must be a number of days between ${MIN_TREND_WINDOW} and ${MAX_TREND_WINDOW}`
+      );
+    }
+  }
+
+  const settings = await getDashboardSettings(
+    req.user!.id,
+    req.userGroups || [],
+    groupId as string | undefined
+  );
+
+  const trends = await getTrends(scopeFilters(req), {
+    windowDays,
+    hiddenTypeIds: settings.hiddenTypeIds
+  });
+
+  res.json({
+    success: true,
+    data: trends,
     generatedAt: new Date().toISOString()
   });
 };

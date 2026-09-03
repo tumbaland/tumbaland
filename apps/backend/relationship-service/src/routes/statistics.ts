@@ -8,7 +8,8 @@ import {
   getWeeklyHeatmapDataController,
   getCumulativeTimelineDataController,
   getStreaks,
-  getMilestonesData
+  getMilestonesData,
+  getTrendsData
 } from '../controllers/statistics.controller';
 
 const router = express.Router();
@@ -36,6 +37,14 @@ router.get('/streaks', getStreaks);
  * @query groupId - Optional: group to scope to (defaults to personal entries)
  */
 router.get('/milestones', getMilestonesData);
+
+/**
+ * @route GET /api/statistics/trends
+ * @desc The last N days against the N before them, per activity type
+ * @query groupId - Optional: group to scope to (defaults to personal entries)
+ * @query window - Optional: length of each window in days, 7-180 (default: 30)
+ */
+router.get('/trends', getTrendsData);
 
 /**
  * @route GET /api/statistics/monthly-hours

@@ -458,6 +458,121 @@ components:
         - typicalGapDays
         - overdueRatio
 
+    TrendTotals:
+      type: object
+      description: What one window contains, for one activity type or across all of them
+      properties:
+        entries:
+          type: integer
+        hours:
+          type: integer
+        activeDays:
+          type: integer
+          description: Distinct days carrying at least one entry inside the window
+      required:
+        - entries
+        - hours
+        - activeDays
+
+    TrendChange:
+      type: object
+      description: |
+        One window against the one before it. Percent changes are null when the
+        previous window was empty — there is no baseline to divide by, and
+        `direction` says 'new' for that case instead.
+      properties:
+        current:
+          $ref: '#/components/schemas/TrendTotals'
+        previous:
+          $ref: '#/components/schemas/TrendTotals'
+        entriesDelta:
+          type: integer
+        hoursDelta:
+          type: integer
+        activeDaysDelta:
+          type: integer
+        entriesChangePct:
+          type: number
+          nullable: true
+        hoursChangePct:
+          type: number
+          nullable: true
+        direction:
+          type: string
+          enum: [up, down, flat, new, stopped]
+          description: |
+            Movement in entry count. 'new' is a type with an empty previous window,
+            'stopped' one with an empty current window.
+      required:
+        - current
+        - previous
+        - entriesDelta
+        - hoursDelta
+        - activeDaysDelta
+        - entriesChangePct
+        - hoursChangePct
+        - direction
+
+    TypeTrend:
+      allOf:
+        - $ref: '#/components/schemas/TrendChange'
+        - type: object
+          description: One activity type's movement between the two windows
+          properties:
+            typeId:
+              type: string
+            slug:
+              type: string
+            name:
+              type: string
+            color:
+              type: string
+              nullable: true
+            valueType:
+              type: string
+              enum: [string, boolean, number]
+          required:
+            - typeId
+            - slug
+            - name
+
+    TrendsResult:
+      type: object
+      description: The last N days against the N before them, per activity type
+      properties:
+        windowDays:
+          type: integer
+          example: 30
+        currentStart:
+          type: string
+          format: date
+          description: First day of the current window, inclusive
+        currentEnd:
+          type: string
+          format: date
+          description: Last day of the current window, inclusive (today)
+        previousStart:
+          type: string
+          format: date
+        previousEnd:
+          type: string
+          format: date
+        totals:
+          $ref: '#/components/schemas/TrendChange'
+        types:
+          type: array
+          description: One row per type logged in either window, biggest mover first
+          items:
+            $ref: '#/components/schemas/TypeTrend'
+      required:
+        - windowDays
+        - currentStart
+        - currentEnd
+        - previousStart
+        - previousEnd
+        - totals
+        - types
+
     StreakStatistics:
       type: object
       description: Logging streaks and per-type staleness, over the whole history of a scope
@@ -888,6 +1003,22 @@ components:
         - success
         - data
         - timeframe
+        - generatedAt
+
+    TrendsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/TrendsResult'
+        generatedAt:
+          type: string
+          format: date-time
+      required:
+        - success
+        - data
         - generatedAt
 
     StreakStatisticsResponse:
@@ -2131,6 +2262,60 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StreakStatisticsResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+        - internalAuth: []
+
+  /api/statistics/trends:
+    get:
+      tags:
+        - Statistics
+      summary: Compare the last N days against the N before them
+      description: |
+        Per activity type and overall: entries, hours and active days in the current
+        window against the window immediately before it, with deltas, percent change
+        and a direction. The dashboard's "picking up or fading" row, sitting between
+        the backward-looking streaks and the forward-looking milestones.
+
+        Both windows are read in one aggregation, so the two halves can never come
+        from different reads of a collection being written to. Types hidden in the
+        scope's dashboard settings are left out of the rows and of the totals, and
+        future-dated entries are excluded so a planned day cannot read as a good week.
+      parameters:
+        - name: window
+          in: query
+          schema:
+            type: integer
+            minimum: 7
+            maximum: 180
+            default: 30
+          description: Length of each of the two windows, in days
+          example: 30
+        - name: groupId
+          in: query
+          schema:
+            type: string
+          description: Filter by specific group ID (defaults to personal entries)
+          example: "group456"
+      responses:
+        '200':
+          description: Trends retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendsResponse'
+        '400':
+          description: Bad request - window outside the accepted range
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:

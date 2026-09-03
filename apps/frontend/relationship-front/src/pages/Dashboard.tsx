@@ -4,6 +4,7 @@ import TuneIcon from '@mui/icons-material/Tune';
 import StatsCards from '../components/StatsCards';
 import StreakCards from '../components/StreakCards';
 import MilestonesCard from '../components/MilestonesCard';
+import TrendsCard from '../components/TrendsCard';
 import RecentActivitiesCards from '../components/RecentActivitiesCards';
 import HoursBarChart from '../components/HoursBarChart';
 import TotalHoursChart from '../components/TotalHoursChart';
@@ -79,6 +80,11 @@ const Dashboard: React.FC = () => {
         {/* Milestones just reached and coming up */}
         <Box sx={{ width: '100%' }}>
           <MilestonesCard />
+        </Box>
+
+        {/* Which way each activity type is moving */}
+        <Box sx={{ width: '100%' }}>
+          <TrendsCard />
         </Box>
 
         {/* Recent Activities */}
