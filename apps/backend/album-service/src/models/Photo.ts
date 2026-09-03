@@ -15,6 +15,11 @@ export interface IPhoto extends Document {
   tags: string[];
   metadata: {
     dateTaken?: Date;
+    /**
+     * Everything else the file carried. Curated by the extractor rather than the
+     * schema, so a new tag is one line in the extractor and no migration here.
+     */
+    exif?: Record<string, string | number | boolean>;
     location?: {
       latitude: number;
       longitude: number;
@@ -101,6 +106,10 @@ const PhotoSchema: Schema = new Schema(
     ],
     metadata: {
       dateTaken: Date,
+      // Mixed: written once at upload from a validated, bounded payload, and
+      // only ever read back whole — a declared shape would buy nothing and cost
+      // a migration every time a tag is added.
+      exif: { type: Schema.Types.Mixed, default: undefined },
       location: {
         latitude: Number,
         longitude: Number,

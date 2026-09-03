@@ -104,7 +104,10 @@ class MemoriesService {
     if (albums.length === 0) return empty;
 
     const albumNames = new Map(albums.map((album) => [String(album._id), album.name]));
-    const albumIds = albums.map((album) => String(album._id));
+    // Cast, rather than the string form the name map is keyed by: Mongoose casts
+    // a query against the schema but never an aggregation pipeline, so a string
+    // here is compared to an ObjectId in the collection and matches nothing.
+    const albumIds = albums.map((album) => new Types.ObjectId(String(album._id)));
 
     // Group into years and keep only the ids — the documents themselves are
     // fetched once below for the capped set, so a day with hundreds of photos

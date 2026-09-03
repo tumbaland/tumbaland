@@ -21,6 +21,50 @@ export const setCoverPhotoSchema = z.object({
   photoId: z.string().min(1, 'Photo ID is required')
 });
 
+/**
+ * Photo metadata as the browser extracts it from the file's EXIF.
+ *
+ * Client-supplied, so it is bounded rather than trusted: `z.record(z.unknown())`
+ * would let a caller push an arbitrarily large blob straight into the document.
+ * The shape mirrors apps/frontend/album-front/src/utils/exif.ts, and `exif`
+ * stays open-ended on purpose — it is the drawer for tags no feature reads yet,
+ * so adding one must not need a schema change on both sides.
+ */
+const exifExtraSchema = z
+  .record(
+    z.string().max(40),
+    z.union([z.string().max(200), z.number(), z.boolean()])
+  )
+  .refine((value) => Object.keys(value).length <= 40, {
+    message: 'exif may carry at most 40 entries'
+  });
+
+export const photoMetadataSchema = z.object({
+  dateTaken: z.coerce.date().optional(),
+  location: z
+    .object({
+      latitude: z.number().min(-90).max(90),
+      longitude: z.number().min(-180).max(180),
+      address: z.string().max(300).optional()
+    })
+    .optional(),
+  camera: z
+    .object({
+      make: z.string().max(200).optional(),
+      model: z.string().max(200).optional(),
+      settings: z
+        .object({
+          iso: z.number().optional(),
+          aperture: z.string().max(40).optional(),
+          shutterSpeed: z.string().max(40).optional(),
+          focalLength: z.string().max(40).optional()
+        })
+        .optional()
+    })
+    .optional(),
+  exif: exifExtraSchema.optional()
+});
+
 export const createPhotoSchema = z.object({
   filename: z.string().min(1),
   originalName: z.string().min(1),
@@ -34,7 +78,7 @@ export const createPhotoSchema = z.object({
   width: z.number().optional(),
   height: z.number().optional(),
   tags: z.array(z.string()).optional(),
-  metadata: z.record(z.string(), z.unknown()).optional()
+  metadata: photoMetadataSchema.optional()
 }).refine((data) => data.minioFileId || data.fileId, {
   message: 'minioFileId (or fileId) is required'
 });
@@ -43,7 +87,7 @@ export const updatePhotoSchema = z.object({
   title: z.string().optional(),
   description: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  metadata: z.record(z.string(), z.unknown()).optional()
+  metadata: photoMetadataSchema.optional()
 });
 
 export const bulkUpdateTagsSchema = z.object({

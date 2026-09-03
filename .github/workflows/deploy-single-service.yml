@@ -108,10 +108,7 @@ jobs:
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env.app
           echo "INTERNAL_SERVICE_TOKEN=${{ secrets.INTERNAL_SERVICE_TOKEN }}" >> .env.app
           echo "GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}" >> .env.app
-          echo "GOOGLE_CLOUD_KEY_FILE_BASE64=${{ secrets.GOOGLE_CLOUD_KEY_FILE_BASE64 }}" >> .env.app
           echo "COOKIE_DOMAIN=${{ vars.COOKIE_DOMAIN }}" >> .env.app
-          echo "GOOGLE_CLOUD_PROJECT_ID=${{ vars.GOOGLE_CLOUD_PROJECT_ID }}" >> .env.app
-          echo "GOOGLE_CLOUD_BUCKET_NAME=${{ vars.GOOGLE_CLOUD_BUCKET_NAME }}" >> .env.app
           echo "CORS_ORIGIN=${{ vars.CORS_ORIGIN }}" >> .env.app
           echo "ALPHA_VANTAGE_API_KEY=${{ secrets.ALPHA_VANTAGE_API_KEY }}" >> .env.app
           echo "GROUP_API_URL=${{ vars.GROUP_API_URL }}" >> .env.app

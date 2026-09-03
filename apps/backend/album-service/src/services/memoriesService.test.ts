@@ -13,6 +13,7 @@ jest.mock('./photoService', () => ({
   default: { attachSignedUrls: jest.fn() }
 }));
 
+import { Types } from 'mongoose';
 import Album from '../models/Album';
 import Photo from '../models/Photo';
 import photoService from '../services/photoService';
@@ -25,6 +26,10 @@ const mockedAttachSignedUrls = photoService.attachSignedUrls as jest.Mock;
 
 const NOW = new Date('2026-09-03T10:15:00.000Z');
 
+// A real 24-hex id: the pipeline casts album ids to ObjectId, so a fixture that
+// is not a valid id would fail construction rather than the assertion.
+const ALBUM_ID = '68b7c1e2f3a4b5c6d7e8f900';
+
 /** Album.find(...).select(...).lean() */
 function albumFindStub(albums: unknown[]) {
   return {
@@ -35,7 +40,7 @@ function albumFindStub(albums: unknown[]) {
 
 const photoDoc = (over: Record<string, unknown> = {}) => ({
   _id: 'p1',
-  albumId: 'a1',
+  albumId: ALBUM_ID,
   filename: 'beach.jpg',
   createdAt: new Date('2024-09-04T08:00:00.000Z'),
   metadata: { dateTaken: new Date('2024-09-03T18:20:00.000Z') },
@@ -44,7 +49,7 @@ const photoDoc = (over: Record<string, unknown> = {}) => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockedAlbumFind.mockReturnValue(albumFindStub([{ _id: 'a1', name: 'Summer' }]));
+  mockedAlbumFind.mockReturnValue(albumFindStub([{ _id: ALBUM_ID, name: 'Summer' }]));
   mockedPhotoAggregate.mockResolvedValue([]);
   mockedPhotoFind.mockResolvedValue([]);
   mockedAttachSignedUrls.mockImplementation(async (photos: unknown[]) => photos);
@@ -103,6 +108,18 @@ describe('getMemories', () => {
     expect(pipeline).toContainEqual({
       $match: expect.objectContaining({ memoryYear: { $lt: 2026 } })
     });
+  });
+
+  it('matches album ids as ObjectIds, since an aggregation is never cast for us', async () => {
+    await memoriesService.getMemories({ now: NOW }, { userId: 'u1', userGroups: [] });
+    const [pipeline] = mockedPhotoAggregate.mock.calls[0];
+
+    // Mongoose casts a query against the schema but leaves a pipeline alone, so
+    // a string here would be compared to an ObjectId in the collection and match
+    // nothing — the whole strip would come back empty for everyone.
+    const [{ $match: match }] = pipeline;
+    expect(match.albumId.$in).toEqual([new Types.ObjectId(ALBUM_ID)]);
+    expect(match.albumId.$in[0]).toBeInstanceOf(Types.ObjectId);
   });
 
   it('falls back to the upload date when a photo carries no capture date', async () => {
@@ -186,7 +203,7 @@ describe('getMemories', () => {
 
   it('names an album it cannot resolve rather than dropping the photo', async () => {
     mockedPhotoAggregate.mockResolvedValue([{ _id: 2024, photoCount: 1, photoIds: ['p1'] }]);
-    mockedPhotoFind.mockResolvedValue([photoDoc({ albumId: 'deleted' })]);
+    mockedPhotoFind.mockResolvedValue([photoDoc({ albumId: '68b7c1e2f3a4b5c6d7e8f9ff' })]);
 
     const result = await memoriesService.getMemories({ now: NOW }, { userId: 'u1', userGroups: [] });
 

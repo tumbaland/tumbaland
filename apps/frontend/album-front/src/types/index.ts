@@ -16,6 +16,37 @@ export interface Album {
   updatedAt: string;
 }
 
+/**
+ * What a photo file told us about itself. Everything is optional: plenty of
+ * files arrive with no EXIF at all — screenshots, scans, anything that has been
+ * through a messaging app.
+ */
+export interface PhotoMetadata {
+  /** ISO instant whose UTC calendar date is the day the photo was taken */
+  dateTaken?: string;
+  location?: {
+    latitude: number;
+    longitude: number;
+    address?: string;
+  };
+  camera?: {
+    make?: string;
+    model?: string;
+    settings?: {
+      iso?: number;
+      aperture?: string;
+      shutterSpeed?: string;
+      focalLength?: string;
+    };
+  };
+  /**
+   * Everything else the file carried, kept for features that do not exist yet.
+   * Deliberately open-ended — the extractor curates what goes in, so widening it
+   * later costs a tag in one list rather than a migration.
+   */
+  exif?: Record<string, unknown>;
+}
+
 export interface Photo {
   _id: string;
   filename: string;
@@ -40,24 +71,7 @@ export interface Photo {
   // Optional: a Mongoose single-nested-subdocument path that was never set
   // (e.g. a photo created before this field existed) serializes as absent
   // from the API response, not as `{}` — see PhotoViewer's buildDetails.
-  metadata?: {
-    dateTaken?: string;
-    location?: {
-      latitude: number;
-      longitude: number;
-      address?: string;
-    };
-    camera?: {
-      make?: string;
-      model?: string;
-      settings?: {
-        iso?: number;
-        aperture?: string;
-        shutterSpeed?: string;
-        focalLength?: string;
-      };
-    };
-  };
+  metadata?: PhotoMetadata;
   aiAnalysis?: {
     objectDetection?: {
       jobId: string;

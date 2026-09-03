@@ -24,6 +24,7 @@ import {
 } from '@mui/icons-material';
 import { UsageMeter } from '@tumbaland/components';
 import { photoService } from '../services/photoService';
+import { extractPhotoMetadata } from '../utils/exif';
 import { getMyEntitlements } from '../services/entitlementsService';
 import { isPaymentRequired, paywallMessage } from '../utils/paywall';
 
@@ -138,10 +139,19 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
             file.size
           );
 
+          // Read the file's own account of itself while the bytes are in
+          // flight. Both only touch the header, so overlapping them with the
+          // transfer keeps EXIF extraction off the upload's critical path
+          // entirely — the parse is finished long before the PUT is.
+          const detailsPromise = Promise.all([
+            getImageDimensions(file),
+            extractPhotoMetadata(file)
+          ]);
+
           // Upload file directly to MinIO
           await photoService.uploadFileToSignedUrl(signedUrlResponse.uploadUrl, file);
 
-          const dimensions = await getImageDimensions(file);
+          const [dimensions, metadata] = await detailsPromise;
 
           // Create photo record in album service with minioFileId
           await photoService.createPhoto({
@@ -152,7 +162,8 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
             mimetype: file.type,
             size: file.size,
             width: dimensions?.width,
-            height: dimensions?.height
+            height: dimensions?.height,
+            metadata
           });
 
           completed++;
