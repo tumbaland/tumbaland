@@ -254,3 +254,80 @@ it('offers the user’s groups as tenants when creating a key', async () => {
   expect(listbox.getByText('My own data')).toBeInTheDocument();
   expect(listbox.getByText('Us Two')).toBeInTheDocument();
 });
+
+it('pins a new key to the selected group', async () => {
+  const user = userEvent.setup();
+  mockedGetUserGroups.mockResolvedValue([{ _id: 'g1', name: 'Us Two' }]);
+  mocked.create.mockResolvedValue({ ...key({ id: 'k2', groupId: 'g1' }), token: TOKEN });
+  await renderTab([]);
+
+  await user.click(screen.getByRole('button', { name: /New key/ }));
+  await user.type(screen.getByLabelText('Name'), 'Shared agent');
+  await user.click(screen.getByLabelText('Acts on'));
+  await user.click(within(screen.getByRole('listbox')).getByText('Us Two'));
+  await user.click(screen.getByRole('button', { name: 'Create key' }));
+
+  expect(mocked.create).toHaveBeenCalledWith(
+    expect.objectContaining({ name: 'Shared agent', groupId: 'g1' })
+  );
+});
+
+it('sends exactly the scopes that are ticked', async () => {
+  const user = userEvent.setup();
+  mocked.create.mockResolvedValue({ ...key({ id: 'k2' }), token: TOKEN });
+  await renderTab([]);
+
+  await user.click(screen.getByRole('button', { name: /New key/ }));
+  await user.type(screen.getByLabelText('Name'), 'Reader');
+  // Drop the default write, add photos read.
+  await user.click(screen.getByLabelText('Relationship — write'));
+  await user.click(screen.getByLabelText('Photos — read'));
+  await user.click(screen.getByRole('button', { name: 'Create key' }));
+
+  expect(mocked.create).toHaveBeenCalledWith(
+    expect.objectContaining({ scopes: ['relationship:read', 'album:read'] })
+  );
+});
+
+it('reports a failed creation and keeps the dialog open so the input is not lost', async () => {
+  const user = userEvent.setup();
+  mocked.create.mockRejectedValue(new Error('server said no'));
+  await renderTab([]);
+
+  await user.click(screen.getByRole('button', { name: /New key/ }));
+  await user.type(screen.getByLabelText('Name'), 'Doomed');
+  await user.click(screen.getByRole('button', { name: 'Create key' }));
+
+  expect(await screen.findByText(/Could not create/)).toBeInTheDocument();
+  expect(screen.getByLabelText('Name')).toHaveValue('Doomed');
+});
+
+it('shows what each key is allowed to do', async () => {
+  await renderTab([key({ scopes: ['relationship:read', 'album:write'] })]);
+
+  expect(screen.getByText('relationship:read')).toBeInTheDocument();
+  expect(screen.getByText('album:write')).toBeInTheDocument();
+});
+
+it('shows when a key was last used, and says so plainly when it never has been', async () => {
+  await renderTab([key({ lastUsedAt: null })]);
+  expect(screen.getByText(/Last used —/)).toBeInTheDocument();
+});
+
+it('shows an expiry only when the key has one', async () => {
+  await renderTab([key({ expiresAt: null })]);
+  expect(screen.queryByText(/Expires/)).not.toBeInTheDocument();
+});
+
+it('keeps each key’s reveal independent', async () => {
+  const user = userEvent.setup();
+  mocked.reveal.mockResolvedValue(TOKEN);
+  await renderTab([key(), key({ id: 'k2', name: 'Second' })]);
+
+  await user.click(screen.getByRole('button', { name: 'Show Claude Code' }));
+  await screen.findByText(TOKEN);
+
+  // The other key stays masked — revealing is per key, not a global toggle.
+  expect(screen.getByRole('button', { name: 'Show Second' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Hide Second' })).not.toBeInTheDocument();
+});

@@ -8,7 +8,7 @@ jest.mock('../logging/logger', () => ({
 
 import jwt from 'jsonwebtoken';
 import { verifyApiKey } from './service';
-import { authenticateAgent, denyApiKeys } from './middleware';
+import { authenticateAgent, requireScope, denyApiKeys } from './middleware';
 
 const mockedVerify = verifyApiKey as jest.Mock;
 const ORIGINAL_ENV = process.env;
@@ -157,6 +157,37 @@ describe('authenticateAgent — API keys', () => {
   });
 });
 
+it('authenticates a key stored before the owner snapshot existed', async () => {
+  // Records written by an earlier version carry no userEmail/userName. Such a
+  // key must still work — the id is what every handler actually reads — rather
+  // than 500 on a missing field.
+  mockedVerify.mockResolvedValue({
+    ok: true,
+    userId: 'u1',
+    keyId: 'k1',
+    scopes: ['relationship:read'],
+    groupId: null
+  });
+  const request = withKey();
+  const next = jest.fn();
+
+  await authenticateAgent('relationship:read')(request, mockRes(), next);
+
+  expect(next).toHaveBeenCalled();
+  expect(request.user).toEqual({ id: 'u1', email: '', name: '' });
+});
+
+it('treats a verification result with no scopes as granting nothing', async () => {
+  mockedVerify.mockResolvedValue({ ok: true, userId: 'u1', keyId: 'k1', groupId: null });
+  const res = mockRes();
+  const next = jest.fn();
+
+  await authenticateAgent('relationship:read')(withKey(), res, next);
+
+  expect(res.status).toHaveBeenCalledWith(403);
+  expect(next).not.toHaveBeenCalled();
+});
+
 describe('authenticateAgent — tenant pinning', () => {
   it('grants a personal key no groups at all', async () => {
     mockedVerify.mockResolvedValue(okVerification({ groupId: null }));
@@ -227,6 +258,74 @@ describe('authenticateAgent — tenant pinning', () => {
 
     await authenticateAgent()(withKey(undefined, { query: { groupId: 'g1' } }), mockRes(), next);
 
+    expect(next).toHaveBeenCalled();
+  });
+});
+
+describe('requireScope', () => {
+  const keyReq = (scopes: string[]) =>
+    req({ apiKey: { keyId: 'k1', scopes, groupId: null } } as Partial<Request>);
+
+  it('lets a session through unconditionally', () => {
+    // Scopes narrow what software may do on a person's behalf, not what the
+    // person may do themselves — a session carries no apiKey context at all.
+    const next = jest.fn();
+    requireScope('relationship:write')(req(), mockRes(), next);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('lets a key with the required scope through', () => {
+    const next = jest.fn();
+    requireScope('relationship:read')(keyReq(['relationship:read']), mockRes(), next);
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('refuses a key without it, naming what is missing', () => {
+    const res = mockRes();
+    const next = jest.fn();
+
+    requireScope('relationship:write')(keyReq(['relationship:read']), res, next);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ message: expect.stringContaining('relationship:write') })
+    );
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('does not let a read scope stand in for a write', () => {
+    const next = jest.fn();
+    requireScope('album:write')(keyReq(['album:read']), mockRes(), next);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('does not let one area’s scope stand in for another’s', () => {
+    const next = jest.fn();
+    requireScope('finance:read')(keyReq(['relationship:read', 'album:read']), mockRes(), next);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('requires every named scope, not just one of them', () => {
+    const res = mockRes();
+    const next = jest.fn();
+
+    requireScope('relationship:read', 'album:write')(keyReq(['relationship:read']), res, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ message: expect.stringContaining('album:write') })
+    );
+  });
+
+  it('refuses a key with no scopes at all', () => {
+    const next = jest.fn();
+    requireScope('relationship:read')(keyReq([]), mockRes(), next);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('lets any authenticated caller through when no scope is named', () => {
+    const next = jest.fn();
+    requireScope()(keyReq([]), mockRes(), next);
     expect(next).toHaveBeenCalled();
   });
 });

@@ -1,6 +1,6 @@
 {
   "name": "@tumbaland/backend-core",
-  "version": "1.32.0",
+  "version": "1.33.0",
   "description": "Core shared functionality for Tumbaland backend services",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

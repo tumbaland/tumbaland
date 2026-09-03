@@ -7,6 +7,10 @@ vi.mock('../components/tabs/ProfileTab', () => ({
   default: () => <div>profile tab content</div>
 }));
 
+vi.mock('../components/tabs/ApiKeysTab', () => ({
+  default: () => <div>api keys tab content</div>
+}));
+
 import AccountPage from './AccountPage';
 
 function renderAt(path: string) {
@@ -41,4 +45,39 @@ it('does not push a new path when re-clicking the already-active tab', async () 
   await userEvent.click(screen.getByRole('tab', { name: 'Profile' }));
 
   expect(pushStateSpy).not.toHaveBeenCalled();
+});
+
+it('renders the API keys tab at its own path', () => {
+  renderAt('/api-keys');
+
+  expect(screen.getByText('api keys tab content')).toBeInTheDocument();
+  expect(screen.getByRole('tab', { name: 'API keys' })).toHaveAttribute('aria-selected', 'true');
+});
+
+it('navigates from profile to API keys when the tab is clicked', async () => {
+  const user = userEvent.setup();
+  renderAt('/profile');
+
+  await user.click(screen.getByRole('tab', { name: 'API keys' }));
+
+  expect(screen.getByText('api keys tab content')).toBeInTheDocument();
+  expect(screen.queryByText('profile tab content')).not.toBeInTheDocument();
+});
+
+it('navigates back to profile', async () => {
+  const user = userEvent.setup();
+  renderAt('/api-keys');
+
+  await user.click(screen.getByRole('tab', { name: 'Profile' }));
+
+  expect(screen.getByText('profile tab content')).toBeInTheDocument();
+});
+
+it('falls back to the first tab for a path with no tab of its own', () => {
+  // The old hard-coded indices pointed at /security and /data, which never had
+  // tabs; selection is now derived from the same list that builds them, so an
+  // unknown path can no longer select a tab that does not exist.
+  renderAt('/security');
+
+  expect(screen.getByRole('tab', { name: 'Profile' })).toHaveAttribute('aria-selected', 'true');
 });
