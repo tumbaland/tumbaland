@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.460](https://github.com/toomastahves/tumbaland/compare/app-v0.0.459...app-v0.0.460) (2026-09-03)
+
+### Features
+
+* add mcp ([3447713](https://github.com/toomastahves/tumbaland/commit/344771391e65185b058cf08c86163d78398638b7))
+* update pipeline ([9bcfe35](https://github.com/toomastahves/tumbaland/commit/9bcfe35339732358eb9874175486a7d1f42017b0))
 ## [0.0.459](https://github.com/toomastahves/tumbaland/compare/app-v0.0.458...app-v0.0.459) (2026-09-03)
 
 ### Features
