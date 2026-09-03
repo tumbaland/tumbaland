@@ -1,0 +1,28 @@
+services:
+  mcp-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: toomastahves/tumbaland-mcp-service:latest
+    restart: unless-stopped
+    stop_grace_period: 15s
+    ports:
+      - '5007:5007'
+    environment:
+      - MCP_SERVICE_PORT=5007
+      - NODE_ENV=production
+      # Verifying a presented API key is the only thing this service needs the
+      # database for; every read and write goes over HTTP to the owning service.
+      - MONGODB_URI=${MONGODB_URI}
+      # Container-network address, so tool calls never leave the host.
+      - RELATIONSHIP_INTERNAL_URL=${RELATIONSHIP_INTERNAL_URL}
+      - RELATIONSHIP_API_URL=${RELATIONSHIP_API_URL}
+      # The canonical URL clients are told to authenticate against.
+      - MCP_PUBLIC_URL=${MCP_PUBLIC_URL}
+    init: true
+    networks:
+      - tumbanet
+
+networks:
+  tumbanet:
+    external: true

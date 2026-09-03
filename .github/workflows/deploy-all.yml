@@ -31,7 +31,7 @@ jobs:
       - id: compute
         run: |
           FRONT="account-front album-front auth-front finance-front group-front payment-front relationship-front shell-front"
-          BACK="album-service auth-service file-service finance-service group-service payment-service public-service relationship-service"
+          BACK="album-service auth-service file-service finance-service group-service mcp-service payment-service public-service relationship-service"
           case "${{ github.event.inputs.target }}" in
             all)          SVCS="$FRONT $BACK" ;;
             all-frontend) SVCS="$FRONT" ;;
@@ -125,6 +125,8 @@ jobs:
           echo "ALBUM_FRONT_URL=${{ vars.ALBUM_FRONT_URL }}" >> .env.app
           echo "FINANCE_FRONT_URL=${{ vars.FINANCE_FRONT_URL }}" >> .env.app
           echo "RELATIONSHIP_API_URL=${{ vars.RELATIONSHIP_API_URL }}" >> .env.app
+          echo "RELATIONSHIP_INTERNAL_URL=${{ vars.RELATIONSHIP_INTERNAL_URL }}" >> .env.app
+          echo "MCP_PUBLIC_URL=${{ vars.MCP_PUBLIC_URL }}" >> .env.app
           echo "PUBLIC_API_URL=${{ vars.PUBLIC_API_URL }}" >> .env.app
           echo "OBJECT_DETECTION_API_URL=${{ vars.OBJECT_DETECTION_API_URL }}" >> .env.app
           echo "SEGMENTATION_API_URL=${{ vars.SEGMENTATION_API_URL }}" >> .env.app
