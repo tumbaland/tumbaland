@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.461](https://github.com/toomastahves/tumbaland/compare/app-v0.0.460...app-v0.0.461) (2026-09-03)
+
+### Bug Fixes
+
+* list activities ([92b2d06](https://github.com/toomastahves/tumbaland/commit/92b2d06a0916b22be4a21c377041b393d4a6141f))
 ## [0.0.460](https://github.com/toomastahves/tumbaland/compare/app-v0.0.459...app-v0.0.460) (2026-09-03)
 
 ### Features
