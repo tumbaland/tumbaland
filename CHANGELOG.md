@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.465](https://github.com/toomastahves/tumbaland/compare/app-v0.0.464...app-v0.0.465) (2026-09-04)
+
+### Bug Fixes
+
+* missing mcp commands ([4242ae0](https://github.com/toomastahves/tumbaland/commit/4242ae0a640b78030c703c5e23b2ba446d3756c5))
 ## [0.0.464](https://github.com/toomastahves/tumbaland/compare/app-v0.0.463...app-v0.0.464) (2026-09-04)
 
 ### Bug Fixes
