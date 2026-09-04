@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.472](https://github.com/toomastahves/tumbaland/compare/app-v0.0.471...app-v0.0.472) (2026-09-04)
+
+### Bug Fixes
+
+* album front mobile bug ([3bd9b0a](https://github.com/toomastahves/tumbaland/commit/3bd9b0a1e3a02fcf1d322de6a67399a4e4b8b5ba))
 ## [0.0.471](https://github.com/toomastahves/tumbaland/compare/app-v0.0.470...app-v0.0.471) (2026-09-04)
 
 ### Features
