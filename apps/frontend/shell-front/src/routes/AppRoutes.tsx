@@ -2,6 +2,8 @@ import { Routes, Route } from 'react-router';
 import { Loader } from '@tumbaland/components';
 import HomePage from '../pages/HomePage';
 import LandingPage from '../pages/LandingPage';
+import PrivacyPage from '../pages/PrivacyPage';
+import ConnectPage from '../pages/ConnectPage';
 import { useAuthState } from '../hooks/useAuthState';
 
 /**
@@ -24,6 +26,10 @@ export default function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      {/* Public and unauthenticated: both are read by people deciding whether to
+          sign up at all, and by connector-directory reviewers who have no account. */}
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/connect" element={<ConnectPage />} />
     </Routes>
   );
 }
