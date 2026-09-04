@@ -39,11 +39,43 @@ const storedCode = (over: Record<string, unknown> = {}) => ({
 beforeEach(() => {
   jest.clearAllMocks();
   mockedClientCreate.mockImplementation(async (doc) => doc);
+  (OAuthClient.findOne as jest.Mock).mockResolvedValue(null);
   mockedCodeCreate.mockImplementation(async (doc) => doc);
   mockedRefreshCreate.mockImplementation(async (doc) => doc);
 });
 
 describe('registerClient', () => {
+  it('returns the existing client when the same callback re-registers', async () => {
+    // The Claude app re-registers on every connect attempt. Minting a fresh id
+    // each time left three identical "Claude" rows in connected apps, only one
+    // of which any given disconnect would cut off.
+    (OAuthClient.findOne as jest.Mock).mockResolvedValue({
+      clientId: 'tmb-client-existing',
+      clientName: 'Claude',
+      redirectUris: ['https://claude.ai/api/mcp/auth_callback']
+    });
+
+    const client = await registerClient({
+      clientName: 'Claude',
+      redirectUris: ['https://claude.ai/api/mcp/auth_callback']
+    });
+
+    expect(client.clientId).toBe('tmb-client-existing');
+    expect(mockedClientCreate).not.toHaveBeenCalled();
+  });
+
+  it('matches on the exact set of callbacks, which is what identifies the app', async () => {
+    (OAuthClient.findOne as jest.Mock).mockResolvedValue(null);
+
+    await registerClient({ clientName: 'Claude', redirectUris: ['https://b/cb', 'https://a/cb'] });
+
+    // Sorted and size-constrained: a client registering a superset is a
+    // different client, and an authorization code is delivered to that URL.
+    expect((OAuthClient.findOne as jest.Mock).mock.calls[0][0]).toEqual({
+      redirectUris: { $size: 2, $all: ['https://a/cb', 'https://b/cb'] }
+    });
+  });
+
   it('issues a namespaced client id and keeps the redirect URIs', async () => {
     const client = await registerClient({
       clientName: 'Claude',
@@ -178,6 +210,29 @@ describe('redeemAuthorizationCode', () => {
     await expect(
       redeemAuthorizationCode('code', 'client-1', 'https://claude.ai/callback', VERIFIER)
     ).resolves.toEqual({ ok: false, rejection: 'expired' });
+  });
+});
+
+describe('issueRefreshToken', () => {
+  it('retires any grant the same client already held for this user', async () => {
+    // Reconnecting is a re-authorization, not a second connection: two live
+    // grants would leave stale scopes beside the new ones and a disconnect
+    // that only cut one of them.
+    mockedRefreshUpdateMany.mockResolvedValue({ modifiedCount: 1 });
+
+    await issueRefreshToken({
+      clientId: 'client-1',
+      userId: 'u1',
+      scopes: ['relationship:read'],
+      groupId: null,
+      resource: 'https://mcp.tumbaland.eu'
+    });
+
+    expect(mockedRefreshUpdateMany).toHaveBeenCalledWith(
+      { userId: 'u1', clientId: 'client-1', revokedAt: { $exists: false } },
+      { $set: { revokedAt: expect.any(Date) } }
+    );
+    expect(mockedRefreshCreate).toHaveBeenCalled();
   });
 });
 

@@ -113,7 +113,7 @@ const ConnectionsSection: React.FC = () => {
                   Connected {formatDate(connection.createdAt)}
                 </Typography>
                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                  Last used {formatDate(connection.lastUsedAt)}
+                  Last renewed {formatDate(connection.lastRenewedAt)}
                 </Typography>
                 <Box sx={{ flexGrow: 1 }} />
                 <Button

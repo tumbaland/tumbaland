@@ -291,3 +291,49 @@ describe('protected resource metadata names the authorization server', () => {
     expect(res.body.authorization_servers?.[0]).toMatch(/^https?:\/\//);
   });
 });
+
+describe('listings this server has nothing for', () => {
+  const listing = async (method: string) => {
+    const res = await rpc({ jsonrpc: '2.0', id: 30, method, params: {} }, KEY);
+    return JSON.parse(res.text.split('data: ')[1] ?? '{}');
+  };
+
+  it.each([
+    ['resources/list', 'resources'],
+    ['resources/templates/list', 'resourceTemplates'],
+    ['prompts/list', 'prompts']
+  ])('answers %s with an empty list rather than "Method not found"', async (method, key) => {
+    // A client cannot tell a server with no resources from a broken one. The
+    // Claude apps ask during discovery, took the error as a failure, and
+    // reported "No matching tools found" for a server whose tools were fine.
+    const payload = await listing(method);
+
+    expect(payload.error).toBeUndefined();
+    expect(payload.result[key]).toEqual([]);
+  });
+
+  it('advertises the capabilities it answers for', async () => {
+    const res = await rpc(initialize, KEY);
+    const payload = JSON.parse(res.text.split('data: ')[1] ?? '{}');
+
+    expect(payload.result.capabilities).toMatchObject({
+      tools: expect.anything(),
+      resources: expect.anything(),
+      prompts: expect.anything()
+    });
+  });
+});
+
+describe('advertised scopes follow the registered modules', () => {
+  it('offers only scopes some module can actually serve', async () => {
+    // This list is what a client asks the user to approve. Advertising a scope
+    // with no tools behind it asks for access that buys them nothing.
+    const res = await request(app).get('/.well-known/oauth-protected-resource');
+
+    expect(res.body.scopes_supported).toEqual(
+      expect.arrayContaining(['relationship:read', 'relationship:write'])
+    );
+    expect(res.body.scopes_supported).not.toContain('album:read');
+    expect(res.body.scopes_supported).not.toContain('finance:write');
+  });
+});

@@ -29,12 +29,34 @@ export interface RegisteredClient {
   redirectUris: string[];
 }
 
+/**
+ * Register a client, or hand back the one that is already registered.
+ *
+ * Clients re-register freely — the Claude app does it on every connect attempt
+ * — and minting a fresh id each time left a user staring at three identical
+ * "Claude" entries in their connected apps, only one of which any given
+ * disconnect would cut off.
+ *
+ * Matching on the exact redirect URIs is what makes this safe. These are public
+ * clients with no secret, so a `client_id` is an identifier rather than a
+ * credential; anything presenting the same callback URL *is* the same
+ * application, because that URL is what an authorization code gets delivered
+ * to. A different app cannot claim it without already controlling it.
+ */
 export const registerClient = async (input: RegisterClientInput): Promise<RegisteredClient> => {
-  const client = await OAuthClient.create({
-    clientId: `tmb-client-${randomBytes(16).toString('hex')}`,
-    clientName: input.clientName.slice(0, 200),
-    redirectUris: input.redirectUris
+  const redirectUris = [...input.redirectUris].sort();
+
+  const existing = await OAuthClient.findOne({
+    redirectUris: { $size: redirectUris.length, $all: redirectUris }
   });
+
+  const client =
+    existing ??
+    (await OAuthClient.create({
+      clientId: `tmb-client-${randomBytes(16).toString('hex')}`,
+      clientName: input.clientName.slice(0, 200),
+      redirectUris
+    }));
 
   return {
     clientId: client.clientId,
@@ -133,6 +155,13 @@ export interface IssuedRefreshToken {
   token: string;
 }
 
+/**
+ * Start a grant, replacing any the same client already held for this user.
+ *
+ * Reconnecting is a re-authorization, not a second connection: without this,
+ * approving twice leaves two live grants, the newer scopes sitting beside the
+ * older ones, and a disconnect that revokes only one of them.
+ */
 export const issueRefreshToken = async (input: {
   clientId: string;
   userId: string;
@@ -140,6 +169,11 @@ export const issueRefreshToken = async (input: {
   groupId: string | null;
   resource: string;
 }): Promise<IssuedRefreshToken> => {
+  await RefreshToken.updateMany(
+    { userId: input.userId, clientId: input.clientId, revokedAt: { $exists: false } },
+    { $set: { revokedAt: new Date() } }
+  );
+
   const token = randomBytes(32).toString('base64url');
   await RefreshToken.create({ ...input, tokenHash: sha256(token) });
   return { token };
@@ -239,7 +273,9 @@ export const listConnections = async (userId: string) => {
     scopes: token.scopes,
     groupId: token.groupId ?? null,
     createdAt: (token.grantedAt ?? token.createdAt).toISOString(),
-    lastUsedAt: token.lastUsedAt?.toISOString() ?? null,
+    // Set when the refresh token is exchanged, not when a tool runs — access
+    // tokens are validated statelessly, so the server never sees ordinary use.
+    lastRenewedAt: token.lastUsedAt?.toISOString() ?? null,
     revokedAt: token.revokedAt?.toISOString() ?? null
   }));
 };

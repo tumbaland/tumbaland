@@ -86,7 +86,8 @@ export interface Connection {
   scopes: ApiKeyScope[];
   groupId: string | null;
   createdAt: string;
-  lastUsedAt: string | null;
+  /** Set when the refresh token is exchanged, not when a tool runs. */
+  lastRenewedAt: string | null;
   revokedAt: string | null;
 }
 

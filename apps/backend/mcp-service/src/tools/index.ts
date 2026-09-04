@@ -35,3 +35,16 @@ export function registerTools(server: McpServer, apiKey: string, scopes: ApiKeyS
 
   return applicable.length;
 }
+
+/**
+ * Every scope some module here can actually serve.
+ *
+ * Derived rather than listed, because this is what a client reads from the
+ * protected-resource metadata and then asks the user to approve. A hand-written
+ * list drifts the moment a module is added or removed, and drifting the wrong
+ * way is worse than it sounds: a consent screen offering `album:read` when no
+ * album tools exist asks someone to grant access that buys them nothing.
+ */
+export const SERVED_SCOPES: ApiKeyScope[] = [
+  ...new Set(MODULES.flatMap((module) => module.scopes))
+];

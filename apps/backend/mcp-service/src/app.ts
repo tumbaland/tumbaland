@@ -1,9 +1,14 @@
 import express, { Request, Response } from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import {
+  ListPromptsRequestSchema,
+  ListResourceTemplatesRequestSchema,
+  ListResourcesRequestSchema
+} from '@modelcontextprotocol/sdk/types.js';
 import { logger, verifyApiKey, verifyAccessToken, looksLikeApiKey } from '@tumbaland/backend-core';
 import type { ApiKeyScope } from '@tumbaland/backend-core';
-import { registerTools } from './tools';
+import { SERVED_SCOPES, registerTools } from './tools';
 
 const SERVER_NAME = 'tumbaland';
 const SERVER_VERSION = '1.0.0';
@@ -40,6 +45,28 @@ const canonicalUrl = (): string =>
 /** The authorization server that issues tokens for this resource. */
 const authorizationServer = (): string =>
   (process.env.AUTH_SERVICE_PUBLIC_URL || 'https://auth-api.tumbaland.eu').replace(/\/$/, '');
+
+/**
+ * Answer the listings this server has nothing to offer for.
+ *
+ * MCP has three kinds of thing — tools, resources and prompts — and this server
+ * only has tools. Registering none of the others meant `resources/list` and
+ * `prompts/list` returned "Method not found", and a client cannot tell a server
+ * that has no resources from one that is broken.
+ *
+ * The Claude apps ask: their connector calls `list_mcp_resources` during
+ * discovery, took the error as a failure, and reported "No matching tools
+ * found" for a server whose tools were listed correctly the whole time. An
+ * empty list is the honest answer and costs nothing.
+ */
+function answerEmptyListings(server: McpServer): void {
+  server.server.registerCapabilities({ resources: {}, prompts: {} });
+  server.server.setRequestHandler(ListResourcesRequestSchema, async () => ({ resources: [] }));
+  server.server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => ({
+    resourceTemplates: []
+  }));
+  server.server.setRequestHandler(ListPromptsRequestSchema, async () => ({ prompts: [] }));
+}
 
 interface Authenticated {
   ok: boolean;
@@ -131,9 +158,10 @@ export function createApp() {
    * RFC 9728 protected resource metadata.
    *
    * Served now, before there is an authorization server to point at, because it
-   * is how a client discovers what this endpoint wants. The `scopes_supported`
-   * list is the same vocabulary the API keys carry, so a client that later goes
-   * through OAuth asks for exactly what a key would have granted.
+   * is how a client discovers what this endpoint wants. `scopes_supported` is
+   * derived from the registered tool modules, so what a user is asked to
+   * approve is exactly what this server can act on — never a permission with
+   * nothing behind it.
    */
   app.get('/.well-known/oauth-protected-resource', (_req: Request, res: Response) => {
     res.json({
@@ -141,7 +169,7 @@ export function createApp() {
       // Where a client goes to obtain a token. Without this a spec-compliant
       // client can discover that it needs to authenticate but not how.
       authorization_servers: [authorizationServer()],
-      scopes_supported: ['relationship:read', 'relationship:write'],
+      scopes_supported: SERVED_SCOPES,
       bearer_methods_supported: ['header']
     });
   });
@@ -178,6 +206,8 @@ export function createApp() {
     if (modules === 0) {
       logger.warn('API key has no scopes matching any tool module', { keyId: verification.keyId });
     }
+
+    answerEmptyListings(server);
 
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
 
