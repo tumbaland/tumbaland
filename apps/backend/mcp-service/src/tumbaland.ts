@@ -1,4 +1,10 @@
 import { requireEnv } from '@tumbaland/backend-core';
+import {
+  activitiesResponseSchema,
+  activityTypesResponseSchema,
+  daysResponseSchema,
+  parseResponse
+} from './schemas';
 
 /**
  * A thin client over the existing Tumbaland HTTP API.
@@ -134,8 +140,8 @@ export const tumbaland = {
   // bare array — `{ types: [...] }` and `{ activities: [...] }`. Unwrapped here
   // so the tools only ever see the list they asked for.
   listActivityTypes: async (apiKey: string): Promise<ActivityType[]> => {
-    const result = await call<{ types?: ActivityType[] }>(apiKey, 'GET', '/activity-types');
-    return result?.types ?? [];
+    const body = await call<unknown>(apiKey, 'GET', '/activity-types');
+    return parseResponse(activityTypesResponseSchema, '/activity-types', body).types;
   },
 
   createActivity: (
@@ -148,14 +154,12 @@ export const tumbaland = {
 
   /** One day's existing entries, so a write can add to them rather than replace them. */
   getDay: async (apiKey: string, date: string): Promise<ExistingEntry[]> => {
-    const result = await call<{ days?: { date: string; entries: ExistingEntry[] }[] }>(
-      apiKey,
-      'GET',
-      '/days',
-      undefined,
-      { startDate: date, endDate: date }
-    );
-    return result?.days?.find((day) => day.date === date)?.entries ?? [];
+    const body = await call<unknown>(apiKey, 'GET', '/days', undefined, {
+      startDate: date,
+      endDate: date
+    });
+    const parsed = parseResponse(daysResponseSchema, '/days', body);
+    return (parsed.days.find((day) => day.date === date)?.entries ?? []) as ExistingEntry[];
   },
 
   /**
@@ -169,14 +173,8 @@ export const tumbaland = {
     apiKey: string,
     params: { startDate?: string; endDate?: string; activityType?: string; limit?: number }
   ): Promise<Activity[]> => {
-    const result = await call<{ activities?: Activity[] }>(
-      apiKey,
-      'GET',
-      '/activities',
-      undefined,
-      params
-    );
-    return result?.activities ?? [];
+    const body = await call<unknown>(apiKey, 'GET', '/activities', undefined, params);
+    return parseResponse(activitiesResponseSchema, '/activities', body).activities as Activity[];
   },
 
   getStatistics: (apiKey: string, timeframe: string): Promise<unknown> =>

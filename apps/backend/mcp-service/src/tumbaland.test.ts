@@ -32,15 +32,24 @@ describe('response unwrapping', () => {
 
   it('unwraps the activities collection the same way', async () => {
     (global.fetch as jest.Mock).mockReturnValue(
-      respond({ success: true, data: { activities: [{ _id: 'a1' }], pagination: {} } })
+      respond({
+        success: true,
+        data: {
+          activities: [{ _id: 'a1', date: '2026-09-04T00:00:00.000Z', typeId: 't1' }],
+          pagination: {}
+        }
+      })
     );
 
     await expect(tumbaland.listActivities(KEY, {})).resolves.toHaveLength(1);
   });
 
-  it('returns an empty list rather than throwing when the collection is absent', async () => {
+  it('treats a missing collection as a changed contract, not an empty result', async () => {
+    // Returning [] here was the original bug's quieter cousin: an endpoint that
+    // stops sending `types` means something moved, and answering "you have no
+    // activity types" would send the model off to tell the user so.
     (global.fetch as jest.Mock).mockReturnValue(respond({ success: true, data: {} }));
-    await expect(tumbaland.listActivityTypes(KEY)).resolves.toEqual([]);
+    await expect(tumbaland.listActivityTypes(KEY)).rejects.toThrow(/not the shape/);
   });
 });
 
@@ -133,7 +142,10 @@ describe('query parameter names', () => {
     // getDay feeds the additive log_day: if this filter is ignored the merge
     // silently finds nothing and the save turns destructive again.
     (global.fetch as jest.Mock).mockReturnValue(
-      respond({ success: true, data: { days: [{ date: '2026-09-04', entries: [{ _id: 'e1' }] }] } })
+      respond({
+        success: true,
+        data: { days: [{ date: '2026-09-04', entries: [{ _id: 'e1', typeId: 't1' }] }] }
+      })
     );
 
     const entries = await tumbaland.getDay(KEY, '2026-09-04');
@@ -146,7 +158,10 @@ describe('query parameter names', () => {
 
   it('returns no entries for a day that is not in the response', async () => {
     (global.fetch as jest.Mock).mockReturnValue(
-      respond({ success: true, data: { days: [{ date: '2026-09-01', entries: [{ _id: 'e1' }] }] } })
+      respond({
+        success: true,
+        data: { days: [{ date: '2026-09-01', entries: [{ _id: 'e1', typeId: 't1' }] }] }
+      })
     );
 
     await expect(tumbaland.getDay(KEY, '2026-09-04')).resolves.toEqual([]);
@@ -204,7 +219,10 @@ describe('endpoint paths', () => {
   });
 
   it('lists activity types from /activity-types', async () => {
+    (global.fetch as jest.Mock).mockReturnValue(respond({ success: true, data: { types: [] } }));
+
     await tumbaland.listActivityTypes(KEY);
+
     expect(requestOf().url.pathname).toBe('/api/activity-types');
   });
 });
