@@ -152,3 +152,59 @@ describe('query parameter names', () => {
     await expect(tumbaland.getDay(KEY, '2026-09-04')).resolves.toEqual([]);
   });
 });
+
+describe('endpoint paths', () => {
+  // Asserted explicitly because a wrong path or verb fails the same way a wrong
+  // query parameter did: quietly, with a plausible-looking answer.
+  const requestOf = () => {
+    const [url, init] = (global.fetch as jest.Mock).mock.calls[0];
+    return { url: new URL(url as string), init: init as RequestInit };
+  };
+
+  beforeEach(() => {
+    (global.fetch as jest.Mock).mockReturnValue(respond({ success: true, data: {} }));
+  });
+
+  it('creates an activity by POST to /activities', async () => {
+    await tumbaland.createActivity(KEY, { date: '2026-09-04', typeId: 't1' });
+
+    const { url, init } = requestOf();
+    expect(url.pathname).toBe('/api/activities');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toMatchObject({ typeId: 't1' });
+  });
+
+  it('saves a day by PUT to that day’s path', async () => {
+    await tumbaland.saveDay(KEY, '2026-09-04', [{ typeId: 't1' }]);
+
+    const { url, init } = requestOf();
+    expect(url.pathname).toBe('/api/days/2026-09-04');
+    expect(init.method).toBe('PUT');
+  });
+
+  it('reads statistics with the timeframe', async () => {
+    await tumbaland.getStatistics(KEY, 'month');
+
+    const { url } = requestOf();
+    expect(url.pathname).toBe('/api/statistics');
+    expect(url.searchParams.get('timeframe')).toBe('month');
+  });
+
+  it('reads trends with the window', async () => {
+    await tumbaland.getTrends(KEY, 7);
+
+    const { url } = requestOf();
+    expect(url.pathname).toBe('/api/statistics/trends');
+    expect(url.searchParams.get('window')).toBe('7');
+  });
+
+  it('omits an absent window rather than sending "undefined"', async () => {
+    await tumbaland.getTrends(KEY);
+    expect(requestOf().url.searchParams.has('window')).toBe(false);
+  });
+
+  it('lists activity types from /activity-types', async () => {
+    await tumbaland.listActivityTypes(KEY);
+    expect(requestOf().url.pathname).toBe('/api/activity-types');
+  });
+});

@@ -70,14 +70,14 @@ describe('resolveEntitlements', () => {
   });
 
   it('reads the limits off the plan document rather than a hardcoded table', async () => {
-    mockSubscriptions([sub({ plan: { code: 'personal', priceMonthlyCents: 600, limits: { meters: { storageBytes: 77 }, retentionDays: UNLIMITED } } })]);
+    mockSubscriptions([sub({ plan: { code: 'support', priceMonthlyCents: 600, limits: { meters: { storageBytes: 77 }, retentionDays: UNLIMITED } } })]);
 
     const result = await resolveEntitlements('user@example.com');
 
-    expect(result.planCode).toBe('personal');
+    expect(result.planCode).toBe('support');
     expect(result.status).toBe('active');
     expect(result.limits.meters.storageBytes).toBe(77);
-    expect(result.limits.meters.aiJobs).toBe(DEFAULT_PLAN_LIMITS.personal.meters.aiJobs);
+    expect(result.limits.meters.aiJobs).toBe(DEFAULT_PLAN_LIMITS.support.meters.aiJobs);
   });
 
   it('treats canceling as entitled — the user paid for the period still running', async () => {
@@ -194,13 +194,13 @@ describe('comp grants', () => {
 
 describe('per-user overrides', () => {
   it('layers on top of the plan, leaving untouched meters alone', async () => {
-    mockSubscriptions([sub({ plan: { code: 'personal', priceMonthlyCents: 600, limits: { meters: { storageBytes: 100 } } } })]);
+    mockSubscriptions([sub({ plan: { code: 'support', priceMonthlyCents: 600, limits: { meters: { storageBytes: 100 } } } })]);
     mockedOverride.findOne.mockResolvedValue({ meters: { storageBytes: 5000 }, reason: 'friend' } as any);
 
     const result = await resolveEntitlements('user@example.com');
 
     expect(result.limits.meters.storageBytes).toBe(5000);
-    expect(result.limits.meters.aiJobs).toBe(DEFAULT_PLAN_LIMITS.personal.meters.aiJobs);
+    expect(result.limits.meters.aiJobs).toBe(DEFAULT_PLAN_LIMITS.support.meters.aiJobs);
     expect(result.hasOverride).toBe(true);
   });
 
