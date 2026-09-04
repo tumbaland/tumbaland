@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.469](https://github.com/toomastahves/tumbaland/compare/app-v0.0.468...app-v0.0.469) (2026-09-04)
+
+### Features
+
+* prefer tenant data ([2b816e0](https://github.com/toomastahves/tumbaland/commit/2b816e040de6ecd4356037be24c135b7fd62deff))
 ## [0.0.468](https://github.com/toomastahves/tumbaland/compare/app-v0.0.467...app-v0.0.468) (2026-09-04)
 
 ### Features
