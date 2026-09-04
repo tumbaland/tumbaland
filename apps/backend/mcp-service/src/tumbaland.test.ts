@@ -100,3 +100,111 @@ describe('resolveType', () => {
     expect(() => resolveType([], 'anything')).toThrow(/none defined yet/);
   });
 });
+
+describe('query parameter names', () => {
+  // These are asserted by name because the API ignores unknown parameters
+  // rather than rejecting them: a wrong name returns an unfiltered result that
+  // looks like a correct one. Only an explicit assertion catches that.
+  const paramsOf = (): URLSearchParams =>
+    new URL((global.fetch as jest.Mock).mock.calls[0][0]).searchParams;
+
+  it('filters activities with startDate/endDate, not from/to', async () => {
+    (global.fetch as jest.Mock).mockReturnValue(respond({ success: true, data: { activities: [] } }));
+
+    await tumbaland.listActivities(KEY, { startDate: '2026-09-01', endDate: '2026-09-04' });
+
+    const params = paramsOf();
+    expect(params.get('startDate')).toBe('2026-09-01');
+    expect(params.get('endDate')).toBe('2026-09-04');
+    expect(params.get('from')).toBeNull();
+    expect(params.get('to')).toBeNull();
+  });
+
+  it('filters activities by activityType slug, not typeId', async () => {
+    (global.fetch as jest.Mock).mockReturnValue(respond({ success: true, data: { activities: [] } }));
+
+    await tumbaland.listActivities(KEY, { activityType: 'dining' });
+
+    expect(paramsOf().get('activityType')).toBe('dining');
+    expect(paramsOf().get('typeId')).toBeNull();
+  });
+
+  it('reads a single day with startDate/endDate too', async () => {
+    // getDay feeds the additive log_day: if this filter is ignored the merge
+    // silently finds nothing and the save turns destructive again.
+    (global.fetch as jest.Mock).mockReturnValue(
+      respond({ success: true, data: { days: [{ date: '2026-09-04', entries: [{ _id: 'e1' }] }] } })
+    );
+
+    const entries = await tumbaland.getDay(KEY, '2026-09-04');
+
+    const params = paramsOf();
+    expect(params.get('startDate')).toBe('2026-09-04');
+    expect(params.get('endDate')).toBe('2026-09-04');
+    expect(entries).toHaveLength(1);
+  });
+
+  it('returns no entries for a day that is not in the response', async () => {
+    (global.fetch as jest.Mock).mockReturnValue(
+      respond({ success: true, data: { days: [{ date: '2026-09-01', entries: [{ _id: 'e1' }] }] } })
+    );
+
+    await expect(tumbaland.getDay(KEY, '2026-09-04')).resolves.toEqual([]);
+  });
+});
+
+describe('endpoint paths', () => {
+  // Asserted explicitly because a wrong path or verb fails the same way a wrong
+  // query parameter did: quietly, with a plausible-looking answer.
+  const requestOf = () => {
+    const [url, init] = (global.fetch as jest.Mock).mock.calls[0];
+    return { url: new URL(url as string), init: init as RequestInit };
+  };
+
+  beforeEach(() => {
+    (global.fetch as jest.Mock).mockReturnValue(respond({ success: true, data: {} }));
+  });
+
+  it('creates an activity by POST to /activities', async () => {
+    await tumbaland.createActivity(KEY, { date: '2026-09-04', typeId: 't1' });
+
+    const { url, init } = requestOf();
+    expect(url.pathname).toBe('/api/activities');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toMatchObject({ typeId: 't1' });
+  });
+
+  it('saves a day by PUT to that day’s path', async () => {
+    await tumbaland.saveDay(KEY, '2026-09-04', [{ typeId: 't1' }]);
+
+    const { url, init } = requestOf();
+    expect(url.pathname).toBe('/api/days/2026-09-04');
+    expect(init.method).toBe('PUT');
+  });
+
+  it('reads statistics with the timeframe', async () => {
+    await tumbaland.getStatistics(KEY, 'month');
+
+    const { url } = requestOf();
+    expect(url.pathname).toBe('/api/statistics');
+    expect(url.searchParams.get('timeframe')).toBe('month');
+  });
+
+  it('reads trends with the window', async () => {
+    await tumbaland.getTrends(KEY, 7);
+
+    const { url } = requestOf();
+    expect(url.pathname).toBe('/api/statistics/trends');
+    expect(url.searchParams.get('window')).toBe('7');
+  });
+
+  it('omits an absent window rather than sending "undefined"', async () => {
+    await tumbaland.getTrends(KEY);
+    expect(requestOf().url.searchParams.has('window')).toBe(false);
+  });
+
+  it('lists activity types from /activity-types', async () => {
+    await tumbaland.listActivityTypes(KEY);
+    expect(requestOf().url.pathname).toBe('/api/activity-types');
+  });
+});

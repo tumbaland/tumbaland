@@ -1,7 +1,8 @@
 import express, { Request, Response } from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { logger, verifyApiKey } from '@tumbaland/backend-core';
+import { logger, verifyApiKey, verifyAccessToken, looksLikeApiKey } from '@tumbaland/backend-core';
+import type { ApiKeyScope } from '@tumbaland/backend-core';
 import { registerTools } from './tools';
 
 const SERVER_NAME = 'tumbaland';
@@ -35,6 +36,49 @@ const SERVER_INSTRUCTIONS = [
 /** Where a client is told to go when it presents nothing usable. */
 const canonicalUrl = (): string =>
   (process.env.MCP_PUBLIC_URL || 'https://mcp.tumbaland.eu').replace(/\/$/, '');
+
+/** The authorization server that issues tokens for this resource. */
+const authorizationServer = (): string =>
+  (process.env.AUTH_SERVICE_PUBLIC_URL || 'https://auth-api.tumbaland.eu').replace(/\/$/, '');
+
+interface Authenticated {
+  ok: boolean;
+  rejection?: string;
+  userId?: string;
+  userEmail?: string;
+  userName?: string;
+  keyId?: string;
+  scopes?: ApiKeyScope[];
+  groupId?: string | null;
+}
+
+/**
+ * Accept either credential this server understands.
+ *
+ * An API key is a long-lived secret a person pasted into a config; an OAuth
+ * access token is short-lived and was granted through a consent screen. They
+ * arrive the same way and mean the same thing downstream — a user, a set of
+ * scopes, and a tenant — so the difference is settled here and nowhere else.
+ *
+ * The prefix decides which path to take, so an expired access token is never
+ * reported as a bad API key.
+ */
+async function authenticate(token: string): Promise<Authenticated> {
+  if (looksLikeApiKey(token)) {
+    return verifyApiKey(token);
+  }
+
+  const result = verifyAccessToken(token, canonicalUrl());
+  return {
+    ok: result.ok,
+    rejection: result.rejection,
+    userId: result.userId,
+    userEmail: result.email,
+    userName: result.name,
+    scopes: result.scopes,
+    groupId: result.groupId
+  };
+}
 
 /**
  * Refuse a request the way the MCP spec expects.
@@ -94,6 +138,9 @@ export function createApp() {
   app.get('/.well-known/oauth-protected-resource', (_req: Request, res: Response) => {
     res.json({
       resource: canonicalUrl(),
+      // Where a client goes to obtain a token. Without this a spec-compliant
+      // client can discover that it needs to authenticate but not how.
+      authorization_servers: [authorizationServer()],
       scopes_supported: ['relationship:read', 'relationship:write'],
       bearer_methods_supported: ['header']
     });
@@ -114,10 +161,10 @@ export function createApp() {
       return;
     }
 
-    const verification = await verifyApiKey(token);
+    const verification = await authenticate(token);
     if (!verification.ok) {
       logger.warn('MCP request rejected', { rejection: verification.rejection });
-      unauthorized(res, 'Invalid or expired API key.');
+      unauthorized(res, 'Invalid or expired credentials.');
       return;
     }
 
@@ -125,7 +172,12 @@ export function createApp() {
       { name: SERVER_NAME, version: SERVER_VERSION },
       { instructions: SERVER_INSTRUCTIONS }
     );
-    registerTools(server, token);
+    // The surface is built from the key's own scopes, so a read-only key is
+    // never shown a tool that would 403 on it.
+    const modules = registerTools(server, token, verification.scopes ?? []);
+    if (modules === 0) {
+      logger.warn('API key has no scopes matching any tool module', { keyId: verification.keyId });
+    }
 
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
 

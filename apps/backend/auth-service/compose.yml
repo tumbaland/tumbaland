@@ -14,6 +14,11 @@ services:
       - MONGODB_URI=${MONGODB_URI}
       - JWT_SECRET=${JWT_SECRET}
       - API_KEY_ENCRYPTION_SECRET=${API_KEY_ENCRYPTION_SECRET}
+      # OAuth: the issuer names itself in tokens and metadata, and only mints
+      # for the one MCP resource it knows about.
+      - AUTH_SERVICE_PUBLIC_URL=${AUTH_SERVICE_URL}
+      - MCP_PUBLIC_URL=${MCP_PUBLIC_URL}
+      - AUTH_FRONT_URL=${AUTH_FRONT_URL}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - COOKIE_DOMAIN=${COOKIE_DOMAIN}
       - CORS_ORIGIN=${CORS_ORIGIN}

@@ -137,14 +137,21 @@ export const tumbaland = {
       'GET',
       '/days',
       undefined,
-      { from: date, to: date }
+      { startDate: date, endDate: date }
     );
     return result?.days?.find((day) => day.date === date)?.entries ?? [];
   },
 
+  /**
+   * `startDate`/`endDate`, and `activityType` as a *slug* — the names the
+   * controller actually reads. Unknown query parameters are ignored rather than
+   * rejected, so getting these wrong returns a confident, unfiltered answer
+   * instead of an error. That is worse than a 400 and is exactly how this was
+   * shipped broken the first time.
+   */
   listActivities: async (
     apiKey: string,
-    params: { from?: string; to?: string; typeId?: string; limit?: number }
+    params: { startDate?: string; endDate?: string; activityType?: string; limit?: number }
   ): Promise<Activity[]> => {
     const result = await call<{ activities?: Activity[] }>(
       apiKey,

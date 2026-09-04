@@ -10,6 +10,9 @@ jest.mock('../models/ActivityType', () => {
   ActivityType.findByIdAndDelete = jest.fn();
   ActivityType.countDocuments = jest.fn();
   ActivityType.bulkWrite = jest.fn();
+  // An empty scope now seeds defaults on first read, so the query path reaches
+  // insertMany. Resolving empty keeps these tests about scoping, not seeding.
+  ActivityType.insertMany = jest.fn().mockResolvedValue([]);
   return { ActivityType };
 });
 
@@ -98,6 +101,74 @@ describe('createActivityType', () => {
 });
 
 describe('getActivityTypes', () => {
+  describe('seeding an empty scope', () => {
+    const mockedInsertMany = (ActivityType as any).insertMany as jest.Mock;
+
+    it('seeds personal types under the user, with no group', async () => {
+      mockedFind.mockReturnValue(mockFindChain([]));
+      mockedCountDocuments.mockResolvedValue(0);
+      mockedInsertMany.mockResolvedValue([{ slug: 'dining' }]);
+
+      await getActivityTypes({ userId: 'u1' });
+
+      const [documents] = mockedInsertMany.mock.calls[0];
+      // Absent rather than null: the personal uniqueness index is
+      // `(userId, slug)` filtered on `groupId: null`, which matches a missing
+      // field — so these are unique per user.
+      expect(documents.every((d: any) => d.userId === 'u1')).toBe(true);
+      expect(documents.every((d: any) => d.groupId === undefined)).toBe(true);
+    });
+
+    it('seeds group types under the group, so they are unique per group', async () => {
+      mockedFind.mockReturnValue(mockFindChain([]));
+      mockedCountDocuments.mockResolvedValue(0);
+      mockedInsertMany.mockResolvedValue([{ slug: 'dining' }]);
+
+      await getActivityTypes({ userId: 'u1', groupId: 'g1' });
+
+      expect(mockedInsertMany.mock.calls[0][0].every((d: any) => d.groupId === 'g1')).toBe(true);
+    });
+
+    it('does not seed when the scope already has types', async () => {
+      mockedFind.mockReturnValue(mockFindChain([{ slug: 'dining' }]));
+      mockedCountDocuments.mockResolvedValue(1);
+
+      await getActivityTypes({ userId: 'u1' });
+
+      expect(mockedInsertMany).not.toHaveBeenCalled();
+    });
+
+    it('does not seed a group whose members already have personal types', async () => {
+      // Group context counts personal types as a fallback, so a user who
+      // already has their own set makes the group non-empty — and seeding it
+      // anyway would show every name twice.
+      mockedFind.mockReturnValue(mockFindChain([{ slug: 'dining' }]));
+      mockedCountDocuments.mockResolvedValue(7);
+
+      await getActivityTypes({ userId: 'u1', groupId: 'g1' });
+
+      expect(mockedInsertMany).not.toHaveBeenCalled();
+    });
+
+    it('only seeds from the first page, since a later empty page means nothing', async () => {
+      mockedFind.mockReturnValue(mockFindChain([]));
+      mockedCountDocuments.mockResolvedValue(0);
+
+      await getActivityTypes({ userId: 'u1', page: 3 });
+
+      expect(mockedInsertMany).not.toHaveBeenCalled();
+    });
+
+    it('needs a user, so an unscoped call never writes', async () => {
+      mockedFind.mockReturnValue(mockFindChain([]));
+      mockedCountDocuments.mockResolvedValue(0);
+
+      await getActivityTypes({});
+
+      expect(mockedInsertMany).not.toHaveBeenCalled();
+    });
+  });
+
   it('scopes to group + personal fallback when groupId is a real id', async () => {
     mockedFind.mockReturnValue(mockFindChain([]));
     mockedCountDocuments.mockResolvedValue(0);

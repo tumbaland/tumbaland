@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import path from 'path';
 import authRoutes from './routes/authRoutes';
+import oauthRoutes, { authorizationServerMetadata } from './routes/oauthRoutes';
 import { healthCheck } from './controllers/healthController';
 import { errorHandler, createBaseApp, metricsHandler } from '@tumbaland/backend-core';
 
@@ -13,6 +14,12 @@ app.use('/api/docs', express.static(path.join(__dirname, '../docs')));
 
 // Routes
 app.use('/auth', authRoutes);
+
+// OAuth 2.1 authorization server. The metadata sits at the issuer's root
+// because that is where RFC 8414 says a client will look for it — it cannot be
+// nested under /auth.
+app.get('/.well-known/oauth-authorization-server', authorizationServerMetadata);
+app.use('/oauth', oauthRoutes);
 
 // Documentation root redirect
 app.get('/docs', (req: Request, res: Response) => {

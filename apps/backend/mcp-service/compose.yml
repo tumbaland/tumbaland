@@ -19,6 +19,11 @@ services:
       - RELATIONSHIP_API_URL=${RELATIONSHIP_API_URL}
       # The canonical URL clients are told to authenticate against.
       - MCP_PUBLIC_URL=${MCP_PUBLIC_URL}
+      # Named in the protected-resource metadata, so a client knows where to
+      # obtain a token.
+      - AUTH_SERVICE_PUBLIC_URL=${AUTH_SERVICE_URL}
+      # Access tokens are JWTs signed by auth-service.
+      - JWT_SECRET=${JWT_SECRET}
     init: true
     networks:
       - tumbanet

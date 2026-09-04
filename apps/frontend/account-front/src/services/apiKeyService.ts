@@ -71,3 +71,32 @@ export const apiKeyService = {
     await accountApi.delete<Wrapped<{ id: string }>>(`/auth/api-keys/${id}`);
   }
 };
+
+/**
+ * An assistant connected through OAuth.
+ *
+ * Distinct from an API key: nobody copied a secret anywhere, they approved a
+ * consent screen. Revoking is therefore the only control that matters here —
+ * there is nothing to reveal.
+ */
+export interface Connection {
+  id: string;
+  clientId: string;
+  clientName: string;
+  scopes: ApiKeyScope[];
+  groupId: string | null;
+  createdAt: string;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+}
+
+export const connectionService = {
+  async list(): Promise<Connection[]> {
+    const response = await accountApi.get<Wrapped<Connection[]>>('/auth/connections');
+    return response.data;
+  },
+
+  async revoke(clientId: string): Promise<void> {
+    await accountApi.delete<Wrapped<{ clientId: string }>>(`/auth/connections/${clientId}`);
+  }
+};

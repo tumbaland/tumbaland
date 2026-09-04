@@ -1,14 +1,17 @@
 jest.mock('@tumbaland/backend-core', () => ({
   verifyApiKey: jest.fn(),
+  verifyAccessToken: jest.fn(),
+  looksLikeApiKey: (t: string) => typeof t === 'string' && t.startsWith('tmb_live_'),
   logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
   requireEnv: (name: string) => process.env[name] ?? `missing:${name}`
 }));
 
 import request from 'supertest';
-import { verifyApiKey } from '@tumbaland/backend-core';
+import { verifyApiKey, verifyAccessToken } from '@tumbaland/backend-core';
 import { createApp } from './app';
 
 const mockedVerify = verifyApiKey as jest.Mock;
+const mockedVerifyToken = verifyAccessToken as jest.Mock;
 const app = createApp();
 
 const KEY = 'tmb_live_abcdef123456_aaaaaaaaaaaaaaaaaaaaaaaa';
@@ -190,5 +193,101 @@ describe('the root and unknown paths', () => {
   it('answers an unknown method on the MCP path with JSON too', async () => {
     const res = await request(app).get('/mcp');
     expect(res.headers['content-type']).toMatch(/json/);
+  });
+});
+
+describe('tools are gated by the key’s scopes', () => {
+  const toolsFor = async (scopes: string[]): Promise<string[]> => {
+    mockedVerify.mockResolvedValue({ ok: true, userId: 'u1', keyId: 'k1', scopes, groupId: null });
+    const res = await rpc({ jsonrpc: '2.0', id: 9, method: 'tools/list', params: {} }, KEY);
+    const payload = JSON.parse(res.text.split('data: ')[1] ?? '{}');
+    return (payload.result?.tools ?? []).map((tool: { name: string }) => tool.name).sort();
+  };
+
+  it('shows a read-only key only the reading tools', async () => {
+    // Advertising log_day to a key that cannot write invites a call that 403s,
+    // and a failure the model cannot act on is worse than an absence.
+    await expect(toolsFor(['relationship:read'])).resolves.toEqual([
+      'get_stats',
+      'list_activity_types',
+      'search_activities'
+    ]);
+  });
+
+  it('shows a read+write key everything', async () => {
+    await expect(toolsFor(['relationship:read', 'relationship:write'])).resolves.toEqual([
+      'get_stats',
+      'list_activity_types',
+      'log_activity',
+      'log_day',
+      'search_activities'
+    ]);
+  });
+
+  it('hides the writing tools from a write-only key, which could not resolve a type anyway', async () => {
+    await expect(toolsFor(['relationship:write'])).resolves.toEqual([]);
+  });
+
+  it('shows nothing for a key scoped to another domain entirely', async () => {
+    await expect(toolsFor(['finance:read'])).resolves.toEqual([]);
+  });
+
+  it('shows nothing for a key with no scopes', async () => {
+    await expect(toolsFor([])).resolves.toEqual([]);
+  });
+});
+
+describe('OAuth access tokens', () => {
+  const OAUTH_TOKEN = 'eyJhbGciOiJIUzI1NiJ9.payload.signature';
+
+  it('accepts an access token and derives the same context as a key', async () => {
+    mockedVerifyToken.mockReturnValue({
+      ok: true,
+      userId: 'u2',
+      email: 'u2@example.com',
+      name: 'OAuth User',
+      scopes: ['relationship:read'],
+      groupId: 'g1'
+    });
+
+    const res = await rpc({ jsonrpc: '2.0', id: 20, method: 'tools/list', params: {} }, OAUTH_TOKEN);
+    const payload = JSON.parse(res.text.split('data: ')[1] ?? '{}');
+    const names = payload.result.tools.map((t: { name: string }) => t.name).sort();
+
+    // Scope gating applies identically, whichever credential arrived.
+    expect(names).toEqual(['get_stats', 'list_activity_types', 'search_activities']);
+    expect(mockedVerify).not.toHaveBeenCalled();
+  });
+
+  it('routes by prefix, so a key is never checked as a token', async () => {
+    mockedVerify.mockResolvedValue({ ok: true, userId: 'u1', keyId: 'k1', scopes: [], groupId: null });
+
+    await rpc(initialize, KEY);
+
+    expect(mockedVerify).toHaveBeenCalled();
+    expect(mockedVerifyToken).not.toHaveBeenCalled();
+  });
+
+  it('refuses an access token minted for a different resource', async () => {
+    mockedVerifyToken.mockReturnValue({ ok: false, rejection: 'wrong-audience' });
+
+    const res = await rpc(initialize, OAUTH_TOKEN);
+
+    expect(res.status).toBe(401);
+    expect(JSON.stringify(res.body)).not.toContain('wrong-audience');
+  });
+
+  it('refuses an expired access token', async () => {
+    mockedVerifyToken.mockReturnValue({ ok: false, rejection: 'expired' });
+    expect((await rpc(initialize, OAUTH_TOKEN)).status).toBe(401);
+  });
+});
+
+describe('protected resource metadata names the authorization server', () => {
+  it('tells a client where to obtain a token', async () => {
+    // Without this a spec-compliant client learns that it must authenticate but
+    // not how, and the OAuth flow can never start.
+    const res = await request(app).get('/.well-known/oauth-protected-resource');
+    expect(res.body.authorization_servers?.[0]).toMatch(/^https?:\/\//);
   });
 });

@@ -104,7 +104,7 @@ describe('listPlans', () => {
 
   it('resolves the limits the pricing page renders, so a card cannot advertise a number nothing enforces', async () => {
     mocked.find.mockReturnValue({
-      sort: jest.fn().mockResolvedValue([{ code: 'personal', limits: { meters: { storageBytes: 999 } } }])
+      sort: jest.fn().mockResolvedValue([{ code: 'support', limits: { meters: { storageBytes: 999 } } }])
     } as any);
     const res = mockRes();
 
@@ -113,7 +113,7 @@ describe('listPlans', () => {
     const [{ plans }] = (res.json as jest.Mock).mock.calls[0];
     expect(plans[0].effectiveLimits.meters.storageBytes).toBe(999);
     // Anything the document leaves unset resolves from that plan's defaults.
-    expect(plans[0].effectiveLimits.meters.seats).toBe(DEFAULT_PLAN_LIMITS.personal.meters.seats);
+    expect(plans[0].effectiveLimits.meters.seats).toBe(DEFAULT_PLAN_LIMITS.support.meters.seats);
   });
 });
 
@@ -300,18 +300,18 @@ describe('updatePlanLimits', () => {
   });
 
   it('echoes the resolved numbers, including the ones defaults filled in', async () => {
-    const plan: any = { code: 'family', save: jest.fn() };
+    const plan: any = { code: 'support', save: jest.fn() };
     mocked.findOne.mockResolvedValue(plan);
     const res = mockRes();
 
     await updatePlanLimits(
-      { params: { code: 'family' }, query: {}, body: { retentionDays: UNLIMITED } } as unknown as Request,
+      { params: { code: 'support' }, query: {}, body: { retentionDays: UNLIMITED } } as unknown as Request,
       res
     );
 
     const [{ effectiveLimits }] = (res.json as jest.Mock).mock.calls[0];
     expect(effectiveLimits.retentionDays).toBe(UNLIMITED);
-    expect(effectiveLimits.meters.seats).toBe(DEFAULT_PLAN_LIMITS.family.meters.seats);
+    expect(effectiveLimits.meters.seats).toBe(DEFAULT_PLAN_LIMITS.support.meters.seats);
   });
 });
 

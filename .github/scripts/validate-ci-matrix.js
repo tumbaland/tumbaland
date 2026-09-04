@@ -47,9 +47,65 @@ if (staleAppKeys.length) {
   problems.push(`ci.yml filters a workspace that no longer exists on disk (remove the entry): ${staleAppKeys.join(', ')}`);
 }
 
+/**
+ * Every workspace must expose the scripts the verify job runs.
+ *
+ * The job invokes them with `--if-present`, so a workspace missing one is
+ * silently skipped rather than failing — album-front went without
+ * `test:coverage` for exactly that reason, and its thresholds were never
+ * enforced despite being configured. A missing script has to be loud, because
+ * the symptom of it otherwise is a green tick over work nobody checked.
+ */
+const REQUIRED_SCRIPTS = ['test', 'test:coverage', 'typecheck', 'lint'];
+
+const missingScripts = [];
+for (const workspace of [...appWorkspaces, ...libWorkspaces]) {
+  const manifest = path.join(repoRoot, workspace, 'package.json');
+  if (!fs.existsSync(manifest)) continue;
+  const scripts = JSON.parse(fs.readFileSync(manifest, 'utf8')).scripts ?? {};
+  const absent = REQUIRED_SCRIPTS.filter((name) => !scripts[name]);
+  if (absent.length) missingScripts.push(`${workspace} (${absent.join(', ')})`);
+}
+
+if (missingScripts.length) {
+  problems.push(
+    `Workspaces missing scripts the verify job runs — they would be skipped silently: ${missingScripts.join('; ')}`
+  );
+}
+
+/**
+ * And every workspace must actually enforce a coverage threshold. A
+ * `test:coverage` script that reports a number nothing checks is a slower way
+ * of not measuring.
+ */
+const CONFIG_FILES = ['jest.config.js', 'vite.config.mts', 'vite.config.ts', 'vitest.config.ts'];
+const withoutThresholds = [];
+for (const workspace of [...appWorkspaces, ...libWorkspaces]) {
+  const config = CONFIG_FILES.map((name) => path.join(repoRoot, workspace, name)).find((f) =>
+    fs.existsSync(f)
+  );
+  if (!config) {
+    withoutThresholds.push(`${workspace} (no test config found)`);
+    continue;
+  }
+  const text = fs.readFileSync(config, 'utf8');
+  if (!/coverageThreshold|thresholds\s*:/.test(text)) {
+    withoutThresholds.push(`${workspace} (${path.basename(config)})`);
+  }
+}
+
+if (withoutThresholds.length) {
+  problems.push(
+    `Workspaces whose coverage is measured but not enforced: ${withoutThresholds.join(', ')}`
+  );
+}
+
 if (problems.length) {
   console.error('CI matrix / workspace drift detected:\n' + problems.map((p) => `  - ${p}`).join('\n'));
   process.exit(1);
 }
 
-console.log(`OK: all ${appWorkspaces.length} app workspaces and ${libWorkspaces.length} libs are covered in ci.yml.`);
+console.log(
+  `OK: all ${appWorkspaces.length} app workspaces and ${libWorkspaces.length} libs are in ci.yml, ` +
+    'expose every script the verify job runs, and enforce a coverage threshold.'
+);

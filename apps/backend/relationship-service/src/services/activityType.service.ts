@@ -1,5 +1,6 @@
 import { ConflictError, logger } from '@tumbaland/backend-core';
 import { ActivityType, IActivityType } from '../models/ActivityType';
+import { seedDefaultActivityTypes } from './defaultActivityTypes';
 
 interface ActivityTypeQuery {
   isActive?: boolean;
@@ -105,6 +106,34 @@ export const getActivityTypes = async (
     ActivityType.find(query).sort({ sortOrder: 1, createdAt: -1 }).skip(skip).limit(limit).lean(),
     ActivityType.countDocuments(query)
   ]);
+
+  // A scope with nothing in it is a brand-new account, and an empty list is a
+  // dead end: entries are recorded against a type, so an assistant asked to log
+  // anything can only reply that there is nothing to log against. Seeding on the
+  // first read puts that right without a setup step, and is safe to race —
+  // `seedDefaultActivityTypes` relies on the unique slug indexes rather than a
+  // check-then-write. Only the first page is considered, since a later page
+  // being empty says nothing about the scope.
+  if (total === 0 && userId && page === 1) {
+    const seeded = await seedDefaultActivityTypes(userId, groupId ?? undefined);
+    if (seeded.length > 0) {
+      logger.info('Seeded default activity types for a new scope', {
+        userId,
+        groupId: groupId ?? null,
+        count: seeded.length
+      });
+      const [freshTypes, freshTotal] = await Promise.all([
+        ActivityType.find(query).sort({ sortOrder: 1, createdAt: -1 }).skip(skip).limit(limit).lean(),
+        ActivityType.countDocuments(query)
+      ]);
+      return {
+        types: freshTypes,
+        total: freshTotal,
+        page,
+        totalPages: Math.ceil(freshTotal / limit)
+      };
+    }
+  }
 
   const totalPages = Math.ceil(total / limit);
 

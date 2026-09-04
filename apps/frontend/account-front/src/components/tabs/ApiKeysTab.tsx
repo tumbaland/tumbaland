@@ -34,6 +34,7 @@ import {
 import { logger } from '@tumbaland/frontend-core';
 import { API_KEY_SCOPES, ApiKey, ApiKeyScope, apiKeyService } from '../../services/apiKeyService';
 import { getUserGroups } from '../../services/groupService';
+import ConnectionsSection from './ConnectionsSection';
 
 interface TenantOption {
   id: string;
@@ -334,6 +335,8 @@ const ApiKeysTab: React.FC = () => {
           })}
         </Stack>
       )}
+
+      <ConnectionsSection />
 
       <Dialog open={createOpen} onClose={() => setCreateOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>New API key</DialogTitle>

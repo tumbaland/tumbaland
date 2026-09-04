@@ -69,8 +69,27 @@ describe('fetchedAtLabel', () => {
   it('is an instant, so it does move with the viewer\'s zone', () => {
     // Unlike a session date, "when did my machine last get data" is a real
     // moment and belongs in local time.
-    const utc = new Date('2026-08-10T22:00:07.000Z');
-    expect(fetchedAtLabel(utc.toISOString())).toContain(String(utc.getHours()).padStart(2, '0'));
+    //
+    // Asserted against the same locale rendering rather than by searching for
+    // a 24-hour hour string: `toLocaleString` may format 12-hour, so 22:00Z
+    // reads as "10:00:07 PM" and the old check only passed in zones where the
+    // local hour landed below 13. It was green in EEST and red in CI's UTC.
+    const iso = '2026-08-10T22:00:07.000Z';
+    const label = fetchedAtLabel(iso) as string;
+
+    expect(label).toBe(
+      new Date(iso).toLocaleString(undefined, {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      })
+    );
+    // And not the raw instant: that would be the same for every viewer.
+    expect(label).not.toContain('Z');
+    expect(label).not.toBe(iso);
   });
 
   it('has nothing to show before the first fetch', () => {

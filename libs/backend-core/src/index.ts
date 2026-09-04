@@ -33,6 +33,9 @@ export * from './groups';
 // API keys (non-browser clients: MCP servers, scripts, agents)
 export * from './apiKeys';
 
+// OAuth 2.1 authorization server, for assistants connecting over MCP
+export * from './oauth';
+
 // Middleware
 export { authenticateToken, optionalAuth } from './middleware/authMiddleware';
 export {

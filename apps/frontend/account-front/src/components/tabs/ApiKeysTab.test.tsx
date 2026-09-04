@@ -20,6 +20,10 @@ vi.mock('../../services/apiKeyService', async () => {
 
 vi.mock('../../services/groupService', () => ({ getUserGroups: vi.fn() }));
 
+// Rendered inside this tab but tested on its own; stubbed so these tests stay
+// about keys.
+vi.mock('./ConnectionsSection', () => ({ default: () => <div>connections section</div> }));
+
 vi.mock('@tumbaland/frontend-core', async () => {
   const actual = await vi.importActual('@tumbaland/frontend-core');
   return { ...actual, logger: { debug: vi.fn(), error: vi.fn(), info: vi.fn(), warn: vi.fn() } };
