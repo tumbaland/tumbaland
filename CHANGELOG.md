@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.471](https://github.com/toomastahves/tumbaland/compare/app-v0.0.470...app-v0.0.471) (2026-09-04)
+
+### Features
+
+* add finance mcp ([5a9b98d](https://github.com/toomastahves/tumbaland/commit/5a9b98d8170cfb3ca84d17f8cc3e8c37b8469d40))
 ## [0.0.470](https://github.com/toomastahves/tumbaland/compare/app-v0.0.469...app-v0.0.470) (2026-09-04)
 
 ### Features
