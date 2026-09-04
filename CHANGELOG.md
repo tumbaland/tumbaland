@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.463](https://github.com/toomastahves/tumbaland/compare/app-v0.0.462...app-v0.0.463) (2026-09-04)
+
+### Bug Fixes
+
+* **mcp:** read the type name off a populated activity ([6d0dbb4](https://github.com/toomastahves/tumbaland/commit/6d0dbb44ee79b5b672d3ac116ef7659828387ace))
+* **mcp:** validate API responses at the boundary, against recorded shapes ([c7a1f70](https://github.com/toomastahves/tumbaland/commit/c7a1f70ddf4f36ad27fb098258e53a8c9df72aad))
 ## [0.0.462](https://github.com/toomastahves/tumbaland/compare/app-v0.0.461...app-v0.0.462) (2026-09-04)
 
 ### Features
