@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.467](https://github.com/toomastahves/tumbaland/compare/app-v0.0.466...app-v0.0.467) (2026-09-04)
+
+### Bug Fixes
+
+* mcp auth write permissions ([1c07a98](https://github.com/toomastahves/tumbaland/commit/1c07a982023c828f56991372b5ffef50f09e72ef))
 ## [0.0.466](https://github.com/toomastahves/tumbaland/compare/app-v0.0.465...app-v0.0.466) (2026-09-04)
 
 ### Features
