@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { strictRateLimiter, validate, NotFoundError } from '@tumbaland/backend-core';
 import { validateToken, logout, verifyAuth, refreshToken, invalidateUserTokens } from '../controllers/authController';
 import { getProfile, updateProfile } from '../controllers/profileController';
+import { getConnections, revokeConnection } from '../controllers/oauthController';
 import {
   requireApiKeysConfigured,
   getApiKeys,
@@ -55,6 +56,12 @@ router.post('/api-keys', ...apiKeyRoute, validate(createApiKeySchema), postApiKe
 router.post('/api-keys/:id/reveal', ...apiKeyRoute, strictRateLimiter, postApiKeyReveal);
 router.post('/api-keys/:id/revoke', ...apiKeyRoute, postApiKeyRevoke);
 router.delete('/api-keys/:id', ...apiKeyRoute, removeApiKey);
+
+// Connected assistants. Managing a connection is a person's job for the same
+// reason key management is: a credential that can revoke credentials is one that
+// cannot be revoked.
+router.get('/connections', authenticateToken, requireApproved, getConnections);
+router.delete('/connections/:clientId', authenticateToken, requireApproved, revokeConnection);
 
 // Internal service endpoints for token management — service-to-service only, never user-facing.
 router.post('/internal/invalidate-tokens', requireInternalService, validate(invalidateTokensSchema), invalidateUserTokens);
