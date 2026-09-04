@@ -1,7 +1,18 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { DayEntry, activityTypeOf, resolveType, tumbaland } from '../tumbaland';
-import { ToolModule, dateSchema, entrySchema, explain, ok } from './module';
+import {
+  Caller,
+  ToolModule,
+  dateSchema,
+  entrySchema,
+  explain,
+  fail,
+  groupIdFor,
+  journalSchema,
+  ok,
+  resolveJournal
+} from './module';
 
 /**
  * The relationship journal: the domain Tumbaland started as.
@@ -12,7 +23,27 @@ import { ToolModule, dateSchema, entrySchema, explain, ok } from './module';
  * fail on the first call.
  */
 
-function registerReadTools(server: McpServer, apiKey: string): void {
+/**
+ * One entry, on one line, with the id needed to act on it.
+ *
+ * The id is shown rather than hidden because editing has to start somewhere: a
+ * model that cannot name an entry can only rewrite the whole day, which is what
+ * it was reduced to doing before `edit_activity` existed. Type *names* are still
+ * resolved for the model — it should never have to invent one of those — but an
+ * id it has just been handed is something it can copy back accurately.
+ */
+const describeActivity = (
+  activity: { _id: string; date: string; description?: string; hours?: number },
+  typeName: string
+): string => {
+  const day = activity.date.slice(0, 10);
+  const time = activity.hours !== undefined ? ` (${activity.hours}h)` : '';
+  const detail = activity.description ? ` — ${activity.description}` : '';
+  return `- ${day}: ${typeName}${time}${detail}  [id ${activity._id}]`;
+};
+
+function registerReadTools(server: McpServer, caller: Caller): void {
+  const apiKey = caller.token;
   server.registerTool(
     'list_activity_types',
     {
@@ -20,11 +51,12 @@ function registerReadTools(server: McpServer, apiKey: string): void {
       description:
         'The kinds of thing that can be logged in this Tumbaland account, with how each is measured. ' +
         'Call this before logging anything: entries are recorded against a type, and only these exist.',
-      inputSchema: {}
+      inputSchema: { ...journalSchema(caller) }
     },
-    async () => {
+    async ({ journal }) => {
       try {
-        const types = await tumbaland.listActivityTypes(apiKey);
+        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const types = await tumbaland.listActivityTypes(apiKey, groupId);
         if (types.length === 0) {
           return ok('No activity types are defined yet. The user needs to create some in Tumbaland first.');
         }
@@ -46,6 +78,36 @@ function registerReadTools(server: McpServer, apiKey: string): void {
     }
   );
   server.registerTool(
+    'get_day',
+    {
+      title: 'Read one day',
+      description:
+        'Everything logged on one day, with the id of each entry. Call this before changing or ' +
+        'removing something: edit_activity and delete_activity need an id, and this is where they ' +
+        'come from. Also the right way to check what is already recorded before adding to a day.',
+      inputSchema: { date: dateSchema, ...journalSchema(caller) }
+    },
+    async ({ date, journal }) => {
+      try {
+        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const [types, entries] = await Promise.all([
+          tumbaland.listActivityTypes(apiKey, groupId),
+          tumbaland.getDay(apiKey, date, groupId)
+        ]);
+        if (entries.length === 0) return ok(`Nothing logged on ${date}.`);
+
+        const nameById = new Map(types.map((type) => [type._id, type.name]));
+        const lines = entries.map((entry) =>
+          describeActivity({ ...entry, date }, nameById.get(entry.typeId) ?? 'Unknown type')
+        );
+
+        return ok(`Logged on ${date}:\n${lines.join('\n')}`);
+      } catch (error) {
+        return explain(error);
+      }
+    }
+  );
+  server.registerTool(
     'search_activities',
     {
       title: 'Search logged activities',
@@ -56,12 +118,14 @@ function registerReadTools(server: McpServer, apiKey: string): void {
         from: dateSchema.optional().describe('Earliest day to include'),
         to: dateSchema.optional().describe('Latest day to include'),
         type: z.string().optional().describe('Narrow to one activity type, by name'),
-        limit: z.number().int().min(1).max(100).optional().describe('How many entries at most (default 20)')
+        limit: z.number().int().min(1).max(100).optional().describe('How many entries at most (default 20)'),
+        ...journalSchema(caller)
       }
     },
-    async ({ from, to, type, limit }) => {
+    async ({ from, to, type, limit, journal }) => {
       try {
-        const types = await tumbaland.listActivityTypes(apiKey);
+        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const types = await tumbaland.listActivityTypes(apiKey, groupId);
         // Filtered by slug, not id — the controller reads `activityType`.
         const activityType = type ? resolveType(types, type).slug : undefined;
         const nameById = new Map(types.map((entry) => [entry._id, entry.name]));
@@ -70,18 +134,15 @@ function registerReadTools(server: McpServer, apiKey: string): void {
           startDate: from,
           endDate: to,
           activityType,
-          limit: limit ?? 20
+          limit: limit ?? 20,
+          groupId
         });
 
         if (activities.length === 0) return ok('Nothing logged matching that.');
 
-        const lines = activities.map((activity) => {
-          const day = activity.date.slice(0, 10);
-          const name = activityTypeOf(activity, nameById) ?? 'Unknown type';
-          const detail = activity.description ? ` — ${activity.description}` : '';
-          const time = activity.hours !== undefined ? ` (${activity.hours}h)` : '';
-          return `- ${day}: ${name}${time}${detail}`;
-        });
+        const lines = activities.map((activity) =>
+          describeActivity(activity, activityTypeOf(activity, nameById) ?? 'Unknown type')
+        );
 
         return ok(lines.join('\n'));
       } catch (error) {
@@ -107,14 +168,16 @@ function registerReadTools(server: McpServer, apiKey: string): void {
           .min(7)
           .max(180)
           .optional()
-          .describe('Compare the last N days against the N before (default 30)')
+          .describe('Compare the last N days against the N before (default 30)'),
+        ...journalSchema(caller)
       }
     },
-    async ({ timeframe, trendWindowDays }) => {
+    async ({ timeframe, trendWindowDays, journal }) => {
       try {
+        const groupId = groupIdFor(resolveJournal(caller, journal));
         const [statistics, trends] = await Promise.all([
-          tumbaland.getStatistics(apiKey, timeframe ?? 'all'),
-          tumbaland.getTrends(apiKey, trendWindowDays)
+          tumbaland.getStatistics(apiKey, timeframe ?? 'all', groupId),
+          tumbaland.getTrends(apiKey, trendWindowDays, groupId)
         ]);
 
         // Returned as JSON rather than prose: these are numbers the model will
@@ -128,7 +191,8 @@ function registerReadTools(server: McpServer, apiKey: string): void {
   );
 }
 
-function registerWriteTools(server: McpServer, apiKey: string): void {
+function registerWriteTools(server: McpServer, caller: Caller): void {
+  const apiKey = caller.token;
   server.registerTool(
     'log_day',
     {
@@ -144,12 +208,14 @@ function registerWriteTools(server: McpServer, apiKey: string): void {
         replace: z
           .boolean()
           .optional()
-          .describe('Discard anything else logged that day. Destructive — only on an explicit request.')
+          .describe('Discard anything else logged that day. Destructive — only on an explicit request.'),
+        ...journalSchema(caller)
       }
     },
-    async ({ date, entries, replace }) => {
+    async ({ date, entries, replace, journal }) => {
       try {
-        const types = await tumbaland.listActivityTypes(apiKey);
+        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const types = await tumbaland.listActivityTypes(apiKey, groupId);
 
         // Names resolve to ids here so the model never sees an ObjectId, and an
         // unknown name fails before anything is written.
@@ -167,7 +233,7 @@ function registerWriteTools(server: McpServer, apiKey: string): void {
         // the destructive behaviour needs an explicit ask.
         const kept: DayEntry[] = replace
           ? []
-          : (await tumbaland.getDay(apiKey, date)).map((entry) => ({
+          : (await tumbaland.getDay(apiKey, date, groupId)).map((entry) => ({
               _id: entry._id,
               typeId: entry.typeId,
               description: entry.description,
@@ -175,7 +241,7 @@ function registerWriteTools(server: McpServer, apiKey: string): void {
               location: entry.location
             }));
 
-        await tumbaland.saveDay(apiKey, date, [...kept, ...added]);
+        await tumbaland.saveDay(apiKey, date, [...kept, ...added], groupId);
 
         const summary = entries
           .map((entry) => (entry.description ? `${entry.type} (${entry.description})` : entry.type))
@@ -202,22 +268,109 @@ function registerWriteTools(server: McpServer, apiKey: string): void {
         date: dateSchema,
         type: entrySchema.shape.type,
         description: entrySchema.shape.description,
-        hours: entrySchema.shape.hours
+        hours: entrySchema.shape.hours,
+        ...journalSchema(caller)
       }
     },
-    async ({ date, type, description, hours }) => {
+    async ({ date, type, description, hours, journal }) => {
       try {
-        const types = await tumbaland.listActivityTypes(apiKey);
+        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const types = await tumbaland.listActivityTypes(apiKey, groupId);
         const activityType = resolveType(types, type);
 
-        await tumbaland.createActivity(apiKey, {
-          date,
-          typeId: activityType._id,
-          description,
-          hours
-        });
+        await tumbaland.createActivity(
+          apiKey,
+          { date, typeId: activityType._id, description, hours },
+          groupId
+        );
 
         return ok(`Logged ${activityType.name} on ${date}${description ? `: ${description}` : ''}`);
+      } catch (error) {
+        return explain(error);
+      }
+    }
+  );
+  server.registerTool(
+    'edit_activity',
+    {
+      title: 'Change a logged entry',
+      description:
+        'Change one entry that is already logged — fix a description, correct the hours, move it to ' +
+        'another day or another type. Get the id from get_day or search_activities first. Only the ' +
+        'fields you pass are changed; everything else is left alone, so there is no need to restate ' +
+        'the whole entry, and no need to rewrite the day around it.',
+      inputSchema: {
+        id: z.string().min(1).describe('The entry to change, from get_day or search_activities'),
+        date: dateSchema.optional().describe('Move it to a different day'),
+        type: z.string().optional().describe('Change which activity type it is recorded against, by name'),
+        description: z
+          .string()
+          .max(500)
+          .optional()
+          .describe('Replace the description. Pass an empty string to clear it.'),
+        hours: z.number().int().nonnegative().optional().describe('Replace the hours'),
+        ...journalSchema(caller)
+      }
+    },
+    async ({ id, date, type, description, hours, journal }) => {
+      try {
+        if (date === undefined && type === undefined && description === undefined && hours === undefined) {
+          return fail('Nothing to change. Pass at least one of date, type, description or hours.');
+        }
+
+        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const types = await tumbaland.listActivityTypes(apiKey, groupId);
+        const nameById = new Map(types.map((entry) => [entry._id, entry.name]));
+
+        // Read first, so a wrong id fails before anything is written and the
+        // confirmation can name what was actually touched. A model working from
+        // an id it copied is one transcription away from editing the wrong
+        // entry, and the only defence that works is showing the user which one.
+        const before = await tumbaland.getActivity(apiKey, id, groupId);
+        const beforeLine = describeActivity(before, activityTypeOf(before, nameById) ?? 'Unknown type');
+
+        const after = await tumbaland.updateActivity(
+          apiKey,
+          id,
+          { date, typeId: type ? resolveType(types, type)._id : undefined, description, hours },
+          groupId
+        );
+        const afterLine = describeActivity(after, activityTypeOf(after, nameById) ?? 'Unknown type');
+
+        return ok(`Changed\n  from ${beforeLine}\n  to   ${afterLine}`);
+      } catch (error) {
+        return explain(error);
+      }
+    }
+  );
+  server.registerTool(
+    'delete_activity',
+    {
+      title: 'Remove a logged entry',
+      description:
+        'Permanently remove one entry. Get the id from get_day or search_activities first. ' +
+        'Destructive and not undoable — only on an explicit request to delete something. ' +
+        'To correct an entry rather than remove it, use edit_activity.',
+      inputSchema: {
+        id: z.string().min(1).describe('The entry to remove, from get_day or search_activities'),
+        ...journalSchema(caller)
+      }
+    },
+    async ({ id, journal }) => {
+      try {
+        const groupId = groupIdFor(resolveJournal(caller, journal));
+        const types = await tumbaland.listActivityTypes(apiKey, groupId);
+        const nameById = new Map(types.map((entry) => [entry._id, entry.name]));
+
+        // Read before deleting so the answer says what is gone. There is no undo
+        // here, and a line the user can see is the difference between noticing
+        // the wrong entry went and not.
+        const activity = await tumbaland.getActivity(apiKey, id, groupId);
+        const line = describeActivity(activity, activityTypeOf(activity, nameById) ?? 'Unknown type');
+
+        await tumbaland.deleteActivity(apiKey, id, groupId);
+
+        return ok(`Deleted\n  ${line}`);
       } catch (error) {
         return explain(error);
       }

@@ -9,7 +9,8 @@ import {
   revokeApiKey,
   deleteApiKey,
   logger,
-  sendSuccess
+  sendSuccess,
+  PERSONAL_TENANT
 } from '@tumbaland/backend-core';
 import type { ApiKeyScope } from '@tumbaland/backend-core';
 
@@ -50,24 +51,36 @@ export const getApiKeys = async (req: Request, res: Response): Promise<void> => 
 /**
  * Issue a key.
  *
- * The tenant is fixed here and cannot be changed later: a key's whole safety
+ * The tenants are fixed here and cannot be changed later: a key's whole safety
  * argument is that the agent holding it cannot wander into data its owner did
  * not mean to expose. Re-pointing a key would quietly invalidate that, so the
  * answer to "wrong group" is a new key.
+ *
+ * Several tenants may be granted at once — a key can reach a shared journal and
+ * the owner's own photos without two connections — but only ones its creator
+ * actually belongs to, and only ones they ticked.
  */
 export const postApiKey = async (req: Request, res: Response): Promise<void> => {
-  const { name, scopes, groupId, expiresAt } = req.body as {
+  const { name, scopes, tenants, defaultTenant, expiresAt } = req.body as {
     name: string;
     scopes: ApiKeyScope[];
-    groupId?: string | null;
+    tenants?: string[];
+    defaultTenant?: string;
     expiresAt?: string | null;
   };
 
-  // A key may only be pinned to a group its creator actually belongs to —
-  // without this the pin could be used to mint access rather than restrict it.
-  if (groupId && !(req.userGroups ?? []).includes(groupId)) {
+  // A key may only reach tenants its creator belongs to — without this the
+  // grant could be used to mint access rather than restrict it.
+  const reachable = new Set([PERSONAL_TENANT, ...(req.userGroups ?? [])]);
+  const requested = tenants?.length ? tenants : [defaultTenant ?? PERSONAL_TENANT];
+  const outside = requested.filter((tenant) => !reachable.has(tenant));
+  if (outside.length > 0) {
     throw new BadRequestError('You are not a member of that group');
   }
+
+  const fallback = requested.includes(defaultTenant ?? '')
+    ? (defaultTenant as string)
+    : (requested[0] as string);
 
   const created = await createApiKey({
     userId: req.user!.id,
@@ -75,7 +88,8 @@ export const postApiKey = async (req: Request, res: Response): Promise<void> => 
     userName: req.user!.name,
     name,
     scopes,
-    groupId: groupId ?? null,
+    tenants: requested,
+    defaultTenant: fallback,
     expiresAt: expiresAt ? new Date(expiresAt) : null
   });
 
@@ -83,7 +97,8 @@ export const postApiKey = async (req: Request, res: Response): Promise<void> => 
     userId: req.user!.id,
     keyId: created.summary.id,
     scopes,
-    groupId: groupId ?? null
+    tenants: requested,
+    defaultTenant: fallback
   });
 
   // The only response that carries the token without an explicit reveal.

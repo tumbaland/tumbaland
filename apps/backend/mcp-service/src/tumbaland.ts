@@ -1,6 +1,7 @@
 import { requireEnv } from '@tumbaland/backend-core';
 import {
   activitiesResponseSchema,
+  activityResponseSchema,
   activityTypesResponseSchema,
   daysResponseSchema,
   parseResponse
@@ -102,6 +103,9 @@ async function call<T>(
   body?: unknown,
   query?: Record<string, string | number | undefined>
 ): Promise<T> {
+  // `groupId` rides in the query string on every verb, including writes. The
+  // credential middleware validates it against the grant and copies it into the
+  // body itself, so a POST does not need to carry it twice.
   const url = new URL(`${relationshipApiUrl()}/api${path}`);
   for (const [key, value] of Object.entries(query ?? {})) {
     if (value !== undefined) url.searchParams.set(key, String(value));
@@ -139,24 +143,27 @@ export const tumbaland = {
   // The list endpoints return a named collection alongside pagination, not a
   // bare array — `{ types: [...] }` and `{ activities: [...] }`. Unwrapped here
   // so the tools only ever see the list they asked for.
-  listActivityTypes: async (apiKey: string): Promise<ActivityType[]> => {
-    const body = await call<unknown>(apiKey, 'GET', '/activity-types');
+  listActivityTypes: async (apiKey: string, groupId?: string): Promise<ActivityType[]> => {
+    const body = await call<unknown>(apiKey, 'GET', '/activity-types', undefined, { groupId });
     return parseResponse(activityTypesResponseSchema, '/activity-types', body).types;
   },
 
   createActivity: (
     apiKey: string,
-    activity: { date: string; typeId: string; description?: string; hours?: number }
-  ): Promise<Activity> => call<Activity>(apiKey, 'POST', '/activities', activity),
+    activity: { date: string; typeId: string; description?: string; hours?: number },
+    groupId?: string
+  ): Promise<Activity> =>
+    call<Activity>(apiKey, 'POST', '/activities', activity, { groupId }),
 
-  saveDay: (apiKey: string, date: string, entries: DayEntry[]): Promise<unknown> =>
-    call(apiKey, 'PUT', `/days/${date}`, { entries }),
+  saveDay: (apiKey: string, date: string, entries: DayEntry[], groupId?: string): Promise<unknown> =>
+    call(apiKey, 'PUT', `/days/${date}`, { entries }, { groupId }),
 
   /** One day's existing entries, so a write can add to them rather than replace them. */
-  getDay: async (apiKey: string, date: string): Promise<ExistingEntry[]> => {
+  getDay: async (apiKey: string, date: string, groupId?: string): Promise<ExistingEntry[]> => {
     const body = await call<unknown>(apiKey, 'GET', '/days', undefined, {
       startDate: date,
-      endDate: date
+      endDate: date,
+      groupId
     });
     const parsed = parseResponse(daysResponseSchema, '/days', body);
     return (parsed.days.find((day) => day.date === date)?.entries ?? []) as ExistingEntry[];
@@ -171,17 +178,48 @@ export const tumbaland = {
    */
   listActivities: async (
     apiKey: string,
-    params: { startDate?: string; endDate?: string; activityType?: string; limit?: number }
+    params: {
+      startDate?: string;
+      endDate?: string;
+      activityType?: string;
+      limit?: number;
+      groupId?: string;
+    }
   ): Promise<Activity[]> => {
     const body = await call<unknown>(apiKey, 'GET', '/activities', undefined, params);
     return parseResponse(activitiesResponseSchema, '/activities', body).activities as Activity[];
   },
 
-  getStatistics: (apiKey: string, timeframe: string): Promise<unknown> =>
-    call(apiKey, 'GET', '/statistics', undefined, { timeframe }),
+  /**
+   * One entry by id, so an edit can say what it is about to change.
+   *
+   * Read before writing rather than after: an id the model got wrong should
+   * fail before anything is modified, and the caller wants to be told which
+   * entry was touched, not merely that something was.
+   */
+  getActivity: async (apiKey: string, id: string, groupId?: string): Promise<Activity> => {
+    const body = await call<unknown>(apiKey, 'GET', `/activities/${id}`, undefined, { groupId });
+    return parseResponse(activityResponseSchema, `/activities/${id}`, body) as Activity;
+  },
 
-  getTrends: (apiKey: string, windowDays?: number): Promise<unknown> =>
-    call(apiKey, 'GET', '/statistics/trends', undefined, { window: windowDays })
+  updateActivity: async (
+    apiKey: string,
+    id: string,
+    patch: { date?: string; typeId?: string; description?: string; hours?: number },
+    groupId?: string
+  ): Promise<Activity> => {
+    const body = await call<unknown>(apiKey, 'PUT', `/activities/${id}`, patch, { groupId });
+    return parseResponse(activityResponseSchema, `/activities/${id}`, body) as Activity;
+  },
+
+  deleteActivity: (apiKey: string, id: string, groupId?: string): Promise<unknown> =>
+    call(apiKey, 'DELETE', `/activities/${id}`, undefined, { groupId }),
+
+  getStatistics: (apiKey: string, timeframe: string, groupId?: string): Promise<unknown> =>
+    call(apiKey, 'GET', '/statistics', undefined, { timeframe, groupId }),
+
+  getTrends: (apiKey: string, windowDays?: number, groupId?: string): Promise<unknown> =>
+    call(apiKey, 'GET', '/statistics/trends', undefined, { window: windowDays, groupId })
 };
 
 /**

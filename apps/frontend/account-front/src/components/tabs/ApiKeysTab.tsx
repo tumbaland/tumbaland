@@ -32,7 +32,13 @@ import {
   Key as KeyIcon
 } from '@mui/icons-material';
 import { logger } from '@tumbaland/frontend-core';
-import { API_KEY_SCOPES, ApiKey, ApiKeyScope, apiKeyService } from '../../services/apiKeyService';
+import {
+  API_KEY_SCOPES,
+  ApiKey,
+  ApiKeyScope,
+  PERSONAL_TENANT,
+  apiKeyService
+} from '../../services/apiKeyService';
 import { getUserGroups } from '../../services/groupService';
 import ConnectionsSection from './ConnectionsSection';
 
@@ -73,8 +79,28 @@ const ApiKeysTab: React.FC = () => {
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState('');
   const [scopes, setScopes] = useState<ApiKeyScope[]>(['relationship:read', 'relationship:write']);
-  const [groupId, setGroupId] = useState<string>('');
+  // Both halves of a tenant grant. `tenants` is everything the key may reach;
+  // `defaultTenant` is what it uses when a call does not say. The default is
+  // always folded into the set on submit, so a key can never be created that
+  // reaches nothing and then fails every call it makes.
+  const [tenants, setTenants] = useState<string[]>([PERSONAL_TENANT]);
+  const [defaultTenant, setDefaultTenant] = useState<string>(PERSONAL_TENANT);
   const [creating, setCreating] = useState(false);
+
+  /** Everything this person could grant a key, personal first. */
+  const tenantOptions: TenantOption[] = [
+    { id: PERSONAL_TENANT, name: 'My own data' },
+    ...groups
+  ];
+
+  const tenantName = (id: string): string =>
+    tenantOptions.find((option) => option.id === id)?.name ??
+    (id === PERSONAL_TENANT ? 'Personal' : 'Group');
+
+  const toggleTenant = (id: string) =>
+    setTenants((current) =>
+      current.includes(id) ? current.filter((tenant) => tenant !== id) : [...current, id]
+    );
 
   const load = useCallback(async () => {
     try {
@@ -106,7 +132,8 @@ const ApiKeysTab: React.FC = () => {
       const created = await apiKeyService.create({
         name: name.trim(),
         scopes,
-        groupId: groupId || null
+        tenants: [...new Set([defaultTenant, ...tenants])],
+        defaultTenant
       });
 
       // The create response carries the token, so it starts out visible without
@@ -237,7 +264,7 @@ const ApiKeysTab: React.FC = () => {
                   {!isRevoked(key) && isExpired(key) && <Chip size="small" color="warning" label="Expired" />}
                   <Box sx={{ flexGrow: 1 }} />
                   <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    {key.groupId ? groups.find((g) => g.id === key.groupId)?.name ?? 'Group' : 'Personal'}
+                    {(key.tenants ?? []).map(tenantName).join(' · ') || 'Personal'}
                   </Typography>
                 </Box>
 
@@ -352,18 +379,42 @@ const ApiKeysTab: React.FC = () => {
             helperText="So you can tell your keys apart later."
           />
 
+          <Typography variant="subtitle2" sx={{ mt: 2, mb: 0.5 }}>
+            Acts on
+          </Typography>
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            Tick everything this key may reach. Granting more than one means the assistant can
+            work across them without a second key.
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', mt: 1 }}>
+            {tenantOptions.map((option) => (
+              <FormControlLabel
+                key={option.id}
+                control={
+                  <Checkbox
+                    checked={tenants.includes(option.id) || defaultTenant === option.id}
+                    // The default is always part of the grant, so its box is
+                    // shown ticked and cannot be the one that empties the set.
+                    disabled={defaultTenant === option.id}
+                    onChange={() => toggleTenant(option.id)}
+                  />
+                }
+                label={option.name}
+              />
+            ))}
+          </Box>
+
           <FormControl fullWidth margin="dense">
-            <InputLabel id="api-key-scope-label">Acts on</InputLabel>
+            <InputLabel id="api-key-default-tenant-label">Use by default</InputLabel>
             <Select
-              labelId="api-key-scope-label"
-              label="Acts on"
-              value={groupId}
-              onChange={(event) => setGroupId(event.target.value)}
+              labelId="api-key-default-tenant-label"
+              label="Use by default"
+              value={defaultTenant}
+              onChange={(event) => setDefaultTenant(event.target.value)}
             >
-              <MenuItem value="">My own data</MenuItem>
-              {groups.map((group) => (
-                <MenuItem key={group.id} value={group.id}>
-                  {group.name}
+              {tenantOptions.map((option) => (
+                <MenuItem key={option.id} value={option.id}>
+                  {option.name}
                 </MenuItem>
               ))}
             </Select>

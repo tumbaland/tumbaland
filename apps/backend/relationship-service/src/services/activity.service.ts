@@ -18,6 +18,27 @@ interface ActivityTypeQuery {
   $or?: Record<string, unknown>[];
 }
 
+/**
+ * Whether a type may be recorded against by this caller.
+ *
+ * Both the create and the update path need this and need it to agree: an edit
+ * that could move an entry onto a type the caller cannot reach would undo the
+ * check the create path makes.
+ */
+export const isTypeAccessible = async (
+  typeId: string,
+  userId: string,
+  userGroupIds: string[] = []
+): Promise<boolean> => {
+  const { ActivityType } = await import('../models/ActivityType');
+  const found = await ActivityType.findOne({
+    _id: typeId,
+    isActive: true,
+    $or: [{ userId }, { groupId: { $in: userGroupIds } }]
+  }).select('_id');
+  return !!found;
+};
+
 // Create a new activity
 export const createActivity = async (activityData: Partial<IActivity>): Promise<IActivity> => {
   const activity = new Activity(activityData);
@@ -142,18 +163,44 @@ export const getActivities = async (
 };
 
 // Get activity by ID
-export const getActivityById = async (id: string): Promise<IActivity | null> => {
-  return Activity.findById(id);
-};
+/**
+ * The entries one caller may act on: their own, plus every group they belong to.
+ *
+ * The three by-id operations below used to take an id and nothing else, so any
+ * signed-in caller could read, rewrite or delete any other account's entry
+ * simply by naming its id. Nothing in the product surfaced another user's ids,
+ * which is why it went unnoticed — but an id is a guessable, sequential-ish
+ * ObjectId, not a secret, and "hard to find" was the only thing standing there.
+ */
+const reachableBy = (userId: string, userGroupIds: string[]): Record<string, unknown> => ({
+  $or: [{ userId }, { groupId: { $in: userGroupIds } }]
+});
+
+export const getActivityById = async (
+  id: string,
+  userId: string,
+  userGroupIds: string[] = []
+): Promise<IActivity | null> => Activity.findOne({ _id: id, ...reachableBy(userId, userGroupIds) });
 
 // Update activity by ID
-export const updateActivity = async (id: string, updateData: Partial<IActivity>): Promise<IActivity | null> => {
-  return Activity.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
-};
+export const updateActivity = async (
+  id: string,
+  updateData: Partial<IActivity>,
+  userId: string,
+  userGroupIds: string[] = []
+): Promise<IActivity | null> =>
+  Activity.findOneAndUpdate({ _id: id, ...reachableBy(userId, userGroupIds) }, updateData, {
+    new: true,
+    runValidators: true
+  });
 
 // Delete activity by ID
-export const deleteActivity = async (id: string): Promise<boolean> => {
-  const result = await Activity.findByIdAndDelete(id);
+export const deleteActivity = async (
+  id: string,
+  userId: string,
+  userGroupIds: string[] = []
+): Promise<boolean> => {
+  const result = await Activity.findOneAndDelete({ _id: id, ...reachableBy(userId, userGroupIds) });
   return !!result;
 };
 

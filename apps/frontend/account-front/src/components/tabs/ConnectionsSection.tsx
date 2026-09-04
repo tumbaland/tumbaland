@@ -98,7 +98,9 @@ const ConnectionsSection: React.FC = () => {
                 <Typography sx={{ fontWeight: 600 }}>{connection.clientName}</Typography>
                 <Box sx={{ flexGrow: 1 }} />
                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                  {connection.groupId ? 'Group data' : 'Personal data'}
+                  {(connection.tenants ?? [])
+                    .map((tenant) => connection.tenantNames?.[tenant] ?? tenant)
+                    .join(' · ') || 'Personal data'}
                 </Typography>
               </Box>
 

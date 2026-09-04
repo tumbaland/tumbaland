@@ -19,9 +19,11 @@ export const approveUserSchema = z.object({
 });
 
 /**
- * A key's grants are fixed at creation. `groupId` is the tenant the key acts in
- * — omitted or null means the creator's own non-group data — and an empty string
- * is accepted as the same thing, since that is what an unset <Select> submits.
+ * A key's grants are fixed at creation. `tenants` is every scope of data the key
+ * may reach — `personal` plus any group ids — and `defaultTenant` is the one it
+ * acts in when a request names none. Both are optional here and defaulted by the
+ * controller, so a client that knows nothing of tenants still gets a working
+ * personal key.
  */
 export const createApiKeySchema = z.object({
   name: z.string().trim().min(1, 'A key needs a name').max(60),
@@ -29,6 +31,7 @@ export const createApiKeySchema = z.object({
     .array(z.enum(API_KEY_SCOPES))
     .min(1, 'A key needs at least one scope')
     .max(API_KEY_SCOPES.length),
-  groupId: z.string().or(z.literal('')).nullish(),
+  tenants: z.array(z.string().min(1)).max(50).optional(),
+  defaultTenant: z.string().min(1).optional(),
   expiresAt: z.coerce.date().min(new Date(), 'Expiry must be in the future').nullish()
 });

@@ -9,6 +9,7 @@ jest.mock('../logging/logger', () => ({
 import jwt from 'jsonwebtoken';
 import { verifyApiKey } from './service';
 import { mintAccessToken, type MintAccessTokenInput } from '../oauth/tokens';
+import { PERSONAL_TENANT } from './types';
 import { authenticateAgent, requireScope, denyApiKeys } from './middleware';
 
 const mockedVerify = verifyApiKey as jest.Mock;
@@ -27,6 +28,9 @@ const req = (over: Partial<Request> = {}): Request =>
 const withKey = (token = 'tmb_live_abcdef123456_secretsecretsecret', over: Partial<Request> = {}) =>
   req({ headers: { authorization: `Bearer ${token}` }, ...over });
 
+/** A grant of one or more tenants; the first is the default unless said otherwise. */
+const grant = (...allowed: string[]) => ({ allowed, default: allowed[0] });
+
 const okVerification = (over: Record<string, unknown> = {}) => ({
   ok: true,
   userId: 'u1',
@@ -34,7 +38,7 @@ const okVerification = (over: Record<string, unknown> = {}) => ({
   userName: 'Tester',
   keyId: 'k1',
   scopes: ['relationship:read', 'relationship:write'],
-  groupId: null,
+  tenants: grant(PERSONAL_TENANT),
   ...over
 });
 
@@ -111,7 +115,8 @@ describe('authenticateAgent — API keys', () => {
     expect(request.apiKey).toEqual({
       keyId: 'k1',
       scopes: ['relationship:read', 'relationship:write'],
-      groupId: null
+      tenants: grant(PERSONAL_TENANT),
+      actingAs: PERSONAL_TENANT
     });
   });
 
@@ -167,7 +172,7 @@ it('authenticates a key stored before the owner snapshot existed', async () => {
     userId: 'u1',
     keyId: 'k1',
     scopes: ['relationship:read'],
-    groupId: null
+    tenants: grant(PERSONAL_TENANT)
   });
   const request = withKey();
   const next = jest.fn();
@@ -179,7 +184,7 @@ it('authenticates a key stored before the owner snapshot existed', async () => {
 });
 
 it('treats a verification result with no scopes as granting nothing', async () => {
-  mockedVerify.mockResolvedValue({ ok: true, userId: 'u1', keyId: 'k1', groupId: null });
+  mockedVerify.mockResolvedValue({ ok: true, userId: 'u1', keyId: 'k1', tenants: grant(PERSONAL_TENANT) });
   const res = mockRes();
   const next = jest.fn();
 
@@ -189,9 +194,14 @@ it('treats a verification result with no scopes as granting nothing', async () =
   expect(next).not.toHaveBeenCalled();
 });
 
-describe('authenticateAgent — tenant pinning', () => {
+describe('authenticateAgent — a single-tenant grant', () => {
+  /**
+   * The behaviour a pinned credential always had, kept intact now that a grant
+   * is a set. An agent given one tenant should never learn that a tenant is a
+   * thing it could name — nothing to choose, nothing to get wrong.
+   */
   it('grants a personal key no groups at all', async () => {
-    mockedVerify.mockResolvedValue(okVerification({ groupId: null }));
+    mockedVerify.mockResolvedValue(okVerification({ tenants: grant(PERSONAL_TENANT) }));
     const request = withKey();
 
     await authenticateAgent()(request, mockRes(), jest.fn());
@@ -200,7 +210,7 @@ describe('authenticateAgent — tenant pinning', () => {
   });
 
   it('grants a group key exactly its own group, not the owner’s whole membership', async () => {
-    mockedVerify.mockResolvedValue(okVerification({ groupId: 'g1' }));
+    mockedVerify.mockResolvedValue(okVerification({ tenants: grant('g1') }));
     const request = withKey();
 
     await authenticateAgent()(request, mockRes(), jest.fn());
@@ -208,8 +218,8 @@ describe('authenticateAgent — tenant pinning', () => {
     expect(request.userGroups).toEqual(['g1']);
   });
 
-  it('fills in the pinned group so the caller never has to know it', async () => {
-    mockedVerify.mockResolvedValue(okVerification({ groupId: 'g1' }));
+  it('fills in the group so the caller never has to know it', async () => {
+    mockedVerify.mockResolvedValue(okVerification({ tenants: grant('g1') }));
     const request = withKey();
     const next = jest.fn();
 
@@ -221,7 +231,7 @@ describe('authenticateAgent — tenant pinning', () => {
   });
 
   it('refuses a query that names a different group', async () => {
-    mockedVerify.mockResolvedValue(okVerification({ groupId: 'g1' }));
+    mockedVerify.mockResolvedValue(okVerification({ tenants: grant('g1') }));
     const res = mockRes();
     const next = jest.fn();
 
@@ -232,7 +242,7 @@ describe('authenticateAgent — tenant pinning', () => {
   });
 
   it('refuses a body that names a different group', async () => {
-    mockedVerify.mockResolvedValue(okVerification({ groupId: 'g1' }));
+    mockedVerify.mockResolvedValue(okVerification({ tenants: grant('g1') }));
     const res = mockRes();
     const next = jest.fn();
 
@@ -243,7 +253,7 @@ describe('authenticateAgent — tenant pinning', () => {
   });
 
   it('refuses a personal key that tries to reach into a group', async () => {
-    mockedVerify.mockResolvedValue(okVerification({ groupId: null }));
+    mockedVerify.mockResolvedValue(okVerification({ tenants: grant(PERSONAL_TENANT) }));
     const res = mockRes();
     const next = jest.fn();
 
@@ -253,8 +263,8 @@ describe('authenticateAgent — tenant pinning', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  it('allows a request that names the pinned group explicitly', async () => {
-    mockedVerify.mockResolvedValue(okVerification({ groupId: 'g1' }));
+  it('allows a request that names the granted group explicitly', async () => {
+    mockedVerify.mockResolvedValue(okVerification({ tenants: grant('g1') }));
     const next = jest.fn();
 
     await authenticateAgent()(withKey(undefined, { query: { groupId: 'g1' } }), mockRes(), next);
@@ -263,9 +273,76 @@ describe('authenticateAgent — tenant pinning', () => {
   });
 });
 
+describe('authenticateAgent — a multi-tenant grant', () => {
+  /**
+   * What the set buys: one connection reaching a shared journal and private data
+   * without reconnecting. The boundary is unchanged — a tenant outside the grant
+   * is still refused — so these tests are about the choice *inside* it.
+   */
+  const both = { allowed: [PERSONAL_TENANT, 'g1'], default: 'g1' };
+
+  it('acts in the default when the request names nothing', async () => {
+    mockedVerify.mockResolvedValue(okVerification({ tenants: both }));
+    const request = withKey();
+
+    await authenticateAgent()(request, mockRes(), jest.fn());
+
+    expect(request.query.groupId).toBe('g1');
+    expect(request.apiKey?.actingAs).toBe('g1');
+  });
+
+  it('acts in another granted tenant when the request names it', async () => {
+    mockedVerify.mockResolvedValue(okVerification({ tenants: both }));
+    const request = withKey(undefined, { query: { groupId: PERSONAL_TENANT } });
+
+    await authenticateAgent()(request, mockRes(), jest.fn());
+
+    // `personal` is erased rather than passed on: handlers have always read the
+    // personal tenant as an absent groupId, and a literal would reach a query as
+    // a group that cannot exist.
+    expect(request.query.groupId).toBeUndefined();
+    expect(request.apiKey?.actingAs).toBe(PERSONAL_TENANT);
+  });
+
+  it('erases a stale groupId from the body too, not only the query', async () => {
+    mockedVerify.mockResolvedValue(okVerification({ tenants: both }));
+    const request = withKey(undefined, { body: { groupId: PERSONAL_TENANT } });
+
+    await authenticateAgent()(request, mockRes(), jest.fn());
+
+    expect((request.body as Record<string, unknown>).groupId).toBeUndefined();
+  });
+
+  it('still refuses a tenant outside the grant', async () => {
+    mockedVerify.mockResolvedValue(okVerification({ tenants: both }));
+    const res = mockRes();
+    const next = jest.fn();
+
+    await authenticateAgent()(withKey(undefined, { query: { groupId: 'g2' } }), res, next);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('carries every granted group into userGroups, and only those', async () => {
+    mockedVerify.mockResolvedValue(
+      okVerification({ tenants: { allowed: [PERSONAL_TENANT, 'g1', 'g2'], default: 'g1' } })
+    );
+    const request = withKey();
+
+    await authenticateAgent()(request, mockRes(), jest.fn());
+
+    // The personal tenant is not a group and must not appear here, or it would
+    // reach a `groupId: { $in: ... }` clause as a group nobody belongs to.
+    expect(request.userGroups).toEqual(['g1', 'g2']);
+  });
+});
+
 describe('requireScope', () => {
   const keyReq = (scopes: string[]) =>
-    req({ apiKey: { keyId: 'k1', scopes, groupId: null } } as Partial<Request>);
+    req({
+      apiKey: { keyId: 'k1', scopes, tenants: grant(PERSONAL_TENANT), actingAs: PERSONAL_TENANT }
+    } as Partial<Request>);
 
   it('lets a session through unconditionally', () => {
     // Scopes narrow what software may do on a person's behalf, not what the
@@ -343,7 +420,9 @@ describe('denyApiKeys', () => {
     const next = jest.fn();
 
     denyApiKeys(
-      req({ apiKey: { keyId: 'k1', scopes: [], groupId: null } }) as Request,
+      req({
+        apiKey: { keyId: 'k1', scopes: [], tenants: grant(PERSONAL_TENANT), actingAs: PERSONAL_TENANT }
+      }) as Request,
       res,
       next
     );
@@ -369,7 +448,9 @@ describe('authenticateAgent — OAuth access tokens', () => {
       resource: 'https://mcp.example.com',
       issuer: 'https://auth.example.com',
       scopes: ['relationship:read', 'relationship:write'],
-      groupId: null,
+      tenants: [PERSONAL_TENANT],
+      defaultTenant: PERSONAL_TENANT,
+      tenantNames: { [PERSONAL_TENANT]: 'My own data' },
       ...over
     }).accessToken;
 
@@ -418,8 +499,8 @@ describe('authenticateAgent — OAuth access tokens', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  it('is pinned to the tenant chosen at consent', async () => {
-    const request = withToken(mint({ groupId: 'g1' }));
+  it('acts in the tenant chosen at consent', async () => {
+    const request = withToken(mint({ tenants: ['g1'], defaultTenant: 'g1' }));
     const next = jest.fn();
 
     await authenticateAgent()(request, mockRes(), next);
@@ -434,7 +515,9 @@ describe('authenticateAgent — OAuth access tokens', () => {
   it('refuses a request naming a different tenant', async () => {
     const res = mockRes();
     const next = jest.fn();
-    const request = withToken(mint({ groupId: 'g1' }), { query: { groupId: 'g2' } });
+    const request = withToken(mint({ tenants: ['g1'], defaultTenant: 'g1' }), {
+      query: { groupId: 'g2' }
+    });
 
     await authenticateAgent()(request, res, next);
 

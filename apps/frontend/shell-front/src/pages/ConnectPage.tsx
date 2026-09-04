@@ -50,8 +50,9 @@ export function ConnectPage() {
         </li>
         <li>Sign in with the Google account you use for Tumbaland.</li>
         <li>
-          Approve the permissions screen. It shows exactly what the assistant is asking for and
-          which data it will act on.
+          Approve the permissions screen. It shows exactly what the assistant is asking for, and
+          lets you tick which journals it may act on — your own data, any group you belong to, or
+          several — plus which to use when you do not say.
         </li>
         <li>
           <strong>Turn it on in the conversation.</strong> In a chat, press <strong>+</strong> →{' '}
@@ -81,7 +82,7 @@ export function ConnectPage() {
       </p>
 
       <h2>What it can do</h2>
-      <p>Five things, and nothing else:</p>
+      <p>Eight things, and nothing else:</p>
 
       <table>
         <thead>
@@ -98,6 +99,15 @@ export function ConnectPage() {
             <td>
               Reads the kinds of thing your account records — Dining, Movies, Together and so on.
               Entries have to be filed under one of these, so it checks first.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <code>get_day</code>
+            </td>
+            <td>
+              Reads back everything logged on one day. Also how it finds the entry you mean when you
+              ask it to change something.
             </td>
           </tr>
           <tr>
@@ -126,6 +136,24 @@ export function ConnectPage() {
           </tr>
           <tr>
             <td>
+              <code>edit_activity</code>
+            </td>
+            <td>
+              Changes one entry — a description, the hours, the day, the type. Only the parts you
+              ask about change, and it tells you what it changed and what it was before.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <code>delete_activity</code>
+            </td>
+            <td>
+              Removes one entry, and says what it removed. There is no undo, so it should only ever
+              happen when you asked for it.
+            </td>
+          </tr>
+          <tr>
+            <td>
               <code>get_stats</code>
             </td>
             <td>Totals, and whether each activity is picking up or tailing off.</td>
@@ -141,8 +169,10 @@ export function ConnectPage() {
           grant reading but not writing, the tools that write are not offered to it at all.
         </li>
         <li>
-          <strong>Move between your data and a group&apos;s.</strong> You pick one when you connect,
-          and the connection is fixed to it.
+          <strong>Reach anything you did not tick.</strong> When you connect, you choose which
+          journals it may act on — your own, a group&apos;s, or both — and one of them as the
+          default. It cannot reach any other, and asking for one by name fails rather than quietly
+          falling back.
         </li>
         <li>
           <strong>Touch your photos, your finances, or your account.</strong> Those are separate
@@ -179,8 +209,17 @@ export function ConnectPage() {
           account has. It will list the real ones; pick from those, or add a new type in the app.
         </li>
         <li>
+          <strong>It writes to the wrong journal</strong> — if you granted more than one, say which
+          one you mean (&quot;log this in Irja &amp; Tom&quot;). It uses the default you picked
+          otherwise.
+        </li>
+        <li>
           <strong>It says it lacks permission</strong> — disconnect and reconnect, granting the
           permission it needs. Retrying will not help.
+        </li>
+        <li>
+          <strong>It offers to rewrite a whole day to fix one entry</strong> — it should not need
+          to. Ask it to read the day first, then change just that entry.
         </li>
       </ul>
     </DocumentPage>

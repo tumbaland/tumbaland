@@ -10,7 +10,7 @@ jest.mock('../models/User', () => ({
 import { User } from '../models/User';
 import { authenticateToken, optionalAuth, requireRole, requireApproved } from './authMiddleware';
 import { generateJWT } from '../services/jwtService';
-import { mintAccessToken } from '@tumbaland/backend-core';
+import { mintAccessToken, PERSONAL_TENANT } from '@tumbaland/backend-core';
 
 const mockedFindOne = User.findOne as unknown as jest.Mock;
 const mockedFindOneAndUpdate = User.findOneAndUpdate as unknown as jest.Mock;
@@ -312,7 +312,9 @@ describe('a connected assistant is not a session', () => {
       resource: 'https://mcp.example.com',
       issuer: 'https://auth.example.com',
       scopes: ['relationship:read'],
-      groupId: null
+      tenants: [PERSONAL_TENANT],
+      defaultTenant: PERSONAL_TENANT,
+      tenantNames: {}
     }).accessToken;
 
   it('is refused, without ever looking the user up', async () => {

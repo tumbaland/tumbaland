@@ -64,6 +64,9 @@ export const activitySchema = z
   })
   .loose();
 
+/** One activity, as the by-id and write endpoints answer with it. */
+export const activityResponseSchema = activitySchema;
+
 export const activitiesResponseSchema = z
   .object({
     activities: z.array(activitySchema),

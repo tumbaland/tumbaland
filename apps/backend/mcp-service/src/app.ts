@@ -6,8 +6,14 @@ import {
   ListResourceTemplatesRequestSchema,
   ListResourcesRequestSchema
 } from '@modelcontextprotocol/sdk/types.js';
-import { logger, verifyApiKey, verifyAccessToken, looksLikeApiKey } from '@tumbaland/backend-core';
-import type { ApiKeyScope } from '@tumbaland/backend-core';
+import {
+  logger,
+  verifyApiKey,
+  verifyAccessToken,
+  looksLikeApiKey,
+  PERSONAL_TENANT
+} from '@tumbaland/backend-core';
+import type { ApiKeyScope, ApiKeyTenant } from '@tumbaland/backend-core';
 import { SERVED_SCOPES, registerTools } from './tools';
 
 const SERVER_NAME = 'tumbaland';
@@ -33,6 +39,13 @@ const SERVER_INSTRUCTIONS = [
   '',
   'Prefer log_day for a whole evening or day, and log_activity for a single thing. Both add to',
   'what is already recorded, so ask about the parts you were told about and nothing more.',
+  '',
+  'To change or remove something already logged, read the day with get_day, then use',
+  'edit_activity or delete_activity with the id it gives you. Never rewrite a day to correct',
+  'one entry — log_day with replace would discard everything else recorded that day.',
+  '',
+  'delete_activity cannot be undone. Only ever call it when the user asked for something to be',
+  'removed; when they asked for a correction, edit_activity is the tool.',
   '',
   'This is personal data. Write what the user actually said — do not embellish a description,',
   'infer hours that were not mentioned, or fill in a place that was not named.'
@@ -76,7 +89,9 @@ interface Authenticated {
   userName?: string;
   keyId?: string;
   scopes?: ApiKeyScope[];
-  groupId?: string | null;
+  tenants?: ApiKeyTenant;
+  /** what each granted tenant is called; empty for an API key, which has no consent screen */
+  tenantNames?: Record<string, string>;
 }
 
 /**
@@ -103,7 +118,8 @@ async function authenticate(token: string): Promise<Authenticated> {
     userEmail: result.email,
     userName: result.name,
     scopes: result.scopes,
-    groupId: result.groupId
+    tenants: result.tenants,
+    tenantNames: result.tenantNames
   };
 }
 
@@ -202,7 +218,15 @@ export function createApp() {
     );
     // The surface is built from the key's own scopes, so a read-only key is
     // never shown a tool that would 403 on it.
-    const modules = registerTools(server, token, verification.scopes ?? []);
+    const modules = registerTools(
+      server,
+      {
+        token,
+        tenants: verification.tenants ?? { allowed: [PERSONAL_TENANT], default: PERSONAL_TENANT },
+        tenantNames: verification.tenantNames ?? {}
+      },
+      verification.scopes ?? []
+    );
     if (modules === 0) {
       logger.warn('API key has no scopes matching any tool module', { keyId: verification.keyId });
     }

@@ -6,6 +6,7 @@ jest.mock('../services/activity.service', () => ({
   getActivityById: jest.fn(),
   updateActivity: jest.fn(),
   deleteActivity: jest.fn(),
+  isTypeAccessible: jest.fn(),
   getActivityStats: jest.fn(),
   getActivitiesByDateRange: jest.fn(),
   getActivityTypes: jest.fn(),
@@ -41,7 +42,7 @@ beforeEach(() => jest.clearAllMocks());
 
 describe('createActivity', () => {
   it('rejects an inaccessible or missing activity type', async () => {
-    mockedTypeFindOne.mockResolvedValue(null);
+    (ActivityService.isTypeAccessible as jest.Mock).mockResolvedValue(false);
     const req = { user: { id: 'u1' }, userGroups: [], body: { typeId: 't1' } } as unknown as Request;
 
     await expect(createActivity(req, mockRes())).rejects.toMatchObject({ name: 'BadRequestError' });
@@ -49,7 +50,7 @@ describe('createActivity', () => {
   });
 
   it('creates the activity when the type is accessible', async () => {
-    mockedTypeFindOne.mockResolvedValue({ _id: 't1' });
+    (ActivityService.isTypeAccessible as jest.Mock).mockResolvedValue(true);
     (ActivityService.createActivity as jest.Mock).mockResolvedValue({ _id: 'a1' });
     const req = { user: { id: 'u1' }, userGroups: ['g1'], body: { typeId: 't1', hours: 2 } } as unknown as Request;
     const res = mockRes();
@@ -118,20 +119,30 @@ describe('getActivities', () => {
   });
 });
 
+/**
+ * Every by-id route carries the caller's scope down to the query.
+ *
+ * These tests used to build a `req` with no user on it at all and still pass,
+ * because the handlers passed nothing but the id — which is precisely the hole
+ * that let one account reach another's entry. Asserting the scope argument is
+ * what makes a regression here visible.
+ */
+const byId = (over: Partial<Request> = {}) =>
+  ({ user: { id: 'u1' }, userGroups: ['g1'], params: { id: 'a1' }, body: {}, ...over }) as unknown as Request;
+
 describe('getActivityById', () => {
   it('throws NotFoundError when missing', async () => {
     (ActivityService.getActivityById as jest.Mock).mockResolvedValue(null);
-    const req = { params: { id: 'a1' } } as unknown as Request;
-    await expect(getActivityById(req, mockRes())).rejects.toMatchObject({ name: 'NotFoundError' });
+    await expect(getActivityById(byId(), mockRes())).rejects.toMatchObject({ name: 'NotFoundError' });
   });
 
-  it('returns the activity when found', async () => {
+  it('reads only within the caller’s scope', async () => {
     (ActivityService.getActivityById as jest.Mock).mockResolvedValue({ _id: 'a1' });
-    const req = { params: { id: 'a1' } } as unknown as Request;
     const res = mockRes();
 
-    await getActivityById(req, res);
+    await getActivityById(byId(), res);
 
+    expect(ActivityService.getActivityById).toHaveBeenCalledWith('a1', 'u1', ['g1']);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: { _id: 'a1' } }));
   });
 });
@@ -139,35 +150,63 @@ describe('getActivityById', () => {
 describe('updateActivity', () => {
   it('throws NotFoundError when missing', async () => {
     (ActivityService.updateActivity as jest.Mock).mockResolvedValue(null);
-    const req = { params: { id: 'a1' }, body: {} } as unknown as Request;
-    await expect(updateActivity(req, mockRes())).rejects.toMatchObject({ name: 'NotFoundError' });
+    await expect(updateActivity(byId(), mockRes())).rejects.toMatchObject({ name: 'NotFoundError' });
   });
 
-  it('returns the updated activity', async () => {
+  it('writes only within the caller’s scope', async () => {
     (ActivityService.updateActivity as jest.Mock).mockResolvedValue({ _id: 'a1', hours: 3 });
-    const req = { params: { id: 'a1' }, body: { hours: 3 } } as unknown as Request;
     const res = mockRes();
 
-    await updateActivity(req, res);
+    await updateActivity(byId({ body: { hours: 3 } } as Partial<Request>), res);
 
+    expect(ActivityService.updateActivity).toHaveBeenCalledWith('a1', { hours: 3 }, 'u1', ['g1']);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: { _id: 'a1', hours: 3 } }));
+  });
+
+  it('refuses to move an entry onto a type the caller cannot reach', async () => {
+    (ActivityService.isTypeAccessible as jest.Mock).mockResolvedValue(false);
+
+    await expect(
+      updateActivity(byId({ body: { typeId: 'someone-elses' } } as Partial<Request>), mockRes())
+    ).rejects.toMatchObject({ name: 'BadRequestError' });
+
+    // Otherwise the check on the create path is only as strong as the absence
+    // of an edit endpoint.
+    expect(ActivityService.updateActivity).not.toHaveBeenCalled();
+  });
+
+  it('allows a type change the caller can reach', async () => {
+    (ActivityService.isTypeAccessible as jest.Mock).mockResolvedValue(true);
+    (ActivityService.updateActivity as jest.Mock).mockResolvedValue({ _id: 'a1', typeId: 't2' });
+
+    await updateActivity(byId({ body: { typeId: 't2' } } as Partial<Request>), mockRes());
+
+    expect(ActivityService.isTypeAccessible).toHaveBeenCalledWith('t2', 'u1', ['g1']);
+    expect(ActivityService.updateActivity).toHaveBeenCalledWith('a1', { typeId: 't2' }, 'u1', ['g1']);
+  });
+
+  it('does not look up a type when the edit leaves it alone', async () => {
+    (ActivityService.updateActivity as jest.Mock).mockResolvedValue({ _id: 'a1' });
+
+    await updateActivity(byId({ body: { description: 'later' } } as Partial<Request>), mockRes());
+
+    expect(ActivityService.isTypeAccessible).not.toHaveBeenCalled();
   });
 });
 
 describe('deleteActivity', () => {
   it('throws NotFoundError when nothing was deleted', async () => {
     (ActivityService.deleteActivity as jest.Mock).mockResolvedValue(false);
-    const req = { params: { id: 'a1' } } as unknown as Request;
-    await expect(deleteActivity(req, mockRes())).rejects.toMatchObject({ name: 'NotFoundError' });
+    await expect(deleteActivity(byId(), mockRes())).rejects.toMatchObject({ name: 'NotFoundError' });
   });
 
-  it('confirms deletion', async () => {
+  it('deletes only within the caller’s scope', async () => {
     (ActivityService.deleteActivity as jest.Mock).mockResolvedValue(true);
-    const req = { params: { id: 'a1' } } as unknown as Request;
     const res = mockRes();
 
-    await deleteActivity(req, res);
+    await deleteActivity(byId(), res);
 
+    expect(ActivityService.deleteActivity).toHaveBeenCalledWith('a1', 'u1', ['g1']);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ message: 'Activity deleted successfully' }));
   });
 });

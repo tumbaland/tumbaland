@@ -1,9 +1,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ApiKeyScope } from '@tumbaland/backend-core';
-import { ToolModule } from './module';
+import { Caller, ToolModule } from './module';
 import { relationshipRead, relationshipWrite } from './relationship';
 
-export type { ToolModule } from './module';
+export type { Caller, ToolModule } from './module';
 
 /**
  * Every tool module this server knows about.
@@ -25,12 +25,12 @@ export const MODULES: ToolModule[] = [relationshipRead, relationshipWrite];
  * Returns how many modules applied, so the caller can log an empty surface —
  * which almost always means a key was issued without the scopes its owner meant.
  */
-export function registerTools(server: McpServer, apiKey: string, scopes: ApiKeyScope[]): number {
+export function registerTools(server: McpServer, caller: Caller, scopes: ApiKeyScope[]): number {
   const granted = new Set(scopes);
   const applicable = MODULES.filter((module) => module.scopes.every((scope) => granted.has(scope)));
 
   for (const module of applicable) {
-    module.register(server, apiKey);
+    module.register(server, caller);
   }
 
   return applicable.length;

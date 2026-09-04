@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { ApiKeyScope } from '@tumbaland/backend-core';
+import { PERSONAL_TENANT, type ApiKeyScope, type Tenant } from '@tumbaland/backend-core';
 import { TumbalandError } from '../tumbaland';
 
 /**
@@ -15,8 +15,89 @@ import { TumbalandError } from '../tumbaland';
 export interface ToolModule {
   /** every one of these must be present on the key */
   scopes: ApiKeyScope[];
-  register: (server: McpServer, apiKey: string) => void;
+  register: (server: McpServer, caller: Caller) => void;
 }
+
+/**
+ * Who is calling, and which data they may reach.
+ *
+ * A credential can now be granted more than one tenant — a shared journal and
+ * the owner's own data, say — so the tenant is no longer a fixed property of
+ * the connection that the tools can ignore. It is settled per call, from this.
+ */
+export interface Caller {
+  /** the credential, forwarded verbatim to the services */
+  token: string;
+  /** every tenant it may act in, and the one it acts in unasked */
+  tenants: { allowed: Tenant[]; default: Tenant };
+  /** what each of those is called, as the user saw them when approving */
+  tenantNames: Record<Tenant, string>;
+}
+
+/** What a tenant should be called, falling back to something legible. */
+export const tenantLabel = (caller: Caller, tenant: Tenant): string =>
+  caller.tenantNames[tenant] ?? (tenant === PERSONAL_TENANT ? 'My own data' : `Group ${tenant.slice(-6)}`);
+
+/**
+ * The `journal` parameter, or nothing at all.
+ *
+ * Only offered when the credential reaches more than one tenant. A model shown
+ * a choice it cannot get wrong is a model that will eventually get it wrong, so
+ * a single-tenant connection is not told that tenants exist — which is exactly
+ * how every connection behaved before they could hold more than one.
+ */
+export const journalSchema = (caller: Caller): { journal: z.ZodOptional<z.ZodString> } => {
+  // Genuinely absent for a single-tenant caller, and typed as present so the
+  // spread into a tool's shape stays a literal that Zod can infer from. The
+  // handler reads `journal` as undefined in that case, which is exactly what an
+  // unsupplied optional parameter would give it.
+  if (caller.tenants.allowed.length < 2) {
+    return {} as { journal: z.ZodOptional<z.ZodString> };
+  }
+
+  const labels = caller.tenants.allowed.map((tenant) => tenantLabel(caller, tenant));
+  return {
+    journal: z
+      .string()
+      .optional()
+      .describe(
+        `Whose journal to use: ${labels.join(' or ')}. ` +
+          `Defaults to ${tenantLabel(caller, caller.tenants.default)}. ` +
+          'Ask the user which one they mean rather than guessing when it matters.'
+      )
+  };
+};
+
+/**
+ * Resolve what the model named to the tenant a request should carry.
+ *
+ * Matching is on the name a person saw and approved, not on an id — the same
+ * reasoning as activity types. A miss throws with the real options rather than
+ * silently falling back to the default, because writing an entry into the wrong
+ * journal is not a failure anyone would notice.
+ */
+export function resolveJournal(caller: Caller, journal?: string): Tenant {
+  if (!journal) return caller.tenants.default;
+
+  const wanted = journal.trim().toLowerCase();
+  const match = caller.tenants.allowed.find(
+    (tenant) => tenantLabel(caller, tenant).toLowerCase() === wanted || tenant.toLowerCase() === wanted
+  );
+
+  if (!match) {
+    const available = caller.tenants.allowed.map((t) => tenantLabel(caller, t)).join(', ');
+    throw new TumbalandError(
+      `This connection cannot reach a journal called "${journal}". It has access to: ${available}.`,
+      403
+    );
+  }
+
+  return match;
+}
+
+/** The `groupId` a resolved tenant travels as; personal travels as nothing. */
+export const groupIdFor = (tenant: Tenant): string | undefined =>
+  tenant === PERSONAL_TENANT ? undefined : tenant;
 
 /** A day as people write it, and as every endpoint here expects it. */
 export const dateSchema = z

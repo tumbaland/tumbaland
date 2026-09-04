@@ -1,4 +1,9 @@
 import { createHash } from 'crypto';
+
+/** Read a minted token's claims without a verify — the signature is not the point here. */
+const decodeJwt = (token: string): Record<string, unknown> =>
+  JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
+
 import { Request, Response } from 'express';
 
 jest.mock('@tumbaland/backend-core', () => {
@@ -187,13 +192,27 @@ describe('authorize', () => {
     expect(html).toContain('u1@example.com');
   });
 
-  it('offers the tenant choice, since that is a decision only a person can make', async () => {
+  it('offers every tenant at once, since one connection may need both', async () => {
     const res = mockRes();
     await authorize(authorizeReq(), res);
 
     const html = (res.send as jest.Mock).mock.calls[0][0] as string;
-    expect(html).toContain('name="groupId"');
+    // Checkboxes, not a single-choice select: making someone pick one and
+    // reconnect to change their mind is the thing this replaced.
+    expect(html).toContain('name="tenant" value="personal"');
+    expect(html).toContain('name="tenant" value="g1"');
+    expect(html).toContain('name="defaultTenant"');
     expect(html).toContain('My own data');
+  });
+
+  it('falls back to a legible label when group names cannot be fetched', async () => {
+    // A consent screen that will not render because a sibling service is slow
+    // is worse than one with an ugly label on it.
+    const res = mockRes();
+    await authorize(authorizeReq(), res);
+
+    const html = (res.send as jest.Mock).mock.calls[0][0] as string;
+    expect(html).toContain('value="g1"');
   });
 
   it('carries a consent token bound to this request', async () => {
@@ -249,7 +268,8 @@ describe('authorizeDecision', () => {
         resource: RESOURCE,
         code_challenge: CHALLENGE,
         state: 'xyz',
-        groupId: '',
+        tenant: ['personal', 'g1'],
+        defaultTenant: 'g1',
         consent_token: consentTokenFrom(rendered),
         ...over
       },
@@ -272,17 +292,73 @@ describe('authorizeDecision', () => {
     expect(url.searchParams.get('iss')).toBe(ISSUER);
   });
 
-  it('records the tenant the user picked', async () => {
+  it('records every tenant the user ticked, and the default among them', async () => {
     mockedIssueCode.mockResolvedValue('c');
-    await authorizeDecision(await decisionReq({ groupId: 'g1' }), mockRes());
-    expect(mockedIssueCode.mock.calls[0][0]).toMatchObject({ groupId: 'g1' });
+
+    await authorizeDecision(await decisionReq(), mockRes());
+
+    expect(mockedIssueCode.mock.calls[0][0]).toMatchObject({
+      tenants: ['g1', 'personal'],
+      defaultTenant: 'g1'
+    });
   });
 
-  it('refuses to pin to a group the approver is not in', async () => {
-    // Otherwise the tenant field would be a way into someone else's data.
+  it('records one tenant when only one was ticked', async () => {
     mockedIssueCode.mockResolvedValue('c');
-    await authorizeDecision(await decisionReq({ groupId: 'g99' }), mockRes());
-    expect(mockedIssueCode.mock.calls[0][0]).toMatchObject({ groupId: null });
+
+    await authorizeDecision(
+      await decisionReq({ tenant: ['g1'], defaultTenant: 'g1' }),
+      mockRes()
+    );
+
+    expect(mockedIssueCode.mock.calls[0][0]).toMatchObject({
+      tenants: ['g1'],
+      defaultTenant: 'g1'
+    });
+  });
+
+  it('drops a tenant the approver is not in', async () => {
+    // Otherwise the tenant field would be a way into someone else's data: the
+    // form is the approver's, but the request carrying it is the client's.
+    mockedIssueCode.mockResolvedValue('c');
+
+    await authorizeDecision(
+      await decisionReq({ tenant: ['g1', 'g99'], defaultTenant: 'g1' }),
+      mockRes()
+    );
+
+    expect(mockedIssueCode.mock.calls[0][0].tenants).toEqual(['g1']);
+  });
+
+  it('refuses a default outside the approver’s reach, rather than honouring it', async () => {
+    mockedIssueCode.mockResolvedValue('c');
+
+    await authorizeDecision(
+      await decisionReq({ tenant: ['g1'], defaultTenant: 'g99' }),
+      mockRes()
+    );
+
+    expect(mockedIssueCode.mock.calls[0][0].defaultTenant).toBe('personal');
+  });
+
+  it('never grants an empty set, which would authenticate and then fail everything', async () => {
+    mockedIssueCode.mockResolvedValue('c');
+
+    // Nothing ticked: the default alone still forms the grant.
+    await authorizeDecision(
+      await decisionReq({ tenant: undefined, defaultTenant: 'g1' }),
+      mockRes()
+    );
+
+    expect(mockedIssueCode.mock.calls[0][0].tenants).toEqual(['g1']);
+  });
+
+  it('carries what each granted tenant is called, for a client that must offer the choice', async () => {
+    mockedIssueCode.mockResolvedValue('c');
+
+    await authorizeDecision(await decisionReq(), mockRes());
+
+    expect(Object.keys(mockedIssueCode.mock.calls[0][0].tenantNames)).toEqual(['g1', 'personal']);
   });
 
   it('returns access_denied when the user cancels, and issues nothing', async () => {
@@ -341,7 +417,9 @@ describe('token — authorization_code', () => {
     userName: 'Tester',
     resource: RESOURCE,
     scopes: ['relationship:read'],
-    groupId: 'g1'
+    tenants: ['personal', 'g1'],
+    defaultTenant: 'g1',
+    tenantNames: { personal: 'My own data', g1: 'Irja & Tom' }
   };
 
   it('exchanges a code for an access and refresh token', async () => {
@@ -368,7 +446,8 @@ describe('token — authorization_code', () => {
     expect(mockedIssueRefresh.mock.calls[0][0]).toMatchObject({
       userId: 'u1',
       scopes: ['relationship:read'],
-      groupId: 'g1'
+      tenants: ['personal', 'g1'],
+      defaultTenant: 'g1'
     });
   });
 
@@ -404,7 +483,8 @@ describe('token — refresh_token', () => {
       ok: true,
       userId: 'u1',
       scopes: ['relationship:read'],
-      groupId: null,
+      tenants: { allowed: ['personal', 'g1'], default: 'g1' },
+      tenantNames: { personal: 'My own data', g1: 'Irja & Tom' },
       resource: RESOURCE,
       rotatedToken: 'refresh-2'
     });
@@ -415,6 +495,27 @@ describe('token — refresh_token', () => {
     // The presented token is dead; a client that does not store this one will
     // read as a reuse on its next refresh.
     expect((res.json as jest.Mock).mock.calls[0][0].refresh_token).toBe('refresh-2');
+  });
+
+  it('mints the refreshed token against the same tenants, never a narrower set', async () => {
+    mockedRedeemRefresh.mockResolvedValue({
+      ok: true,
+      userId: 'u1',
+      scopes: ['relationship:read'],
+      tenants: { allowed: ['personal', 'g1'], default: 'g1' },
+      tenantNames: {},
+      resource: RESOURCE,
+      rotatedToken: 'refresh-2'
+    });
+    const res = mockRes();
+
+    await token({ body: refreshBody } as Request, res);
+
+    // A connection that quietly lost a tenant every hour would look like an
+    // intermittent permissions bug rather than a narrowing.
+    const claims = decodeJwt((res.json as jest.Mock).mock.calls[0][0].access_token);
+    expect(claims.tenants).toEqual(['personal', 'g1']);
+    expect(claims.defaultTenant).toBe('g1');
   });
 
   it('rejects a refused refresh token', async () => {

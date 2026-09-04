@@ -11,6 +11,7 @@ jest.mock('./ApiKey', () => ({
 }));
 
 import { ApiKey } from './ApiKey';
+import { PERSONAL_TENANT } from './types';
 import {
   createApiKey,
   listApiKeys,
@@ -43,7 +44,8 @@ function storedKey(over: Record<string, unknown> = {}) {
     sealedIv: 'iv',
     sealedTag: 'tag',
     scopes: ['relationship:read'],
-    groupId: null,
+    tenants: [PERSONAL_TENANT],
+    defaultTenant: PERSONAL_TENANT,
     revealCount: 0,
     lastRevealedAt: undefined as Date | undefined,
     createdAt: CREATED_AT,
@@ -98,14 +100,30 @@ describe('createApiKey', () => {
     expect(stored.sealedTag).toBeTruthy();
   });
 
-  it('defaults an unpinned key to the owner’s personal scope', async () => {
+  it('defaults a key with no stated tenants to the owner’s personal data', async () => {
     await createApiKey(input);
-    expect(mockedCreate.mock.calls[0][0].groupId).toBeNull();
+    expect(mockedCreate.mock.calls[0][0].tenants).toEqual([PERSONAL_TENANT]);
+    expect(mockedCreate.mock.calls[0][0].defaultTenant).toBe(PERSONAL_TENANT);
   });
 
-  it('pins a key to the group it was issued for', async () => {
-    await createApiKey({ ...input, groupId: 'g1' });
-    expect(mockedCreate.mock.calls[0][0].groupId).toBe('g1');
+  it('stores every tenant a key was granted', async () => {
+    await createApiKey({ ...input, tenants: [PERSONAL_TENANT, 'g1'], defaultTenant: 'g1' });
+
+    expect(mockedCreate.mock.calls[0][0].tenants).toEqual([PERSONAL_TENANT, 'g1']);
+    expect(mockedCreate.mock.calls[0][0].defaultTenant).toBe('g1');
+  });
+
+  it('refuses to store a default outside the grant', async () => {
+    // A key acting by default in something it cannot reach would authenticate
+    // and then fail every call that did not name a tenant explicitly.
+    await createApiKey({ ...input, tenants: ['g1'], defaultTenant: 'g2' });
+
+    expect(mockedCreate.mock.calls[0][0].defaultTenant).toBe('g1');
+  });
+
+  it('reads an empty grant as the safest non-empty one', async () => {
+    await createApiKey({ ...input, tenants: [] });
+    expect(mockedCreate.mock.calls[0][0].tenants).toEqual([PERSONAL_TENANT]);
   });
 
   it('snapshots the owner so verification needs no second query', async () => {
@@ -311,10 +329,14 @@ describe('verifyApiKey', () => {
     expect(mockedFindOne).toHaveBeenCalledWith({ keyId: parseKey(token)!.id });
   });
 
-  it('returns the identity, scopes and tenant a valid key carries', async () => {
+  it('returns the identity, scopes and tenants a valid key carries', async () => {
     const { token } = generateKey();
     mockedFindOne.mockResolvedValue(
-      acceptingKey(token, { scopes: ['relationship:read', 'album:write'], groupId: 'g1' })
+      acceptingKey(token, {
+        scopes: ['relationship:read', 'album:write'],
+        tenants: [PERSONAL_TENANT, 'g1'],
+        defaultTenant: 'g1'
+      })
     );
 
     await expect(verifyApiKey(token)).resolves.toEqual({
@@ -324,7 +346,32 @@ describe('verifyApiKey', () => {
       userName: 'Tester',
       keyId: 'k1',
       scopes: ['relationship:read', 'album:write'],
-      groupId: 'g1'
+      tenants: { allowed: [PERSONAL_TENANT, 'g1'], default: 'g1' }
+    });
+  });
+
+  it('reads a key issued before tenants were a set', async () => {
+    // Keys stored under the single-tenant model carry `groupId` and no array.
+    // Without this fallback every connected assistant would break at once on
+    // the deploy that introduced the set.
+    const { token } = generateKey();
+    mockedFindOne.mockResolvedValue(
+      acceptingKey(token, { tenants: undefined, defaultTenant: undefined, groupId: 'g1' })
+    );
+
+    await expect(verifyApiKey(token)).resolves.toMatchObject({
+      tenants: { allowed: ['g1'], default: 'g1' }
+    });
+  });
+
+  it('reads an old personal key as the personal tenant, not as no tenant', async () => {
+    const { token } = generateKey();
+    mockedFindOne.mockResolvedValue(
+      acceptingKey(token, { tenants: undefined, defaultTenant: undefined, groupId: null })
+    );
+
+    await expect(verifyApiKey(token)).resolves.toMatchObject({
+      tenants: { allowed: [PERSONAL_TENANT], default: PERSONAL_TENANT }
     });
   });
 

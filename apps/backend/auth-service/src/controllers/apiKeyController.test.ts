@@ -78,7 +78,12 @@ describe('postApiKey', () => {
     await postApiKey(request, res);
 
     expect(mockedCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: 'u1', name: 'Claude', groupId: null })
+      expect.objectContaining({
+        userId: 'u1',
+        name: 'Claude',
+        tenants: ['personal'],
+        defaultTenant: 'personal'
+      })
     );
     expect(res.status).toHaveBeenCalledWith(201);
     expect(res.json).toHaveBeenCalledWith(
@@ -94,22 +99,78 @@ describe('postApiKey', () => {
     );
   });
 
-  it('pins the key to a group the creator belongs to', async () => {
+  it('grants the key a group the creator belongs to', async () => {
     await postApiKey(
-      req({ body: { name: 'Claude', scopes: ['relationship:write'], groupId: 'g1' } }),
+      req({
+        body: {
+          name: 'Claude',
+          scopes: ['relationship:write'],
+          tenants: ['g1'],
+          defaultTenant: 'g1'
+        }
+      }),
       mockRes()
     );
 
-    expect(mockedCreate).toHaveBeenCalledWith(expect.objectContaining({ groupId: 'g1' }));
+    expect(mockedCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ tenants: ['g1'], defaultTenant: 'g1' })
+    );
   });
 
-  it('refuses to pin a key to a group the creator is not in', async () => {
-    // Otherwise the pin could be used to reach into a group rather than to
+  it('grants several tenants at once, so one key reaches both', async () => {
+    await postApiKey(
+      req({
+        body: {
+          name: 'Claude',
+          scopes: ['relationship:write'],
+          tenants: ['personal', 'g1'],
+          defaultTenant: 'g1'
+        }
+      }),
+      mockRes()
+    );
+
+    expect(mockedCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ tenants: ['personal', 'g1'], defaultTenant: 'g1' })
+    );
+  });
+
+  it('refuses a tenant the creator is not a member of', async () => {
+    // Otherwise the grant could be used to reach into a group rather than to
     // restrict a key to one.
-    const request = req({ body: { name: 'Claude', scopes: ['relationship:write'], groupId: 'g99' } });
+    const request = req({
+      body: { name: 'Claude', scopes: ['relationship:write'], tenants: ['g99'] }
+    });
 
     await expect(postApiKey(request, mockRes())).rejects.toMatchObject({ name: 'BadRequestError' });
     expect(mockedCreate).not.toHaveBeenCalled();
+  });
+
+  it('refuses the whole request when one tenant of several is out of reach', async () => {
+    // Silently dropping it would issue a key quietly narrower than the one the
+    // creator asked for, and they would find out at the first failed call.
+    const request = req({
+      body: { name: 'Claude', scopes: ['relationship:write'], tenants: ['g1', 'g99'] }
+    });
+
+    await expect(postApiKey(request, mockRes())).rejects.toMatchObject({ name: 'BadRequestError' });
+    expect(mockedCreate).not.toHaveBeenCalled();
+  });
+
+  it('falls back to a default inside the grant when the one asked for is not', async () => {
+    await postApiKey(
+      req({
+        body: {
+          name: 'Claude',
+          scopes: ['relationship:write'],
+          tenants: ['g1'],
+          defaultTenant: 'personal'
+        }
+      }),
+      mockRes()
+    );
+
+    expect(mockedCreate).toHaveBeenCalledWith(expect.objectContaining({ defaultTenant: 'g1' }));
   });
 
   it('passes an expiry through as a Date, and null when there is none', async () => {

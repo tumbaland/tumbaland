@@ -5,9 +5,9 @@ jest.mock('../models/Activity', () => {
   }));
   Activity.find = jest.fn();
   Activity.countDocuments = jest.fn();
-  Activity.findById = jest.fn();
-  Activity.findByIdAndUpdate = jest.fn();
-  Activity.findByIdAndDelete = jest.fn();
+  Activity.findOne = jest.fn();
+  Activity.findOneAndUpdate = jest.fn();
+  Activity.findOneAndDelete = jest.fn();
   Activity.distinct = jest.fn();
   return { Activity };
 });
@@ -31,9 +31,9 @@ import {
 const mockedCtor = Activity as unknown as jest.Mock;
 const mockedFind = Activity.find as unknown as jest.Mock;
 const mockedCountDocuments = Activity.countDocuments as unknown as jest.Mock;
-const mockedFindById = Activity.findById as unknown as jest.Mock;
-const mockedFindByIdAndUpdate = Activity.findByIdAndUpdate as unknown as jest.Mock;
-const mockedFindByIdAndDelete = Activity.findByIdAndDelete as unknown as jest.Mock;
+const mockedFindOne = Activity.findOne as unknown as jest.Mock;
+const mockedFindOneAndUpdate = Activity.findOneAndUpdate as unknown as jest.Mock;
+const mockedFindOneAndDelete = Activity.findOneAndDelete as unknown as jest.Mock;
 const mockedDistinct = Activity.distinct as unknown as jest.Mock;
 const mockedTypeFindOne = ActivityType.findOne as jest.Mock;
 const mockedTypeFind = ActivityType.find as jest.Mock;
@@ -140,26 +140,60 @@ describe('getActivities', () => {
 });
 
 describe('getActivityById / updateActivity / deleteActivity', () => {
-  it('getActivityById delegates to findById', async () => {
-    mockedFindById.mockResolvedValue({ _id: 'a1' });
-    expect(await getActivityById('a1')).toEqual({ _id: 'a1' });
+  /**
+   * These three took an id and nothing else, so any signed-in caller could read,
+   * rewrite or delete any other account's entry by naming its id. The scope is
+   * asserted on every one of them rather than on a representative sample: the
+   * whole failure was that one of them was written without it.
+   */
+  const ownScope = { $or: [{ userId: 'u1' }, { groupId: { $in: ['g1'] } }] };
+
+  it('getActivityById only reaches entries the caller can see', async () => {
+    mockedFindOne.mockResolvedValue({ _id: 'a1' });
+
+    expect(await getActivityById('a1', 'u1', ['g1'])).toEqual({ _id: 'a1' });
+    expect(mockedFindOne).toHaveBeenCalledWith({ _id: 'a1', ...ownScope });
   });
 
-  it('updateActivity delegates to findByIdAndUpdate with validators', async () => {
-    mockedFindByIdAndUpdate.mockResolvedValue({ _id: 'a1', hours: 2 });
-    const result = await updateActivity('a1', { hours: 2 });
-    expect(mockedFindByIdAndUpdate).toHaveBeenCalledWith('a1', { hours: 2 }, { new: true, runValidators: true });
+  it('updateActivity only rewrites entries the caller can see, with validators', async () => {
+    mockedFindOneAndUpdate.mockResolvedValue({ _id: 'a1', hours: 2 });
+
+    const result = await updateActivity('a1', { hours: 2 }, 'u1', ['g1']);
+
+    expect(mockedFindOneAndUpdate).toHaveBeenCalledWith(
+      { _id: 'a1', ...ownScope },
+      { hours: 2 },
+      { new: true, runValidators: true }
+    );
     expect(result).toEqual({ _id: 'a1', hours: 2 });
   });
 
-  it('deleteActivity returns true when a document was deleted', async () => {
-    mockedFindByIdAndDelete.mockResolvedValue({ _id: 'a1' });
-    expect(await deleteActivity('a1')).toBe(true);
+  it('updateActivity reports a miss rather than touching another account', async () => {
+    mockedFindOneAndUpdate.mockResolvedValue(null);
+    expect(await updateActivity('someone-elses', { hours: 2 }, 'u1', ['g1'])).toBeNull();
   });
 
-  it('deleteActivity returns false when nothing was found', async () => {
-    mockedFindByIdAndDelete.mockResolvedValue(null);
-    expect(await deleteActivity('missing')).toBe(false);
+  it('deleteActivity only reaches entries the caller can see', async () => {
+    mockedFindOneAndDelete.mockResolvedValue({ _id: 'a1' });
+
+    expect(await deleteActivity('a1', 'u1', ['g1'])).toBe(true);
+    expect(mockedFindOneAndDelete).toHaveBeenCalledWith({ _id: 'a1', ...ownScope });
+  });
+
+  it('deleteActivity returns false when nothing in scope was found', async () => {
+    mockedFindOneAndDelete.mockResolvedValue(null);
+    expect(await deleteActivity('missing', 'u1', [])).toBe(false);
+  });
+
+  it('a caller in no groups reaches only their own entries', async () => {
+    mockedFindOne.mockResolvedValue(null);
+
+    await getActivityById('a1', 'u1');
+
+    expect(mockedFindOne).toHaveBeenCalledWith({
+      _id: 'a1',
+      $or: [{ userId: 'u1' }, { groupId: { $in: [] } }]
+    });
   });
 });
 

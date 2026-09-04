@@ -11,8 +11,22 @@ export {
 export type { CreateApiKeyInput, CreatedApiKey } from './service';
 export { authenticateAgent, requireScope, denyApiKeys } from './middleware';
 export type { ApiKeyContext } from './middleware';
-export { API_KEY_SCOPES, isApiKeyScope } from './types';
-export type { ApiKeyScope, ApiKeySummary, ApiKeyVerification, ApiKeyRejection } from './types';
+export {
+  API_KEY_SCOPES,
+  isApiKeyScope,
+  PERSONAL_TENANT,
+  groupIdOf,
+  groupIdsOf,
+  readTenants
+} from './types';
+export type {
+  ApiKeyScope,
+  ApiKeySummary,
+  ApiKeyVerification,
+  ApiKeyRejection,
+  ApiKeyTenant,
+  Tenant
+} from './types';
 export {
   looksLikeApiKey,
   displayPrefix,

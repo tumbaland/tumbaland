@@ -7,7 +7,14 @@ import {
   parseKey,
   secretMatches
 } from './crypto';
-import type { ApiKeyScope, ApiKeySummary, ApiKeyVerification } from './types';
+import {
+  PERSONAL_TENANT,
+  readTenants,
+  type ApiKeyScope,
+  type ApiKeySummary,
+  type ApiKeyVerification,
+  type Tenant
+} from './types';
 
 export interface CreateApiKeyInput {
   userId: string;
@@ -15,8 +22,10 @@ export interface CreateApiKeyInput {
   userName: string;
   name: string;
   scopes: ApiKeyScope[];
-  /** null pins the key to the user's own non-group data */
-  groupId?: string | null;
+  /** every tenant the key may act in; defaults to the user's own data alone */
+  tenants?: Tenant[];
+  /** which of them it acts in when a request names none */
+  defaultTenant?: Tenant;
   expiresAt?: Date | null;
 }
 
@@ -31,7 +40,9 @@ const toSummary = (key: IApiKey): ApiKeySummary => ({
   name: key.name,
   prefix: displayPrefix(key.keyId),
   scopes: key.scopes,
-  groupId: key.groupId ?? null,
+  ...(({ allowed, default: fallback }) => ({ tenants: allowed, defaultTenant: fallback }))(
+    readTenants(key)
+  ),
   createdAt: key.createdAt.toISOString(),
   lastUsedAt: key.lastUsedAt?.toISOString() ?? null,
   expiresAt: key.expiresAt?.toISOString() ?? null,
@@ -39,6 +50,10 @@ const toSummary = (key: IApiKey): ApiKeySummary => ({
 });
 
 export const createApiKey = async (input: CreateApiKeyInput): Promise<CreatedApiKey> => {
+  // A key that reaches nowhere would authenticate and then fail every call, so
+  // an empty grant is read as the safest non-empty one rather than stored.
+  const tenants = input.tenants?.length ? input.tenants : [PERSONAL_TENANT];
+
   const { token, id, hash } = generateKey();
   const sealed = encryptSecret(token);
 
@@ -53,7 +68,10 @@ export const createApiKey = async (input: CreateApiKeyInput): Promise<CreatedApi
     sealedIv: sealed.iv,
     sealedTag: sealed.tag,
     scopes: input.scopes,
-    groupId: input.groupId ?? null,
+    tenants,
+    defaultTenant: tenants.includes(input.defaultTenant ?? '')
+      ? input.defaultTenant
+      : (tenants[0] as Tenant),
     expiresAt: input.expiresAt ?? undefined
   });
 
@@ -144,6 +162,6 @@ export const verifyApiKey = async (token: unknown): Promise<ApiKeyVerification> 
     userName: key.userName,
     keyId: String(key._id),
     scopes: key.scopes,
-    groupId: key.groupId ?? null
+    tenants: readTenants(key)
   };
 };

@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 
@@ -50,7 +50,8 @@ const key = (over: Partial<ApiKey> = {}): ApiKey => ({
   name: 'Claude Code',
   prefix: 'tmb_live_abcdef123456',
   scopes: ['relationship:read', 'relationship:write'],
-  groupId: null,
+  tenants: ['personal'],
+  defaultTenant: 'personal',
   createdAt: '2026-09-01T00:00:00.000Z',
   lastUsedAt: null,
   expiresAt: null,
@@ -173,7 +174,8 @@ it('creates a personal key by default with the chosen scopes', async () => {
   expect(mocked.create).toHaveBeenCalledWith({
     name: 'Agent',
     scopes: ['relationship:read', 'relationship:write'],
-    groupId: null
+    tenants: ['personal'],
+    defaultTenant: 'personal'
   });
 });
 
@@ -229,14 +231,21 @@ it('removes a deleted key from the list', async () => {
 
 it('says which tenant a key acts in', async () => {
   mockedGetUserGroups.mockResolvedValue([{ _id: 'g1', name: 'Us Two' }]);
-  await renderTab([key({ groupId: 'g1' })]);
+  await renderTab([key({ tenants: ['g1'], defaultTenant: 'g1' })]);
 
   expect(await screen.findByText('Us Two')).toBeInTheDocument();
 });
 
+it('lists every tenant a key reaches, not just one', async () => {
+  mockedGetUserGroups.mockResolvedValue([{ _id: 'g1', name: 'Us Two' }]);
+  await renderTab([key({ tenants: ['personal', 'g1'], defaultTenant: 'g1' })]);
+
+  expect(await screen.findByText('My own data · Us Two')).toBeInTheDocument();
+});
+
 it('labels a personal key as personal', async () => {
-  await renderTab([key({ groupId: null })]);
-  expect(screen.getByText('Personal')).toBeInTheDocument();
+  await renderTab([key({ tenants: ['personal'], defaultTenant: 'personal' })]);
+  expect(screen.getByText('My own data')).toBeInTheDocument();
 });
 
 it('still lists keys when the group service is unreachable', async () => {
@@ -246,33 +255,53 @@ it('still lists keys when the group service is unreachable', async () => {
   expect(screen.getByText('Claude Code')).toBeInTheDocument();
 });
 
-it('offers the user’s groups as tenants when creating a key', async () => {
+it('offers the user’s groups alongside their own data when creating a key', async () => {
   const user = userEvent.setup();
   mockedGetUserGroups.mockResolvedValue([{ _id: 'g1', name: 'Us Two' }]);
   await renderTab([]);
 
   await user.click(screen.getByRole('button', { name: /New key/ }));
-  await user.click(screen.getByLabelText('Acts on'));
 
-  const listbox = within(screen.getByRole('listbox'));
-  expect(listbox.getByText('My own data')).toBeInTheDocument();
-  expect(listbox.getByText('Us Two')).toBeInTheDocument();
+  expect(screen.getByRole('checkbox', { name: 'My own data' })).toBeInTheDocument();
+  expect(screen.getByRole('checkbox', { name: 'Us Two' })).toBeInTheDocument();
 });
 
-it('pins a new key to the selected group', async () => {
+it('grants a new key every tenant that is ticked', async () => {
   const user = userEvent.setup();
   mockedGetUserGroups.mockResolvedValue([{ _id: 'g1', name: 'Us Two' }]);
-  mocked.create.mockResolvedValue({ ...key({ id: 'k2', groupId: 'g1' }), token: TOKEN });
+  mocked.create.mockResolvedValue({
+    ...key({ id: 'k2', tenants: ['personal', 'g1'], defaultTenant: 'personal' }),
+    token: TOKEN
+  });
   await renderTab([]);
 
   await user.click(screen.getByRole('button', { name: /New key/ }));
   await user.type(screen.getByLabelText('Name'), 'Shared agent');
-  await user.click(screen.getByLabelText('Acts on'));
-  await user.click(within(screen.getByRole('listbox')).getByText('Us Two'));
+  await user.click(screen.getByRole('checkbox', { name: 'Us Two' }));
   await user.click(screen.getByRole('button', { name: 'Create key' }));
 
   expect(mocked.create).toHaveBeenCalledWith(
-    expect.objectContaining({ name: 'Shared agent', groupId: 'g1' })
+    expect.objectContaining({ name: 'Shared agent', tenants: ['personal', 'g1'] })
+  );
+});
+
+it('always includes the default in the grant, so a key can never reach nothing', async () => {
+  const user = userEvent.setup();
+  mockedGetUserGroups.mockResolvedValue([{ _id: 'g1', name: 'Us Two' }]);
+  mocked.create.mockResolvedValue({ ...key({ id: 'k2' }), token: TOKEN });
+  await renderTab([]);
+
+  await user.click(screen.getByRole('button', { name: /New key/ }));
+  await user.type(screen.getByLabelText('Name'), 'Solo');
+
+  // The default's own box is disabled precisely so it cannot be unticked; a key
+  // granted nothing would authenticate and then fail every call it made.
+  expect(screen.getByRole('checkbox', { name: 'My own data' })).toBeDisabled();
+
+  await user.click(screen.getByRole('button', { name: 'Create key' }));
+
+  expect(mocked.create).toHaveBeenCalledWith(
+    expect.objectContaining({ tenants: ['personal'], defaultTenant: 'personal' })
   );
 });
 

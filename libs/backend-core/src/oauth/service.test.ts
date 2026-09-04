@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import { PERSONAL_TENANT } from '../apiKeys/types';
 
 jest.mock('./models', () => ({
   OAuthClient: { create: jest.fn(), findOne: jest.fn(), find: jest.fn() },
@@ -122,13 +123,21 @@ describe('issueAuthorizationCode', () => {
       userName: 'Tester',
       redirectUri: 'https://claude.ai/callback',
       scopes: ['relationship:read'],
-      groupId: 'g1',
+      tenants: ['g1'],
+      defaultTenant: 'g1',
+      tenantNames: { g1: 'Irja & Tom' },
       resource: 'https://mcp.tumbaland.eu',
       codeChallenge: CHALLENGE
     });
 
     const [doc] = mockedCodeCreate.mock.calls[0];
-    expect(doc).toMatchObject({ userId: 'u1', groupId: 'g1', scopes: ['relationship:read'] });
+    expect(doc).toMatchObject({
+      userId: 'u1',
+      tenants: ['g1'],
+      defaultTenant: 'g1',
+      tenantNames: { g1: 'Irja & Tom' },
+      scopes: ['relationship:read']
+    });
     expect(doc.expiresAt.getTime() - before).toBeLessThanOrEqual(60_000);
   });
 });
@@ -224,7 +233,9 @@ describe('issueRefreshToken', () => {
       clientId: 'client-1',
       userId: 'u1',
       scopes: ['relationship:read'],
-      groupId: null,
+      tenants: [PERSONAL_TENANT],
+      defaultTenant: PERSONAL_TENANT,
+      tenantNames: {},
       resource: 'https://mcp.tumbaland.eu'
     });
 
@@ -311,7 +322,9 @@ describe('refresh tokens', () => {
       clientId: 'client-1',
       userId: 'u1',
       scopes: ['relationship:read'],
-      groupId: null,
+      tenants: [PERSONAL_TENANT],
+      defaultTenant: PERSONAL_TENANT,
+      tenantNames: {},
       resource: 'https://mcp.tumbaland.eu'
     });
 
@@ -324,7 +337,9 @@ describe('refresh tokens', () => {
     mockedRefreshFindOne.mockResolvedValue({
       userId: 'u1',
       scopes: ['relationship:read'],
-      groupId: 'g1',
+      tenants: [PERSONAL_TENANT, 'g1'],
+      defaultTenant: 'g1',
+      tenantNames: { g1: 'Irja & Tom' },
       resource: 'https://mcp.tumbaland.eu',
       grantedAt: new Date(),
       save: jest.fn()
@@ -333,7 +348,44 @@ describe('refresh tokens', () => {
     await expect(redeemRefreshToken('tok', 'client-1')).resolves.toMatchObject({
       ok: true,
       userId: 'u1',
-      groupId: 'g1'
+      tenants: { allowed: [PERSONAL_TENANT, 'g1'], default: 'g1' }
+    });
+  });
+
+  it('carries the tenants through rotation rather than re-deriving them', async () => {
+    mockedRefreshFindOne.mockResolvedValue({
+      userId: 'u1',
+      scopes: ['relationship:read'],
+      tenants: [PERSONAL_TENANT, 'g1'],
+      defaultTenant: 'g1',
+      tenantNames: { g1: 'Irja & Tom' },
+      resource: 'https://mcp.tumbaland.eu',
+      grantedAt: new Date(),
+      save: jest.fn()
+    });
+
+    await redeemRefreshToken('tok', 'client-1');
+
+    // Rotation reissues the same grant; re-deriving would quietly narrow a
+    // connection every time it refreshed.
+    const [doc] = mockedRefreshCreate.mock.calls.at(-1)!;
+    expect(doc.tenants).toEqual([PERSONAL_TENANT, 'g1']);
+    expect(doc.defaultTenant).toBe('g1');
+    expect(doc.tenantNames).toEqual({ g1: 'Irja & Tom' });
+  });
+
+  it('reads a grant issued before tenants were a set', async () => {
+    mockedRefreshFindOne.mockResolvedValue({
+      userId: 'u1',
+      scopes: ['relationship:read'],
+      groupId: 'g1',
+      resource: 'https://mcp.tumbaland.eu',
+      grantedAt: new Date(),
+      save: jest.fn()
+    });
+
+    await expect(redeemRefreshToken('tok', 'client-1')).resolves.toMatchObject({
+      tenants: { allowed: ['g1'], default: 'g1' }
     });
   });
 

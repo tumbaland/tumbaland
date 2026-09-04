@@ -17,7 +17,8 @@ import {
   NotFoundError,
   sendSuccess,
   requireEnv,
-  API_KEY_SCOPES
+  API_KEY_SCOPES,
+  PERSONAL_TENANT
 } from '@tumbaland/backend-core';
 import type { ApiKeyScope } from '@tumbaland/backend-core';
 
@@ -202,6 +203,53 @@ const escapeHtml = (value: string): string =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string
   );
 
+
+/**
+ * What each tenant the approver could pick is called.
+ *
+ * The consent screen used to render `Group 539ad2` — the tail of an ObjectId —
+ * which asks someone to choose between options they cannot tell apart. Names
+ * come from group-service over the internal channel auth-service already uses
+ * for the `groups` claim, so this needs no new configuration.
+ *
+ * A failure here degrades to the id rather than blocking: a consent screen that
+ * will not render because a sibling service is slow is worse than one with an
+ * ugly label on it.
+ */
+const tenantNamesFor = async (email: string, groupIds: string[]): Promise<Record<string, string>> => {
+  const names: Record<string, string> = { [PERSONAL_TENANT]: 'My own data' };
+  for (const id of groupIds) names[id] = `Group ${id.slice(-6)}`;
+
+  const groupServiceUrl = process.env.GROUP_API_URL;
+  const internalToken = process.env.INTERNAL_SERVICE_TOKEN;
+  if (!groupServiceUrl || !internalToken || groupIds.length === 0) return names;
+
+  try {
+    const response = await fetch(
+      `${groupServiceUrl}/api/groups/mine?userEmail=${encodeURIComponent(email)}`,
+      {
+        headers: {
+          'x-internal-token': internalToken,
+          'x-service-id': 'auth-service'
+        },
+        signal: AbortSignal.timeout(3000)
+      }
+    );
+    if (!response.ok) return names;
+
+    const body = (await response.json()) as { success?: boolean; data?: { _id?: string; name?: string }[] };
+    for (const group of body.data ?? []) {
+      if (group?._id && group.name) names[String(group._id)] = group.name;
+    }
+  } catch (error) {
+    logger.warn('Could not resolve group names for the consent screen', {
+      error: (error as Error)?.message
+    });
+  }
+
+  return names;
+};
+
 /**
  * The authorization endpoint.
  *
@@ -219,6 +267,17 @@ export const authorize = async (req: Request, res: Response): Promise<void> => {
 
   const client = await findClient(params.clientId);
   const groups = req.userGroups ?? [];
+  const names = await tenantNamesFor(req.user.email, groups);
+
+  // Personal first, then every group. A person who belongs to one group sees two
+  // rows, both offered — the previous screen made them pick one and reconnect to
+  // change their mind.
+  const tenants = [PERSONAL_TENANT, ...groups];
+
+  // What a fresh connection should reach unless the approver says otherwise. A
+  // group is the better guess than personal: a shared journal is the reason
+  // most people connect anything at all.
+  const suggestedDefault = groups[0] ?? PERSONAL_TENANT;
 
   // Server-rendered, because a consent screen must come from the authorization
   // server itself — a page the client could influence is not consent.
@@ -236,6 +295,10 @@ export const authorize = async (req: Request, res: Response): Promise<void> => {
   li{padding:.5rem .75rem;background:#f2f7ff;border-radius:8px;margin-bottom:.4rem;font-size:.9rem}
   label{display:block;font-size:.85rem;color:#444;margin:0 0 .35rem}
   select{width:100%;padding:.55rem;border:1px solid #ccc;border-radius:8px;margin-bottom:1.25rem}
+  .tenants{margin:0 0 1rem}
+  .tenant{display:flex;align-items:center;gap:.55rem;padding:.5rem .75rem;background:#fafafa;
+          border:1px solid #eee;border-radius:8px;margin-bottom:.35rem;font-size:.9rem;color:#1a1a1a}
+  .tenant input{margin:0}
   .row{display:flex;gap:.6rem}
   button{flex:1;padding:.7rem;border-radius:8px;border:0;font-size:.95rem;cursor:pointer}
   .approve{background:#1a73e8;color:#fff}
@@ -247,10 +310,25 @@ export const authorize = async (req: Request, res: Response): Promise<void> => {
   <p class="sub">It is asking to access your Tumbaland account.</p>
   <ul>${params.scopes.map((s) => `<li>${escapeHtml(scopeLabel(s))}</li>`).join('')}</ul>
   <form method="POST" action="${issuer()}/oauth/authorize">
-    <label for="groupId">Which data should it act on?</label>
-    <select id="groupId" name="groupId">
-      <option value="">My own data</option>
-      ${groups.map((g) => `<option value="${escapeHtml(g)}">Group ${escapeHtml(g.slice(-6))}</option>`).join('')}
+    <label>Which data may it act on?</label>
+    <div class="tenants">
+      ${tenants
+        .map(
+          (tenant) => `<label class="tenant">
+        <input type="checkbox" name="tenant" value="${escapeHtml(tenant)}" checked>
+        <span>${escapeHtml(names[tenant] ?? tenant)}</span>
+      </label>`
+        )
+        .join('')}
+    </div>
+    <label for="defaultTenant">When it is not told which, use</label>
+    <select id="defaultTenant" name="defaultTenant">
+      ${tenants
+        .map(
+          (tenant) =>
+            `<option value="${escapeHtml(tenant)}"${tenant === suggestedDefault ? ' selected' : ''}>${escapeHtml(names[tenant] ?? tenant)}</option>`
+        )
+        .join('')}
     </select>
     <input type="hidden" name="client_id" value="${escapeHtml(params.clientId)}">
     <input type="hidden" name="redirect_uri" value="${escapeHtml(params.redirectUri)}">
@@ -283,8 +361,7 @@ export const authorizeDecision = async (req: Request, res: Response): Promise<vo
     scope,
     resource,
     code_challenge: codeChallenge,
-    state,
-    groupId
+    state
   } = req.body as Record<string, string | undefined>;
 
   const client = clientId ? await findClient(clientId) : null;
@@ -323,9 +400,25 @@ export const authorizeDecision = async (req: Request, res: Response): Promise<vo
     throw new BadRequestError('This consent form is not valid. Start the connection again.');
   }
 
-  // A key may only be pinned to a group the approver actually belongs to,
-  // otherwise the tenant field could be used to reach into someone else's data.
-  const pinned = groupId && (req.userGroups ?? []).includes(groupId) ? groupId : null;
+  // A credential may only reach a tenant the approver actually belongs to.
+  // Filtered rather than trusted: the form is the approver's, but the request
+  // carrying it is the client's, and a tenant field taken at face value is a
+  // way into someone else's data.
+  const reachable = new Set([PERSONAL_TENANT, ...(req.userGroups ?? [])]);
+  const submitted = ([] as string[])
+    .concat(req.body.tenant ?? [])
+    .filter((tenant) => reachable.has(tenant));
+
+  const defaultTenant = reachable.has(req.body.defaultTenant as string)
+    ? (req.body.defaultTenant as string)
+    : PERSONAL_TENANT;
+
+  // The default is always in the grant, so the set can never come out empty —
+  // there is no way to approve a connection that reaches nothing and then fails
+  // every call it makes.
+  const tenants = [...new Set([defaultTenant, ...submitted])];
+  const names = await tenantNamesFor(req.user.email, tenants.filter((t) => t !== PERSONAL_TENANT));
+  const tenantNames = Object.fromEntries(tenants.map((tenant) => [tenant, names[tenant] ?? tenant]));
 
   const code = await issueAuthorizationCode({
     clientId: client.clientId,
@@ -334,7 +427,9 @@ export const authorizeDecision = async (req: Request, res: Response): Promise<vo
     userName: req.user.name,
     redirectUri,
     scopes,
-    groupId: pinned,
+    tenants,
+    defaultTenant,
+    tenantNames,
     resource: mcpResource(),
     codeChallenge
   });
@@ -343,7 +438,8 @@ export const authorizeDecision = async (req: Request, res: Response): Promise<vo
     clientId: client.clientId,
     userId: req.user.id,
     scopes,
-    groupId: pinned
+    tenants,
+    defaultTenant
   });
 
   back.searchParams.set('code', code);
@@ -393,14 +489,18 @@ export const token = async (req: Request, res: Response): Promise<void> => {
       resource: granted.resource,
       issuer: issuer(),
       scopes,
-      groupId: granted.groupId ?? null
+      tenants: granted.tenants,
+      defaultTenant: granted.defaultTenant,
+      tenantNames: granted.tenantNames ?? {}
     });
 
     const refresh = await issueRefreshToken({
       clientId,
       userId: granted.userId,
       scopes,
-      groupId: granted.groupId ?? null,
+      tenants: granted.tenants,
+      defaultTenant: granted.defaultTenant,
+      tenantNames: granted.tenantNames ?? {},
       resource: granted.resource
     });
 
@@ -434,7 +534,9 @@ export const token = async (req: Request, res: Response): Promise<void> => {
       resource: result.resource!,
       issuer: issuer(),
       scopes: result.scopes ?? [],
-      groupId: result.groupId ?? null
+      tenants: result.tenants!.allowed,
+      defaultTenant: result.tenants!.default,
+      tenantNames: result.tenantNames ?? {}
     });
 
     res.json({

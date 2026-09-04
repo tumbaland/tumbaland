@@ -1,5 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
-import type { ApiKeyScope } from './types';
+import { PERSONAL_TENANT, type ApiKeyScope, type Tenant } from './types';
 
 /**
  * One API key. Lives in backend-core rather than auth-service because both
@@ -31,8 +31,17 @@ export interface IApiKey extends Document {
   sealedIv: string;
   sealedTag: string;
   scopes: ApiKeyScope[];
-  /** the tenant this key acts in; null means the user's own non-group data */
-  groupId: string | null;
+  /** every tenant this key may act in; see `Tenant` */
+  tenants: Tenant[];
+  /** the one it acts in when a request names none; always a member of `tenants` */
+  defaultTenant: Tenant;
+  /**
+   * The single tenant this key was pinned to, before tenants were a set.
+   *
+   * Kept so keys issued under the old model keep working; `readTenants` falls
+   * back to it. Nothing writes it any more.
+   */
+  groupId?: string | null;
   lastUsedAt?: Date;
   expiresAt?: Date;
   revokedAt?: Date;
@@ -55,8 +64,11 @@ const ApiKeySchema = new Schema<IApiKey>(
     sealedIv: { type: String, required: true },
     sealedTag: { type: String, required: true },
     scopes: { type: [String], default: [] },
-    // Explicitly nullable rather than optional: "personal scope" is a decision the
+    // Defaulted rather than optional: which data a key reaches is a decision the
     // creator made, and it must not be indistinguishable from a field nobody set.
+    tenants: { type: [String], default: () => [PERSONAL_TENANT] },
+    defaultTenant: { type: String, default: PERSONAL_TENANT },
+    // Written by the single-tenant model this replaced; read-only now.
     groupId: { type: String, default: null },
     lastUsedAt: { type: Date },
     expiresAt: { type: Date },

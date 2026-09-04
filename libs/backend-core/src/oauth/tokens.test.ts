@@ -1,6 +1,7 @@
 const ORIGINAL_ENV = process.env;
 
 import jwt from 'jsonwebtoken';
+import { PERSONAL_TENANT } from '../apiKeys/types';
 import { mintAccessToken, verifyAccessToken, parseScopes } from './tokens';
 
 const RESOURCE = 'https://mcp.tumbaland.eu';
@@ -14,7 +15,9 @@ const mint = (over: Partial<Parameters<typeof mintAccessToken>[0]> = {}) =>
     resource: RESOURCE,
     issuer: ISSUER,
     scopes: ['relationship:read', 'relationship:write'],
-    groupId: null,
+    tenants: [PERSONAL_TENANT],
+    defaultTenant: PERSONAL_TENANT,
+    tenantNames: { [PERSONAL_TENANT]: 'My own data' },
     ...over
   });
 
@@ -38,9 +41,21 @@ describe('mintAccessToken', () => {
     expect(expiresIn).toBe(3600);
   });
 
-  it('carries the tenant pin, so a token cannot wander between groups', () => {
-    const claims = jwt.decode(mint({ groupId: 'g1' }).accessToken) as Record<string, unknown>;
-    expect(claims.groupId).toBe('g1');
+  it('carries the granted tenants, so a token cannot wander outside them', () => {
+    const claims = jwt.decode(
+      mint({ tenants: [PERSONAL_TENANT, 'g1'], defaultTenant: 'g1' }).accessToken
+    ) as Record<string, unknown>;
+
+    expect(claims.tenants).toEqual([PERSONAL_TENANT, 'g1']);
+    expect(claims.defaultTenant).toBe('g1');
+  });
+
+  it('carries what each tenant is called, since nothing downstream can look it up', () => {
+    const claims = jwt.decode(
+      mint({ tenants: ['g1'], defaultTenant: 'g1', tenantNames: { g1: 'Irja & Tom' } }).accessToken
+    ) as Record<string, unknown>;
+
+    expect(claims.tenantNames).toEqual({ g1: 'Irja & Tom' });
   });
 
   it('gives every token a distinct id', () => {
@@ -59,7 +74,7 @@ describe('verifyAccessToken', () => {
       userId: 'u1',
       email: 'u1@example.com',
       scopes: ['relationship:read', 'relationship:write'],
-      groupId: null
+      tenants: { allowed: [PERSONAL_TENANT], default: PERSONAL_TENANT }
     });
   });
 

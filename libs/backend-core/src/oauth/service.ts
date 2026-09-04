@@ -1,6 +1,11 @@
 import { createHash, randomBytes, timingSafeEqual } from 'crypto';
 import { AuthorizationCode, IAuthorizationCode, OAuthClient, RefreshToken } from './models';
-import type { ApiKeyScope } from '../apiKeys/types';
+import {
+  readTenants,
+  type ApiKeyScope,
+  type ApiKeyTenant,
+  type Tenant
+} from '../apiKeys/types';
 
 /** How long a user has between approving and the client exchanging the code. */
 const CODE_TTL_MS = 60 * 1000;
@@ -84,7 +89,9 @@ export interface IssueCodeInput {
   userName: string;
   redirectUri: string;
   scopes: ApiKeyScope[];
-  groupId: string | null;
+  tenants: Tenant[];
+  defaultTenant: Tenant;
+  tenantNames: Record<Tenant, string>;
   resource: string;
   codeChallenge: string;
 }
@@ -166,7 +173,9 @@ export const issueRefreshToken = async (input: {
   clientId: string;
   userId: string;
   scopes: ApiKeyScope[];
-  groupId: string | null;
+  tenants: Tenant[];
+  defaultTenant: Tenant;
+  tenantNames: Record<Tenant, string>;
   resource: string;
 }): Promise<IssuedRefreshToken> => {
   await RefreshToken.updateMany(
@@ -185,7 +194,8 @@ export interface RefreshRedemption {
   reused?: boolean;
   userId?: string;
   scopes?: ApiKeyScope[];
-  groupId?: string | null;
+  tenants?: ApiKeyTenant;
+  tenantNames?: Record<Tenant, string>;
   resource?: string;
   /** the replacement the client must store; the presented one is now dead */
   rotatedToken?: string;
@@ -233,7 +243,11 @@ export const redeemRefreshToken = async (
     clientId,
     userId: record.userId,
     scopes: record.scopes,
-    groupId: record.groupId ?? null,
+    // Carried, not reset: rotation reissues the same grant, and re-deriving the
+    // tenants would quietly narrow a connection every time it refreshed.
+    tenants: record.tenants,
+    defaultTenant: record.defaultTenant,
+    tenantNames: record.tenantNames,
     resource: record.resource,
     // Carried, not reset: this is still the grant the user approved.
     grantedAt: record.grantedAt ?? record.createdAt
@@ -243,7 +257,8 @@ export const redeemRefreshToken = async (
     ok: true,
     userId: record.userId,
     scopes: record.scopes as ApiKeyScope[],
-    groupId: record.groupId ?? null,
+    tenants: readTenants(record),
+    tenantNames: record.tenantNames ?? {},
     resource: record.resource,
     rotatedToken: rotated
   };
@@ -271,7 +286,10 @@ export const listConnections = async (userId: string) => {
     clientId: token.clientId,
     clientName: nameById.get(token.clientId) ?? 'Unknown app',
     scopes: token.scopes,
-    groupId: token.groupId ?? null,
+    ...(({ allowed, default: fallback }) => ({ tenants: allowed, defaultTenant: fallback }))(
+      readTenants(token)
+    ),
+    tenantNames: token.tenantNames ?? {},
     createdAt: (token.grantedAt ?? token.createdAt).toISOString(),
     // Set when the refresh token is exchanged, not when a tool runs — access
     // tokens are validated statelessly, so the server never sees ordinary use.

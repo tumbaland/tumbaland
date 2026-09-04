@@ -27,7 +27,9 @@ const connection = (over: Partial<Connection> = {}): Connection => ({
   clientId: 'tmb-client-abc',
   clientName: 'Claude',
   scopes: ['relationship:read', 'relationship:write'],
-  groupId: null,
+  tenants: ['personal'],
+  defaultTenant: 'personal',
+  tenantNames: { personal: 'My own data' },
   createdAt: '2026-09-01T00:00:00.000Z',
   lastRenewedAt: null,
   revokedAt: null,
@@ -65,14 +67,20 @@ it('offers no way to reveal anything, because there is no secret', async () => {
   expect(screen.queryByRole('button', { name: /copy/i })).not.toBeInTheDocument();
 });
 
-it('says which data the assistant acts on', async () => {
-  await renderSection([connection({ groupId: 'g1' })]);
-  expect(screen.getByText('Group data')).toBeInTheDocument();
+it('names every journal the assistant can reach, as the user saw them', async () => {
+  await renderSection([
+    connection({
+      tenants: ['personal', 'g1'],
+      tenantNames: { personal: 'My own data', g1: 'Irja & Tom' }
+    })
+  ]);
+
+  expect(screen.getByText('My own data · Irja & Tom')).toBeInTheDocument();
 });
 
 it('labels a personal connection as such', async () => {
   await renderSection();
-  expect(screen.getByText('Personal data')).toBeInTheDocument();
+  expect(screen.getByText('My own data')).toBeInTheDocument();
 });
 
 it('disconnects by client, and removes it from the list', async () => {

@@ -22,7 +22,8 @@ const summary = {
   name: 'Claude',
   prefix: 'tmb_live_abcdef123456',
   scopes: ['relationship:read'],
-  groupId: null,
+  tenants: ['personal'],
+  defaultTenant: 'personal',
   createdAt: '2026-09-01T00:00:00.000Z',
   lastUsedAt: null,
   expiresAt: null,
@@ -62,7 +63,12 @@ describe('list', () => {
 describe('create', () => {
   it('posts the request and returns the key with its token', async () => {
     mocked.post.mockResolvedValue({ success: true, data: { ...summary, token: 'tmb_live_x_y' } });
-    const request = { name: 'Claude', scopes: ['relationship:read' as const], groupId: null };
+    const request = {
+      name: 'Claude',
+      scopes: ['relationship:read' as const],
+      tenants: ['personal'],
+      defaultTenant: 'personal'
+    };
 
     const created = await apiKeyService.create(request);
 

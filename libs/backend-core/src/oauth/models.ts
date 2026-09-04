@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { PERSONAL_TENANT, type Tenant } from '../apiKeys/types';
 
 /**
  * A client registered through RFC 7591 Dynamic Client Registration.
@@ -46,7 +47,13 @@ export interface IAuthorizationCode extends Document {
   userName: string;
   redirectUri: string;
   scopes: string[];
-  groupId: string | null;
+  /** every tenant the user approved, and the one chosen as the default */
+  tenants: Tenant[];
+  defaultTenant: Tenant;
+  /** what each approved tenant is called, snapshotted at consent */
+  tenantNames: Record<Tenant, string>;
+  /** the single tenant an older grant was pinned to; read by `readTenants` */
+  groupId?: string | null;
   /** RFC 8707: the MCP server this will be minted for */
   resource: string;
   /** PKCE, always S256 — the spec does not allow `plain` */
@@ -66,6 +73,10 @@ const AuthorizationCodeSchema = new Schema<IAuthorizationCode>(
     userName: { type: String, default: '' },
     redirectUri: { type: String, required: true },
     scopes: { type: [String], default: [] },
+    tenants: { type: [String], default: () => [PERSONAL_TENANT] },
+    defaultTenant: { type: String, default: PERSONAL_TENANT },
+    tenantNames: { type: Schema.Types.Mixed, default: () => ({}) },
+    // Written by the single-tenant model this replaced; read-only now.
     groupId: { type: String, default: null },
     resource: { type: String, required: true },
     codeChallenge: { type: String, required: true },
@@ -96,7 +107,11 @@ export interface IRefreshToken extends Document {
   clientId: string;
   userId: string;
   scopes: string[];
-  groupId: string | null;
+  tenants: Tenant[];
+  defaultTenant: Tenant;
+  tenantNames: Record<Tenant, string>;
+  /** the single tenant an older grant was pinned to; read by `readTenants` */
+  groupId?: string | null;
   resource: string;
   /**
    * When the user actually connected this assistant.
@@ -118,6 +133,10 @@ const RefreshTokenSchema = new Schema<IRefreshToken>(
     clientId: { type: String, required: true },
     userId: { type: String, required: true, index: true },
     scopes: { type: [String], default: [] },
+    tenants: { type: [String], default: () => [PERSONAL_TENANT] },
+    defaultTenant: { type: String, default: PERSONAL_TENANT },
+    tenantNames: { type: Schema.Types.Mixed, default: () => ({}) },
+    // Written by the single-tenant model this replaced; read-only now.
     groupId: { type: String, default: null },
     resource: { type: String, required: true },
     grantedAt: { type: Date, default: Date.now },

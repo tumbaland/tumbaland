@@ -1,7 +1,13 @@
 import { randomUUID } from 'crypto';
 import jwt from 'jsonwebtoken';
 import { requireEnv } from '../config/env';
-import { isApiKeyScope, type ApiKeyScope } from '../apiKeys/types';
+import {
+  isApiKeyScope,
+  readTenants,
+  type ApiKeyScope,
+  type ApiKeyTenant,
+  type Tenant
+} from '../apiKeys/types';
 
 /**
  * Access tokens for the OAuth flow that lets an assistant connect to Tumbaland.
@@ -27,8 +33,22 @@ export interface AccessTokenClaims {
   aud: string;
   iss: string;
   scope: string;
-  /** the tenant the token is pinned to; null means the user's personal data */
-  groupId: string | null;
+  /** every tenant this token may act in */
+  tenants: Tenant[];
+  /** the one it acts in when a call names none */
+  defaultTenant: Tenant;
+  /**
+   * What each tenant is called, for a client that has to offer the choice.
+   *
+   * Carried on the token because the only place these names are known is the
+   * consent screen that rendered them, and the MCP server — which has to name
+   * the choice to a model — cannot reach group-service. A snapshot: a group
+   * renamed after the connection was made shows its old name until reconnect,
+   * which is the same trade the owner's name on an API key already makes.
+   */
+  tenantNames: Record<Tenant, string>;
+  /** the single tenant an older token was pinned to; read by `readTenants` */
+  groupId?: string | null;
   email: string;
   name: string;
   typ: typeof ACCESS_TOKEN_TYPE;
@@ -45,7 +65,9 @@ export interface MintAccessTokenInput {
   resource: string;
   issuer: string;
   scopes: ApiKeyScope[];
-  groupId: string | null;
+  tenants: Tenant[];
+  defaultTenant: Tenant;
+  tenantNames: Record<Tenant, string>;
 }
 
 export interface MintedAccessToken {
@@ -63,7 +85,9 @@ export const mintAccessToken = (input: MintAccessTokenInput): MintedAccessToken 
       aud: input.resource,
       iss: input.issuer,
       scope,
-      groupId: input.groupId,
+      tenants: input.tenants,
+      defaultTenant: input.defaultTenant,
+      tenantNames: input.tenantNames,
       email: input.email,
       name: input.name,
       typ: ACCESS_TOKEN_TYPE,
@@ -83,7 +107,8 @@ export interface AccessTokenVerification {
   email?: string;
   name?: string;
   scopes?: ApiKeyScope[];
-  groupId?: string | null;
+  tenants?: ApiKeyTenant;
+  tenantNames?: Record<Tenant, string>;
 }
 
 /**
@@ -118,7 +143,8 @@ export const verifyAccessToken = (
     email: claims.email ?? '',
     name: claims.name ?? '',
     scopes: (claims.scope ?? '').split(' ').filter(isApiKeyScope),
-    groupId: claims.groupId ?? null
+    tenants: readTenants(claims),
+    tenantNames: claims.tenantNames ?? {}
   };
 };
 

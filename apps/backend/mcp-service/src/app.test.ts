@@ -1,4 +1,14 @@
 jest.mock('@tumbaland/backend-core', () => ({
+  // The tenant constants come from the real module rather than being restated
+  // here. A hand-listed mock silently dropped PERSONAL_TENANT once, and the code
+  // comparing against `undefined` then sent the literal 'personal' to the API as
+  // though it were a group id — a mock disagreeing with the library it stands in
+  // for, which is the failure this integration keeps hitting.
+  //
+  // Reached by its own path: requiring the package root pulls in the whole
+  // library, and one of its transitive dependencies ships ESM that Jest will not
+  // transform. This file has no imports at all.
+  ...jest.requireActual('@tumbaland/backend-core/dist/apiKeys/types'),
   verifyApiKey: jest.fn(),
   verifyAccessToken: jest.fn(),
   looksLikeApiKey: (t: string) => typeof t === 'string' && t.startsWith('tmb_live_'),
@@ -112,6 +122,9 @@ describe('the MCP handshake', () => {
     const names = (payload.result?.tools ?? []).map((tool: { name: string }) => tool.name).sort();
 
     expect(names).toEqual([
+      'delete_activity',
+      'edit_activity',
+      'get_day',
       'get_stats',
       'list_activity_types',
       'log_activity',
@@ -208,6 +221,7 @@ describe('tools are gated by the key’s scopes', () => {
     // Advertising log_day to a key that cannot write invites a call that 403s,
     // and a failure the model cannot act on is worse than an absence.
     await expect(toolsFor(['relationship:read'])).resolves.toEqual([
+      'get_day',
       'get_stats',
       'list_activity_types',
       'search_activities'
@@ -216,6 +230,9 @@ describe('tools are gated by the key’s scopes', () => {
 
   it('shows a read+write key everything', async () => {
     await expect(toolsFor(['relationship:read', 'relationship:write'])).resolves.toEqual([
+      'delete_activity',
+      'edit_activity',
+      'get_day',
       'get_stats',
       'list_activity_types',
       'log_activity',
@@ -255,7 +272,7 @@ describe('OAuth access tokens', () => {
     const names = payload.result.tools.map((t: { name: string }) => t.name).sort();
 
     // Scope gating applies identically, whichever credential arrived.
-    expect(names).toEqual(['get_stats', 'list_activity_types', 'search_activities']);
+    expect(names).toEqual(['get_day', 'get_stats', 'list_activity_types', 'search_activities']);
     expect(mockedVerify).not.toHaveBeenCalled();
   });
 

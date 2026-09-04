@@ -15,17 +15,13 @@ export const createActivity = async (req: Request, res: Response): Promise<void>
 
   // Validate that the activity type exists and is accessible
   // (route-level schema validation already guarantees typeId is present)
-  const ActivityType = (await import('../models/ActivityType')).ActivityType;
-  const activityType = await ActivityType.findOne({
-    _id: activityData.typeId,
-    isActive: true,
-    $or: [
-      { userId: user.id },
-      { groupId: { $in: req.userGroups || [] } }
-    ]
-  });
+  const accessible = await ActivityService.isTypeAccessible(
+    String(activityData.typeId),
+    user.id,
+    req.userGroups || []
+  );
 
-  if (!activityType) {
+  if (!accessible) {
     throw new BadRequestError('Invalid or inaccessible activity type');
   }
 
@@ -73,7 +69,8 @@ export const getActivities = async (req: Request, res: Response): Promise<void> 
  */
 export const getActivityById = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const activity = await ActivityService.getActivityById(id as string);
+  const user = req.user!;
+  const activity = await ActivityService.getActivityById(id as string, user.id, req.userGroups || []);
 
   if (!activity) {
     throw new NotFoundError('Activity not found');
@@ -87,9 +84,25 @@ export const getActivityById = async (req: Request, res: Response): Promise<void
  */
 export const updateActivity = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
+  const user = req.user!;
+  const userGroups = req.userGroups || [];
   const updateData = req.body;
 
-  const activity = await ActivityService.updateActivity(id as string, updateData);
+  // An edit may move an entry to a different type, and that type has to pass
+  // the same test the create path applies — otherwise the check there is only
+  // as strong as the absence of an edit endpoint.
+  if (updateData.typeId !== undefined) {
+    const accessible = await ActivityService.isTypeAccessible(
+      String(updateData.typeId),
+      user.id,
+      userGroups
+    );
+    if (!accessible) {
+      throw new BadRequestError('Invalid or inaccessible activity type');
+    }
+  }
+
+  const activity = await ActivityService.updateActivity(id as string, updateData, user.id, userGroups);
 
   if (!activity) {
     throw new NotFoundError('Activity not found');
@@ -103,7 +116,8 @@ export const updateActivity = async (req: Request, res: Response): Promise<void>
  */
 export const deleteActivity = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const deleted = await ActivityService.deleteActivity(id as string);
+  const user = req.user!;
+  const deleted = await ActivityService.deleteActivity(id as string, user.id, req.userGroups || []);
 
   if (!deleted) {
     throw new NotFoundError('Activity not found');

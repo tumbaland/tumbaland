@@ -12,13 +12,25 @@ export const API_KEY_SCOPES = [
 
 export type ApiKeyScope = (typeof API_KEY_SCOPES)[number]['value'];
 
+/**
+ * The user's own data, as a tenant.
+ *
+ * A named value rather than null, matching the server: a tenant is always a
+ * plain string, so the set a credential is granted is an ordinary array with no
+ * special case in it.
+ */
+export const PERSONAL_TENANT = 'personal';
+
 export interface ApiKey {
   id: string;
   name: string;
   /** the public half — enough to tell two keys apart, not enough to use one */
   prefix: string;
   scopes: ApiKeyScope[];
-  groupId: string | null;
+  /** every scope of data this key may reach */
+  tenants: string[];
+  /** the one it uses when a request names none */
+  defaultTenant: string;
   createdAt: string;
   lastUsedAt: string | null;
   expiresAt: string | null;
@@ -33,7 +45,8 @@ export interface CreatedApiKey extends ApiKey {
 export interface CreateApiKeyRequest {
   name: string;
   scopes: ApiKeyScope[];
-  groupId?: string | null;
+  tenants?: string[];
+  defaultTenant?: string;
   expiresAt?: string | null;
 }
 
@@ -84,7 +97,10 @@ export interface Connection {
   clientId: string;
   clientName: string;
   scopes: ApiKeyScope[];
-  groupId: string | null;
+  tenants: string[];
+  defaultTenant: string;
+  /** what each granted tenant was called when the connection was approved */
+  tenantNames: Record<string, string>;
   createdAt: string;
   /** Set when the refresh token is exchanged, not when a tool runs. */
   lastRenewedAt: string | null;

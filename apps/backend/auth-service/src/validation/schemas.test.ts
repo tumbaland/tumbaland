@@ -37,16 +37,19 @@ describe('createApiKeySchema', () => {
     expect(createApiKeySchema.safeParse({ ...valid, scopes: all }).success).toBe(true);
   });
 
-  it.each([
-    ['omitted', {}],
-    ['null', { groupId: null }],
-    ['an empty string, as an unset Select submits', { groupId: '' }]
-  ])('treats a groupId that is %s as personal scope', (_label, over) => {
-    expect(createApiKeySchema.safeParse({ ...valid, ...over }).success).toBe(true);
+  it('accepts a request that says nothing about tenants, which the controller defaults', () => {
+    expect(createApiKeySchema.safeParse(valid).success).toBe(true);
   });
 
-  it('accepts a group id', () => {
-    expect(createApiKeySchema.parse({ ...valid, groupId: 'g1' }).groupId).toBe('g1');
+  it('accepts several tenants and a default among them', () => {
+    const parsed = createApiKeySchema.parse({
+      ...valid,
+      tenants: ['personal', 'g1'],
+      defaultTenant: 'g1'
+    });
+
+    expect(parsed.tenants).toEqual(['personal', 'g1']);
+    expect(parsed.defaultTenant).toBe('g1');
   });
 
   it('rejects an expiry in the past, which would create a dead key', () => {

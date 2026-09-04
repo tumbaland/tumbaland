@@ -149,8 +149,9 @@ export function PrivacyPage() {
       </p>
       <p>
         What Tumbaland does control is the size of the opening. When you connect an assistant you
-        approve a specific list of permissions and choose whether it acts on your own data or a
-        group&apos;s. It gets nothing beyond that, and you can disconnect it at any time from{' '}
+        approve a specific list of permissions and tick which data it may act on — your own, a
+        group&apos;s, or both. It gets nothing beyond that, and you can disconnect it at any time
+        from{' '}
         <strong>Account → API keys → Connected apps</strong>. Disconnecting stops it renewing its
         access; anything it already holds expires within an hour.
       </p>

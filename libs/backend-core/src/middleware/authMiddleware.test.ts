@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { authenticateToken, optionalAuth } from './authMiddleware';
+import { PERSONAL_TENANT } from '../apiKeys/types';
 import { mintAccessToken } from '../oauth/tokens';
 import { UserPayload } from '../types/auth';
 
@@ -192,7 +193,9 @@ describe('OAuth access tokens are not sessions', () => {
       resource: 'https://mcp.example.com',
       issuer: 'https://auth.example.com',
       scopes: ['relationship:read'],
-      groupId: null
+      tenants: [PERSONAL_TENANT],
+      defaultTenant: PERSONAL_TENANT,
+      tenantNames: {}
     }).accessToken;
 
   it('refuses one on a session-only route', () => {

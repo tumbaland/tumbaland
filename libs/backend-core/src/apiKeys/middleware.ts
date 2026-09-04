@@ -6,7 +6,15 @@ import { isAccessTokenClaims, type AccessTokenClaims } from '../oauth/tokens';
 import type { UserPayload } from '../types/auth';
 import { looksLikeApiKey } from './crypto';
 import { verifyApiKey } from './service';
-import { isApiKeyScope, type ApiKeyScope } from './types';
+import {
+  PERSONAL_TENANT,
+  groupIdsOf,
+  isApiKeyScope,
+  readTenants,
+  type ApiKeyScope,
+  type ApiKeyTenant,
+  type Tenant
+} from './types';
 
 /**
  * Request-scoped facts about the key a request arrived on. Absent on ordinary
@@ -16,8 +24,10 @@ import { isApiKeyScope, type ApiKeyScope } from './types';
 export interface ApiKeyContext {
   keyId: string;
   scopes: ApiKeyScope[];
-  /** the tenant this key is pinned to; null means the owner's personal data */
-  groupId: string | null;
+  /** every tenant this credential may act in, and the one it acts in by default */
+  tenants: ApiKeyTenant;
+  /** the tenant this particular request resolved to */
+  actingAs: Tenant;
 }
 
 declare global {
@@ -40,10 +50,12 @@ const unauthorized = (res: Response): void => {
  * The tenant a request is asking to act in, wherever it named one.
  *
  * Handlers read `groupId` from either the query string or the body depending on
- * the verb, so both are checked — a pin that only covered one of them would be
- * no pin at all.
+ * the verb, so both are checked — a rule that only covered one of them would be
+ * no rule at all. A caller names the personal tenant with the literal
+ * `personal`, since "no group" is what the resolved default gets written into
+ * and would otherwise be indistinguishable from not having asked.
  */
-const requestedGroupId = (req: Request): string | undefined => {
+const requestedTenant = (req: Request): Tenant | undefined => {
   const fromQuery = req.query?.groupId;
   if (typeof fromQuery === 'string' && fromQuery.length > 0) return fromQuery;
 
@@ -53,35 +65,50 @@ const requestedGroupId = (req: Request): string | undefined => {
   return undefined;
 };
 
+/** Express 5 makes `req.query` a getter, so it is redefined rather than assigned. */
+const setQueryGroupId = (req: Request, groupId: string | undefined): void => {
+  const query = { ...req.query } as Record<string, unknown>;
+  if (groupId === undefined) delete query.groupId;
+  else query.groupId = groupId;
+
+  Object.defineProperty(req, 'query', {
+    value: query,
+    writable: true,
+    configurable: true,
+    enumerable: true
+  });
+};
+
 /**
- * Hold a key to the tenant it was issued for.
+ * Hold a credential to the tenants it was granted, and settle which one this
+ * request is acting in.
  *
- * Two things happen here, and the second is the one that makes keys pleasant to
- * use. A request that names a *different* tenant is refused outright — the pin
- * is the whole reason a key is safe to hand to an agent. A request that names
- * none has the pinned tenant written in for it, so the agent never has to know a
- * group id exists, and a handler's `if (groupId) ... else personal` branch lands
- * where the key's owner intended.
+ * A request naming a tenant outside the grant is refused outright — that
+ * boundary is the whole reason a credential is safe to hand to an agent, and it
+ * is unchanged by the grant being a set rather than one. What the set adds is a
+ * choice *inside* it, which is what lets one connection reach a shared journal
+ * and a private photo library without reconnecting.
+ *
+ * A request that names nothing gets the default written in for it, so an agent
+ * granted a single tenant never has to know a group id exists and a handler's
+ * `if (groupId) … else personal` branch lands where the owner intended.
  */
-const applyTenantPin = (req: Request, groupId: string | null): boolean => {
-  const requested = requestedGroupId(req);
+const applyTenantGrant = (req: Request, tenants: ApiKeyTenant): Tenant | null => {
+  const requested = requestedTenant(req) ?? tenants.default;
 
-  if (requested !== undefined && requested !== groupId) return false;
+  if (!tenants.allowed.includes(requested)) return null;
 
-  if (groupId !== null && requested === undefined) {
-    // Express 5 makes req.query a getter, so it is redefined rather than assigned.
-    Object.defineProperty(req, 'query', {
-      value: { ...req.query, groupId },
-      writable: true,
-      configurable: true,
-      enumerable: true
-    });
-    if (req.body && typeof req.body === 'object') {
-      (req.body as Record<string, unknown>).groupId = groupId;
-    }
+  // Resolved either way, including when the caller asked for exactly what the
+  // default already was: handlers read the personal tenant as an absent
+  // `groupId`, so `personal` has to be erased rather than passed through.
+  const groupId = requested === PERSONAL_TENANT ? undefined : requested;
+  setQueryGroupId(req, groupId);
+  if (req.body && typeof req.body === 'object') {
+    if (groupId === undefined) delete (req.body as Record<string, unknown>).groupId;
+    else (req.body as Record<string, unknown>).groupId = groupId;
   }
 
-  return true;
+  return requested;
 };
 
 /** A verified non-session credential, whichever kind it arrived as. */
@@ -92,7 +119,7 @@ interface AgentCredential {
   email: string;
   name: string;
   scopes: ApiKeyScope[];
-  groupId: string | null;
+  tenants: ApiKeyTenant;
 }
 
 /**
@@ -120,7 +147,8 @@ function admitAgent(
     return;
   }
 
-  if (!applyTenantPin(req, credential.groupId)) {
+  const actingAs = applyTenantGrant(req, credential.tenants);
+  if (actingAs === null) {
     res.status(403).json({
       success: false,
       message: 'Credential is not permitted to act in the requested group'
@@ -129,11 +157,16 @@ function admitAgent(
   }
 
   req.user = { id: credential.userId, email: credential.email, name: credential.name };
-  // Only the pinned group, never the owner's full membership: this is what
+  // Only the granted groups, never the owner's full membership: this is what
   // stops a credential reaching a group it was not issued for through any
   // handler that consults `userGroups` instead of the `groupId` parameter.
-  req.userGroups = credential.groupId ? [credential.groupId] : [];
-  req.apiKey = { keyId: credential.credentialId, scopes: credential.scopes, groupId: credential.groupId };
+  req.userGroups = groupIdsOf(credential.tenants.allowed);
+  req.apiKey = {
+    keyId: credential.credentialId,
+    scopes: credential.scopes,
+    tenants: credential.tenants,
+    actingAs
+  };
 
   next();
 }
@@ -191,7 +224,7 @@ export const authenticateAgent = (...requiredScopes: ApiKeyScope[]): RequestHand
         email: claims.email ?? '',
         name: claims.name ?? '',
         scopes: (claims.scope ?? '').split(' ').filter(isApiKeyScope),
-        groupId: claims.groupId ?? null
+        tenants: readTenants(claims)
       });
       return;
     }
@@ -211,7 +244,7 @@ export const authenticateAgent = (...requiredScopes: ApiKeyScope[]): RequestHand
       email: result.userEmail ?? '',
       name: result.userName ?? '',
       scopes: result.scopes ?? [],
-      groupId: result.groupId ?? null
+      tenants: result.tenants ?? readTenants({})
     });
   };
 

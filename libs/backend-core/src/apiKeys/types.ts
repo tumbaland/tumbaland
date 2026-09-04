@@ -24,16 +24,68 @@ export const isApiKeyScope = (value: unknown): value is ApiKeyScope =>
   typeof value === 'string' && (API_KEY_SCOPES as readonly string[]).includes(value);
 
 /**
- * The tenant a key acts in, fixed when the key is created.
+ * A tenant a credential may act in: a group id, or the user's own data.
  *
- * The web app picks this per request from a tenant selector, but an agent has no
- * such UI and no way to know it guessed wrong — so the choice is made once, by a
- * person, and the key cannot escape it. `groupId: null` means the user's own
- * non-group data.
+ * Personal is a named sentinel rather than `null` so that a tenant is always a
+ * plain string — storable in an array, sendable in a JWT claim, comparable
+ * without a special case at every layer. It cannot collide with a real tenant:
+ * group ids are 24-character hex.
+ */
+export const PERSONAL_TENANT = 'personal';
+
+export type Tenant = string;
+
+/** The `groupId` a tenant corresponds to, as handlers have always read it. */
+export const groupIdOf = (tenant: Tenant): string | null =>
+  tenant === PERSONAL_TENANT ? null : tenant;
+
+/**
+ * Which tenants a credential may act in, and which one it acts in by default.
+ *
+ * The web app picks a tenant per request from a selector; an agent has no such
+ * UI. So the *set* is chosen once, by a person, and the credential cannot escape
+ * it — but within that set the caller may name one per request, which is what
+ * lets a single connection reach both a shared journal and a private photo
+ * library without reconnecting.
+ *
+ * `allowed` is never empty and always contains `default`. A credential granted
+ * exactly one tenant behaves precisely as a pinned one did: nothing to name,
+ * nothing to get wrong.
  */
 export interface ApiKeyTenant {
-  groupId: string | null;
+  allowed: Tenant[];
+  default: Tenant;
 }
+
+/** Just the groups, for the `req.userGroups` every handler already reads. */
+export const groupIdsOf = (tenants: Tenant[]): string[] =>
+  tenants.filter((tenant) => tenant !== PERSONAL_TENANT);
+
+/**
+ * Read a stored tenant grant, tolerating one written before tenants were a set.
+ *
+ * Keys and grants issued under the old single-tenant model carry `groupId`
+ * alone. Falling back to it here means they keep working across the deploy
+ * rather than every connected assistant breaking at once.
+ */
+export const readTenants = (stored: {
+  tenants?: Tenant[] | null;
+  defaultTenant?: Tenant | null;
+  groupId?: string | null;
+}): ApiKeyTenant => {
+  const allowed =
+    stored.tenants && stored.tenants.length > 0
+      ? stored.tenants
+      : [stored.groupId ?? PERSONAL_TENANT];
+
+  const fallbackDefault = allowed[0] as Tenant;
+  const preferred = stored.defaultTenant ?? fallbackDefault;
+
+  return {
+    allowed,
+    default: allowed.includes(preferred) ? preferred : fallbackDefault
+  };
+};
 
 /** A key as the API hands it back — never including the secret. */
 export interface ApiKeySummary {
@@ -42,7 +94,8 @@ export interface ApiKeySummary {
   /** the public half, shown in listings so a key is identifiable at a glance */
   prefix: string;
   scopes: ApiKeyScope[];
-  groupId: string | null;
+  tenants: Tenant[];
+  defaultTenant: Tenant;
   createdAt: string;
   lastUsedAt: string | null;
   expiresAt: string | null;
@@ -65,5 +118,5 @@ export interface ApiKeyVerification {
   userName?: string;
   keyId?: string;
   scopes?: ApiKeyScope[];
-  groupId?: string | null;
+  tenants?: ApiKeyTenant;
 }
