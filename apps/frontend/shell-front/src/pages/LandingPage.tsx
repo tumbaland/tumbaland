@@ -5,6 +5,7 @@ import BgImageBox from '../components/BgImageBox';
 import { HeroSection } from '../components/landing/HeroSection';
 import { ProductsSection } from '../components/landing/ProductsSection';
 import { ProductPreview } from '../components/landing/ProductPreview';
+import { AssistantSection } from '../components/landing/AssistantSection';
 import { PrivacySection } from '../components/landing/PrivacySection';
 import { SupportSection } from '../components/landing/SupportSection';
 import { FaqSection } from '../components/landing/FaqSection';
@@ -85,6 +86,10 @@ export function LandingPage() {
         <Box sx={{ px: 2, pb: { xs: 6, md: 8 } }}>
           <ProductPreview />
         </Box>
+        {/* After the product, before the privacy promise: it only means anything
+            once you know what there is to write into, and it raises the question
+            the privacy section then answers. */}
+        <AssistantSection />
         <PrivacySection />
         <FaqSection plans={plansState.plans} />
         <SupportSection onChoosePlan={handleChoosePlan} {...plansState} />

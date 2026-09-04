@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { brand, ink } from '../../theme/tokens';
 import { Alert, Box, Button, Chip, Paper, Skeleton, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import CheckIcon from '@mui/icons-material/Check';
 import FavoriteIcon from '@mui/icons-material/Favorite';
@@ -59,7 +60,7 @@ export function SupportSection({ onChoosePlan, plans, loading, failed }: Support
       <SectionHeading
         eyebrow="Support"
         title="The site is free. Support is welcome."
-        subtitle="Everything here works without paying, and it stays that way. If it is useful to you and you want to help cover what it costs to run, there is a way. Supporters also get a lot more room."
+        subtitle="Everything works without paying, and it stays that way. If you want to chip in towards running costs, you can. Supporters get a lot more room."
       />
 
       {PRICING_STATUS === 'preview' && (
@@ -115,7 +116,7 @@ export function SupportSection({ onChoosePlan, plans, loading, failed }: Support
                 fontWeight: 600,
                 px: 2.5,
                 py: 0.75,
-                color: '#475569'
+                color: ink.body
               },
               '& .Mui-selected': {
                 backgroundColor: '#c026d3 !important',
@@ -212,7 +213,7 @@ export function SupportSection({ onChoosePlan, plans, loading, failed }: Support
                     transform: 'translateX(-50%)',
                     fontWeight: 600,
                     fontSize: 11,
-                    backgroundColor: '#c026d3',
+                    backgroundColor: brand.magenta,
                     color: '#fff'
                   }}
                 />
@@ -220,7 +221,7 @@ export function SupportSection({ onChoosePlan, plans, loading, failed }: Support
 
               <Typography
                 component="h3"
-                sx={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a' }}
+                sx={{ fontSize: '1.15rem', fontWeight: 700, color: ink.strong }}
               >
                 {plan.name}
               </Typography>
@@ -231,20 +232,20 @@ export function SupportSection({ onChoosePlan, plans, loading, failed }: Support
                     fontSize: '2.4rem',
                     fontWeight: 800,
                     letterSpacing: '-0.03em',
-                    color: '#0f172a',
+                    color: ink.strong,
                     fontVariantNumeric: 'tabular-nums'
                   }}
                 >
                   {formatPrice(cents)}
                 </Typography>
                 {cents > 0 && (
-                  <Typography sx={{ color: '#64748b', fontSize: '0.95rem' }}>
+                  <Typography sx={{ color: ink.muted, fontSize: '0.95rem' }}>
                     / {interval === 'month' ? 'month' : 'year'}
                   </Typography>
                 )}
               </Box>
 
-              <Typography sx={{ color: '#475569', fontSize: '0.93rem', lineHeight: 1.55, minHeight: 44 }}>
+              <Typography sx={{ color: ink.body, fontSize: '0.93rem', lineHeight: 1.55, minHeight: 44 }}>
                 {taglineFor(plan)}
               </Typography>
 
@@ -259,8 +260,8 @@ export function SupportSection({ onChoosePlan, plans, loading, failed }: Support
                   py: 1.1,
                   mt: 0.5,
                   ...(highlight
-                    ? { backgroundColor: '#c026d3', '&:hover': { backgroundColor: '#a21caf' } }
-                    : { borderColor: 'rgba(147,51,234,0.35)', color: '#9333ea' })
+                    ? { backgroundColor: brand.magenta, '&:hover': { backgroundColor: '#a21caf' } }
+                    : { borderColor: 'rgba(147,51,234,0.35)', color: brand.purple })
                 }}
               >
                 {paid ? 'Become a supporter' : 'Start free'}
@@ -287,7 +288,7 @@ export function SupportSection({ onChoosePlan, plans, loading, failed }: Support
       <Typography
         sx={{
           textAlign: 'center',
-          color: '#64748b',
+          color: ink.muted,
           fontSize: '0.88rem',
           mt: 3,
           maxWidth: 640,

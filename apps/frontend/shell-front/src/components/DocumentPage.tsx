@@ -73,6 +73,8 @@ export function DocumentPage({ title, intro, updated, children }: DocumentPagePr
           <Link href="/privacy">Privacy</Link>
           {' · '}
           <Link href="/connect">Connect an assistant</Link>
+          {' · '}
+          <Link href="/terms">Terms</Link>
         </Typography>
       </Container>
     </Box>

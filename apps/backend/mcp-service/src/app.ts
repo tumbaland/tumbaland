@@ -47,6 +47,13 @@ const SERVER_INSTRUCTIONS = [
   'delete_activity cannot be undone. Only ever call it when the user asked for something to be',
   'removed; when they asked for a correction, edit_activity is the tool.',
   '',
+'Money lives in a separate set of tools. Nothing there can create a transaction — those come',
+  'from importing a bank statement — so if the user wants a one-off expense recorded, say that it',
+  'has to be done in the app rather than inventing a trade to stand in for it.',
+  '',
+  'recategorise_transactions moves many rows at once. Say how many are involved and get agreement',
+  'before calling it.',
+  '',
   'This is personal data. Write what the user actually said — do not embellish a description,',
   'infer hours that were not mentioned, or fill in a place that was not named.'
 ].join('\n');

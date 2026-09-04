@@ -1,4 +1,5 @@
 import { Box, Paper, Typography } from '@mui/material';
+import { ink } from '../../theme/tokens';
 import AlbumIcon from '@mui/icons-material/PhotoAlbum';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
@@ -129,7 +130,7 @@ export function ProductsSection() {
 
               <Typography
                 component="h3"
-                sx={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.015em' }}
+                sx={{ fontSize: '1.15rem', fontWeight: 700, color: ink.strong, letterSpacing: '-0.015em' }}
               >
                 {product.headline}
               </Typography>
@@ -143,7 +144,7 @@ export function ProductsSection() {
                   <Box
                     key={point}
                     component="li"
-                    sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', color: '#475569', fontSize: '0.93rem' }}
+                    sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', color: ink.body, fontSize: '0.93rem' }}
                   >
                     <Box
                       sx={{

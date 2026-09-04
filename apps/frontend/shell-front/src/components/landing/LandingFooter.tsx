@@ -1,10 +1,26 @@
 import { Box, Button, Link, Typography } from '@mui/material';
+import { brand, ink } from '../../theme/tokens';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import GoogleIcon from '@mui/icons-material/Google';
 
 interface LandingFooterProps {
   onSignIn: () => void;
 }
+
+/**
+ * Shared by every link in the row.
+ *
+ * These three are the only way a signed-out visitor reaches the privacy policy,
+ * the terms, or the guide to connecting an assistant — none of them is linked
+ * from anywhere else on the page, and all three are read by people deciding
+ * whether to sign up at all.
+ */
+const footerLink = {
+  fontSize: 14,
+  color: ink.muted,
+  textDecoration: 'none',
+  '&:hover': { color: brand.purple, textDecoration: 'underline' }
+} as const;
 
 export function LandingFooter({ onSignIn }: LandingFooterProps) {
   return (
@@ -28,14 +44,14 @@ export function LandingFooter({ onSignIn }: LandingFooterProps) {
             fontSize: { xs: '1.55rem', md: '1.95rem' },
             fontWeight: 750,
             letterSpacing: '-0.025em',
-            color: '#0f172a',
+            color: ink.strong,
             textWrap: 'balance',
             mb: 1.5
           }}
         >
           It&apos;s free. That&apos;s the whole offer.
         </Typography>
-        <Typography sx={{ color: '#475569', fontSize: '1rem', lineHeight: 1.6, mb: 3.5 }}>
+        <Typography sx={{ color: ink.body, fontSize: '1rem', lineHeight: 1.6, mb: 3.5 }}>
           Sign in with Google and it is all there. No setup, no card, nothing counting down.
           Supporting is a separate choice, and never a required one.
         </Typography>
@@ -79,31 +95,21 @@ export function LandingFooter({ onSignIn }: LandingFooterProps) {
           href="https://github.com/toomastahves/tumbaland"
           target="_blank"
           rel="noopener noreferrer"
-          sx={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 0.6,
-            fontSize: 14,
-            color: '#64748b',
-            textDecoration: 'none',
-            '&:hover': { color: '#9333ea', textDecoration: 'underline' }
-          }}
+          sx={{ ...footerLink, display: 'inline-flex', alignItems: 'center', gap: 0.6 }}
         >
           <GitHubIcon sx={{ fontSize: 16 }} />
           Source
         </Link>
-        <Link
-          href="/payments/terms"
-          sx={{
-            fontSize: 14,
-            color: '#64748b',
-            textDecoration: 'none',
-            '&:hover': { color: '#9333ea', textDecoration: 'underline' }
-          }}
-        >
+        <Link href="/connect" sx={footerLink}>
+          Connect an assistant
+        </Link>
+        <Link href="/privacy" sx={footerLink}>
+          Privacy
+        </Link>
+        <Link href="/terms" sx={footerLink}>
           Terms
         </Link>
-        <Typography sx={{ fontSize: 14, color: '#94a3b8' }}>
+        <Typography sx={{ fontSize: 14, color: ink.faint }}>
           © {new Date().getFullYear()} Tumbaland
         </Typography>
       </Box>

@@ -39,7 +39,7 @@ export function PrivacyPage() {
             <td>Google, when you sign in. Tumbaland never sees or stores a password.</td>
           </tr>
           <tr>
-            <td>Journal entries — dates, activity types, descriptions, hours, and places</td>
+            <td>Journal entries: dates, activity types, descriptions, hours and places</td>
             <td>What you type in.</td>
           </tr>
           <tr>
@@ -50,7 +50,7 @@ export function PrivacyPage() {
             <td>Files you upload. See the note below.</td>
           </tr>
           <tr>
-            <td>Finance records — transactions, holdings, and the tickers you track</td>
+            <td>Finance records: transactions, holdings and the tickers you track</td>
             <td>What you enter or import.</td>
           </tr>
           <tr>
@@ -69,7 +69,7 @@ export function PrivacyPage() {
           <strong>Photos usually contain a location.</strong> Most phones write GPS coordinates into
           the image file, and Tumbaland reads them so photos can appear on a map and be found by
           place. If you would rather that did not happen, turn location off in your camera app, or
-          strip it from files before uploading — once a photo is uploaded, its coordinates are
+          strip it from files before uploading. Once a photo is uploaded, its coordinates are
           stored with it.
         </Typography>
       </Alert>
@@ -77,8 +77,8 @@ export function PrivacyPage() {
       <h2>Where it lives</h2>
       <ul>
         <li>
-          <strong>The database</strong> — journal entries, finance records, accounts and group
-          membership — is hosted on MongoDB Atlas.
+          <strong>The database</strong> is hosted on MongoDB Atlas. That covers journal entries,
+          finance records, accounts and group membership.
         </li>
         <li>
           <strong>Photo and video files</strong> are stored on a server the operator runs and
@@ -131,7 +131,7 @@ export function PrivacyPage() {
           </tr>
           <tr>
             <td>An AI assistant, if you connect one</td>
-            <td>See the section below — this one is worth reading.</td>
+            <td>See the section below. This one is worth reading.</td>
           </tr>
         </tbody>
       </table>
@@ -145,11 +145,11 @@ export function PrivacyPage() {
         <strong>When you use it, the content involved goes to whoever runs that assistant.</strong>{' '}
         If you ask it to log a dinner, the restaurant name is sent to them. If you ask what you did
         last month, the entries it reads are sent to them. Tumbaland cannot see or control what they
-        then do with it — their own privacy policy governs that, and it is worth reading.
+        then do with it. Their own privacy policy governs that, and it is worth reading.
       </p>
       <p>
         What Tumbaland does control is the size of the opening. When you connect an assistant you
-        approve a specific list of permissions and tick which data it may act on — your own, a
+        approve a specific list of permissions and tick which data it may act on: your own, a
         group&apos;s, or both. It gets nothing beyond that, and you can disconnect it at any time
         from{' '}
         <strong>Account → API keys → Connected apps</strong>. Disconnecting stops it renewing its
@@ -191,7 +191,7 @@ export function PrivacyPage() {
         <Link href="https://github.com/toomastahves/tumbaland" target="_blank" rel="noreferrer">
           open source
         </Link>
-        , so none of this has to be taken on trust — the code that handles your data can be read.
+        , so none of this has to be taken on trust. The code that handles your data can be read.
       </p>
 
       <h2>Children</h2>
@@ -205,8 +205,8 @@ export function PrivacyPage() {
 
       <h2>Contact</h2>
       <p>
-        Tumbaland is operated by an individual in Estonia. For anything on this page — access,
-        deletion, or a question — write to{' '}
+        Tumbaland is operated by an individual in Estonia. For access, deletion or any question
+        about this page, write to{' '}
         <Link href="mailto:hello@tumbaland.eu">hello@tumbaland.eu</Link>.
       </p>
     </DocumentPage>

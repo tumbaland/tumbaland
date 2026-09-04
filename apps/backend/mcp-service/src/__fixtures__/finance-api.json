@@ -1,0 +1,163 @@
+{
+  "transactions": {
+    "items": [
+      {
+        "_id": "6a9b1c6a5bde08b6766df800",
+        "externalId": "EXT0000001",
+        "userId": "u_00000000",
+        "amount": 3.98,
+        "category": "Telecom",
+        "createdAt": "2026-08-06T13:56:23.815Z",
+        "date": "2017-01-01T00:00:00.000Z",
+        "note": "ACME TELECOM \u00b7 invoice 000",
+        "type": "expense",
+        "updatedAt": "2026-08-06T14:30:25.990Z",
+        "groupId": "g_00000000"
+      },
+      {
+        "_id": "6a9b1c6a5bde08b6766df801",
+        "userId": "u_00000000",
+        "externalId": "EXT0000002",
+        "amount": 4.8,
+        "category": "Groceries",
+        "createdAt": "2026-08-06T13:56:23.815Z",
+        "date": "2017-01-01T00:00:00.000Z",
+        "note": "SUPERMARKET \u00b7 card ...0000",
+        "type": "expense",
+        "updatedAt": "2026-08-06T14:30:25.990Z",
+        "groupId": "g_00000000"
+      }
+    ],
+    "totals": {
+      "count": 7484,
+      "income": 412000.5,
+      "expense": 388120.25,
+      "net": 23880.25
+    },
+    "hasMore": true
+  },
+  "holdings": [
+    {
+      "_id": "6a9b1c6a5bde08b6766df900",
+      "avgBuyPrice": 12.504,
+      "groupId": "g_00000000",
+      "quantity": 1000,
+      "ticker": "H410.DEX",
+      "userId": "u_00000000",
+      "displayName": "HSBC MSCI Emerging Markets UCITS EUR",
+      "currency": "EUR",
+      "baseCurrency": "EUR",
+      "fxRate": 1,
+      "missingFxRate": false,
+      "latestPrice": 14.762,
+      "latestPriceDate": "2026-09-03T00:00:00.000Z",
+      "athPrice": 15.0572,
+      "costBasis": 12504.0,
+      "currentValue": 14762.0,
+      "valueIncrease": 2258.0,
+      "percentIncrease": 18.0582,
+      "realizedGain": 0,
+      "dividends": 0,
+      "tradeFees": 0,
+      "tradeCount": 4
+    },
+    {
+      "_id": "6a9b1c6a5bde08b6766df901",
+      "avgBuyPrice": 105.765,
+      "groupId": "g_00000000",
+      "quantity": 600,
+      "ticker": "VWCE.DEX",
+      "userId": "u_00000000",
+      "displayName": "Vanguard FTSE All-World UCITS ETF USD Accumulation",
+      "currency": "EUR",
+      "baseCurrency": "EUR",
+      "fxRate": 1,
+      "missingFxRate": false,
+      "latestPrice": 168.06,
+      "latestPriceDate": "2026-09-03T00:00:00.000Z",
+      "athPrice": 171.4212,
+      "costBasis": 63459.0,
+      "currentValue": 100836.0,
+      "valueIncrease": 37377.0,
+      "percentIncrease": 58.8994,
+      "realizedGain": 0,
+      "dividends": 0,
+      "tradeFees": 0,
+      "tradeCount": 4
+    },
+    {
+      "_id": "6a9b1c6a5bde08b6766df902",
+      "ticker": "UNPRICED.XX",
+      "quantity": 50,
+      "avgBuyPrice": 20,
+      "userId": "u_00000000",
+      "groupId": "g_00000000",
+      "currency": "EUR",
+      "baseCurrency": "EUR",
+      "costBasis": 1000,
+      "realizedGain": 0,
+      "dividends": 0,
+      "tradeFees": 0,
+      "tradeCount": 0,
+      "missingFxRate": false
+    }
+  ],
+  "trades": [
+    {
+      "_id": "6a9b1c6a5bde08b6766dfa00",
+      "userId": "u_00000000",
+      "externalId": "EXT1000000",
+      "amount": 0,
+      "createdAt": "2026-08-06T13:56:46.367Z",
+      "date": "2021-01-12T00:00:00.000Z",
+      "fees": 0,
+      "notes": "Broker note",
+      "price": 0.7112770125227431,
+      "quantity": 1405.922,
+      "ticker": "SETEBC",
+      "type": "buy",
+      "updatedAt": "2026-08-06T14:29:31.417Z",
+      "groupId": "g_00000000"
+    },
+    {
+      "_id": "6a9b1c6a5bde08b6766dfa01",
+      "externalId": "EXT1000001",
+      "userId": "u_00000000",
+      "amount": 0,
+      "createdAt": "2026-08-06T13:56:46.367Z",
+      "date": "2021-01-29T00:00:00.000Z",
+      "fees": 0,
+      "notes": "Broker note",
+      "price": 0.7078051048653616,
+      "quantity": 12712.539,
+      "ticker": "SETEBC",
+      "type": "buy",
+      "updatedAt": "2026-08-06T14:29:31.417Z",
+      "groupId": "g_00000000"
+    }
+  ],
+  "assetClasses": [
+    {
+      "_id": "000000000000000000000000",
+      "name": "Pension 2nd",
+      "description": "SEB index",
+      "userId": "u_00000000",
+      "groupId": "g_00000000",
+      "createdAt": "2025-11-01T16:34:25.627Z",
+      "updatedAt": "2025-11-01T18:30:34.500Z",
+      "__v": 0,
+      "color": "#06b6d4"
+    },
+    {
+      "_id": "000000000000000000000000",
+      "name": "Pension 3rd",
+      "description": "Tuleva index and Swedbank index",
+      "userId": "u_00000000",
+      "groupId": "g_00000000",
+      "createdAt": "2025-11-01T16:34:40.624Z",
+      "updatedAt": "2025-11-01T18:30:40.535Z",
+      "__v": 0,
+      "color": "#3b82f6"
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import { Box, Typography } from '@mui/material';
+import { ink, wordmark } from '../../theme/tokens';
 
 interface GreetingHeaderProps {
   name?: string;
@@ -25,23 +26,11 @@ export function GreetingHeader({ name, now = new Date() }: GreetingHeaderProps) 
     <Box sx={{ textAlign: 'center', mb: { xs: 4, md: 5 } }}>
       <Typography
         component="h1"
-        sx={{
-          fontFamily: '"Pacifico", cursive',
-          fontSize: { xs: 34, sm: 44, md: 52 },
-          lineHeight: 1.25,
-          background: 'linear-gradient(135deg, #ff1fae 0%, #8b5cf6 100%)',
-          backgroundClip: 'text',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.08))',
-          letterSpacing: 1,
-          px: 2,
-          pb: 1
-        }}
+        sx={{ ...wordmark, fontSize: { xs: 34, sm: 44, md: 52 }, px: 2 }}
       >
         {first ? `${timeOfDayGreeting(now)}, ${first}` : 'Welcome to Tumbaland'}
       </Typography>
-      <Typography sx={{ color: '#475569', fontSize: { xs: '0.98rem', md: '1.05rem' } }}>
+      <Typography sx={{ color: ink.body, fontSize: { xs: '0.98rem', md: '1.05rem' } }}>
         Everything you keep here, in one place. Where would you like to start?
       </Typography>
     </Box>

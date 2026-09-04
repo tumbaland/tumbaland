@@ -1,6 +1,7 @@
 import { Box, IconButton, Typography } from '@mui/material';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import { useTodo } from '../../hooks/useTodo';
+import { brand, glass, gradient, ink } from '../../theme/tokens';
 
 /**
  * Shared line box for the label, the text and the reroll button. The three have
@@ -10,9 +11,13 @@ import { useTodo } from '../../hooks/useTodo';
 const LINE_HEIGHT = '22px';
 
 /**
- * The old home page was this and nothing else. Kept as a small strip at the
- * bottom — it is a nice piece of personality, but it should not be the first
- * thing a signed-in user sees instead of their own content.
+ * Something to do together, rerollable.
+ *
+ * The old home page was this and nothing else; then it became a thin strip at
+ * the very bottom, which is where things go to be ignored. It sits under the
+ * greeting now — the first thing on the page that is not navigation, and the
+ * only part with any warmth to it. Still small: it is a nudge, not a feature,
+ * and the modules below are what people actually came for.
  */
 export function DailyTodo() {
   const { todo, isLoading, error, fetchTodo } = useTodo();
@@ -20,19 +25,31 @@ export function DailyTodo() {
   return (
     <Box
       sx={{
-        mt: { xs: 4, md: 5 },
+        ...glass,
+        position: 'relative',
+        overflow: 'hidden',
+        mb: { xs: 3, md: 4 },
         mx: 'auto',
         maxWidth: 620,
         display: 'flex',
         alignItems: 'flex-start',
         gap: 1.5,
         px: 2.25,
-        py: 1.5,
+        py: 1.75,
         // Rounded rectangle rather than a pill: the text wraps to two or three
         // lines for longer entries, and a 999px radius looks broken once it does.
         borderRadius: 3,
-        background: 'rgba(255,255,255,0.5)',
-        border: '1px solid rgba(255,255,255,0.65)'
+        // A hairline of the brand gradient down the leading edge. Enough to mark
+        // the card as the page's one warm thing without tinting the whole card,
+        // which would fight the module cards below for attention.
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          insetBlock: 0,
+          insetInlineStart: 0,
+          width: 3,
+          background: gradient.brand
+        }
       }}
     >
       <Typography
@@ -41,7 +58,7 @@ export function DailyTodo() {
           fontWeight: 700,
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
-          color: '#c026d3',
+          color: brand.magenta,
           flexShrink: 0,
           // Same line box as the body text below, so the label sits on the
           // first line rather than floating above it once the text wraps.
@@ -60,7 +77,7 @@ export function DailyTodo() {
           minWidth: 0,
           fontSize: '0.92rem',
           lineHeight: LINE_HEIGHT,
-          color: error ? '#ef4444' : '#334155',
+          color: error ? '#ef4444' : ink.body,
           display: '-webkit-box',
           WebkitLineClamp: 3,
           WebkitBoxOrient: 'vertical',
@@ -76,7 +93,7 @@ export function DailyTodo() {
         disabled={isLoading}
         onClick={fetchTodo}
         // Pulls the ~29px button back onto the 22px first line.
-        sx={{ color: '#ff1fae', flexShrink: 0, mt: '-4px', mr: '-4px' }}
+        sx={{ color: brand.pink, flexShrink: 0, mt: '-4px', mr: '-4px' }}
       >
         <AutorenewIcon sx={{ fontSize: 19 }} />
       </IconButton>

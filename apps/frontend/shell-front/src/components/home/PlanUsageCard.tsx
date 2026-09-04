@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { brand, ink } from '../../theme/tokens';
 import { Box, Button, Chip, Typography } from '@mui/material';
 import { useNavigate } from 'react-router';
 import { UsageMeter, useEntitlements } from '@tumbaland/components';
@@ -64,7 +65,7 @@ export function PlanUsageCard() {
             fontWeight: 700,
             letterSpacing: '0.1em',
             textTransform: 'uppercase',
-            color: '#c026d3'
+            color: brand.magenta
           }}
         >
           Your plan
@@ -84,7 +85,7 @@ export function PlanUsageCard() {
         <Button
           size="small"
           onClick={handleSeePlans}
-          sx={{ textTransform: 'none', fontWeight: 600, color: '#9333ea', mr: '-6px' }}
+          sx={{ textTransform: 'none', fontWeight: 600, color: brand.purple, mr: '-6px' }}
         >
           See plans
         </Button>
@@ -106,7 +107,7 @@ export function PlanUsageCard() {
         upgradeLabel="See plans"
       />
 
-      <Typography sx={{ fontSize: 13, color: '#64748b', mt: 0.5 }}>
+      <Typography sx={{ fontSize: 13, color: ink.muted, mt: 0.5 }}>
         {retentionLine(limits.retentionDays)}
       </Typography>
     </Box>

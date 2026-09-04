@@ -1,4 +1,5 @@
 import { Box, Typography } from '@mui/material';
+import { brand, ink } from '../../theme/tokens';
 
 interface SectionHeadingProps {
   title: string;
@@ -16,7 +17,7 @@ export function SectionHeading({ title, subtitle, eyebrow }: SectionHeadingProps
             fontWeight: 600,
             letterSpacing: '0.14em',
             textTransform: 'uppercase',
-            color: '#9333ea',
+            color: brand.purple,
             mb: 1.5
           }}
         >
@@ -30,7 +31,7 @@ export function SectionHeading({ title, subtitle, eyebrow }: SectionHeadingProps
           fontWeight: 750,
           letterSpacing: '-0.025em',
           lineHeight: 1.15,
-          color: '#0f172a',
+          color: ink.strong,
           textWrap: 'balance',
           mb: subtitle ? 1.75 : 0
         }}
@@ -38,7 +39,7 @@ export function SectionHeading({ title, subtitle, eyebrow }: SectionHeadingProps
         {title}
       </Typography>
       {subtitle && (
-        <Typography sx={{ fontSize: '1.02rem', lineHeight: 1.6, color: '#475569' }}>
+        <Typography sx={{ fontSize: '1.02rem', lineHeight: 1.6, color: ink.body }}>
           {subtitle}
         </Typography>
       )}

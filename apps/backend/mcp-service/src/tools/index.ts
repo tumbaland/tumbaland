@@ -1,6 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ApiKeyScope } from '@tumbaland/backend-core';
 import { Caller, ToolModule } from './module';
+import { financeRead, financeWrite } from './finance';
 import { relationshipRead, relationshipWrite } from './relationship';
 
 export type { Caller, ToolModule } from './module';
@@ -12,7 +13,12 @@ export type { Caller, ToolModule } from './module';
  * its own scopes. Nothing in the transport, the auth, or this registry needs to
  * change, and a key never granted that scope will not see the tools.
  */
-export const MODULES: ToolModule[] = [relationshipRead, relationshipWrite];
+export const MODULES: ToolModule[] = [
+  relationshipRead,
+  relationshipWrite,
+  financeRead,
+  financeWrite
+];
 
 /**
  * Register the tools a key is actually entitled to use.

@@ -1,5 +1,6 @@
 import { Box, Button, Typography } from '@mui/material';
 import GoogleIcon from '@mui/icons-material/Google';
+import { brand, brandButton, ink, wordmark } from '../../theme/tokens';
 
 interface HeroSectionProps {
   onSignIn: () => void;
@@ -17,17 +18,9 @@ export function HeroSection({ onSignIn, onWhyFree }: HeroSectionProps) {
           product behind the login look like the same thing. */}
       <Typography
         sx={{
+          ...wordmark,
           textAlign: 'center',
-          fontFamily: '"Pacifico", cursive',
           fontSize: { xs: 34, sm: 40, md: 46 },
-          lineHeight: 1.25,
-          letterSpacing: 1,
-          background: 'linear-gradient(135deg, #ff1fae 0%, #8b5cf6 100%)',
-          backgroundClip: 'text',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.08))',
-          pb: 1,
           mb: { xs: 2, md: 2.5 }
         }}
       >
@@ -41,7 +34,7 @@ export function HeroSection({ onSignIn, onWhyFree }: HeroSectionProps) {
           fontWeight: 800,
           letterSpacing: '-0.03em',
           lineHeight: 1.08,
-          color: '#0f172a',
+          color: ink.strong,
           textAlign: 'center',
           textWrap: 'balance',
           maxWidth: 880,
@@ -56,15 +49,15 @@ export function HeroSection({ onSignIn, onWhyFree }: HeroSectionProps) {
         sx={{
           fontSize: { xs: '1.02rem', md: '1.16rem' },
           lineHeight: 1.6,
-          color: '#475569',
+          color: ink.body,
           textAlign: 'center',
           maxWidth: 620,
           mx: 'auto',
           mb: 3.5
         }}
       >
-        Albums that tag themselves. Net worth that updates itself. A journal that remembers where
-        your days went. Free to use, for as long as you like.
+        Photos get tagged for you. Net worth stays up to date. Your journal keeps track of where
+        the days went. All free.
       </Typography>
 
       <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', flexWrap: 'wrap', mb: 2 }}>
@@ -73,20 +66,7 @@ export function HeroSection({ onSignIn, onWhyFree }: HeroSectionProps) {
           size="large"
           startIcon={<GoogleIcon />}
           onClick={onSignIn}
-          sx={{
-            textTransform: 'none',
-            fontSize: '1rem',
-            fontWeight: 600,
-            px: 3.5,
-            py: 1.4,
-            borderRadius: 3,
-            background: 'linear-gradient(135deg, #ff1fae 0%, #8b5cf6 100%)',
-            boxShadow: '0 10px 28px -10px rgba(168,45,190,0.75)',
-            '&:hover': {
-              background: 'linear-gradient(135deg, #f01aa2 0%, #7c4de8 100%)',
-              boxShadow: '0 12px 32px -10px rgba(168,45,190,0.9)'
-            }
-          }}
+          sx={{ ...brandButton, fontSize: '1rem', px: 3.5, py: 1.4 }}
         >
           Start free with Google
         </Button>
@@ -101,15 +81,15 @@ export function HeroSection({ onSignIn, onWhyFree }: HeroSectionProps) {
             px: 3,
             py: 1.4,
             borderRadius: 3,
-            color: '#9333ea',
-            '&:hover': { backgroundColor: 'rgba(147,51,234,0.09)' }
+            color: brand.purple,
+            '&:hover': { backgroundColor: `${brand.purple}17` }
           }}
         >
           Why it&apos;s free
         </Button>
       </Box>
 
-      <Typography sx={{ fontSize: 13.5, color: '#64748b', textAlign: 'center' }}>
+      <Typography sx={{ fontSize: 13.5, color: ink.muted, textAlign: 'center' }}>
         Free · Private until you share
       </Typography>
     </Box>

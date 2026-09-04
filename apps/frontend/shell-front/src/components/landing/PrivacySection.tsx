@@ -1,4 +1,5 @@
 import { Box, Link, Typography } from '@mui/material';
+import { brand, ink } from '../../theme/tokens';
 import LockIcon from '@mui/icons-material/Lock';
 import GroupOffIcon from '@mui/icons-material/GroupOff';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -76,7 +77,7 @@ export function PrivacySection() {
         WebkitBackdropFilter: 'blur(12px)',
         border: '1px solid rgba(255,255,255,0.75)',
         boxShadow: '0 18px 44px -30px rgba(124,58,237,0.55)',
-        color: '#0f172a'
+        color: ink.strong
       }}
     >
       <Box sx={{ textAlign: 'center', maxWidth: 620, mx: 'auto', mb: { xs: 4, md: 5 } }}>
@@ -86,7 +87,7 @@ export function PrivacySection() {
             fontWeight: 600,
             letterSpacing: '0.14em',
             textTransform: 'uppercase',
-            color: '#9333ea',
+            color: brand.purple,
             mb: 1.5
           }}
         >
@@ -105,7 +106,7 @@ export function PrivacySection() {
         >
           Before you hand it anything
         </Typography>
-        <Typography sx={{ fontSize: '1.02rem', lineHeight: 1.6, color: '#475569' }}>
+        <Typography sx={{ fontSize: '1.02rem', lineHeight: 1.6, color: ink.body }}>
           A product that asks for your photos, your balance sheet, and your diary owes you straight
           answers.
         </Typography>
@@ -141,11 +142,11 @@ export function PrivacySection() {
               <Box>
                 <Typography
                   component="h3"
-                  sx={{ fontSize: '1.02rem', fontWeight: 700, mb: 0.5, color: '#0f172a' }}
+                  sx={{ fontSize: '1.02rem', fontWeight: 700, mb: 0.5, color: ink.strong }}
                 >
                   {item.title}
                 </Typography>
-                <Typography sx={{ fontSize: '0.93rem', lineHeight: 1.62, color: '#475569' }}>
+                <Typography sx={{ fontSize: '0.93rem', lineHeight: 1.62, color: ink.body }}>
                   {item.body}
                 </Typography>
               </Box>

@@ -1,4 +1,5 @@
 import { Accordion, AccordionDetails, AccordionSummary, Box, Typography } from '@mui/material';
+import { brand, ink } from '../../theme/tokens';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { CatalogPlan, limitLinesFor } from '../../config/pricing';
 import { SectionHeading } from './SectionHeading';
@@ -92,15 +93,15 @@ export function FaqSection({ plans = [] }: FaqSectionProps) {
             }}
           >
             <AccordionSummary
-              expandIcon={<ExpandMoreIcon sx={{ color: '#8b5cf6' }} />}
+              expandIcon={<ExpandMoreIcon sx={{ color: brand.violet }} />}
               sx={{ px: 0.5, py: 1 }}
             >
-              <Typography sx={{ fontWeight: 650, color: '#0f172a', fontSize: '1rem' }}>
+              <Typography sx={{ fontWeight: 650, color: ink.strong, fontSize: '1rem' }}>
                 {faq.q}
               </Typography>
             </AccordionSummary>
             <AccordionDetails sx={{ px: 0.5, pt: 0, pb: 2.5 }}>
-              <Typography sx={{ color: '#475569', fontSize: '0.95rem', lineHeight: 1.68 }}>
+              <Typography sx={{ color: ink.body, fontSize: '0.95rem', lineHeight: 1.68 }}>
                 {faq.a}
               </Typography>
             </AccordionDetails>

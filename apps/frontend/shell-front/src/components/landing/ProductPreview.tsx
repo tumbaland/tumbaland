@@ -1,4 +1,5 @@
 import { Box } from '@mui/material';
+import { ink } from '../../theme/tokens';
 
 const PHOTO_TINTS = ['#93c5fd', '#c4b5fd', '#fda4af', '#fcd34d', '#86efac', '#a5b4fc'];
 
@@ -88,7 +89,7 @@ export function ProductPreview() {
                 fontSize: { xs: 22, md: 27 },
                 fontWeight: 800,
                 letterSpacing: '-0.03em',
-                color: '#0f172a',
+                color: ink.strong,
                 lineHeight: 1.1
               }}
             >
@@ -159,7 +160,7 @@ export function ProductPreview() {
                 />
               ))}
             </Box>
-            <Box sx={{ fontSize: 11, color: '#64748b', mt: 0.75 }}>
+            <Box sx={{ fontSize: 11, color: ink.muted, mt: 0.75 }}>
               2,418 photos · tagged automatically
             </Box>
           </Panel>
@@ -222,7 +223,7 @@ function Label({ children }: { children: React.ReactNode }) {
         fontWeight: 700,
         letterSpacing: '0.1em',
         textTransform: 'uppercase',
-        color: '#94a3b8'
+        color: ink.faint
       }}
     >
       {children}

@@ -4,6 +4,7 @@ import HomePage from '../pages/HomePage';
 import LandingPage from '../pages/LandingPage';
 import PrivacyPage from '../pages/PrivacyPage';
 import ConnectPage from '../pages/ConnectPage';
+import TermsPage from '../pages/TermsPage';
 import { useAuthState } from '../hooks/useAuthState';
 
 /**
@@ -30,6 +31,7 @@ export default function AppRoutes() {
           sign up at all, and by connector-directory reviewers who have no account. */}
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/connect" element={<ConnectPage />} />
+      <Route path="/terms" element={<TermsPage />} />
     </Routes>
   );
 }

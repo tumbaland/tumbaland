@@ -1,4 +1,4 @@
-import { requireEnv } from '@tumbaland/backend-core';
+import { callService, serviceUrl, TumbalandError } from './http';
 import {
   activitiesResponseSchema,
   activityResponseSchema,
@@ -8,14 +8,16 @@ import {
 } from './schemas';
 
 /**
- * A thin client over the existing Tumbaland HTTP API.
+ * A thin client over the relationship API.
  *
  * The MCP server deliberately does not touch MongoDB. Every rule that makes a
  * write correct — tenant scoping, validation, plan limits, the group access
  * query — already lives in the services, and reimplementing any of it here
  * would mean two places to keep in step and one of them silently wrong. So this
- * forwards the caller's own API key and lets relationship-service decide.
+ * forwards the caller's own credential and lets relationship-service decide.
  */
+
+export { TumbalandError };
 
 export interface ActivityType {
   _id: string;
@@ -100,75 +102,21 @@ export interface DayEntry {
   location?: { label: string; lat: number; lng: number } | null;
 }
 
-/** An API error the model can act on, rather than a stack trace. */
-export class TumbalandError extends Error {
-  constructor(
-    message: string,
-    readonly status: number
-  ) {
-    super(message);
-    this.name = 'TumbalandError';
-  }
-}
+const relationshipUrl = () => serviceUrl('RELATIONSHIP');
 
-const relationshipApiUrl = (): string =>
-  (process.env.RELATIONSHIP_INTERNAL_URL || requireEnv('RELATIONSHIP_API_URL')).replace(/\/$/, '');
-
-interface Envelope<T> {
-  success: boolean;
-  data: T;
-  message?: string;
-}
-
-/**
- * One call against relationship-service, carrying the caller's key.
- *
- * The key is passed straight through rather than exchanged for a service token:
- * that keeps the request scoped to exactly what the user granted, so a
- * read-only key cannot be widened by passing through this hop.
- */
-async function call<T>(
+/** One call against relationship-service, carrying the caller's credential. */
+const call = <T>(
   apiKey: string,
   method: string,
   path: string,
   body?: unknown,
   query?: Record<string, string | number | undefined>
-): Promise<T> {
+): Promise<T> => {
   // `groupId` rides in the query string on every verb, including writes. The
   // credential middleware validates it against the grant and copies it into the
   // body itself, so a POST does not need to carry it twice.
-  const url = new URL(`${relationshipApiUrl()}/api${path}`);
-  for (const [key, value] of Object.entries(query ?? {})) {
-    if (value !== undefined) url.searchParams.set(key, String(value));
-  }
-
-  const response = await fetch(url, {
-    method,
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      ...(body ? { 'Content-Type': 'application/json' } : {})
-    },
-    body: body ? JSON.stringify(body) : undefined
-  });
-
-  const text = await response.text();
-  let parsed: Envelope<T> | undefined;
-  try {
-    parsed = text ? (JSON.parse(text) as Envelope<T>) : undefined;
-  } catch {
-    // A non-JSON body means something in front of the service answered — a
-    // proxy, a gateway. The status is the only trustworthy part.
-  }
-
-  if (!response.ok) {
-    throw new TumbalandError(
-      parsed?.message || `Request failed with status ${response.status}`,
-      response.status
-    );
-  }
-
-  return (parsed?.data ?? parsed) as T;
-}
+  return callService<T>(relationshipUrl(), apiKey, method, path, body, query);
+};
 
 export const tumbaland = {
   // The list endpoints return a named collection alongside pagination, not a

@@ -45,6 +45,11 @@ export function HomePage({ user }: HomePageProps) {
       >
         <GreetingHeader name={user?.name} />
 
+        {/* Directly under the greeting rather than at the foot of the page: it
+            is the one thing here with any personality, and nothing below it is
+            worse for being read second. */}
+        <DailyTodo />
+
         {resumeModule && (
           <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
             <Button
@@ -79,8 +84,6 @@ export function HomePage({ user }: HomePageProps) {
         </Box>
 
         <PlanUsageCard />
-
-        <DailyTodo />
       </Box>
     </Box>
   );

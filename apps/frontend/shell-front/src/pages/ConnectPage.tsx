@@ -27,7 +27,7 @@ export function ConnectPage() {
       <ul>
         <li>A Tumbaland account.</li>
         <li>
-          Claude, ChatGPT or Gemini — anything that supports connectors, sometimes called MCP
+          Claude, ChatGPT or Gemini. Anything that supports connectors, sometimes called MCP
           servers.
         </li>
       </ul>
@@ -51,12 +51,12 @@ export function ConnectPage() {
         <li>Sign in with the Google account you use for Tumbaland.</li>
         <li>
           Approve the permissions screen. It shows exactly what the assistant is asking for, and
-          lets you tick which journals it may act on — your own data, any group you belong to, or
-          several — plus which to use when you do not say.
+          lets you tick which journals it may act on: your own data, any group you belong to, or
+          several. You also pick which one to use when you do not say.
         </li>
         <li>
           <strong>Turn it on in the conversation.</strong> In a chat, press <strong>+</strong> →{' '}
-          <strong>Connectors</strong> and switch Tumbaland on. This is per conversation — adding the
+          <strong>Connectors</strong> and switch Tumbaland on. This is per conversation. Adding the
           connector in settings only makes it available.
         </li>
       </ol>
@@ -82,7 +82,12 @@ export function ConnectPage() {
       </p>
 
       <h2>What it can do</h2>
-      <p>Eight things, and nothing else:</p>
+      <p>
+        Sixteen things, and nothing else. Which of them it gets depends on what you approved. Grant
+        the journal only and it never learns the money tools exist.
+      </p>
+
+      <h3>Your journal</h3>
 
       <table>
         <thead>
@@ -97,7 +102,7 @@ export function ConnectPage() {
               <code>list_activity_types</code>
             </td>
             <td>
-              Reads the kinds of thing your account records — Dining, Movies, Together and so on.
+              Reads the kinds of thing your account records: Dining, Movies, Together and so on.
               Entries have to be filed under one of these, so it checks first.
             </td>
           </tr>
@@ -139,7 +144,7 @@ export function ConnectPage() {
               <code>edit_activity</code>
             </td>
             <td>
-              Changes one entry — a description, the hours, the day, the type. Only the parts you
+              Changes one entry: a description, the hours, the day, the type. Only the parts you
               ask about change, and it tells you what it changed and what it was before.
             </td>
           </tr>
@@ -161,6 +166,93 @@ export function ConnectPage() {
         </tbody>
       </table>
 
+      <h3>Your money</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Tool</th>
+            <th>What it does</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <code>get_net_worth</code>
+            </td>
+            <td>
+              What everything adds up to, how it has moved over the last month and year, and how it
+              is split across asset classes.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <code>get_spending</code>
+            </td>
+            <td>
+              Month-by-month income, spending and what was saved, plus the categories the money
+              went to.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <code>search_transactions</code>
+            </td>
+            <td>
+              Individual payments, narrowed by date, category, direction or text. The text search
+              covers the statement line, so searching a shop name finds it.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <code>list_recurring_payments</code>
+            </td>
+            <td>What is paid on a schedule: subscriptions, rent, insurance.</td>
+          </tr>
+          <tr>
+            <td>
+              <code>get_spending_trends</code>
+            </td>
+            <td>
+              Income and spending by year, which categories moved, and how much went into savings
+              rather than out the door.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <code>get_portfolio</code>
+            </td>
+            <td>
+              Every position held, valued at the latest price: what it cost, what it is worth now,
+              and the gain.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <code>log_trade</code>
+            </td>
+            <td>Records a buy, sell, dividend or fee.</td>
+          </tr>
+          <tr>
+            <td>
+              <code>recategorise_transactions</code>
+            </td>
+            <td>
+              Moves every transaction in one category to another. Changes many rows at once, so it
+              should tell you how many before doing it.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <Alert severity="info" sx={{ my: 3 }}>
+        <Typography variant="body2">
+          <strong>It cannot record a one-off expense.</strong> Transactions come from importing a
+          bank statement, and there is no way to type one in. Not through an assistant, and not in
+          the app. Ask it to log a trade and it can; ask it to log a coffee and it should tell you
+          it cannot rather than inventing something.
+        </Typography>
+      </Alert>
+
       <h2>What it cannot do</h2>
       <ul>
         <li>
@@ -170,14 +262,14 @@ export function ConnectPage() {
         </li>
         <li>
           <strong>Reach anything you did not tick.</strong> When you connect, you choose which
-          journals it may act on — your own, a group&apos;s, or both — and one of them as the
+          journals it may act on: your own, a group&apos;s, or both. One of them becomes the
           default. It cannot reach any other, and asking for one by name fails rather than quietly
           falling back.
         </li>
         <li>
-          <strong>Touch your photos, your finances, or your account.</strong> Those are separate
-          permissions the journal connection does not carry, and billing and account settings are
-          not reachable by any assistant.
+          <strong>Touch anything you did not grant.</strong> Photos have no tools at all yet, and
+          the journal and money permissions are separate. An assistant granted one is never shown
+          the other's tools. Billing and account settings are not reachable by any assistant.
         </li>
       </ul>
 
@@ -193,7 +285,7 @@ export function ConnectPage() {
       <p>
         Whatever passes through the conversation. If you ask it to log a restaurant, that name goes
         to them; if you ask what you did last month, the entries it reads go to them. That is
-        inherent to using an assistant rather than something Tumbaland can prevent — the{' '}
+        inherent to using an assistant, not something Tumbaland can prevent. The{' '}
         <Link href="/privacy">privacy page</Link> covers it, and their own policy governs what they
         do with it.
       </p>
@@ -201,24 +293,24 @@ export function ConnectPage() {
       <h2>If something is not working</h2>
       <ul>
         <li>
-          <strong>&quot;No matching tools found&quot;</strong> — the connector is not switched on for
+          <strong>&quot;No matching tools found&quot;.</strong> The connector is not switched on for
           that conversation. See step 5.
         </li>
         <li>
-          <strong>It says a type does not exist</strong> — it can only use the activity types your
+          <strong>It says a type does not exist.</strong> It can only use the activity types your
           account has. It will list the real ones; pick from those, or add a new type in the app.
         </li>
         <li>
-          <strong>It writes to the wrong journal</strong> — if you granted more than one, say which
+          <strong>It writes to the wrong journal.</strong> If you granted more than one, say which
           one you mean (&quot;log this in Irja &amp; Tom&quot;). It uses the default you picked
           otherwise.
         </li>
         <li>
-          <strong>It says it lacks permission</strong> — disconnect and reconnect, granting the
+          <strong>It says it lacks permission.</strong> Disconnect and reconnect, granting the
           permission it needs. Retrying will not help.
         </li>
         <li>
-          <strong>It offers to rewrite a whole day to fix one entry</strong> — it should not need
+          <strong>It offers to rewrite a whole day to fix one entry.</strong> It should not need
           to. Ask it to read the day first, then change just that entry.
         </li>
       </ul>

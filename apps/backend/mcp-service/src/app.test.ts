@@ -93,7 +93,12 @@ describe('protected resource metadata', () => {
     const res = await request(app).get('/.well-known/oauth-protected-resource');
 
     expect(res.status).toBe(200);
-    expect(res.body.scopes_supported).toEqual(['relationship:read', 'relationship:write']);
+    expect(res.body.scopes_supported).toEqual([
+      'relationship:read',
+      'relationship:write',
+      'finance:read',
+      'finance:write'
+    ]);
   });
 });
 
@@ -245,8 +250,34 @@ describe('tools are gated by the key’s scopes', () => {
     await expect(toolsFor(['relationship:write'])).resolves.toEqual([]);
   });
 
-  it('shows nothing for a key scoped to another domain entirely', async () => {
-    await expect(toolsFor(['finance:read'])).resolves.toEqual([]);
+  it('shows nothing for a key scoped to a domain with no tools yet', async () => {
+    // Photos have no module, so an album-only key sees an empty surface rather
+    // than a list of journal tools it cannot use.
+    await expect(toolsFor(['album:read'])).resolves.toEqual([]);
+  });
+
+  it('shows a finance-only key the finance tools and nothing else', async () => {
+    const tools = await toolsFor(['finance:read']);
+
+    expect(tools).toEqual([
+      'get_net_worth',
+      'get_portfolio',
+      'get_spending',
+      'get_spending_trends',
+      'list_recurring_payments',
+      'search_transactions'
+    ]);
+  });
+
+  it('keeps the two domains apart on a key that holds both', async () => {
+    const tools = await toolsFor(['relationship:read', 'finance:read']);
+
+    expect(tools).toContain('search_activities');
+    expect(tools).toContain('search_transactions');
+    // Writing is gated separately in each domain, so a read-only pair sees no
+    // write tool from either.
+    expect(tools).not.toContain('log_day');
+    expect(tools).not.toContain('log_trade');
   });
 
   it('shows nothing for a key with no scopes', async () => {
@@ -348,9 +379,10 @@ describe('advertised scopes follow the registered modules', () => {
     const res = await request(app).get('/.well-known/oauth-protected-resource');
 
     expect(res.body.scopes_supported).toEqual(
-      expect.arrayContaining(['relationship:read', 'relationship:write'])
+      expect.arrayContaining(['relationship:read', 'relationship:write', 'finance:read', 'finance:write'])
     );
+    // Photos have no module yet, so nobody is asked to approve access to them.
     expect(res.body.scopes_supported).not.toContain('album:read');
-    expect(res.body.scopes_supported).not.toContain('finance:write');
+    expect(res.body.scopes_supported).not.toContain('album:write');
   });
 });
