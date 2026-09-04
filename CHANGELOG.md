@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.468](https://github.com/toomastahves/tumbaland/compare/app-v0.0.467...app-v0.0.468) (2026-09-04)
+
+### Features
+
+* add tenant and personal account to mcp ([49a0acf](https://github.com/toomastahves/tumbaland/commit/49a0acf21bc0ae47978e102e568b1e22f9f31a68))
 ## [0.0.467](https://github.com/toomastahves/tumbaland/compare/app-v0.0.466...app-v0.0.467) (2026-09-04)
 
 ### Bug Fixes
