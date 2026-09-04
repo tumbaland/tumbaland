@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.462](https://github.com/toomastahves/tumbaland/compare/app-v0.0.461...app-v0.0.462) (2026-09-04)
+
+### Features
+
+* MCP server with OAuth 2.1, so assistants can connect ([#65](https://github.com/toomastahves/tumbaland/issues/65)) ([523e487](https://github.com/toomastahves/tumbaland/commit/523e487f1b524d385fad43aed03b3ab380f7a0bb))
 ## [0.0.461](https://github.com/toomastahves/tumbaland/compare/app-v0.0.460...app-v0.0.461) (2026-09-03)
 
 ### Bug Fixes
