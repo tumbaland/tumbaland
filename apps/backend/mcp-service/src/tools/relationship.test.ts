@@ -170,6 +170,34 @@ describe('search_activities', () => {
     expect(text).not.toContain('t1');
   });
 
+  it('reads the name off a populated type, which is what /activities returns', async () => {
+    // The two endpoints disagree: /days sends a bare id, /activities sends the
+    // whole type document. Reading it as an id labelled every real result
+    // "Unknown type" while the search itself looked like it worked.
+    api.listActivities.mockResolvedValue([
+      {
+        _id: 'a1',
+        date: '2026-09-04T00:00:00.000Z',
+        typeId: { _id: 't1', name: 'Dining', slug: 'dining', valueType: 'string', hasLocation: true },
+        description: 'Kolm Sõsarat'
+      }
+    ] as never);
+
+    const { text } = await callTool('search_activities', {});
+
+    expect(text).toContain('Dining — Kolm Sõsarat');
+    expect(text).not.toContain('Unknown type');
+  });
+
+  it('falls back to Unknown type only when neither shape names one', async () => {
+    api.listActivities.mockResolvedValue([
+      { _id: 'a1', date: '2026-09-04T00:00:00.000Z', typeId: 'deleted-type' }
+    ] as never);
+
+    const { text } = await callTool('search_activities', {});
+    expect(text).toContain('Unknown type');
+  });
+
   it('filters by slug, which is what the endpoint reads', async () => {
     api.listActivities.mockResolvedValue([]);
 

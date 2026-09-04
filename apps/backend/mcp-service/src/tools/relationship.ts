@@ -1,6 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { DayEntry, resolveType, tumbaland } from '../tumbaland';
+import { DayEntry, activityTypeOf, resolveType, tumbaland } from '../tumbaland';
 import { ToolModule, dateSchema, entrySchema, explain, ok } from './module';
 
 /**
@@ -77,7 +77,7 @@ function registerReadTools(server: McpServer, apiKey: string): void {
 
         const lines = activities.map((activity) => {
           const day = activity.date.slice(0, 10);
-          const name = nameById.get(activity.typeId) ?? 'Unknown type';
+          const name = activityTypeOf(activity, nameById) ?? 'Unknown type';
           const detail = activity.description ? ` — ${activity.description}` : '';
           const time = activity.hours !== undefined ? ` (${activity.hours}h)` : '';
           return `- ${day}: ${name}${time}${detail}`;

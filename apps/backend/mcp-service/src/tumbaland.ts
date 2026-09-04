@@ -22,11 +22,27 @@ export interface ActivityType {
 export interface Activity {
   _id: string;
   date: string;
-  typeId: string;
+  /**
+   * Populated on `/activities` and a bare id on `/days`.
+   *
+   * The two endpoints disagree, so callers must handle both — reading it as an
+   * id everywhere produced "Unknown type" against every real activity while
+   * looking like a working search.
+   */
+  typeId: string | ActivityType;
   description?: string;
   hours?: number;
   location?: { label: string; lat: number; lng: number };
 }
+
+/** The type an activity is recorded against, whichever shape it arrived in. */
+export const activityTypeOf = (
+  activity: Activity,
+  namesById: Map<string, string>
+): string | undefined =>
+  typeof activity.typeId === 'string'
+    ? namesById.get(activity.typeId)
+    : activity.typeId?.name;
 
 /** An entry already stored on a day; `_id` is what marks it as one to keep. */
 export interface ExistingEntry {
