@@ -2,6 +2,7 @@ import { NextFunction, Request, RequestHandler, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { requireEnv } from '../config/env';
 import logger from '../logging/logger';
+import { beginAudit } from '../audit/context';
 import { isAccessTokenClaims, type AccessTokenClaims } from '../oauth/tokens';
 import type { UserPayload } from '../types/auth';
 import { looksLikeApiKey } from './crypto';
@@ -28,6 +29,18 @@ export interface ApiKeyContext {
   tenants: ApiKeyTenant;
   /** the tenant this particular request resolved to */
   actingAs: Tenant;
+  /** which credential this is; they are revoked and audited differently */
+  kind: 'api_key' | 'oauth';
+  /** what the owner called it — a key's name, or the connected app's */
+  label: string;
+  /**
+   * The stable identity of the credential.
+   *
+   * A key's document id, or an OAuth client id — never the access token's
+   * `jti`, which rotates hourly and would make one connection look like a new
+   * actor every time it refreshed.
+   */
+  credentialId: string;
 }
 
 declare global {
@@ -113,8 +126,11 @@ const applyTenantGrant = (req: Request, tenants: ApiKeyTenant): Tenant | null =>
 
 /** A verified non-session credential, whichever kind it arrived as. */
 interface AgentCredential {
-  /** the key id or token id, for the request-scoped context */
+  /** the key's document id, or the OAuth client id */
   credentialId: string;
+  kind: 'api_key' | 'oauth';
+  /** what the owner called it, for a trail a person can read */
+  label: string;
   userId: string;
   email: string;
   name: string;
@@ -165,10 +181,16 @@ function admitAgent(
     keyId: credential.credentialId,
     scopes: credential.scopes,
     tenants: credential.tenants,
-    actingAs
+    actingAs,
+    kind: credential.kind,
+    label: credential.label,
+    credentialId: credential.credentialId
   };
 
-  next();
+  // Attribution comes from authentication, so it is established here rather
+  // than mounted separately — a router that authenticates per route would
+  // otherwise have no actor in scope when a router-level middleware ran.
+  beginAudit(req, res, next);
 }
 
 /**
@@ -204,7 +226,7 @@ export const authenticateAgent = (...requiredScopes: ApiKeyScope[]): RequestHand
         const user = claims as UserPayload;
         req.user = user;
         req.userGroups = user.groups ?? [];
-        next();
+        beginAudit(req, res, next);
         return;
       }
 
@@ -219,7 +241,10 @@ export const authenticateAgent = (...requiredScopes: ApiKeyScope[]): RequestHand
       // whose scope collapsed to nothing fell through to "no user context" and
       // answered from the whole collection.
       admitAgent(req, res, next, requiredScopes, {
-        credentialId: claims.jti,
+        // The client, not the token: `jti` is a new value every hour.
+        credentialId: claims.clientId ?? 'unknown-client',
+        kind: 'oauth',
+        label: claims.clientName || 'A connected app',
         userId: claims.sub,
         email: claims.email ?? '',
         name: claims.name ?? '',
@@ -240,6 +265,8 @@ export const authenticateAgent = (...requiredScopes: ApiKeyScope[]): RequestHand
 
     admitAgent(req, res, next, requiredScopes, {
       credentialId: result.keyId!,
+      kind: 'api_key',
+      label: result.label || 'An API key',
       userId: result.userId!,
       email: result.userEmail ?? '',
       name: result.userName ?? '',

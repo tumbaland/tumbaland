@@ -3,6 +3,7 @@ import { strictRateLimiter, validate, NotFoundError } from '@tumbaland/backend-c
 import { validateToken, logout, verifyAuth, refreshToken, invalidateUserTokens } from '../controllers/authController';
 import { getProfile, updateProfile } from '../controllers/profileController';
 import { getConnections, revokeConnection } from '../controllers/oauthController';
+import { getAuditTrail } from '../controllers/auditController';
 import {
   requireApiKeysConfigured,
   getApiKeys,
@@ -62,6 +63,13 @@ router.delete('/api-keys/:id', ...apiKeyRoute, removeApiKey);
 // cannot be revoked.
 router.get('/connections', authenticateToken, requireApproved, getConnections);
 router.delete('/connections/:clientId', authenticateToken, requireApproved, revokeConnection);
+
+// The trail of what actually happened. Session-only for the same reason as the
+// two above, and more sharply: an assistant that can read the record of what
+// assistants did is an assistant that can check whether anyone noticed.
+// `authenticateToken` already refuses access tokens outright, so there is
+// nothing further to guard against here.
+router.get('/audit', authenticateToken, requireApproved, getAuditTrail);
 
 // Internal service endpoints for token management — service-to-service only, never user-facing.
 router.post('/internal/invalidate-tokens', requireInternalService, validate(invalidateTokensSchema), invalidateUserTokens);

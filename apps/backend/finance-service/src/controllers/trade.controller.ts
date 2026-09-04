@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ForbiddenError, sendSuccess } from '@tumbaland/backend-core';
+import { ForbiddenError, sendSuccess, countRead } from '@tumbaland/backend-core';
 import * as tradeService from '../services/trade.service';
 
 /** Groups the caller is working in: the query group, or personal. */
@@ -24,6 +24,7 @@ export const getTrades = async (req: Request, res: Response): Promise<void> => {
     ticker ? String(ticker) : undefined
   );
 
+  countRead(res, trades.length);
   sendSuccess(res, trades);
 };
 

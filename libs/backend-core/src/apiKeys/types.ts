@@ -117,6 +117,8 @@ export interface ApiKeyVerification {
   userEmail?: string;
   userName?: string;
   keyId?: string;
+  /** what the owner called this key, for an audit trail a person can read */
+  label?: string;
   scopes?: ApiKeyScope[];
   tenants?: ApiKeyTenant;
 }

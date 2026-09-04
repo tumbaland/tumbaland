@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { auditPlugin } from '@tumbaland/backend-core';
 
 export type TransactionType = 'income' | 'expense';
 
@@ -50,5 +51,8 @@ TransactionSchema.index(
   { userId: 1, externalId: 1 },
   { unique: true, partialFilterExpression: { externalId: { $exists: true } } }
 );
+
+// Attribution and a change trail; see auditPlugin.
+TransactionSchema.plugin(auditPlugin, { resource: 'transaction' });
 
 export default mongoose.model<ITransaction>('Transaction', TransactionSchema);

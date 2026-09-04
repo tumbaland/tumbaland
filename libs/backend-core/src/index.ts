@@ -35,6 +35,7 @@ export * from './apiKeys';
 
 // OAuth 2.1 authorization server, for assistants connecting over MCP
 export * from './oauth';
+export * from './audit';
 
 // Middleware
 export { authenticateToken, optionalAuth } from './middleware/authMiddleware';

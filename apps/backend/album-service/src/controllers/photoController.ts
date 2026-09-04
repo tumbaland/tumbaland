@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { NotFoundError, UnauthorizedError, sendSuccess } from '@tumbaland/backend-core';
+import { NotFoundError, UnauthorizedError, sendSuccess, countRead } from '@tumbaland/backend-core';
 import photoService from '../services/photoService';
 import memoriesService from '../services/memoriesService';
 import { getUploadSignedUrl, generateFileId } from '../services/fileServiceClient';
@@ -52,6 +52,7 @@ export const getPhotosByAlbum = async (req: Request, res: Response): Promise<voi
     tagMatch: tagMatch === 'any' ? 'any' : 'all'
   });
 
+  countRead(res, result.photos.length);
   sendSuccess(res, { photos: result.photos, pagination: result.pagination });
 };
 
@@ -82,6 +83,9 @@ export const getMemories = async (req: Request, res: Response): Promise<void> =>
     { userId: user.id, userGroups: req.userGroups || [] }
   );
 
+  // Photos, not years: a year is a grouping, and what left the server is
+  // the photos inside it.
+  countRead(res, memories.totalPhotos);
   sendSuccess(res, memories);
 };
 
@@ -207,6 +211,7 @@ export const getPhotosForAIAnalysis = async (req: Request, res: Response): Promi
 
   const photos = await photoService.getPhotosForAIAnalysis(albumId as string, Number(limit));
 
+  countRead(res, photos.length);
   sendSuccess(res, photos);
 };
 

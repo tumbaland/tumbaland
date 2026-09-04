@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { auditPlugin } from '@tumbaland/backend-core';
 
 export interface IAlbum extends Document {
   name: string;
@@ -79,5 +80,8 @@ AlbumSchema.index({ updatedAt: -1 });
 // personal albums or a single group, without scanning every album.
 AlbumSchema.index({ userId: 1, totalSize: -1 });
 AlbumSchema.index({ groupId: 1, totalSize: -1 });
+
+// Attribution and a change trail; see auditPlugin.
+AlbumSchema.plugin(auditPlugin, { resource: 'album' });
 
 export default mongoose.model<IAlbum>('Album', AlbumSchema);

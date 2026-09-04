@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { auditPlugin } from '@tumbaland/backend-core';
 
 // Where an entry happened. Present only on entries whose type opts in via
 // ActivityType.hasLocation; orthogonal to valueType, so a 'string' type can
@@ -24,6 +25,15 @@ export interface IActivity extends Document {
   updatedAt: Date;
   userId: string; // User ID who created the activity
   groupId?: string; // Optional group association
+  /**
+   * Who actually made the entry, and who last touched it.
+   *
+   * Distinct from `userId`, which is the account: in a shared journal that is
+   * whichever member logged it, and it says nothing about whether they typed it
+   * or an assistant did. Written by the audit plugin.
+   */
+  createdBy?: string;
+  updatedBy?: string;
 }
 
 // Subdocument, not GeoJSON: the map renders every pin client-side and never
@@ -115,5 +125,9 @@ ActivitySchema.index({ date: -1 });
 // only holds the minority of entries that actually carry a place.
 ActivitySchema.index({ userId: 1, 'location.label': 1 }, { sparse: true });
 ActivitySchema.index({ groupId: 1, 'location.label': 1 }, { sparse: true });
+
+// Attribution and a change trail, added at the model so no write path can
+// forget it — including ones written after this line.
+ActivitySchema.plugin(auditPlugin, { resource: 'activity' });
 
 export const Activity = mongoose.model<IActivity>('Activity', ActivitySchema);

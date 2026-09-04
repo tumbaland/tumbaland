@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { auditPlugin } from '@tumbaland/backend-core';
 
 export interface ISnapshotEntry {
   assetClassId: string;
@@ -37,5 +38,8 @@ const SnapshotSchema: Schema = new Schema({
 
 // One snapshot per owner per month
 SnapshotSchema.index({ userId: 1, groupId: 1, date: 1 }, { unique: true });
+
+// Attribution and a change trail; see auditPlugin.
+SnapshotSchema.plugin(auditPlugin, { resource: 'snapshot' });
 
 export default mongoose.model<ISnapshot>('Snapshot', SnapshotSchema);

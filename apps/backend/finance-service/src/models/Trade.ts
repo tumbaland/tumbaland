@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { auditPlugin } from '@tumbaland/backend-core';
 
 export type TradeType = 'buy' | 'sell' | 'dividend' | 'fee';
 
@@ -46,5 +47,8 @@ const TradeSchema: Schema = new Schema(
 // order the position replay needs — so the index leads with tenancy.
 TradeSchema.index({ userId: 1, ticker: 1, date: 1 });
 TradeSchema.index({ groupId: 1, ticker: 1, date: 1 });
+
+// Attribution and a change trail; see auditPlugin.
+TradeSchema.plugin(auditPlugin, { resource: 'trade' });
 
 export default mongoose.model<ITrade>('Trade', TradeSchema);

@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { auditPlugin } from '../audit/plugin';
 import { PERSONAL_TENANT, type Tenant } from '../apiKeys/types';
 
 /**
@@ -147,6 +148,16 @@ const RefreshTokenSchema = new Schema<IRefreshToken>(
 );
 
 RefreshTokenSchema.index({ userId: 1, createdAt: -1 });
+
+/**
+ * A grant appearing and being revoked is the shape of "who connected Claude,
+ * and when did it stop" — the question the connections page answers for the
+ * present and this answers for the past.
+ *
+ * `tokenHash` is redacted: it is the only thing standing between a copy of this
+ * collection and a working refresh token.
+ */
+RefreshTokenSchema.plugin(auditPlugin, { resource: 'connection', redact: ['tokenHash'] });
 
 export const RefreshToken = mongoose.models.RefreshToken
   ? (mongoose.models.RefreshToken as mongoose.Model<IRefreshToken>)

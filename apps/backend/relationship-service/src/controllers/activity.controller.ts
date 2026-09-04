@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { BadRequestError, NotFoundError, sendSuccess } from '@tumbaland/backend-core';
+import { BadRequestError, NotFoundError, countRead, sendSuccess } from '@tumbaland/backend-core';
 import * as ActivityService from '../services/activity.service';
 import { IActivity } from '../models/Activity';
 
@@ -52,6 +52,10 @@ export const getActivities = async (req: Request, res: Response): Promise<void> 
   filters.userGroupIds = userGroups;
 
   const result = await ActivityService.getActivities(filters);
+
+  // How much left the server, not just that something did: "read the journal"
+  // and "read four hundred entries" are different events in a trail.
+  countRead(res, result.activities.length);
 
   sendSuccess(res, {
     activities: result.activities,

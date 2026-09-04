@@ -1,4 +1,4 @@
-import { ApiKey } from './ApiKey';
+import { ApiKey, API_KEY_SECRET_FIELDS } from './ApiKey';
 
 /** The fields the schema insists on, so each test only varies what it is about. */
 const complete = {
@@ -114,5 +114,29 @@ describe('model registration', () => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const again = require('./ApiKey').ApiKey;
     expect(again).toBe(ApiKey);
+  });
+});
+
+describe('what a key’s audit trail may carry', () => {
+  /**
+   * The trail is readable by the account owner and kept for a year. A snapshot
+   * carrying the hash or the sealed ciphertext would copy credential material
+   * into a second collection with a different lifetime — which is exactly what
+   * the encryption exists to prevent.
+   */
+  it('redacts every field on the schema that holds a secret', () => {
+    const secretish = Object.keys(ApiKey.schema.paths).filter((path) =>
+      /hash|sealed|secret/i.test(path)
+    );
+
+    // Compared against the schema rather than a hand-written list, so a secret
+    // field added later fails here instead of quietly reaching the trail.
+    expect(secretish.sort()).toEqual([...API_KEY_SECRET_FIELDS].sort());
+  });
+
+  it('keeps the fields that make a row worth reading', () => {
+    for (const field of ['name', 'scopes', 'tenants', 'revokedAt']) {
+      expect(API_KEY_SECRET_FIELDS).not.toContain(field);
+    }
   });
 });

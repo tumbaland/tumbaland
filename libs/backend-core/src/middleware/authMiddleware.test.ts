@@ -195,7 +195,9 @@ describe('OAuth access tokens are not sessions', () => {
       scopes: ['relationship:read'],
       tenants: [PERSONAL_TENANT],
       defaultTenant: PERSONAL_TENANT,
-      tenantNames: {}
+      tenantNames: {},
+      clientId: 'client-1',
+      clientName: 'Claude'
     }).accessToken;
 
   it('refuses one on a session-only route', () => {

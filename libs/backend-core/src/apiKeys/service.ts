@@ -161,6 +161,7 @@ export const verifyApiKey = async (token: unknown): Promise<ApiKeyVerification> 
     userEmail: key.userEmail,
     userName: key.userName,
     keyId: String(key._id),
+    label: key.name,
     scopes: key.scopes,
     tenants: readTenants(key)
   };

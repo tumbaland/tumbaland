@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { ForbiddenError, sendSuccess, sendError } from '@tumbaland/backend-core';
+import { ForbiddenError, sendSuccess, sendError, countRead } from '@tumbaland/backend-core';
 import * as holdingService from '../services/holding.service';
 import { tickerActor, withTickerSlot } from '../services/trackedTickerUsage';
 
@@ -23,6 +23,7 @@ export const getHoldings = async (req: Request, res: Response): Promise<void> =>
     holdings = await holdingService.getAllHoldings(user.id, []);
   }
 
+  countRead(res, holdings.length);
   sendSuccess(res, holdings);
 };
 

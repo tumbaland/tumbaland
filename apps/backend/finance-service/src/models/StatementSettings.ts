@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { auditPlugin } from '@tumbaland/backend-core';
 
 /**
  * Per-owner settings for reading bank statements.
@@ -39,5 +40,8 @@ const StatementSettingsSchema: Schema = new Schema(
 // One document per owner, and the read is always "this owner's settings".
 StatementSettingsSchema.index({ userId: 1 });
 StatementSettingsSchema.index({ groupId: 1 });
+
+// Attribution and a change trail; see auditPlugin.
+StatementSettingsSchema.plugin(auditPlugin, { resource: 'statement_settings' });
 
 export default mongoose.model<IStatementSettings>('StatementSettings', StatementSettingsSchema);

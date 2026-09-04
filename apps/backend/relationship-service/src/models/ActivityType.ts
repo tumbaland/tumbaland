@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { auditPlugin } from '@tumbaland/backend-core';
 
 // Interface for ActivityType document
 export interface IActivityType extends Document {
@@ -124,5 +125,7 @@ ActivityTypeSchema.pre('save', function(this: IActivityType) {
   }
 });
 
+
+ActivityTypeSchema.plugin(auditPlugin, { resource: 'activity_type' });
 
 export const ActivityType = mongoose.model<IActivityType, IActivityTypeModel>('ActivityType', ActivityTypeSchema);

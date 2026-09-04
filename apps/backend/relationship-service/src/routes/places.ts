@@ -5,6 +5,8 @@ import { getPlaces, getPlaceVisits } from '../controllers/place.controller';
 const router = Router();
 
 // Authentication also populates req.userGroups from the JWT.
+// Authentication also populates req.userGroups and establishes the audit
+// context — see authenticateAgent.
 router.use(authenticateAgent());
 
 /**

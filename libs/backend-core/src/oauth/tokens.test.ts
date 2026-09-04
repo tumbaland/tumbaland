@@ -18,6 +18,8 @@ const mint = (over: Partial<Parameters<typeof mintAccessToken>[0]> = {}) =>
     tenants: [PERSONAL_TENANT],
     defaultTenant: PERSONAL_TENANT,
     tenantNames: { [PERSONAL_TENANT]: 'My own data' },
+    clientId: 'client-1',
+    clientName: 'Claude',
     ...over
   });
 

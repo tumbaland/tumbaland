@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { auditPlugin } from '@tumbaland/backend-core';
 
 /**
  * A position in a tradeable instrument (ETF, stock). Replaces the old
@@ -24,5 +25,8 @@ const HoldingSchema: Schema = new Schema({
   userId: { type: String, required: true, index: true },
   groupId: { type: String, index: true }
 });
+
+// Attribution and a change trail; see auditPlugin.
+HoldingSchema.plugin(auditPlugin, { resource: 'holding' });
 
 export default mongoose.model<IHolding>('Holding', HoldingSchema);

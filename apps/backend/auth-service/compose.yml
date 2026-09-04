@@ -11,6 +11,9 @@ services:
     environment:
       - PORT=5001
       - NODE_ENV=production
+      # Labels this process in metrics, health and the audit trail. Without it
+      # every row auth-service writes reads as "unknown-service".
+      - SERVICE_NAME=auth-service
       - MONGODB_URI=${MONGODB_URI}
       - JWT_SECRET=${JWT_SECRET}
       - API_KEY_ENCRYPTION_SECRET=${API_KEY_ENCRYPTION_SECRET}

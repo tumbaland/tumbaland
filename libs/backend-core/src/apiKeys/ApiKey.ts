@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { auditPlugin } from '../audit/plugin';
 import { PERSONAL_TENANT, type ApiKeyScope, type Tenant } from './types';
 
 /**
@@ -81,6 +82,20 @@ const ApiKeySchema = new Schema<IApiKey>(
 
 // Every listing is one user's keys, newest first.
 ApiKeySchema.index({ userId: 1, createdAt: -1 });
+
+/**
+ * Issuing and revoking a key is worth a record — arguably more than anything a
+ * key goes on to do, since a credential nobody remembers creating is the one
+ * that matters.
+ *
+ * Every secret-bearing field is redacted. The trail is readable by the account
+ * owner and kept for a year; a snapshot carrying `hash` or the sealed
+ * ciphertext would put credential material into a second collection with a
+ * different lifetime, which is precisely the thing the encryption is for.
+ */
+export const API_KEY_SECRET_FIELDS = ['hash', 'sealedCiphertext', 'sealedIv', 'sealedTag'];
+
+ApiKeySchema.plugin(auditPlugin, { resource: 'api_key', redact: API_KEY_SECRET_FIELDS });
 
 export const ApiKey = mongoose.models.ApiKey
   ? (mongoose.models.ApiKey as mongoose.Model<IApiKey>)

@@ -49,6 +49,17 @@ export interface AccessTokenClaims {
   tenantNames: Record<Tenant, string>;
   /** the single tenant an older token was pinned to; read by `readTenants` */
   groupId?: string | null;
+  /**
+   * Which app this token was issued to.
+   *
+   * `jti` identifies the token and rotates every hour, so it cannot stand in for
+   * the connection — an audit trail built on it would show a different actor
+   * each time the assistant refreshed. The client id is stable for the life of
+   * the grant, and the name is snapshotted alongside it for the same reason the
+   * tenant names are: nothing downstream can look it up.
+   */
+  clientId: string;
+  clientName: string;
   email: string;
   name: string;
   typ: typeof ACCESS_TOKEN_TYPE;
@@ -68,6 +79,8 @@ export interface MintAccessTokenInput {
   tenants: Tenant[];
   defaultTenant: Tenant;
   tenantNames: Record<Tenant, string>;
+  clientId: string;
+  clientName: string;
 }
 
 export interface MintedAccessToken {
@@ -88,6 +101,8 @@ export const mintAccessToken = (input: MintAccessTokenInput): MintedAccessToken 
       tenants: input.tenants,
       defaultTenant: input.defaultTenant,
       tenantNames: input.tenantNames,
+      clientId: input.clientId,
+      clientName: input.clientName,
       email: input.email,
       name: input.name,
       typ: ACCESS_TOKEN_TYPE,
@@ -109,6 +124,8 @@ export interface AccessTokenVerification {
   scopes?: ApiKeyScope[];
   tenants?: ApiKeyTenant;
   tenantNames?: Record<Tenant, string>;
+  clientId?: string;
+  clientName?: string;
 }
 
 /**
@@ -144,7 +161,9 @@ export const verifyAccessToken = (
     name: claims.name ?? '',
     scopes: (claims.scope ?? '').split(' ').filter(isApiKeyScope),
     tenants: readTenants(claims),
-    tenantNames: claims.tenantNames ?? {}
+    tenantNames: claims.tenantNames ?? {},
+    clientId: claims.clientId,
+    clientName: claims.clientName
   };
 };
 

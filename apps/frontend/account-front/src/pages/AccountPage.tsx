@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router'
 import { Box, Tabs, Tab } from '@mui/material';
 import ProfileTab from '../components/tabs/ProfileTab';
 import ApiKeysTab from '../components/tabs/ApiKeysTab';
+import ActivityTab from '../components/tabs/ActivityTab';
 
 const AccountPage: React.FC = () => {
   const location = useLocation();
@@ -12,7 +13,8 @@ const AccountPage: React.FC = () => {
   // selecting a path that renders something else.
   const tabs = [
     { path: '/profile', label: 'Profile' },
-    { path: '/api-keys', label: 'API keys' }
+    { path: '/api-keys', label: 'API keys' },
+    { path: '/activity', label: 'Activity' }
   ];
 
   const getActiveTab = () => {
@@ -38,6 +40,7 @@ const AccountPage: React.FC = () => {
           <Route path="" element={<Navigate to="profile" replace />} />
           <Route path="profile" element={<ProfileTab />} />
           <Route path="api-keys" element={<ApiKeysTab />} />
+          <Route path="activity" element={<ActivityTab />} />
         </Routes>
       </Box>
     </Box>

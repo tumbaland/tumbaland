@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { auditPlugin } from '@tumbaland/backend-core';
 
 export interface ITrackedTicker extends Document {
   ticker: string;
@@ -43,5 +44,8 @@ const TrackedTickerSchema: Schema = new Schema({
 // stopped declaring, so narrowing a constraint here also needs an entry in
 // scripts/migration/drop-stale-indexes.js to retire the old index.
 TrackedTickerSchema.index({ ticker: 1, userId: 1, groupId: 1 }, { unique: true, sparse: true });
+
+// Attribution and a change trail; see auditPlugin.
+TrackedTickerSchema.plugin(auditPlugin, { resource: 'tracked_ticker' });
 
 export default mongoose.model<ITrackedTicker>('TrackedTicker', TrackedTickerSchema);

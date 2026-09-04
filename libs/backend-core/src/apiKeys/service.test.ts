@@ -346,6 +346,8 @@ describe('verifyApiKey', () => {
       userName: 'Tester',
       keyId: 'k1',
       scopes: ['relationship:read', 'album:write'],
+      // The key's own name, so an audit trail reads "Claude" and not "k1".
+      label: 'Claude',
       tenants: { allowed: [PERSONAL_TENANT, 'g1'], default: 'g1' }
     });
   });

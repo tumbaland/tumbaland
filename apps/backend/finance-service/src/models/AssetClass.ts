@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { auditPlugin } from '@tumbaland/backend-core';
 
 export type AssetClassKind = 'asset' | 'liability';
 
@@ -52,5 +53,8 @@ const AssetClassSchema: Schema = new Schema({
 }, {
   timestamps: true // Adds createdAt and updatedAt
 });
+
+// Attribution and a change trail; see auditPlugin.
+AssetClassSchema.plugin(auditPlugin, { resource: 'asset_class' });
 
 export default mongoose.model<IAssetClass>('AssetClass', AssetClassSchema);

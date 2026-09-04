@@ -39,6 +39,7 @@ const okVerification = (over: Record<string, unknown> = {}) => ({
   keyId: 'k1',
   scopes: ['relationship:read', 'relationship:write'],
   tenants: grant(PERSONAL_TENANT),
+  label: 'Claude Code',
   ...over
 });
 
@@ -116,7 +117,11 @@ describe('authenticateAgent — API keys', () => {
       keyId: 'k1',
       scopes: ['relationship:read', 'relationship:write'],
       tenants: grant(PERSONAL_TENANT),
-      actingAs: PERSONAL_TENANT
+      actingAs: PERSONAL_TENANT,
+      kind: 'api_key',
+      // What the owner called it, so a trail reads "Claude Code" not an id.
+      label: 'Claude Code',
+      credentialId: 'k1'
     });
   });
 
@@ -341,7 +346,15 @@ describe('authenticateAgent — a multi-tenant grant', () => {
 describe('requireScope', () => {
   const keyReq = (scopes: string[]) =>
     req({
-      apiKey: { keyId: 'k1', scopes, tenants: grant(PERSONAL_TENANT), actingAs: PERSONAL_TENANT }
+      apiKey: {
+        keyId: 'k1',
+        scopes,
+        tenants: grant(PERSONAL_TENANT),
+        actingAs: PERSONAL_TENANT,
+        kind: 'api_key' as const,
+        label: 'A key',
+        credentialId: 'k1'
+      }
     } as Partial<Request>);
 
   it('lets a session through unconditionally', () => {
@@ -421,7 +434,15 @@ describe('denyApiKeys', () => {
 
     denyApiKeys(
       req({
-        apiKey: { keyId: 'k1', scopes: [], tenants: grant(PERSONAL_TENANT), actingAs: PERSONAL_TENANT }
+        apiKey: {
+          keyId: 'k1',
+          scopes: [],
+          tenants: grant(PERSONAL_TENANT),
+          actingAs: PERSONAL_TENANT,
+          kind: 'api_key' as const,
+          label: 'A key',
+          credentialId: 'k1'
+        }
       }) as Request,
       res,
       next
@@ -451,6 +472,8 @@ describe('authenticateAgent — OAuth access tokens', () => {
       tenants: [PERSONAL_TENANT],
       defaultTenant: PERSONAL_TENANT,
       tenantNames: { [PERSONAL_TENANT]: 'My own data' },
+      clientId: 'client-1',
+      clientName: 'Claude',
       ...over
     }).accessToken;
 

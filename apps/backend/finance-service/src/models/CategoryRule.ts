@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { auditPlugin } from '@tumbaland/backend-core';
 import { TransactionType } from './Transaction';
 
 export type MatchType = 'text' | 'regex';
@@ -63,5 +64,8 @@ const CategoryRuleSchema: Schema = new Schema(
 // Every read is "this owner's rules, in the order they run".
 CategoryRuleSchema.index({ userId: 1, priority: 1 });
 CategoryRuleSchema.index({ groupId: 1, priority: 1 });
+
+// Attribution and a change trail; see auditPlugin.
+CategoryRuleSchema.plugin(auditPlugin, { resource: 'category_rule' });
 
 export default mongoose.model<ICategoryRule>('CategoryRule', CategoryRuleSchema);

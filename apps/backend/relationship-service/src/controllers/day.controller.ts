@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { sendSuccess } from '@tumbaland/backend-core';
+import { sendSuccess, countRead } from '@tumbaland/backend-core';
 import * as DayService from '../services/day.service';
 
 /**
@@ -21,6 +21,10 @@ export const getDays = async (req: Request, res: Response): Promise<void> => {
     startDate: startDate ? new Date(startDate as string) : undefined,
     endDate: endDate ? new Date(endDate as string) : undefined
   });
+
+  // Entries, not days: a day is a container, and what left the server is the
+  // entries inside it.
+  countRead(res, result.days.reduce((total, day) => total + day.entries.length, 0));
 
   sendSuccess(res, result);
 };

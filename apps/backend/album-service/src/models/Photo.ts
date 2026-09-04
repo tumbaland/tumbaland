@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { auditPlugin } from '@tumbaland/backend-core';
 
 export interface IPhoto extends Document {
   filename: string;
@@ -178,5 +179,8 @@ const PhotoSchema: Schema = new Schema(
 // Indexes for performance
 PhotoSchema.index({ albumId: 1, createdAt: -1 });
 PhotoSchema.index({ title: 'text', description: 'text', tags: 'text' });
+
+// Attribution and a change trail; see auditPlugin.
+PhotoSchema.plugin(auditPlugin, { resource: 'photo', redact: ['metadata', 'aiAnalysis'] });
 
 export default mongoose.model<IPhoto>('Photo', PhotoSchema);

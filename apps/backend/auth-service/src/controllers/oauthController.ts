@@ -482,6 +482,9 @@ export const token = async (req: Request, res: Response): Promise<void> => {
 
     const granted = result.code;
     const scopes = granted.scopes as ApiKeyScope[];
+    // Resolved once here and carried on the token: an audit trail has to name
+    // the assistant, and nothing downstream can turn a client id into a name.
+    const clientName = (await findClient(clientId))?.clientName ?? 'A connected app';
     const minted = mintAccessToken({
       userId: granted.userId,
       email: granted.userEmail,
@@ -491,7 +494,11 @@ export const token = async (req: Request, res: Response): Promise<void> => {
       scopes,
       tenants: granted.tenants,
       defaultTenant: granted.defaultTenant,
-      tenantNames: granted.tenantNames ?? {}
+      tenantNames: granted.tenantNames ?? {},
+      // Named on the token so an audit trail can say which assistant acted.
+      // Nothing downstream can resolve a client id, and `jti` rotates hourly.
+      clientId,
+      clientName
     });
 
     const refresh = await issueRefreshToken({
@@ -536,7 +543,9 @@ export const token = async (req: Request, res: Response): Promise<void> => {
       scopes: result.scopes ?? [],
       tenants: result.tenants!.allowed,
       defaultTenant: result.tenants!.default,
-      tenantNames: result.tenantNames ?? {}
+      tenantNames: result.tenantNames ?? {},
+      clientId,
+      clientName: (await findClient(clientId))?.clientName ?? 'A connected app'
     });
 
     res.json({

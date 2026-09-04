@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { sendSuccess } from '@tumbaland/backend-core';
+import { sendSuccess, countRead } from '@tumbaland/backend-core';
 import albumService from '../services/albumService';
 import { releaseStoredBytes, storageActor, transferStoredBytes } from '../services/storageUsage';
 
@@ -42,6 +42,7 @@ export const getAlbums = async (req: Request, res: Response): Promise<void> => {
     groupServiceError
   });
 
+  countRead(res, result.albums.length);
   sendSuccess(res, { albums: result.albums, pagination: result.pagination });
 };
 

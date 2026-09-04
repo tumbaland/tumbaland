@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { BadRequestError, ForbiddenError, sendSuccess } from '@tumbaland/backend-core';
+import { BadRequestError, ForbiddenError, sendSuccess, countRead } from '@tumbaland/backend-core';
 import * as transactionService from '../services/transaction.service';
 import { getCashflowSummary, DEFAULT_MONTHS } from '../services/cashflow.service';
 import { getAnalytics } from '../services/analytics.service';
@@ -83,6 +83,9 @@ export const getTransactions = async (req: Request, res: Response): Promise<void
     skip: parseOffset(skip, 'skip')
   });
 
+  // The page, not the filter's total: the count records what actually left
+  // the server, and `totals.count` covers everything the filter matched.
+  countRead(res, page.items.length);
   sendSuccess(res, page);
 };
 
