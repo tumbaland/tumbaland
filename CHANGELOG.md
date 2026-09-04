@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.464](https://github.com/toomastahves/tumbaland/compare/app-v0.0.463...app-v0.0.464) (2026-09-04)
+
+### Bug Fixes
+
+* CORS was rejecting the OAuth consent form ([#66](https://github.com/toomastahves/tumbaland/issues/66)) ([f78faa9](https://github.com/toomastahves/tumbaland/commit/f78faa9f7998c8d9abcfc19b4b1fb620b9ad6fcb))
 ## [0.0.463](https://github.com/toomastahves/tumbaland/compare/app-v0.0.462...app-v0.0.463) (2026-09-04)
 
 ### Bug Fixes
