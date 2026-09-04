@@ -112,8 +112,10 @@ function registerReadTools(server: McpServer, caller: Caller): void {
     {
       title: 'Search logged activities',
       description:
-        'Look back at what has been logged, optionally narrowed to a date range or one activity type. ' +
-        'Use this to answer "when did we last…" or "how often do we…".',
+        'Look back at what has been logged, newest first, optionally narrowed to a date range or ' +
+        'one activity type. Use this to answer "when did we last…" or "how often do we…" — and ' +
+        'with no date range at all to see the most recent entries, which is the fastest way to ' +
+        'find something to edit.',
       inputSchema: {
         from: dateSchema.optional().describe('Earliest day to include'),
         to: dateSchema.optional().describe('Latest day to include'),

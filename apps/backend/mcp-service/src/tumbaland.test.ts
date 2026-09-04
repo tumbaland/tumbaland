@@ -2,7 +2,7 @@ jest.mock('@tumbaland/backend-core', () => ({
   requireEnv: (name: string) => process.env[name] ?? 'http://relationship-service:4001'
 }));
 
-import { resolveType, tumbaland, TumbalandError, ActivityType } from './tumbaland';
+import { preferTenant, resolveType, tumbaland, TumbalandError, ActivityType } from './tumbaland';
 
 const KEY = 'tmb_live_abcdef123456_secret';
 
@@ -224,5 +224,71 @@ describe('endpoint paths', () => {
     await tumbaland.listActivityTypes(KEY);
 
     expect(requestOf().url.pathname).toBe('/api/activity-types');
+  });
+});
+
+describe('preferTenant', () => {
+  /**
+   * Listing a group returns its own types plus the user's personal ones as a
+   * fallback, so a name can arrive twice. Resolving a name to the wrong one of
+   * them is a silent fault: the entry renders correctly in the day view and
+   * quietly splits the statistics into two rows of the same name.
+   */
+  const type = (over: Partial<ActivityType>): ActivityType => ({
+    _id: 'x',
+    name: 'Together',
+    slug: 'together',
+    valueType: 'number',
+    hasLocation: false,
+    ...over
+  });
+
+  it('keeps the acting group’s type over an inherited personal one', () => {
+    const kept = preferTenant(
+      [type({ _id: 'personal' }), type({ _id: 'group', groupId: 'g1' })],
+      'g1'
+    );
+
+    expect(kept).toHaveLength(1);
+    expect(kept[0]._id).toBe('group');
+  });
+
+  it('keeps it whichever order the API returned them in', () => {
+    // The listing sorts by sortOrder then recency, so a type seeded yesterday
+    // can arrive ahead of the one with every entry against it.
+    const kept = preferTenant(
+      [type({ _id: 'group', groupId: 'g1' }), type({ _id: 'personal' })],
+      'g1'
+    );
+
+    expect(kept[0]._id).toBe('group');
+  });
+
+  it('keeps the personal type when acting personally', () => {
+    const kept = preferTenant(
+      [type({ _id: 'group', groupId: 'g1' }), type({ _id: 'personal' })],
+      undefined
+    );
+
+    expect(kept[0]._id).toBe('personal');
+  });
+
+  it('leaves distinct names alone', () => {
+    const kept = preferTenant(
+      [type({ _id: 'a', name: 'Together' }), type({ _id: 'b', name: 'Dining' })],
+      undefined
+    );
+
+    expect(kept.map((t) => t._id)).toEqual(['a', 'b']);
+  });
+
+  it('matches names case- and space-insensitively, as duplicates are typed', () => {
+    const kept = preferTenant(
+      [type({ _id: 'personal', name: ' together ' }), type({ _id: 'group', groupId: 'g1' })],
+      'g1'
+    );
+
+    expect(kept).toHaveLength(1);
+    expect(kept[0]._id).toBe('group');
   });
 });

@@ -34,7 +34,9 @@ export const activityTypeSchema = z
     slug: z.string(),
     valueType: z.enum(['string', 'boolean', 'number']).catch('string'),
     hasLocation: z.boolean().catch(false),
-    color: z.string().optional()
+    color: z.string().optional(),
+    /** absent on a personal type; the group listing returns both kinds */
+    groupId: z.string().optional()
   })
   .loose();
 

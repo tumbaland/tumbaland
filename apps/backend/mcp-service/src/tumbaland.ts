@@ -24,6 +24,37 @@ export interface ActivityType {
   valueType: 'string' | 'boolean' | 'number';
   hasLocation: boolean;
   color?: string;
+  /** absent on a personal type */
+  groupId?: string;
+}
+
+/**
+ * Keep one type per name: the acting tenant's own, over an inherited one.
+ *
+ * Listing a group returns its types *plus* the user's personal ones as a
+ * fallback, so a name can arrive twice — and picking the wrong one is a silent
+ * fault, not a loud one. An entry filed against a shadowed personal "Together"
+ * renders correctly in the day view and quietly splits the statistics in two.
+ *
+ * Shadowing rather than showing both is also what the model needs: a list with
+ * "Together" in it twice is a list it cannot choose from.
+ */
+export function preferTenant(types: ActivityType[], groupId?: string): ActivityType[] {
+  const byName = new Map<string, ActivityType>();
+
+  for (const type of types) {
+    const key = type.name.trim().toLowerCase();
+    const existing = byName.get(key);
+    if (!existing) {
+      byName.set(key, type);
+      continue;
+    }
+    // `groupId` undefined means acting personally, where a personal type is the
+    // one that belongs and a group type is the inherited one.
+    if (type.groupId === groupId && existing.groupId !== groupId) byName.set(key, type);
+  }
+
+  return [...byName.values()];
 }
 
 export interface Activity {
@@ -145,7 +176,8 @@ export const tumbaland = {
   // so the tools only ever see the list they asked for.
   listActivityTypes: async (apiKey: string, groupId?: string): Promise<ActivityType[]> => {
     const body = await call<unknown>(apiKey, 'GET', '/activity-types', undefined, { groupId });
-    return parseResponse(activityTypesResponseSchema, '/activity-types', body).types;
+    const { types } = parseResponse(activityTypesResponseSchema, '/activity-types', body);
+    return preferTenant(types as ActivityType[], groupId);
   },
 
   createActivity: (
@@ -186,7 +218,15 @@ export const tumbaland = {
       groupId?: string;
     }
   ): Promise<Activity[]> => {
-    const body = await call<unknown>(apiKey, 'GET', '/activities', undefined, params);
+    // Newest first. The endpoint's own default is oldest-first, which makes
+    // "what did we do most recently" — the commonest question anyone asks an
+    // assistant about a journal — a search through date windows rather than one
+    // call. A person scrolling a page wants the start; an agent wants the end.
+    const body = await call<unknown>(apiKey, 'GET', '/activities', undefined, {
+      ...params,
+      sortBy: 'date',
+      sortOrder: 'desc'
+    });
     return parseResponse(activitiesResponseSchema, '/activities', body).activities as Activity[];
   },
 
