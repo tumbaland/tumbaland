@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.466](https://github.com/toomastahves/tumbaland/compare/app-v0.0.465...app-v0.0.466) (2026-09-04)
+
+### Features
+
+* update front ([b063da4](https://github.com/toomastahves/tumbaland/commit/b063da436b4c52a16d28d38ea7e4275b63243fd0))
 ## [0.0.465](https://github.com/toomastahves/tumbaland/compare/app-v0.0.464...app-v0.0.465) (2026-09-04)
 
 ### Bug Fixes
