@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.470](https://github.com/toomastahves/tumbaland/compare/app-v0.0.469...app-v0.0.470) (2026-09-04)
+
+### Features
+
+* add audit ([b1128cf](https://github.com/toomastahves/tumbaland/commit/b1128cf7aaa39268f86e828ce804cebd802ba994))
 ## [0.0.469](https://github.com/toomastahves/tumbaland/compare/app-v0.0.468...app-v0.0.469) (2026-09-04)
 
 ### Features
