@@ -6,7 +6,15 @@ import { healthCheck } from './controllers/healthController';
 import { errorHandler, createBaseApp, metricsHandler } from '@tumbaland/backend-core';
 
 const app = createBaseApp({
-  corsOptions: { exposedHeaders: ['Content-Type', 'Content-Length', 'ETag', 'Cache-Control'] }
+  corsOptions: {
+    exposedHeaders: ['Content-Type', 'Content-Length', 'ETag', 'Cache-Control'],
+    // The OAuth endpoints are navigated to by the browser, not fetched by
+    // script: a top-level GET for the consent page and a form POST back. CORS
+    // cannot help there and does actively break it — Firefox sends
+    // `Origin: null` after the login redirect, which failed the whitelist and
+    // turned an approved consent into a 500.
+    bypassPaths: ['/oauth']
+  }
 });
 
 // Serve static documentation files
