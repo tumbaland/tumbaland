@@ -94,3 +94,42 @@ describe('createCorsMiddleware', () => {
     process.env = ORIGINAL_ENV;
   });
 });
+
+describe('bypassPaths', () => {
+  const run = (middleware: ReturnType<typeof createCorsMiddleware>, path: string, origin?: string) => {
+    const req = { path, method: 'POST', headers: origin ? { origin } : {} } as never;
+    const res = { setHeader: jest.fn(), getHeader: jest.fn(), end: jest.fn() } as never;
+    const next = jest.fn();
+    middleware(req, res, next);
+    return next;
+  };
+
+  it('lets a bypassed path through with an origin that would otherwise be blocked', () => {
+    // Firefox sends a literal `Origin: null` on the consent form POST after the
+    // login redirect. It is truthy, matches no whitelist entry, and turned an
+    // approved consent into a 500.
+    const middleware = createCorsMiddleware({ origins: 'https://app.example', bypassPaths: ['/oauth'] });
+
+    const next = run(middleware, '/oauth/authorize', 'null');
+
+    expect(next).toHaveBeenCalledWith();
+  });
+
+  it('still checks the origin on every other path', () => {
+    const middleware = createCorsMiddleware({ origins: 'https://app.example', bypassPaths: ['/oauth'] });
+
+    const next = run(middleware, '/auth/profile', 'null');
+
+    expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('CORS') }));
+  });
+
+  it('matches by prefix, so nested oauth routes are covered too', () => {
+    const middleware = createCorsMiddleware({ origins: 'https://app.example', bypassPaths: ['/oauth'] });
+    expect(run(middleware, '/oauth/token', 'null')).toHaveBeenCalledWith();
+  });
+
+  it('changes nothing when no bypass is configured', () => {
+    const middleware = createCorsMiddleware({ origins: 'https://app.example' });
+    expect(run(middleware, '/oauth/authorize', 'null')).toHaveBeenCalledWith(expect.any(Error));
+  });
+});
