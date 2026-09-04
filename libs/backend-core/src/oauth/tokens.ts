@@ -15,7 +15,7 @@ import { isApiKeyScope, type ApiKeyScope } from '../apiKeys/types';
  */
 
 /** Marks a token as issued by the OAuth flow, for the MCP resource specifically. */
-const TOKEN_TYPE = 'mcp_access';
+export const ACCESS_TOKEN_TYPE = 'mcp_access';
 
 /** Short enough that a leaked token is a small window, long enough to be usable. */
 const ACCESS_TOKEN_TTL_SECONDS = 60 * 60;
@@ -31,7 +31,7 @@ export interface AccessTokenClaims {
   groupId: string | null;
   email: string;
   name: string;
-  typ: typeof TOKEN_TYPE;
+  typ: typeof ACCESS_TOKEN_TYPE;
   jti: string;
   exp: number;
   iat: number;
@@ -66,7 +66,7 @@ export const mintAccessToken = (input: MintAccessTokenInput): MintedAccessToken 
       groupId: input.groupId,
       email: input.email,
       name: input.name,
-      typ: TOKEN_TYPE,
+      typ: ACCESS_TOKEN_TYPE,
       jti: randomUUID()
     },
     requireEnv('JWT_SECRET'),
@@ -108,7 +108,7 @@ export const verifyAccessToken = (
     return { ok: false, rejection: expired ? 'expired' : 'bad-signature' };
   }
 
-  if (claims.typ !== TOKEN_TYPE) return { ok: false, rejection: 'wrong-type' };
+  if (!isAccessTokenClaims(claims)) return { ok: false, rejection: 'wrong-type' };
   if (claims.aud !== expectedAudience) return { ok: false, rejection: 'wrong-audience' };
   if (!claims.sub) return { ok: false, rejection: 'malformed' };
 
@@ -121,6 +121,20 @@ export const verifyAccessToken = (
     groupId: claims.groupId ?? null
   };
 };
+
+/**
+ * Tell an OAuth access token apart from an ordinary session JWT.
+ *
+ * They are signed with the same secret and arrive in the same header, so
+ * anything holding one has to ask which it got. Getting this wrong is not a
+ * subtle failure: read as a session, an access token has no `id` and no
+ * `groups`, so `req.user.id` lands as `undefined` and every scoped query goes
+ * out unbounded.
+ */
+export const isAccessTokenClaims = (claims: unknown): claims is AccessTokenClaims =>
+  typeof claims === 'object' &&
+  claims !== null &&
+  (claims as AccessTokenClaims).typ === ACCESS_TOKEN_TYPE;
 
 /** Parse a space-separated `scope` parameter, dropping anything we do not define. */
 export const parseScopes = (scope: unknown): ApiKeyScope[] =>

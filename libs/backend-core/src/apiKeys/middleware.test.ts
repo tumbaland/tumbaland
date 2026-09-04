@@ -8,6 +8,7 @@ jest.mock('../logging/logger', () => ({
 
 import jwt from 'jsonwebtoken';
 import { verifyApiKey } from './service';
+import { mintAccessToken, type MintAccessTokenInput } from '../oauth/tokens';
 import { authenticateAgent, requireScope, denyApiKeys } from './middleware';
 
 const mockedVerify = verifyApiKey as jest.Mock;
@@ -349,5 +350,112 @@ describe('denyApiKeys', () => {
 
     expect(res.status).toHaveBeenCalledWith(403);
     expect(next).not.toHaveBeenCalled();
+  });
+});
+
+describe('authenticateAgent — OAuth access tokens', () => {
+  /**
+   * Minted by the real thing rather than hand-signed. The bug this covers was
+   * that an access token verified as a session — same secret, same header — and
+   * its claims were then read as a session's: `sub` instead of `id`, no
+   * `groups`. Every one of those details has to come from the code that issues
+   * them, or the test simply re-encodes whatever the middleware happens to do.
+   */
+  const mint = (over: Partial<MintAccessTokenInput> = {}) =>
+    mintAccessToken({
+      userId: 'u1',
+      email: 'u1@example.com',
+      name: 'Tester',
+      resource: 'https://mcp.example.com',
+      issuer: 'https://auth.example.com',
+      scopes: ['relationship:read', 'relationship:write'],
+      groupId: null,
+      ...over
+    }).accessToken;
+
+  const withToken = (token: string, over: Partial<Request> = {}) =>
+    req({ headers: { authorization: `Bearer ${token}` }, ...over });
+
+  it('names the user, so scoped queries are bounded', async () => {
+    const request = withToken(mint());
+    const next = jest.fn();
+
+    await authenticateAgent('relationship:write')(request, mockRes(), next);
+
+    expect(next).toHaveBeenCalled();
+    // Read as a session this was `undefined`, which reached handlers as "no
+    // user" rather than as a refusal: writes were rejected as inaccessible and
+    // reads fell through to an unscoped query.
+    expect(request.user?.id).toBe('u1');
+    expect(request.user?.email).toBe('u1@example.com');
+  });
+
+  it('is held to its scopes, exactly as a key is', async () => {
+    const res = mockRes();
+    const next = jest.fn();
+    const request = withToken(mint({ scopes: ['relationship:read'] }));
+
+    await authenticateAgent('relationship:write')(request, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('carries an apiKey context, so requireScope applies downstream', async () => {
+    const request = withToken(mint({ scopes: ['relationship:read'] }));
+
+    await authenticateAgent()(request, mockRes(), jest.fn());
+
+    // Without this the token looked like a session and every requireScope on
+    // every route waved it through.
+    expect(request.apiKey?.scopes).toEqual(['relationship:read']);
+
+    const res = mockRes();
+    const next = jest.fn();
+    requireScope('relationship:write')(request, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('is pinned to the tenant chosen at consent', async () => {
+    const request = withToken(mint({ groupId: 'g1' }));
+    const next = jest.fn();
+
+    await authenticateAgent()(request, mockRes(), next);
+
+    expect(next).toHaveBeenCalled();
+    expect(request.userGroups).toEqual(['g1']);
+    // Written in for a caller that named none, so a handler's group branch
+    // lands where the person who approved the connection intended.
+    expect(request.query.groupId).toBe('g1');
+  });
+
+  it('refuses a request naming a different tenant', async () => {
+    const res = mockRes();
+    const next = jest.fn();
+    const request = withToken(mint({ groupId: 'g1' }), { query: { groupId: 'g2' } });
+
+    await authenticateAgent()(request, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('is refused by denyApiKeys, like any other credential software holds', async () => {
+    const request = withToken(mint());
+    await authenticateAgent()(request, mockRes(), jest.fn());
+
+    const res = mockRes();
+    const next = jest.fn();
+    denyApiKeys(request, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('never consults the API key store', async () => {
+    await authenticateAgent()(withToken(mint()), mockRes(), jest.fn());
+    expect(mockedVerify).not.toHaveBeenCalled();
   });
 });

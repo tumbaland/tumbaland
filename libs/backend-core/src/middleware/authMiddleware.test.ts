@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { authenticateToken, optionalAuth } from './authMiddleware';
+import { mintAccessToken } from '../oauth/tokens';
 import { UserPayload } from '../types/auth';
 
 function mockReq(overrides: Partial<Request> = {}): Request {
@@ -169,5 +170,53 @@ describe('optionalAuth', () => {
 
     expect(next).toHaveBeenCalledTimes(1);
     expect(res.status).not.toHaveBeenCalled();
+  });
+});
+
+describe('OAuth access tokens are not sessions', () => {
+  const ORIGINAL_ENV = process.env;
+
+  beforeEach(() => {
+    process.env = { ...ORIGINAL_ENV, JWT_SECRET: 'test-secret' };
+  });
+
+  afterEach(() => {
+    process.env = ORIGINAL_ENV;
+  });
+
+  const accessToken = () =>
+    mintAccessToken({
+      userId: 'u1',
+      email: 'u1@example.com',
+      name: 'Tester',
+      resource: 'https://mcp.example.com',
+      issuer: 'https://auth.example.com',
+      scopes: ['relationship:read'],
+      groupId: null
+    }).accessToken;
+
+  it('refuses one on a session-only route', () => {
+    const res = mockRes();
+    const next = jest.fn();
+    const req = mockReq({ headers: { authorization: `Bearer ${accessToken()}` } });
+
+    // It verifies — same secret — so nothing but the type check stands between
+    // an assistant and every route that has no scopes to be held to.
+    authenticateToken(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+    expect(req.user).toBeUndefined();
+  });
+
+  it('treats one as no session at all on an optional-auth route', () => {
+    const next = jest.fn();
+    const req = mockReq({ headers: { authorization: `Bearer ${accessToken()}` } });
+
+    optionalAuth(req, mockRes(), next);
+
+    // The route still answers, in its public form — the same as a stale cookie.
+    expect(next).toHaveBeenCalled();
+    expect(req.user).toBeUndefined();
   });
 });

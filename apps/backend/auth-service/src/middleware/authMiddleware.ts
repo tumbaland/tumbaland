@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { logger } from '@tumbaland/backend-core';
+import { isAccessTokenClaims, logger } from '@tumbaland/backend-core';
 import { verifyJWT } from '../services/jwtService';
 import { User, IUser } from '../models/User';
 
@@ -29,6 +29,18 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
       return;
     }
     const decoded = verifyJWT(token);
+
+    // An OAuth access token verifies here — same secret — and carries an email,
+    // so without this it would find a user and be admitted as that person. It
+    // is a connected assistant, held to scopes it has no way to state on these
+    // routes, and this service is where keys and connections are managed.
+    if (isAccessTokenClaims(decoded)) {
+      res.status(403).json({
+        success: false,
+        message: 'This operation requires an interactive session, not a connected assistant'
+      });
+      return;
+    }
 
     // Check if token version is valid
     const dbUser = await User.findOne({ email: decoded.email.toLowerCase() });
@@ -63,6 +75,13 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
     const token = req.cookies?.access_token || req.headers.authorization?.replace('Bearer ', '');
     if (token) {
       const decoded = verifyJWT(token);
+      // Treated as no session at all, the same as an expired cookie — and in
+      // particular never upserted, since an access token must not be the thing
+      // that creates an account.
+      if (isAccessTokenClaims(decoded)) {
+        next();
+        return;
+      }
       req.user = decoded;
       req.userGroups = decoded.groups ?? [];
       // Upsert but do not block on approval

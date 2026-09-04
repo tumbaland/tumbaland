@@ -163,7 +163,7 @@ describe('getActivityTypes', () => {
       mockedFind.mockReturnValue(mockFindChain([]));
       mockedCountDocuments.mockResolvedValue(0);
 
-      await getActivityTypes({});
+      await expect(getActivityTypes({})).rejects.toThrow();
 
       expect(mockedInsertMany).not.toHaveBeenCalled();
     });
@@ -207,14 +207,16 @@ describe('getActivityTypes', () => {
     });
   });
 
-  it('falls back to active-only when neither userId nor groupId is given', async () => {
+  it('refuses when neither userId nor groupId is given, rather than reading everything', async () => {
     mockedFind.mockReturnValue(mockFindChain([]));
     mockedCountDocuments.mockResolvedValue(0);
 
-    const result = await getActivityTypes({});
-
-    expect(mockedFind).toHaveBeenCalledWith({ isActive: true });
-    expect(result).toEqual({ types: [], total: 0, page: 1, totalPages: 0 });
+    // This used to answer with every active type in the database — one
+    // account's list built from all of them. It hid a real fault for as long as
+    // it stood: an OAuth access token read as a session left `userId`
+    // undefined, and the listing looked correct right up until the first write.
+    await expect(getActivityTypes({})).rejects.toThrow('without a user');
+    expect(mockedFind).not.toHaveBeenCalled();
   });
 
   it('computes pagination from the total count', async () => {

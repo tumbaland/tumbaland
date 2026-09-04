@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { requireEnv } from '../config/env';
+import { isAccessTokenClaims } from '../oauth/tokens';
 import { UserPayload } from '../types/auth';
 
 /**
@@ -8,6 +9,13 @@ import { UserPayload } from '../types/auth';
  * Verifies JWT token and attaches user info (and its embedded groups) to
  * the request — typed via the global `Express.Request` augmentation in
  * `../types/auth`, no `(req as any)` cast needed.
+ *
+ * OAuth access tokens are refused outright. They are signed with the same
+ * secret, so they verify here, but they mean something this middleware has no
+ * way to honour: an assistant acting within scopes, pinned to one tenant.
+ * Routes that software may legitimately reach use `authenticateAgent`, which
+ * enforces both — so anything still guarded by this one is a person's to do,
+ * and letting a token through would be handing an assistant the account.
  */
 export function authenticateToken(req: Request, res: Response, next: NextFunction): void {
   try {
@@ -19,7 +27,16 @@ export function authenticateToken(req: Request, res: Response, next: NextFunctio
       return;
     }
 
-    const user = jwt.verify(token, JWT_SECRET) as UserPayload;
+    const claims = jwt.verify(token, JWT_SECRET);
+    if (isAccessTokenClaims(claims)) {
+      res.status(403).json({
+        success: false,
+        message: 'This operation requires an interactive session, not a connected assistant'
+      });
+      return;
+    }
+
+    const user = claims as UserPayload;
     req.user = user;
     req.userGroups = user.groups ?? [];
     next();
@@ -46,9 +63,14 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction): 
     const token = req.cookies?.access_token || req.headers.authorization?.replace('Bearer ', '');
 
     if (token) {
-      const user = jwt.verify(token, JWT_SECRET) as UserPayload;
-      req.user = user;
-      req.userGroups = user.groups ?? [];
+      const claims = jwt.verify(token, JWT_SECRET);
+      // An access token is not a session; treated as none, exactly like an
+      // expired cookie, so the route still answers with its public form.
+      if (!isAccessTokenClaims(claims)) {
+        const user = claims as UserPayload;
+        req.user = user;
+        req.userGroups = user.groups ?? [];
+      }
     }
   } catch {
     // Deliberately ignored — see above.

@@ -1,4 +1,4 @@
-import { ConflictError, logger } from '@tumbaland/backend-core';
+import { BadRequestError, ConflictError, logger } from '@tumbaland/backend-core';
 import { ActivityType, IActivityType } from '../models/ActivityType';
 import { seedDefaultActivityTypes } from './defaultActivityTypes';
 
@@ -93,9 +93,17 @@ export const getActivityTypes = async (
       { groupId: null }
     ];
   } else {
-    // No user context - this shouldn't happen in production, but return active types
-    logger.warn('No userId provided to getActivityTypes - this should not happen in production');
-    query.isActive = true;
+    // No user context. Every caller reaches this through authentication, so
+    // arriving without a user means the middleware handed over something it did
+    // not understand — which is exactly what happened when an OAuth access
+    // token was read as a session and its `sub` never became `user.id`.
+    //
+    // This used to answer with every active type in the database, which is one
+    // account reading another's. It also read as working, so the real fault
+    // surfaced only on the first write, where there is no such fallback to hide
+    // it. Refusing keeps the failure where the mistake is.
+    logger.error('getActivityTypes called with no user context');
+    throw new BadRequestError('Cannot list activity types without a user');
   }
 
   // Calculate pagination

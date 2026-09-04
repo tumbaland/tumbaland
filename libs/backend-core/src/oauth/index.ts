@@ -19,5 +19,11 @@ export type {
   CodeRejection,
   RefreshRedemption
 } from './service';
-export { mintAccessToken, verifyAccessToken, parseScopes } from './tokens';
+export {
+  mintAccessToken,
+  verifyAccessToken,
+  parseScopes,
+  isAccessTokenClaims,
+  ACCESS_TOKEN_TYPE
+} from './tokens';
 export type { AccessTokenClaims, MintAccessTokenInput, MintedAccessToken, AccessTokenVerification } from './tokens';

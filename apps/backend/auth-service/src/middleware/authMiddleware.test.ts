@@ -10,6 +10,7 @@ jest.mock('../models/User', () => ({
 import { User } from '../models/User';
 import { authenticateToken, optionalAuth, requireRole, requireApproved } from './authMiddleware';
 import { generateJWT } from '../services/jwtService';
+import { mintAccessToken } from '@tumbaland/backend-core';
 
 const mockedFindOne = User.findOne as unknown as jest.Mock;
 const mockedFindOneAndUpdate = User.findOneAndUpdate as unknown as jest.Mock;
@@ -292,5 +293,48 @@ describe('authMiddleware', () => {
       expect(next).toHaveBeenCalledTimes(1);
       expect(res.status).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('a connected assistant is not a session', () => {
+  /**
+   * An OAuth access token is signed with the same secret as a session, so it
+   * verifies here. What made it dangerous on this service specifically is that
+   * its claims carry an email: the user lookup succeeded, `tokenVersion` was
+   * absent so the invalidation check was skipped, and an assistant was admitted
+   * as the person — on the service where keys and connections are managed.
+   */
+  const accessToken = () =>
+    mintAccessToken({
+      userId: 'u1',
+      email: 'u1@example.com',
+      name: 'Tester',
+      resource: 'https://mcp.example.com',
+      issuer: 'https://auth.example.com',
+      scopes: ['relationship:read'],
+      groupId: null
+    }).accessToken;
+
+  it('is refused, without ever looking the user up', async () => {
+    const res = mockRes();
+    const next = jest.fn();
+    const req = mockReq({ headers: { authorization: `Bearer ${accessToken()}` } });
+
+    await authenticateToken(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+    expect(mockedFindOne).not.toHaveBeenCalled();
+  });
+
+  it('never creates an account through optionalAuth', async () => {
+    const next = jest.fn();
+    const req = mockReq({ headers: { authorization: `Bearer ${accessToken()}` } });
+
+    await optionalAuth(req, mockRes(), next);
+
+    expect(next).toHaveBeenCalled();
+    expect(req.user).toBeUndefined();
+    expect(mockedFindOneAndUpdate).not.toHaveBeenCalled();
   });
 });

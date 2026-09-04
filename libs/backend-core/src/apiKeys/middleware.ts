@@ -2,10 +2,11 @@ import { NextFunction, Request, RequestHandler, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { requireEnv } from '../config/env';
 import logger from '../logging/logger';
+import { isAccessTokenClaims, type AccessTokenClaims } from '../oauth/tokens';
 import type { UserPayload } from '../types/auth';
 import { looksLikeApiKey } from './crypto';
 import { verifyApiKey } from './service';
-import type { ApiKeyScope } from './types';
+import { isApiKeyScope, type ApiKeyScope } from './types';
 
 /**
  * Request-scoped facts about the key a request arrived on. Absent on ordinary
@@ -83,6 +84,60 @@ const applyTenantPin = (req: Request, groupId: string | null): boolean => {
   return true;
 };
 
+/** A verified non-session credential, whichever kind it arrived as. */
+interface AgentCredential {
+  /** the key id or token id, for the request-scoped context */
+  credentialId: string;
+  userId: string;
+  email: string;
+  name: string;
+  scopes: ApiKeyScope[];
+  groupId: string | null;
+}
+
+/**
+ * Admit software acting for a user, on the terms its credential carries.
+ *
+ * Shared by both non-session credentials on purpose. An API key and an OAuth
+ * access token differ entirely in how they are issued and verified, and not at
+ * all in what they mean once they are: a user, a set of scopes, and one tenant.
+ * Settling that in one place is what keeps the two from drifting into subtly
+ * different amounts of access.
+ */
+function admitAgent(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+  requiredScopes: ApiKeyScope[],
+  credential: AgentCredential
+): void {
+  const missing = requiredScopes.filter((scope) => !credential.scopes.includes(scope));
+  if (missing.length > 0) {
+    res.status(403).json({
+      success: false,
+      message: `Credential is missing required scope: ${missing.join(', ')}`
+    });
+    return;
+  }
+
+  if (!applyTenantPin(req, credential.groupId)) {
+    res.status(403).json({
+      success: false,
+      message: 'Credential is not permitted to act in the requested group'
+    });
+    return;
+  }
+
+  req.user = { id: credential.userId, email: credential.email, name: credential.name };
+  // Only the pinned group, never the owner's full membership: this is what
+  // stops a credential reaching a group it was not issued for through any
+  // handler that consults `userGroups` instead of the `groupId` parameter.
+  req.userGroups = credential.groupId ? [credential.groupId] : [];
+  req.apiKey = { keyId: credential.credentialId, scopes: credential.scopes, groupId: credential.groupId };
+
+  next();
+}
+
 /**
  * Authenticate a request that software may legitimately be making.
  *
@@ -104,14 +159,40 @@ export const authenticateAgent = (...requiredScopes: ApiKeyScope[]): RequestHand
     }
 
     if (!looksLikeApiKey(token)) {
+      let claims: UserPayload | AccessTokenClaims;
       try {
-        const user = jwt.verify(token, requireEnv('JWT_SECRET')) as UserPayload;
+        claims = jwt.verify(token, requireEnv('JWT_SECRET')) as UserPayload | AccessTokenClaims;
+      } catch {
+        unauthorized(res);
+        return;
+      }
+
+      if (!isAccessTokenClaims(claims)) {
+        const user = claims as UserPayload;
         req.user = user;
         req.userGroups = user.groups ?? [];
         next();
-      } catch {
-        unauthorized(res);
+        return;
       }
+
+      // An OAuth access token: signed with the same secret as a session and
+      // arriving in the same header, but nothing like one. It names its user in
+      // `sub`, carries scopes, and is pinned to a tenant — so it is admitted
+      // the way a key is, not the way a person is.
+      //
+      // Reading it as a session was the original bug and it failed quietly: the
+      // claims have no `id` and no `groups`, so `req.user.id` arrived as
+      // `undefined`, scoped writes were refused as inaccessible, and a read
+      // whose scope collapsed to nothing fell through to "no user context" and
+      // answered from the whole collection.
+      admitAgent(req, res, next, requiredScopes, {
+        credentialId: claims.jti,
+        userId: claims.sub,
+        email: claims.email ?? '',
+        name: claims.name ?? '',
+        scopes: (claims.scope ?? '').split(' ').filter(isApiKeyScope),
+        groupId: claims.groupId ?? null
+      });
       return;
     }
 
@@ -124,37 +205,14 @@ export const authenticateAgent = (...requiredScopes: ApiKeyScope[]): RequestHand
       return;
     }
 
-    const scopes = result.scopes ?? [];
-    const missing = requiredScopes.filter((scope) => !scopes.includes(scope));
-    if (missing.length > 0) {
-      res.status(403).json({
-        success: false,
-        message: `API key is missing required scope: ${missing.join(', ')}`
-      });
-      return;
-    }
-
-    const groupId = result.groupId ?? null;
-    if (!applyTenantPin(req, groupId)) {
-      res.status(403).json({
-        success: false,
-        message: 'API key is not permitted to act in the requested group'
-      });
-      return;
-    }
-
-    req.user = {
-      id: result.userId!,
+    admitAgent(req, res, next, requiredScopes, {
+      credentialId: result.keyId!,
+      userId: result.userId!,
       email: result.userEmail ?? '',
-      name: result.userName ?? ''
-    };
-    // Only the pinned group, never the owner's full membership: this is what
-    // stops a key reaching a group it was not issued for through any handler
-    // that consults `userGroups` instead of the `groupId` parameter.
-    req.userGroups = groupId ? [groupId] : [];
-    req.apiKey = { keyId: result.keyId!, scopes, groupId };
-
-    next();
+      name: result.userName ?? '',
+      scopes: result.scopes ?? [],
+      groupId: result.groupId ?? null
+    });
   };
 
 /**
@@ -166,7 +224,9 @@ export const authenticateAgent = (...requiredScopes: ApiKeyScope[]): RequestHand
  * door for lacking a scope half the router never uses.
  *
  * A session passes unconditionally: scopes narrow what software may do on a
- * person's behalf, not what the person may do themselves.
+ * person's behalf, not what the person may do themselves. Everything that is
+ * not a session — an API key or an OAuth access token alike — arrives with
+ * `req.apiKey` set and is held to it.
  */
 export const requireScope = (...requiredScopes: ApiKeyScope[]): RequestHandler =>
   function requireScopeHandler(req, res, next) {
@@ -179,7 +239,7 @@ export const requireScope = (...requiredScopes: ApiKeyScope[]): RequestHandler =
     if (missing.length > 0) {
       res.status(403).json({
         success: false,
-        message: `API key is missing required scope: ${missing.join(', ')}`
+        message: `Credential is missing required scope: ${missing.join(', ')}`
       });
       return;
     }
@@ -188,7 +248,7 @@ export const requireScope = (...requiredScopes: ApiKeyScope[]): RequestHandler =
   };
 
 /**
- * Refuse API keys on a route that a session may still use.
+ * Refuse every non-session credential on a route that a session may still use.
  *
  * For the handful of operations that should stay a person's to perform — key
  * management itself, most obviously, since a key that can mint keys is a key
