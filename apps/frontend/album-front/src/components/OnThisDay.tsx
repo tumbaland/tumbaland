@@ -7,11 +7,18 @@ import { MemoryPhoto, MemoryYear } from '../types';
 
 interface OnThisDayProps {
   groupId?: string;
-  /** thumbnail edge length in px */
-  size?: number;
+  /** thumbnail edge length in px; responsive by default */
+  size?: number | Record<string, number>;
 }
 
-const THUMB_SIZE = 104;
+/**
+ * Smaller on a phone.
+ *
+ * At 104px a 360px screen shows two and a half thumbnails, which reads as a
+ * cropped row rather than a strip of memories. 72px fits four with the fifth
+ * peeking, which is what tells someone the row scrolls.
+ */
+const THUMB_SIZE = { xs: 72, sm: 88, md: 104 };
 
 const formatDay = (day: string): string =>
   new Date(`${day}T00:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
@@ -28,19 +35,19 @@ const yearsAgoLabel = (yearsAgo: number): string =>
 
 /**
  * What the tooltip says about a photo. A photo remembered on its upload date
- * rather than a capture date says so — the strip should never imply it knows
+ * rather than a capture date says so. The strip should never imply it knows
  * when a picture was taken when all it really has is when it arrived.
  */
 const describe = (photo: MemoryPhoto): string => {
   const where = photo.title || photo.originalName;
   const when = formatFullDay(photo.memoryDate);
   const source = photo.dateSource === 'uploaded' ? ' (uploaded)' : '';
-  return `${where} — ${when}${source} · ${photo.albumName}`;
+  return `${where}. ${when}${source} · ${photo.albumName}`;
 };
 
 interface MemoryYearRowProps {
   year: MemoryYear;
-  size: number;
+  size: number | Record<string, number>;
   onSelect: (photo: MemoryPhoto) => void;
 }
 
@@ -52,7 +59,7 @@ const MemoryYearRow: React.FC<MemoryYearRowProps> = ({ year, size, onSelect }) =
 
   return (
     <Box>
-      <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mb: 1 }}>
+      <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mb: 1, flexWrap: 'wrap' }}>
         <Chip size="small" label={yearsAgoLabel(year.yearsAgo)} sx={{ fontWeight: 600 }} />
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
           {year.year} · {year.photoCount} {year.photoCount === 1 ? 'photo' : 'photos'}
@@ -60,8 +67,21 @@ const MemoryYearRow: React.FC<MemoryYearRowProps> = ({ year, size, onSelect }) =
       </Stack>
 
       {/* One row per year, scrolling sideways on its own: a busy day should not
-          be able to push the album grid off the screen. */}
-      <Box sx={{ display: 'flex', gap: 1, overflowX: 'auto', pb: 1 }}>
+          be able to push the album grid off the screen. `minWidth: 0` is what
+          lets it shrink inside a flex parent rather than growing to fit. */}
+      <Box
+        sx={{
+          display: 'flex',
+          gap: 1,
+          overflowX: 'auto',
+          minWidth: 0,
+          pb: 1,
+          // The native bar sits on top of the thumbnails on a phone and adds
+          // nothing a peeking fifth thumbnail does not already say.
+          scrollbarWidth: 'none',
+          '&::-webkit-scrollbar': { display: 'none' }
+        }}
+      >
         {year.photos.map((photo) => {
           const src = photo.thumbnailSignedUrl || photo.signedUrl;
 
@@ -151,8 +171,17 @@ const OnThisDay: React.FC<OnThisDayProps> = ({ groupId, size = THUMB_SIZE }) => 
   }
 
   return (
-    <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', p: 2, mb: 4 }}>
-      <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mb: 2 }}>
+    <Card
+      elevation={0}
+      sx={{
+        borderRadius: 3,
+        border: '1px solid',
+        borderColor: 'divider',
+        p: { xs: 1.5, sm: 2 },
+        mb: { xs: 3, sm: 4 }
+      }}
+    >
+      <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mb: 2, flexWrap: 'wrap' }}>
         <HistoryIcon color="primary" />
         <Typography variant="h6" component="h2" sx={{ fontWeight: 'bold' }}>
           On this day

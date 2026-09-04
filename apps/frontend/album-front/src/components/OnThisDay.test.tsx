@@ -151,3 +151,20 @@ it('opens the photo it was given, in its own album', async () => {
 
   expect(mockedNavigate).toHaveBeenCalledWith('/albums/a1/photos/p1');
 });
+
+it('labels a photo in plain punctuation, with no em dash', () => {
+  // House rule for anything a person reads: an em dash is the clearest tell
+  // that a machine wrote the sentence.
+  mockedUseMemories.mockReturnValue({
+    memories: memories(),
+    loading: false,
+    isFetching: false,
+    error: null
+  });
+  renderStrip();
+
+  const label = screen.getAllByRole('button')[0].getAttribute('aria-label') ?? '';
+  expect(label).not.toContain('—');
+  expect(label.length).toBeGreaterThan(0);
+});
+
