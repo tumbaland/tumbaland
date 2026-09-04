@@ -94,6 +94,10 @@ jobs:
               - *root-shared
               - *backend-libs-changed
               - 'apps/backend/group-service/**'
+            apps/backend/mcp-service:
+              - *root-shared
+              - *backend-libs-changed
+              - 'apps/backend/mcp-service/**'
             apps/backend/payment-service:
               - *root-shared
               - *backend-libs-changed
