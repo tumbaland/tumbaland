@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.474](https://github.com/toomastahves/tumbaland/compare/app-v0.0.473...app-v0.0.474) (2026-09-05)
+
+### Features
+
+* optimize mcp calls ([d7f75a8](https://github.com/toomastahves/tumbaland/commit/d7f75a8db6a872ed9aa07cd25f9124fa5bc23d2f))
 ## [0.0.473](https://github.com/toomastahves/tumbaland/compare/app-v0.0.472...app-v0.0.473) (2026-09-05)
 
 ### Features
