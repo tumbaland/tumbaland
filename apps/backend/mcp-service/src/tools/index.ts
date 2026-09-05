@@ -1,6 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ApiKeyScope } from '@tumbaland/backend-core';
 import { Caller, ToolModule } from './module';
+import { albumRead, albumWrite } from './album';
 import { financeRead, financeWrite } from './finance';
 import { relationshipRead, relationshipWrite } from './relationship';
 
@@ -17,7 +18,9 @@ export const MODULES: ToolModule[] = [
   relationshipRead,
   relationshipWrite,
   financeRead,
-  financeWrite
+  financeWrite,
+  albumRead,
+  albumWrite
 ];
 
 /**

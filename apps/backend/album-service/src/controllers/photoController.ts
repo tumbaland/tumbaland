@@ -105,8 +105,12 @@ export const getAlbumTags = async (req: Request, res: Response): Promise<void> =
  */
 export const bulkUpdateTags = async (req: Request, res: Response): Promise<void> => {
   const { photoIds, add, remove } = req.body;
+  const user = req.user!;
 
-  const result = await photoService.bulkUpdateTags({ photoIds, add, remove });
+  const result = await photoService.bulkUpdateTags(
+    { photoIds, add, remove },
+    { userId: user.id, userGroups: req.userGroups || [] }
+  );
 
   sendSuccess(res, result, 'Tags updated successfully');
 };
@@ -117,7 +121,12 @@ export const bulkUpdateTags = async (req: Request, res: Response): Promise<void>
 export const getPhotoById = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
 
-  const photo = await photoService.getPhotoById(id as string);
+  const user = req.user!;
+
+  const photo = await photoService.getPhotoById(id as string, {
+    userId: user.id,
+    userGroups: req.userGroups || []
+  });
 
   sendSuccess(res, photo);
 };
@@ -128,13 +137,13 @@ export const getPhotoById = async (req: Request, res: Response): Promise<void> =
 export const updatePhoto = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
   const { title, description, tags, metadata } = req.body;
+  const user = req.user!;
 
-  const photo = await photoService.updatePhoto(id as string, {
-    title,
-    description,
-    tags,
-    metadata
-  });
+  const photo = await photoService.updatePhoto(
+    id as string,
+    { title, description, tags, metadata },
+    { userId: user.id, userGroups: req.userGroups || [] }
+  );
 
   sendSuccess(res, photo, 'Photo updated successfully');
 };
@@ -144,8 +153,12 @@ export const updatePhoto = async (req: Request, res: Response): Promise<void> =>
  */
 export const deletePhoto = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
+  const user = req.user!;
 
-  const deleted = await photoService.deletePhoto(id as string);
+  const deleted = await photoService.deletePhoto(id as string, {
+    userId: user.id,
+    userGroups: req.userGroups || []
+  });
 
   // Hand the bytes back. A cumulative meter that only counts up locks people
   // out of storage they freed months earlier.

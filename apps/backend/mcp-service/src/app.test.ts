@@ -97,7 +97,9 @@ describe('protected resource metadata', () => {
       'relationship:read',
       'relationship:write',
       'finance:read',
-      'finance:write'
+      'finance:write',
+      'album:read',
+      'album:write'
     ]);
   });
 });
@@ -250,10 +252,18 @@ describe('tools are gated by the key’s scopes', () => {
     await expect(toolsFor(['relationship:write'])).resolves.toEqual([]);
   });
 
-  it('shows nothing for a key scoped to a domain with no tools yet', async () => {
-    // Photos have no module, so an album-only key sees an empty surface rather
-    // than a list of journal tools it cannot use.
-    await expect(toolsFor(['album:read'])).resolves.toEqual([]);
+  it('shows an album-only key the photo tools and nothing else', async () => {
+    await expect(toolsFor(['album:read'])).resolves.toEqual([
+      'get_photo_memories',
+      'list_albums',
+      'search_photos'
+    ]);
+  });
+
+  it('shows nothing for a key with a scope no module serves', async () => {
+    // Every scope has a module now, so the empty surface is proved with one
+    // that does not exist rather than one that has simply not been built yet.
+    await expect(toolsFor(['nothing:read' as never])).resolves.toEqual([]);
   });
 
   it('shows a finance-only key the finance tools and nothing else', async () => {
@@ -378,11 +388,17 @@ describe('advertised scopes follow the registered modules', () => {
     // with no tools behind it asks for access that buys them nothing.
     const res = await request(app).get('/.well-known/oauth-protected-resource');
 
-    expect(res.body.scopes_supported).toEqual(
-      expect.arrayContaining(['relationship:read', 'relationship:write', 'finance:read', 'finance:write'])
+    // Every scope the product defines now has tools behind it, so the list is
+    // the whole set rather than a subset.
+    expect([...res.body.scopes_supported].sort()).toEqual(
+      [
+        'album:read',
+        'album:write',
+        'finance:read',
+        'finance:write',
+        'relationship:read',
+        'relationship:write'
+      ].sort()
     );
-    // Photos have no module yet, so nobody is asked to approve access to them.
-    expect(res.body.scopes_supported).not.toContain('album:read');
-    expect(res.body.scopes_supported).not.toContain('album:write');
   });
 });

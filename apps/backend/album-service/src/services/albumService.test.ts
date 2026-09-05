@@ -93,23 +93,26 @@ describe('updateAlbum', () => {
   });
 });
 
+/** Deleting an album destroys every photo file in it, so it needs a caller. */
+const OWNER = { userId: 'user-1', userGroups: ['g1'] };
+
 describe('deleteAlbum', () => {
   it('throws NotFoundError when the album does not exist', async () => {
     mockedFindById.mockResolvedValue(null);
 
-    await expect(albumService.deleteAlbum('album-1')).rejects.toMatchObject({ name: 'NotFoundError' });
+    await expect(albumService.deleteAlbum('album-1', OWNER)).rejects.toMatchObject({ name: 'NotFoundError' });
     expect(mockedPhotoDeleteMany).not.toHaveBeenCalled();
   });
 
   it('deletes files for every photo, then the photos, then the album', async () => {
-    mockedFindById.mockResolvedValue({ _id: 'album-1' });
+    mockedFindById.mockResolvedValue({ _id: 'album-1', userId: 'user-1' });
     mockedPhotoFind.mockResolvedValue([
       { minioFileId: 'file-1', minioThumbnailFileId: 'thumb-1' },
       { minioFileId: 'file-2', minioThumbnailFileId: undefined }
     ]);
     mockedDeleteFile.mockResolvedValue(true);
 
-    await albumService.deleteAlbum('album-1');
+    await albumService.deleteAlbum('album-1', OWNER);
 
     expect(mockedDeleteFile).toHaveBeenCalledWith('file-1');
     expect(mockedDeleteFile).toHaveBeenCalledWith('thumb-1');
@@ -126,7 +129,7 @@ describe('deleteAlbum', () => {
 
     // The bytes are reported as freed even though MinIO refused: the rows are
     // gone, so the meter must follow them or it counts storage nobody holds.
-    await expect(albumService.deleteAlbum('album-1')).resolves.toMatchObject({ bytes: 700 });
+    await expect(albumService.deleteAlbum('album-1', OWNER)).resolves.toMatchObject({ bytes: 700 });
 
     expect(mockedPhotoDeleteMany).toHaveBeenCalledWith({ albumId: 'album-1' });
     expect(mockedFindByIdAndDelete).toHaveBeenCalledWith('album-1');
@@ -358,5 +361,27 @@ describe('getAlbumById', () => {
     const result = await albumService.getAlbumById('507f1f77bcf86cd799439011', ctx());
 
     expect(result.coverPhoto).toBeNull();
+  });
+});
+
+describe('deleting another account’s album', () => {
+  it('refuses, before any file is destroyed', async () => {
+    // The only by-id album operation that took no caller. Deleting an album
+    // deletes every photo file in it, which makes it the one where getting
+    // this wrong is least recoverable.
+    mockedFindById.mockResolvedValue({ _id: 'album-1', userId: 'someone-else' });
+
+    await expect(albumService.deleteAlbum('album-1', OWNER)).rejects.toMatchObject({
+      name: 'ForbiddenError'
+    });
+    expect(mockedDeleteFile).not.toHaveBeenCalled();
+    expect(mockedFindByIdAndDelete).not.toHaveBeenCalled();
+  });
+
+  it('allows a member of the album’s group', async () => {
+    mockedFindById.mockResolvedValue({ _id: 'album-1', userId: 'someone-else', groupId: 'g1' });
+    mockedPhotoFind.mockResolvedValue([]);
+
+    await expect(albumService.deleteAlbum('album-1', OWNER)).resolves.toBeDefined();
   });
 });

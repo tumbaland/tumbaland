@@ -19,6 +19,8 @@ services:
       - RELATIONSHIP_API_URL=${RELATIONSHIP_API_URL}
       - FINANCE_INTERNAL_URL=${FINANCE_INTERNAL_URL}
       - FINANCE_API_URL=${FINANCE_API_URL}
+      - ALBUM_INTERNAL_URL=${ALBUM_INTERNAL_URL}
+      - ALBUM_API_URL=${ALBUM_API_URL}
       # The canonical URL clients are told to authenticate against.
       - MCP_PUBLIC_URL=${MCP_PUBLIC_URL}
       # Named in the protected-resource metadata, so a client knows where to

@@ -1,0 +1,115 @@
+{
+  "albums": {
+    "albums": [
+      {
+        "_id": "685a7b72414b3995b5f1f872",
+        "name": "Finland 2025",
+        "description": "We went to Linnanmaki",
+        "isPublic": false,
+        "tags": [],
+        "photoCount": 16,
+        "totalSize": 69051121,
+        "createdAt": "2025-06-24T10:18:26.773Z",
+        "groupId": "g_00000000",
+        "userId": "u_00000000"
+      },
+      {
+        "_id": "685a9943d1beadd96f037d6b",
+        "name": "Tartu 2024",
+        "description": "Our visit to Tartu",
+        "isPublic": false,
+        "tags": [],
+        "photoCount": 35,
+        "totalSize": 163186516,
+        "createdAt": "2025-06-24T12:25:39.121Z",
+        "groupId": "g_00000000",
+        "userId": "u_00000000"
+      }
+    ],
+    "pagination": {
+      "total": 44,
+      "page": 1,
+      "pages": 1,
+      "limit": 100
+    }
+  },
+  "photos": {
+    "photos": [
+      {
+        "_id": "685a9670d1beadd96f037cb0",
+        "filename": "677c9582.jpg",
+        "originalName": "PXL_20250614_072211118.MP.jpg",
+        "albumId": "685a7b72414b3995b5f1f872",
+        "mimetype": "image/jpeg",
+        "size": 4180466,
+        "tags": [],
+        "metadata": {
+          "dateTaken": "2025-06-14T10:22:11.000Z",
+          "camera": {
+            "make": "Google",
+            "model": "Pixel 8a",
+            "settings": {
+              "aperture": "f/2.2",
+              "iso": 43
+            }
+          }
+        },
+        "userId": "u_00000000"
+      },
+      {
+        "_id": "685a9670d1beadd96f037cb1",
+        "filename": "a1b2c3d4.jpg",
+        "originalName": "PXL_20250615_101500000.MP.jpg",
+        "albumId": "685a7b72414b3995b5f1f872",
+        "title": "The ferris wheel",
+        "mimetype": "image/jpeg",
+        "size": 3120000,
+        "tags": [
+          "rides"
+        ],
+        "metadata": {
+          "dateTaken": "2025-06-15T13:15:00.000Z"
+        },
+        "userId": "u_00000000"
+      }
+    ],
+    "pagination": {
+      "total": 16,
+      "page": 1,
+      "pages": 1,
+      "limit": 25
+    }
+  },
+  "memories": {
+    "date": "2026-09-05",
+    "windowDays": 3,
+    "totalPhotos": 5,
+    "years": [
+      {
+        "year": 2025,
+        "yearsAgo": 1,
+        "photoCount": 3,
+        "photos": [
+          {
+            "_id": "p1",
+            "albumId": "685a7b72414b3995b5f1f872",
+            "albumName": "Finland 2025",
+            "originalName": "PXL_20250904_120000000.jpg",
+            "title": "",
+            "memoryDate": "2025-09-04",
+            "dateSource": "taken"
+          },
+          {
+            "_id": "p2",
+            "albumId": "685a9943d1beadd96f037d6b",
+            "albumName": "Tartu 2024",
+            "originalName": "IMG_0042.jpg",
+            "title": "",
+            "memoryDate": "2025-09-06",
+            "dateSource": "uploaded"
+          }
+        ]
+      }
+    ]
+  }
+}

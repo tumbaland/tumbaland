@@ -14,7 +14,7 @@ export function ConnectPage() {
     <DocumentPage
       title="Connect an assistant"
       intro="Talk to Claude, ChatGPT or Gemini and have it write to your Tumbaland journal."
-      updated="4 September 2026"
+      updated="5 September 2026"
     >
       <p>
         Once connected you can say <em>&quot;we went to Kolm Sõsarat on Saturday&quot;</em> and it
@@ -83,8 +83,8 @@ export function ConnectPage() {
 
       <h2>What it can do</h2>
       <p>
-        Sixteen things, and nothing else. Which of them it gets depends on what you approved. Grant
-        the journal only and it never learns the money tools exist.
+        Twenty-one things, and nothing else. Which of them it gets depends on what you approved.
+        Grant the journal only and it never learns the money or photo tools exist.
       </p>
 
       <h3>Your journal</h3>
@@ -243,6 +243,66 @@ export function ConnectPage() {
           </tr>
         </tbody>
       </table>
+
+      <h3>Your photos</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Tool</th>
+            <th>What it does</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <code>list_albums</code>
+            </td>
+            <td>
+              Every album, with how many photos it holds and how much space it takes. Photos are
+              searched one album at a time, so this is the way in.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <code>search_photos</code>
+            </td>
+            <td>
+              Photos inside one album, narrowed by text or tag. The text matches the filename and
+              the title.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <code>get_photo_memories</code>
+            </td>
+            <td>
+              Photos taken around today&apos;s date in earlier years, across every album. The one
+              photo search that spans the whole library.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <code>tag_photos</code>
+            </td>
+            <td>Adds or removes tags on photos you picked out.</td>
+          </tr>
+          <tr>
+            <td>
+              <code>describe_photo</code>
+            </td>
+            <td>Gives one photo a title or a description.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <Alert severity="info" sx={{ my: 3 }}>
+        <Typography variant="body2">
+          <strong>It cannot tell what is in a picture.</strong> Nothing in the library reads the
+          image itself, so &quot;find the ones with the dog&quot; has no answer. What it can search
+          is the album, the filename, the date, and any tag or title you have added. Tagging photos
+          is what makes them findable later, which is why it can help with that.
+        </Typography>
+      </Alert>
 
       <Alert severity="info" sx={{ my: 3 }}>
         <Typography variant="body2">

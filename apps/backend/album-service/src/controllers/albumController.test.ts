@@ -139,7 +139,8 @@ describe('deleteAlbum', () => {
 
     await deleteAlbum(baseReq({ params: { id: 'a1' } }), res);
 
-    expect(mocked.deleteAlbum).toHaveBeenCalledWith('a1');
+    // Every by-id route now carries the caller down to the query.
+    expect(mocked.deleteAlbum).toHaveBeenCalledWith('a1', { userId: 'user-1', userGroups: [] });
     expect(mockedRelease).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ groupId: 'group-1' }),

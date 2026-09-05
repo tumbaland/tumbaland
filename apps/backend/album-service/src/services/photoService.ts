@@ -1,7 +1,7 @@
 import mongoose, { HydratedDocument } from 'mongoose';
 import Photo, { IPhoto } from '../models/Photo';
 import Album from '../models/Album';
-import { ConflictError, logger, NotFoundError } from '@tumbaland/backend-core';
+import { canAccessResource, ConflictError, logger, NotFoundError } from '@tumbaland/backend-core';
 import {
   deleteFile,
   getPhotoSignedUrl,
@@ -87,6 +87,52 @@ export interface BulkTagInput {
   add?: string[];
   remove?: string[];
 }
+
+/** Who is asking. Every by-id operation below needs one. */
+export interface PhotoAccessContext {
+  userId: string;
+  userGroups: string[];
+}
+
+/**
+ * A photo is reachable exactly when its album is.
+ *
+ * Photos carry no owner of their own, so every check has to go through the
+ * album, and until now none of them did: `getPhotoById`, `updatePhoto`,
+ * `deletePhoto` and `bulkUpdateTags` all took an id and nothing else. Any
+ * signed-in caller could read, retitle, retag or delete any other account's
+ * photo by naming its id, and `getPhotoById` answers with a working signed URL
+ * to the image file itself.
+ */
+const reachableAlbumIds = async (
+  albumIds: string[],
+  { userId, userGroups }: PhotoAccessContext
+): Promise<Set<string>> => {
+  const albums = await Album.find({ _id: { $in: albumIds } })
+    .select('_id userId groupId isPublic')
+    .lean();
+
+  return new Set(
+    albums
+      .filter((album) =>
+        canAccessResource(userId, album.userId, album.groupId, userGroups, album.isPublic)
+      )
+      .map((album) => String(album._id))
+  );
+};
+
+/** Throws unless the caller may reach the album this photo sits in. */
+const assertPhotoReachable = async (
+  albumId: unknown,
+  context: PhotoAccessContext
+): Promise<void> => {
+  const reachable = await reachableAlbumIds([String(albumId)], context);
+  if (!reachable.has(String(albumId))) {
+    // Same message as a missing photo: distinguishing "not yours" from "not
+    // there" confirms an id exists to someone guessing at them.
+    throw new NotFoundError('Photo not found');
+  }
+};
 
 /**
  * Tags are user-typed, so the same idea arrives as "Beach", "beach " and
@@ -249,12 +295,17 @@ class PhotoService {
   /**
    * Get single photo by ID
    */
-  async getPhotoById(photoId: string): Promise<PhotoWithSignedUrls> {
+  async getPhotoById(photoId: string, context: PhotoAccessContext): Promise<PhotoWithSignedUrls> {
     const photo = await Photo.findById(photoId).populate('albumId');
 
     if (!photo) {
       throw new NotFoundError('Photo not found');
     }
+
+    // Before enriching: the enrichment is what mints the signed URL, and that
+    // is the thing worth not handing to a stranger.
+    const albumId = (photo.albumId as unknown as { _id?: unknown })?._id ?? photo.albumId;
+    await assertPhotoReachable(albumId, context);
 
     return this.enrichPhotoWithSignedUrl(photo);
   }
@@ -275,11 +326,17 @@ class PhotoService {
   /**
    * Update photo metadata
    */
-  async updatePhoto(photoId: string, input: UpdatePhotoInput): Promise<IPhoto | null> {
+  async updatePhoto(
+    photoId: string,
+    input: UpdatePhotoInput,
+    context: PhotoAccessContext
+  ): Promise<IPhoto | null> {
     const photo = await Photo.findById(photoId);
     if (!photo) {
       throw new NotFoundError('Photo not found');
     }
+
+    await assertPhotoReachable(photo.albumId, context);
 
     const updateData: Partial<Pick<IPhoto, 'title' | 'description' | 'tags' | 'metadata'>> = {};
     if (input.title !== undefined) updateData.title = input.title?.trim();
@@ -329,12 +386,33 @@ class PhotoService {
    * removes are applied in that order per photo, so a tag in both lists ends up
    * removed.
    */
-  async bulkUpdateTags(input: BulkTagInput): Promise<{ matched: number; modified: number; tags: TagCount[] }> {
-    const photoIds = (input.photoIds || []).filter((id) => mongoose.Types.ObjectId.isValid(id));
+  async bulkUpdateTags(
+    input: BulkTagInput,
+    context: PhotoAccessContext
+  ): Promise<{ matched: number; modified: number; tags: TagCount[] }> {
+    const requested = (input.photoIds || []).filter((id) => mongoose.Types.ObjectId.isValid(id));
     const add = normalizeTags(input.add);
     const remove = normalizeTags(input.remove);
 
-    if (photoIds.length === 0 || (add.length === 0 && remove.length === 0)) {
+    // Answered before any lookup: a request naming no photos, or asking for no
+    // change, has nothing to check reachability for.
+    if (requested.length === 0 || (add.length === 0 && remove.length === 0)) {
+      return { matched: 0, modified: 0, tags: [] };
+    }
+
+    // Narrowed to photos the caller can actually reach, rather than checked
+    // afterwards: an unreachable id is dropped silently, so a caller learns
+    // nothing about whether it existed.
+    const candidates = await Photo.find({ _id: { $in: requested } }).select('_id albumId').lean();
+    const reachable = await reachableAlbumIds(
+      [...new Set(candidates.map((photo) => String(photo.albumId)))],
+      context
+    );
+    const photoIds = candidates
+      .filter((photo) => reachable.has(String(photo.albumId)))
+      .map((photo) => String(photo._id));
+
+    if (photoIds.length === 0) {
       return { matched: 0, modified: 0, tags: [] };
     }
 
@@ -371,11 +449,13 @@ class PhotoService {
    * storage meter (MONETIZATION.md Phase 3, chokepoint 1) without re-reading a
    * row that no longer exists.
    */
-  async deletePhoto(photoId: string): Promise<IPhoto> {
+  async deletePhoto(photoId: string, context: PhotoAccessContext): Promise<IPhoto> {
     const photo = await Photo.findById(photoId);
     if (!photo) {
       throw new NotFoundError('Photo not found');
     }
+
+    await assertPhotoReachable(photo.albumId, context);
 
     // Delete associated files
     try {

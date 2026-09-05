@@ -72,6 +72,13 @@ describe('ConnectPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('warns that nothing can read the picture itself', () => {
+    // A tool that implied otherwise would search album after album and report
+    // nothing found, which reads as a broken search rather than a missing one.
+    render(<ConnectPage />);
+    expect(screen.getByText(/It cannot tell what is in a picture/)).toBeInTheDocument();
+  });
+
   it('warns that a one-off expense cannot be recorded at all', () => {
     // Not an MCP limitation: nothing in the product creates a transaction, and
     // an assistant that quietly logs a trade instead would be worse than one

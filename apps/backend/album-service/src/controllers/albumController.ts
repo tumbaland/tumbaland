@@ -94,8 +94,12 @@ export const updateAlbum = async (req: Request, res: Response): Promise<void> =>
  */
 export const deleteAlbum = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
+  const user = req.user!;
 
-  const freed = await albumService.deleteAlbum(id as string);
+  const freed = await albumService.deleteAlbum(id as string, {
+    userId: user.id,
+    userGroups: req.userGroups || []
+  });
 
   // Every photo in the album went with it; hand the bytes back.
   await releaseStoredBytes(storageActor(req), freed, freed.bytes);

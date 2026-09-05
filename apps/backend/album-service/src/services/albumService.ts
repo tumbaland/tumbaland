@@ -367,10 +367,17 @@ class AlbumService {
    * Reports the bytes it freed so the caller can hand them back to the storage
    * meter (MONETIZATION.md Phase 3, chokepoint 1).
    */
-  async deleteAlbum(albumId: string): Promise<AlbumStorage> {
+  async deleteAlbum(albumId: string, context: AlbumPermissionContext): Promise<AlbumStorage> {
     const album = await Album.findById(albumId);
     if (!album) {
       throw new NotFoundError('Album not found');
+    }
+
+    // The only by-id album operation that took no context. Deleting an album
+    // deletes every photo file in it, which makes it the one where getting this
+    // wrong is least recoverable.
+    if (!canAccessResource(context.userId, album.userId, album.groupId, context.userGroups)) {
+      throw new ForbiddenError('Access denied');
     }
 
     // Get all photos in the album

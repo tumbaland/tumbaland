@@ -16,7 +16,7 @@ jest.mock('../models/Photo', () => {
 
 jest.mock('../models/Album', () => ({
   __esModule: true,
-  default: { findById: jest.fn(), findOne: jest.fn(), updateOne: jest.fn() }
+  default: { findById: jest.fn(), findOne: jest.fn(), find: jest.fn(), updateOne: jest.fn() }
 }));
 
 jest.mock('./fileServiceClient', () => ({
@@ -51,6 +51,23 @@ const mockedAggregate = Photo.aggregate as unknown as jest.Mock;
 const mockedUpdateMany = Photo.updateMany as unknown as jest.Mock;
 const mockedAlbumFindById = Album.findById as unknown as jest.Mock;
 const mockedAlbumFindOne = Album.findOne as unknown as jest.Mock;
+const mockedAlbumFind = Album.find as unknown as jest.Mock;
+
+/**
+ * Who is asking. Every by-id photo operation needs one now: photos carry no
+ * owner of their own, so reachability is decided by the album they sit in, and
+ * until this was added any signed-in caller could read, retitle, retag or
+ * delete any other account's photo by naming its id.
+ */
+const OWNER = { userId: 'user-1', userGroups: ['g1'] };
+
+/** Album lookups used by the reachability check. */
+const albumsReachable = (albums: Record<string, unknown>[] = [{ _id: 'a1', userId: 'user-1' }]) =>
+  mockedAlbumFind.mockReturnValue({ select: () => ({ lean: async () => albums }) });
+
+/** The candidate lookup bulk tagging does before narrowing to what is reachable. */
+const photosInAlbum = (photos: Record<string, unknown>[]) =>
+  mockedFind.mockReturnValue({ select: () => ({ lean: async () => photos }) });
 const mockedAlbumUpdateOne = Album.updateOne as unknown as jest.Mock;
 const mockedDeleteFile = deleteFile as unknown as jest.Mock;
 const mockedGetPhotoSignedUrl = getPhotoSignedUrl as unknown as jest.Mock;
@@ -59,7 +76,12 @@ const mockedGetFile = getFile as unknown as jest.Mock;
 const mockedGenerateThumbnail = generateThumbnailFromBuffer as unknown as jest.Mock;
 const mockedIsSupported = isSupportedImageFormat as unknown as jest.Mock;
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  // Reachability is decided by the album a photo sits in, so every by-id test
+  // needs one the caller owns unless it is deliberately testing a refusal.
+  albumsReachable();
+});
 
 describe('createPhoto', () => {
   const baseInput = { filename: 'x.jpg', originalName: 'x.jpg', minioFileId: 'file-1', albumId: 'a1', mimetype: 'image/jpeg', size: 100 };
@@ -148,7 +170,7 @@ describe('getPhotosByAlbum', () => {
 
   it('returns paginated photos with signed URLs', async () => {
     mockedAlbumFindById.mockResolvedValue({ _id: 'a1' });
-    const photo = { minioFileId: 'file-1', minioThumbnailFileId: undefined, toObject: () => ({ minioFileId: 'file-1' }) };
+    const photo = { albumId: 'a1', minioFileId: 'file-1', minioThumbnailFileId: undefined, toObject: () => ({ minioFileId: 'file-1' }) };
     mockedFind.mockReturnValue(chainable([photo]));
     (Photo.countDocuments as unknown as jest.Mock) = jest.fn().mockResolvedValue(1);
     mockedGetPhotoSignedUrlsBatch.mockResolvedValue({ 'file-1': { signedUrl: 'https://x', expiresAt: 't', expiresInMinutes: 60 } });
@@ -161,7 +183,7 @@ describe('getPhotosByAlbum', () => {
 
   it('continues (empty signed URL map) when the batch signed-url call fails', async () => {
     mockedAlbumFindById.mockResolvedValue({ _id: 'a1' });
-    const photo = { minioFileId: 'file-1', toObject: () => ({ minioFileId: 'file-1' }) };
+    const photo = { albumId: 'a1', minioFileId: 'file-1', toObject: () => ({ minioFileId: 'file-1' }) };
     mockedFind.mockReturnValue(chainable([photo]));
     (Photo.countDocuments as unknown as jest.Mock) = jest.fn().mockResolvedValue(1);
     mockedGetPhotoSignedUrlsBatch.mockRejectedValue(new Error('down'));
@@ -205,7 +227,7 @@ describe('getPhotosByAlbum', () => {
 
   it('also fetches thumbnail signed URLs for photos that have a thumbnail', async () => {
     mockedAlbumFindById.mockResolvedValue({ _id: 'a1' });
-    const photo = { minioFileId: 'file-1', minioThumbnailFileId: 'thumb-1', toObject: () => ({ minioFileId: 'file-1' }) };
+    const photo = { albumId: 'a1', minioFileId: 'file-1', minioThumbnailFileId: 'thumb-1', toObject: () => ({ minioFileId: 'file-1' }) };
     mockedFind.mockReturnValue(chainable([photo]));
     (Photo.countDocuments as unknown as jest.Mock) = jest.fn().mockResolvedValue(1);
     mockedGetPhotoSignedUrlsBatch
@@ -220,46 +242,46 @@ describe('getPhotosByAlbum', () => {
 describe('getPhotoById', () => {
   it('throws NotFoundError when the photo does not exist', async () => {
     mockedFindById.mockReturnValue({ populate: jest.fn().mockResolvedValue(null) });
-    await expect(photoService.getPhotoById('p1')).rejects.toMatchObject({ name: 'NotFoundError' });
+    await expect(photoService.getPhotoById('p1', OWNER)).rejects.toMatchObject({ name: 'NotFoundError' });
   });
 
   it('returns the photo enriched with a signed URL', async () => {
-    const photo = { minioFileId: 'file-1', minioThumbnailFileId: undefined, toObject: () => ({ minioFileId: 'file-1' }) };
+    const photo = { albumId: 'a1', minioFileId: 'file-1', minioThumbnailFileId: undefined, toObject: () => ({ minioFileId: 'file-1' }) };
     mockedFindById.mockReturnValue({ populate: jest.fn().mockResolvedValue(photo) });
     mockedGetPhotoSignedUrl.mockResolvedValue({ signedUrl: 'https://x', expiresAt: 't', expiresInMinutes: 60 });
 
-    const result = await photoService.getPhotoById('p1');
+    const result = await photoService.getPhotoById('p1', OWNER);
     expect(result.signedUrl).toBe('https://x');
   });
 
   it('also enriches with a thumbnail signed URL when one exists', async () => {
-    const photo = { minioFileId: 'file-1', minioThumbnailFileId: 'thumb-1', toObject: () => ({ minioFileId: 'file-1' }) };
+    const photo = { albumId: 'a1', minioFileId: 'file-1', minioThumbnailFileId: 'thumb-1', toObject: () => ({ minioFileId: 'file-1' }) };
     mockedFindById.mockReturnValue({ populate: jest.fn().mockResolvedValue(photo) });
     mockedGetPhotoSignedUrl
       .mockResolvedValueOnce({ signedUrl: 'https://x', expiresAt: 't', expiresInMinutes: 60 })
       .mockResolvedValueOnce({ signedUrl: 'https://thumb', expiresAt: 't', expiresInMinutes: 60 });
 
-    const result = await photoService.getPhotoById('p1');
+    const result = await photoService.getPhotoById('p1', OWNER);
     expect(result.thumbnailSignedUrl).toBe('https://thumb');
   });
 
   it('returns the plain photo object when fetching the signed URL fails', async () => {
-    const photo = { minioFileId: 'file-1', toObject: () => ({ minioFileId: 'file-1' }) };
+    const photo = { albumId: 'a1', minioFileId: 'file-1', toObject: () => ({ minioFileId: 'file-1' }) };
     mockedFindById.mockReturnValue({ populate: jest.fn().mockResolvedValue(photo) });
     mockedGetPhotoSignedUrl.mockRejectedValue(new Error('down'));
 
-    const result = await photoService.getPhotoById('p1');
+    const result = await photoService.getPhotoById('p1', OWNER);
     expect(result).toEqual({ minioFileId: 'file-1' });
   });
 
   it('logs (does not throw) when the thumbnail signed-url call fails', async () => {
-    const photo = { minioFileId: 'file-1', minioThumbnailFileId: 'thumb-1', toObject: () => ({ minioFileId: 'file-1' }) };
+    const photo = { albumId: 'a1', minioFileId: 'file-1', minioThumbnailFileId: 'thumb-1', toObject: () => ({ minioFileId: 'file-1' }) };
     mockedFindById.mockReturnValue({ populate: jest.fn().mockResolvedValue(photo) });
     mockedGetPhotoSignedUrl
       .mockResolvedValueOnce({ signedUrl: 'https://x', expiresAt: 't', expiresInMinutes: 60 })
       .mockRejectedValueOnce(new Error('thumb down'));
 
-    const result = await photoService.getPhotoById('p1');
+    const result = await photoService.getPhotoById('p1', OWNER);
     expect(result.signedUrl).toBe('https://x');
     expect(result.thumbnailSignedUrl).toBeUndefined();
   });
@@ -280,14 +302,14 @@ describe('getPhotoByFileId', () => {
 describe('updatePhoto', () => {
   it('throws NotFoundError when the photo does not exist', async () => {
     mockedFindById.mockResolvedValue(null);
-    await expect(photoService.updatePhoto('p1', {})).rejects.toMatchObject({ name: 'NotFoundError' });
+    await expect(photoService.updatePhoto('p1', {}, OWNER)).rejects.toMatchObject({ name: 'NotFoundError' });
   });
 
   it('trims tags and passes through the update', async () => {
-    mockedFindById.mockResolvedValue({ _id: 'p1' });
+    mockedFindById.mockResolvedValue({ albumId: 'a1', _id: 'p1' });
     mockedFindByIdAndUpdate.mockResolvedValue({ _id: 'p1', tags: ['a'] });
 
-    await photoService.updatePhoto('p1', { tags: [' a ', ''] });
+    await photoService.updatePhoto('p1', { tags: [' a ', ''] }, OWNER);
 
     expect(mockedFindByIdAndUpdate).toHaveBeenCalledWith('p1', { tags: ['a'] }, { new: true });
   });
@@ -296,7 +318,7 @@ describe('updatePhoto', () => {
 describe('deletePhoto', () => {
   it('throws NotFoundError when the photo does not exist', async () => {
     mockedFindById.mockResolvedValue(null);
-    await expect(photoService.deletePhoto('p1')).rejects.toMatchObject({ name: 'NotFoundError' });
+    await expect(photoService.deletePhoto('p1', OWNER)).rejects.toMatchObject({ name: 'NotFoundError' });
   });
 
   it('deletes files, the photo, and clears the album cover if it was the cover photo', async () => {
@@ -304,7 +326,7 @@ describe('deletePhoto', () => {
     const album: any = { coverPhotoId: 'p1', save: jest.fn().mockResolvedValue(undefined) };
     mockedAlbumFindOne.mockResolvedValue(album);
 
-    await photoService.deletePhoto('p1');
+    await photoService.deletePhoto('p1', OWNER);
 
     expect(mockedDeleteFile).toHaveBeenCalledWith('file-1');
     expect(mockedDeleteFile).toHaveBeenCalledWith('thumb-1');
@@ -324,7 +346,7 @@ describe('deletePhoto', () => {
 
     // Still returns the deleted document: the caller needs its size to hand
     // the bytes back to the storage meter.
-    await expect(photoService.deletePhoto('p1')).resolves.toMatchObject({ size: 100 });
+    await expect(photoService.deletePhoto('p1', OWNER)).resolves.toMatchObject({ size: 100 });
     expect(mockedFindByIdAndDelete).toHaveBeenCalledWith('p1');
   });
 
@@ -332,7 +354,7 @@ describe('deletePhoto', () => {
     mockedFindById.mockResolvedValue({ albumId: 'a1', size: 50 });
     mockedAlbumFindOne.mockResolvedValue(null);
 
-    await photoService.deletePhoto('p1');
+    await photoService.deletePhoto('p1', OWNER);
     expect(mockedFindByIdAndDelete).toHaveBeenCalledWith('p1');
   });
 });
@@ -344,7 +366,7 @@ describe('updatePhotoAIAnalysis', () => {
   });
 
   it('nests the provided analysis fields under aiAnalysis, matching the schema', async () => {
-    mockedFindById.mockResolvedValue({ _id: 'p1' });
+    mockedFindById.mockResolvedValue({ albumId: 'a1', _id: 'p1' });
     mockedFindByIdAndUpdate.mockResolvedValue({ _id: 'p1' });
 
     await photoService.updatePhotoAIAnalysis('p1', { objectDetection: { jobId: 'j1' } as any });
@@ -357,7 +379,7 @@ describe('updatePhotoAIAnalysis', () => {
   });
 
   it('merges with the existing aiAnalysis so setting one field does not clear the other', async () => {
-    mockedFindById.mockResolvedValue({ _id: 'p1', aiAnalysis: { segmentation: { jobId: 's1' } } });
+    mockedFindById.mockResolvedValue({ albumId: 'a1', _id: 'p1', aiAnalysis: { segmentation: { jobId: 's1' } } });
     mockedFindByIdAndUpdate.mockResolvedValue({ _id: 'p1' });
 
     await photoService.updatePhotoAIAnalysis('p1', { objectDetection: { jobId: 'j1' } as any });
@@ -424,12 +446,12 @@ describe('bulkUpdateTags', () => {
   const photoId = '68d8f4b1c2a3b4d5e6f70123';
 
   it('is a no-op when there are no photos or no tag changes', async () => {
-    await expect(photoService.bulkUpdateTags({ photoIds: [], add: ['beach'] })).resolves.toEqual({
+    await expect(photoService.bulkUpdateTags({ photoIds: [], add: ['beach'] }, OWNER)).resolves.toEqual({
       matched: 0,
       modified: 0,
       tags: []
     });
-    await expect(photoService.bulkUpdateTags({ photoIds: [photoId] })).resolves.toEqual({
+    await expect(photoService.bulkUpdateTags({ photoIds: [photoId] }, OWNER)).resolves.toEqual({
       matched: 0,
       modified: 0,
       tags: []
@@ -438,10 +460,11 @@ describe('bulkUpdateTags', () => {
   });
 
   it('adds normalized tags with $addToSet so re-tagging does not duplicate', async () => {
+    photosInAlbum([{ _id: photoId, albumId: 'a1' }]);
     mockedUpdateMany.mockResolvedValue({ matchedCount: 2, modifiedCount: 2 });
     mockedFindById.mockReturnValue({ select: jest.fn().mockResolvedValue(null) });
 
-    const result = await photoService.bulkUpdateTags({ photoIds: [photoId], add: ['Beach', 'beach ', ''] });
+    const result = await photoService.bulkUpdateTags({ photoIds: [photoId], add: ['Beach', 'beach ', ''] }, OWNER);
 
     expect(mockedUpdateMany).toHaveBeenCalledTimes(1);
     expect(mockedUpdateMany.mock.calls[0][1]).toEqual({ $addToSet: { tags: { $each: ['beach'] } } });
@@ -449,6 +472,7 @@ describe('bulkUpdateTags', () => {
   });
 
   it('pulls removed tags and returns the album\'s refreshed tag list', async () => {
+    photosInAlbum([{ _id: photoId, albumId: 'a1' }]);
     mockedUpdateMany.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
     mockedFindById.mockReturnValue({
       select: jest.fn().mockResolvedValue({ albumId: '68d8f4b1c2a3b4d5e6f70999' })
@@ -456,18 +480,107 @@ describe('bulkUpdateTags', () => {
     mockedAlbumFindById.mockResolvedValue({ _id: '68d8f4b1c2a3b4d5e6f70999' });
     mockedAggregate.mockResolvedValue([{ _id: 'sunset', count: 3 }]);
 
-    const result = await photoService.bulkUpdateTags({ photoIds: [photoId], remove: ['Beach'] });
+    const result = await photoService.bulkUpdateTags({ photoIds: [photoId], remove: ['Beach'] }, OWNER);
 
     expect(mockedUpdateMany.mock.calls[0][1]).toEqual({ $pull: { tags: { $in: ['beach'] } } });
     expect(result.tags).toEqual([{ tag: 'sunset', count: 3 }]);
   });
 
   it('ignores ids that are not valid ObjectIds', async () => {
-    await expect(photoService.bulkUpdateTags({ photoIds: ['not-an-id'], add: ['beach'] })).resolves.toEqual({
+    await expect(photoService.bulkUpdateTags({ photoIds: ['not-an-id'], add: ['beach'] }, OWNER)).resolves.toEqual({
       matched: 0,
       modified: 0,
       tags: []
     });
+    expect(mockedUpdateMany).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * A photo carries no owner of its own, so reachability is decided by the album
+ * it sits in. Until this was added, `getPhotoById`, `updatePhoto`, `deletePhoto`
+ * and `bulkUpdateTags` all took an id and nothing else: any signed-in caller
+ * could read, retitle, retag or delete any other account's photo by naming its
+ * id, and `getPhotoById` answers with a working signed URL to the image file.
+ */
+describe('reaching another account’s photos', () => {
+  const STRANGER = { userId: 'someone-else', userGroups: [] };
+  const photoId = '68d8f4b1c2a3b4d5e6f70123';
+  const inSomeoneElsesAlbum = () => {
+    mockedFindById.mockReturnValue({
+      populate: jest.fn().mockResolvedValue({
+        albumId: 'a1',
+        minioFileId: 'file-1',
+        toObject: () => ({ minioFileId: 'file-1' })
+      })
+    });
+    // The album exists but belongs to someone else, so it is not in the
+    // reachable set.
+    albumsReachable([]);
+  };
+
+  it('refuses a read, before a signed URL is ever minted', async () => {
+    inSomeoneElsesAlbum();
+
+    await expect(photoService.getPhotoById('p1', STRANGER)).rejects.toMatchObject({
+      name: 'NotFoundError'
+    });
+    expect(mockedGetPhotoSignedUrl).not.toHaveBeenCalled();
+  });
+
+  it('reports a miss rather than a refusal, so ids cannot be probed', async () => {
+    // "Not yours" and "not there" have to be indistinguishable, or the error
+    // confirms an id exists to someone guessing at them.
+    inSomeoneElsesAlbum();
+
+    await expect(photoService.getPhotoById('p1', STRANGER)).rejects.toMatchObject({
+      message: 'Photo not found'
+    });
+  });
+
+  it('refuses an edit', async () => {
+    mockedFindById.mockResolvedValue({ albumId: 'a1', _id: 'p1' });
+    albumsReachable([]);
+
+    await expect(photoService.updatePhoto('p1', { title: 'Mine now' }, STRANGER)).rejects.toMatchObject({
+      name: 'NotFoundError'
+    });
+    expect(mockedFindByIdAndUpdate).not.toHaveBeenCalled();
+  });
+
+  it('refuses a delete, so no file is destroyed', async () => {
+    mockedFindById.mockResolvedValue({ albumId: 'a1', _id: 'p1', minioFileId: 'file-1' });
+    albumsReachable([]);
+
+    await expect(photoService.deletePhoto('p1', STRANGER)).rejects.toMatchObject({
+      name: 'NotFoundError'
+    });
+    expect(mockedDeleteFile).not.toHaveBeenCalled();
+  });
+
+  it('drops unreachable photos from a bulk tag instead of failing the batch', async () => {
+    // Silently: a caller tagging a mix of their own and someone else's photos
+    // learns nothing about which ids were real.
+    photosInAlbum([
+      { _id: photoId, albumId: 'a1' },
+      { _id: photoId, albumId: 'not-yours' }
+    ]);
+    albumsReachable([{ _id: 'a1', userId: 'user-1' }]);
+    mockedUpdateMany.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
+    mockedFindById.mockReturnValue({ select: jest.fn().mockResolvedValue(null) });
+
+    await photoService.bulkUpdateTags({ photoIds: [photoId], add: ['beach'] }, OWNER);
+
+    expect(mockedUpdateMany.mock.calls[0][0]._id.$in).toHaveLength(1);
+  });
+
+  it('touches nothing when none of the photos are reachable', async () => {
+    photosInAlbum([{ _id: photoId, albumId: 'not-yours' }]);
+    albumsReachable([]);
+
+    await expect(
+      photoService.bulkUpdateTags({ photoIds: [photoId], add: ['beach'] }, STRANGER)
+    ).resolves.toEqual({ matched: 0, modified: 0, tags: [] });
     expect(mockedUpdateMany).not.toHaveBeenCalled();
   });
 });

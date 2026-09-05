@@ -163,11 +163,13 @@ describe('tag endpoints', () => {
       mockRes()
     );
 
-    expect(mockedPhotoService.bulkUpdateTags).toHaveBeenCalledWith({
-      photoIds: ['p1', 'p2'],
-      add: ['beach'],
-      remove: ['old']
-    });
+    // Every by-id and bulk route now carries the caller down to the query. A
+    // photo carries no owner of its own, so without this any signed-in caller
+    // could retag any other account's photos by naming their ids.
+    expect(mockedPhotoService.bulkUpdateTags).toHaveBeenCalledWith(
+      { photoIds: ['p1', 'p2'], add: ['beach'], remove: ['old'] },
+      { userId: 'user-1', userGroups: [] }
+    );
   });
 });
 
@@ -198,7 +200,10 @@ describe('getPhotoById', () => {
 
     await getPhotoById(baseReq({ params: { id: 'p1' } }), res);
 
-    expect(mockedPhotoService.getPhotoById).toHaveBeenCalledWith('p1');
+    expect(mockedPhotoService.getPhotoById).toHaveBeenCalledWith('p1', {
+      userId: 'user-1',
+      userGroups: []
+    });
   });
 });
 
@@ -209,7 +214,11 @@ describe('updatePhoto', () => {
 
     await updatePhoto(baseReq({ params: { id: 'p1' }, body: { title: 'New' } }), res);
 
-    expect(mockedPhotoService.updatePhoto).toHaveBeenCalledWith('p1', expect.objectContaining({ title: 'New' }));
+    expect(mockedPhotoService.updatePhoto).toHaveBeenCalledWith(
+      'p1',
+      expect.objectContaining({ title: 'New' }),
+      { userId: 'user-1', userGroups: [] }
+    );
   });
 });
 
@@ -221,7 +230,10 @@ describe('deletePhoto', () => {
 
     await deletePhoto(baseReq({ params: { id: 'p1' } }), res);
 
-    expect(mockedPhotoService.deletePhoto).toHaveBeenCalledWith('p1');
+    expect(mockedPhotoService.deletePhoto).toHaveBeenCalledWith('p1', {
+      userId: 'user-1',
+      userGroups: []
+    });
     expect(mockedRelease).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ groupId: 'group-1' }),
