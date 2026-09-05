@@ -1,4 +1,13 @@
 # Tumbalog
+## [0.0.476](https://github.com/toomastahves/tumbaland/compare/app-v0.0.475...app-v0.0.476) (2026-09-05)
+
+### Features
+
+* release front lib ([3b79118](https://github.com/toomastahves/tumbaland/commit/3b79118327d621dee941c296472a2b3f1ee361fc))
+
+### Chores
+
+* **release:** 1.11.0 ([e00bb5a](https://github.com/toomastahves/tumbaland/commit/e00bb5abed2149ff3becbe8ccf4f66d7f2096e3e))
 ## [0.0.475](https://github.com/toomastahves/tumbaland/compare/app-v0.0.474...app-v0.0.475) (2026-09-05)
 
 ### Features
