@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { PERSONAL_TENANT, type ApiKeyScope, type Tenant } from '@tumbaland/backend-core';
+import { PERSONAL_TENANT, type ActorKind, type ApiKeyScope, type Tenant } from '@tumbaland/backend-core';
 import { TumbalandError } from '../tumbaland';
 
 /**
@@ -32,6 +32,21 @@ export interface Caller {
   tenants: { allowed: Tenant[]; default: Tenant };
   /** what each of those is called, as the user saw them when approving */
   tenantNames: Record<Tenant, string>;
+  /**
+   * Who to attribute a tool call to in the audit trail.
+   *
+   * Separate from the token because the token is a secret to forward and this
+   * is a name to write down. Optional so a test can build a caller without
+   * inventing an identity for it — a call with no actor is timed and logged,
+   * just not filed under anyone.
+   */
+  actor?: {
+    kind: ActorKind;
+    userId: string;
+    /** the key's name or the app's, as the user would recognise it */
+    label: string;
+    credentialId?: string;
+  };
 }
 
 /** What a tenant should be called, falling back to something legible. */

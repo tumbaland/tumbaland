@@ -22,7 +22,7 @@ export const getAuditTrail = async (req: Request, res: Response): Promise<void> 
   const result = await listAuditEvents({
     userId: user.id,
     actorKind: actorKind as ActorKind | undefined,
-    action: action as 'create' | 'update' | 'delete' | 'read' | undefined,
+    action: action as 'create' | 'update' | 'delete' | 'read' | 'call' | undefined,
     resource: resource as string | undefined,
     credentialId: credentialId as string | undefined,
     service: service as string | undefined,

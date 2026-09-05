@@ -20,6 +20,20 @@ import request from 'supertest';
 import { verifyApiKey, verifyAccessToken } from '@tumbaland/backend-core';
 import { createApp } from './app';
 
+/**
+ * The JSON out of one SSE frame.
+ *
+ * Split on the *first* delimiter rather than every one: a tool result is free
+ * to contain the string "data: " — one of them does — and splitting on all of
+ * them truncates the payload mid-string, which surfaces as a JSON parse error
+ * about the transport and says nothing about the tool.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const sseBody = (text: string): any => {
+  const at = text.indexOf('data: ');
+  return JSON.parse(at === -1 ? '{}' : text.slice(at + 'data: '.length));
+};
+
 const mockedVerify = verifyApiKey as jest.Mock;
 const mockedVerifyToken = verifyAccessToken as jest.Mock;
 const app = createApp();
@@ -117,7 +131,7 @@ describe('the MCP handshake', () => {
     const res = await rpc(initialize, KEY);
 
     // Streamable HTTP replies as SSE; the JSON-RPC payload is in the data frame.
-    const payload = JSON.parse(res.text.split('data: ')[1] ?? '{}');
+    const payload = sseBody(res.text);
     expect(payload.result?.serverInfo?.name).toBe('tumbaland');
   });
 
@@ -125,7 +139,7 @@ describe('the MCP handshake', () => {
     // A small, intent-shaped surface is a deliberate choice: one tool per REST
     // route would bury the two the model needs under thirty near-synonyms.
     const res = await rpc({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }, KEY);
-    const payload = JSON.parse(res.text.split('data: ')[1] ?? '{}');
+    const payload = sseBody(res.text);
     const names = (payload.result?.tools ?? []).map((tool: { name: string }) => tool.name).sort();
 
     expect(names).toEqual([
@@ -142,7 +156,7 @@ describe('the MCP handshake', () => {
 
   it('describes each tool in terms of what a person would ask for', async () => {
     const res = await rpc({ jsonrpc: '2.0', id: 3, method: 'tools/list', params: {} }, KEY);
-    const payload = JSON.parse(res.text.split('data: ')[1] ?? '{}');
+    const payload = sseBody(res.text);
 
     for (const tool of payload.result?.tools ?? []) {
       expect(tool.description?.length ?? 0).toBeGreaterThan(40);
@@ -152,7 +166,7 @@ describe('the MCP handshake', () => {
   it('takes activity types by name, never by id', async () => {
     // The model must never be asked to carry a Mongo ObjectId — it will invent one.
     const res = await rpc({ jsonrpc: '2.0', id: 4, method: 'tools/list', params: {} }, KEY);
-    const payload = JSON.parse(res.text.split('data: ')[1] ?? '{}');
+    const payload = sseBody(res.text);
     const logDay = payload.result.tools.find((tool: { name: string }) => tool.name === 'log_day');
 
     const schema = JSON.stringify(logDay.inputSchema);
@@ -164,7 +178,7 @@ describe('the MCP handshake', () => {
 describe('server instructions', () => {
   it('returns guidance on initialize, for clients that inject it', async () => {
     const res = await rpc(initialize, KEY);
-    const payload = JSON.parse(res.text.split('data: ')[1] ?? '{}');
+    const payload = sseBody(res.text);
 
     expect(payload.result?.instructions).toContain('YYYY-MM-DD');
     expect(payload.result?.instructions).toContain('list_activity_types');
@@ -177,7 +191,7 @@ describe('log_day is additive', () => {
     // asked to "add a walk" cannot know what else is on the day, so the
     // destructive path must be something it opts into, never the default.
     const res = await rpc({ jsonrpc: '2.0', id: 5, method: 'tools/list', params: {} }, KEY);
-    const payload = JSON.parse(res.text.split('data: ')[1] ?? '{}');
+    const payload = sseBody(res.text);
     const logDay = payload.result.tools.find((tool: { name: string }) => tool.name === 'log_day');
 
     expect(logDay.inputSchema.properties.replace).toBeDefined();
@@ -220,7 +234,7 @@ describe('tools are gated by the key’s scopes', () => {
   const toolsFor = async (scopes: string[]): Promise<string[]> => {
     mockedVerify.mockResolvedValue({ ok: true, userId: 'u1', keyId: 'k1', scopes, groupId: null });
     const res = await rpc({ jsonrpc: '2.0', id: 9, method: 'tools/list', params: {} }, KEY);
-    const payload = JSON.parse(res.text.split('data: ')[1] ?? '{}');
+    const payload = sseBody(res.text);
     return (payload.result?.tools ?? []).map((tool: { name: string }) => tool.name).sort();
   };
 
@@ -309,7 +323,7 @@ describe('OAuth access tokens', () => {
     });
 
     const res = await rpc({ jsonrpc: '2.0', id: 20, method: 'tools/list', params: {} }, OAUTH_TOKEN);
-    const payload = JSON.parse(res.text.split('data: ')[1] ?? '{}');
+    const payload = sseBody(res.text);
     const names = payload.result.tools.map((t: { name: string }) => t.name).sort();
 
     // Scope gating applies identically, whichever credential arrived.
@@ -353,7 +367,7 @@ describe('protected resource metadata names the authorization server', () => {
 describe('listings this server has nothing for', () => {
   const listing = async (method: string) => {
     const res = await rpc({ jsonrpc: '2.0', id: 30, method, params: {} }, KEY);
-    return JSON.parse(res.text.split('data: ')[1] ?? '{}');
+    return sseBody(res.text);
   };
 
   it.each([
@@ -372,7 +386,7 @@ describe('listings this server has nothing for', () => {
 
   it('advertises the capabilities it answers for', async () => {
     const res = await rpc(initialize, KEY);
-    const payload = JSON.parse(res.text.split('data: ')[1] ?? '{}');
+    const payload = sseBody(res.text);
 
     expect(payload.result.capabilities).toMatchObject({
       tools: expect.anything(),

@@ -1,5 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { ApiKeyScope } from '@tumbaland/backend-core';
+import { auditTools } from '../audit';
 import { Caller, ToolModule } from './module';
 import { albumRead, albumWrite } from './album';
 import { financeRead, financeWrite } from './finance';
@@ -38,8 +39,11 @@ export function registerTools(server: McpServer, caller: Caller, scopes: ApiKeyS
   const granted = new Set(scopes);
   const applicable = MODULES.filter((module) => module.scopes.every((scope) => granted.has(scope)));
 
+  // Every module registers against the timed server, so a tool added later is
+  // measured without its author having to remember to ask for it.
+  const measured = auditTools(server, caller);
   for (const module of applicable) {
-    module.register(server, caller);
+    module.register(measured, caller);
   }
 
   return applicable.length;

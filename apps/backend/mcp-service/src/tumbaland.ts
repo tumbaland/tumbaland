@@ -4,7 +4,11 @@ import {
   activityResponseSchema,
   activityTypesResponseSchema,
   daysResponseSchema,
-  parseResponse
+  parseResponse,
+  statisticsResponseSchema,
+  trendsResponseSchema,
+  type Statistics,
+  type Trends
 } from './schemas';
 
 /**
@@ -203,11 +207,18 @@ export const tumbaland = {
   deleteActivity: (apiKey: string, id: string, groupId?: string): Promise<unknown> =>
     call(apiKey, 'DELETE', `/activities/${id}`, undefined, { groupId }),
 
-  getStatistics: (apiKey: string, timeframe: string, groupId?: string): Promise<unknown> =>
-    call(apiKey, 'GET', '/statistics', undefined, { timeframe, groupId }),
+  getStatistics: async (apiKey: string, timeframe: string, groupId?: string): Promise<Statistics> => {
+    const body = await call<unknown>(apiKey, 'GET', '/statistics', undefined, { timeframe, groupId });
+    return parseResponse(statisticsResponseSchema, '/statistics', body);
+  },
 
-  getTrends: (apiKey: string, windowDays?: number, groupId?: string): Promise<unknown> =>
-    call(apiKey, 'GET', '/statistics/trends', undefined, { window: windowDays, groupId })
+  getTrends: async (apiKey: string, windowDays?: number, groupId?: string): Promise<Trends> => {
+    const body = await call<unknown>(apiKey, 'GET', '/statistics/trends', undefined, {
+      window: windowDays,
+      groupId
+    });
+    return parseResponse(trendsResponseSchema, '/statistics/trends', body);
+  }
 };
 
 /**

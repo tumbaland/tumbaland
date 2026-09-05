@@ -23,6 +23,9 @@ import {
  * fail on the first call.
  */
 
+/** Separators on the aggregate counts: "2089 entries" is a number to decode, not read. */
+const count = (value: number): string => value.toLocaleString('en-US');
+
 /**
  * One entry, on one line, with the id needed to act on it.
  *
@@ -182,10 +185,70 @@ function registerReadTools(server: McpServer, caller: Caller): void {
           tumbaland.getTrends(apiKey, trendWindowDays, groupId)
         ]);
 
-        // Returned as JSON rather than prose: these are numbers the model will
-        // want to quote and compare, and re-describing them here would only add
-        // a layer to be wrong in.
-        return ok(JSON.stringify({ statistics, trends }, null, 2));
+        const period = timeframe && timeframe !== 'all' ? `over the last ${timeframe}` : 'in total';
+        const since =
+          statistics.firstEntryDate
+            ? ` since ${statistics.firstEntryDate.slice(0, 10)}` +
+              (statistics.daysSinceFirstEntry ? ` (${statistics.daysSinceFirstEntry} days)` : '')
+            : '';
+
+        const lines: string[] = [
+          `${count(statistics.totalActivities ?? 0)} entries ${period}${since}` +
+            (statistics.totalHours ? `, ${count(statistics.totalHours)} hours logged` : '') +
+            '.'
+        ];
+
+        if (statistics.types.length > 0) {
+          lines.push(
+            '',
+            'By type:',
+            ...statistics.types.map((type) => {
+              const days = type.uniqueDays === undefined ? '' : ` on ${type.uniqueDays} days`;
+              // Hours only where a type is measured in them. Most are not, and
+              // "0h" against every one of them reads as a real zero.
+              const hours = type.totalHours ? `, ${type.totalHours}h` : '';
+              return `- ${type.name}: ${count(type.count)} entries${days}${hours}`;
+            })
+          );
+        }
+
+        const window = trends.windowDays ?? 30;
+        const totals = trends.totals;
+        if (totals) {
+          const span =
+            trends.currentStart && trends.currentEnd
+              ? ` (${trends.currentStart} to ${trends.currentEnd})`
+              : '';
+          const change = (value: number | null | undefined): string =>
+            value === null || value === undefined ? '' : ` (${value >= 0 ? '+' : ''}${value}%)`;
+          lines.push(
+            '',
+            `Last ${window} days${span} against the ${window} before: ` +
+              `${totals.current.entries} entries vs ${totals.previous.entries}${change(totals.entriesChangePct)}, ` +
+              `${totals.current.hours ?? 0}h vs ${totals.previous.hours ?? 0}h${change(totals.hoursChangePct)}, ` +
+              `active on ${totals.current.activeDays ?? 0} days vs ${totals.previous.activeDays ?? 0}.` +
+              (totals.direction ? ` Overall ${totals.direction}.` : '')
+          );
+        }
+
+        if (trends.types.length > 0) {
+          lines.push(
+            '',
+            'What moved:',
+            ...trends.types.map((type) => {
+              const shift =
+                type.entriesChangePct === null || type.entriesChangePct === undefined
+                  ? ''
+                  : ` (${type.entriesChangePct >= 0 ? '+' : ''}${type.entriesChangePct}%)`;
+              return (
+                `- ${type.name}: ${type.current.entries} vs ${type.previous.entries} entries${shift}` +
+                (type.direction ? `, ${type.direction}` : '')
+              );
+            })
+          );
+        }
+
+        return ok(lines.join('\n'));
       } catch (error) {
         return explain(error);
       }

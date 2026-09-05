@@ -10,7 +10,22 @@ import { accountApi } from './accountApi';
  */
 
 export type ActorKind = 'person' | 'key' | 'assistant';
-export type AuditAction = 'create' | 'update' | 'delete' | 'read';
+export type AuditAction = 'create' | 'update' | 'delete' | 'read' | 'call';
+
+/**
+ * What one assistant tool call cost.
+ *
+ * Present on 'call' rows only. `tokens` is an estimate at four characters to a
+ * token — close enough to tell an expensive tool from a cheap one, which is the
+ * only decision it informs.
+ */
+export interface ToolCall {
+  name: string;
+  ms: number;
+  chars: number;
+  tokens: number;
+  failed?: boolean;
+}
 
 export interface AuditEntry {
   id: string;
@@ -29,6 +44,8 @@ export interface AuditEntry {
   snapshot?: Record<string, unknown>;
   /** present on reads: how many records left the server */
   count?: number;
+  /** present on calls: which tool ran, how long it took, and what it cost */
+  tool?: ToolCall;
 }
 
 export interface AuditPage {

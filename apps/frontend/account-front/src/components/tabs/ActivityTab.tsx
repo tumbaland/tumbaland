@@ -11,12 +11,22 @@ import {
   ToggleButtonGroup,
   Typography
 } from '@mui/material';
-import { Add, Edit, DeleteOutlined, Visibility, Person, VpnKey, SmartToy } from '@mui/icons-material';
+import {
+  Add,
+  Edit,
+  DeleteOutlined,
+  Visibility,
+  Person,
+  VpnKey,
+  SmartToy,
+  Bolt
+} from '@mui/icons-material';
 import { logger } from '@tumbaland/frontend-core';
 import {
   ActorKind,
   AuditAction,
   AuditEntry,
+  ToolCall,
   auditService
 } from '../../services/auditService';
 
@@ -38,15 +48,28 @@ const AREAS = [
   { value: 'relationship-service', label: 'Journal' },
   { value: 'album-service', label: 'Photos' },
   { value: 'finance-service', label: 'Finance' },
-  { value: 'auth-service', label: 'Account' }
+  { value: 'auth-service', label: 'Account' },
+  { value: 'mcp-service', label: 'Assistant' }
 ] as const;
 
 const ACTIONS: Record<AuditAction, { verb: string; icon: React.ReactElement; color: string }> = {
   create: { verb: 'added', icon: <Add fontSize="small" />, color: 'success.main' },
   update: { verb: 'changed', icon: <Edit fontSize="small" />, color: 'warning.main' },
   delete: { verb: 'removed', icon: <DeleteOutlined fontSize="small" />, color: 'error.main' },
-  read: { verb: 'read', icon: <Visibility fontSize="small" />, color: 'text.secondary' }
+  read: { verb: 'read', icon: <Visibility fontSize="small" />, color: 'text.secondary' },
+  call: { verb: 'called', icon: <Bolt fontSize="small" />, color: 'info.main' }
 };
+
+/**
+ * What a tool call cost, in the two units that decide anything.
+ *
+ * Tokens first, because that is the one that surprises people. A tool result is
+ * not a page you close: it stays in the conversation and is sent again with
+ * every message after it, so ten thousand tokens is ten thousand paid for on
+ * every turn that follows, not once.
+ */
+const toolCost = (tool: ToolCall): string =>
+  `~${tool.tokens.toLocaleString()} tokens · ${tool.ms.toLocaleString()} ms`;
 
 /** Singular, and without the underscores the API stores them with. */
 const resourceName = (resource: string): string =>
@@ -209,6 +232,7 @@ const ActivityTab: React.FC = () => {
           <ToggleButton value="update">Changed</ToggleButton>
           <ToggleButton value="delete">Removed</ToggleButton>
           <ToggleButton value="read">Read</ToggleButton>
+          <ToggleButton value="call">Tool calls</ToggleButton>
         </ToggleButtonGroup>
       </Stack>
 
@@ -271,10 +295,33 @@ const ActivityTab: React.FC = () => {
 
                     <Typography variant="body2">
                       {verb.verb}{' '}
-                      {entry.action === 'read'
-                        ? `${entry.count ?? 'some'} ${entry.resource.replace(/_/g, ' ')}`
-                        : withArticle(resourceName(entry.resource))}
+                      {entry.action === 'call' ? (
+                        <Box component="span" sx={{ fontFamily: 'monospace' }}>
+                          {entry.tool?.name ?? 'a tool'}
+                        </Box>
+                      ) : entry.action === 'read' ? (
+                        `${entry.count ?? 'some'} ${entry.resource.replace(/_/g, ' ')}`
+                      ) : (
+                        withArticle(resourceName(entry.resource))
+                      )}
                     </Typography>
+
+                    {entry.tool && (
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        // Red once an answer is big enough that carrying it
+                        // through a conversation is what the bill is made of.
+                        color={
+                          entry.tool.failed
+                            ? 'error'
+                            : entry.tool.tokens >= 4000
+                              ? 'warning'
+                              : 'default'
+                        }
+                        label={toolCost(entry.tool)}
+                      />
+                    )}
 
                     <Box sx={{ flexGrow: 1 }} />
                     <Typography variant="caption" sx={{ color: 'text.secondary' }}>

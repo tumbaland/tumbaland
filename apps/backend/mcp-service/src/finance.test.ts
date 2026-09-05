@@ -3,7 +3,16 @@ jest.mock('@tumbaland/backend-core', () => ({
 }));
 
 import fixtures from './__fixtures__/finance-api.json';
-import { finance, holdingSchema, tradeSchema, transactionPageSchema } from './finance';
+import {
+  analyticsSchema,
+  dashboardSchema,
+  finance,
+  holdingSchema,
+  recurringSchema,
+  summarySchema,
+  tradeSchema,
+  transactionPageSchema
+} from './finance';
 import { parseResponse, ShapeError } from './schemas';
 
 /**
@@ -52,6 +61,47 @@ describe('the recorded responses parse', () => {
       costBasis: expect.any(Number),
       percentIncrease: expect.any(Number)
     });
+  });
+
+  it('accepts a real /dashboard, which is what net worth is read from', () => {
+    const dashboard = parseResponse(dashboardSchema, '/dashboard', fixtures.dashboard);
+
+    expect(dashboard.kpis.netWorth).toEqual(expect.any(Number));
+    expect(dashboard.allocation[0]).toMatchObject({
+      name: expect.any(String),
+      value: expect.any(Number)
+    });
+    // The cashflow block is what separates money consumed from money moved into
+    // an asset, and answering "are we overspending" without it gets it wrong.
+    expect(dashboard.cashflow?.trailing.consumption).toEqual(expect.any(Number));
+  });
+
+  it('accepts a real /transactions/analytics', () => {
+    const analytics = parseResponse(analyticsSchema, '/transactions/analytics', fixtures.analytics);
+
+    expect(analytics.years[0]).toMatchObject({ year: expect.any(Number) });
+    expect(analytics.categoryTrends[0]).toMatchObject({
+      category: expect.any(String),
+      latest: expect.any(Number)
+    });
+  });
+
+  it('accepts a real /transactions/recurring', () => {
+    const recurring = parseResponse(recurringSchema, '/transactions/recurring', fixtures.recurring);
+
+    expect(recurring.payments[0]).toMatchObject({
+      merchant: expect.any(String),
+      amount: expect.any(Number)
+    });
+  });
+
+  it('accepts a real /transactions/summary', () => {
+    const summary = parseResponse(summarySchema, '/transactions/summary', fixtures.summary);
+
+    expect(summary.months[0]).toMatchObject({ month: expect.any(String), income: expect.any(Number) });
+    // Per month on average, not a total for the window — the tool says so, and
+    // a caller that reads it as a total is out by the length of the window.
+    expect(summary.categories[0].spent).toEqual(expect.any(Number));
   });
 
   it('accepts a position the price job has never covered', () => {
@@ -127,7 +177,11 @@ describe('every endpoint this client speaks to', () => {
   const method = () => ((global.fetch as jest.Mock).mock.calls[0][1] as RequestInit).method;
 
   beforeEach(() => {
-    (global.fetch as jest.Mock).mockReturnValue(respond([]));
+    // One body that satisfies every schema in the block: this is a test about
+    // paths and verbs, and the aggregate endpoints now parse what they read.
+    (global.fetch as jest.Mock).mockReturnValue(
+      respond({ kpis: { netWorth: 0, assets: 0, liabilities: 0 }, monthlyTotal: 0, yearlyTotal: 0 })
+    );
   });
 
   it('reads the summary from /transactions/summary with a month window', async () => {
@@ -156,6 +210,7 @@ describe('every endpoint this client speaks to', () => {
   });
 
   it('reads trades from /trades', async () => {
+    (global.fetch as jest.Mock).mockReturnValue(respond([]));
     await finance.listTrades(KEY);
     expect(requested().pathname).toBe('/api/trades');
   });

@@ -9,11 +9,41 @@ import type { ActorKind } from './actor';
  * question or an album question. Every service writes into the same collection,
  * and `service` says which one.
  */
+/**
+ * What one MCP tool call cost.
+ *
+ * Kept beside the trail rather than in a metrics system because the question it
+ * answers is the same one the trail answers — what did the assistant do — with
+ * the part that turned out to matter added: how much text came back. A tool
+ * result is not a page a person closes. It stays in the conversation and is
+ * resent with every message after it, so a single answer of ten thousand tokens
+ * is paid for again on every turn that follows. Nothing in the product made
+ * that visible until a bill did.
+ */
+export interface ToolCall {
+  /** the tool as the model called it — 'get_net_worth', 'log_day' */
+  name: string;
+  /** how long the handler took, end to end, including the calls it made */
+  ms: number;
+  /** characters of text handed back to the model */
+  chars: number;
+  /**
+   * Roughly what those characters cost, at four to a token.
+   *
+   * An estimate on purpose: the real count depends on a tokeniser this server
+   * has no reason to carry, and the decision it informs — which tool is the
+   * expensive one — is nowhere near close enough for the difference to matter.
+   */
+  tokens: number;
+  /** the call came back as an error, so the size is a message rather than data */
+  failed?: boolean;
+}
+
 export interface IAuditEvent extends Document {
   at: Date;
   /** which service handled it — 'relationship-service', 'album-service' */
   service: string;
-  action: 'create' | 'update' | 'delete' | 'read';
+  action: 'create' | 'update' | 'delete' | 'read' | 'call';
   /** what kind of thing — 'activity', 'activity_type', 'photo' */
   resource: string;
   resourceId?: string;
@@ -37,14 +67,27 @@ export interface IAuditEvent extends Document {
   snapshot?: Record<string, unknown>;
   /** how many records a read returned — the size of what left the server */
   count?: number;
+  /** present on 'call': the tool, and what it cost */
+  tool?: ToolCall;
   createdAt: Date;
 }
+
+const ToolCallSchema = new Schema<ToolCall>(
+  {
+    name: { type: String, required: true },
+    ms: { type: Number, required: true },
+    chars: { type: Number, required: true },
+    tokens: { type: Number, required: true },
+    failed: { type: Boolean }
+  },
+  { _id: false }
+);
 
 const AuditEventSchema = new Schema<IAuditEvent>(
   {
     at: { type: Date, required: true, default: Date.now },
     service: { type: String, required: true },
-    action: { type: String, required: true, enum: ['create', 'update', 'delete', 'read'] },
+    action: { type: String, required: true, enum: ['create', 'update', 'delete', 'read', 'call'] },
     resource: { type: String, required: true },
     resourceId: { type: String },
     actorKind: { type: String, required: true, enum: ['person', 'key', 'assistant'] },
@@ -54,7 +97,8 @@ const AuditEventSchema = new Schema<IAuditEvent>(
     tenant: { type: String, required: true },
     changes: { type: Schema.Types.Mixed },
     snapshot: { type: Schema.Types.Mixed },
-    count: { type: Number }
+    count: { type: Number },
+    tool: { type: ToolCallSchema }
   },
   { timestamps: { createdAt: true, updatedAt: false }, collection: 'audit_events' }
 );

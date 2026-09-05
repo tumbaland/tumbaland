@@ -40,6 +40,20 @@ import { verifyApiKey } from '@tumbaland/backend-core';
 import { tumbaland, TumbalandError } from '../tumbaland';
 import { createApp } from '../app';
 
+/**
+ * The JSON out of one SSE frame.
+ *
+ * Split on the *first* delimiter rather than every one: a tool result is free
+ * to contain the string "data: " — one of them does — and splitting on all of
+ * them truncates the payload mid-string, which surfaces as a JSON parse error
+ * about the transport and says nothing about the tool.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const sseBody = (text: string): any => {
+  const at = text.indexOf('data: ');
+  return JSON.parse(at === -1 ? '{}' : text.slice(at + 'data: '.length));
+};
+
 const mockedVerify = verifyApiKey as jest.Mock;
 const api = tumbaland as jest.Mocked<typeof tumbaland>;
 const app = createApp();
@@ -58,7 +72,7 @@ async function callTool(name: string, args: Record<string, unknown> = {}) {
     .set('Accept', 'application/json, text/event-stream')
     .send({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } });
 
-  const payload = JSON.parse(res.text.split('data: ')[1] ?? '{}');
+  const payload = sseBody(res.text);
   return {
     isError: Boolean(payload.result?.isError),
     text: payload.result?.content?.[0]?.text ?? ''
@@ -232,14 +246,91 @@ describe('search_activities', () => {
 });
 
 describe('get_stats', () => {
-  it('returns the numbers as JSON for the model to quote', async () => {
-    api.getStatistics.mockResolvedValue({ totalActivities: 12 });
+  const STATISTICS = {
+    totalActivities: 12,
+    totalHours: 40,
+    firstEntryDate: '2024-01-18',
+    daysSinceFirstEntry: 961,
+    types: [
+      { name: 'Together', count: 7, totalHours: 40, uniqueDays: 7 },
+      { name: 'Gaming', count: 5, totalHours: 0, uniqueDays: 4 }
+    ]
+  };
+
+  const TRENDS = {
+    windowDays: 30,
+    currentStart: '2026-08-07',
+    currentEnd: '2026-09-05',
+    totals: {
+      current: { entries: 53, hours: 37, activeDays: 22 },
+      previous: { entries: 74, hours: 230, activeDays: 27 },
+      entriesChangePct: -28.4,
+      hoursChangePct: -83.9,
+      direction: 'down'
+    },
+    types: [{ name: 'Gaming', current: { entries: 31 }, previous: { entries: 23 }, entriesChangePct: 34.8, direction: 'up' }]
+  };
+
+  it('reads the totals and the type breakdown as prose', async () => {
+    api.getStatistics.mockResolvedValue(STATISTICS);
     api.getTrends.mockResolvedValue({ types: [] });
 
     const { text } = await callTool('get_stats', { timeframe: 'month' });
 
-    expect(JSON.parse(text)).toMatchObject({ statistics: { totalActivities: 12 } });
+    expect(text).toContain('12 entries over the last month since 2024-01-18 (961 days), 40 hours logged.');
+    expect(text).toContain('- Together: 7 entries on 7 days, 40h');
     expect(api.getStatistics).toHaveBeenCalledWith(KEY, 'month', undefined);
+  });
+
+  it('leaves the hours off a type that is not measured in them', async () => {
+    api.getStatistics.mockResolvedValue(STATISTICS);
+    api.getTrends.mockResolvedValue({ types: [] });
+
+    const { text } = await callTool('get_stats', {});
+
+    // "0h" against a type counted in entries reads as a real zero, which is a
+    // different and wrong answer.
+    expect(text).toContain('- Gaming: 5 entries on 4 days');
+    expect(text).not.toContain('Gaming: 5 entries on 4 days, 0h');
+  });
+
+  it('compares the window with the one before it', async () => {
+    api.getStatistics.mockResolvedValue(STATISTICS);
+    api.getTrends.mockResolvedValue(TRENDS);
+
+    const { text } = await callTool('get_stats', {});
+
+    expect(text).toContain('Last 30 days (2026-08-07 to 2026-09-05) against the 30 before');
+    expect(text).toContain('53 entries vs 74 (-28.4%)');
+    expect(text).toContain('37h vs 230h (-83.9%)');
+    expect(text).toContain('Overall down.');
+    expect(text).toContain('- Gaming: 31 vs 23 entries (+34.8%), up');
+  });
+
+  it('stays small enough to carry through a conversation', async () => {
+    api.getStatistics.mockResolvedValue(STATISTICS);
+    api.getTrends.mockResolvedValue(TRENDS);
+
+    const { text } = await callTool('get_stats', {});
+
+    // The guard this whole rewrite exists for. A tool result is resent with
+    // every later turn, so a few hundred characters and a few thousand are not
+    // the same decision.
+    expect(text.length).toBeLessThan(1500);
+  });
+
+  it('renders a sparse response without leaking "undefined" into a sentence', async () => {
+    // A fresh account has no first entry, no hours and no trend window to
+    // compare against. The failure mode is not a crash but the word
+    // "undefined" in a sentence the model quotes back to somebody.
+    api.getStatistics.mockResolvedValue({ totalActivities: 3, types: [{ name: 'Coffee', count: 3 }] });
+    api.getTrends.mockResolvedValue({ types: [] });
+
+    const { text } = await callTool('get_stats', {});
+
+    expect(text).not.toMatch(/undefined|NaN|null/);
+    expect(text).toContain('3 entries in total.');
+    expect(text).toContain('- Coffee: 3 entries');
   });
 });
 
@@ -433,7 +524,7 @@ describe('choosing a journal', () => {
       .set('Accept', 'application/json, text/event-stream')
       .send({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} });
 
-    const payload = JSON.parse(res.text.split('data: ')[1] ?? '{}');
+    const payload = sseBody(res.text);
     return (payload.result?.tools ?? []) as { name: string; inputSchema: { properties?: object } }[];
   }
 

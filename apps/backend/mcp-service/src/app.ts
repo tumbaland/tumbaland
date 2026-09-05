@@ -99,6 +99,10 @@ interface Authenticated {
   userEmail?: string;
   userName?: string;
   keyId?: string;
+  /** what the credential is called: the key's name, or the app's */
+  label?: string;
+  /** an API key was presented rather than a token granted through consent */
+  isApiKey?: boolean;
   scopes?: ApiKeyScope[];
   tenants?: ApiKeyTenant;
   /** what each granted tenant is called; empty for an API key, which has no consent screen */
@@ -118,7 +122,7 @@ interface Authenticated {
  */
 async function authenticate(token: string): Promise<Authenticated> {
   if (looksLikeApiKey(token)) {
-    return verifyApiKey(token);
+    return { ...(await verifyApiKey(token)), isApiKey: true };
   }
 
   const result = verifyAccessToken(token, canonicalUrl());
@@ -128,6 +132,11 @@ async function authenticate(token: string): Promise<Authenticated> {
     userId: result.userId,
     userEmail: result.email,
     userName: result.name,
+    // The client id, not the token's own: an access token is refreshed hourly
+    // and a trail keyed on it would show a different actor every hour.
+    keyId: result.clientId,
+    label: result.clientName,
+    isApiKey: false,
     scopes: result.scopes,
     tenants: result.tenants,
     tenantNames: result.tenantNames
@@ -234,7 +243,17 @@ export function createApp() {
       {
         token,
         tenants: verification.tenants ?? { allowed: [PERSONAL_TENANT], default: PERSONAL_TENANT },
-        tenantNames: verification.tenantNames ?? {}
+        tenantNames: verification.tenantNames ?? {},
+        // Named the way the account page names it, so a row in the trail reads
+        // "Claude called get_net_worth" rather than naming a credential id.
+        actor: verification.userId
+          ? {
+              kind: verification.isApiKey ? 'key' : 'assistant',
+              userId: verification.userId,
+              label: verification.label || verification.userEmail || verification.userId,
+              credentialId: verification.keyId
+            }
+          : undefined
       },
       verification.scopes ?? []
     );

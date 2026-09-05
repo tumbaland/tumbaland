@@ -97,6 +97,81 @@ export const daysResponseSchema = z
   .loose();
 
 /**
+ * The two statistics endpoints, named so `get_stats` can render them.
+ *
+ * Both used to be forwarded as pretty-printed JSON, which meant the model was
+ * handed a type id, a slug and a hex colour for every activity type on its way
+ * to the two numbers it wanted. None of the three mean anything to it: entries
+ * are named by name everywhere else in this server, deliberately, so the model
+ * never has to invent or carry an id.
+ */
+const typeCountsSchema = z
+  .object({
+    name: z.string(),
+    count: z.number(),
+    totalHours: z.number().optional(),
+    /** days with at least one entry, which is not the same as the count */
+    uniqueDays: z.number().optional()
+  })
+  .loose();
+
+export const statisticsResponseSchema = z
+  .object({
+    totalHours: z.number().optional(),
+    totalActivities: z.number().optional(),
+    firstEntryDate: z.string().nullable().optional(),
+    daysSinceFirstEntry: z.number().optional(),
+    types: z.array(typeCountsSchema).catch([])
+  })
+  .loose();
+
+/** One side of a trend comparison: the window, or the window before it. */
+const windowTotalsSchema = z
+  .object({
+    entries: z.number(),
+    hours: z.number().optional(),
+    activeDays: z.number().optional()
+  })
+  .loose();
+
+export const trendsResponseSchema = z
+  .object({
+    windowDays: z.number().optional(),
+    currentStart: z.string().optional(),
+    currentEnd: z.string().optional(),
+    previousStart: z.string().optional(),
+    previousEnd: z.string().optional(),
+    totals: z
+      .object({
+        current: windowTotalsSchema,
+        previous: windowTotalsSchema,
+        entriesChangePct: z.number().nullable().optional(),
+        hoursChangePct: z.number().nullable().optional(),
+        direction: z.string().optional()
+      })
+      .loose()
+      .optional(),
+    types: z
+      .array(
+        z
+          .object({
+            name: z.string(),
+            current: windowTotalsSchema,
+            previous: windowTotalsSchema,
+            entriesChangePct: z.number().nullable().optional(),
+            hoursChangePct: z.number().nullable().optional(),
+            direction: z.string().optional()
+          })
+          .loose()
+      )
+      .catch([])
+  })
+  .loose();
+
+export type Statistics = z.infer<typeof statisticsResponseSchema>;
+export type Trends = z.infer<typeof trendsResponseSchema>;
+
+/**
  * A response that did not look the way this client expects.
  *
  * Named separately from a transport failure because the two need different

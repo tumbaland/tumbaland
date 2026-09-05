@@ -1,4 +1,4 @@
-import { AuditEvent, type IAuditEvent } from './AuditEvent';
+import { AuditEvent, type IAuditEvent, type ToolCall } from './AuditEvent';
 import type { ActorKind } from './actor';
 
 export interface AuditQuery {
@@ -30,6 +30,8 @@ export interface AuditEntry {
   changes?: Record<string, { from: unknown; to: unknown }>;
   snapshot?: Record<string, unknown>;
   count?: number;
+  /** present on 'call': which tool ran, how long it took, and what it cost */
+  tool?: ToolCall;
 }
 
 const toEntry = (event: IAuditEvent): AuditEntry => ({
@@ -45,7 +47,8 @@ const toEntry = (event: IAuditEvent): AuditEntry => ({
   tenant: event.tenant,
   changes: event.changes,
   snapshot: event.snapshot,
-  count: event.count
+  count: event.count,
+  tool: event.tool
 });
 
 /**

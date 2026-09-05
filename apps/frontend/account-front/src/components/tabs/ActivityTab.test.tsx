@@ -91,6 +91,34 @@ describe('reading the trail', () => {
     expect(await screen.findByText(/read 47 activities/)).toBeInTheDocument();
   });
 
+  it('names the tool an assistant called, and what the answer cost', async () => {
+    await renderTab([
+      entry({
+        action: 'call',
+        service: 'mcp-service',
+        resource: 'tool',
+        tool: { name: 'get_net_worth', ms: 412, chars: 36631, tokens: 9158 }
+      })
+    ]);
+
+    expect(await screen.findByText('get_net_worth')).toBeInTheDocument();
+    // Tokens first: it is the number that decides whether a tool is worth
+    // calling, and the one nothing in the product showed before.
+    expect(screen.getByText(/~9,158 tokens/)).toBeInTheDocument();
+    expect(screen.getByText(/412 ms/)).toBeInTheDocument();
+  });
+
+  it('narrows the trail to tool calls, which is where the cost lives', async () => {
+    const user = userEvent.setup();
+    await renderTab();
+
+    await user.click(screen.getByRole('button', { name: 'Tool calls' }));
+
+    await waitFor(() =>
+      expect(mocked.list).toHaveBeenLastCalledWith(expect.objectContaining({ action: 'call' }))
+    );
+  });
+
   it('groups by day, with today named rather than dated', async () => {
     await renderTab();
     expect(await screen.findByText('Today')).toBeInTheDocument();
