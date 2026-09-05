@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.475](https://github.com/toomastahves/tumbaland/compare/app-v0.0.474...app-v0.0.475) (2026-09-05)
+
+### Features
+
+* update mcp ui ([02d67a0](https://github.com/toomastahves/tumbaland/commit/02d67a042725846383ff45b6e34151e696bd258e))
 ## [0.0.474](https://github.com/toomastahves/tumbaland/compare/app-v0.0.473...app-v0.0.474) (2026-09-05)
 
 ### Features
