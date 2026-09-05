@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.473](https://github.com/toomastahves/tumbaland/compare/app-v0.0.472...app-v0.0.473) (2026-09-05)
+
+### Features
+
+* add album mcp ([35cbddd](https://github.com/toomastahves/tumbaland/commit/35cbddd91b563c60d03df7a37161b6fead867e73))
 ## [0.0.472](https://github.com/toomastahves/tumbaland/compare/app-v0.0.471...app-v0.0.472) (2026-09-04)
 
 ### Bug Fixes
