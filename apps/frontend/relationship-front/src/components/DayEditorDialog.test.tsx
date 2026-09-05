@@ -36,7 +36,7 @@ vi.mock('./map/LocationPicker', () => ({
     <div>
       <span data-testid="picker-label">{label}</span>
       <span data-testid="picker-value">{value ? value.label : 'none'}</span>
-      <button type="button" onClick={() => onChange({ label: 'Kolm Sõsarat', lat: 59.4405, lng: 24.7453 })}>
+      <button type="button" onClick={() => onChange({ label: 'Sushi House', lat: 59.4405, lng: 24.7453 })}>
         pick place
       </button>
       <button type="button" onClick={() => onChange(null)}>
@@ -206,7 +206,7 @@ const locationType = {
 
 const savedPlace = {
   id: '59.4405,24.7453',
-  label: 'Kolm Sõsarat',
+  label: 'Sushi House',
   lat: 59.4405,
   lng: 24.7453,
   visits: 2,
@@ -257,7 +257,7 @@ it('saves a picked place with the entry', async () => {
   await waitFor(() =>
     expect(mockedSaveDay).toHaveBeenCalledWith(
       '2024-01-01',
-      [{ typeId: 'l1', location: { label: 'Kolm Sõsarat', lat: 59.4405, lng: 24.7453 } }],
+      [{ typeId: 'l1', location: { label: 'Sushi House', lat: 59.4405, lng: 24.7453 } }],
       'g1'
     )
   );
@@ -274,7 +274,7 @@ it('sends a null location so clearing a place removes it on save', async () => {
             _id: 'e1',
             typeId: 'l1',
             description: '',
-            location: { label: 'Kolm Sõsarat', lat: 59.4405, lng: 24.7453 }
+            location: { label: 'Sushi House', lat: 59.4405, lng: 24.7453 }
           }
         ]
       }
@@ -283,7 +283,7 @@ it('sends a null location so clearing a place removes it on save', async () => {
   mockedSaveDay.mockResolvedValue({ date: '2024-01-01', entries: [] });
   render(<DayEditorDialog open date="2024-01-01" onClose={vi.fn()} onSaved={vi.fn()} />);
 
-  expect(await screen.findByTestId('picker-value')).toHaveTextContent('Kolm Sõsarat');
+  expect(await screen.findByTestId('picker-value')).toHaveTextContent('Sushi House');
   await userEvent.click(screen.getByRole('button', { name: 'clear place' }));
   await userEvent.click(screen.getByRole('button', { name: 'Save day' }));
 

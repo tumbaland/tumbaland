@@ -261,7 +261,7 @@ it('shows the place on an entry chip when one was logged', async () => {
             typeId: 't1',
             type: readingType,
             description: 'tasting menu',
-            location: { label: 'Kolm Sõsarat', lat: 59.4405, lng: 24.7453 }
+            location: { label: 'Sushi House', lat: 59.4405, lng: 24.7453 }
           }
         ]
       }
@@ -272,7 +272,7 @@ it('shows the place on an entry chip when one was logged', async () => {
   });
   renderPage();
 
-  expect(await screen.findByText('Kolm Sõsarat')).toBeInTheDocument();
+  expect(await screen.findByText('Sushi House')).toBeInTheDocument();
 });
 
 it('opens the day editor for a ?date= deep link from the map', async () => {
@@ -306,7 +306,7 @@ it('includes the place columns in the CSV export', async () => {
     days: [
       dayWithEntry('2024-05-01', {
         description: 'tasting menu',
-        location: { label: 'Kolm Sõsarat', lat: 59.4405, lng: 24.7453 }
+        location: { label: 'Sushi House', lat: 59.4405, lng: 24.7453 }
       })
     ],
     page: 1,
@@ -319,7 +319,7 @@ it('includes the place columns in the CSV export', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
 
   await waitFor(() => expect(exported).toContain('"Place","Latitude","Longitude"'));
-  expect(exported).toContain('"Kolm Sõsarat","59.4405","24.7453"');
+  expect(exported).toContain('"Sushi House","59.4405","24.7453"');
 });
 
 it('exports every matching day, not just the pages already loaded', async () => {

@@ -55,15 +55,41 @@ beforeEach(() => {
   mockedGetPlans.mockResolvedValue(CATALOG);
 });
 
-it('names the actual modules in the headline, not just what it feels like', () => {
+it('leads with the assistant, which is the part nothing else on the shelf has', () => {
   render(<LandingPage />);
   const h1 = screen.getByRole('heading', { level: 1 });
-  expect(h1).toHaveTextContent(/photo/i);
-  expect(h1).toHaveTextContent(/finance/i);
-  expect(h1).toHaveTextContent(/one private place/i);
+
+  // The page used to open by naming the four modules, which puts Tumbaland
+  // beside four products it cannot out-feature. The connector is the argument.
+  expect(h1).toHaveTextContent(/tell your assistant/i);
 
   // "your money" reads as though we hold it. We track it; we never touch it.
   expect(h1).not.toHaveTextContent(/your money/i);
+});
+
+it('claims only the client that has been tested, above the fold', () => {
+  render(<LandingPage />);
+  expect(screen.getByText(/Works with Claude . and any MCP client/)).toBeInTheDocument();
+
+  // Naming a product nobody has run it against is a promise the page cannot
+  // keep, and the first thing a visitor discovers is whether it was true.
+  expect(screen.queryByText(/ChatGPT|Gemini/)).not.toBeInTheDocument();
+});
+
+it('shows the connector address, which is the one thing nobody can guess', () => {
+  render(<LandingPage />);
+  // Concrete enough to act on, and it says plainly that this is an ordinary MCP
+  // endpoint rather than something proprietary.
+  expect(screen.getByText('https://mcp.tumbaland.eu/mcp')).toBeInTheDocument();
+});
+
+it('explains connecting before listing the modules', () => {
+  render(<LandingPage />);
+  const connect = screen.getByRole('heading', { name: /One address, and it is connected/ });
+  const pillars = screen.getByRole('heading', { name: /Four things worth tracking/ });
+
+  // The hero makes a claim that only holds if connecting is this small a job.
+  expect(connect.compareDocumentPosition(pillars) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
 
 it('holds the product visual back until after the pillars are explained', () => {
@@ -85,7 +111,10 @@ it('leads each pillar with one sentence before its bullets', () => {
 it('names each module the same way the app nav does', () => {
   render(<LandingPage />);
   PRODUCTS.forEach((product) => {
-    expect(screen.getByText(product.name)).toBeInTheDocument();
+    // Some names now appear twice: once on the capability card above and once
+    // on the module card. That repetition is the point — it is the same thing
+    // named the same way in both places.
+    expect(screen.getAllByText(product.name).length).toBeGreaterThan(0);
     expect(screen.getByRole('heading', { name: product.headline })).toBeInTheDocument();
   });
 });
@@ -224,16 +253,27 @@ it('sends the hero and footer calls to action to sign-in', async () => {
   expect(redirectToLogin).toHaveBeenCalledTimes(2);
 });
 
-it('scrolls to the answers rather than navigating away', async () => {
+it('scrolls to the setup rather than navigating away', async () => {
   const scrollIntoView = vi.fn();
   Element.prototype.scrollIntoView = scrollIntoView;
   const user = userEvent.setup();
   render(<LandingPage />);
 
-  await user.click(screen.getByRole('button', { name: /Why it's free/ }));
+  await user.click(screen.getByRole('button', { name: /See how it connects/ }));
 
   expect(scrollIntoView).toHaveBeenCalled();
   expect(redirectToLogin).not.toHaveBeenCalled();
+});
+
+it('offers a way back to sign-in after the hero has scrolled past', async () => {
+  const user = userEvent.setup();
+  render(<LandingPage />);
+
+  // The page had one sign-in button, in the hero, and nothing in the nav — so a
+  // returning visitor who scrolled had no way back to it.
+  await user.click(screen.getAllByRole('button', { name: 'Sign in' })[0]);
+
+  expect(redirectToLogin).toHaveBeenCalledTimes(1);
 });
 
 it('lists what each plan includes, and omits rather than dashes what it does not', async () => {

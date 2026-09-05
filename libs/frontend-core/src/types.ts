@@ -8,6 +8,15 @@ export interface User {
   roles?: string[];
   isApproved?: boolean;
   lastLoginAt?: string;
+  /**
+   * When the owner asked for the account to be removed, if they have.
+   *
+   * Served by `/auth/profile`, which is what this type describes. A request and
+   * not a removal: the account signs in and works exactly as before while it
+   * stands, and an administrator does the deleting by hand. Null once the owner
+   * withdraws it.
+   */
+  deletionRequestedAt?: string | null;
 }
 
 export interface AuthResponse {

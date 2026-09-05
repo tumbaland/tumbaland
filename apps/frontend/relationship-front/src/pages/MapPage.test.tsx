@@ -52,7 +52,7 @@ const plainType = { ...restaurantType, _id: 't2', id: 't2', name: 'Reading', slu
 
 const place = (over: Partial<Place> = {}): Place => ({
   id: '59.4405,24.7453',
-  label: 'Kolm Sõsarat',
+  label: 'Sushi House',
   lat: 59.4405,
   lng: 24.7453,
   visits: 3,
@@ -202,5 +202,5 @@ it('lists the busiest places as chips beneath the map', async () => {
   mockedGetPlaces.mockResolvedValue([place()]);
   renderPage();
 
-  expect(await screen.findByText('Kolm Sõsarat · 3')).toBeInTheDocument();
+  expect(await screen.findByText('Sushi House · 3')).toBeInTheDocument();
 });

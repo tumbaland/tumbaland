@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Box, Button, Chip, CircularProgress, Paper, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, CircularProgress, Link, Paper, Stack, Typography } from '@mui/material';
 import { LinkOff, Hub } from '@mui/icons-material';
 import { logger } from '@tumbaland/frontend-core';
 import { Connection, connectionService } from '../../services/apiKeyService';
@@ -10,12 +10,20 @@ const formatDate = (value: string | null): string =>
 /**
  * Assistants connected through OAuth.
  *
- * Sits alongside API keys because both answer "what can reach my data", but the
- * two are not the same thing: a key is a secret someone pasted into a config,
- * while a connection was approved on a consent screen and has no secret to show.
- * So this list has one control — disconnect — and no reveal.
+ * Its own tab rather than a section under API keys, which is where it used to
+ * live. The two answer the same question — what can reach my data — but they
+ * are not the same thing and they are not managed the same way: a key is a
+ * secret someone pasted into a config and may need to read back, while a
+ * connection was approved on a consent screen and has no secret to show. Under
+ * one heading the page offered a "New key" button above a list of things no key
+ * was ever made for, and the only control here, disconnect, sat below two
+ * screens of key management.
+ *
+ * The cross-link at the foot is what keeps the split from hiding one from the
+ * other: somebody who came looking for "what can reach my data" has to land on
+ * both halves of the answer.
  */
-const ConnectionsSection: React.FC = () => {
+const ConnectionsTab: React.FC = () => {
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -69,12 +77,13 @@ const ConnectionsSection: React.FC = () => {
   const active = connections.filter((connection) => !connection.revokedAt);
 
   return (
-    <Box sx={{ mt: 5 }}>
+    <Box>
       <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-        Connected apps
+        Connections
       </Typography>
       <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-        Assistants you have connected to Tumbaland. No key was copied for these — you approved them.
+        Assistants you approved on a consent screen. Nothing was copied or pasted for these, so
+        there is no key to show. The only control is disconnecting.
       </Typography>
 
       {message && (
@@ -87,8 +96,11 @@ const ConnectionsSection: React.FC = () => {
         <Paper variant="outlined" sx={{ p: 3, textAlign: 'center', borderRadius: 2 }}>
           <Hub sx={{ fontSize: 32, color: 'text.disabled', mb: 1 }} />
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Nothing connected yet. Add Tumbaland as a connector in Claude, ChatGPT or Gemini.
+            Nothing connected yet. Add Tumbaland as a connector in Claude, or any assistant that takes one.
           </Typography>
+          <Link href="/connect" sx={{ fontSize: 14, mt: 1, display: 'inline-block' }}>
+            How connecting works
+          </Link>
         </Paper>
       ) : (
         <Stack spacing={2}>
@@ -131,8 +143,13 @@ const ConnectionsSection: React.FC = () => {
           ))}
         </Stack>
       )}
+
+      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 3 }}>
+        Something that cannot sign in — a script, or a tool without a consent screen — needs an{' '}
+        <Link href="/account/api-keys">API key</Link> instead.
+      </Typography>
     </Box>
   );
 };
 
-export default ConnectionsSection;
+export default ConnectionsTab;

@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router'
 import { Box, Tabs, Tab } from '@mui/material';
 import ProfileTab from '../components/tabs/ProfileTab';
 import ApiKeysTab from '../components/tabs/ApiKeysTab';
+import ConnectionsTab from '../components/tabs/ConnectionsTab';
 import ActivityTab from '../components/tabs/ActivityTab';
 
 const AccountPage: React.FC = () => {
@@ -11,8 +12,16 @@ const AccountPage: React.FC = () => {
 
   // One list drives both the labels and the routing, so a tab cannot end up
   // selecting a path that renders something else.
+  //
+  // Keys and connections are two tabs rather than one screen because they are
+  // two different things a person does. A key is a secret to create, read back
+  // and paste somewhere; a connection is something already approved that you
+  // only ever revoke. Under one heading the "New key" button sat above a list
+  // of things no key was made for. Each tab links to the other, so "what can
+  // reach my data" still has one obvious answer.
   const tabs = [
     { path: '/profile', label: 'Profile' },
+    { path: '/connections', label: 'Connections' },
     { path: '/api-keys', label: 'API keys' },
     { path: '/activity', label: 'Activity' }
   ];
@@ -39,6 +48,7 @@ const AccountPage: React.FC = () => {
         <Routes>
           <Route path="" element={<Navigate to="profile" replace />} />
           <Route path="profile" element={<ProfileTab />} />
+          <Route path="connections" element={<ConnectionsTab />} />
           <Route path="api-keys" element={<ApiKeysTab />} />
           <Route path="activity" element={<ActivityTab />} />
         </Routes>

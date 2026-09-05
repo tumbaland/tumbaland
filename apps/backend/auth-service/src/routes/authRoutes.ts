@@ -1,7 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { strictRateLimiter, validate, NotFoundError } from '@tumbaland/backend-core';
 import { validateToken, logout, verifyAuth, refreshToken, invalidateUserTokens } from '../controllers/authController';
-import { getProfile, updateProfile } from '../controllers/profileController';
+import {
+  cancelAccountDeletion,
+  getProfile,
+  requestAccountDeletion,
+  updateProfile
+} from '../controllers/profileController';
 import { getConnections, revokeConnection } from '../controllers/oauthController';
 import { getAuditTrail } from '../controllers/auditController';
 import {
@@ -38,6 +43,17 @@ router.post('/logout', authenticateToken, requireApproved, logout);
 // Protected routes
 router.get('/profile', authenticateToken, requireApproved, getProfile);
 router.put('/profile', authenticateToken, requireApproved, validate(updateProfileSchema), updateProfile);
+
+/**
+ * Asking for the account to be removed, and taking it back.
+ *
+ * A request only — nothing is deleted and nothing is disabled, so these stay
+ * behind the same `requireApproved` as the rest of the profile rather than
+ * getting a gate of their own. An account with a request standing signs in and
+ * works exactly as it did before.
+ */
+router.post('/profile/deletion', authenticateToken, requireApproved, requestAccountDeletion);
+router.delete('/profile/deletion', authenticateToken, requireApproved, cancelAccountDeletion);
 
 // Verify route now fully protected
 router.get('/verify', authenticateToken, requireApproved, verifyAuth);

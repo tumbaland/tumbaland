@@ -63,7 +63,9 @@ export function PrivacySection() {
   return (
     <Box
       component="section"
+      id="privacy"
       sx={{
+        scrollMarginTop: 80,
         py: { xs: 5, md: 7 },
         px: { xs: 2.5, md: 5 },
         mx: { xs: 1, md: 2 },

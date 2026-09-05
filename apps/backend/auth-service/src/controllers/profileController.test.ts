@@ -8,7 +8,12 @@ jest.mock('../models/User', () => ({
 }));
 
 import { User } from '../models/User';
-import { getProfile, updateProfile } from './profileController';
+import {
+  cancelAccountDeletion,
+  getProfile,
+  requestAccountDeletion,
+  updateProfile
+} from './profileController';
 
 const mockedFindById = User.findById as unknown as jest.Mock;
 const mockedFindByIdAndUpdate = User.findByIdAndUpdate as unknown as jest.Mock;
@@ -61,10 +66,25 @@ describe('getProfile', () => {
         lastName: 'Lovelace',
         name: 'Ada Lovelace',
         picture: 'pic.png',
-        lastLoginAt
+        lastLoginAt,
+        deletionRequestedAt: null
       },
       approved: true
     });
+  });
+
+  it('carries a standing deletion request, so the page can show it', async () => {
+    // Without this the account page would offer to make a request that already
+    // exists, and the person who made it would have no way to see that it took.
+    const deletionRequestedAt = new Date('2026-09-01T10:00:00.000Z');
+    mockedFindById.mockResolvedValue({ isApproved: true, deletionRequestedAt });
+    const res = mockRes();
+
+    await getProfile(authedReq(), res);
+
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ user: expect.objectContaining({ deletionRequestedAt }) })
+    );
   });
 });
 
@@ -133,5 +153,103 @@ describe('updateProfile', () => {
     await updateProfile(authedReq({ body: {} }), res);
 
     expect(mockedFindByIdAndUpdate).toHaveBeenCalledWith('user-1', { $set: {} }, { new: true });
+  });
+});
+
+/**
+ * Asking for the account to be removed.
+ *
+ * The whole point of these is that nothing happens to the data. A request is
+ * recorded, an administrator acts on it later, and in the meantime the account
+ * signs in and works exactly as it did before — so every test here is as much
+ * about what is *not* touched as about the flag that is set.
+ */
+describe('requestAccountDeletion', () => {
+  it('refuses an unauthenticated caller', async () => {
+    await expect(
+      requestAccountDeletion({ user: undefined } as unknown as Request, mockRes())
+    ).rejects.toThrow('Not authenticated');
+  });
+
+  it('says so when the account is already gone', async () => {
+    mockedFindById.mockResolvedValue(null);
+
+    await expect(requestAccountDeletion(authedReq(), mockRes())).rejects.toThrow('User not found');
+  });
+
+  it('records when the request was made, and nothing else', async () => {
+    const save = jest.fn().mockResolvedValue(undefined);
+    const user = { deletionRequestedAt: null, isApproved: true, tokenVersion: 1, save };
+    mockedFindById.mockResolvedValue(user);
+    const res = mockRes();
+
+    await requestAccountDeletion(authedReq(), res);
+
+    expect(user.deletionRequestedAt).toBeInstanceOf(Date);
+    // Nothing is deleted and nothing is disabled: the account must keep working
+    // while the request stands.
+    expect(user.isApproved).toBe(true);
+    expect(user.tokenVersion).toBe(1);
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it('tells the caller plainly that nothing has been removed', async () => {
+    mockedFindById.mockResolvedValue({ deletionRequestedAt: null, save: jest.fn() });
+    const res = mockRes();
+
+    await requestAccountDeletion(authedReq(), res);
+
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        message: expect.stringMatching(/Nothing has been removed yet/)
+      })
+    );
+  });
+
+  it('keeps the original date when asked twice', async () => {
+    // Re-clicking a button is not a second request, and the date an
+    // administrator works from should be when the person actually decided.
+    const asked = new Date('2026-09-01T10:00:00.000Z');
+    const save = jest.fn();
+    mockedFindById.mockResolvedValue({ deletionRequestedAt: asked, save });
+    const res = mockRes();
+
+    await requestAccountDeletion(authedReq(), res);
+
+    expect(save).not.toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ deletionRequestedAt: asked })
+    );
+  });
+});
+
+describe('cancelAccountDeletion', () => {
+  it('refuses an unauthenticated caller', async () => {
+    await expect(
+      cancelAccountDeletion({ user: undefined } as unknown as Request, mockRes())
+    ).rejects.toThrow('Not authenticated');
+  });
+
+  it('clears the request', async () => {
+    mockedFindByIdAndUpdate.mockResolvedValue({ deletionRequestedAt: null });
+    const res = mockRes();
+
+    await cancelAccountDeletion(authedReq(), res);
+
+    expect(mockedFindByIdAndUpdate).toHaveBeenCalledWith(
+      'user-1',
+      { $set: { deletionRequestedAt: null } },
+      { new: true }
+    );
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true, deletionRequestedAt: null })
+    );
+  });
+
+  it('says so when the account is already gone', async () => {
+    mockedFindByIdAndUpdate.mockResolvedValue(null);
+
+    await expect(cancelAccountDeletion(authedReq(), mockRes())).rejects.toThrow('User not found');
   });
 });

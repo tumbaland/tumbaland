@@ -2,10 +2,11 @@ import { useCallback } from 'react';
 import { Box } from '@mui/material';
 import { authService } from '../services/authService';
 import BgImageBox from '../components/BgImageBox';
+import { LandingNav } from '../components/landing/LandingNav';
 import { HeroSection } from '../components/landing/HeroSection';
+import { AssistantSection } from '../components/landing/AssistantSection';
 import { ProductsSection } from '../components/landing/ProductsSection';
 import { ProductPreview } from '../components/landing/ProductPreview';
-import { AssistantSection } from '../components/landing/AssistantSection';
 import { PrivacySection } from '../components/landing/PrivacySection';
 import { SupportSection } from '../components/landing/SupportSection';
 import { FaqSection } from '../components/landing/FaqSection';
@@ -16,10 +17,15 @@ import { usePlans } from '../hooks/usePlans';
  * The public front page, shown at `/` to signed-out visitors. Signed-in users
  * get the dashboard instead (see routes/AppRoutes.tsx).
  *
- * **The money lives at the bottom.** The price table used to sit in the middle
- * of the page, which made the pitch "here is a product, and here is what it
- * costs" when the actual offer is "here is a product, it is free, and you can
- * chip in if you want it to stay running". Support now comes after the FAQ has
+ * **The assistant leads.** The page used to open with "photo albums, finance
+ * tracking and a journal" — three things a visitor can already get separately,
+ * and a claim that puts Tumbaland beside four products it cannot out-feature.
+ * The connector is the part none of them have, and it is finished and working,
+ * so it is now the hero and the section under it. The modules follow as what
+ * the assistant can reach, which is a better argument for them than the one
+ * they were making on their own.
+ *
+ * **The money still lives at the bottom.** Support comes after the FAQ has
  * explained why limits exist at all, so a visitor meets the ask having already
  * been told they do not have to answer it.
  *
@@ -37,8 +43,8 @@ export function LandingPage() {
     authService.redirectToLogin();
   }, []);
 
-  const handleWhyFree = useCallback(() => {
-    document.getElementById('faq')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const handleSeeHow = useCallback(() => {
+    document.getElementById('assistant')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 
   const handleChoosePlan = useCallback(() => {
@@ -77,23 +83,26 @@ export function LandingPage() {
         <BgImageBox />
       </Box>
 
-      <Box sx={{ position: 'relative', zIndex: 1, maxWidth: 1200, mx: 'auto', pb: 2 }}>
-        <HeroSection onSignIn={handleSignIn} onWhyFree={handleWhyFree} />
-        <ProductsSection />
-        {/* Sits below the pillars deliberately: the visual lands better once the
-            reader knows what the four modules are than it does interrupting the
-            hero before they understand the product. */}
-        <Box sx={{ px: 2, pb: { xs: 6, md: 8 } }}>
-          <ProductPreview />
+      <Box sx={{ position: 'relative', zIndex: 1 }}>
+        <LandingNav onSignIn={handleSignIn} />
+
+        <Box sx={{ maxWidth: 1200, mx: 'auto', pb: 2 }}>
+          <HeroSection onSignIn={handleSignIn} onSeeHow={handleSeeHow} />
+          {/* Straight after the hero, because the hero makes a claim that only
+              holds if connecting is genuinely this small a job. */}
+          <AssistantSection />
+          <ProductsSection />
+          {/* Sits below the pillars deliberately: the visual lands better once
+              the reader knows what the four modules are than it does
+              interrupting the hero before they understand the product. */}
+          <Box sx={{ px: 2, pb: { xs: 6, md: 8 } }}>
+            <ProductPreview />
+          </Box>
+          <PrivacySection />
+          <FaqSection plans={plansState.plans} />
+          <SupportSection onChoosePlan={handleChoosePlan} {...plansState} />
+          <LandingFooter onSignIn={handleSignIn} />
         </Box>
-        {/* After the product, before the privacy promise: it only means anything
-            once you know what there is to write into, and it raises the question
-            the privacy section then answers. */}
-        <AssistantSection />
-        <PrivacySection />
-        <FaqSection plans={plansState.plans} />
-        <SupportSection onChoosePlan={handleChoosePlan} {...plansState} />
-        <LandingFooter onSignIn={handleSignIn} />
       </Box>
     </Box>
   );

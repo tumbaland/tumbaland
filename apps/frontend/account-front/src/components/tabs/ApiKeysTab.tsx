@@ -14,6 +14,7 @@ import {
   Checkbox,
   IconButton,
   InputLabel,
+  Link,
   MenuItem,
   Paper,
   Select,
@@ -40,7 +41,6 @@ import {
   apiKeyService
 } from '../../services/apiKeyService';
 import { getUserGroups } from '../../services/groupService';
-import ConnectionsSection from './ConnectionsSection';
 
 interface TenantOption {
   id: string;
@@ -225,7 +225,8 @@ const ApiKeysTab: React.FC = () => {
             API keys
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Let an assistant read or write your data without signing in as you.
+            A secret you paste into something that cannot sign in as you, like a script or a
+            tool with no consent screen.
           </Typography>
         </Box>
         <Button startIcon={<Add />} variant="contained" onClick={() => setCreateOpen(true)}>
@@ -363,7 +364,11 @@ const ApiKeysTab: React.FC = () => {
         </Stack>
       )}
 
-      <ConnectionsSection />
+      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 3 }}>
+        Claude does not need one, and nor does anything else that takes an MCP connector. They
+        connect by approving a consent screen, and appear under{' '}
+        <Link href="/account/connections">Connections</Link>.
+      </Typography>
 
       <Dialog open={createOpen} onClose={() => setCreateOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>New API key</DialogTitle>

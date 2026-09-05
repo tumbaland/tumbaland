@@ -138,7 +138,7 @@ export function PrivacyPage() {
 
       <h2>Connecting an AI assistant</h2>
       <p>
-        You can connect an assistant such as Claude, ChatGPT or Gemini so you can add and read
+        You can connect an assistant such as Claude so you can add and read
         entries by talking to it. This is off unless you turn it on.
       </p>
       <p>

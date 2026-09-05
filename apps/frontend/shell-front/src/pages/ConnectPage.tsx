@@ -13,11 +13,11 @@ export function ConnectPage() {
   return (
     <DocumentPage
       title="Connect an assistant"
-      intro="Talk to Claude, ChatGPT or Gemini and have it write to your Tumbaland journal."
+      intro="Talk to Claude, or any assistant that takes MCP connectors, and have it write to your Tumbaland journal."
       updated="5 September 2026"
     >
       <p>
-        Once connected you can say <em>&quot;we went to Kolm Sõsarat on Saturday&quot;</em> and it
+        Once connected you can say <em>&quot;we went to Sushi House on Friday&quot;</em> and it
         lands as a proper journal entry, or ask <em>&quot;when did we last see a film?&quot;</em> and
         get an answer from your own history. Nothing is sent anywhere until you connect it, and you
         choose what it may touch.
@@ -27,8 +27,8 @@ export function ConnectPage() {
       <ul>
         <li>A Tumbaland account.</li>
         <li>
-          Claude, ChatGPT or Gemini. Anything that supports connectors, sometimes called MCP
-          servers.
+          Claude, or any other assistant that supports connectors, sometimes called MCP servers.
+          Claude is the one these steps have been tested against.
         </li>
       </ul>
 
@@ -75,10 +75,16 @@ export function ConnectPage() {
         claude mcp login tumbaland
       </Box>
 
-      <h3>ChatGPT and Gemini</h3>
+      <h3>Other assistants</h3>
       <p>
-        Both support remote connectors and take the same address. Add it wherever that product lists
-        connectors or MCP servers, then authorise it in the browser window that opens.
+        Tumbaland is an ordinary MCP server over HTTP with OAuth, so anything that speaks that
+        standard takes the same address. Add it wherever the product lists connectors or MCP
+        servers, then authorise it in the browser window that opens.
+      </p>
+      <p>
+        Claude is the one we have set up and used end to end. Other clients implement connectors to
+        varying degrees and at different stages of release, so if one of them will not complete the
+        sign-in, that is worth reporting rather than assuming you have done it wrong.
       </p>
 
       <h2>What it can do</h2>

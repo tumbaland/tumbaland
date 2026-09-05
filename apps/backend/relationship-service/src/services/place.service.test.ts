@@ -24,7 +24,7 @@ const mockVisitQuery = (docs: unknown[]) => {
 
 const aggRow = (over: Record<string, unknown> = {}) => ({
   _id: { lat: 59.4405, lng: 24.7453 },
-  label: 'Kolm Sõsarat',
+  label: 'Sushi House',
   lat: 59.44051,
   lng: 24.74532,
   visits: 3,
@@ -54,7 +54,7 @@ describe('getPlaces', () => {
     expect(places).toEqual([
       {
         id: '59.4405,24.7453',
-        label: 'Kolm Sõsarat',
+        label: 'Sushi House',
         lat: 59.44051,
         lng: 24.74532,
         visits: 3,

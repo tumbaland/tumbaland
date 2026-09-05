@@ -252,6 +252,142 @@ describe('when there is nothing, or something is wrong', () => {
   });
 });
 
+/**
+ * A controllable IntersectionObserver.
+ *
+ * jsdom has none, so the component's scroll loading is inert under test unless
+ * one is supplied. This records every observer created and lets a test say
+ * "the foot of the list is now on screen", which is the only event the
+ * behaviour actually turns on.
+ */
+function stubIntersectionObserver() {
+  const instances: Array<{ trigger: (visible: boolean) => void; disconnected: boolean }> = [];
+
+  class Stub {
+    private readonly record: { trigger: (visible: boolean) => void; disconnected: boolean };
+
+    constructor(private readonly callback: IntersectionObserverCallback) {
+      this.record = {
+        // Silent once disconnected, the way a real one is. Without that, a test
+        // holding a stale instance can drive a component that has already
+        // stopped listening, and the test passes for the wrong reason.
+        trigger: (visible) => {
+          if (this.record.disconnected) return;
+          this.callback([{ isIntersecting: visible } as IntersectionObserverEntry], this as never);
+        },
+        disconnected: false
+      };
+      instances.push(this.record);
+    }
+
+    observe() {}
+    unobserve() {}
+    disconnect() {
+      this.record.disconnected = true;
+    }
+    takeRecords() {
+      return [];
+    }
+  }
+
+  vi.stubGlobal('IntersectionObserver', Stub);
+  // The newest observer is the live one: the component rebuilds it whenever the
+  // page or the filters change, disconnecting the previous.
+  return { scrollToFoot: () => instances[instances.length - 1]!.trigger(true), instances };
+}
+
+describe('scrolling to the end loads more', () => {
+  const twoPages = (first: boolean) => ({
+    events: first
+      ? [entry({ actorLabel: 'Claude' })]
+      : [entry({ id: 'e2', actorLabel: 'Tom', actorKind: 'person' })],
+    total: 2,
+    page: first ? 1 : 2,
+    totalPages: 2
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('fetches the next page when the foot of the list comes into view', async () => {
+    const observer = stubIntersectionObserver();
+    mocked.list.mockResolvedValue(twoPages(true));
+    render(<ActivityTab />);
+    await screen.findByText('Claude');
+
+    mocked.list.mockResolvedValue(twoPages(false));
+    observer.scrollToFoot();
+
+    // Appended, not replaced: the whole point of reading further back is that
+    // what you already read stays on screen.
+    await waitFor(() => expect(screen.getByText('Tom')).toBeInTheDocument());
+    expect(screen.getByText('Claude')).toBeInTheDocument();
+  });
+
+  it('asks for one page however many times the sentinel fires', async () => {
+    const observer = stubIntersectionObserver();
+    mocked.list.mockResolvedValue(twoPages(true));
+    render(<ActivityTab />);
+    await screen.findByText('Claude');
+    mocked.list.mockClear();
+
+    // The observer reports every intersection change, and `loading` is state
+    // that has not been committed when the second one lands. Without the guard
+    // page 2 is fetched twice and its rows appear twice.
+    mocked.list.mockResolvedValue(twoPages(false));
+    observer.scrollToFoot();
+    observer.scrollToFoot();
+    observer.scrollToFoot();
+
+    await waitFor(() => expect(screen.getByText('Tom')).toBeInTheDocument());
+    expect(mocked.list).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops watching once there is nothing left to fetch', async () => {
+    const observer = stubIntersectionObserver();
+    await renderTab();
+
+    // One page of results renders no sentinel at all, so nothing is watched.
+    expect(observer.instances).toHaveLength(0);
+  });
+
+  it('does not keep retrying a request that failed', async () => {
+    const observer = stubIntersectionObserver();
+    mocked.list.mockResolvedValue(twoPages(true));
+    render(<ActivityTab />);
+    await screen.findByText('Claude');
+
+    mocked.list.mockRejectedValue(new Error('network is down'));
+    observer.scrollToFoot();
+    await screen.findByText('Could not load your activity.');
+
+    // The sentinel is unmounted while the error stands. An infinite scroll that
+    // retries a failing request for ever is worse than one that stops.
+    mocked.list.mockClear();
+    // Every observer the component ever made, including the one that was live
+    // when the request failed. All of them are disconnected now.
+    observer.instances.forEach((instance) => instance.trigger(true));
+
+    await waitFor(() => expect(mocked.list).not.toHaveBeenCalled());
+    expect(observer.instances.every((instance) => instance.disconnected)).toBe(true);
+  });
+
+  it('still loads more without an IntersectionObserver at all', async () => {
+    // Older browsers, and any environment that does not provide one. The button
+    // is a real control rather than a fallback bolted on, so its absence costs
+    // the automatic part and nothing else.
+    vi.stubGlobal('IntersectionObserver', undefined);
+    const user = userEvent.setup();
+    mocked.list.mockResolvedValue(twoPages(true));
+    render(<ActivityTab />);
+    await screen.findByText('Claude');
+
+    mocked.list.mockResolvedValue(twoPages(false));
+    await user.click(screen.getByRole('button', { name: /Show more/ }));
+
+    await waitFor(() => expect(screen.getByText('Tom')).toBeInTheDocument());
+  });
+});
+
 describe('paging', () => {
   it('appends the next page rather than replacing what is shown', async () => {
     const user = userEvent.setup();

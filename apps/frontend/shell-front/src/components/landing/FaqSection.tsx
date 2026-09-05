@@ -76,7 +76,7 @@ export function FaqSection({ plans = [] }: FaqSectionProps) {
   ];
 
   return (
-    <Box component="section" id="faq" sx={{ py: { xs: 5, md: 7 }, px: 2, scrollMarginTop: 24 }}>
+    <Box component="section" id="faq" sx={{ py: { xs: 5, md: 7 }, px: 2, scrollMarginTop: 80 }}>
       <SectionHeading eyebrow="Straight answers" title="Questions worth asking first" />
 
       <Box sx={{ maxWidth: 760, mx: 'auto' }}>

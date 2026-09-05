@@ -56,7 +56,7 @@ export function SupportSection({ onChoosePlan, plans, loading, failed }: Support
   const showIntervalToggle = hasYearlyPricing(plans);
 
   return (
-    <Box component="section" id="support" sx={{ py: { xs: 6, md: 8 }, px: 2, scrollMarginTop: 24 }}>
+    <Box component="section" id="support" sx={{ py: { xs: 6, md: 8 }, px: 2, scrollMarginTop: 80 }}>
       <SectionHeading
         eyebrow="Support"
         title="The site is free. Support is welcome."

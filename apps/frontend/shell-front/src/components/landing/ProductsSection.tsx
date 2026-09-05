@@ -59,7 +59,7 @@ export const PRODUCTS: Product[] = [
 
 export function ProductsSection() {
   return (
-    <Box component="section" sx={{ py: { xs: 6, md: 9 }, px: 2 }}>
+    <Box component="section" id="modules" sx={{ py: { xs: 5, md: 7 }, px: 2, scrollMarginTop: 80 }}>
       <SectionHeading
         eyebrow="What you get"
         title="Four things worth tracking, finally in one login"

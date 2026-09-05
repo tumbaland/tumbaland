@@ -172,7 +172,7 @@ describe('saveDay', () => {
 
     await saveDay(
       '2024-05-01',
-      [{ typeId: 't1', location: { label: '  Kolm Sõsarat  ', lat: 59.4405, lng: 24.7453 } }],
+      [{ typeId: 't1', location: { label: '  Sushi House  ', lat: 59.4405, lng: 24.7453 } }],
       'user-1',
       []
     );
@@ -180,7 +180,7 @@ describe('saveDay', () => {
     expect(mockedActivityCtor).toHaveBeenCalledWith(
       expect.objectContaining({
         typeId: 't1',
-        location: { label: 'Kolm Sõsarat', lat: 59.4405, lng: 24.7453 }
+        location: { label: 'Sushi House', lat: 59.4405, lng: 24.7453 }
       })
     );
   });

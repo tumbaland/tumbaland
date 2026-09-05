@@ -12,7 +12,9 @@ vi.mock('../../services/authService', () => ({
 
 vi.mock('../../services/profileService', () => ({
   profileService: {
-    updateProfile: vi.fn()
+    updateProfile: vi.fn(),
+    requestDeletion: vi.fn(),
+    cancelDeletion: vi.fn()
   }
 }));
 
@@ -29,6 +31,8 @@ const mockedIsAuthenticated = authService.isAuthenticated as unknown as ReturnTy
 const mockedGetProfile = authService.getProfile as unknown as ReturnType<typeof vi.fn>;
 const mockedRedirectToLogin = authService.redirectToLogin as unknown as ReturnType<typeof vi.fn>;
 const mockedUpdateProfile = profileService.updateProfile as unknown as ReturnType<typeof vi.fn>;
+const mockedRequestDeletion = profileService.requestDeletion as unknown as ReturnType<typeof vi.fn>;
+const mockedCancelDeletion = profileService.cancelDeletion as unknown as ReturnType<typeof vi.fn>;
 
 const user = { id: 'u1', email: 'jane@example.com', firstName: 'Jane', lastName: 'Doe' };
 
@@ -202,11 +206,114 @@ it('dismisses the alert message when its close button is clicked', async () => {
   expect(alert).not.toBeInTheDocument();
 });
 
-it('shows a placeholder alert when deleting the account', async () => {
-  const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
-  render(<ProfileTab />);
+/**
+ * Asking for the account to be removed.
+ *
+ * Nothing is deleted here. The request is recorded, an administrator acts on it
+ * by hand later, and in the meantime the account works exactly as before — so
+ * the copy has to say that, and these tests are as much about the promise the
+ * page makes as about the call it sends.
+ */
+describe('the danger zone', () => {
+  const REQUESTED = '2026-09-01T10:00:00.000Z';
 
-  await userEvent.click(await screen.findByRole('button', { name: /delete account/i }));
+  const openConfirm = async () => {
+    const person = userEvent.setup();
+    render(<ProfileTab />);
+    await person.click(await screen.findByRole('button', { name: /Request account deletion/i }));
+    return person;
+  };
 
-  expect(alertSpy).toHaveBeenCalledWith(expect.stringMatching(/not implemented/i));
+  it('does not promise an immediate deletion, because there is not one', async () => {
+    render(<ProfileTab />);
+
+    // A button labelled "delete" that quietly does not delete is worse than one
+    // that never existed: somebody would leave believing their data was gone.
+    expect(await screen.findByRole('button', { name: /Request account deletion/i })).toBeInTheDocument();
+    expect(screen.getByText(/Nothing is removed straight away/i)).toBeInTheDocument();
+    expect(screen.getByText(/withdraw the request whenever you like/i)).toBeInTheDocument();
+  });
+
+  it('asks for the email address before it will send the request', async () => {
+    await openConfirm();
+
+    // A guard against a mis-click, not a lock: the action behind it is slow and
+    // reversible.
+    expect(screen.getByRole('button', { name: /^Request deletion$/i })).toBeDisabled();
+  });
+
+  it('sends the request once the address matches', async () => {
+    const person = await openConfirm();
+    mockedRequestDeletion.mockResolvedValue({ success: true, deletionRequestedAt: REQUESTED });
+
+    await person.type(screen.getByLabelText(/Type your email address/i), 'jane@example.com');
+    await person.click(screen.getByRole('button', { name: /^Request deletion$/i }));
+
+    await waitFor(() => expect(mockedRequestDeletion).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText(/Nothing has been removed yet/i)).toBeInTheDocument();
+  });
+
+  it('ignores the case of the address, since nobody types their own email carefully', async () => {
+    const person = await openConfirm();
+    mockedRequestDeletion.mockResolvedValue({ success: true, deletionRequestedAt: REQUESTED });
+
+    await person.type(screen.getByLabelText(/Type your email address/i), '  Jane@Example.com  ');
+
+    expect(screen.getByRole('button', { name: /^Request deletion$/i })).toBeEnabled();
+  });
+
+  it('says the data is still there once a request stands', async () => {
+    mockedGetProfile.mockResolvedValue({ ...user, deletionRequestedAt: REQUESTED });
+    render(<ProfileTab />);
+
+    expect(await screen.findByText(/Deletion requested/i)).toBeInTheDocument();
+    expect(screen.getByText(/Nothing has been removed/i)).toBeInTheDocument();
+    // The date an administrator will work from, so the person can see it took.
+    expect(screen.getByText(/1 September 2026|September 1, 2026/)).toBeInTheDocument();
+  });
+
+  it('offers no second request while one is already standing', async () => {
+    mockedGetProfile.mockResolvedValue({ ...user, deletionRequestedAt: REQUESTED });
+    render(<ProfileTab />);
+
+    await screen.findByText(/Deletion requested/i);
+    expect(screen.queryByRole('button', { name: /Request account deletion/i })).not.toBeInTheDocument();
+  });
+
+  it('withdraws the request and goes back to normal', async () => {
+    const person = userEvent.setup();
+    mockedGetProfile.mockResolvedValue({ ...user, deletionRequestedAt: REQUESTED });
+    mockedCancelDeletion.mockResolvedValue({ success: true, deletionRequestedAt: null });
+    render(<ProfileTab />);
+
+    await person.click(await screen.findByRole('button', { name: /Withdraw request/i }));
+
+    await waitFor(() => expect(mockedCancelDeletion).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText(/Your account stays as it is/i)).toBeInTheDocument();
+    // Back to the state it started in, without a reload.
+    expect(await screen.findByRole('button', { name: /Request account deletion/i })).toBeInTheDocument();
+  });
+
+  it('says so when the request could not be sent', async () => {
+    const person = await openConfirm();
+    mockedRequestDeletion.mockRejectedValue(new Error('network is down'));
+
+    await person.type(screen.getByLabelText(/Type your email address/i), 'jane@example.com');
+    await person.click(screen.getByRole('button', { name: /^Request deletion$/i }));
+
+    expect(await screen.findByText(/Could not send the request/i)).toBeInTheDocument();
+  });
+
+  it('says so when the withdrawal could not be sent', async () => {
+    const person = userEvent.setup();
+    mockedGetProfile.mockResolvedValue({ ...user, deletionRequestedAt: REQUESTED });
+    mockedCancelDeletion.mockRejectedValue(new Error('network is down'));
+    render(<ProfileTab />);
+
+    await person.click(await screen.findByRole('button', { name: /Withdraw request/i }));
+
+    expect(await screen.findByText(/Could not withdraw the request/i)).toBeInTheDocument();
+    // The request is still standing, so the button that clears it has to stay.
+    expect(screen.getByRole('button', { name: /Withdraw request/i })).toBeInTheDocument();
+  });
 });

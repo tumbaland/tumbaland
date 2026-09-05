@@ -3,7 +3,7 @@ import { auditPlugin } from '@tumbaland/backend-core';
 
 // Where an entry happened. Present only on entries whose type opts in via
 // ActivityType.hasLocation; orthogonal to valueType, so a 'string' type can
-// carry both a description ("tasting menu") and a place ("Kolm Sõsarat").
+// carry both a description ("tasting menu") and a place ("Sushi House").
 export interface IActivityLocation {
   label: string;
   lat: number;

@@ -11,6 +11,10 @@ vi.mock('../components/tabs/ApiKeysTab', () => ({
   default: () => <div>api keys tab content</div>
 }));
 
+vi.mock('../components/tabs/ConnectionsTab', () => ({
+  default: () => <div>connections tab content</div>
+}));
+
 import AccountPage from './AccountPage';
 
 function renderAt(path: string) {
@@ -80,4 +84,32 @@ it('falls back to the first tab for a path with no tab of its own', () => {
   renderAt('/security');
 
   expect(screen.getByRole('tab', { name: 'Profile' })).toHaveAttribute('aria-selected', 'true');
+});
+
+describe('keys and connections are two tabs', () => {
+  it('renders connections at its own path', () => {
+    renderAt('/connections');
+
+    expect(screen.getByText('connections tab content')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Connections' })).toHaveAttribute('aria-selected', 'true');
+    // The two used to be one screen, where "New key" sat above a list of things
+    // no key was ever made for.
+    expect(screen.queryByText('api keys tab content')).not.toBeInTheDocument();
+  });
+
+  it('keeps the keys tab to keys alone', () => {
+    renderAt('/api-keys');
+
+    expect(screen.getByText('api keys tab content')).toBeInTheDocument();
+    expect(screen.queryByText('connections tab content')).not.toBeInTheDocument();
+  });
+
+  it('moves between them without going through profile', async () => {
+    const user = userEvent.setup();
+    renderAt('/connections');
+
+    await user.click(screen.getByRole('tab', { name: 'API keys' }));
+
+    expect(screen.getByText('api keys tab content')).toBeInTheDocument();
+  });
 });

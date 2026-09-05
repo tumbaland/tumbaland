@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Box,
@@ -144,8 +144,32 @@ const ActivityTab: React.FC = () => {
   const [action, setAction] = useState<AuditAction | 'all'>('all');
   const [area, setArea] = useState<string>('all');
 
+  /**
+   * The element whose coming into view means "fetch the next page".
+   *
+   * State behind a callback ref, not `useRef`. The sentinel is only rendered
+   * once a first page has come back and said there is a second, so on the
+   * mounting render there is no node to observe — and a ref does not re-run the
+   * effect when one appears. Held this way, attaching the node is what starts
+   * the observer.
+   */
+  const [sentinel, setSentinel] = useState<HTMLDivElement | null>(null);
+  /**
+   * The page a fetch is already in flight for.
+   *
+   * The observer fires on every intersection change, and `loading` is state
+   * that has not been committed yet when the second one arrives — so without
+   * this the same page is requested twice and its rows appear twice. A ref,
+   * because the guard has to be true the instant the first call is made rather
+   * than after the next render.
+   */
+  const inFlight = useRef(0);
+
   const load = useCallback(
     async (wanted: number, append: boolean) => {
+      if (inFlight.current === wanted) return;
+      inFlight.current = wanted;
+
       try {
         setLoading(true);
         setError(null);
@@ -163,6 +187,10 @@ const ActivityTab: React.FC = () => {
       } catch (caught) {
         logger.error('Failed to load the activity trail', { error: caught });
         setError('Could not load your activity.');
+        // Released so the retry button can ask for the same page again. The
+        // sentinel is not rendered while an error stands, so this cannot turn
+        // a failing request into a loop.
+        inFlight.current = 0;
       } finally {
         setLoading(false);
       }
@@ -171,10 +199,43 @@ const ActivityTab: React.FC = () => {
   );
 
   // Filters restart the listing rather than appending into it, so the page
-  // never shows two different queries stacked on top of each other.
+  // never shows two different queries stacked on top of each other. The
+  // in-flight guard is released first: page 1 of the new filter is a different
+  // request from page 1 of the old one, however alike the numbers look.
   useEffect(() => {
+    inFlight.current = 0;
     load(1, false);
   }, [load]);
+
+  /**
+   * Fetch the next page when the foot of the list comes into view.
+   *
+   * The trail is the one screen here that is genuinely long — a year of
+   * everything an assistant read or wrote — and paging it a button-press at a
+   * time meant nobody ever looked further back than the first fifty rows.
+   *
+   * Re-created whenever the sentinel, the page or the filters change, because
+   * the observer closes over which page to ask for next.
+   * `IntersectionObserver` is absent in
+   * some test environments and in older browsers; the button below is a real
+   * control rather than a fallback bolted on, so its absence costs the
+   * automatic part and nothing else.
+   */
+  useEffect(() => {
+    if (!sentinel || typeof IntersectionObserver === 'undefined') return;
+
+    const observer = new IntersectionObserver(
+      (records) => {
+        if (records.some((record) => record.isIntersecting)) load(page + 1, true);
+      },
+      // Started before the foot is actually reached, so the next rows are
+      // usually there by the time the reader would have run out.
+      { rootMargin: '400px' }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [sentinel, load, page]);
 
   const grouped = entries.reduce<Record<string, AuditEntry[]>>((days, entry) => {
     const key = dayHeading(entry.at);
@@ -359,10 +420,17 @@ const ActivityTab: React.FC = () => {
       ))}
 
       {page < totalPages && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mt: 2, gap: 1 }}>
+          {/* Kept alongside the automatic load, not replaced by it: scrolling is
+              not a control everyone can use, and a list that only ever grows
+              when you scroll it is unreachable by keyboard. */}
           <Button onClick={() => load(page + 1, true)} disabled={loading}>
             {loading ? 'Loading…' : `Show more (${total - entries.length} left)`}
           </Button>
+          {/* Zero height, so it does not push the button around. Not rendered
+              while an error stands, which is what stops a failing request from
+              being retried for ever. */}
+          {!error && <Box ref={setSentinel} aria-hidden sx={{ height: 1, width: '100%' }} />}
         </Box>
       )}
     </Box>

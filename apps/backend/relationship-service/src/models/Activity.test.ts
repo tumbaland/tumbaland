@@ -37,7 +37,7 @@ describe('Activity validation', () => {
       date: new Date(),
       typeId: '507f1f77bcf86cd799439011',
       userId: 'u1',
-      location: { label: 'Kolm Sõsarat', lat: 59.4405, lng: 24.7453 }
+      location: { label: 'Sushi House', lat: 59.4405, lng: 24.7453 }
     });
     expect(doc.validateSync()?.errors.location).toBeUndefined();
   });

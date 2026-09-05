@@ -61,7 +61,7 @@ describe('App', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/photo albums/i);
+      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/tell your assistant/i);
     });
 
     expect(screen.queryByText('Write more tests')).not.toBeInTheDocument();

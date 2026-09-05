@@ -12,7 +12,7 @@ const mockedGetVisits = getPlaceVisits as unknown as ReturnType<typeof vi.fn>;
 
 const place: Place = {
   id: '59.4405,24.7453',
-  label: 'Kolm Sõsarat',
+  label: 'Sushi House',
   lat: 59.4405,
   lng: 24.7453,
   visits: 3,
@@ -39,7 +39,7 @@ beforeEach(() => {
 it('shows the place name, visit count and per-type breakdown', async () => {
   renderPopup();
 
-  expect(screen.getByText('Kolm Sõsarat')).toBeInTheDocument();
+  expect(screen.getByText('Sushi House')).toBeInTheDocument();
   expect(screen.getByText(/3 visits · first/)).toBeInTheDocument();
   expect(screen.getByText('Restaurants · 2')).toBeInTheDocument();
   expect(screen.getByText('Date night · 1')).toBeInTheDocument();

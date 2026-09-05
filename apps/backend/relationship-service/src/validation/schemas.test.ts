@@ -63,9 +63,9 @@ describe('saveDaySchema', () => {
 
   it('accepts an entry carrying a location', () => {
     const result = saveDaySchema.parse({
-      entries: [{ typeId: 't1', location: { label: 'Kolm Sõsarat', lat: 59.4405, lng: 24.7453 } }]
+      entries: [{ typeId: 't1', location: { label: 'Sushi House', lat: 59.4405, lng: 24.7453 } }]
     });
-    expect(result.entries[0].location).toEqual({ label: 'Kolm Sõsarat', lat: 59.4405, lng: 24.7453 });
+    expect(result.entries[0].location).toEqual({ label: 'Sushi House', lat: 59.4405, lng: 24.7453 });
   });
 
   it('accepts a null location, which clears a previously saved place', () => {

@@ -111,10 +111,10 @@ describe('list_activity_types', () => {
 
 describe('log_day', () => {
   it('resolves type names to ids so the model never handles one', async () => {
-    await callTool('log_day', { date: '2026-09-04', entries: [{ type: 'Dining', description: 'Kolm Sõsarat' }] });
+    await callTool('log_day', { date: '2026-09-04', entries: [{ type: 'Dining', description: 'Sushi House' }] });
 
     const [, , entries] = api.saveDay.mock.calls[0];
-    expect(entries).toEqual([{ typeId: 't1', description: 'Kolm Sõsarat', hours: undefined }]);
+    expect(entries).toEqual([{ typeId: 't1', description: 'Sushi House', hours: undefined }]);
   });
 
   it('carries the day’s existing entries through, rather than deleting them', async () => {
@@ -188,12 +188,12 @@ describe('log_activity', () => {
 describe('search_activities', () => {
   it('renders results with type names rather than ids', async () => {
     api.listActivities.mockResolvedValue([
-      { _id: 'a1', date: '2026-09-04T00:00:00.000Z', typeId: 't1', description: 'Kolm Sõsarat' }
+      { _id: 'a1', date: '2026-09-04T00:00:00.000Z', typeId: 't1', description: 'Sushi House' }
     ] as never);
 
     const { text } = await callTool('search_activities', {});
 
-    expect(text).toContain('2026-09-04: Dining — Kolm Sõsarat');
+    expect(text).toContain('2026-09-04: Dining — Sushi House');
     expect(text).not.toContain('t1');
   });
 
@@ -206,13 +206,13 @@ describe('search_activities', () => {
         _id: 'a1',
         date: '2026-09-04T00:00:00.000Z',
         typeId: { _id: 't1', name: 'Dining', slug: 'dining', valueType: 'string', hasLocation: true },
-        description: 'Kolm Sõsarat'
+        description: 'Sushi House'
       }
     ] as never);
 
     const { text } = await callTool('search_activities', {});
 
-    expect(text).toContain('Dining — Kolm Sõsarat');
+    expect(text).toContain('Dining — Sushi House');
     expect(text).not.toContain('Unknown type');
   });
 
@@ -375,20 +375,20 @@ const ENTRY = {
   _id: 'a1',
   date: '2026-09-04T00:00:00.000Z',
   typeId: 't1',
-  description: 'Kolm Sõsarat',
+  description: 'Sushi House',
   hours: 2
 };
 
 describe('get_day', () => {
   it('gives every entry an id, which is where editing starts', async () => {
     api.getDay.mockResolvedValue([
-      { _id: 'a1', typeId: 't1', description: 'Kolm Sõsarat' },
+      { _id: 'a1', typeId: 't1', description: 'Sushi House' },
       { _id: 'a2', typeId: 't2', hours: 3 }
     ]);
 
     const { text } = await callTool('get_day', { date: '2026-09-04' });
 
-    expect(text).toContain('Dining — Kolm Sõsarat  [id a1]');
+    expect(text).toContain('Dining — Sushi House  [id a1]');
     expect(text).toContain('Together (3h)  [id a2]');
   });
 
@@ -417,16 +417,16 @@ describe('search_activities', () => {
 describe('edit_activity', () => {
   beforeEach(() => {
     api.getActivity.mockResolvedValue(ENTRY);
-    api.updateActivity.mockResolvedValue({ ...ENTRY, description: 'Kolm Sõsarat, terrace' });
+    api.updateActivity.mockResolvedValue({ ...ENTRY, description: 'Sushi House, terrace' });
   });
 
   it('changes only the fields it was given', async () => {
-    await callTool('edit_activity', { id: 'a1', description: 'Kolm Sõsarat, terrace' });
+    await callTool('edit_activity', { id: 'a1', description: 'Sushi House, terrace' });
 
     expect(api.updateActivity).toHaveBeenCalledWith(
       KEY,
       'a1',
-      { date: undefined, typeId: undefined, description: 'Kolm Sõsarat, terrace', hours: undefined },
+      { date: undefined, typeId: undefined, description: 'Sushi House, terrace', hours: undefined },
       undefined
     );
   });
@@ -451,12 +451,12 @@ describe('edit_activity', () => {
   });
 
   it('shows what changed, so the wrong entry is visible to the user', async () => {
-    const { text } = await callTool('edit_activity', { id: 'a1', description: 'Kolm Sõsarat, terrace' });
+    const { text } = await callTool('edit_activity', { id: 'a1', description: 'Sushi House, terrace' });
 
     // An id the model copied is one transcription away from the wrong entry,
     // and naming both sides is the only thing that surfaces that.
-    expect(text).toContain('from - 2026-09-04: Dining (2h) — Kolm Sõsarat  [id a1]');
-    expect(text).toContain('to   - 2026-09-04: Dining (2h) — Kolm Sõsarat, terrace  [id a1]');
+    expect(text).toContain('from - 2026-09-04: Dining (2h) — Sushi House  [id a1]');
+    expect(text).toContain('to   - 2026-09-04: Dining (2h) — Sushi House, terrace  [id a1]');
   });
 
   it('refuses an edit that changes nothing', async () => {
@@ -486,7 +486,7 @@ describe('delete_activity', () => {
     const { text } = await callTool('delete_activity', { id: 'a1' });
 
     expect(text).toContain('Deleted');
-    expect(text).toContain('2026-09-04: Dining (2h) — Kolm Sõsarat');
+    expect(text).toContain('2026-09-04: Dining (2h) — Sushi House');
     expect(api.deleteActivity).toHaveBeenCalledWith(KEY, 'a1', undefined);
   });
 

@@ -39,7 +39,7 @@ const mockedSearch = searchPlaces as unknown as ReturnType<typeof vi.fn>;
 
 const savedPlace: Place = {
   id: '59.4405,24.7453',
-  label: 'Kolm Sõsarat',
+  label: 'Sushi House',
   lat: 59.4405,
   lng: 24.7453,
   visits: 4,
@@ -62,7 +62,7 @@ it('offers saved places without touching the geocoder', async () => {
 
   await user.click(screen.getByRole('combobox'));
 
-  expect(await screen.findByText('Kolm Sõsarat')).toBeInTheDocument();
+  expect(await screen.findByText('Sushi House')).toBeInTheDocument();
   expect(screen.getByText(/4 visits · last 2024-06-11/)).toBeInTheDocument();
   expect(mockedSearch).not.toHaveBeenCalled();
 });
@@ -73,9 +73,9 @@ it('reports the picked saved place to the parent', async () => {
   render(<LocationPicker value={null} onChange={onChange} savedPlaces={[savedPlace]} />);
 
   await user.click(screen.getByRole('combobox'));
-  await user.click(await screen.findByText('Kolm Sõsarat'));
+  await user.click(await screen.findByText('Sushi House'));
 
-  expect(onChange).toHaveBeenCalledWith({ label: 'Kolm Sõsarat', lat: 59.4405, lng: 24.7453 });
+  expect(onChange).toHaveBeenCalledWith({ label: 'Sushi House', lat: 59.4405, lng: 24.7453 });
 });
 
 it('does not search the geocoder for fewer than 3 characters', async () => {
@@ -104,21 +104,21 @@ it('searches the geocoder once the query is long enough and lists the hits', asy
 it('hides a geocoder hit that duplicates an already-saved place', async () => {
   const user = userEvent.setup();
   mockedSearch.mockResolvedValue([
-    { label: 'Kolm Sõsarat (OSM)', lat: 59.44051, lng: 24.74533, detail: 'same spot' }
+    { label: 'Sushi House (OSM)', lat: 59.44051, lng: 24.74533, detail: 'same spot' }
   ]);
   render(<LocationPicker value={null} onChange={vi.fn()} savedPlaces={[savedPlace]} />);
 
-  await user.type(screen.getByRole('combobox'), 'kolm');
+  await user.type(screen.getByRole('combobox'), 'sushi');
 
   await waitFor(() => expect(mockedSearch).toHaveBeenCalled());
-  await waitFor(() => expect(screen.queryByText('Kolm Sõsarat (OSM)')).not.toBeInTheDocument());
-  expect(screen.getByText('Kolm Sõsarat')).toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByText('Sushi House (OSM)')).not.toBeInTheDocument());
+  expect(screen.getByText('Sushi House')).toBeInTheDocument();
 });
 
 it('shows the map and the current coordinates once a place is set', () => {
   render(
     <LocationPicker
-      value={{ label: 'Kolm Sõsarat', lat: 59.4405, lng: 24.7453 }}
+      value={{ label: 'Sushi House', lat: 59.4405, lng: 24.7453 }}
       onChange={vi.fn()}
       savedPlaces={[]}
     />
@@ -126,7 +126,7 @@ it('shows the map and the current coordinates once a place is set', () => {
 
   expect(screen.getByTestId('map')).toBeInTheDocument();
   expect(screen.getByTestId('marker')).toBeInTheDocument();
-  expect(screen.getByText(/Kolm Sõsarat · 59.4405, 24.7453/)).toBeInTheDocument();
+  expect(screen.getByText(/Sushi House · 59.4405, 24.7453/)).toBeInTheDocument();
 });
 
 it('opens the map on request when no place is set yet', async () => {
@@ -155,7 +155,7 @@ it('keeps the existing label when the pin is moved', () => {
   const onChange = vi.fn();
   render(
     <LocationPicker
-      value={{ label: 'Kolm Sõsarat', lat: 59.4405, lng: 24.7453 }}
+      value={{ label: 'Sushi House', lat: 59.4405, lng: 24.7453 }}
       onChange={onChange}
       savedPlaces={[]}
     />
@@ -163,7 +163,7 @@ it('keeps the existing label when the pin is moved', () => {
 
   markerDragEnd?.({ target: { getLatLng: () => ({ lat: 59.5, lng: 24.8 }) } });
 
-  expect(onChange).toHaveBeenCalledWith({ label: 'Kolm Sõsarat', lat: 59.5, lng: 24.8 });
+  expect(onChange).toHaveBeenCalledWith({ label: 'Sushi House', lat: 59.5, lng: 24.8 });
   expect(lastMarkerPosition).toEqual([59.4405, 24.7453]);
 });
 
@@ -172,7 +172,7 @@ it('clears the place and closes the map', async () => {
   const onChange = vi.fn();
   render(
     <LocationPicker
-      value={{ label: 'Kolm Sõsarat', lat: 59.4405, lng: 24.7453 }}
+      value={{ label: 'Sushi House', lat: 59.4405, lng: 24.7453 }}
       onChange={onChange}
       savedPlaces={[]}
     />

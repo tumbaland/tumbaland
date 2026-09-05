@@ -7,11 +7,23 @@ import {
   Button,
   Avatar,
   Alert,
+  AlertTitle,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Switch,
   FormControlLabel
 } from '@mui/material';
-import { Email, Save, DeleteForever } from '@mui/icons-material';
+import {
+  Email,
+  Save,
+  DeleteForever,
+  HourglassTop,
+  Undo
+} from '@mui/icons-material';
 import { logger } from '@tumbaland/frontend-core';
 import { authService } from '../../services/authService';
 import { profileService } from '../../services/profileService';
@@ -27,6 +39,13 @@ const ProfileTab: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Null means no request standing. Held apart from `user` because it changes
+  // on its own, without the rest of the profile being reloaded.
+  const [deletionRequestedAt, setDeletionRequestedAt] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmEmail, setConfirmEmail] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   // Load user data on component mount
   useEffect(() => {
@@ -48,6 +67,7 @@ const ProfileTab: React.FC = () => {
           setEmail(currentUser.email);
           setFirstName(currentUser.firstName || '');
           setLastName(currentUser.lastName || '');
+          setDeletionRequestedAt(currentUser.deletionRequestedAt ?? null);
         } else {
           logger.error('ProfileTab: no profile data received');
           setMessage({ type: 'error', text: 'Failed to load profile data' });
@@ -115,10 +135,64 @@ const ProfileTab: React.FC = () => {
     }
   };
 
-  const handleDeleteAccount = () => {
-    // Placeholder for delete account functionality
-    alert('Account deletion is not implemented yet. This is a demo.');
+  /**
+   * Ask for the account to be removed.
+   *
+   * A request, not a removal: nothing is deleted here, the account goes on
+   * working, and an administrator removes the data by hand afterwards. The copy
+   * says so, because a button labelled "delete" that quietly does not delete is
+   * worse than one that never existed — somebody would leave believing their
+   * data was gone.
+   */
+  const handleRequestDeletion = async () => {
+    setDeleting(true);
+    setMessage(null);
+
+    try {
+      const response = await profileService.requestDeletion();
+      setDeletionRequestedAt(response.deletionRequestedAt);
+      setConfirmOpen(false);
+      setConfirmEmail('');
+      setMessage({
+        type: 'success',
+        text: 'Deletion requested. Nothing has been removed yet, and you can withdraw this at any time.'
+      });
+    } catch (error) {
+      logger.error('Failed to request account deletion', error);
+      setMessage({ type: 'error', text: 'Could not send the request. Please try again.' });
+    } finally {
+      setDeleting(false);
+    }
   };
+
+  /** Take the request back. The account was never actually altered. */
+  const handleWithdrawDeletion = async () => {
+    setDeleting(true);
+    setMessage(null);
+
+    try {
+      await profileService.cancelDeletion();
+      setDeletionRequestedAt(null);
+      setMessage({ type: 'success', text: 'Request withdrawn. Your account stays as it is.' });
+    } catch (error) {
+      logger.error('Failed to withdraw the deletion request', error);
+      setMessage({ type: 'error', text: 'Could not withdraw the request. Please try again.' });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const requestedOn = deletionRequestedAt
+    ? new Date(deletionRequestedAt).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    : null;
+
+  // Typing the address is the only guard here, and the action it guards is
+  // slow and reversible — so it is a check against a mis-click, not a lock.
+  const confirmed = confirmEmail.trim().toLowerCase() === email.trim().toLowerCase();
 
   if (loading) {
     return (
@@ -236,38 +310,109 @@ const ProfileTab: React.FC = () => {
         />
       </Paper>
       {/* Danger Zone */}
-      <Paper 
+      <Paper
         elevation={0}
-        sx={{ 
-          p: { xs: 2, md: 3 }, 
-          mb: 3, 
-          borderRadius: 3, 
-          border: '1px solid', 
-          borderColor: 'error.light',
-          bgcolor: 'rgba(211, 47, 47, 0.04)'
+        sx={{
+          p: { xs: 2, md: 3 },
+          mb: 3,
+          borderRadius: 3,
+          border: '1px solid',
+          borderColor: deletionRequestedAt ? 'warning.light' : 'error.light',
+          bgcolor: deletionRequestedAt ? 'rgba(237, 108, 2, 0.05)' : 'rgba(211, 47, 47, 0.04)'
         }}
       >
-        <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: 'error.main', mb: 1 }}>
+        <Typography
+          variant="h6"
+          gutterBottom
+          sx={{ fontWeight: 600, color: deletionRequestedAt ? 'warning.dark' : 'error.main', mb: 1 }}
+        >
           Danger Zone
         </Typography>
-        <Typography
-          variant="body2"
-          sx={{
-            color: "text.secondary",
-            mb: 2
-          }}>
-          Permanently delete your account and all of your content.
-        </Typography>
-        <Button
-          variant="outlined"
-          color="error"
-          startIcon={<DeleteForever />}
-          onClick={handleDeleteAccount}
-          size="small"
-        >
-          Delete Account
-        </Button>
+
+        {deletionRequestedAt ? (
+          <>
+            <Alert
+              severity="warning"
+              icon={<HourglassTop />}
+              sx={{ mb: 2, bgcolor: 'transparent', px: 0 }}
+            >
+              <AlertTitle sx={{ fontWeight: 600 }}>Deletion requested</AlertTitle>
+              You asked for this account to be deleted on {requestedOn}. Nothing has been removed:
+              your photos, finances and journal are all still here, and you can keep using
+              everything as normal until someone removes it by hand.
+            </Alert>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<Undo />}
+              onClick={handleWithdrawDeletion}
+              disabled={deleting}
+              size="small"
+            >
+              {deleting ? 'Withdrawing…' : 'Withdraw request'}
+            </Button>
+          </>
+        ) : (
+          <>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+              Ask for your account and everything in it to be deleted. Nothing is removed
+              straight away. The request is queued and someone deletes it by hand, so you can
+              carry on using Tumbaland in the meantime and withdraw the request whenever you
+              like.
+            </Typography>
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<DeleteForever />}
+              onClick={() => setConfirmOpen(true)}
+              size="small"
+            >
+              Request account deletion
+            </Button>
+          </>
+        )}
       </Paper>
+
+      <Dialog
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Request account deletion</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            This asks for your account and everything in it to be deleted: photos,
+            transactions, journal entries, groups and API keys. It does not happen straight away.
+            The request goes to a person, and until they act on it your account works exactly as
+            it does now. You can withdraw the request at any point before then.
+          </DialogContentText>
+          <TextField
+            fullWidth
+            size="small"
+            label="Type your email address to confirm"
+            placeholder={email}
+            value={confirmEmail}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmEmail(e.target.value)}
+            disabled={deleting}
+            autoComplete="off"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmOpen(false)} disabled={deleting}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleRequestDeletion}
+            disabled={deleting || !confirmed}
+            startIcon={deleting ? <CircularProgress size={18} color="inherit" /> : <DeleteForever />}
+          >
+            {deleting ? 'Sending…' : 'Request deletion'}
+          </Button>
+        </DialogActions>
+      </Dialog>
       {/* Actions */}
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
         <Button

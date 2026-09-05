@@ -314,7 +314,12 @@ describe('a connected assistant is not a session', () => {
       scopes: ['relationship:read'],
       tenants: [PERSONAL_TENANT],
       defaultTenant: PERSONAL_TENANT,
-      tenantNames: {}
+      tenantNames: {},
+      // Required since access tokens started carrying which app they were
+      // granted to, so the audit trail names the assistant rather than a token
+      // id that rotates hourly.
+      clientId: 'client-1',
+      clientName: 'Test Assistant'
     }).accessToken;
 
   it('is refused, without ever looking the user up', async () => {

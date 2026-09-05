@@ -29,15 +29,15 @@ describe('searchPlaces', () => {
 
   it('maps Nominatim hits into results, preferring the short name', async () => {
     mockHits([
-      { name: 'Kolm Sõsarat', display_name: 'Kolm Sõsarat, Pikk 71, Tallinn', lat: '59.4405', lon: '24.7453' }
+      { name: 'Sushi House', display_name: 'Sushi House, Pikk 71, Tallinn', lat: '59.4405', lon: '24.7453' }
     ]);
 
-    await expect(searchPlaces('kolm sõsarat')).resolves.toEqual([
+    await expect(searchPlaces('sushi house')).resolves.toEqual([
       {
-        label: 'Kolm Sõsarat',
+        label: 'Sushi House',
         lat: 59.4405,
         lng: 24.7453,
-        detail: 'Kolm Sõsarat, Pikk 71, Tallinn'
+        detail: 'Sushi House, Pikk 71, Tallinn'
       }
     ]);
   });

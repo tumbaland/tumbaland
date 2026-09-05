@@ -15,7 +15,7 @@ vi.mock('@tumbaland/frontend-core', async () => {
 });
 
 import { connectionService, Connection } from '../../services/apiKeyService';
-import ConnectionsSection from './ConnectionsSection';
+import ConnectionsTab from './ConnectionsTab';
 
 const mocked = connectionService as unknown as {
   list: ReturnType<typeof vi.fn>;
@@ -38,7 +38,7 @@ const connection = (over: Partial<Connection> = {}): Connection => ({
 
 const renderSection = async (connections: Connection[] = [connection()]) => {
   mocked.list.mockResolvedValue(connections);
-  const result = render(<ConnectionsSection />);
+  const result = render(<ConnectionsTab />);
   await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
   return result;
 };
@@ -126,7 +126,7 @@ it('reports a failed revoke without dropping the connection from the list', asyn
 
 it('reports a failed load', async () => {
   mocked.list.mockRejectedValue(new Error('boom'));
-  render(<ConnectionsSection />);
+  render(<ConnectionsTab />);
 
   expect(await screen.findByText(/Could not load connected apps/)).toBeInTheDocument();
 });
