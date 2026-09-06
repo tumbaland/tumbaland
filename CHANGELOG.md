@@ -1,4 +1,9 @@
 # Tumbalog
+## [0.0.477](https://github.com/toomastahves/tumbaland/compare/app-v0.0.476...app-v0.0.477) (2026-09-06)
+
+### Bug Fixes
+
+* relationship activity type owner bug ([a63cc74](https://github.com/toomastahves/tumbaland/commit/a63cc74c83cb29efbac48137baef6efa6852a1f1))
 ## [0.0.476](https://github.com/toomastahves/tumbaland/compare/app-v0.0.475...app-v0.0.476) (2026-09-05)
 
 ### Features
