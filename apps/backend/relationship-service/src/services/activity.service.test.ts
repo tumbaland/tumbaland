@@ -203,14 +203,14 @@ describe('getActivityTypes', () => {
     expect(mockedTypeFind).not.toHaveBeenCalled();
   });
 
-  it('scopes to the group (with personal fallback) when access is allowed', async () => {
+  it("scopes to the group's own types when access is allowed", async () => {
     mockedTypeFind.mockReturnValue({ sort: jest.fn().mockResolvedValue([]) });
 
     await getActivityTypes('u1', 'g1', ['g1']);
 
     expect(mockedTypeFind).toHaveBeenCalledWith({
       isActive: true,
-      $or: [{ groupId: 'g1' }, { userId: 'u1', groupId: { $exists: false } }]
+      groupId: 'g1'
     });
   });
 

@@ -15,6 +15,7 @@ interface ActivityQuery {
 interface ActivityTypeQuery {
   isActive?: boolean;
   userId?: string;
+  groupId?: string;
   $or?: Record<string, unknown>[];
 }
 
@@ -28,13 +29,22 @@ interface ActivityTypeQuery {
 export const isTypeAccessible = async (
   typeId: string,
   userId: string,
-  userGroupIds: string[] = []
+  userGroupIds: string[] = [],
+  groupId?: string
 ): Promise<boolean> => {
+  // The type has to live in the same scope as the entry, not merely somewhere
+  // the caller can reach. "Anything I own or any group I am in" let a personal
+  // type be recorded against inside a group, where the rest of the group cannot
+  // see it and its owner can delete it out from under them.
+  if (groupId && !userGroupIds.includes(groupId)) return false;
+
   const { ActivityType } = await import('../models/ActivityType');
   const found = await ActivityType.findOne({
     _id: typeId,
     isActive: true,
-    $or: [{ userId }, { groupId: { $in: userGroupIds } }]
+    ...(groupId
+      ? { groupId }
+      : { userId, $or: [{ groupId: { $exists: false } }, { groupId: null }] })
   }).select('_id');
   return !!found;
 };
@@ -214,10 +224,8 @@ export const getActivityTypes = async (userId?: string, groupId?: string, userGr
     if (!userGroupIds.includes(groupId)) {
       throw new ForbiddenError('Access denied');
     }
-    query.$or = [
-      { groupId },
-      { userId, groupId: { $exists: false } }
-    ];
+    // The group's own types only — a personal type is never usable in a group.
+    query.groupId = groupId;
   } else if (userId) {
     query.userId = userId;
     query.$or = [

@@ -27,12 +27,18 @@ const mockedDeleteMany = Activity.deleteMany as unknown as jest.Mock;
 const mockedAggregate = Activity.aggregate as unknown as jest.Mock;
 const mockedTypeFind = ActivityType.find as unknown as jest.Mock;
 
-// ActivityType.find(...).select('_id hasLocation') resolves to the accessible types.
-const mockAccessibleTypes = (ids: string[], locationIds: string[] = []) => {
+// ActivityType.find(...).select(...) resolves to the referenced types. They
+// default to the personal scope of `user-1`, the caller throughout these tests;
+// pass `scope` to put them somewhere else.
+const mockAccessibleTypes = (
+  ids: string[],
+  locationIds: string[] = [],
+  scope: { userId?: string; groupId?: string } = { userId: 'user-1' }
+) => {
   mockedTypeFind.mockReturnValue({
-    select: jest
-      .fn()
-      .mockResolvedValue(ids.map((id) => ({ _id: id, hasLocation: locationIds.includes(id) })))
+    select: jest.fn().mockResolvedValue(
+      ids.map((id) => ({ _id: id, hasLocation: locationIds.includes(id), ...scope }))
+    )
   });
 };
 
@@ -63,7 +69,8 @@ describe('saveDay', () => {
   });
 
   it('rejects entries referencing an inaccessible activity type', async () => {
-    mockAccessibleTypes(['t1']); // only t1 accessible, but t2 requested
+    mockAccessibleTypes(['t1']); // only t1 exists, but t2 requested
+    mockedActivityFind.mockResolvedValueOnce([]);
     await expect(
       saveDay('2024-05-01', [{ typeId: 't1' }, { typeId: 't2' }], 'user-1', [])
     ).rejects.toMatchObject({ name: 'BadRequestError' });
@@ -187,11 +194,70 @@ describe('saveDay', () => {
 
   it('rejects a location on a type that has not opted in', async () => {
     mockAccessibleTypes(['t1']); // hasLocation false
+    mockedActivityFind.mockResolvedValueOnce([]);
 
     await expect(
       saveDay('2024-05-01', [{ typeId: 't1', location: { label: 'Home', lat: 1, lng: 2 } }], 'user-1', [])
     ).rejects.toMatchObject({ name: 'BadRequestError' });
     expect(mockedActivityCtor).not.toHaveBeenCalled();
+  });
+
+  it('rejects a new group entry recorded against a personal type', async () => {
+    // The whole point of the scope rule: a personal type inside a group makes
+    // entries the rest of the group cannot see, which vanish when its owner
+    // deletes it.
+    mockAccessibleTypes(['t1'], [], { userId: 'user-1' });
+    mockedActivityFind.mockResolvedValueOnce([]);
+
+    await expect(
+      saveDay('2024-05-01', [{ typeId: 't1' }], 'user-1', ['group-1'], 'group-1')
+    ).rejects.toMatchObject({ name: 'BadRequestError' });
+    expect(mockedActivityCtor).not.toHaveBeenCalled();
+  });
+
+  it("accepts a group entry recorded against that group's own type", async () => {
+    mockAccessibleTypes(['t1'], [], { userId: 'user-1', groupId: 'group-1' });
+    mockedActivityFind.mockResolvedValueOnce([]).mockReturnValueOnce(mockReload([]));
+
+    await saveDay('2024-05-01', [{ typeId: 't1' }], 'user-1', ['group-1'], 'group-1');
+
+    expect(mockedActivityCtor).toHaveBeenCalledWith(
+      expect.objectContaining({ typeId: 't1', groupId: 'group-1' })
+    );
+  });
+
+  it('lets an existing out-of-scope entry be saved again unchanged', async () => {
+    // Rows that predate the scope rule are moved by
+    // scripts/migration/regroup-activity-types.js. Until then the day still has
+    // to be editable, or one stale entry makes the whole day unsaveable.
+    mockAccessibleTypes(['t1'], [], { userId: 'user-1' });
+    mockedActivityFind
+      .mockResolvedValueOnce([{ _id: 'e1', typeId: 't1' }])
+      .mockReturnValueOnce(mockReload([]));
+    mockedFindByIdAndUpdate.mockResolvedValue({});
+
+    await saveDay(
+      '2024-05-01',
+      [{ _id: 'e1', typeId: 't1', description: 'still here' }],
+      'user-1',
+      ['group-1'],
+      'group-1'
+    );
+
+    expect(mockedFindByIdAndUpdate).toHaveBeenCalledWith(
+      'e1',
+      expect.objectContaining({ $set: expect.objectContaining({ description: 'still here' }) }),
+      { runValidators: true }
+    );
+  });
+
+  it('refuses to move an existing entry onto a different out-of-scope type', async () => {
+    mockAccessibleTypes(['t1', 't2'], [], { userId: 'user-1' });
+    mockedActivityFind.mockResolvedValueOnce([{ _id: 'e1', typeId: 't1' }]);
+
+    await expect(
+      saveDay('2024-05-01', [{ _id: 'e1', typeId: 't2' }], 'user-1', ['group-1'], 'group-1')
+    ).rejects.toMatchObject({ name: 'BadRequestError' });
   });
 
   it('sets a location on an updated entry and clears it when passed null', async () => {

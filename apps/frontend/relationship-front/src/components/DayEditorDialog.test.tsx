@@ -314,3 +314,39 @@ it('still renders the day when loading saved places fails', async () => {
   expect(await screen.findByText('Restaurants')).toBeInTheDocument();
   expect(screen.queryByText('Failed to load this day')).not.toBeInTheDocument();
 });
+
+it('keeps entries whose type is not in this scope instead of deleting them', async () => {
+  // Group days can still hold entries recorded against a personal type, from
+  // before that was closed off. The editor has no row for them, and a save
+  // rewrites the whole day, so leaving them out of the payload would delete
+  // them silently.
+  mockedGetTypes.mockResolvedValue({ data: [booleanType], pagination: {} as ActivityTypesResponse['pagination'] });
+  mockedGetDays.mockResolvedValue({
+    days: [
+      {
+        date: '2024-01-01',
+        entries: [
+          { _id: 'e1', typeId: 'gone', description: 'Skyrim', type: { name: 'Gaming' } },
+          { _id: 'e2', typeId: 'b1' }
+        ]
+      }
+    ]
+  });
+  mockedSaveDay.mockResolvedValue({ date: '2024-01-01', entries: [] });
+  render(<DayEditorDialog open date="2024-01-01" onClose={vi.fn()} onSaved={vi.fn()} />);
+
+  expect(await screen.findByText(/not in this journal \(Gaming\)/)).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole('button', { name: 'Save day' }));
+
+  await waitFor(() =>
+    expect(mockedSaveDay).toHaveBeenCalledWith(
+      '2024-01-01',
+      [
+        { _id: 'e1', typeId: 'gone', description: 'Skyrim' },
+        { _id: 'e2', typeId: 'b1' }
+      ],
+      'g1'
+    )
+  );
+});

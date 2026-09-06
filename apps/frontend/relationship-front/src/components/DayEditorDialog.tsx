@@ -46,6 +46,12 @@ interface EntryDraft {
 /** per-type editing state: a type is "on" when it has at least one draft */
 type Drafts = Record<string, EntryDraft[]>;
 
+/** An existing entry whose type is not in this scope's list — kept, not shown. */
+interface OrphanEntry extends DayEntryInput {
+  _id: string;
+  typeName?: string;
+}
+
 const todayKey = () => new Date().toISOString().slice(0, 10);
 
 /**
@@ -72,6 +78,14 @@ const DayEditorDialog: React.FC<DayEditorDialogProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [descriptionOptions, setDescriptionOptions] = useState<Record<string, string[]>>({});
   const [savedPlaces, setSavedPlaces] = useState<Place[]>([]);
+  /**
+   * Entries recorded against a type this scope no longer offers — a personal
+   * type used inside a group before that was closed off, or a type since
+   * deleted. They have no row to edit, but saving the day rewrites it whole, so
+   * leaving them out of the payload would delete them without anyone asking.
+   * They ride along untouched until the migration re-points them.
+   */
+  const [orphanEntries, setOrphanEntries] = useState<OrphanEntry[]>([]);
 
   // Load activity types + the day's current entries whenever the target day changes
   useEffect(() => {
@@ -97,13 +111,26 @@ const DayEditorDialog: React.FC<DayEditorDialogProps> = ({
         }
 
         const day = daysResponse.days.find((d) => d.date === date);
+        const known = new Set(typesResponse.data.map((type) => type._id));
         const next: Drafts = {};
+        const orphans: OrphanEntry[] = [];
         for (const entry of day?.entries ?? []) {
           // The API type says typeId is always a string, but a populated
           // reference from the backend can still come through as an object.
           const rawTypeId = entry.typeId as unknown as string | { _id: string };
           const typeId = typeof rawTypeId === 'string' ? rawTypeId : rawTypeId?._id;
           if (!typeId) continue;
+          if (!known.has(typeId)) {
+            orphans.push({
+              _id: entry._id,
+              typeId,
+              typeName: entry.type?.name,
+              ...(entry.description !== undefined ? { description: entry.description } : {}),
+              ...(entry.hours !== undefined ? { hours: entry.hours } : {}),
+              ...(entry.location ? { location: entry.location } : {})
+            });
+            continue;
+          }
           (next[typeId] ??= []).push({
             _id: entry._id,
             description: entry.description ?? '',
@@ -112,6 +139,7 @@ const DayEditorDialog: React.FC<DayEditorDialogProps> = ({
           });
         }
         setDrafts(next);
+        setOrphanEntries(orphans);
       })
       .catch((e) => {
         if (!cancelled) {
@@ -181,9 +209,16 @@ const DayEditorDialog: React.FC<DayEditorDialogProps> = ({
     [types]
   );
 
+  const orphanNames = useMemo(
+    () => [...new Set(orphanEntries.map((entry) => entry.typeName).filter(Boolean))].join(', '),
+    [orphanEntries]
+  );
+
   const handleSave = async () => {
     if (!types) return;
-    const entries: DayEntryInput[] = [];
+    // Carried through unchanged so a save does not delete what the editor
+    // cannot show; `typeName` is display-only and never sent.
+    const entries: DayEntryInput[] = orphanEntries.map(({ typeName: _typeName, ...entry }) => entry);
     for (const type of types) {
       for (const draft of drafts[type._id] ?? []) {
         const entry: DayEntryInput = { typeId: type._id };
@@ -244,6 +279,14 @@ const DayEditorDialog: React.FC<DayEditorDialogProps> = ({
         {error && (
           <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
             {error}
+          </Alert>
+        )}
+        {orphanEntries.length > 0 && (
+          <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
+            {orphanEntries.length === 1 ? '1 entry' : `${orphanEntries.length} entries`} on this day
+            use an activity type that is not in this journal
+            {orphanNames ? ` (${orphanNames})` : ''}. They are kept as they are. You cannot edit
+            them here.
           </Alert>
         )}
         {loading || types === null ? (

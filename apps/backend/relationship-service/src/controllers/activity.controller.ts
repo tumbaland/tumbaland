@@ -13,12 +13,14 @@ export const createActivity = async (req: Request, res: Response): Promise<void>
     userId: user.id
   };
 
-  // Validate that the activity type exists and is accessible
+  // Validate that the activity type exists and is accessible in the scope the
+  // entry is being written into — a group entry needs one of that group's types
   // (route-level schema validation already guarantees typeId is present)
   const accessible = await ActivityService.isTypeAccessible(
     String(activityData.typeId),
     user.id,
-    req.userGroups || []
+    req.userGroups || [],
+    activityData.groupId
   );
 
   if (!accessible) {
@@ -94,12 +96,18 @@ export const updateActivity = async (req: Request, res: Response): Promise<void>
 
   // An edit may move an entry to a different type, and that type has to pass
   // the same test the create path applies — otherwise the check there is only
-  // as strong as the absence of an edit endpoint.
+  // as strong as the absence of an edit endpoint. The scope is the one the
+  // entry ends up in: the update's groupId where it sets one, else the stored.
   if (updateData.typeId !== undefined) {
+    const current = await ActivityService.getActivityById(id as string, user.id, userGroups);
+    if (!current) {
+      throw new NotFoundError('Activity not found');
+    }
     const accessible = await ActivityService.isTypeAccessible(
       String(updateData.typeId),
       user.id,
-      userGroups
+      userGroups,
+      updateData.groupId ?? current.groupId
     );
     if (!accessible) {
       throw new BadRequestError('Invalid or inaccessible activity type');

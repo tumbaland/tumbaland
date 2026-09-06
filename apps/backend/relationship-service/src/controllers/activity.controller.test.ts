@@ -57,6 +57,7 @@ describe('createActivity', () => {
 
     await createActivity(req, res);
 
+    expect(ActivityService.isTypeAccessible).toHaveBeenCalledWith('t1', 'u1', ['g1'], undefined);
     expect(ActivityService.createActivity).toHaveBeenCalledWith({ typeId: 't1', hours: 2, userId: 'u1' });
     expect(res.status).toHaveBeenCalledWith(201);
   });
@@ -164,6 +165,7 @@ describe('updateActivity', () => {
   });
 
   it('refuses to move an entry onto a type the caller cannot reach', async () => {
+    (ActivityService.getActivityById as jest.Mock).mockResolvedValue({ _id: 'a1' });
     (ActivityService.isTypeAccessible as jest.Mock).mockResolvedValue(false);
 
     await expect(
@@ -176,13 +178,37 @@ describe('updateActivity', () => {
   });
 
   it('allows a type change the caller can reach', async () => {
+    (ActivityService.getActivityById as jest.Mock).mockResolvedValue({ _id: 'a1' });
     (ActivityService.isTypeAccessible as jest.Mock).mockResolvedValue(true);
     (ActivityService.updateActivity as jest.Mock).mockResolvedValue({ _id: 'a1', typeId: 't2' });
 
     await updateActivity(byId({ body: { typeId: 't2' } } as Partial<Request>), mockRes());
 
-    expect(ActivityService.isTypeAccessible).toHaveBeenCalledWith('t2', 'u1', ['g1']);
+    expect(ActivityService.isTypeAccessible).toHaveBeenCalledWith('t2', 'u1', ['g1'], undefined);
     expect(ActivityService.updateActivity).toHaveBeenCalledWith('a1', { typeId: 't2' }, 'u1', ['g1']);
+  });
+
+  it("checks the new type against the entry's own scope, not everything the caller can reach", async () => {
+    // The entry lives in g1, so the type has to be one of g1's. Passing only
+    // "anything this caller can touch" is how a personal type ended up on a
+    // group entry in the first place.
+    (ActivityService.getActivityById as jest.Mock).mockResolvedValue({ _id: 'a1', groupId: 'g1' });
+    (ActivityService.isTypeAccessible as jest.Mock).mockResolvedValue(true);
+    (ActivityService.updateActivity as jest.Mock).mockResolvedValue({ _id: 'a1', typeId: 't2' });
+
+    await updateActivity(byId({ body: { typeId: 't2' } } as Partial<Request>), mockRes());
+
+    expect(ActivityService.isTypeAccessible).toHaveBeenCalledWith('t2', 'u1', ['g1'], 'g1');
+  });
+
+  it('refuses a type change on an entry the caller cannot see', async () => {
+    (ActivityService.getActivityById as jest.Mock).mockResolvedValue(null);
+
+    await expect(
+      updateActivity(byId({ body: { typeId: 't2' } } as Partial<Request>), mockRes())
+    ).rejects.toMatchObject({ name: 'NotFoundError' });
+
+    expect(ActivityService.updateActivity).not.toHaveBeenCalled();
   });
 
   it('does not look up a type when the edit leaves it alone', async () => {

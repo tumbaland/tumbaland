@@ -142,18 +142,44 @@ export const saveDay = async (
   const date = dayToDate(day);
   const scope = scopeQuery(userId, groupId);
 
-  // Every referenced type must exist and be accessible to the caller
+  const existing = await Activity.find({ ...scope, date });
+  const existingById = new Map(existing.map((a) => [String(a._id), a]));
+
+  // Every referenced type must exist and belong to the same scope as the day.
+  //
+  // "Any type the caller can reach" is not the same test: it let a personal type
+  // be recorded against inside a group, producing entries the rest of the group
+  // cannot see and that break when the owner deletes the type. Scope equality is
+  // the rule; `scripts/migration/regroup-activity-types.js` moves the rows that
+  // predate it.
   const typeIds = [...new Set(entries.map((e) => e.typeId))];
   const locationTypeIds = new Set<string>();
   if (typeIds.length > 0) {
-    const accessible = await ActivityType.find({
-      _id: { $in: typeIds },
-      $or: [{ userId }, { groupId: { $in: userGroupIds } }]
-    }).select('_id hasLocation');
-    if (accessible.length !== typeIds.length) {
-      throw new BadRequestError('Invalid or inaccessible activity type');
+    const found = await ActivityType.find({ _id: { $in: typeIds } }).select(
+      '_id hasLocation userId groupId'
+    );
+    const byId = new Map(found.map((type) => [String(type._id), type]));
+
+    const inScope = (type: IActivityType): boolean =>
+      groupId ? type.groupId === groupId : !type.groupId && type.userId === userId;
+
+    for (const entry of entries) {
+      const type = byId.get(entry.typeId);
+      if (!type) {
+        throw new BadRequestError('Invalid or inaccessible activity type');
+      }
+      if (inScope(type)) continue;
+
+      // An entry that already exists and is not changing type is tolerated, so a
+      // day holding not-yet-migrated rows stays editable instead of refusing
+      // every save. Nothing new may be created out of scope.
+      const current = entry._id ? existingById.get(entry._id) : undefined;
+      if (!current || String(current.typeId) !== entry.typeId) {
+        throw new BadRequestError('Invalid or inaccessible activity type');
+      }
     }
-    for (const type of accessible) {
+
+    for (const type of found) {
       if (type.hasLocation) locationTypeIds.add(String(type._id));
     }
   }
@@ -164,9 +190,6 @@ export const saveDay = async (
   if (strayLocation) {
     throw new BadRequestError('This activity type does not accept a location');
   }
-
-  const existing = await Activity.find({ ...scope, date });
-  const existingById = new Map(existing.map((a) => [String(a._id), a]));
 
   const keptIds = new Set(entries.filter((e) => e._id).map((e) => e._id!));
   const toDelete = existing.filter((a) => !keptIds.has(String(a._id)));

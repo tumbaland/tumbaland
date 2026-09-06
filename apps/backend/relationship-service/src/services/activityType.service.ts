@@ -6,6 +6,7 @@ interface ActivityTypeQuery {
   isActive?: boolean;
   slug?: string;
   userId?: string;
+  groupId?: string;
   $or?: Record<string, unknown>[];
 }
 
@@ -72,11 +73,15 @@ export const getActivityTypes = async (
   // Apply permission filtering
   if (groupId !== undefined) {
     if (groupId !== null) {
-      // Group context - show group types and fallback to user's personal types
-      query.$or = [
-        { groupId },
-        { userId, groupId: { $exists: false } }
-      ];
+      // Group context - the group's own types only.
+      //
+      // This used to fall back to the caller's personal types when the group had
+      // none, which reads as helpful and is not: the day editor then offers a
+      // personal type inside a group, entries get recorded against it, and those
+      // entries belong to a type nobody else in the group can see. Deleting that
+      // type personally strands them — which is exactly what happened. A group
+      // with no types of its own is seeded with the defaults below instead.
+      query.groupId = groupId;
     } else {
       // Personal context (groupId explicitly set to null) - show only user's personal types
       query.userId = userId;
@@ -163,10 +168,8 @@ export const getActivityTypeBySlug = async (slug: string, userId?: string, group
   const query: ActivityTypeQuery = { slug, isActive: true };
 
   if (groupId) {
-    query.$or = [
-      { groupId },
-      { userId, groupId: { $exists: false } }
-    ];
+    // Group scope only — see the note in getActivityTypes.
+    query.groupId = groupId;
   } else if (userId) {
     query.userId = userId;
     query.$or = [

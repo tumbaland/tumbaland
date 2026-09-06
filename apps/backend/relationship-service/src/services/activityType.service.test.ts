@@ -169,7 +169,10 @@ describe('getActivityTypes', () => {
     });
   });
 
-  it('scopes to group + personal fallback when groupId is a real id', async () => {
+  it("scopes to the group's own types, never the caller's personal ones", async () => {
+    // A personal type offered inside a group gets recorded against, and the
+    // resulting entries are invisible to everyone else in the group and break
+    // when their owner deletes the type.
     mockedFind.mockReturnValue(mockFindChain([]));
     mockedCountDocuments.mockResolvedValue(0);
 
@@ -177,7 +180,7 @@ describe('getActivityTypes', () => {
 
     expect(mockedFind).toHaveBeenCalledWith({
       isActive: true,
-      $or: [{ groupId: 'g1' }, { userId: 'u1', groupId: { $exists: false } }]
+      groupId: 'g1'
     });
   });
 
@@ -246,7 +249,7 @@ describe('getActivityTypeBySlug', () => {
     expect(mockedFindOne).toHaveBeenCalledWith({
       slug: 'reading',
       isActive: true,
-      $or: [{ groupId: 'g1' }, { userId: 'u1', groupId: { $exists: false } }]
+      groupId: 'g1'
     });
   });
 
