@@ -1,4 +1,14 @@
 # Tumbalog
+## [0.0.478](https://github.com/toomastahves/tumbaland/compare/app-v0.0.477...app-v0.0.478) (2026-09-12)
+
+### Features
+
+* **finance:** carry price history, holdings and trades over on ticker rename ([38db304](https://github.com/toomastahves/tumbaland/commit/38db3048dc4ec51a2bea39d5b8521fa151dc360a))
+* remove photo analysis ([56a2ec9](https://github.com/toomastahves/tumbaland/commit/56a2ec95a4da2d871d5008f442bd81598e20eb3b))
+
+### Bug Fixes
+
+* **album,relationship,finance:** enforce ownership and group membership on writes ([7ccebaa](https://github.com/toomastahves/tumbaland/commit/7ccebaa58498b838cbb4b9c58fdc8ac5fcf82bd3))
 ## [0.0.477](https://github.com/toomastahves/tumbaland/compare/app-v0.0.476...app-v0.0.477) (2026-09-06)
 
 ### Bug Fixes
