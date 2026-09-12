@@ -52,6 +52,13 @@ describe('createActivityType', () => {
       expect.objectContaining({ slug: 'custom' })
     );
   });
+
+  it('refuses to create a type in a group the caller is not in', async () => {
+    const req = { user: { id: 'u1' }, userGroups: [], body: { name: 'Hike', groupId: 'g-other' } } as unknown as Request;
+
+    await expect(createActivityType(req, mockRes())).rejects.toMatchObject({ name: 'ForbiddenError' });
+    expect(ActivityTypeService.createActivityType).not.toHaveBeenCalled();
+  });
 });
 
 describe('getActivityTypes', () => {
@@ -95,57 +102,98 @@ describe('getActivityTypes', () => {
   });
 });
 
+/** A request from u1, who belongs to g1, naming type t1. */
+const asU1 = (extra: Record<string, unknown> = {}) =>
+  ({ user: { id: 'u1' }, userGroups: ['g1'], params: { id: 't1' }, body: {}, ...extra }) as unknown as Request;
+
+const typeFound = (type: Record<string, unknown> | null) =>
+  (ActivityTypeService.getActivityTypeById as jest.Mock).mockResolvedValue(type);
+
 describe('getActivityTypeById', () => {
   it('throws NotFoundError when missing', async () => {
-    (ActivityTypeService.getActivityTypeById as jest.Mock).mockResolvedValue(null);
-    const req = { params: { id: 't1' } } as unknown as Request;
-    await expect(getActivityTypeById(req, mockRes())).rejects.toMatchObject({ name: 'NotFoundError' });
+    typeFound(null);
+    await expect(getActivityTypeById(asU1(), mockRes())).rejects.toMatchObject({ name: 'NotFoundError' });
   });
 
   it('returns the type when found', async () => {
-    (ActivityTypeService.getActivityTypeById as jest.Mock).mockResolvedValue({ _id: 't1' });
-    const req = { params: { id: 't1' } } as unknown as Request;
+    typeFound({ _id: 't1', userId: 'u1' });
     const res = mockRes();
 
-    await getActivityTypeById(req, res);
+    await getActivityTypeById(asU1(), res);
 
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: { _id: 't1' } }));
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: { _id: 't1', userId: 'u1' } }));
   });
 });
 
 describe('updateActivityType', () => {
   it('throws NotFoundError when missing', async () => {
+    typeFound({ _id: 't1', userId: 'u1' });
     (ActivityTypeService.updateActivityType as jest.Mock).mockResolvedValue(null);
-    const req = { params: { id: 't1' }, body: {} } as unknown as Request;
-    await expect(updateActivityType(req, mockRes())).rejects.toMatchObject({ name: 'NotFoundError' });
+    await expect(updateActivityType(asU1(), mockRes())).rejects.toMatchObject({ name: 'NotFoundError' });
   });
 
   it('returns the updated type', async () => {
+    typeFound({ _id: 't1', userId: 'u1' });
     (ActivityTypeService.updateActivityType as jest.Mock).mockResolvedValue({ _id: 't1', name: 'New' });
-    const req = { params: { id: 't1' }, body: { name: 'New' } } as unknown as Request;
     const res = mockRes();
 
-    await updateActivityType(req, res);
+    await updateActivityType(asU1({ body: { name: 'New' } }), res);
 
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: { _id: 't1', name: 'New' } }));
+  });
+
+  it('refuses moving a type into a group the caller is not in', async () => {
+    typeFound({ _id: 't1', userId: 'u1' });
+
+    await expect(updateActivityType(asU1({ body: { groupId: 'g-other' } }), mockRes())).rejects.toMatchObject({
+      name: 'ForbiddenError'
+    });
+    expect(ActivityTypeService.updateActivityType).not.toHaveBeenCalled();
   });
 });
 
 describe('deleteActivityType', () => {
   it('throws NotFoundError when nothing was deleted', async () => {
+    typeFound({ _id: 't1', userId: 'u1' });
     (ActivityTypeService.deleteActivityType as jest.Mock).mockResolvedValue(false);
-    const req = { params: { id: 't1' } } as unknown as Request;
-    await expect(deleteActivityType(req, mockRes())).rejects.toMatchObject({ name: 'NotFoundError' });
+    await expect(deleteActivityType(asU1(), mockRes())).rejects.toMatchObject({ name: 'NotFoundError' });
   });
 
   it('confirms deletion', async () => {
+    typeFound({ _id: 't1', userId: 'u1' });
     (ActivityTypeService.deleteActivityType as jest.Mock).mockResolvedValue(true);
-    const req = { params: { id: 't1' } } as unknown as Request;
     const res = mockRes();
 
-    await deleteActivityType(req, res);
+    await deleteActivityType(asU1(), res);
 
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ message: 'Activity type deleted successfully' }));
+  });
+});
+
+describe("another account's type", () => {
+  it.each([
+    { what: 'a personal type of someone else', type: { _id: 't1', userId: 'u2' } },
+    { what: 'a type in a group the caller is not in', type: { _id: 't1', userId: 'u2', groupId: 'g2' } }
+  ])('answers as missing for $what, and changes nothing', async ({ type }) => {
+    typeFound(type);
+
+    await expect(getActivityTypeById(asU1(), mockRes())).rejects.toMatchObject({ name: 'NotFoundError' });
+    await expect(updateActivityType(asU1({ body: { name: 'Mine now' } }), mockRes())).rejects.toMatchObject({
+      name: 'NotFoundError'
+    });
+    await expect(deleteActivityType(asU1(), mockRes())).rejects.toMatchObject({ name: 'NotFoundError' });
+
+    expect(ActivityTypeService.updateActivityType).not.toHaveBeenCalled();
+    expect(ActivityTypeService.deleteActivityType).not.toHaveBeenCalled();
+  });
+
+  it('lets a member of the group reach a group type', async () => {
+    typeFound({ _id: 't1', userId: 'u2', groupId: 'g1' });
+    (ActivityTypeService.deleteActivityType as jest.Mock).mockResolvedValue(true);
+
+    await deleteActivityType(asU1(), mockRes());
+
+    expect(ActivityTypeService.deleteActivityType).toHaveBeenCalledWith('t1');
   });
 });
 

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { NotFoundError, UnauthorizedError, sendSuccess, countRead } from '@tumbaland/backend-core';
+import { NotFoundError, UnauthorizedError, canAccessResource, sendSuccess, countRead } from '@tumbaland/backend-core';
 import photoService from '../services/photoService';
 import memoriesService from '../services/memoriesService';
 import { getUploadSignedUrl, generateFileId } from '../services/fileServiceClient';
@@ -27,7 +27,7 @@ export const createPhoto = async (req: Request, res: Response): Promise<void> =>
   const user = req.user!;
   const album = await Album.findById(req.body.albumId);
 
-  const photo = await photoService.createPhoto(req.body, user.id, album?.groupId);
+  const photo = await photoService.createPhoto(req.body, user.id, album?.groupId, req.userGroups || []);
 
   // The bytes are already in MinIO by now — the quota gate ran back at the
   // signed-URL request — so this records rather than re-checks. `createPhoto`
@@ -44,13 +44,17 @@ export const getPhotosByAlbum = async (req: Request, res: Response): Promise<voi
   const { albumId } = req.params;
   const { page, limit, search, tags, tagMatch } = req.query;
 
-  const result = await photoService.getPhotosByAlbum(albumId as string, {
-    page: page ? Number(page) : 1,
-    limit: limit ? Number(limit) : undefined,
-    search: search as string,
-    tags: parseTagsParam(tags),
-    tagMatch: tagMatch === 'any' ? 'any' : 'all'
-  });
+  const result = await photoService.getPhotosByAlbum(
+    albumId as string,
+    {
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : undefined,
+      search: search as string,
+      tags: parseTagsParam(tags),
+      tagMatch: tagMatch === 'any' ? 'any' : 'all'
+    },
+    { userId: req.user!.id, userGroups: req.userGroups || [] }
+  );
 
   countRead(res, result.photos.length);
   sendSuccess(res, { photos: result.photos, pagination: result.pagination });
@@ -95,7 +99,10 @@ export const getMemories = async (req: Request, res: Response): Promise<void> =>
 export const getAlbumTags = async (req: Request, res: Response): Promise<void> => {
   const { albumId } = req.params;
 
-  const tags = await photoService.getAlbumTags(albumId as string);
+  const tags = await photoService.getAlbumTags(albumId as string, {
+    userId: req.user!.id,
+    userGroups: req.userGroups || []
+  });
 
   sendSuccess(res, { tags });
 };
@@ -179,9 +186,11 @@ export const getUploadSignedUrlRequest = async (req: Request, res: Response): Pr
     throw new UnauthorizedError('Access token required');
   }
 
-  // Check if album exists
+  // The album has to be one the caller may add to: its owner or its group. A
+  // public album is readable by anyone but not writable, and without this any
+  // signed-in caller could upload into someone else's album on their storage.
   const album = await Album.findById(albumId);
-  if (!album) {
+  if (!album || !canAccessResource(userId, album.userId, album.groupId, req.userGroups || [])) {
     throw new NotFoundError('Album not found');
   }
 

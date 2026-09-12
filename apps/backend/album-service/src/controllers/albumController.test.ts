@@ -157,7 +157,7 @@ describe('setCoverPhoto', () => {
 
     await setCoverPhoto(baseReq({ params: { id: 'a1' }, body: { photoId: 'p1' } }), res);
 
-    expect(mocked.setCoverPhoto).toHaveBeenCalledWith('a1', 'p1');
+    expect(mocked.setCoverPhoto).toHaveBeenCalledWith('a1', 'p1', { userId: 'user-1', userGroups: [] });
   });
 });
 
@@ -168,6 +168,6 @@ describe('removeCoverPhoto', () => {
 
     await removeCoverPhoto(baseReq({ params: { id: 'a1' } }), res);
 
-    expect(mocked.removeCoverPhoto).toHaveBeenCalledWith('a1');
+    expect(mocked.removeCoverPhoto).toHaveBeenCalledWith('a1', { userId: 'user-1', userGroups: [] });
   });
 });

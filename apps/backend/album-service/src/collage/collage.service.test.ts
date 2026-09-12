@@ -98,6 +98,27 @@ describe('collage.service', () => {
     });
   });
 
+  describe('writing into a group', () => {
+    it('refuses to create a collage in a group the caller is not in', async () => {
+      const calls = mockedCtor.mock.calls.length;
+
+      await expect(createCollage({ ...collageInput, groupId: 'group-9' }, OWNER, [])).rejects.toMatchObject({
+        name: 'ForbiddenError'
+      });
+      expect(mockedCtor.mock.calls.length).toBe(calls);
+    });
+
+    it('refuses to move a collage into a group the caller is not in', async () => {
+      mockedFindById.mockResolvedValue({ _id: 'c1', userId: OWNER });
+      const calls = mockedFindByIdAndUpdate.mock.calls.length;
+
+      await expect(
+        updateCollage('c1', { ...collageInput, groupId: 'group-9' }, OWNER, [])
+      ).rejects.toMatchObject({ name: 'ForbiddenError' });
+      expect(mockedFindByIdAndUpdate.mock.calls.length).toBe(calls);
+    });
+  });
+
   describe('deleteCollage', () => {
     it('throws NotFoundError when the collage does not exist', async () => {
       mockedFindById.mockResolvedValue(null);

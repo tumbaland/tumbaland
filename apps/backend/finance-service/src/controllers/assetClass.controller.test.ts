@@ -105,6 +105,16 @@ describe('POST /api/asset-classes', () => {
       data: { name: 'Real Estate', userId: 'user-1' }
     });
   });
+
+  it('refuses to create an asset class in a group the user is not in', async () => {
+    const res = await request(app)
+      .post('/api/asset-classes')
+      .set('Cookie', authCookie(['group-a']))
+      .send({ name: 'Real Estate', groupId: 'group-b' });
+
+    expect(res.status).toBe(403);
+    expect(AssetClass).not.toHaveBeenCalled();
+  });
 });
 
 describe('PUT /api/asset-classes/:id', () => {

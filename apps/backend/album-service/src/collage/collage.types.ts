@@ -5,6 +5,7 @@ export interface CollageInput {
   config: CollageConfig;
   albumIds: string[];
   ownerId?: string;
+  groupId?: string;
 }
 
 export interface Collage extends CollageInput {

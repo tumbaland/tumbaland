@@ -143,6 +143,15 @@ describe('updateAssetClass', () => {
     expect(model.findByIdAndUpdate).not.toHaveBeenCalled();
   });
 
+  it('throws ForbiddenError when moving the class into a group the user is not in', async () => {
+    model.findById.mockResolvedValueOnce({ userId: 'owner', groupId: undefined });
+
+    await expect(updateAssetClass('ac-1', { groupId: 'group-b' }, 'owner', [])).rejects.toThrow(
+      ForbiddenError
+    );
+    expect(model.findByIdAndUpdate).not.toHaveBeenCalled();
+  });
+
   it('updates the class (returning the new doc) when access is via group membership', async () => {
     model.findById.mockResolvedValueOnce({ userId: 'owner', groupId: 'group-a' });
     const updated = { id: 'ac-1', name: 'New' };

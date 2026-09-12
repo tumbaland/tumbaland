@@ -313,16 +313,18 @@ class AlbumService {
       throw new NotFoundError('Album not found');
     }
 
-    // Check if user can modify this album
-    const hasAccess = canAccessResource(
-      userId,
-      album.userId,
-      album.groupId,
-      userGroups,
-      album.isPublic
-    );
+    // Public makes an album readable by anyone, never writable. Passing the flag
+    // here let any signed-in caller rename, re-group or un-publish someone
+    // else's public album.
+    const hasAccess = canAccessResource(userId, album.userId, album.groupId, userGroups);
 
     if (!hasAccess) {
+      throw new ForbiddenError('Access denied');
+    }
+
+    // Moving it into a group is writing into that group, and bills its storage
+    // to that group's owner.
+    if (input.groupId && !userGroups.includes(input.groupId)) {
       throw new ForbiddenError('Access denied');
     }
 
@@ -411,10 +413,16 @@ class AlbumService {
   /**
    * Set cover photo for album
    */
-  async setCoverPhoto(albumId: string, photoId: string): Promise<IAlbum> {
+  async setCoverPhoto(albumId: string, photoId: string, context: AlbumPermissionContext): Promise<IAlbum> {
     const album = await Album.findById(albumId);
     if (!album) {
       throw new NotFoundError('Album not found');
+    }
+
+    // Both cover routes took no caller at all, so anyone signed in could change
+    // any album's cover. Public albums are readable, not writable.
+    if (!canAccessResource(context.userId, album.userId, album.groupId, context.userGroups)) {
+      throw new ForbiddenError('Access denied');
     }
 
     // Check if photo exists and belongs to the album
@@ -431,10 +439,14 @@ class AlbumService {
   /**
    * Remove cover photo from album
    */
-  async removeCoverPhoto(albumId: string): Promise<IAlbum> {
+  async removeCoverPhoto(albumId: string, context: AlbumPermissionContext): Promise<IAlbum> {
     const album = await Album.findById(albumId);
     if (!album) {
       throw new NotFoundError('Album not found');
+    }
+
+    if (!canAccessResource(context.userId, album.userId, album.groupId, context.userGroups)) {
+      throw new ForbiddenError('Access denied');
     }
 
     album.coverPhotoId = undefined;

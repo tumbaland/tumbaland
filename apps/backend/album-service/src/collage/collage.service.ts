@@ -45,8 +45,13 @@ interface CollageListFilter {
 export const createCollage = async (
   data: CollageInput, 
   userId: string, 
-  _userGroups: string[] = []
+  userGroups: string[] = []
 ): Promise<ICollage> => {
+  // Creating a collage in a group is writing into that group.
+  if (data.groupId && !userGroups.includes(data.groupId)) {
+    throw new ForbiddenError('Access denied');
+  }
+
   // Set the userId on the collage data
   const collageData = {
     ...data,
@@ -80,6 +85,11 @@ export const updateCollage = async (
   );
 
   if (!hasAccess) {
+    throw new ForbiddenError('Access denied');
+  }
+
+  // Moving a collage into a group is writing into that group.
+  if (data.groupId && !userGroups.includes(data.groupId)) {
     throw new ForbiddenError('Access denied');
   }
 

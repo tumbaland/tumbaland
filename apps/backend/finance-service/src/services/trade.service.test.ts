@@ -258,6 +258,15 @@ describe('updateTrade', () => {
     await expect(updateTrade('t1', {}, 'u1', [])).rejects.toMatchObject({ name: 'ForbiddenError' });
   });
 
+  it('refuses moving a trade into a group the caller is not in', async () => {
+    mockedFindById.mockResolvedValue(existing);
+
+    await expect(updateTrade('t1', { groupId: 'not-mine' }, 'u1', [])).rejects.toMatchObject({
+      name: 'ForbiddenError'
+    });
+    expect(mockedFindByIdAndUpdate).not.toHaveBeenCalled();
+  });
+
   it('validates the merged document, not just the patch', async () => {
     mockedFindById.mockResolvedValue(existing);
 

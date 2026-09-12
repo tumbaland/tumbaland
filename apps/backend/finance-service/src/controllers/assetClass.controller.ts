@@ -31,6 +31,11 @@ export const getAssetClasses = async (req: Request, res: Response): Promise<void
 export const createAssetClass = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
 
+  // Creating a class in a group is writing into that group.
+  if (req.body.groupId && !(req.userGroups || []).includes(req.body.groupId)) {
+    throw new ForbiddenError('Access denied');
+  }
+
   const assetClassData = {
     ...req.body,
     userId: user.id

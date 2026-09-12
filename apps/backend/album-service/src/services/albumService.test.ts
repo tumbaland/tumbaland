@@ -83,13 +83,22 @@ describe('updateAlbum', () => {
     expect(mockedFindByIdAndUpdate).toHaveBeenCalledWith('album-1', { name: 'Trimmed' }, { new: true });
   });
 
-  it('allows anyone to update a public album', async () => {
+  it('does not let a stranger edit a public album, which is readable only', async () => {
     mockedFindById.mockResolvedValue({ userId: 'owner', groupId: undefined, isPublic: true });
-    mockedFindByIdAndUpdate.mockResolvedValue({ name: 'New' });
 
-    await albumService.updateAlbum('album-1', { name: 'New' }, ctx({ userId: 'stranger' }));
+    await expect(
+      albumService.updateAlbum('album-1', { isPublic: false }, ctx({ userId: 'stranger' }))
+    ).rejects.toMatchObject({ name: 'ForbiddenError' });
+    expect(mockedFindByIdAndUpdate).not.toHaveBeenCalled();
+  });
 
-    expect(mockedFindByIdAndUpdate).toHaveBeenCalled();
+  it('refuses moving an album into a group the caller is not in', async () => {
+    mockedFindById.mockResolvedValue({ userId: 'user-1', groupId: undefined, isPublic: false });
+
+    await expect(albumService.updateAlbum('album-1', { groupId: 'not-mine' }, ctx())).rejects.toMatchObject({
+      name: 'ForbiddenError'
+    });
+    expect(mockedFindByIdAndUpdate).not.toHaveBeenCalled();
   });
 });
 
@@ -169,26 +178,48 @@ describe('setCoverPhoto', () => {
   it('throws NotFoundError when the album does not exist', async () => {
     mockedFindById.mockResolvedValue(null);
 
-    await expect(albumService.setCoverPhoto('album-1', 'photo-1')).rejects.toMatchObject({ name: 'NotFoundError' });
+    await expect(albumService.setCoverPhoto('album-1', 'photo-1', ctx())).rejects.toMatchObject({ name: 'NotFoundError' });
   });
 
   it('throws NotFoundError when the photo does not belong to the album', async () => {
-    mockedFindById.mockResolvedValue({ _id: 'album-1', save: jest.fn() });
+    mockedFindById.mockResolvedValue({ _id: 'album-1', userId: 'user-1', save: jest.fn() });
     mockedPhotoFindOne.mockResolvedValue(null);
 
-    await expect(albumService.setCoverPhoto('album-1', 'photo-1')).rejects.toMatchObject({ name: 'NotFoundError' });
+    await expect(albumService.setCoverPhoto('album-1', 'photo-1', ctx())).rejects.toMatchObject({ name: 'NotFoundError' });
     expect(mockedPhotoFindOne).toHaveBeenCalledWith({ _id: 'photo-1', albumId: 'album-1' });
   });
 
   it('sets the cover photo when it belongs to the album', async () => {
-    const album: any = { _id: 'album-1', save: jest.fn().mockResolvedValue(undefined) };
+    const album: any = { _id: 'album-1', userId: 'user-1', save: jest.fn().mockResolvedValue(undefined) };
     mockedFindById.mockResolvedValue(album);
     mockedPhotoFindOne.mockResolvedValue({ _id: 'photo-1', albumId: 'album-1' });
 
-    await albumService.setCoverPhoto('album-1', 'photo-1');
+    await albumService.setCoverPhoto('album-1', 'photo-1', ctx());
 
     expect(album.coverPhotoId).toBe('photo-1');
     expect(album.save).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('changing the cover of someone else’s album', () => {
+  it('refuses to set it, even on a public album', async () => {
+    const album: any = { _id: 'album-1', userId: 'owner', isPublic: true, save: jest.fn() };
+    mockedFindById.mockResolvedValue(album);
+
+    await expect(
+      albumService.setCoverPhoto('album-1', 'photo-1', ctx({ userId: 'stranger' }))
+    ).rejects.toMatchObject({ name: 'ForbiddenError' });
+    expect(album.save).not.toHaveBeenCalled();
+  });
+
+  it('refuses to remove it', async () => {
+    const album: any = { _id: 'album-1', userId: 'owner', coverPhotoId: 'photo-1', save: jest.fn() };
+    mockedFindById.mockResolvedValue(album);
+
+    await expect(albumService.removeCoverPhoto('album-1', ctx({ userId: 'stranger' }))).rejects.toMatchObject({
+      name: 'ForbiddenError'
+    });
+    expect(album.coverPhotoId).toBe('photo-1');
   });
 });
 
@@ -196,14 +227,14 @@ describe('removeCoverPhoto', () => {
   it('throws NotFoundError when the album does not exist', async () => {
     mockedFindById.mockResolvedValue(null);
 
-    await expect(albumService.removeCoverPhoto('album-1')).rejects.toMatchObject({ name: 'NotFoundError' });
+    await expect(albumService.removeCoverPhoto('album-1', ctx())).rejects.toMatchObject({ name: 'NotFoundError' });
   });
 
   it('clears the cover photo', async () => {
-    const album: any = { _id: 'album-1', coverPhotoId: 'photo-1', save: jest.fn().mockResolvedValue(undefined) };
+    const album: any = { _id: 'album-1', userId: 'user-1', coverPhotoId: 'photo-1', save: jest.fn().mockResolvedValue(undefined) };
     mockedFindById.mockResolvedValue(album);
 
-    await albumService.removeCoverPhoto('album-1');
+    await albumService.removeCoverPhoto('album-1', ctx());
 
     expect(album.coverPhotoId).toBeUndefined();
     expect(album.save).toHaveBeenCalledTimes(1);

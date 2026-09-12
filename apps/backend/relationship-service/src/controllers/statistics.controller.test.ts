@@ -99,6 +99,35 @@ describe('getStreaks', () => {
   });
 });
 
+describe('a group the caller is not in', () => {
+  it.each([
+    { name: 'getStatistics', handler: getStatistics, read: StatisticsService.getRelationshipStatistics },
+    { name: 'getStreaks', handler: getStreaks, read: StatisticsService.getStreakStatistics },
+    { name: 'getMonthlyHoursData', handler: getMonthlyHoursData, read: StatisticsService.getMonthlyHours },
+    { name: 'getMonthlyStatisticsData', handler: getMonthlyStatisticsData, read: StatisticsService.getMonthlyStatistics },
+    {
+      name: 'getMonthlyActivityBreakdownData',
+      handler: getMonthlyActivityBreakdownData,
+      read: StatisticsService.getMonthlyActivityBreakdown
+    },
+    {
+      name: 'getWeeklyHeatmapDataController',
+      handler: getWeeklyHeatmapDataController,
+      read: StatisticsService.getWeeklyHeatmapData
+    },
+    {
+      name: 'getCumulativeTimelineDataController',
+      handler: getCumulativeTimelineDataController,
+      read: StatisticsService.getCumulativeTimelineData
+    }
+  ])('$name refuses, reading nothing', async ({ handler, read }) => {
+    const req = { query: { groupId: 'g-other' }, user: { id: 'u1' }, userGroups: ['g1'] } as unknown as Request;
+
+    await expect(handler(req, mockRes())).rejects.toMatchObject({ name: 'ForbiddenError' });
+    expect(read).not.toHaveBeenCalled();
+  });
+});
+
 describe('year-param controllers', () => {
   it('getMonthlyHoursData rejects an invalid year', async () => {
     const req = { query: { year: '1999' }, user: { id: 'u1' } } as unknown as Request;

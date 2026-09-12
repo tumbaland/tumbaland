@@ -75,7 +75,7 @@ beforeEach(() => jest.clearAllMocks());
 
 describe('createPhoto', () => {
   it('looks up the album to derive groupId, then creates the photo', async () => {
-    mockedAlbumFindById.mockResolvedValue({ groupId: 'group-1' });
+    mockedAlbumFindById.mockResolvedValue({ userId: 'user-1', groupId: 'group-1' });
     mockedPhotoService.createPhoto.mockResolvedValue({ _id: 'p1' } as any);
     const res = mockRes();
 
@@ -84,7 +84,8 @@ describe('createPhoto', () => {
     expect(mockedPhotoService.createPhoto).toHaveBeenCalledWith(
       { albumId: 'a1', filename: 'x.jpg' },
       'user-1',
-      'group-1'
+      'group-1',
+      []
     );
     expect(res.status).toHaveBeenCalledWith(201);
   });
@@ -111,7 +112,8 @@ describe('tag endpoints', () => {
 
     expect(mockedPhotoService.getPhotosByAlbum).toHaveBeenCalledWith(
       'a1',
-      expect.objectContaining({ tags: ['beach', 'sunset'], tagMatch: 'all' })
+      expect.objectContaining({ tags: ['beach', 'sunset'], tagMatch: 'all' }),
+      { userId: 'user-1', userGroups: [] }
     );
   });
 
@@ -125,7 +127,8 @@ describe('tag endpoints', () => {
 
     expect(mockedPhotoService.getPhotosByAlbum).toHaveBeenCalledWith(
       'a1',
-      expect.objectContaining({ tags: ['beach', 'sunset'], tagMatch: 'any' })
+      expect.objectContaining({ tags: ['beach', 'sunset'], tagMatch: 'any' }),
+      { userId: 'user-1', userGroups: [] }
     );
   });
 
@@ -136,7 +139,8 @@ describe('tag endpoints', () => {
 
     expect(mockedPhotoService.getPhotosByAlbum).toHaveBeenCalledWith(
       'a1',
-      expect.objectContaining({ tagMatch: 'all' })
+      expect.objectContaining({ tagMatch: 'all' }),
+      { userId: 'user-1', userGroups: [] }
     );
   });
 
@@ -145,6 +149,8 @@ describe('tag endpoints', () => {
     const res = mockRes();
 
     await getAlbumTags(baseReq({ params: { albumId: 'a1' } }), res);
+
+    expect(mockedPhotoService.getAlbumTags).toHaveBeenCalledWith('a1', { userId: 'user-1', userGroups: [] });
 
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ data: { tags: [{ tag: 'beach', count: 2 }] } })
@@ -185,7 +191,7 @@ describe('getPhotosByAlbum', () => {
       search: undefined,
       tags: undefined,
       tagMatch: 'all'
-    });
+    }, { userId: 'user-1', userGroups: [] });
   });
 });
 
@@ -270,7 +276,7 @@ describe('getUploadSignedUrlRequest', () => {
   });
 
   it('generates a fileId and returns a signed upload URL', async () => {
-    mockedAlbumFindById.mockResolvedValue({ groupId: 'group-1' });
+    mockedAlbumFindById.mockResolvedValue({ userId: 'user-1', groupId: 'group-1' });
     mockedGenerateFileId.mockReturnValue('group-1/a1/123/original.jpg');
     mockedGetUploadSignedUrl.mockResolvedValue('https://upload.example');
     const res = mockRes();
@@ -316,6 +322,38 @@ describe('getUploadSignedUrlRequest', () => {
     ).rejects.toMatchObject({ statusCode: 402 });
 
     expect(mockedGetUploadSignedUrl).not.toHaveBeenCalled();
+  });
+});
+
+describe('uploading into an album the caller cannot write to', () => {
+  it('issues no URL, even for a public album', async () => {
+    mockedAlbumFindById.mockResolvedValue({ userId: 'owner', groupId: undefined, isPublic: true });
+
+    await expect(
+      getUploadSignedUrlRequest(
+        baseReq({ body: { filename: 'p.jpg', mimetype: 'image/jpeg', albumId: 'a1', sizeBytes: 1 } }),
+        mockRes()
+      )
+    ).rejects.toThrow('Album not found');
+
+    expect(mockedHeadroom).not.toHaveBeenCalled();
+    expect(mockedGetUploadSignedUrl).not.toHaveBeenCalled();
+  });
+
+  it('allows a member of the album group', async () => {
+    mockedAlbumFindById.mockResolvedValue({ userId: 'owner', groupId: 'group-1' });
+    mockedGenerateFileId.mockReturnValue('file-1');
+    mockedGetUploadSignedUrl.mockResolvedValue('https://upload.example');
+
+    await getUploadSignedUrlRequest(
+      baseReq({
+        userGroups: ['group-1'],
+        body: { filename: 'p.jpg', mimetype: 'image/jpeg', albumId: 'a1', sizeBytes: 1 }
+      } as Partial<Request>),
+      mockRes()
+    );
+
+    expect(mockedGetUploadSignedUrl).toHaveBeenCalled();
   });
 });
 

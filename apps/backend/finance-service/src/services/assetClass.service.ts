@@ -69,5 +69,10 @@ export const updateAssetClass = async (id: string, data: Partial<IAssetClass>, u
     throw new ForbiddenError('Access denied');
   }
 
+  // Moving a class into a group is writing into that group.
+  if (data.groupId && !userGroupIds.includes(data.groupId)) {
+    throw new ForbiddenError('Access denied');
+  }
+
   return AssetClass.findByIdAndUpdate(id, data, { new: true });
 };

@@ -103,29 +103,43 @@ export interface PhotoAccessContext {
  * photo by naming its id, and `getPhotoById` answers with a working signed URL
  * to the image file itself.
  */
+/**
+ * Reading and writing are different questions. A public album can be looked at
+ * by anyone, but only its owner or its group may change what is in it. Using the
+ * read answer for writes let any signed-in caller retag, retitle or delete the
+ * photos in someone else's public album.
+ */
+type PhotoAccess = 'read' | 'write';
+
+/** Whether the caller may reach an album, for reading or for writing. */
+const canReachAlbum = (
+  album: { userId: string; groupId?: string; isPublic?: boolean },
+  { userId, userGroups }: PhotoAccessContext,
+  access: PhotoAccess
+): boolean =>
+  canAccessResource(userId, album.userId, album.groupId, userGroups, access === 'read' && !!album.isPublic);
+
 const reachableAlbumIds = async (
   albumIds: string[],
-  { userId, userGroups }: PhotoAccessContext
+  context: PhotoAccessContext,
+  access: PhotoAccess
 ): Promise<Set<string>> => {
   const albums = await Album.find({ _id: { $in: albumIds } })
     .select('_id userId groupId isPublic')
     .lean();
 
   return new Set(
-    albums
-      .filter((album) =>
-        canAccessResource(userId, album.userId, album.groupId, userGroups, album.isPublic)
-      )
-      .map((album) => String(album._id))
+    albums.filter((album) => canReachAlbum(album, context, access)).map((album) => String(album._id))
   );
 };
 
 /** Throws unless the caller may reach the album this photo sits in. */
 const assertPhotoReachable = async (
   albumId: unknown,
-  context: PhotoAccessContext
+  context: PhotoAccessContext,
+  access: PhotoAccess
 ): Promise<void> => {
-  const reachable = await reachableAlbumIds([String(albumId)], context);
+  const reachable = await reachableAlbumIds([String(albumId)], context, access);
   if (!reachable.has(String(albumId))) {
     // Same message as a missing photo: distinguishing "not yours" from "not
     // there" confirms an id exists to someone guessing at them.
@@ -151,7 +165,12 @@ class PhotoService {
   /**
    * Create a new photo record
    */
-  async createPhoto(input: CreatePhotoInput, userId: string, groupId?: string): Promise<IPhoto> {
+  async createPhoto(
+    input: CreatePhotoInput,
+    userId: string,
+    groupId?: string,
+    userGroups: string[] = []
+  ): Promise<IPhoto> {
     const {
       filename,
       originalName,
@@ -172,9 +191,10 @@ class PhotoService {
     // Route-level schema validation already guarantees one of them is present.
     const actualMinioFileId = (minioFileId || fileId)!;
 
-    // Check if album exists
+    // The album has to exist and be one the caller may add to. Both answer the
+    // same, so album ids cannot be probed.
     const album = await Album.findById(albumId);
-    if (!album) {
+    if (!album || !canReachAlbum(album, { userId, userGroups }, 'write')) {
       throw new NotFoundError('Album not found');
     }
 
@@ -234,7 +254,8 @@ class PhotoService {
    */
   async getPhotosByAlbum(
     albumId: string,
-    filter: GetPhotosFilter
+    filter: GetPhotosFilter,
+    context: PhotoAccessContext
   ): Promise<{
     photos: PhotoWithSignedUrls[];
     pagination: {
@@ -246,9 +267,10 @@ class PhotoService {
   }> {
     const { page = 1, limit, search, tags, tagMatch = 'all' } = filter;
 
-    // Check if album exists
+    // Every photo in the page leaves with a signed URL, so an album the caller
+    // cannot reach answers as missing rather than as someone else's pictures.
     const album = await Album.findById(albumId);
-    if (!album) {
+    if (!album || !canReachAlbum(album, context, 'read')) {
       throw new NotFoundError('Album not found');
     }
 
@@ -302,7 +324,7 @@ class PhotoService {
     // Before enriching: the enrichment is what mints the signed URL, and that
     // is the thing worth not handing to a stranger.
     const albumId = (photo.albumId as unknown as { _id?: unknown })?._id ?? photo.albumId;
-    await assertPhotoReachable(albumId, context);
+    await assertPhotoReachable(albumId, context, 'read');
 
     return this.enrichPhotoWithSignedUrl(photo);
   }
@@ -333,7 +355,7 @@ class PhotoService {
       throw new NotFoundError('Photo not found');
     }
 
-    await assertPhotoReachable(photo.albumId, context);
+    await assertPhotoReachable(photo.albumId, context, 'write');
 
     const updateData: Partial<Pick<IPhoto, 'title' | 'description' | 'tags' | 'metadata'>> = {};
     if (input.title !== undefined) updateData.title = input.title?.trim();
@@ -353,7 +375,7 @@ class PhotoService {
    * a photo reuses the vocabulary already in the album instead of inventing a
    * near-duplicate of it.
    */
-  async getAlbumTags(albumId: string): Promise<TagCount[]> {
+  async getAlbumTags(albumId: string, context: PhotoAccessContext): Promise<TagCount[]> {
     // Checked before the lookup so a malformed id surfaces as a 404 rather
     // than a BSON cast error out of the aggregation below.
     if (!mongoose.Types.ObjectId.isValid(albumId)) {
@@ -361,7 +383,7 @@ class PhotoService {
     }
 
     const album = await Album.findById(albumId);
-    if (!album) {
+    if (!album || !canReachAlbum(album, context, 'read')) {
       throw new NotFoundError('Album not found');
     }
 
@@ -403,7 +425,8 @@ class PhotoService {
     const candidates = await Photo.find({ _id: { $in: requested } }).select('_id albumId').lean();
     const reachable = await reachableAlbumIds(
       [...new Set(candidates.map((photo) => String(photo.albumId)))],
-      context
+      context,
+      'write'
     );
     const photoIds = candidates
       .filter((photo) => reachable.has(String(photo.albumId)))
@@ -434,7 +457,7 @@ class PhotoService {
     // Hand back the album's refreshed tag list so the client can update its
     // filter row without a second round trip.
     const photo = await Photo.findById(photoIds[0]).select('albumId');
-    const tags = photo ? await this.getAlbumTags(photo.albumId.toString()) : [];
+    const tags = photo ? await this.getAlbumTags(photo.albumId.toString(), context) : [];
 
     return { matched, modified, tags };
   }
@@ -452,7 +475,7 @@ class PhotoService {
       throw new NotFoundError('Photo not found');
     }
 
-    await assertPhotoReachable(photo.albumId, context);
+    await assertPhotoReachable(photo.albumId, context, 'write');
 
     // Delete associated files
     try {

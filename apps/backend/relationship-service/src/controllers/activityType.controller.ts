@@ -1,9 +1,30 @@
 import { Request, Response } from 'express';
-import { NotFoundError, sendSuccess } from '@tumbaland/backend-core';
+import { ForbiddenError, NotFoundError, canAccessResource, sendSuccess } from '@tumbaland/backend-core';
 import * as ActivityTypeService from '../services/activityType.service';
 import { IActivityType } from '../models/ActivityType';
 import { createActivityTypeSchema } from '../validation/schemas';
 import { z } from 'zod';
+
+/**
+ * The type, if the caller may reach it: their own personal type or one in a
+ * group they belong to. Anything else answers as missing, so ids cannot be
+ * probed. Every by-id route goes through this; before it, any signed-in caller
+ * could read, rename or delete another account's type by naming its id.
+ */
+const findReachable = async (req: Request, id: string): Promise<IActivityType> => {
+  const type = await ActivityTypeService.getActivityTypeById(id);
+  if (!type || !canAccessResource(req.user!.id, type.userId, type.groupId, req.userGroups || [])) {
+    throw new NotFoundError('Activity type not found');
+  }
+  return type;
+};
+
+/** Refuses a write that would put a type into a group the caller is not in. */
+const assertGroupMember = (req: Request, groupId?: string | null): void => {
+  if (groupId && !(req.userGroups || []).includes(groupId)) {
+    throw new ForbiddenError('Access denied');
+  }
+};
 
 /**
  * Create a new activity type
@@ -11,6 +32,7 @@ import { z } from 'zod';
 export const createActivityType = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
   const body = req.body as z.infer<typeof createActivityTypeSchema>;
+  assertGroupMember(req, body.groupId);
   const typeData: Partial<IActivityType> = {
     ...body,
     userId: user.id
@@ -73,11 +95,7 @@ export const getActivityTypes = async (req: Request, res: Response): Promise<voi
  */
 export const getActivityTypeById = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const activityType = await ActivityTypeService.getActivityTypeById(id as string);
-
-  if (!activityType) {
-    throw new NotFoundError('Activity type not found');
-  }
+  const activityType = await findReachable(req, id as string);
 
   sendSuccess(res, activityType);
 };
@@ -88,6 +106,9 @@ export const getActivityTypeById = async (req: Request, res: Response): Promise<
 export const updateActivityType = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
   const updateData = req.body;
+
+  await findReachable(req, id as string);
+  assertGroupMember(req, updateData.groupId);
 
   const activityType = await ActivityTypeService.updateActivityType(id as string, updateData);
 
@@ -103,6 +124,7 @@ export const updateActivityType = async (req: Request, res: Response): Promise<v
  */
 export const deleteActivityType = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
+  await findReachable(req, id as string);
   const deleted = await ActivityTypeService.deleteActivityType(id as string);
 
   if (!deleted) {

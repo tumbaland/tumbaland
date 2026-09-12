@@ -114,7 +114,10 @@ export const setCoverPhoto = async (req: Request, res: Response): Promise<void> 
   const { id } = req.params;
   const { photoId } = req.body;
 
-  const album = await albumService.setCoverPhoto(id as string, photoId);
+  const album = await albumService.setCoverPhoto(id as string, photoId, {
+    userId: req.user!.id,
+    userGroups: req.userGroups || []
+  });
 
   sendSuccess(res, album, 'Cover photo set successfully');
 };
@@ -125,7 +128,10 @@ export const setCoverPhoto = async (req: Request, res: Response): Promise<void> 
 export const removeCoverPhoto = async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
 
-  const album = await albumService.removeCoverPhoto(id as string);
+  const album = await albumService.removeCoverPhoto(id as string, {
+    userId: req.user!.id,
+    userGroups: req.userGroups || []
+  });
 
   sendSuccess(res, album, 'Cover photo removed successfully');
 };

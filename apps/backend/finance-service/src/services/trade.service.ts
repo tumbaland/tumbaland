@@ -149,6 +149,11 @@ export const updateTrade = async (
     throw new ForbiddenError('Access denied');
   }
 
+  // Moving a trade into a group is writing into that group.
+  if (data.groupId && !userGroups.includes(data.groupId)) {
+    throw new ForbiddenError('Access denied');
+  }
+
   const type = (data.type || existing.type) as TradeType;
   assertConsistent({ ...existing.toObject(), ...data }, type);
 

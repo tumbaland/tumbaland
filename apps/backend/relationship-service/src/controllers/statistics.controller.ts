@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { BadRequestError } from '@tumbaland/backend-core';
+import { BadRequestError, ForbiddenError } from '@tumbaland/backend-core';
 import {
   getRelationshipStatistics,
   getMonthlyHours,
@@ -35,6 +35,12 @@ function scopeFilters(req: Request): StatisticsFilters {
   const filters: StatisticsFilters = { userId: req.user!.id };
 
   if (groupId) {
+    // A named group is not taken on trust. Milestones and trends were covered by
+    // the dashboard-settings read in front of them; every other statistics
+    // endpoint handed any group's figures to anyone who named it.
+    if (!(req.userGroups || []).includes(groupId as string)) {
+      throw new ForbiddenError('Access denied');
+    }
     filters.groupId = groupId as string;
   } else {
     filters.userGroupIds = req.userGroups || [];
