@@ -43,8 +43,8 @@ when the reason for wanting a tunnel is that nothing can reach the Pi at all.
    | `album-api.tumbaland.eu` | `account.tumbaland.eu` | `group.tumbaland.eu` |
    | `relationship.tumbaland.eu` | `file-service.tumbaland.eu` | `group-api.tumbaland.eu` |
    | `relationship-api.tumbaland.eu` | `api.tumbaland.eu` | `rabbitmq.tumbaland.eu` |
-   | `finance.tumbaland.eu` | `segmentation-api.tumbaland.eu` | `rabbitmq-metrics.tumbaland.eu` |
-   | `finance-api.tumbaland.eu` | `object-detection-api.tumbaland.eu` | `beszel.tumbaland.eu` |
+   | `finance.tumbaland.eu` | `mcp.tumbaland.eu` | `rabbitmq-metrics.tumbaland.eu` |
+   | `finance-api.tumbaland.eu` | | `beszel.tumbaland.eu` |
 
    Saving a hostname replaces its DNS record with a proxied CNAME to
    `<tunnel-id>.cfargotunnel.com`. A subdomain you forget falls through to the
@@ -85,15 +85,13 @@ when the reason for wanting a tunnel is that nothing can reach the Pi at all.
 
 - **Request bodies are capped at 100 MB** (Free/Pro; 200 MB Business). Every host
   here is configured at or below `client_max_body_size 50M`
-  (`file-service`, `segmentation-api`, `object-detection-api`; the rest inherit
-  nginx's 1 MB default), so nothing needs chunking today. A future feature that
+  (`file-service`; the rest inherit nginx's 1 MB default), so nothing needs chunking today. A future feature that
   raises a limit past 100 MB would have to upload in `Content-Range` chunks
   instead — the visin repo has a worked example of that.
 - **Cloudflare returns 524 if the origin takes longer than 100 s** to start
-  responding, and that is not raisable below Enterprise. Three hosts allow 300 s
-  upstream reads — `file-service`, `segmentation-api`, `object-detection-api`. ML
-  inference that runs past 100 s will surface as a 524 through the tunnel even
-  though it works directly on the LAN. If that happens, the fix is async: return a
+  responding, and that is not raisable below Enterprise. Two hosts allow 300 s
+  upstream reads — `file-service` and `mcp`. A request that runs past 100 s will
+  surface as a 524 through the tunnel even though it works directly on the LAN. If that happens, the fix is async: return a
   job id immediately and poll, rather than holding the request open.
 - **Stripe webhooks arrive through Cloudflare now** (`payment-api.tumbaland.eu`).
   Check that Bot Fight Mode is off, or add a WAF skip rule for the webhook path —

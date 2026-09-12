@@ -15,10 +15,10 @@ import { getMyEntitlements } from '../../services/entitlementsService';
  * visible to someone already deep inside the module it applies to, and the
  * first news of a ceiling was usually the refusal at it.
  *
- * **Only enforced limits appear here.** `aiJobs` and `seats` are metered but
- * nothing refuses on either (MONETIZATION.md 3.1, and the seats chokepoint is
- * unwired), and `seats` in particular would paint an existing group owner's
- * bar red for a rule no service applies. That is the same line the pricing
+ * **Only enforced limits appear here.** `aiJobs` counts nothing since AI photo
+ * analysis was removed, and `seats` is metered but nothing refuses on it (the
+ * seats chokepoint is unwired). `seats` in particular would paint an existing
+ * group owner's bar red for a rule no service applies. That is the same line the pricing
  * table draws: a number shown to a user is a claim the product is held to.
  */
 

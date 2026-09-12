@@ -36,9 +36,8 @@ npm workspaces monorepo with three workspace groups:
 | account-front | 3007 | | group-service | 5006 |
 | | | | mcp-service | 5007 |
 
-AI services (album-front's photo analysis features) run separately: segmentation on `8001`,
-object-detection on `8002`. See `.env.example` for the full variable list (`VITE_*` for frontends,
-plain names for backend services).
+See `.env.example` for the full variable list (`VITE_*` for frontends, plain names for backend
+services).
 
 ## Quick Start
 

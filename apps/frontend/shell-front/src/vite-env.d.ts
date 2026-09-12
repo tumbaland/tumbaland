@@ -16,8 +16,6 @@ interface ImportMetaEnv {
   readonly VITE_GROUP_FRONT_URL: string
   readonly VITE_GROUP_API_URL: string
   readonly VITE_ACCOUNT_FRONT_URL: string
-  readonly VITE_SEGMENTATION_API_URL: string
-  readonly VITE_OBJECT_DETECTION_API_URL: string
 }
 
 interface ImportMeta {

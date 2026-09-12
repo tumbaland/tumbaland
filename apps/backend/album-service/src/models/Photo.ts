@@ -37,21 +37,6 @@ export interface IPhoto extends Document {
       };
     };
   };
-  aiAnalysis?: {
-    objectDetection?: {
-      jobId: string;
-      analyzedAt: Date;
-      totalDetections: number;
-      processingTime: number;
-    };
-    segmentation?: {
-      jobId: string;
-      analyzedAt: Date;
-      totalMasks: number;
-      segmentationType: 'prompted' | 'automatic';
-      processingTime: number;
-    };
-  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -126,49 +111,6 @@ const PhotoSchema: Schema = new Schema(
           focalLength: String
         }
       }
-    },
-    aiAnalysis: {
-      objectDetection: {
-        jobId: {
-          type: String,
-          required: false
-        },
-        analyzedAt: {
-          type: Date,
-          required: false
-        },
-        totalDetections: {
-          type: Number,
-          required: false
-        },
-        processingTime: {
-          type: Number,
-          required: false
-        }
-      },
-      segmentation: {
-        jobId: {
-          type: String,
-          required: false
-        },
-        analyzedAt: {
-          type: Date,
-          required: false
-        },
-        totalMasks: {
-          type: Number,
-          required: false
-        },
-        segmentationType: {
-          type: String,
-          enum: ['prompted', 'automatic'],
-          required: false
-        },
-        processingTime: {
-          type: Number,
-          required: false
-        }
-      }
     }
   },
   {
@@ -181,6 +123,6 @@ PhotoSchema.index({ albumId: 1, createdAt: -1 });
 PhotoSchema.index({ title: 'text', description: 'text', tags: 'text' });
 
 // Attribution and a change trail; see auditPlugin.
-PhotoSchema.plugin(auditPlugin, { resource: 'photo', redact: ['metadata', 'aiAnalysis'] });
+PhotoSchema.plugin(auditPlugin, { resource: 'photo', redact: ['metadata'] });
 
 export default mongoose.model<IPhoto>('Photo', PhotoSchema);

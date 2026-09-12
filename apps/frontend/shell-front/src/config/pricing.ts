@@ -79,15 +79,14 @@ function formatBytes(bytes: number): string {
  * **Two enforced-elsewhere rules decide what is *absent* here**, and both are
  * deliberate omissions rather than oversights:
  *
- * - `aiJobs` is not advertised. There is no server-side dispatch path to meter
- *   it (MONETIZATION.md 3.1) — the browser calls the AI services directly — so
- *   a number on the card would be a claim nothing holds the product to.
+ * - `aiJobs` is not advertised. The AI photo analysis it was defined for has
+ *   been removed, so the meter counts nothing and a number on the card would be
+ *   a claim nothing holds the product to.
  * - `cleanExport` is not advertised. Collage export is entirely client-side and
  *   no watermarking code exists (3.0), so the free tier's "watermarked" line
- *   described something that never happened.
- *
- * Both return the moment their chokepoint lands. Advertising them meanwhile is
- * the part with legal exposure, not the missing feature.
+ *   described something that never happened. It returns the moment its
+ *   chokepoint lands; advertising it meanwhile is the part with legal exposure,
+ *   not the missing feature.
  */
 export function limitLinesFor(limits: PlanLimits): LimitLine[] {
   const lines: LimitLine[] = [];

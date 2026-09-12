@@ -10,12 +10,6 @@ vi.mock('react-router', async (importOriginal) => {
   return { ...actual, useNavigate: () => mockedNavigate };
 });
 
-// Phase 7 components: not the target of this page test, and each does its
-// own AI-service polling — stub them so this test stays scoped to
-// PhotoDetailPage's own routing/tab/dialog logic.
-vi.mock('../components/ObjectDetectionView', () => ({ default: () => <div>object detection view</div> }));
-vi.mock('../components/SegmentationView', () => ({ default: () => <div>segmentation view</div> }));
-
 vi.mock('../hooks/usePhotos', () => ({ usePhotos: vi.fn() }));
 vi.mock('../hooks/useAlbumTags', () => ({
   useAlbumTags: () => ({ tags: [], loading: false, error: null }),
@@ -80,35 +74,22 @@ it('shows an error and a back link when the photo fails to load', async () => {
   expect(mockedNavigate).toHaveBeenCalledWith('/albums/album-1');
 });
 
-it('renders the photo header and basic info tab once loaded', async () => {
+it('renders the photo header once loaded', async () => {
   renderPage();
 
-  expect(await screen.findByText('Basic Info')).toBeInTheDocument();
-  expect(screen.getByText('Object Detection')).toBeInTheDocument();
-  expect(screen.getByText('Segmentation')).toBeInTheDocument();
-});
-
-it('switches to the Object Detection and Segmentation tabs', async () => {
-  renderPage();
-  await screen.findByText('Basic Info');
-
-  await userEvent.click(screen.getByRole('tab', { name: /object detection/i }));
-  expect(screen.getByText('object detection view')).toBeVisible();
-
-  await userEvent.click(screen.getByRole('tab', { name: /segmentation/i }));
-  expect(screen.getByText('segmentation view')).toBeVisible();
+  expect((await screen.findAllByText('Middle')).length).toBeGreaterThan(0);
 });
 
 it('computes previous/next from the unpaginated album photo list', async () => {
   renderPage('photo-2');
-  await screen.findByText('Basic Info');
+  await screen.findByRole('button', { name: /previous photo/i });
 
   expect(mockedUsePhotos).toHaveBeenCalledWith('album-1');
 });
 
 it('navigates to the previous/next photo via the header controls', async () => {
   renderPage('photo-2');
-  await screen.findByText('Basic Info');
+  await screen.findByRole('button', { name: /previous photo/i });
 
   await userEvent.click(screen.getByRole('button', { name: /previous photo/i }));
   expect(mockedNavigate).toHaveBeenCalledWith('/albums/album-1/photos/photo-1');
@@ -119,7 +100,7 @@ it('navigates to the previous/next photo via the header controls', async () => {
 
 it('has no previous/next when at the start/end of the album', async () => {
   renderPage('photo-1');
-  await screen.findByText('Basic Info');
+  await screen.findByRole('button', { name: /previous photo/i });
 
   expect(screen.getByRole('button', { name: /previous photo/i })).toBeDisabled();
 });
@@ -130,7 +111,7 @@ it('opens the edit dialog and saves changes', async () => {
   (photoService.updatePhoto as ReturnType<typeof vi.fn>).mockResolvedValue(updatedPhoto);
 
   renderPage('photo-2');
-  await screen.findByText('Basic Info');
+  await screen.findByRole('button', { name: /previous photo/i });
 
   await userEvent.click(screen.getByRole('button', { name: /^edit$/i }));
   const titleInput = screen.getByDisplayValue('Middle');
@@ -147,7 +128,7 @@ it('deletes the photo and navigates back to the album', async () => {
   (photoService.deletePhoto as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
   renderPage('photo-2');
-  await screen.findByText('Basic Info');
+  await screen.findByRole('button', { name: /previous photo/i });
 
   await userEvent.click(screen.getByRole('button', { name: /^delete$/i }));
   await userEvent.click(screen.getByRole('button', { name: /delete photo/i }));

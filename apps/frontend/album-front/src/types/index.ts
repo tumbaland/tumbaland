@@ -72,21 +72,6 @@ export interface Photo {
   // (e.g. a photo created before this field existed) serializes as absent
   // from the API response, not as `{}` — see PhotoViewer's buildDetails.
   metadata?: PhotoMetadata;
-  aiAnalysis?: {
-    objectDetection?: {
-      jobId: string;
-      analyzedAt: string;
-      totalDetections: number;
-      processingTime: number;
-    };
-    segmentation?: {
-      jobId: string;
-      analyzedAt: string;
-      totalMasks: number;
-      segmentationType: 'automatic' | 'prompted' | 'error';
-      processingTime: number;
-    };
-  };
   createdAt: string;
   updatedAt: string;
 }
@@ -195,13 +180,6 @@ export interface AlbumStatistics {
     tag: string;
     count: number;
   }>;
-  aiAnalysis: {
-    totalPhotos: number;
-    analyzedPhotos: number;
-    analysisRate: number;
-    totalDetections: number;
-    totalMasks: number;
-  };
   groups: Array<{
     groupId: string;
     albumCount: number;

@@ -33,7 +33,7 @@ function freeTierAnswer(free?: CatalogPlan): string {
 /**
  * The honest-limits explanation, cut into questions.
  *
- * As three paragraphs it asked a stranger to read about our GPU bill before
+ * As three paragraphs it asked a stranger to read about our storage bill before
  * they knew what the product was. As an FAQ it answers the same things at the
  * point someone is deciding whether to sign up — and since the support section
  * now sits *below* this one, these answers are what a visitor has read before
@@ -48,7 +48,7 @@ function freeTierAnswer(free?: CatalogPlan): string {
 const FAQS: Faq[] = [
   {
     q: 'Why are there limits at all?',
-    a: 'Three things cost money every time they are used: storing photos, running the AI analysis on a GPU, and market data. Our data provider allows a fixed number of price lookups per day for the whole service, so each tracked ticker is genuinely finite. The limits are what keep this free for everyone. Without them the first heavy account closes it for the rest.'
+    a: 'Two things cost money every time they are used: storing photos and market data. Our data provider allows a fixed number of price lookups per day for the whole service, so each tracked ticker is genuinely finite. The limits are what keep this free for everyone. Without them the first heavy account closes it for the rest.'
   },
   {
     q: 'What happens when I hit a limit?',

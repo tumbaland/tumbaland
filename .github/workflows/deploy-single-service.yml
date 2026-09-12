@@ -129,8 +129,6 @@ jobs:
           echo "RELATIONSHIP_INTERNAL_URL=${{ vars.RELATIONSHIP_INTERNAL_URL }}" >> .env.app
           echo "MCP_PUBLIC_URL=${{ vars.MCP_PUBLIC_URL }}" >> .env.app
           echo "PUBLIC_API_URL=${{ vars.PUBLIC_API_URL }}" >> .env.app
-          echo "OBJECT_DETECTION_API_URL=${{ vars.OBJECT_DETECTION_API_URL }}" >> .env.app
-          echo "SEGMENTATION_API_URL=${{ vars.SEGMENTATION_API_URL }}" >> .env.app
           echo "PAYMENT_API_URL=${{ vars.PAYMENT_API_URL }}" >> .env.app
           echo "PAYMENT_INTERNAL_URL=${{ vars.PAYMENT_INTERNAL_URL }}" >> .env.app
           echo "STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}" >> .env.app

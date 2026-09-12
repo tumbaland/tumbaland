@@ -54,24 +54,6 @@ export const albumService = {
     return response;
   },
 
-  // Update photo AI analysis info
-  async updatePhotoAIAnalysis(photoId: string, analysis: {
-    analysisType: string;
-    jobId: string;
-    totalMasks?: number;
-    segmentationType?: string;
-    processingTime?: number;
-  }): Promise<ApiResponse<unknown>> {
-    const response = await albumApi.put<ApiResponse<unknown>>(`/photos/${photoId}/ai-analysis`, {
-      analysisType: analysis.analysisType,
-      jobId: analysis.jobId,
-      totalMasks: analysis.totalMasks,
-      segmentationType: analysis.segmentationType,
-      processingTime: analysis.processingTime
-    });
-    return response;
-  },
-
   // Get album statistics for dashboard
   async getAlbumStatistics(params?: {
     groupId?: string;

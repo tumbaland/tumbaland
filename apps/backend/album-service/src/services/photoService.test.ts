@@ -359,63 +359,6 @@ describe('deletePhoto', () => {
   });
 });
 
-describe('updatePhotoAIAnalysis', () => {
-  it('throws NotFoundError when the photo does not exist', async () => {
-    mockedFindById.mockResolvedValue(null);
-    await expect(photoService.updatePhotoAIAnalysis('p1', {})).rejects.toMatchObject({ name: 'NotFoundError' });
-  });
-
-  it('nests the provided analysis fields under aiAnalysis, matching the schema', async () => {
-    mockedFindById.mockResolvedValue({ albumId: 'a1', _id: 'p1' });
-    mockedFindByIdAndUpdate.mockResolvedValue({ _id: 'p1' });
-
-    await photoService.updatePhotoAIAnalysis('p1', { objectDetection: { jobId: 'j1' } as any });
-
-    expect(mockedFindByIdAndUpdate).toHaveBeenCalledWith(
-      'p1',
-      { aiAnalysis: { objectDetection: { jobId: 'j1' } } },
-      { new: true }
-    );
-  });
-
-  it('merges with the existing aiAnalysis so setting one field does not clear the other', async () => {
-    mockedFindById.mockResolvedValue({ albumId: 'a1', _id: 'p1', aiAnalysis: { segmentation: { jobId: 's1' } } });
-    mockedFindByIdAndUpdate.mockResolvedValue({ _id: 'p1' });
-
-    await photoService.updatePhotoAIAnalysis('p1', { objectDetection: { jobId: 'j1' } as any });
-
-    expect(mockedFindByIdAndUpdate).toHaveBeenCalledWith(
-      'p1',
-      { aiAnalysis: { segmentation: { jobId: 's1' }, objectDetection: { jobId: 'j1' } } },
-      { new: true }
-    );
-  });
-
-  it('returns the existing photo without updating when neither field is provided', async () => {
-    const existingPhoto = { _id: 'p1' };
-    mockedFindById.mockResolvedValue(existingPhoto);
-
-    const result = await photoService.updatePhotoAIAnalysis('p1', {});
-
-    expect(mockedFindByIdAndUpdate).not.toHaveBeenCalled();
-    expect(result).toBe(existingPhoto);
-  });
-});
-
-describe('getPhotosForAIAnalysis', () => {
-  it('limits and sorts by createdAt descending', async () => {
-    const sort = jest.fn().mockResolvedValue([{ _id: 'p1' }]);
-    const limit = jest.fn().mockReturnValue({ sort });
-    mockedFind.mockReturnValue({ limit });
-
-    const result = await photoService.getPhotosForAIAnalysis('a1', 25);
-
-    expect(limit).toHaveBeenCalledWith(25);
-    expect(result).toEqual([{ _id: 'p1' }]);
-  });
-});
-
-
 describe('getAlbumTags', () => {
   it('throws NotFoundError when the album does not exist', async () => {
     mockedAlbumFindById.mockResolvedValue(null);

@@ -55,7 +55,6 @@ export interface PhotoWithSignedUrls {
   height?: number;
   tags: string[];
   metadata: IPhoto['metadata'];
-  aiAnalysis?: IPhoto['aiAnalysis'];
   createdAt: Date;
   updatedAt: Date;
   signedUrl?: string;
@@ -147,8 +146,6 @@ export const normalizeTags = (tags: string[] = []): string[] => {
   }
   return Array.from(seen);
 };
-
-export type AIAnalysisUpdate = NonNullable<IPhoto['aiAnalysis']>;
 
 class PhotoService {
   /**
@@ -483,43 +480,6 @@ class PhotoService {
     }
 
     return photo;
-  }
-
-  /**
-   * Update photo AI analysis results
-   */
-  async updatePhotoAIAnalysis(photoId: string, analysis: AIAnalysisUpdate): Promise<IPhoto | null> {
-    const photo = await Photo.findById(photoId);
-    if (!photo) {
-      throw new NotFoundError('Photo not found');
-    }
-
-    if (!analysis.objectDetection && !analysis.segmentation) {
-      return photo;
-    }
-
-    // aiAnalysis.objectDetection/segmentation are nested fields (see Photo schema);
-    // merge with the photo's existing aiAnalysis so setting one doesn't clear the other.
-    const updateData: Pick<IPhoto, 'aiAnalysis'> = {
-      aiAnalysis: {
-        ...photo.aiAnalysis,
-        ...(analysis.objectDetection ? { objectDetection: analysis.objectDetection } : {}),
-        ...(analysis.segmentation ? { segmentation: analysis.segmentation } : {})
-      }
-    };
-
-    return Photo.findByIdAndUpdate(photoId, updateData, { new: true });
-  }
-
-  /**
-   * Get photos for AI analysis (batch retrieval)
-   */
-  async getPhotosForAIAnalysis(albumId: string, limit: number = 50): Promise<IPhoto[]> {
-    const photos = await Photo.find({ albumId })
-      .limit(limit)
-      .sort({ createdAt: -1 });
-
-    return photos;
   }
 
   /**

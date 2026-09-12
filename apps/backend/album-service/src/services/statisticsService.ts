@@ -47,13 +47,6 @@ interface TagStatRow {
   count: number;
 }
 
-interface AIAnalysisStats {
-  totalPhotos: number;
-  analyzedPhotos: number;
-  totalDetections: number;
-  totalMasks: number;
-}
-
 interface GroupStatRow {
   _id: string;
   albumCount: number;
@@ -72,13 +65,6 @@ interface AlbumStatisticsResult {
     photosUploaded: { date: string; count: number }[];
   };
   tags: { tag: string; count: number }[];
-  aiAnalysis: {
-    totalPhotos: number;
-    analyzedPhotos: number;
-    analysisRate: number;
-    totalDetections: number;
-    totalMasks: number;
-  };
   groups: { groupId: string; albumCount: number; photoCount: number }[];
   albums: { albumId: string; name: string; totalSize: number; photoCount: number }[];
 }
@@ -143,9 +129,6 @@ class StatisticsService {
     // Get popular tags (top 10)
     const tagStats = await this.getPopularTags(albumMatchQuery);
 
-    // Get AI analysis statistics
-    const aiStats = await this.getAIAnalysisStats(photoMatchQuery);
-
     // Get albums by group (if no specific group filter)
     let groupStats: GroupStatRow[] = [];
     if (!groupId) {
@@ -175,13 +158,6 @@ class StatisticsService {
         tag: tag._id,
         count: tag.count
       })),
-      aiAnalysis: {
-        totalPhotos: aiStats.totalPhotos,
-        analyzedPhotos: aiStats.analyzedPhotos,
-        analysisRate: aiStats.totalPhotos > 0 ? (aiStats.analyzedPhotos / aiStats.totalPhotos) * 100 : 0,
-        totalDetections: aiStats.totalDetections,
-        totalMasks: aiStats.totalMasks
-      },
       groups: groupStats.map(group => ({
         groupId: group._id,
         albumCount: group.albumCount,
@@ -306,39 +282,6 @@ class StatisticsService {
       { $sort: { count: -1 } },
       { $limit: 10 }
     ]);
-  }
-
-  /**
-   * Private helper: Get AI analysis statistics
-   */
-  private async getAIAnalysisStats(photoMatchQuery: PhotoMatchQuery): Promise<AIAnalysisStats> {
-    const aiAnalysisStats = await Photo.aggregate<AIAnalysisStats>([
-      { $match: photoMatchQuery },
-      {
-        $group: {
-          _id: null,
-          totalPhotos: { $sum: 1 },
-          analyzedPhotos: {
-            $sum: {
-              $cond: [
-                { $or: ['$aiAnalysis.objectDetection', '$aiAnalysis.segmentation'] },
-                1,
-                0
-              ]
-            }
-          },
-          totalDetections: { $sum: { $ifNull: ['$aiAnalysis.objectDetection.totalDetections', 0] } },
-          totalMasks: { $sum: { $ifNull: ['$aiAnalysis.segmentation.totalMasks', 0] } }
-        }
-      }
-    ]);
-
-    return aiAnalysisStats[0] || {
-      totalPhotos: 0,
-      analyzedPhotos: 0,
-      totalDetections: 0,
-      totalMasks: 0
-    };
   }
 
   /**

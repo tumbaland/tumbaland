@@ -88,22 +88,6 @@ it('gets an upload signed url', async () => {
   });
 });
 
-it('updates AI analysis metadata for a photo', async () => {
-  const photo = makePhoto();
-  mockFetchOnce({ success: true, data: photo });
-
-  await photoService.updatePhotoAIAnalysis('photo-1', {
-    analysisType: 'objectDetection',
-    resultId: 'result-1',
-    totalDetections: 3,
-    processingTime: 1200
-  });
-
-  const [url, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-  expect(String(url)).toContain('/photos/photo-1/ai-analysis');
-  expect(init).toMatchObject({ method: 'PUT' });
-});
-
 describe('uploadFileToSignedUrl', () => {
   it('PUTs the file to the signed URL with its content type', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ ok: true, status: 200 } as Response);

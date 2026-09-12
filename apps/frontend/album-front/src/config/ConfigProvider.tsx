@@ -4,8 +4,6 @@ export interface AppConfig {
   ALBUM_API_URL?: string;
   AUTH_SERVICE_URL?: string;
   AUTH_FRONT_URL?: string;
-  SEGMENTATION_API_URL?: string;
-  OBJECT_DETECTION_API_URL?: string;
   GROUP_API_URL?: string;
   ALBUM_FRONT_URL?: string;
   ACCOUNT_FRONT_URL?: string;
@@ -23,8 +21,6 @@ const factory = createConfigProvider<AppConfig>({
     ALBUM_API_URL: import.meta.env.VITE_ALBUM_API_URL,
     AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL,
     AUTH_FRONT_URL: import.meta.env.VITE_AUTH_FRONT_URL,
-    SEGMENTATION_API_URL: import.meta.env.VITE_SEGMENTATION_API_URL,
-    OBJECT_DETECTION_API_URL: import.meta.env.VITE_OBJECT_DETECTION_API_URL,
     GROUP_API_URL: import.meta.env.VITE_GROUP_API_URL,
     ALBUM_FRONT_URL: import.meta.env.VITE_ALBUM_FRONT_URL,
     ACCOUNT_FRONT_URL: import.meta.env.VITE_ACCOUNT_FRONT_URL,

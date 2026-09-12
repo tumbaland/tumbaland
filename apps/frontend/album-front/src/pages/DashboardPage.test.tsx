@@ -39,7 +39,6 @@ const statistics = {
   overview: { totalAlbums: 3, totalPhotos: 100, totalStorage: 1024, averagePhotoSize: 100 },
   timeSeries: { albumsCreated: [], photosUploaded: [] },
   tags: [],
-  aiAnalysis: { totalPhotos: 100, analyzedPhotos: 10, analysisRate: 10, totalDetections: 1, totalMasks: 1 },
   groups: [],
   albums: [{ albumId: 'a1', name: 'Trip', totalSize: 512, photoCount: 3 }]
 };

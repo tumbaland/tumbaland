@@ -72,8 +72,8 @@ it('shows usage without a ceiling on an unlimited plan', async () => {
 });
 
 it('advertises no meter that nothing enforces', async () => {
-  // `aiJobs` has no dispatch chokepoint and `seats` is metered but unwired, so
-  // neither is a claim this card is allowed to make (MONETIZATION.md 3.1).
+  // `aiJobs` counts nothing since AI analysis was removed and `seats` is metered
+  // but unwired, so neither is a claim this card is allowed to make.
   renderCard();
   await screen.findByText('512 MB of 1 GB');
 

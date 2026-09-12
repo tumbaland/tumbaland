@@ -201,34 +201,6 @@ export const getUploadSignedUrlRequest = async (req: Request, res: Response): Pr
 };
 
 /**
- * Update photo with AI analysis results
- */
-export const updatePhotoAIAnalysis = async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
-  const { objectDetection, segmentation } = req.body;
-
-  const photo = await photoService.updatePhotoAIAnalysis(id as string, {
-    objectDetection,
-    segmentation
-  });
-
-  sendSuccess(res, photo);
-};
-
-/**
- * Get photos that need AI analysis
- */
-export const getPhotosForAIAnalysis = async (req: Request, res: Response): Promise<void> => {
-  const { albumId } = req.params;
-  const { limit = 50 } = req.query;
-
-  const photos = await photoService.getPhotosForAIAnalysis(albumId as string, Number(limit));
-
-  countRead(res, photos.length);
-  sendSuccess(res, photos);
-};
-
-/**
  * Get photo by minioFileId (for file service integration)
  */
 export const getPhotoByFileId = async (req: Request, res: Response): Promise<void> => {

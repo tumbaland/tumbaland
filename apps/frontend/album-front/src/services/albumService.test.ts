@@ -82,31 +82,6 @@ describe('albumService', () => {
     expect(init).toMatchObject({ method: 'DELETE' });
   });
 
-  it('updates a photo\'s AI analysis info', async () => {
-    mockFetchOnce({ success: true, data: {} });
-
-    await albumService.updatePhotoAIAnalysis('photo-1', {
-      analysisType: 'segmentation',
-      jobId: 'job-1',
-      totalMasks: 5,
-      segmentationType: 'automatic',
-      processingTime: 800
-    });
-
-    const [url, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-    expect(String(url)).toContain('/photos/photo-1/ai-analysis');
-    expect(init).toMatchObject({
-      method: 'PUT',
-      body: JSON.stringify({
-        analysisType: 'segmentation',
-        jobId: 'job-1',
-        totalMasks: 5,
-        segmentationType: 'automatic',
-        processingTime: 800
-      })
-    });
-  });
-
   it('fetches album statistics for the dashboard', async () => {
     mockFetchOnce({ success: true, data: { overview: { totalAlbums: 3 } } });
 

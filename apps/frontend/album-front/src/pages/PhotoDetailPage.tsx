@@ -6,15 +6,8 @@ import {
   Container,
   Button,
   Alert,
-  CircularProgress,
-  Tab,
-  Tabs
+  CircularProgress
 } from '@mui/material';
-import {
-  SmartToy as SmartToyIcon,
-  ViewInAr as ViewInArIcon,
-  Info as InfoIcon
-} from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router';
 import { Photo, Album } from '../types';
 import { albumService } from '../services/albumService';
@@ -24,11 +17,8 @@ import { useAlbumTags, albumTagKeys } from '../hooks/useAlbumTags';
 import { downloadPhoto } from '../utils/downloadPhoto';
 import EditPhotoDialog from '../components/EditPhotoDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
-import SegmentationView from '../components/SegmentationView';
-import ObjectDetectionView from '../components/ObjectDetectionView';
 import PhotoDetailHeader from '../components/photo-detail/PhotoDetailHeader';
 import PhotoBasicInfo from '../components/photo-detail/PhotoBasicInfo';
-import TabPanel from '../components/photo-detail/TabPanel';
 
 const PhotoDetailPage: React.FC = () => {
   const { albumId, photoId } = useParams<{ albumId: string; photoId: string }>();
@@ -40,7 +30,6 @@ const PhotoDetailPage: React.FC = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [tabValue, setTabValue] = useState(0);
 
   const queryClient = useQueryClient();
 
@@ -80,17 +69,6 @@ const PhotoDetailPage: React.FC = () => {
     };
   }, [previousPhoto, nextPhoto, showEditDialog, showDeleteDialog, navigate, albumId]);
 
-  // Refetch photo after analysis completes
-  const refetchPhoto = async () => {
-    if (!photoId) return;
-    try {
-      const photoResponse = await photoService.getPhotoById(photoId);
-      setPhoto(photoResponse);
-    } catch (err) {
-      setError('Failed to reload photo after analysis');
-    }
-  };
-
   useEffect(() => {
     const fetchData = async () => {
       if (!albumId || !photoId) return;
@@ -111,10 +89,6 @@ const PhotoDetailPage: React.FC = () => {
     };
     fetchData();
   }, [albumId, photoId]);
-
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
 
   const handleEdit = () => setShowEditDialog(true);
   const handleDelete = () => setShowDeleteDialog(true);
@@ -224,7 +198,7 @@ const PhotoDetailPage: React.FC = () => {
         }
       />
 
-      {/* Main Content with Tabs */}
+      {/* Main Content */}
       <Box
         sx={{
           background: 'rgba(255, 255, 255, 0.5)',
@@ -233,55 +207,19 @@ const PhotoDetailPage: React.FC = () => {
           borderRadius: 4,
           border: '1px solid rgba(255, 255, 255, 0.4)',
           boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          p: { xs: 2, sm: 3 }
         }}
       >
-        {/* Main Tabs */}
-        <Box sx={{ borderBottom: 1, borderColor: 'rgba(0,0,0,0.06)' }}>
-          <Tabs 
-            value={tabValue} 
-            onChange={handleTabChange}
-            variant="scrollable"
-            scrollButtons="auto"
-            sx={{
-              '& .MuiTab-root': {
-                textTransform: 'none',
-                fontWeight: 600,
-                fontSize: '1rem',
-                minHeight: 64
-              }
-            }}
-          >
-            <Tab label="Basic Info" icon={<InfoIcon />} iconPosition="start" />
-            <Tab label="Object Detection" icon={<SmartToyIcon />} iconPosition="start" />
-            <Tab label="Segmentation" icon={<ViewInArIcon />} iconPosition="start" />
-          </Tabs>
-        </Box>
-        <TabPanel value={tabValue} index={0}>
-          <PhotoBasicInfo
-            photo={photo}
-            formatFileSize={formatFileSize}
-            formatDate={formatDate}
-            onSwipeNext={nextPhoto ? handleNextPhoto : undefined}
-            onSwipePrevious={previousPhoto ? handlePreviousPhoto : undefined}
-            tagSuggestions={albumTags}
-            onSaveTags={handleSaveTags}
-          />
-        </TabPanel>
-        <TabPanel value={tabValue} index={1}>
-          <ObjectDetectionView
-            photo={photo}
-            formatDate={formatDate}
-            onAnalysisComplete={refetchPhoto}
-          />
-        </TabPanel>
-        <TabPanel value={tabValue} index={2}>
-          <SegmentationView
-            photo={photo}
-            formatDate={formatDate}
-            onAnalysisComplete={refetchPhoto}
-          />
-        </TabPanel>
+        <PhotoBasicInfo
+          photo={photo}
+          formatFileSize={formatFileSize}
+          formatDate={formatDate}
+          onSwipeNext={nextPhoto ? handleNextPhoto : undefined}
+          onSwipePrevious={previousPhoto ? handlePreviousPhoto : undefined}
+          tagSuggestions={albumTags}
+          onSaveTags={handleSaveTags}
+        />
       </Box>
       {/* Edit Dialog */}
       <EditPhotoDialog

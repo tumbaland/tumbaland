@@ -149,9 +149,9 @@ describe('limitLinesFor', () => {
   });
 
   it('advertises neither AI analysis nor clean export, because nothing enforces them', () => {
-    // MONETIZATION.md 3.0 and 3.1: the browser calls the AI services directly
-    // and no watermarking code exists, so a number on the card would be a claim
-    // the product cannot hold itself to.
+    // AI analysis was removed, so `aiJobs` counts nothing, and no watermarking
+    // code exists (MONETIZATION.md 3.0), so a number on the card would be a
+    // claim the product cannot hold itself to.
     const keys = limitLinesFor(limits({ aiJobs: 600, cleanExport: true })).map((l) => l.key);
 
     expect(keys).not.toContain('ai');

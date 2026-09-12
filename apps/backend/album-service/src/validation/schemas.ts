@@ -110,13 +110,6 @@ export const uploadSignedUrlSchema = z.object({
   sizeBytes: z.number().int().positive('sizeBytes is required')
 });
 
-export const updatePhotoAIAnalysisSchema = z.object({
-  objectDetection: z.record(z.string(), z.unknown()).optional(),
-  segmentation: z.record(z.string(), z.unknown()).optional()
-}).refine((data) => data.objectDetection || data.segmentation, {
-  message: 'Must provide objectDetection or segmentation data'
-});
-
 export const createCollageSchema = z.object({
   title: z.string().min(1, 'title is required'),
   config: z.record(z.string(), z.unknown()),

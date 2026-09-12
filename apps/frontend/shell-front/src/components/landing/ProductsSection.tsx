@@ -25,8 +25,8 @@ export const PRODUCTS: Product[] = [
     color: '#3b82f6',
     icon: AlbumIcon,
     headline: 'Photos you can actually find',
-    lede: 'AI tagging, fast search, and a collage editor with full-resolution export.',
-    points: ['Albums, tags and search', 'AI labels what is in each photo', 'Collages that export print-ready']
+    lede: 'Search and tag your photos, and make collages that export at full resolution.',
+    points: ['Albums, tags and search', 'Photos from this day in past years', 'Collages that export print-ready']
   },
   {
     key: 'finance',

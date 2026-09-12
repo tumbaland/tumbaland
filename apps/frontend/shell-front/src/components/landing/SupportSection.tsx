@@ -297,8 +297,8 @@ export function SupportSection({ onChoosePlan, plans, loading, failed }: Support
         }}
       >
         No upsell after this, and nothing changes for anyone who never supports. Support covers the
-        three bills the limits come from: photo storage, GPU time, and the market data key. Amounts
-        include VAT where applicable.
+        two bills the limits come from: photo storage and the market data key. Amounts include VAT
+        where applicable.
       </Typography>
     </Box>
   );

@@ -24,7 +24,6 @@ interface PaymentRequiredBody {
 /** What each meter is called in a sentence. Falls back to the raw key. */
 const METER_LABELS: Record<string, string> = {
   storageBytes: 'storage',
-  aiJobs: 'AI analyses',
   trackedTickers: 'tracked tickers',
   seats: 'group seats'
 };

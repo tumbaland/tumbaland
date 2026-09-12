@@ -11,8 +11,6 @@ jest.mock('../services/photoService', () => ({
     getPhotoById: jest.fn(),
     updatePhoto: jest.fn(),
     deletePhoto: jest.fn(),
-    updatePhotoAIAnalysis: jest.fn(),
-    getPhotosForAIAnalysis: jest.fn(),
     getPhotoByFileId: jest.fn()
   }
 }));
@@ -50,8 +48,6 @@ import {
   updatePhoto,
   deletePhoto,
   getUploadSignedUrlRequest,
-  updatePhotoAIAnalysis,
-  getPhotosForAIAnalysis,
   getPhotoByFileId,
   getMemories
 } from './photoController';
@@ -320,31 +316,6 @@ describe('getUploadSignedUrlRequest', () => {
     ).rejects.toMatchObject({ statusCode: 402 });
 
     expect(mockedGetUploadSignedUrl).not.toHaveBeenCalled();
-  });
-});
-
-describe('updatePhotoAIAnalysis', () => {
-  it('updates the AI analysis fields', async () => {
-    mockedPhotoService.updatePhotoAIAnalysis.mockResolvedValue({ _id: 'p1' } as any);
-    const res = mockRes();
-
-    await updatePhotoAIAnalysis(baseReq({ params: { id: 'p1' }, body: { objectDetection: { jobId: 'j1' } } }), res);
-
-    expect(mockedPhotoService.updatePhotoAIAnalysis).toHaveBeenCalledWith(
-      'p1',
-      expect.objectContaining({ objectDetection: { jobId: 'j1' } })
-    );
-  });
-});
-
-describe('getPhotosForAIAnalysis', () => {
-  it('defaults limit to 50', async () => {
-    mockedPhotoService.getPhotosForAIAnalysis.mockResolvedValue([]);
-    const res = mockRes();
-
-    await getPhotosForAIAnalysis(baseReq({ params: { albumId: 'a1' } }), res);
-
-    expect(mockedPhotoService.getPhotosForAIAnalysis).toHaveBeenCalledWith('a1', 50);
   });
 });
 

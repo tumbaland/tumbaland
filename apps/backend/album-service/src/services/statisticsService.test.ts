@@ -71,31 +71,27 @@ describe('getAlbumStatistics', () => {
       .mockResolvedValueOnce([]) // album creation stats
       .mockResolvedValueOnce([]) // popular tags
       .mockResolvedValueOnce([{ _id: 'personal', albumCount: 3, photoCount: 0 }]); // group stats
-    mockedPhotoAggregate
-      .mockResolvedValueOnce([]) // photo upload stats
-      .mockResolvedValueOnce([{ totalPhotos: 2, analyzedPhotos: 1, totalDetections: 3, totalMasks: 0 }]); // ai stats
+    mockedPhotoAggregate.mockResolvedValueOnce([]); // photo upload stats
 
     const result = await statisticsService.getAlbumStatistics({}, { userId: 'u1', userGroups: [] });
 
     expect(result.overview.totalStorage).toBe(1000);
     expect(result.overview.averagePhotoSize).toBe(500);
-    expect(result.aiAnalysis).toMatchObject({ totalPhotos: 2, analyzedPhotos: 1, analysisRate: 50 });
     expect(result.groups).toEqual([{ groupId: 'personal', albumCount: 3, photoCount: 0 }]);
   });
 
-  it('formats time-series and tag data, and defaults an empty analysisRate when there are no photos', async () => {
+  it('formats time-series and tag data', async () => {
     mockedAlbumAggregate
       .mockResolvedValueOnce([]) // storage stats
       .mockResolvedValueOnce([{ _id: { year: 2026, month: 3 }, count: 4 }]) // album creation stats
       .mockResolvedValueOnce([{ _id: 'vacation', count: 5 }]) // popular tags
       .mockResolvedValueOnce([]); // group stats
-    mockedPhotoAggregate.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    mockedPhotoAggregate.mockResolvedValueOnce([]);
 
     const result = await statisticsService.getAlbumStatistics({}, { userId: 'u1', userGroups: [] });
 
     expect(result.timeSeries.albumsCreated).toEqual([{ date: '2026-03', count: 4 }]);
     expect(result.tags).toEqual([{ tag: 'vacation', count: 5 }]);
-    expect(result.aiAnalysis.analysisRate).toBe(0);
   });
 
   it('returns the top albums by storage, sorted and limited via an indexed find (no photo aggregation)', async () => {

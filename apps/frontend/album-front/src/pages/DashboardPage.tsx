@@ -27,7 +27,6 @@ import StatisticsOverview from '../components/dashboard/StatisticsOverview';
 import TimeSeriesChart from '../components/dashboard/TimeSeriesChart';
 import StorageChart from '../components/dashboard/StorageChart';
 import TagsChart from '../components/dashboard/TagsChart';
-import AIAnalysisChart from '../components/dashboard/AIAnalysisChart';
 import GroupDistributionChart from '../components/dashboard/GroupDistributionChart';
 
 const DashboardPage: React.FC = () => {
@@ -228,14 +227,8 @@ const DashboardPage: React.FC = () => {
           />
         </Box>
 
-        {/* Storage and AI Analysis */}
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateRows: '1fr 1fr',
-            gap: 3
-          }}
-        >
+        {/* Storage */}
+        <Box>
           <StorageChart
             totalStorage={statistics.overview.totalStorage}
             averagePhotoSize={statistics.overview.averagePhotoSize}
@@ -248,7 +241,6 @@ const DashboardPage: React.FC = () => {
             meteredStorage={entitlements?.usage?.storageBytes}
             onUpgrade={goToPlans}
           />
-          <AIAnalysisChart data={statistics.aiAnalysis} />
         </Box>
 
         {/* Tags and Group Distribution */}

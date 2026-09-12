@@ -162,43 +162,6 @@ components:
                     focalLength:
                       type: string
                       example: "50mm"
-        aiAnalysis:
-          type: object
-          properties:
-            objectDetection:
-              type: object
-              properties:
-                jobId:
-                  type: string
-                  example: "job-123"
-                analyzedAt:
-                  type: string
-                  format: date-time
-                totalDetections:
-                  type: integer
-                  example: 5
-                processingTime:
-                  type: number
-                  example: 2.5
-            segmentation:
-              type: object
-              properties:
-                jobId:
-                  type: string
-                  example: "seg-job-456"
-                analyzedAt:
-                  type: string
-                  format: date-time
-                totalMasks:
-                  type: integer
-                  example: 3
-                segmentationType:
-                  type: string
-                  enum: ["prompted", "automatic"]
-                  example: "automatic"
-                processingTime:
-                  type: number
-                  example: 1.8
         createdAt:
           type: string
           format: date-time
@@ -429,44 +392,6 @@ components:
           example: ["updated", "colosseum", "rome"]
         metadata:
           type: object
-
-    PhotoAIAnalysisUpdateRequest:
-      type: object
-      properties:
-        objectDetection:
-          type: object
-          properties:
-            jobId:
-              type: string
-              example: "job-123"
-            analyzedAt:
-              type: string
-              format: date-time
-            totalDetections:
-              type: integer
-              example: 5
-            processingTime:
-              type: number
-              example: 2.5
-        segmentation:
-          type: object
-          properties:
-            jobId:
-              type: string
-              example: "seg-job-456"
-            analyzedAt:
-              type: string
-              format: date-time
-            totalMasks:
-              type: integer
-              example: 3
-            segmentationType:
-              type: string
-              enum: ["prompted", "automatic"]
-              example: "automatic"
-            processingTime:
-              type: number
-              example: 1.8
 
     UploadSignedUrlRequest:
       type: object
@@ -1132,63 +1057,6 @@ paths:
       security:
         - bearerAuth: []
 
-  /photos/album/{albumId}/ai-analysis:
-    get:
-      tags: [Photos]
-      summary: Get photos for AI analysis
-      description: Retrieve photos from an album that need AI analysis or have been analyzed
-      parameters:
-        - name: albumId
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Album ID
-        - name: analyzed
-          in: query
-          schema:
-            type: boolean
-          description: Filter by analysis status (true for analyzed, false for not analyzed)
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 1
-          description: Page number
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 50
-          description: Number of photos per page
-      responses:
-        '200':
-          description: Photos retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PhotosResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Album not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearerAuth: []
-
   /photos/{id}:
     get:
       tags: [Photos]
@@ -1298,58 +1166,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Photo not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearerAuth: []
-
-  /photos/{id}/ai-analysis:
-    put:
-      tags: [Photos]
-      summary: Update photo AI analysis
-      description: Update AI analysis results for a photo
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          description: Photo ID
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PhotoAIAnalysisUpdateRequest'
-      responses:
-        '200':
-          description: AI analysis updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
           content:

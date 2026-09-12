@@ -7,8 +7,8 @@ import { parseResponse } from './schemas';
  *
  * Worth knowing before reading the tools built on this: almost nothing about
  * the *content* of a photo is indexed. Across a real library of 2,600 photos
- * there is one distinct tag, `aiAnalysis` stores job timings rather than
- * labels, and no photo has a resolved place name. What can be searched is the
+ * there is one distinct tag, nothing records what a picture shows, and no
+ * photo has a resolved place name. What can be searched is the
  * album it sits in, its filename, its title if someone wrote one, and when it
  * was taken. The tools say so rather than implying a search that would quietly
  * return nothing.

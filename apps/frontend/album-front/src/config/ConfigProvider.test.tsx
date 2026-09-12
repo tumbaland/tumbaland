@@ -33,8 +33,6 @@ it('maps every VITE_* env var into the dev config', async () => {
     ALBUM_API_URL: import.meta.env.VITE_ALBUM_API_URL,
     AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL,
     AUTH_FRONT_URL: import.meta.env.VITE_AUTH_FRONT_URL,
-    SEGMENTATION_API_URL: import.meta.env.VITE_SEGMENTATION_API_URL,
-    OBJECT_DETECTION_API_URL: import.meta.env.VITE_OBJECT_DETECTION_API_URL,
     GROUP_API_URL: import.meta.env.VITE_GROUP_API_URL,
     ALBUM_FRONT_URL: import.meta.env.VITE_ALBUM_FRONT_URL,
     ACCOUNT_FRONT_URL: import.meta.env.VITE_ACCOUNT_FRONT_URL,

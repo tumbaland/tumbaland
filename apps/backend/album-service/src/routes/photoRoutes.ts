@@ -9,8 +9,6 @@ import {
   getAlbumTags,
   bulkUpdateTags,
   getUploadSignedUrlRequest,
-  updatePhotoAIAnalysis,
-  getPhotosForAIAnalysis,
   getPhotoByFileId,
   getMemories
 } from '../controllers/photoController';
@@ -18,7 +16,6 @@ import {
   createPhotoSchema,
   updatePhotoSchema,
   uploadSignedUrlSchema,
-  updatePhotoAIAnalysisSchema,
   bulkUpdateTagsSchema
 } from '../validation/schemas';
 
@@ -37,10 +34,6 @@ router.get('/:id', authenticateAgent(), requireScope('album:read'), getPhotoById
 router.get('/by-file/:fileId', getPhotoByFileId); // Public route for file service
 router.put('/:id', authenticateAgent(), requireScope('album:write'), validate(updatePhotoSchema), updatePhoto);
 router.delete('/:id', authenticateAgent(), requireScope('album:write'), deletePhoto);
-
-// AI Analysis routes
-router.put('/:id/ai-analysis', authenticateAgent(), requireScope('album:write'), validate(updatePhotoAIAnalysisSchema), updatePhotoAIAnalysis);
-router.get('/album/:albumId/ai-analysis', authenticateAgent(), requireScope('album:read'), getPhotosForAIAnalysis);
 
 // Upload routes
 router.post('/upload-url', authenticateAgent(), requireScope('album:write'), validate(uploadSignedUrlSchema), getUploadSignedUrlRequest);

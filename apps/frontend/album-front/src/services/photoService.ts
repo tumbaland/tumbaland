@@ -132,22 +132,6 @@ export const photoService = {
     }
   },
 
-  // AI Analysis methods
-  async updatePhotoAIAnalysis(
-    photoId: string,
-    analysisData: {
-      analysisType: 'objectDetection' | 'segmentation';
-      resultId: string;
-      totalDetections?: number;
-      totalMasks?: number;
-      segmentationType?: 'prompted' | 'automatic';
-      processingTime: number;
-    }
-  ): Promise<Photo> {
-    const response = await albumApi.put<ApiResponse<Photo>>(`/photos/${photoId}/ai-analysis`, analysisData);
-    return response.data;
-  },
-
   // Utility: Load photos with signed URLs (album service now provides them directly)
   async loadPhotosWithThumbnails(
     albumId: string,

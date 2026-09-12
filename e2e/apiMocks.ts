@@ -52,7 +52,7 @@ export async function installApiMocks(page: Page) {
 }
 
 function isMockedBackendHost(url: URL): boolean {
-  const mockedPorts = new Set(['4001', '4002', '4003', '5001', '5003', '5005', '5006', '8001', '8002']);
+  const mockedPorts = new Set(['4001', '4002', '4003', '5001', '5003', '5005', '5006']);
   return ['localhost', '127.0.0.1'].includes(url.hostname) && mockedPorts.has(url.port);
 }
 
@@ -202,13 +202,6 @@ function albumStatistics() {
       photosUploaded: []
     },
     tags: [],
-    aiAnalysis: {
-      totalPhotos: 0,
-      analyzedPhotos: 0,
-      analysisRate: 0,
-      totalDetections: 0,
-      totalMasks: 0
-    },
     groups: [],
     // Required by AlbumStatistics and returned by the real /api/statistics —
     // omitting it crashed DashboardPage on statistics.albums.map().
