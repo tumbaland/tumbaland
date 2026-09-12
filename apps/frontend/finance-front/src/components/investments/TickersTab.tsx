@@ -124,6 +124,11 @@ const TickersTab: React.FC<TickersTabProps> = ({
     setDialogOpen(true);
   };
 
+  // The symbol as saved, so the dialog can say what a change to it will do: the
+  // server carries price history, holdings and trades over to the new symbol.
+  const savedSymbol = editingId ? tickers.find((t) => t._id === editingId)?.ticker : undefined;
+  const renaming = !!savedSymbol && !!form.ticker.trim() && form.ticker !== savedSymbol;
+
   const handleSubmit = async () => {
     if (!form.ticker.trim() || !form.displayName.trim()) {
       notify('Ticker and display name are required', 'error');
@@ -132,7 +137,13 @@ const TickersTab: React.FC<TickersTabProps> = ({
     try {
       if (editingId) {
         await updateMutation.mutateAsync({ id: editingId, data: { ...form } });
-        notify('Ticker updated', 'success');
+        if (renaming) {
+          notify(`Renamed ${savedSymbol} to ${form.ticker}`, 'success');
+          // Coverage is keyed by symbol, so the row would read as empty until reload.
+          refreshCoverage();
+        } else {
+          notify('Ticker updated', 'success');
+        }
       } else {
         await createMutation.mutateAsync({ ...form, groupId: tenantGroupId });
         notify('Ticker added', 'success');
@@ -140,7 +151,9 @@ const TickersTab: React.FC<TickersTabProps> = ({
       setDialogOpen(false);
     } catch (err) {
       // A plan limit is not a failure — name it, or the paywall reads as a bug.
-      notify(paywallMessage(err, 'Failed to save ticker'), 'error');
+      // A conflict says which symbol is in the way, which the generic line would hide.
+      const isConflict = (err as { status?: number })?.status === 409;
+      notify(paywallMessage(err, isConflict ? (err as Error).message : 'Failed to save ticker'), 'error');
     }
   };
 
@@ -447,6 +460,11 @@ const TickersTab: React.FC<TickersTabProps> = ({
             required
             value={form.ticker}
             onChange={(e) => setForm((f) => ({ ...f, ticker: e.target.value.toUpperCase() }))}
+            helperText={
+              renaming
+                ? `Price history, holdings and trades for ${savedSymbol} will move to ${form.ticker}.`
+                : undefined
+            }
             slotProps={{ inputLabel: { shrink: true } }}
           />
           <TextField

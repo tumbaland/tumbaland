@@ -238,6 +238,46 @@ it('edits an existing ticker, pre-filling the form and toggling the active switc
     data: { ticker: 'AAPL', displayName: 'Apple', currency: 'USD', description: '', isActive: false }
   });
   expect(notify).toHaveBeenCalledWith('Ticker updated', 'success');
+  expect(screen.queryByText(/will move to/)).not.toBeInTheDocument();
+});
+
+it('says what a symbol change carries over, and reports the rename', async () => {
+  mockedUpdateMutateAsync.mockResolvedValue({});
+  const notify = vi.fn();
+  render(<TickersTab tickers={tickers} notify={notify} />);
+
+  const editButtons = screen.getAllByRole('button').filter((b) => b.querySelector('[data-testid="EditIcon"]'));
+  await userEvent.click(editButtons[0]);
+  const symbol = screen.getByLabelText(/^Ticker/);
+  await userEvent.clear(symbol);
+  await userEvent.type(symbol, 'aapl.dex');
+
+  expect(screen.getByText('Price history, holdings and trades for AAPL will move to AAPL.DEX.')).toBeInTheDocument();
+
+  mockedCoverage.mockClear();
+  await userEvent.click(screen.getByRole('button', { name: 'Update' }));
+
+  expect(mockedUpdateMutateAsync).toHaveBeenCalledWith({
+    id: 't1',
+    data: expect.objectContaining({ ticker: 'AAPL.DEX' })
+  });
+  expect(notify).toHaveBeenCalledWith('Renamed AAPL to AAPL.DEX', 'success');
+  // Coverage is keyed by symbol, so it is fetched again under the new one.
+  expect(mockedCoverage).toHaveBeenCalled();
+});
+
+it('shows why a rename was refused when the new symbol is already in use', async () => {
+  const message = 'AAPL.DEX is already tracked or held here. Remove it first, then rename AAPL.';
+  mockedUpdateMutateAsync.mockRejectedValue(Object.assign(new Error(message), { status: 409 }));
+  const notify = vi.fn();
+  render(<TickersTab tickers={tickers} notify={notify} />);
+
+  const editButtons = screen.getAllByRole('button').filter((b) => b.querySelector('[data-testid="EditIcon"]'));
+  await userEvent.click(editButtons[0]);
+  await userEvent.type(screen.getByLabelText(/^Ticker/), '.DEX');
+  await userEvent.click(screen.getByRole('button', { name: 'Update' }));
+
+  expect(notify).toHaveBeenCalledWith(message, 'error');
 });
 
 it('deletes a ticker after confirming, and shows an error notification on failure', async () => {

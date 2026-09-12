@@ -4,10 +4,24 @@ jest.mock('../models/TrackedTicker', () => {
   ctor.findById = jest.fn();
   ctor.findByIdAndUpdate = jest.fn();
   ctor.findByIdAndDelete = jest.fn();
+  ctor.exists = jest.fn();
   return { __esModule: true, default: ctor };
 });
 
+jest.mock('../models/Holding', () => ({
+  __esModule: true,
+  default: { exists: jest.fn(), updateMany: jest.fn() }
+}));
+jest.mock('../models/Trade', () => ({ __esModule: true, default: { updateMany: jest.fn() } }));
+jest.mock('../models/TickerPriceHistory', () => ({
+  __esModule: true,
+  default: { aggregate: jest.fn(), collection: { collectionName: 'tickerpricehistories' } }
+}));
+
 import TrackedTicker from '../models/TrackedTicker';
+import Holding from '../models/Holding';
+import Trade from '../models/Trade';
+import TickerPriceHistory from '../models/TickerPriceHistory';
 import {
   getAllTrackedTickers,
   createTrackedTicker,
@@ -86,6 +100,84 @@ describe('updateTrackedTicker', () => {
     await updateTrackedTicker('t1', { displayName: 'New' }, 'user-1', []);
 
     expect(mockedFindByIdAndUpdate).toHaveBeenCalledWith('t1', { displayName: 'New' }, { new: true });
+    expect(TickerPriceHistory.aggregate).not.toHaveBeenCalled();
+  });
+
+  describe('renaming the symbol', () => {
+    const personal = { userId: 'user-1', $or: [{ groupId: { $exists: false } }, { groupId: null }] };
+
+    beforeEach(() => {
+      mockedFindById.mockResolvedValue({ ticker: 'VUSA.DE', userId: 'user-1', groupId: undefined });
+      mockedFindByIdAndUpdate.mockResolvedValue({ _id: 't1', ticker: 'VUSA.DEX' });
+      (TrackedTicker.exists as jest.Mock).mockResolvedValue(null);
+      (Holding.exists as jest.Mock).mockResolvedValue(null);
+    });
+
+    it('copies price history to the new symbol, keeping closes it already has', async () => {
+      await updateTrackedTicker('t1', { ticker: 'VUSA.DEX' }, 'user-1', []);
+
+      expect(TickerPriceHistory.aggregate).toHaveBeenCalledWith([
+        { $match: { ticker: 'VUSA.DE' } },
+        { $project: { _id: 0 } },
+        { $set: { ticker: 'VUSA.DEX', interval: { $ifNull: ['$interval', 'daily'] } } },
+        {
+          $merge: {
+            into: 'tickerpricehistories',
+            on: ['ticker', 'interval', 'date'],
+            whenMatched: 'keepExisting',
+            whenNotMatched: 'insert'
+          }
+        }
+      ]);
+    });
+
+    it("re-points the owner's holdings and trades, and renames the ticker last", async () => {
+      await updateTrackedTicker('t1', { ticker: 'VUSA.DEX' }, 'user-1', []);
+
+      const update = { $set: { ticker: 'VUSA.DEX' } };
+      expect(Holding.updateMany).toHaveBeenCalledWith({ ...personal, ticker: 'VUSA.DE' }, update);
+      expect(Trade.updateMany).toHaveBeenCalledWith({ ...personal, ticker: 'VUSA.DE' }, update);
+
+      // A failure before the rename must leave the old symbol on the ticker, or
+      // a retry would see nothing to carry over.
+      const renamedAt = mockedFindByIdAndUpdate.mock.invocationCallOrder[0];
+      expect((Trade.updateMany as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan(renamedAt);
+      expect((TickerPriceHistory.aggregate as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan(renamedAt);
+    });
+
+    it("stays within the group for a group's ticker", async () => {
+      mockedFindById.mockResolvedValue({ ticker: 'VUSA.DE', userId: 'user-1', groupId: 'g1' });
+
+      await updateTrackedTicker('t1', { ticker: 'VUSA.DEX' }, 'user-1', ['g1']);
+
+      expect(Holding.updateMany).toHaveBeenCalledWith(
+        { groupId: { $in: ['g1'] }, ticker: 'VUSA.DE' },
+        { $set: { ticker: 'VUSA.DEX' } }
+      );
+    });
+
+    it.each([
+      ['tracked', () => (TrackedTicker.exists as jest.Mock).mockResolvedValue({ _id: 't2' })],
+      ['held', () => (Holding.exists as jest.Mock).mockResolvedValue({ _id: 'h2' })]
+    ])('refuses a symbol already %s in the scope, writing nothing', async (_what, arrange) => {
+      arrange();
+
+      await expect(updateTrackedTicker('t1', { ticker: 'VUSA.DEX' }, 'user-1', [])).rejects.toMatchObject({
+        name: 'ConflictError'
+      });
+
+      expect(TrackedTicker.exists).toHaveBeenCalledWith({ ...personal, ticker: 'VUSA.DEX' });
+      expect(TickerPriceHistory.aggregate).not.toHaveBeenCalled();
+      expect(Holding.updateMany).not.toHaveBeenCalled();
+      expect(mockedFindByIdAndUpdate).not.toHaveBeenCalled();
+    });
+
+    it('does nothing extra when the symbol sent is the one it already has', async () => {
+      await updateTrackedTicker('t1', { ticker: 'VUSA.DE', displayName: 'Vanguard' }, 'user-1', []);
+
+      expect(TrackedTicker.exists).not.toHaveBeenCalled();
+      expect(TickerPriceHistory.aggregate).not.toHaveBeenCalled();
+    });
   });
 });
 

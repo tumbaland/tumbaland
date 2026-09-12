@@ -37,6 +37,11 @@ export const useUpdateTrackedTicker = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trackedTickers'] });
       queryClient.invalidateQueries({ queryKey: ['myEntitlements'] });
+      // Renaming the symbol re-points the holdings and trades under it.
+      queryClient.invalidateQueries({ queryKey: ['holdings'] });
+      queryClient.invalidateQueries({ queryKey: ['trades'] });
+      queryClient.invalidateQueries({ queryKey: ['position'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
   });
 };

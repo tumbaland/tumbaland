@@ -59,6 +59,20 @@ it('updates a tracked ticker', async () => {
   expect(trackedTickerService.updateTrackedTicker).toHaveBeenCalledWith('t1', { isActive: false });
 });
 
+it('refreshes holdings and trades after an update, since a rename re-points them', async () => {
+  (trackedTickerService.updateTrackedTicker as ReturnType<typeof vi.fn>).mockResolvedValue({ _id: 't1', ticker: 'VUSA.DEX' });
+  const { Wrapper, queryClient } = wrapper();
+  const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+  const { result } = renderHook(() => useUpdateTrackedTicker(), { wrapper: Wrapper });
+  result.current.mutate({ id: 't1', data: { ticker: 'VUSA.DEX' } });
+
+  await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  for (const key of ['trackedTickers', 'holdings', 'trades', 'position', 'dashboard']) {
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: [key] });
+  }
+});
+
 it('deletes a tracked ticker', async () => {
   (trackedTickerService.deleteTrackedTicker as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
   const { Wrapper } = wrapper();
