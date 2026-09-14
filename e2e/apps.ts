@@ -9,7 +9,7 @@ export interface SmokeApp {
 export const apps: SmokeApp[] = [
   { name: 'shell-front', url: 'http://localhost:3000/', heading: /Write end-to-end tests/ },
   { name: 'relationship-front', url: 'http://localhost:3001/', heading: /Overview of your time together/ },
-  { name: 'album-front', url: 'http://localhost:3002/', heading: /View Albums/ },
+  { name: 'album-front', url: 'http://localhost:3002/', heading: /Total Albums/ },
   { name: 'finance-front', url: 'http://localhost:3003/', heading: /Your net worth, asset allocation and investments at a glance/ },
   { name: 'auth-front', url: 'http://localhost:3004/', heading: /Welcome back, Test User!/ },
   { name: 'payment-front', url: 'http://localhost:3005/', heading: /Choose Your Plan/ },
