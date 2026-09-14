@@ -1,13 +1,14 @@
 import { useCallback, useMemo } from 'react';
-import { Box, Button } from '@mui/material';
-import HistoryIcon from '@mui/icons-material/History';
+import { Box } from '@mui/material';
 import { useNavigate } from 'react-router';
 import BgImageBox from '../components/BgImageBox';
 import { GreetingHeader } from '../components/home/GreetingHeader';
-import { ModuleCard } from '../components/home/ModuleCard';
+import { QuickActions } from '../components/home/QuickActions';
+import { ContinueCard } from '../components/home/ContinueCard';
+import { ModuleList } from '../components/home/ModuleList';
 import { DailyTodo } from '../components/home/DailyTodo';
 import { PlanUsageCard } from '../components/home/PlanUsageCard';
-import { HOME_MODULES, moduleForRoute } from '../components/home/modules';
+import { moduleForRoute } from '../components/home/modules';
 import { getLastVisited } from '../services/lastVisited';
 import { User } from '../types';
 
@@ -16,9 +17,13 @@ interface HomePageProps {
 }
 
 /**
- * The signed-in home. Replaces the random-todo card, which showed nothing the
- * user owned and offered no route into any of the four modules — all the
- * navigation work was falling to the side menu.
+ * The signed-in home: where the app opens, with the tab bar under it for
+ * everything else.
+ *
+ * Built like the first screen of a phone app rather than a web page: a title,
+ * a row of one-tap actions, a way back to where you were, the modules as a
+ * list, then the daily idea and your plan. On a wider screen the same parts sit
+ * in two columns.
  */
 export function HomePage({ user }: HomePageProps) {
   const navigate = useNavigate();
@@ -26,7 +31,13 @@ export function HomePage({ user }: HomePageProps) {
   const handleOpen = useCallback((route: string) => navigate(route), [navigate]);
 
   // Read once per mount: this is a "where was I" shortcut, not live state.
-  const resumeModule = useMemo(() => moduleForRoute(getLastVisited()), []);
+  const resume = useMemo(() => {
+    const route = getLastVisited();
+    const module = moduleForRoute(route);
+    return route && module ? { route, module } : null;
+  }, []);
+
+  const column = { display: 'flex', flexDirection: 'column', gap: { xs: 2.5, md: 3 }, minWidth: 0 } as const;
 
   return (
     <Box sx={{ position: 'relative', width: '100%', alignSelf: 'flex-start', minHeight: '100%' }}>
@@ -36,54 +47,38 @@ export function HomePage({ user }: HomePageProps) {
         sx={{
           position: 'relative',
           zIndex: 1,
-          maxWidth: 900,
+          maxWidth: 960,
           mx: 'auto',
-          px: { xs: 2, md: 3 },
-          pt: { xs: 5, md: 7 },
-          pb: { xs: 5, md: 7 }
+          px: { xs: 2, md: 4 },
+          pt: { xs: 2.5, md: 6 },
+          pb: { xs: 3, md: 6 },
+          display: 'flex',
+          flexDirection: 'column',
+          gap: { xs: 2.5, md: 3.5 }
         }}
       >
         <GreetingHeader name={user?.name} />
 
-        {/* Directly under the greeting rather than at the foot of the page: it
-            is the one thing here with any personality, and nothing below it is
-            worse for being read second. */}
-        <DailyTodo />
-
-        {resumeModule && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-            <Button
-              startIcon={<HistoryIcon />}
-              onClick={() => handleOpen(resumeModule.route)}
-              sx={{
-                textTransform: 'none',
-                fontWeight: 600,
-                borderRadius: 999,
-                px: 2.25,
-                py: 0.75,
-                color: resumeModule.color,
-                backgroundColor: `${resumeModule.color}14`,
-                '&:hover': { backgroundColor: `${resumeModule.color}26` }
-              }}
-            >
-              Back to {resumeModule.name}
-            </Button>
-          </Box>
-        )}
+        <QuickActions onOpen={handleOpen} />
 
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
-            gap: { xs: 1.75, md: 2.25 }
+            gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 1.35fr) minmax(0, 1fr)' },
+            gap: { xs: 2.5, md: 3 },
+            alignItems: 'start'
           }}
         >
-          {HOME_MODULES.map((module) => (
-            <ModuleCard key={module.key} module={module} onOpen={handleOpen} />
-          ))}
-        </Box>
+          <Box sx={column}>
+            {resume && <ContinueCard module={resume.module} route={resume.route} onOpen={handleOpen} />}
+            <ModuleList onOpen={handleOpen} />
+          </Box>
 
-        <PlanUsageCard />
+          <Box sx={column}>
+            <DailyTodo />
+            <PlanUsageCard />
+          </Box>
+        </Box>
       </Box>
     </Box>
   );

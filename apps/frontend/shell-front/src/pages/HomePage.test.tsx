@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, expect, it, vi } from 'vitest';
@@ -19,7 +19,7 @@ vi.mock('../hooks/useTodo', () => ({
 }));
 
 import HomePage from './HomePage';
-import { HOME_MODULES } from '../components/home/modules';
+import { HOME_MODULES, journalTodayKey } from '../components/home/modules';
 import { User } from '../types';
 
 const USER: User = { id: '1', email: 'toomas@example.com', name: 'Toomas Tahves' };
@@ -48,20 +48,15 @@ it('falls back to a generic welcome when there is no name', () => {
   expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Welcome to Tumbaland');
 });
 
-it('offers a card for every module', () => {
-  renderHome();
-  HOME_MODULES.forEach((module) => {
-    expect(screen.getByRole('heading', { name: module.name })).toBeInTheDocument();
-  });
-});
-
-it('navigates into a module when its card is opened', async () => {
+it('opens today in the journal from the first quick action', async () => {
   const user = userEvent.setup();
   renderHome();
 
-  await user.click(screen.getByRole('button', { name: 'Open Money' }));
+  const actions = screen.getByRole('navigation', { name: 'Quick actions' });
+  await user.click(within(actions).getByRole('button', { name: 'Log today' }));
 
-  expect(navigate).toHaveBeenCalledWith('/finance/dashboard');
+  // The journal opens its day editor for a ?date= link.
+  expect(navigate).toHaveBeenCalledWith(`/relationship/journal?date=${journalTodayKey()}`);
 });
 
 it('deep-links straight to a sub-page from a quick action', async () => {
@@ -73,20 +68,38 @@ it('deep-links straight to a sub-page from a quick action', async () => {
   expect(navigate).toHaveBeenCalledWith('/finance/net-worth');
 });
 
+it('lists every module, in the order the tab bar shows them', () => {
+  renderHome();
+
+  const list = screen.getByRole('region', { name: 'Modules' });
+  const rows = within(list).getAllByRole('button');
+  expect(rows.map((row) => row.getAttribute('aria-label'))).toEqual(
+    HOME_MODULES.map((module) => `Open ${module.name}`)
+  );
+});
+
+it('navigates into a module from its row', async () => {
+  const user = userEvent.setup();
+  renderHome();
+
+  await user.click(screen.getByRole('button', { name: 'Open Money' }));
+
+  expect(navigate).toHaveBeenCalledWith('/finance/dashboard');
+});
+
 it('offers no resume shortcut on a first visit', () => {
   renderHome();
   expect(screen.queryByRole('button', { name: /^Back to/ })).not.toBeInTheDocument();
 });
 
-it('offers a way back to the module the user was last in', async () => {
-  window.localStorage.setItem('tumbaland:last-visited', '/relationship/journal');
+it('goes back to the exact page the user was last on, not just the module', async () => {
+  window.localStorage.setItem('tumbaland:last-visited', '/finance/net-worth');
   const user = userEvent.setup();
   renderHome();
 
-  const resume = screen.getByRole('button', { name: 'Back to Journal' });
-  await user.click(resume);
+  await user.click(screen.getByRole('button', { name: 'Back to Money' }));
 
-  expect(navigate).toHaveBeenCalledWith('/relationship/journal');
+  expect(navigate).toHaveBeenCalledWith('/finance/net-worth');
 });
 
 it('ignores a stored route that no longer maps to a module', () => {
@@ -95,7 +108,7 @@ it('ignores a stored route that no longer maps to a module', () => {
   expect(screen.queryByRole('button', { name: /^Back to/ })).not.toBeInTheDocument();
 });
 
-it('keeps the daily idea as a strip rather than the whole page', () => {
+it('keeps the daily idea on the page', () => {
   renderHome();
   expect(screen.getByText('Water the plants')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Show another idea' })).toBeInTheDocument();

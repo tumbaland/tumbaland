@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter, useNavigate } from 'react-router';
 import { vi } from 'vitest';
 
 vi.mock('../services/authService', () => ({
@@ -99,6 +100,42 @@ it('boots the iframe on a nested route and keeps the src stable as the child nav
       'src',
       'https://relationship.example/?embedded=1&embedPath=%2Fjournal'
     )
+  );
+});
+
+it('builds the frame from the current URL after a page without one, not from the last visit', async () => {
+  // The map, then home, then "Log today": the frame used to come back on the
+  // map, because it reused the src from the last visit and the navigate
+  // message meant to correct it was posted before the new frame had loaded.
+  function Go({ to }: { to: string }) {
+    const navigate = useNavigate();
+    return <button onClick={() => navigate(to)}>go {to}</button>;
+  }
+  const user = userEvent.setup();
+  render(
+    <ConfigContext.Provider value={{ RELATIONSHIP_FRONT_URL: 'https://relationship.example' } as any}>
+      <MemoryRouter initialEntries={['/relationship/map']}>
+        <Layout>
+          <div>page content</div>
+        </Layout>
+        <Go to="/" />
+        <Go to="/relationship/journal?date=2026-09-14" />
+      </MemoryRouter>
+    </ConfigContext.Provider>
+  );
+
+  expect(await screen.findByTitle('Journal')).toHaveAttribute(
+    'src',
+    'https://relationship.example/?embedded=1&embedPath=%2Fmap'
+  );
+
+  await user.click(screen.getByRole('button', { name: 'go /' }));
+  await waitFor(() => expect(document.querySelector('iframe')).toBeNull());
+
+  await user.click(screen.getByRole('button', { name: 'go /relationship/journal?date=2026-09-14' }));
+  expect(await screen.findByTitle('Journal')).toHaveAttribute(
+    'src',
+    'https://relationship.example/?embedded=1&embedPath=%2Fjournal%3Fdate%3D2026-09-14'
   );
 });
 

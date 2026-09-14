@@ -47,6 +47,14 @@ export default function Layout({ children }: LayoutProps) {
       src: buildEmbeddedUrl(appUrl, extractChildPath(currentApp.route, location.pathname, location.search))
     });
   }
+  // Leaving for a page with no frame (home, say) unmounts the iframe, so the
+  // next visit builds its src afresh from the URL. Kept, the old src reloaded
+  // the app on whatever page it was last on: "Log today" on the home page,
+  // after a look at the map, opened the map. The navigate message meant to
+  // correct it is posted before the new frame has loaded, and is dropped.
+  if (!appKey && frameSrc) {
+    setFrameSrc(null);
+  }
   const showIframe = appKey !== null && frameSrc?.key === appKey;
 
   const handleChildNavigate = useCallback(

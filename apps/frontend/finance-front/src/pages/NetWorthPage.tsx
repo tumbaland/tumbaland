@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
   Box,
   Button,
+  ButtonBase,
   Typography,
   Paper,
   Table,
@@ -39,11 +40,15 @@ import { formatCurrency, formatPct } from '../utils/numberUtils';
 
 const changeColor = (v: number) => (v > 0 ? 'success.main' : v < 0 ? 'error.main' : 'text.secondary');
 
+const signed = (v: number) => `${v >= 0 ? '+' : ''}${formatCurrency(v)}`;
+
 function nextMonth(month: string): string {
   const [y, m] = month.split('-').map(Number);
   const d = new Date(Date.UTC(y, m, 1)); // m is 0-based here, so this is month+1
   return d.toISOString().slice(0, 7);
 }
+
+const statLabelSx = { color: 'text.secondary', fontSize: { xs: '0.78rem', md: '0.875rem' } };
 
 const NetWorthPage: React.FC = () => {
   const tenantGroupId = useTenantFilter();
@@ -132,6 +137,11 @@ const NetWorthPage: React.FC = () => {
     setDeleteTarget(null);
   };
 
+  const openEdit = (snapshot: Snapshot) => {
+    setEditSnapshot(snapshot);
+    setCheckInOpen(true);
+  };
+
   const renderBreakdownChips = (snapshot: Snapshot) =>
     [...snapshot.entries]
       .sort((a, b) => b.value - a.value)
@@ -142,7 +152,7 @@ const NetWorthPage: React.FC = () => {
           <Chip
             key={e.assetClassId}
             size="small"
-            sx={{ borderLeft: `4px solid ${ac?.color || '#667eea'}` }}
+            sx={{ borderLeft: `4px solid ${ac?.color || '#667eea'}`, maxWidth: '100%' }}
             label={
               `${ac?.name || 'Unknown'}: ${owed ? '−' : ''}${formatCurrency(e.value)}` +
               (!owed && e.gain ? ` (${e.gain > 0 ? '+' : ''}${formatCurrency(e.gain)} gain)` : '')
@@ -170,120 +180,190 @@ const NetWorthPage: React.FC = () => {
 
   if (error) {
     return (
-      <Box sx={{ p: 3 }}>
+      <Box sx={{ py: 3 }}>
         <Alert severity="error">Failed to load net worth history</Alert>
       </Box>
     );
   }
 
+  const emptyState = (
+    <>
+      <Typography variant="body1" sx={{ color: 'text.secondary', mb: 1 }}>
+        No check-ins yet
+      </Typography>
+      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+        Set up your asset classes, then add your first monthly check-in.
+      </Typography>
+    </>
+  );
+
   return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
-      {/* Header */}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2, mb: 3 }}>
-        <Box sx={{ flexGrow: 1 }}>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>Net Worth</Typography>
-          <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-            One check-in per month: the value of every asset class
+    // No side padding on a phone: the layout's container already has a gutter,
+    // and the two together cost every card 32px of width.
+    <Box sx={{ px: { xs: 0, md: 4 }, py: { xs: 1.5, md: 4 } }}>
+      {/* Title and both actions on one row. On a phone the class manager is an
+          icon: it is set up once and rarely revisited, while a check-in is
+          added every month. */}
+      <Box sx={{ mb: { xs: 1.5, md: 3 } }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{ fontWeight: 700, flexGrow: 1, minWidth: 0, fontSize: { xs: '1.4rem', md: '2.125rem' } }}
+          >
+            Net Worth
           </Typography>
+          <Button
+            startIcon={<CategoryIcon />}
+            onClick={() => setClassManagerOpen(true)}
+            aria-label="Asset classes"
+            size={isMobile ? 'small' : 'medium'}
+            sx={{ minWidth: 0, flexShrink: 0, '& .MuiButton-startIcon': { mr: { xs: 0, sm: 1 } } }}
+          >
+            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}>
+              Asset classes
+            </Box>
+          </Button>
+          <Button
+            variant="contained"
+            disableElevation
+            startIcon={<AddIcon />}
+            size={isMobile ? 'small' : 'medium'}
+            onClick={() => { setEditSnapshot(null); setCheckInOpen(true); }}
+            sx={{ flexShrink: 0, whiteSpace: 'nowrap' }}
+          >
+            Add check-in
+          </Button>
         </Box>
-        <Button startIcon={<CategoryIcon />} onClick={() => setClassManagerOpen(true)}>
-          Asset classes
-        </Button>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => { setEditSnapshot(null); setCheckInOpen(true); }}>
-          Add check-in
-        </Button>
+        <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25, fontSize: { xs: '0.82rem', md: '1rem' } }}>
+          One check-in per month: the value of every asset class
+        </Typography>
       </Box>
 
-      {/* Summary */}
+      {/* One summary card rather than three: on a phone the net worth leads on
+          its own line and the two changes share the line under it. */}
       {latest && (
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 3 }}>
-          <Paper elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: 3, minWidth: 200 }}>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>Net worth · {latest.month}</Typography>
-            <Typography variant="h5" sx={{ fontWeight: 700 }}>{formatCurrency(latest.total)}</Typography>
-          </Paper>
+        <Paper
+          elevation={0}
+          sx={{
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 3,
+            p: { xs: 1.75, md: 2.5 },
+            mb: { xs: 1.5, md: 3 },
+            display: 'grid',
+            gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(3, minmax(0, 1fr))' },
+            gap: { xs: 1.5, md: 3 }
+          }}
+        >
+          <Box sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' } }}>
+            <Typography variant="body2" sx={statLabelSx}>Net worth · {latest.month}</Typography>
+            <Typography variant="h5" sx={{ fontWeight: 700, fontSize: { xs: '1.5rem', md: '1.5rem' } }}>
+              {formatCurrency(latest.total)}
+            </Typography>
+          </Box>
           {latest.change !== undefined && (
-            <Paper elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: 3, minWidth: 200 }}>
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>Change vs previous month</Typography>
-              <Typography variant="h5" sx={{ fontWeight: 700, color: changeColor(latest.change) }}>
-                {latest.change >= 0 ? '+' : ''}{formatCurrency(latest.change)}
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="body2" sx={statLabelSx}>Change vs previous month</Typography>
+              <Typography
+                variant="h5"
+                sx={{ fontWeight: 700, color: changeColor(latest.change), fontSize: { xs: '1.05rem', md: '1.5rem' } }}
+              >
+                {signed(latest.change)}
                 {latest.changePct !== undefined && (
-                  <Typography component="span" variant="body1" sx={{ ml: 1, color: 'inherit' }}>
+                  <Typography component="span" variant="body1" sx={{ ml: 0.75, color: 'inherit', fontSize: '0.8em' }}>
                     ({formatPct(latest.changePct)})
                   </Typography>
                 )}
               </Typography>
-            </Paper>
+            </Box>
           )}
-          <Paper elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: 3, minWidth: 200 }}>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>Total gain (latest check-in)</Typography>
-            <Typography variant="h5" sx={{ fontWeight: 700, color: changeColor(latest.gain) }}>
-              {latest.gain >= 0 ? '+' : ''}{formatCurrency(latest.gain)}
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="body2" sx={statLabelSx}>Total gain (latest check-in)</Typography>
+            <Typography
+              variant="h5"
+              sx={{ fontWeight: 700, color: changeColor(latest.gain), fontSize: { xs: '1.05rem', md: '1.5rem' } }}
+            >
+              {signed(latest.gain)}
             </Typography>
-          </Paper>
-        </Box>
+          </Box>
+        </Paper>
       )}
 
       {/* History */}
       {isMobile ? (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-          {rows.map((row) => (
-            <Paper
-              key={row.snapshot._id}
-              elevation={0}
-              sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, p: 2 }}
-            >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <Box sx={{ cursor: 'pointer', flexGrow: 1 }} onClick={() => toggleExpand(row.snapshot._id)}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-                    <Typography sx={{ fontWeight: 600 }}>{row.month}</Typography>
-                    <IconButton size="small">
-                      {expanded.has(row.snapshot._id) ? <KeyboardArrowUp fontSize="small" /> : <KeyboardArrowDown fontSize="small" />}
-                    </IconButton>
+        // One grouped list, a row per month: the month and its change on the
+        // left, the total on the right. The breakdown, the gain and the edit and
+        // delete actions open under a row when it is tapped. As separate cards
+        // with the actions always showing, three months filled a screen.
+        <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, overflow: 'hidden' }}>
+          {rows.map((row, index) => {
+            const open = expanded.has(row.snapshot._id);
+            return (
+              <Box
+                key={row.snapshot._id}
+                sx={{ borderTop: index === 0 ? 'none' : '1px solid', borderColor: 'divider' }}
+              >
+                <ButtonBase
+                  onClick={() => toggleExpand(row.snapshot._id)}
+                  aria-expanded={open}
+                  sx={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-start',
+                    gap: 1,
+                    px: 1.75,
+                    py: 1.1,
+                    textAlign: 'left'
+                  }}
+                >
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography sx={{ fontWeight: 600, fontSize: '0.95rem', lineHeight: 1.3 }}>{row.month}</Typography>
+                    <Typography
+                      noWrap
+                      sx={{ fontSize: '0.78rem', fontWeight: 600, color: changeColor(row.change ?? 0) }}
+                    >
+                      {row.change !== undefined
+                        ? `${signed(row.change)}${row.changePct !== undefined ? ` · ${formatPct(row.changePct)}` : ''}`
+                        : 'First check-in'}
+                    </Typography>
                   </Box>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>{formatCurrency(row.total)}</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', flexShrink: 0 }}>
-                  <IconButton size="small" onClick={() => { setEditSnapshot(row.snapshot); setCheckInOpen(true); }}>
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton size="small" onClick={() => setDeleteTarget(row.snapshot)}>
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-              </Box>
-              <Box sx={{ display: 'flex', gap: 3, mt: 1 }}>
-                <Box>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>Change</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: changeColor(row.change ?? 0) }}>
-                    {row.change !== undefined ? `${row.change >= 0 ? '+' : ''}${formatCurrency(row.change)}` : '—'}
-                    {row.changePct !== undefined && ` (${formatPct(row.changePct)})`}
+                  <Typography sx={{ fontWeight: 700, fontSize: '1rem', whiteSpace: 'nowrap' }}>
+                    {formatCurrency(row.total)}
                   </Typography>
-                </Box>
-                <Box>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>Total gain</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 600, color: changeColor(row.gain) }}>
-                    {row.gain !== 0 ? `${row.gain >= 0 ? '+' : ''}${formatCurrency(row.gain)}` : '—'}
-                  </Typography>
-                </Box>
+                  {open ? (
+                    <KeyboardArrowUp fontSize="small" sx={{ color: 'text.secondary' }} />
+                  ) : (
+                    <KeyboardArrowDown fontSize="small" sx={{ color: 'text.secondary' }} />
+                  )}
+                </ButtonBase>
+                <Collapse in={open} timeout="auto" unmountOnExit>
+                  <Box sx={{ px: 1.75, pb: 1.5 }}>
+                    <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
+                      Total gain{' '}
+                      <Box component="span" sx={{ fontWeight: 600, color: changeColor(row.gain) }}>
+                        {row.gain !== 0 ? signed(row.gain) : '—'}
+                      </Box>
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1 }}>
+                      {renderBreakdownChips(row.snapshot)}
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1.25 }}>
+                      <Button size="small" startIcon={<EditIcon />} onClick={() => openEdit(row.snapshot)}>
+                        Edit
+                      </Button>
+                      <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={() => setDeleteTarget(row.snapshot)}>
+                        Delete
+                      </Button>
+                    </Box>
+                  </Box>
+                </Collapse>
               </Box>
-              <Collapse in={expanded.has(row.snapshot._id)} timeout="auto" unmountOnExit>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1.5 }}>
-                  {renderBreakdownChips(row.snapshot)}
-                </Box>
-              </Collapse>
-            </Paper>
-          ))}
-          {rows.length === 0 && (
-            <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, p: 4, textAlign: 'center' }}>
-              <Typography variant="body1" sx={{ color: 'text.secondary', mb: 1 }}>
-                No check-ins yet
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                Set up your asset classes, then add your first monthly check-in.
-              </Typography>
-            </Paper>
-          )}
-        </Box>
+            );
+          })}
+          {rows.length === 0 && <Box sx={{ p: 4, textAlign: 'center' }}>{emptyState}</Box>}
+        </Paper>
       ) : (
         <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
           <Table size="small">
@@ -310,16 +390,16 @@ const NetWorthPage: React.FC = () => {
                     <TableCell sx={{ fontWeight: 600 }}>{row.month}</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 600 }}>{formatCurrency(row.total)}</TableCell>
                     <TableCell align="right" sx={{ color: changeColor(row.change ?? 0) }}>
-                      {row.change !== undefined ? `${row.change >= 0 ? '+' : ''}${formatCurrency(row.change)}` : '—'}
+                      {row.change !== undefined ? signed(row.change) : '—'}
                     </TableCell>
                     <TableCell align="right" sx={{ color: changeColor(row.change ?? 0) }}>
                       {row.changePct !== undefined ? formatPct(row.changePct) : '—'}
                     </TableCell>
                     <TableCell align="right" sx={{ color: changeColor(row.gain) }}>
-                      {row.gain !== 0 ? `${row.gain >= 0 ? '+' : ''}${formatCurrency(row.gain)}` : '—'}
+                      {row.gain !== 0 ? signed(row.gain) : '—'}
                     </TableCell>
                     <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                      <IconButton size="small" onClick={() => { setEditSnapshot(row.snapshot); setCheckInOpen(true); }}>
+                      <IconButton size="small" onClick={() => openEdit(row.snapshot)}>
                         <EditIcon fontSize="small" />
                       </IconButton>
                       <IconButton size="small" onClick={() => setDeleteTarget(row.snapshot)}>
@@ -341,12 +421,7 @@ const NetWorthPage: React.FC = () => {
               {rows.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} sx={{ textAlign: 'center', py: 6 }}>
-                    <Typography variant="body1" sx={{ color: 'text.secondary', mb: 1 }}>
-                      No check-ins yet
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                      Set up your asset classes, then add your first monthly check-in.
-                    </Typography>
+                    {emptyState}
                   </TableCell>
                 </TableRow>
               )}

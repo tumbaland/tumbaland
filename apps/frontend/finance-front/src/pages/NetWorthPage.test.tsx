@@ -239,3 +239,54 @@ describe('liabilities', () => {
     expect(screen.getByText(/Mortgage: −400 €/)).toBeInTheDocument();
   });
 });
+
+describe('on a phone', () => {
+  const originalMatchMedia = window.matchMedia;
+
+  beforeEach(() => {
+    window.matchMedia = ((query: string) => ({
+      matches: true,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false
+    })) as unknown as typeof window.matchMedia;
+    mockedUseSnapshots.mockReturnValue({ data: snapshots, isLoading: false, error: null });
+  });
+
+  afterEach(() => {
+    window.matchMedia = originalMatchMedia;
+  });
+
+  it('lists each month as one row, with the breakdown and actions a tap away', async () => {
+    // As cards with edit and delete always showing, three months filled a
+    // phone screen; a row per month puts a year of history within a scroll.
+    render(<NetWorthPage />);
+
+    const row = await screen.findByRole('button', { name: /2024-06/ });
+    expect(row).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
+
+    await userEvent.click(row);
+
+    expect(row).toHaveAttribute('aria-expanded', 'true');
+    expect(await screen.findByText(/Stocks: /)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    expect(screen.getByText('check-in dialog · 2024-06')).toBeInTheDocument();
+  });
+
+  it('marks the oldest check-in as the first rather than showing an empty change', async () => {
+    render(<NetWorthPage />);
+    expect(await screen.findByText('First check-in')).toBeInTheDocument();
+  });
+
+  it('keeps the class manager reachable by name when its label is an icon', async () => {
+    render(<NetWorthPage />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Asset classes' }));
+    expect(screen.getByText('class manager')).toBeInTheDocument();
+  });
+});

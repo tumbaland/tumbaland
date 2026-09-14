@@ -52,14 +52,11 @@ export function PlanUsageCard() {
   return (
     <Box
       sx={{
-        mt: { xs: 3, md: 4 },
-        mx: 'auto',
-        maxWidth: 620,
-        px: { xs: 2.25, md: 2.75 },
-        py: { xs: 2, md: 2.25 },
-        borderRadius: 3,
-        background: 'rgba(255,255,255,0.5)',
-        border: '1px solid rgba(255,255,255,0.65)'
+        px: { xs: 2, md: 2.5 },
+        py: { xs: 1.75, md: 2.25 },
+        borderRadius: 3.5,
+        background: 'rgba(255,255,255,0.62)',
+        border: '1px solid rgba(255,255,255,0.7)'
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>

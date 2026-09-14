@@ -1,5 +1,5 @@
 import { Box, Typography } from '@mui/material';
-import { ink, wordmark } from '../../theme/tokens';
+import { brand, gradient, ink } from '../../theme/tokens';
 
 interface GreetingHeaderProps {
   name?: string;
@@ -19,19 +19,64 @@ export function firstNameOf(name?: string): string | null {
   return first || null;
 }
 
+/** e.g. "Monday 14 September". */
+export function formatToday(now: Date): string {
+  return now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+/**
+ * The top of the home page, set the way a phone app sets a screen title: the
+ * date small above, the greeting large and left-aligned under it.
+ *
+ * It was a centred script greeting over a line of copy, which reads as a web
+ * page's hero rather than the first screen of an app, and took a quarter of a
+ * phone's height before anything could be tapped.
+ */
 export function GreetingHeader({ name, now = new Date() }: GreetingHeaderProps) {
   const first = firstNameOf(name);
 
   return (
-    <Box sx={{ textAlign: 'center', mb: { xs: 4, md: 5 } }}>
+    <Box component="header">
+      <Typography
+        sx={{
+          fontSize: { xs: 12, md: 13 },
+          fontWeight: 700,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          color: brand.purple,
+          mb: 0.5
+        }}
+      >
+        {formatToday(now)}
+      </Typography>
       <Typography
         component="h1"
-        sx={{ ...wordmark, fontSize: { xs: 34, sm: 44, md: 52 }, px: 2 }}
+        sx={{
+          fontSize: { xs: '1.85rem', md: '2.5rem' },
+          fontWeight: 800,
+          letterSpacing: '-0.03em',
+          lineHeight: 1.12,
+          color: ink.strong
+        }}
       >
-        {first ? `${timeOfDayGreeting(now)}, ${first}` : 'Welcome to Tumbaland'}
-      </Typography>
-      <Typography sx={{ color: ink.body, fontSize: { xs: '0.98rem', md: '1.05rem' } }}>
-        Everything you keep here, in one place. Where would you like to start?
+        {first ? (
+          <>
+            {timeOfDayGreeting(now)},{' '}
+            <Box
+              component="span"
+              sx={{
+                background: gradient.brand,
+                WebkitBackgroundClip: 'text',
+                backgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}
+            >
+              {first}
+            </Box>
+          </>
+        ) : (
+          'Welcome to Tumbaland'
+        )}
       </Typography>
     </Box>
   );
