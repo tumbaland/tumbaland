@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.485](https://github.com/toomastahves/tumbaland/compare/app-v0.0.484...app-v0.0.485) (2026-09-14)
+
+### Bug Fixes
+
+* e2e tests ([94628c1](https://github.com/toomastahves/tumbaland/commit/94628c1232afe25d49e97f219f0011887ec5a9d1))
+
 ## [0.0.484](https://github.com/toomastahves/tumbaland/compare/app-v0.0.483...app-v0.0.484) (2026-09-14)
 
 ### Features
