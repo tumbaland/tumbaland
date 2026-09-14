@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.480](https://github.com/toomastahves/tumbaland/compare/app-v0.0.479...app-v0.0.480) (2026-09-14)
+
+### Features
+
+* improve album front ui on mobile ([119f6b3](https://github.com/toomastahves/tumbaland/commit/119f6b3be8343acdc2cc42cb2812f3f94451a905))
+
 ## [0.0.479](https://github.com/toomastahves/tumbaland/compare/app-v0.0.478...app-v0.0.479) (2026-09-14)
 
 ### Features
