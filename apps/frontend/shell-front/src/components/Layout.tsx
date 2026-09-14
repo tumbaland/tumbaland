@@ -93,10 +93,18 @@ export default function Layout({ children }: LayoutProps) {
   const nav = authenticated ? <AppNav currentRoute={location.pathname} user={user} mobile={isMobile} /> : null;
 
   return (
+    // Kept clear of the notch, the status bar and rounded corners. index.html
+    // opts into the whole screen (viewport-fit=cover), so an iPhone in landscape
+    // already reports side insets in a browser, and an app's web view reports
+    // the status bar as well. The bottom edge is the tab bar's (see AppNav).
     <div
       style={{
         height: '100dvh',
         width: '100%',
+        boxSizing: 'border-box',
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: isMobile ? 'column' : 'row',

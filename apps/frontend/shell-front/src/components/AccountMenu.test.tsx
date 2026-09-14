@@ -51,6 +51,21 @@ it('shows who is signed in, the account pages and sign out, and nothing else', (
   expect(actions).toEqual(['Profile', 'Groups', 'Billing', 'Sign out']);
 });
 
+it('lists no Billing inside a native app, where store billing rules apply', () => {
+  window.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'ios' };
+  try {
+    renderMenu();
+
+    const actions = screen
+      .getAllByRole('menuitem')
+      .filter((item) => item.getAttribute('aria-disabled') !== 'true')
+      .map((item) => item.textContent);
+    expect(actions).toEqual(['Profile', 'Groups', 'Sign out']);
+  } finally {
+    delete window.Capacitor;
+  }
+});
+
 it('marks the account page the user is on', () => {
   renderMenu({ route: '/payments/plans' });
   expect(screen.getByRole('menuitem', { name: 'Billing' })).toHaveClass('Mui-selected');

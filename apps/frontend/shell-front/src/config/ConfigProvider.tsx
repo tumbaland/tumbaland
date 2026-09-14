@@ -8,7 +8,7 @@ export interface AppConfig {
   PAYMENT_FRONT_URL?: string;
   GROUP_FRONT_URL?: string;
   PUBLIC_API_URL?: string;
-  /** payment-service, for the pricing table's plans and limits. */
+  /** payment-service, for the plan and usage meters on the signed-in home page. */
   PAYMENT_API_URL?: string;
   ACCOUNT_FRONT_URL?: string;
   AUTH_SERVICE_URL?: string;

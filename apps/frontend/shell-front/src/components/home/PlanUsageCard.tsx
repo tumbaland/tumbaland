@@ -3,6 +3,7 @@ import { brand, ink } from '../../theme/tokens';
 import { Box, Button, Chip, Typography } from '@mui/material';
 import { useNavigate } from 'react-router';
 import { UsageMeter, useEntitlements } from '@tumbaland/components';
+import { canOfferPurchases } from '../../services/platform';
 import { isUnlimited } from '@tumbaland/frontend-core';
 import { getMyEntitlements } from '../../services/entitlementsService';
 
@@ -38,6 +39,9 @@ export function PlanUsageCard() {
   const { entitlements, loading, error } = useEntitlements(getMyEntitlements);
 
   const handleSeePlans = useCallback(() => navigate('/payments'), [navigate]);
+  // Plans are for the website. In an app store build there is no plans page to
+  // send anyone to (see canOfferPurchases), so the card only reports usage.
+  const offerPlans = canOfferPurchases();
 
   // A failed lookup is not an error state: the home page works without this
   // card, and a red box where a usage bar should be is worse than no bar.
@@ -82,13 +86,15 @@ export function PlanUsageCard() {
           }}
         />
         <Box sx={{ flex: 1 }} />
-        <Button
-          size="small"
-          onClick={handleSeePlans}
-          sx={{ textTransform: 'none', fontWeight: 600, color: brand.purple, mr: '-6px' }}
-        >
-          See plans
-        </Button>
+        {offerPlans && (
+          <Button
+            size="small"
+            onClick={handleSeePlans}
+            sx={{ textTransform: 'none', fontWeight: 600, color: brand.purple, mr: '-6px' }}
+          >
+            See plans
+          </Button>
+        )}
       </Box>
 
       <UsageMeter
@@ -96,14 +102,14 @@ export function PlanUsageCard() {
         used={usage.storageBytes}
         limit={limits.meters.storageBytes}
         unit="bytes"
-        onUpgrade={handleSeePlans}
+        onUpgrade={offerPlans ? handleSeePlans : undefined}
         upgradeLabel="See plans"
       />
       <UsageMeter
         label="Tracked tickers"
         used={usage.trackedTickers}
         limit={limits.meters.trackedTickers}
-        onUpgrade={handleSeePlans}
+        onUpgrade={offerPlans ? handleSeePlans : undefined}
         upgradeLabel="See plans"
       />
 

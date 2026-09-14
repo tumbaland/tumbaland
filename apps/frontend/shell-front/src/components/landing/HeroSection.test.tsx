@@ -69,7 +69,7 @@ describe('HeroSection', () => {
     const user = userEvent.setup();
     const { onSignIn, onSeeHow } = renderHero();
 
-    await user.click(screen.getByRole('button', { name: /Start free with Google/ }));
+    await user.click(screen.getByRole('button', { name: /Continue with Google/ }));
     expect(onSignIn).toHaveBeenCalledTimes(1);
 
     await user.click(screen.getByRole('button', { name: /See how it connects/ }));

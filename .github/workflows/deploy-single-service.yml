@@ -110,6 +110,7 @@ jobs:
           echo "API_KEY_ENCRYPTION_SECRET=${{ secrets.API_KEY_ENCRYPTION_SECRET }}" >> .env.app
           echo "INTERNAL_SERVICE_TOKEN=${{ secrets.INTERNAL_SERVICE_TOKEN }}" >> .env.app
           echo "GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}" >> .env.app
+          echo "GOOGLE_NATIVE_CLIENT_IDS=${{ vars.GOOGLE_NATIVE_CLIENT_IDS }}" >> .env.app
           echo "COOKIE_DOMAIN=${{ vars.COOKIE_DOMAIN }}" >> .env.app
           echo "CORS_ORIGIN=${{ vars.CORS_ORIGIN }}" >> .env.app
           echo "ALPHA_VANTAGE_API_KEY=${{ secrets.ALPHA_VANTAGE_API_KEY }}" >> .env.app

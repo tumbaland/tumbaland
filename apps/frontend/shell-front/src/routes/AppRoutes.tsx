@@ -9,7 +9,7 @@ import { useAuthState } from '../hooks/useAuthState';
 
 /**
  * `/` serves two audiences: signed-out visitors get the public landing page
- * (the product and its pricing), signed-in users get the dashboard. The
+ * (what the product is, and a way in), signed-in users get the dashboard. The
  * loading state renders a spinner rather than the landing page so a returning
  * user never sees the marketing copy flash before their own content.
  */

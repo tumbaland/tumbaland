@@ -12,26 +12,26 @@ import AssistantSection from './AssistantSection';
  */
 describe('AssistantSection', () => {
   it('names Claude, and leaves everything else to the standard', () => {
-    render(<AssistantSection />);
+    render(<AssistantSection onOpenGuide={vi.fn()} />);
     expect(screen.getByText(/In Claude, or any assistant that takes MCP connectors/)).toBeInTheDocument();
     expect(screen.queryByText(/ChatGPT|Gemini/)).not.toBeInTheDocument();
   });
 
   it('says plainly which client has been tested', () => {
-    render(<AssistantSection />);
+    render(<AssistantSection onOpenGuide={vi.fn()} />);
     // "Should work, because it is a standard" and "we have run it" are
     // different claims, and only one of them is this page's to make.
     expect(screen.getByText(/Claude is the one we have tested end to end/)).toBeInTheDocument();
   });
 
   it('shows the connector address, which is the one thing nobody can guess', () => {
-    render(<AssistantSection />);
+    render(<AssistantSection onOpenGuide={vi.fn()} />);
     // The detail that turns "sounds nice" into "I could set that up now".
     expect(screen.getByText('https://mcp.tumbaland.eu/mcp')).toBeInTheDocument();
   });
 
   it('says which standard it speaks, so it reads as ordinary rather than proprietary', () => {
-    render(<AssistantSection />);
+    render(<AssistantSection onOpenGuide={vi.fn()} />);
     expect(screen.getByText(/standard MCP server/)).toBeInTheDocument();
   });
 
@@ -41,7 +41,7 @@ describe('AssistantSection', () => {
     // jsdom exposes navigator.clipboard as a getter, so it is redefined rather
     // than assigned — and after setup(), which installs a stub of its own.
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
-    render(<AssistantSection />);
+    render(<AssistantSection onOpenGuide={vi.fn()} />);
 
     await user.click(screen.getByRole('button', { name: /Copy/ }));
 
@@ -60,7 +60,7 @@ describe('AssistantSection', () => {
       value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
       configurable: true
     });
-    render(<AssistantSection />);
+    render(<AssistantSection onOpenGuide={vi.fn()} />);
 
     await user.click(screen.getByRole('button', { name: /Copy/ }));
 
@@ -69,32 +69,36 @@ describe('AssistantSection', () => {
   });
 
   it('gives the three steps in the order they are done', () => {
-    render(<AssistantSection />);
+    render(<AssistantSection onOpenGuide={vi.fn()} />);
     ['Add the address', 'Pick what it can reach', 'Talk to it'].forEach((step) => {
       expect(screen.getByText(step)).toBeInTheDocument();
     });
   });
 
   it('says what it can do as things a person would say, not as tool names', () => {
-    render(<AssistantSection />);
+    render(<AssistantSection onOpenGuide={vi.fn()} />);
     // `search_transactions` is accurate and tells a visitor nothing.
     expect(screen.getByText(/what did we spend at Selver this year/)).toBeInTheDocument();
     expect(screen.getByText(/when did we last go out for dinner/)).toBeInTheDocument();
     expect(screen.queryByText(/search_transactions/)).not.toBeInTheDocument();
   });
 
-  it('leads to the full guide rather than explaining every client here', () => {
-    render(<AssistantSection />);
-    expect(screen.getByRole('link', { name: /Full setup guide/ })).toHaveAttribute(
-      'href',
-      '/connect'
-    );
+  it('opens the full guide over the page, and keeps its real address for a new tab', async () => {
+    const onOpenGuide = vi.fn();
+    const user = userEvent.setup();
+    render(<AssistantSection onOpenGuide={onOpenGuide} />);
+
+    const link = screen.getByRole('link', { name: /Full setup guide/ });
+    expect(link).toHaveAttribute('href', '/connect');
+
+    await user.click(link);
+    expect(onOpenGuide).toHaveBeenCalledTimes(1);
   });
 
   it('says the connection is bounded and reversible, next to the invitation', () => {
     // The reassurance has to sit with the ask; a visitor who has to go looking
     // for it has already decided.
-    render(<AssistantSection />);
+    render(<AssistantSection onOpenGuide={vi.fn()} />);
     expect(screen.getByText(/only ever sees what you tick/)).toBeInTheDocument();
     expect(screen.getByText(/disconnect it from your account page/)).toBeInTheDocument();
   });

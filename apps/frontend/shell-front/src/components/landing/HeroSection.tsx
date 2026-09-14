@@ -5,23 +5,19 @@ import { brand, brandButton, glass, gradient, ink } from '../../theme/tokens';
 /**
  * The first screen, and the whole pitch.
  *
- * It used to lead with "photo albums, finance tracking and a journal" — three
- * things a visitor can already get separately, and a claim that puts Tumbaland
- * next to four products it cannot out-feature. The assistant connector is the
- * part nothing else on that list has: you say what happened and it lands as a
- * proper entry, and you ask a question and the answer comes out of your own
- * history. That now leads, and the modules follow as what it can reach.
+ * The assistant connector leads because it is the part nothing else on the
+ * shelf has: you say what happened and it lands as a proper entry, and you ask
+ * a question and the answer comes out of your own history. The modules follow
+ * as what it can reach.
  *
- * Two columns from `md` up, because the claim and the proof belong on screen at
- * the same time. The sample exchange is the proof: "MCP server" and "connector"
- * mean nothing to the person this page is for, and what they want to know is
- * what it feels like to use.
+ * Laid out for a phone first. On a narrow screen the claim, the button and the
+ * sample exchange stack so all three fit the first screen; from `md` up they
+ * sit in two columns, the claim beside its proof. The exchange is the proof:
+ * "MCP server" means nothing to the person this page is for, and what they want
+ * to know is what it feels like to use.
  *
- * Only Claude is named. The page used to promise ChatGPT and Gemini too, on the
- * reasoning that both support MCP connectors — which is true of the protocol
- * and was never true of anything anyone here had actually run. Claude is what
- * has been tested end to end, so Claude is what is claimed; the standard is
- * what covers the rest, and it can be named honestly without naming a product.
+ * Only Claude is named, because Claude is what has been tested end to end; the
+ * standard covers the rest and can be named without naming a product.
  */
 
 interface HeroSectionProps {
@@ -49,18 +45,18 @@ function Bubble({ mine, text }: Line) {
       sx={{
         alignSelf: mine ? 'flex-end' : 'flex-start',
         maxWidth: '88%',
-        px: 2,
-        py: 1.25,
+        px: { xs: 1.5, md: 2 },
+        py: { xs: 1, md: 1.25 },
         // Squared on the speaker's own side, the way every messaging app does
-        // it — the shape alone says who is talking, so nothing needs labelling.
+        // it: the shape alone says who is talking, so nothing needs labelling.
         borderRadius: 3,
         borderBottomRightRadius: mine ? 0.5 : 3,
         borderBottomLeftRadius: mine ? 3 : 0.5,
         background: mine ? gradient.brand : 'rgba(255,255,255,0.82)',
         border: mine ? 'none' : '1px solid rgba(255,255,255,0.9)',
         color: mine ? '#fff' : ink.body,
-        fontSize: { xs: '0.9rem', md: '0.95rem' },
-        lineHeight: 1.55,
+        fontSize: { xs: '0.86rem', md: '0.95rem' },
+        lineHeight: 1.5,
         boxShadow: mine ? `0 8px 22px -14px ${brand.magenta}` : 'none'
       }}
     >
@@ -74,24 +70,26 @@ export function HeroSection({ onSignIn, onSeeHow }: HeroSectionProps) {
     <Box
       component="section"
       sx={{
-        pt: { xs: 3, md: 5 },
-        pb: { xs: 4, md: 6 },
+        maxWidth: 1120,
+        mx: 'auto',
         px: 2,
+        pt: { xs: 2.5, md: 6 },
+        pb: { xs: 3, md: 7 },
         display: 'grid',
-        gridTemplateColumns: { xs: '1fr', md: '1.05fr 0.95fr' },
+        gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '1.05fr 0.95fr' },
         alignItems: 'center',
-        gap: { xs: 4, md: 6 }
+        gap: { xs: 3, md: 6 }
       }}
     >
       <Box sx={{ textAlign: { xs: 'center', md: 'left' } }}>
         <Typography
           sx={{
-            fontSize: 12,
+            fontSize: { xs: 11, md: 12 },
             fontWeight: 700,
             letterSpacing: '0.14em',
             textTransform: 'uppercase',
             color: brand.purple,
-            mb: 2
+            mb: { xs: 1.25, md: 2 }
           }}
         >
           Works with Claude · and any MCP client
@@ -100,13 +98,13 @@ export function HeroSection({ onSignIn, onSeeHow }: HeroSectionProps) {
         <Typography
           component="h1"
           sx={{
-            fontSize: { xs: '2.1rem', sm: '2.6rem', md: '3.15rem' },
+            fontSize: { xs: '2rem', sm: '2.5rem', md: '3.15rem' },
             fontWeight: 800,
             letterSpacing: '-0.035em',
             lineHeight: 1.06,
             color: ink.strong,
             textWrap: 'balance',
-            mb: 2.5
+            mb: { xs: 1.5, md: 2.5 }
           }}
         >
           Just tell your assistant. It writes it down.
@@ -114,25 +112,30 @@ export function HeroSection({ onSignIn, onSeeHow }: HeroSectionProps) {
 
         <Typography
           sx={{
-            fontSize: { xs: '1.05rem', md: '1.18rem' },
-            lineHeight: 1.6,
+            fontSize: { xs: '1rem', md: '1.18rem' },
+            lineHeight: 1.55,
             color: ink.body,
             maxWidth: 520,
             mx: { xs: 'auto', md: 0 },
-            mb: 3.5
+            mb: { xs: 2.5, md: 3.5 }
           }}
         >
           Connect Tumbaland once and your assistant can keep your journal, read your accounts and
           find your photos. Everything it writes is yours, in a real app you can open.
         </Typography>
 
+        {/* Full width and stacked on a phone, where a thumb reaches for the
+            first button; side by side once there is room. */}
         <Box
           sx={{
             display: 'flex',
-            gap: 1.5,
-            flexWrap: 'wrap',
-            justifyContent: { xs: 'center', md: 'flex-start' },
-            mb: 2.5
+            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: { xs: 'stretch', sm: 'center' },
+            justifyContent: { sm: 'center', md: 'flex-start' },
+            gap: { xs: 1, sm: 1.5 },
+            maxWidth: { xs: 400, sm: 'none' },
+            mx: { xs: 'auto', md: 0 },
+            mb: { xs: 1.75, md: 2.5 }
           }}
         >
           <Button
@@ -140,9 +143,9 @@ export function HeroSection({ onSignIn, onSeeHow }: HeroSectionProps) {
             size="large"
             startIcon={<GoogleIcon />}
             onClick={onSignIn}
-            sx={{ ...brandButton, fontSize: '1rem', px: 3.5, py: 1.4 }}
+            sx={{ ...brandButton, fontSize: '1rem', px: 3.5, py: 1.3 }}
           >
-            Start free with Google
+            Continue with Google
           </Button>
           <Button
             variant="outlined"
@@ -153,7 +156,7 @@ export function HeroSection({ onSignIn, onSeeHow }: HeroSectionProps) {
               fontSize: '1rem',
               fontWeight: 600,
               px: 3,
-              py: 1.4,
+              py: 1.3,
               borderRadius: 3,
               color: brand.purple,
               borderColor: `${brand.purple}55`,
@@ -164,7 +167,7 @@ export function HeroSection({ onSignIn, onSeeHow }: HeroSectionProps) {
           </Button>
         </Box>
 
-        <Typography sx={{ fontSize: 13.5, color: ink.muted }}>
+        <Typography sx={{ fontSize: { xs: 12.5, md: 13.5 }, color: ink.muted }}>
           Free · You pick what it can reach · Disconnect whenever
         </Typography>
       </Box>
@@ -172,12 +175,12 @@ export function HeroSection({ onSignIn, onSeeHow }: HeroSectionProps) {
       <Box
         sx={{
           ...glass,
-          p: { xs: 2, md: 2.5 },
+          p: { xs: 1.5, md: 2.5 },
           display: 'flex',
           flexDirection: 'column',
-          gap: 1.25,
+          gap: { xs: 1, md: 1.25 },
           width: '100%',
-          maxWidth: { xs: 520, md: 'none' },
+          maxWidth: { xs: 460, md: 'none' },
           mx: 'auto'
         }}
         // Decorative: the heading beside it is the real explanation, and a

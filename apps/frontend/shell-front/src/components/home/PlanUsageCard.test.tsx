@@ -90,6 +90,20 @@ it('routes to the plans page rather than to a checkout', async () => {
   expect(navigate).toHaveBeenCalledWith('/payments');
 });
 
+it('reports usage but offers no plans inside a native app', async () => {
+  // Nearly full meters too, which on the website grow their own "See plans".
+  mocked.mockResolvedValue({ ...FREE, usage: { ...FREE.usage, storageBytes: 0.95 * GB, trackedTickers: 3 } });
+  window.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'android' };
+  try {
+    renderCard();
+
+    expect(await screen.findByText('3 of 3')).toBeInTheDocument();
+    expect(screen.queryAllByRole('button', { name: 'See plans' })).toHaveLength(0);
+  } finally {
+    delete window.Capacitor;
+  }
+});
+
 it('hides itself rather than showing an error when the lookup fails', async () => {
   mocked.mockRejectedValue(new Error('payment-service down'));
   const { container } = renderCard();

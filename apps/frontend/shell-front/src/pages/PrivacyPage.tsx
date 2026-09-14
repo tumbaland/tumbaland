@@ -11,13 +11,16 @@ import DocumentPage from '../components/DocumentPage';
  * GPS coordinates and Tumbaland reads them, and that connecting an AI assistant
  * sends journal content to whoever runs it.
  */
-export function PrivacyPage() {
+export const PRIVACY_DOC = {
+  title: 'Privacy',
+  intro: 'What Tumbaland stores, where it lives, and who else can see it.',
+  updated: '14 September 2026'
+};
+
+/** The policy itself: the /privacy page and the front page's reader both show it. */
+export function PrivacyContent() {
   return (
-    <DocumentPage
-      title="Privacy"
-      intro="What Tumbaland stores, where it lives, and who else can see it."
-      updated="4 September 2026"
-    >
+    <>
       <p>
         Tumbaland is a private journal, photo library and finance tracker for one person or a small
         group. It is run by an individual, not a company, and it is built to hold things people do
@@ -110,13 +113,6 @@ export function PrivacyPage() {
             <td>Handles sign-in and tells Tumbaland your email, name and picture.</td>
           </tr>
           <tr>
-            <td>Stripe</td>
-            <td>
-              Handles payment if you choose to support the project. Card details go to Stripe
-              directly and are never seen or stored by Tumbaland.
-            </td>
-          </tr>
-          <tr>
             <td>OpenStreetMap (Nominatim)</td>
             <td>
               Receives place names you type when searching for a location to attach to an entry.
@@ -160,7 +156,7 @@ export function PrivacyPage() {
       <ul>
         <li>
           <strong>Export.</strong> Journal entries and cash flow can be exported as CSV, and photos
-          downloaded at full resolution. This works on every plan.
+          downloaded at full resolution, whenever you like.
         </li>
         <li>
           <strong>Deletion.</strong> Ask at the address below and the account and everything in it
@@ -174,8 +170,8 @@ export function PrivacyPage() {
       <h2>How long things are kept</h2>
       <p>
         Your content is kept until you delete it or ask for the account to be removed. Server logs
-        are kept for a short period for debugging and then rotated away. Some plans apply a
-        retention window to older content, which is shown on the pricing section of the home page.
+        are kept for a short period for debugging and then rotated away. If older history is only
+        kept for a set time, your home page says how long once you sign in.
       </p>
 
       <h2>Security</h2>
@@ -185,13 +181,6 @@ export function PrivacyPage() {
         them. Credentials issued to assistants are stored as one-way digests where they do not need
         to be readable, and API keys you can re-read are encrypted with a key held outside the
         database.
-      </p>
-      <p>
-        Tumbaland is{' '}
-        <Link href="https://github.com/toomastahves/tumbaland" target="_blank" rel="noreferrer">
-          open source
-        </Link>
-        , so none of this has to be taken on trust. The code that handles your data can be read.
       </p>
 
       <h2>Children</h2>
@@ -209,6 +198,14 @@ export function PrivacyPage() {
         about this page, write to{' '}
         <Link href="mailto:hello@tumbaland.eu">hello@tumbaland.eu</Link>.
       </p>
+    </>
+  );
+}
+
+export function PrivacyPage() {
+  return (
+    <DocumentPage {...PRIVACY_DOC}>
+      <PrivacyContent />
     </DocumentPage>
   );
 }

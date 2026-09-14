@@ -8,6 +8,7 @@ import GroupsIcon from '@mui/icons-material/Groups';
 import type { SvgIconProps } from '@mui/material/SvgIcon';
 import { AppConfig } from './ConfigProvider';
 import { brand } from '../theme/tokens';
+import { canOfferPurchases } from '../services/platform';
 
 export interface AppConfigItem {
   name: string;
@@ -15,6 +16,8 @@ export interface AppConfigItem {
   urlKey?: keyof AppConfig; // Key to get URL from config
   icon: React.ComponentType<SvgIconProps>;
   color: string;
+  /** Sells plans or takes payments, so left out where that is not allowed (see canOfferPurchases). */
+  purchases?: boolean;
 }
 
 /** The modules, in the order the main navigation lists them. */
@@ -75,11 +78,18 @@ export const USER_APPS: AppConfigItem[] = [
     route: '/payments',
     urlKey: 'PAYMENT_FRONT_URL',
     icon: PaymentIcon,
-    color: '#6366f1'
+    color: '#6366f1',
+    purchases: true
   }
 ];
 
 const EMBEDDABLE_APPS = [...APPS, ...USER_APPS].filter((app) => app.route !== '/');
+
+/** Whether this platform may show the app at all: a native app lists no billing. */
+const isOffered = (app: AppConfigItem) => !app.purchases || canOfferPurchases();
+
+/** The account entries to list on this platform. */
+export const getUserApps = () => USER_APPS.filter(isOffered);
 
 /**
  * Match an app by route prefix, so nested child routes like
@@ -87,7 +97,10 @@ const EMBEDDABLE_APPS = [...APPS, ...USER_APPS].filter((app) => app.route !== '/
  * after the prefix belongs to the child app's own router.
  */
 export const getAppByRoute = (pathname: string) =>
-  EMBEDDABLE_APPS.find((app) => pathname === app.route || pathname.startsWith(`${app.route}/`));
+  EMBEDDABLE_APPS.find(
+    // Checked here too, or a link or bookmark would still frame Billing in an app.
+    (app) => isOffered(app) && (pathname === app.route || pathname.startsWith(`${app.route}/`))
+  );
 
 /** Nav highlighting: an app stays active while the user is deep inside it. */
 export const isRouteActive = (route: string, pathname?: string) =>

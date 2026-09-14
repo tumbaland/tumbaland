@@ -1,37 +1,49 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { vi } from 'vitest';
 
 import LandingFooter from './LandingFooter';
 
-/**
- * The footer is the only route a signed-out visitor has to any of the three
- * public documents. Nothing else on the landing page links to them, so a broken
- * or missing link here means the page simply does not exist as far as anyone
- * without an account is concerned.
- */
+const onSignIn = vi.fn();
+const onOpen = vi.fn();
+
 const linkTo = (name: RegExp | string) => screen.getByRole('link', { name });
 
 describe('LandingFooter', () => {
-  beforeEach(() => render(<LandingFooter onSignIn={() => undefined} />));
+  beforeEach(() => {
+    onSignIn.mockReset();
+    onOpen.mockReset();
+    render(<LandingFooter onSignIn={onSignIn} onOpen={onOpen} />);
+  });
 
-  it('links to the terms on this site, not into the billing app', () => {
-    // The previous link pointed at /payments/terms. Payment-front is served
-    // from its own hostname, so that path hit this app's SPA fallback and
-    // dead-ended on a page that does not exist.
+  it('keeps a real address on each document link, on this site', () => {
+    // An old terms link pointed into the billing app and dead-ended. Each link
+    // also works opened in a new tab, because the address is real.
     expect(linkTo('Terms')).toHaveAttribute('href', '/terms');
-  });
-
-  it('links to the privacy policy', () => {
     expect(linkTo('Privacy')).toHaveAttribute('href', '/privacy');
-  });
-
-  it('links to the connector guide, which nothing else on the page mentions', () => {
     expect(linkTo('Connect an assistant')).toHaveAttribute('href', '/connect');
   });
 
-  it('keeps the source link pointed off-site, opened safely', () => {
-    const source = linkTo('Source');
+  it('opens each document over the page on a plain click', async () => {
+    const user = userEvent.setup();
 
-    expect(source).toHaveAttribute('href', 'https://github.com/toomastahves/tumbaland');
-    expect(source).toHaveAttribute('rel', expect.stringContaining('noopener'));
+    await user.click(linkTo('Privacy'));
+    await user.click(linkTo('Terms'));
+    await user.click(linkTo('Connect an assistant'));
+
+    expect(onOpen.mock.calls).toEqual([['privacy'], ['terms'], ['connect']]);
+  });
+
+  it('has no link to source code, which is not published', () => {
+    expect(screen.queryByRole('link', { name: /source|github/i })).not.toBeInTheDocument();
+  });
+
+  it('closes with sign-in and nothing to pay for', async () => {
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('button', { name: /Continue with Google/ }));
+
+    expect(onSignIn).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/support/i)).not.toBeInTheDocument();
   });
 });

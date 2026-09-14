@@ -10,6 +10,39 @@ interface DocumentPageProps {
 }
 
 /**
+ * How a document's body is set: headings, lists, tables and code. Shared with
+ * the front page's reader, so a policy reads the same in the dialog as on its
+ * own page.
+ */
+export const documentProse = {
+  '& h2': { fontSize: '1.35rem', fontWeight: 700, mt: 5, mb: 1.5 },
+  '& h3': { fontSize: '1.05rem', fontWeight: 600, mt: 3, mb: 1 },
+  '& p': { lineHeight: 1.7, mb: 2, color: 'text.primary' },
+  '& li': { lineHeight: 1.7, mb: 1 },
+  '& ul, & ol': { pl: 3, mb: 2 },
+  '& table': { width: '100%', borderCollapse: 'collapse', mb: 3, fontSize: '0.92rem' },
+  '& th, & td': {
+    textAlign: 'left',
+    padding: '0.6rem 0.75rem',
+    borderBottom: '1px solid',
+    borderColor: 'divider',
+    verticalAlign: 'top'
+  },
+  '& th': { fontWeight: 600 },
+  '& code': {
+    fontFamily: 'monospace',
+    fontSize: '0.88em',
+    bgcolor: 'action.hover',
+    px: 0.6,
+    py: 0.2,
+    borderRadius: 0.5,
+    // A command or an address is one long word; on a phone it has to wrap
+    // rather than push the page sideways.
+    overflowWrap: 'anywhere'
+  }
+} as const;
+
+/**
  * The shell for the pages a visitor reads rather than uses: the privacy policy
  * and the connector guide.
  *
@@ -34,32 +67,7 @@ export function DocumentPage({ title, intro, updated, children }: DocumentPagePr
 
         <Divider sx={{ my: 4 }} />
 
-        <Box
-          sx={{
-            '& h2': { fontSize: '1.35rem', fontWeight: 700, mt: 5, mb: 1.5 },
-            '& h3': { fontSize: '1.05rem', fontWeight: 600, mt: 3, mb: 1 },
-            '& p': { lineHeight: 1.7, mb: 2, color: 'text.primary' },
-            '& li': { lineHeight: 1.7, mb: 1 },
-            '& ul': { pl: 3, mb: 2 },
-            '& table': { width: '100%', borderCollapse: 'collapse', mb: 3, fontSize: '0.92rem' },
-            '& th, & td': {
-              textAlign: 'left',
-              padding: '0.6rem 0.75rem',
-              borderBottom: '1px solid',
-              borderColor: 'divider',
-              verticalAlign: 'top'
-            },
-            '& th': { fontWeight: 600 },
-            '& code': {
-              fontFamily: 'monospace',
-              fontSize: '0.88em',
-              bgcolor: 'action.hover',
-              px: 0.6,
-              py: 0.2,
-              borderRadius: 0.5
-            }
-          }}
-        >
+        <Box sx={documentProse}>
           {children}
         </Box>
 

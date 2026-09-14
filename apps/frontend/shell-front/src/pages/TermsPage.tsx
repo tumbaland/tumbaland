@@ -1,4 +1,4 @@
-import { Alert, Link, Typography } from '@mui/material';
+import { Link } from '@mui/material';
 import DocumentPage from '../components/DocumentPage';
 
 /**
@@ -11,18 +11,20 @@ import DocumentPage from '../components/DocumentPage';
  * "last updated" with today's date on every render, so it claimed to have been
  * revised daily and could never be checked against anything.
  *
- * Written to match what is actually offered: everything is free, and one
- * optional subscription exists for people who want to support the project. Copy
- * that describes tiers and entitlements would be describing a product that does
- * not exist.
+ * Written to match what is actually offered: everything is free. Copy that
+ * describes tiers, subscriptions or entitlements would be describing a product
+ * that does not exist.
  */
-export function TermsPage() {
+export const TERMS_DOC = {
+  title: 'Terms',
+  intro: 'What you can expect from Tumbaland, and what it expects from you.',
+  updated: '14 September 2026'
+};
+
+/** The terms themselves: the /terms page and the front page's reader both show them. */
+export function TermsContent() {
   return (
-    <DocumentPage
-      title="Terms"
-      intro="What you can expect from Tumbaland, and what it expects from you."
-      updated="5 September 2026"
-    >
+    <>
       <p>
         Tumbaland is a private journal, photo library and finance tracker, run by an individual
         rather than a company. These terms cover using it. They are short because the arrangement
@@ -32,22 +34,8 @@ export function TermsPage() {
       <h2>The service is free</h2>
       <p>
         Every feature is available at no cost. There is no paid tier holding back the real
-        product, and nothing you can do today will stop working.
+        product, nothing to subscribe to and no card to enter.
       </p>
-      <p>
-        There is one optional subscription, for people who want to support the project. It buys
-        goodwill and nothing else. No feature is behind it. It renews until you cancel, which you
-        can do at any time from your account, and cancelling takes effect at the end of the period
-        you have already paid for. Payments are handled by Stripe; card details never reach
-        Tumbaland.
-      </p>
-
-      <Alert severity="info" sx={{ my: 3 }}>
-        <Typography variant="body2">
-          <strong>Refunds.</strong> Ask and you will get one. Nobody should have to argue about
-          money they gave to a side project.
-        </Typography>
-      </Alert>
 
       <h2>Your content is yours</h2>
       <ul>
@@ -60,8 +48,8 @@ export function TermsPage() {
           where you are.
         </li>
         <li>
-          Journal entries and cash flow export as CSV, and photos download at full resolution, on
-          every plan. Ask and the account and everything in it will be deleted.
+          Journal entries and cash flow export as CSV, and photos download at full resolution,
+          whenever you like. Ask and the account and everything in it will be deleted.
         </li>
       </ul>
 
@@ -82,7 +70,7 @@ export function TermsPage() {
       <p>
         This is run by one person on hardware they own. It is looked after carefully and backed up,
         but it comes with no uptime guarantee and no warranty, and the operator&apos;s liability is
-        limited to what you have paid, which for almost everyone is nothing. Keep your own copy of
+        limited to what you have paid, which is nothing. Keep your own copy of
         anything you would be upset to lose; the export tools exist for exactly that.
       </p>
 
@@ -103,6 +91,14 @@ export function TermsPage() {
       <p>
         Questions about any of this: <Link href="mailto:hello@tumbaland.eu">hello@tumbaland.eu</Link>.
       </p>
+    </>
+  );
+}
+
+export function TermsPage() {
+  return (
+    <DocumentPage {...TERMS_DOC}>
+      <TermsContent />
     </DocumentPage>
   );
 }

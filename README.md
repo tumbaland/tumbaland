@@ -59,6 +59,34 @@ services).
    ssh tom@192.168.0.131
    ```
 
+## Mobile apps (not built yet)
+
+There are no iOS or Android apps yet. The intended shape is a thin Capacitor wrapper (a new
+`apps/mobile` workspace) that loads the live site at `https://tumbaland.eu`, so the shell, the
+framed apps and the `.tumbaland.eu` session cookie keep working as they are. Bundling the shell
+into the app would put it on another origin, where that cookie is never sent.
+
+Already in place:
+
+- `shell-front/src/services/platform.ts`: `getAppPlatform()` and `isNativeApp()` detect the
+  wrapper, and `canOfferPurchases()` hides Billing and "See plans" inside an app, since the
+  stores require their own billing for those.
+- The shell layout keeps clear of the notch and status bar (`env(safe-area-inset-*)`); the tab
+  bar already pads for the home indicator.
+- auth-service accepts Google tokens from the native client IDs in `GOOGLE_NATIVE_CLIENT_IDS`.
+  Google blocks its sign-in page inside web views, so an app signs in with a native Google plugin
+  and posts the ID token to `/auth/validate`, the same call the web button makes.
+
+Still to do when the apps are built:
+
+- Sign in with Apple, which iOS requires next to Google sign-in: an auth-service endpoint that
+  verifies Apple's identity token and sets the same cookie.
+- Account deletion has to actually delete; today it only records the request.
+- Session length: the cookie lasts 7 days, so an app would sign people out every week.
+- `apple-app-site-association` and `assetlinks.json` in `apps/infra/tumbaland-proxy`, so links
+  to the site open the app.
+- Links outside `*.tumbaland.eu` should open in the system browser.
+
 ## Commits & Releases
 
 Use [Conventional Commits](https://www.conventionalcommits.org/) for every commit, everywhere in

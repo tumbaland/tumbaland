@@ -9,13 +9,16 @@ import DocumentPage from '../components/DocumentPage';
  * they cannot guess. A directory reviewer needs to know what every tool does and
  * what it can reach. Both are served by saying it plainly once.
  */
-export function ConnectPage() {
+export const CONNECT_DOC = {
+  title: 'Connect an assistant',
+  intro: 'Talk to Claude, or any assistant that takes MCP connectors, and have it write to your Tumbaland journal.',
+  updated: '5 September 2026'
+};
+
+/** The guide itself: the /connect page and the front page's reader both show it. */
+export function ConnectContent() {
   return (
-    <DocumentPage
-      title="Connect an assistant"
-      intro="Talk to Claude, or any assistant that takes MCP connectors, and have it write to your Tumbaland journal."
-      updated="5 September 2026"
-    >
+    <>
       <p>
         Once connected you can say <em>&quot;we went to Sushi House on Friday&quot;</em> and it
         lands as a proper journal entry, or ask <em>&quot;when did we last see a film?&quot;</em> and
@@ -380,6 +383,14 @@ export function ConnectPage() {
           to. Ask it to read the day first, then change just that entry.
         </li>
       </ul>
+    </>
+  );
+}
+
+export function ConnectPage() {
+  return (
+    <DocumentPage {...CONNECT_DOC}>
+      <ConnectContent />
     </DocumentPage>
   );
 }

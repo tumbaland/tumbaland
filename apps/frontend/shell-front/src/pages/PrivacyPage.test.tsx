@@ -9,9 +9,18 @@ describe('PrivacyPage', () => {
 
     // A policy that omits one of these is inaccurate, and these are exactly the
     // services the code talks to.
-    for (const party of ['Google', 'Stripe', 'OpenStreetMap', 'Alpha Vantage']) {
+    for (const party of ['Google', 'OpenStreetMap', 'Alpha Vantage']) {
       expect(screen.getAllByText(new RegExp(party)).length).toBeGreaterThan(0);
     }
+  });
+
+  it('mentions no payment provider and claims no public source code', () => {
+    // Tumbaland is free and its code is not published, so neither belongs in
+    // the policy.
+    render(<PrivacyPage />);
+    expect(screen.queryByText(/Stripe/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/open source/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /open source|github/i })).not.toBeInTheDocument();
   });
 
   it('says plainly that photos carry a location and that Tumbaland reads it', () => {
@@ -103,14 +112,15 @@ describe('TermsPage', () => {
 
     const today = new Date().toLocaleDateString();
     expect(screen.queryByText(new RegExp(today.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))).toBeNull();
-    expect(screen.getByText(/Last updated 5 September 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Last updated 14 September 2026/)).toBeInTheDocument();
   });
 
-  it('describes what is actually sold: everything free, support optional', () => {
+  it('says it is free, with nothing to subscribe to and nothing to refund', () => {
     render(<TermsPage />);
 
     expect(screen.getByText(/no paid tier holding back the real/)).toBeInTheDocument();
-    expect(screen.getByText(/buys goodwill and nothing else/)).toBeInTheDocument();
+    expect(screen.getByText(/nothing to subscribe to/)).toBeInTheDocument();
+    expect(screen.queryByText(/Stripe|subscription|refund/i)).not.toBeInTheDocument();
   });
 
   it('points at the other two documents rather than mentioning them', () => {
