@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.13.0](https://github.com/toomastahves/tumbaland/compare/frontend-core-v1.12.0...frontend-core-v1.13.0) (2026-09-14)
+
+### Features
+
+* rework menu ([10aab5d](https://github.com/toomastahves/tumbaland/commit/10aab5dde3e4d82e597c8bdea7e679cfdbec7497))
+
 ## [1.12.0](https://github.com/toomastahves/tumbaland/compare/frontend-core-v1.7.0...frontend-core-v1.12.0) (2026-09-14)
 
 ### Features
