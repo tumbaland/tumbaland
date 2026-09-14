@@ -1,4 +1,16 @@
 # Tumbalog
+## [0.0.479](https://github.com/toomastahves/tumbaland/compare/app-v0.0.478...app-v0.0.479) (2026-09-14)
+
+### Features
+
+* rework menu ([10aab5d](https://github.com/toomastahves/tumbaland/commit/10aab5dde3e4d82e597c8bdea7e679cfdbec7497))
+* update deps ([6efa78d](https://github.com/toomastahves/tumbaland/commit/6efa78d64c9c8c014f34acc6400379096445b93e))
+
+### Chores
+
+* **release:** 1.12.0 ([e1f65b9](https://github.com/toomastahves/tumbaland/commit/e1f65b9262cf47330cc105cc3be3df9d489218d3))
+* **release:** 1.13.0 ([60dad5d](https://github.com/toomastahves/tumbaland/commit/60dad5d61b6e8fec7313c1064fdda15ab7460bf0))
+
 ## [0.0.478](https://github.com/toomastahves/tumbaland/compare/app-v0.0.477...app-v0.0.478) (2026-09-12)
 
 ### Features
