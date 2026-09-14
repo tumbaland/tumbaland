@@ -1,77 +1,93 @@
 import React from 'react';
-import { Box, Button, Avatar, Typography } from '@mui/material';
-import { ArrowBack as ArrowBackIcon, Group as GroupIcon, Edit as EditIcon } from '@mui/icons-material';
+import { Avatar, Box, Button, Typography } from '@mui/material';
+import { ArrowBack as ArrowBackIcon, Edit as EditIcon } from '@mui/icons-material';
+import { initials, tintFor } from '../groups/groupAvatar';
 
 interface GroupDetailsHeaderProps {
   groupName: string;
   onBack: () => void;
   onEdit: () => void;
   currentUserRole?: string;
+  memberCount?: number;
+  /** Keys the avatar colour, so it matches the group's row in the list. */
+  groupId?: string;
 }
+
+const ROLE_LINE: Record<string, string> = {
+  owner: "You're the owner",
+  admin: "You're an admin",
+  member: "You're a member"
+};
 
 const GroupDetailsHeader: React.FC<GroupDetailsHeaderProps> = ({
   groupName,
   onBack,
   onEdit,
-  currentUserRole
+  currentUserRole,
+  memberCount,
+  groupId
 }) => {
   const canEdit = currentUserRole === 'owner' || currentUserRole === 'admin';
+  const tint = tintFor(groupId ?? groupName);
+  const subtitle = [
+    memberCount !== undefined ? `${memberCount} ${memberCount === 1 ? 'member' : 'members'}` : null,
+    currentUserRole ? ROLE_LINE[currentUserRole] : null
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
-    <Box
-      sx={{
-        bgcolor: 'white',
-        borderBottom: '1px solid',
-        borderColor: 'divider',
-        pt: 4,
-        pb: 8,
-        px: { xs: 2, sm: 4 }
-      }}
-    >
-      <Box sx={{ maxWidth: 'lg', mx: 'auto' }}>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={onBack}
-          sx={{ mb: 3, color: 'text.secondary' }}
+    <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+      <Button
+        size="small"
+        startIcon={<ArrowBackIcon />}
+        onClick={onBack}
+        aria-label="Back to groups"
+        sx={{ ml: -1, mb: 1, color: 'text.secondary', textTransform: 'none', fontWeight: 600 }}
+      >
+        Groups
+      </Button>
+
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <Avatar
+          variant="rounded"
+          sx={{
+            width: 52,
+            height: 52,
+            borderRadius: 2.5,
+            bgcolor: `${tint}1f`,
+            color: tint,
+            fontWeight: 700,
+            fontSize: '1.15rem',
+            flexShrink: 0
+          }}
         >
-          Back to Groups
-        </Button>
+          {initials(groupName)}
+        </Avatar>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            <Avatar
-              sx={{
-                width: 64,
-                height: 64,
-                bgcolor: 'primary.main',
-                fontSize: '2rem'
-              }}
-            >
-              <GroupIcon fontSize="inherit" />
-            </Avatar>
-            <Box>
-              <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
-                {groupName}
-              </Typography>
-              <Typography variant="body1" sx={{
-                color: "text.secondary"
-              }}>
-                Group Details
-              </Typography>
-            </Box>
-          </Box>
-
-          {canEdit && (
-            <Button
-              variant="outlined"
-              startIcon={<EditIcon />}
-              onClick={onEdit}
-              sx={{ borderRadius: 2 }}
-            >
-              Edit Group
-            </Button>
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Typography variant="h5" component="h1" noWrap sx={{ fontWeight: 700, lineHeight: 1.25 }}>
+            {groupName}
+          </Typography>
+          {subtitle && (
+            <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25 }}>
+              {subtitle}
+            </Typography>
           )}
         </Box>
+
+        {/* Named for what the dialog does: it changes the name and nothing else. */}
+        {canEdit && (
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<EditIcon />}
+            onClick={onEdit}
+            sx={{ flexShrink: 0, textTransform: 'none', fontWeight: 600, borderRadius: 2 }}
+          >
+            Rename
+          </Button>
+        )}
       </Box>
     </Box>
   );

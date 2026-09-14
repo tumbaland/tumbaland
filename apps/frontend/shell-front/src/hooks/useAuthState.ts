@@ -11,8 +11,8 @@ export interface AuthState {
 
 /**
  * Reads session state for the shell's own routes. `checkAuth` caches for five
- * minutes inside the auth service, so this shares a result with HeaderNav's
- * check rather than issuing a second request.
+ * minutes inside the auth service, so Layout and the `/` route share one
+ * result rather than each issuing a request.
  */
 export function useAuthState(): AuthState {
   const [state, setState] = useState<AuthState>({ loading: true, authenticated: false, user: null });

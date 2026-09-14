@@ -2,9 +2,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { useState, ReactNode, useCallback, useEffect, useRef } from 'react';
 import CircularProgress from '@mui/material/CircularProgress';
 import { ProtectedRoute, buildEmbeddedUrl, extractChildPath, useShellBridge } from '@tumbaland/components';
-import { SideMenu } from './SideMenu';
-import { HeaderNav } from './HeaderNav';
-import Footer from './Footer';
+import { AppNav } from './AppNav';
 import { getAppByRoute } from '../config/apps';
 import { useConfig } from '../config/ConfigProvider';
 import { authService } from '../services/authService';
@@ -23,14 +21,16 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const config = useConfig();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  // Read synchronously. The default first pass assumes a wide screen, which
+  // would draw the rail on a phone for a frame before swapping in the tab bar.
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'), { noSsr: true });
   const frameRef = useRef<HTMLIFrameElement>(null);
 
-  // The side menu only links to apps that require a session, so signed-out
+  // The navigation only links to apps that require a session, so signed-out
   // visitors (who see the public landing page at `/`) get no app chrome at all.
   // It stays hidden while the check is in flight so the landing page never
-  // flashes a nav bar it is about to lose.
-  const { authenticated } = useAuthState();
+  // flashes a nav it is about to lose.
+  const { authenticated, user } = useAuthState();
 
   const currentApp = getAppByRoute(location.pathname);
   const appUrl = currentApp?.urlKey ? config[currentApp.urlKey] : undefined;
@@ -90,15 +90,16 @@ export default function Layout({ children }: LayoutProps) {
     }
   }, [currentApp, location.pathname]);
 
+  const nav = authenticated ? <AppNav currentRoute={location.pathname} user={user} mobile={isMobile} /> : null;
+
   return (
     <div
       style={{
-        minHeight: '100dvh',
         height: '100dvh',
-        width: '100dvw',
+        width: '100%',
         overflow: 'hidden',
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: isMobile ? 'column' : 'row',
         background: 'radial-gradient(circle at 50% 0%, #f0f4ff 0%, #e0e7ff 50%, #f8fafc 100%)',
         fontFamily: '"Inter", "Roboto", sans-serif'
       }}
@@ -119,62 +120,62 @@ export default function Layout({ children }: LayoutProps) {
           background: rgba(99, 102, 241, 0.4);
         }
       `}</style>
-      {/* Header Navigation for Account/Groups/Billing */}
-      <HeaderNav currentRoute={location.pathname} />
 
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {authenticated && <SideMenu currentRoute={location.pathname} />}
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'stretch',
-            justifyContent: 'center',
-            position: 'relative',
-            marginLeft: showIframe && authenticated && !isMobile ? 60 : 0,
-            transition: 'margin-left 0.3s',
-            overflow: 'auto'
-          }}
-        >
-          {showIframe ? (
-            <ProtectedRoute authService={authService}>
-              <>
-                {loading && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)',
-                      zIndex: 2
-                    }}
-                  >
-                    <CircularProgress />
-                  </div>
-                )}
-                <iframe
-                  key={appKey!}
-                  ref={frameRef}
-                  src={frameSrc!.src}
-                  title={currentApp!.name}
-                  style={{ width: '100%', height: '100%', border: 'none', zIndex: 1 }}
-                  allow="fullscreen"
-                  onLoad={() => setLoading(false)}
-                />
-              </>
-            </ProtectedRoute>
-          ) : (
-            children
-          )}
-        </div>
+      {/* A rail beside the content on wider screens, a tab bar under it on
+          phones, where it stays in reach of a thumb and clear of each
+          module's own header. */}
+      {!isMobile && nav}
+
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          minHeight: 0,
+          display: 'flex',
+          alignItems: 'stretch',
+          justifyContent: 'center',
+          position: 'relative',
+          overflow: 'auto'
+        }}
+      >
+        {showIframe ? (
+          <ProtectedRoute authService={authService}>
+            <>
+              {loading && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)',
+                    zIndex: 2
+                  }}
+                >
+                  <CircularProgress />
+                </div>
+              )}
+              <iframe
+                key={appKey!}
+                ref={frameRef}
+                src={frameSrc!.src}
+                title={currentApp!.name}
+                style={{ width: '100%', height: '100%', border: 'none', zIndex: 1 }}
+                allow="fullscreen"
+                onLoad={() => setLoading(false)}
+              />
+            </>
+          </ProtectedRoute>
+        ) : (
+          children
+        )}
       </div>
 
-      <Footer isVisible={location.pathname !== '/'} offsetForSideMenu={authenticated} />
+      {isMobile && nav}
     </div>
   );
 }

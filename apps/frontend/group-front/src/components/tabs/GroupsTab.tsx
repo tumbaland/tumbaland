@@ -168,8 +168,10 @@ const GroupsTab = () => {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: 'transparent' }}>
-      <Box sx={{ maxWidth: 1200, mx: 'auto', px: 2, py: 3 }}>
+    <Box>
+      {/* No side padding of its own: the page container already has gutters,
+          and adding more doubled them on a phone. */}
+      <Box sx={{ maxWidth: 960, mx: 'auto', py: { xs: 2, sm: 4 } }}>
         <GroupsHeader onCreateClick={() => setCreateOpen(true)} />
         
         {error && (

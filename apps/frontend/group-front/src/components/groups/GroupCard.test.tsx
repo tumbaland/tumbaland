@@ -54,8 +54,19 @@ it('shows the menu button and calls onMenuOpen when modifiable', async () => {
   expect(onMenuOpen).toHaveBeenCalledWith(expect.anything(), group);
 });
 
-it('hides the menu button when not modifiable, keeping the Open Group button', () => {
+it('hides the menu button when not modifiable, and the whole row still opens the group', () => {
   renderCard({ canModify: false });
   expect(screen.queryByTestId('MoreVertIcon')).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Open Group' })).toBeInTheDocument();
+  expect(screen.getByRole('link')).toHaveAttribute('href', '/g1');
+});
+
+it('keeps the options button outside the link', () => {
+  renderCard({ canModify: true });
+  const options = screen.getByRole('button', { name: 'Options for Family' });
+  expect(screen.getByRole('link')).not.toContainElement(options);
+});
+
+it('marks the group with its initials', () => {
+  renderCard({ group: { ...group, name: 'Book club' } });
+  expect(screen.getByText('BC')).toBeInTheDocument();
 });

@@ -47,7 +47,7 @@ const AREAS = [
   { value: 'all', label: 'All' },
   { value: 'relationship-service', label: 'Journal' },
   { value: 'album-service', label: 'Photos' },
-  { value: 'finance-service', label: 'Finance' },
+  { value: 'finance-service', label: 'Money' },
   { value: 'auth-service', label: 'Account' },
   { value: 'mcp-service', label: 'Assistant' }
 ] as const;

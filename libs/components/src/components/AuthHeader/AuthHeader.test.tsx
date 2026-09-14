@@ -259,4 +259,32 @@ describe('AuthHeader', () => {
       expect(screen.getAllByTestId('nav-icon').length).toBeGreaterThan(0);
     });
   });
+
+  describe('inside the shell', () => {
+    const user = { name: 'Ada Lovelace', email: 'ada@example.com' };
+
+    it('leaves the account menu and notifications to the shell but keeps sections and the group picker', () => {
+      renderAuthHeader({ isAuthenticated: true, user, embedded: true }, '/albums');
+
+      expect(screen.queryByRole('button', { name: /account menu/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /notifications/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Albums' })).toBeInTheDocument();
+      expect(screen.getByTestId('tenant-selector')).toBeInTheDocument();
+    });
+
+    it('draws no spinner or sign-in button of its own', () => {
+      renderAuthHeader({ isLoading: true, embedded: true });
+
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('LoginIcon')).not.toBeInTheDocument();
+    });
+
+    it('does the same on phones', () => {
+      mediaQueryState.isMobile = true;
+      renderAuthHeader({ isAuthenticated: true, user, embedded: true });
+
+      expect(screen.queryByRole('button', { name: /account menu/i })).not.toBeInTheDocument();
+      expect(screen.getByTestId('tenant-selector')).toBeInTheDocument();
+    });
+  });
 });

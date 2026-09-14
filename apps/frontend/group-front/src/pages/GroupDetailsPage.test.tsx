@@ -65,8 +65,8 @@ it('renders the group header, stats, and members once loaded, resolving the curr
   render(<GroupDetailsPage />);
 
   expect(await screen.findByText('Family')).toBeInTheDocument();
-  // GroupDetailsHeader shows "Edit Group" only for owner/admin — 'me' is the owner here.
-  expect(screen.getByRole('button', { name: /edit group/i })).toBeInTheDocument();
+  // GroupDetailsHeader shows "Rename" only for owner/admin — 'me' is the owner here.
+  expect(screen.getByRole('button', { name: /rename/i })).toBeInTheDocument();
 });
 
 it('navigates back to the groups list', async () => {
@@ -89,7 +89,7 @@ it('edits the group name via the header button', async () => {
   render(<GroupDetailsPage />);
   await screen.findByText('Family');
 
-  await userEvent.click(screen.getByRole('button', { name: /edit group/i }));
+  await userEvent.click(screen.getByRole('button', { name: /rename/i }));
   const nameInput = screen.getByLabelText('Group Name') as HTMLInputElement;
   expect(nameInput.value).toBe('Family');
   await userEvent.clear(nameInput);

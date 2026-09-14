@@ -16,7 +16,10 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         display: 'flex'
       }}
     >
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      {/* minWidth 0: a flex item otherwise grows to fit its widest content, so a
+          single wide row anywhere on a page (a tab strip, a table, a chart)
+          widened the whole app past the edge of a phone screen. */}
+      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         <AuthHeader />
         <Container maxWidth="xl">{children}</Container>
       </Box>

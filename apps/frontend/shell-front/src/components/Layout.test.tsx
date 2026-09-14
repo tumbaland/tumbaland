@@ -18,15 +18,27 @@ import { authService } from '../services/authService';
 type AuthResult = Awaited<ReturnType<typeof authService.checkAuth>>;
 
 /**
- * Both HeaderNav and Layout's own useAuthState call checkAuth, and HeaderNav's
- * effect fires first, so per-test sessions have to be set with
- * mockResolvedValue rather than a single mockResolvedValueOnce.
+ * Layout's useAuthState calls checkAuth on every mount, so per-test sessions
+ * are set with mockResolvedValue rather than a single mockResolvedValueOnce.
  */
 function setSession(authenticated: boolean) {
   vi.mocked(authService.checkAuth).mockResolvedValue({
     authenticated,
     user: authenticated ? { email: 'a@b.c' } : null
   } as AuthResult);
+}
+
+function setMobile(isMobile: boolean) {
+  window.matchMedia = ((query: string) => ({
+    matches: isMobile,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false
+  })) as unknown as typeof window.matchMedia;
 }
 
 function renderAt(path: string, config: Record<string, string> = {}) {
@@ -43,22 +55,13 @@ function renderAt(path: string, config: Record<string, string> = {}) {
 
 beforeEach(() => {
   setSession(false);
-  window.matchMedia = ((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => false
-  })) as unknown as typeof window.matchMedia;
+  setMobile(false);
 });
 
-it('renders children directly on the home route (no iframe, no footer)', () => {
+it('renders children directly on the home route (no iframe)', () => {
   renderAt('/');
   expect(screen.getByText('page content')).toBeInTheDocument();
-  expect(screen.queryByText('Status')).not.toBeInTheDocument();
+  expect(document.querySelector('iframe')).toBeNull();
 });
 
 it('renders children when the route has no configured app url', () => {
@@ -66,13 +69,12 @@ it('renders children when the route has no configured app url', () => {
   expect(screen.getByText('page content')).toBeInTheDocument();
 });
 
-it('renders a protected iframe and hides the loader once it loads, with the footer visible', async () => {
+it('renders a protected iframe and hides the loader once it loads', async () => {
   renderAt('/relationship', { RELATIONSHIP_FRONT_URL: 'https://relationship.example' });
 
-  const iframe = await screen.findByTitle('Relationship');
+  const iframe = await screen.findByTitle('Journal');
   expect(iframe).toHaveAttribute('src', 'https://relationship.example/?embedded=1&embedPath=%2F');
   expect(screen.getByRole('progressbar')).toBeInTheDocument();
-  expect(screen.getByText('Status')).toBeInTheDocument();
 
   iframe.dispatchEvent(new Event('load'));
   await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
@@ -81,7 +83,7 @@ it('renders a protected iframe and hides the loader once it loads, with the foot
 it('boots the iframe on a nested route and keeps the src stable as the child navigates', async () => {
   renderAt('/relationship/journal', { RELATIONSHIP_FRONT_URL: 'https://relationship.example' });
 
-  const iframe = await screen.findByTitle('Relationship');
+  const iframe = await screen.findByTitle('Journal');
   expect(iframe).toHaveAttribute('src', 'https://relationship.example/?embedded=1&embedPath=%2Fjournal');
 
   // A location report from the child updates the shell URL, never the src.
@@ -93,27 +95,41 @@ it('boots the iframe on a nested route and keeps the src stable as the child nav
   window.dispatchEvent(event);
 
   await waitFor(() =>
-    expect(screen.getByTitle('Relationship')).toHaveAttribute(
+    expect(screen.getByTitle('Journal')).toHaveAttribute(
       'src',
       'https://relationship.example/?embedded=1&embedPath=%2Fjournal'
     )
   );
 });
 
-it('hides the side menu from signed-out visitors', async () => {
+it('hides the navigation from signed-out visitors', async () => {
   renderAt('/');
   await waitFor(() => expect(screen.getByText('page content')).toBeInTheDocument());
-  expect(screen.queryByLabelText('Album')).not.toBeInTheDocument();
-  expect(screen.queryByLabelText('Finance')).not.toBeInTheDocument();
+  expect(screen.queryByRole('navigation', { name: 'Main' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'Album' })).not.toBeInTheDocument();
 });
 
-it('shows the side menu once a session is confirmed', async () => {
+it('shows the navigation once a session is confirmed', async () => {
   setSession(true);
 
   renderAt('/');
 
-  expect(await screen.findByLabelText('Album')).toBeInTheDocument();
-  expect(screen.getByLabelText('Finance')).toBeInTheDocument();
+  expect(await screen.findByRole('link', { name: 'Album' })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Money' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Account' })).toBeInTheDocument();
+});
+
+it('puts the rail before the content on wide screens and the tab bar after it on phones', async () => {
+  setSession(true);
+  const { unmount } = renderAt('/');
+  const rail = await screen.findByRole('navigation', { name: 'Main' });
+  expect(rail.compareDocumentPosition(screen.getByText('page content'))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  unmount();
+
+  setMobile(true);
+  renderAt('/');
+  const tabBar = await screen.findByRole('navigation', { name: 'Main' });
+  expect(tabBar.compareDocumentPosition(screen.getByText('page content'))).toBe(Node.DOCUMENT_POSITION_PRECEDING);
 });
 
 it('shows an unauthorized page instead of the iframe when not authenticated', async () => {

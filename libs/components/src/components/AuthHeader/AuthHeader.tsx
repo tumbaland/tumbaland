@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -19,6 +19,7 @@ import { AccountCircle, Logout, Person, Groups, Payment } from '@mui/icons-mater
 import { useNavigate, useLocation } from 'react-router';
 import { NotificationsMenu } from '../NotificationsMenu/NotificationsMenu';
 import { LoginButton } from '../LoginButton';
+import { readEmbedContext } from '../../routing/embedContext';
 
 export interface AuthHeaderUser {
   name: string;
@@ -70,6 +71,13 @@ export interface AuthHeaderProps {
   onTenantChange: (tenant: AuthHeaderTenantOption) => void;
   /** Placeholder until real notification counts are wired up per app. */
   notificationCount?: number;
+  /**
+   * Running inside the shell's iframe. The shell's navigation already carries
+   * the account menu and sign-out there, so this header keeps to the app's own
+   * sections and group picker instead of drawing a second set. Read from the
+   * frame's URL when not given.
+   */
+  embedded?: boolean;
 }
 
 // A nav item's path of '/' would match every route via startsWith, so it needs an exact-match
@@ -96,7 +104,8 @@ export function AuthHeader({
   tenantsLoading = false,
   tenantsError = null,
   onTenantChange,
-  notificationCount = 0
+  notificationCount = 0,
+  embedded
 }: AuthHeaderProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationAnchorEl, setNotificationAnchorEl] = useState<null | HTMLElement>(null);
@@ -106,6 +115,7 @@ export function AuthHeader({
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isEmbedded = useMemo(() => embedded ?? readEmbedContext().embedded, [embedded]);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
@@ -228,7 +238,7 @@ export function AuthHeader({
       <Toolbar>
         {isMobile ? (
           <>
-            <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', minHeight: 56, pl: { xs: 2, sm: 4 } }}>
+            <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', minHeight: 56, minWidth: 0 }}>
               <Button
                 color="inherit"
                 onClick={handleMobileMenuOpen}
@@ -246,7 +256,6 @@ export function AuthHeader({
                   overflow: 'hidden',
                   whiteSpace: 'nowrap',
                   textOverflow: 'ellipsis',
-                  ml: { xs: 1, sm: 2 }, // push menu button slightly right
                   fontSize: { xs: '0.875rem', sm: '1rem' }
                 }}
               >
@@ -292,7 +301,7 @@ export function AuthHeader({
               </Box>
             )}
 
-            <Box sx={{ flexGrow: 0, ml: { xs: 1, sm: 2 } }}>{renderAuthSection()}</Box>
+            {!isEmbedded && <Box sx={{ flexGrow: 0, ml: { xs: 1, sm: 2 } }}>{renderAuthSection()}</Box>}
             <Menu
               anchorEl={mobileMenuAnchor}
               open={Boolean(mobileMenuAnchor)}
@@ -369,7 +378,7 @@ export function AuthHeader({
                 />
               )}
 
-              {renderAuthSection()}
+              {!isEmbedded && renderAuthSection()}
             </Box>
           </Box>
         )}

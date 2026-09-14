@@ -79,7 +79,7 @@ const CAPABILITIES: Capability[] = [
   },
   {
     key: 'finance',
-    name: 'Finance',
+    name: 'Money',
     color: '#22c55e',
     icon: AttachMoneyIcon,
     examples: [

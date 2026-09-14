@@ -8,23 +8,33 @@ interface GroupsHeaderProps {
 
 const GroupsHeader: React.FC<GroupsHeaderProps> = ({ onCreateClick }) => {
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-      <Box>
-        <Typography variant="h5" component="h1" sx={{ fontWeight: 700, color: 'text.primary' }}>
-          My Groups
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        gap: 2,
+        mb: { xs: 2, sm: 3 }
+      }}
+    >
+      <Box sx={{ minWidth: 0 }}>
+        <Typography variant="h5" component="h1" sx={{ fontWeight: 700, color: 'text.primary', lineHeight: 1.25 }}>
+          Groups
         </Typography>
-        <Typography variant="body2" sx={{
-          color: "text.secondary"
-        }}>
-          Manage your teams and projects
+        <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+          Share albums, money and your journal with people you choose.
         </Typography>
       </Box>
+      {/* Short label and no wrapping, so it stays one tidy button beside the
+          title on a phone instead of a two-line block. */}
       <Button
         variant="contained"
+        disableElevation
         startIcon={<AddIcon />}
         onClick={onCreateClick}
+        sx={{ flexShrink: 0, whiteSpace: 'nowrap', textTransform: 'none', fontWeight: 600, borderRadius: 2 }}
       >
-        Create Group
+        New group
       </Button>
     </Box>
   );

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
-import GroupMembersList from './GroupMembersList';
+import GroupMembersList, { formatDateTime, formatDay, nameFromEmail } from './GroupMembersList';
 import { Group } from '../../types';
 
 const group: Group = {
@@ -11,21 +11,12 @@ const group: Group = {
     {
       email: 'owner@example.com',
       role: 'owner',
-      joinedAt: '2024-01-15T00:00:00.000Z',
-      lastActivity: '2024-01-20T05:30:45.000Z'
+      joinedAt: '2024-01-15T12:00:00.000Z',
+      lastActivity: '2024-01-20T12:30:45.000Z'
     },
     { email: 'admin@example.com', role: 'admin' },
     { email: 'member@example.com', role: 'member' }
   ]
-};
-
-const pad = (n: number): string => String(n).padStart(2, '0');
-const expectDateParts = (iso: string): { date: string; time: string } => {
-  const d = new Date(iso);
-  return {
-    date: `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${pad(d.getFullYear() % 100)}`,
-    time: `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
-  };
 };
 
 function renderList(overrides: Partial<{ group: Group; currentUserRole: string; currentUserEmail: string }> = {}) {
@@ -43,33 +34,51 @@ function renderList(overrides: Partial<{ group: Group; currentUserRole: string; 
   return { onAddMember, onMenuOpen, ...result };
 }
 
+const menuButtons = () => screen.getAllByRole('button').filter((b) => b.querySelector('[data-testid="MoreVertIcon"]'));
+
 it('shows the empty state when there are no members', () => {
   renderList({ group: { _id: 'g2', name: 'Empty' } });
-  expect(screen.getByText('No members found in this group')).toBeInTheDocument();
+  expect(screen.getByText('No members yet')).toBeInTheDocument();
 });
 
-it('renders a row per member with name derived from email, role chip, and a stacked joined date/time', () => {
+it('renders a row per member with a readable name, the address and a role badge', () => {
   renderList({ currentUserRole: 'owner', currentUserEmail: 'owner@example.com' });
 
-  expect(screen.getAllByText('owner').length).toBeGreaterThan(0); // derived name + role chip
+  expect(screen.getAllByRole('listitem')).toHaveLength(3);
+  expect(screen.getByText('Admin')).toBeInTheDocument(); // name read from admin@example.com
   expect(screen.getByText('admin@example.com')).toBeInTheDocument();
-
-  const joined = expectDateParts('2024-01-15T00:00:00.000Z');
-  expect(screen.getByText(joined.date)).toBeInTheDocument();
-  expect(screen.getByText(joined.time)).toBeInTheDocument();
-  // admin/member have neither joinedAt nor lastActivity -> 4 dash placeholders
-  expect(screen.getAllByText('-').length).toBe(4);
+  expect(screen.getByText('owner')).toBeInTheDocument(); // role badge
 });
 
-it('shows a stacked last-active date/time when present', () => {
+it('shows the day a member joined and the date and time they were last active', () => {
   renderList({ currentUserRole: 'owner', currentUserEmail: 'owner@example.com' });
 
-  const lastActive = expectDateParts('2024-01-20T00:00:00.000Z');
-  expect(screen.getByText(lastActive.date)).toBeInTheDocument();
-  expect(screen.getByText(lastActive.time)).toBeInTheDocument();
+  expect(screen.getByText(`Joined ${formatDay('2024-01-15T12:00:00.000Z')}`)).toBeInTheDocument();
+  expect(screen.getByText(`Active ${formatDateTime('2024-01-20T12:30:45.000Z')}`)).toBeInTheDocument();
+  // Minutes are enough; seconds were noise.
+  expect(screen.queryByText(/\d:\d\d:\d\d/)).not.toBeInTheDocument();
 });
 
-it('shows Add Member for an owner/admin and hides it for a plain member', () => {
+it('formats dates the Estonian way, with a 24-hour time for activity', () => {
+  // No zone suffix, so these parse as local time and the expectation holds anywhere.
+  expect(formatDay('2025-03-02T09:14:00')).toBe('02.03.2025');
+  expect(formatDateTime('2026-09-13T21:22:10')).toBe('13.09.2026 21:22');
+  expect(formatDateTime('2026-01-05T07:05:00')).toBe('05.01.2026 07:05');
+  expect(formatDay(undefined)).toBeNull();
+  expect(formatDateTime(undefined)).toBeNull();
+});
+
+it('leaves the activity line out for a member with no dates', () => {
+  renderList({ group: { _id: 'g3', name: 'Solo', members: [{ email: 'a@example.com', role: 'member' }] } });
+  expect(screen.queryByText(/Joined|Active/)).not.toBeInTheDocument();
+});
+
+it('tags the viewer as You', () => {
+  renderList({ currentUserRole: 'owner', currentUserEmail: 'owner@example.com' });
+  expect(screen.getByText('You')).toBeInTheDocument();
+});
+
+it('shows Add member for an owner/admin and hides it for a plain member', () => {
   const { rerender } = renderList({ currentUserRole: 'owner' });
   expect(screen.getByRole('button', { name: /add member/i })).toBeInTheDocument();
 
@@ -85,26 +94,29 @@ it('calls onAddMember', async () => {
   expect(onAddMember).toHaveBeenCalled();
 });
 
-it('shows the member menu for an owner acting on a plain member, but not on themself or the owner row', async () => {
+it('shows the member menu for an owner acting on others, but not on themself or the owner row', async () => {
   const { onMenuOpen } = renderList({ currentUserRole: 'owner', currentUserEmail: 'owner@example.com' });
 
-  // 3 members, only "member@example.com" and "admin@example.com" are editable by the owner
-  // (owner row is unmanageable, and the owner viewing themself is excluded).
-  const menuButtons = screen.getAllByRole('button').filter((b) => b.querySelector('[data-testid="MoreVertIcon"]'));
-  expect(menuButtons.length).toBe(2);
+  // Only admin@ and member@ are editable by the owner.
+  expect(menuButtons()).toHaveLength(2);
+  expect(screen.getByRole('button', { name: 'Options for member@example.com' })).toBeInTheDocument();
 
-  await userEvent.click(menuButtons[0]);
+  await userEvent.click(menuButtons()[0]);
   expect(onMenuOpen).toHaveBeenCalled();
 });
 
 it('prevents an admin from managing another admin', () => {
   renderList({ currentUserRole: 'admin', currentUserEmail: 'admin@example.com' });
-  // admin can only manage the plain member row -> 1 menu button
-  const menuButtons = screen.getAllByRole('button').filter((b) => b.querySelector('[data-testid="MoreVertIcon"]'));
-  expect(menuButtons.length).toBe(1);
+  expect(menuButtons()).toHaveLength(1);
 });
 
 it('hides all member menus for a plain member viewer', () => {
   renderList({ currentUserRole: 'member', currentUserEmail: 'member@example.com' });
-  expect(screen.queryAllByTestId('MoreVertIcon').length).toBe(0);
+  expect(screen.queryAllByTestId('MoreVertIcon')).toHaveLength(0);
+});
+
+it('reads a name out of an address', () => {
+  expect(nameFromEmail('test.user@example.com')).toBe('Test User');
+  expect(nameFromEmail('partner@example.com')).toBe('Partner');
+  expect(nameFromEmail('first_last+tag@example.com')).toBe('First Last Tag');
 });

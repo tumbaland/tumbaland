@@ -129,9 +129,9 @@ describe('sendBatch failure handling', () => {
     await flushLogs();
 
     expect(warnSpy).toHaveBeenCalledWith('Failed to send log batch, dropping logs:', expect.any(Error));
-    // console.warn must be restored to the spy afterward, not left disabled by the
-    // temporary "console.warn = () => {}" swap inside sendBatch's catch block.
+    // The report is written with console capture paused, and the pause is lifted afterwards.
     expect(console.warn).toBe(warnSpy);
+    expect(window._monitoringInterceptingConsole).not.toBe(true);
     warnSpy.mockRestore();
   });
 

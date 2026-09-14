@@ -17,7 +17,10 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         fontFamily: '"Inter", "Roboto", sans-serif'
       }}
     >
-      <Box sx={{ flex: 1 }}>
+      {/* minWidth 0: a flex item otherwise grows to fit its widest content, so a
+          single wide row anywhere on a page (a strip of thumbnails, a long
+          table) widened the whole app past the edge of a phone screen. */}
+      <Box sx={{ flex: 1, minWidth: 0 }}>
         <AuthHeader />
         <Container maxWidth="xl" sx={{ py: 4 }}>{children}</Container>
       </Box>

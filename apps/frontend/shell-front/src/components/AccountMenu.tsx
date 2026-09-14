@@ -1,121 +1,126 @@
-import React from 'react';
-import { useNavigate } from 'react-router';
-import {
-  IconButton,
-  Avatar,
-  Menu,
-  MenuItem,
-  Typography,
-  Divider,
-  Box
-} from '@mui/material';
-import { AccountCircle, Logout } from '@mui/icons-material';
+import { Link, useNavigate } from 'react-router';
+import Avatar from '@mui/material/Avatar';
+import Box from '@mui/material/Box';
+import Divider from '@mui/material/Divider';
+import Drawer from '@mui/material/Drawer';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import MenuList from '@mui/material/MenuList';
+import Typography from '@mui/material/Typography';
+import LogoutIcon from '@mui/icons-material/Logout';
+import { USER_APPS, isRouteActive } from '../config/apps';
+import { authService } from '../services/authService';
+import { ink } from '../theme/tokens';
 import { User } from '../types';
 
 interface AccountMenuProps {
   user: User | null;
+  /** The Account entry that opened the menu; null while closed. */
   anchorEl: HTMLElement | null;
-  onMenuOpen: (event: React.MouseEvent<HTMLElement>) => void;
-  onMenuClose: () => void;
-  onLogout: () => void;
-  navigationItems?: Array<{
-    key: string;
-    label: string;
-    route: string;
-    icon: React.ElementType;
-  }>;
+  currentRoute: string;
+  /** A bottom sheet on phones, a popover beside the rail everywhere else. */
+  mobile: boolean;
+  onClose: () => void;
 }
 
-export function AccountMenu({
-  user,
-  anchorEl,
-  onMenuOpen,
-  onMenuClose,
-  onLogout,
-  navigationItems = []
-}: AccountMenuProps) {
+export function AccountMenu({ user, anchorEl, currentRoute, mobile, onClose }: AccountMenuProps) {
   const navigate = useNavigate();
+  const open = Boolean(anchorEl);
 
-  const handleNavigation = (route: string) => {
-    navigate(route);
-    onMenuClose();
+  // Head for the landing page first: logout() reloads the document on success,
+  // and reloading a module route signed out only shows "Access Restricted".
+  const handleSignOut = async () => {
+    onClose();
+    navigate('/');
+    await authService.logout();
   };
 
-  if (!user) {
-    return null;
-  }
+  // An array rather than a fragment: Menu and MenuList walk their direct
+  // children to manage focus.
+  const items = [
+    <MenuItem key="who" disabled sx={{ gap: 1.5, py: 1.25, '&.Mui-disabled': { opacity: 1 } }}>
+      <Avatar src={user?.picture} alt="" sx={{ width: 36, height: 36 }} />
+      <Box sx={{ minWidth: 0 }}>
+        <Typography noWrap sx={{ fontSize: 14.5, fontWeight: 700, color: ink.strong }}>
+          {user?.name}
+        </Typography>
+        <Typography noWrap sx={{ fontSize: 12.5, color: ink.muted }}>
+          {user?.email}
+        </Typography>
+      </Box>
+    </MenuItem>,
+    <Divider key="account-divider" />,
+    ...USER_APPS.map((app) => {
+      const Icon = app.icon;
+      return (
+        <MenuItem
+          key={app.route}
+          component={Link}
+          to={app.route}
+          selected={isRouteActive(app.route, currentRoute)}
+          onClick={onClose}
+        >
+          <ListItemIcon>
+            <Icon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{app.name}</ListItemText>
+        </MenuItem>
+      );
+    }),
+    <Divider key="sign-out-divider" />,
+    <MenuItem key="sign-out" onClick={handleSignOut}>
+      <ListItemIcon>
+        <LogoutIcon fontSize="small" />
+      </ListItemIcon>
+      <ListItemText>Sign out</ListItemText>
+    </MenuItem>
+  ];
 
-  return (
-    <>
-      <IconButton
-        onClick={onMenuOpen}
-        size="large"
-        edge="end"
-        aria-label="account menu"
-        aria-controls="account-menu"
-        aria-haspopup="true"
-        color="inherit"
-      >
-        {user.picture ? (
-          <Avatar src={user.picture} alt={user.name} sx={{ width: 32, height: 32 }} />
-        ) : (
-          <AccountCircle />
-        )}
-      </IconButton>
-      <Menu
-        id="account-menu"
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={onMenuClose}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+  if (mobile) {
+    return (
+      <Drawer
+        anchor="bottom"
+        open={open}
+        onClose={onClose}
         slotProps={{
-          list: {
-            'aria-labelledby': 'account-button'
+          paper: {
+            sx: {
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              maxHeight: '85dvh',
+              pb: 'calc(8px + env(safe-area-inset-bottom))'
+            }
           }
         }}
       >
-        <MenuItem disabled>
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-start'
-            }}
-          >
-            <Typography variant="body2" sx={{
-              fontWeight: "bold"
-            }}>
-              {user.name}
-            </Typography>
-            <Typography variant="caption" sx={{
-              color: "text.secondary"
-            }}>
-              {user.email}
-            </Typography>
-          </Box>
-        </MenuItem>
-        <Divider />
+        <Box
+          aria-hidden
+          sx={{ width: 36, height: 4, borderRadius: 2, bgcolor: 'rgba(15,23,42,0.18)', mx: 'auto', mt: 1.25 }}
+        />
+        <MenuList aria-label="Account" autoFocusItem={open}>
+          {items}
+        </MenuList>
+      </Drawer>
+    );
+  }
 
-        {/* Navigation items */}
-        {navigationItems.map((item) => {
-          const IconComponent = item.icon;
-          return (
-            <MenuItem key={item.key} onClick={() => handleNavigation(item.route)}>
-              <IconComponent fontSize="small" sx={{ mr: 1 }} />
-              {item.label}
-            </MenuItem>
-          );
-        })}
-
-        {/* Add divider if there are navigation items */}
-        {navigationItems.length > 0 && <Divider />}
-
-        <MenuItem onClick={onLogout}>
-          <Logout fontSize="small" sx={{ mr: 1 }} />
-          Logout
-        </MenuItem>
-      </Menu>
-    </>
+  return (
+    <Menu
+      anchorEl={anchorEl}
+      open={open}
+      onClose={onClose}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+      slotProps={{
+        paper: { sx: { ml: 1, minWidth: 240, maxWidth: 320, borderRadius: 3 } },
+        list: { 'aria-label': 'Account' }
+      }}
+    >
+      {items}
+    </Menu>
   );
 }
+
+export default AccountMenu;

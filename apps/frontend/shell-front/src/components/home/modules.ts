@@ -39,8 +39,10 @@ export const HOME_MODULES: HomeModule[] = [
     ]
   },
   {
+    // `key` is the route segment, which kept the old name: moduleForRoute
+    // matches on it, so it must not follow the display name.
     key: 'finance',
-    name: 'Finance',
+    name: 'Money',
     description: 'Net worth, cash flow, holdings and the planner.',
     color: '#22c55e',
     icon: AttachMoneyIcon,
@@ -52,13 +54,13 @@ export const HOME_MODULES: HomeModule[] = [
   },
   {
     key: 'relationship',
-    name: 'Relationship',
-    description: 'Journal what you did, and see where the time went.',
+    name: 'Journal',
+    description: 'Write down what you did together, and see where the time went.',
     color: '#ef4444',
     icon: FavoriteIcon,
     route: '/relationship/journal',
     actions: [
-      { label: 'Journal', route: '/relationship/journal' },
+      { label: 'Entries', route: '/relationship/journal' },
       { label: 'Map', route: '/relationship/map' }
     ]
   },

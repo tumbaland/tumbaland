@@ -30,7 +30,7 @@ export const PRODUCTS: Product[] = [
   },
   {
     key: 'finance',
-    name: 'Finance',
+    name: 'Money',
     color: '#22c55e',
     icon: AttachMoneyIcon,
     headline: 'Every account in one number',
@@ -39,7 +39,7 @@ export const PRODUCTS: Product[] = [
   },
   {
     key: 'relationship',
-    name: 'Relationship',
+    name: 'Journal',
     color: '#ef4444',
     icon: FavoriteIcon,
     headline: 'Where your time went',

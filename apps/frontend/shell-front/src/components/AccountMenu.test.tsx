@@ -1,90 +1,87 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { vi } from 'vitest';
-import { Person } from '@mui/icons-material';
+
+vi.mock('../services/authService', () => ({
+  authService: { logout: vi.fn() }
+}));
+
+import { authService } from '../services/authService';
 import { AccountMenu } from './AccountMenu';
 import { User } from '../types';
 
 const user: User = { id: 'u1', email: 'user@example.com', name: 'Jane Doe' };
 
-it('renders nothing when there is no user', () => {
-  const { container } = render(
-    <MemoryRouter>
-      <AccountMenu user={null} anchorEl={null} onMenuOpen={vi.fn()} onMenuClose={vi.fn()} onLogout={vi.fn()} />
+function CurrentPath() {
+  return <div data-testid="path">{useLocation().pathname}</div>;
+}
+
+function renderMenu({ route = '/finance', mobile = false, open = true } = {}) {
+  const onClose = vi.fn();
+  const anchorEl = open ? document.body.appendChild(document.createElement('button')) : null;
+  render(
+    <MemoryRouter initialEntries={[route]}>
+      <Routes>
+        <Route path="*" element={<CurrentPath />} />
+      </Routes>
+      <AccountMenu user={user} anchorEl={anchorEl} currentRoute={route} mobile={mobile} onClose={onClose} />
     </MemoryRouter>
   );
-  expect(container).toBeEmptyDOMElement();
+  return { onClose };
+}
+
+beforeEach(() => vi.clearAllMocks());
+
+it('renders nothing while closed', () => {
+  renderMenu({ open: false });
+  expect(screen.queryByRole('menu')).not.toBeInTheDocument();
 });
 
-it('shows an account-circle icon when the user has no picture', () => {
-  render(
-    <MemoryRouter>
-      <AccountMenu user={user} anchorEl={null} onMenuOpen={vi.fn()} onMenuClose={vi.fn()} onLogout={vi.fn()} />
-    </MemoryRouter>
-  );
-  expect(screen.getByTestId('AccountCircleIcon')).toBeInTheDocument();
-});
+it('shows who is signed in, the account pages and sign out, and nothing else', () => {
+  renderMenu();
 
-it('shows the user avatar image when a picture is set', () => {
-  render(
-    <MemoryRouter>
-      <AccountMenu
-        user={{ ...user, picture: 'https://example.com/pic.png' }}
-        anchorEl={null}
-        onMenuOpen={vi.fn()}
-        onMenuClose={vi.fn()}
-        onLogout={vi.fn()}
-      />
-    </MemoryRouter>
-  );
-  expect(screen.getByRole('img', { name: 'Jane Doe' })).toHaveAttribute('src', 'https://example.com/pic.png');
-});
-
-it('opens the menu, shows user info and navigation items, and navigates on click', async () => {
-  const onMenuOpen = vi.fn();
-  const onMenuClose = vi.fn();
-  const anchorEl = document.createElement('div');
-  render(
-    <MemoryRouter>
-      <AccountMenu
-        user={user}
-        anchorEl={anchorEl}
-        onMenuOpen={onMenuOpen}
-        onMenuClose={onMenuClose}
-        onLogout={vi.fn()}
-        navigationItems={[{ key: 'account', label: 'Account', route: '/account', icon: Person }]}
-      />
-    </MemoryRouter>
-  );
-
+  expect(screen.getByRole('menu', { name: 'Account' })).toBeInTheDocument();
   expect(screen.getByText('Jane Doe')).toBeInTheDocument();
   expect(screen.getByText('user@example.com')).toBeInTheDocument();
-
-  await userEvent.click(screen.getByText('Account'));
-  expect(onMenuClose).toHaveBeenCalled();
+  const actions = screen
+    .getAllByRole('menuitem')
+    .filter((item) => item.getAttribute('aria-disabled') !== 'true')
+    .map((item) => item.textContent);
+  expect(actions).toEqual(['Profile', 'Groups', 'Billing', 'Sign out']);
 });
 
-it('calls onLogout when the Logout item is clicked', async () => {
-  const onLogout = vi.fn();
-  const anchorEl = document.createElement('div');
-  render(
-    <MemoryRouter>
-      <AccountMenu user={user} anchorEl={anchorEl} onMenuOpen={vi.fn()} onMenuClose={vi.fn()} onLogout={onLogout} />
-    </MemoryRouter>
-  );
-
-  await userEvent.click(screen.getByText('Logout'));
-  expect(onLogout).toHaveBeenCalled();
+it('marks the account page the user is on', () => {
+  renderMenu({ route: '/payments/plans' });
+  expect(screen.getByRole('menuitem', { name: 'Billing' })).toHaveClass('Mui-selected');
+  expect(screen.getByRole('menuitem', { name: 'Profile' })).not.toHaveClass('Mui-selected');
 });
 
-it('calls onMenuOpen when the icon button is clicked', async () => {
-  const onMenuOpen = vi.fn();
-  render(
-    <MemoryRouter>
-      <AccountMenu user={user} anchorEl={null} onMenuOpen={onMenuOpen} onMenuClose={vi.fn()} onLogout={vi.fn()} />
-    </MemoryRouter>
-  );
-  await userEvent.click(screen.getByRole('button', { name: 'account menu' }));
-  expect(onMenuOpen).toHaveBeenCalled();
+it('navigates to an account page and closes', async () => {
+  const { onClose } = renderMenu();
+
+  await userEvent.click(screen.getByRole('menuitem', { name: 'Groups' }));
+
+  expect(screen.getByTestId('path')).toHaveTextContent('/groups');
+  expect(onClose).toHaveBeenCalled();
+});
+
+it('signs out from the home route', async () => {
+  vi.mocked(authService.logout).mockResolvedValue(true);
+  const { onClose } = renderMenu();
+
+  await userEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
+
+  await waitFor(() => expect(authService.logout).toHaveBeenCalled());
+  expect(screen.getByTestId('path')).toHaveTextContent(/^\/$/);
+  expect(onClose).toHaveBeenCalled();
+});
+
+it('opens as a bottom sheet on phones with the same entries', () => {
+  renderMenu({ mobile: true });
+
+  expect(screen.getByRole('menu', { name: 'Account' })).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: 'Profile' })).toBeInTheDocument();
+  expect(document.querySelector('.MuiDrawer-root')).not.toBeNull();
+  expect(document.querySelector('.MuiPopover-root')).toBeNull();
 });

@@ -130,7 +130,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ highlightTypeIds, startDate }) 
         }}
       >
         <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
-          Relationship Statistics
+          Statistics
         </Typography>
         <FormControl sx={{ minWidth: { xs: 120, sm: 200 }, width: { xs: '100%', sm: 'auto' } }} size="small">
           <InputLabel id="timeframe-select-label">Timeframe</InputLabel>

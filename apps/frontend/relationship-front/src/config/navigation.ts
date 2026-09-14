@@ -10,7 +10,7 @@ export const navigationItems: AuthHeaderNavigationItem[] = [
     icon: DashboardIcon
   },
   {
-    label: 'Journal',
+    label: 'Entries',
     path: '/journal',
     icon: TimelineIcon
   },

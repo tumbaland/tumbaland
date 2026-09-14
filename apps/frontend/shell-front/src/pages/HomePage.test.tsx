@@ -59,7 +59,7 @@ it('navigates into a module when its card is opened', async () => {
   const user = userEvent.setup();
   renderHome();
 
-  await user.click(screen.getByRole('button', { name: 'Open Finance' }));
+  await user.click(screen.getByRole('button', { name: 'Open Money' }));
 
   expect(navigate).toHaveBeenCalledWith('/finance/dashboard');
 });
@@ -83,7 +83,7 @@ it('offers a way back to the module the user was last in', async () => {
   const user = userEvent.setup();
   renderHome();
 
-  const resume = screen.getByRole('button', { name: 'Back to Relationship' });
+  const resume = screen.getByRole('button', { name: 'Back to Journal' });
   await user.click(resume);
 
   expect(navigate).toHaveBeenCalledWith('/relationship/journal');

@@ -31,21 +31,24 @@ const sendBatch = async () => {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
   } catch (error) {
-    // Log error without triggering console interception to prevent recursion.
-    // Must call originalWarn (not console.warn) below — console.warn is the
-    // no-op we're about to install for the duration of this block.
-    const originalWarn = console.warn;
-    console.warn = () => {}; // Temporarily disable console.warn
+    // Report the failure without it becoming a log of its own. console.warn is
+    // usually the interceptor, which captures and queues whatever passes through
+    // it; saving a reference to it and swapping in a no-op did not stop that.
+    // Each failure then queued one warning plus, in development, one per dropped
+    // log, which refilled the batch past BATCH_SIZE and sent again at once. With
+    // the endpoint down that never paused and ran the page out of memory.
+    // The interceptor still prints while this flag is set; it just captures nothing.
+    const wasIntercepting = window._monitoringInterceptingConsole === true;
+    window._monitoringInterceptingConsole = true;
     try {
-      originalWarn('Failed to send log batch, dropping logs:', error);
-      // Optional: log failed batch to console in development
+      console.warn('Failed to send log batch, dropping logs:', error);
       if (config.isDevelopment) {
         batchToSend.forEach(log => {
-          originalWarn('📝 [DROPPED LOG]:', JSON.stringify(log));
+          console.warn('📝 [DROPPED LOG]:', JSON.stringify(log));
         });
       }
     } finally {
-      console.warn = originalWarn; // Restore original console.warn
+      window._monitoringInterceptingConsole = wasIntercepting;
     }
   }
 };

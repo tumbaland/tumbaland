@@ -197,7 +197,15 @@ const CashFlowPage: React.FC = () => {
         </Paper>
       ) : (
         <>
-          <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}>
+          {/* Five tabs are wider than a phone: they scroll sideways there
+              rather than forcing the page wider. */}
+          <Tabs
+            value={tab}
+            onChange={(_, v) => setTab(v)}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
+          >
             <Tab label="Overview" />
             <Tab label="Trends" />
             <Tab label="Categories" />

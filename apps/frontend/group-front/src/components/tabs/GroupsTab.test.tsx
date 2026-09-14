@@ -92,7 +92,7 @@ it('creates a group via the header button and reloads the list', async () => {
   renderTab();
   await screen.findByText('Family');
 
-  await userEvent.click(screen.getByRole('button', { name: /create group/i }));
+  await userEvent.click(screen.getByRole('button', { name: /new group/i }));
   await userEvent.type(screen.getByLabelText('Group Name'), 'New Group');
   await userEvent.click(screen.getByRole('button', { name: 'Create Group' }));
 
@@ -106,7 +106,7 @@ it('shows an error message when creating a group fails', async () => {
   renderTab();
   await screen.findByText('Family');
 
-  await userEvent.click(screen.getByRole('button', { name: /create group/i }));
+  await userEvent.click(screen.getByRole('button', { name: /new group/i }));
   await userEvent.type(screen.getByLabelText('Group Name'), 'Dup');
   await userEvent.click(screen.getByRole('button', { name: 'Create Group' }));
 
@@ -174,7 +174,7 @@ it('deletes a group the user owns via the card menu', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Delete Group' }));
 
   expect(mockedDeleteGroup).toHaveBeenCalledWith('g1');
-  await waitFor(() => expect(screen.getByText('No Groups Yet')).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText('No groups yet')).toBeInTheDocument());
 });
 
 it('shows an error message when deleting a group fails', async () => {

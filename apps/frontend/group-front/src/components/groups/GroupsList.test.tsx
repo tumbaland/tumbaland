@@ -29,7 +29,7 @@ function renderList(list: Group[] = groups) {
 
 it('shows an empty state with a create button when there are no groups', async () => {
   const { onCreateClick } = renderList([]);
-  expect(screen.getByText('No Groups Yet')).toBeInTheDocument();
+  expect(screen.getByText('No groups yet')).toBeInTheDocument();
 
   await userEvent.click(screen.getByRole('button', { name: /create your first group/i }));
   expect(onCreateClick).toHaveBeenCalled();

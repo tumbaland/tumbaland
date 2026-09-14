@@ -3,28 +3,32 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import HomeIcon from '@mui/icons-material/Home';
 import PaymentIcon from '@mui/icons-material/Payment';
-import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-import { AppConfig } from './ConfigProvider';
+import PersonIcon from '@mui/icons-material/Person';
 import GroupsIcon from '@mui/icons-material/Groups';
+import type { SvgIconProps } from '@mui/material/SvgIcon';
+import { AppConfig } from './ConfigProvider';
+import { brand } from '../theme/tokens';
 
 export interface AppConfigItem {
   name: string;
   route: string;
   urlKey?: keyof AppConfig; // Key to get URL from config
-  icon: React.ComponentType;
+  icon: React.ComponentType<SvgIconProps>;
   color: string;
-  external?: boolean; // For external links
 }
 
+/** The modules, in the order the main navigation lists them. */
 export const APPS: AppConfigItem[] = [
   {
     name: 'Home',
     route: '/',
     icon: HomeIcon,
-    color: '#334155'
+    color: brand.purple
   },
   {
-    name: 'Relationship',
+    // Shown as Journal, still served from /relationship: bookmarks, the home
+    // page's "Back to" link and every service keep the original name.
+    name: 'Journal',
     route: '/relationship',
     urlKey: 'RELATIONSHIP_FRONT_URL',
     icon: FavoriteIcon,
@@ -38,7 +42,8 @@ export const APPS: AppConfigItem[] = [
     color: '#3b82f6'
   },
   {
-    name: 'Finance',
+    // Shown as Money, still served from /finance.
+    name: 'Money',
     route: '/finance',
     urlKey: 'FINANCE_FRONT_URL',
     icon: AttachMoneyIcon,
@@ -46,13 +51,17 @@ export const APPS: AppConfigItem[] = [
   }
 ];
 
+/**
+ * About the person rather than their data. The navigation keeps these behind
+ * its Account entry instead of listing them beside the modules.
+ */
 export const USER_APPS: AppConfigItem[] = [
   {
-    name: 'Payments',
-    route: '/payments',
-    urlKey: 'PAYMENT_FRONT_URL',
-    icon: PaymentIcon,
-    color: '#6366f1'
+    name: 'Profile',
+    route: '/account',
+    urlKey: 'ACCOUNT_FRONT_URL',
+    icon: PersonIcon,
+    color: '#0f172a'
   },
   {
     name: 'Groups',
@@ -62,11 +71,11 @@ export const USER_APPS: AppConfigItem[] = [
     color: '#7c3aed'
   },
   {
-    name: 'Account',
-    route: '/account',
-    urlKey: 'ACCOUNT_FRONT_URL',
-    icon: AccountCircleIcon,
-    color: '#0f172a'
+    name: 'Billing',
+    route: '/payments',
+    urlKey: 'PAYMENT_FRONT_URL',
+    icon: PaymentIcon,
+    color: '#6366f1'
   }
 ];
 

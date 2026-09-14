@@ -144,25 +144,27 @@ const GroupDetailsPage: React.FC = () => {
   const currentUserRole = currentUserMember?.role;
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'grey.50', pb: 8 }}>
-      <GroupDetailsHeader 
+    // Same width and rhythm as the groups list, so moving between the two does
+    // not jump. The page container already supplies the side gutters.
+    <Box sx={{ maxWidth: 960, mx: 'auto', py: { xs: 2, sm: 4 } }}>
+      <GroupDetailsHeader
         groupName={group.name}
+        groupId={group._id}
+        memberCount={group.members?.length ?? 0}
         onBack={() => navigate('/')}
         onEdit={() => setIsEditGroupOpen(true)}
         currentUserRole={currentUserRole}
       />
 
-      <Container maxWidth="lg" sx={{ mt: -4, position: 'relative', zIndex: 1 }}>
-        <GroupStats group={group} />
+      <GroupStats group={group} />
 
-        <GroupMembersList 
-          group={group}
-          currentUserRole={currentUserRole}
-          currentUserEmail={user?.email}
-          onAddMember={() => setIsAddMemberOpen(true)}
-          onMenuOpen={handleMenuOpen}
-        />
-      </Container>
+      <GroupMembersList
+        group={group}
+        currentUserRole={currentUserRole}
+        currentUserEmail={user?.email}
+        onAddMember={() => setIsAddMemberOpen(true)}
+        onMenuOpen={handleMenuOpen}
+      />
 
       {/* Dialogs */}
       <AddMemberDialog 

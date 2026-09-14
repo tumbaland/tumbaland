@@ -101,6 +101,34 @@ it('counts the photos the per-year cap left out', () => {
   expect(screen.getByText('+8')).toBeInTheDocument();
 });
 
+it('shows at most four tiles a year, folding the rest into a count', () => {
+  const photos = Array.from({ length: 9 }, (_, i) => memoryPhoto({ _id: `p${i}`, originalName: `img-${i}.jpg` }));
+  mockedUseMemories.mockReturnValue({
+    memories: memories({ years: [{ year: 2025, yearsAgo: 1, photoCount: 9, photos }] }),
+    loading: false,
+    isFetching: false,
+    error: null
+  });
+  renderStrip();
+
+  expect(screen.getAllByRole('button')).toHaveLength(3);
+  expect(screen.getByRole('img', { name: '6 more photos' })).toHaveTextContent('+6');
+});
+
+it('shows all four photos and no count when that is the whole day', () => {
+  const photos = Array.from({ length: 4 }, (_, i) => memoryPhoto({ _id: `p${i}`, originalName: `img-${i}.jpg` }));
+  mockedUseMemories.mockReturnValue({
+    memories: memories({ years: [{ year: 2025, yearsAgo: 1, photoCount: 4, photos }] }),
+    loading: false,
+    isFetching: false,
+    error: null
+  });
+  renderStrip();
+
+  expect(screen.getAllByRole('button')).toHaveLength(4);
+  expect(screen.queryByText(/^\+\d+$/)).not.toBeInTheDocument();
+});
+
 it('says when a photo is remembered on its upload date', () => {
   mockedUseMemories.mockReturnValue({
     memories: memories({

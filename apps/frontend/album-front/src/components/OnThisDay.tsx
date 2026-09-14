@@ -7,18 +7,17 @@ import { MemoryPhoto, MemoryYear } from '../types';
 
 interface OnThisDayProps {
   groupId?: string;
-  /** thumbnail edge length in px; responsive by default */
-  size?: number | Record<string, number>;
 }
 
 /**
- * Smaller on a phone.
+ * Tiles per year, the count tile included.
  *
- * At 104px a 360px screen shows two and a half thumbnails, which reads as a
- * cropped row rather than a strip of memories. 72px fits four with the fifth
- * peeking, which is what tells someone the row scrolls.
+ * Every returned photo used to sit in a row that scrolled sideways. A busy day
+ * became a wall of thumbnails, and the row's full width leaked into the page
+ * layout on a phone, pushing the whole albums page past the screen edge. Four
+ * fit a phone at a comfortable size; anything past that is a count.
  */
-const THUMB_SIZE = { xs: 72, sm: 88, md: 104 };
+const MAX_TILES = 4;
 
 const formatDay = (day: string): string =>
   new Date(`${day}T00:00:00`).toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
@@ -45,17 +44,27 @@ const describe = (photo: MemoryPhoto): string => {
   return `${where}. ${when}${source} · ${photo.albumName}`;
 };
 
+const tileSx = {
+  width: '100%',
+  aspectRatio: '1 / 1',
+  borderRadius: 2,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center'
+} as const;
+
 interface MemoryYearRowProps {
   year: MemoryYear;
-  size: number | Record<string, number>;
   onSelect: (photo: MemoryPhoto) => void;
 }
 
-const MemoryYearRow: React.FC<MemoryYearRowProps> = ({ year, size, onSelect }) => {
+const MemoryYearRow: React.FC<MemoryYearRowProps> = ({ year, onSelect }) => {
   const theme = useTheme();
-  // The cap is applied server-side, so the count is the truth about the day
-  // even when only a handful of photos came back.
-  const hidden = year.photoCount - year.photos.length;
+  // photoCount is the truth about the day even when the server capped the list,
+  // so it decides whether a count tile is needed, not photos.length.
+  const needsCount = year.photoCount > Math.min(year.photos.length, MAX_TILES);
+  const shown = year.photos.slice(0, needsCount ? MAX_TILES - 1 : MAX_TILES);
+  const hidden = year.photoCount - shown.length;
 
   return (
     <Box>
@@ -66,23 +75,17 @@ const MemoryYearRow: React.FC<MemoryYearRowProps> = ({ year, size, onSelect }) =
         </Typography>
       </Stack>
 
-      {/* One row per year, scrolling sideways on its own: a busy day should not
-          be able to push the album grid off the screen. `minWidth: 0` is what
-          lets it shrink inside a flex parent rather than growing to fit. */}
+      {/* Fixed columns sized from the card, never from the photos: the row can
+          only ever be as wide as the space it is given. */}
       <Box
         sx={{
-          display: 'flex',
+          display: 'grid',
+          gridTemplateColumns: `repeat(${MAX_TILES}, minmax(0, 1fr))`,
           gap: 1,
-          overflowX: 'auto',
-          minWidth: 0,
-          pb: 1,
-          // The native bar sits on top of the thumbnails on a phone and adds
-          // nothing a peeking fifth thumbnail does not already say.
-          scrollbarWidth: 'none',
-          '&::-webkit-scrollbar': { display: 'none' }
+          maxWidth: { xs: '100%', sm: 440 }
         }}
       >
-        {year.photos.map((photo) => {
+        {shown.map((photo) => {
           const src = photo.thumbnailSignedUrl || photo.signedUrl;
 
           return (
@@ -93,19 +96,13 @@ const MemoryYearRow: React.FC<MemoryYearRowProps> = ({ year, size, onSelect }) =
                 onClick={() => onSelect(photo)}
                 aria-label={describe(photo)}
                 sx={{
-                  width: size,
-                  height: size,
-                  flexShrink: 0,
+                  ...tileSx,
                   p: 0,
                   border: '1px solid',
                   borderColor: 'divider',
-                  borderRadius: 2,
                   overflow: 'hidden',
                   cursor: 'pointer',
                   bgcolor: 'action.hover',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
                   transition: 'transform 0.2s, box-shadow 0.2s',
                   '&:hover': {
                     transform: 'translateY(-2px)',
@@ -129,19 +126,11 @@ const MemoryYearRow: React.FC<MemoryYearRowProps> = ({ year, size, onSelect }) =
           );
         })}
 
-        {hidden > 0 && (
+        {needsCount && (
           <Box
-            sx={{
-              width: size,
-              height: size,
-              flexShrink: 0,
-              borderRadius: 2,
-              border: '1px dashed',
-              borderColor: 'divider',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
+            role="img"
+            aria-label={`${hidden} more ${hidden === 1 ? 'photo' : 'photos'}`}
+            sx={{ ...tileSx, border: '1px dashed', borderColor: 'divider' }}
           >
             <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
               +{hidden}
@@ -160,7 +149,7 @@ const MemoryYearRow: React.FC<MemoryYearRowProps> = ({ year, size, onSelect }) =
  * "On this day" heading is worse than no heading, and most days in a young
  * library have nothing to show.
  */
-const OnThisDay: React.FC<OnThisDayProps> = ({ groupId, size = THUMB_SIZE }) => {
+const OnThisDay: React.FC<OnThisDayProps> = ({ groupId }) => {
   const navigate = useNavigate();
   const { memories, error } = useMemories(groupId);
 
@@ -196,7 +185,6 @@ const OnThisDay: React.FC<OnThisDayProps> = ({ groupId, size = THUMB_SIZE }) => 
           <MemoryYearRow
             key={year.year}
             year={year}
-            size={size}
             onSelect={(photo) => navigate(`/albums/${photo.albumId}/photos/${photo._id}`)}
           />
         ))}

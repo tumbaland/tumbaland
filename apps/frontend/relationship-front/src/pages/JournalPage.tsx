@@ -280,7 +280,7 @@ const JournalPage: React.FC = () => {
       >
         <Box>
           <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
-            Journal
+            Entries
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             {total > 0 ? `${total} day${total === 1 ? '' : 's'} logged` : 'Your days together'}

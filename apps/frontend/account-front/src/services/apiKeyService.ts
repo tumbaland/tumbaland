@@ -2,12 +2,12 @@ import { accountApi } from './accountApi';
 
 /** Everything a key may be granted, paired with wording a person can act on. */
 export const API_KEY_SCOPES = [
-  { value: 'relationship:read', label: 'Relationship — read', group: 'Relationship' },
-  { value: 'relationship:write', label: 'Relationship — write', group: 'Relationship' },
+  { value: 'relationship:read', label: 'Journal — read', group: 'Journal' },
+  { value: 'relationship:write', label: 'Journal — write', group: 'Journal' },
   { value: 'album:read', label: 'Photos — read', group: 'Photos' },
   { value: 'album:write', label: 'Photos — write', group: 'Photos' },
-  { value: 'finance:read', label: 'Finance — read', group: 'Finance' },
-  { value: 'finance:write', label: 'Finance — write', group: 'Finance' }
+  { value: 'finance:read', label: 'Money — read', group: 'Money' },
+  { value: 'finance:write', label: 'Money — write', group: 'Money' }
 ] as const;
 
 export type ApiKeyScope = (typeof API_KEY_SCOPES)[number]['value'];

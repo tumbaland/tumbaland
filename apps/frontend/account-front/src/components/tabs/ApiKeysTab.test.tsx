@@ -190,8 +190,8 @@ it('will not create a key with no name or no scopes', async () => {
   expect(screen.getByRole('button', { name: 'Create key' })).toBeEnabled();
 
   // Clearing every scope disables it again — a key that can do nothing is a mistake.
-  await user.click(screen.getByLabelText('Relationship — read'));
-  await user.click(screen.getByLabelText('Relationship — write'));
+  await user.click(screen.getByLabelText('Journal — read'));
+  await user.click(screen.getByLabelText('Journal — write'));
   expect(screen.getByRole('button', { name: 'Create key' })).toBeDisabled();
 });
 
@@ -313,7 +313,7 @@ it('sends exactly the scopes that are ticked', async () => {
   await user.click(screen.getByRole('button', { name: /New key/ }));
   await user.type(screen.getByLabelText('Name'), 'Reader');
   // Drop the default write, add photos read.
-  await user.click(screen.getByLabelText('Relationship — write'));
+  await user.click(screen.getByLabelText('Journal — write'));
   await user.click(screen.getByLabelText('Photos — read'));
   await user.click(screen.getByRole('button', { name: 'Create key' }));
 
