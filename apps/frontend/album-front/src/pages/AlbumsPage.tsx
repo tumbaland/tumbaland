@@ -6,7 +6,6 @@ import {
   Container,
   Alert,
   CircularProgress,
-  Fab,
   Menu,
   MenuItem,
   ListItemIcon,
@@ -19,7 +18,6 @@ import {
   Typography
 } from '@mui/material';
 import {
-  Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon
 } from '@mui/icons-material';
@@ -168,7 +166,9 @@ const AlbumsPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 4 }, px: { xs: 1, sm: 3 } }}>
+    <Container maxWidth="xl" sx={{ py: { xs: 1, sm: 4 }, px: { xs: 0, sm: 3 } }}>
+      {/* The header's own Create button shows on every screen size, so there
+          is no floating button repeating it over the album grid. */}
       <AlbumsHeader
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
@@ -178,11 +178,11 @@ const AlbumsPage: React.FC = () => {
       />
 
       {isFetching && !loading && (
-        <LinearProgress sx={{ mb: 4 }} />
+        <LinearProgress sx={{ mb: 2 }} />
       )}
 
       {albumsError && (
-        <Alert severity="error" sx={{ mb: 4 }}>
+        <Alert severity="error" sx={{ mb: { xs: 2, sm: 4 } }}>
           {albumsError}
         </Alert>
       )}
@@ -200,7 +200,7 @@ const AlbumsPage: React.FC = () => {
         <>
           <Stack
             direction="row"
-            sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, mb: 3 }}
+            sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1, mb: { xs: 1.5, sm: 3 } }}
           >
             <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
               {pagination.total} {pagination.total === 1 ? 'album' : 'albums'}
@@ -223,7 +223,7 @@ const AlbumsPage: React.FC = () => {
             onMenuOpen={handleMenuOpen}
           />
           {pagination.pages > 1 && (
-            <Stack spacing={2} sx={{ alignItems: 'center', mt: 4, mb: 2 }}>
+            <Stack spacing={2} sx={{ alignItems: 'center', mt: { xs: 2, sm: 4 }, mb: 2 }}>
               <Pagination
                 count={pagination.pages}
                 page={page}
@@ -288,21 +288,6 @@ const AlbumsPage: React.FC = () => {
         onCreate={handleCreateAlbum}
         tenantGroupId={tenantGroupId}
       />
-
-      {/* Floating Action Button for mobile */}
-      <Fab
-        color="primary"
-        aria-label="create album"
-        sx={{
-          position: 'fixed',
-          bottom: 16,
-          right: 16,
-          display: { xs: 'flex', sm: 'none' }
-        }}
-        onClick={() => setShowCreateDialog(true)}
-      >
-        <AddIcon />
-      </Fab>
 
       {/* Toast feedback for album actions */}
       <Snackbar

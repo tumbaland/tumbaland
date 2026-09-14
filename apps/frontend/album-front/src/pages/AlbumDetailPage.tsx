@@ -27,7 +27,6 @@ import PhotoSearchBar from '../components/PhotoSearchBar';
 import PhotoPaginationControls from '../components/PhotoPaginationControls';
 import PhotosGrid from '../components/PhotosGrid';
 import PhotoViewer from '../components/PhotoViewer';
-import AlbumFloatingActionButton from '../components/AlbumFloatingActionButton';
 import FileUpload from '../components/FileUpload';
 import ConfirmDialog from '../components/ConfirmDialog';
 import EditPhotoDialog from '../components/EditPhotoDialog';
@@ -277,17 +276,59 @@ const AlbumDetailPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 4 }, px: { xs: 1, sm: 3 } }}>
+    <Container maxWidth="xl" sx={{ py: { xs: 1, sm: 4 }, px: { xs: 0, sm: 3 } }}>
+      {/* The header's Upload button shows on every screen size, so no floating
+          button repeats it over the photos. */}
       <AlbumHeader
         album={album}
         onNavigateBack={() => navigate('/albums')}
         onUploadPhotos={() => setShowUploadDialog(true)}
       />
 
-      <PhotoSearchBar
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-      />
+      {/* Search and Select share a row. Stacked, with Select on a row of its
+          own, they cost a phone two rows before the first photo. */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: { xs: 1, sm: 2 } }}>
+        <PhotoSearchBar
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+        />
+        {!selectMode && (
+          <Button size="small" startIcon={<ChecklistIcon />} onClick={handleToggleSelectMode} sx={{ flexShrink: 0 }}>
+            Select
+          </Button>
+        )}
+      </Box>
+
+      {selectMode && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: { xs: 1, sm: 2 } }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            {selectedIds.size} selected
+          </Typography>
+          <Button size="small" onClick={handleSelectAllOnPage}>
+            Select all on page
+          </Button>
+          <Button
+            size="small"
+            startIcon={<LocalOfferIcon />}
+            disabled={selectedIds.size === 0}
+            onClick={handleTagSelected}
+          >
+            Tag
+          </Button>
+          <Button
+            size="small"
+            color="error"
+            startIcon={<DeleteIcon />}
+            disabled={selectedIds.size === 0}
+            onClick={() => setShowBulkDeleteDialog(true)}
+          >
+            Delete
+          </Button>
+          <Button size="small" startIcon={<CloseIcon />} onClick={handleToggleSelectMode}>
+            Cancel
+          </Button>
+        </Box>
+      )}
 
       <PhotoTagFilter
         tags={albumTags}
@@ -296,43 +337,6 @@ const AlbumDetailPage: React.FC = () => {
         onChange={setSelectedTags}
         onMatchChange={setTagMatch}
       />
-
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-        {selectMode ? (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              {selectedIds.size} selected
-            </Typography>
-            <Button size="small" onClick={handleSelectAllOnPage}>
-              Select all on page
-            </Button>
-            <Button
-              size="small"
-              startIcon={<LocalOfferIcon />}
-              disabled={selectedIds.size === 0}
-              onClick={handleTagSelected}
-            >
-              Tag
-            </Button>
-            <Button
-              size="small"
-              color="error"
-              startIcon={<DeleteIcon />}
-              disabled={selectedIds.size === 0}
-              onClick={() => setShowBulkDeleteDialog(true)}
-            >
-              Delete
-            </Button>
-            <Button size="small" startIcon={<CloseIcon />} onClick={handleToggleSelectMode}>
-              Cancel
-            </Button>
-          </Box>
-        ) : (
-          <Button size="small" startIcon={<ChecklistIcon />} onClick={handleToggleSelectMode}>
-            Select
-          </Button>
-        )}
-      </Box>
 
       <PhotoPaginationControls
         pagination={pagination}
@@ -378,10 +382,6 @@ const AlbumDetailPage: React.FC = () => {
         onClose={handleClosePhotoViewer}
         onPrevious={handlePreviousPhoto}
         onNext={handleNextPhoto}
-      />
-
-      <AlbumFloatingActionButton
-        onUploadPhotos={() => setShowUploadDialog(true)}
       />
 
       {/* Upload Dialog */}

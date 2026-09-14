@@ -10,14 +10,12 @@ import {
   TextField,
   InputAdornment,
   Alert,
-  LinearProgress,
-  Fab
+  LinearProgress
 } from '@mui/material';
 import {
   Add as AddIcon,
   Search as SearchIcon,
-  PhotoLibrary as PhotoLibraryIcon,
-  GridOn as GridOnIcon
+  PhotoLibrary as PhotoLibraryIcon
 } from '@mui/icons-material';
 import { useCollageList, useCollageMutations } from '../hooks/useCollage';
 import { Collage, CollageInput } from '../types/collage';
@@ -41,27 +39,27 @@ const CollageListPage: React.FC = () => {
   // Filter and Sort logic
   const filteredCollages = useMemo(() => {
     if (!collageListQuery.data) return [];
-    
+
     let result = [...collageListQuery.data];
 
     // Filter by search term
     if (searchTerm) {
       const lowerTerm = searchTerm.toLowerCase();
-      result = result.filter(collage => 
+      result = result.filter(collage =>
         collage.title.toLowerCase().includes(lowerTerm) ||
         collage.config?.title?.subtitle?.toLowerCase().includes(lowerTerm)
       );
     }
 
     // Sort by updatedAt desc
-    return result.sort((a, b) => 
+    return result.sort((a, b) =>
       new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     );
   }, [collageListQuery.data, searchTerm]);
 
   const handleOpenModal = () => setModalOpen(true);
   const handleCloseModal = () => setModalOpen(false);
-  
+
   const handleCreateCollage = async (input: CollageInput) => {
     const created = await createCollage(input);
     // jump straight into the editor for the new collage
@@ -88,7 +86,7 @@ const CollageListPage: React.FC = () => {
 
   const handleConfirmDelete = async () => {
     if (!collageToDelete) return;
-    
+
     setDeleting(true);
     try {
       await deleteCollage(collageToDelete._id);
@@ -110,100 +108,62 @@ const CollageListPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: { xs: 2, sm: 4 }, px: { xs: 1, sm: 3 } }}>
-      {/* Header */}
+    <Container maxWidth="xl" sx={{ py: { xs: 1, sm: 4 }, px: { xs: 0, sm: 3 } }}>
+      {/* Title and action on one line, search directly under it. This used to
+          be a centred heading, a full-width button and a padded search card,
+          which on a phone left the first collage below the fold. The header
+          button stays on every screen size, so no floating button repeats it. */}
       <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: { xs: 2, sm: 4 },
-          flexDirection: { xs: 'column', sm: 'row' },
-          gap: { xs: 2, sm: 0 }
-        }}
+        sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: { xs: 1.5, sm: 3 } }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <GridOnIcon sx={{ mr: 2, fontSize: 32, color: '#8b5cf6' }} />
-          <Typography 
-            variant="h4" 
-            component="h1" 
-            sx={{ 
-              fontWeight: 700,
-              background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
-              backgroundClip: 'text',
-              textFillColor: 'transparent',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
-            }}
-          >
-            Collages
-          </Typography>
-        </Box>
+        <Typography
+          variant="h5"
+          component="h1"
+          sx={{ fontWeight: 700, color: '#1e293b', fontSize: { xs: '1.35rem', sm: '1.75rem' } }}
+        >
+          Collages
+        </Typography>
         <Button
           variant="contained"
+          size="small"
+          disableElevation
           startIcon={<AddIcon />}
           onClick={handleOpenModal}
-          sx={{ 
-            width: { xs: '100%', sm: 'auto' },
-            borderRadius: 3,
+          sx={{
+            flexShrink: 0,
+            whiteSpace: 'nowrap',
+            borderRadius: 2,
             textTransform: 'none',
             fontWeight: 600,
-            px: 3,
-            py: 1,
-            background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
-            boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)',
-            '&:hover': {
-              boxShadow: '0 6px 16px rgba(139, 92, 246, 0.4)'
-            }
+            background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)'
           }}
         >
-          Create Collage
+          Create collage
         </Button>
       </Box>
-      {/* Search Bar */}
-      <Box
-        sx={{
-          mb: { xs: 2, sm: 4 },
-          display: 'flex',
-          gap: 2,
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          background: 'rgba(255, 255, 255, 0.5)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          p: { xs: 1.5, sm: 2 },
-          borderRadius: 4,
-          border: '1px solid rgba(255, 255, 255, 0.4)',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
-        }}>
-        <TextField
-          placeholder="Search collages..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon color="action" />
-                </InputAdornment>
-              ),
-              sx: {
-                borderRadius: 3,
-                backgroundColor: 'rgba(255, 255, 255, 0.5)',
-                '& fieldset': { border: 'none' },
-                '&:hover fieldset': { border: 'none' },
-                '&.Mui-focused fieldset': { border: 'none' }
-              }
-            }
-          }}
-          sx={{ maxWidth: 400, flex: 1, minWidth: 200 }}
-        />
-      </Box>
+      <TextField
+        size="small"
+        fullWidth
+        placeholder="Search collages..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        slotProps={{
+          input: {
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon color="action" fontSize="small" />
+              </InputAdornment>
+            ),
+            sx: { borderRadius: 2, backgroundColor: 'rgba(255, 255, 255, 0.75)' }
+          }
+        }}
+        sx={{ mb: { xs: 1.5, sm: 3 }, maxWidth: { sm: 400 } }}
+      />
       {collageListQuery.isFetching && !collageListQuery.isLoading && (
-        <LinearProgress sx={{ mb: 4 }} />
+        <LinearProgress sx={{ mb: 2 }} />
       )}
       {collageListQuery.error && (
-        <Alert severity="error" sx={{ mb: 4 }}>
+        <Alert severity="error" sx={{ mb: { xs: 2, sm: 4 } }}>
           Failed to load collages
         </Alert>
       )}
@@ -295,21 +255,6 @@ const CollageListPage: React.FC = () => {
         variant="danger"
         loading={deleting}
       />
-      {/* Floating Action Button for mobile */}
-      <Fab
-        color="primary"
-        aria-label="create collage"
-        sx={{
-          position: 'fixed',
-          bottom: 16,
-          right: 16,
-          display: { xs: 'flex', sm: 'none' },
-          background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
-        }}
-        onClick={handleOpenModal}
-      >
-        <AddIcon />
-      </Fab>
     </Container>
   );
 };

@@ -116,19 +116,19 @@ const PhotoPaginationControls: React.FC<PhotoPaginationControlsProps> = ({
         sx={{
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: isMobile ? 'stretch' : 'center',
-          mb: 3,
-          flexDirection: { xs: 'column', sm: 'row' },
-          gap: { xs: 2, sm: 0 }
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: { xs: 1, sm: 2 },
+          mb: { xs: 1, sm: 3 }
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
           <Typography variant="body2" sx={{
             color: "text.secondary"
           }}>
             {pagination.total} {pagination.total === 1 ? 'photo' : 'photos'} total
           </Typography>
-          <FormControl size="small" sx={{ minWidth: 120 }}>
+          <FormControl size="small" sx={{ minWidth: { xs: 96, sm: 120 } }}>
             <InputLabel>Per page</InputLabel>
             <Select value={pageSize} onChange={onPageSizeChange} label="Per page">
               <MenuItem value={24}>24</MenuItem>
@@ -138,7 +138,9 @@ const PhotoPaginationControls: React.FC<PhotoPaginationControlsProps> = ({
             </Select>
           </FormControl>
         </Box>
-        {showPagination && paginationControl}
+        {/* On a phone the page numbers live at the bottom only. A second full
+            row of them above the photos pushed the grid down for no gain. */}
+        {showPagination && !isMobile && paginationControl}
       </Box>
     );
   }
@@ -146,7 +148,7 @@ const PhotoPaginationControls: React.FC<PhotoPaginationControlsProps> = ({
   // Bottom pagination
   if (showPagination) {
     return (
-      <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
+      <Box sx={{ mt: { xs: 2, sm: 4 }, display: 'flex', justifyContent: 'center' }}>
         {paginationControl}
       </Box>
     );

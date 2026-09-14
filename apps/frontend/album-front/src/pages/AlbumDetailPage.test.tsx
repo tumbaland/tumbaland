@@ -116,8 +116,8 @@ it('opens the upload dialog from the header button', async () => {
   renderPage();
   await screen.findByRole('heading', { name: 'Trip' });
 
-  // Both the header button and the floating action button match "upload
-  // media" (text vs. aria-label) — click the first.
+  // The header's Upload button (accessible name "Upload media") comes first;
+  // an empty album's own upload prompt can match too, later in the page.
   await userEvent.click(screen.getAllByRole('button', { name: /upload media/i })[0]);
 
   expect(screen.getByText('file upload')).toBeInTheDocument();

@@ -22,7 +22,9 @@ const AppLayout = ({ children }: AppLayoutProps) => {
           table) widened the whole app past the edge of a phone screen. */}
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <AuthHeader />
-        <Container maxWidth="xl" sx={{ py: 4 }}>{children}</Container>
+        {/* Pages set their own vertical rhythm; 32px here on top of theirs was
+            dead space above every page on a phone. */}
+        <Container maxWidth="xl" sx={{ py: { xs: 1, sm: 4 } }}>{children}</Container>
       </Box>
     </Box>
   );

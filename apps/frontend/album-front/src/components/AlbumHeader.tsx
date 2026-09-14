@@ -1,16 +1,6 @@
 import React from 'react';
-import {
-  Box,
-  Typography,
-  Button,
-  IconButton,
-  Breadcrumbs,
-  Link
-} from '@mui/material';
-import {
-  CloudUpload as CloudUploadIcon,
-  ArrowBack as ArrowBackIcon
-} from '@mui/icons-material';
+import { Box, Typography, Button, IconButton } from '@mui/material';
+import { CloudUpload as CloudUploadIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { Album } from '../types';
 import { formatBytes } from '../utils/formatBytes';
 
@@ -20,110 +10,71 @@ interface AlbumHeaderProps {
   onUploadPhotos: () => void;
 }
 
-const AlbumHeader: React.FC<AlbumHeaderProps> = ({
-  album,
-  onNavigateBack,
-  onUploadPhotos
-}) => {
+/**
+ * Back, title and upload on one line, the album's facts under it.
+ *
+ * It replaces a breadcrumb trail plus a padded card holding a second way back
+ * and a full-width upload button, which together filled half a phone screen
+ * before the first photo.
+ */
+const AlbumHeader: React.FC<AlbumHeaderProps> = ({ album, onNavigateBack, onUploadPhotos }) => {
   return (
-    <>
-      {/* Breadcrumbs */}
-      <Breadcrumbs sx={{ mb: 2 }}>
-        <Link 
-          component="button" 
-          variant="body1" 
-          onClick={onNavigateBack} 
-          sx={{ textDecoration: 'none' }}
+    <Box sx={{ mb: { xs: 1.5, sm: 3 } }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <IconButton onClick={onNavigateBack} aria-label="Back to albums" sx={{ ml: -1 }}>
+          <ArrowBackIcon />
+        </IconButton>
+        <Typography
+          variant="h5"
+          component="h1"
+          noWrap
+          sx={{ flex: 1, minWidth: 0, fontWeight: 700, color: '#1e293b', fontSize: { xs: '1.25rem', sm: '1.75rem' } }}
         >
-          Albums
-        </Link>
-        <Typography sx={{
-          color: "text.primary"
-        }}>{album.name}</Typography>
-      </Breadcrumbs>
-      {/* Header */}
-      <Box 
-        sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          justifyContent: 'space-between',
-          alignItems: { xs: 'stretch', sm: 'flex-start' },
-          mb: { xs: 2, sm: 4 },
-          background: 'rgba(255, 255, 255, 0.5)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          p: { xs: 2, sm: 3 },
-          borderRadius: 4,
-          border: '1px solid rgba(255, 255, 255, 0.4)',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
-        }}
-      >
-        <Box sx={{ mb: { xs: 2, sm: 0 } }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <IconButton onClick={onNavigateBack} sx={{ mr: 1, ml: -1 }}>
-              <ArrowBackIcon />
-            </IconButton>
-            <Typography 
-              variant="h4" 
-              component="h1" 
-              sx={{ 
-                mr: 1,
-                fontWeight: 700,
-                fontSize: { xs: '1.5rem', sm: '2.125rem' },
-                background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
-                backgroundClip: 'text',
-                textFillColor: 'transparent',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
-              }}
-            >
-              {album.name}
-            </Typography>
-          </Box>
-          {album.description && (
-            <Typography
-              variant="body1"
-              sx={{
-                color: "text.secondary",
-                mb: 1,
-                pl: { xs: 0, sm: 6 }
-              }}>
-              {album.description}
-            </Typography>
-          )}
+          {album.name}
+        </Typography>
+        <Button
+          variant="contained"
+          size="small"
+          disableElevation
+          startIcon={<CloudUploadIcon />}
+          onClick={onUploadPhotos}
+          aria-label="Upload media"
+          sx={{
+            flexShrink: 0,
+            whiteSpace: 'nowrap',
+            borderRadius: 2,
+            textTransform: 'none',
+            fontWeight: 600,
+            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
+          }}
+        >
+          Upload
+        </Button>
+      </Box>
+
+      <Box sx={{ pl: { xs: 0, sm: 5 } }}>
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          {album.photoCount} {album.photoCount === 1 ? 'photo' : 'photos'}
+          {album.photoCount > 0 && ` • ${formatBytes(album.totalSize)}`}
+          {album.isPublic ? ' • Public' : ' • Private'}
+        </Typography>
+        {album.description && (
           <Typography
             variant="body2"
             sx={{
-              color: "text.secondary",
-              pl: { xs: 0, sm: 6 }
-            }}>
-            {album.photoCount} {album.photoCount === 1 ? 'photo' : 'photos'}
-            {album.photoCount > 0 && ` • ${formatBytes(album.totalSize)}`}
-            {album.isPublic ? ' • Public' : ' • Private'}
+              color: 'text.secondary',
+              mt: 0.25,
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden'
+            }}
+          >
+            {album.description}
           </Typography>
-        </Box>
-        <Button 
-          variant="contained" 
-          startIcon={<CloudUploadIcon />} 
-          onClick={onUploadPhotos}
-          fullWidth={false}
-          sx={{
-            width: { xs: '100%', sm: 'auto' },
-            borderRadius: 3,
-            textTransform: 'none',
-            fontWeight: 600,
-            px: 3,
-            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
-            '&:hover': {
-              boxShadow: '0 6px 16px rgba(99, 102, 241, 0.4)'
-            }
-          }}
-        >
-          Upload Media
-        </Button>
+        )}
       </Box>
-    </>
+    </Box>
   );
 };
 

@@ -89,6 +89,27 @@ it('says "a year ago" for the previous year', () => {
   expect(screen.getByText('2025 · 2 photos')).toBeInTheDocument();
 });
 
+it('shows only the most recent year, as one row under the heading', () => {
+  mockedUseMemories.mockReturnValue({
+    memories: memories({
+      totalPhotos: 2,
+      years: [
+        { year: 2025, yearsAgo: 1, photoCount: 1, photos: [memoryPhoto({ _id: 'p25', originalName: 'recent.jpg' })] },
+        { year: 2024, yearsAgo: 2, photoCount: 1, photos: [memoryPhoto({ _id: 'p24', originalName: 'older.jpg' })] }
+      ]
+    }),
+    loading: false,
+    isFetching: false,
+    error: null
+  });
+  renderStrip();
+
+  expect(screen.getByText('a year ago')).toBeInTheDocument();
+  expect(screen.getByRole('img', { name: 'recent.jpg' })).toBeInTheDocument();
+  expect(screen.queryByText('2 years ago')).not.toBeInTheDocument();
+  expect(screen.queryByRole('img', { name: 'older.jpg' })).not.toBeInTheDocument();
+});
+
 it('counts the photos the per-year cap left out', () => {
   mockedUseMemories.mockReturnValue({
     memories: memories({ years: [{ year: 2024, yearsAgo: 2, photoCount: 9, photos: [memoryPhoto()] }] }),

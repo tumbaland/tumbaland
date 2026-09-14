@@ -8,7 +8,7 @@ it('renders the album name, description, photo count, total size, and public/pri
   const album = makeAlbum({ description: 'Summer trip', photoCount: 1, totalSize: 1024 * 500, isPublic: true });
   render(<AlbumHeader album={album} onNavigateBack={vi.fn()} onUploadPhotos={vi.fn()} />);
 
-  expect(screen.getAllByText(album.name).length).toBeGreaterThan(0);
+  expect(screen.getByRole('heading', { level: 1, name: album.name })).toBeInTheDocument();
   expect(screen.getByText('Summer trip')).toBeInTheDocument();
   expect(screen.getByText('1 photo • 500 KB • Public')).toBeInTheDocument();
 });
@@ -34,15 +34,20 @@ it('omits the description when the album has none', () => {
   expect(screen.queryByText(/summer/i)).not.toBeInTheDocument();
 });
 
-it('calls onNavigateBack from both the breadcrumb link and the back button', async () => {
+it('goes back to the albums list from the back button', async () => {
   const onNavigateBack = vi.fn();
   render(<AlbumHeader album={makeAlbum()} onNavigateBack={onNavigateBack} onUploadPhotos={vi.fn()} />);
 
-  await userEvent.click(screen.getByRole('button', { name: 'Albums' }));
-  expect(onNavigateBack).toHaveBeenCalledTimes(1);
+  await userEvent.click(screen.getByRole('button', { name: 'Back to albums' }));
 
-  await userEvent.click(screen.getByRole('button', { name: '' }));
-  expect(onNavigateBack).toHaveBeenCalledTimes(2);
+  expect(onNavigateBack).toHaveBeenCalledTimes(1);
+});
+
+it('has no separate breadcrumb trail repeating the way back', () => {
+  render(<AlbumHeader album={makeAlbum()} onNavigateBack={vi.fn()} onUploadPhotos={vi.fn()} />);
+
+  expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+  expect(screen.getAllByRole('button')).toHaveLength(2);
 });
 
 it('calls onUploadPhotos when the upload button is clicked', async () => {

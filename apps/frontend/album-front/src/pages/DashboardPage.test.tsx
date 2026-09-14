@@ -109,16 +109,13 @@ it('passes the per-album storage breakdown through to the storage chart', () => 
   expect(screen.getByText('512 B')).toBeInTheDocument();
 });
 
-it('navigates to /albums and /collages from the header buttons', async () => {
+it('leaves navigation to the section tabs rather than repeating it as header buttons', () => {
   mockedUseStatistics.mockReturnValue({ statistics, loading: false, isFetching: false, error: null, refetch: vi.fn() });
   renderPage();
 
-  await userEvent.click(screen.getByRole('button', { name: /view albums/i }));
-  await userEvent.click(screen.getByRole('button', { name: /view collages/i }));
-
-  // Navigation via MemoryRouter can't be asserted on location directly without
-  // more router plumbing; this at least exercises the click handlers without
-  // throwing, and pairs with AlbumsPage/CollageListPage's own navigate tests.
+  expect(screen.queryByRole('button', { name: /view albums/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /view collages/i })).not.toBeInTheDocument();
+  expect(screen.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument();
 });
 
 it('calls refetch when the refresh button is clicked', async () => {

@@ -1,28 +1,22 @@
 import React from 'react';
-import {
-  Box,
-  TextField,
-  InputAdornment
-} from '@mui/material';
-import {
-  Search as SearchIcon
-} from '@mui/icons-material';
+import { Box, TextField, InputAdornment } from '@mui/material';
+import { Search as SearchIcon } from '@mui/icons-material';
 
 interface PhotoSearchBarProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
 }
 
-const PhotoSearchBar: React.FC<PhotoSearchBarProps> = ({
-  searchTerm,
-  onSearchChange
-}) => {
+/**
+ * Sits in a row beside other controls, so it takes the room it is given and
+ * leaves spacing to the row rather than setting its own margins.
+ */
+const PhotoSearchBar: React.FC<PhotoSearchBarProps> = ({ searchTerm, onSearchChange }) => {
   return (
-    <Box sx={{
-      mb: { xs: 2, sm: 4 }
-    }}>
+    <Box sx={{ flex: 1, minWidth: 0, maxWidth: { sm: 400 } }}>
       <TextField
         fullWidth
+        size="small"
         placeholder="Search photos..."
         value={searchTerm}
         onChange={(e) => onSearchChange(e.target.value)}
@@ -30,25 +24,23 @@ const PhotoSearchBar: React.FC<PhotoSearchBarProps> = ({
           input: {
             startAdornment: (
               <InputAdornment position="start">
-                <SearchIcon />
+                <SearchIcon fontSize="small" />
               </InputAdornment>
             )
           }
         }}
-        sx={{ 
-          maxWidth: 400,
+        sx={{
           '& .MuiOutlinedInput-root': {
-            borderRadius: 3,
-            backgroundColor: 'rgba(255, 255, 255, 0.5)',
-            backdropFilter: 'blur(12px)',
+            borderRadius: 2,
+            backgroundColor: 'rgba(255, 255, 255, 0.75)',
             '& fieldset': {
-              borderColor: 'rgba(255, 255, 255, 0.4)',
+              borderColor: 'rgba(15, 23, 42, 0.12)'
             },
             '&:hover fieldset': {
-              borderColor: 'rgba(99, 102, 241, 0.5)',
+              borderColor: 'rgba(99, 102, 241, 0.5)'
             },
             '&.Mui-focused fieldset': {
-              borderColor: '#6366f1',
+              borderColor: '#6366f1'
             }
           }
         }}

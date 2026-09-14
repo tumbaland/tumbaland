@@ -194,7 +194,7 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
   // Photos grid
   return (
     <>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.5 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
         <ToggleButtonGroup
           value={density}
           exclusive
