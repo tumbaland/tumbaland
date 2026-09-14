@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.482](https://github.com/toomastahves/tumbaland/compare/app-v0.0.481...app-v0.0.482) (2026-09-14)
+
+### Features
+
+* improve mobile ui for money ([e94fcbf](https://github.com/toomastahves/tumbaland/commit/e94fcbf368d4cd086a4166c0968bc8e1b837afce))
+
 ## [0.0.481](https://github.com/toomastahves/tumbaland/compare/app-v0.0.480...app-v0.0.481) (2026-09-14)
 
 ### Features
