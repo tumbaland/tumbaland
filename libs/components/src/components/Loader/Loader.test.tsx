@@ -23,7 +23,8 @@ describe('Loader', () => {
   it('takes full viewport height by default', () => {
     const { container } = render(<Loader />);
 
-    expect(container.firstChild).toHaveStyle({ height: '100vh' });
+    // jsdom resolves viewport units, so 100vh computes to the window's height in pixels.
+    expect(container.firstChild).toHaveStyle({ height: `${window.innerHeight}px` });
   });
 
   it('uses auto height layout when fullHeight is false', () => {

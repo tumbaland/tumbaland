@@ -110,9 +110,21 @@ const tickers: TrackedTicker[] = [
   { _id: 't2', ticker: 'BND', displayName: 'Vanguard Bond', isActive: false }
 ];
 
+// The fixtures and the component both read "now": the newest bar is dated
+// today, and the years of weekly history run up to it. A real clock let
+// "11.6 yrs" drift to 11.7 a month later. Only Date is faked, so timers, user
+// events and findBy* keep running in real time.
+const NOW = new Date('2026-08-12T09:00:00.000Z');
+
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(NOW);
   vi.clearAllMocks();
   mockedCoverage.mockResolvedValue(coverageFor());
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 it('shows an empty state when there are no tracked tickers', () => {
