@@ -35,6 +35,7 @@ const PortfolioValueChart: React.FC<PortfolioValueChartProps> = ({ records, asse
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [timePeriod, setTimePeriod] = useState<string>('2');
   const [useLogScale, setUseLogScale] = useState<boolean>(false);
+  const chartHeight = isMobile ? 260 : 350;
 
   // Filter records based on selected time period
   const filteredRecords = React.useMemo(() => {
@@ -105,6 +106,15 @@ const PortfolioValueChart: React.FC<PortfolioValueChartProps> = ({ records, asse
     return { dates, series };
   }, [filteredRecords]);
 
+  // On a phone the axis has about 40px, so full amounts ("250 000") were cut
+  // to "250…". Thousands as "250k" fit and read the same.
+  const compactAmount = (value: number) =>
+    Math.abs(value) >= 1_000_000
+      ? `${+(value / 1_000_000).toFixed(1)}M`
+      : Math.abs(value) >= 1_000
+        ? `${Math.round(value / 1_000)}k`
+        : `${Math.round(value)}`;
+
   const handleTimePeriodChange = (event: SelectChangeEvent<string>) => {
     setTimePeriod(event.target.value);
   };
@@ -125,14 +135,14 @@ const PortfolioValueChart: React.FC<PortfolioValueChartProps> = ({ records, asse
           height: '100%'
         }}
       >
-        <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-            <Timeline sx={{ mr: 2, color: '#667eea' }} />
-            <Typography variant="h6" sx={{ fontWeight: 600, color: '#1e293b' }}>
+        <CardContent sx={{ p: { xs: 1.5, md: 4 }, '&:last-child': { pb: { xs: 1.5, md: 4 } } }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 1.5, md: 3 } }}>
+            <Timeline sx={{ mr: { xs: 1, md: 2 }, color: '#667eea', fontSize: { xs: 20, md: 24 } }} />
+            <Typography variant="h6" sx={{ fontWeight: 600, color: '#1e293b', fontSize: { xs: '1.05rem', md: '1.25rem' } }}>
               Net Worth Over Time
             </Typography>
           </Box>
-          <Box sx={{ textAlign: 'center', py: 6 }}>
+          <Box sx={{ textAlign: 'center', py: { xs: 3, md: 6 } }}>
             <Typography variant="body1" sx={{
               color: "text.secondary"
             }}>
@@ -154,16 +164,18 @@ const PortfolioValueChart: React.FC<PortfolioValueChartProps> = ({ records, asse
         height: '100%'
       }}
     >
-      <CardContent sx={{ p: { xs: 3, md: 4 } }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+      <CardContent sx={{ p: { xs: 1.5, md: 4 }, '&:last-child': { pb: { xs: 1.5, md: 4 } } }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: { xs: 1, md: 3 }, flexWrap: 'wrap', gap: { xs: 1, md: 2 } }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Timeline sx={{ mr: 2, color: '#667eea' }} />
-            <Typography variant="h6" sx={{ fontWeight: 600, color: '#1e293b' }}>
+            <Timeline sx={{ mr: { xs: 1, md: 2 }, color: '#667eea', fontSize: { xs: 20, md: 24 } }} />
+            <Typography variant="h6" sx={{ fontWeight: 600, color: '#1e293b', fontSize: { xs: '1.05rem', md: '1.25rem' } }}>
               Net Worth Over Time
             </Typography>
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+          {/* Period and log scale share one line under the title on a phone; they
+              used to take a line each. */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 2 } }}>
             <FormControl size="small" sx={{ minWidth: 120 }}>
               <InputLabel>Time Period</InputLabel>
               <Select
@@ -192,7 +204,7 @@ const PortfolioValueChart: React.FC<PortfolioValueChartProps> = ({ records, asse
             />
           </Box>
         </Box>
-        <Box sx={{ width: '100%', height: 350 }}>
+        <Box sx={{ width: '100%', minHeight: chartHeight }}>
           <LineChart
             xAxis={[{
               data: portfolioTimelineData.dates,
@@ -211,16 +223,16 @@ const PortfolioValueChart: React.FC<PortfolioValueChartProps> = ({ records, asse
             yAxis={[{
               label: isMobile ? '' : 'Net Worth (€)',
               labelStyle: { textAnchor: 'middle' },
-              scaleType: useLogScale ? 'log' : 'linear'
+              scaleType: useLogScale ? 'log' : 'linear',
+              ...(isMobile ? { width: 40, valueFormatter: (value: number) => compactAmount(value) } : {})
             }]}
             series={portfolioTimelineData.series}
-            height={350}
-            margin={{
-              top: 20,
-              right: isMobile ? 20 : 30,
-              bottom: 60,
-              left: isMobile ? 20 : 80
-            }}
+            height={chartHeight}
+            margin={
+              isMobile
+                ? { top: 8, right: 28, bottom: 4, left: 0 }
+                : { top: 20, right: 30, bottom: 60, left: 80 }
+            }
             grid={{ horizontal: true, vertical: false }}
           />
         </Box>

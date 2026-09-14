@@ -20,10 +20,12 @@ interface Tile {
   valueColor?: string;
 }
 
+const ICON_SIZE = { xs: 18, md: 28 };
+
 const trendIcon = (v: number) =>
-  v > 0 ? <TrendingUp sx={{ fontSize: { xs: 24, md: 28 } }} />
-  : v < 0 ? <TrendingDown sx={{ fontSize: { xs: 24, md: 28 } }} />
-  : <TrendingFlat sx={{ fontSize: { xs: 24, md: 28 } }} />;
+  v > 0 ? <TrendingUp sx={{ fontSize: ICON_SIZE }} />
+  : v < 0 ? <TrendingDown sx={{ fontSize: ICON_SIZE }} />
+  : <TrendingFlat sx={{ fontSize: ICON_SIZE }} />;
 
 const trendColor = (v: number) => (v > 0 ? 'success.main' : v < 0 ? 'error.main' : 'text.primary');
 
@@ -59,7 +61,7 @@ const FinancialKPIs: React.FC<FinancialKPIsProps> = ({ kpis, currency = 'EUR' })
       detail: kpis.liabilities > 0
         ? `${money(kpis.assets)} assets − ${money(kpis.liabilities)} debt`
         : undefined,
-      icon: <AccountBalance sx={{ fontSize: { xs: 24, md: 28 } }} />,
+      icon: <AccountBalance sx={{ fontSize: ICON_SIZE }} />,
       accent: '#667eea'
     },
     changeTile(
@@ -73,7 +75,7 @@ const FinancialKPIs: React.FC<FinancialKPIsProps> = ({ kpis, currency = 'EUR' })
       'Past year',
       kpis.yearChange,
       kpis.yearChangePct,
-      <CalendarMonth sx={{ fontSize: { xs: 24, md: 28 } }} />,
+      <CalendarMonth sx={{ fontSize: ICON_SIZE }} />,
       '#8b5cf6'
     ),
     {
@@ -81,19 +83,21 @@ const FinancialKPIs: React.FC<FinancialKPIsProps> = ({ kpis, currency = 'EUR' })
       sublabel: 'vs invested',
       value: signed(kpis.totalGain, currency),
       detail: formatPct(kpis.totalGainPct),
-      icon: <Savings sx={{ fontSize: { xs: 24, md: 28 } }} />,
+      icon: <Savings sx={{ fontSize: ICON_SIZE }} />,
       accent: '#eab308',
       valueColor: trendColor(kpis.totalGain)
     }
   ];
 
   return (
+    // Two per row on a phone: one per row made the four figures fill the first
+    // screen before the chart.
     <Box
       sx={{
         display: 'grid',
-        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' },
-        gap: { xs: 2, md: 3 },
-        mb: { xs: 3, md: 4 }
+        gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(4, minmax(0, 1fr))' },
+        gap: { xs: 1.5, md: 3 },
+        mb: { xs: 2, md: 4 }
       }}
     >
       {tiles.map((tile) => (
@@ -112,26 +116,34 @@ const FinancialKPIs: React.FC<FinancialKPIsProps> = ({ kpis, currency = 'EUR' })
             }
           }}
         >
-          <CardContent sx={{ p: { xs: 2.5, md: 3 } }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+          <CardContent sx={{ p: { xs: 1.5, md: 3 }, '&:last-child': { pb: { xs: 1.5, md: 3 } } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 0.75, md: 1.5 } }}>
               <Box
                 sx={{
-                  p: 1.25,
+                  p: { xs: 0.5, md: 1.25 },
                   borderRadius: 2,
                   bgcolor: alpha(tile.accent, 0.1),
                   color: tile.accent,
-                  mr: 1.5,
-                  display: 'flex'
+                  mr: { xs: 1, md: 1.5 },
+                  display: 'flex',
+                  flexShrink: 0
                 }}
               >
                 {tile.icon}
               </Box>
-              <Box>
-                <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography
+                  variant="body2"
+                  noWrap
+                  sx={{ fontWeight: 600, color: 'text.primary', fontSize: { xs: '0.8rem', md: '0.875rem' } }}
+                >
                   {tile.label}
                 </Typography>
                 {tile.sublabel && (
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  <Typography
+                    variant="caption"
+                    sx={{ display: 'block', color: 'text.secondary', lineHeight: 1.2, fontSize: { xs: '0.68rem', md: '0.75rem' } }}
+                  >
                     {tile.sublabel}
                   </Typography>
                 )}
@@ -139,12 +151,25 @@ const FinancialKPIs: React.FC<FinancialKPIsProps> = ({ kpis, currency = 'EUR' })
             </Box>
             <Typography
               variant="h5"
-              sx={{ fontWeight: 700, color: tile.valueColor || 'text.primary', fontSize: { xs: '1.4rem', md: '1.6rem' } }}
+              sx={{
+                fontWeight: 700,
+                color: tile.valueColor || 'text.primary',
+                fontSize: { xs: '1.15rem', md: '1.6rem' },
+                lineHeight: 1.25
+              }}
             >
               {tile.value}
             </Typography>
             {tile.detail && (
-              <Typography variant="body2" sx={{ color: tile.valueColor || 'text.secondary', mt: 0.5 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: tile.valueColor || 'text.secondary',
+                  mt: 0.25,
+                  fontSize: { xs: '0.72rem', md: '0.875rem' },
+                  lineHeight: 1.35
+                }}
+              >
                 {tile.detail}
               </Typography>
             )}
