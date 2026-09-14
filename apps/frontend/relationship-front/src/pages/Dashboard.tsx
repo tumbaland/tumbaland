@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Box, Button, Typography } from '@mui/material';
+import { Box, Button, Typography, useMediaQuery, useTheme } from '@mui/material';
 import TuneIcon from '@mui/icons-material/Tune';
 import StatsCards from '../components/StatsCards';
 import StreakCards from '../components/StreakCards';
@@ -19,6 +19,10 @@ const Dashboard: React.FC = () => {
   const tenantGroupId = useTenantFilter();
   const { settings, types, save } = useDashboardSettings(tenantGroupId);
   const [customizeOpen, setCustomizeOpen] = useState(false);
+  // Charts are a full screen width on a phone already; at desktop height each
+  // one filled most of the screen on its own.
+  const isPhone = useMediaQuery(useTheme().breakpoints.down('sm'));
+  const chartHeight = isPhone ? 320 : 400;
 
   // hidden types by slug, for chart components whose data is keyed by slug
   const hiddenSlugs = useMemo(
@@ -37,22 +41,23 @@ const Dashboard: React.FC = () => {
   );
 
   return (
-    <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth: '100%', overflowX: 'hidden' }}>
+    <Box sx={{ px: { xs: 0, sm: 3 }, py: { xs: 1.5, sm: 3 }, maxWidth: '100%', overflowX: 'hidden' }}>
+      {/* Title and Customize on one row: stacked, with a large heading, they
+          took most of the first screen on a phone before any figure. */}
       <Box
         sx={{
-          mb: 3,
+          mb: { xs: 2, sm: 3 },
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          gap: 2,
-          flexWrap: 'wrap'
+          alignItems: 'center',
+          gap: 1.5
         }}
       >
-        <Box>
-          <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 'bold' }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="h5" component="h1" sx={{ fontWeight: 'bold', fontSize: { xs: '1.4rem', sm: '2rem' } }}>
             Dashboard
           </Typography>
-          <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             Overview of your time together
           </Typography>
         </Box>
@@ -61,12 +66,12 @@ const Dashboard: React.FC = () => {
           onClick={() => setCustomizeOpen(true)}
           variant="outlined"
           size="small"
-          sx={{ textTransform: 'none' }}
+          sx={{ flexShrink: 0, textTransform: 'none' }}
         >
           Customize
         </Button>
       </Box>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 2.5, sm: 3 } }}>
         {/* Key Statistics */}
         <Box sx={{ width: '100%' }}>
           <StatsCards highlightTypeIds={settings.highlightTypeIds} startDate={settings.startDate} />
@@ -94,16 +99,16 @@ const Dashboard: React.FC = () => {
 
         {/* Charts Section */}
         <Box sx={{ width: { xs: '100%', md: 'calc(50% - 12px)' } }}>
-          <HoursBarChart hiddenSlugs={hiddenSlugs} />
+          <HoursBarChart hiddenSlugs={hiddenSlugs} height={chartHeight} />
         </Box>
         <Box sx={{ width: { xs: '100%', md: 'calc(50% - 12px)' } }}>
-          <TotalHoursChart />
+          <TotalHoursChart height={chartHeight} />
         </Box>
         <Box sx={{ width: { xs: '100%', md: 'calc(50% - 12px)' } }}>
-          <TotalDaysChart featuredType={featuredType} />
+          <TotalDaysChart featuredType={featuredType} height={chartHeight} />
         </Box>
         <Box sx={{ width: { xs: '100%', md: 'calc(50% - 12px)' } }}>
-          <CumulativeTimeline height={400} />
+          <CumulativeTimeline height={chartHeight} />
         </Box>
 
         {/* Heatmap */}

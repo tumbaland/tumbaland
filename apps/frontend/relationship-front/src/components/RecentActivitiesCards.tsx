@@ -134,27 +134,25 @@ const RecentActivitiesCards: React.FC = () => {
   }
   return (
     <Box>
+      {/* Title and timeline on one row; the selector used to span a phone's
+          width on a line of its own. */}
       <Box
         sx={{
-          mb: 3,
+          mb: { xs: 1.5, sm: 3 },
           display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
           justifyContent: 'space-between',
-          alignItems: { xs: 'stretch', sm: 'center' },
-          gap: 2
+          alignItems: 'center',
+          gap: 1.5
         }}
       >
         <Typography
           variant="h5"
           component="h2"
-          sx={{
-            fontWeight: 'bold',
-            color: 'text.primary'
-          }}
+          sx={{ fontWeight: 'bold', color: 'text.primary', fontSize: { xs: '1.1rem', sm: '1.5rem' } }}
         >
-          Recent Activities by Category
+          Recent activities
         </Typography>
-        <FormControl size="small" sx={{ minWidth: { xs: 120, sm: 200 }, width: { xs: '100%', sm: 'auto' } }}>
+        <FormControl size="small" sx={{ width: { xs: 140, sm: 200 }, flexShrink: 0 }}>
           <InputLabel id="timeline-select-label">Timeline</InputLabel>
           <Select
             labelId="timeline-select-label"
@@ -171,11 +169,13 @@ const RecentActivitiesCards: React.FC = () => {
           </Select>
         </FormControl>
       </Box>
+      {/* Two cards per row on a phone. A 250px minimum left one card per row
+          there, each with a long padded list. */}
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-          gap: 3
+          gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(auto-fill, minmax(220px, 1fr))' },
+          gap: { xs: 1.5, sm: 3 }
         }}
       >
         {activityTypes.map((activityType) => {
@@ -198,17 +198,23 @@ const RecentActivitiesCards: React.FC = () => {
                 }
               }}
             >
-              <CardContent sx={{ p: 2 }}>
+              <CardContent sx={{ p: { xs: 1.25, sm: 2 }, '&:last-child': { pb: { xs: 1.25, sm: 2 } } }}>
                 <Box
                   sx={{
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    mb: 2
+                    gap: 0.5,
+                    mb: { xs: 1, sm: 2 }
                   }}>
                   <Chip
                     label={activityType.name}
+                    size="small"
                     sx={{
+                      // minWidth 0 lets a long type name ellipsize instead of
+                      // pushing the expand button out of a half-width card.
+                      minWidth: 0,
+                      maxWidth: '100%',
                       backgroundColor: alpha(activityType.color || '#607d8b', 0.1),
                       color: activityType.color || '#607d8b',
                       fontWeight: 600,
@@ -242,7 +248,7 @@ const RecentActivitiesCards: React.FC = () => {
                         fontSize: { xs: '0.65rem', sm: '0.7rem' },
                         fontStyle: 'italic',
                         textAlign: 'center',
-                        py: 2
+                        py: { xs: 1, sm: 2 }
                       }}
                     >
                       No activities found
@@ -250,7 +256,7 @@ const RecentActivitiesCards: React.FC = () => {
                   ) : (
                     <Box
                       sx={{
-                        maxHeight: expandedCards.has(activityType.slug) ? 'none' : { xs: 200, sm: 250 },
+                        maxHeight: expandedCards.has(activityType.slug) ? 'none' : { xs: 120, sm: 250 },
                         overflowY: expandedCards.has(activityType.slug) ? 'visible' : 'auto',
                         pr: expandedCards.has(activityType.slug) ? 0 : 0.5,
                         '&::-webkit-scrollbar': {
@@ -302,6 +308,7 @@ const RecentActivitiesCards: React.FC = () => {
                               lineHeight: 1.2,
                               color: 'text.primary',
                               flex: 1,
+                              minWidth: 0,
                               wordBreak: 'break-word'
                             }}
                           >

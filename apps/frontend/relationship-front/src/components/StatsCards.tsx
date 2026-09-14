@@ -118,21 +118,25 @@ const StatsCards: React.FC<StatsCardsProps> = ({ highlightTypeIds, startDate }) 
 
   return (
     <Box>
-      {/* Header with Title and Timeframe Selector */}
+      {/* Title and timeframe on one row; the selector used to span the width
+          of a phone on a line of its own. */}
       <Box
         sx={{
-          mb: 3,
+          mb: { xs: 1.5, sm: 3 },
           display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
           justifyContent: 'space-between',
-          alignItems: { xs: 'stretch', sm: 'center' },
-          gap: 2
+          alignItems: 'center',
+          gap: 1.5
         }}
       >
-        <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+        <Typography
+          variant="h5"
+          component="h2"
+          sx={{ fontWeight: 'bold', color: 'text.primary', fontSize: { xs: '1.1rem', sm: '1.5rem' } }}
+        >
           Statistics
         </Typography>
-        <FormControl sx={{ minWidth: { xs: 120, sm: 200 }, width: { xs: '100%', sm: 'auto' } }} size="small">
+        <FormControl sx={{ width: { xs: 140, sm: 200 }, flexShrink: 0 }} size="small">
           <InputLabel id="timeframe-select-label">Timeframe</InputLabel>
           <Select
             labelId="timeframe-select-label"
@@ -150,16 +154,15 @@ const StatsCards: React.FC<StatsCardsProps> = ({ highlightTypeIds, startDate }) 
           </Select>
         </FormControl>
       </Box>
-      {/* Stats Cards Grid */}
+      {/* Two per row on a phone: one per row made four figures fill a screen. */}
       <Box
         sx={{
           display: 'grid',
           gridTemplateColumns: {
-            xs: '1fr',
-            sm: 'repeat(2, 1fr)',
-            md: `repeat(${Math.min(cardCount, 4)}, 1fr)`
+            xs: 'repeat(2, minmax(0, 1fr))',
+            md: `repeat(${Math.min(cardCount, 4)}, minmax(0, 1fr))`
           },
-          gap: 3
+          gap: { xs: 1.5, sm: 3 }
         }}
       >
         <Box>

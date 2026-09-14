@@ -79,8 +79,8 @@ interface MilestoneListProps {
 
 const MilestoneList: React.FC<MilestoneListProps> = ({ icon, title, emptyText, accent, milestones }) => (
   <Card elevation={0} sx={{ height: '100%', borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-    <CardContent>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, color: accent }}>
+    <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: { xs: 1, sm: 1.5 }, color: accent }}>
         {icon}
         <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.secondary' }}>
           {title}
@@ -92,7 +92,7 @@ const MilestoneList: React.FC<MilestoneListProps> = ({ icon, title, emptyText, a
           {emptyText}
         </Typography>
       ) : (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
           {milestones.map((milestone) => {
             const dot = milestone.color || accent;
             const progress = progressOf(milestone);
@@ -169,15 +169,19 @@ const MilestonesCard: React.FC<MilestonesCardProps> = ({ maxItems = 4 }) => {
 
   return (
     <Box>
-      <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold', color: 'text.primary', mb: 3 }}>
+      <Typography
+        variant="h5"
+        component="h2"
+        sx={{ fontWeight: 'bold', color: 'text.primary', fontSize: { xs: '1.1rem', sm: '1.5rem' }, mb: { xs: 1.5, sm: 3 } }}
+      >
         Milestones
       </Typography>
 
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
-          gap: 3
+          gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(2, minmax(0, 1fr))' },
+          gap: { xs: 1.5, sm: 3 }
         }}
       >
         <MilestoneList

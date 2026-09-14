@@ -110,12 +110,16 @@ interface SummaryTileProps {
 }
 
 const SummaryTile: React.FC<SummaryTileProps> = ({ label, current, previous, delta, pct, direction }) => (
-  <Box>
+  <Box sx={{ minWidth: 0 }}>
     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
       {label}
     </Typography>
-    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mt: 0.5 }}>
-      <Typography variant="h5" component="p" sx={{ fontWeight: 'bold' }}>
+    <Box sx={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: { xs: 0.5, sm: 1 }, mt: 0.5 }}>
+      <Typography
+        variant="h5"
+        component="p"
+        sx={{ fontWeight: 'bold', fontSize: { xs: '1.15rem', sm: '1.5rem' }, lineHeight: 1.2 }}
+      >
         {current}
       </Typography>
       <ChangeChip
@@ -201,11 +205,15 @@ const TrendsCard: React.FC<TrendsCardProps> = ({ maxItems = 6 }) => {
   const { trends, loading, error } = useTrends(windowDays, tenantGroupId);
 
   const header = (
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, mb: 3 }}>
-      <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1.5, mb: { xs: 1.5, sm: 3 } }}>
+      <Typography
+        variant="h5"
+        component="h2"
+        sx={{ fontWeight: 'bold', color: 'text.primary', fontSize: { xs: '1.1rem', sm: '1.5rem' } }}
+      >
         Trends
       </Typography>
-      <FormControl size="small" sx={{ minWidth: 140 }}>
+      <FormControl size="small" sx={{ minWidth: { xs: 124, sm: 140 } }}>
         <InputLabel id="trends-window-label">Window</InputLabel>
         <Select
           labelId="trends-window-label"
@@ -255,17 +263,22 @@ const TrendsCard: React.FC<TrendsCardProps> = ({ maxItems = 6 }) => {
 
       <Card elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
         {loading && <LinearProgress aria-label="Loading trends" sx={{ height: 2 }} />}
-        <CardContent>
-          <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+        <CardContent sx={{ p: { xs: 1.5, sm: 2 }, '&:last-child': { pb: { xs: 1.5, sm: 2 } } }}>
+          <Typography
+            variant="body2"
+            sx={{ color: 'text.secondary', fontSize: { xs: '0.75rem', sm: '0.875rem' }, mb: { xs: 1, sm: 2 } }}
+          >
             {formatDay(trends.currentStart)} – {formatDay(trends.currentEnd)} against{' '}
             {formatDay(trends.previousStart)} – {formatDay(trends.previousEnd)}
           </Typography>
 
+          {/* The three totals side by side even on a phone: stacked, each took
+              a row of its own for a single number. */}
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
-              gap: 2
+              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+              gap: { xs: 1, sm: 2 }
             }}
           >
             <SummaryTile
@@ -296,9 +309,9 @@ const TrendsCard: React.FC<TrendsCardProps> = ({ maxItems = 6 }) => {
             />
           </Box>
 
-          <Divider sx={{ my: 2.5 }} />
+          <Divider sx={{ my: { xs: 1.5, sm: 2.5 } }} />
 
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1.25, sm: 2 } }}>
             {rows.map((trend) => (
               <TrendRow key={trend.typeId} trend={trend} scale={scale} />
             ))}

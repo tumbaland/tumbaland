@@ -15,10 +15,13 @@ vi.mock('../services/activityTypes', () => ({
   getActivityTypes: vi.fn()
 }));
 vi.mock('../components/DayEditorDialog', () => ({
-  default: ({ open, date, onClose, onSaved }: any) =>
+  default: ({ open, date, dateEditable, onClose, onSaved }: any) =>
     open ? (
       <div>
-        <div>DayEditorDialog for {date}</div>
+        <div>
+          DayEditorDialog for {date}
+          {dateEditable ? ' (date editable)' : ''}
+        </div>
         <button onClick={onClose}>close-editor</button>
         <button onClick={onSaved}>save-editor</button>
       </div>
@@ -76,11 +79,12 @@ it('shows an error message when loading fails', async () => {
   expect(await screen.findByText('Failed to load the journal')).toBeInTheDocument();
 });
 
-it('shows an empty state with a Log today shortcut when there are no days', async () => {
+it('shows an empty state with a Log a day shortcut when there are no days', async () => {
   mockedGetDays.mockResolvedValue({ days: [], page: 1, totalPages: 1, total: 0 });
   renderPage();
   expect(await screen.findByText('Nothing logged yet')).toBeInTheDocument();
   expect(screen.getByText('Your days together')).toBeInTheDocument();
+  expect(screen.getAllByRole('button', { name: 'Log a day' }).length).toBeGreaterThan(0);
 });
 
 it('renders days grouped by month with entry chips, and a day count', async () => {
@@ -97,7 +101,7 @@ it('renders days grouped by month with entry chips, and a day count', async () =
   expect(screen.getByText(/Book club/)).toBeInTheDocument();
 });
 
-it('opens the editor for today via "Log today" and shows "Edit today\'s log" once today exists', async () => {
+it('opens the editor on today, with the date changeable, from the Log a day button', async () => {
   mockedGetDays.mockResolvedValue({
     days: [dayWithEntry(todayKey())],
     page: 1,
@@ -105,20 +109,26 @@ it('opens the editor for today via "Log today" and shows "Edit today\'s log" onc
     total: 1
   });
   renderPage();
+  await screen.findByText('1 day logged');
 
-  const editButton = await screen.findByRole('button', { name: "Edit today's log" });
-  await userEvent.click(editButton);
+  await userEvent.click(screen.getByRole('button', { name: 'Log a day' }));
 
-  expect(screen.getByText(`DayEditorDialog for ${todayKey()}`)).toBeInTheDocument();
+  expect(screen.getByText(`DayEditorDialog for ${todayKey()} (date editable)`)).toBeInTheDocument();
 });
 
-it('opens a date-editable editor via "Other day"', async () => {
-  mockedGetDays.mockResolvedValue({ days: [], page: 1, totalPages: 1, total: 0 });
+it('offers one logging button, not separate ones for today and another day', async () => {
+  mockedGetDays.mockResolvedValue({
+    days: [dayWithEntry(todayKey())],
+    page: 1,
+    totalPages: 1,
+    total: 1
+  });
   renderPage();
-  await screen.findByText('Nothing logged yet');
+  await screen.findByText('1 day logged');
 
-  await userEvent.click(screen.getByRole('button', { name: 'Other day' }));
-  expect(screen.getByText(`DayEditorDialog for ${todayKey()}`)).toBeInTheDocument();
+  expect(screen.getAllByRole('button', { name: 'Log a day' })).toHaveLength(1);
+  expect(screen.queryByRole('button', { name: 'Other day' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: "Edit today's log" })).not.toBeInTheDocument();
 });
 
 it('opens the editor for a specific day from its card', async () => {
@@ -140,7 +150,7 @@ it('reloads the journal when the editor reports a save', async () => {
   renderPage();
   await screen.findByText('Nothing logged yet');
 
-  await userEvent.click(screen.getAllByRole('button', { name: 'Log today' })[0]);
+  await userEvent.click(screen.getAllByRole('button', { name: 'Log a day' })[0]);
   await userEvent.click(screen.getByText('save-editor'));
 
   await waitFor(() => expect(mockedGetDays).toHaveBeenCalledTimes(2));

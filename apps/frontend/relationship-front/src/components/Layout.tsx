@@ -14,7 +14,10 @@ const Layout = ({ children }: LayoutProps) => {
         display: 'flex'
       }}
     >
-      <Box sx={{ flex: 1 }}>{children}</Box>
+      {/* minWidth 0: a flex item otherwise grows to fit its widest content, so a
+          single unbreakable row (a long place name on an entry) widened the
+          whole journal past the edge of a phone screen. */}
+      <Box sx={{ flex: 1, minWidth: 0 }}>{children}</Box>
     </Box>
   );
 };

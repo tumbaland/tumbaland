@@ -15,7 +15,6 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
 import DownloadIcon from '@mui/icons-material/Download';
-import EditCalendarIcon from '@mui/icons-material/EditCalendar';
 import PlaceIcon from '@mui/icons-material/Place';
 import TuneIcon from '@mui/icons-material/Tune';
 import { useSearchParams } from 'react-router';
@@ -70,20 +69,28 @@ const EntryChip: React.FC<{ entry: Day['entries'][number] }> = ({ entry }) => {
         />
       }
       label={
-        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
+        <Box component="span">
           <span>
             <strong>{type?.name || 'Unknown'}</strong>
             {value ? ` · ${value}` : ''}
           </span>
           {entry.location && (
             <>
-              <PlaceIcon sx={{ fontSize: 13, ml: 0.5, color: 'text.disabled' }} />
+              <PlaceIcon sx={{ fontSize: 13, ml: 0.5, mr: 0.25, color: 'text.disabled', verticalAlign: 'text-bottom' }} />
               <span>{entry.location.label}</span>
             </>
           )}
         </Box>
       }
-      sx={{ borderColor: 'divider', bgcolor: 'transparent', maxWidth: '100%' }}
+      sx={{
+        borderColor: 'divider',
+        bgcolor: 'transparent',
+        maxWidth: '100%',
+        // A chip's label never wraps by default, so a long description or place
+        // name used to push the whole journal wider than a phone screen.
+        height: 'auto',
+        '& .MuiChip-label': { whiteSpace: 'normal', overflowWrap: 'anywhere', py: 0.25 }
+      }}
     />
   );
 };
@@ -186,6 +193,11 @@ const JournalPage: React.FC = () => {
     setEditorOpen(true);
   };
 
+  // The one way to log: the editor opens on today with its date changeable, so
+  // the same button logs today, edits what today already has, or fills in an
+  // earlier day. It used to be two buttons, "Log today" and "Other day".
+  const openLogDay = () => openEditor(todayKey(), true);
+
   // ?date=YYYY-MM-DD opens that day straight away — how the map's pin popups
   // link back into the journal. Consumed once so a later close doesn't reopen.
   const linkedDate = searchParams.get('date');
@@ -264,55 +276,39 @@ const JournalPage: React.FC = () => {
     return groups;
   }, [days]);
 
-  const hasToday = days.some((d) => d.date === todayKey());
-
   return (
-    <Box sx={{ p: { xs: 2, sm: 3 }, maxWidth: 900, mx: 'auto' }}>
+    <Box sx={{ px: { xs: 0, sm: 3 }, py: { xs: 1.5, sm: 3 }, maxWidth: 900, mx: 'auto' }}>
       <Box
-        sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          justifyContent: 'space-between',
-          alignItems: { xs: 'stretch', sm: 'center' },
-          gap: 2,
-          mb: 3
-        }}
+        sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, mb: { xs: 1.5, sm: 3 } }}
       >
-        <Box>
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="h5" component="h1" sx={{ fontWeight: 'bold', fontSize: { xs: '1.4rem', sm: '2rem' } }}>
             Entries
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             {total > 0 ? `${total} day${total === 1 ? '' : 's'} logged` : 'Your days together'}
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1, flexDirection: { xs: 'column', sm: 'row' } }}>
-          <Button
-            variant={hasToday ? 'outlined' : 'contained'}
-            startIcon={<AddIcon />}
-            onClick={() => openEditor(todayKey(), false)}
-            sx={{ textTransform: 'none', fontWeight: 600 }}
-          >
-            {hasToday ? "Edit today's log" : 'Log today'}
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<EditCalendarIcon />}
-            onClick={() => openEditor(todayKey(), true)}
-            sx={{ textTransform: 'none' }}
-          >
-            Other day
-          </Button>
-        </Box>
+        <Button
+          variant="contained"
+          disableElevation
+          startIcon={<AddIcon />}
+          onClick={openLogDay}
+          sx={{ flexShrink: 0, whiteSpace: 'nowrap', textTransform: 'none', fontWeight: 600 }}
+        >
+          Log a day
+        </Button>
       </Box>
 
-      <Box sx={{ display: 'flex', gap: 1.5, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+      {/* Search and the activity filter share a row that fits a narrow phone;
+          the two text actions wrap under them rather than off the screen. */}
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: { xs: 1.5, sm: 3 } }}>
         <TextField
           placeholder="Search descriptions…"
           size="small"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          sx={{ flex: 1, minWidth: 180, maxWidth: 320 }}
+          sx={{ flex: '1 1 160px', minWidth: 0, maxWidth: { sm: 320 } }}
           slotProps={{
             input: {
               startAdornment: (
@@ -328,7 +324,7 @@ const JournalPage: React.FC = () => {
           size="small"
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          sx={{ minWidth: 160 }}
+          sx={{ flex: '0 1 150px', minWidth: 0 }}
           label="Activity"
         >
           <MenuItem value="">All activities</MenuItem>
@@ -341,24 +337,25 @@ const JournalPage: React.FC = () => {
             </MenuItem>
           ))}
         </TextField>
-        <Button
-          startIcon={<TuneIcon />}
-          onClick={() => setTypesDialogOpen(true)}
-          size="small"
-          sx={{ textTransform: 'none' }}
-        >
-          Manage types
-        </Button>
-        <Box sx={{ flex: 1 }} />
-        <Button
-          startIcon={<DownloadIcon />}
-          onClick={() => void handleExportCSV()}
-          disabled={days.length === 0 || exporting}
-          size="small"
-          sx={{ textTransform: 'none' }}
-        >
-          {exporting ? 'Exporting…' : 'Export CSV'}
-        </Button>
+        <Box sx={{ display: 'flex', gap: 0.5, ml: 'auto' }}>
+          <Button
+            startIcon={<TuneIcon />}
+            onClick={() => setTypesDialogOpen(true)}
+            size="small"
+            sx={{ textTransform: 'none' }}
+          >
+            Manage types
+          </Button>
+          <Button
+            startIcon={<DownloadIcon />}
+            onClick={() => void handleExportCSV()}
+            disabled={days.length === 0 || exporting}
+            size="small"
+            sx={{ textTransform: 'none' }}
+          >
+            {exporting ? 'Exporting…' : 'Export CSV'}
+          </Button>
+        </Box>
       </Box>
 
       {error && (
@@ -377,17 +374,17 @@ const JournalPage: React.FC = () => {
             {debouncedSearch || typeFilter ? 'No days match these filters' : 'Nothing logged yet'}
           </Typography>
           {!debouncedSearch && !typeFilter && (
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => openEditor(todayKey(), false)}>
-              Log today
+            <Button variant="contained" startIcon={<AddIcon />} onClick={openLogDay}>
+              Log a day
             </Button>
           )}
         </Box>
       ) : (
         groupedByMonth.map((group) => (
-          <Box key={group.month} sx={{ mb: 3 }}>
+          <Box key={group.month} sx={{ mb: { xs: 2, sm: 3 } }}>
             <Typography
               variant="overline"
-              sx={{ color: 'text.secondary', letterSpacing: 1.5, display: 'block', mb: 1 }}
+              sx={{ color: 'text.secondary', letterSpacing: 1.5, display: 'block', mb: 0.5 }}
             >
               {group.month}
             </Typography>
@@ -398,8 +395,8 @@ const JournalPage: React.FC = () => {
                   variant="outlined"
                   sx={{ borderRadius: 2, '&:hover': { borderColor: 'primary.main' } }}
                 >
-                  <CardActionArea onClick={() => openEditor(day.date, false)} sx={{ p: 1.5 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 0.75 }}>
+                  <CardActionArea onClick={() => openEditor(day.date, false)} sx={{ p: { xs: 1.25, sm: 1.5 } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 0.5 }}>
                       <Typography sx={{ fontWeight: 600 }}>{dayLabel(day.date)}</Typography>
                       <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                         {new Date(`${day.date}T00:00:00`).toLocaleDateString(undefined, {
@@ -408,7 +405,7 @@ const JournalPage: React.FC = () => {
                         })}
                       </Typography>
                     </Box>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, minWidth: 0 }}>
                       {day.entries.map((entry) => (
                         <EntryChip key={entry._id} entry={entry} />
                       ))}

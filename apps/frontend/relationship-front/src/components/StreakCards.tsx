@@ -104,15 +104,22 @@ const StreakCards: React.FC<StreakCardsProps> = ({ hiddenTypeIds, maxNudges = 4 
 
   return (
     <Box>
-      <Typography variant="h5" component="h2" sx={{ fontWeight: 'bold', color: 'text.primary', mb: 3 }}>
+      <Typography
+        variant="h5"
+        component="h2"
+        sx={{ fontWeight: 'bold', color: 'text.primary', fontSize: { xs: '1.1rem', sm: '1.5rem' }, mb: { xs: 1.5, sm: 3 } }}
+      >
         Momentum
       </Typography>
 
+      {/* Two per row on a phone. The third figure and the "it has been a
+          while" list each take a full row there, since neither reads at half
+          width. */}
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
-          gap: 3
+          gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' },
+          gap: { xs: 1.5, sm: 3 }
         }}
       >
         <StatCard
@@ -133,20 +140,28 @@ const StreakCards: React.FC<StreakCardsProps> = ({ hiddenTypeIds, maxNudges = 4 
           subtitle={longestRange}
           color={theme.palette.secondary.main}
         />
-        <StatCard
-          icon={<HistoryToggleOff />}
-          title="Days Logged"
-          value={streaks.totalLoggedDays}
-          subtitle={`most recent: ${lastTimeLabel(daysSinceLastEntry)}`}
-          color={theme.palette.info.main}
-        />
+        <Box sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' } }}>
+          <StatCard
+            icon={<HistoryToggleOff />}
+            title="Days Logged"
+            value={streaks.totalLoggedDays}
+            subtitle={`most recent: ${lastTimeLabel(daysSinceLastEntry)}`}
+            color={theme.palette.info.main}
+          />
+        </Box>
 
         {/* Fourth cell beside the stat cards: one slim line per type — a colour dot,
             the name, how long it has been, and the rhythm it is judged against.
             Exact dates live in the tooltip. */}
         <Card
           elevation={0}
-          sx={{ height: '100%', borderRadius: 3, border: '1px solid', borderColor: 'divider' }}
+          sx={{
+            gridColumn: { xs: '1 / -1', sm: 'auto' },
+            height: '100%',
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: 'divider'
+          }}
         >
           <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
             <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
