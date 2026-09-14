@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.483](https://github.com/toomastahves/tumbaland/compare/app-v0.0.482...app-v0.0.483) (2026-09-14)
+
+### Features
+
+* prepare mobile views ([340d7b0](https://github.com/toomastahves/tumbaland/commit/340d7b06e5b2eb7c2fbebe1d3e0348f108bdb76b))
+
 ## [0.0.482](https://github.com/toomastahves/tumbaland/compare/app-v0.0.481...app-v0.0.482) (2026-09-14)
 
 ### Features
