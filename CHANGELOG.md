@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.481](https://github.com/toomastahves/tumbaland/compare/app-v0.0.480...app-v0.0.481) (2026-09-14)
+
+### Features
+
+* improve journal mobile view ([dcf340a](https://github.com/toomastahves/tumbaland/commit/dcf340af9017e5b2b8965c3321439bc0a858769c))
+
 ## [0.0.480](https://github.com/toomastahves/tumbaland/compare/app-v0.0.479...app-v0.0.480) (2026-09-14)
 
 ### Features
