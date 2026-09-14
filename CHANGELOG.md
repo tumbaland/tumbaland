@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.484](https://github.com/toomastahves/tumbaland/compare/app-v0.0.483...app-v0.0.484) (2026-09-14)
+
+### Features
+
+* add new mobile home page ([a9637e1](https://github.com/toomastahves/tumbaland/commit/a9637e1e4bfe34a3bacca25f6078f4323a0539f1))
+
 ## [0.0.483](https://github.com/toomastahves/tumbaland/compare/app-v0.0.482...app-v0.0.483) (2026-09-14)
 
 ### Features
