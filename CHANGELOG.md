@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.489](https://github.com/toomastahves/tumbaland/compare/app-v0.0.488...app-v0.0.489) (2026-09-19)
+
+### Features
+
+* add sessions ([da1aa66](https://github.com/toomastahves/tumbaland/commit/da1aa66fe1536132e382cf200a788ae548970344))
+
 ## [0.0.488](https://github.com/toomastahves/tumbaland/compare/app-v0.0.487...app-v0.0.488) (2026-09-19)
 
 ### Features
