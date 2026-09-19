@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.486](https://github.com/toomastahves/tumbaland/compare/app-v0.0.485...app-v0.0.486) (2026-09-19)
+
+### Features
+
+* add refresh token and pwa ([bcb3989](https://github.com/toomastahves/tumbaland/commit/bcb39892e927d02b968db760ed40963312217532))
+
 ## [0.0.485](https://github.com/toomastahves/tumbaland/compare/app-v0.0.484...app-v0.0.485) (2026-09-14)
 
 ### Bug Fixes
