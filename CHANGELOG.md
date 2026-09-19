@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.494](https://github.com/toomastahves/tumbaland/compare/app-v0.0.493...app-v0.0.494) (2026-09-19)
+
+### Features
+
+* unify theme ([db783e9](https://github.com/toomastahves/tumbaland/commit/db783e9d537cf9faf0fee7da2523d31b60cf1ce4))
+
 ## [0.0.493](https://github.com/toomastahves/tumbaland/compare/app-v0.0.492...app-v0.0.493) (2026-09-19)
 
 ### Features
