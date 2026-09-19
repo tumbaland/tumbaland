@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.487](https://github.com/toomastahves/tumbaland/compare/app-v0.0.486...app-v0.0.487) (2026-09-19)
+
+### Bug Fixes
+
+* iphone auth flow ([271bdbc](https://github.com/toomastahves/tumbaland/commit/271bdbcb69750659ab6c96f419061b3551418f48))
+
 ## [0.0.486](https://github.com/toomastahves/tumbaland/compare/app-v0.0.485...app-v0.0.486) (2026-09-19)
 
 ### Features
