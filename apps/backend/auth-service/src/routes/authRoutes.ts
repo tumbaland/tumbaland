@@ -17,7 +17,7 @@ import {
   postApiKeyRevoke,
   removeApiKey
 } from '../controllers/apiKeyController';
-import { authenticateToken, requireRole, requireApproved } from '../middleware/authMiddleware';
+import { authenticateToken, authenticateSession, requireRole, requireApproved } from '../middleware/authMiddleware';
 import { requireInternalService } from '../middleware/internalServiceAuth';
 import { User } from '../models/User';
 import {
@@ -35,10 +35,13 @@ const router = Router();
 router.post('/validate', strictRateLimiter, validate(validateTokenSchema), validateToken);
 
 // Refresh token route (protected)
-router.post('/refresh', authenticateToken, requireApproved, refreshToken);
+// authenticateSession on the three session routes: an access token that expired
+// while the app was closed is renewed from the refresh cookie rather than
+// sending the person back to sign in (or, for logout, leaving them unable to).
+router.post('/refresh', authenticateSession, requireApproved, refreshToken);
 
 // Protected logout
-router.post('/logout', authenticateToken, requireApproved, logout);
+router.post('/logout', authenticateSession, requireApproved, logout);
 
 // Protected routes
 router.get('/profile', authenticateToken, requireApproved, getProfile);
@@ -56,7 +59,7 @@ router.post('/profile/deletion', authenticateToken, requireApproved, requestAcco
 router.delete('/profile/deletion', authenticateToken, requireApproved, cancelAccountDeletion);
 
 // Verify route now fully protected
-router.get('/verify', authenticateToken, requireApproved, verifyAuth);
+router.get('/verify', authenticateSession, requireApproved, verifyAuth);
 
 // API keys — issuing credentials that act for the user, so always an interactive
 // session (`authenticateToken` is JWT-only) and never reachable with a key

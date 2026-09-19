@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="512" height="512">
+  <!-- Home-screen icon, the source for icon-192/512.png and apple-touch-icon.png.
+       Full-bleed square because phones mask it to their own shape; the hearts stay
+       inside the central safe zone (radius 40%) so no mask clips them. -->
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fce4ec" />
+      <stop offset="100%" stop-color="#f8bbd9" />
+    </linearGradient>
+    <linearGradient id="heart" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff6b9d" />
+      <stop offset="100%" stop-color="#e91e63" />
+    </linearGradient>
+    <path id="h" d="M12 21s-7.5-4.6-10-9.5C0 7.5 2.5 3 6.5 3 9 3 11 4.5 12 6.5 13 4.5 15 3 17.5 3 21.5 3 24 7.5 22 11.5 19.5 16.4 12 21 12 21z" />
+  </defs>
+  <rect width="64" height="64" fill="url(#bg)" />
+  <use href="#h" transform="translate(11 19) scale(1.15)" fill="url(#heart)" opacity="0.75" />
+  <use href="#h" transform="translate(25 15) scale(1.15)" fill="url(#heart)" />
+  <circle cx="15" cy="17" r="1.5" fill="#ffffff" opacity="0.9" />
+  <circle cx="50" cy="14" r="1" fill="#ffffff" opacity="0.8" />
+  <circle cx="16" cy="47" r="1" fill="#ffffff" opacity="0.7" />
+  <circle cx="49" cy="46" r="1.5" fill="#ffffff" opacity="0.9" />
+</svg>

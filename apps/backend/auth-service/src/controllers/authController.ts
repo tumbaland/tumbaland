@@ -1,8 +1,38 @@
 import { Request, Response, NextFunction } from 'express';
 import { BadRequestError, logger, NotFoundError, UnauthorizedError } from '@tumbaland/backend-core';
 import { verifyGoogleToken } from '../services/googleAuthService';
-import { generateJWT, UserPayload } from '../services/jwtService';
+import { generateJWT, generateRefreshToken, REFRESH_TOKEN_MAX_AGE_MS, UserPayload } from '../services/jwtService';
 import { User } from '../models/User';
+
+const REFRESH_COOKIE_PATH = '/auth';
+
+/**
+ * The access token, shared across every *.tumbaland.eu service, plus the
+ * refresh token that renews it (see authenticateSession).
+ *
+ * The refresh cookie is host-only and limited to /auth, so the browser sends
+ * it to auth-service's session routes and nowhere else. It is reissued with
+ * every access token, which is what makes its 90 days count from the last
+ * visit rather than from sign-in.
+ */
+const setSessionCookies = (res: Response, accessToken: string, user: UserPayload): void => {
+  const secure = process.env.NODE_ENV === 'production';
+  res.cookie('access_token', accessToken, {
+    httpOnly: true,
+    secure,
+    sameSite: 'lax',
+    domain: process.env.COOKIE_DOMAIN || 'localhost',
+    path: '/',
+    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+  });
+  res.cookie('refresh_token', generateRefreshToken(user), {
+    httpOnly: true,
+    secure,
+    sameSite: 'lax',
+    path: REFRESH_COOKIE_PATH,
+    maxAge: REFRESH_TOKEN_MAX_AGE_MS
+  });
+};
 
 export const validateToken = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
   const { idToken } = req.body;
@@ -56,17 +86,7 @@ export const validateToken = async (req: Request, res: Response, _next: NextFunc
 
   const jwtToken = generateJWT(jwtPayload);
 
-  // Set secure cookie for SSO across subdomains
-  const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
-    domain: process.env.COOKIE_DOMAIN || 'localhost',
-    path: '/',
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-  };
-
-  res.cookie('access_token', jwtToken, cookieOptions);
+  setSessionCookies(res, jwtToken, jwtPayload);
 
   res.json({
     success: true,
@@ -80,6 +100,7 @@ export const logout = (req: Request, res: Response): void => {
     domain: process.env.COOKIE_DOMAIN || 'localhost',
     path: '/'
   });
+  res.clearCookie('refresh_token', { path: REFRESH_COOKIE_PATH });
   res.json({ success: true, message: 'Logged out successfully' });
 };
 
@@ -187,17 +208,7 @@ export const verifyAuth = async (req: Request, res: Response): Promise<void> => 
 
   const newToken = generateJWT(jwtPayload);
 
-  // Update cookie with fresh token
-  const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
-    domain: process.env.COOKIE_DOMAIN || 'localhost',
-    path: '/',
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-  };
-
-  res.cookie('access_token', newToken, cookieOptions);
+  setSessionCookies(res, newToken, jwtPayload);
 
   logger.info('Generated new token for user', { email: currentUser.email, groupCount: userGroups.length });
 
@@ -235,17 +246,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
 
   const newToken = generateJWT(jwtPayload);
 
-  // Update cookie
-  const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
-    domain: process.env.COOKIE_DOMAIN || 'localhost',
-    path: '/',
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-  };
-
-  res.cookie('access_token', newToken, cookieOptions);
+  setSessionCookies(res, newToken, jwtPayload);
 
   res.json({
     success: true,

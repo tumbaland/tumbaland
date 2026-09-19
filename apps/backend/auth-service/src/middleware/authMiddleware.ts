@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { isAccessTokenClaims, logger } from '@tumbaland/backend-core';
-import { verifyJWT } from '../services/jwtService';
+import { verifyJWT, verifyRefreshToken, UserPayload } from '../services/jwtService';
 import { User, IUser } from '../models/User';
 
 // req.user's ambient type comes from @tumbaland/backend-core's global Express.Request
@@ -67,6 +67,59 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
   } catch (error) {
     logger.error('Token verification failed', { error: (error as Error)?.message });
     res.status(401).json({ success: false, message: 'Invalid or expired token' });
+  }
+};
+
+/**
+ * authenticateToken, but an expired or missing access token is renewed from the
+ * refresh cookie instead of answering 401.
+ *
+ * Only on the routes that mint a new access token (/verify, /refresh). Every
+ * app checks /verify when it opens, so someone who has not visited for a few
+ * days is signed back in there before any other service sees the stale token.
+ * req.user comes from the refresh token's claims; groups and roles are left for
+ * the handler, which looks them up fresh anyway.
+ */
+export const authenticateSession = async (req: Request, res: Response, next: NextFunction) => {
+  const refreshToken = req.cookies?.refresh_token;
+  if (!refreshToken || hasUsableAccessToken(req)) {
+    return authenticateToken(req, res, next);
+  }
+
+  let claims: UserPayload;
+  try {
+    claims = verifyRefreshToken(refreshToken);
+  } catch {
+    // Neither token is any good: let authenticateToken give its usual 401.
+    return authenticateToken(req, res, next);
+  }
+
+  const dbUser = await User.findOne({ email: claims.email.toLowerCase() });
+  if (!dbUser) {
+    res.status(401).json({ success: false, message: 'User not found' });
+    return;
+  }
+  // Strict, unlike the access-token check: a refresh token always carries a
+  // version, and one from before an invalidation must not buy a new session.
+  if ((claims.tokenVersion ?? 1) !== dbUser.tokenVersion) {
+    res.status(401).json({ success: false, message: 'Token has been invalidated' });
+    return;
+  }
+
+  req.user = claims;
+  req.userGroups = [];
+  req.dbUser = dbUser;
+  next();
+};
+
+const hasUsableAccessToken = (req: Request): boolean => {
+  const token = req.cookies?.access_token || req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return false;
+  try {
+    verifyJWT(token);
+    return true;
+  } catch {
+    return false;
   }
 };
 

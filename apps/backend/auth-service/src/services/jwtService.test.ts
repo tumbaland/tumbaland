@@ -1,5 +1,5 @@
 import * as jwt from 'jsonwebtoken';
-import { generateJWT, verifyJWT, decodeJWT, UserPayload } from './jwtService';
+import { generateJWT, verifyJWT, decodeJWT, generateRefreshToken, verifyRefreshToken, UserPayload } from './jwtService';
 
 const basePayload: UserPayload = { id: '1', email: 'user@example.com', name: 'User' };
 
@@ -63,6 +63,35 @@ describe('jwtService', () => {
 
     it('returns null for a malformed token', () => {
       expect(decodeJWT('not-a-real-jwt')).toBeNull();
+    });
+  });
+
+  describe('refresh tokens', () => {
+    const withVersion: UserPayload = { ...basePayload, picture: 'https://example.com/me.png', tokenVersion: 3 };
+
+    it('round-trips who the person is and nothing else', () => {
+      const token = generateRefreshToken({ ...withVersion, groups: ['g1'], roles: ['admin'] });
+      expect(verifyRefreshToken(token)).toEqual(withVersion);
+    });
+
+    it('is not accepted where an access token is expected', () => {
+      // Every other service verifies with JWT_SECRET; a refresh token must fail there.
+      expect(() => verifyJWT(generateRefreshToken(withVersion))).toThrow('Invalid or expired token');
+    });
+
+    it('does not accept an access token as a refresh token', () => {
+      expect(() => verifyRefreshToken(generateJWT(withVersion))).toThrow('Invalid or expired refresh token');
+    });
+
+    it('rejects an expired refresh token', () => {
+      const token = generateRefreshToken(withVersion);
+      const realNow = Date.now;
+      Date.now = () => realNow() + 91 * 24 * 60 * 60 * 1000;
+      try {
+        expect(() => verifyRefreshToken(token)).toThrow('Invalid or expired refresh token');
+      } finally {
+        Date.now = realNow;
+      }
     });
   });
 });

@@ -14,7 +14,7 @@ jest.mock('../services/googleAuthService', () => ({
 import { Request, Response } from 'express';
 import { User } from '../models/User';
 import app from '../app';
-import { generateJWT, decodeJWT } from '../services/jwtService';
+import { generateJWT, decodeJWT, generateRefreshToken, verifyRefreshToken } from '../services/jwtService';
 import { verifyGoogleToken } from '../services/googleAuthService';
 import { validateToken, verifyAuth, refreshToken } from './authController';
 
@@ -258,6 +258,17 @@ describe('POST /auth/validate', () => {
     );
     const setCookie = res.headers['set-cookie'] as unknown as string[];
     expect(setCookie.find((c) => c.startsWith('access_token='))).toMatch(/HttpOnly/i);
+
+    // Kept to auth-service's own host and session routes.
+    const refresh = setCookie.find((c) => c.startsWith('refresh_token='))!;
+    expect(refresh).toMatch(/HttpOnly/i);
+    expect(refresh).toMatch(/Path=\/auth(;|$)/);
+    expect(refresh).not.toMatch(/Domain=/i);
+    expect(verifyRefreshToken(refresh.split(';')[0].split('=')[1])).toMatchObject({
+      id: 'db-user-1',
+      email: 'Ada@Example.com',
+      tokenVersion: 1
+    });
   });
 
   it('fetches groups from group-service and includes them in the minted JWT when configured', async () => {
@@ -342,6 +353,18 @@ describe('POST /auth/logout', () => {
     const cleared = setCookie.find((c) => c.startsWith('access_token='));
     expect(cleared).toBeDefined();
     expect(cleared).toMatch(/access_token=;/);
+    expect(setCookie.find((c) => c.startsWith('refresh_token='))).toMatch(/refresh_token=;.*Path=\/auth/);
+  });
+
+  it('still signs out someone whose access token expired, using the refresh cookie', async () => {
+    const refresh = generateRefreshToken({ id: '1', email: 'user@example.com', name: 'User', tokenVersion: 1 });
+    mockedFindOne.mockResolvedValue({ email: 'user@example.com', tokenVersion: 1, isApproved: true });
+
+    const res = await request(app).post('/auth/logout').set('Cookie', `refresh_token=${refresh}`);
+
+    expect(res.status).toBe(200);
+    const setCookie = res.headers['set-cookie'] as unknown as string[];
+    expect(setCookie.find((c) => c.startsWith('refresh_token='))).toMatch(/refresh_token=;/);
   });
 });
 
@@ -362,6 +385,78 @@ describe('GET /auth/verify', () => {
       success: true,
       authenticated: true,
       user: { email: 'user@example.com', groups: [] }
+    });
+  });
+
+  describe('when the access token has expired', () => {
+    const person = { id: '1', email: 'user@example.com', name: 'User', picture: 'pic.png', tokenVersion: 2 };
+    const expired = () => {
+      const realNow = Date.now;
+      Date.now = () => realNow() - 2 * 24 * 60 * 60 * 1000;
+      try {
+        return generateJWT(person);
+      } finally {
+        Date.now = realNow;
+      }
+    };
+
+    it('signs the person back in from the refresh cookie and reissues both cookies', async () => {
+      mockedFindOne.mockResolvedValue({ email: 'user@example.com', tokenVersion: 2, isApproved: true });
+
+      const res = await request(app)
+        .get('/auth/verify')
+        .set('Cookie', [`access_token=${expired()}`, `refresh_token=${generateRefreshToken(person)}`]);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({
+        authenticated: true,
+        user: { id: '1', email: 'user@example.com', name: 'User', picture: 'pic.png', tokenVersion: 2 }
+      });
+      const setCookie = res.headers['set-cookie'] as unknown as string[];
+      const access = setCookie.find((c) => c.startsWith('access_token='))!.split(';')[0].split('=')[1];
+      expect(decodeJWT(access)).toMatchObject({ email: 'user@example.com', tokenVersion: 2 });
+      expect(setCookie.find((c) => c.startsWith('refresh_token='))).toBeDefined();
+    });
+
+    it('works with no access cookie at all, as after the browser drops it', async () => {
+      mockedFindOne.mockResolvedValue({ email: 'user@example.com', tokenVersion: 2, isApproved: true });
+
+      const res = await request(app)
+        .get('/auth/verify')
+        .set('Cookie', `refresh_token=${generateRefreshToken(person)}`);
+
+      expect(res.status).toBe(200);
+    });
+
+    it('refuses a refresh token from before the tokens were invalidated', async () => {
+      mockedFindOne.mockResolvedValue({ email: 'user@example.com', tokenVersion: 3, isApproved: true });
+
+      const res = await request(app)
+        .get('/auth/verify')
+        .set('Cookie', `refresh_token=${generateRefreshToken(person)}`);
+
+      expect(res.status).toBe(401);
+      expect(res.body).toEqual({ success: false, message: 'Token has been invalidated' });
+    });
+
+    it('refuses an unapproved account', async () => {
+      mockedFindOne.mockResolvedValue({ email: 'user@example.com', tokenVersion: 2, isApproved: false });
+
+      const res = await request(app)
+        .get('/auth/verify')
+        .set('Cookie', `refresh_token=${generateRefreshToken(person)}`);
+
+      expect(res.status).toBe(403);
+    });
+
+    it('gives the usual 401 when the refresh cookie is not a valid refresh token', async () => {
+      const res = await request(app)
+        .get('/auth/verify')
+        .set('Cookie', [`access_token=${expired()}`, `refresh_token=${generateJWT(person)}`]);
+
+      expect(res.status).toBe(401);
+      expect(res.body).toEqual({ success: false, message: 'Invalid or expired token' });
+      expect(mockedFindOne).not.toHaveBeenCalled();
     });
   });
 });
