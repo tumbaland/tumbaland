@@ -1,5 +1,6 @@
 import { getGlobalConfig } from './config/ConfigProvider';
 import { logger } from '@tumbaland/frontend-core';
+import { rememberSignIn } from './signInHandoff';
 
 interface GoogleAccountsId {
   initialize(config: { client_id: string; ux_mode: 'redirect'; login_uri: string; nonce: string }): void;
@@ -45,16 +46,21 @@ function randomNonce(): string {
 }
 
 /**
- * Sign-in uses Google's redirect mode rather than its popup. On an iPhone
- * home-screen app the popup opens in a separate Safari sheet with its own
- * cookies, so the sign-in never reached the app. With redirects every step is
- * a page load in the same window, and auth-service's /auth/google/callback
- * sets the session and sends the person on to `redirectUri`.
+ * Sign-in uses Google's redirect mode, and auth-service's /auth/google/callback
+ * receives the token. In a normal browser the nonce cookie comes back with it,
+ * so the callback sets the session and sends the person on to `redirectUri`.
+ *
+ * On an iPhone home-screen app, Google's page opens in a Safari sheet with its
+ * own cookies, so the cookie does not come back. The callback then parks the
+ * sign-in and shows a code, and this page collects it with the nonce saved in
+ * rememberSignIn (see signInHandoff).
  */
 function prepareRedirectSignIn(redirectUri: string): { loginUri: string; nonce: string } {
   const nonce = randomNonce();
+  const redirect = new URL(redirectUri, window.location.href).toString();
   setLoginCookie('login_nonce', nonce);
-  setLoginCookie('login_redirect', new URL(redirectUri, window.location.href).toString());
+  setLoginCookie('login_redirect', redirect);
+  rememberSignIn({ nonce, redirect });
   return { loginUri: `${getGlobalConfig().AUTH_SERVICE_URL}/auth/google/callback`, nonce };
 }
 

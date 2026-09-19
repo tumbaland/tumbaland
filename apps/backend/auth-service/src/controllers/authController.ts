@@ -1,8 +1,10 @@
+import { createHash, randomInt, timingSafeEqual } from 'crypto';
 import { Request, Response, NextFunction } from 'express';
 import { BadRequestError, logger, NotFoundError, UnauthorizedError } from '@tumbaland/backend-core';
 import { verifyGoogleToken } from '../services/googleAuthService';
 import { generateJWT, generateRefreshToken, REFRESH_TOKEN_MAX_AGE_MS, UserPayload } from '../services/jwtService';
 import { User } from '../models/User';
+import { PendingSignIn } from '../models/PendingSignIn';
 
 const REFRESH_COOKIE_PATH = '/auth';
 
@@ -38,17 +40,24 @@ const setSessionCookies = (res: Response, accessToken: string, user: UserPayload
  * Verifies a Google ID token, creates or updates the user, and sets the session
  * cookies. Shared by the JSON endpoint and the redirect-mode callback.
  */
-const signInWithGoogle = async (res: Response, idToken: string, expectedNonce?: string) => {
+const signInWithGoogle = async (res: Response, idToken: string) => {
   const googleUser = await verifyGoogleToken(idToken);
 
   if (!googleUser) {
     throw new UnauthorizedError('Invalid Google token');
   }
 
-  if (expectedNonce !== undefined && googleUser.nonce !== expectedNonce) {
-    throw new UnauthorizedError('Sign-in nonce does not match');
-  }
+  return startSession(res, googleUser);
+};
 
+interface GoogleIdentity {
+  email?: string;
+  name?: string;
+  picture?: string;
+}
+
+/** Creates or updates the user and sets the session cookies. */
+const startSession = async (res: Response, googleUser: GoogleIdentity) => {
   const userEmail = googleUser.email || '';
   if (!userEmail) {
     throw new BadRequestError('Email not present in Google token');
@@ -137,24 +146,36 @@ export const safeRedirectTarget = (target: unknown): string => {
   return onOurDomain && schemeOk ? url.toString() : fallback;
 };
 
+/** How long a sign-in finished in another window waits to be collected. */
+const PENDING_SIGNIN_TTL_MS = 5 * 60 * 1000;
+/** Wrong codes allowed before the pending sign-in is thrown away. */
+const PENDING_SIGNIN_MAX_ATTEMPTS = 5;
+
+const sha256 = (value: string): string => createHash('sha256').update(value).digest('hex');
+
+const sameHash = (a: string, b: string): boolean => {
+  const left = Buffer.from(a, 'hex');
+  const right = Buffer.from(b, 'hex');
+  return left.length === right.length && timingSafeEqual(left, right);
+};
+
 /**
  * Google's redirect-mode sign-in (`ux_mode: 'redirect'`): Google posts the ID
- * token here as a form, and we answer with the session cookies and a redirect
- * back into the app.
+ * token here as a form, and we answer with a redirect.
  *
- * This exists for the iOS home-screen app. The popup the button uses by
- * default opens in a separate Safari sheet with its own storage there, so the
- * sign-in finished in the sheet and the app itself stayed signed out. Here
- * every step is a page load in the same window, so the cookies land where the
- * app can see them.
+ * The nonce ties the token to the browser that started the sign-in: auth-front
+ * gives it to Google, which puts it in the token, and also stores it in a
+ * cookie. When that cookie comes back we are in the same browser, so the
+ * session is set right here.
  *
- * The nonce ties the token to this browser: auth-front stores it in a cookie
- * and hands it to Google, which puts it in the token. Someone else's token
- * posted here carries a different nonce, which stops login CSRF.
+ * On an iPhone home-screen app it does not come back: Google's page opens in a
+ * Safari sheet with its own cookies. Setting the session here would put it in
+ * the sheet, not the app. So the sign-in is parked (see PendingSignIn) and the
+ * sheet shows a code that the person types into the app to collect it.
  */
 export const googleRedirectCallback = async (req: Request, res: Response): Promise<void> => {
   const redirectTarget = safeRedirectTarget(req.cookies?.[LOGIN_REDIRECT_COOKIE]);
-  const nonce = req.cookies?.[LOGIN_NONCE_COOKIE];
+  const nonceCookie = req.cookies?.[LOGIN_NONCE_COOKIE];
 
   const clearOptions = { domain: process.env.COOKIE_DOMAIN || 'localhost', path: LOGIN_COOKIE_PATH };
   res.clearCookie(LOGIN_NONCE_COOKIE, clearOptions);
@@ -162,20 +183,106 @@ export const googleRedirectCallback = async (req: Request, res: Response): Promi
 
   const credential = req.body?.credential;
   try {
-    if (typeof credential !== 'string' || !credential || typeof nonce !== 'string' || !nonce) {
-      throw new BadRequestError('Missing credential or sign-in nonce');
+    if (typeof credential !== 'string' || !credential) {
+      throw new BadRequestError('Missing credential');
     }
-    await signInWithGoogle(res, credential, nonce);
+
+    const googleUser = await verifyGoogleToken(credential);
+    if (!googleUser?.email) {
+      throw new UnauthorizedError('Invalid Google token');
+    }
+    if (typeof googleUser.nonce !== 'string' || !googleUser.nonce) {
+      throw new UnauthorizedError('Google token has no nonce');
+    }
+
+    if (typeof nonceCookie === 'string' && nonceCookie) {
+      if (nonceCookie !== googleUser.nonce) {
+        throw new UnauthorizedError('Sign-in nonce does not match');
+      }
+      await startSession(res, googleUser);
+      res.redirect(303, redirectTarget);
+      return;
+    }
+
+    const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
+    await PendingSignIn.findOneAndUpdate(
+      { nonceHash: sha256(googleUser.nonce) },
+      {
+        $set: {
+          codeHash: sha256(code),
+          email: googleUser.email,
+          name: googleUser.name,
+          picture: googleUser.picture,
+          failedAttempts: 0,
+          expiresAt: new Date(Date.now() + PENDING_SIGNIN_TTL_MS)
+        }
+      },
+      { upsert: true }
+    );
+    logger.info('Google sign-in finished in another window; waiting for the app to collect it', {
+      email: googleUser.email
+    });
+
+    const pending = new URL(authFrontUrl());
+    pending.searchParams.set('signin', 'pending');
+    pending.searchParams.set('code', code);
+    res.redirect(303, pending.toString());
   } catch (error) {
-    logger.warn('Google redirect sign-in failed', { error: (error as Error)?.message });
+    logger.warn('Google redirect sign-in failed', {
+      error: (error as Error)?.message,
+      hadNonceCookie: Boolean(nonceCookie)
+    });
     const retry = new URL(authFrontUrl());
     retry.searchParams.set('error', 'signin_failed');
     retry.searchParams.set('redirect_uri', redirectTarget);
     res.redirect(303, retry.toString());
+  }
+};
+
+/**
+ * Collects a sign-in parked by googleRedirectCallback.
+ *
+ * Without a code it only says whether one is waiting, so the login page knows
+ * to ask for the code. With the code it sets the session cookies, in the
+ * browser that made this request, which is the app.
+ */
+export const claimPendingSignIn = async (req: Request, res: Response): Promise<void> => {
+  const { nonce, code } = req.body as { nonce: string; code?: string };
+  const nonceHash = sha256(nonce);
+
+  const pending = await PendingSignIn.findOne({ nonceHash, expiresAt: { $gt: new Date() } });
+  if (!pending) {
+    res.json({ success: true, status: 'none' });
     return;
   }
 
-  res.redirect(303, redirectTarget);
+  if (code === undefined) {
+    res.json({ success: true, status: 'code_required' });
+    return;
+  }
+
+  if (!sameHash(sha256(code), pending.codeHash)) {
+    const updated = await PendingSignIn.findOneAndUpdate(
+      { nonceHash },
+      { $inc: { failedAttempts: 1 } },
+      { new: true }
+    );
+    if (!updated || updated.failedAttempts >= PENDING_SIGNIN_MAX_ATTEMPTS) {
+      await PendingSignIn.deleteOne({ nonceHash });
+      throw new UnauthorizedError('Too many wrong codes. Please sign in again.');
+    }
+    throw new UnauthorizedError('That code is not right. Please check it and try again.');
+  }
+
+  // Delete first, so the same sign-in cannot be collected twice.
+  const claimed = await PendingSignIn.findOneAndDelete({ nonceHash, codeHash: pending.codeHash });
+  if (!claimed) {
+    res.json({ success: true, status: 'none' });
+    return;
+  }
+
+  await startSession(res, { email: claimed.email, name: claimed.name, picture: claimed.picture });
+  res.json({ success: true, status: 'signed_in' });
 };
 
 export const logout = (req: Request, res: Response): void => {

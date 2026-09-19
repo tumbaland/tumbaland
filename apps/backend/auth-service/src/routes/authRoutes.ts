@@ -1,6 +1,6 @@
 import express, { Router, Request, Response } from 'express';
 import { strictRateLimiter, validate, NotFoundError } from '@tumbaland/backend-core';
-import { validateToken, googleRedirectCallback, logout, verifyAuth, refreshToken, invalidateUserTokens } from '../controllers/authController';
+import { validateToken, googleRedirectCallback, claimPendingSignIn, logout, verifyAuth, refreshToken, invalidateUserTokens } from '../controllers/authController';
 import {
   cancelAccountDeletion,
   getProfile,
@@ -22,6 +22,7 @@ import { requireInternalService } from '../middleware/internalServiceAuth';
 import { User } from '../models/User';
 import {
   validateTokenSchema,
+  claimPendingSignInSchema,
   invalidateTokensSchema,
   updateProfileSchema,
   approveUserSchema,
@@ -36,6 +37,12 @@ router.post('/validate', strictRateLimiter, validate(validateTokenSchema), valid
 
 // Google's redirect-mode sign-in posts the token here as a form, not JSON.
 router.post('/google/callback', strictRateLimiter, express.urlencoded({ extended: false }), googleRedirectCallback);
+
+// The app collecting a sign-in that finished in another window (see
+// claimPendingSignIn). The login page asks each time it comes back into view,
+// so this sits under the standard limit rather than the strict one; the
+// six-digit code gets its own limit of five tries.
+router.post('/google/claim', validate(claimPendingSignInSchema), claimPendingSignIn);
 
 // Refresh token route (protected)
 // authenticateSession on the three session routes: an access token that expired

@@ -5,6 +5,14 @@ export const validateTokenSchema = z.object({
   idToken: z.string().min(1, 'Token is required')
 });
 
+export const claimPendingSignInSchema = z.object({
+  nonce: z.string().min(16).max(128),
+  code: z
+    .string()
+    .regex(/^\d{6}$/, 'The code is six digits')
+    .optional()
+});
+
 export const invalidateTokensSchema = z.object({
   email: z.string().min(1, 'Email is required')
 });

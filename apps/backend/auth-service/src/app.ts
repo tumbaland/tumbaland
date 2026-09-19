@@ -15,7 +15,7 @@ const app = createBaseApp({
     // turned an approved consent into a 500.
     // Google's redirect-mode sign-in is the same kind of request: a form
     // POST from accounts.google.com.
-    bypassPaths: ['/oauth', '/auth/google/']
+    bypassPaths: ['/oauth', '/auth/google/callback']
   }
 });
 
