@@ -19,7 +19,7 @@
     "@mui/material": "^9.4.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
-    "@tumbaland/components": "1.23.0",
+    "@tumbaland/components": "1.24.0",
     "@tumbaland/frontend-core": "1.14.1"
   },
   "devDependencies": {

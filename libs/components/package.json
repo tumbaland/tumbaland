@@ -1,6 +1,6 @@
 {
   "name": "@tumbaland/components",
-  "version": "1.23.0",
+  "version": "1.24.0",
   "author": "Tumbaland",
   "license": "MIT",
   "main": "dist/index.js",
