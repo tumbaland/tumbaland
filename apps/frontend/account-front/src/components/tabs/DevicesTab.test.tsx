@@ -97,6 +97,45 @@ it('offers no "all other devices" button when this is the only one', async () =>
   expect(screen.queryByRole('button', { name: 'Sign out all other devices' })).not.toBeInTheDocument();
 });
 
+it('says so when a device cannot be signed out, and keeps it in the list', async () => {
+  mocked.signOut.mockRejectedValue(new Error('down'));
+  await renderTab([device({ id: 'here', device: 'Chrome on Android', current: true }), device({ id: 'there' })]);
+
+  await userEvent.click(screen.getByRole('button', { name: 'Sign out device' }));
+
+  expect(await screen.findByText('Could not sign out that device.')).toBeInTheDocument();
+  expect(screen.getByText('Safari on iPhone')).toBeInTheDocument();
+});
+
+it('says so when the other devices cannot be signed out', async () => {
+  mocked.signOutOthers.mockRejectedValue(new Error('down'));
+  await renderTab([device({ id: 'here', current: true }), device({ id: 'there' })]);
+
+  await userEvent.click(screen.getByRole('button', { name: 'Sign out all other devices' }));
+
+  expect(await screen.findByText('Could not sign out your other devices.')).toBeInTheDocument();
+});
+
+it('counts one signed-out device in the singular', async () => {
+  mocked.signOutOthers.mockResolvedValue(1);
+  await renderTab([device({ id: 'here', current: true }), device({ id: 'there' })]);
+
+  await userEvent.click(screen.getByRole('button', { name: 'Sign out all other devices' }));
+
+  expect(await screen.findByText('Signed out 1 other device.')).toBeInTheDocument();
+});
+
+it('lets the message be dismissed', async () => {
+  mocked.signOut.mockResolvedValue(false);
+  await renderTab([device({ id: 'here', current: true }), device({ id: 'there' })]);
+  await userEvent.click(screen.getByRole('button', { name: 'Sign out device' }));
+  await screen.findByText('Signed out Safari on iPhone.');
+
+  await userEvent.click(screen.getByRole('button', { name: /close/i }));
+
+  expect(screen.queryByText('Signed out Safari on iPhone.')).not.toBeInTheDocument();
+});
+
 it('says so when the list cannot be loaded', async () => {
   mocked.list.mockRejectedValue(new Error('down'));
   render(<DevicesTab />);
