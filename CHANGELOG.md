@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.488](https://github.com/toomastahves/tumbaland/compare/app-v0.0.487...app-v0.0.488) (2026-09-19)
+
+### Features
+
+* add code login for iphones ([fdf7ca0](https://github.com/toomastahves/tumbaland/commit/fdf7ca08b467aeb85d4d9946e6d5074c7c7b9a28))
+
 ## [0.0.487](https://github.com/toomastahves/tumbaland/compare/app-v0.0.486...app-v0.0.487) (2026-09-19)
 
 ### Bug Fixes
