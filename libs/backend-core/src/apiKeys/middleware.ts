@@ -16,6 +16,7 @@ import {
   type ApiKeyTenant,
   type Tenant
 } from './types';
+import { isCurrentSession } from '../auth/session';
 
 /**
  * Request-scoped facts about the key a request arrived on. Absent on ordinary
@@ -223,6 +224,10 @@ export const authenticateAgent = (...requiredScopes: ApiKeyScope[]): RequestHand
       }
 
       if (!isAccessTokenClaims(claims)) {
+        if (!(await isCurrentSession(claims))) {
+          unauthorized(res);
+          return;
+        }
         const user = claims as UserPayload;
         req.user = user;
         req.userGroups = user.groups ?? [];

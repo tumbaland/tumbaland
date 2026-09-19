@@ -3,20 +3,9 @@ import { Box, Card, CardContent, Alert } from '@mui/material';
 import { initializeGoogleSignIn } from '../authFlow';
 import LoggedInUser from '../components/LoggedInUser';
 import LoginPrompt from '../components/LoginPrompt';
-import { EnterSignInCode, ShowSignInCode } from '../components/SignInCode';
-import { claimSignIn, forgetSignIn, startedSignIn } from '../signInHandoff';
 import { useConfig } from '../config/ConfigProvider';
 import { logger } from '@tumbaland/frontend-core';
 import { authApi } from '../services/authApi';
-
-/** How often the app asks whether a sign-in finished in another window. */
-const CLAIM_POLL_MS = 4000;
-
-/** The code auth-service's callback puts in the URL when it parked a sign-in. */
-const parkedSignInCode = (): string | null => {
-  const params = new URLSearchParams(window.location.search);
-  return params.get('signin') === 'pending' ? params.get('code') : null;
-};
 
 interface AuthenticatedUser {
   name: string;
@@ -35,44 +24,13 @@ const LoginPage: React.FC = () => {
   const [error, setError] = useState<string | null>(initialError);
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [initializationAttempted, setInitializationAttempted] = useState(false);
-  const [codeToShow, setCodeToShow] = useState<string | null>(null);
-  const [askForCode, setAskForCode] = useState(false);
-  const [submittingCode, setSubmittingCode] = useState(false);
-  const [codeError, setCodeError] = useState<string | null>(null);
   const config = useConfig();
-
-  const finishSignIn = (redirect: string) => {
-    forgetSignIn();
-    window.location.href = redirect;
-  };
 
   useEffect(() => {
     const checkExistingAuth = async () => {
-      // Back from Google with a parked sign-in. If this is the window that
-      // started it, collect it now; otherwise this is the Safari sheet, and the
-      // person needs the code to finish in the app.
-      const parkedCode = parkedSignInCode();
-      if (parkedCode) {
-        const started = startedSignIn();
-        if (started) {
-          try {
-            if ((await claimSignIn(started.nonce, parkedCode)) === 'signed_in') {
-              finishSignIn(started.redirect);
-              return;
-            }
-          } catch (err) {
-            logger.warn('Could not collect the parked sign-in here', { error: err });
-          }
-        }
-        setCodeToShow(parkedCode);
-        setIsLoading(false);
-        return;
-      }
-
       try {
         const data = await authApi.get<{ success: boolean; authenticated: boolean; user?: unknown }>('/auth/verify');
         if (data.success && data.authenticated) {
-          forgetSignIn();
           setUser(data.user as AuthenticatedUser);
           setIsLoading(false);
           return;
@@ -100,62 +58,6 @@ const LoginPage: React.FC = () => {
     };
     checkExistingAuth();
   }, [config]);
-
-  // While a sign-in started here may be waiting in another window, ask about it
-  // whenever this page is in view: when the Safari sheet closes, and every few
-  // seconds while it stays open.
-  useEffect(() => {
-    if (askForCode || codeToShow || user) return;
-
-    let stopped = false;
-    const check = async () => {
-      const started = startedSignIn();
-      if (stopped || !started || document.visibilityState !== 'visible') return;
-      try {
-        if ((await claimSignIn(started.nonce)) === 'code_required' && !stopped) {
-          setAskForCode(true);
-        }
-      } catch (err) {
-        logger.debug('Pending sign-in check failed', { error: err });
-      }
-    };
-
-    check();
-    const interval = window.setInterval(check, CLAIM_POLL_MS);
-    document.addEventListener('visibilitychange', check);
-    window.addEventListener('focus', check);
-    return () => {
-      stopped = true;
-      window.clearInterval(interval);
-      document.removeEventListener('visibilitychange', check);
-      window.removeEventListener('focus', check);
-    };
-  }, [askForCode, codeToShow, user]);
-
-  const handleCode = async (code: string) => {
-    const started = startedSignIn();
-    if (!started) {
-      setAskForCode(false);
-      setError('That sign-in has expired. Please sign in again.');
-      return;
-    }
-    setSubmittingCode(true);
-    setCodeError(null);
-    try {
-      const status = await claimSignIn(started.nonce, code);
-      if (status === 'signed_in') {
-        finishSignIn(started.redirect);
-        return;
-      }
-      forgetSignIn();
-      setAskForCode(false);
-      setError('That sign-in has expired. Please sign in again.');
-    } catch (err) {
-      setCodeError(err instanceof Error ? err.message : 'Sign-in did not go through. Please try again.');
-    } finally {
-      setSubmittingCode(false);
-    }
-  };
 
   const handleLogout = async () => {
     try {
@@ -229,11 +131,7 @@ const LoginPage: React.FC = () => {
               {error}
             </Alert>
           )}
-          {codeToShow ? (
-            <ShowSignInCode code={codeToShow} />
-          ) : askForCode ? (
-            <EnterSignInCode onSubmit={handleCode} submitting={submittingCode} error={codeError} />
-          ) : user ? (
+          {user ? (
             <LoggedInUser user={user} onContinue={handleContinue} onLogout={handleLogout} />
           ) : (
             <LoginPrompt isLoading={isLoading} initializationAttempted={initializationAttempted} error={error} />

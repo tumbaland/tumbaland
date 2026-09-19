@@ -161,16 +161,6 @@ describe('initializeGoogleSignIn', () => {
       expect(value).toBe(new URL('/redirect-target', window.location.href).toString());
     });
 
-    it('saves the nonce and return address for collecting a sign-in finished elsewhere', () => {
-      const { initialize } = mockGoogle();
-      initializeGoogleSignIn('client-id', '/redirect-target');
-      vi.advanceTimersByTime(0);
-
-      const saved = JSON.parse(localStorage.getItem('tumbaland.pendingSignIn')!);
-      expect(saved.nonce).toBe(initialize.mock.calls[0][0].nonce);
-      expect(saved.redirect).toBe(new URL('/redirect-target', window.location.href).toString());
-    });
-
     it('sets no cookie domain on localhost', () => {
       mockGoogle();
       initializeGoogleSignIn('client-id', '/redirect-target');

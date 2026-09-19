@@ -4,7 +4,7 @@ jest.mock('../services/groupService', () => ({
   createGroup: jest.fn(),
   listMyGroups: jest.fn(),
   listMyDeletedGroups: jest.fn(),
-  updateMemberActivity: jest.fn(),
+  recordActivity: jest.fn(),
   getGroupIfMember: jest.fn(),
   updateGroup: jest.fn(),
   deleteGroup: jest.fn(),
@@ -86,14 +86,13 @@ describe('userEmail resolution (via createGroup)', () => {
 });
 
 describe('listMine', () => {
-  it('updates activity for each returned group and returns the list', async () => {
+  it('records activity and returns the list', async () => {
     mocked.listMyGroups.mockResolvedValue([{ _id: 'g1' }, { _id: 'g2' }] as any);
     const res = mockRes();
 
     await listMine(baseReq(), res);
 
-    expect(mocked.updateMemberActivity).toHaveBeenCalledWith('g1', 'user@example.com');
-    expect(mocked.updateMemberActivity).toHaveBeenCalledWith('g2', 'user@example.com');
+    expect(mocked.recordActivity).toHaveBeenCalledWith('user@example.com');
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: [{ _id: 'g1' }, { _id: 'g2' }] }));
   });
 
@@ -125,6 +124,28 @@ describe('getUserGroupIds', () => {
     await getUserGroupIds(baseReq(), res);
 
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: ['g1', 'g2'] }));
+  });
+
+  it('records activity for the person auth-service asks about', async () => {
+    mocked.listMyGroups.mockResolvedValue([] as any);
+    const res = mockRes();
+
+    await getUserGroupIds(
+      baseReq({ user: undefined, isInternalService: true, query: { userEmail: 'ada@example.com' } }),
+      res
+    );
+
+    expect(mocked.recordActivity).toHaveBeenCalledWith('ada@example.com');
+  });
+
+  it('still returns the ids when recording activity fails', async () => {
+    mocked.listMyGroups.mockResolvedValue([{ _id: 'g1' }] as any);
+    mocked.recordActivity.mockRejectedValueOnce(new Error('db down'));
+    const res = mockRes();
+
+    await getUserGroupIds(baseReq(), res);
+
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: ['g1'] }));
   });
 
   it('throws BadRequestError with no resolvable email', async () => {

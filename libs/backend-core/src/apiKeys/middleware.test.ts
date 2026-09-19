@@ -11,6 +11,7 @@ import { verifyApiKey } from './service';
 import { mintAccessToken, type MintAccessTokenInput } from '../oauth/tokens';
 import { PERSONAL_TENANT } from './types';
 import { authenticateAgent, requireScope, denyApiKeys } from './middleware';
+import { overrideSessionCheckForTests } from '../auth/session';
 
 const mockedVerify = verifyApiKey as jest.Mock;
 const ORIGINAL_ENV = process.env;
@@ -65,6 +66,21 @@ describe('authenticateAgent — no credentials', () => {
 });
 
 describe('authenticateAgent — session tokens', () => {
+  beforeEach(() => overrideSessionCheckForTests(async () => true));
+  afterAll(() => overrideSessionCheckForTests());
+
+  it('rejects a validly signed JWT whose session has ended', async () => {
+    overrideSessionCheckForTests(async () => false);
+    const token = jwt.sign({ id: 'u1', email: 'a@b.c', name: 'A', sid: 'a'.repeat(24) }, 'test-jwt-secret');
+    const res = mockRes();
+    const next = jest.fn();
+
+    await authenticateAgent()(req({ headers: { authorization: `Bearer ${token}` } }), res, next);
+
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(next).not.toHaveBeenCalled();
+  });
+
   it('accepts a valid JWT and grants the full session, with no apiKey context', async () => {
     const token = jwt.sign({ id: 'u1', email: 'a@b.c', name: 'A', groups: ['g1', 'g2'] }, 'test-jwt-secret');
     const request = req({ headers: { authorization: `Bearer ${token}` } });

@@ -5,7 +5,8 @@ jest.mock('../models/Group', () => ({
     findOne: jest.fn(),
     findById: jest.fn(),
     findByIdAndDelete: jest.fn(),
-    updateOne: jest.fn()
+    updateOne: jest.fn(),
+    updateMany: jest.fn()
   }
 }));
 
@@ -17,7 +18,7 @@ const mockedFind = Group.find as unknown as jest.Mock;
 const mockedFindOne = Group.findOne as unknown as jest.Mock;
 const mockedFindById = Group.findById as unknown as jest.Mock;
 const mockedFindByIdAndDelete = Group.findByIdAndDelete as unknown as jest.Mock;
-const mockedUpdateOne = Group.updateOne as unknown as jest.Mock;
+const mockedUpdateMany = Group.updateMany as unknown as jest.Mock;
 
 function makeGroup(overrides: Partial<{ members: any[]; deletedAt: Date | null }> = {}) {
   return {
@@ -235,15 +236,16 @@ describe('checkMembership', () => {
   });
 });
 
-describe('updateMemberActivity', () => {
-  it('sets lastActivity for the matching member using a lowercased email', async () => {
-    mockedUpdateOne.mockResolvedValue({});
+describe('recordActivity', () => {
+  it('sets lastActivity for the member in every group they belong to, using a lowercased email', async () => {
+    mockedUpdateMany.mockResolvedValue({});
 
-    await groupService.updateMemberActivity('group-1', 'Member@Example.com');
+    await groupService.recordActivity('Member@Example.com');
 
-    expect(mockedUpdateOne).toHaveBeenCalledWith(
-      { _id: 'group-1', 'members.email': 'member@example.com' },
-      { $set: { 'members.$.lastActivity': expect.any(Date) } }
+    expect(mockedUpdateMany).toHaveBeenCalledWith(
+      { 'members.email': 'member@example.com' },
+      { $set: { 'members.$[member].lastActivity': expect.any(Date) } },
+      { arrayFilters: [{ 'member.email': 'member@example.com' }] }
     );
   });
 });

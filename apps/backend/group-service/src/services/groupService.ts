@@ -1,11 +1,19 @@
 import { ConflictError, ForbiddenError, NotFoundError } from '@tumbaland/backend-core';
 import { Group, IGroup, GroupRole } from '../models/Group';
 
-export async function updateMemberActivity(groupId: string, memberEmail: string): Promise<void> {
-  const normalizedEmail = memberEmail.toLowerCase();
-  await Group.updateOne(
-    { _id: groupId, 'members.email': normalizedEmail },
-    { $set: { 'members.$.lastActivity': new Date() } }
+/**
+ * Marks the person active now in every group they belong to.
+ *
+ * Called from the group-ID lookup auth-service makes each time an app opens
+ * and checks the session, so "Active" on the member list follows real use
+ * rather than the last time someone opened the groups page.
+ */
+export async function recordActivity(memberEmail: string): Promise<void> {
+  const email = memberEmail.toLowerCase();
+  await Group.updateMany(
+    { 'members.email': email },
+    { $set: { 'members.$[member].lastActivity': new Date() } },
+    { arrayFilters: [{ 'member.email': email }] }
   );
 }
 

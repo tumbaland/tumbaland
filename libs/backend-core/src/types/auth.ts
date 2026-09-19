@@ -7,6 +7,9 @@ export interface UserPayload {
   picture?: string;
   groups?: string[];
   roles?: string[];
+  tokenVersion?: number;
+  /** The auth-service session (user_sessions) this token belongs to; absent on pre-sessions tokens. */
+  sid?: string;
 }
 
 /**

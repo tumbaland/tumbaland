@@ -5,6 +5,7 @@ import ProfileTab from '../components/tabs/ProfileTab';
 import ApiKeysTab from '../components/tabs/ApiKeysTab';
 import ConnectionsTab from '../components/tabs/ConnectionsTab';
 import ActivityTab from '../components/tabs/ActivityTab';
+import DevicesTab from '../components/tabs/DevicesTab';
 
 const AccountPage: React.FC = () => {
   const location = useLocation();
@@ -21,6 +22,7 @@ const AccountPage: React.FC = () => {
   // reach my data" still has one obvious answer.
   const tabs = [
     { path: '/profile', label: 'Profile' },
+    { path: '/devices', label: 'Devices' },
     { path: '/connections', label: 'Connections' },
     { path: '/api-keys', label: 'API keys' },
     { path: '/activity', label: 'Activity' }
@@ -48,6 +50,7 @@ const AccountPage: React.FC = () => {
         <Routes>
           <Route path="" element={<Navigate to="profile" replace />} />
           <Route path="profile" element={<ProfileTab />} />
+          <Route path="devices" element={<DevicesTab />} />
           <Route path="connections" element={<ConnectionsTab />} />
           <Route path="api-keys" element={<ApiKeysTab />} />
           <Route path="activity" element={<ActivityTab />} />

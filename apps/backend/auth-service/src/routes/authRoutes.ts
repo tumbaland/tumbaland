@@ -1,6 +1,6 @@
 import express, { Router, Request, Response } from 'express';
 import { strictRateLimiter, validate, NotFoundError } from '@tumbaland/backend-core';
-import { validateToken, googleRedirectCallback, claimPendingSignIn, logout, verifyAuth, refreshToken, invalidateUserTokens } from '../controllers/authController';
+import { validateToken, googleRedirectCallback, logout, verifyAuth, refreshToken, invalidateUserTokens } from '../controllers/authController';
 import {
   cancelAccountDeletion,
   getProfile,
@@ -9,6 +9,7 @@ import {
 } from '../controllers/profileController';
 import { getConnections, revokeConnection } from '../controllers/oauthController';
 import { getAuditTrail } from '../controllers/auditController';
+import { getSessions, revokeOtherSessions, revokeSession } from '../controllers/sessionController';
 import {
   requireApiKeysConfigured,
   getApiKeys,
@@ -22,7 +23,6 @@ import { requireInternalService } from '../middleware/internalServiceAuth';
 import { User } from '../models/User';
 import {
   validateTokenSchema,
-  claimPendingSignInSchema,
   invalidateTokensSchema,
   updateProfileSchema,
   approveUserSchema,
@@ -38,16 +38,10 @@ router.post('/validate', strictRateLimiter, validate(validateTokenSchema), valid
 // Google's redirect-mode sign-in posts the token here as a form, not JSON.
 router.post('/google/callback', strictRateLimiter, express.urlencoded({ extended: false }), googleRedirectCallback);
 
-// The app collecting a sign-in that finished in another window (see
-// claimPendingSignIn). The login page asks each time it comes back into view,
-// so this sits under the standard limit rather than the strict one; the
-// six-digit code gets its own limit of five tries.
-router.post('/google/claim', validate(claimPendingSignInSchema), claimPendingSignIn);
-
 // Refresh token route (protected)
-// authenticateSession on the three session routes: an access token that expired
-// while the app was closed is renewed from the refresh cookie rather than
-// sending the person back to sign in (or, for logout, leaving them unable to).
+// authenticateSession on the three session routes: a pre-sessions refresh
+// cookie is still accepted here, so renewal can turn it into a session rather
+// than send the person back to sign in (or, for logout, leave them unable to).
 router.post('/refresh', authenticateSession, requireApproved, refreshToken);
 
 // Protected logout
@@ -92,6 +86,13 @@ router.delete('/api-keys/:id', ...apiKeyRoute, removeApiKey);
 // cannot be revoked.
 router.get('/connections', authenticateToken, requireApproved, getConnections);
 router.delete('/connections/:clientId', authenticateToken, requireApproved, revokeConnection);
+
+// Signed-in devices. A person's own sessions only, and only from a session:
+// `authenticateToken` refuses keys and connected assistants, so nothing
+// automated can list or end them.
+router.get('/sessions', authenticateToken, requireApproved, getSessions);
+router.post('/sessions/revoke-others', authenticateToken, requireApproved, revokeOtherSessions);
+router.delete('/sessions/:id', authenticateToken, requireApproved, revokeSession);
 
 // The trail of what actually happened. Session-only for the same reason as the
 // two above, and more sharply: an assistant that can read the record of what

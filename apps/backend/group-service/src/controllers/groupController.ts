@@ -37,6 +37,18 @@ const invalidateUserTokens = async (userEmails: string[]): Promise<void> => {
   }
 };
 
+/**
+ * Activity is a side note: failing to record it must not fail the request,
+ * least of all the group lookup that every sign-in depends on.
+ */
+const recordActivity = async (email: string): Promise<void> => {
+  try {
+    await svc.recordActivity(email);
+  } catch (error) {
+    logger.warn('Failed to record member activity', { email, error: (error as Error)?.message });
+  }
+};
+
 const userEmail = (req: Request) => {
   // For internal service requests, extract email from request body or params
   if (req.isInternalService) {
@@ -62,12 +74,7 @@ export const listMine = async (req: Request, res: Response): Promise<void> => {
     throw new BadRequestError('User email required');
   }
   const groups = await svc.listMyGroups(email);
-
-  // Update last activity for this user in each group
-  for (const group of groups) {
-    await svc.updateMemberActivity(group._id.toString(), email);
-  }
-
+  await recordActivity(email);
   sendSuccess(res, groups);
 };
 
@@ -87,6 +94,7 @@ export const getUserGroupIds = async (req: Request, res: Response): Promise<void
   }
   const groups = await svc.listMyGroups(email);
   const groupIds = groups.map(group => group._id.toString());
+  await recordActivity(email);
   sendSuccess(res, groupIds);
 };
 

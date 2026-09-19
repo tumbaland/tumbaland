@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { requireEnv } from '../config/env';
 import { isAccessTokenClaims } from '../oauth/tokens';
 import { UserPayload } from '../types/auth';
+import { isCurrentSession } from '../auth/session';
 
 /**
  * JWT authentication middleware
@@ -17,7 +18,7 @@ import { UserPayload } from '../types/auth';
  * enforces both — so anything still guarded by this one is a person's to do,
  * and letting a token through would be handing an assistant the account.
  */
-export function authenticateToken(req: Request, res: Response, next: NextFunction): void {
+export async function authenticateToken(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const JWT_SECRET = requireEnv('JWT_SECRET');
     const token = req.cookies?.access_token || req.headers.authorization?.replace('Bearer ', '');
@@ -36,13 +37,20 @@ export function authenticateToken(req: Request, res: Response, next: NextFunctio
       return;
     }
 
+    // A signed-out or revoked device keeps a validly signed token; only its
+    // session record says it has ended.
+    if (!(await isCurrentSession(claims))) {
+      res.status(401).json({ success: false, message: 'Session has ended' });
+      return;
+    }
     const user = claims as UserPayload;
     req.user = user;
     req.userGroups = user.groups ?? [];
-    next();
   } catch (error) {
     res.status(401).json({ success: false, message: 'Invalid or expired token' });
+    return;
   }
+  next();
 }
 /**
  * Attaches the user when a valid token is present, and never rejects.
@@ -57,7 +65,7 @@ export function authenticateToken(req: Request, res: Response, next: NextFunctio
  * around would break the landing page for exactly the people most likely to
  * have one.
  */
-export function optionalAuth(req: Request, _res: Response, next: NextFunction): void {
+export async function optionalAuth(req: Request, _res: Response, next: NextFunction): Promise<void> {
   try {
     const JWT_SECRET = requireEnv('JWT_SECRET');
     const token = req.cookies?.access_token || req.headers.authorization?.replace('Bearer ', '');
@@ -66,7 +74,8 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction): 
       const claims = jwt.verify(token, JWT_SECRET);
       // An access token is not a session; treated as none, exactly like an
       // expired cookie, so the route still answers with its public form.
-      if (!isAccessTokenClaims(claims)) {
+      // An ended session is treated as none, like an expired cookie.
+      if (!isAccessTokenClaims(claims) && (await isCurrentSession(claims))) {
         const user = claims as UserPayload;
         req.user = user;
         req.userGroups = user.groups ?? [];

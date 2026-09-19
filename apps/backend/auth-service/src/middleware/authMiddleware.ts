@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import { isAccessTokenClaims, logger } from '@tumbaland/backend-core';
+import { isAccessTokenClaims, isLegacySessionlessToken, logger } from '@tumbaland/backend-core';
 import { verifyJWT, verifyRefreshToken, UserPayload } from '../services/jwtService';
 import { User, IUser } from '../models/User';
+import { ISession, Session } from '../models/Session';
 
 // req.user's ambient type comes from @tumbaland/backend-core's global Express.Request
 // augmentation (see libs/core/src/types/auth.ts). This service's decoded JWT
@@ -17,8 +18,24 @@ declare global {
   namespace Express {
     interface Request {
       dbUser?: IUser;
+      /** The caller's live session; absent for a pre-sessions token or refresh cookie. */
+      authSession?: ISession;
     }
   }
+}
+
+/**
+ * The session a token belongs to, if it is still live. `null` means the token
+ * must be refused: its session was revoked or expired, or it names none and is
+ * not a short-lived pre-sessions token either. `undefined` is such a legacy
+ * token, which has no session to load but is otherwise acceptable.
+ */
+async function loadSession(decoded: UserPayload): Promise<ISession | null | undefined> {
+  if (decoded.sid === undefined) {
+    return isLegacySessionlessToken(decoded) ? undefined : null;
+  }
+  if (typeof decoded.sid !== 'string' || !/^[a-f\d]{24}$/i.test(decoded.sid)) return null;
+  return Session.findOne({ _id: decoded.sid, userId: decoded.id, expiresAt: { $gt: new Date() } });
 }
 
 export const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
@@ -55,7 +72,14 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
       return;
     }
 
+    const session = await loadSession(decoded);
+    if (session === null) {
+      res.status(401).json({ success: false, message: 'Session has ended' });
+      return;
+    }
+
     req.user = decoded;
+    req.authSession = session;
     // Mirror backend-core's authenticateToken, which every other service uses:
     // handlers read group membership off `req.userGroups`, and leaving it unset
     // here made it look like the caller belonged to no groups at all.
@@ -71,8 +95,9 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
 };
 
 /**
- * authenticateToken, but an expired or missing access token is renewed from the
- * refresh cookie instead of answering 401.
+ * authenticateToken, but a pre-sessions refresh cookie is accepted when there
+ * is no usable access token, so renewal can turn it into a session (see
+ * verifyRefreshToken, which goes when those cookies have all expired).
  *
  * Only on the routes that mint a new access token (/verify, /refresh). Every
  * app checks /verify when it opens, so someone who has not visited for a few
@@ -135,7 +160,14 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
         next();
         return;
       }
+      // An ended session is no session: continue signed out.
+      const session = await loadSession(decoded);
+      if (session === null) {
+        next();
+        return;
+      }
       req.user = decoded;
+      req.authSession = session;
       req.userGroups = decoded.groups ?? [];
       // Upsert but do not block on approval
       await User.findOneAndUpdate(

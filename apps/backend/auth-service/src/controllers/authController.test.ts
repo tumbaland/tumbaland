@@ -7,33 +7,24 @@ jest.mock('../models/User', () => ({
   }
 }));
 
-jest.mock('../models/PendingSignIn', () => ({
-  PendingSignIn: {
-    findOne: jest.fn(),
-    findOneAndUpdate: jest.fn(),
-    findOneAndDelete: jest.fn(),
-    deleteOne: jest.fn()
-  }
-}));
+jest.mock('../models/Session', () => jest.requireActual('../test/sessionModelMock').sessionModule());
 
 jest.mock('../services/googleAuthService', () => ({
   verifyGoogleToken: jest.fn()
 }));
 
 import { Request, Response } from 'express';
-import { createHash } from 'crypto';
 import { User } from '../models/User';
-import { PendingSignIn } from '../models/PendingSignIn';
+import { Session } from '../models/Session';
 import app from '../app';
-import { generateJWT, decodeJWT, generateRefreshToken, verifyRefreshToken } from '../services/jwtService';
+import { generateJWT, decodeJWT, generateRefreshToken } from '../services/jwtService';
 import { verifyGoogleToken } from '../services/googleAuthService';
 import { validateToken, verifyAuth, refreshToken, safeRedirectTarget } from './authController';
 
 const mockedFindOne = User.findOne as unknown as jest.Mock;
 const mockedFindOneAndUpdate = User.findOneAndUpdate as unknown as jest.Mock;
 const mockedVerifyGoogleToken = verifyGoogleToken as unknown as jest.Mock;
-const pending = PendingSignIn as unknown as Record<'findOne' | 'findOneAndUpdate' | 'findOneAndDelete' | 'deleteOne', jest.Mock>;
-const sha256 = (value: string) => createHash('sha256').update(value).digest('hex');
+const sessions = Session as unknown as Record<'create' | 'findOne' | 'findOneAndUpdate' | 'find' | 'deleteOne' | 'deleteMany', jest.Mock>;
 
 describe('POST /auth/refresh', () => {
   beforeAll(() => {
@@ -272,16 +263,16 @@ describe('POST /auth/validate', () => {
     const setCookie = res.headers['set-cookie'] as unknown as string[];
     expect(setCookie.find((c) => c.startsWith('access_token='))).toMatch(/HttpOnly/i);
 
-    // Kept to auth-service's own host and session routes.
-    const refresh = setCookie.find((c) => c.startsWith('refresh_token='))!;
-    expect(refresh).toMatch(/HttpOnly/i);
-    expect(refresh).toMatch(/Path=\/auth(;|$)/);
-    expect(refresh).not.toMatch(/Domain=/i);
-    expect(verifyRefreshToken(refresh.split(';')[0].split('=')[1])).toMatchObject({
-      id: 'db-user-1',
-      email: 'Ada@Example.com',
-      tokenVersion: 1
-    });
+    // A new session for this device, named in the token.
+    expect(sessions.create).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: 'db-user-1', method: 'google', lastSeenAt: expect.any(Date) })
+    );
+    const sessionId = (await sessions.create.mock.results[0].value)._id.toString();
+    const access = setCookie.find((c) => c.startsWith('access_token='))!.split(';')[0].split('=')[1];
+    expect(decodeJWT(access)).toMatchObject({ id: 'db-user-1', sid: sessionId });
+
+    // The pre-sessions refresh cookie is cleared, not issued.
+    expect(setCookie.find((c) => c.startsWith('refresh_token='))).toMatch(/^refresh_token=;/);
   });
 
   it('fetches groups from group-service and includes them in the minted JWT when configured', async () => {
@@ -407,35 +398,15 @@ describe('POST /auth/google/callback', () => {
     expect(mockedFindOneAndUpdate).not.toHaveBeenCalled();
   });
 
-  it('parks the sign-in and shows a code when the nonce cookie did not come back (iPhone home-screen app)', async () => {
+  it('refuses a request with no nonce cookie', async () => {
     mockedVerifyGoogleToken.mockResolvedValue(googleUser);
 
-    const res = await post([]);
+    const res = await post([`login_redirect=${encodeURIComponent(target)}`]);
 
     expect(res.status).toBe(303);
-    const location = new URL(res.headers.location);
-    expect(location.origin).toBe('http://localhost:3004');
-    expect(location.searchParams.get('signin')).toBe('pending');
-    const code = location.searchParams.get('code')!;
-    expect(code).toMatch(/^\d{6}$/);
-    expect(pending.findOneAndUpdate).toHaveBeenCalledWith(
-      { nonceHash: sha256('nonce-1') },
-      { $set: expect.objectContaining({ codeHash: sha256(code), email: 'ada@example.com', failedAttempts: 0 }) },
-      { upsert: true }
-    );
-    // No session in the window that finished Google's page.
-    const setCookie = (res.headers['set-cookie'] as unknown as string[]) ?? [];
-    expect(setCookie.find((c) => c.startsWith('access_token='))).toBeUndefined();
-    expect(mockedFindOneAndUpdate).not.toHaveBeenCalled();
-  });
-
-  it('refuses a Google token that carries no nonce', async () => {
-    mockedVerifyGoogleToken.mockResolvedValue({ email: 'ada@example.com' });
-
-    const res = await post([]);
-
     expect(new URL(res.headers.location).searchParams.get('error')).toBe('signin_failed');
-    expect(pending.findOneAndUpdate).not.toHaveBeenCalled();
+    expect(mockedVerifyGoogleToken).not.toHaveBeenCalled();
+    expect(sessions.create).not.toHaveBeenCalled();
   });
 
   it('refuses a request with no credential', async () => {
@@ -462,115 +433,6 @@ describe('POST /auth/google/callback', () => {
     expect(res.status).toBe(303);
     expect(res.headers.location).toBe('http://localhost:3004');
   });
-});
-
-describe('POST /auth/google/claim', () => {
-  const nonce = 'n'.repeat(32);
-  const record = {
-    codeHash: sha256('123456'),
-    email: 'ada@example.com',
-    name: 'Ada Lovelace',
-    picture: 'pic.png',
-    failedAttempts: 0
-  };
-  const claim = (body: Record<string, string>) => request(app).post('/auth/google/claim').send(body);
-
-  beforeAll(() => {
-    process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
-    delete process.env.GROUP_API_URL;
-  });
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockedFindOneAndUpdate.mockResolvedValue({ _id: 'db-user-1', email: 'ada@example.com', tokenVersion: 1, isApproved: true });
-  });
-
-  it('says there is nothing waiting when no sign-in is parked', async () => {
-    pending.findOne.mockResolvedValue(null);
-
-    const res = await claim({ nonce });
-
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual({ success: true, status: 'none' });
-    expect(pending.findOne).toHaveBeenCalledWith({ nonceHash: sha256(nonce), expiresAt: { $gt: expect.any(Date) } });
-  });
-
-  it('asks for the code when a sign-in is waiting, without signing in', async () => {
-    pending.findOne.mockResolvedValue(record);
-
-    const res = await claim({ nonce });
-
-    expect(res.body).toEqual({ success: true, status: 'code_required' });
-    expect(res.headers['set-cookie']).toBeUndefined();
-    expect(pending.findOneAndDelete).not.toHaveBeenCalled();
-  });
-
-  it('signs in with the right code, once', async () => {
-    pending.findOne.mockResolvedValue(record);
-    pending.findOneAndDelete.mockResolvedValue(record);
-
-    const res = await claim({ nonce, code: '123456' });
-
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual({ success: true, status: 'signed_in' });
-    expect(pending.findOneAndDelete).toHaveBeenCalledWith({ nonceHash: sha256(nonce), codeHash: record.codeHash });
-    const setCookie = res.headers['set-cookie'] as unknown as string[];
-    expect(setCookie.find((c) => c.startsWith('access_token='))).toMatch(/HttpOnly/i);
-    expect(setCookie.find((c) => c.startsWith('refresh_token='))).toBeDefined();
-    expect(mockedFindOneAndUpdate).toHaveBeenCalledWith(
-      { email: 'ada@example.com' },
-      expect.anything(),
-      { new: true, upsert: true }
-    );
-  });
-
-  it('does not sign in when another request already collected it', async () => {
-    pending.findOne.mockResolvedValue(record);
-    pending.findOneAndDelete.mockResolvedValue(null);
-
-    const res = await claim({ nonce, code: '123456' });
-
-    expect(res.body).toEqual({ success: true, status: 'none' });
-    expect(res.headers['set-cookie']).toBeUndefined();
-  });
-
-  it('rejects a wrong code and counts the attempt', async () => {
-    pending.findOne.mockResolvedValue(record);
-    pending.findOneAndUpdate.mockResolvedValue({ ...record, failedAttempts: 1 });
-
-    const res = await claim({ nonce, code: '000000' });
-
-    expect(res.status).toBe(401);
-    expect(res.body.message).toMatch(/code is not right/i);
-    expect(pending.findOneAndUpdate).toHaveBeenCalledWith(
-      { nonceHash: sha256(nonce) },
-      { $inc: { failedAttempts: 1 } },
-      { new: true }
-    );
-    expect(pending.deleteOne).not.toHaveBeenCalled();
-    expect(res.headers['set-cookie']).toBeUndefined();
-  });
-
-  it('throws the sign-in away after five wrong codes', async () => {
-    pending.findOne.mockResolvedValue(record);
-    pending.findOneAndUpdate.mockResolvedValue({ ...record, failedAttempts: 5 });
-
-    const res = await claim({ nonce, code: '000000' });
-
-    expect(res.status).toBe(401);
-    expect(res.body.message).toMatch(/too many wrong codes/i);
-    expect(pending.deleteOne).toHaveBeenCalledWith({ nonceHash: sha256(nonce) });
-  });
-
-  it.each([[{}], [{ nonce: 'short' }], [{ nonce, code: '12345' }], [{ nonce, code: 'abcdef' }]])(
-    'rejects a malformed request %j',
-    async (body) => {
-      const res = await claim(body as Record<string, string>);
-
-      expect(res.status).toBe(400);
-      expect(pending.findOne).not.toHaveBeenCalled();
-    }
-  );
 });
 
 describe('safeRedirectTarget', () => {
@@ -664,7 +526,7 @@ describe('GET /auth/verify', () => {
       }
     };
 
-    it('signs the person back in from the refresh cookie and reissues both cookies', async () => {
+    it('turns a pre-sessions refresh cookie into a session instead of signing the person out', async () => {
       mockedFindOne.mockResolvedValue({ email: 'user@example.com', tokenVersion: 2, isApproved: true });
 
       const res = await request(app)
@@ -678,8 +540,11 @@ describe('GET /auth/verify', () => {
       });
       const setCookie = res.headers['set-cookie'] as unknown as string[];
       const access = setCookie.find((c) => c.startsWith('access_token='))!.split(';')[0].split('=')[1];
-      expect(decodeJWT(access)).toMatchObject({ email: 'user@example.com', tokenVersion: 2 });
-      expect(setCookie.find((c) => c.startsWith('refresh_token='))).toBeDefined();
+      expect(sessions.create).toHaveBeenCalledWith(expect.objectContaining({ userId: '1', method: 'unknown' }));
+      const sessionId = (await sessions.create.mock.results[0].value)._id.toString();
+      expect(decodeJWT(access)).toMatchObject({ email: 'user@example.com', tokenVersion: 2, sid: sessionId });
+      // The refresh cookie has done its job and is cleared.
+      expect(setCookie.find((c) => c.startsWith('refresh_token='))).toMatch(/^refresh_token=;/);
     });
 
     it('works with no access cookie at all, as after the browser drops it', async () => {

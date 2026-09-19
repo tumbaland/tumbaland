@@ -39,6 +39,7 @@ export * from './audit';
 
 // Middleware
 export { authenticateToken, optionalAuth } from './middleware/authMiddleware';
+export { USER_SESSIONS_COLLECTION, isCurrentSession, isLegacySessionlessToken } from './auth/session';
 export {
   requireInternalServiceToken,
   internalServiceTokenBypass,

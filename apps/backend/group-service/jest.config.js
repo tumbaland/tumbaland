@@ -2,6 +2,8 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  // Test tokens carry no session and there is no database (see backend-core's testing.js).
+  setupFiles: ['@tumbaland/backend-core/testing'],
   testMatch: ['<rootDir>/src/**/*.test.ts'],
   clearMocks: true,
   transform: {
