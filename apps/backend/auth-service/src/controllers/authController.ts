@@ -34,12 +34,19 @@ const setSessionCookies = (res: Response, accessToken: string, user: UserPayload
   });
 };
 
-export const validateToken = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
-  const { idToken } = req.body;
+/**
+ * Verifies a Google ID token, creates or updates the user, and sets the session
+ * cookies. Shared by the JSON endpoint and the redirect-mode callback.
+ */
+const signInWithGoogle = async (res: Response, idToken: string, expectedNonce?: string) => {
   const googleUser = await verifyGoogleToken(idToken);
 
   if (!googleUser) {
     throw new UnauthorizedError('Invalid Google token');
+  }
+
+  if (expectedNonce !== undefined && googleUser.nonce !== expectedNonce) {
+    throw new UnauthorizedError('Sign-in nonce does not match');
   }
 
   const userEmail = googleUser.email || '';
@@ -88,11 +95,87 @@ export const validateToken = async (req: Request, res: Response, _next: NextFunc
 
   setSessionCookies(res, jwtToken, jwtPayload);
 
+  return { userPayload, approved: dbUser.isApproved };
+};
+
+export const validateToken = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+  const { userPayload, approved } = await signInWithGoogle(res, req.body.idToken);
+
   res.json({
     success: true,
     user: userPayload,
-    approved: dbUser.isApproved
+    approved
   });
+};
+
+/** Cookies auth-front sets just before sending the person to Google. */
+const LOGIN_NONCE_COOKIE = 'login_nonce';
+const LOGIN_REDIRECT_COOKIE = 'login_redirect';
+const LOGIN_COOKIE_PATH = '/auth/google';
+
+const authFrontUrl = (): string =>
+  (process.env.AUTH_FRONT_URL || 'https://auth.tumbaland.eu').replace(/\/$/, '');
+
+/**
+ * Where to send the person once they are signed in. Only our own sites are
+ * allowed, so the callback cannot be used to bounce someone to another domain.
+ */
+export const safeRedirectTarget = (target: unknown): string => {
+  const fallback = authFrontUrl();
+  if (typeof target !== 'string' || !target) return fallback;
+
+  let url: URL;
+  try {
+    url = new URL(target);
+  } catch {
+    return fallback;
+  }
+
+  const domain = process.env.COOKIE_DOMAIN || 'localhost';
+  const onOurDomain = url.hostname === domain || url.hostname.endsWith(`.${domain}`);
+  const schemeOk = url.protocol === 'https:' || (url.protocol === 'http:' && url.hostname === 'localhost');
+  return onOurDomain && schemeOk ? url.toString() : fallback;
+};
+
+/**
+ * Google's redirect-mode sign-in (`ux_mode: 'redirect'`): Google posts the ID
+ * token here as a form, and we answer with the session cookies and a redirect
+ * back into the app.
+ *
+ * This exists for the iOS home-screen app. The popup the button uses by
+ * default opens in a separate Safari sheet with its own storage there, so the
+ * sign-in finished in the sheet and the app itself stayed signed out. Here
+ * every step is a page load in the same window, so the cookies land where the
+ * app can see them.
+ *
+ * The nonce ties the token to this browser: auth-front stores it in a cookie
+ * and hands it to Google, which puts it in the token. Someone else's token
+ * posted here carries a different nonce, which stops login CSRF.
+ */
+export const googleRedirectCallback = async (req: Request, res: Response): Promise<void> => {
+  const redirectTarget = safeRedirectTarget(req.cookies?.[LOGIN_REDIRECT_COOKIE]);
+  const nonce = req.cookies?.[LOGIN_NONCE_COOKIE];
+
+  const clearOptions = { domain: process.env.COOKIE_DOMAIN || 'localhost', path: LOGIN_COOKIE_PATH };
+  res.clearCookie(LOGIN_NONCE_COOKIE, clearOptions);
+  res.clearCookie(LOGIN_REDIRECT_COOKIE, clearOptions);
+
+  const credential = req.body?.credential;
+  try {
+    if (typeof credential !== 'string' || !credential || typeof nonce !== 'string' || !nonce) {
+      throw new BadRequestError('Missing credential or sign-in nonce');
+    }
+    await signInWithGoogle(res, credential, nonce);
+  } catch (error) {
+    logger.warn('Google redirect sign-in failed', { error: (error as Error)?.message });
+    const retry = new URL(authFrontUrl());
+    retry.searchParams.set('error', 'signin_failed');
+    retry.searchParams.set('redirect_uri', redirectTarget);
+    res.redirect(303, retry.toString());
+    return;
+  }
+
+  res.redirect(303, redirectTarget);
 };
 
 export const logout = (req: Request, res: Response): void => {

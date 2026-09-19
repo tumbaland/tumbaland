@@ -4,12 +4,8 @@
 vi.mock('./config/ConfigProvider', () => ({
   getGlobalConfig: vi.fn(() => ({ AUTH_SERVICE_URL: 'https://auth.example' }))
 }));
-vi.mock('./services/authApi', () => ({ authApi: { post: vi.fn() } }));
 
 import { initializeGoogleSignIn } from './authFlow';
-import { authApi } from './services/authApi';
-
-const mockedPost = authApi.post as unknown as ReturnType<typeof vi.fn>;
 
 function mockGoogle(overrides: { initialize?: ReturnType<typeof vi.fn>; renderButton?: ReturnType<typeof vi.fn> } = {}) {
   const renderButton =
@@ -26,7 +22,6 @@ beforeEach(() => {
   vi.useFakeTimers();
   document.body.innerHTML = '<div id="google-signin-button"></div>';
   delete (window as any).google;
-  mockedPost.mockReset();
 });
 
 afterEach(() => {
@@ -40,9 +35,12 @@ describe('initializeGoogleSignIn', () => {
     initializeGoogleSignIn('client-id', '/redirect');
     vi.advanceTimersByTime(0);
 
-    expect(initialize).toHaveBeenCalledWith(
-      expect.objectContaining({ client_id: 'client-id', callback: expect.any(Function) })
-    );
+    expect(initialize).toHaveBeenCalledWith({
+      client_id: 'client-id',
+      ux_mode: 'redirect',
+      login_uri: 'https://auth.example/auth/google/callback',
+      nonce: expect.stringMatching(/^[0-9a-f]{32}$/)
+    });
     expect(renderButton).toHaveBeenCalled();
   });
 
@@ -126,48 +124,50 @@ describe('initializeGoogleSignIn', () => {
     }).not.toThrow();
   });
 
-  describe('the Google credential callback (handleCredentialResponse)', () => {
-    function captureCallback(): (response: { credential: string }) => void {
-      const initialize = vi.fn();
-      mockGoogle({ initialize });
+  describe('redirect-mode sign-in', () => {
+    let cookieWrites: string[];
+
+    beforeEach(() => {
+      cookieWrites = [];
+      vi.spyOn(document, 'cookie', 'set').mockImplementation((value: string) => {
+        cookieWrites.push(value);
+      });
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('stores the nonce it gives Google in a cookie for the callback to check', () => {
+      const { initialize } = mockGoogle();
       initializeGoogleSignIn('client-id', '/redirect-target');
       vi.advanceTimersByTime(0);
-      return initialize.mock.calls[0][0].callback;
-    }
 
-    it('redirects to redirectUri when the auth service validates the credential successfully', async () => {
-      const originalLocation = window.location;
-      Object.defineProperty(window, 'location', { writable: true, value: { ...originalLocation, href: '' } });
-      mockedPost.mockResolvedValue({ success: true });
-      const callback = captureCallback();
-
-      callback({ credential: 'google-id-token' });
-      await vi.waitFor(() => expect(mockedPost).toHaveBeenCalledWith('/auth/validate', { idToken: 'google-id-token' }));
-      await vi.waitFor(() => expect(window.location.href).toBe('/redirect-target'));
-
-      Object.defineProperty(window, 'location', { writable: true, value: originalLocation });
+      const { nonce } = initialize.mock.calls[0][0];
+      const nonceCookie = cookieWrites.find((c) => c.startsWith('login_nonce='))!;
+      expect(nonceCookie).toContain(`login_nonce=${nonce}`);
+      expect(nonceCookie).toContain('path=/auth/google');
+      expect(nonceCookie).toContain('SameSite=None');
+      expect(nonceCookie).toContain('Secure');
     });
 
-    it('alerts the user and does not redirect when the auth service rejects the credential', async () => {
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
-      mockedPost.mockResolvedValue({ success: false, message: 'Not approved' });
-      const callback = captureCallback();
+    it('stores where to return as an absolute URL', () => {
+      mockGoogle();
+      initializeGoogleSignIn('client-id', '/redirect-target');
+      vi.advanceTimersByTime(0);
 
-      callback({ credential: 'google-id-token' });
-      await vi.waitFor(() => expect(alertSpy).toHaveBeenCalledWith('Authentication failed: Not approved'));
-
-      alertSpy.mockRestore();
+      const redirectCookie = cookieWrites.find((c) => c.startsWith('login_redirect='))!;
+      const value = decodeURIComponent(redirectCookie.split(';')[0].slice('login_redirect='.length));
+      expect(value).toBe(new URL('/redirect-target', window.location.href).toString());
     });
 
-    it('alerts the user when the validate request itself fails', async () => {
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
-      mockedPost.mockRejectedValue(new Error('network down'));
-      const callback = captureCallback();
+    it('sets no cookie domain on localhost', () => {
+      mockGoogle();
+      initializeGoogleSignIn('client-id', '/redirect-target');
+      vi.advanceTimersByTime(0);
 
-      callback({ credential: 'google-id-token' });
-      await vi.waitFor(() => expect(alertSpy).toHaveBeenCalledWith('Authentication error: network down'));
-
-      alertSpy.mockRestore();
+      expect(cookieWrites.length).toBeGreaterThan(0);
+      expect(cookieWrites.every((c) => !c.includes('domain='))).toBe(true);
     });
   });
 });

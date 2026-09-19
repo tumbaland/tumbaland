@@ -16,7 +16,7 @@ import { User } from '../models/User';
 import app from '../app';
 import { generateJWT, decodeJWT, generateRefreshToken, verifyRefreshToken } from '../services/jwtService';
 import { verifyGoogleToken } from '../services/googleAuthService';
-import { validateToken, verifyAuth, refreshToken } from './authController';
+import { validateToken, verifyAuth, refreshToken, safeRedirectTarget } from './authController';
 
 const mockedFindOne = User.findOne as unknown as jest.Mock;
 const mockedFindOneAndUpdate = User.findOneAndUpdate as unknown as jest.Mock;
@@ -331,6 +331,127 @@ describe('POST /auth/validate', () => {
 
     delete process.env.GROUP_API_URL;
     delete process.env.INTERNAL_SERVICE_TOKEN;
+  });
+});
+
+describe('POST /auth/google/callback', () => {
+  const googleUser = { email: 'ada@example.com', name: 'Ada Lovelace', nonce: 'nonce-1' };
+  const target = 'http://localhost:3000/albums';
+
+  const post = (cookies: string[], body: Record<string, string> = { credential: 'good-token' }) =>
+    request(app)
+      .post('/auth/google/callback')
+      // A real form POST from Google's page, which the CORS allow-list must not block.
+      .set('Origin', 'https://accounts.google.com')
+      .set('Cookie', cookies)
+      .type('form')
+      .send(body);
+
+  beforeAll(() => {
+    process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
+    delete process.env.GROUP_API_URL;
+    delete process.env.COOKIE_DOMAIN;
+    process.env.AUTH_FRONT_URL = 'http://localhost:3004';
+  });
+
+  afterAll(() => {
+    delete process.env.AUTH_FRONT_URL;
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockedFindOneAndUpdate.mockResolvedValue({ _id: 'db-user-1', email: 'ada@example.com', tokenVersion: 1, isApproved: true });
+  });
+
+  it('signs the person in and sends them back to where they started', async () => {
+    mockedVerifyGoogleToken.mockResolvedValue(googleUser);
+
+    const res = await post(['login_nonce=nonce-1', `login_redirect=${encodeURIComponent(target)}`]);
+
+    expect(res.status).toBe(303);
+    expect(res.headers.location).toBe(target);
+    expect(mockedVerifyGoogleToken).toHaveBeenCalledWith('good-token');
+    const setCookie = res.headers['set-cookie'] as unknown as string[];
+    expect(setCookie.find((c) => c.startsWith('access_token='))).toMatch(/HttpOnly/i);
+    expect(setCookie.find((c) => c.startsWith('refresh_token='))).toBeDefined();
+    // The one-time login cookies are cleared.
+    expect(setCookie.find((c) => c.startsWith('login_nonce=;'))).toBeDefined();
+    expect(setCookie.find((c) => c.startsWith('login_redirect=;'))).toBeDefined();
+  });
+
+  it('refuses a token whose nonce does not match this browser (login CSRF)', async () => {
+    mockedVerifyGoogleToken.mockResolvedValue({ ...googleUser, nonce: 'someone-elses' });
+
+    const res = await post(['login_nonce=nonce-1', `login_redirect=${encodeURIComponent(target)}`]);
+
+    expect(res.status).toBe(303);
+    const location = new URL(res.headers.location);
+    expect(location.origin).toBe('http://localhost:3004');
+    expect(location.searchParams.get('error')).toBe('signin_failed');
+    expect(location.searchParams.get('redirect_uri')).toBe(target);
+    const setCookie = (res.headers['set-cookie'] as unknown as string[]) ?? [];
+    expect(setCookie.find((c) => c.startsWith('access_token='))).toBeUndefined();
+    expect(mockedFindOneAndUpdate).not.toHaveBeenCalled();
+  });
+
+  it('refuses a request with no nonce cookie', async () => {
+    mockedVerifyGoogleToken.mockResolvedValue(googleUser);
+
+    const res = await post([`login_redirect=${encodeURIComponent(target)}`]);
+
+    expect(res.status).toBe(303);
+    expect(new URL(res.headers.location).searchParams.get('error')).toBe('signin_failed');
+    expect(mockedVerifyGoogleToken).not.toHaveBeenCalled();
+  });
+
+  it('refuses a request with no credential', async () => {
+    const res = await post(['login_nonce=nonce-1'], {});
+
+    expect(res.status).toBe(303);
+    expect(new URL(res.headers.location).searchParams.get('error')).toBe('signin_failed');
+  });
+
+  it('sends the person to a failure page rather than a 500 when Google rejects the token', async () => {
+    mockedVerifyGoogleToken.mockRejectedValue(new Error('Invalid token'));
+
+    const res = await post(['login_nonce=nonce-1']);
+
+    expect(res.status).toBe(303);
+    expect(new URL(res.headers.location).searchParams.get('error')).toBe('signin_failed');
+  });
+
+  it('never redirects to another domain', async () => {
+    mockedVerifyGoogleToken.mockResolvedValue(googleUser);
+
+    const res = await post(['login_nonce=nonce-1', `login_redirect=${encodeURIComponent('https://evil.example/')}`]);
+
+    expect(res.status).toBe(303);
+    expect(res.headers.location).toBe('http://localhost:3004');
+  });
+});
+
+describe('safeRedirectTarget', () => {
+  beforeAll(() => {
+    process.env.COOKIE_DOMAIN = 'tumbaland.eu';
+    process.env.AUTH_FRONT_URL = 'https://auth.tumbaland.eu';
+  });
+
+  afterAll(() => {
+    delete process.env.COOKIE_DOMAIN;
+    delete process.env.AUTH_FRONT_URL;
+  });
+
+  it.each([
+    ['https://tumbaland.eu/', 'https://tumbaland.eu/'],
+    ['https://album.tumbaland.eu/x?y=1', 'https://album.tumbaland.eu/x?y=1'],
+    ['http://tumbaland.eu/', 'https://auth.tumbaland.eu'],
+    ['https://tumbaland.eu.evil.example/', 'https://auth.tumbaland.eu'],
+    ['https://eviltumbaland.eu/', 'https://auth.tumbaland.eu'],
+    ['javascript:alert(1)', 'https://auth.tumbaland.eu'],
+    ['/relative', 'https://auth.tumbaland.eu'],
+    [undefined, 'https://auth.tumbaland.eu']
+  ])('%s -> %s', (input, expected) => {
+    expect(safeRedirectTarget(input)).toBe(expected);
   });
 });
 

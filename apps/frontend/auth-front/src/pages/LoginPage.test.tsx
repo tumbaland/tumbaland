@@ -47,6 +47,19 @@ describe('LoginPage — unauthenticated flow', () => {
     expect((await screen.findAllByText(/failed to initialize google sign-in: boom/i)).length).toBeGreaterThan(0);
   });
 
+  it('says sign-in did not go through when the callback sent the person back with an error', async () => {
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: { ...originalLocation, search: '?error=signin_failed&redirect_uri=%2F' }
+    });
+
+    render(<LoginPage />);
+
+    expect((await screen.findAllByText(/sign-in did not go through/i)).length).toBeGreaterThan(0);
+    Object.defineProperty(window, 'location', { writable: true, value: originalLocation });
+  });
+
   it('uses the redirect_uri query param when starting Google Sign-In', async () => {
     const originalLocation = window.location;
     Object.defineProperty(window, 'location', {

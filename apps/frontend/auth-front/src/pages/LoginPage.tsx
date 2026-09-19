@@ -13,9 +13,15 @@ interface AuthenticatedUser {
   picture?: string;
 }
 
+/** Set by auth-service's /auth/google/callback when it could not sign the person in. */
+const initialError = (): string | null =>
+  new URLSearchParams(window.location.search).get('error') === 'signin_failed'
+    ? 'Sign-in did not go through. Please try again.'
+    : null;
+
 const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError);
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [initializationAttempted, setInitializationAttempted] = useState(false);
   const config = useConfig();

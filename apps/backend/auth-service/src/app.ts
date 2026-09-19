@@ -13,7 +13,9 @@ const app = createBaseApp({
     // cannot help there and does actively break it — Firefox sends
     // `Origin: null` after the login redirect, which failed the whitelist and
     // turned an approved consent into a 500.
-    bypassPaths: ['/oauth']
+    // Google's redirect-mode sign-in is the same kind of request: a form
+    // POST from accounts.google.com.
+    bypassPaths: ['/oauth', '/auth/google/']
   }
 });
 

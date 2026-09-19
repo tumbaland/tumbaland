@@ -1,6 +1,6 @@
-import { Router, Request, Response } from 'express';
+import express, { Router, Request, Response } from 'express';
 import { strictRateLimiter, validate, NotFoundError } from '@tumbaland/backend-core';
-import { validateToken, logout, verifyAuth, refreshToken, invalidateUserTokens } from '../controllers/authController';
+import { validateToken, googleRedirectCallback, logout, verifyAuth, refreshToken, invalidateUserTokens } from '../controllers/authController';
 import {
   cancelAccountDeletion,
   getProfile,
@@ -33,6 +33,9 @@ const router = Router();
 // Login route (public) – must remain public so user can obtain token.
 // Strictly rate-limited: unauthenticated token issuance is a brute-force target.
 router.post('/validate', strictRateLimiter, validate(validateTokenSchema), validateToken);
+
+// Google's redirect-mode sign-in posts the token here as a form, not JSON.
+router.post('/google/callback', strictRateLimiter, express.urlencoded({ extended: false }), googleRedirectCallback);
 
 // Refresh token route (protected)
 // authenticateSession on the three session routes: an access token that expired

@@ -1,9 +1,8 @@
 import { getGlobalConfig } from './config/ConfigProvider';
 import { logger } from '@tumbaland/frontend-core';
-import { authApi } from './services/authApi';
 
 interface GoogleAccountsId {
-  initialize(config: { client_id: string; callback: (response: { credential: string }) => void }): void;
+  initialize(config: { client_id: string; ux_mode: 'redirect'; login_uri: string; nonce: string }): void;
   renderButton(parent: HTMLElement, options: { theme: string; size: string }): void;
 }
 
@@ -14,31 +13,49 @@ declare global {
   }
 }
 
-interface ValidateResponse {
-  success: boolean;
-  message?: string;
+/** Ten minutes is plenty to get through Google's page. */
+const LOGIN_COOKIE_MAX_AGE_S = 600;
+
+/**
+ * The domain the login cookies go on, so auth-api (a sibling subdomain) gets
+ * them: `auth.tumbaland.eu` gives `tumbaland.eu`. Local hosts get none.
+ */
+function parentDomain(hostname: string): string | null {
+  if (hostname === 'localhost' || /^[\d.]+$/.test(hostname)) return null;
+  return hostname.split('.').slice(-2).join('.');
 }
 
-function handleCredentialResponse(response: { credential: string }, redirectUri: string) {
-  const idToken = response.credential;
+function setLoginCookie(name: string, value: string) {
+  const domain = parentDomain(window.location.hostname);
+  // SameSite=None because Google returns with a cross-site form POST, and
+  // Lax cookies are not sent on those.
+  document.cookie = [
+    `${name}=${encodeURIComponent(value)}`,
+    'path=/auth/google',
+    `max-age=${LOGIN_COOKIE_MAX_AGE_S}`,
+    'SameSite=None',
+    'Secure',
+    ...(domain ? [`domain=${domain}`] : [])
+  ].join('; ');
+}
 
-  logger.debug('Sending token to auth service', { authServiceUrl: getGlobalConfig().AUTH_SERVICE_URL });
+function randomNonce(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
 
-  authApi
-    .post<ValidateResponse>('/auth/validate', { idToken })
-    .then((data) => {
-      logger.debug('Auth service response', { success: data.success, message: data.message });
-      if (data.success) {
-        window.location.href = redirectUri; // Redirect back without JWT
-      } else {
-        logger.error('Validation failed', data.message);
-        alert('Authentication failed: ' + (data.message || 'Unknown error'));
-      }
-    })
-    .catch((err) => {
-      logger.error('Google credential exchange failed', err);
-      alert('Authentication error: ' + (err instanceof Error ? err.message : 'Unknown error'));
-    });
+/**
+ * Sign-in uses Google's redirect mode rather than its popup. On an iPhone
+ * home-screen app the popup opens in a separate Safari sheet with its own
+ * cookies, so the sign-in never reached the app. With redirects every step is
+ * a page load in the same window, and auth-service's /auth/google/callback
+ * sets the session and sends the person on to `redirectUri`.
+ */
+function prepareRedirectSignIn(redirectUri: string): { loginUri: string; nonce: string } {
+  const nonce = randomNonce();
+  setLoginCookie('login_nonce', nonce);
+  setLoginCookie('login_redirect', new URL(redirectUri, window.location.href).toString());
+  return { loginUri: `${getGlobalConfig().AUTH_SERVICE_URL}/auth/google/callback`, nonce };
 }
 
 export function initializeGoogleSignIn(clientId: string, redirectUri: string) {
@@ -99,9 +116,12 @@ export function initializeGoogleSignIn(clientId: string, redirectUri: string) {
     // Initialize Google Sign-In if not already done
     if (!googleInitialized) {
       try {
+        const { loginUri, nonce } = prepareRedirectSignIn(redirectUri);
         window.google.accounts.id.initialize({
           client_id: clientId,
-          callback: (response: { credential: string }) => handleCredentialResponse(response, redirectUri)
+          ux_mode: 'redirect',
+          login_uri: loginUri,
+          nonce
         });
         logger.debug('Google Sign-In initialized', { attempts: retryCount });
         googleInitialized = true;
