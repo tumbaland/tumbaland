@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.493](https://github.com/toomastahves/tumbaland/compare/app-v0.0.492...app-v0.0.493) (2026-09-19)
+
+### Features
+
+* increase account front test coverage ([ae2b434](https://github.com/toomastahves/tumbaland/commit/ae2b43426bb5a6ff1e0b171d1ad653a2a99cbf2b))
+
 ## [0.0.492](https://github.com/toomastahves/tumbaland/compare/app-v0.0.491...app-v0.0.492) (2026-09-19)
 
 ### Features
