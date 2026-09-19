@@ -10,14 +10,16 @@ interface OnThisDayProps {
 }
 
 /**
- * Tiles in the row, the count tile included.
+ * How many photos the row shows, by screen width.
  *
- * Every returned photo used to sit in a row that scrolled sideways. A busy day
- * became a wall of thumbnails, and the row's full width leaked into the page
- * layout on a phone, pushing the whole albums page past the screen edge. Four
- * fit a phone at a comfortable size; anything past that is a count.
+ * Every returned photo used to sit in a row that scrolled sideways, which on a
+ * phone pushed the whole page past the screen edge. The fix capped the row at
+ * four and spent the fourth slot on a `+5` counter — but a counter is a dead
+ * tile: it shows nothing, and it cannot be clicked. The extra photos are simply
+ * not drawn now, and a wider screen draws more of them, so resizing reveals
+ * them rather than trading one away to say they exist.
  */
-const MAX_TILES = 4;
+const TILES_BY_WIDTH = { xs: 4, sm: 6, md: 8 } as const;
 
 const formatFullDay = (day: string): string =>
   new Date(`${day}T00:00:00`).toLocaleDateString(undefined, {
@@ -26,8 +28,7 @@ const formatFullDay = (day: string): string =>
     day: 'numeric'
   });
 
-const yearsAgoLabel = (yearsAgo: number): string =>
-  yearsAgo === 1 ? 'a year ago' : `${yearsAgo} years ago`;
+const yearsAgoLabel = (yearsAgo: number): string => (yearsAgo === 1 ? 'a year ago' : `${yearsAgo} years ago`);
 
 /**
  * What the tooltip says about a photo. A photo remembered on its upload date
@@ -57,24 +58,29 @@ interface MemoryTilesProps {
 
 const MemoryTiles: React.FC<MemoryTilesProps> = ({ year, onSelect }) => {
   const theme = useTheme();
-  // photoCount is the truth about the day even when the server capped the list,
-  // so it decides whether a count tile is needed, not photos.length.
-  const needsCount = year.photoCount > Math.min(year.photos.length, MAX_TILES);
-  const shown = year.photos.slice(0, needsCount ? MAX_TILES - 1 : MAX_TILES);
-  const hidden = year.photoCount - shown.length;
+  // Every photo the server sent is rendered; CSS decides how many are on
+  // screen. Doing it the other way — slicing to a width read in JavaScript —
+  // would need a resize listener and would still be a frame behind.
+  const shown = year.photos.slice(0, TILES_BY_WIDTH.md);
 
   return (
     // Fixed columns sized from the card, never from the photos: the row can
-    // only ever be as wide as the space it is given.
+    // only ever be as wide as the space it is given. The tiles past the
+    // column count are hidden rather than dropped, so widening the window
+    // brings them in.
     <Box
       sx={{
         display: 'grid',
-        gridTemplateColumns: `repeat(${MAX_TILES}, minmax(0, 1fr))`,
+        gridTemplateColumns: {
+          xs: `repeat(${TILES_BY_WIDTH.xs}, minmax(0, 1fr))`,
+          sm: `repeat(${TILES_BY_WIDTH.sm}, minmax(0, 1fr))`,
+          md: `repeat(${TILES_BY_WIDTH.md}, minmax(0, 1fr))`
+        },
         gap: 1,
-        maxWidth: { xs: '100%', sm: 440 }
+        maxWidth: { xs: '100%', sm: 660 }
       }}
     >
-      {shown.map((photo) => {
+      {shown.map((photo, index) => {
         const src = photo.thumbnailSignedUrl || photo.signedUrl;
 
         return (
@@ -86,6 +92,11 @@ const MemoryTiles: React.FC<MemoryTilesProps> = ({ year, onSelect }) => {
               aria-label={describe(photo)}
               sx={{
                 ...tileSx,
+                display: {
+                  xs: index < TILES_BY_WIDTH.xs ? 'flex' : 'none',
+                  sm: index < TILES_BY_WIDTH.sm ? 'flex' : 'none',
+                  md: 'flex'
+                },
                 p: 0,
                 border: '1px solid',
                 borderColor: 'divider',
@@ -114,18 +125,6 @@ const MemoryTiles: React.FC<MemoryTilesProps> = ({ year, onSelect }) => {
           </Tooltip>
         );
       })}
-
-      {needsCount && (
-        <Box
-          role="img"
-          aria-label={`${hidden} more ${hidden === 1 ? 'photo' : 'photos'}`}
-          sx={{ ...tileSx, border: '1px dashed', borderColor: 'divider' }}
-        >
-          <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-            +{hidden}
-          </Typography>
-        </Box>
-      )}
     </Box>
   );
 };
@@ -168,11 +167,7 @@ const OnThisDay: React.FC<OnThisDayProps> = ({ groupId }) => {
     >
       <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mb: 1, flexWrap: 'wrap' }}>
         <HistoryIcon color="primary" sx={{ fontSize: { xs: 20, sm: 24 } }} />
-        <Typography
-          variant="h6"
-          component="h2"
-          sx={{ fontWeight: 'bold', fontSize: { xs: '1rem', sm: '1.25rem' } }}
-        >
+        <Typography variant="h6" component="h2" sx={{ fontWeight: 'bold', fontSize: { xs: '1rem', sm: '1.25rem' } }}>
           On this day
         </Typography>
         <Chip size="small" label={yearsAgoLabel(year.yearsAgo)} sx={{ fontWeight: 600 }} />
@@ -181,10 +176,7 @@ const OnThisDay: React.FC<OnThisDayProps> = ({ groupId }) => {
         </Typography>
       </Stack>
 
-      <MemoryTiles
-        year={year}
-        onSelect={(photo) => navigate(`/albums/${photo.albumId}/photos/${photo._id}`)}
-      />
+      <MemoryTiles year={year} onSelect={(photo) => navigate(`/albums/${photo.albumId}/photos/${photo._id}`)} />
     </Card>
   );
 };

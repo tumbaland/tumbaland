@@ -11,12 +11,7 @@ interface AlbumsGridProps {
   onMenuOpen: (event: React.MouseEvent<HTMLButtonElement>, album: Album) => void;
 }
 
-const AlbumsGrid: React.FC<AlbumsGridProps> = ({
-  albums,
-  onViewAlbum,
-  onDeleteAlbum,
-  onMenuOpen
-}) => {
+const AlbumsGrid: React.FC<AlbumsGridProps> = ({ albums, onViewAlbum, onDeleteAlbum, onMenuOpen }) => {
   return (
     <Box
       sx={{

@@ -1,19 +1,10 @@
 import { ReactNode } from 'react';
-import Container from '@mui/material/Container';
-import Layout from './Layout';
+import { AppLayout as SharedAppLayout } from '@tumbaland/components';
 import AuthHeader from './AuthHeader';
 
-interface AppLayoutProps {
-  children: ReactNode;
-}
-
-const AppLayout = ({ children }: AppLayoutProps) => {
-  return (
-    <Layout>
-      <AuthHeader />
-      <Container maxWidth="xl">{children}</Container>
-    </Layout>
-  );
-};
+/** Thin binding to the shared layout, kept so pages' import paths stay put. */
+const AppLayout = ({ children }: { children: ReactNode }) => (
+  <SharedAppLayout header={<AuthHeader />}>{children}</SharedAppLayout>
+);
 
 export default AppLayout;

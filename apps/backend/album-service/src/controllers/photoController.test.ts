@@ -90,7 +90,7 @@ describe('createPhoto', () => {
     expect(res.status).toHaveBeenCalledWith(201);
   });
 
-  it('records the stored bytes against the album\'s meter', async () => {
+  it("records the stored bytes against the album's meter", async () => {
     mockedAlbumFindById.mockResolvedValue({ userId: 'user-1', groupId: 'group-1' });
     mockedPhotoService.createPhoto.mockResolvedValue({ _id: 'p1', size: 5_000 } as any);
 
@@ -135,7 +135,10 @@ describe('tag endpoints', () => {
   it('falls back to matching all tags for an unrecognised tagMatch', async () => {
     mockedPhotoService.getPhotosByAlbum.mockResolvedValue({ photos: [], pagination: { page: 1, total: 0, pages: 0 } });
 
-    await getPhotosByAlbum(baseReq({ params: { albumId: 'a1' }, query: { tags: 'beach', tagMatch: 'weird' } }), mockRes());
+    await getPhotosByAlbum(
+      baseReq({ params: { albumId: 'a1' }, query: { tags: 'beach', tagMatch: 'weird' } }),
+      mockRes()
+    );
 
     expect(mockedPhotoService.getPhotosByAlbum).toHaveBeenCalledWith(
       'a1',
@@ -152,18 +155,13 @@ describe('tag endpoints', () => {
 
     expect(mockedPhotoService.getAlbumTags).toHaveBeenCalledWith('a1', { userId: 'user-1', userGroups: [] });
 
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { tags: [{ tag: 'beach', count: 2 }] } })
-    );
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: { tags: [{ tag: 'beach', count: 2 }] } }));
   });
 
   it('passes the bulk tag payload through to the service', async () => {
     mockedPhotoService.bulkUpdateTags.mockResolvedValue({ matched: 2, modified: 2, tags: [] });
 
-    await bulkUpdateTags(
-      baseReq({ body: { photoIds: ['p1', 'p2'], add: ['beach'], remove: ['old'] } }),
-      mockRes()
-    );
+    await bulkUpdateTags(baseReq({ body: { photoIds: ['p1', 'p2'], add: ['beach'], remove: ['old'] } }), mockRes());
 
     // Every by-id and bulk route now carries the caller down to the query. A
     // photo carries no owner of its own, so without this any signed-in caller
@@ -185,13 +183,17 @@ describe('getPhotosByAlbum', () => {
 
     await getPhotosByAlbum(baseReq({ params: { albumId: 'a1' }, query: { page: '2', limit: '5' } }), res);
 
-    expect(mockedPhotoService.getPhotosByAlbum).toHaveBeenCalledWith('a1', {
-      page: 2,
-      limit: 5,
-      search: undefined,
-      tags: undefined,
-      tagMatch: 'all'
-    }, { userId: 'user-1', userGroups: [] });
+    expect(mockedPhotoService.getPhotosByAlbum).toHaveBeenCalledWith(
+      'a1',
+      {
+        page: 2,
+        limit: 5,
+        search: undefined,
+        tags: undefined,
+        tagMatch: 'all'
+      },
+      { userId: 'user-1', userGroups: [] }
+    );
   });
 });
 
@@ -216,11 +218,10 @@ describe('updatePhoto', () => {
 
     await updatePhoto(baseReq({ params: { id: 'p1' }, body: { title: 'New' } }), res);
 
-    expect(mockedPhotoService.updatePhoto).toHaveBeenCalledWith(
-      'p1',
-      expect.objectContaining({ title: 'New' }),
-      { userId: 'user-1', userGroups: [] }
-    );
+    expect(mockedPhotoService.updatePhoto).toHaveBeenCalledWith('p1', expect.objectContaining({ title: 'New' }), {
+      userId: 'user-1',
+      userGroups: []
+    });
   });
 });
 
@@ -261,18 +262,18 @@ describe('getUploadSignedUrlRequest', () => {
   it('throws UnauthorizedError when there is no authenticated user', async () => {
     const res = mockRes();
 
-    await expect(
-      getUploadSignedUrlRequest(baseReq({ user: undefined, body: { albumId: 'a1' } }), res)
-    ).rejects.toThrow('Access token required');
+    await expect(getUploadSignedUrlRequest(baseReq({ user: undefined, body: { albumId: 'a1' } }), res)).rejects.toThrow(
+      'Access token required'
+    );
   });
 
   it('throws NotFoundError when the album does not exist', async () => {
     mockedAlbumFindById.mockResolvedValue(null);
     const res = mockRes();
 
-    await expect(
-      getUploadSignedUrlRequest(baseReq({ body: { albumId: 'missing' } }), res)
-    ).rejects.toThrow('Album not found');
+    await expect(getUploadSignedUrlRequest(baseReq({ body: { albumId: 'missing' } }), res)).rejects.toThrow(
+      'Album not found'
+    );
   });
 
   it('generates a fileId and returns a signed upload URL', async () => {
@@ -312,7 +313,9 @@ describe('getUploadSignedUrlRequest', () => {
 
   it('issues no URL when the quota gate refuses — the bytes are never written', async () => {
     mockedAlbumFindById.mockResolvedValue({ userId: 'user-1' });
-    mockedHeadroom.mockRejectedValueOnce(new PaymentRequiredError('Limit reached for storageBytes', { code: 'QUOTA_EXCEEDED', meter: 'storageBytes' }));
+    mockedHeadroom.mockRejectedValueOnce(
+      new PaymentRequiredError('Limit reached for storageBytes', { code: 'QUOTA_EXCEEDED', meter: 'storageBytes' })
+    );
 
     await expect(
       getUploadSignedUrlRequest(
@@ -373,7 +376,7 @@ describe('getMemories', () => {
 
   beforeEach(() => mockedMemoriesService.getMemories.mockResolvedValue(emptyResult));
 
-  it('passes the scope and the caller\'s groups through', async () => {
+  it("passes the scope and the caller's groups through", async () => {
     const req = baseReq({ query: { groupId: 'g1' }, userGroups: ['g1'] } as Partial<Request>);
     const res = mockRes();
 

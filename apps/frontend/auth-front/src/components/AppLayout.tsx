@@ -1,25 +1,12 @@
 import { ReactNode } from 'react';
-import Container from '@mui/material/Container';
-import { Box } from '@mui/material';
+import { AppLayout as SharedAppLayout } from '@tumbaland/components';
 
-interface AppLayoutProps {
-  children: ReactNode;
-}
-
-const AppLayout = ({ children }: AppLayoutProps) => {
-  return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        background: 'radial-gradient(circle at 50% 0%, #f0f4ff 0%, #e0e7ff 50%, #f8fafc 100%)',
-        fontFamily: '"Inter", "Roboto", sans-serif'
-      }}
-    >
-      <Container maxWidth="xl" sx={{ height: '100%', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        {children}
-      </Container>
-    </Box>
-  );
-};
+/**
+ * Sign-in is one centred card, so it caps narrower than the modules do and
+ * keeps its own full-height column for the centring.
+ */
+const AppLayout = ({ children }: { children: ReactNode }) => (
+  <SharedAppLayout maxWidth="sm">{children}</SharedAppLayout>
+);
 
 export default AppLayout;

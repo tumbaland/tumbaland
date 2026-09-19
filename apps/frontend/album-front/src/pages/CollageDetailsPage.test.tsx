@@ -21,7 +21,10 @@ vi.mock('../hooks/useCollage', () => ({
 // this page's own callback-wiring can still be verified without the real
 // interactive canvas.
 vi.mock('../components/collage/CollageStage', () => ({
-  default: (props: { onEditItem?: (id: string) => void; onDropPhoto?: (photoId: string, x: number, y: number) => void }) => (
+  default: (props: {
+    onEditItem?: (id: string) => void;
+    onDropPhoto?: (photoId: string, x: number, y: number) => void;
+  }) => (
     <div>
       collage stage
       <button onClick={() => props.onDropPhoto?.('photo-1', 10, 20)}>simulate drop photo-1</button>

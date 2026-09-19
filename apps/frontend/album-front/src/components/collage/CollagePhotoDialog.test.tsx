@@ -29,13 +29,17 @@ it('shows "Use collage setting" when frame is undefined (inherit)', () => {
 });
 
 it('shows "Always framed" when frame is explicitly true', () => {
-  render(<CollagePhotoDialog open photo={{ ...photo, frame: true }} onClose={vi.fn()} onSave={vi.fn()} onDelete={vi.fn()} />);
+  render(
+    <CollagePhotoDialog open photo={{ ...photo, frame: true }} onClose={vi.fn()} onSave={vi.fn()} onDelete={vi.fn()} />
+  );
 
   expect(screen.getByText('Always framed')).toBeInTheDocument();
 });
 
 it('shows "Never framed" when frame is explicitly false', () => {
-  render(<CollagePhotoDialog open photo={{ ...photo, frame: false }} onClose={vi.fn()} onSave={vi.fn()} onDelete={vi.fn()} />);
+  render(
+    <CollagePhotoDialog open photo={{ ...photo, frame: false }} onClose={vi.fn()} onSave={vi.fn()} onDelete={vi.fn()} />
+  );
 
   expect(screen.getByText('Never framed')).toBeInTheDocument();
 });

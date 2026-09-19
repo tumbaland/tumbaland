@@ -33,7 +33,15 @@ function renderViewer(overrides: Partial<React.ComponentProps<typeof PhotoViewer
 
 it('renders nothing when there is no selected photo', () => {
   const { container } = render(
-    <PhotoViewer photos={photos} selectedPhoto={null} selectedPhotoIndex={0} open onClose={vi.fn()} onPrevious={vi.fn()} onNext={vi.fn()} />
+    <PhotoViewer
+      photos={photos}
+      selectedPhoto={null}
+      selectedPhotoIndex={0}
+      open
+      onClose={vi.fn()}
+      onPrevious={vi.fn()}
+      onNext={vi.fn()}
+    />
   );
   expect(container).toBeEmptyDOMElement();
 });
@@ -57,7 +65,15 @@ it('hides Previous on the first photo and Next on the last', () => {
   expect(screen.queryByRole('button', { name: /previous/i })).not.toBeInTheDocument();
 
   rerender(
-    <PhotoViewer photos={photos} selectedPhoto={photos[2]} selectedPhotoIndex={2} open onClose={vi.fn()} onPrevious={vi.fn()} onNext={vi.fn()} />
+    <PhotoViewer
+      photos={photos}
+      selectedPhoto={photos[2]}
+      selectedPhotoIndex={2}
+      open
+      onClose={vi.fn()}
+      onPrevious={vi.fn()}
+      onNext={vi.fn()}
+    />
   );
   // Buttons have no accessible name, so just count icon buttons via test id instead.
   expect(document.querySelector('[data-testid="NavigateNextIcon"]')).not.toBeInTheDocument();

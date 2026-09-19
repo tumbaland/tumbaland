@@ -12,7 +12,7 @@ import Typography from '@mui/material/Typography';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { getUserApps, isRouteActive } from '../config/apps';
 import { authService } from '../services/authService';
-import { ink } from '../theme/tokens';
+import { ink } from '@tumbaland/components';
 import { User } from '../types';
 
 interface AccountMenuProps {

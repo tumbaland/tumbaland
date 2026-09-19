@@ -104,9 +104,7 @@ const CollagePhotoDialog: React.FC<CollagePhotoDialogProps> = ({
     // Reshape the box to the crop only when the crop or orientation actually
     // changed, so editing just a caption never moves the photo on the canvas.
     const height =
-      changed && photo && naturalSize
-        ? heightForCrop(photo.width, naturalSize, nextCrop, orientation)
-        : undefined;
+      changed && photo && naturalSize ? heightForCrop(photo.width, naturalSize, nextCrop, orientation) : undefined;
 
     onSave({
       caption: caption.trim(),
@@ -169,11 +167,7 @@ const CollagePhotoDialog: React.FC<CollagePhotoDialogProps> = ({
               <Typography variant="caption" sx={{ color: 'text.secondary', flex: 1 }}>
                 {orientation ? `Turned ${orientation}°` : 'Upright'}
               </Typography>
-              <Button
-                size="small"
-                onClick={() => turnBy(-orientationTurns(orientation))}
-                disabled={!orientation}
-              >
+              <Button size="small" onClick={() => turnBy(-orientationTurns(orientation))} disabled={!orientation}>
                 Reset
               </Button>
             </Box>
@@ -224,7 +218,13 @@ const CollagePhotoDialog: React.FC<CollagePhotoDialogProps> = ({
         </TextField>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={() => { onDelete(); onClose(); }} color="error">
+        <Button
+          onClick={() => {
+            onDelete();
+            onClose();
+          }}
+          color="error"
+        >
           Remove from collage
         </Button>
         <Box sx={{ flex: 1 }} />

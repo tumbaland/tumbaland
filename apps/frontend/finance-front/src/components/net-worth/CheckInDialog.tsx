@@ -94,10 +94,7 @@ const CheckInDialog: React.FC<CheckInDialogProps> = ({
     return result;
   }, [form]);
 
-  const kindOf = useMemo(
-    () => new Map(assetClasses.map((ac) => [ac._id, ac.kind || 'asset'])),
-    [assetClasses]
-  );
+  const kindOf = useMemo(() => new Map(assetClasses.map((ac) => [ac._id, ac.kind || 'asset'])), [assetClasses]);
 
   // Liability values are entered as positive magnitudes and subtracted here,
   // so the running total shown while typing is the real net worth.
@@ -154,8 +151,8 @@ const CheckInDialog: React.FC<CheckInDialogProps> = ({
       <DialogContent>
         {!editMonth && (
           <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-            Enter the current value of each asset class. Values are prefilled from your last
-            check-in — just adjust what changed. Leave a row empty to skip it.
+            Enter the current value of each asset class. Values are prefilled from your last check-in — just adjust what
+            changed. Leave a row empty to skip it.
           </Typography>
         )}
         <TextField
@@ -178,10 +175,10 @@ const CheckInDialog: React.FC<CheckInDialogProps> = ({
               <Box key={ac._id} sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                   <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: ac.color || '#667eea' }} />
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{ac.name}</Typography>
-                  {ac.kind === 'liability' && (
-                    <Chip size="small" label="owed" color="warning" variant="outlined" />
-                  )}
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {ac.name}
+                  </Typography>
+                  {ac.kind === 'liability' && <Chip size="small" label="owed" color="warning" variant="outlined" />}
                 </Box>
                 <Box sx={{ display: 'flex', gap: 1.5 }}>
                   <TextField
@@ -227,71 +224,90 @@ const CheckInDialog: React.FC<CheckInDialogProps> = ({
             </Box>
           </Box>
         ) : (
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Asset class</TableCell>
-                <TableCell align="right" sx={{ width: 140 }}>Value (€)</TableCell>
-                <TableCell align="right" sx={{ width: 140 }}>Total gain (€)</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {orderedRows.map((ac) => (
-                <TableRow key={ac._id}>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: ac.color || '#667eea' }} />
-                      {ac.name}
-                      {ac.kind === 'liability' && (
-                        <Chip size="small" label="owed" color="warning" variant="outlined" />
-                      )}
-                    </Box>
+          /* The dialog is near full-width on a phone and these columns are not,
+              so the row scrolls sideways on its own rather than taking the page
+              with it. */
+          <Box sx={{ overflowX: 'auto' }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Asset class</TableCell>
+                  <TableCell align="right" sx={{ width: 140 }}>
+                    Value (€)
                   </TableCell>
-                  <TableCell align="right">
-                    <TextField
-                      value={form.get(ac._id)?.value ?? ''}
-                      onChange={(e) => setField(ac._id, 'value', e.target.value)}
-                      size="small"
-                      placeholder="—"
-                      slotProps={{ htmlInput: { inputMode: 'decimal', style: { textAlign: 'right' } } }}
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    {ac.kind !== 'liability' && (
-                      <TextField
-                        value={form.get(ac._id)?.gain ?? ''}
-                        onChange={(e) => setField(ac._id, 'gain', e.target.value)}
-                        size="small"
-                        placeholder="0"
-                        slotProps={{ htmlInput: { inputMode: 'decimal', style: { textAlign: 'right' } } }}
-                      />
-                    )}
+                  <TableCell align="right" sx={{ width: 140 }}>
+                    Total gain (€)
                   </TableCell>
                 </TableRow>
-              ))}
-              {liabilities > 0 && (
-                <>
-                  <TableRow>
-                    <TableCell sx={{ border: 0, pb: 0 }}>Assets</TableCell>
-                    <TableCell align="right" sx={{ border: 0, pb: 0 }}>{formatCurrency(assets)}</TableCell>
-                    <TableCell sx={{ border: 0 }} />
+              </TableHead>
+              <TableBody>
+                {orderedRows.map((ac) => (
+                  <TableRow key={ac._id}>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: ac.color || '#667eea' }} />
+                        {ac.name}
+                        {ac.kind === 'liability' && (
+                          <Chip size="small" label="owed" color="warning" variant="outlined" />
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell align="right">
+                      <TextField
+                        value={form.get(ac._id)?.value ?? ''}
+                        onChange={(e) => setField(ac._id, 'value', e.target.value)}
+                        size="small"
+                        placeholder="—"
+                        slotProps={{ htmlInput: { inputMode: 'decimal', style: { textAlign: 'right' } } }}
+                      />
+                    </TableCell>
+                    <TableCell align="right">
+                      {ac.kind !== 'liability' && (
+                        <TextField
+                          value={form.get(ac._id)?.gain ?? ''}
+                          onChange={(e) => setField(ac._id, 'gain', e.target.value)}
+                          size="small"
+                          placeholder="0"
+                          slotProps={{ htmlInput: { inputMode: 'decimal', style: { textAlign: 'right' } } }}
+                        />
+                      )}
+                    </TableCell>
                   </TableRow>
-                  <TableRow>
-                    <TableCell sx={{ border: 0, pt: 0 }}>Liabilities</TableCell>
-                    <TableCell align="right" sx={{ border: 0, pt: 0 }}>−{formatCurrency(liabilities)}</TableCell>
-                    <TableCell sx={{ border: 0 }} />
-                  </TableRow>
-                </>
-              )}
-              <TableRow>
-                <TableCell sx={{ fontWeight: 700 }}>Net worth</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 700 }}>{formatCurrency(total)}</TableCell>
-                <TableCell />
-              </TableRow>
-            </TableBody>
-          </Table>
+                ))}
+                {liabilities > 0 && (
+                  <>
+                    <TableRow>
+                      <TableCell sx={{ border: 0, pb: 0 }}>Assets</TableCell>
+                      <TableCell align="right" sx={{ border: 0, pb: 0 }}>
+                        {formatCurrency(assets)}
+                      </TableCell>
+                      <TableCell sx={{ border: 0 }} />
+                    </TableRow>
+                    <TableRow>
+                      <TableCell sx={{ border: 0, pt: 0 }}>Liabilities</TableCell>
+                      <TableCell align="right" sx={{ border: 0, pt: 0 }}>
+                        −{formatCurrency(liabilities)}
+                      </TableCell>
+                      <TableCell sx={{ border: 0 }} />
+                    </TableRow>
+                  </>
+                )}
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 700 }}>Net worth</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 700 }}>
+                    {formatCurrency(total)}
+                  </TableCell>
+                  <TableCell />
+                </TableRow>
+              </TableBody>
+            </Table>
+          </Box>
         )}
-        {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+        {error && (
+          <Alert severity="error" sx={{ mt: 2 }}>
+            {error}
+          </Alert>
+        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>

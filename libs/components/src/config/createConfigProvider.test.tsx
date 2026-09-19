@@ -1,5 +1,7 @@
 import { render, renderHook, screen, waitFor } from '@testing-library/react';
+import { useTheme } from '@mui/material/styles';
 import { createConfigProvider } from './createConfigProvider';
+import { brand } from '../theme/tokens';
 
 const { initMonitoringMock, initWebVitalsMock } = vi.hoisted(() => ({
   initMonitoringMock: vi.fn(),
@@ -207,23 +209,36 @@ describe('createConfigProvider (production mode)', () => {
     expect(() => getGlobalConfig()).toThrow('Configuration not initialized. Make sure ConfigProvider is mounted.');
   });
 
-  it('renders without crashing when themed is true', async () => {
+  it('renders its children under the shared theme, with no opt-in', async () => {
+    // The theme used to be an option three of the eight fronts remembered to
+    // pass. The other five rendered MUI's factory blue and Roboto.
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, json: async () => ({}) });
     const { ConfigProvider } = createConfigProvider<TestConfig>({
       serviceName: 'test-service',
       isDev: false,
       mode: 'production',
-      getDevConfig: () => ({}),
-      themed: true
+      getDevConfig: () => ({})
     });
+
+    // Reading the theme a child actually receives, rather than a rendered
+    // colour: jsdom does not resolve emotion's classes into computed styles.
+    const ThemeProbe = () => {
+      const theme = useTheme();
+      return (
+        <div data-testid="child">
+          {theme.palette.primary.main}|{String(theme.typography.fontFamily).slice(0, 7)}
+        </div>
+      );
+    };
 
     render(
       <ConfigProvider>
-        <div data-testid="child" />
+        <ThemeProbe />
       </ConfigProvider>
     );
 
-    await waitFor(() => expect(screen.getByTestId('child')).toBeInTheDocument());
+    // The brand pink and Inter, not MUI's #1976d2 and Roboto.
+    await waitFor(() => expect(screen.getByTestId('child')).toHaveTextContent(`${brand.pinkInk}|"Inter"`));
   });
 });
 

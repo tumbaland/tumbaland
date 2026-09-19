@@ -2,7 +2,7 @@ import { Box, ButtonBase, Typography } from '@mui/material';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { HOME_MODULES } from './modules';
 import { SectionLabel } from './SectionLabel';
-import { glass, ink } from '../../theme/tokens';
+import { glass, ink } from '@tumbaland/components';
 
 interface ModuleListProps {
   onOpen: (route: string) => void;

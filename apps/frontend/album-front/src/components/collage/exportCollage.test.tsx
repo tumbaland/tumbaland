@@ -154,7 +154,9 @@ it('draws each line of a multi-line text item', async () => {
   const docWithText: CollageDoc = {
     ...baseDoc,
     photos: [],
-    texts: [{ id: 't1', text: 'Line one\nLine two', x: 0, y: 0, width: 200, height: 60, fontSize: 20, color: '#e91e63' }]
+    texts: [
+      { id: 't1', text: 'Line one\nLine two', x: 0, y: 0, width: 200, height: 60, fontSize: 20, color: '#e91e63' }
+    ]
   };
 
   await exportCollageToPng(docWithText, resolvePhoto);

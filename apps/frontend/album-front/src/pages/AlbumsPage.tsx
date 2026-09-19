@@ -17,10 +17,7 @@ import {
   Tooltip,
   Typography
 } from '@mui/material';
-import {
-  Edit as EditIcon,
-  Delete as DeleteIcon
-} from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router';
 import { useAlbums } from '../hooks/useAlbums';
 import EditAlbumDialog from '../components/EditAlbumDialog';
@@ -30,7 +27,6 @@ import CreateAlbumDialog from '../components/CreateAlbumDialog';
 import AlbumsGrid from '../components/AlbumsGrid';
 import AlbumsEmptyState from '../components/AlbumsEmptyState';
 import AlbumsHeader from '../components/AlbumsHeader';
-import OnThisDay from '../components/OnThisDay';
 
 const AlbumsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -76,7 +72,12 @@ const AlbumsPage: React.FC = () => {
     page
   });
 
-  const handleCreateAlbum = async (albumData: { name: string; description: string; tags: string[]; groupId?: string }) => {
+  const handleCreateAlbum = async (albumData: {
+    name: string;
+    description: string;
+    tags: string[];
+    groupId?: string;
+  }) => {
     await createAlbum(albumData);
   };
 
@@ -177,9 +178,7 @@ const AlbumsPage: React.FC = () => {
         loading={loading || isFetching}
       />
 
-      {isFetching && !loading && (
-        <LinearProgress sx={{ mb: 2 }} />
-      )}
+      {isFetching && !loading && <LinearProgress sx={{ mb: 2 }} />}
 
       {albumsError && (
         <Alert severity="error" sx={{ mb: { xs: 2, sm: 4 } }}>
@@ -187,20 +186,19 @@ const AlbumsPage: React.FC = () => {
         </Alert>
       )}
 
-      {/* Photos from this day in earlier years; renders nothing on a day with
-          no history, so it costs the page nothing when there is none. */}
-      <OnThisDay groupId={tenantGroupId} />
-
       {albums.length === 0 ? (
-        <AlbumsEmptyState
-          searchTerm={searchTerm}
-          onCreateAlbum={() => setShowCreateDialog(true)}
-        />
+        <AlbumsEmptyState searchTerm={searchTerm} onCreateAlbum={() => setShowCreateDialog(true)} />
       ) : (
         <>
           <Stack
             direction="row"
-            sx={{ alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1, mb: { xs: 1.5, sm: 3 } }}
+            sx={{
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 1,
+              mb: { xs: 1.5, sm: 3 }
+            }}
           >
             <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
               {pagination.total} {pagination.total === 1 ? 'album' : 'albums'}

@@ -18,6 +18,7 @@ import {
 } from '@mui/icons-material';
 import { Photo, Album, GridDensity } from '../types';
 import PhotoCard from './PhotoCard';
+import { gradient } from '@tumbaland/components';
 
 const DENSITY_STORAGE_KEY = 'tumbaland:photoGridDensity';
 const DENSITIES: GridDensity[] = ['large', 'comfortable', 'compact', 'tiny'];
@@ -107,10 +108,7 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
     window.localStorage.setItem(DENSITY_STORAGE_KEY, density);
   }, [density]);
 
-  const handleDensityChange = (
-    _event: React.MouseEvent<HTMLElement>,
-    value: GridDensity | null
-  ) => {
+  const handleDensityChange = (_event: React.MouseEvent<HTMLElement>, value: GridDensity | null) => {
     if (value) setDensity(value);
   };
 
@@ -137,7 +135,7 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
     return (
       <Box
         sx={{
-          textAlign: "center",
+          textAlign: 'center',
           py: 10,
           background: 'rgba(255, 255, 255, 0.4)',
           backdropFilter: 'blur(12px)',
@@ -147,29 +145,32 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
           mx: 'auto',
           maxWidth: 600,
           mt: 4
-        }}>
-        <CloudUploadIcon sx={{ fontSize: 80, color: 'rgba(99, 102, 241, 0.3)', mb: 3 }} />
+        }}
+      >
+        <CloudUploadIcon sx={{ fontSize: 80, color: 'rgba(168, 45, 190, 0.3)', mb: 3 }} />
         <Typography
           variant="h5"
           gutterBottom
           sx={{
-            color: "text.primary",
+            color: 'text.primary',
             fontWeight: 600
-          }}>
+          }}
+        >
           {searchTerm ? 'No photos found' : 'No photos yet'}
         </Typography>
         <Typography
           variant="body1"
           sx={{
-            color: "text.secondary",
+            color: 'text.secondary',
             mb: 4
-          }}>
+          }}
+        >
           {searchTerm ? 'Try adjusting your search terms' : 'Upload your first photos to get started'}
         </Typography>
         {!searchTerm && (
-          <Button 
-            variant="contained" 
-            startIcon={<CloudUploadIcon />} 
+          <Button
+            variant="contained"
+            startIcon={<CloudUploadIcon />}
             onClick={onUploadPhotos}
             sx={{
               borderRadius: 3,
@@ -177,10 +178,10 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
               fontWeight: 600,
               px: 4,
               py: 1.5,
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+              background: gradient.brand,
+              boxShadow: '0 4px 12px rgba(168, 45, 190, 0.3)',
               '&:hover': {
-                boxShadow: '0 6px 16px rgba(99, 102, 241, 0.4)'
+                boxShadow: '0 6px 16px rgba(168, 45, 190, 0.4)'
               }
             }}
           >

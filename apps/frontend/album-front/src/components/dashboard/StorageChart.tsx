@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  LinearProgress
-} from '@mui/material';
+import { Card, CardContent, Typography, Box, LinearProgress } from '@mui/material';
 import { Storage as StorageIcon } from '@mui/icons-material';
 import { UsageMeter } from '@tumbaland/components';
 import { formatBytes } from '../../utils/formatBytes';

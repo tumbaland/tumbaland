@@ -2,13 +2,7 @@ import mongoose, { HydratedDocument } from 'mongoose';
 import Photo, { IPhoto } from '../models/Photo';
 import Album from '../models/Album';
 import { canAccessResource, ConflictError, logger, NotFoundError } from '@tumbaland/backend-core';
-import {
-  deleteFile,
-  getPhotoSignedUrl,
-  getPhotoSignedUrlsBatch,
-  getFile,
-  SignedUrlData
-} from './fileServiceClient';
+import { deleteFile, getPhotoSignedUrl, getPhotoSignedUrlsBatch, getFile, SignedUrlData } from './fileServiceClient';
 import { generateThumbnailFromBuffer, isSupportedImageFormat } from './thumbnailService';
 
 export interface CreatePhotoInput {
@@ -116,8 +110,7 @@ const canReachAlbum = (
   album: { userId: string; groupId?: string; isPublic?: boolean },
   { userId, userGroups }: PhotoAccessContext,
   access: PhotoAccess
-): boolean =>
-  canAccessResource(userId, album.userId, album.groupId, userGroups, access === 'read' && !!album.isPublic);
+): boolean => canAccessResource(userId, album.userId, album.groupId, userGroups, access === 'read' && !!album.isPublic);
 
 const reachableAlbumIds = async (
   albumIds: string[],
@@ -128,9 +121,7 @@ const reachableAlbumIds = async (
     .select('_id userId groupId isPublic')
     .lean();
 
-  return new Set(
-    albums.filter((album) => canReachAlbum(album, context, access)).map((album) => String(album._id))
-  );
+  return new Set(albums.filter((album) => canReachAlbum(album, context, access)).map((album) => String(album._id)));
 };
 
 /** Throws unless the caller may reach the album this photo sits in. */
@@ -230,14 +221,7 @@ class PhotoService {
 
     // Generate thumbnail asynchronously for supported image formats (don't block photo creation)
     if (isSupportedImageFormat(mimetype)) {
-      this.generateThumbnailAsync(
-        savedPhoto._id.toString(),
-        actualMinioFileId,
-        originalName,
-        userId,
-        albumId,
-        groupId
-      );
+      this.generateThumbnailAsync(savedPhoto._id.toString(), actualMinioFileId, originalName, userId, albumId, groupId);
     }
 
     // If this is the first photo in the album and no cover is set, make it the cover
@@ -345,11 +329,7 @@ class PhotoService {
   /**
    * Update photo metadata
    */
-  async updatePhoto(
-    photoId: string,
-    input: UpdatePhotoInput,
-    context: PhotoAccessContext
-  ): Promise<IPhoto | null> {
+  async updatePhoto(photoId: string, input: UpdatePhotoInput, context: PhotoAccessContext): Promise<IPhoto | null> {
     const photo = await Photo.findById(photoId);
     if (!photo) {
       throw new NotFoundError('Photo not found');
@@ -422,7 +402,9 @@ class PhotoService {
     // Narrowed to photos the caller can actually reach, rather than checked
     // afterwards: an unreachable id is dropped silently, so a caller learns
     // nothing about whether it existed.
-    const candidates = await Photo.find({ _id: { $in: requested } }).select('_id albumId').lean();
+    const candidates = await Photo.find({ _id: { $in: requested } })
+      .select('_id albumId')
+      .lean();
     const reachable = await reachableAlbumIds(
       [...new Set(candidates.map((photo) => String(photo.albumId)))],
       context,
@@ -522,13 +504,7 @@ class PhotoService {
         const imageBuffer = await getFile(minioFileId);
 
         // Generate thumbnail from the buffer
-        const thumbnailResult = await generateThumbnailFromBuffer(
-          imageBuffer,
-          originalName,
-          userId,
-          albumId,
-          groupId
-        );
+        const thumbnailResult = await generateThumbnailFromBuffer(imageBuffer, originalName, userId, albumId, groupId);
 
         // Update photo with thumbnail file ID returned from generation
         await Photo.findByIdAndUpdate(photoId, {

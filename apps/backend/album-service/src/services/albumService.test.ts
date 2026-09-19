@@ -178,14 +178,18 @@ describe('setCoverPhoto', () => {
   it('throws NotFoundError when the album does not exist', async () => {
     mockedFindById.mockResolvedValue(null);
 
-    await expect(albumService.setCoverPhoto('album-1', 'photo-1', ctx())).rejects.toMatchObject({ name: 'NotFoundError' });
+    await expect(albumService.setCoverPhoto('album-1', 'photo-1', ctx())).rejects.toMatchObject({
+      name: 'NotFoundError'
+    });
   });
 
   it('throws NotFoundError when the photo does not belong to the album', async () => {
     mockedFindById.mockResolvedValue({ _id: 'album-1', userId: 'user-1', save: jest.fn() });
     mockedPhotoFindOne.mockResolvedValue(null);
 
-    await expect(albumService.setCoverPhoto('album-1', 'photo-1', ctx())).rejects.toMatchObject({ name: 'NotFoundError' });
+    await expect(albumService.setCoverPhoto('album-1', 'photo-1', ctx())).rejects.toMatchObject({
+      name: 'NotFoundError'
+    });
     expect(mockedPhotoFindOne).toHaveBeenCalledWith({ _id: 'photo-1', albumId: 'album-1' });
   });
 
@@ -206,9 +210,9 @@ describe('changing the cover of someone else’s album', () => {
     const album: any = { _id: 'album-1', userId: 'owner', isPublic: true, save: jest.fn() };
     mockedFindById.mockResolvedValue(album);
 
-    await expect(
-      albumService.setCoverPhoto('album-1', 'photo-1', ctx({ userId: 'stranger' }))
-    ).rejects.toMatchObject({ name: 'ForbiddenError' });
+    await expect(albumService.setCoverPhoto('album-1', 'photo-1', ctx({ userId: 'stranger' }))).rejects.toMatchObject({
+      name: 'ForbiddenError'
+    });
     expect(album.save).not.toHaveBeenCalled();
   });
 
@@ -231,7 +235,12 @@ describe('removeCoverPhoto', () => {
   });
 
   it('clears the cover photo', async () => {
-    const album: any = { _id: 'album-1', userId: 'user-1', coverPhotoId: 'photo-1', save: jest.fn().mockResolvedValue(undefined) };
+    const album: any = {
+      _id: 'album-1',
+      userId: 'user-1',
+      coverPhotoId: 'photo-1',
+      save: jest.fn().mockResolvedValue(undefined)
+    };
     mockedFindById.mockResolvedValue(album);
 
     await albumService.removeCoverPhoto('album-1', ctx());
@@ -267,7 +276,9 @@ function albumsChainable(result: unknown[]) {
 
 describe('getAlbums', () => {
   it('scopes to personal albums (no groupId) by default', async () => {
-    mockedFind.mockReturnValueOnce(albumsChainable([{ _id: 'a1', coverPhotoId: undefined, photoCount: 0, totalSize: 0 }]));
+    mockedFind.mockReturnValueOnce(
+      albumsChainable([{ _id: 'a1', coverPhotoId: undefined, photoCount: 0, totalSize: 0 }])
+    );
     mockedCountDocuments.mockResolvedValueOnce(1);
 
     const result = await albumService.getAlbums({}, ctx());
@@ -323,7 +334,9 @@ describe('getAlbums', () => {
     mockedPhotoFind.mockResolvedValue([
       { id: 'p1', minioFileId: 'file-1', mimetype: 'image/jpeg', toObject: () => ({ id: 'p1' }) }
     ]);
-    mockedGetPhotoSignedUrlsBatch.mockResolvedValue({ 'file-1': { signedUrl: 'https://x', expiresAt: 't', expiresInMinutes: 60 } });
+    mockedGetPhotoSignedUrlsBatch.mockResolvedValue({
+      'file-1': { signedUrl: 'https://x', expiresAt: 't', expiresInMinutes: 60 }
+    });
 
     const result = await albumService.getAlbums({}, ctx());
 

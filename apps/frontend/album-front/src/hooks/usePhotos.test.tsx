@@ -40,7 +40,10 @@ it('fetches photos for an album, normalizing away undefined params', async () =>
 });
 
 it('does not query when albumId is empty', () => {
-  (photoService.loadPhotosWithThumbnails as ReturnType<typeof vi.fn>).mockResolvedValue({ photos: [], pagination: { page: 1, limit: 20, total: 0, pages: 0 } });
+  (photoService.loadPhotosWithThumbnails as ReturnType<typeof vi.fn>).mockResolvedValue({
+    photos: [],
+    pagination: { page: 1, limit: 20, total: 0, pages: 0 }
+  });
   const { Wrapper } = wrapper();
 
   renderHook(() => usePhotos(''), { wrapper: Wrapper });

@@ -38,10 +38,7 @@ import {
   useMoveCategoryRule,
   useApplyCategoryRules
 } from '../../hooks/useCategoryRules';
-import {
-  useStatementSettings,
-  useUpdateStatementSettings
-} from '../../hooks/useStatementSettings';
+import { useStatementSettings, useUpdateStatementSettings } from '../../hooks/useStatementSettings';
 import { CategoryRule } from '../../services/categoryRuleService';
 import { TransactionType } from '../../services/cashflowService';
 
@@ -176,9 +173,8 @@ const CategoryRulesDialog: React.FC<CategoryRulesDialogProps> = ({
             Your name on statements
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1.5 }}>
-            Moving money between two of your own accounts is not income or spending. Add your name
-            as the bank writes it — in both orderings, because it uses both — and those rows are
-            skipped instead of counted twice.
+            Moving money between two of your own accounts is not income or spending. Add your name as the bank writes it
+            — in both orderings, because it uses both — and those rows are skipped instead of counted twice.
           </Typography>
 
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1.5 }}>
@@ -229,8 +225,8 @@ const CategoryRulesDialog: React.FC<CategoryRulesDialogProps> = ({
         </Box>
 
         <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-          Every import is filed by these rules, top to bottom — the first that matches wins, so a
-          specific one has to sit above a broader one.
+          Every import is filed by these rules, top to bottom — the first that matches wins, so a specific one has to
+          sit above a broader one.
         </Typography>
 
         {/* Add */}
@@ -298,81 +294,84 @@ const CategoryRulesDialog: React.FC<CategoryRulesDialogProps> = ({
           </Box>
         ) : rules.length === 0 ? (
           <Alert severity="info">
-            No rules yet, so every import lands in Uncategorised. Add one above, or change a
-            transaction&apos;s category and let it be remembered.
+            No rules yet, so every import lands in Uncategorised. Add one above, or change a transaction&apos;s category
+            and let it be remembered.
           </Alert>
         ) : (
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ width: 60 }}>Order</TableCell>
-                <TableCell>Matches</TableCell>
-                <TableCell>Files as</TableCell>
-                <TableCell>Applies to</TableCell>
-                <TableCell align="right" sx={{ width: 40 }} />
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {rules.map((rule, index) => (
-                <TableRow key={rule._id} hover>
-                  <TableCell>
-                    <Box sx={{ display: 'flex' }}>
-                      <IconButton
-                        size="small"
-                        aria-label={`Move ${rule.pattern} earlier`}
-                        disabled={index === 0 || moveMutation.isPending}
-                        onClick={() => handleMove(rule, 'up')}
-                      >
-                        <ArrowUpward fontSize="inherit" />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        aria-label={`Move ${rule.pattern} later`}
-                        disabled={index === rules.length - 1 || moveMutation.isPending}
-                        onClick={() => handleMove(rule, 'down')}
-                      >
-                        <ArrowDownward fontSize="inherit" />
-                      </IconButton>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                      <Typography
-                        variant="body2"
-                        sx={{ fontFamily: rule.matchType === 'regex' ? 'monospace' : undefined }}
-                      >
-                        {rule.pattern}
-                      </Typography>
-                      {rule.matchType === 'regex' && (
-                        <Tooltip title="A pattern, not literal text — edit with care">
-                          <Chip size="small" label="regex" variant="outlined" />
-                        </Tooltip>
-                      )}
-                      {rule.note && (
-                        <Tooltip title={rule.note}>
-                          <InfoIcon fontSize="inherit" sx={{ color: 'text.secondary' }} />
-                        </Tooltip>
-                      )}
-                    </Box>
-                  </TableCell>
-                  <TableCell>{rule.category}</TableCell>
-                  <TableCell sx={{ color: 'text.secondary' }}>
-                    {DIRECTION_LABEL[rule.type || '']}
-                  </TableCell>
-                  <TableCell align="right">
-                    <IconButton
-                      size="small"
-                      aria-label={`Delete rule for ${rule.pattern}`}
-                      onClick={() => handleDelete(rule)}
-                      disabled={deleteMutation.isPending}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </TableCell>
+          /* The dialog is near full-width on a phone and these columns are not,
+              so the row scrolls sideways on its own rather than taking the page
+              with it. */
+          <Box sx={{ overflowX: 'auto' }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ width: 60 }}>Order</TableCell>
+                  <TableCell>Matches</TableCell>
+                  <TableCell>Files as</TableCell>
+                  <TableCell>Applies to</TableCell>
+                  <TableCell align="right" sx={{ width: 40 }} />
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHead>
+              <TableBody>
+                {rules.map((rule, index) => (
+                  <TableRow key={rule._id} hover>
+                    <TableCell>
+                      <Box sx={{ display: 'flex' }}>
+                        <IconButton
+                          size="small"
+                          aria-label={`Move ${rule.pattern} earlier`}
+                          disabled={index === 0 || moveMutation.isPending}
+                          onClick={() => handleMove(rule, 'up')}
+                        >
+                          <ArrowUpward fontSize="inherit" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          aria-label={`Move ${rule.pattern} later`}
+                          disabled={index === rules.length - 1 || moveMutation.isPending}
+                          onClick={() => handleMove(rule, 'down')}
+                        >
+                          <ArrowDownward fontSize="inherit" />
+                        </IconButton>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                        <Typography
+                          variant="body2"
+                          sx={{ fontFamily: rule.matchType === 'regex' ? 'monospace' : undefined }}
+                        >
+                          {rule.pattern}
+                        </Typography>
+                        {rule.matchType === 'regex' && (
+                          <Tooltip title="A pattern, not literal text — edit with care">
+                            <Chip size="small" label="regex" variant="outlined" />
+                          </Tooltip>
+                        )}
+                        {rule.note && (
+                          <Tooltip title={rule.note}>
+                            <InfoIcon fontSize="inherit" sx={{ color: 'text.secondary' }} />
+                          </Tooltip>
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell>{rule.category}</TableCell>
+                    <TableCell sx={{ color: 'text.secondary' }}>{DIRECTION_LABEL[rule.type || '']}</TableCell>
+                    <TableCell align="right">
+                      <IconButton
+                        size="small"
+                        aria-label={`Delete rule for ${rule.pattern}`}
+                        onClick={() => handleDelete(rule)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Box>
         )}
 
         {/* Retroactive apply — a new rule otherwise only bites on the next import */}
@@ -382,34 +381,23 @@ const CategoryRulesDialog: React.FC<CategoryRulesDialogProps> = ({
               Apply to transactions already imported
             </Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
-              A new rule only changes what the next statement does. Run it over what you already
-              have to clear the backlog it was written for.
+              A new rule only changes what the next statement does. Run it over what you already have to clear the
+              backlog it was written for.
             </Typography>
             <FormControlLabel
               control={
-                <Checkbox
-                  checked={onlyUncategorised}
-                  onChange={(e) => setOnlyUncategorised(e.target.checked)}
-                />
+                <Checkbox checked={onlyUncategorised} onChange={(e) => setOnlyUncategorised(e.target.checked)} />
               }
-              label={
-                <Typography variant="body2">
-                  Only touch unsorted rows
-                </Typography>
-              }
+              label={<Typography variant="body2">Only touch unsorted rows</Typography>}
             />
             {!onlyUncategorised && (
               <Alert severity="warning" sx={{ mb: 1 }}>
-                Unchecked, this also refiles rows you sorted by hand — anything a rule claims will
-                be moved to that rule&apos;s category.
+                Unchecked, this also refiles rows you sorted by hand — anything a rule claims will be moved to that
+                rule&apos;s category.
               </Alert>
             )}
             <Box>
-              <Button
-                startIcon={<ApplyIcon />}
-                onClick={handleApply}
-                disabled={applyMutation.isPending}
-              >
+              <Button startIcon={<ApplyIcon />} onClick={handleApply} disabled={applyMutation.isPending}>
                 {applyMutation.isPending ? 'Applying…' : 'Apply now'}
               </Button>
             </Box>

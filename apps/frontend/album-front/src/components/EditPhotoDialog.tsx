@@ -14,6 +14,7 @@ import {
 import { Close as CloseIcon } from '@mui/icons-material';
 import { Photo, TagCount } from '../types';
 import TagInput from './TagInput';
+import { gradient } from '@tumbaland/components';
 
 interface EditPhotoDialogProps {
   open: boolean;
@@ -24,13 +25,7 @@ interface EditPhotoDialogProps {
   onSave: (photoId: string, data: { title?: string; description?: string; tags?: string[] }) => Promise<void>;
 }
 
-const EditPhotoDialog: React.FC<EditPhotoDialogProps> = ({
-  open,
-  photo,
-  suggestions = [],
-  onClose,
-  onSave
-}) => {
+const EditPhotoDialog: React.FC<EditPhotoDialogProps> = ({ open, photo, suggestions = [], onClose, onSave }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState<string[]>([]);
@@ -145,19 +140,19 @@ const EditPhotoDialog: React.FC<EditPhotoDialogProps> = ({
               onChange={(e) => setTitle(e.target.value)}
               placeholder={photo.originalName}
               disabled={saving}
-              sx={{ 
+              sx={{
                 mb: 3,
                 '& .MuiOutlinedInput-root': {
                   borderRadius: 2,
                   backgroundColor: 'rgba(255, 255, 255, 0.5)',
                   '& fieldset': {
-                    borderColor: 'rgba(0, 0, 0, 0.1)',
+                    borderColor: 'rgba(0, 0, 0, 0.1)'
                   },
                   '&:hover fieldset': {
-                    borderColor: 'rgba(99, 102, 241, 0.5)',
+                    borderColor: 'rgba(168, 45, 190, 0.5)'
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: '#6366f1',
+                    borderColor: '#6366f1'
                   }
                 }
               }}
@@ -183,18 +178,18 @@ const EditPhotoDialog: React.FC<EditPhotoDialogProps> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               disabled={saving}
-              sx={{ 
+              sx={{
                 '& .MuiOutlinedInput-root': {
                   borderRadius: 2,
                   backgroundColor: 'rgba(255, 255, 255, 0.5)',
                   '& fieldset': {
-                    borderColor: 'rgba(0, 0, 0, 0.1)',
+                    borderColor: 'rgba(0, 0, 0, 0.1)'
                   },
                   '&:hover fieldset': {
-                    borderColor: 'rgba(99, 102, 241, 0.5)',
+                    borderColor: 'rgba(168, 45, 190, 0.5)'
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: '#6366f1',
+                    borderColor: '#6366f1'
                   }
                 }
               }}
@@ -204,9 +199,9 @@ const EditPhotoDialog: React.FC<EditPhotoDialogProps> = ({
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 3, pt: 2 }}>
-        <Button 
-          onClick={handleClose} 
-          disabled={saving} 
+        <Button
+          onClick={handleClose}
+          disabled={saving}
           variant="outlined"
           sx={{
             borderRadius: 2,
@@ -232,10 +227,10 @@ const EditPhotoDialog: React.FC<EditPhotoDialogProps> = ({
             textTransform: 'none',
             fontWeight: 600,
             px: 3,
-            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+            background: gradient.brand,
+            boxShadow: '0 4px 12px rgba(168, 45, 190, 0.3)',
             '&:hover': {
-              boxShadow: '0 6px 16px rgba(99, 102, 241, 0.4)'
+              boxShadow: '0 6px 16px rgba(168, 45, 190, 0.4)'
             }
           }}
         >

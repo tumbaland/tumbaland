@@ -54,9 +54,12 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1 }}>
         <CircularProgress size={16} />
-        <Typography variant="body2" sx={{
-          color: "text.secondary"
-        }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: 'text.secondary'
+          }}
+        >
           Loading groups...
         </Typography>
       </Box>
@@ -64,21 +67,13 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
   }
 
   if (error) {
-    return (
-      <Alert severity="warning">
-        {error}
-      </Alert>
-    );
+    return <Alert severity="warning">{error}</Alert>;
   }
 
   return (
     <FormControl fullWidth disabled={disabled}>
       <InputLabel>{label}</InputLabel>
-      <Select
-        value={value || ''}
-        label={label}
-        onChange={(e) => onChange(e.target.value || undefined)}
-      >
+      <Select value={value || ''} label={label} onChange={(e) => onChange(e.target.value || undefined)}>
         {includeNone && (
           <MenuItem value="">
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -87,7 +82,7 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
             </Box>
           </MenuItem>
         )}
-        
+
         {includePersonal && (
           <MenuItem value="personal">
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -101,16 +96,8 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
           <MenuItem key={group._id} value={group._id}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography>{group.name}</Typography>
-              {group.isOwner && (
-                <Chip label="Owner" size="small" color="secondary" />
-              )}
-              {group.memberCount && (
-                <Chip 
-                  label={`${group.memberCount} members`} 
-                  size="small" 
-                  variant="outlined" 
-                />
-              )}
+              {group.isOwner && <Chip label="Owner" size="small" color="secondary" />}
+              {group.memberCount && <Chip label={`${group.memberCount} members`} size="small" variant="outlined" />}
             </Box>
           </MenuItem>
         ))}

@@ -10,7 +10,9 @@ import {
   bulkUpdateTags,
   getUploadSignedUrlRequest,
   getPhotoByFileId,
-  getMemories
+  getMemories,
+  getRecentPhotos,
+  getRandomPhotos
 } from '../controllers/photoController';
 import {
   createPhotoSchema,
@@ -30,12 +32,21 @@ router.put('/tags', authenticateAgent(), requireScope('album:write'), validate(b
 // Must precede GET /:id, for the same reason PUT /tags does — a literal path
 // segment registered after a param route is never reached.
 router.get('/memories', authenticateAgent(), requireScope('album:read'), getMemories);
+// Above '/:id', or Express reads 'recent' and 'random' as photo ids.
+router.get('/recent', authenticateAgent(), requireScope('album:read'), getRecentPhotos);
+router.get('/random', authenticateAgent(), requireScope('album:read'), getRandomPhotos);
 router.get('/:id', authenticateAgent(), requireScope('album:read'), getPhotoById);
 router.get('/by-file/:fileId', getPhotoByFileId); // Public route for file service
 router.put('/:id', authenticateAgent(), requireScope('album:write'), validate(updatePhotoSchema), updatePhoto);
 router.delete('/:id', authenticateAgent(), requireScope('album:write'), deletePhoto);
 
 // Upload routes
-router.post('/upload-url', authenticateAgent(), requireScope('album:write'), validate(uploadSignedUrlSchema), getUploadSignedUrlRequest);
+router.post(
+  '/upload-url',
+  authenticateAgent(),
+  requireScope('album:write'),
+  validate(uploadSignedUrlSchema),
+  getUploadSignedUrlRequest
+);
 
 export default router;

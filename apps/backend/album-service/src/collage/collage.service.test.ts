@@ -112,9 +112,9 @@ describe('collage.service', () => {
       mockedFindById.mockResolvedValue({ _id: 'c1', userId: OWNER });
       const calls = mockedFindByIdAndUpdate.mock.calls.length;
 
-      await expect(
-        updateCollage('c1', { ...collageInput, groupId: 'group-9' }, OWNER, [])
-      ).rejects.toMatchObject({ name: 'ForbiddenError' });
+      await expect(updateCollage('c1', { ...collageInput, groupId: 'group-9' }, OWNER, [])).rejects.toMatchObject({
+        name: 'ForbiddenError'
+      });
       expect(mockedFindByIdAndUpdate.mock.calls.length).toBe(calls);
     });
   });

@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from 'react-router';
 import { useState, ReactNode, useCallback, useEffect, useRef } from 'react';
 import CircularProgress from '@mui/material/CircularProgress';
-import { ProtectedRoute, buildEmbeddedUrl, extractChildPath, useShellBridge } from '@tumbaland/components';
+import { ProtectedRoute, buildEmbeddedUrl, extractChildPath, surface, useShellBridge } from '@tumbaland/components';
 import { AppNav } from './AppNav';
 import { getAppByRoute } from '../config/apps';
 import { useConfig } from '../config/ConfigProvider';
@@ -121,27 +121,9 @@ export default function Layout({ children }: LayoutProps) {
         overflow: 'hidden',
         display: 'flex',
         flexDirection: isMobile ? 'column' : 'row',
-        background: 'radial-gradient(circle at 50% 0%, #f0f4ff 0%, #e0e7ff 50%, #f8fafc 100%)',
-        fontFamily: '"Inter", "Roboto", sans-serif'
+        background: surface.page
       }}
     >
-      <style>{`
-        ::-webkit-scrollbar {
-          width: 8px;
-          height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-          background: rgba(99, 102, 241, 0.2);
-          border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-          background: rgba(99, 102, 241, 0.4);
-        }
-      `}</style>
-
       {/* A rail beside the content on wider screens, a tab bar under it on
           phones, where it stays in reach of a thumb and clear of each
           module's own header. */}
@@ -173,7 +155,7 @@ export default function Layout({ children }: LayoutProps) {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)',
+                    background: surface.page,
                     zIndex: 2
                   }}
                 >

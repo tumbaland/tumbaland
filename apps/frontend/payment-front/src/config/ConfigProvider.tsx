@@ -12,7 +12,6 @@ const factory = createConfigProvider<AppConfig>({
   serviceName: 'payment-front',
   isDev: import.meta.env.DEV,
   mode: import.meta.env.MODE,
-  themed: true,
   getDevConfig: () => ({
     PAYMENT_API_URL: import.meta.env.VITE_PAYMENT_API_URL,
     AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL,

@@ -38,7 +38,15 @@ describe('addPhoto / addText / removeItem', () => {
 
     let newId = '';
     act(() => {
-      newId = result.current.addPhoto({ photoId: 'photo-1', x: 0, y: 0, width: 100, height: 100, rotation: 0, caption: '' });
+      newId = result.current.addPhoto({
+        photoId: 'photo-1',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        rotation: 0,
+        caption: ''
+      });
     });
 
     expect(result.current.doc?.photos).toHaveLength(1);
@@ -67,7 +75,15 @@ describe('addPhoto / addText / removeItem', () => {
     act(() => result.current.init(emptyDoc));
     let photoId = '';
     act(() => {
-      photoId = result.current.addPhoto({ photoId: 'photo-1', x: 0, y: 0, width: 100, height: 100, rotation: 0, caption: '' });
+      photoId = result.current.addPhoto({
+        photoId: 'photo-1',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        rotation: 0,
+        caption: ''
+      });
       result.current.addText({ text: 'keep me' });
     });
 
@@ -100,7 +116,15 @@ describe('patchItem / patchDoc', () => {
     act(() => result.current.init(emptyDoc));
     let photoId = '';
     act(() => {
-      photoId = result.current.addPhoto({ photoId: 'photo-1', x: 0, y: 0, width: 100, height: 100, rotation: 0, caption: '' });
+      photoId = result.current.addPhoto({
+        photoId: 'photo-1',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        rotation: 0,
+        caption: ''
+      });
     });
 
     act(() => result.current.patchItem(photoId, { x: 50, caption: 'updated' }));

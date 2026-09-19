@@ -20,7 +20,7 @@ import {
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { CollageInput } from '../../types/collage';
 import { useAlbums } from '../../hooks/useAlbums';
-import { useTenantFilter } from '@tumbaland/components';
+import { gradient, useTenantFilter } from '@tumbaland/components';
 import { DEFAULT_BACKGROUND, DEFAULT_FRAME_COLOR } from './collageDoc';
 
 interface CollageCreateModalProps {
@@ -44,8 +44,7 @@ const defaultConfig = {
 };
 
 /** They make one collage per month — suggest e.g. "July 2026" as the title. */
-const suggestedTitle = () =>
-  new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+const suggestedTitle = () => new Date().toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
 export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, onClose, onCreate }) => {
   const [title, setTitle] = useState(suggestedTitle);
@@ -54,7 +53,11 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const tenantGroupId = useTenantFilter(); // Get groupId from tenant context
-  const { albums, loading: albumsLoading, fetchAlbums } = useAlbums({
+  const {
+    albums,
+    loading: albumsLoading,
+    fetchAlbums
+  } = useAlbums({
     groupId: tenantGroupId, // Pass groupId only if present (group context), undefined for personal
     includeCover: false
   });
@@ -108,10 +111,10 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
   };
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={handleClose} 
-      maxWidth="sm" 
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="sm"
       fullWidth
       slotProps={{
         paper: {
@@ -141,8 +144,8 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
           variant="outlined"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          sx={{ 
-            mb: 2, 
+          sx={{
+            mb: 2,
             mt: 2,
             '& .MuiOutlinedInput-root': { borderRadius: 2 }
           }}
@@ -157,7 +160,7 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
           variant="outlined"
           value={subtitle}
           onChange={(e) => setSubtitle(e.target.value)}
-          sx={{ 
+          sx={{
             mb: 3,
             '& .MuiOutlinedInput-root': { borderRadius: 2 }
           }}
@@ -174,25 +177,14 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
             renderValue={(selected) => (
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                 {selected.map((value) => {
-                  const album = albums.find(a => a._id === value);
-                  return (
-                    <Chip 
-                      key={value} 
-                      label={album?.name || value} 
-                      size="small"
-                      sx={{ borderRadius: 1 }}
-                    />
-                  );
+                  const album = albums.find((a) => a._id === value);
+                  return <Chip key={value} label={album?.name || value} size="small" sx={{ borderRadius: 1 }} />;
                 })}
               </Box>
             )}
             endAdornment={
               <InputAdornment position="end" sx={{ mr: 2 }}>
-                <IconButton 
-                  onClick={handleRefreshAlbums} 
-                  disabled={albumsLoading}
-                  size="small"
-                >
+                <IconButton onClick={handleRefreshAlbums} disabled={albumsLoading} size="small">
                   <RefreshIcon fontSize="small" />
                 </IconButton>
               </InputAdornment>
@@ -208,23 +200,23 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
         </FormControl>
       </DialogContent>
       <DialogActions sx={{ p: 3, pt: 1 }}>
-        <Button 
-          onClick={handleClose} 
+        <Button
+          onClick={handleClose}
           disabled={loading}
           sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, color: 'text.secondary' }}
         >
           Cancel
         </Button>
-        <Button 
-          onClick={handleCreate} 
-          variant="contained" 
+        <Button
+          onClick={handleCreate}
+          variant="contained"
           disabled={loading}
           sx={{
             borderRadius: 2,
             textTransform: 'none',
             fontWeight: 600,
             px: 3,
-            background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+            background: gradient.brand,
             boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)',
             '&:hover': {
               boxShadow: '0 6px 16px rgba(139, 92, 246, 0.4)'

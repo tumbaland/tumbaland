@@ -278,14 +278,15 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
           <Typography
             variant="body2"
             sx={{
-              color: "text.secondary",
+              color: 'text.secondary',
               mt: 0.5,
               display: '-webkit-box',
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden',
               fontSize: '0.875rem'
-            }}>
+            }}
+          >
             {photo.description}
           </Typography>
         )}
@@ -293,11 +294,12 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
         <Typography
           variant="caption"
           sx={{
-            color: "text.secondary",
+            color: 'text.secondary',
             mt: 1,
             display: 'block',
             fontSize: '0.75rem'
-          }}>
+          }}
+        >
           Uploaded {formatUploadDate(photo.createdAt)}
         </Typography>
 

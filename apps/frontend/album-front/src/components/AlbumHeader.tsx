@@ -3,6 +3,7 @@ import { Box, Typography, Button, IconButton } from '@mui/material';
 import { CloudUpload as CloudUploadIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { Album } from '../types';
 import { formatBytes } from '../utils/formatBytes';
+import { gradient } from '@tumbaland/components';
 
 interface AlbumHeaderProps {
   album: Album;
@@ -45,7 +46,7 @@ const AlbumHeader: React.FC<AlbumHeaderProps> = ({ album, onNavigateBack, onUplo
             borderRadius: 2,
             textTransform: 'none',
             fontWeight: 600,
-            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
+            background: gradient.brand
           }}
         >
           Upload

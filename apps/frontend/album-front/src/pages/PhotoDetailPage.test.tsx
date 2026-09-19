@@ -119,9 +119,7 @@ it('opens the edit dialog and saves changes', async () => {
   await userEvent.type(titleInput, 'Renamed');
   await userEvent.click(screen.getByRole('button', { name: /save changes/i }));
 
-  await waitFor(() =>
-    expect(photoService.updatePhoto).toHaveBeenCalledWith('photo-2', { title: 'Renamed', tags: [] })
-  );
+  await waitFor(() => expect(photoService.updatePhoto).toHaveBeenCalledWith('photo-2', { title: 'Renamed', tags: [] }));
 });
 
 it('deletes the photo and navigates back to the album', async () => {

@@ -33,12 +33,7 @@ jest.mock('./thumbnailService', () => ({
 
 import Photo from '../models/Photo';
 import Album from '../models/Album';
-import {
-  deleteFile,
-  getPhotoSignedUrl,
-  getPhotoSignedUrlsBatch,
-  getFile
-} from './fileServiceClient';
+import { deleteFile, getPhotoSignedUrl, getPhotoSignedUrlsBatch, getFile } from './fileServiceClient';
 import { generateThumbnailFromBuffer, isSupportedImageFormat } from './thumbnailService';
 import photoService from './photoService';
 
@@ -84,7 +79,14 @@ beforeEach(() => {
 });
 
 describe('createPhoto', () => {
-  const baseInput = { filename: 'x.jpg', originalName: 'x.jpg', minioFileId: 'file-1', albumId: 'a1', mimetype: 'image/jpeg', size: 100 };
+  const baseInput = {
+    filename: 'x.jpg',
+    originalName: 'x.jpg',
+    minioFileId: 'file-1',
+    albumId: 'a1',
+    mimetype: 'image/jpeg',
+    size: 100
+  };
 
   it('throws NotFoundError when the album does not exist', async () => {
     mockedAlbumFindById.mockResolvedValue(null);
@@ -99,7 +101,12 @@ describe('createPhoto', () => {
   });
 
   it('creates the photo and sets it as the album cover when none is set', async () => {
-    const album: any = { _id: 'a1', userId: 'user-1', coverPhotoId: undefined, save: jest.fn().mockResolvedValue(undefined) };
+    const album: any = {
+      _id: 'a1',
+      userId: 'user-1',
+      coverPhotoId: undefined,
+      save: jest.fn().mockResolvedValue(undefined)
+    };
     mockedAlbumFindById.mockResolvedValue(album);
     mockedFindOne.mockResolvedValue(null);
     mockedIsSupported.mockReturnValue(false);
@@ -109,10 +116,7 @@ describe('createPhoto', () => {
     expect(result._id).toBe('new-photo-id');
     expect(album.coverPhotoId).toBe('new-photo-id');
     expect(album.save).toHaveBeenCalledTimes(1);
-    expect(mockedAlbumUpdateOne).toHaveBeenCalledWith(
-      { _id: 'a1' },
-      { $inc: { photoCount: 1, totalSize: 100 } }
-    );
+    expect(mockedAlbumUpdateOne).toHaveBeenCalledWith({ _id: 'a1' }, { $inc: { photoCount: 1, totalSize: 100 } });
   });
 
   it('does not overwrite an existing album cover', async () => {
@@ -158,7 +162,11 @@ describe('createPhoto', () => {
 
 describe('getPhotosByAlbum', () => {
   function chainable(result: any[]) {
-    const query: any = { sort: jest.fn().mockReturnThis(), limit: jest.fn().mockReturnThis(), skip: jest.fn().mockReturnThis() };
+    const query: any = {
+      sort: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis()
+    };
     query.then = (resolve: any) => Promise.resolve(result).then(resolve);
     return query;
   }
@@ -170,10 +178,17 @@ describe('getPhotosByAlbum', () => {
 
   it('returns paginated photos with signed URLs', async () => {
     mockedAlbumFindById.mockResolvedValue({ _id: 'a1', userId: 'user-1' });
-    const photo = { albumId: 'a1', minioFileId: 'file-1', minioThumbnailFileId: undefined, toObject: () => ({ minioFileId: 'file-1' }) };
+    const photo = {
+      albumId: 'a1',
+      minioFileId: 'file-1',
+      minioThumbnailFileId: undefined,
+      toObject: () => ({ minioFileId: 'file-1' })
+    };
     mockedFind.mockReturnValue(chainable([photo]));
     (Photo.countDocuments as unknown as jest.Mock) = jest.fn().mockResolvedValue(1);
-    mockedGetPhotoSignedUrlsBatch.mockResolvedValue({ 'file-1': { signedUrl: 'https://x', expiresAt: 't', expiresInMinutes: 60 } });
+    mockedGetPhotoSignedUrlsBatch.mockResolvedValue({
+      'file-1': { signedUrl: 'https://x', expiresAt: 't', expiresInMinutes: 60 }
+    });
 
     const result = await photoService.getPhotosByAlbum('a1', { page: 1, limit: 10 }, OWNER);
 
@@ -227,7 +242,12 @@ describe('getPhotosByAlbum', () => {
 
   it('also fetches thumbnail signed URLs for photos that have a thumbnail', async () => {
     mockedAlbumFindById.mockResolvedValue({ _id: 'a1', userId: 'user-1' });
-    const photo = { albumId: 'a1', minioFileId: 'file-1', minioThumbnailFileId: 'thumb-1', toObject: () => ({ minioFileId: 'file-1' }) };
+    const photo = {
+      albumId: 'a1',
+      minioFileId: 'file-1',
+      minioThumbnailFileId: 'thumb-1',
+      toObject: () => ({ minioFileId: 'file-1' })
+    };
     mockedFind.mockReturnValue(chainable([photo]));
     (Photo.countDocuments as unknown as jest.Mock) = jest.fn().mockResolvedValue(1);
     mockedGetPhotoSignedUrlsBatch
@@ -246,7 +266,12 @@ describe('getPhotoById', () => {
   });
 
   it('returns the photo enriched with a signed URL', async () => {
-    const photo = { albumId: 'a1', minioFileId: 'file-1', minioThumbnailFileId: undefined, toObject: () => ({ minioFileId: 'file-1' }) };
+    const photo = {
+      albumId: 'a1',
+      minioFileId: 'file-1',
+      minioThumbnailFileId: undefined,
+      toObject: () => ({ minioFileId: 'file-1' })
+    };
     mockedFindById.mockReturnValue({ populate: jest.fn().mockResolvedValue(photo) });
     mockedGetPhotoSignedUrl.mockResolvedValue({ signedUrl: 'https://x', expiresAt: 't', expiresInMinutes: 60 });
 
@@ -255,7 +280,12 @@ describe('getPhotoById', () => {
   });
 
   it('also enriches with a thumbnail signed URL when one exists', async () => {
-    const photo = { albumId: 'a1', minioFileId: 'file-1', minioThumbnailFileId: 'thumb-1', toObject: () => ({ minioFileId: 'file-1' }) };
+    const photo = {
+      albumId: 'a1',
+      minioFileId: 'file-1',
+      minioThumbnailFileId: 'thumb-1',
+      toObject: () => ({ minioFileId: 'file-1' })
+    };
     mockedFindById.mockReturnValue({ populate: jest.fn().mockResolvedValue(photo) });
     mockedGetPhotoSignedUrl
       .mockResolvedValueOnce({ signedUrl: 'https://x', expiresAt: 't', expiresInMinutes: 60 })
@@ -275,7 +305,12 @@ describe('getPhotoById', () => {
   });
 
   it('logs (does not throw) when the thumbnail signed-url call fails', async () => {
-    const photo = { albumId: 'a1', minioFileId: 'file-1', minioThumbnailFileId: 'thumb-1', toObject: () => ({ minioFileId: 'file-1' }) };
+    const photo = {
+      albumId: 'a1',
+      minioFileId: 'file-1',
+      minioThumbnailFileId: 'thumb-1',
+      toObject: () => ({ minioFileId: 'file-1' })
+    };
     mockedFindById.mockReturnValue({ populate: jest.fn().mockResolvedValue(photo) });
     mockedGetPhotoSignedUrl
       .mockResolvedValueOnce({ signedUrl: 'https://x', expiresAt: 't', expiresInMinutes: 60 })
@@ -322,7 +357,12 @@ describe('deletePhoto', () => {
   });
 
   it('deletes files, the photo, and clears the album cover if it was the cover photo', async () => {
-    mockedFindById.mockResolvedValue({ albumId: 'a1', size: 100, minioFileId: 'file-1', minioThumbnailFileId: 'thumb-1' });
+    mockedFindById.mockResolvedValue({
+      albumId: 'a1',
+      size: 100,
+      minioFileId: 'file-1',
+      minioThumbnailFileId: 'thumb-1'
+    });
     const album: any = { coverPhotoId: 'p1', save: jest.fn().mockResolvedValue(undefined) };
     mockedAlbumFindOne.mockResolvedValue(album);
 
@@ -331,10 +371,7 @@ describe('deletePhoto', () => {
     expect(mockedDeleteFile).toHaveBeenCalledWith('file-1');
     expect(mockedDeleteFile).toHaveBeenCalledWith('thumb-1');
     expect(mockedFindByIdAndDelete).toHaveBeenCalledWith('p1');
-    expect(mockedAlbumUpdateOne).toHaveBeenCalledWith(
-      { _id: 'a1' },
-      { $inc: { photoCount: -1, totalSize: -100 } }
-    );
+    expect(mockedAlbumUpdateOne).toHaveBeenCalledWith({ _id: 'a1' }, { $inc: { photoCount: -1, totalSize: -100 } });
     expect(album.coverPhotoId).toBeUndefined();
     expect(album.save).toHaveBeenCalledTimes(1);
   });
@@ -414,7 +451,7 @@ describe('bulkUpdateTags', () => {
     expect(result).toMatchObject({ matched: 2, modified: 2 });
   });
 
-  it('pulls removed tags and returns the album\'s refreshed tag list', async () => {
+  it("pulls removed tags and returns the album's refreshed tag list", async () => {
     photosInAlbum([{ _id: photoId, albumId: 'a1' }]);
     mockedUpdateMany.mockResolvedValue({ matchedCount: 1, modifiedCount: 1 });
     mockedFindById.mockReturnValue({
@@ -521,9 +558,11 @@ describe('reaching another account’s photos', () => {
     photosInAlbum([{ _id: photoId, albumId: 'not-yours' }]);
     albumsReachable([]);
 
-    await expect(
-      photoService.bulkUpdateTags({ photoIds: [photoId], add: ['beach'] }, STRANGER)
-    ).resolves.toEqual({ matched: 0, modified: 0, tags: [] });
+    await expect(photoService.bulkUpdateTags({ photoIds: [photoId], add: ['beach'] }, STRANGER)).resolves.toEqual({
+      matched: 0,
+      modified: 0,
+      tags: []
+    });
     expect(mockedUpdateMany).not.toHaveBeenCalled();
   });
 
@@ -546,7 +585,14 @@ describe('reaching another account’s photos', () => {
 
   it('refuses to add a photo to an album the caller cannot write to', async () => {
     mockedAlbumFindById.mockResolvedValue({ _id: 'a1', userId: 'owner', isPublic: true });
-    const input = { filename: 'x.jpg', originalName: 'x.jpg', minioFileId: 'file-1', albumId: 'a1', mimetype: 'image/jpeg', size: 100 };
+    const input = {
+      filename: 'x.jpg',
+      originalName: 'x.jpg',
+      minioFileId: 'file-1',
+      albumId: 'a1',
+      mimetype: 'image/jpeg',
+      size: 100
+    };
 
     await expect(
       photoService.createPhoto(input, STRANGER.userId, undefined, STRANGER.userGroups)
@@ -582,9 +628,11 @@ describe('reaching another account’s photos', () => {
       await expect(photoService.deletePhoto('p1', STRANGER)).rejects.toMatchObject({ name: 'NotFoundError' });
 
       photosInAlbum([{ _id: photoId, albumId: 'a1' }]);
-      await expect(
-        photoService.bulkUpdateTags({ photoIds: [photoId], add: ['mine'] }, STRANGER)
-      ).resolves.toEqual({ matched: 0, modified: 0, tags: [] });
+      await expect(photoService.bulkUpdateTags({ photoIds: [photoId], add: ['mine'] }, STRANGER)).resolves.toEqual({
+        matched: 0,
+        modified: 0,
+        tags: []
+      });
 
       expect(mockedFindByIdAndUpdate).not.toHaveBeenCalled();
       expect(mockedDeleteFile).not.toHaveBeenCalled();

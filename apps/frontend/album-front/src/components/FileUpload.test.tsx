@@ -129,7 +129,12 @@ it('accepts a drag-and-drop file via the dropzone', async () => {
 });
 
 it('uploads selected files end-to-end and calls onUploadComplete', async () => {
-  mockedGetUploadSignedUrl.mockResolvedValue({ uploadUrl: 'https://minio.example/upload', minioFileId: 'file-1', albumId: 'album-1', expiresInMinutes: 15 });
+  mockedGetUploadSignedUrl.mockResolvedValue({
+    uploadUrl: 'https://minio.example/upload',
+    minioFileId: 'file-1',
+    albumId: 'album-1',
+    expiresInMinutes: 15
+  });
   mockedUploadFileToSignedUrl.mockResolvedValue(undefined);
   mockedCreatePhoto.mockResolvedValue({ _id: 'photo-1' });
   const { onUploadComplete } = renderDialog();
@@ -168,7 +173,13 @@ it('shows a 402 as the limit it is, not as a failed upload', async () => {
   mockedGetUploadSignedUrl.mockRejectedValue(
     Object.assign(new Error('Payment Required'), {
       status: 402,
-      body: { code: 'QUOTA_EXCEEDED', meter: 'storageBytes', limit: 1_073_741_824, planCode: 'free', upgradeTo: 'support' }
+      body: {
+        code: 'QUOTA_EXCEEDED',
+        meter: 'storageBytes',
+        limit: 1_073_741_824,
+        planCode: 'free',
+        upgradeTo: 'support'
+      }
     })
   );
   renderDialog();
@@ -182,7 +193,12 @@ it('shows a 402 as the limit it is, not as a failed upload', async () => {
 
 it('omits dimensions when the image fails to load', async () => {
   FakeImage.nextFails = true;
-  mockedGetUploadSignedUrl.mockResolvedValue({ uploadUrl: 'https://minio.example/upload', minioFileId: 'file-1', albumId: 'album-1', expiresInMinutes: 15 });
+  mockedGetUploadSignedUrl.mockResolvedValue({
+    uploadUrl: 'https://minio.example/upload',
+    minioFileId: 'file-1',
+    albumId: 'album-1',
+    expiresInMinutes: 15
+  });
   mockedUploadFileToSignedUrl.mockResolvedValue(undefined);
   mockedCreatePhoto.mockResolvedValue({ _id: 'photo-1' });
   renderDialog();
@@ -192,9 +208,7 @@ it('omits dimensions when the image fails to load', async () => {
   await userEvent.click(screen.getByRole('button', { name: /upload 1 file/i }));
 
   await waitFor(() => expect(mockedCreatePhoto).toHaveBeenCalled());
-  expect(mockedCreatePhoto).toHaveBeenCalledWith(
-    expect.objectContaining({ width: undefined, height: undefined })
-  );
+  expect(mockedCreatePhoto).toHaveBeenCalledWith(expect.objectContaining({ width: undefined, height: undefined }));
 });
 
 it('shows an error and stays open when the upload fails', async () => {

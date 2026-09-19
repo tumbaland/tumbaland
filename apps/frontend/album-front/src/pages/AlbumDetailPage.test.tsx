@@ -15,7 +15,15 @@ vi.mock('react-router', async (importOriginal) => {
 // stub exposes plain buttons wired to the real onUploadComplete/onClose
 // props so this page's own callback-wiring can still be verified.
 vi.mock('../components/FileUpload', () => ({
-  default: ({ open, onUploadComplete, onClose }: { open: boolean; onUploadComplete: () => void; onClose: () => void }) =>
+  default: ({
+    open,
+    onUploadComplete,
+    onClose
+  }: {
+    open: boolean;
+    onUploadComplete: () => void;
+    onClose: () => void;
+  }) =>
     open ? (
       <div>
         file upload
@@ -103,9 +111,7 @@ it('shows an error and a back link when the album fails to load', async () => {
 
 it('renders the album header and photos once loaded', async () => {
   const photos = [makePhoto({ _id: 'p1', title: 'Sunset' })];
-  mockedUsePhotos.mockReturnValue(
-    basePhotosReturn({ photos, pagination: { page: 1, limit: 24, total: 1, pages: 1 } })
-  );
+  mockedUsePhotos.mockReturnValue(basePhotosReturn({ photos, pagination: { page: 1, limit: 24, total: 1, pages: 1 } }));
 
   renderPage();
 
@@ -125,9 +131,7 @@ it('opens the upload dialog from the header button', async () => {
 
 it('toggles select mode and shows the selection toolbar', async () => {
   const photos = [makePhoto({ _id: 'p1' }), makePhoto({ _id: 'p2' })];
-  mockedUsePhotos.mockReturnValue(
-    basePhotosReturn({ photos, pagination: { page: 1, limit: 24, total: 2, pages: 1 } })
-  );
+  mockedUsePhotos.mockReturnValue(basePhotosReturn({ photos, pagination: { page: 1, limit: 24, total: 2, pages: 1 } }));
 
   renderPage();
   await screen.findByRole('heading', { name: 'Trip' });
@@ -140,9 +144,7 @@ it('toggles select mode and shows the selection toolbar', async () => {
 
 it('selects all photos on the page and enables bulk delete', async () => {
   const photos = [makePhoto({ _id: 'p1' }), makePhoto({ _id: 'p2' })];
-  mockedUsePhotos.mockReturnValue(
-    basePhotosReturn({ photos, pagination: { page: 1, limit: 24, total: 2, pages: 1 } })
-  );
+  mockedUsePhotos.mockReturnValue(basePhotosReturn({ photos, pagination: { page: 1, limit: 24, total: 2, pages: 1 } }));
 
   renderPage();
   await screen.findByRole('heading', { name: 'Trip' });
@@ -212,9 +214,7 @@ it('sets a cover photo via the card menu', async () => {
     data: makeAlbum({ _id: 'album-1', name: 'Trip', coverPhotoId: 'p1' })
   });
   const photos = [makePhoto({ _id: 'p1', title: 'Sunset' })];
-  mockedUsePhotos.mockReturnValue(
-    basePhotosReturn({ photos, pagination: { page: 1, limit: 24, total: 1, pages: 1 } })
-  );
+  mockedUsePhotos.mockReturnValue(basePhotosReturn({ photos, pagination: { page: 1, limit: 24, total: 1, pages: 1 } }));
   const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
   renderPage();
@@ -248,9 +248,7 @@ it('bulk-deletes selected photos', async () => {
 
 it('cancels select mode via the Cancel button', async () => {
   const photos = [makePhoto({ _id: 'p1' })];
-  mockedUsePhotos.mockReturnValue(
-    basePhotosReturn({ photos, pagination: { page: 1, limit: 24, total: 1, pages: 1 } })
-  );
+  mockedUsePhotos.mockReturnValue(basePhotosReturn({ photos, pagination: { page: 1, limit: 24, total: 1, pages: 1 } }));
 
   renderPage();
   await screen.findByRole('heading', { name: 'Trip' });
@@ -266,9 +264,7 @@ it('toggles selection of a single photo by clicking its card in select mode', as
     makePhoto({ _id: 'p1', signedUrl: 'https://cdn.example/p1.jpg' }),
     makePhoto({ _id: 'p2', signedUrl: 'https://cdn.example/p2.jpg' })
   ];
-  mockedUsePhotos.mockReturnValue(
-    basePhotosReturn({ photos, pagination: { page: 1, limit: 24, total: 2, pages: 1 } })
-  );
+  mockedUsePhotos.mockReturnValue(basePhotosReturn({ photos, pagination: { page: 1, limit: 24, total: 2, pages: 1 } }));
 
   renderPage();
   await screen.findByRole('heading', { name: 'Trip' });
@@ -321,9 +317,7 @@ it('cancels the bulk-delete confirmation without deleting', async () => {
 
 it('navigates to the photo detail page from the card menu', async () => {
   const photos = [makePhoto({ _id: 'p1', title: 'Sunset' })];
-  mockedUsePhotos.mockReturnValue(
-    basePhotosReturn({ photos, pagination: { page: 1, limit: 24, total: 1, pages: 1 } })
-  );
+  mockedUsePhotos.mockReturnValue(basePhotosReturn({ photos, pagination: { page: 1, limit: 24, total: 1, pages: 1 } }));
 
   renderPage();
   await screen.findByRole('heading', { name: 'Trip' });
@@ -369,7 +363,6 @@ it('refreshes photos when an upload completes, and closes the dialog independent
   await userEvent.click(screen.getByText('simulate close upload'));
   expect(screen.queryByText('file upload')).not.toBeInTheDocument();
 });
-
 
 describe('tagging and tag filtering', () => {
   const taggedPhotos = [
@@ -417,9 +410,7 @@ describe('tagging and tag filtering', () => {
     await userEvent.type(screen.getByRole('combobox'), 'pier{Enter}');
     await userEvent.click(screen.getByRole('button', { name: /save tags/i }));
 
-    await waitFor(() =>
-      expect(bulkUpdateTags).toHaveBeenCalledWith({ photoIds: ['p2'], add: ['pier'], remove: [] })
-    );
+    await waitFor(() => expect(bulkUpdateTags).toHaveBeenCalledWith({ photoIds: ['p2'], add: ['pier'], remove: [] }));
   });
 
   it('tags the whole selection from the select-mode toolbar', async () => {

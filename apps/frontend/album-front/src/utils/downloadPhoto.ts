@@ -10,7 +10,9 @@ import { Photo } from '../types';
  * back to the classic download link where file sharing isn't supported
  * (desktop browsers, older mobile browsers).
  */
-export async function downloadPhoto(photo: Pick<Photo, 'signedUrl' | 'originalName' | '_id' | 'mimetype'>): Promise<void> {
+export async function downloadPhoto(
+  photo: Pick<Photo, 'signedUrl' | 'originalName' | '_id' | 'mimetype'>
+): Promise<void> {
   if (!photo.signedUrl) return;
 
   const filename = photo.originalName || `photo-${photo._id}`;

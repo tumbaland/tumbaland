@@ -57,9 +57,13 @@ const PhotoBasicInfo: React.FC<PhotoBasicInfoProps> = ({
     <Box sx={{ display: 'flex', gap: 4, flexDirection: { xs: 'column', lg: 'row' } }}>
       {/* Photo Display */}
       <Box sx={{ flex: 2 }}>
-        <Typography variant="h6" gutterBottom sx={{
-          fontWeight: 600
-        }}>
+        <Typography
+          variant="h6"
+          gutterBottom
+          sx={{
+            fontWeight: 600
+          }}
+        >
           Photo
         </Typography>
         <Box
@@ -91,9 +95,13 @@ const PhotoBasicInfo: React.FC<PhotoBasicInfoProps> = ({
       </Box>
       {/* Photo Details */}
       <Box sx={{ flex: 1, minWidth: { lg: 300 } }}>
-        <Typography variant="h6" gutterBottom sx={{
-          fontWeight: 600
-        }}>
+        <Typography
+          variant="h6"
+          gutterBottom
+          sx={{
+            fontWeight: 600
+          }}
+        >
           Details
         </Typography>
         <Box sx={{ mb: 3 }}>
@@ -101,9 +109,10 @@ const PhotoBasicInfo: React.FC<PhotoBasicInfoProps> = ({
             variant="body2"
             gutterBottom
             sx={{
-              color: "text.secondary",
+              color: 'text.secondary',
               fontWeight: 500
-            }}>
+            }}
+          >
             Description
           </Typography>
           <Typography variant="body1">{photo.description || 'No description'}</Typography>
@@ -114,14 +123,18 @@ const PhotoBasicInfo: React.FC<PhotoBasicInfoProps> = ({
             <Typography
               variant="body2"
               sx={{
-                color: "text.secondary",
+                color: 'text.secondary',
                 fontWeight: 500
-              }}>
+              }}
+            >
               File Size
             </Typography>
-            <Typography variant="body1" sx={{
-              fontWeight: 500
-            }}>
+            <Typography
+              variant="body1"
+              sx={{
+                fontWeight: 500
+              }}
+            >
               {formatFileSize(photo.size)}
             </Typography>
           </Box>
@@ -129,14 +142,18 @@ const PhotoBasicInfo: React.FC<PhotoBasicInfoProps> = ({
             <Typography
               variant="body2"
               sx={{
-                color: "text.secondary",
+                color: 'text.secondary',
                 fontWeight: 500
-              }}>
+              }}
+            >
               Dimensions
             </Typography>
-            <Typography variant="body1" sx={{
-              fontWeight: 500
-            }}>
+            <Typography
+              variant="body1"
+              sx={{
+                fontWeight: 500
+              }}
+            >
               {photo.width && photo.height ? `${photo.width} × ${photo.height}` : 'Unknown'}
             </Typography>
           </Box>
@@ -144,14 +161,18 @@ const PhotoBasicInfo: React.FC<PhotoBasicInfoProps> = ({
             <Typography
               variant="body2"
               sx={{
-                color: "text.secondary",
+                color: 'text.secondary',
                 fontWeight: 500
-              }}>
+              }}
+            >
               Upload Date
             </Typography>
-            <Typography variant="body1" sx={{
-              fontWeight: 500
-            }}>
+            <Typography
+              variant="body1"
+              sx={{
+                fontWeight: 500
+              }}
+            >
               {formatDate(photo.createdAt)}
             </Typography>
           </Box>
@@ -160,9 +181,10 @@ const PhotoBasicInfo: React.FC<PhotoBasicInfoProps> = ({
           <Typography
             variant="body2"
             sx={{
-              color: "text.secondary",
+              color: 'text.secondary',
               fontWeight: 500
-            }}>
+            }}
+          >
             Original Name
           </Typography>
           <Typography
@@ -178,9 +200,10 @@ const PhotoBasicInfo: React.FC<PhotoBasicInfoProps> = ({
               variant="body2"
               gutterBottom
               sx={{
-                color: "text.secondary",
+                color: 'text.secondary',
                 fontWeight: 500
-              }}>
+              }}
+            >
               Tags
             </Typography>
 

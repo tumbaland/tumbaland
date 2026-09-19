@@ -37,8 +37,26 @@ const initialData: Collage = {
 };
 
 const albums = [
-  { _id: 'album-1', name: 'Trip', isPublic: false, tags: [], photoCount: 0, userId: 'u1', createdAt: '', updatedAt: '' },
-  { _id: 'album-2', name: 'Party', isPublic: false, tags: [], photoCount: 0, userId: 'u1', createdAt: '', updatedAt: '' }
+  {
+    _id: 'album-1',
+    name: 'Trip',
+    isPublic: false,
+    tags: [],
+    photoCount: 0,
+    userId: 'u1',
+    createdAt: '',
+    updatedAt: ''
+  },
+  {
+    _id: 'album-2',
+    name: 'Party',
+    isPublic: false,
+    tags: [],
+    photoCount: 0,
+    userId: 'u1',
+    createdAt: '',
+    updatedAt: ''
+  }
 ];
 
 beforeEach(() => {

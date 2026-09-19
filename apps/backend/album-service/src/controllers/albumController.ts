@@ -10,10 +10,7 @@ export const createAlbum = async (req: Request, res: Response): Promise<void> =>
   const user = req.user!;
   const { name, description, isPublic, tags, groupId } = req.body;
 
-  const album = await albumService.createAlbum(
-    { name, description, isPublic, tags, groupId },
-    user.id
-  );
+  const album = await albumService.createAlbum({ name, description, isPublic, tags, groupId }, user.id);
 
   sendSuccess(res, album, 'Album created successfully', 201);
 };

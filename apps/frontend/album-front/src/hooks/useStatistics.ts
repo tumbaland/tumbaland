@@ -20,7 +20,8 @@ export const useStatistics = (groupId?: string) => {
     statistics: query.data ?? null,
     loading: query.isPending,
     isFetching: query.isFetching,
-    error: query.error instanceof Error ? query.error.message : query.error ? 'Failed to load dashboard statistics' : null,
+    error:
+      query.error instanceof Error ? query.error.message : query.error ? 'Failed to load dashboard statistics' : null,
     refetch: query.refetch
   };
 };

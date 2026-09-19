@@ -103,7 +103,13 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete, 
         {editButton}
       </Box>
       <CardContent sx={{ flexGrow: 1, p: { xs: 1.5, sm: 2 } }}>
-        <Typography gutterBottom variant="h6" component="div" noWrap sx={{ fontSize: { xs: '0.9rem', sm: '1.1rem' }, fontWeight: 600 }}>
+        <Typography
+          gutterBottom
+          variant="h6"
+          component="div"
+          noWrap
+          sx={{ fontSize: { xs: '0.9rem', sm: '1.1rem' }, fontWeight: 600 }}
+        >
           {album.name}
         </Typography>
 
@@ -111,14 +117,15 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete, 
           <Typography
             variant="body2"
             sx={{
-              color: "text.secondary",
+              color: 'text.secondary',
               mt: 0.5,
               display: '-webkit-box',
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden',
               fontSize: { xs: '0.75rem', sm: '0.875rem' }
-            }}>
+            }}
+          >
             {album.description}
           </Typography>
         )}
@@ -126,10 +133,11 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete, 
         <Typography
           variant="body2"
           sx={{
-            color: "text.secondary",
+            color: 'text.secondary',
             mt: 1,
             fontSize: { xs: '0.75rem', sm: '0.875rem' }
-          }}>
+          }}
+        >
           {album.photoCount} {album.photoCount === 1 ? 'photo' : 'photos'}
           {album.photoCount > 0 && ` • ${formatBytes(album.totalSize)}`}
         </Typography>
@@ -140,7 +148,12 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete, 
               <Chip key={index} label={tag} size="small" variant="outlined" sx={{ fontSize: '0.7rem', height: 20 }} />
             ))}
             {album.tags.length > 3 && (
-              <Chip label={`+${album.tags.length - 3}`} size="small" variant="outlined" sx={{ fontSize: '0.7rem', height: 20 }} />
+              <Chip
+                label={`+${album.tags.length - 3}`}
+                size="small"
+                variant="outlined"
+                sx={{ fontSize: '0.7rem', height: 20 }}
+              />
             )}
           </Box>
         )}

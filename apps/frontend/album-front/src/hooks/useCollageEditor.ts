@@ -40,8 +40,7 @@ type Action =
   | { type: 'markSaved' }
   | { type: 'select'; id: string | null };
 
-const pushPast = (past: CollageDoc[], doc: CollageDoc): CollageDoc[] =>
-  [...past, doc].slice(-HISTORY_LIMIT);
+const pushPast = (past: CollageDoc[], doc: CollageDoc): CollageDoc[] => [...past, doc].slice(-HISTORY_LIMIT);
 
 const reducer = (state: EditorState, action: Action): EditorState => {
   switch (action.type) {
@@ -129,7 +128,7 @@ const patchItems = <T extends { id: string }>(items: T[], id: string, patch: Par
   return next;
 };
 
-const moveInArray = <T,>(items: T[], from: number, to: number): T[] => {
+const moveInArray = <T>(items: T[], from: number, to: number): T[] => {
   if (from === to || from < 0 || to < 0 || to >= items.length) return items;
   const next = items.slice();
   const [item] = next.splice(from, 1);
@@ -148,8 +147,7 @@ export const useCollageEditor = () => {
   const select = useCallback((id: string | null) => dispatch({ type: 'select', id }), []);
 
   const commit = useCallback(
-    (updater: (d: CollageDoc) => CollageDoc, select?: string | null) =>
-      dispatch({ type: 'commit', updater, select }),
+    (updater: (d: CollageDoc) => CollageDoc, select?: string | null) => dispatch({ type: 'commit', updater, select }),
     []
   );
 

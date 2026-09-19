@@ -81,9 +81,7 @@ it('shows an error alert when the query has an error', () => {
 
 it('renders the album grid and count when albums are present', () => {
   const albums = [makeAlbum({ _id: 'a1', name: 'Trip' })];
-  mockedUseAlbums.mockReturnValue(
-    baseAlbumsReturn({ albums, pagination: { page: 1, limit: 20, total: 1, pages: 1 } })
-  );
+  mockedUseAlbums.mockReturnValue(baseAlbumsReturn({ albums, pagination: { page: 1, limit: 20, total: 1, pages: 1 } }));
 
   renderPage();
 
@@ -93,9 +91,7 @@ it('renders the album grid and count when albums are present', () => {
 
 it('navigates to the album detail page when a card is clicked', async () => {
   const albums = [makeAlbum({ _id: 'a1', name: 'Trip' })];
-  mockedUseAlbums.mockReturnValue(
-    baseAlbumsReturn({ albums, pagination: { page: 1, limit: 20, total: 1, pages: 1 } })
-  );
+  mockedUseAlbums.mockReturnValue(baseAlbumsReturn({ albums, pagination: { page: 1, limit: 20, total: 1, pages: 1 } }));
 
   renderPage();
   await userEvent.click(screen.getByText('Trip'));
@@ -154,9 +150,7 @@ it('deletes an album via the card menu and confirmation dialog', async () => {
 
 it('disables deleting an album that still has photos', async () => {
   const albums = [makeAlbum({ _id: 'a1', name: 'Trip', photoCount: 3 })];
-  mockedUseAlbums.mockReturnValue(
-    baseAlbumsReturn({ albums, pagination: { page: 1, limit: 20, total: 1, pages: 1 } })
-  );
+  mockedUseAlbums.mockReturnValue(baseAlbumsReturn({ albums, pagination: { page: 1, limit: 20, total: 1, pages: 1 } }));
 
   renderPage();
   await userEvent.click(screen.getByRole('button', { name: /album options/i }));

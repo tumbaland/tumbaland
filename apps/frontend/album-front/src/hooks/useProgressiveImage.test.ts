@@ -58,10 +58,9 @@ it('has no display source when there is no full src', () => {
 });
 
 it('resets isFullLoaded and re-preloads when fullSrc changes', () => {
-  const { result, rerender } = renderHook(
-    ({ fullSrc, thumbnailSrc }) => useProgressiveImage(fullSrc, thumbnailSrc),
-    { initialProps: { fullSrc: '/a.jpg', thumbnailSrc: '/a-thumb.jpg' } }
-  );
+  const { result, rerender } = renderHook(({ fullSrc, thumbnailSrc }) => useProgressiveImage(fullSrc, thumbnailSrc), {
+    initialProps: { fullSrc: '/a.jpg', thumbnailSrc: '/a-thumb.jpg' }
+  });
 
   act(() => {
     FakeImage.instances[0].onload?.();

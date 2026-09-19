@@ -74,7 +74,11 @@ describe('editButton slot', () => {
       <AlbumCard
         album={album}
         onView={onView}
-        editButton={<button aria-label="open menu" onClick={(e) => e.stopPropagation()}>menu</button>}
+        editButton={
+          <button aria-label="open menu" onClick={(e) => e.stopPropagation()}>
+            menu
+          </button>
+        }
       />
     );
 

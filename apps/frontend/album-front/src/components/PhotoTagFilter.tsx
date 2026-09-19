@@ -22,13 +22,7 @@ const COLLAPSED_LIMIT = 12;
  * One row that scrolls sideways on a phone, where a label line above wrapped
  * chips used to take three. The label is the group's accessible name instead.
  */
-const PhotoTagFilter: React.FC<PhotoTagFilterProps> = ({
-  tags,
-  selected,
-  match,
-  onChange,
-  onMatchChange
-}) => {
+const PhotoTagFilter: React.FC<PhotoTagFilterProps> = ({ tags, selected, match, onChange, onMatchChange }) => {
   const [expanded, setExpanded] = useState(false);
 
   if (tags.length === 0) return null;
@@ -91,11 +85,7 @@ const PhotoTagFilter: React.FC<PhotoTagFilterProps> = ({
           </Button>
         )}
         {selected.length > 0 && (
-          <Button
-            size="small"
-            onClick={() => onChange([])}
-            sx={{ textTransform: 'none', minWidth: 0, flexShrink: 0 }}
-          >
+          <Button size="small" onClick={() => onChange([])} sx={{ textTransform: 'none', minWidth: 0, flexShrink: 0 }}>
             Clear
           </Button>
         )}

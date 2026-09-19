@@ -70,10 +70,7 @@ const cropImageStyle = (crop?: CollageCrop): CSSProperties => {
  * by 90 or 270 swaps the axes, so the pre-turn box is the content box on its
  * side; rotating that lands it back exactly on the content box.
  */
-const orientedLayer = (
-  content: { width: number; height: number },
-  orientation?: number
-): CSSProperties => {
+const orientedLayer = (content: { width: number; height: number }, orientation?: number): CSSProperties => {
   const turned = isQuarterTurned(orientation);
   const width = turned ? content.height : content.width;
   const height = turned ? content.width : content.height;
@@ -259,23 +256,23 @@ const SelectionHandles: React.FC<{
     >
       {/* rotate handle */}
       {showRotate && (
-      <Box
-        onPointerDown={onRotateDown}
-        sx={{
-          position: 'absolute',
-          left: '50%',
-          top: -28 / scale,
-          transform: 'translateX(-50%)',
-          width: handleSize,
-          height: handleSize,
-          borderRadius: '50%',
-          bgcolor: '#6366f1',
-          border: '2px solid #fff',
-          cursor: 'grab',
-          pointerEvents: 'auto',
-          touchAction: 'none'
-        }}
-      />
+        <Box
+          onPointerDown={onRotateDown}
+          sx={{
+            position: 'absolute',
+            left: '50%',
+            top: -28 / scale,
+            transform: 'translateX(-50%)',
+            width: handleSize,
+            height: handleSize,
+            borderRadius: '50%',
+            bgcolor: '#6366f1',
+            border: '2px solid #fff',
+            cursor: 'grab',
+            pointerEvents: 'auto',
+            touchAction: 'none'
+          }}
+        />
       )}
       {/* resize handle (SE) */}
       <Box

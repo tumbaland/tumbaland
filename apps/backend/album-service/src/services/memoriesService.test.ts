@@ -89,7 +89,7 @@ describe('getMemories', () => {
     expect(mockedAlbumFind).toHaveBeenCalledWith({ groupId: 'g1' });
   });
 
-  it('scopes to the caller\'s own non-group albums when no group is given', async () => {
+  it("scopes to the caller's own non-group albums when no group is given", async () => {
     await memoriesService.getMemories({ now: NOW }, { userId: 'u1', userGroups: ['g1'] });
     expect(mockedAlbumFind).toHaveBeenCalledWith({ userId: 'u1', groupId: { $exists: false } });
   });
@@ -134,10 +134,7 @@ describe('getMemories', () => {
     mockedPhotoAggregate.mockResolvedValue([{ _id: 2024, photoCount: 40, photoIds: ['p1'] }]);
     mockedPhotoFind.mockResolvedValue([photoDoc()]);
 
-    const result = await memoriesService.getMemories(
-      { now: NOW, limitPerYear: 1 },
-      { userId: 'u1', userGroups: [] }
-    );
+    const result = await memoriesService.getMemories({ now: NOW, limitPerYear: 1 }, { userId: 'u1', userGroups: [] });
 
     const [pipeline] = mockedPhotoAggregate.mock.calls[0];
     expect(pipeline).toContainEqual({ $project: { photoCount: 1, photoIds: { $slice: ['$photoIds', 1] } } });
@@ -187,7 +184,7 @@ describe('getMemories', () => {
     expect(result.years[0].photos).toHaveLength(1);
   });
 
-  it('signs every year\'s photos in a single batch', async () => {
+  it("signs every year's photos in a single batch", async () => {
     mockedPhotoAggregate.mockResolvedValue([
       { _id: 2024, photoCount: 1, photoIds: ['p1'] },
       { _id: 2023, photoCount: 1, photoIds: ['p2'] }

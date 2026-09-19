@@ -43,8 +43,8 @@ interface CollageListFilter {
 }
 
 export const createCollage = async (
-  data: CollageInput, 
-  userId: string, 
+  data: CollageInput,
+  userId: string,
   userGroups: string[] = []
 ): Promise<ICollage> => {
   // Creating a collage in a group is writing into that group.
@@ -57,16 +57,16 @@ export const createCollage = async (
     ...data,
     userId
   };
-  
+
   const collage = new CollageModel(collageData);
   await collage.save();
   return collage;
 };
 
 export const updateCollage = async (
-  id: string, 
-  data: CollageInput, 
-  userId: string, 
+  id: string,
+  data: CollageInput,
+  userId: string,
   userGroups: string[] = []
 ): Promise<ICollage | null> => {
   // First check if user has access to this collage
@@ -98,12 +98,12 @@ export const updateCollage = async (
 };
 
 export const getCollageById = async (
-  id: string, 
-  userId: string, 
+  id: string,
+  userId: string,
   userGroups: string[] = []
 ): Promise<ICollage | null> => {
   const collage = await CollageModel.findById(id);
-  
+
   if (!collage) {
     return null;
   }
@@ -140,7 +140,7 @@ export const getCollageWithPhotos = async (
 
   // Use aggregation to fetch photos from all albums in the collage
   const aggregationPipeline: PipelineStage[] = [
-    { $match: { _id: { $in: collage.albumIds.map(id => new mongoose.Types.ObjectId(id)) } } },
+    { $match: { _id: { $in: collage.albumIds.map((id) => new mongoose.Types.ObjectId(id)) } } },
     {
       $lookup: {
         from: 'photos',
@@ -203,7 +203,9 @@ export const getCollageWithPhotos = async (
   let urlMap: Awaited<ReturnType<typeof getSignedUrlsBatch>> = {};
   try {
     urlMap = await getSignedUrlsBatch(
-      allPhotos.flatMap((photo) => [photo.minioFileId, photo.minioThumbnailFileId]).filter((id): id is string => Boolean(id)),
+      allPhotos
+        .flatMap((photo) => [photo.minioFileId, photo.minioThumbnailFileId])
+        .filter((id): id is string => Boolean(id)),
       60
     );
   } catch (error) {
@@ -228,13 +230,13 @@ export const getCollageWithPhotos = async (
 };
 
 export const getCollageList = async (
-  albumId?: string, 
-  userId?: string, 
+  albumId?: string,
+  userId?: string,
   userGroups: string[] = [],
   groupId?: string
 ): Promise<ICollage[]> => {
   const filter: CollageListFilter = {};
-  
+
   // Add album filter if provided
   if (albumId) {
     filter.albumIds = { $in: [albumId] };
@@ -258,11 +260,7 @@ export const getCollageList = async (
   return CollageModel.find(filter).sort({ createdAt: -1 });
 };
 
-export const deleteCollage = async (
-  id: string, 
-  userId: string, 
-  userGroups: string[] = []
-): Promise<void> => {
+export const deleteCollage = async (id: string, userId: string, userGroups: string[] = []): Promise<void> => {
   // First check if user has access to this collage
   const existingCollage = await CollageModel.findById(id);
   if (!existingCollage) {

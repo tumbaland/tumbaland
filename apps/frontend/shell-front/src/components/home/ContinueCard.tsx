@@ -1,7 +1,7 @@
 import { Box, ButtonBase, Typography } from '@mui/material';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { HomeModule } from './modules';
-import { glass, ink } from '../../theme/tokens';
+import { glass, ink } from '@tumbaland/components';
 
 interface ContinueCardProps {
   module: HomeModule;

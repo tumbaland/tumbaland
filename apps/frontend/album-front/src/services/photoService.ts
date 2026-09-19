@@ -1,5 +1,6 @@
 import { albumApi } from './albumApi';
 import {
+  Highlights,
   Memories,
   Photo,
   CreatePhotoData,
@@ -10,6 +11,12 @@ import {
   TagCount,
   TagMatch
 } from '../types';
+
+export type HighlightsQueryParams = {
+  groupId?: string;
+  /** how many photos to return; server defaults to 8 for recent, 1 for random */
+  limit?: number;
+};
 
 export type MemoriesQueryParams = {
   groupId?: string;
@@ -56,6 +63,18 @@ export const photoService = {
   // Photos from this day in earlier years, newest year first
   async getMemories(params?: MemoriesQueryParams): Promise<Memories> {
     const response = await albumApi.get<ApiResponse<Memories>>('/photos/memories', { params });
+    return response.data;
+  },
+
+  // The newest uploads across every album in scope, newest first
+  async getRecentPhotos(params?: HighlightsQueryParams): Promise<Highlights> {
+    const response = await albumApi.get<ApiResponse<Highlights>>('/photos/recent', { params });
+    return response.data;
+  },
+
+  // A photo picked at random, to resurface something the library had buried
+  async getRandomPhotos(params?: HighlightsQueryParams): Promise<Highlights> {
+    const response = await albumApi.get<ApiResponse<Highlights>>('/photos/random', { params });
     return response.data;
   },
 
@@ -108,12 +127,15 @@ export const photoService = {
     albumId: string,
     sizeBytes: number
   ): Promise<UploadSignedUrlResponse & { expiresInMinutes: number }> {
-    const response = await albumApi.post<ApiResponse<UploadSignedUrlResponse & { expiresInMinutes: number }>>('/photos/upload-url', {
-      filename,
-      mimetype,
-      albumId,
-      sizeBytes
-    });
+    const response = await albumApi.post<ApiResponse<UploadSignedUrlResponse & { expiresInMinutes: number }>>(
+      '/photos/upload-url',
+      {
+        filename,
+        mimetype,
+        albumId,
+        sizeBytes
+      }
+    );
     return response.data;
   },
 
@@ -142,7 +164,7 @@ export const photoService = {
     const photos = photosResponse.photos || [];
 
     // The album service already provides signed URLs, so we just need to map them
-    const photosWithUrls = photos.map(photo => ({
+    const photosWithUrls = photos.map((photo) => ({
       ...photo,
       thumbnailUrl: photo.thumbnailSignedUrl || undefined, // Only use thumbnail if signed URL exists
       fileUrl: photo.signedUrl // Full resolution URL
@@ -152,5 +174,5 @@ export const photoService = {
       ...photosResponse,
       photos: photosWithUrls
     };
-  },
+  }
 };

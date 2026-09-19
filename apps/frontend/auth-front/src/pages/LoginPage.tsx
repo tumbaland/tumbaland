@@ -107,10 +107,11 @@ const LoginPage: React.FC = () => {
 
       <Card
         sx={{
-          p: { xs: 4, sm: 6 },
+          p: { xs: 3, sm: 6 },
           borderRadius: 6,
           boxShadow: '0 20px 60px -10px rgba(31, 38, 135, 0.25)',
-          minWidth: 340,
+          // No minWidth: 340 plus 32px of padding a side needed 404px, which a
+          // 360px phone does not have, so the card pushed the page sideways.
           maxWidth: 420,
           width: '100%',
           textAlign: 'center',

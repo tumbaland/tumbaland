@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { NotFoundError, UnauthorizedError, canAccessResource, sendSuccess, countRead } from '@tumbaland/backend-core';
 import photoService from '../services/photoService';
 import memoriesService from '../services/memoriesService';
+import highlightsService from '../services/highlightsService';
 import { getUploadSignedUrl, generateFileId } from '../services/fileServiceClient';
 import { assertStorageHeadroom, recordStoredBytes, releaseStoredBytes, storageActor } from '../services/storageUsage';
 import Album from '../models/Album';
@@ -91,6 +92,38 @@ export const getMemories = async (req: Request, res: Response): Promise<void> =>
   // the photos inside it.
   countRead(res, memories.totalPhotos);
   sendSuccess(res, memories);
+};
+
+/**
+ * The most recently uploaded photos, across every album in scope
+ */
+export const getRecentPhotos = async (req: Request, res: Response): Promise<void> => {
+  const user = req.user!;
+  const { groupId, limit } = req.query;
+
+  const result = await highlightsService.getRecentPhotos(
+    { groupId: groupId as string | undefined, limit: parseBoundedNumber(limit, 8, 1, 50) },
+    { userId: user.id, userGroups: req.userGroups || [] }
+  );
+
+  countRead(res, result.photos.length);
+  sendSuccess(res, result);
+};
+
+/**
+ * A photo picked at random, to resurface something the library had buried
+ */
+export const getRandomPhotos = async (req: Request, res: Response): Promise<void> => {
+  const user = req.user!;
+  const { groupId, limit } = req.query;
+
+  const result = await highlightsService.getRandomPhotos(
+    { groupId: groupId as string | undefined, limit: parseBoundedNumber(limit, 1, 1, 10) },
+    { userId: user.id, userGroups: req.userGroups || [] }
+  );
+
+  countRead(res, result.photos.length);
+  sendSuccess(res, result);
 };
 
 /**

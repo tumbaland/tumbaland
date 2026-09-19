@@ -1,15 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { logger } from '@tumbaland/frontend-core';
-import {
-  Box,
-  Container,
-  Alert,
-  CircularProgress,
-  Button,
-  Typography,
-  SelectChangeEvent
-} from '@mui/material';
+import { Box, Container, Alert, CircularProgress, Button, Typography, SelectChangeEvent } from '@mui/material';
 import {
   Delete as DeleteIcon,
   Checklist as ChecklistIcon,
@@ -114,7 +106,6 @@ const AlbumDetailPage: React.FC = () => {
     handleClosePhotoViewer
   } = usePhotoViewer(allPhotos);
 
-
   const handleDeletePhoto = async (photo: Photo) => {
     setPhotoToDelete(photo);
     setShowDeleteDialog(true);
@@ -182,7 +173,10 @@ const AlbumDetailPage: React.FC = () => {
     setPhotoToEdit(null);
   };
 
-  const handleSaveEditPhoto = async (photoId: string, data: { title?: string; description?: string; tags?: string[] }) => {
+  const handleSaveEditPhoto = async (
+    photoId: string,
+    data: { title?: string; description?: string; tags?: string[] }
+  ) => {
     try {
       await updatePhoto(photoId, data);
     } catch (err) {
@@ -288,10 +282,7 @@ const AlbumDetailPage: React.FC = () => {
       {/* Search and Select share a row. Stacked, with Select on a row of its
           own, they cost a phone two rows before the first photo. */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: { xs: 1, sm: 2 } }}>
-        <PhotoSearchBar
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-        />
+        <PhotoSearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
         {!selectMode && (
           <Button size="small" startIcon={<ChecklistIcon />} onClick={handleToggleSelectMode} sx={{ flexShrink: 0 }}>
             Select

@@ -54,44 +54,35 @@ describe('getAlbumStatistics', () => {
     mockedAlbumCount.mockResolvedValue(2);
     mockedPhotoCount.mockResolvedValue(5);
 
-    const result = await statisticsService.getAlbumStatistics(
-      { groupId: 'g1' },
-      { userId: 'u1', userGroups: ['g1'] }
-    );
+    const result = await statisticsService.getAlbumStatistics({ groupId: 'g1' }, { userId: 'u1', userGroups: ['g1'] });
 
     expect(result.overview.totalAlbums).toBe(2);
     expect(result.overview.totalPhotos).toBe(5);
-    // Group-scoped requests skip the per-user group breakdown.
-    expect(result.groups).toEqual([]);
   });
 
-  it('scopes to personal albums and includes group stats when no groupId is given', async () => {
-    mockedAlbumAggregate
-      .mockResolvedValueOnce([{ totalSize: 1000, totalPhotoCount: 2 }]) // storage stats
-      .mockResolvedValueOnce([]) // album creation stats
-      .mockResolvedValueOnce([]) // popular tags
-      .mockResolvedValueOnce([{ _id: 'personal', albumCount: 3, photoCount: 0 }]); // group stats
-    mockedPhotoAggregate.mockResolvedValueOnce([]); // photo upload stats
+  it('scopes to personal albums when no groupId is given', async () => {
+    mockedAlbumAggregate.mockResolvedValueOnce([{ totalSize: 1000, totalPhotoCount: 2 }]); // storage stats
 
     const result = await statisticsService.getAlbumStatistics({}, { userId: 'u1', userGroups: [] });
 
     expect(result.overview.totalStorage).toBe(1000);
     expect(result.overview.averagePhotoSize).toBe(500);
-    expect(result.groups).toEqual([{ groupId: 'personal', albumCount: 3, photoCount: 0 }]);
   });
 
-  it('formats time-series and tag data', async () => {
-    mockedAlbumAggregate
-      .mockResolvedValueOnce([]) // storage stats
-      .mockResolvedValueOnce([{ _id: { year: 2026, month: 3 }, count: 4 }]) // album creation stats
-      .mockResolvedValueOnce([{ _id: 'vacation', count: 5 }]) // popular tags
-      .mockResolvedValueOnce([]); // group stats
-    mockedPhotoAggregate.mockResolvedValueOnce([]);
-
+  it('returns only what the dashboard draws, so nothing is computed to be thrown away', async () => {
     const result = await statisticsService.getAlbumStatistics({}, { userId: 'u1', userGroups: [] });
 
-    expect(result.timeSeries.albumsCreated).toEqual([{ date: '2026-03', count: 4 }]);
-    expect(result.tags).toEqual([{ tag: 'vacation', count: 5 }]);
+    expect(Object.keys(result).sort()).toEqual(['albums', 'overview']);
+  });
+
+  it('runs one aggregation, the storage sum, and no per-group N+1 loop', async () => {
+    await statisticsService.getAlbumStatistics({}, { userId: 'u1', userGroups: [] });
+
+    // The group breakdown used to issue a find plus a countDocuments per
+    // group, on top of three time-series and tag aggregations, for charts
+    // the dashboard no longer draws.
+    expect(mockedAlbumAggregate).toHaveBeenCalledTimes(1);
+    expect(mockedPhotoAggregate).not.toHaveBeenCalled();
   });
 
   it('returns the top albums by storage, sorted and limited via an indexed find (no photo aggregation)', async () => {

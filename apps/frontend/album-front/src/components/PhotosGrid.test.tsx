@@ -89,7 +89,9 @@ it('ignores an invalid stored density and falls back to Comfortable', () => {
 
 it('passes select mode through to photo cards, hiding their per-card menu button', () => {
   const photos = [makePhoto({ _id: 'p1', title: 'First' }), makePhoto({ _id: 'p2', title: 'Second' })];
-  render(<PhotosGrid {...baseProps} photos={photos} selectMode selectedIds={new Set(['p1'])} onToggleSelectPhoto={vi.fn()} />);
+  render(
+    <PhotosGrid {...baseProps} photos={photos} selectMode selectedIds={new Set(['p1'])} onToggleSelectPhoto={vi.fn()} />
+  );
 
   // The only buttons left should be the 4 density toggles — each photo
   // card's "⋮" menu button (no accessible name) is suppressed in select mode.

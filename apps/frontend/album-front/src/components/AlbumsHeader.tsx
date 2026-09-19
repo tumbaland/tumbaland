@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Typography, Button, TextField, InputAdornment, IconButton } from '@mui/material';
 import { Search as SearchIcon, Add as AddIcon, Refresh as RefreshIcon } from '@mui/icons-material';
+import { gradient } from '@tumbaland/components';
 
 interface AlbumsHeaderProps {
   searchTerm: string;
@@ -46,7 +47,7 @@ const AlbumsHeader: React.FC<AlbumsHeaderProps> = ({
             borderRadius: 2,
             textTransform: 'none',
             fontWeight: 600,
-            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
+            background: gradient.brand
           }}
         >
           Create album

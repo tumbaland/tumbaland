@@ -37,22 +37,6 @@ interface TopAlbumRow {
   photoCount: number;
 }
 
-interface TimeSeriesRow {
-  _id: { year: number; month: number };
-  count: number;
-}
-
-interface TagStatRow {
-  _id: string;
-  count: number;
-}
-
-interface GroupStatRow {
-  _id: string;
-  albumCount: number;
-  photoCount: number;
-}
-
 interface AlbumStatisticsResult {
   overview: {
     totalAlbums: number;
@@ -60,12 +44,6 @@ interface AlbumStatisticsResult {
     totalStorage: number;
     averagePhotoSize: number;
   };
-  timeSeries: {
-    albumsCreated: { date: string; count: number }[];
-    photosUploaded: { date: string; count: number }[];
-  };
-  tags: { tag: string; count: number }[];
-  groups: { groupId: string; albumCount: number; photoCount: number }[];
   albums: { albumId: string; name: string; totalSize: number; photoCount: number }[];
 }
 
@@ -73,10 +51,7 @@ class StatisticsService {
   /**
    * Get comprehensive album and photo statistics
    */
-  async getAlbumStatistics(
-    filter: StatisticsFilter,
-    context: StatisticsContext
-  ): Promise<AlbumStatisticsResult> {
+  async getAlbumStatistics(filter: StatisticsFilter, context: StatisticsContext): Promise<AlbumStatisticsResult> {
     const { groupId } = filter;
     const { userId, userGroups } = context;
 
@@ -120,29 +95,6 @@ class StatisticsService {
     // on Album, so this is a fast indexed sort/limit, not a full scan.
     const topAlbums = await this.getTopAlbumsByStorage(albumMatchQuery);
 
-    // Get albums created over time (last 12 months)
-    const albumCreationStats = await this.getAlbumCreationStats(albumMatchQuery);
-
-    // Get photos uploaded over time (last 12 months)
-    const photoUploadStats = await this.getPhotoUploadStats(photoMatchQuery);
-
-    // Get popular tags (top 10)
-    const tagStats = await this.getPopularTags(albumMatchQuery);
-
-    // Get albums by group (if no specific group filter)
-    let groupStats: GroupStatRow[] = [];
-    if (!groupId) {
-      groupStats = await this.getGroupStats(userId);
-    }
-
-    // Format time series data
-    const formatTimeSeries = (stats: TimeSeriesRow[]) => {
-      return stats.map(stat => ({
-        date: `${stat._id.year}-${String(stat._id.month).padStart(2, '0')}`,
-        count: stat.count
-      }));
-    };
-
     return {
       overview: {
         totalAlbums: albumCount,
@@ -150,20 +102,7 @@ class StatisticsService {
         totalStorage: storageStats.totalSize,
         averagePhotoSize: Math.round(storageStats.avgSize || 0)
       },
-      timeSeries: {
-        albumsCreated: formatTimeSeries(albumCreationStats),
-        photosUploaded: formatTimeSeries(photoUploadStats)
-      },
-      tags: tagStats.map(tag => ({
-        tag: tag._id,
-        count: tag.count
-      })),
-      groups: groupStats.map(group => ({
-        groupId: group._id,
-        albumCount: group.albumCount,
-        photoCount: group.photoCount
-      })),
-      albums: topAlbums.map(album => ({
+      albums: topAlbums.map((album) => ({
         albumId: String(album._id),
         name: album.name,
         totalSize: album.totalSize,
@@ -216,101 +155,6 @@ class StatisticsService {
       .lean<TopAlbumRow[]>();
 
     return rows.map((row) => ({ ...row, totalSize: row.totalSize ?? 0, photoCount: row.photoCount ?? 0 }));
-  }
-
-  /**
-   * Private helper: Get album creation statistics (12 months)
-   */
-  private async getAlbumCreationStats(albumMatchQuery: AlbumMatchQuery): Promise<TimeSeriesRow[]> {
-    const twelveMonthsAgo = new Date();
-    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
-
-    return Album.aggregate<TimeSeriesRow>([
-      { $match: { ...albumMatchQuery, createdAt: { $gte: twelveMonthsAgo } } },
-      {
-        $group: {
-          _id: {
-            year: { $year: '$createdAt' },
-            month: { $month: '$createdAt' }
-          },
-          count: { $sum: 1 }
-        }
-      },
-      {
-        $sort: { '_id.year': 1, '_id.month': 1 }
-      }
-    ]);
-  }
-
-  /**
-   * Private helper: Get photo upload statistics (12 months)
-   */
-  private async getPhotoUploadStats(photoMatchQuery: PhotoMatchQuery): Promise<TimeSeriesRow[]> {
-    const twelveMonthsAgo = new Date();
-    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
-
-    return Photo.aggregate<TimeSeriesRow>([
-      { $match: { ...photoMatchQuery, createdAt: { $gte: twelveMonthsAgo } } },
-      {
-        $group: {
-          _id: {
-            year: { $year: '$createdAt' },
-            month: { $month: '$createdAt' }
-          },
-          count: { $sum: 1 }
-        }
-      },
-      {
-        $sort: { '_id.year': 1, '_id.month': 1 }
-      }
-    ]);
-  }
-
-  /**
-   * Private helper: Get popular tags (top 10)
-   */
-  private async getPopularTags(albumMatchQuery: AlbumMatchQuery): Promise<TagStatRow[]> {
-    return Album.aggregate<TagStatRow>([
-      { $match: albumMatchQuery },
-      { $unwind: '$tags' },
-      {
-        $group: {
-          _id: '$tags',
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { count: -1 } },
-      { $limit: 10 }
-    ]);
-  }
-
-  /**
-   * Private helper: Get group statistics
-   */
-  private async getGroupStats(userId: string): Promise<GroupStatRow[]> {
-    const groupStats = await Album.aggregate<GroupStatRow>([
-      { $match: { userId } },
-      {
-        $group: {
-          _id: { $ifNull: ['$groupId', 'personal'] },
-          albumCount: { $sum: 1 },
-          photoCount: { $sum: 0 }
-        }
-      }
-    ]);
-
-    // Get photo counts for each group
-    for (const group of groupStats) {
-      const groupPhotoQuery =
-        group._id === 'personal'
-          ? { albumId: { $in: (await Album.find({ userId, groupId: { $exists: false } }).distinct('_id')).map((albumId) => albumId.toString()) } }
-          : { albumId: { $in: (await Album.find({ groupId: group._id }).distinct('_id')).map((albumId) => albumId.toString()) } };
-
-      const photoCount = await Photo.countDocuments(groupPhotoQuery);
-      group.photoCount = photoCount;
-    }
-
-    return groupStats;
   }
 }
 

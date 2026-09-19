@@ -1,13 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { logger } from '@tumbaland/frontend-core';
-import {
-  Box,
-  Container,
-  Button,
-  Alert,
-  CircularProgress
-} from '@mui/material';
+import { Box, Container, Button, Alert, CircularProgress } from '@mui/material';
 import { useParams, useNavigate } from 'react-router';
 import { Photo, Album } from '../types';
 import { albumService } from '../services/albumService';
@@ -39,9 +33,7 @@ const PhotoDetailPage: React.FC = () => {
   const currentPhotoIndex = albumPhotos.findIndex((p) => p._id === photoId);
   const previousPhoto = currentPhotoIndex > 0 ? albumPhotos[currentPhotoIndex - 1] : null;
   const nextPhoto =
-    currentPhotoIndex >= 0 && currentPhotoIndex < albumPhotos.length - 1
-      ? albumPhotos[currentPhotoIndex + 1]
-      : null;
+    currentPhotoIndex >= 0 && currentPhotoIndex < albumPhotos.length - 1 ? albumPhotos[currentPhotoIndex + 1] : null;
 
   const goToPhoto = (targetPhotoId: string) => {
     navigate(`/albums/${albumId}/photos/${targetPhotoId}`);
@@ -106,7 +98,6 @@ const PhotoDetailPage: React.FC = () => {
     }
   };
 
-
   // This page holds the photo in local state, so the album's cached lists (and
   // its tag vocabulary) would otherwise keep showing the pre-edit values when
   // the user navigates back.
@@ -129,7 +120,6 @@ const PhotoDetailPage: React.FC = () => {
       alert('Failed to update photo');
     }
   };
-
 
   const handleSaveTags = async (tags: string[]) => {
     if (!photo) return;
@@ -193,9 +183,7 @@ const PhotoDetailPage: React.FC = () => {
         onNext={handleNextPhoto}
         hasPrevious={Boolean(previousPhoto)}
         hasNext={Boolean(nextPhoto)}
-        photoPosition={
-          currentPhotoIndex >= 0 ? { index: currentPhotoIndex + 1, total: albumPhotos.length } : undefined
-        }
+        photoPosition={currentPhotoIndex >= 0 ? { index: currentPhotoIndex + 1, total: albumPhotos.length } : undefined}
       />
 
       {/* Main Content */}
@@ -230,7 +218,17 @@ const PhotoDetailPage: React.FC = () => {
         onSave={handleSaveEdit}
       />
       {/* Delete Confirmation Dialog */}
-      <ConfirmDialog open={showDeleteDialog} onClose={() => setShowDeleteDialog(false)} onConfirm={handleConfirmDelete} title="Delete Photo" message="Are you sure you want to delete this photo? This action cannot be undone." confirmText="Delete Photo" cancelText="Cancel" variant="danger" loading={deleting} />
+      <ConfirmDialog
+        open={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Photo"
+        message="Are you sure you want to delete this photo? This action cannot be undone."
+        confirmText="Delete Photo"
+        cancelText="Cancel"
+        variant="danger"
+        loading={deleting}
+      />
     </Container>
   );
 };

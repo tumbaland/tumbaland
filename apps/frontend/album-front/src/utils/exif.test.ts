@@ -7,8 +7,7 @@ import { exifDateToUtc, toDecimalDegrees, metadataFromExif, extractPhotoMetadata
 
 const mockedParse = exifr.parse as unknown as ReturnType<typeof vi.fn>;
 
-const imageFile = (name = 'photo.jpg', type = 'image/jpeg') =>
-  new File([new Uint8Array([1, 2, 3])], name, { type });
+const imageFile = (name = 'photo.jpg', type = 'image/jpeg') => new File([new Uint8Array([1, 2, 3])], name, { type });
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -99,18 +98,12 @@ describe('metadataFromExif', () => {
   });
 
   it('falls back through CreateDate and ModifyDate when the original is absent', () => {
-    expect(metadataFromExif({ CreateDate: '2023:05:04 10:00:00' })?.dateTaken).toBe(
-      '2023-05-04T10:00:00.000Z'
-    );
-    expect(metadataFromExif({ ModifyDate: '2022:05:04 10:00:00' })?.dateTaken).toBe(
-      '2022-05-04T10:00:00.000Z'
-    );
+    expect(metadataFromExif({ CreateDate: '2023:05:04 10:00:00' })?.dateTaken).toBe('2023-05-04T10:00:00.000Z');
+    expect(metadataFromExif({ ModifyDate: '2022:05:04 10:00:00' })?.dateTaken).toBe('2022-05-04T10:00:00.000Z');
   });
 
   it('omits location entirely when only one coordinate is present', () => {
-    expect(
-      metadataFromExif({ GPSLatitude: [58, 22, 0], GPSLatitudeRef: 'N' })?.location
-    ).toBeUndefined();
+    expect(metadataFromExif({ GPSLatitude: [58, 22, 0], GPSLatitudeRef: 'N' })?.location).toBeUndefined();
   });
 
   it('still returns the camera for a file carrying no date', () => {

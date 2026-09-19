@@ -67,7 +67,12 @@ it('logs and stays open (does not call onClose) when onSave rejects', async () =
 
 it('disables Cancel/close while saving is in flight', async () => {
   let resolveSave: () => void = () => {};
-  const onSave = vi.fn(() => new Promise<void>((resolve) => { resolveSave = resolve; }));
+  const onSave = vi.fn(
+    () =>
+      new Promise<void>((resolve) => {
+        resolveSave = resolve;
+      })
+  );
   render(<EditPhotoDialog open photo={makePhoto()} onClose={vi.fn()} onSave={onSave} />);
 
   await userEvent.click(screen.getByRole('button', { name: /save changes/i }));

@@ -25,7 +25,13 @@ it('shows the current search term and calls onSearchChange as it changes', async
 it('calls onCreateAlbum when the create button is clicked', async () => {
   const onCreateAlbum = vi.fn();
   render(
-    <AlbumsHeader searchTerm="" onSearchChange={vi.fn()} onCreateAlbum={onCreateAlbum} onRefresh={vi.fn()} loading={false} />
+    <AlbumsHeader
+      searchTerm=""
+      onSearchChange={vi.fn()}
+      onCreateAlbum={onCreateAlbum}
+      onRefresh={vi.fn()}
+      loading={false}
+    />
   );
 
   await userEvent.click(screen.getByRole('button', { name: /create album/i }));
@@ -36,7 +42,13 @@ it('calls onCreateAlbum when the create button is clicked', async () => {
 it('calls onRefresh when the refresh button is clicked, and disables it while loading', async () => {
   const onRefresh = vi.fn();
   const { rerender } = render(
-    <AlbumsHeader searchTerm="" onSearchChange={vi.fn()} onCreateAlbum={vi.fn()} onRefresh={onRefresh} loading={false} />
+    <AlbumsHeader
+      searchTerm=""
+      onSearchChange={vi.fn()}
+      onCreateAlbum={vi.fn()}
+      onRefresh={onRefresh}
+      loading={false}
+    />
   );
 
   const refreshButton = screen.getByRole('button', { name: /refresh albums/i });

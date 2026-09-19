@@ -1,6 +1,6 @@
 import { Box, Button, Link, Typography } from '@mui/material';
 import GoogleIcon from '@mui/icons-material/Google';
-import { brandButton, ink, brand } from '../../theme/tokens';
+import { brandButton, ink, brand } from '@tumbaland/components';
 import type { DocumentKey } from './DocumentDialog';
 
 interface LandingFooterProps {

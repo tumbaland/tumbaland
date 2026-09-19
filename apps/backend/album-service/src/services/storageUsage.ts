@@ -1,12 +1,5 @@
 import { Request } from 'express';
-import {
-  checkQuota,
-  getEntitlements,
-  getGroupOwner,
-  logger,
-  recordUsage,
-  releaseQuota
-} from '@tumbaland/backend-core';
+import { checkQuota, getEntitlements, getGroupOwner, logger, recordUsage, releaseQuota } from '@tumbaland/backend-core';
 
 /**
  * The `storageBytes` chokepoint (MONETIZATION.md, Phase 3 #1).
@@ -158,11 +151,7 @@ export async function assertStorageHeadroom(
 }
 
 /** Count bytes that are now stored. Call after the photo record exists. */
-export async function recordStoredBytes(
-  actor: StorageActor,
-  scope: StorageScope,
-  bytes: number
-): Promise<void> {
+export async function recordStoredBytes(actor: StorageActor, scope: StorageScope, bytes: number): Promise<void> {
   if (!(bytes > 0)) return;
 
   const billing = await storageSubject(actor, scope);
@@ -172,11 +161,7 @@ export async function recordStoredBytes(
 }
 
 /** Hand bytes back once they are gone. Call after the delete has landed. */
-export async function releaseStoredBytes(
-  actor: StorageActor,
-  scope: StorageScope,
-  bytes: number
-): Promise<void> {
+export async function releaseStoredBytes(actor: StorageActor, scope: StorageScope, bytes: number): Promise<void> {
   if (!(bytes > 0)) return;
 
   const billing = await storageSubject(actor, scope);

@@ -12,17 +12,14 @@ import {
   Alert,
   LinearProgress
 } from '@mui/material';
-import {
-  Add as AddIcon,
-  Search as SearchIcon,
-  PhotoLibrary as PhotoLibraryIcon
-} from '@mui/icons-material';
+import { Add as AddIcon, Search as SearchIcon, PhotoLibrary as PhotoLibraryIcon } from '@mui/icons-material';
 import { useCollageList, useCollageMutations } from '../hooks/useCollage';
 import { Collage, CollageInput } from '../types/collage';
 import { CollageCreateModal } from '../components/collage/CollageCreateModal';
 import { CollageEditModal } from '../components/collage/CollageEditModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import CollageCard from '../components/collage/CollageCard';
+import { gradient } from '@tumbaland/components';
 
 const CollageListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -45,16 +42,15 @@ const CollageListPage: React.FC = () => {
     // Filter by search term
     if (searchTerm) {
       const lowerTerm = searchTerm.toLowerCase();
-      result = result.filter(collage =>
-        collage.title.toLowerCase().includes(lowerTerm) ||
-        collage.config?.title?.subtitle?.toLowerCase().includes(lowerTerm)
+      result = result.filter(
+        (collage) =>
+          collage.title.toLowerCase().includes(lowerTerm) ||
+          collage.config?.title?.subtitle?.toLowerCase().includes(lowerTerm)
       );
     }
 
     // Sort by updatedAt desc
-    return result.sort((a, b) =>
-      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-    );
+    return result.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }, [collageListQuery.data, searchTerm]);
 
   const handleOpenModal = () => setModalOpen(true);
@@ -135,7 +131,7 @@ const CollageListPage: React.FC = () => {
             borderRadius: 2,
             textTransform: 'none',
             fontWeight: 600,
-            background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)'
+            background: gradient.brand
           }}
         >
           Create collage
@@ -159,9 +155,7 @@ const CollageListPage: React.FC = () => {
         }}
         sx={{ mb: { xs: 1.5, sm: 3 }, maxWidth: { sm: 400 } }}
       />
-      {collageListQuery.isFetching && !collageListQuery.isLoading && (
-        <LinearProgress sx={{ mb: 2 }} />
-      )}
+      {collageListQuery.isFetching && !collageListQuery.isLoading && <LinearProgress sx={{ mb: 2 }} />}
       {collageListQuery.error && (
         <Alert severity="error" sx={{ mb: { xs: 2, sm: 4 } }}>
           Failed to load collages
@@ -170,21 +164,27 @@ const CollageListPage: React.FC = () => {
       {filteredCollages.length === 0 ? (
         <Box
           sx={{
-            textAlign: "center",
+            textAlign: 'center',
             py: { xs: 4, sm: 8 }
-          }}>
+          }}
+        >
           <PhotoLibraryIcon sx={{ fontSize: { xs: 48, sm: 64 }, color: 'grey.400', mb: 2 }} />
-          <Typography variant="h6" gutterBottom sx={{
-            color: "text.secondary"
-          }}>
+          <Typography
+            variant="h6"
+            gutterBottom
+            sx={{
+              color: 'text.secondary'
+            }}
+          >
             {searchTerm ? 'No collages found' : 'No collages yet'}
           </Typography>
           <Typography
             variant="body2"
             sx={{
-              color: "text.secondary",
+              color: 'text.secondary',
               mb: 3
-            }}>
+            }}
+          >
             {searchTerm ? 'Try adjusting your search terms' : 'Create your first collage to get started'}
           </Typography>
           {!searchTerm && (
@@ -220,11 +220,7 @@ const CollageListPage: React.FC = () => {
         </Box>
       )}
       {/* Create Modal */}
-      <CollageCreateModal
-        open={modalOpen}
-        onClose={handleCloseModal}
-        onCreate={handleCreateCollage}
-      />
+      <CollageCreateModal open={modalOpen} onClose={handleCloseModal} onCreate={handleCreateCollage} />
       {/* Edit details (title / subtitle / source albums) */}
       {selectedCollage && (
         <CollageEditModal

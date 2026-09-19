@@ -13,7 +13,6 @@ const factory = createConfigProvider<AppConfig>({
   serviceName: 'account-front',
   isDev: import.meta.env.DEV,
   mode: import.meta.env.MODE,
-  themed: true,
   devCaptureConsoleLevels: ['error', 'warn', 'info', 'debug'],
   getDevConfig: () => ({
     AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL,

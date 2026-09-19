@@ -29,7 +29,7 @@ interface CollageCardProps {
 }
 
 /** Schematic thumbnail: the saved layout drawn as scaled rectangles. */
-const CollagePreview: React.FC<{ collage: Collage }> = ({ collage }) => {
+export const CollagePreview: React.FC<{ collage: Collage }> = ({ collage }) => {
   const doc = useMemo(() => normalizeCollageConfig(collage.config), [collage.config]);
   const { width: vw, height: vh } = doc.canvas;
   const pct = (v: number, total: number) => `${(v / total) * 100}%`;

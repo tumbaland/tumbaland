@@ -1,5 +1,5 @@
 import { Box, Typography } from '@mui/material';
-import { brand, gradient, ink } from '../../theme/tokens';
+import { brand, gradient, ink } from '@tumbaland/components';
 
 interface GreetingHeaderProps {
   name?: string;

@@ -25,7 +25,10 @@ it('creates a collage and unwraps the data envelope', async () => {
 
   expect(result).toMatchObject({ _id: 'collage-1', title: 'Trip' });
   const [, init] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-  expect(init).toMatchObject({ method: 'POST', body: JSON.stringify({ title: 'Trip', config, albumIds: ['album-1'] }) });
+  expect(init).toMatchObject({
+    method: 'POST',
+    body: JSON.stringify({ title: 'Trip', config, albumIds: ['album-1'] })
+  });
 });
 
 it('lists collages with no filters when none are given', async () => {

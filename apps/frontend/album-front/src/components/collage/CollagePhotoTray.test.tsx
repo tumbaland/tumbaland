@@ -71,8 +71,20 @@ it('shows the empty-state message when there are no photos', () => {
 
 describe('tag filtering', () => {
   const tagged: AlbumPhoto[] = [
-    { _id: 'p1', filename: 'a.jpg', title: 'Beach day', thumbnailSignedUrl: 'https://cdn.example/a.jpg', tags: ['beach', 'summer'] },
-    { _id: 'p2', filename: 'b.jpg', title: 'Sunset', thumbnailSignedUrl: 'https://cdn.example/b.jpg', tags: ['sunset', 'summer'] },
+    {
+      _id: 'p1',
+      filename: 'a.jpg',
+      title: 'Beach day',
+      thumbnailSignedUrl: 'https://cdn.example/a.jpg',
+      tags: ['beach', 'summer']
+    },
+    {
+      _id: 'p2',
+      filename: 'b.jpg',
+      title: 'Sunset',
+      thumbnailSignedUrl: 'https://cdn.example/b.jpg',
+      tags: ['sunset', 'summer']
+    },
     { _id: 'p3', filename: 'c.jpg', title: 'Indoors', thumbnailSignedUrl: 'https://cdn.example/c.jpg', tags: [] }
   ];
 
@@ -121,7 +133,7 @@ describe('tag filtering', () => {
     expect(screen.getByText(/photos \(3\)/i)).toBeInTheDocument();
   });
 
-  it('surfaces a photo\'s tags in its tooltip', async () => {
+  it("surfaces a photo's tags in its tooltip", async () => {
     render(<CollagePhotoTray photos={tagged} usedPhotoIds={new Set()} onAddPhoto={vi.fn()} />);
 
     await userEvent.hover(screen.getByRole('img', { name: 'Beach day' }));

@@ -1,7 +1,7 @@
 import { Box, IconButton, Typography } from '@mui/material';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import { useTodo } from '../../hooks/useTodo';
-import { brand, glass, gradient, ink } from '../../theme/tokens';
+import { brand, glass, gradient, ink } from '@tumbaland/components';
 
 /**
  * Shared line box for the label, the text and the reroll button. The three have

@@ -112,7 +112,7 @@ it('switches to a slider with prev/next steppers above the full-list threshold',
   expect(screen.queryByRole('button', { name: 'Go to page 1' })).not.toBeInTheDocument();
 });
 
-it('steps the page via the slider\'s prev/next buttons, clamped to the valid range', async () => {
+it("steps the page via the slider's prev/next buttons, clamped to the valid range", async () => {
   const onPageChange = vi.fn();
   render(
     <PhotoPaginationControls

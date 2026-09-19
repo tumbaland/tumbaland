@@ -127,8 +127,7 @@ export const orientationTurns = (orientation?: number | null): number => {
 };
 
 /** True when the orientation swaps the image's width and height. */
-export const isQuarterTurned = (orientation?: number | null): boolean =>
-  orientationTurns(orientation) % 2 === 1;
+export const isQuarterTurned = (orientation?: number | null): boolean => orientationTurns(orientation) % 2 === 1;
 
 /** Stored orientation, snapped to a quarter turn; upright collapses to undefined. */
 export const normalizeOrientation = (value?: number | null): number | undefined => {
@@ -254,5 +253,4 @@ export const serializeCollageDoc = (doc: CollageDoc, existingConfig?: CollageCon
 };
 
 /** Effective frame state for a photo, honoring the per-photo override. */
-export const photoHasFrame = (doc: CollageDoc, photo: CollagePhotoItem): boolean =>
-  photo.frame ?? doc.frameEnabled;
+export const photoHasFrame = (doc: CollageDoc, photo: CollagePhotoItem): boolean => photo.frame ?? doc.frameEnabled;

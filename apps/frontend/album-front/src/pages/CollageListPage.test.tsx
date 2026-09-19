@@ -91,7 +91,12 @@ it('shows the empty state when there are no collages', () => {
 });
 
 it('shows an error alert when the query has an error', () => {
-  mockedUseCollageList.mockReturnValue({ data: undefined, isLoading: false, isFetching: false, error: new Error('down') });
+  mockedUseCollageList.mockReturnValue({
+    data: undefined,
+    isLoading: false,
+    isFetching: false,
+    error: new Error('down')
+  });
 
   renderPage();
 
@@ -119,7 +124,11 @@ it('filters collages by search term, matching title or subtitle', async () => {
   mockedUseCollageList.mockReturnValue({
     data: [
       makeCollage({ _id: 'c1', title: 'Summer trip' }),
-      makeCollage({ _id: 'c2', title: 'Winter getaway', config: { ...config, title: { text: 'Winter getaway', subtitle: 'ski trip' } } })
+      makeCollage({
+        _id: 'c2',
+        title: 'Winter getaway',
+        config: { ...config, title: { text: 'Winter getaway', subtitle: 'ski trip' } }
+      })
     ],
     isLoading: false,
     isFetching: false,

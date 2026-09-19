@@ -24,9 +24,7 @@ const ROUTES_DIR = __dirname;
  */
 const PUBLIC_ROUTES = new Set(['get /by-file/:fileId']);
 
-const routeFiles = readdirSync(ROUTES_DIR).filter(
-  (file) => file.endsWith('.ts') && !file.endsWith('.test.ts')
-);
+const routeFiles = readdirSync(ROUTES_DIR).filter((file) => file.endsWith('.ts') && !file.endsWith('.test.ts'));
 
 const ROUTE_PATTERN = /router\.(get|post|put|patch|delete)\(\s*'([^']*)'([^;]*)/g;
 
@@ -62,9 +60,7 @@ it('no longer reaches for the JWT-only middleware, which would refuse every key'
 
 it('leaves the file-service route public, since it carries no user session', () => {
   const source = readFileSync(join(ROUTES_DIR, 'photoRoutes.ts'), 'utf8');
-  const publicRoute = source
-    .split('\n')
-    .find((line) => line.includes("'/by-file/:fileId'"));
+  const publicRoute = source.split('\n').find((line) => line.includes("'/by-file/:fileId'"));
 
   expect(publicRoute).toBeDefined();
   expect(publicRoute).not.toContain('authenticateAgent');
@@ -72,22 +68,14 @@ it('leaves the file-service route public, since it carries no user session', () 
 });
 
 describe('every authenticated route declares a scope', () => {
-  it.each(guarded.map((d) => [`${d.file} ${d.verb.toUpperCase()} ${d.path}`, d] as const))(
-    '%s',
-    (_label, route) => {
-      expect(route.rest).toContain('requireScope(');
-    }
-  );
+  it.each(guarded.map((d) => [`${d.file} ${d.verb.toUpperCase()} ${d.path}`, d] as const))('%s', (_label, route) => {
+    expect(route.rest).toContain('requireScope(');
+  });
 });
 
 describe('the scope matches what the verb does', () => {
-  it.each(guarded.map((d) => [`${d.file} ${d.verb.toUpperCase()} ${d.path}`, d] as const))(
-    '%s',
-    (_label, route) => {
-      const expected = READ_VERBS.has(route.verb)
-        ? "requireScope('album:read')"
-        : "requireScope('album:write')";
-      expect(route.rest).toContain(expected);
-    }
-  );
+  it.each(guarded.map((d) => [`${d.file} ${d.verb.toUpperCase()} ${d.path}`, d] as const))('%s', (_label, route) => {
+    const expected = READ_VERBS.has(route.verb) ? "requireScope('album:read')" : "requireScope('album:write')";
+    expect(route.rest).toContain(expected);
+  });
 });

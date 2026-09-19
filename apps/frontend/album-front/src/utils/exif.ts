@@ -17,17 +17,42 @@ import type { PhotoMetadata } from '../types';
  * if that ever needs doing again.
  */
 const TAGS = [
-  'DateTimeOriginal', 'CreateDate', 'ModifyDate',
-  'OffsetTimeOriginal', 'OffsetTime',
-  'Make', 'Model', 'LensMake', 'LensModel', 'Software',
-  'ISO', 'FNumber', 'ExposureTime', 'FocalLength', 'FocalLengthIn35mmFormat',
-  'ExposureProgram', 'ExposureMode', 'ExposureCompensation', 'MeteringMode',
-  'WhiteBalance', 'Flash', 'SceneCaptureType', 'DigitalZoomRatio',
-  'SubjectDistance', 'ColorSpace', 'Orientation',
-  'ExifImageWidth', 'ExifImageHeight',
-  'GPSLatitude', 'GPSLongitude', 'GPSLatitudeRef', 'GPSLongitudeRef',
-  'GPSAltitude', 'GPSDateStamp',
-  'Artist', 'Copyright'
+  'DateTimeOriginal',
+  'CreateDate',
+  'ModifyDate',
+  'OffsetTimeOriginal',
+  'OffsetTime',
+  'Make',
+  'Model',
+  'LensMake',
+  'LensModel',
+  'Software',
+  'ISO',
+  'FNumber',
+  'ExposureTime',
+  'FocalLength',
+  'FocalLengthIn35mmFormat',
+  'ExposureProgram',
+  'ExposureMode',
+  'ExposureCompensation',
+  'MeteringMode',
+  'WhiteBalance',
+  'Flash',
+  'SceneCaptureType',
+  'DigitalZoomRatio',
+  'SubjectDistance',
+  'ColorSpace',
+  'Orientation',
+  'ExifImageWidth',
+  'ExifImageHeight',
+  'GPSLatitude',
+  'GPSLongitude',
+  'GPSLatitudeRef',
+  'GPSLongitudeRef',
+  'GPSAltitude',
+  'GPSDateStamp',
+  'Artist',
+  'Copyright'
 ];
 
 type RawExif = Record<string, unknown>;
@@ -74,7 +99,12 @@ const asText = (value: unknown): string | undefined => {
 };
 
 /** Assign only when the tag holds something usable, keeping the object sparse. */
-function put<T>(target: Record<string, unknown>, key: string, value: unknown, map: (v: unknown) => T | undefined): void {
+function put<T>(
+  target: Record<string, unknown>,
+  key: string,
+  value: unknown,
+  map: (v: unknown) => T | undefined
+): void {
   if (value === undefined || value === null || value === '') return;
   const mapped = map(value);
   if (mapped !== undefined) target[key] = mapped;
@@ -88,9 +118,7 @@ export const metadataFromExif = (exif: RawExif | null): PhotoMetadata | undefine
   // DateTimeOriginal is when the shutter fired; the rest are fallbacks for files
   // carrying only a digitised or modified stamp.
   const dateTaken =
-    exifDateToUtc(exif.DateTimeOriginal) ||
-    exifDateToUtc(exif.CreateDate) ||
-    exifDateToUtc(exif.ModifyDate);
+    exifDateToUtc(exif.DateTimeOriginal) || exifDateToUtc(exif.CreateDate) || exifDateToUtc(exif.ModifyDate);
   if (dateTaken) metadata.dateTaken = dateTaken.toISOString();
 
   const camera: Record<string, unknown> = {};

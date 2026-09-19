@@ -17,9 +17,7 @@ const PORT = process.env.PORT || 4002;
 const start = async (): Promise<void> => {
   await connectDB('album-service');
 
-  const server = app.listen(PORT, () =>
-    logger.info('Album service started successfully', { port: PORT })
-  );
+  const server = app.listen(PORT, () => logger.info('Album service started successfully', { port: PORT }));
 
   // Graceful shutdown (SIGINT + SIGTERM: drain HTTP, then close the DB)
   registerShutdown({ serviceName: 'album-service', server });

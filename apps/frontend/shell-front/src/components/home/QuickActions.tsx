@@ -1,6 +1,6 @@
 import { Box, ButtonBase, Typography } from '@mui/material';
 import { QUICK_ACTIONS } from './modules';
-import { brand, glass, ink } from '../../theme/tokens';
+import { brand, glass, ink } from '@tumbaland/components';
 
 interface QuickActionsProps {
   onOpen: (route: string) => void;

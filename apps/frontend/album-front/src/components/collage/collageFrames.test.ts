@@ -12,7 +12,15 @@ const docWith = (overrides: Partial<CollageDoc>): CollageDoc => ({
 });
 
 const photo = (frame: boolean | undefined) => ({
-  id: 'p1', photoId: 'ph1', x: 0, y: 0, width: 100, height: 100, rotation: 0, caption: '', frame
+  id: 'p1',
+  photoId: 'ph1',
+  x: 0,
+  y: 0,
+  width: 100,
+  height: 100,
+  rotation: 0,
+  caption: '',
+  frame
 });
 
 describe('photoHasFrame', () => {

@@ -57,12 +57,7 @@ export const generateThumbnailFromBuffer = async (
     const metadata = await sharp(thumbnailBuffer).metadata();
 
     // Upload thumbnail to file-service
-    await uploadFile(
-      thumbnailBuffer,
-      thumbnailFileId,
-      `image/${opts.format}`,
-      thumbnailBuffer.length
-    );
+    await uploadFile(thumbnailBuffer, thumbnailFileId, `image/${opts.format}`, thumbnailBuffer.length);
 
     logger.info(`Thumbnail generated and uploaded: ${thumbnailFileId}`, {
       originalSize: imageBuffer.length,
@@ -97,14 +92,7 @@ export const generateThumbnailFromFile = async (
     // Read the original file
     const imageBuffer = fs.readFileSync(filePath);
 
-    return await generateThumbnailFromBuffer(
-      imageBuffer,
-      originalFilename,
-      userId,
-      albumId,
-      groupId,
-      options
-    );
+    return await generateThumbnailFromBuffer(imageBuffer, originalFilename, userId, albumId, groupId, options);
   } catch (error) {
     logger.error(`Failed to read file for thumbnail generation: ${filePath}`, error);
     throw new Error('Failed to read source file for thumbnail generation');
@@ -151,7 +139,9 @@ export const generateThumbnailsBatch = async (
     const batchResults = await Promise.all(batchPromises);
     results.push(...batchResults.filter((result): result is ThumbnailResult => result !== null));
 
-    logger.info(`Processed thumbnail batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(imagePaths.length / batchSize)}`);
+    logger.info(
+      `Processed thumbnail batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(imagePaths.length / batchSize)}`
+    );
   }
 
   return results;

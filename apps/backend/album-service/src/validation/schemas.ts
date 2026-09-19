@@ -31,10 +31,7 @@ export const setCoverPhotoSchema = z.object({
  * so adding one must not need a schema change on both sides.
  */
 const exifExtraSchema = z
-  .record(
-    z.string().max(40),
-    z.union([z.string().max(200), z.number(), z.boolean()])
-  )
+  .record(z.string().max(40), z.union([z.string().max(200), z.number(), z.boolean()]))
   .refine((value) => Object.keys(value).length <= 40, {
     message: 'exif may carry at most 40 entries'
   });
@@ -65,23 +62,25 @@ export const photoMetadataSchema = z.object({
   exif: exifExtraSchema.optional()
 });
 
-export const createPhotoSchema = z.object({
-  filename: z.string().min(1),
-  originalName: z.string().min(1),
-  fileId: z.string().optional(),
-  minioFileId: z.string().optional(),
-  albumId: z.string().min(1),
-  title: z.string().optional(),
-  description: z.string().optional(),
-  mimetype: z.string().min(1),
-  size: z.number().positive(),
-  width: z.number().optional(),
-  height: z.number().optional(),
-  tags: z.array(z.string()).optional(),
-  metadata: photoMetadataSchema.optional()
-}).refine((data) => data.minioFileId || data.fileId, {
-  message: 'minioFileId (or fileId) is required'
-});
+export const createPhotoSchema = z
+  .object({
+    filename: z.string().min(1),
+    originalName: z.string().min(1),
+    fileId: z.string().optional(),
+    minioFileId: z.string().optional(),
+    albumId: z.string().min(1),
+    title: z.string().optional(),
+    description: z.string().optional(),
+    mimetype: z.string().min(1),
+    size: z.number().positive(),
+    width: z.number().optional(),
+    height: z.number().optional(),
+    tags: z.array(z.string()).optional(),
+    metadata: photoMetadataSchema.optional()
+  })
+  .refine((data) => data.minioFileId || data.fileId, {
+    message: 'minioFileId (or fileId) is required'
+  });
 
 export const updatePhotoSchema = z.object({
   title: z.string().optional(),
@@ -90,13 +89,15 @@ export const updatePhotoSchema = z.object({
   metadata: photoMetadataSchema.optional()
 });
 
-export const bulkUpdateTagsSchema = z.object({
-  photoIds: z.array(z.string()).min(1, 'photoIds must contain at least one photo'),
-  add: z.array(z.string()).optional(),
-  remove: z.array(z.string()).optional()
-}).refine((data) => (data.add?.length || 0) > 0 || (data.remove?.length || 0) > 0, {
-  message: 'Must provide tags to add or remove'
-});
+export const bulkUpdateTagsSchema = z
+  .object({
+    photoIds: z.array(z.string()).min(1, 'photoIds must contain at least one photo'),
+    add: z.array(z.string()).optional(),
+    remove: z.array(z.string()).optional()
+  })
+  .refine((data) => (data.add?.length || 0) > 0 || (data.remove?.length || 0) > 0, {
+    message: 'Must provide tags to add or remove'
+  });
 
 export const uploadSignedUrlSchema = z.object({
   filename: z.string().min(1, 'filename is required'),

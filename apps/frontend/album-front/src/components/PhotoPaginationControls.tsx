@@ -87,7 +87,10 @@ const PhotoPaginationControls: React.FC<PhotoPaginationControlsProps> = ({
       >
         <NavigateNextIcon fontSize="small" />
       </IconButton>
-      <Typography variant="body2" sx={{ color: 'text.secondary', whiteSpace: 'nowrap', minWidth: 56, textAlign: 'right' }}>
+      <Typography
+        variant="body2"
+        sx={{ color: 'text.secondary', whiteSpace: 'nowrap', minWidth: 56, textAlign: 'right' }}
+      >
         {currentPage} / {pagination.pages}
       </Typography>
     </Box>
@@ -123,9 +126,12 @@ const PhotoPaginationControls: React.FC<PhotoPaginationControlsProps> = ({
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
-          <Typography variant="body2" sx={{
-            color: "text.secondary"
-          }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary'
+            }}
+          >
             {pagination.total} {pagination.total === 1 ? 'photo' : 'photos'} total
           </Typography>
           <FormControl size="small" sx={{ minWidth: { xs: 96, sm: 120 } }}>
@@ -147,11 +153,7 @@ const PhotoPaginationControls: React.FC<PhotoPaginationControlsProps> = ({
 
   // Bottom pagination
   if (showPagination) {
-    return (
-      <Box sx={{ mt: { xs: 2, sm: 4 }, display: 'flex', justifyContent: 'center' }}>
-        {paginationControl}
-      </Box>
-    );
+    return <Box sx={{ mt: { xs: 2, sm: 4 }, display: 'flex', justifyContent: 'center' }}>{paginationControl}</Box>;
   }
 
   return null;

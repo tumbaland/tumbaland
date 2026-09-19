@@ -11,6 +11,7 @@ import {
   Alert,
   CircularProgress
 } from '@mui/material';
+import { gradient } from '@tumbaland/components';
 
 interface CreateAlbumDialogProps {
   open: boolean;
@@ -19,12 +20,7 @@ interface CreateAlbumDialogProps {
   tenantGroupId?: string;
 }
 
-const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
-  open,
-  onClose,
-  onCreate,
-  tenantGroupId
-}) => {
+const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({ open, onClose, onCreate, tenantGroupId }) => {
   const [newAlbum, setNewAlbum] = useState({
     name: '',
     description: '',
@@ -84,10 +80,10 @@ const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
   };
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={handleClose} 
-      maxWidth="sm" 
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="sm"
       fullWidth
       slotProps={{
         paper: {
@@ -117,8 +113,8 @@ const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
           variant="outlined"
           value={newAlbum.name}
           onChange={(e) => setNewAlbum((prev) => ({ ...prev, name: e.target.value }))}
-          sx={{ 
-            mb: 2, 
+          sx={{
+            mb: 2,
             mt: 2,
             '& .MuiOutlinedInput-root': { borderRadius: 2 }
           }}
@@ -133,7 +129,7 @@ const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
           variant="outlined"
           value={newAlbum.description}
           onChange={(e) => setNewAlbum((prev) => ({ ...prev, description: e.target.value }))}
-          sx={{ 
+          sx={{
             mb: 2,
             '& .MuiOutlinedInput-root': { borderRadius: 2 }
           }}
@@ -159,7 +155,7 @@ const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
           value={tagInput}
           onChange={(e) => setTagInput(e.target.value)}
           onKeyDown={handleAddTag}
-          sx={{ 
+          sx={{
             mb: 1,
             '& .MuiOutlinedInput-root': { borderRadius: 2 }
           }}
@@ -168,11 +164,11 @@ const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
         {newAlbum.tags.length > 0 && (
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1 }}>
             {newAlbum.tags.map((tag, index) => (
-              <Chip 
-                key={index} 
-                label={tag} 
-                onDelete={() => handleRemoveTag(tag)} 
-                size="small" 
+              <Chip
+                key={index}
+                label={tag}
+                onDelete={() => handleRemoveTag(tag)}
+                size="small"
                 sx={{ borderRadius: 1 }}
               />
             ))}
@@ -181,26 +177,26 @@ const CreateAlbumDialog: React.FC<CreateAlbumDialogProps> = ({
       </DialogContent>
 
       <DialogActions sx={{ p: 3, pt: 1 }}>
-        <Button 
-          onClick={handleClose} 
+        <Button
+          onClick={handleClose}
           disabled={creating}
           sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, color: 'text.secondary' }}
         >
           Cancel
         </Button>
-        <Button 
-          onClick={handleCreateAlbum} 
-          variant="contained" 
+        <Button
+          onClick={handleCreateAlbum}
+          variant="contained"
           disabled={creating}
           sx={{
             borderRadius: 2,
             textTransform: 'none',
             fontWeight: 600,
             px: 3,
-            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+            background: gradient.brand,
+            boxShadow: '0 4px 12px rgba(168, 45, 190, 0.3)',
             '&:hover': {
-              boxShadow: '0 6px 16px rgba(99, 102, 241, 0.4)'
+              boxShadow: '0 6px 16px rgba(168, 45, 190, 0.4)'
             }
           }}
         >

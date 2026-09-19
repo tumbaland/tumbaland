@@ -10,6 +10,7 @@ import {
   Alert
 } from '@mui/material';
 import { Album } from '../types';
+import { gradient } from '@tumbaland/components';
 
 interface EditAlbumDialogProps {
   open: boolean;
@@ -50,10 +51,10 @@ const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({ open, album, onClose,
   };
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
-      maxWidth="sm" 
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="sm"
       fullWidth
       slotProps={{
         paper: {
@@ -82,8 +83,8 @@ const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({ open, album, onClose,
           variant="outlined"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          sx={{ 
-            mb: 2, 
+          sx={{
+            mb: 2,
             mt: 2,
             '& .MuiOutlinedInput-root': { borderRadius: 2 }
           }}
@@ -97,33 +98,33 @@ const EditAlbumDialog: React.FC<EditAlbumDialogProps> = ({ open, album, onClose,
           variant="outlined"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          sx={{ 
+          sx={{
             mb: 2,
             '& .MuiOutlinedInput-root': { borderRadius: 2 }
           }}
         />
       </DialogContent>
       <DialogActions sx={{ p: 3, pt: 1 }}>
-        <Button 
-          onClick={onClose} 
+        <Button
+          onClick={onClose}
           disabled={saving}
           sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, color: 'text.secondary' }}
         >
           Cancel
         </Button>
-        <Button 
-          onClick={handleSave} 
-          variant="contained" 
+        <Button
+          onClick={handleSave}
+          variant="contained"
           disabled={saving}
           sx={{
             borderRadius: 2,
             textTransform: 'none',
             fontWeight: 600,
             px: 3,
-            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+            background: gradient.brand,
+            boxShadow: '0 4px 12px rgba(168, 45, 190, 0.3)',
             '&:hover': {
-              boxShadow: '0 6px 16px rgba(99, 102, 241, 0.4)'
+              boxShadow: '0 6px 16px rgba(168, 45, 190, 0.4)'
             }
           }}
         >

@@ -1,17 +1,17 @@
 import React from 'react';
-import { useTenantFilter } from '@tumbaland/components';
+import { ink, useTenantFilter } from '@tumbaland/components';
 import { Box, Container, Typography, Alert, Button, IconButton, LinearProgress, Tooltip } from '@mui/material';
 import { Refresh as RefreshIcon } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { useStatistics } from '../hooks/useStatistics';
-import { getUserGroups } from '../services/groupService';
 import { getMyEntitlements } from '../services/entitlementsService';
 import { getGlobalConfig } from '../config/ConfigProvider';
 import StatisticsOverview from '../components/dashboard/StatisticsOverview';
-import TimeSeriesChart from '../components/dashboard/TimeSeriesChart';
 import StorageChart from '../components/dashboard/StorageChart';
-import TagsChart from '../components/dashboard/TagsChart';
-import GroupDistributionChart from '../components/dashboard/GroupDistributionChart';
+import RecentCollages from '../components/dashboard/RecentCollages';
+import RecentUploads from '../components/dashboard/RecentUploads';
+import Rediscover from '../components/dashboard/Rediscover';
+import OnThisDay from '../components/OnThisDay';
 
 const pageSx = { py: { xs: 1, sm: 4 }, px: { xs: 0, sm: 3 } } as const;
 
@@ -20,12 +20,6 @@ const DashboardPage: React.FC = () => {
 
   const { statistics, loading, isFetching, error, refetch } = useStatistics(selectedGroupId || undefined);
 
-  // Resolve group ids to readable names for the distribution chart, so it never shows raw ObjectIds.
-  const { data: groups } = useQuery({
-    queryKey: ['userGroups'],
-    queryFn: () => getUserGroups(),
-    staleTime: 5 * 60 * 1000
-  });
   // Plan limits and live meter readings for the storage bar. `retry: false`
   // and a swallowed error on purpose: the meter is decoration on a page that
   // works without it, so payment-service being down must not cost the user
@@ -54,11 +48,6 @@ const DashboardPage: React.FC = () => {
     if (shellFrontUrl && window.top?.location) window.top.location.href = `${shellFrontUrl}/payments`;
   }, []);
 
-  const groupNames = React.useMemo(
-    () => Object.fromEntries((groups ?? []).map((g) => [g._id, g.name])),
-    [groups]
-  );
-
   // One short line. The section tabs above already lead to Albums and
   // Collages, so the page no longer repeats them as buttons that took up a
   // third of a phone screen before the first figure.
@@ -69,18 +58,13 @@ const DashboardPage: React.FC = () => {
       <Typography
         variant="h5"
         component="h1"
-        sx={{ fontWeight: 700, color: '#1e293b', fontSize: { xs: '1.35rem', sm: '1.75rem' } }}
+        sx={{ fontWeight: 700, color: ink.strong, fontSize: { xs: '1.35rem', sm: '1.75rem' } }}
       >
         Dashboard
       </Typography>
       <Tooltip title="Refresh statistics">
         <span>
-          <IconButton
-            onClick={() => refetch()}
-            disabled={isFetching}
-            color="primary"
-            aria-label="Refresh statistics"
-          >
+          <IconButton onClick={() => refetch()} disabled={isFetching} color="primary" aria-label="Refresh statistics">
             <RefreshIcon />
           </IconButton>
         </span>
@@ -131,64 +115,37 @@ const DashboardPage: React.FC = () => {
       {header}
 
       {/* Non-blocking indicator while re-fetching (e.g. after switching group filter) */}
-      <Box sx={{ height: 4, mb: { xs: 1, sm: 2 } }}>
-        {isFetching && <LinearProgress sx={{ borderRadius: 2 }} />}
-      </Box>
+      <Box sx={{ height: 4, mb: { xs: 1, sm: 2 } }}>{isFetching && <LinearProgress sx={{ borderRadius: 2 }} />}</Box>
 
       {/* Statistics Overview Cards */}
       <StatisticsOverview data={statistics.overview} />
 
-      {/* Charts Grid */}
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: {
-            xs: 'minmax(0, 1fr)',
-            lg: '2fr 1fr'
-          },
-          gap: { xs: 2, sm: 3 },
-          alignItems: 'start'
-        }}
-      >
-        {/* Time Series Charts */}
-        <Box>
-          <TimeSeriesChart
-            albumsData={statistics.timeSeries.albumsCreated}
-            photosData={statistics.timeSeries.photosUploaded}
-          />
-        </Box>
+      {/* Things to look at, then the one figure worth a chart. Each card
+          renders nothing when it has nothing, so the column closes up rather
+          than leaving a gap. Order is by how likely a card is to have
+          something: `OnThisDay` only fires on a day with history, which most
+          days in a young library are not. */}
+      <Box sx={{ display: 'grid', gap: { xs: 2, sm: 3 }, alignItems: 'start' }}>
+        <OnThisDay groupId={selectedGroupId || undefined} />
 
-        {/* Storage */}
-        <Box>
-          <StorageChart
-            totalStorage={statistics.overview.totalStorage}
-            averagePhotoSize={statistics.overview.averagePhotoSize}
-            topAlbums={statistics.albums.map((album) => ({
-              albumId: album.albumId,
-              name: album.name,
-              totalSize: album.totalSize
-            }))}
-            storageLimit={entitlements?.limits?.meters?.storageBytes}
-            meteredStorage={entitlements?.usage?.storageBytes}
-            onUpgrade={goToPlans}
-          />
-        </Box>
+        <RecentUploads groupId={selectedGroupId || undefined} />
 
-        {/* Tags and Group Distribution */}
-        <Box
-          sx={{
-            gridColumn: { xs: '1', lg: '1 / -1' },
-            display: 'grid',
-            gridTemplateColumns: {
-              xs: 'minmax(0, 1fr)',
-              md: '1fr 1fr'
-            },
-            gap: { xs: 2, sm: 3 }
-          }}
-        >
-          <TagsChart tags={statistics.tags} />
-          <GroupDistributionChart groups={statistics.groups} groupNames={groupNames} />
-        </Box>
+        <Rediscover groupId={selectedGroupId || undefined} />
+
+        <RecentCollages />
+
+        <StorageChart
+          totalStorage={statistics.overview.totalStorage}
+          averagePhotoSize={statistics.overview.averagePhotoSize}
+          topAlbums={statistics.albums.map((album) => ({
+            albumId: album.albumId,
+            name: album.name,
+            totalSize: album.totalSize
+          }))}
+          storageLimit={entitlements?.limits?.meters?.storageBytes}
+          meteredStorage={entitlements?.usage?.storageBytes}
+          onUpgrade={goToPlans}
+        />
       </Box>
     </Container>
   );

@@ -1,16 +1,5 @@
 import React from 'react';
-import {
-  Badge,
-  Box,
-  Button,
-  Divider,
-  IconButton,
-  MenuItem,
-  Paper,
-  Select,
-  Tooltip,
-  Typography
-} from '@mui/material';
+import { Badge, Box, Button, Divider, IconButton, MenuItem, Paper, Select, Tooltip, Typography } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
 import UndoIcon from '@mui/icons-material/Undo';
@@ -79,18 +68,7 @@ interface CollageToolbarProps {
 }
 
 const CollageToolbar: React.FC<CollageToolbarProps> = (props) => {
-  const {
-    title,
-    isDirty,
-    saving,
-    canUndo,
-    canRedo,
-    background,
-    frameColor,
-    frameEnabled,
-    zoom,
-    hasSelection
-  } = props;
+  const { title, isDirty, saving, canUndo, canRedo, background, frameColor, frameEnabled, zoom, hasSelection } = props;
 
   return (
     <Paper

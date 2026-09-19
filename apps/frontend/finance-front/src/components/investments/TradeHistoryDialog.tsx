@@ -152,21 +152,30 @@ const TradeHistoryDialog: React.FC<TradeHistoryDialogProps> = ({
               }}
             >
               <Box>
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>Shares held</Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  Shares held
+                </Typography>
                 <Typography sx={{ fontWeight: 700 }}>{position.quantity}</Typography>
               </Box>
               <Box>
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>Average cost</Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  Average cost
+                </Typography>
                 <Typography sx={{ fontWeight: 700 }}>{formatPrice(position.avgBuyPrice, currency)}</Typography>
               </Box>
               <Box>
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>Realized P/L</Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  Realized P/L
+                </Typography>
                 <Typography sx={{ fontWeight: 700, color: signColor(position.realizedGain) }}>
-                  {position.realizedGain >= 0 ? '+' : ''}{formatCurrency(position.realizedGain, currency)}
+                  {position.realizedGain >= 0 ? '+' : ''}
+                  {formatCurrency(position.realizedGain, currency)}
                 </Typography>
               </Box>
               <Box>
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>Dividends</Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  Dividends
+                </Typography>
                 <Typography sx={{ fontWeight: 700, color: position.dividends > 0 ? 'success.main' : 'text.primary' }}>
                   {formatCurrency(position.dividends, currency)}
                 </Typography>
@@ -180,46 +189,49 @@ const TradeHistoryDialog: React.FC<TradeHistoryDialogProps> = ({
             </Box>
           ) : trades.length === 0 ? (
             <Alert severity="info" sx={{ mb: 2 }}>
-              No trades recorded for {ticker}. Adding them here replaces the hand-entered quantity and
-              average price with figures derived from what you actually bought and sold.
+              No trades recorded for {ticker}. Adding them here replaces the hand-entered quantity and average price
+              with figures derived from what you actually bought and sold.
             </Alert>
           ) : (
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Type</TableCell>
-                  <TableCell align="right">Quantity</TableCell>
-                  <TableCell align="right">Price</TableCell>
-                  <TableCell align="right">Value</TableCell>
-                  <TableCell align="right">Fees</TableCell>
-                  <TableCell align="right" sx={{ width: 50 }} />
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {trades.map((trade) => (
-                  <TableRow key={trade._id} hover>
-                    <TableCell>{trade.date.slice(0, 10)}</TableCell>
-                    <TableCell>
-                      <Chip size="small" label={TYPE_LABELS[trade.type]} color={typeColor(trade.type)} />
-                    </TableCell>
-                    <TableCell align="right">{isShareTrade(trade.type) ? trade.quantity : '—'}</TableCell>
-                    <TableCell align="right">
-                      {isShareTrade(trade.type) ? formatPrice(trade.price, currency) : '—'}
-                    </TableCell>
-                    <TableCell align="right">{formatCurrency(tradeValue(trade), currency)}</TableCell>
-                    <TableCell align="right">
-                      {trade.fees ? formatCurrency(trade.fees, currency) : '—'}
-                    </TableCell>
-                    <TableCell align="right">
-                      <IconButton size="small" onClick={() => setDeleteTarget(trade)}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </TableCell>
+            /* The dialog is near full-width on a phone and these columns are not,
+                so the row scrolls sideways on its own rather than taking the page
+                with it. */
+            <Box sx={{ overflowX: 'auto' }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Date</TableCell>
+                    <TableCell>Type</TableCell>
+                    <TableCell align="right">Quantity</TableCell>
+                    <TableCell align="right">Price</TableCell>
+                    <TableCell align="right">Value</TableCell>
+                    <TableCell align="right">Fees</TableCell>
+                    <TableCell align="right" sx={{ width: 50 }} />
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHead>
+                <TableBody>
+                  {trades.map((trade) => (
+                    <TableRow key={trade._id} hover>
+                      <TableCell>{trade.date.slice(0, 10)}</TableCell>
+                      <TableCell>
+                        <Chip size="small" label={TYPE_LABELS[trade.type]} color={typeColor(trade.type)} />
+                      </TableCell>
+                      <TableCell align="right">{isShareTrade(trade.type) ? trade.quantity : '—'}</TableCell>
+                      <TableCell align="right">
+                        {isShareTrade(trade.type) ? formatPrice(trade.price, currency) : '—'}
+                      </TableCell>
+                      <TableCell align="right">{formatCurrency(tradeValue(trade), currency)}</TableCell>
+                      <TableCell align="right">{trade.fees ? formatCurrency(trade.fees, currency) : '—'}</TableCell>
+                      <TableCell align="right">
+                        <IconButton size="small" onClick={() => setDeleteTarget(trade)}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Box>
           )}
 
           {adding ? (
@@ -233,7 +245,9 @@ const TradeHistoryDialog: React.FC<TradeHistoryDialogProps> = ({
                   onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as TradeType }))}
                 >
                   {(Object.keys(TYPE_LABELS) as TradeType[]).map((type) => (
-                    <MenuItem key={type} value={type}>{TYPE_LABELS[type]}</MenuItem>
+                    <MenuItem key={type} value={type}>
+                      {TYPE_LABELS[type]}
+                    </MenuItem>
                   ))}
                 </TextField>
                 <TextField
@@ -290,7 +304,9 @@ const TradeHistoryDialog: React.FC<TradeHistoryDialogProps> = ({
                 />
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
-                <Button size="small" onClick={() => setAdding(false)}>Cancel</Button>
+                <Button size="small" onClick={() => setAdding(false)}>
+                  Cancel
+                </Button>
                 <Button size="small" variant="contained" onClick={handleAdd} disabled={createMutation.isPending}>
                   Record trade
                 </Button>
@@ -303,7 +319,9 @@ const TradeHistoryDialog: React.FC<TradeHistoryDialogProps> = ({
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose} variant="contained">Done</Button>
+          <Button onClick={onClose} variant="contained">
+            Done
+          </Button>
         </DialogActions>
       </Dialog>
 

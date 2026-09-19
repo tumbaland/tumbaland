@@ -12,14 +12,21 @@ describe('isPaymentRequired', () => {
 });
 
 describe('paywallMessage', () => {
-  it('keeps the caller\'s message for anything that is not a paywall', () => {
+  it("keeps the caller's message for anything that is not a paywall", () => {
     expect(paywallMessage(new Error('offline'), 'Failed to upload photo.jpg')).toBe('Failed to upload photo.jpg');
   });
 
   it('renders the storage ceiling in bytes a person can read', () => {
     // "1073741824" is a number nobody can decide about.
     const message = paywallMessage(
-      quotaError({ code: 'QUOTA_EXCEEDED', meter: 'storageBytes', used: 1_000_000_000, limit: 1_073_741_824, planCode: 'free', upgradeTo: 'support' }),
+      quotaError({
+        code: 'QUOTA_EXCEEDED',
+        meter: 'storageBytes',
+        used: 1_000_000_000,
+        limit: 1_073_741_824,
+        planCode: 'free',
+        upgradeTo: 'support'
+      }),
       'Failed to upload photo.jpg'
     );
 

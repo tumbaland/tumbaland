@@ -165,7 +165,9 @@ describe('getSignedUrlsBatch', () => {
         res.end(JSON.stringify({ success: false }));
       } else {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true, data: { downloadUrl: 'https://x', expiresMs: 1, expiresInMinutes: 60 } }));
+        res.end(
+          JSON.stringify({ success: true, data: { downloadUrl: 'https://x', expiresMs: 1, expiresInMinutes: 60 } })
+        );
       }
     };
 
@@ -217,7 +219,9 @@ describe('uploadFile', () => {
   it('throws when the upload responds with a non-2xx status', async () => {
     handler = (_req, res) => res.writeHead(500).end();
 
-    await expect(uploadFile(Buffer.from('data'), 'a.jpg', 'image/jpeg', 4)).rejects.toThrow('upload failed with status 500');
+    await expect(uploadFile(Buffer.from('data'), 'a.jpg', 'image/jpeg', 4)).rejects.toThrow(
+      'upload failed with status 500'
+    );
   });
 });
 

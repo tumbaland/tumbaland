@@ -9,13 +9,7 @@ jest.mock('./collage.service', () => ({
 }));
 
 import * as collageService from './collage.service';
-import {
-  createCollage,
-  updateCollage,
-  getCollageById,
-  getCollageList,
-  deleteCollage
-} from './collage.controller';
+import { createCollage, updateCollage, getCollageById, getCollageList, deleteCollage } from './collage.controller';
 
 const mocked = collageService as jest.Mocked<typeof collageService>;
 
@@ -62,9 +56,7 @@ describe('getCollageById', () => {
     await getCollageById(baseReq({ params: { id: 'c1' } }), res);
 
     expect(mocked.getCollageWithPhotos).toHaveBeenCalledWith('c1', 'user-1', []);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { collage: { _id: 'c1' }, photos: [] } })
-    );
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: { collage: { _id: 'c1' }, photos: [] } }));
   });
 });
 

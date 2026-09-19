@@ -48,10 +48,7 @@ const TagInput: React.FC<TagInputProps> = ({
 }) => {
   const [inputValue, setInputValue] = useState('');
   const options = useMemo(() => suggestions.map((s) => s.tag), [suggestions]);
-  const countByTag = useMemo(
-    () => new Map(suggestions.map((s) => [s.tag, s.count])),
-    [suggestions]
-  );
+  const countByTag = useMemo(() => new Map(suggestions.map((s) => [s.tag, s.count])), [suggestions]);
 
   return (
     <Autocomplete

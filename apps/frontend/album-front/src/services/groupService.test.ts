@@ -14,7 +14,7 @@ beforeEach(() => {
   mockedGetGlobalConfig.mockReturnValue({ GROUP_API_URL: 'https://groups.example' });
 });
 
-it('resolves its base URL from GROUP_API_URL when fetching the user\'s groups', async () => {
+it("resolves its base URL from GROUP_API_URL when fetching the user's groups", async () => {
   (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
     ok: true,
     json: async () => ({ success: true, data: [{ _id: 'group-1', name: 'Family' }] })
@@ -27,7 +27,7 @@ it('resolves its base URL from GROUP_API_URL when fetching the user\'s groups', 
   expect(String(url)).toBe('https://groups.example/api/groups/mine');
 });
 
-it('resolves its base URL from GROUP_API_URL when fetching the user\'s group ids', async () => {
+it("resolves its base URL from GROUP_API_URL when fetching the user's group ids", async () => {
   (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
     ok: true,
     json: async () => ({ success: true, data: ['group-1', 'group-2'] })

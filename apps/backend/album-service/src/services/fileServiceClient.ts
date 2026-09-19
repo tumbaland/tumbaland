@@ -16,8 +16,7 @@ import { logger } from '@tumbaland/backend-core';
 
 // ─── Config helpers ───────────────────────────────────────────────────────────
 
-const fileServiceBaseUrl = (): string =>
-  (process.env.FILE_SERVICE_URL || 'http://localhost:4010').replace(/\/$/, '');
+const fileServiceBaseUrl = (): string => (process.env.FILE_SERVICE_URL || 'http://localhost:4010').replace(/\/$/, '');
 
 const apiKey = (): string => {
   const key = process.env.FILE_SERVICE_API_KEY;
@@ -61,9 +60,7 @@ function request(
     const req = lib.request(options, (res) => {
       const chunks: Buffer[] = [];
       res.on('data', (c: Buffer) => chunks.push(c));
-      res.on('end', () =>
-        resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks) })
-      );
+      res.on('end', () => resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks) }));
     });
 
     req.setTimeout(REQUEST_TIMEOUT_MS, () => {
@@ -84,15 +81,9 @@ class FileServiceHttpError extends Error {
   }
 }
 
-async function requestJson<T = unknown>(
-  method: string,
-  urlStr: string,
-  payload?: unknown
-): Promise<T> {
+async function requestJson<T = unknown>(method: string, urlStr: string, payload?: unknown): Promise<T> {
   const body = payload ? Buffer.from(JSON.stringify(payload)) : undefined;
-  const headers: Record<string, string> = body
-    ? { 'Content-Type': 'application/json' }
-    : {};
+  const headers: Record<string, string> = body ? { 'Content-Type': 'application/json' } : {};
   const { status, body: responseBody } = await request(method, urlStr, headers, body);
   const text = responseBody.toString('utf8');
   if (status < 200 || status >= 300) {
@@ -117,12 +108,7 @@ export interface FileUploadResult {
   etag: string;
 }
 
-export const generateFileId = (
-  userId: string,
-  albumId: string,
-  originalFilename: string,
-  groupId?: string
-): string => {
+export const generateFileId = (userId: string, albumId: string, originalFilename: string, groupId?: string): string => {
   const timestamp = Date.now();
   const random = Math.random().toString(36).substring(2, 15);
   const extension = originalFilename.split('.').pop();
@@ -166,27 +152,19 @@ export const getFileFolder = (fileId: string): string => {
 /**
  * Get a signed upload URL. The browser PUTs directly to this URL.
  */
-export const getUploadSignedUrl = async (
-  fileId: string,
-  _mimetype: string,
-  expiresInMinutes = 15
-): Promise<string> => {
+export const getUploadSignedUrl = async (fileId: string, _mimetype: string, expiresInMinutes = 15): Promise<string> => {
   const url = `${fileServiceBaseUrl()}/internal/upload-url`;
-  const data = await requestJson<{ success: boolean; data: { uploadUrl: string } }>(
-    'POST',
-    url,
-    { fileId, expiresInMinutes }
-  );
+  const data = await requestJson<{ success: boolean; data: { uploadUrl: string } }>('POST', url, {
+    fileId,
+    expiresInMinutes
+  });
   return data.data.uploadUrl;
 };
 
 /**
  * Get a signed download URL for a single fileId.
  */
-export const getSignedUrl = async (
-  fileId: string,
-  expiresInMinutes = 60
-): Promise<SignedUrlData | null> => {
+export const getSignedUrl = async (fileId: string, expiresInMinutes = 60): Promise<SignedUrlData | null> => {
   try {
     const url = `${fileServiceBaseUrl()}/internal/download-url`;
     const data = await requestJson<{
@@ -408,10 +386,7 @@ export const getFileMetadata = async (fileId: string): Promise<{ size: number; l
 /**
  * List files with an optional prefix.
  */
-export const listFiles = async (
-  prefix?: string,
-  maxKeys = 1000
-): Promise<Array<{ name: string; size: number }>> => {
+export const listFiles = async (prefix?: string, maxKeys = 1000): Promise<Array<{ name: string; size: number }>> => {
   const params = new URLSearchParams();
   if (prefix) params.set('prefix', prefix);
   params.set('maxKeys', String(maxKeys));

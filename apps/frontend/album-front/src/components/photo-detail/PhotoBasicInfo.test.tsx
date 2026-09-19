@@ -47,7 +47,11 @@ it('shows the description, or a fallback when there is none', () => {
   expect(screen.getByText('A lovely sunset')).toBeInTheDocument();
 
   rerender(
-    <PhotoBasicInfo photo={makePhoto({ description: undefined })} formatFileSize={formatFileSize} formatDate={formatDate} />
+    <PhotoBasicInfo
+      photo={makePhoto({ description: undefined })}
+      formatFileSize={formatFileSize}
+      formatDate={formatDate}
+    />
   );
   expect(screen.getByText('No description')).toBeInTheDocument();
 });
@@ -62,9 +66,7 @@ it('renders tags when present and omits the section when there are none', () => 
   expect(screen.getByText('beach')).toBeInTheDocument();
   expect(screen.getByText('vacation')).toBeInTheDocument();
 
-  rerender(
-    <PhotoBasicInfo photo={makePhoto({ tags: [] })} formatFileSize={formatFileSize} formatDate={formatDate} />
-  );
+  rerender(<PhotoBasicInfo photo={makePhoto({ tags: [] })} formatFileSize={formatFileSize} formatDate={formatDate} />);
   expect(screen.queryByText('Tags')).not.toBeInTheDocument();
 });
 
@@ -104,9 +106,7 @@ describe('inline tag editing', () => {
 
   it('saves an added tag alongside the existing ones', async () => {
     const onSaveTags = vi.fn().mockResolvedValue(undefined);
-    render(
-      <PhotoBasicInfo photo={makePhoto({ tags: ['beach'] })} {...editableProps} onSaveTags={onSaveTags} />
-    );
+    render(<PhotoBasicInfo photo={makePhoto({ tags: ['beach'] })} {...editableProps} onSaveTags={onSaveTags} />);
 
     await userEvent.click(screen.getByText('Edit'));
     await userEvent.type(screen.getByRole('combobox'), 'sunset{Enter}');
@@ -117,9 +117,7 @@ describe('inline tag editing', () => {
 
   it('discards the draft when the edit is cancelled', async () => {
     const onSaveTags = vi.fn().mockResolvedValue(undefined);
-    render(
-      <PhotoBasicInfo photo={makePhoto({ tags: ['beach'] })} {...editableProps} onSaveTags={onSaveTags} />
-    );
+    render(<PhotoBasicInfo photo={makePhoto({ tags: ['beach'] })} {...editableProps} onSaveTags={onSaveTags} />);
 
     await userEvent.click(screen.getByText('Edit'));
     await userEvent.type(screen.getByRole('combobox'), 'sunset{Enter}');

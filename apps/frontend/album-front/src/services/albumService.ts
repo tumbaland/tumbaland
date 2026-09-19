@@ -55,10 +55,7 @@ export const albumService = {
   },
 
   // Get album statistics for dashboard
-  async getAlbumStatistics(params?: {
-    groupId?: string;
-    tenantId?: string;
-  }): Promise<AlbumStatistics> {
+  async getAlbumStatistics(params?: { groupId?: string; tenantId?: string }): Promise<AlbumStatistics> {
     const response = await albumApi.get<ApiResponse<AlbumStatistics>>('/statistics', { params });
     return response.data;
   }

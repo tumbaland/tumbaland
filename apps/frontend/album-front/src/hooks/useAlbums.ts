@@ -17,9 +17,7 @@ const normalizeParams = (params?: {
   includeCover?: boolean;
 }) => {
   if (!params) return {};
-  return Object.fromEntries(
-    Object.entries(params).filter(([, value]) => value !== undefined && value !== null)
-  );
+  return Object.fromEntries(Object.entries(params).filter(([, value]) => value !== undefined && value !== null));
 };
 
 export const useAlbums = (params?: {

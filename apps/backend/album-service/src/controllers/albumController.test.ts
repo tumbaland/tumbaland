@@ -57,7 +57,9 @@ describe('createAlbum', () => {
 
     expect(mocked.createAlbum).toHaveBeenCalledWith({ name: 'Trip' }, 'user-1');
     expect(res.status).toHaveBeenCalledWith(201);
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, data: { _id: 'a1', name: 'Trip' } }));
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true, data: { _id: 'a1', name: 'Trip' } })
+    );
   });
 });
 

@@ -93,6 +93,20 @@ export interface MemoryYear {
   photos: MemoryPhoto[];
 }
 
+/** A photo in one of the dashboard strips: recent uploads, or the random pick. */
+export interface HighlightPhoto extends Photo {
+  /** the album the photo lives in, so a tile can say where it came from */
+  albumName: string;
+  /** its capture date if the file carried one, otherwise when it was uploaded */
+  takenAt: string;
+  /** 'taken' when the file carried a capture date, 'uploaded' when it did not */
+  dateSource: 'taken' | 'uploaded';
+}
+
+export interface Highlights {
+  photos: HighlightPhoto[];
+}
+
 export interface Memories {
   /** the day the window is centred on (YYYY-MM-DD) */
   date: string;
@@ -166,25 +180,6 @@ export interface AlbumStatistics {
     totalStorage: number;
     averagePhotoSize: number;
   };
-  timeSeries: {
-    albumsCreated: Array<{
-      date: string;
-      count: number;
-    }>;
-    photosUploaded: Array<{
-      date: string;
-      count: number;
-    }>;
-  };
-  tags: Array<{
-    tag: string;
-    count: number;
-  }>;
-  groups: Array<{
-    groupId: string;
-    albumCount: number;
-    photoCount: number;
-  }>;
   albums: Array<{
     albumId: string;
     name: string;

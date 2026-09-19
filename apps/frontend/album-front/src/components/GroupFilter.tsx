@@ -24,11 +24,7 @@ interface GroupFilterProps {
   showCounts?: boolean;
 }
 
-const GroupFilter: React.FC<GroupFilterProps> = ({
-  value,
-  onChange,
-  showCounts = false
-}) => {
+const GroupFilter: React.FC<GroupFilterProps> = ({ value, onChange, showCounts = false }) => {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,9 +50,12 @@ const GroupFilter: React.FC<GroupFilterProps> = ({
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1 }}>
         <CircularProgress size={16} />
-        <Typography variant="body2" sx={{
-          color: "text.secondary"
-        }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: 'text.secondary'
+          }}
+        >
           Loading filters...
         </Typography>
       </Box>
@@ -64,11 +63,7 @@ const GroupFilter: React.FC<GroupFilterProps> = ({
   }
 
   if (error) {
-    return (
-      <Alert severity="warning">
-        Unable to load group filters
-      </Alert>
-    );
+    return <Alert severity="warning">Unable to load group filters</Alert>;
   }
 
   return (
@@ -90,7 +85,7 @@ const GroupFilter: React.FC<GroupFilterProps> = ({
             <Typography>All Albums</Typography>
           </Box>
         </MenuItem>
-        
+
         <MenuItem value="personal">
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <PersonIcon fontSize="small" />
@@ -104,15 +99,9 @@ const GroupFilter: React.FC<GroupFilterProps> = ({
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <GroupIcon fontSize="small" />
               <Typography>{group.name}</Typography>
-              {group.isOwner && (
-                <Chip label="Owner" size="small" color="secondary" />
-              )}
+              {group.isOwner && <Chip label="Owner" size="small" color="secondary" />}
               {showCounts && group.memberCount && (
-                <Chip 
-                  label={`${group.memberCount}`} 
-                  size="small" 
-                  variant="outlined" 
-                />
+                <Chip label={`${group.memberCount}`} size="small" variant="outlined" />
               )}
             </Box>
           </MenuItem>

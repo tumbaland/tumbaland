@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Avatar, Typography, Stack, Button } from '@mui/material';
+import { gradient } from '@tumbaland/components';
 
 interface LoggedInUserProps {
   user: {
@@ -22,7 +23,7 @@ const LoggedInUser: React.FC<LoggedInUserProps> = ({ user, onContinue, onLogout 
           height: 88,
           mx: 'auto',
           border: '4px solid white',
-          boxShadow: '0 12px 24px rgba(99, 102, 241, 0.15)'
+          boxShadow: '0 12px 24px rgba(168, 45, 190, 0.15)'
         }}
       />
     </Box>
@@ -57,11 +58,11 @@ const LoggedInUser: React.FC<LoggedInUserProps> = ({ user, onContinue, onLogout 
           borderRadius: 3,
           textTransform: 'none',
           fontWeight: 600,
-          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+          background: gradient.brand,
           transition: 'transform 0.2s',
           '&:hover': {
             transform: 'translateY(-2px)',
-            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)'
+            boxShadow: '0 4px 12px rgba(168, 45, 190, 0.3)'
           }
         }}
       >

@@ -17,6 +17,7 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import { logger } from '@tumbaland/frontend-core';
 import { Photo, TagCount } from '../types';
 import TagInput, { normalizeTagList } from './TagInput';
+import { gradient } from '@tumbaland/components';
 
 /** What to do with a tag that only some of the selected photos carry. */
 type PartialAction = 'keep' | 'add' | 'remove';
@@ -54,13 +55,7 @@ const splitTags = (photos: Photo[]) => {
  * are listed separately, untouched unless you explicitly add or remove them —
  * a blanket overwrite would silently strip tags the user never saw.
  */
-const TagPhotosDialog: React.FC<TagPhotosDialogProps> = ({
-  open,
-  photos,
-  suggestions,
-  onClose,
-  onApply
-}) => {
+const TagPhotosDialog: React.FC<TagPhotosDialogProps> = ({ open, photos, suggestions, onClose, onApply }) => {
   const { common, partial } = useMemo(() => splitTags(photos), [photos]);
   const [tags, setTags] = useState<string[]>(common);
   const [partialActions, setPartialActions] = useState<Record<string, PartialAction>>({});
@@ -105,7 +100,10 @@ const TagPhotosDialog: React.FC<TagPhotosDialogProps> = ({
     }
     setSaving(true);
     try {
-      await onApply(photos.map((p) => p._id), { add, remove });
+      await onApply(
+        photos.map((p) => p._id),
+        { add, remove }
+      );
       onClose();
     } catch (error) {
       logger.error('Failed to update tags', error);
@@ -169,7 +167,11 @@ const TagPhotosDialog: React.FC<TagPhotosDialogProps> = ({
                     disabled={saving}
                     onClick={() => cyclePartial(tag)}
                     icon={
-                      action === 'add' ? <AddIcon fontSize="small" /> : action === 'remove' ? <RemoveIcon fontSize="small" /> : undefined
+                      action === 'add' ? (
+                        <AddIcon fontSize="small" />
+                      ) : action === 'remove' ? (
+                        <RemoveIcon fontSize="small" />
+                      ) : undefined
                     }
                     color={action === 'add' ? 'primary' : action === 'remove' ? 'error' : 'default'}
                     variant={action === 'keep' ? 'outlined' : 'filled'}
@@ -190,7 +192,13 @@ const TagPhotosDialog: React.FC<TagPhotosDialogProps> = ({
           onClick={onClose}
           disabled={saving}
           variant="outlined"
-          sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600, borderColor: 'rgba(0,0,0,0.12)', color: 'text.primary' }}
+          sx={{
+            borderRadius: 2,
+            textTransform: 'none',
+            fontWeight: 600,
+            borderColor: 'rgba(0,0,0,0.12)',
+            color: 'text.primary'
+          }}
         >
           Cancel
         </Button>
@@ -204,8 +212,8 @@ const TagPhotosDialog: React.FC<TagPhotosDialogProps> = ({
             textTransform: 'none',
             fontWeight: 600,
             px: 3,
-            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)'
+            background: gradient.brand,
+            boxShadow: '0 4px 12px rgba(168, 45, 190, 0.3)'
           }}
         >
           {saving ? 'Saving...' : 'Save tags'}

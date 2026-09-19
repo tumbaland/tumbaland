@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-  Box,
-  Typography,
-  Button,
-  Breadcrumbs,
-  Link,
-  IconButton
-} from '@mui/material';
+import { Box, Typography, Button, Breadcrumbs, Link, IconButton } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
   NavigateBefore as NavigateBeforeIcon,
@@ -17,6 +10,7 @@ import {
   Share as ShareIcon
 } from '@mui/icons-material';
 import { Photo, Album } from '../../types';
+import { gradient } from '@tumbaland/components';
 
 interface PhotoDetailHeaderProps {
   photo: Photo;
@@ -49,12 +43,7 @@ const PhotoDetailHeader: React.FC<PhotoDetailHeaderProps> = ({
     <>
       {/* Breadcrumbs */}
       <Breadcrumbs sx={{ mb: 2 }}>
-        <Link
-          component="button"
-          variant="body1"
-          onClick={() => onNavigate('/albums')}
-          sx={{ textDecoration: 'none' }}
-        >
+        <Link component="button" variant="body1" onClick={() => onNavigate('/albums')} sx={{ textDecoration: 'none' }}>
           Albums
         </Link>
         <Link
@@ -68,9 +57,10 @@ const PhotoDetailHeader: React.FC<PhotoDetailHeaderProps> = ({
         <Typography
           noWrap
           sx={{
-            color: "text.primary",
+            color: 'text.primary',
             maxWidth: 200
-          }}>
+          }}
+        >
           {photo.title || photo.originalName}
         </Typography>
       </Breadcrumbs>
@@ -176,10 +166,10 @@ const PhotoDetailHeader: React.FC<PhotoDetailHeaderProps> = ({
               borderRadius: 2,
               textTransform: 'none',
               fontWeight: 600,
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+              background: gradient.brand,
+              boxShadow: '0 4px 12px rgba(168, 45, 190, 0.3)',
               '&:hover': {
-                boxShadow: '0 6px 16px rgba(99, 102, 241, 0.4)'
+                boxShadow: '0 6px 16px rgba(168, 45, 190, 0.4)'
               }
             }}
           >

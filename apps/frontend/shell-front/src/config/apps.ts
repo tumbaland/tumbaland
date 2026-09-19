@@ -7,7 +7,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import GroupsIcon from '@mui/icons-material/Groups';
 import type { SvgIconProps } from '@mui/material/SvgIcon';
 import { AppConfig } from './ConfigProvider';
-import { brand } from '../theme/tokens';
+import { moduleAccent } from '@tumbaland/components';
 import { canOfferPurchases } from '../services/platform';
 
 export interface AppConfigItem {
@@ -26,7 +26,7 @@ export const APPS: AppConfigItem[] = [
     name: 'Home',
     route: '/',
     icon: HomeIcon,
-    color: brand.purple
+    color: moduleAccent.home
   },
   {
     // Shown as Journal, still served from /relationship: bookmarks, the home
@@ -35,14 +35,14 @@ export const APPS: AppConfigItem[] = [
     route: '/relationship',
     urlKey: 'RELATIONSHIP_FRONT_URL',
     icon: FavoriteIcon,
-    color: '#ef4444'
+    color: moduleAccent.journal
   },
   {
     name: 'Album',
     route: '/album',
     urlKey: 'ALBUM_FRONT_URL',
     icon: AlbumIcon,
-    color: '#3b82f6'
+    color: moduleAccent.album
   },
   {
     // Shown as Money, still served from /finance.
@@ -50,7 +50,7 @@ export const APPS: AppConfigItem[] = [
     route: '/finance',
     urlKey: 'FINANCE_FRONT_URL',
     icon: AttachMoneyIcon,
-    color: '#22c55e'
+    color: moduleAccent.money
   }
 ];
 
@@ -64,21 +64,21 @@ export const USER_APPS: AppConfigItem[] = [
     route: '/account',
     urlKey: 'ACCOUNT_FRONT_URL',
     icon: PersonIcon,
-    color: '#0f172a'
+    color: moduleAccent.profile
   },
   {
     name: 'Groups',
     route: '/groups',
     urlKey: 'GROUP_FRONT_URL',
     icon: GroupsIcon,
-    color: '#7c3aed'
+    color: moduleAccent.groups
   },
   {
     name: 'Billing',
     route: '/payments',
     urlKey: 'PAYMENT_FRONT_URL',
     icon: PaymentIcon,
-    color: '#6366f1',
+    color: moduleAccent.billing,
     purchases: true
   }
 ];

@@ -1,25 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { logger } from '@tumbaland/frontend-core';
-import {
-  Alert,
-  Box,
-  CircularProgress,
-  IconButton,
-  Snackbar,
-  Tooltip,
-  Typography
-} from '@mui/material';
+import { Alert, Box, CircularProgress, IconButton, Snackbar, Tooltip, Typography } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import DownloadIcon from '@mui/icons-material/Download';
 import { useCollageDetails, useCollageMutations } from '../hooks/useCollage';
 import { useCollageEditor } from '../hooks/useCollageEditor';
-import {
-  EDITOR_BACKDROP,
-  normalizeCollageConfig,
-  serializeCollageDoc
-} from '../components/collage/collageDoc';
+import { EDITOR_BACKDROP, normalizeCollageConfig, serializeCollageDoc } from '../components/collage/collageDoc';
 import CollageStage, { ResolvedPhoto } from '../components/collage/CollageStage';
 import CollageToolbar from '../components/collage/CollageToolbar';
 import CollagePhotoTray, { AlbumPhoto } from '../components/collage/CollagePhotoTray';
@@ -51,10 +39,7 @@ const CollageDetailsPage: React.FC = () => {
   const [toast, setToast] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
 
   const collage = collageQuery.data?.collage;
-  const albumPhotos = useMemo(
-    () => (collageQuery.data?.albumPhotos ?? []) as AlbumPhoto[],
-    [collageQuery.data]
-  );
+  const albumPhotos = useMemo(() => (collageQuery.data?.albumPhotos ?? []) as AlbumPhoto[], [collageQuery.data]);
 
   // Initialize the editor once per collage; refetches only refresh photo URLs.
   const initializedFor = useRef<string | null>(null);
@@ -86,10 +71,7 @@ const CollageDetailsPage: React.FC = () => {
     [photoById]
   );
 
-  const usedPhotoIds = useMemo(
-    () => new Set((doc?.photos ?? []).map((p) => p.photoId)),
-    [doc?.photos]
-  );
+  const usedPhotoIds = useMemo(() => new Set((doc?.photos ?? []).map((p) => p.photoId)), [doc?.photos]);
 
   const placePhoto = useCallback(
     (photo: AlbumPhoto, at?: { x: number; y: number }) => {
@@ -223,7 +205,17 @@ const CollageDetailsPage: React.FC = () => {
 
   if (collageQuery.isPending) {
     return (
-      <Box sx={{ position: 'fixed', inset: 0, zIndex: 1300, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: EDITOR_BACKDROP }}>
+      <Box
+        sx={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 1300,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          bgcolor: EDITOR_BACKDROP
+        }}
+      >
         <CircularProgress />
       </Box>
     );
@@ -231,10 +223,20 @@ const CollageDetailsPage: React.FC = () => {
 
   if (collageQuery.error || !collage) {
     return (
-      <Box sx={{ position: 'fixed', inset: 0, zIndex: 1300, display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default' }}>
-        <Typography color="error">
-          {collageQuery.error ? 'Failed to load collage' : 'Collage not found'}
-        </Typography>
+      <Box
+        sx={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 1300,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2,
+          alignItems: 'center',
+          justifyContent: 'center',
+          bgcolor: 'background.default'
+        }}
+      >
+        <Typography color="error">{collageQuery.error ? 'Failed to load collage' : 'Collage not found'}</Typography>
         <IconButton onClick={() => navigate('/collages')}>
           <ArrowBackIcon />
         </IconButton>
@@ -316,9 +318,7 @@ const CollageDetailsPage: React.FC = () => {
       )}
 
       <Box sx={{ flex: 1, display: 'flex', minHeight: 0 }}>
-        {!isViewMode && (
-          <CollagePhotoTray photos={albumPhotos} usedPhotoIds={usedPhotoIds} onAddPhoto={placePhoto} />
-        )}
+        {!isViewMode && <CollagePhotoTray photos={albumPhotos} usedPhotoIds={usedPhotoIds} onAddPhoto={placePhoto} />}
         <CollageStage
           editor={editor}
           resolvePhoto={resolvePhoto}

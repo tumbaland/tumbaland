@@ -110,7 +110,7 @@ it('shows only the most recent year, as one row under the heading', () => {
   expect(screen.queryByRole('img', { name: 'older.jpg' })).not.toBeInTheDocument();
 });
 
-it('counts the photos the per-year cap left out', () => {
+it('still says how many photos the day holds, in the heading', () => {
   mockedUseMemories.mockReturnValue({
     memories: memories({ years: [{ year: 2024, yearsAgo: 2, photoCount: 9, photos: [memoryPhoto()] }] }),
     loading: false,
@@ -119,10 +119,13 @@ it('counts the photos the per-year cap left out', () => {
   });
   renderStrip();
 
-  expect(screen.getByText('+8')).toBeInTheDocument();
+  // The count used to be a dead '+8' tile that showed nothing and could not be
+  // clicked. It is a photo's place now; the number lives in the heading.
+  expect(screen.getByText(/9 photos/)).toBeInTheDocument();
+  expect(screen.queryByText('+8')).not.toBeInTheDocument();
 });
 
-it('shows at most four tiles a year, folding the rest into a count', () => {
+it('spends every tile on a photo, with no counter taking a slot', () => {
   const photos = Array.from({ length: 9 }, (_, i) => memoryPhoto({ _id: `p${i}`, originalName: `img-${i}.jpg` }));
   mockedUseMemories.mockReturnValue({
     memories: memories({ years: [{ year: 2025, yearsAgo: 1, photoCount: 9, photos }] }),
@@ -132,8 +135,24 @@ it('shows at most four tiles a year, folding the rest into a count', () => {
   });
   renderStrip();
 
-  expect(screen.getAllByRole('button')).toHaveLength(3);
-  expect(screen.getByRole('img', { name: '6 more photos' })).toHaveTextContent('+6');
+  // Eight is the widest row (md). Each is a real photo, and each opens.
+  expect(screen.getAllByRole('button')).toHaveLength(8);
+  expect(screen.queryByRole('img', { name: /more photos/ })).not.toBeInTheDocument();
+});
+
+it('renders the tiles a narrow screen hides, so resizing reveals them', () => {
+  const photos = Array.from({ length: 8 }, (_, i) => memoryPhoto({ _id: `p${i}`, originalName: `img-${i}.jpg` }));
+  mockedUseMemories.mockReturnValue({
+    memories: memories({ years: [{ year: 2025, yearsAgo: 1, photoCount: 8, photos }] }),
+    loading: false,
+    isFetching: false,
+    error: null
+  });
+  renderStrip();
+
+  // They are in the DOM at every width; a media query decides which are shown,
+  // so widening the window needs no resize listener and drops no photo.
+  expect(screen.getByRole('button', { name: /img-7\.jpg/ })).toBeInTheDocument();
 });
 
 it('shows all four photos and no count when that is the whole day', () => {
@@ -216,4 +235,3 @@ it('labels a photo in plain punctuation, with no em dash', () => {
   expect(label).not.toContain('—');
   expect(label.length).toBeGreaterThan(0);
 });
-

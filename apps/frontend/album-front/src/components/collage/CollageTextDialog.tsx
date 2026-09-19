@@ -83,16 +83,19 @@ const CollageTextDialog: React.FC<CollageTextDialogProps> = ({ open, text, onClo
               bgcolor: 'transparent'
             }}
           />
-          <Box
-            component="span"
-            sx={{ fontWeight: 700, fontSize: Math.min(fontSize, 28), color, ml: 1 }}
-          >
+          <Box component="span" sx={{ fontWeight: 700, fontSize: Math.min(fontSize, 28), color, ml: 1 }}>
             Preview
           </Box>
         </Box>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={() => { onDelete(); onClose(); }} color="error">
+        <Button
+          onClick={() => {
+            onDelete();
+            onClose();
+          }}
+          color="error"
+        >
           Delete
         </Button>
         <Box sx={{ flex: 1 }} />

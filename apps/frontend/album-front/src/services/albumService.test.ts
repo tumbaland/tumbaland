@@ -19,7 +19,10 @@ describe('albumService', () => {
 
     const result = await albumService.getAlbums({ page: 1, limit: 10 });
 
-    expect(result).toEqual({ albums: [{ _id: 'album-1', name: 'Trip' }], pagination: { page: 1, limit: 10, total: 1, pages: 1 } });
+    expect(result).toEqual({
+      albums: [{ _id: 'album-1', name: 'Trip' }],
+      pagination: { page: 1, limit: 10, total: 1, pages: 1 }
+    });
     const [url] = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(String(url)).toContain('/albums?page=1&limit=10');
   });
@@ -37,7 +40,10 @@ describe('albumService', () => {
   it('propagates a non-ok response as a thrown ApiError', async () => {
     mockFetchOnce({ success: false, message: 'Album not found' }, { ok: false, status: 404 });
 
-    await expect(albumService.getAlbumById('missing-id')).rejects.toMatchObject({ status: 404, message: 'Album not found' });
+    await expect(albumService.getAlbumById('missing-id')).rejects.toMatchObject({
+      status: 404,
+      message: 'Album not found'
+    });
   });
 
   it('updates an album and returns the full envelope', async () => {

@@ -13,7 +13,6 @@ const factory = createConfigProvider<AppConfig>({
   serviceName: 'group-front',
   isDev: import.meta.env.DEV,
   mode: import.meta.env.MODE,
-  themed: true,
   getDevConfig: () => ({
     GROUP_API_URL: import.meta.env.VITE_GROUP_API_URL,
     AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL,

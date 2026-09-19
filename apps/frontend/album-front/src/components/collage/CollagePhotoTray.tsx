@@ -119,7 +119,14 @@ const CollagePhotoTray: React.FC<CollagePhotoTrayProps> = ({ photos, usedPhotoId
             <Button
               size="small"
               onClick={() => setMatchAll((prev) => !prev)}
-              sx={{ mt: 0.5, textTransform: 'none', color: 'rgba(255,255,255,0.6)', fontSize: '0.7rem', p: 0, minWidth: 0 }}
+              sx={{
+                mt: 0.5,
+                textTransform: 'none',
+                color: 'rgba(255,255,255,0.6)',
+                fontSize: '0.7rem',
+                p: 0,
+                minWidth: 0
+              }}
             >
               {matchAll ? 'Match all' : 'Match any'}
             </Button>
@@ -210,9 +217,7 @@ const CollagePhotoTray: React.FC<CollagePhotoTrayProps> = ({ photos, usedPhotoId
       </Box>
       {visiblePhotos.length === 0 && (
         <Typography variant="body2" sx={{ p: 1, color: 'rgba(255,255,255,0.5)' }}>
-          {photos.length === 0
-            ? 'No photos in the source albums yet.'
-            : 'No photos match the selected tags.'}
+          {photos.length === 0 ? 'No photos in the source albums yet.' : 'No photos match the selected tags.'}
         </Typography>
       )}
     </Box>

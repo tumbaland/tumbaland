@@ -34,9 +34,7 @@ it('adds a tag to the selection when clicked', async () => {
 
 it('removes an already-selected tag when clicked again', async () => {
   const onChange = vi.fn();
-  render(
-    <PhotoTagFilter tags={tags} selected={['beach']} match="all" onChange={onChange} onMatchChange={vi.fn()} />
-  );
+  render(<PhotoTagFilter tags={tags} selected={['beach']} match="all" onChange={onChange} onMatchChange={vi.fn()} />);
 
   await userEvent.click(screen.getByText('beach (5)'));
 
@@ -45,9 +43,7 @@ it('removes an already-selected tag when clicked again', async () => {
 
 it('clears the whole selection', async () => {
   const onChange = vi.fn();
-  render(
-    <PhotoTagFilter tags={tags} selected={['beach']} match="all" onChange={onChange} onMatchChange={vi.fn()} />
-  );
+  render(<PhotoTagFilter tags={tags} selected={['beach']} match="all" onChange={onChange} onMatchChange={vi.fn()} />);
 
   await userEvent.click(screen.getByRole('button', { name: /clear/i }));
 

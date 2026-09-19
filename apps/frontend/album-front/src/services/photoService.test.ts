@@ -30,7 +30,10 @@ it('creates a photo and unwraps the data envelope', async () => {
 });
 
 it('fetches photos by album with pagination params', async () => {
-  mockFetchOnce({ success: true, data: { photos: [makePhoto()], pagination: { page: 1, limit: 10, total: 1, pages: 1 } } });
+  mockFetchOnce({
+    success: true,
+    data: { photos: [makePhoto()], pagination: { page: 1, limit: 10, total: 1, pages: 1 } }
+  });
 
   await photoService.getPhotosByAlbum('album-1', { page: 1, limit: 10 });
 
@@ -113,7 +116,10 @@ describe('uploadFileToSignedUrl', () => {
 
 describe('loadPhotosWithThumbnails', () => {
   it('maps signed URLs onto thumbnailUrl/fileUrl and passes through pagination', async () => {
-    const photo = makePhoto({ signedUrl: 'https://cdn.example/full.jpg', thumbnailSignedUrl: 'https://cdn.example/thumb.jpg' });
+    const photo = makePhoto({
+      signedUrl: 'https://cdn.example/full.jpg',
+      thumbnailSignedUrl: 'https://cdn.example/thumb.jpg'
+    });
     mockFetchOnce({
       success: true,
       data: { photos: [photo], pagination: { page: 1, limit: 10, total: 1, pages: 1 } }

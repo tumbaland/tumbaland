@@ -2,12 +2,7 @@ import Album, { IAlbum } from '../models/Album';
 import Photo from '../models/Photo';
 import mongoose, { PipelineStage } from 'mongoose';
 import { canAccessResource, ForbiddenError, logger, NotFoundError } from '@tumbaland/backend-core';
-import {
-  deleteFile,
-  getPhotoSignedUrl,
-  getPhotoSignedUrlsBatch,
-  SignedUrlData
-} from './fileServiceClient';
+import { deleteFile, getPhotoSignedUrl, getPhotoSignedUrlsBatch, SignedUrlData } from './fileServiceClient';
 
 interface AlbumMatchQuery {
   $text?: { $search: string };
@@ -139,14 +134,7 @@ class AlbumService {
       pages: number;
     };
   }> {
-    const {
-      page = 1,
-      limit = 10,
-      search,
-      isPublic,
-      groupId,
-      includeCover = true
-    } = filter;
+    const { page = 1, limit = 10, search, isPublic, groupId, includeCover = true } = filter;
     const { userId, userGroups, groupServiceError } = context;
 
     const matchQuery: AlbumMatchQuery = {};
@@ -195,7 +183,9 @@ class AlbumService {
         .skip(skip)
         .limit(Number(limit))
         .lean<AlbumAggRow[]>()
-        .then((rows) => rows.map((row) => ({ ...row, photoCount: row.photoCount ?? 0, totalSize: row.totalSize ?? 0 }))),
+        .then((rows) =>
+          rows.map((row) => ({ ...row, photoCount: row.photoCount ?? 0, totalSize: row.totalSize ?? 0 }))
+        ),
       Album.countDocuments(matchQuery)
     ]);
 
@@ -242,9 +232,7 @@ class AlbumService {
         $lookup: {
           from: 'photos',
           let: { coverPhotoId: '$coverPhotoId' },
-          pipeline: [
-            { $match: { $expr: { $eq: ['$_id', '$$coverPhotoId'] } } }
-          ],
+          pipeline: [{ $match: { $expr: { $eq: ['$_id', '$$coverPhotoId'] } } }],
           as: 'coverPhotoDocs'
         }
       },
@@ -271,13 +259,7 @@ class AlbumService {
     const albumData = albumResult[0];
 
     // Check if user can access this album
-    const hasAccess = canAccessResource(
-      userId,
-      albumData.userId,
-      albumData.groupId,
-      userGroups,
-      albumData.isPublic
-    );
+    const hasAccess = canAccessResource(userId, albumData.userId, albumData.groupId, userGroups, albumData.isPublic);
 
     if (!hasAccess && !albumData.isPublic) {
       throw new ForbiddenError('Access denied');
@@ -301,11 +283,7 @@ class AlbumService {
   /**
    * Update album
    */
-  async updateAlbum(
-    albumId: string,
-    input: UpdateAlbumInput,
-    context: AlbumPermissionContext
-  ): Promise<IAlbum | null> {
+  async updateAlbum(albumId: string, input: UpdateAlbumInput, context: AlbumPermissionContext): Promise<IAlbum | null> {
     const { userId, userGroups } = context;
 
     const album = await Album.findById(albumId);
@@ -328,14 +306,13 @@ class AlbumService {
       throw new ForbiddenError('Access denied');
     }
 
-    const updateData: Partial<Pick<IAlbum, 'name' | 'description' | 'isPublic' | 'tags' | 'coverPhotoId' | 'groupId'>> = {};
+    const updateData: Partial<Pick<IAlbum, 'name' | 'description' | 'isPublic' | 'tags' | 'coverPhotoId' | 'groupId'>> =
+      {};
     if (input.name) updateData.name = input.name.trim();
     if (input.description !== undefined) updateData.description = input.description?.trim();
     if (input.isPublic !== undefined) updateData.isPublic = input.isPublic;
     if (input.tags) {
-      updateData.tags = input.tags
-        .map((tag: string) => tag.trim())
-        .filter((tag: string) => tag.length > 0);
+      updateData.tags = input.tags.map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0);
     }
     if (input.coverPhotoId !== undefined) updateData.coverPhotoId = input.coverPhotoId;
     if (input.groupId !== undefined) updateData.groupId = input.groupId;
@@ -458,11 +435,7 @@ class AlbumService {
    */
   private async enrichAlbumsWithCoverPhotos(albums: AlbumAggRow[]): Promise<AlbumWithCoverPhoto[]> {
     const coverPhotoIds = Array.from(
-      new Set(
-        albums
-          .filter((album) => album.coverPhotoId)
-          .map((album) => album.coverPhotoId!.toString())
-      )
+      new Set(albums.filter((album) => album.coverPhotoId).map((album) => album.coverPhotoId!.toString()))
     );
 
     let coverPhotoMap = new Map<string, PhotoWithSignedUrls>();
@@ -487,9 +460,7 @@ class AlbumService {
           const isGif = photo.mimetype === 'image/gif';
           const effectiveThumbnailSignedUrl = isGif ? null : thumbnailSignedUrlData?.signedUrl || null;
           const effectiveThumbnailExpiresAt = isGif ? null : thumbnailSignedUrlData?.expiresAt || null;
-          const effectiveThumbnailExpiresInMinutes = isGif
-            ? null
-            : thumbnailSignedUrlData?.expiresInMinutes || null;
+          const effectiveThumbnailExpiresInMinutes = isGif ? null : thumbnailSignedUrlData?.expiresInMinutes || null;
 
           return [
             photo.id,
@@ -527,9 +498,7 @@ class AlbumService {
         const isGif = photo.mimetype === 'image/gif';
         const effectiveThumbnailSignedUrl = isGif ? null : thumbnailSignedUrlData?.signedUrl || null;
         const effectiveThumbnailExpiresAt = isGif ? null : thumbnailSignedUrlData?.expiresAt || null;
-        const effectiveThumbnailExpiresInMinutes = isGif
-          ? null
-          : thumbnailSignedUrlData?.expiresInMinutes || null;
+        const effectiveThumbnailExpiresInMinutes = isGif ? null : thumbnailSignedUrlData?.expiresInMinutes || null;
 
         return {
           ...photo,

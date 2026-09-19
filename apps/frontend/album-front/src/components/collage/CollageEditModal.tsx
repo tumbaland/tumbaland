@@ -33,7 +33,11 @@ export const CollageEditModal: React.FC<CollageEditModalProps> = ({ open, onClos
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const tenantGroupId = useTenantFilter(); // Get groupId from tenant context
-  const { albums, loading: albumsLoading, fetchAlbums } = useAlbums({
+  const {
+    albums,
+    loading: albumsLoading,
+    fetchAlbums
+  } = useAlbums({
     groupId: tenantGroupId, // Pass groupId only if present (group context), undefined for personal
     includeCover: false
   });
@@ -123,9 +127,10 @@ export const CollageEditModal: React.FC<CollageEditModalProps> = ({ open, onClos
         {error && (
           <Box
             sx={{
-              color: "error.main",
+              color: 'error.main',
               mt: 1
-            }}>
+            }}
+          >
             {error}
           </Box>
         )}
@@ -134,7 +139,12 @@ export const CollageEditModal: React.FC<CollageEditModalProps> = ({ open, onClos
         <Button onClick={onClose} disabled={loading}>
           Cancel
         </Button>
-        <Button onClick={handleSave} variant="contained" color="primary" disabled={loading || !title || albumIds.length === 0}>
+        <Button
+          onClick={handleSave}
+          variant="contained"
+          color="primary"
+          disabled={loading || !title || albumIds.length === 0}
+        >
           Save
         </Button>
       </DialogActions>

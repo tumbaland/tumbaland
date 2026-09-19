@@ -1,13 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Dialog,
-  DialogContent,
-  IconButton,
-  Typography,
-  useTheme,
-  useMediaQuery
-} from '@mui/material';
+import { Box, Dialog, DialogContent, IconButton, Typography, useTheme, useMediaQuery } from '@mui/material';
 import {
   Close as CloseIcon,
   NavigateBefore as NavigateBeforeIcon,

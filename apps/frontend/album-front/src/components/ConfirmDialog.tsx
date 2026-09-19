@@ -57,12 +57,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const styles = getVariantStyles();
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="sm"
-      fullWidth
-    >
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <Box sx={{ position: 'relative' }}>
         <IconButton
           onClick={onClose}
@@ -79,18 +74,23 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         </IconButton>
 
         <DialogTitle sx={{ textAlign: 'center', pt: 3, pb: 2 }}>
-          <Typography sx={{
-            fontWeight: "600"
-          }}>{title}</Typography>
+          <Typography
+            sx={{
+              fontWeight: '600'
+            }}
+          >
+            {title}
+          </Typography>
         </DialogTitle>
 
         <DialogContent sx={{ textAlign: 'center', pt: 0, pb: 2 }}>
           <Typography
             variant="body1"
             sx={{
-              color: "text.secondary",
+              color: 'text.secondary',
               mb: 2
-            }}>
+            }}
+          >
             {message}
           </Typography>
         </DialogContent>

@@ -31,10 +31,7 @@ describe('getAlbumStatistics', () => {
 
     await getAlbumStatistics(req, res);
 
-    expect(mocked.getAlbumStatistics).toHaveBeenCalledWith(
-      { groupId: 'g1' },
-      { userId: 'user-1', userGroups: ['g1'] }
-    );
+    expect(mocked.getAlbumStatistics).toHaveBeenCalledWith({ groupId: 'g1' }, { userId: 'user-1', userGroups: ['g1'] });
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
   });
 });

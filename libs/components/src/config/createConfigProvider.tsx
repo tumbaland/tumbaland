@@ -1,8 +1,9 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
+import { CssBaseline, ThemeProvider } from '@mui/material';
 import { Loader } from '../components/Loader';
 import { ErrorPage, ErrorPageProps } from '../components/ErrorPage';
 import { initMonitoring, initWebVitals } from '@tumbaland/frontend-core';
+import { tumbalandTheme } from '../theme';
 
 export interface CreateConfigProviderOptions<TConfig extends { PUBLIC_API_URL?: string }> {
   /** Passed to initMonitoring as the `service` tag. */
@@ -15,21 +16,11 @@ export interface CreateConfigProviderOptions<TConfig extends { PUBLIC_API_URL?: 
   /** Builds the config from `import.meta.env.VITE_*` — must be provided by the calling app so the
    *  `VITE_` env var reads stay in app source where Vite can statically resolve them. */
   getDevConfig: () => TConfig;
-  /** Wrap children in a MUI ThemeProvider with the shared light background. Default: false. */
-  themed?: boolean;
   /** Override the default ErrorPage props (e.g. shell-front's custom icon/title). */
   errorPageProps?: ErrorPageProps;
   /** Console levels to intercept in dev. Omit to use initMonitoring's own default (error + warn only). */
   devCaptureConsoleLevels?: ('debug' | 'info' | 'warn' | 'error')[];
 }
-
-const themedBackground = createTheme({
-  palette: {
-    background: {
-      default: '#f7f7fa'
-    }
-  }
-});
 
 /**
  * Builds a per-front ConfigProvider instance. Each of the 8 frontends previously hand-rolled their
@@ -115,7 +106,7 @@ export function createConfigProvider<TConfig extends { PUBLIC_API_URL?: string }
 
     return (
       <ConfigContext.Provider value={config}>
-        {options.themed ? <ThemeProvider theme={themedBackground}>{content}</ThemeProvider> : content}
+        <ThemeProvider theme={tumbalandTheme}>{content}</ThemeProvider>
       </ConfigContext.Provider>
     );
   }

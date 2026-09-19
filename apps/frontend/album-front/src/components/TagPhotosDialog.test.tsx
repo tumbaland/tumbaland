@@ -6,7 +6,7 @@ import { makePhoto } from '../test/fixtures';
 
 const photo = (id: string, tags: string[]) => makePhoto({ _id: id, tags });
 
-it('prefills the field with a single photo\'s tags', () => {
+it("prefills the field with a single photo's tags", () => {
   render(
     <TagPhotosDialog
       open
@@ -30,9 +30,7 @@ it('sends only the added tag, not the untouched ones', async () => {
   await userEvent.type(screen.getByRole('combobox'), 'sunset{Enter}');
   await userEvent.click(screen.getByRole('button', { name: /save tags/i }));
 
-  await waitFor(() =>
-    expect(onApply).toHaveBeenCalledWith(['p1'], { add: ['sunset'], remove: [] })
-  );
+  await waitFor(() => expect(onApply).toHaveBeenCalledWith(['p1'], { add: ['sunset'], remove: [] }));
 });
 
 it('sends a removal when a prefilled tag is deleted', async () => {
@@ -87,9 +85,7 @@ it('cycles a partial tag through add and remove', async () => {
 
   await userEvent.click(chip); // keep -> add
   await userEvent.click(screen.getByRole('button', { name: /save tags/i }));
-  await waitFor(() =>
-    expect(onApply).toHaveBeenCalledWith(['p1', 'p2'], { add: ['sunset'], remove: [] })
-  );
+  await waitFor(() => expect(onApply).toHaveBeenCalledWith(['p1', 'p2'], { add: ['sunset'], remove: [] }));
 });
 
 it('keeps Save disabled until something actually changes', async () => {
@@ -107,9 +103,7 @@ it('keeps Save disabled until something actually changes', async () => {
 it('stays open when applying fails', async () => {
   const onApply = vi.fn().mockRejectedValue(new Error('nope'));
   const onClose = vi.fn();
-  render(
-    <TagPhotosDialog open photos={[photo('p1', [])]} suggestions={[]} onClose={onClose} onApply={onApply} />
-  );
+  render(<TagPhotosDialog open photos={[photo('p1', [])]} suggestions={[]} onClose={onClose} onApply={onApply} />);
 
   await userEvent.type(screen.getByRole('combobox'), 'beach{Enter}');
   await userEvent.click(screen.getByRole('button', { name: /save tags/i }));

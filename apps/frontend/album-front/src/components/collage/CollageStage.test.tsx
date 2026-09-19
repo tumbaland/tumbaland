@@ -11,7 +11,16 @@ const baseDoc: CollageDoc = {
   frameEnabled: false,
   frameColor: '#ffffff',
   photos: [
-    { id: 'photo-item-1', photoId: 'photo-1', x: 100, y: 100, width: 200, height: 150, rotation: 0, caption: 'Beach day' }
+    {
+      id: 'photo-item-1',
+      photoId: 'photo-1',
+      x: 100,
+      y: 100,
+      width: 200,
+      height: 150,
+      rotation: 0,
+      caption: 'Beach day'
+    }
   ],
   texts: [{ id: 'text-item-1', text: 'Hello', x: 400, y: 100, width: 240, height: 60, fontSize: 32, color: '#e91e63' }]
 };

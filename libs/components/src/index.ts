@@ -6,6 +6,7 @@ export { ProtectedRoute } from './components/ProtectedRoute';
 export { LoginButton } from './components/LoginButton';
 export { NotificationsMenu } from './components/NotificationsMenu/NotificationsMenu';
 export { AuthHeader } from './components/AuthHeader';
+export { AppLayout } from './components/AppLayout';
 
 // Entitlements: the usage bar and the hook that feeds it
 export { UsageMeter, formatBytes, useEntitlements } from './components/UsageMeter';
@@ -24,6 +25,7 @@ export {
 export type { LoaderProps } from './components/Loader';
 export type { ErrorPageProps } from './components/ErrorPage';
 export type { AppErrorBoundaryProps } from './components/AppErrorBoundary';
+export type { AppLayoutProps } from './components/AppLayout';
 export type { UnauthorizedPageProps } from './components/UnauthorizedPage';
 export type { ProtectedRouteProps, ProtectedRouteAuthService } from './components/ProtectedRoute';
 export type { LoginButtonProps } from './components/LoginButton';
@@ -73,3 +75,25 @@ export type {
   ShellAuthMessage,
   ShellNavigateMessage
 } from './routing';
+
+// Theme: the palette, the MUI theme built from it, and the raw tokens for the
+// places that have to name a colour outside a `sx` prop.
+export {
+  brand,
+  ink,
+  surface,
+  gradient,
+  moduleAccent,
+  wordmark,
+  glass,
+  glassInteractive,
+  brandButton,
+  section,
+  gutter,
+  gutterSx,
+  TOUCH_TARGET,
+  PHONE,
+  createTumbalandTheme,
+  tumbalandTheme,
+  TUMBALAND_COLORS
+} from './theme';

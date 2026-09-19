@@ -23,7 +23,9 @@ const collage: Collage = {
 };
 
 it('renders the title, subtitle, photo count, and formatted date', () => {
-  render(<CollageCard collage={collage} onView={vi.fn()} onEdit={vi.fn()} onEditDetails={vi.fn()} onDelete={vi.fn()} />);
+  render(
+    <CollageCard collage={collage} onView={vi.fn()} onEdit={vi.fn()} onEditDetails={vi.fn()} onDelete={vi.fn()} />
+  );
 
   expect(screen.getByText('Summer trip')).toBeInTheDocument();
   expect(screen.getByText('Best weekend ever')).toBeInTheDocument();
@@ -33,7 +35,9 @@ it('renders the title, subtitle, photo count, and formatted date', () => {
 
 it('omits the subtitle line when there is none', () => {
   const noSubtitle = { ...collage, config: { ...collage.config, title: { text: 'Summer trip' } } };
-  render(<CollageCard collage={noSubtitle} onView={vi.fn()} onEdit={vi.fn()} onEditDetails={vi.fn()} onDelete={vi.fn()} />);
+  render(
+    <CollageCard collage={noSubtitle} onView={vi.fn()} onEdit={vi.fn()} onEditDetails={vi.fn()} onDelete={vi.fn()} />
+  );
 
   expect(screen.queryByText('Best weekend ever')).not.toBeInTheDocument();
 });
@@ -67,7 +71,15 @@ describe('menu', () => {
     const onEdit = vi.fn();
     const onEditDetails = vi.fn();
     const onDelete = vi.fn();
-    render(<CollageCard collage={collage} onView={onView} onEdit={onEdit} onEditDetails={onEditDetails} onDelete={onDelete} />);
+    render(
+      <CollageCard
+        collage={collage}
+        onView={onView}
+        onEdit={onEdit}
+        onEditDetails={onEditDetails}
+        onDelete={onDelete}
+      />
+    );
 
     const menuButtons = screen.getAllByRole('button');
     const menuTrigger = menuButtons.find((b) => b.querySelector('[data-testid="MoreVertIcon"]'))!;
