@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.14.0](https://github.com/toomastahves/tumbaland/compare/frontend-core-v1.13.0...frontend-core-v1.14.0) (2026-09-19)
+
+### Features
+
+* add code login for iphones ([fdf7ca0](https://github.com/toomastahves/tumbaland/commit/fdf7ca08b467aeb85d4d9946e6d5074c7c7b9a28))
+* add new mobile home page ([a9637e1](https://github.com/toomastahves/tumbaland/commit/a9637e1e4bfe34a3bacca25f6078f4323a0539f1))
+* add refresh token and pwa ([bcb3989](https://github.com/toomastahves/tumbaland/commit/bcb39892e927d02b968db760ed40963312217532))
+* add sessions ([da1aa66](https://github.com/toomastahves/tumbaland/commit/da1aa66fe1536132e382cf200a788ae548970344))
+* improve album front ui on mobile ([119f6b3](https://github.com/toomastahves/tumbaland/commit/119f6b3be8343acdc2cc42cb2812f3f94451a905))
+* improve journal mobile view ([dcf340a](https://github.com/toomastahves/tumbaland/commit/dcf340af9017e5b2b8965c3321439bc0a858769c))
+* improve mobile ui for money ([e94fcbf](https://github.com/toomastahves/tumbaland/commit/e94fcbf368d4cd086a4166c0968bc8e1b837afce))
+* prepare mobile views ([340d7b0](https://github.com/toomastahves/tumbaland/commit/340d7b06e5b2eb7c2fbebe1d3e0348f108bdb76b))
+* update deps ([6efa78d](https://github.com/toomastahves/tumbaland/commit/6efa78d64c9c8c014f34acc6400379096445b93e))
+
+### Bug Fixes
+
+* auth service build ([76e3fd1](https://github.com/toomastahves/tumbaland/commit/76e3fd16ae133182bf530ed7c4a07b7ea97d5bbf))
+* e2e tests ([94628c1](https://github.com/toomastahves/tumbaland/commit/94628c1232afe25d49e97f219f0011887ec5a9d1))
+* iphone auth flow ([271bdbc](https://github.com/toomastahves/tumbaland/commit/271bdbcb69750659ab6c96f419061b3551418f48))
+
 ## [1.13.0](https://github.com/toomastahves/tumbaland/compare/frontend-core-v1.12.0...frontend-core-v1.13.0) (2026-09-14)
 
 ### Features
