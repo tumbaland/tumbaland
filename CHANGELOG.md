@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.490](https://github.com/toomastahves/tumbaland/compare/app-v0.0.489...app-v0.0.490) (2026-09-19)
+
+### Bug Fixes
+
+* auth service build ([76e3fd1](https://github.com/toomastahves/tumbaland/commit/76e3fd16ae133182bf530ed7c4a07b7ea97d5bbf))
+
 ## [0.0.489](https://github.com/toomastahves/tumbaland/compare/app-v0.0.488...app-v0.0.489) (2026-09-19)
 
 ### Features
