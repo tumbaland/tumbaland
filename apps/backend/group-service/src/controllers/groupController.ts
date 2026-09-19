@@ -1,53 +1,7 @@
 import { Request, Response } from 'express';
-import { BadRequestError, logger, sendSuccess } from '@tumbaland/backend-core';
+import { BadRequestError, sendSuccess } from '@tumbaland/backend-core';
 import * as svc from '../services/groupService';
 import { GroupRole } from '../models/Group';
-
-// Helper function to invalidate user tokens when membership changes
-const invalidateUserTokens = async (userEmails: string[]): Promise<void> => {
-  const authServiceUrl = process.env.AUTH_API_URL;
-  const internalToken = process.env.INTERNAL_SERVICE_TOKEN;
-
-  if (!authServiceUrl || !internalToken) {
-    logger.warn('Auth service not configured for token invalidation');
-    return;
-  }
-
-  // Invalidate tokens for affected users by incrementing their token version
-  for (const email of userEmails) {
-    try {
-      const invalidateResponse = await fetch(`${authServiceUrl}/auth/internal/invalidate-tokens`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-internal-token': internalToken,
-          'x-service-id': 'group-service'
-        },
-        body: JSON.stringify({ email })
-      });
-
-      if (invalidateResponse.ok) {
-        logger.info('Successfully invalidated tokens for user', { email });
-      } else {
-        logger.error('Failed to invalidate tokens for user', { email, status: invalidateResponse.status });
-      }
-    } catch (error) {
-      logger.error('Failed to invalidate tokens for user', { email, error: (error as Error)?.message });
-    }
-  }
-};
-
-/**
- * Activity is a side note: failing to record it must not fail the request,
- * least of all the group lookup that every sign-in depends on.
- */
-const recordActivity = async (email: string): Promise<void> => {
-  try {
-    await svc.recordActivity(email);
-  } catch (error) {
-    logger.warn('Failed to record member activity', { email, error: (error as Error)?.message });
-  }
-};
 
 const userEmail = (req: Request) => {
   // For internal service requests, extract email from request body or params
@@ -74,8 +28,7 @@ export const listMine = async (req: Request, res: Response): Promise<void> => {
     throw new BadRequestError('User email required');
   }
   const groups = await svc.listMyGroups(email);
-  await recordActivity(email);
-  sendSuccess(res, groups);
+  sendSuccess(res, await svc.withMemberActivity(groups));
 };
 
 export const listMyDeleted = async (req: Request, res: Response): Promise<void> => {
@@ -94,13 +47,13 @@ export const getUserGroupIds = async (req: Request, res: Response): Promise<void
   }
   const groups = await svc.listMyGroups(email);
   const groupIds = groups.map(group => group._id.toString());
-  await recordActivity(email);
   sendSuccess(res, groupIds);
 };
 
 export const getOne = async (req: Request, res: Response): Promise<void> => {
   const group = await svc.getGroupIfMember(req.params.id as string, userEmail(req));
-  sendSuccess(res, group);
+  const [withActivity] = await svc.withMemberActivity([group]);
+  sendSuccess(res, withActivity);
 };
 
 export const updateGroup = async (req: Request, res: Response): Promise<void> => {
@@ -124,12 +77,13 @@ export const permanentlyDeleteGroup = async (req: Request, res: Response): Promi
   res.status(204).send();
 };
 
+// Membership changes need nothing from auth-service: every service asks
+// group-service who belongs where (backend-core's currentGroupsOf, cached for
+// seconds), so a change applies without re-signing anyone's token. They used
+// to invalidate the member's tokens, which signed them out everywhere.
 export const addMember = async (req: Request, res: Response): Promise<void> => {
   const { email, role } = req.body as { email: string; role?: GroupRole };
   const group = await svc.addMember(req.params.id as string, userEmail(req), email, role);
-
-  // Invalidate tokens for the added user
-  await invalidateUserTokens([email]);
 
   sendSuccess(res, group, undefined, 201);
 };
@@ -143,17 +97,11 @@ export const updateRole = async (req: Request, res: Response): Promise<void> => 
     role
   );
 
-  // Invalidate tokens for the user whose role changed
-  await invalidateUserTokens([req.params.memberEmail as string]);
-
   sendSuccess(res, group);
 };
 
 export const removeMember = async (req: Request, res: Response): Promise<void> => {
   const group = await svc.removeMember(req.params.id as string, userEmail(req), req.params.memberEmail as string);
-
-  // Invalidate tokens for the removed user
-  await invalidateUserTokens([req.params.memberEmail as string]);
 
   sendSuccess(res, group);
 };

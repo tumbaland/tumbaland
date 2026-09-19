@@ -20,8 +20,15 @@ export type { EmbedContext } from './embedContext';
 export {
   APP_SOURCE,
   SHELL_SOURCE,
+  isAppAuthRequestMessage,
   isAppLocationMessage,
   isNavigateTopMessage,
   isShellNavigateMessage
 } from './messages';
-export type { AppLocationMessage, NavigateTopMessage, ShellNavigateMessage } from './messages';
+export type {
+  AppAuthRequestMessage,
+  AppLocationMessage,
+  NavigateTopMessage,
+  ShellAuthMessage,
+  ShellNavigateMessage
+} from './messages';

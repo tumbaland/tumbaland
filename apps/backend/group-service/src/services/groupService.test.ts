@@ -5,11 +5,11 @@ jest.mock('../models/Group', () => ({
     findOne: jest.fn(),
     findById: jest.fn(),
     findByIdAndDelete: jest.fn(),
-    updateOne: jest.fn(),
-    updateMany: jest.fn()
+    updateOne: jest.fn()
   }
 }));
 
+import mongoose, { Types } from 'mongoose';
 import { Group } from '../models/Group';
 import * as groupService from './groupService';
 
@@ -18,7 +18,6 @@ const mockedFind = Group.find as unknown as jest.Mock;
 const mockedFindOne = Group.findOne as unknown as jest.Mock;
 const mockedFindById = Group.findById as unknown as jest.Mock;
 const mockedFindByIdAndDelete = Group.findByIdAndDelete as unknown as jest.Mock;
-const mockedUpdateMany = Group.updateMany as unknown as jest.Mock;
 
 function makeGroup(overrides: Partial<{ members: any[]; deletedAt: Date | null }> = {}) {
   return {
@@ -236,17 +235,72 @@ describe('checkMembership', () => {
   });
 });
 
-describe('recordActivity', () => {
-  it('sets lastActivity for the member in every group they belong to, using a lowercased email', async () => {
-    mockedUpdateMany.mockResolvedValue({});
+describe('withMemberActivity', () => {
+  const ada = new Types.ObjectId();
+  const bob = new Types.ObjectId();
+  const earlier = new Date('2026-09-19T20:00:00Z');
+  const later = new Date('2026-09-19T21:30:00Z');
+  const stored = new Date('2026-09-01T10:00:00Z');
+  let users: jest.Mock;
+  let aggregate: jest.Mock;
 
-    await groupService.recordActivity('Member@Example.com');
+  beforeEach(() => {
+    users = jest.fn();
+    aggregate = jest.fn();
+    jest.spyOn(mongoose.connection, 'collection').mockImplementation(((name: string) =>
+      name === 'users'
+        ? { find: (...args: unknown[]) => ({ toArray: () => users(...args) }) }
+        : { aggregate: (...args: unknown[]) => ({ toArray: () => aggregate(...args) }) }) as never);
+  });
 
-    expect(mockedUpdateMany).toHaveBeenCalledWith(
-      { 'members.email': 'member@example.com' },
-      { $set: { 'members.$[member].lastActivity': expect.any(Date) } },
-      { arrayFilters: [{ 'member.email': 'member@example.com' }] }
+  afterEach(() => jest.restoreAllMocks());
+
+  const group = () =>
+    makeGroup({
+      members: [
+        { email: 'ada@example.com', role: 'owner', lastActivity: null },
+        { email: 'bob@example.com', role: 'member', lastActivity: stored },
+        { email: 'cy@example.com', role: 'member', lastActivity: stored }
+      ]
+    });
+
+  it('takes each member’s last activity from their most recently seen session', async () => {
+    users.mockResolvedValue([
+      { _id: ada, email: 'ada@example.com' },
+      { _id: bob, email: 'bob@example.com' }
+    ]);
+    aggregate.mockResolvedValue([
+      { _id: ada, lastSeenAt: later },
+      { _id: bob, lastSeenAt: earlier }
+    ]);
+
+    const [result] = await groupService.withMemberActivity([group() as never]);
+
+    expect((result.members as Array<{ email: string; lastActivity: Date | null }>).map((m) => [m.email, m.lastActivity])).toEqual([
+      ['ada@example.com', later],
+      ['bob@example.com', earlier],
+      // No sessions: the time stored on the membership, from before.
+      ['cy@example.com', stored]
+    ]);
+    expect(users).toHaveBeenCalledWith(
+      { email: { $in: ['ada@example.com', 'bob@example.com', 'cy@example.com'] } },
+      { projection: { email: 1 } }
     );
+    expect(aggregate.mock.calls[0][0][0]).toEqual({ $match: { userId: { $in: [ada, bob] } } });
+  });
+
+  it('skips the session lookup when none of the members has an account', async () => {
+    users.mockResolvedValue([]);
+
+    const [result] = await groupService.withMemberActivity([group() as never]);
+
+    expect(aggregate).not.toHaveBeenCalled();
+    expect((result.members as Array<{ lastActivity: Date | null }>)[0].lastActivity).toBeNull();
+  });
+
+  it('makes no lookups for no groups', async () => {
+    await expect(groupService.withMemberActivity([])).resolves.toEqual([]);
+    expect(users).not.toHaveBeenCalled();
   });
 });
 

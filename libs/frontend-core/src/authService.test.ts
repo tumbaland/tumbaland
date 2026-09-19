@@ -295,3 +295,141 @@ describe('createAppAuthService', () => {
     Object.defineProperty(window, 'location', { writable: true, value: originalLocation });
   });
 });
+
+describe('checkAuth inside the shell', () => {
+  const SHELL = 'https://shell.example';
+  const config = {
+    getAuthServiceUrl: () => 'https://auth.example',
+    getAuthFrontUrl: () => 'https://login.example',
+    getShellUrl: () => SHELL
+  };
+  const user = { id: '1', email: 'a@b.com', name: 'A' };
+
+  // jsdom has no real parent window; a same-document iframe stands in for the
+  // shell, so replies can carry a genuine Window as their source.
+  let shellWindow: Window;
+  let postToShell: ReturnType<typeof vi.fn>;
+  const originalParent = Object.getOwnPropertyDescriptor(window, 'parent');
+
+  const lastRequest = () => {
+    const [message, targetOrigin] = postToShell.mock.calls.at(-1)!;
+    return { message, targetOrigin };
+  };
+
+  const shellReplies = (data: Record<string, unknown>, { origin = SHELL, source = shellWindow } = {}) =>
+    window.dispatchEvent(new MessageEvent('message', { origin, source, data }));
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    global.fetch = vi.fn();
+    const frame = document.createElement('iframe');
+    document.body.appendChild(frame);
+    shellWindow = frame.contentWindow!;
+    postToShell = vi.fn();
+    shellWindow.postMessage = postToShell as unknown as Window['postMessage'];
+    Object.defineProperty(window, 'parent', { configurable: true, get: () => shellWindow });
+    window.history.replaceState({}, '', '/?embedded=1&embedPath=%2F');
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    if (originalParent) Object.defineProperty(window, 'parent', originalParent);
+    window.history.replaceState({}, '', '/');
+    document.body.innerHTML = '';
+  });
+
+  it("uses the shell's answer instead of calling auth-service", async () => {
+    const authService = createAuthService(config);
+
+    const pending = authService.checkAuth();
+    const { message, targetOrigin } = lastRequest();
+    expect(message).toMatchObject({ source: 'tumbaland-app', type: 'app:auth-request' });
+    expect(targetOrigin).toBe(SHELL);
+
+    shellReplies({ source: 'tumbaland-shell', type: 'shell:auth', id: message.id, authenticated: true, user });
+
+    await expect(pending).resolves.toEqual({ authenticated: true, user });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('ignores answers from anywhere but the shell', async () => {
+    mockFetchOnce({ success: true, authenticated: false });
+    const authService = createAuthService(config);
+
+    const pending = authService.checkAuth();
+    const { id } = lastRequest().message;
+    const lie = { source: 'tumbaland-shell', type: 'shell:auth', id, authenticated: true, user };
+    shellReplies(lie, { origin: 'https://evil.example' });
+    shellReplies(lie, { source: window });
+    shellReplies({ ...lie, id: 'another-request' });
+    await vi.advanceTimersByTimeAsync(3000);
+
+    await expect(pending).resolves.toEqual({ authenticated: false, user: null });
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks auth-service itself when the shell does not answer in time', async () => {
+    mockFetchOnce({ success: true, authenticated: true, user });
+    const warn = vi.spyOn(logger, 'warn').mockResolvedValue(undefined);
+    const authService = createAuthService(config);
+
+    const pending = authService.checkAuth();
+    await vi.advanceTimersByTimeAsync(3000);
+
+    await expect(pending).resolves.toEqual({ authenticated: true, user });
+    expect(global.fetch).toHaveBeenCalledWith('https://auth.example/auth/verify', expect.anything());
+    warn.mockRestore();
+  });
+
+  it('never asks the shell when not loaded with the embed flag', async () => {
+    window.history.replaceState({}, '', '/');
+    mockFetchOnce({ success: true, authenticated: true, user });
+    const authService = createAuthService(config);
+
+    await authService.checkAuth();
+
+    expect(postToShell).not.toHaveBeenCalled();
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('shares one check between callers that ask at the same time', async () => {
+    const authService = createAuthService(config);
+
+    const first = authService.checkAuth();
+    const second = authService.checkAuth();
+    expect(postToShell).toHaveBeenCalledTimes(1);
+    shellReplies({ source: 'tumbaland-shell', type: 'shell:auth', id: lastRequest().message.id, authenticated: true, user });
+
+    expect(await first).toBe(await second);
+  });
+
+  it('does not let a check that was in flight across a cache clear refill the cache', async () => {
+    const authService = createAuthService(config);
+
+    const stale = authService.checkAuth();
+    const { id } = lastRequest().message;
+    authService.clearAuthCache();
+    shellReplies({ source: 'tumbaland-shell', type: 'shell:auth', id, authenticated: true, user });
+    await stale;
+
+    const fresh = authService.checkAuth();
+    expect(postToShell).toHaveBeenCalledTimes(2);
+    shellReplies({ source: 'tumbaland-shell', type: 'shell:auth', id: lastRequest().message.id, authenticated: false, user: null });
+    await expect(fresh).resolves.toEqual({ authenticated: false, user: null });
+  });
+});
+
+describe('createAppAuthService', () => {
+  it('passes the shell URL from config through', async () => {
+    global.fetch = vi.fn();
+    mockFetchOnce({ success: true, authenticated: true, user: null });
+    const authService = createAppAuthService(() => ({
+      AUTH_SERVICE_URL: 'https://auth.example',
+      AUTH_FRONT_URL: 'https://login.example',
+      SHELL_FRONT_URL: 'https://shell.example'
+    }));
+
+    // Not framed here, so the shell URL alone does not change anything.
+    await expect(authService.checkAuth()).resolves.toMatchObject({ authenticated: true });
+  });
+});

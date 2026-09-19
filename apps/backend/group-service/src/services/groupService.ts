@@ -1,20 +1,60 @@
-import { ConflictError, ForbiddenError, NotFoundError } from '@tumbaland/backend-core';
+import mongoose from 'mongoose';
+import { ConflictError, ForbiddenError, NotFoundError, USER_SESSIONS_COLLECTION } from '@tumbaland/backend-core';
 import { Group, IGroup, GroupRole } from '../models/Group';
 
 /**
- * Marks the person active now in every group they belong to.
- *
- * Called from the group-ID lookup auth-service makes each time an app opens
- * and checks the session, so "Active" on the member list follows real use
- * rather than the last time someone opened the groups page.
+ * When each person was last active, from auth-service's sessions: the latest
+ * `lastSeenAt` across their signed-in devices, which every app refreshes when
+ * it opens. Read straight from the shared database, as backend-core's session
+ * check does, rather than written on every group lookup the way it used to be.
  */
-export async function recordActivity(memberEmail: string): Promise<void> {
-  const email = memberEmail.toLowerCase();
-  await Group.updateMany(
-    { 'members.email': email },
-    { $set: { 'members.$[member].lastActivity': new Date() } },
-    { arrayFilters: [{ 'member.email': email }] }
-  );
+async function lastActiveByEmail(emails: string[]): Promise<Map<string, Date>> {
+  const lastActive = new Map<string, Date>();
+  if (emails.length === 0) return lastActive;
+
+  const users = await mongoose.connection
+    .collection('users')
+    .find({ email: { $in: emails } }, { projection: { email: 1 } })
+    .toArray();
+  if (users.length === 0) return lastActive;
+
+  const emailById = new Map(users.map((user) => [user._id.toString(), user.email as string]));
+  const latest = await mongoose.connection
+    .collection(USER_SESSIONS_COLLECTION)
+    .aggregate<{ _id: mongoose.Types.ObjectId; lastSeenAt: Date }>([
+      { $match: { userId: { $in: users.map((user) => user._id) } } },
+      { $group: { _id: '$userId', lastSeenAt: { $max: '$lastSeenAt' } } }
+    ])
+    .toArray();
+
+  for (const row of latest) {
+    const email = emailById.get(row._id.toString());
+    if (email) lastActive.set(email, row.lastSeenAt);
+  }
+  return lastActive;
+}
+
+/**
+ * The groups as plain objects, each member's `lastActivity` taken from their
+ * sessions. Someone with no session left (signed out everywhere) keeps the time
+ * last stored on the membership, from before activity came from sessions.
+ */
+export async function withMemberActivity(groups: IGroup[]): Promise<Record<string, unknown>[]> {
+  const emails = [...new Set(groups.flatMap((group) => group.members.map((member) => member.email)))];
+  const lastActive = await lastActiveByEmail(emails);
+
+  return groups.map((group) => {
+    const plain = (typeof group.toObject === 'function' ? group.toObject() : group) as Record<string, unknown> & {
+      members: Array<{ email: string; lastActivity?: Date | null }>;
+    };
+    return {
+      ...plain,
+      members: plain.members.map((member) => ({
+        ...member,
+        lastActivity: lastActive.get(member.email) ?? member.lastActivity ?? null
+      }))
+    };
+  });
 }
 
 export async function createGroup(creatorEmail: string, name: string): Promise<IGroup> {

@@ -26,6 +26,12 @@ export interface ISession extends Document {
   expiresAt: Date;
   /** Hard cap from sign-in; however active the session, it ends here. */
   absoluteExpiresAt: Date;
+  /**
+   * For a session upgraded from a pre-sessions login: a hash of the old
+   * credentials, so the parallel requests an app makes when it opens all land
+   * on one session instead of each creating its own.
+   */
+  legacyKey?: string;
 }
 
 const SessionSchema = new Schema<ISession>(
@@ -36,7 +42,8 @@ const SessionSchema = new Schema<ISession>(
     country: { type: String, maxlength: 2 },
     lastSeenAt: { type: Date, required: true },
     expiresAt: { type: Date, required: true },
-    absoluteExpiresAt: { type: Date, required: true }
+    absoluteExpiresAt: { type: Date, required: true },
+    legacyKey: { type: String }
   },
   { timestamps: { createdAt: true, updatedAt: false }, collection: USER_SESSIONS_COLLECTION }
 );
@@ -44,6 +51,7 @@ const SessionSchema = new Schema<ISession>(
 // Expired sessions delete themselves. The middleware compares `expiresAt`
 // itself as well, since the TTL monitor only runs about once a minute.
 SessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+SessionSchema.index({ legacyKey: 1 }, { unique: true, sparse: true });
 
 export const Session: Model<ISession> =
   (models.Session as Model<ISession>) || model<ISession>('Session', SessionSchema);

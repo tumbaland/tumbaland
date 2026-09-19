@@ -17,6 +17,8 @@ services:
       # Also gates /internal/groups/:id/owner, which album- and finance-service
       # read to pick the quota subject for anything held in a group.
       - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN}
+      # Group membership is asked of group-service on each request (backend-core currentGroupsOf).
+      - GROUP_INTERNAL_URL=${GROUP_INTERNAL_URL}
       - AUTH_API_URL=${AUTH_API_URL}
       - CORS_ORIGIN=${CORS_ORIGIN}
       # Entitlements: the seats chokepoint checks an added member against the

@@ -236,4 +236,71 @@ describe('useShellBridge', () => {
       )
     ).not.toThrow();
   });
+
+  describe('auth requests from the framed app', () => {
+    const authRequest = (id = 'req-1') => ({ source: APP_SOURCE, type: 'app:auth-request', id });
+    const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+    it("answers with the shell's own auth state, to the frame's origin only", async () => {
+      const frame = makeFrame();
+      const user = { id: '1', email: 'a@b.com' };
+      const onAuthRequest = vi.fn().mockResolvedValue({ authenticated: true, user });
+
+      renderHook(() =>
+        useShellBridge({
+          frameRef: frame.ref,
+          appRoute: '/album',
+          appUrl: APP_URL,
+          shellPath: '/album',
+          onNavigate: vi.fn(),
+          onAuthRequest
+        })
+      );
+
+      dispatchMessage(authRequest(), APP_URL, frame.contentWindow);
+      await flush();
+
+      expect(onAuthRequest).toHaveBeenCalledTimes(1);
+      expect(frame.postMessage).toHaveBeenCalledWith(
+        { source: SHELL_SOURCE, type: 'shell:auth', id: 'req-1', authenticated: true, user },
+        APP_URL
+      );
+    });
+
+    it('ignores requests from another origin or another window', async () => {
+      const frame = makeFrame();
+      const onAuthRequest = vi.fn().mockResolvedValue({ authenticated: true, user: null });
+
+      renderHook(() =>
+        useShellBridge({
+          frameRef: frame.ref,
+          appRoute: '/album',
+          appUrl: APP_URL,
+          shellPath: '/album',
+          onNavigate: vi.fn(),
+          onAuthRequest
+        })
+      );
+
+      dispatchMessage(authRequest(), 'https://evil.example', frame.contentWindow);
+      dispatchMessage(authRequest(), APP_URL, { postMessage: vi.fn() });
+      await flush();
+
+      expect(onAuthRequest).not.toHaveBeenCalled();
+    });
+
+    it('leaves the request unanswered when the shell has no auth state to give', async () => {
+      const frame = makeFrame();
+
+      renderHook(() =>
+        useShellBridge({ frameRef: frame.ref, appRoute: '/album', appUrl: APP_URL, shellPath: '/album', onNavigate: vi.fn() })
+      );
+      frame.postMessage.mockClear();
+
+      dispatchMessage(authRequest(), APP_URL, frame.contentWindow);
+      await flush();
+
+      expect(frame.postMessage).not.toHaveBeenCalled();
+    });
+  });
 });

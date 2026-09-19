@@ -12,6 +12,7 @@ import { mintAccessToken, type MintAccessTokenInput } from '../oauth/tokens';
 import { PERSONAL_TENANT } from './types';
 import { authenticateAgent, requireScope, denyApiKeys } from './middleware';
 import { overrideSessionCheckForTests } from '../auth/session';
+import { overrideMembershipLookupForTests } from '../groups/membership';
 
 const mockedVerify = verifyApiKey as jest.Mock;
 const ORIGINAL_ENV = process.env;
@@ -44,10 +45,17 @@ const okVerification = (over: Record<string, unknown> = {}) => ({
   ...over
 });
 
+// Unless a test says otherwise, the owner still belongs to every group used here.
+let memberOf: string[];
+
 beforeEach(() => {
   jest.clearAllMocks();
   process.env = { ...ORIGINAL_ENV, JWT_SECRET: 'test-jwt-secret' };
+  memberOf = ['g1', 'g2'];
+  overrideMembershipLookupForTests(async () => memberOf);
 });
+
+afterAll(() => overrideMembershipLookupForTests());
 
 afterEach(() => {
   process.env = ORIGINAL_ENV;
@@ -79,6 +87,17 @@ describe('authenticateAgent — session tokens', () => {
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(next).not.toHaveBeenCalled();
+  });
+
+  it("takes the person's groups from group-service, not from the token", async () => {
+    memberOf = ['g2'];
+    const token = jwt.sign({ id: 'u1', email: 'a@b.c', name: 'A', groups: ['g1'] }, 'test-jwt-secret');
+    const request = req({ headers: { authorization: `Bearer ${token}` } });
+
+    await authenticateAgent()(request, mockRes(), jest.fn());
+
+    expect(request.userGroups).toEqual(['g2']);
+    expect(request.user?.groups).toEqual(['g2']);
   });
 
   it('accepts a valid JWT and grants the full session, with no apiKey context', async () => {
@@ -356,6 +375,55 @@ describe('authenticateAgent — a multi-tenant grant', () => {
     // The personal tenant is not a group and must not appear here, or it would
     // reach a `groupId: { $in: ... }` clause as a group nobody belongs to.
     expect(request.userGroups).toEqual(['g1', 'g2']);
+  });
+});
+
+describe('authenticateAgent — groups the owner has since left', () => {
+  it('drops a granted group the owner no longer belongs to', async () => {
+    memberOf = ['g2'];
+    mockedVerify.mockResolvedValue(
+      okVerification({ tenants: { allowed: [PERSONAL_TENANT, 'g1', 'g2'], default: PERSONAL_TENANT } })
+    );
+    const request = withKey();
+
+    await authenticateAgent()(request, mockRes(), jest.fn());
+
+    expect(request.userGroups).toEqual(['g2']);
+    expect(request.apiKey?.tenants.allowed).toEqual([PERSONAL_TENANT, 'g2']);
+  });
+
+  it('refuses a request for a group the owner has left, although the key was granted it', async () => {
+    memberOf = [];
+    mockedVerify.mockResolvedValue(okVerification({ tenants: grant(PERSONAL_TENANT, 'g1') }));
+    const res = mockRes();
+    const next = jest.fn();
+
+    await authenticateAgent()(withKey(undefined, { query: { groupId: 'g1' } } as Partial<Request>), res, next);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('refuses a key whose only group the owner has left, rather than acting somewhere else', async () => {
+    memberOf = [];
+    mockedVerify.mockResolvedValue(okVerification({ tenants: grant('g1') }));
+    const res = mockRes();
+    const next = jest.fn();
+
+    await authenticateAgent()(withKey(), res, next);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('asks about the key owner, by email', async () => {
+    const lookup = jest.fn(async () => ['g1']);
+    overrideMembershipLookupForTests(lookup);
+    mockedVerify.mockResolvedValue(okVerification({ tenants: grant('g1') }));
+
+    await authenticateAgent()(withKey(), mockRes(), jest.fn());
+
+    expect(lookup).toHaveBeenCalledWith({ email: 'u1@example.com' });
   });
 });
 

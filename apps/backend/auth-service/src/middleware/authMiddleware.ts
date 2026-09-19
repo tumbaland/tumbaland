@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { isAccessTokenClaims, isLegacySessionlessToken, logger } from '@tumbaland/backend-core';
+import { currentGroupsOf, isAccessTokenClaims, isLegacySessionlessToken, logger } from '@tumbaland/backend-core';
 import { verifyJWT, verifyRefreshToken, UserPayload } from '../services/jwtService';
 import { User, IUser } from '../models/User';
 import { ISession, Session } from '../models/Session';
@@ -83,7 +83,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     // Mirror backend-core's authenticateToken, which every other service uses:
     // handlers read group membership off `req.userGroups`, and leaving it unset
     // here made it look like the caller belonged to no groups at all.
-    req.userGroups = decoded.groups ?? [];
+    req.userGroups = await currentGroupsOf(decoded);
 
     // attach db user (if needed elsewhere)
     req.dbUser = dbUser;
@@ -168,7 +168,7 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
       }
       req.user = decoded;
       req.authSession = session;
-      req.userGroups = decoded.groups ?? [];
+      req.userGroups = await currentGroupsOf(decoded);
       // Upsert but do not block on approval
       await User.findOneAndUpdate(
         { email: decoded.email.toLowerCase() },

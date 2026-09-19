@@ -195,8 +195,6 @@ export const verifyAuth = async (req: Request, res: Response): Promise<void> => 
 
   const payload = await renewSession(req, res);
 
-  logger.info('Generated new token for user', { email: payload.email, groupCount: payload.groups?.length ?? 0 });
-
   res.json({
     success: true,
     authenticated: true,
@@ -209,10 +207,8 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     throw new UnauthorizedError('No authenticated user');
   }
 
-  const payload = await renewSession(req, res);
+  // An explicit request for a new token, so always a new one.
+  await renewSession(req, res, { reissue: true });
 
-  res.json({
-    success: true,
-    groups: payload.groups
-  });
+  res.json({ success: true });
 };

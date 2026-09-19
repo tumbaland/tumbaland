@@ -19,6 +19,8 @@ services:
       - CORS_ORIGIN=${CORS_ORIGIN}
       # Gates /internal/entitlements, which every other service reads.
       - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN}
+      # Group membership is asked of group-service on each request (backend-core currentGroupsOf).
+      - GROUP_INTERNAL_URL=${GROUP_INTERNAL_URL}
     init: true
     networks:
       - tumbanet

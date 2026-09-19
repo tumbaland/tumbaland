@@ -5,6 +5,7 @@ import { PERSONAL_TENANT } from '../apiKeys/types';
 import { mintAccessToken } from '../oauth/tokens';
 import { UserPayload } from '../types/auth';
 import { overrideSessionCheckForTests } from '../auth/session';
+import { overrideMembershipLookupForTests } from '../groups/membership';
 
 // These tokens carry no session; the session check has its own tests below and in session.test.ts.
 beforeEach(() => overrideSessionCheckForTests(async () => true));
@@ -57,14 +58,19 @@ describe('authenticateToken', () => {
     expect(req.userGroups).toEqual([]);
   });
 
-  it('attaches userGroups from the token when present', async () => {
-    const token = jwt.sign({ ...payload, groups: ['group-1', 'group-2'] }, 'test-secret');
+  it("takes the person's groups from group-service, not from the token", async () => {
+    const lookup = jest.fn(async () => ['live-group']);
+    overrideMembershipLookupForTests(lookup);
+    const token = jwt.sign({ ...payload, groups: ['stale-group'] }, 'test-secret');
     const req = mockReq({ cookies: { access_token: token } });
     const res = mockRes();
 
     await authenticateToken(req, res, next);
 
-    expect(req.userGroups).toEqual(['group-1', 'group-2']);
+    expect(lookup).toHaveBeenCalledWith(expect.objectContaining({ email: 'user@example.com' }));
+    expect(req.userGroups).toEqual(['live-group']);
+    expect(req.user?.groups).toEqual(['live-group']);
+    overrideMembershipLookupForTests();
   });
 
   it('accepts a Bearer token from the Authorization header', async () => {

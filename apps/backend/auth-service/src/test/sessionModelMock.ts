@@ -13,7 +13,10 @@ export const sessionModule = () => ({
   Session: {
     create: jest.fn(async (doc: Record<string, unknown>) => ({ _id: new Types.ObjectId(), ...doc })),
     findOne: jest.fn().mockResolvedValue(null),
-    findOneAndUpdate: jest.fn().mockResolvedValue(null),
+    // An upsert inserts its $setOnInsert fields, like Mongoose does; anything else matches nothing.
+    findOneAndUpdate: jest.fn(async (_filter: unknown, update: { $setOnInsert?: Record<string, unknown> }, options?: { upsert?: boolean }) =>
+      options?.upsert ? { _id: new Types.ObjectId(), ...update.$setOnInsert } : null
+    ),
     find: jest.fn(),
     deleteOne: jest.fn().mockResolvedValue({ deletedCount: 0 }),
     deleteMany: jest.fn().mockResolvedValue({ deletedCount: 0 })

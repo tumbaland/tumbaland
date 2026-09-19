@@ -28,12 +28,17 @@ const IPHONE =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1';
 const WINDOWS = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36';
 
-/** A session and a token that names it, as a signed-in device holds them. */
-const signedIn = (overrides: Record<string, unknown> = {}) => {
+/**
+ * A session and a token that names it, as a signed-in device holds them. The
+ * token was issued `tokenAgeMinutes` ago: past TOKEN_REISSUE_AFTER_MS by
+ * default, so /auth/verify signs a new one.
+ */
+const signedIn = (overrides: Record<string, unknown> = {}, tokenAgeMinutes = 20) => {
   const session = makeSession({ userId: new Types.ObjectId(USER_ID), userAgent: IPHONE, ...overrides });
   sessions.findOne.mockResolvedValue(session);
+  const iat = Math.floor(Date.now() / 1000) - tokenAgeMinutes * 60;
   const token = generateJWT(
-    { id: USER_ID, email: 'ada@example.com', name: 'Ada', tokenVersion: 1, sid: session._id.toString() },
+    { id: USER_ID, email: 'ada@example.com', name: 'Ada', tokenVersion: 1, sid: session._id.toString(), iat } as never,
     session.absoluteExpiresAt as Date
   );
   return { session, cookie: `access_token=${token}` };
@@ -48,10 +53,11 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockedFindOne.mockResolvedValue({ _id: USER_ID, email: 'ada@example.com', tokenVersion: 1, isApproved: true, roles: [] });
   sessions.findOne.mockResolvedValue(null);
-  sessions.findOneAndUpdate.mockImplementation(async (_query, update) => ({
-    ...(await sessions.findOne.mock.results[0]?.value),
-    ...update.$set
-  }));
+  sessions.findOneAndUpdate.mockImplementation(async (_query, update, options) =>
+    options?.upsert
+      ? { _id: new Types.ObjectId(), ...update.$setOnInsert }
+      : { ...(await sessions.findOne.mock.results[0]?.value), ...update.$set }
+  );
   sessions.deleteOne.mockResolvedValue({ deletedCount: 1 });
   sessions.deleteMany.mockResolvedValue({ deletedCount: 0 });
 });
@@ -115,6 +121,46 @@ describe('GET /auth/verify with a session', () => {
     expect(decodeJWT(access)).toMatchObject({ sid: session._id.toString() });
   });
 
+  it('answers without a new token or cookie while the token is recent, so parallel calls do not race', async () => {
+    const { session, cookie } = signedIn({ lastSeenAt: new Date() }, 2);
+    process.env.GROUP_API_URL = 'http://group-service.internal';
+    process.env.INTERNAL_SERVICE_TOKEN = 'test-internal-token';
+    global.fetch = jest.fn();
+
+    const res = await request(app).get('/auth/verify').set('Cookie', cookie).set('User-Agent', IPHONE);
+
+    expect(res.status).toBe(200);
+    expect(res.body.user).toMatchObject({ id: USER_ID, email: 'ada@example.com', sid: session._id.toString() });
+    expect(res.body.user.iat).toBeUndefined();
+    expect(res.body.user.exp).toBeUndefined();
+    expect(res.headers['set-cookie']).toBeUndefined();
+    expect(global.fetch).not.toHaveBeenCalled();
+
+    delete process.env.GROUP_API_URL;
+    delete process.env.INTERNAL_SERVICE_TOKEN;
+  });
+
+  it('still slides the session while the token is recent', async () => {
+    const { cookie } = signedIn({}, 2);
+
+    await request(app).get('/auth/verify').set('Cookie', cookie).set('User-Agent', IPHONE);
+
+    expect(sessions.findOneAndUpdate).toHaveBeenCalledWith(
+      expect.anything(),
+      { $set: expect.objectContaining({ lastSeenAt: expect.any(Date) }) },
+      { returnDocument: 'after' }
+    );
+  });
+
+  it('still refuses a recent token whose session has ended', async () => {
+    const { cookie } = signedIn({}, 2);
+    sessions.findOne.mockResolvedValue(null);
+
+    const res = await request(app).get('/auth/verify').set('Cookie', cookie).set('User-Agent', IPHONE);
+
+    expect(res.status).toBe(401);
+  });
+
   it('does not write when the session was seen in the last few minutes', async () => {
     const { cookie } = signedIn({ lastSeenAt: new Date() });
 
@@ -153,9 +199,50 @@ describe('GET /auth/verify with a session', () => {
     const res = await request(app).get('/auth/verify').set('Cookie', `access_token=${token}`).set('User-Agent', IPHONE);
 
     expect(res.status).toBe(200);
-    expect(sessions.create).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: USER_ID, method: 'unknown', userAgent: IPHONE })
+    expect(sessions.findOneAndUpdate).toHaveBeenCalledWith(
+      { legacyKey: expect.stringMatching(/^[0-9a-f]{64}$/), userId: USER_ID },
+      { $setOnInsert: expect.objectContaining({ userId: USER_ID, method: 'unknown', userAgent: IPHONE }) },
+      { upsert: true, returnDocument: 'after' }
     );
+    expect(sessions.create).not.toHaveBeenCalled();
+  });
+
+  it('gives the parallel calls an app makes when it opens one session between them, not one each', async () => {
+    const token = generateJWT({ id: USER_ID, email: 'ada@example.com', name: 'Ada', tokenVersion: 1 });
+    const verify = () => request(app).get('/auth/verify').set('Cookie', `access_token=${token}`).set('User-Agent', IPHONE);
+
+    await Promise.all([verify(), verify(), verify()]);
+
+    const keys = sessions.findOneAndUpdate.mock.calls.map(([filter]) => filter.legacyKey);
+    expect(keys).toHaveLength(3);
+    expect(new Set(keys).size).toBe(1);
+  });
+
+  it('uses the session another call just created when their inserts race', async () => {
+    const token = generateJWT({ id: USER_ID, email: 'ada@example.com', name: 'Ada', tokenVersion: 1 });
+    const winner = makeSession({ userId: new Types.ObjectId(USER_ID), userAgent: IPHONE, lastSeenAt: new Date() });
+    sessions.findOneAndUpdate.mockRejectedValueOnce(Object.assign(new Error('E11000 duplicate key'), { code: 11000 }));
+    sessions.findOne.mockResolvedValue(winner);
+
+    const res = await request(app).get('/auth/verify').set('Cookie', `access_token=${token}`).set('User-Agent', IPHONE);
+
+    expect(res.status).toBe(200);
+    const setCookie = res.headers['set-cookie'] as unknown as string[];
+    const access = setCookie.find((c) => c.startsWith('access_token='))!.split(';')[0].split('=')[1];
+    expect(decodeJWT(access)).toMatchObject({ sid: winner._id.toString() });
+  });
+});
+
+describe('POST /auth/refresh', () => {
+  it('always signs a new token, however recent the current one is', async () => {
+    const { session, cookie } = signedIn({ lastSeenAt: new Date() }, 1);
+
+    const res = await request(app).post('/auth/refresh').set('Cookie', cookie).set('User-Agent', IPHONE);
+
+    expect(res.status).toBe(200);
+    const setCookie = res.headers['set-cookie'] as unknown as string[];
+    const access = setCookie.find((c) => c.startsWith('access_token='))!.split(';')[0].split('=')[1];
+    expect(decodeJWT(access)).toMatchObject({ sid: session._id.toString() });
   });
 });
 

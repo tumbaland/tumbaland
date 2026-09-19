@@ -58,6 +58,7 @@ export {
   toOrigin,
   APP_SOURCE,
   SHELL_SOURCE,
+  isAppAuthRequestMessage,
   isAppLocationMessage,
   isNavigateTopMessage,
   isShellNavigateMessage
@@ -66,7 +67,9 @@ export type {
   EmbeddedRouterProps,
   ShellBridgeOptions,
   EmbedContext,
+  AppAuthRequestMessage,
   AppLocationMessage,
   NavigateTopMessage,
+  ShellAuthMessage,
   ShellNavigateMessage
 } from './routing';

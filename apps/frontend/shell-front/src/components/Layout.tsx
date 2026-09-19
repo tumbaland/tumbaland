@@ -74,6 +74,10 @@ export default function Layout({ children }: LayoutProps) {
     window.location.assign('/');
   }, []);
 
+  // The framed app asks the shell whether it is signed in rather than calling
+  // /auth/verify itself, so opening a page renews the session once.
+  const handleAuthRequest = useCallback(() => authService.checkAuth(), []);
+
   useShellBridge({
     frameRef,
     appRoute: currentApp?.route,
@@ -82,7 +86,8 @@ export default function Layout({ children }: LayoutProps) {
     shellSearch: location.search,
     onNavigate: handleChildNavigate,
     onTitleChange: handleChildTitle,
-    onChildLogout: handleChildLogout
+    onChildLogout: handleChildLogout,
+    onAuthRequest: handleAuthRequest
   });
 
   useEffect(() => {

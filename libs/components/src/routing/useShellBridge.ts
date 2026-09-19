@@ -2,7 +2,9 @@ import { RefObject, useCallback, useEffect, useMemo, useRef } from 'react';
 import { extractChildPath, joinShellPath, normalizeEmbedPath, safeUrl, toOrigin } from './embedContext';
 import {
   SHELL_SOURCE,
+  ShellAuthMessage,
   ShellNavigateMessage,
+  isAppAuthRequestMessage,
   isAppLocationMessage,
   isAppLogoutMessage,
   isNavigateTopMessage
@@ -23,6 +25,12 @@ export interface ShellBridgeOptions {
   onTitleChange?: (title: string) => void;
   /** The framed app signed the user out; the shell's own session is over too. */
   onChildLogout?: () => void;
+  /**
+   * The shell's own auth state, answered to a framed app's `app:auth-request`
+   * so the app need not call /auth/verify itself. Without it the request goes
+   * unanswered and the app asks auth-service after a short wait.
+   */
+  onAuthRequest?: () => Promise<{ authenticated: boolean; user: unknown }>;
 }
 
 /**
@@ -30,7 +38,8 @@ export interface ShellBridgeOptions {
  *
  * Listens for location reports from the framed app and mirrors them into the
  * shell's own router, and pushes shell-initiated navigation (back/forward, a
- * pasted deep link) down into the frame. Also handles the legacy
+ * pasted deep link) down into the frame. Answers the frame's auth checks from
+ * the shell's own, so a page open verifies the session once. Also handles the legacy
  * `tumbaland:navigate-top` escape hatch from payment-front's checkout.
  */
 export const useShellBridge = ({
@@ -41,7 +50,8 @@ export const useShellBridge = ({
   shellSearch = '',
   onNavigate,
   onTitleChange,
-  onChildLogout
+  onChildLogout,
+  onAuthRequest
 }: ShellBridgeOptions): void => {
   const appOrigin = useMemo(() => toOrigin(appUrl), [appUrl]);
   // Path the child just reported, so we don't push it straight back down.
@@ -86,6 +96,17 @@ export const useShellBridge = ({
         return;
       }
 
+      if (isAppAuthRequestMessage(event.data)) {
+        if (!onAuthRequest || !frame?.contentWindow) return;
+        const { id } = event.data;
+        const target = frame.contentWindow;
+        onAuthRequest().then(({ authenticated, user }) => {
+          const answer: ShellAuthMessage = { source: SHELL_SOURCE, type: 'shell:auth', id, authenticated, user };
+          target.postMessage(answer, appOrigin);
+        });
+        return;
+      }
+
       if (isNavigateTopMessage(event.data)) {
         const target = safeUrl(event.data.url);
         if (!target) return;
@@ -101,7 +122,7 @@ export const useShellBridge = ({
 
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [appOrigin, appRoute, frameRef, handleAppLocation, onChildLogout]);
+  }, [appOrigin, appRoute, frameRef, handleAppLocation, onChildLogout, onAuthRequest]);
 
   useEffect(() => {
     if (!appOrigin || !appRoute) return;

@@ -76,7 +76,7 @@ interface GroupOwnerResponse {
  * round, out through the proxy and back, carrying the internal token across the
  * public edge.
  */
-function internalGroupUrl(): string | undefined {
+export function internalGroupUrl(): string | undefined {
   return process.env.GROUP_INTERNAL_URL || process.env.GROUP_API_URL;
 }
 

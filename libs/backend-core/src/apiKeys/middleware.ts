@@ -17,6 +17,7 @@ import {
   type Tenant
 } from './types';
 import { isCurrentSession } from '../auth/session';
+import { currentGroupsOf } from '../groups/membership';
 
 /**
  * Request-scoped facts about the key a request arrived on. Absent on ordinary
@@ -148,13 +149,13 @@ interface AgentCredential {
  * Settling that in one place is what keeps the two from drifting into subtly
  * different amounts of access.
  */
-function admitAgent(
+async function admitAgent(
   req: Request,
   res: Response,
   next: NextFunction,
   requiredScopes: ApiKeyScope[],
   credential: AgentCredential
-): void {
+): Promise<void> {
   const missing = requiredScopes.filter((scope) => !credential.scopes.includes(scope));
   if (missing.length > 0) {
     res.status(403).json({
@@ -164,7 +165,16 @@ function admitAgent(
     return;
   }
 
-  const actingAs = applyTenantGrant(req, credential.tenants);
+  // A grant names the groups the owner belonged to when they made it. Only the
+  // ones they still belong to count, so leaving a group also takes it from
+  // every key and connection they gave it to.
+  const stillMemberOf = new Set(await currentGroupsOf({ email: credential.email }));
+  const tenants: ApiKeyTenant = {
+    ...credential.tenants,
+    allowed: credential.tenants.allowed.filter((tenant) => tenant === PERSONAL_TENANT || stillMemberOf.has(tenant))
+  };
+
+  const actingAs = applyTenantGrant(req, tenants);
   if (actingAs === null) {
     res.status(403).json({
       success: false,
@@ -177,11 +187,11 @@ function admitAgent(
   // Only the granted groups, never the owner's full membership: this is what
   // stops a credential reaching a group it was not issued for through any
   // handler that consults `userGroups` instead of the `groupId` parameter.
-  req.userGroups = groupIdsOf(credential.tenants.allowed);
+  req.userGroups = groupIdsOf(tenants.allowed);
   req.apiKey = {
     keyId: credential.credentialId,
     scopes: credential.scopes,
-    tenants: credential.tenants,
+    tenants,
     actingAs,
     kind: credential.kind,
     label: credential.label,
@@ -228,9 +238,9 @@ export const authenticateAgent = (...requiredScopes: ApiKeyScope[]): RequestHand
           unauthorized(res);
           return;
         }
-        const user = claims as UserPayload;
-        req.user = user;
-        req.userGroups = user.groups ?? [];
+        const groups = await currentGroupsOf(claims as UserPayload);
+        req.user = { ...(claims as UserPayload), groups };
+        req.userGroups = groups;
         beginAudit(req, res, next);
         return;
       }
@@ -245,7 +255,7 @@ export const authenticateAgent = (...requiredScopes: ApiKeyScope[]): RequestHand
       // `undefined`, scoped writes were refused as inaccessible, and a read
       // whose scope collapsed to nothing fell through to "no user context" and
       // answered from the whole collection.
-      admitAgent(req, res, next, requiredScopes, {
+      await admitAgent(req, res, next, requiredScopes, {
         // The client, not the token: `jti` is a new value every hour.
         credentialId: claims.clientId ?? 'unknown-client',
         kind: 'oauth',
@@ -268,7 +278,7 @@ export const authenticateAgent = (...requiredScopes: ApiKeyScope[]): RequestHand
       return;
     }
 
-    admitAgent(req, res, next, requiredScopes, {
+    await admitAgent(req, res, next, requiredScopes, {
       credentialId: result.keyId!,
       kind: 'api_key',
       label: result.label || 'An API key',

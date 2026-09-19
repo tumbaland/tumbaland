@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { Request, Response } from 'express';
 import { logger, UnauthorizedError } from '@tumbaland/backend-core';
 import { generateJWT, UserPayload } from './jwtService';
@@ -25,6 +26,15 @@ export const SESSION_MAX_AGE_MS = 90 * DAY_MS;
  */
 export const SESSION_TOUCH_INTERVAL_MS = 5 * 60 * 1000;
 
+/**
+ * How old a token gets before /auth/verify signs a new one. Younger than this,
+ * verify only answers who the caller is: every app runs it when it opens, often
+ * several at once, and re-signing each time meant a new cookie per call and
+ * parallel writers racing each other. It is also how stale the token's roles
+ * can get.
+ */
+export const TOKEN_REISSUE_AFTER_MS = 15 * 60 * 1000;
+
 /** Where the refresh cookie lived before sessions; cleared wherever it turns up. */
 const LEGACY_REFRESH_COOKIE_PATH = '/auth';
 
@@ -43,54 +53,6 @@ const sessionCookieOptions = (session: Pick<ISession, 'expiresAt'>) => ({
 export const clearSessionCookies = (res: Response): void => {
   res.clearCookie('access_token', { domain: cookieDomain(), path: '/' });
   res.clearCookie('refresh_token', { path: LEGACY_REFRESH_COOKIE_PATH });
-};
-
-/**
- * Group memberships for the JWT's `groups` claim, which every service
- * authorizes group-scoped requests against.
- *
- * `fallback` is what to claim when group-service cannot be reached. Returning
- * an empty list there is not a safe default: it mints a token that looks valid
- * and 403s every group-scoped request, and the user has no way to tell that
- * from having lost access. Callers that already hold a verified token pass its
- * existing claim, so a blip re-issues what the user already had.
- */
-export const getUserGroups = async (email: string, fallback: string[] = []): Promise<string[]> => {
-  try {
-    const groupServiceUrl = process.env.GROUP_API_URL;
-    const internalToken = process.env.INTERNAL_SERVICE_TOKEN;
-
-    if (!groupServiceUrl || !internalToken) {
-      logger.error('Cannot resolve group claim: GROUP_API_URL or INTERNAL_SERVICE_TOKEN is unset', { email });
-      return fallback;
-    }
-
-    const groupResponse = await fetch(`${groupServiceUrl}/api/groups/mine/ids?userEmail=${encodeURIComponent(email)}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-internal-token': internalToken,
-        'x-service-id': 'auth-service'
-      },
-      signal: AbortSignal.timeout(3000)
-    });
-
-    if (!groupResponse.ok) {
-      logger.error('Group service rejected the group claim lookup', { email, status: groupResponse.status });
-      return fallback;
-    }
-
-    const groupResult = await groupResponse.json();
-    if (!groupResult.success) {
-      logger.error('Group service reported failure for the group claim lookup', { email });
-      return fallback;
-    }
-
-    return groupResult.data || [];
-  } catch (error) {
-    logger.error('Failed to fetch user groups for JWT', { email, error: (error as Error)?.message });
-    return fallback;
-  }
 };
 
 const getUserRoles = async (email: string): Promise<string[]> => {
@@ -116,33 +78,39 @@ const countryOf = (req: Request): string | undefined => {
     : undefined;
 };
 
-/** Signs the token for `session`, with fresh groups and roles, and sets the cookie. */
+/**
+ * Signs the token for `session`, with fresh roles, and sets the cookie.
+ *
+ * No `groups` claim: every service asks group-service for membership (see
+ * currentGroupsOf in backend-core), so a change applies within seconds instead
+ * of waiting for the token to be re-signed.
+ */
 async function mintSessionToken(
   res: Response,
   session: ISession,
-  user: { id: string; email: string; tokenVersion?: number; groups?: string[] },
+  user: { id: string; email: string; tokenVersion?: number },
   identity: SessionIdentity
 ): Promise<UserPayload> {
-  const [groups, roles] = await Promise.all([getUserGroups(user.email, user.groups), getUserRoles(user.email)]);
+  const roles = await getUserRoles(user.email);
   const payload: UserPayload = {
     id: user.id,
     email: user.email,
     name: identity.name ?? '',
     ...(identity.picture ? { picture: identity.picture } : {}),
-    groups,
     roles,
     tokenVersion: user.tokenVersion || 1,
     sid: session._id.toString()
   };
   res.cookie('access_token', generateJWT(payload, session.absoluteExpiresAt), sessionCookieOptions(session));
+  logger.info('Issued session token', { userId: user.id, sessionId: payload.sid });
   // The refresh cookie belongs to the pre-sessions scheme; a session replaces it.
   res.clearCookie('refresh_token', { path: LEGACY_REFRESH_COOKIE_PATH });
   return payload;
 }
 
-async function createSession(req: Request, userId: string, method: SignInMethod): Promise<ISession> {
+const newSessionFields = (req: Request, userId: string, method: SignInMethod) => {
   const now = Date.now();
-  return Session.create({
+  return {
     userId,
     method,
     userAgent: userAgentOf(req),
@@ -150,7 +118,43 @@ async function createSession(req: Request, userId: string, method: SignInMethod)
     lastSeenAt: new Date(now),
     expiresAt: new Date(now + SESSION_IDLE_TTL_MS),
     absoluteExpiresAt: new Date(now + SESSION_MAX_AGE_MS)
-  });
+  };
+};
+
+async function createSession(req: Request, userId: string, method: SignInMethod): Promise<ISession> {
+  return Session.create(newSessionFields(req, userId, method));
+}
+
+const isDuplicateKey = (error: unknown): boolean => (error as { code?: number })?.code === 11000;
+
+/**
+ * The session for a pre-sessions login, created the first time it is renewed.
+ *
+ * An app opening runs several /auth/verify calls at once, all carrying the same
+ * old cookies. Keyed on a hash of those cookies, they all get one session
+ * rather than one each; creating a session per call left orphans that showed
+ * up as the same device listed several times.
+ */
+async function sessionForLegacyLogin(req: Request, userId: string): Promise<ISession> {
+  const credentials = [req.cookies?.access_token, req.cookies?.refresh_token, req.headers?.authorization]
+    .map((value) => (typeof value === 'string' ? value : ''))
+    .join('|');
+  const legacyKey = createHash('sha256').update(credentials).digest('hex');
+  const filter = { legacyKey, userId };
+  try {
+    const session = await Session.findOneAndUpdate(
+      filter,
+      { $setOnInsert: { ...newSessionFields(req, userId, 'unknown'), legacyKey } },
+      { upsert: true, returnDocument: 'after' }
+    );
+    if (session) return session;
+  } catch (error) {
+    // Two upserts raced and the other one inserted: use its session.
+    if (!isDuplicateKey(error)) throw error;
+  }
+  const existing = await Session.findOne(filter);
+  if (!existing) throw new UnauthorizedError('Session has ended');
+  return existing;
 }
 
 /**
@@ -175,10 +179,16 @@ export const startSession = async (
   );
 };
 
+/** The caller's token claims as the response describes them, without the JWT's own timestamps. */
+const claimsOf = (user: UserPayload): UserPayload => {
+  const { iat: _iat, exp: _exp, ...claims } = user as UserPayload & { iat?: number; exp?: number };
+  return claims;
+};
+
 /**
  * Renews the caller's session (`/auth/verify`, `/auth/refresh`): slides its
- * idle expiry, re-signs the token with fresh groups and roles, re-sets the
- * cookie. A pre-sessions token (or refresh cookie) has no session to renew, so
+ * idle expiry and, once the token is older than TOKEN_REISSUE_AFTER_MS (or
+ * always, with `reissue`), re-signs it with fresh roles and re-sets the cookie. A pre-sessions token (or refresh cookie) has no session to renew, so
  * it is given one, which is how those migrate without anyone being signed out.
  *
  * A session that turns up on a different kind of device than it started on is
@@ -186,9 +196,13 @@ export const startSession = async (
  * compared (see deviceFamily), so an iPhone asking for the desktop site is not
  * mistaken for a stranger's laptop.
  */
-export const renewSession = async (req: Request, res: Response): Promise<UserPayload> => {
+export const renewSession = async (
+  req: Request,
+  res: Response,
+  { reissue = false }: { reissue?: boolean } = {}
+): Promise<UserPayload> => {
   const user = req.user as UserPayload;
-  let session = req.authSession ?? (await createSession(req, user.id, 'unknown'));
+  let session = req.authSession ?? (await sessionForLegacyLogin(req, user.id));
 
   const startedOn = deviceFamily(session.userAgent);
   const seenOn = deviceFamily(userAgentOf(req));
@@ -218,10 +232,18 @@ export const renewSession = async (req: Request, res: Response): Promise<UserPay
     session = touched;
   }
 
+  // A pre-sessions login has no session in its token yet, so it always gets a new one.
+  const issuedAt = (user as UserPayload & { iat?: number }).iat;
+  const tokenIsFresh =
+    req.authSession !== undefined && typeof issuedAt === 'number' && now - issuedAt * 1000 < TOKEN_REISSUE_AFTER_MS;
+  if (!reissue && tokenIsFresh) {
+    return claimsOf(user);
+  }
+
   return mintSessionToken(
     res,
     session,
-    { id: user.id, email: user.email, tokenVersion: user.tokenVersion, groups: user.groups },
+    { id: user.id, email: user.email, tokenVersion: user.tokenVersion },
     { name: user.name, picture: user.picture }
   );
 };

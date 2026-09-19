@@ -80,8 +80,7 @@ describe('POST /auth/refresh', () => {
     const res = await request(app).post('/auth/refresh').set('Cookie', `access_token=${token}`);
 
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({ success: true, groups: [] });
-    expect(res.body.token).toBeUndefined();
+    expect(res.body).toEqual({ success: true });
 
     const setCookie = res.headers['set-cookie'];
     expect(setCookie).toBeDefined();
@@ -94,50 +93,22 @@ describe('POST /auth/refresh', () => {
     expect(newToken).not.toBe(token);
   });
 
-  it('keeps the groups already in the token when group-service cannot be reached', async () => {
+  it('signs a token without a groups claim, and never asks group-service', async () => {
     process.env.GROUP_API_URL = 'http://group-service.internal';
     process.env.INTERNAL_SERVICE_TOKEN = 'test-internal-token';
-    const token = generateJWT({
-      id: '1',
-      email: 'user@example.com',
-      name: 'User',
-      groups: ['group-1'],
-      tokenVersion: 1
-    });
-    mockedFindOne.mockResolvedValue({ email: 'user@example.com', tokenVersion: 1, isApproved: true });
-    global.fetch = jest.fn().mockRejectedValue(new Error('network down'));
+    global.fetch = jest.fn();
+    const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User', groups: ['group-1'], tokenVersion: 1 });
+    mockedFindOne.mockResolvedValue({ email: 'user@example.com', tokenVersion: 1, isApproved: true, roles: ['admin'] });
 
     const res = await request(app).post('/auth/refresh').set('Cookie', `access_token=${token}`);
 
-    // Blanking the claim here would mint a seven-day token that 403s every
-    // group-scoped request, with nothing to distinguish it from lost access.
-    expect(res.status).toBe(200);
-    expect(res.body.groups).toEqual(['group-1']);
+    // Membership is asked of group-service by each service when a request
+    // arrives, so the token no longer carries a copy that can go stale.
     const setCookie = res.headers['set-cookie'] as unknown as string[];
     const cookieToken = setCookie.find((c) => c.startsWith('access_token='))!.split(';')[0].split('=')[1];
-    expect(decodeJWT(cookieToken)?.groups).toEqual(['group-1']);
-
-    delete process.env.GROUP_API_URL;
-    delete process.env.INTERNAL_SERVICE_TOKEN;
-  });
-
-  it('still adopts the fresh list when group-service does answer', async () => {
-    process.env.GROUP_API_URL = 'http://group-service.internal';
-    process.env.INTERNAL_SERVICE_TOKEN = 'test-internal-token';
-    const token = generateJWT({
-      id: '1',
-      email: 'user@example.com',
-      name: 'User',
-      groups: ['group-1'],
-      tokenVersion: 1
-    });
-    mockedFindOne.mockResolvedValue({ email: 'user@example.com', tokenVersion: 1, isApproved: true });
-    global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ success: true, data: ['group-2'] }) });
-
-    const res = await request(app).post('/auth/refresh').set('Cookie', `access_token=${token}`);
-
-    // Removals must still take effect — the fallback is for unreachable, not stale.
-    expect(res.body.groups).toEqual(['group-2']);
+    expect(decodeJWT(cookieToken)?.groups).toBeUndefined();
+    expect(decodeJWT(cookieToken)?.roles).toEqual(['admin']);
+    expect(global.fetch).not.toHaveBeenCalledWith(expect.stringContaining('/api/groups/mine/ids'), expect.anything());
 
     delete process.env.GROUP_API_URL;
     delete process.env.INTERNAL_SERVICE_TOKEN;
@@ -275,63 +246,20 @@ describe('POST /auth/validate', () => {
     expect(setCookie.find((c) => c.startsWith('refresh_token='))).toMatch(/^refresh_token=;/);
   });
 
-  it('fetches groups from group-service and includes them in the minted JWT when configured', async () => {
+  it('signs in without asking group-service, and puts no groups in the token', async () => {
     process.env.GROUP_API_URL = 'http://group-service.internal';
     process.env.INTERNAL_SERVICE_TOKEN = 'test-internal-token';
+    global.fetch = jest.fn();
     mockedVerifyGoogleToken.mockResolvedValue({ email: 'ada@example.com', name: 'Ada' });
     mockedFindOneAndUpdate.mockResolvedValue({ _id: 'db-user-1', email: 'ada@example.com', tokenVersion: 1, isApproved: true });
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ success: true, data: ['group-1', 'group-2'] })
-    });
-
-    const res = await request(app).post('/auth/validate').send({ idToken: 'good-token' });
-
-    expect(res.status).toBe(200);
-    expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('http://group-service.internal/api/groups/mine/ids'),
-      expect.objectContaining({ headers: expect.objectContaining({ 'x-internal-token': 'test-internal-token' }) })
-    );
-    const setCookie = res.headers['set-cookie'] as unknown as string[];
-    const cookieToken = setCookie.find((c) => c.startsWith('access_token='))!.split(';')[0].split('=')[1];
-    const decoded = decodeJWT(cookieToken);
-    expect(decoded?.groups).toEqual(['group-1', 'group-2']);
-
-    delete process.env.GROUP_API_URL;
-    delete process.env.INTERNAL_SERVICE_TOKEN;
-  });
-
-  it('leaves groups empty when the group-service fetch fails (non-ok response)', async () => {
-    process.env.GROUP_API_URL = 'http://group-service.internal';
-    process.env.INTERNAL_SERVICE_TOKEN = 'test-internal-token';
-    mockedVerifyGoogleToken.mockResolvedValue({ email: 'ada@example.com', name: 'Ada' });
-    mockedFindOneAndUpdate.mockResolvedValue({ _id: 'db-user-1', email: 'ada@example.com', tokenVersion: 1, isApproved: true });
-    global.fetch = jest.fn().mockResolvedValue({ ok: false });
 
     const res = await request(app).post('/auth/validate').send({ idToken: 'good-token' });
 
     expect(res.status).toBe(200);
     const setCookie = res.headers['set-cookie'] as unknown as string[];
     const cookieToken = setCookie.find((c) => c.startsWith('access_token='))!.split(';')[0].split('=')[1];
-    expect(decodeJWT(cookieToken)?.groups).toEqual([]);
-
-    delete process.env.GROUP_API_URL;
-    delete process.env.INTERNAL_SERVICE_TOKEN;
-  });
-
-  it('leaves groups empty and does not throw when the group-service fetch itself rejects', async () => {
-    process.env.GROUP_API_URL = 'http://group-service.internal';
-    process.env.INTERNAL_SERVICE_TOKEN = 'test-internal-token';
-    mockedVerifyGoogleToken.mockResolvedValue({ email: 'ada@example.com', name: 'Ada' });
-    mockedFindOneAndUpdate.mockResolvedValue({ _id: 'db-user-1', email: 'ada@example.com', tokenVersion: 1, isApproved: true });
-    global.fetch = jest.fn().mockRejectedValue(new Error('network down'));
-
-    const res = await request(app).post('/auth/validate').send({ idToken: 'good-token' });
-
-    expect(res.status).toBe(200);
-    const setCookie = res.headers['set-cookie'] as unknown as string[];
-    const cookieToken = setCookie.find((c) => c.startsWith('access_token='))!.split(';')[0].split('=')[1];
-    expect(decodeJWT(cookieToken)?.groups).toEqual([]);
+    expect(decodeJWT(cookieToken)?.groups).toBeUndefined();
+    expect(global.fetch).not.toHaveBeenCalled();
 
     delete process.env.GROUP_API_URL;
     delete process.env.INTERNAL_SERVICE_TOKEN;
@@ -510,7 +438,7 @@ describe('GET /auth/verify', () => {
     expect(res.body).toMatchObject({
       success: true,
       authenticated: true,
-      user: { email: 'user@example.com', groups: [] }
+      user: { email: 'user@example.com' }
     });
   });
 
@@ -540,8 +468,12 @@ describe('GET /auth/verify', () => {
       });
       const setCookie = res.headers['set-cookie'] as unknown as string[];
       const access = setCookie.find((c) => c.startsWith('access_token='))!.split(';')[0].split('=')[1];
-      expect(sessions.create).toHaveBeenCalledWith(expect.objectContaining({ userId: '1', method: 'unknown' }));
-      const sessionId = (await sessions.create.mock.results[0].value)._id.toString();
+      expect(sessions.findOneAndUpdate).toHaveBeenCalledWith(
+        { legacyKey: expect.any(String), userId: '1' },
+        { $setOnInsert: expect.objectContaining({ userId: '1', method: 'unknown' }) },
+        { upsert: true, returnDocument: 'after' }
+      );
+      const sessionId = (await sessions.findOneAndUpdate.mock.results[0].value)._id.toString();
       expect(decodeJWT(access)).toMatchObject({ email: 'user@example.com', tokenVersion: 2, sid: sessionId });
       // The refresh cookie has done its job and is cleared.
       expect(setCookie.find((c) => c.startsWith('refresh_token='))).toMatch(/^refresh_token=;/);

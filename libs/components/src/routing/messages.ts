@@ -41,6 +41,28 @@ export interface AppLogoutMessage {
 }
 
 /**
+ * Child -> shell: am I signed in? Sent by `checkAuth()` in
+ * @tumbaland/frontend-core in place of calling /auth/verify, so opening a page
+ * renews the session once (the shell's check) rather than once per frame.
+ * frontend-core cannot import this module, so its literals must match these.
+ */
+export interface AppAuthRequestMessage {
+  source: typeof APP_SOURCE;
+  type: 'app:auth-request';
+  /** Echoed in the answer, so the child can match it to its request. */
+  id: string;
+}
+
+/** Shell -> child: the answer to an `app:auth-request`. */
+export interface ShellAuthMessage {
+  source: typeof SHELL_SOURCE;
+  type: 'shell:auth';
+  id: string;
+  authenticated: boolean;
+  user: unknown;
+}
+
+/**
  * Child -> shell: escape hatch for flows that must leave the frame (payment
  * checkout redirects). Predates this contract, so it carries its own `source`.
  */
@@ -68,6 +90,9 @@ export const isAppLocationMessage = (value: unknown): value is AppLocationMessag
 
 export const isAppLogoutMessage = (value: unknown): value is AppLogoutMessage =>
   isRecord(value) && value.source === APP_SOURCE && value.type === 'app:logout';
+
+export const isAppAuthRequestMessage = (value: unknown): value is AppAuthRequestMessage =>
+  isRecord(value) && value.source === APP_SOURCE && value.type === 'app:auth-request' && typeof value.id === 'string';
 
 export const isNavigateTopMessage = (value: unknown): value is NavigateTopMessage =>
   isRecord(value) && value.type === 'tumbaland:navigate-top' && typeof value.url === 'string';

@@ -4,7 +4,7 @@ jest.mock('../services/groupService', () => ({
   createGroup: jest.fn(),
   listMyGroups: jest.fn(),
   listMyDeletedGroups: jest.fn(),
-  recordActivity: jest.fn(),
+  withMemberActivity: jest.fn(async (groups: unknown[]) => groups),
   getGroupIfMember: jest.fn(),
   updateGroup: jest.fn(),
   deleteGroup: jest.fn(),
@@ -86,13 +86,13 @@ describe('userEmail resolution (via createGroup)', () => {
 });
 
 describe('listMine', () => {
-  it('records activity and returns the list', async () => {
+  it('returns the list with each member’s activity filled in', async () => {
     mocked.listMyGroups.mockResolvedValue([{ _id: 'g1' }, { _id: 'g2' }] as any);
     const res = mockRes();
 
     await listMine(baseReq(), res);
 
-    expect(mocked.recordActivity).toHaveBeenCalledWith('user@example.com');
+    expect(mocked.withMemberActivity).toHaveBeenCalledWith([{ _id: 'g1' }, { _id: 'g2' }]);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: [{ _id: 'g1' }, { _id: 'g2' }] }));
   });
 
@@ -126,8 +126,8 @@ describe('getUserGroupIds', () => {
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: ['g1', 'g2'] }));
   });
 
-  it('records activity for the person auth-service asks about', async () => {
-    mocked.listMyGroups.mockResolvedValue([] as any);
+  it('is a pure read: every service asks it, so it must not write', async () => {
+    mocked.listMyGroups.mockResolvedValue([{ _id: 'g1' }] as any);
     const res = mockRes();
 
     await getUserGroupIds(
@@ -135,16 +135,8 @@ describe('getUserGroupIds', () => {
       res
     );
 
-    expect(mocked.recordActivity).toHaveBeenCalledWith('ada@example.com');
-  });
-
-  it('still returns the ids when recording activity fails', async () => {
-    mocked.listMyGroups.mockResolvedValue([{ _id: 'g1' }] as any);
-    mocked.recordActivity.mockRejectedValueOnce(new Error('db down'));
-    const res = mockRes();
-
-    await getUserGroupIds(baseReq(), res);
-
+    expect(mocked.listMyGroups).toHaveBeenCalledWith('ada@example.com');
+    expect(mocked.withMemberActivity).not.toHaveBeenCalled();
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: ['g1'] }));
   });
 
@@ -164,6 +156,8 @@ describe('getOne', () => {
     await getOne(baseReq({ params: { id: 'g1' } }), res);
 
     expect(mocked.getGroupIfMember).toHaveBeenCalledWith('g1', 'user@example.com');
+    expect(mocked.withMemberActivity).toHaveBeenCalledWith([{ _id: 'g1' }]);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: { _id: 'g1' } }));
   });
 });
 
@@ -212,7 +206,7 @@ describe('permanentlyDeleteGroup', () => {
 });
 
 describe('addMember', () => {
-  it('adds the member and invalidates their tokens when auth service is configured', async () => {
+  it('adds the member without signing them out: nothing is sent to auth-service', async () => {
     process.env.AUTH_API_URL = 'https://auth.example';
     process.env.INTERNAL_SERVICE_TOKEN = 'test-token';
     mocked.addMember.mockResolvedValue({ _id: 'g1' } as any);
@@ -221,62 +215,32 @@ describe('addMember', () => {
     await addMember(baseReq({ params: { id: 'g1' }, body: { email: 'new@example.com', role: 'member' } }), res);
 
     expect(mocked.addMember).toHaveBeenCalledWith('g1', 'user@example.com', 'new@example.com', 'member');
-    expect(global.fetch).toHaveBeenCalledWith(
-      'https://auth.example/auth/internal/invalidate-tokens',
-      expect.objectContaining({ method: 'POST' })
-    );
-    expect(res.status).toHaveBeenCalledWith(201);
-  });
-
-  it('skips token invalidation (logs a warning) when auth service is not configured', async () => {
-    mocked.addMember.mockResolvedValue({ _id: 'g1' } as any);
-    const res = mockRes();
-
-    await addMember(baseReq({ params: { id: 'g1' }, body: { email: 'new@example.com' } }), res);
-
     expect(global.fetch).not.toHaveBeenCalled();
-  });
-
-  it('logs (does not throw) when the invalidate-tokens request responds not-ok', async () => {
-    process.env.AUTH_API_URL = 'https://auth.example';
-    process.env.INTERNAL_SERVICE_TOKEN = 'test-token';
-    (global.fetch as jest.Mock).mockResolvedValue({ ok: false, status: 500 });
-    mocked.addMember.mockResolvedValue({ _id: 'g1' } as any);
-    const res = mockRes();
-
-    await expect(addMember(baseReq({ params: { id: 'g1' }, body: { email: 'new@example.com' } }), res)).resolves.toBeUndefined();
-  });
-
-  it('logs (does not throw) when the invalidate-tokens request itself rejects', async () => {
-    process.env.AUTH_API_URL = 'https://auth.example';
-    process.env.INTERNAL_SERVICE_TOKEN = 'test-token';
-    (global.fetch as jest.Mock).mockRejectedValue(new Error('network down'));
-    mocked.addMember.mockResolvedValue({ _id: 'g1' } as any);
-    const res = mockRes();
-
-    await expect(addMember(baseReq({ params: { id: 'g1' }, body: { email: 'new@example.com' } }), res)).resolves.toBeUndefined();
+    expect(res.status).toHaveBeenCalledWith(201);
   });
 });
 
 describe('updateRole', () => {
-  it('updates the role and invalidates the target user tokens', async () => {
+  it('updates the role without signing the member out', async () => {
     mocked.updateMemberRole.mockResolvedValue({ _id: 'g1' } as any);
     const res = mockRes();
 
     await updateRole(baseReq({ params: { id: 'g1', memberEmail: 'member@example.com' }, body: { role: 'admin' } }), res);
 
     expect(mocked.updateMemberRole).toHaveBeenCalledWith('g1', 'user@example.com', 'member@example.com', 'admin');
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 });
 
 describe('removeMember', () => {
-  it('removes the member and invalidates their tokens', async () => {
+  it('removes the member without a token invalidation; their access ends through the membership lookup', async () => {
     mocked.removeMember.mockResolvedValue({ _id: 'g1' } as any);
     const res = mockRes();
 
     await removeMember(baseReq({ params: { id: 'g1', memberEmail: 'member@example.com' } }), res);
 
     expect(mocked.removeMember).toHaveBeenCalledWith('g1', 'user@example.com', 'member@example.com');
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 });
 

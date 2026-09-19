@@ -4,6 +4,7 @@ import { requireEnv } from '../config/env';
 import { isAccessTokenClaims } from '../oauth/tokens';
 import { UserPayload } from '../types/auth';
 import { isCurrentSession } from '../auth/session';
+import { currentGroupsOf } from '../groups/membership';
 
 /**
  * JWT authentication middleware
@@ -43,9 +44,11 @@ export async function authenticateToken(req: Request, res: Response, next: NextF
       res.status(401).json({ success: false, message: 'Session has ended' });
       return;
     }
-    const user = claims as UserPayload;
-    req.user = user;
-    req.userGroups = user.groups ?? [];
+    // Membership is asked of group-service, not read from the token, so a
+    // change applies within seconds rather than at the next renewal.
+    const groups = await currentGroupsOf(claims as UserPayload);
+    req.user = { ...(claims as UserPayload), groups };
+    req.userGroups = groups;
   } catch (error) {
     res.status(401).json({ success: false, message: 'Invalid or expired token' });
     return;
@@ -76,9 +79,9 @@ export async function optionalAuth(req: Request, _res: Response, next: NextFunct
       // expired cookie, so the route still answers with its public form.
       // An ended session is treated as none, like an expired cookie.
       if (!isAccessTokenClaims(claims) && (await isCurrentSession(claims))) {
-        const user = claims as UserPayload;
-        req.user = user;
-        req.userGroups = user.groups ?? [];
+        const groups = await currentGroupsOf(claims as UserPayload);
+        req.user = { ...(claims as UserPayload), groups };
+        req.userGroups = groups;
       }
     }
   } catch {

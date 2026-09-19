@@ -6,9 +6,70 @@ export interface AuthServiceConfig {
   /** Read fresh at call time (config may not be resolved yet at module load). */
   getAuthServiceUrl: () => string;
   getAuthFrontUrl: () => string;
+  /** The shell's URL. When the app runs inside it, the shell answers auth checks. */
+  getShellUrl?: () => string | undefined;
 }
 
 const AUTH_CACHE_TTL = 5 * 60 * 1000;
+
+/** How long an embedded app waits for the shell before asking auth-service itself. */
+const SHELL_AUTH_TIMEOUT_MS = 3000;
+
+/**
+ * The shell's origin, when this app runs inside it: framed, and loaded with the
+ * `embedded=1` flag the shell puts in the iframe src (see buildEmbeddedUrl in
+ * @tumbaland/components). A direct visit is never embedded.
+ */
+function embeddingShellOrigin(shellUrl: string | undefined): string | null {
+  if (typeof window === 'undefined' || window.parent === window.self || !shellUrl) return null;
+  if (new URLSearchParams(window.location.search).get('embedded') !== '1') return null;
+  try {
+    return new URL(shellUrl).origin;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Asks the shell for its auth state instead of calling /auth/verify.
+ *
+ * The shell has already checked the session when it framed this app, and
+ * every app calling verify on its own meant several parallel renewals on each
+ * page open. Resolves to null when the shell does not answer in time (an older
+ * shell, or a slow one), and the caller then asks auth-service itself.
+ *
+ * The answer only decides what the app shows. Every API call still carries the
+ * session cookie and is checked by the service it goes to.
+ *
+ * Contract lives in @tumbaland/components `routing/messages` (app:auth-request
+ * and shell:auth); a lower layer cannot import it, so the literals are repeated.
+ */
+function askShellForAuth(shellOrigin: string): Promise<AuthResponse | null> {
+  return new Promise((resolve) => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    const finish = (result: AuthResponse | null) => {
+      window.clearTimeout(timer);
+      window.removeEventListener('message', onMessage);
+      resolve(result);
+    };
+
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== shellOrigin || event.source !== window.parent) return;
+      const data = event.data as { source?: unknown; type?: unknown; id?: unknown; authenticated?: unknown; user?: unknown };
+      if (!data || data.source !== 'tumbaland-shell' || data.type !== 'shell:auth' || data.id !== id) return;
+      finish({ authenticated: data.authenticated === true, user: (data.user as User | null) ?? null });
+    };
+
+    const timer = window.setTimeout(() => {
+      logger.warn('Shell did not answer the auth check; asking auth-service instead');
+      finish(null);
+    }, SHELL_AUTH_TIMEOUT_MS);
+
+    window.addEventListener('message', onMessage);
+    window.parent.postMessage({ source: 'tumbaland-app', type: 'app:auth-request', id }, shellOrigin);
+  });
+}
 
 /**
  * Tell the shell its session just ended.
@@ -61,11 +122,55 @@ function authHeaders(): HeadersInit {
 export function createAuthService(config: AuthServiceConfig) {
   let authCache: AuthResponse | null = null;
   let authCacheTime = 0;
+  let pendingCheck: Promise<AuthResponse> | null = null;
+  // Bumped by clearAuthCache, so a check already in flight (say, across a
+  // logout) cannot put its stale answer back into the cache.
+  let cacheGeneration = 0;
+
+  /** Inside the shell, the shell's answer; otherwise (or if it does not answer) auth-service's. */
+  const resolveAuth = async (): Promise<AuthResponse> => {
+    const generation = cacheGeneration;
+    const remember = (result: AuthResponse): AuthResponse => {
+      if (generation === cacheGeneration) {
+        authCache = result;
+        authCacheTime = Date.now();
+      }
+      return result;
+    };
+
+    const shellOrigin = embeddingShellOrigin(config.getShellUrl?.());
+    if (shellOrigin) {
+      const fromShell = await askShellForAuth(shellOrigin);
+      if (fromShell) return remember(fromShell);
+    }
+
+    try {
+      const response = await fetch(`${config.getAuthServiceUrl()}/auth/verify`, {
+        credentials: 'include',
+        headers: authHeaders()
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return remember({
+        authenticated: data.success && data.authenticated,
+        user: data.user || null
+      });
+    } catch (error) {
+      logger.error('Auth check failed', error);
+      return remember({ authenticated: false, user: null });
+    }
+  };
 
   return {
     clearAuthCache(): void {
       authCache = null;
       authCacheTime = 0;
+      pendingCheck = null;
+      cacheGeneration += 1;
     },
 
     /** Verifies the session against auth-service. Cached for 5 minutes. */
@@ -74,32 +179,13 @@ export function createAuthService(config: AuthServiceConfig) {
       if (authCache && now - authCacheTime < AUTH_CACHE_TTL) {
         return authCache;
       }
-
-      try {
-        const response = await fetch(`${config.getAuthServiceUrl()}/auth/verify`, {
-          credentials: 'include',
-          headers: authHeaders()
+      // Callers that ask at the same time share one check.
+      if (!pendingCheck) {
+        pendingCheck = resolveAuth().finally(() => {
+          pendingCheck = null;
         });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const result: AuthResponse = {
-          authenticated: data.success && data.authenticated,
-          user: data.user || null
-        };
-        authCache = result;
-        authCacheTime = now;
-        return result;
-      } catch (error) {
-        logger.error('Auth check failed', error);
-        const result: AuthResponse = { authenticated: false, user: null };
-        authCache = result;
-        authCacheTime = now;
-        return result;
       }
+      return pendingCheck;
     },
 
     redirectToLogin(returnUrl?: string): void {
@@ -121,8 +207,7 @@ export function createAuthService(config: AuthServiceConfig) {
 
         const data = await response.json();
         if (data.success) {
-          authCache = null;
-          authCacheTime = 0;
+          this.clearAuthCache();
           clearSessionScopedStorage();
           notifyShellOfLogout();
           window.location.reload();
@@ -174,11 +259,12 @@ export type AuthService = ReturnType<typeof createAuthService>;
 export interface AppAuthConfig {
   AUTH_SERVICE_URL?: string;
   AUTH_FRONT_URL?: string;
+  SHELL_FRONT_URL?: string;
 }
 
 /**
  * Convenience over `createAuthService` for the frontends, which all read the
- * same two auth URLs from their resolved config. Centralizes that key mapping
+ * same auth URLs (and the shell's) from their resolved config. Centralizes that key mapping
  * so each app's `services/authService.ts` is just:
  *
  *   export const authService = createAppAuthService(getGlobalConfig);
@@ -188,6 +274,7 @@ export interface AppAuthConfig {
 export function createAppAuthService(getGlobalConfig: () => AppAuthConfig): AuthService {
   return createAuthService({
     getAuthServiceUrl: () => getGlobalConfig().AUTH_SERVICE_URL!,
-    getAuthFrontUrl: () => getGlobalConfig().AUTH_FRONT_URL!
+    getAuthFrontUrl: () => getGlobalConfig().AUTH_FRONT_URL!,
+    getShellUrl: () => getGlobalConfig().SHELL_FRONT_URL
   });
 }
