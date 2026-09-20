@@ -20,7 +20,7 @@ function renderNav(route: string, { mobile = false, who = user }: { mobile?: boo
   );
 }
 
-it('labels every module and marks the one in use', () => {
+it('labels every module and marks the one in use', async () => {
   renderNav('/finance/net-worth');
 
   const nav = screen.getByRole('navigation', { name: 'Main' });

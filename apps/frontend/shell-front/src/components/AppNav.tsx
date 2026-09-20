@@ -54,11 +54,7 @@ export function AppNav({ currentRoute, user, mobile }: AppNavProps) {
         label="Account"
         color={brand.purple}
         icon={
-          user?.picture ? (
-            <Avatar src={user.picture} alt="" sx={{ width: 26, height: 26 }} />
-          ) : (
-            <AccountCircleIcon />
-          )
+          user?.picture ? <Avatar src={user.picture} alt="" sx={{ width: 26, height: 26 }} /> : <AccountCircleIcon />
         }
         active={menuOpen || onAccountPage}
         mobile={mobile}

@@ -409,9 +409,12 @@ jobs:
           GROUP_API_URL: ${{ vars.GROUP_API_URL }}
           GROUP_INTERNAL_URL: ${{ vars.GROUP_INTERNAL_URL }}
           ALBUM_API_URL: ${{ vars.ALBUM_API_URL }}
+          ALBUM_INTERNAL_URL: ${{ vars.ALBUM_INTERNAL_URL }}
+          AUTH_INTERNAL_URL: ${{ vars.AUTH_INTERNAL_URL }}
           AUTH_SERVICE_URL: ${{ vars.AUTH_SERVICE_URL }}
           AUTH_FRONT_URL: ${{ vars.AUTH_FRONT_URL }}
           FINANCE_API_URL: ${{ vars.FINANCE_API_URL }}
+          FINANCE_INTERNAL_URL: ${{ vars.FINANCE_INTERNAL_URL }}
           RELATIONSHIP_FRONT_URL: ${{ vars.RELATIONSHIP_FRONT_URL }}
           ALBUM_FRONT_URL: ${{ vars.ALBUM_FRONT_URL }}
           FINANCE_FRONT_URL: ${{ vars.FINANCE_FRONT_URL }}

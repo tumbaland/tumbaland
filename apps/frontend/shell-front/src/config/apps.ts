@@ -5,6 +5,15 @@ import HomeIcon from '@mui/icons-material/Home';
 import PaymentIcon from '@mui/icons-material/Payment';
 import PersonIcon from '@mui/icons-material/Person';
 import GroupsIcon from '@mui/icons-material/Groups';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import PhotoAlbumIcon from '@mui/icons-material/PhotoAlbum';
+import GridOnIcon from '@mui/icons-material/GridOn';
+import SavingsIcon from '@mui/icons-material/Savings';
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
+import ShowChartIcon from '@mui/icons-material/ShowChart';
+import TuneIcon from '@mui/icons-material/Tune';
+import TimelineIcon from '@mui/icons-material/Timeline';
+import MapIcon from '@mui/icons-material/Map';
 import type { SvgIconProps } from '@mui/material/SvgIcon';
 import { AppConfig } from './ConfigProvider';
 import { moduleAccent } from '@tumbaland/frontend-core';
@@ -23,6 +32,13 @@ export interface AppConfigItem {
   color: string;
   /** Sells plans or takes payments, so left out where that is not allowed (see canOfferPurchases). */
   purchases?: boolean;
+  menu?: ModuleMenuItem[];
+}
+
+export interface ModuleMenuItem {
+  label: string;
+  route: string;
+  icon: React.ComponentType<SvgIconProps>;
 }
 
 /** The modules, in the order the main navigation lists them. */
@@ -41,7 +57,12 @@ export const APPS: AppConfigItem[] = [
     remote: 'relationship',
     urlKey: 'RELATIONSHIP_FRONT_URL',
     icon: FavoriteIcon,
-    color: moduleAccent.journal
+    color: moduleAccent.journal,
+    menu: [
+      { label: 'Dashboard', route: '/relationship/dashboard', icon: DashboardIcon },
+      { label: 'Entries', route: '/relationship/journal', icon: TimelineIcon },
+      { label: 'Map', route: '/relationship/map', icon: MapIcon }
+    ]
   },
   {
     name: 'Album',
@@ -49,7 +70,12 @@ export const APPS: AppConfigItem[] = [
     remote: 'album',
     urlKey: 'ALBUM_FRONT_URL',
     icon: AlbumIcon,
-    color: moduleAccent.album
+    color: moduleAccent.album,
+    menu: [
+      { label: 'Dashboard', route: '/album/dashboard', icon: DashboardIcon },
+      { label: 'Albums', route: '/album/albums', icon: PhotoAlbumIcon },
+      { label: 'Collages', route: '/album/collages', icon: GridOnIcon }
+    ]
   },
   {
     // Shown as Money, still served from /finance.
@@ -58,7 +84,14 @@ export const APPS: AppConfigItem[] = [
     remote: 'finance',
     urlKey: 'FINANCE_FRONT_URL',
     icon: AttachMoneyIcon,
-    color: moduleAccent.money
+    color: moduleAccent.money,
+    menu: [
+      { label: 'Dashboard', route: '/finance/dashboard', icon: DashboardIcon },
+      { label: 'Net Worth', route: '/finance/net-worth', icon: SavingsIcon },
+      { label: 'Cash Flow', route: '/finance/cash-flow', icon: AccountBalanceWalletIcon },
+      { label: 'Investments', route: '/finance/investments', icon: ShowChartIcon },
+      { label: 'Planner', route: '/finance/planner', icon: TuneIcon }
+    ]
   }
 ];
 

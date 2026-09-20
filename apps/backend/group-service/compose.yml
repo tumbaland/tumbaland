@@ -19,7 +19,7 @@ services:
       - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN}
       # Group membership is asked of group-service on each request (backend-core currentGroupsOf).
       - GROUP_INTERNAL_URL=${GROUP_INTERNAL_URL}
-      - AUTH_API_URL=${AUTH_API_URL}
+      - AUTH_INTERNAL_URL=${AUTH_INTERNAL_URL}
       - CORS_ORIGIN=${CORS_ORIGIN}
       # Entitlements: the seats chokepoint checks an added member against the
       # group owner's plan. No group URL — this service owns that data.

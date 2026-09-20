@@ -50,7 +50,7 @@ const baseReq = (overrides: Partial<InternalServiceRequest> = {}) =>
 beforeEach(() => {
   jest.clearAllMocks();
   global.fetch = jest.fn().mockResolvedValue({ ok: true });
-  delete process.env.AUTH_API_URL;
+  delete process.env.AUTH_INTERNAL_URL;
   delete process.env.INTERNAL_SERVICE_TOKEN;
 });
 
@@ -207,7 +207,7 @@ describe('permanentlyDeleteGroup', () => {
 
 describe('addMember', () => {
   it('adds the member without signing them out: nothing is sent to auth-service', async () => {
-    process.env.AUTH_API_URL = 'https://auth.example';
+    process.env.AUTH_INTERNAL_URL = 'https://auth.example';
     process.env.INTERNAL_SERVICE_TOKEN = 'test-token';
     mocked.addMember.mockResolvedValue({ _id: 'g1' } as any);
     const res = mockRes();

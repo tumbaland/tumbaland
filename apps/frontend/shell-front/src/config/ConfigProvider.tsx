@@ -7,6 +7,7 @@ export interface AppConfig {
   RELATIONSHIP_FRONT_URL?: string;
   PAYMENT_FRONT_URL?: string;
   GROUP_FRONT_URL?: string;
+  GROUP_API_URL?: string;
   PUBLIC_API_URL?: string;
   /** payment-service, for the plan and usage meters on the signed-in home page. */
   PAYMENT_API_URL?: string;
@@ -25,6 +26,7 @@ const factory = createConfigProvider<AppConfig>({
     RELATIONSHIP_FRONT_URL: import.meta.env.VITE_RELATIONSHIP_FRONT_URL,
     PAYMENT_FRONT_URL: import.meta.env.VITE_PAYMENT_FRONT_URL,
     GROUP_FRONT_URL: import.meta.env.VITE_GROUP_FRONT_URL,
+    GROUP_API_URL: import.meta.env.VITE_GROUP_API_URL,
     PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL,
     PAYMENT_API_URL: import.meta.env.VITE_PAYMENT_API_URL,
     ACCOUNT_FRONT_URL: import.meta.env.VITE_ACCOUNT_FRONT_URL,

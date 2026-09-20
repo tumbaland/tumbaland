@@ -1,14 +1,16 @@
 import { useLocation } from 'react-router';
 import { ReactNode, useEffect } from 'react';
-import { ProtectedRoute, surface } from '@tumbaland/frontend-core';
+import { ProtectedRoute, surface, TenantSelector, useTenant } from '@tumbaland/frontend-core';
 import { AppNav } from './AppNav';
 import { RemoteOutlet } from './RemoteOutlet';
 import { getAppByRoute } from '../config/apps';
+import { useConfig } from '../config/ConfigProvider';
 import { authService } from '../services/authService';
 import { recordLastVisited } from '../services/lastVisited';
 import { useAuthState } from '../hooks/useAuthState';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
+import { getModuleMenu } from './ModuleMenu';
 
 interface LayoutProps {
   children: ReactNode;
@@ -37,6 +39,8 @@ export default function Layout({ children }: LayoutProps) {
   // It stays hidden while the check is in flight so the landing page never
   // flashes a nav it is about to lose.
   const { authenticated, user } = useAuthState();
+  const { GROUP_API_URL } = useConfig();
+  const tenant = useTenant(GROUP_API_URL ?? '', authenticated ? user?.email : undefined);
 
   const currentApp = getAppByRoute(location.pathname);
 
@@ -48,6 +52,41 @@ export default function Layout({ children }: LayoutProps) {
   }, [currentApp, location.pathname]);
 
   const nav = authenticated ? <AppNav currentRoute={location.pathname} user={user} mobile={isMobile} /> : null;
+  const tenantBar =
+    authenticated && user ? (
+      <div
+        style={{
+          flexShrink: 0,
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: isMobile ? 8 : 16,
+          minHeight: 68,
+          padding: '10px 16px',
+          borderBottom: '1px solid rgba(15,23,42,0.08)',
+          background: 'rgba(255,255,255,0.72)',
+          backdropFilter: 'blur(14px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(14px) saturate(180%)'
+        }}
+      >
+        {getModuleMenu(currentApp, location.pathname)}
+        <TenantSelector
+          selectedTenant={tenant.selectedTenant}
+          tenants={tenant.availableTenants}
+          onTenantChange={tenant.setSelectedTenant}
+          loading={tenant.loading}
+          error={tenant.error}
+          sx={{
+            flex: isMobile ? '0 0 auto' : '0 1 min(360px, 38vw)',
+            width: isMobile ? 'clamp(140px, 42vw, 220px)' : undefined,
+            minWidth: isMobile ? 0 : 150,
+            '& button': { width: '100%', minWidth: 0, px: isMobile ? 1 : undefined },
+            '& button > .MuiBox-root': { minWidth: 0 },
+            '& button .MuiTypography-root:last-child': { maxWidth: isMobile ? 120 : 'min(260px, 55vw)' }
+          }}
+        />
+      </div>
+    ) : null;
 
   return (
     // Kept clear of the notch, the status bar and rounded corners. index.html
@@ -85,13 +124,25 @@ export default function Layout({ children }: LayoutProps) {
           overflow: 'auto'
         }}
       >
-        {currentApp ? (
-          <ProtectedRoute authService={authService}>
-            <RemoteOutlet />
-          </ProtectedRoute>
-        ) : (
-          children
-        )}
+        {tenantBar}
+
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            minHeight: 0,
+            paddingInline: isMobile ? 12 : 0,
+            boxSizing: 'border-box'
+          }}
+        >
+          {currentApp ? (
+            <ProtectedRoute authService={authService}>
+              <RemoteOutlet />
+            </ProtectedRoute>
+          ) : (
+            children
+          )}
+        </div>
       </div>
 
       {isMobile && nav}
