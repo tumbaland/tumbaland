@@ -83,11 +83,14 @@ it('asks for nothing a front was not given a URL for', async () => {
   expect(getRecentActivities).not.toHaveBeenCalled();
 });
 
-it('scopes the album calls to the tenant being read', async () => {
+it('scopes every call to the tenant being read', async () => {
+  // The journal call included: without a groupId the service answers with the
+  // caller's personal entries alone, so a shared journal came back empty.
   renderHook(() => useHomeFeed());
 
   await waitFor(() => expect(getMemories).toHaveBeenCalled());
 
   expect(getMemories).toHaveBeenCalledWith(undefined);
   expect(getRecentPhotos).toHaveBeenCalledWith(undefined);
+  expect(getRecentActivities).toHaveBeenCalledWith(undefined);
 });

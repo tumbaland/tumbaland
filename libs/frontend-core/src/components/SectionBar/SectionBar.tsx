@@ -224,7 +224,7 @@ const bar = {
   gap: 1,
   py: 1,
   ...chrome,
-  borderBottom: `1px solid ${surface.divider}`
+  borderBottom: `1px solid ${surface.chromeEdge}`
 } as const;
 
 const tile = {

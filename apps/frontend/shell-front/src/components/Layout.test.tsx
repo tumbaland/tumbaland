@@ -165,3 +165,28 @@ it('shows an unauthorized page instead of the module when not authenticated', as
 
   expect(await screen.findByText('Access Restricted')).toBeInTheDocument();
 });
+
+it('gives every module the same content width, rather than leaving it to each one', async () => {
+  // Album capped its own pages and centred them; Journal and Money ran to the
+  // edge of the window, so crossing between them moved the content sideways.
+  setSession(true);
+  renderAt('/relationship', { RELATIONSHIP_FRONT_URL: 'https://relationship.example' });
+
+  const module = await screen.findByText('remote module');
+  const column = module.parentElement as HTMLElement;
+
+  expect(column.style.maxWidth).toBe('1536px');
+  expect(column.style.marginInline).toBe('auto');
+});
+
+it("leaves the shell's own pages to set their own width", async () => {
+  // The home page is a full-bleed backdrop with a narrow column floated on
+  // top; capping it here cropped the image to a band down the middle.
+  setSession(true);
+  renderAt('/');
+
+  const content = (await screen.findByText('page content')).parentElement as HTMLElement;
+
+  expect(content.style.maxWidth).toBe('');
+  expect(content.style.marginInline).toBe('');
+});

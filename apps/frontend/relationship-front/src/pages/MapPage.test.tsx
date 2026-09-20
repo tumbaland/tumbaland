@@ -11,6 +11,16 @@ vi.mock('@tumbaland/frontend-core', async (importOriginal) => {
 // jsdom gives Leaflet no layout box, so the map is stubbed; what matters here
 // is which pins are rendered and how the bounds are fitted.
 let fittedPositions: [number, number][] = [];
+// What the page did to the map, in order, so a test can assert that the size
+// was refreshed before anything was computed from it.
+let mapCalls: string[] = [];
+
+const fakeMap = {
+  setView: vi.fn(() => mapCalls.push('setView')),
+  fitBounds: vi.fn(() => mapCalls.push('fitBounds')),
+  invalidateSize: vi.fn(() => mapCalls.push('invalidateSize')),
+  getContainer: () => document.createElement('div')
+};
 
 vi.mock('react-leaflet', () => ({
   MapContainer: ({ children }: { children?: React.ReactNode }) => <div data-testid="map">{children}</div>,
@@ -20,7 +30,7 @@ vi.mock('react-leaflet', () => ({
     return <div data-testid="marker">{children}</div>;
   },
   Popup: ({ children }: { children?: React.ReactNode }) => <div data-testid="popup">{children}</div>,
-  useMap: () => ({ setView: vi.fn(), fitBounds: vi.fn() })
+  useMap: () => fakeMap
 }));
 
 vi.mock('../services/places', () => ({ getPlaces: vi.fn(), getPlaceVisits: vi.fn() }));
@@ -72,6 +82,7 @@ const renderPage = () =>
 beforeEach(() => {
   vi.clearAllMocks();
   fittedPositions = [];
+  mapCalls = [];
   mockedGetTypes.mockResolvedValue({ data: [restaurantType, plainType], pagination: {} });
   mockedGetPlaces.mockResolvedValue([]);
   mockedGetVisits.mockResolvedValue([]);
@@ -123,9 +134,7 @@ it('uses singular wording for one place visited once', async () => {
 it('scopes the request to the current tenant group', async () => {
   renderPage();
 
-  await waitFor(() =>
-    expect(mockedGetPlaces).toHaveBeenCalledWith(expect.objectContaining({ groupId: 'g1' }))
-  );
+  await waitFor(() => expect(mockedGetPlaces).toHaveBeenCalledWith(expect.objectContaining({ groupId: 'g1' })));
 });
 
 it('only offers activity types that track a location', async () => {
@@ -148,9 +157,7 @@ it('refetches with the chosen activity type', async () => {
   await user.click(screen.getByLabelText('Activity'));
   await user.click(within(await screen.findByRole('listbox')).getByText('Restaurants'));
 
-  await waitFor(() =>
-    expect(mockedGetPlaces).toHaveBeenLastCalledWith(expect.objectContaining({ typeId: 't1' }))
-  );
+  await waitFor(() => expect(mockedGetPlaces).toHaveBeenLastCalledWith(expect.objectContaining({ typeId: 't1' })));
 });
 
 it.each([
@@ -165,9 +172,7 @@ it.each([
   await user.click(within(await screen.findByRole('listbox')).getByText(label));
 
   await waitFor(() =>
-    expect(mockedGetPlaces).toHaveBeenLastCalledWith(
-      expect.objectContaining(expected(new Date().getFullYear()))
-    )
+    expect(mockedGetPlaces).toHaveBeenLastCalledWith(expect.objectContaining(expected(new Date().getFullYear())))
   );
 });
 
@@ -203,4 +208,53 @@ it('lists the busiest places as chips beneath the map', async () => {
   renderPage();
 
   expect(await screen.findByText('Sushi House · 3')).toBeInTheDocument();
+});
+
+describe('sizing the map before anything is computed from it', () => {
+  // Leaflet measures its container once, when the map is created, and converts
+  // every lat/lng against that cached size. Inside the shell the module is
+  // still being laid out then, so the size it caught was wrong: the view
+  // landed somewhere else and the pins, placed against the same stale size,
+  // fell outside it.
+  it('refreshes the size before fitting the bounds', async () => {
+    mockedGetPlaces.mockResolvedValue([
+      place(),
+      place({ id: '59.5,24.8', label: 'Vabaduse väljak', lat: 59.5, lng: 24.8 })
+    ]);
+    renderPage();
+
+    await waitFor(() => expect(fakeMap.fitBounds).toHaveBeenCalled());
+    expect(mapCalls.indexOf('invalidateSize')).toBeLessThan(mapCalls.indexOf('fitBounds'));
+  });
+
+  it('refreshes the size before centring on a lone place', async () => {
+    mockedGetPlaces.mockResolvedValue([place()]);
+    renderPage();
+
+    await waitFor(() => expect(fakeMap.setView).toHaveBeenCalled());
+    expect(mapCalls.indexOf('invalidateSize')).toBeLessThan(mapCalls.indexOf('setView'));
+  });
+
+  it('remeasures when the container changes shape, not only on the first render', async () => {
+    const observe = vi.fn();
+    const disconnect = vi.fn();
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe = observe;
+        unobserve = vi.fn();
+        disconnect = disconnect;
+      }
+    );
+    mockedGetPlaces.mockResolvedValue([place()]);
+
+    const { unmount } = renderPage();
+    await waitFor(() => expect(screen.getByTestId('map')).toBeInTheDocument());
+
+    expect(observe).toHaveBeenCalled();
+
+    unmount();
+    expect(disconnect).toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
 });

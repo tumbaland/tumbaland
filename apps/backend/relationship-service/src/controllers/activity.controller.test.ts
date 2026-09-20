@@ -111,7 +111,12 @@ describe('getActivities', () => {
   });
 
   it('applies defaults when no query params are given', async () => {
-    (ActivityService.getActivities as jest.Mock).mockResolvedValue({ activities: [], total: 0, page: 1, totalPages: 0 });
+    (ActivityService.getActivities as jest.Mock).mockResolvedValue({
+      activities: [],
+      total: 0,
+      page: 1,
+      totalPages: 0
+    });
     const req = { user: { id: 'u1' }, query: {} } as unknown as Request;
 
     await getActivities(req, mockRes());
@@ -204,9 +209,9 @@ describe('updateActivity', () => {
   it('refuses a type change on an entry the caller cannot see', async () => {
     (ActivityService.getActivityById as jest.Mock).mockResolvedValue(null);
 
-    await expect(
-      updateActivity(byId({ body: { typeId: 't2' } } as Partial<Request>), mockRes())
-    ).rejects.toMatchObject({ name: 'NotFoundError' });
+    await expect(updateActivity(byId({ body: { typeId: 't2' } } as Partial<Request>), mockRes())).rejects.toMatchObject(
+      { name: 'NotFoundError' }
+    );
 
     expect(ActivityService.updateActivity).not.toHaveBeenCalled();
   });
@@ -247,6 +252,26 @@ describe('getRecentActivities', () => {
     expect(ActivityService.getActivities).toHaveBeenCalledWith(
       expect.objectContaining({ limit: 10, sortBy: 'createdAt', sortOrder: 'desc', userId: 'u1', userGroupIds: [] })
     );
+  });
+
+  it('passes the group through, so a shared journal is not answered as an empty one', async () => {
+    // Without a groupId, getActivities falls through to its personal branch:
+    // the caller's own entries, and only those carrying no groupId.
+    (ActivityService.getActivities as jest.Mock).mockResolvedValue({ activities: [] });
+    const req = { user: { id: 'u1' }, userGroups: ['g1'], query: { groupId: 'g1' } } as unknown as Request;
+
+    await getRecentActivities(req, mockRes());
+
+    expect(ActivityService.getActivities).toHaveBeenCalledWith(expect.objectContaining({ groupId: 'g1' }));
+  });
+
+  it('leaves the group undefined in a personal context', async () => {
+    (ActivityService.getActivities as jest.Mock).mockResolvedValue({ activities: [] });
+    const req = { user: { id: 'u1' }, userGroups: ['g1'], query: {} } as unknown as Request;
+
+    await getRecentActivities(req, mockRes());
+
+    expect(ActivityService.getActivities).toHaveBeenCalledWith(expect.objectContaining({ groupId: undefined }));
   });
 
   it('parses a provided limit', async () => {

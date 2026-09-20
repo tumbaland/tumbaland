@@ -43,7 +43,7 @@ export function useHomeFeed(): HomeFeed {
     await Promise.all([
       ALBUM_API_URL ? settle(getMemories(groupId), setMemories, 'memories') : Promise.resolve(),
       ALBUM_API_URL ? settle(getRecentPhotos(groupId), setPhotos, 'recent photos') : Promise.resolve(),
-      RELATIONSHIP_API_URL ? settle(getRecentActivities(), setActivities, 'recent entries') : Promise.resolve()
+      RELATIONSHIP_API_URL ? settle(getRecentActivities(groupId), setActivities, 'recent entries') : Promise.resolve()
     ]);
 
     setLoading(false);

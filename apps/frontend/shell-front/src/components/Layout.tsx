@@ -17,6 +17,14 @@ interface LayoutProps {
 }
 
 /**
+ * How wide a module's content column is allowed to get, matching MUI's `xl`
+ * breakpoint — the cap Album's own pages already used, now applied to all of
+ * them. Past this a table or a photo grid stops being scannable because the
+ * eye has to travel the whole monitor to follow a row.
+ */
+const CONTENT_MAX_WIDTH = 1536;
+
+/**
  * The chrome around every page: the navigation, and whichever module owns the
  * current address.
  *
@@ -120,13 +128,26 @@ export default function Layout({ children }: LayoutProps) {
       >
         {header}
 
+        {/* One column width for every module. Album capped its own pages at
+            `xl` and centred them while Journal and Money ran to the edge of the
+            window, so crossing between them on a desktop moved the content
+            sideways. The cap belongs to the chrome, not to whichever module
+            remembered to add one.
+            
+            It is a cap on a *module*, though. The shell's own pages set their
+            own width — the privacy and terms pages hold themselves to a
+            reading measure, and the home page is a full-bleed backdrop with a
+            narrow column floated on top, which a cap here cropped to a band
+            down the middle of the screen. */}
         <div
           style={{
             flex: 1,
             minWidth: 0,
             minHeight: 0,
+            width: '100%',
+            boxSizing: 'border-box',
             paddingInline: isMobile ? 12 : 0,
-            boxSizing: 'border-box'
+            ...(currentApp ? { maxWidth: CONTENT_MAX_WIDTH, marginInline: 'auto' } : null)
           }}
         >
           {currentApp ? (

@@ -6,7 +6,15 @@ import type { RecentActivity as Entry } from '../../services/homeApi';
 interface RecentActivityProps {
   activities: Entry[];
   onOpen: (route: string) => void;
+  /** Injectable so the week's boundary is testable without freezing the clock. */
+  now?: Date;
 }
+
+/** How far back "this week" reaches. */
+const WEEK_DAYS = 7;
+
+/** How many rows the section will show, however much is in the window. */
+const MAX_ROWS = 6;
 
 /** "Today", "Yesterday", then the date — the way anyone would say it out loud. */
 export function whenLabel(date: string, now: Date = new Date()): string {
@@ -25,6 +33,47 @@ export function whenLabel(date: string, now: Date = new Date()): string {
   return then.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
+/** Whole days between two dates, so a late evening and the next morning are one day apart. */
+function daysBetween(from: Date, to: Date): number {
+  return Math.round(
+    (Date.UTC(to.getFullYear(), to.getMonth(), to.getDate()) -
+      Date.UTC(from.getFullYear(), from.getMonth(), from.getDate())) /
+      86_400_000
+  );
+}
+
+export interface RecentWindow {
+  entries: Entry[];
+  /** True when every entry shown falls inside the last week. */
+  withinWeek: boolean;
+}
+
+/**
+ * The last week's entries, or the latest few when the week was a quiet one.
+ *
+ * Seven days back from now, not the calendar week: on a Monday morning a
+ * calendar week is empty and says nothing, which is the opposite of what this
+ * section is for. The heading says "Last 7 days" rather than "This week" for
+ * the same reason — the two mean different things, and this is the rolling one.
+ *
+ * A strict week would still empty the section on exactly the weeks it most
+ * needs to say something, and an empty section on the home page reads as a
+ * broken one. Falling back to the most recent entries keeps it honest instead:
+ * the dates beside them still say "three weeks ago", and the heading stops
+ * claiming the week.
+ */
+export function windowEntries(activities: Entry[], now: Date = new Date()): RecentWindow {
+  const dated = activities.filter((entry) => !Number.isNaN(new Date(entry.date).getTime()));
+  const week = dated.filter((entry) => {
+    const days = daysBetween(new Date(entry.date), now);
+    // Future-dated entries are plans, not things that happened this week.
+    return days >= 0 && days < WEEK_DAYS;
+  });
+
+  if (week.length > 0) return { entries: week.slice(0, MAX_ROWS), withinWeek: true };
+  return { entries: dated.slice(0, 3), withinWeek: false };
+}
+
 /** What the entry actually says: its own words, else the kind of thing it was. */
 export function entryTitle(entry: Entry): string {
   const described = entry.description?.trim();
@@ -41,14 +90,15 @@ export function entryTitle(entry: Entry): string {
  * These are the entries themselves, not a count: seeing "Sushi House,
  * yesterday" is what makes the journal feel kept rather than maintained.
  */
-export function RecentActivity({ activities, onOpen }: RecentActivityProps) {
-  if (activities.length === 0) return null;
+export function RecentActivity({ activities, onOpen, now = new Date() }: RecentActivityProps) {
+  const { entries, withinWeek } = windowEntries(activities, now);
+  if (entries.length === 0) return null;
 
   return (
     <Box component="section" aria-labelledby="home-recent-activity">
-      <SectionLabel id="home-recent-activity">Recently logged</SectionLabel>
+      <SectionLabel id="home-recent-activity">{withinWeek ? 'Last 7 days' : 'Last logged'}</SectionLabel>
       <Box sx={{ ...glass, overflow: 'hidden' }}>
-        {activities.map((entry, index) => {
+        {entries.map((entry, index) => {
           const accent = entry.typeId?.color || moduleAccent.journal;
           return (
             <ButtonBase

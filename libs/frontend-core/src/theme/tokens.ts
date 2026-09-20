@@ -64,7 +64,15 @@ export const surface = {
   paper: '#ffffff',
   /** Table heads, inset panels, anything one step back from `paper`. */
   sunken: '#faf7fc',
-  divider: '#ece7f2'
+  divider: '#ece7f2',
+  /**
+   * The line where the chrome meets the content.
+   *
+   * `divider` is opaque, which drew a hard grey rule across the frosted bar
+   * and undid the blending it is there for. This is the same idea in the
+   * brand's violet, at an alpha that reads as an edge rather than a border.
+   */
+  chromeEdge: 'rgba(124,58,237,0.10)'
 } as const;
 
 export const gradient = {
@@ -141,9 +149,14 @@ export const glass = {
  * page happens to be next to.
  */
 export const chrome = {
-  background: 'rgba(255,255,255,0.78)',
-  backdropFilter: 'blur(14px) saturate(150%)',
-  WebkitBackdropFilter: 'blur(14px) saturate(150%)'
+  // Tinted, not white. A flat white bar over the pink wash reads as a separate
+  // sheet laid on the page, with a hard edge where the two meet; the same bar
+  // carrying a little of the page's own pink sits in it instead. The alpha is
+  // what does the work — high enough to keep text legible over whatever
+  // scrolls under it, low enough that the wash still shows through.
+  background: 'rgba(253,244,250,0.72)',
+  backdropFilter: 'blur(16px) saturate(165%)',
+  WebkitBackdropFilter: 'blur(16px) saturate(165%)'
 } as const;
 
 /** A card that responds to being pointed at. `accent` tints the lifted shadow. */

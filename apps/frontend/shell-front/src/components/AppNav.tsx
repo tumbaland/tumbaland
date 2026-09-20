@@ -164,7 +164,7 @@ const rail = {
   px: 0.5,
   py: 2,
   overflowY: 'auto',
-  borderRight: `1px solid ${surface.divider}`
+  borderRight: `1px solid ${surface.chromeEdge}`
 } as const;
 
 const bottomBar = {
@@ -173,7 +173,7 @@ const bottomBar = {
   px: 0.5,
   pt: 0.75,
   pb: 'calc(6px + env(safe-area-inset-bottom))',
-  borderTop: `1px solid ${surface.divider}`
+  borderTop: `1px solid ${surface.chromeEdge}`
 } as const;
 
 export default AppNav;

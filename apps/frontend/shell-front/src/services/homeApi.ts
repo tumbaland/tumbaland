@@ -72,11 +72,16 @@ export const getRecentPhotos = async (groupId?: string, limit = 8): Promise<Home
   return data.photos ?? [];
 };
 
-export const getRecentActivities = async (limit = 5): Promise<RecentActivity[]> => {
-  // No groupId: this endpoint scopes itself to the caller and the groups they
-  // belong to, and takes no filter.
+export const getRecentActivities = async (groupId?: string, limit = 20): Promise<RecentActivity[]> => {
+  // Scoped like the photo calls. Without a groupId the service answers with
+  // the caller's *personal* entries alone, so a shared journal came back empty
+  // however much was in it.
+  //
+  // Asks for more than the home page shows. The endpoint takes a count, not a
+  // date range, and the page wants a week — so the week is cut here, from a
+  // batch big enough that a busy one is not truncated before it is measured.
   const { data } = await journalApi.get<Envelope<RecentActivity[]>>('/api/activities/recent', {
-    params: { limit }
+    params: { ...scope(groupId), limit }
   });
   return data ?? [];
 };

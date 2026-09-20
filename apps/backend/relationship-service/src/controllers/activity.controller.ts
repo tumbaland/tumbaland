@@ -142,7 +142,7 @@ export const deleteActivity = async (req: Request, res: Response): Promise<void>
  * Get recent activities
  */
 export const getRecentActivities = async (req: Request, res: Response): Promise<void> => {
-  const { limit } = req.query;
+  const { limit, groupId } = req.query;
   const user = req.user!;
   const userGroups = req.userGroups || [];
   const limitNum = limit ? parseInt(limit as string) : 10;
@@ -152,6 +152,11 @@ export const getRecentActivities = async (req: Request, res: Response): Promise<
     page: 1,
     sortBy: 'createdAt',
     sortOrder: 'desc' as const,
+    // Scoped like every other read here. Without it `getActivities` falls
+    // through to its personal branch — the caller's own entries, and only
+    // those carrying no groupId — so this answered a shared journal with an
+    // empty list however much was in it.
+    groupId: groupId as string | undefined,
     userId: user.id,
     userGroupIds: userGroups
   };

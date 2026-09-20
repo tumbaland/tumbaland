@@ -1,13 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Alert,
-  Box,
-  Chip,
-  CircularProgress,
-  MenuItem,
-  TextField,
-  Typography
-} from '@mui/material';
+import { Alert, Box, Chip, CircularProgress, MenuItem, TextField, Typography } from '@mui/material';
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -19,20 +11,56 @@ import { getActivityTypes } from '../services/activityTypes';
 import { PLACE_ZOOM, TILE_ATTRIBUTION, TILE_URL, WORLD_CENTER, WORLD_ZOOM, pinIcon } from '../components/map/mapConfig';
 import PlacePopup from '../components/map/PlacePopup';
 
-/** Keeps the viewport on the current set of pins as filters change. */
+/**
+ * Keeps the viewport on the current set of pins as filters change.
+ *
+ * Every fit is preceded by `invalidateSize`. Leaflet measures its container
+ * once, when the map is created, and caches that size; it then converts
+ * lat/lng to pixels against it. Inside the shell the map is created while the
+ * module is still being laid out, so the size it caught was wrong or zero, and
+ * everything derived from it was wrong with it — the fit resolved against a
+ * box of the wrong shape, so the view landed somewhere else and the pins,
+ * positioned against the same stale size, sat outside the visible area. That
+ * is one bug with two faces: a map that does not fit, and pins that are not
+ * on it.
+ */
 const FitToPlaces: React.FC<{ places: Place[] }> = ({ places }) => {
   const map = useMap();
 
   useEffect(() => {
+    // The container is still being sized on the frame the map is created in,
+    // so remeasure once the browser has laid it out rather than right now.
+    const remeasure = () => map.invalidateSize({ animate: false });
+    const frame = requestAnimationFrame(remeasure);
+
+    // And again whenever the box changes: rotating a phone, opening the rail,
+    // or the window being resized all leave the cached size stale.
+    const observer = new ResizeObserver(remeasure);
+    observer.observe(map.getContainer());
+
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [map]);
+
+  useEffect(() => {
     if (places.length === 0) return;
-    if (places.length === 1) {
-      map.setView([places[0].lat, places[0].lng], PLACE_ZOOM);
-      return;
-    }
-    map.fitBounds(L.latLngBounds(places.map((place) => [place.lat, place.lng] as [number, number])), {
-      padding: [48, 48],
-      maxZoom: PLACE_ZOOM
-    });
+
+    const fit = () => {
+      map.invalidateSize({ animate: false });
+      if (places.length === 1) {
+        map.setView([places[0].lat, places[0].lng], PLACE_ZOOM);
+        return;
+      }
+      map.fitBounds(L.latLngBounds(places.map((place) => [place.lat, place.lng] as [number, number])), {
+        padding: [48, 48],
+        maxZoom: PLACE_ZOOM
+      });
+    };
+
+    const frame = requestAnimationFrame(fit);
+    return () => cancelAnimationFrame(frame);
   }, [map, places]);
 
   return null;
@@ -116,8 +144,7 @@ const MapPage: React.FC = () => {
 
   const totalVisits = useMemo(() => places.reduce((sum, place) => sum + place.visits, 0), [places]);
 
-  const initialCenter: [number, number] =
-    places.length > 0 ? [places[0].lat, places[0].lng] : WORLD_CENTER;
+  const initialCenter: [number, number] = places.length > 0 ? [places[0].lat, places[0].lng] : WORLD_CENTER;
 
   return (
     <Box sx={{ p: { xs: 2, sm: 3 }, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -155,9 +182,7 @@ const MapPage: React.FC = () => {
             {types.map((type) => (
               <MenuItem key={type._id} value={type._id}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box
-                    sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: type.color || '#9e9e9e' }}
-                  />
+                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: type.color || '#9e9e9e' }} />
                   {type.name}
                 </Box>
               </MenuItem>
@@ -193,8 +218,7 @@ const MapPage: React.FC = () => {
           </Typography>
           {!typeFilter && rangeFilter === 'all' && (
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Turn on “Track where it happened” for an activity type, then add a place when you log a
-              day.
+              Turn on “Track where it happened” for an activity type, then add a place when you log a day.
             </Typography>
           )}
         </Box>
@@ -210,7 +234,15 @@ const MapPage: React.FC = () => {
               '& .leaflet-container': { height: '100%', width: '100%' }
             }}
           >
-            <MapContainer center={initialCenter} zoom={places.length > 0 ? PLACE_ZOOM : WORLD_ZOOM}>
+            <MapContainer
+              center={initialCenter}
+              zoom={places.length > 0 ? PLACE_ZOOM : WORLD_ZOOM}
+              // Sized here as well as by the rule above: the map has to have a
+              // box before Leaflet measures it, and a descendant selector that
+              // loses to anything is a map of zero height.
+              style={{ height: '100%', width: '100%' }}
+              scrollWheelZoom
+            >
               <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} />
               <FitToPlaces places={places} />
               {places.map((place) => (

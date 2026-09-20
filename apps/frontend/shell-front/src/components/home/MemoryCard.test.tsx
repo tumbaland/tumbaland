@@ -43,7 +43,7 @@ describe('pickYear', () => {
   });
 });
 
-it('names the day and the album, and opens the album it came from', async () => {
+it('names the day and the album, and opens the album from the caption', async () => {
   const onOpen = vi.fn();
   render(
     <MemoryCard
@@ -56,9 +56,88 @@ it('names the day and the album, and opens the album it came from', async () => 
   expect(screen.getByText('Tallinn')).toBeInTheDocument();
   expect(screen.getByText('5 photos')).toBeInTheDocument();
 
-  await userEvent.click(screen.getByRole('button'));
+  await userEvent.click(screen.getByRole('button', { name: 'Open Tallinn' }));
 
   expect(onOpen).toHaveBeenCalledWith('/album/albums/album-1');
+});
+
+describe('several photos from the same day', () => {
+  const day = (count: number) =>
+    memories([
+      {
+        year: 2024,
+        yearsAgo: 2,
+        photoCount: count,
+        photos: Array.from({ length: count }, (_, i) => photo(`p${i}`, { title: `Photo ${i}` }))
+      }
+    ]);
+
+  it('steps through them in place rather than leaving the page', async () => {
+    const onOpen = vi.fn();
+    render(<MemoryCard memories={day(3)} onOpen={onOpen} />);
+
+    expect(screen.getByText('Photo 0')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Next photo' }));
+
+    expect(screen.getByText('Photo 1')).toBeInTheDocument();
+    // The three chips this replaced opened the album instead of the photo, so
+    // the only thing they did was take you off the home page.
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  it('wraps around at both ends', async () => {
+    render(<MemoryCard memories={day(3)} onOpen={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Previous photo' }));
+    expect(screen.getByText('Photo 2')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Next photo' }));
+    expect(screen.getByText('Photo 0')).toBeInTheDocument();
+  });
+
+  it('jumps straight to a photo from its dot', async () => {
+    render(<MemoryCard memories={day(4)} onOpen={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Photo 3 of 4' }));
+
+    expect(screen.getByText('Photo 2')).toBeInTheDocument();
+  });
+
+  it('marks which slide is showing', async () => {
+    render(<MemoryCard memories={day(2)} onOpen={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Photo 1 of 2' })).toHaveAttribute('aria-current', 'true');
+    expect(screen.getByRole('button', { name: 'Photo 2 of 2' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('offers no arrows for a day with a single photo', () => {
+    render(<MemoryCard memories={day(1)} onOpen={vi.fn()} />);
+
+    expect(screen.queryByRole('button', { name: 'Next photo' })).not.toBeInTheDocument();
+  });
+
+  it('opens the album of the photo being shown', async () => {
+    const onOpen = vi.fn();
+    render(
+      <MemoryCard
+        memories={memories([
+          {
+            year: 2024,
+            yearsAgo: 2,
+            photoCount: 2,
+            photos: [photo('a'), photo('b', { albumId: 'album-2' })]
+          }
+        ])}
+        onOpen={onOpen}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Next photo' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Open Tallinn' }));
+
+    expect(onOpen).toHaveBeenCalledWith('/album/albums/album-2');
+  });
 });
 
 it("prefers the photo's own title over the album name", () => {
