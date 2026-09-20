@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: toomastahves/tumbaland-payment-front:latest
+    image: toomastahves/tumbaland-payment-front:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
       PAYMENT_API_URL: ${PAYMENT_API_URL}

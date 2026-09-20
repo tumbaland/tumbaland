@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: toomastahves/tumbaland-group-front:latest
+    image: toomastahves/tumbaland-group-front:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
       GROUP_API_URL: ${GROUP_API_URL}

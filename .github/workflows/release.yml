@@ -4,8 +4,10 @@
 #   2. verify what changed — lint, typecheck, and its tests
 #   3. publish each library with publishable changes, and skip the rest
 #   4. cut the version: bump, changelog, tag
-#   5. build and push an ARM image for each changed service only
+#   5. build and push an ARM image for each service changed since the last
+#      successfully deployed release
 #   6. deploy those services to the Pi, one at a time
+#   7. mark the release as deployed
 #
 # Nothing here runs on a push. Merging to main used to cut a version and a tag
 # by itself, which made the version a count of merges; releasing is a decision,
@@ -46,7 +48,7 @@ permissions:
   contents: write
   packages: write
 
-# A second release queued behind a first starts from the first one's tag.
+# A second release queued behind a first starts from the first one's branch tip.
 concurrency:
   group: release
   cancel-in-progress: false
@@ -80,7 +82,10 @@ jobs:
         run: |
           LIBRARIES=$(node scripts/release-plan.mjs libs)
 
-          LAST=$(git describe --tags --abbrev=0 --match 'app-v[0-9]*' 2>/dev/null || true)
+          # An app-v tag means that the release was cut, not that its images
+          # reached the Pi. Keep failed releases in the next plan until deploy
+          # writes the corresponding app-deployed-v tag.
+          LAST=$(git tag --list 'app-deployed-v[0-9]*' --sort=-v:refname | sed -n '1p')
           if [ -n "$LAST" ]; then
             SERVICES=$(node scripts/release-plan.mjs services "$LAST" HEAD | jq -c .changed)
           else
@@ -114,7 +119,7 @@ jobs:
           {
             echo "### Release plan"
             echo ""
-            echo "- Since: \`${LAST:-nothing}\`"
+            echo "- Since: \`${LAST:-the repository root}\`"
             echo "- Libraries to publish: \`$LIBRARIES\`"
             echo "- Services to build: \`$SERVICES\`"
             if [ "$RELEASE" = "true" ]; then
@@ -276,6 +281,8 @@ jobs:
 
   # Re-planned after the release commits: a library publish re-pins its
   # consumers, so services the first plan called unchanged have changed by now.
+  # The baseline is the last successful deployment, not the last app-v tag;
+  # releases that failed after tagging must be carried into the next attempt.
   build-plan:
     needs: changelog
     if: always() && needs.changelog.result == 'success'
@@ -294,9 +301,7 @@ jobs:
 
       - id: plan
         run: |
-          # The tag this release just cut is on HEAD, so compare against the one
-          # before it.
-          PREVIOUS=$(git tag --list 'app-v[0-9]*' --sort=-v:refname | sed -n '2p')
+          PREVIOUS=$(git tag --list 'app-deployed-v[0-9]*' --sort=-v:refname | sed -n '1p')
           if [ -z "$PREVIOUS" ]; then
             PREVIOUS=$(git rev-list --max-parents=0 HEAD)
           fi
@@ -355,9 +360,9 @@ jobs:
           # which publishes its own group-service, auth-service, file-service,
           # auth-front and account-front.
           #
-          # `latest` is what every compose file pins, so it is the tag that
-          # matters. The version tag is for reading back which release an image
-          # came from.
+          # Every image gets an immutable release tag as well as latest. The
+          # release deploy selects the immutable tag; latest remains available
+          # for manual deploy workflows and backwards-compatible compose use.
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/tumbaland-${{ matrix.service }}:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/tumbaland-${{ matrix.service }}:${{ needs.changelog.outputs.version }}
@@ -443,6 +448,7 @@ jobs:
       - name: Deploy the changed services, one at a time
         env:
           SERVICES_JSON: ${{ needs['build-plan'].outputs.services }}
+          IMAGE_TAG: ${{ needs.changelog.outputs.version }}
           GAP_SECONDS: '20'
         run: |
           cd "$DEPLOY_ROOT"
@@ -468,6 +474,17 @@ jobs:
             echo "$svc state: ${state:-unknown}"
             sleep "$GAP_SECONDS"
           done
+
+      - name: Mark release as deployed
+        env:
+          VERSION: ${{ needs.changelog.outputs.version }}
+        run: |
+          git config user.name "Tumbabot"
+          git config user.email "bot@tumbaland.eu"
+          RELEASE_TAG="app-v$VERSION"
+          TAG="app-deployed-v$VERSION"
+          git tag -a "$TAG" -m "deployed: $RELEASE_TAG" "$RELEASE_TAG^{commit}"
+          git push origin "$TAG"
 
       - name: Summary
         env:

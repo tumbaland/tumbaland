@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: toomastahves/tumbaland-shell-front:latest
+    image: toomastahves/tumbaland-shell-front:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
       ALBUM_FRONT_URL: ${ALBUM_FRONT_URL}

@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: toomastahves/tumbaland-auth-service:latest
+    image: toomastahves/tumbaland-auth-service:${IMAGE_TAG:-latest}
     restart: unless-stopped
     stop_grace_period: 15s
     ports:

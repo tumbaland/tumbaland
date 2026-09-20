@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: toomastahves/tumbaland-relationship-front:latest
+    image: toomastahves/tumbaland-relationship-front:${IMAGE_TAG:-latest}
     restart: unless-stopped
     environment:
       RELATIONSHIP_API_URL: ${RELATIONSHIP_API_URL}
