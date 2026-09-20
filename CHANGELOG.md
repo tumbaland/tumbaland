@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.502](https://github.com/toomastahves/tumbaland/compare/app-v0.0.501...app-v0.0.502) (2026-09-20)
+
+### Bug Fixes
+
+* leaflet map ([ac101f3](https://github.com/toomastahves/tumbaland/commit/ac101f35986162ac41e3ad8c91a2634bc98fc2ee))
+
 ## [0.0.501](https://github.com/toomastahves/tumbaland/compare/app-v0.0.500...app-v0.0.501) (2026-09-20)
 
 ### Features
