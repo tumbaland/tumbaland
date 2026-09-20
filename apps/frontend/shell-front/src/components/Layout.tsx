@@ -1,6 +1,6 @@
 import { useLocation } from 'react-router';
 import { ReactNode, useEffect } from 'react';
-import { ProtectedRoute, surface } from '@tumbaland/components';
+import { ProtectedRoute, surface } from '@tumbaland/frontend-core';
 import { AppNav } from './AppNav';
 import { RemoteOutlet } from './RemoteOutlet';
 import { getAppByRoute } from '../config/apps';

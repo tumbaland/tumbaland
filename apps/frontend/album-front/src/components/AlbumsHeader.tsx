@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Typography, Button, TextField, InputAdornment, IconButton } from '@mui/material';
 import { Search as SearchIcon, Add as AddIcon, Refresh as RefreshIcon } from '@mui/icons-material';
-import { gradient } from '@tumbaland/components';
+import { gradient } from '@tumbaland/frontend-core';
 
 interface AlbumsHeaderProps {
   searchTerm: string;

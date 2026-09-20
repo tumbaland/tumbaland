@@ -15,8 +15,8 @@ export default tseslint.config(
       'apps/infra/**',
       '**/*.js',
       '**/*.cjs',
-      '**/*.mjs',
-    ],
+      '**/*.mjs'
+    ]
   },
 
   js.configs.recommended,
@@ -26,18 +26,18 @@ export default tseslint.config(
   {
     files: ['apps/backend/**/*.ts', 'libs/backend-core/**/*.ts'],
     languageOptions: {
-      globals: { ...globals.node },
-    },
+      globals: { ...globals.node }
+    }
   },
 
   // Frontends + component library (browser, React)
   {
-    files: ['apps/frontend/**/*.{ts,tsx}', 'libs/components/**/*.{ts,tsx}', 'libs/frontend-core/**/*.ts'],
+    files: ['apps/frontend/**/*.{ts,tsx}', 'libs/frontend-core/**/*.ts'],
     languageOptions: {
-      globals: { ...globals.browser },
+      globals: { ...globals.browser }
     },
     plugins: {
-      'react-hooks': reactHooks,
+      'react-hooks': reactHooks
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
@@ -46,65 +46,57 @@ export default tseslint.config(
       'react-hooks/set-state-in-effect': 'off',
       'react-hooks/immutability': 'off',
       'react-hooks/purity': 'off',
-      'react-hooks/preserve-manual-memoization': 'off',
-    },
+      'react-hooks/preserve-manual-memoization': 'off'
+    }
   },
 
   // Vite config files run in Node
   {
     files: ['**/vite.config.ts', '**/vite.config.mts', 'playwright.config.ts', '**/.storybook/**/*.ts'],
     languageOptions: {
-      globals: { ...globals.node },
-    },
+      globals: { ...globals.node }
+    }
   },
 
   // Playwright specs run in Node while driving a browser.
   {
     files: ['e2e/**/*.ts'],
     languageOptions: {
-      globals: { ...globals.node },
-    },
+      globals: { ...globals.node }
+    }
   },
 
   // Default calibration, mainly a safety net for tooling/config files not
   // covered by a workspace (vite/playwright/storybook configs, e2e specs):
   // every real source tree — backend services + libs/backend-core, frontend
-  // apps + libs/frontend-core + libs/components — promotes this to `error`
+  // apps + libs/frontend-core — promotes this to `error`
   // via the overrides below (tests keep `any` allowed everywhere).
   {
     rules: {
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unused-vars': [
         'error',
-        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrors: 'none', ignoreRestSiblings: true },
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrors: 'none', ignoreRestSiblings: true }
       ],
       '@typescript-eslint/no-empty-object-type': ['error', { allowInterfaces: 'with-single-extends' }],
       '@typescript-eslint/no-namespace': ['error', { allowDeclarations: true }],
-      'preserve-caught-error': 'off',
-    },
+      'preserve-caught-error': 'off'
+    }
   },
 
   // Frontend apps + the shared frontend libs: no `any` in source (still
-  // allowed in tests). libs/frontend-core and libs/components are now
+  // allowed in tests). libs/frontend-core is now
   // verified clean of non-test `any`, closing the last gap from the
   // any-removal campaign — every workspace in the repo enforces this at
   // `error` except test files (only tooling/config files outside any
   // workspace's src, e.g. vite/playwright/storybook configs, still fall
   // back to the project-wide `warn` above).
   {
-    files: [
-      'apps/frontend/**/*.{ts,tsx}',
-      'libs/frontend-core/**/*.ts',
-      'libs/components/**/*.{ts,tsx}',
-    ],
-    ignores: [
-      'apps/frontend/**/*.test.{ts,tsx}',
-      'libs/frontend-core/**/*.test.ts',
-      'libs/components/**/*.test.{ts,tsx}',
-    ],
+    files: ['apps/frontend/**/*.{ts,tsx}', 'libs/frontend-core/**/*.{ts,tsx}'],
+    ignores: ['apps/frontend/**/*.test.{ts,tsx}', 'libs/frontend-core/**/*.test.{ts,tsx}'],
     rules: {
-      '@typescript-eslint/no-explicit-any': 'error',
-    },
+      '@typescript-eslint/no-explicit-any': 'error'
+    }
   },
 
   // All backend services AND the shared backend-core lib cleared of `any` in
@@ -115,7 +107,7 @@ export default tseslint.config(
     files: ['apps/backend/**/*.ts', 'libs/backend-core/**/*.ts'],
     ignores: ['apps/backend/**/*.test.ts', 'libs/backend-core/**/*.test.ts'],
     rules: {
-      '@typescript-eslint/no-explicit-any': 'error',
-    },
+      '@typescript-eslint/no-explicit-any': 'error'
+    }
   }
 );

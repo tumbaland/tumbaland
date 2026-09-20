@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Box, Button, Link } from '@mui/material';
 import GoogleIcon from '@mui/icons-material/Google';
-import { brandButton, wordmark } from '@tumbaland/components';
+import { brandButton, wordmark } from '@tumbaland/frontend-core';
 
 /**
  * The bar across the top of the public page: the name, and a way to sign in

@@ -121,7 +121,11 @@ describe('flushLogs', () => {
 describe('sendBatch failure handling', () => {
   it('drops the batch and warns, without recursing into console interception, on a non-ok response', async () => {
     mockConfig({ elkUrl: 'http://elk.local' });
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: false, status: 500, statusText: 'Server Error' });
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: false,
+      status: 500,
+      statusText: 'Server Error'
+    });
     const { queueLog, flushLogs } = await freshBatch();
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 

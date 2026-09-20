@@ -18,7 +18,7 @@ import {
 } from '@mui/icons-material';
 import { Photo, Album, GridDensity } from '../types';
 import PhotoCard from './PhotoCard';
-import { gradient } from '@tumbaland/components';
+import { gradient } from '@tumbaland/frontend-core';
 
 const DENSITY_STORAGE_KEY = 'tumbaland:photoGridDensity';
 const DENSITIES: GridDensity[] = ['large', 'comfortable', 'compact', 'tiny'];

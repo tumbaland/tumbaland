@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Avatar, Typography, Stack, Button } from '@mui/material';
-import { gradient } from '@tumbaland/components';
+import { gradient } from '@tumbaland/frontend-core';
 
 interface LoggedInUserProps {
   user: {

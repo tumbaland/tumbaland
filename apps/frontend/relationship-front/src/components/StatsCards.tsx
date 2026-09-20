@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import { AccessTime, Favorite, Timeline, Event } from '@mui/icons-material';
 import { useStatistics } from '../hooks/useStatistics';
-import { useTenantFilter } from '@tumbaland/components';
+import { useTenantFilter } from '@tumbaland/frontend-core';
 import StatCard from './StatCard';
 
 interface StatsCardsProps {

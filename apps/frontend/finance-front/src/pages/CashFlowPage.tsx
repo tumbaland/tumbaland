@@ -29,7 +29,7 @@ import {
   Rule as RuleIcon
 } from '@mui/icons-material';
 import TableSortLabel from '@mui/material/TableSortLabel';
-import { useTenantFilter } from '@tumbaland/components';
+import { useTenantFilter } from '@tumbaland/frontend-core';
 import {
   useTransactions,
   useTransactionCategories,

@@ -1,5 +1,5 @@
 import { Routes, Route } from 'react-router';
-import { ProtectedRoute } from '@tumbaland/components';
+import { ProtectedRoute } from '@tumbaland/frontend-core';
 import AccountPage from '../pages/AccountPage';
 import { authService } from '../services/authService';
 

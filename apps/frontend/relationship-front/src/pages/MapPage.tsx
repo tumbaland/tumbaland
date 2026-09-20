@@ -11,7 +11,7 @@ import {
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { useTenantFilter } from '@tumbaland/components';
+import { useTenantFilter } from '@tumbaland/frontend-core';
 import { logger } from '@tumbaland/frontend-core';
 import { ActivityType, Place } from '../services/types';
 import { getPlaces } from '../services/places';

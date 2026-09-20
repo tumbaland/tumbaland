@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Card, CardContent, Typography, CircularProgress, Alert, Button } from '@mui/material';
 import { AccountBalance, ArrowForward, ShowChart } from '@mui/icons-material';
 import { Link } from 'react-router';
-import { useTenantFilter } from '@tumbaland/components';
+import { useTenantFilter } from '@tumbaland/frontend-core';
 import { useDashboard } from '../hooks/useDashboard';
 import FinancialKPIs from '../components/FinancialKPIs';
 import PortfolioValueChart from '../components/PortfolioValueChart';

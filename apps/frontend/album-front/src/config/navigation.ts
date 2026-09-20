@@ -1,7 +1,7 @@
 import PhotoAlbumIcon from '@mui/icons-material/PhotoAlbum';
 import GridOnIcon from '@mui/icons-material/GridOn';
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import { AuthHeaderNavigationItem } from '@tumbaland/components';
+import { AuthHeaderNavigationItem } from '@tumbaland/frontend-core';
 
 export const navigationItems: AuthHeaderNavigationItem[] = [
   {

@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { Box, Button, Chip, Typography } from '@mui/material';
 import { useNavigate } from 'react-router';
-import { brand, ink, UsageMeter, useEntitlements } from '@tumbaland/components';
+import { brand, ink, UsageMeter, useEntitlements } from '@tumbaland/frontend-core';
 import { canOfferPurchases } from '../../services/platform';
 import { isUnlimited } from '@tumbaland/frontend-core';
 import { getMyEntitlements } from '../../services/entitlementsService';

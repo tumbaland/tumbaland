@@ -18,7 +18,7 @@ const SHELL_AUTH_TIMEOUT_MS = 3000;
 /**
  * The shell's origin, when this app runs inside it: framed, and loaded with the
  * `embedded=1` flag the shell puts in the iframe src (see buildEmbeddedUrl in
- * @tumbaland/components). A direct visit is never embedded.
+ * @tumbaland/frontend-core). A direct visit is never embedded.
  */
 function embeddingShellOrigin(shellUrl: string | undefined): string | null {
   if (typeof window === 'undefined' || window.parent === window.self || !shellUrl) return null;
@@ -41,7 +41,7 @@ function embeddingShellOrigin(shellUrl: string | undefined): string | null {
  * The answer only decides what the app shows. Every API call still carries the
  * session cookie and is checked by the service it goes to.
  *
- * Contract lives in @tumbaland/components `routing/messages` (app:auth-request
+ * Contract lives in @tumbaland/frontend-core `routing/messages` (app:auth-request
  * and shell:auth); a lower layer cannot import it, so the literals are repeated.
  */
 function askShellForAuth(shellOrigin: string): Promise<AuthResponse | null> {
@@ -56,7 +56,13 @@ function askShellForAuth(shellOrigin: string): Promise<AuthResponse | null> {
 
     const onMessage = (event: MessageEvent) => {
       if (event.origin !== shellOrigin || event.source !== window.parent) return;
-      const data = event.data as { source?: unknown; type?: unknown; id?: unknown; authenticated?: unknown; user?: unknown };
+      const data = event.data as {
+        source?: unknown;
+        type?: unknown;
+        id?: unknown;
+        authenticated?: unknown;
+        user?: unknown;
+      };
       if (!data || data.source !== 'tumbaland-shell' || data.type !== 'shell:auth' || data.id !== id) return;
       finish({ authenticated: data.authenticated === true, user: (data.user as User | null) ?? null });
     };
@@ -86,7 +92,7 @@ function askShellForAuth(shellOrigin: string): Promise<AuthResponse | null> {
 function notifyShellOfLogout(): void {
   if (typeof window === 'undefined' || window.parent === window.self) return;
   try {
-    // Contract lives in @tumbaland/components `routing/messages` — a lower
+    // Contract lives in @tumbaland/frontend-core `routing/messages` — a lower
     // layer cannot import it, so the literal is repeated here.
     window.parent.postMessage({ source: 'tumbaland-app', type: 'app:logout' }, '*');
   } catch (error) {

@@ -3,8 +3,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { vi } from 'vitest';
 
 const mockUseTenantFilter = vi.fn();
-vi.mock('@tumbaland/components', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@tumbaland/components')>();
+vi.mock('@tumbaland/frontend-core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tumbaland/frontend-core')>();
   return { ...actual, useTenantFilter: () => mockUseTenantFilter() };
 });
 

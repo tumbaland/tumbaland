@@ -1,7 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Box, Button, Typography } from '@mui/material';
 import { logger } from '@tumbaland/frontend-core';
-import { ink } from '@tumbaland/components';
+import { ink } from '@tumbaland/frontend-core';
 
 interface RemoteBoundaryProps {
   children: ReactNode;

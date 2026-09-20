@@ -1,13 +1,16 @@
 name: CI
 
+# Pull requests only. A merge to main used to run this whole matrix a second
+# time over code that had just passed it, and next to a changelog job that cut
+# a version for every merge. Releasing is a decision now (see release.yml),
+# and it verifies what it is about to publish itself.
 on:
-  push:
-    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: true
 
 jobs:
   validate-matrix:
@@ -73,7 +76,6 @@ jobs:
               - 'libs/backend-core/**'
             frontend-libs-changed: &frontend-libs-changed
               - 'libs/frontend-core/**'
-              - 'libs/components/**'
             apps/backend/album-service:
               - *root-shared
               - *backend-libs-changed
@@ -145,20 +147,15 @@ jobs:
             libs/backend-core:
               - *root-shared
               - 'libs/backend-core/**'
-            libs/components:
-              - *root-shared
-              - 'libs/components/**'
             libs/frontend-core:
               - *root-shared
               - 'libs/frontend-core/**'
-              - 'libs/components/**'
             e2e:
               - *root-shared
               - 'e2e/**'
               - 'playwright.config.ts'
               - 'apps/frontend/**'
               - 'libs/frontend-core/**'
-              - 'libs/components/**'
 
       - name: Build workspace matrix
         id: set-matrix
@@ -183,7 +180,7 @@ jobs:
       - name: Build shared libs
         # Order matters: components imports from frontend-core, so frontend-core
         # must be built (its dist/.d.ts emitted) before components typechecks.
-        run: npm run build -w @tumbaland/backend-core -w @tumbaland/frontend-core -w @tumbaland/components
+        run: npm run build -w @tumbaland/backend-core -w @tumbaland/frontend-core
 
       # Split into a backend and a frontend artifact so each verify job pulls
       # only the libs its workspace actually consumes, instead of every job
@@ -200,7 +197,6 @@ jobs:
         with:
           name: libs-dist-frontend
           path: |
-            libs/components/dist
             libs/frontend-core/dist
           retention-days: 1
 
@@ -239,7 +235,7 @@ jobs:
           path: libs/backend-core/dist
 
       - name: Download frontend libs
-        if: startsWith(matrix.workspace, 'apps/frontend/') || matrix.workspace == 'libs/components' || matrix.workspace == 'libs/frontend-core'
+        if: startsWith(matrix.workspace, 'apps/frontend/') || matrix.workspace == 'libs/frontend-core'
         uses: actions/download-artifact@v4
         with:
           name: libs-dist-frontend

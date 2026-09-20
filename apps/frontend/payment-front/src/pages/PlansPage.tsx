@@ -3,7 +3,7 @@ import { Box, Card, CardActions, CardContent, Button, Typography, Divider, Avata
 import { useNavigate } from 'react-router';
 import { paymentApi } from '../services/paymentApi';
 import { Plan, Subscription } from '../types';
-import { Loader } from '@tumbaland/components';
+import { Loader } from '@tumbaland/frontend-core';
 import { Star, CheckCircle } from '@mui/icons-material';
 import { appPath } from '../appBase';
 

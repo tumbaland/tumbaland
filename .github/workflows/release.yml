@@ -1,0 +1,396 @@
+# One run for a whole release:
+#
+#   1. work out which libraries and which services actually changed
+#   2. verify what changed — lint, typecheck, and its tests
+#   3. publish each library with publishable changes, and skip the rest
+#   4. cut the version: bump, changelog, tag
+#   5. build and push an ARM image for each changed service only
+#   6. deploy those services to the Pi, one at a time
+#
+# Nothing here runs on a push. Merging to main used to cut a version and a tag
+# by itself, which made the version a count of merges; releasing is a decision,
+# so it is a dispatch.
+#
+# Each stage is still its own workflow where it was one already, and can be run
+# by hand. Calling them as reusable workflows chains them — a tag pushed from a
+# workflow starts no other workflow, which is why they never followed each
+# other on their own.
+#
+# What counts as a change is decided by scripts/release-plan.mjs: tests, e2e
+# suites and Markdown do not.
+#
+# Unlike Visin there is no carry-forward of unchanged images: every compose
+# file pins `:latest`, so an image nobody rebuilt is already the one the server
+# pulls.
+
+name: Release
+
+run-name: Release ${{ inputs.release-as || '(version from commits)' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-as:
+        description: 'Version (e.g. 1.7.0) or patch|minor|major. Empty derives it from the commits.'
+        required: false
+        type: string
+      skip-deploy:
+        description: 'Publish and build, but stop before touching the Pi.'
+        required: false
+        default: false
+        type: boolean
+
+# The union of what the stages need. A called workflow cannot hold more than
+# its caller.
+permissions:
+  contents: write
+  packages: write
+
+# A second release queued behind a first starts from the first one's tag.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      libraries: ${{ steps.plan.outputs.libraries }}
+      services: ${{ steps.plan.outputs.services }}
+      release: ${{ steps.plan.outputs.release }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+
+      - name: Decide what to release
+        id: plan
+        env:
+          RELEASE_AS: ${{ inputs.release-as }}
+        run: |
+          LIBRARIES=$(node scripts/release-plan.mjs libs)
+
+          LAST=$(git describe --tags --abbrev=0 --match 'app-v[0-9]*' 2>/dev/null || true)
+          if [ -n "$LAST" ]; then
+            SERVICES=$(node scripts/release-plan.mjs services "$LAST" HEAD | jq -c .changed)
+          else
+            # Nothing to compare against: build everything once.
+            SERVICES=$(node scripts/release-plan.mjs services "$(git rev-list --max-parents=0 HEAD)" HEAD | jq -c .changed)
+          fi
+
+          # A library release re-pins its consumers, so it always changes a
+          # service too; checking both keeps the answer right before that has
+          # happened. An explicit version is a request to release regardless.
+          RELEASE=false
+          if [ "$LIBRARIES" != "[]" ] || [ "$SERVICES" != "[]" ] || [ -n "$RELEASE_AS" ]; then
+            RELEASE=true
+          fi
+
+          echo "libraries=$LIBRARIES" >> "$GITHUB_OUTPUT"
+          echo "services=$SERVICES"   >> "$GITHUB_OUTPUT"
+          echo "release=$RELEASE"     >> "$GITHUB_OUTPUT"
+          {
+            echo "### Release plan"
+            echo ""
+            echo "- Since: \`${LAST:-nothing}\`"
+            echo "- Libraries to publish: \`$LIBRARIES\`"
+            echo "- Services to build: \`$SERVICES\`"
+            if [ "$RELEASE" = "true" ]; then
+              echo "- Cutting a release."
+            else
+              echo "- Nothing publishable changed since \`$LAST\`: no release."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # Lint and typecheck the whole repo — both are cheap and catch cross-workspace
+  # drift — then run the tests for what the plan says changed. The full matrix
+  # still runs on every pull request; repeating it here for untouched apps would
+  # only make releasing slower, not safer.
+  verify:
+    needs: plan
+    if: needs.plan.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Deployed images install the libs from npm, so a consumer left on an
+      # older pinned version silently compiles against stale typings inside
+      # Docker's cached install layer.
+      - name: Check workspaces pin the current lib versions
+        run: node scripts/sync-lib-versions.mjs --check
+
+      - name: Build libraries
+        run: |
+          npm run build --workspace=@tumbaland/backend-core
+          npm run build --workspace=@tumbaland/frontend-core
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck --workspaces --if-present
+
+      - name: Test what changed
+        env:
+          LIBRARIES: ${{ needs.plan.outputs.libraries }}
+          SERVICES: ${{ needs.plan.outputs.services }}
+        run: |
+          set -o pipefail
+          FAILED=""
+          for lib in $(echo "$LIBRARIES" | jq -r '.[]'); do
+            echo "::group::test @tumbaland/$lib"
+            npm test --workspace="@tumbaland/$lib" || FAILED="$FAILED @tumbaland/$lib"
+            echo "::endgroup::"
+          done
+          for svc in $(echo "$SERVICES" | jq -r '.[]'); do
+            echo "::group::test $svc"
+            npm run test --workspace="$svc" --if-present || FAILED="$FAILED $svc"
+            echo "::endgroup::"
+          done
+          if [ -n "$FAILED" ]; then
+            echo "::error::tests failed in:$FAILED"
+            exit 1
+          fi
+          echo "All changed workspaces passed."
+
+  libraries:
+    needs: [plan, verify]
+    if: needs.plan.outputs.libraries != '[]'
+    strategy:
+      # Each publish commits re-pinned consumers to the branch; one at a time,
+      # so the second starts from the first one's commit.
+      max-parallel: 1
+      fail-fast: true
+      matrix:
+        library: ${{ fromJSON(needs.plan.outputs.libraries) }}
+    uses: ./.github/workflows/publish-libs.yml
+    with:
+      library: ${{ matrix.library }}
+      release-type: auto
+    secrets: inherit
+
+  changelog:
+    needs: [plan, verify, libraries]
+    # Runs after the libraries were published, or when there were none to
+    # publish — never after a library publish failed.
+    if: >-
+      always() && needs.plan.outputs.release == 'true' && needs.verify.result == 'success' &&
+      (needs.libraries.result == 'success' || needs.libraries.result == 'skipped')
+    uses: ./.github/workflows/changelog.yml
+    with:
+      release-as: ${{ inputs.release-as }}
+
+  # Re-planned after the release commits: a library publish re-pins its
+  # consumers, so services the first plan called unchanged have changed by now.
+  build-plan:
+    needs: changelog
+    if: always() && needs.changelog.result == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.plan.outputs.services }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref_name }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+
+      - id: plan
+        run: |
+          # The tag this release just cut is on HEAD, so compare against the one
+          # before it.
+          PREVIOUS=$(git tag --list 'app-v[0-9]*' --sort=-v:refname | sed -n '2p')
+          if [ -z "$PREVIOUS" ]; then
+            PREVIOUS=$(git rev-list --max-parents=0 HEAD)
+          fi
+          SERVICES=$(node scripts/release-plan.mjs services "$PREVIOUS" HEAD | jq -c .changed)
+          echo "services=$SERVICES" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Images to build"
+            echo ""
+            echo "- Since: \`$PREVIOUS\`"
+            echo "- Building: \`$SERVICES\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  images:
+    needs: [changelog, build-plan]
+    if: always() && needs.build-plan.result == 'success' && needs.build-plan.outputs.services != '[]'
+    # The Pi is ARM, and it is the only place these images run, so there is no
+    # second architecture to build for.
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.build-plan.outputs.services) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Resolve paths
+        id: vars
+        run: |
+          case "${{ matrix.service }}" in
+            *-front) TIER=frontend ;;
+            *)       TIER=backend ;;
+          esac
+          echo "dir=apps/$TIER/${{ matrix.service }}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ steps.vars.outputs.dir }}
+          file: ./${{ steps.vars.outputs.dir }}/Dockerfile
+          push: true
+          # `tumbaland-` prefix: the Docker Hub account is shared with visin,
+          # which publishes its own group-service, auth-service, file-service,
+          # auth-front and account-front.
+          #
+          # `latest` is what every compose file pins, so it is the tag that
+          # matters. The version tag is for reading back which release an image
+          # came from.
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/tumbaland-${{ matrix.service }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/tumbaland-${{ matrix.service }}:${{ needs.changelog.outputs.version }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  deploy:
+    needs: [changelog, build-plan, images]
+    if: >-
+      always() && inputs.skip-deploy != true &&
+      needs.build-plan.outputs.services != '[]' && needs.images.result == 'success'
+    # Runs on the Pi itself: the runner dials out to GitHub, so the deploy needs
+    # no inbound port at home.
+    runs-on: [self-hosted, tumbaland-pi]
+    # Shares the concurrency group with the manual deploy workflows so no two
+    # deploys ever hit the server simultaneously.
+    concurrency:
+      group: tumbaland-deployment
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Generate .env file
+        run: bash .github/scripts/write-deploy-env.sh
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          API_KEY_ENCRYPTION_SECRET: ${{ secrets.API_KEY_ENCRYPTION_SECRET }}
+          INTERNAL_SERVICE_TOKEN: ${{ secrets.INTERNAL_SERVICE_TOKEN }}
+          ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          FILE_ACCESS_SECRET: ${{ secrets.FILE_ACCESS_SECRET }}
+          FILE_SERVICE_API_KEY: ${{ secrets.FILE_SERVICE_API_KEY }}
+          FILE_SERVICE_HMAC_SECRET: ${{ secrets.FILE_SERVICE_HMAC_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+          GOOGLE_NATIVE_CLIENT_IDS: ${{ vars.GOOGLE_NATIVE_CLIENT_IDS }}
+          COOKIE_DOMAIN: ${{ vars.COOKIE_DOMAIN }}
+          CORS_ORIGIN: ${{ vars.CORS_ORIGIN }}
+          GROUP_API_URL: ${{ vars.GROUP_API_URL }}
+          GROUP_INTERNAL_URL: ${{ vars.GROUP_INTERNAL_URL }}
+          ALBUM_API_URL: ${{ vars.ALBUM_API_URL }}
+          AUTH_SERVICE_URL: ${{ vars.AUTH_SERVICE_URL }}
+          AUTH_FRONT_URL: ${{ vars.AUTH_FRONT_URL }}
+          FINANCE_API_URL: ${{ vars.FINANCE_API_URL }}
+          RELATIONSHIP_FRONT_URL: ${{ vars.RELATIONSHIP_FRONT_URL }}
+          ALBUM_FRONT_URL: ${{ vars.ALBUM_FRONT_URL }}
+          FINANCE_FRONT_URL: ${{ vars.FINANCE_FRONT_URL }}
+          RELATIONSHIP_API_URL: ${{ vars.RELATIONSHIP_API_URL }}
+          RELATIONSHIP_INTERNAL_URL: ${{ vars.RELATIONSHIP_INTERNAL_URL }}
+          MCP_PUBLIC_URL: ${{ vars.MCP_PUBLIC_URL }}
+          PUBLIC_API_URL: ${{ vars.PUBLIC_API_URL }}
+          PAYMENT_API_URL: ${{ vars.PAYMENT_API_URL }}
+          PAYMENT_INTERNAL_URL: ${{ vars.PAYMENT_INTERNAL_URL }}
+          PAYMENT_FRONT_URL: ${{ vars.PAYMENT_FRONT_URL }}
+          PAYMENT_URL: ${{ vars.PAYMENT_URL }}
+          GROUP_FRONT_URL: ${{ vars.GROUP_FRONT_URL }}
+          ACCOUNT_FRONT_URL: ${{ vars.ACCOUNT_FRONT_URL }}
+          SHELL_FRONT_URL: ${{ vars.SHELL_FRONT_URL }}
+          LOGSTASH_HTTP_URL: ${{ vars.LOGSTASH_HTTP_URL }}
+          FILE_SERVICE_URL: ${{ vars.FILE_SERVICE_URL }}
+          FILE_SERVICE_PUBLIC_URL: ${{ vars.FILE_SERVICE_PUBLIC_URL }}
+
+      - name: Stage compose files into the deploy tree
+        run: |
+          # Compose runs from $DEPLOY_ROOT, not the runner workspace: service
+          # compose files bind-mount relative paths (file-service's data dir)
+          # and the workspace is wiped between jobs.
+          DEPLOY_ROOT="${{ vars.DEPLOY_ROOT }}"
+          DEPLOY_ROOT="${DEPLOY_ROOT:-$HOME/tumbaland}"
+          echo "DEPLOY_ROOT=$DEPLOY_ROOT" >> "$GITHUB_ENV"
+
+          mkdir -p "$DEPLOY_ROOT"
+          cp .env.app "$DEPLOY_ROOT/"
+          for compose in apps/frontend/*/compose.yml apps/backend/*/compose.yml; do
+            mkdir -p "$DEPLOY_ROOT/$(dirname "$compose")"
+            cp "$compose" "$DEPLOY_ROOT/$compose"
+          done
+
+      - name: Deploy the changed services, one at a time
+        env:
+          SERVICES_JSON: ${{ needs.build-plan.outputs.services }}
+          GAP_SECONDS: '20'
+        run: |
+          cd "$DEPLOY_ROOT"
+          export COMPOSE_HTTP_TIMEOUT=300
+          docker network ls | grep -q tumbanet || docker network create tumbanet
+          for svc in $(echo "$SERVICES_JSON" | jq -r '.[]'); do
+            case "$svc" in
+              *-front) TIER=frontend ;;
+              *)       TIER=backend ;;
+            esac
+            CF="apps/$TIER/$svc/compose.yml"
+            echo "=== Deploying $svc ($CF) ==="
+            docker compose --env-file .env.app -f "$CF" pull
+            docker compose --env-file .env.app -f "$CF" up -d
+            # Wait for the container to report running before touching the next
+            # service, so a slow start never overlaps the next stop/start.
+            state=""
+            for i in $(seq 1 30); do
+              state=$(docker compose --env-file .env.app -f "$CF" ps --format '{{.State}}' 2>/dev/null | head -n1)
+              [ "$state" = "running" ] && break
+              sleep 2
+            done
+            echo "$svc state: ${state:-unknown}"
+            sleep "$GAP_SECONDS"
+          done
+
+      - name: Summary
+        env:
+          SERVICES_JSON: ${{ needs.build-plan.outputs.services }}
+        run: |
+          {
+            echo "### Deployed \`app-v${{ needs.changelog.outputs.version }}\`"
+            echo ""
+            echo "$SERVICES_JSON" | jq -r '.[] | "- \(.)"'
+          } >> "$GITHUB_STEP_SUMMARY"

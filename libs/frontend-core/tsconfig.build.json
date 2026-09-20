@@ -1,4 +1,5 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+  "comment": "Tests and their jsdom scaffolding are not part of the package. The exclude used to name only *.test.ts, so once the components moved in here every *.test.tsx compiled into dist — shipped to npm, and picked up again by vitest, which is why a run reported more test files than src holds.",
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx", "src/test"]
 }

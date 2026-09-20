@@ -1,0 +1,214 @@
+# Publishes a shared library to npmjs.com.
+#
+# Deliberately separate from the image build. A service image installs these
+# libraries *from the registry* (`npm i` inside each Dockerfile, which never
+# sees this monorepo), so a library has to be published, and every consumer
+# re-pinned, before any image that needs it is built.
+#
+# Normally run as a stage of release.yml, once per library the release plan
+# found publishable changes in. Can be run on its own to publish one library.
+
+name: Publish library
+
+run-name: Publish ${{ inputs.library }} (${{ inputs.release-type }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      library:
+        description: 'Library to publish'
+        required: true
+        type: choice
+        options:
+          - backend-core
+          - frontend-core
+      release-type:
+        description: 'Version bump. auto derives it from the commits that touched the library.'
+        required: true
+        default: auto
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+  workflow_call:
+    inputs:
+      library:
+        required: true
+        type: string
+      release-type:
+        required: false
+        default: auto
+        type: string
+
+permissions:
+  contents: write # commits the version bump and the re-pinned consumers
+
+# Two library publishes at once would race on the consumer re-pin commit.
+concurrency:
+  group: publish-libs
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # The branch tip, not the commit the run was dispatched from. Runs
+          # queue behind each other (see concurrency above), so a run started
+          # while another was publishing would otherwise build on the commit
+          # before that release — and have its own release commit rejected
+          # after its version was already on npm, where it cannot be taken back.
+          ref: ${{ github.ref_name }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install
+        run: npm ci
+
+      # Verify the library on its own before anything is published. A broken
+      # publish cannot be withdrawn — npm forbids reusing a version number.
+      - name: Verify
+        run: |
+          npm run typecheck --workspace=@tumbaland/${{ inputs.library }}
+          npm run lint --workspace=@tumbaland/${{ inputs.library }}
+          npm test --workspace=@tumbaland/${{ inputs.library }}
+
+      # commit-and-tag-version here only rewrites package.json: each lib's own
+      # .versionrc.json skips changelog, commit and tag, so this cannot collide
+      # with the monorepo's app-vX.Y.Z tags.
+      #
+      # `auto` reads the conventional commits that touched this library since
+      # its version last changed: a breaking change is major, a feat minor,
+      # anything else patch. Picking a type overrides that.
+      - name: Bump version
+        working-directory: libs/${{ inputs.library }}
+        env:
+          RELEASE_TYPE: ${{ inputs.release-type }}
+        run: |
+          if [ "$RELEASE_TYPE" = "auto" ]; then
+            BASE=$(git log -1 --format=%H -G'"version"' -- package.json)
+            RANGE=${BASE:+$BASE..}HEAD
+            COMMITS=$(git rev-list --count "$RANGE" -- .)
+            if [ "$COMMITS" -eq 0 ]; then
+              echo "::error::No commits touched libs/${{ inputs.library }} since its last version change"
+              exit 1
+            fi
+            LOG=$(git log --format='%s%n%b' "$RANGE" -- .)
+            if printf '%s\n' "$LOG" | grep -qE '^BREAKING[ -]CHANGE:|^[a-z]+(\([^)]*\))?!:'; then
+              RELEASE_TYPE=major
+            elif printf '%s\n' "$LOG" | grep -qE '^feat(\([^)]*\))?:'; then
+              RELEASE_TYPE=minor
+            else
+              RELEASE_TYPE=patch
+            fi
+            echo "Derived a $RELEASE_TYPE release from $COMMITS commit(s)"
+          fi
+          npx commit-and-tag-version --release-as "$RELEASE_TYPE"
+
+      - name: Refuse to republish an existing version
+        id: version
+        working-directory: libs/${{ inputs.library }}
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          echo "name=$NAME"       >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
+            echo "::error::$NAME@$VERSION is already on the registry. If an earlier run published it but did not push its release commit, finish that by hand: set the lib's package.json version to $VERSION, run node scripts/sync-lib-versions.mjs, npm install --package-lock-only, and commit."
+            exit 1
+          fi
+          echo "Publishing $NAME@$VERSION"
+
+      - name: Build
+        run: npm run build --workspace=@tumbaland/${{ inputs.library }}
+
+      # Publishing cannot be undone, and the release commit is only pushed
+      # after it. If the branch moved since checkout, stop now, while stopping
+      # is free.
+      - name: Check the branch has not moved
+        run: |
+          git fetch origin "${{ github.ref_name }}"
+          if [ "$(git rev-parse HEAD)" != "$(git rev-parse FETCH_HEAD)" ]; then
+            echo "::error::${{ github.ref_name }} moved while this run was preparing; nothing was published. Run it again."
+            exit 1
+          fi
+
+      - name: Publish
+        working-directory: libs/${{ inputs.library }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::error::NPM_TOKEN is not set"
+            exit 1
+          fi
+          npm publish --access public
+
+      # A fresh publish is not immediately resolvable: registry metadata can lag
+      # by seconds, and `npm ci` above cached this lib's metadata from before
+      # the publish. Re-pinning consumers any earlier fails with ETARGET — after
+      # the version is already out, which a re-run cannot repeat.
+      - name: Wait for the registry to serve the new version
+        env:
+          NAME: ${{ steps.version.outputs.name }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          for attempt in $(seq 1 30); do
+            if npm view "$NAME@$VERSION" version --prefer-online >/dev/null 2>&1; then
+              echo "$NAME@$VERSION is resolvable"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::$NAME@$VERSION is published but not yet resolvable; re-pin consumers by hand"
+          exit 1
+
+      # Consumers pin the lib exactly, so every one of them has to move before a
+      # service image can pick the new version up. Leaving this out is the
+      # failure sync-lib-versions exists to prevent: Docker restores a cached
+      # install of the old lib and compiles fresh source against it.
+      - name: Re-pin consumers
+        run: node scripts/sync-lib-versions.mjs
+
+      - name: Refresh the lockfile
+        run: npm install --package-lock-only --ignore-scripts --prefer-online
+
+      - name: Commit the bump
+        env:
+          NAME: ${{ steps.version.outputs.name }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git config user.name "Tumbabot"
+          git config user.email "bot@tumbaland.eu"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Nothing to commit — consumers were already pinned."
+            exit 0
+          fi
+          git commit -m "chore(release): $NAME $VERSION"
+          # Something can still land during the minutes publishing takes. The
+          # version is already on npm by now, so replay the release commit —
+          # versions and the lockfile only — on top rather than lose it.
+          if ! git push origin HEAD:${{ github.ref_name }}; then
+            git pull --rebase origin "${{ github.ref_name }}"
+            git push origin HEAD:${{ github.ref_name }}
+          fi
+
+      - name: Summary
+        env:
+          NAME: ${{ steps.version.outputs.name }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          {
+            echo "### Published \`$NAME@$VERSION\`"
+            echo ""
+            echo "- <https://www.npmjs.com/package/$NAME/v/$VERSION>"
+            echo "- Consumers re-pinned; images built after this pick it up."
+          } >> "$GITHUB_STEP_SUMMARY"

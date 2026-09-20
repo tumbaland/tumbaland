@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 
-vi.mock('@tumbaland/components', () => ({
+vi.mock('@tumbaland/frontend-core', () => ({
   useTenantFilter: () => 'g1'
 }));
 

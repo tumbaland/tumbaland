@@ -15,8 +15,6 @@
     "baseUrl": ".",
      "ignoreDeprecations": "6.0",
     "paths": {
-      "@tumbaland/components": ["../../../libs/components/src/index.ts"],
-      "@tumbaland/components/*": ["../../../libs/components/src/*"]
     },
     "strict": true,
     "noUnusedLocals": true,

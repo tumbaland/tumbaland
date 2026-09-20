@@ -10,7 +10,7 @@ import {
   Alert
 } from '@mui/material';
 import { Album } from '../types';
-import { gradient } from '@tumbaland/components';
+import { gradient } from '@tumbaland/frontend-core';
 
 interface EditAlbumDialogProps {
   open: boolean;

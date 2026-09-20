@@ -22,9 +22,9 @@ const sendBatch = async () => {
     const response = await fetch(config.elkUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(batchToSend),
+      body: JSON.stringify(batchToSend)
     });
 
     if (!response.ok) {
@@ -43,7 +43,7 @@ const sendBatch = async () => {
     try {
       console.warn('Failed to send log batch, dropping logs:', error);
       if (config.isDevelopment) {
-        batchToSend.forEach(log => {
+        batchToSend.forEach((log) => {
           console.warn('📝 [DROPPED LOG]:', JSON.stringify(log));
         });
       }

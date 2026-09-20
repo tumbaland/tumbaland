@@ -3,7 +3,7 @@ import { Box, Typography, Button, IconButton } from '@mui/material';
 import { CloudUpload as CloudUploadIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { Album } from '../types';
 import { formatBytes } from '../utils/formatBytes';
-import { gradient } from '@tumbaland/components';
+import { gradient } from '@tumbaland/frontend-core';
 
 interface AlbumHeaderProps {
   album: Album;

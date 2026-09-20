@@ -22,7 +22,7 @@ import {
   Delete as DeleteIcon,
   PhotoLibrary as PhotoLibraryIcon
 } from '@mui/icons-material';
-import { gradient, UsageMeter } from '@tumbaland/components';
+import { gradient, UsageMeter } from '@tumbaland/frontend-core';
 import { photoService } from '../services/photoService';
 import { extractPhotoMetadata } from '../utils/exif';
 import { getMyEntitlements } from '../services/entitlementsService';

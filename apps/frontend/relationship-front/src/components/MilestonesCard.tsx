@@ -12,7 +12,7 @@ import {
   useTheme
 } from '@mui/material';
 import { Flag, Celebration } from '@mui/icons-material';
-import { useTenantFilter } from '@tumbaland/components';
+import { useTenantFilter } from '@tumbaland/frontend-core';
 import { useMilestones } from '../hooks/useMilestones';
 import { Milestone } from '../services/statistics';
 

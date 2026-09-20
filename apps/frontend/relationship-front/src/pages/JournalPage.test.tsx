@@ -3,8 +3,8 @@ import { MemoryRouter } from 'react-router';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 
-vi.mock('@tumbaland/components', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@tumbaland/components')>();
+vi.mock('@tumbaland/frontend-core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tumbaland/frontend-core')>();
   return { ...actual, useTenantFilter: () => 'g1' };
 });
 

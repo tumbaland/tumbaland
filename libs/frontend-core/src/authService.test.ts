@@ -94,9 +94,7 @@ describe('createAuthService', () => {
 
       authService.redirectToLogin();
 
-      expect(window.location.href).toBe(
-        'https://login.example?redirect_uri=https%3A%2F%2Fapp.example%2Fcurrent-page'
-      );
+      expect(window.location.href).toBe('https://login.example?redirect_uri=https%3A%2F%2Fapp.example%2Fcurrent-page');
       Object.defineProperty(window, 'location', { writable: true, value: originalLocation });
     });
   });
@@ -289,9 +287,7 @@ describe('createAppAuthService', () => {
 
     authService.redirectToLogin('https://app.example/page');
 
-    expect(window.location.href).toBe(
-      'https://login.example?redirect_uri=https%3A%2F%2Fapp.example%2Fpage'
-    );
+    expect(window.location.href).toBe('https://login.example?redirect_uri=https%3A%2F%2Fapp.example%2Fpage');
     Object.defineProperty(window, 'location', { writable: true, value: originalLocation });
   });
 });
@@ -398,7 +394,13 @@ describe('checkAuth inside the shell', () => {
     const first = authService.checkAuth();
     const second = authService.checkAuth();
     expect(postToShell).toHaveBeenCalledTimes(1);
-    shellReplies({ source: 'tumbaland-shell', type: 'shell:auth', id: lastRequest().message.id, authenticated: true, user });
+    shellReplies({
+      source: 'tumbaland-shell',
+      type: 'shell:auth',
+      id: lastRequest().message.id,
+      authenticated: true,
+      user
+    });
 
     expect(await first).toBe(await second);
   });
@@ -414,7 +416,13 @@ describe('checkAuth inside the shell', () => {
 
     const fresh = authService.checkAuth();
     expect(postToShell).toHaveBeenCalledTimes(2);
-    shellReplies({ source: 'tumbaland-shell', type: 'shell:auth', id: lastRequest().message.id, authenticated: false, user: null });
+    shellReplies({
+      source: 'tumbaland-shell',
+      type: 'shell:auth',
+      id: lastRequest().message.id,
+      authenticated: false,
+      user: null
+    });
     await expect(fresh).resolves.toEqual({ authenticated: false, user: null });
   });
 });

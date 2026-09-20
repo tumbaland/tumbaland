@@ -3,7 +3,7 @@ import SavingsIcon from '@mui/icons-material/Savings';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import TuneIcon from '@mui/icons-material/Tune';
-import { AuthHeaderNavigationItem } from '@tumbaland/components';
+import { AuthHeaderNavigationItem } from '@tumbaland/frontend-core';
 
 export const navigationItems: AuthHeaderNavigationItem[] = [
   {

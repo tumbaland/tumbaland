@@ -19,7 +19,7 @@ import { CollageCreateModal } from '../components/collage/CollageCreateModal';
 import { CollageEditModal } from '../components/collage/CollageEditModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import CollageCard from '../components/collage/CollageCard';
-import { gradient } from '@tumbaland/components';
+import { gradient } from '@tumbaland/frontend-core';
 import { appPath } from '../appBase';
 
 const CollageListPage: React.FC = () => {

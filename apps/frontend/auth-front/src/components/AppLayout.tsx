@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { AppLayout as SharedAppLayout } from '@tumbaland/components';
+import { AppLayout as SharedAppLayout } from '@tumbaland/frontend-core';
 
 /**
  * Sign-in is one centred card, so it caps narrower than the modules do and

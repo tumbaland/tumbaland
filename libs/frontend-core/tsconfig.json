@@ -9,7 +9,7 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "ignoreDeprecations": "6.0",
     "resolveJsonModule": true,
     "isolatedModules": true,
@@ -17,7 +17,8 @@
     "types": ["node", "vitest/globals"],
     "declaration": true,
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    "jsx": "react-jsx"
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]

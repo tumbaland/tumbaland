@@ -2,7 +2,7 @@ import { Box, Button, Typography } from '@mui/material';
 import LockIcon from '@mui/icons-material/Lock';
 import GroupOffIcon from '@mui/icons-material/GroupOff';
 import DownloadIcon from '@mui/icons-material/Download';
-import { brand, ink } from '@tumbaland/components';
+import { brand, ink } from '@tumbaland/frontend-core';
 import type { DocumentKey } from './DocumentDialog';
 
 interface Assurance {

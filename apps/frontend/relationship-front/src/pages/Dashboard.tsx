@@ -13,7 +13,7 @@ import WeeklyHeatmap from '../components/WeeklyHeatmap';
 import CumulativeTimeline from '../components/CumulativeTimeline';
 import DashboardCustomizeDialog from '../components/DashboardCustomizeDialog';
 import { useDashboardSettings } from '../hooks/useDashboardSettings';
-import { useTenantFilter } from '@tumbaland/components';
+import { useTenantFilter } from '@tumbaland/frontend-core';
 
 const Dashboard: React.FC = () => {
   const tenantGroupId = useTenantFilter();

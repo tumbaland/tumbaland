@@ -18,7 +18,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import PlaceIcon from '@mui/icons-material/Place';
 import TuneIcon from '@mui/icons-material/Tune';
 import { useSearchParams } from 'react-router';
-import { useTenantFilter } from '@tumbaland/components';
+import { useTenantFilter } from '@tumbaland/frontend-core';
 import { logger } from '@tumbaland/frontend-core';
 import { ActivityType, Day, DaysResponse } from '../services/types';
 import { getDays } from '../services/days';

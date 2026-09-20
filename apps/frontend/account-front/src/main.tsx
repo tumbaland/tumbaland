@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { AppErrorBoundary } from '@tumbaland/components';
+import { AppErrorBoundary } from '@tumbaland/frontend-core';
 import App from './App';
 import { ConfigProvider } from './config/ConfigProvider';
 

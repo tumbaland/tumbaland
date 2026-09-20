@@ -20,7 +20,7 @@ import {
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { CollageInput } from '../../types/collage';
 import { useAlbums } from '../../hooks/useAlbums';
-import { gradient, useTenantFilter } from '@tumbaland/components';
+import { gradient, useTenantFilter } from '@tumbaland/frontend-core';
 import { DEFAULT_BACKGROUND, DEFAULT_FRAME_COLOR } from './collageDoc';
 
 interface CollageCreateModalProps {

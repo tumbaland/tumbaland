@@ -5,8 +5,8 @@ import { vi } from 'vitest';
 
 // Only ProtectedRoute is stubbed: the module also backs ConfigProvider, which
 // authService pulls in transitively.
-vi.mock('@tumbaland/components', async () => {
-  const actual = await vi.importActual<typeof import('@tumbaland/components')>('@tumbaland/components');
+vi.mock('@tumbaland/frontend-core', async () => {
+  const actual = await vi.importActual<typeof import('@tumbaland/frontend-core')>('@tumbaland/frontend-core');
   return { ...actual, ProtectedRoute: ({ children }: { children: ReactNode }) => <>{children}</> };
 });
 vi.mock('../pages/PaymentsPage', () => ({ default: () => <div>payments page</div> }));

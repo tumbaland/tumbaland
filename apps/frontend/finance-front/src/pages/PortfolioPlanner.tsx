@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Box, Typography, CircularProgress, Alert, AlertTitle, Button, Tabs, Tab } from '@mui/material';
-import { useTenantFilter } from '@tumbaland/components';
+import { useTenantFilter } from '@tumbaland/frontend-core';
 import { useHoldings } from '../hooks/useHoldings';
 import { useTrackedTickers } from '../hooks/useTrackedTicker';
 import { usePersistedState } from '../hooks/usePersistedState';

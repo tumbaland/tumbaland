@@ -15,8 +15,8 @@ import { vi } from 'vitest';
  */
 vi.setConfig({ testTimeout: 20_000, hookTimeout: 20_000 });
 
-vi.mock('@tumbaland/components', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@tumbaland/components')>();
+vi.mock('@tumbaland/frontend-core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tumbaland/frontend-core')>();
   return { ...actual, useTenantFilter: () => undefined };
 });
 

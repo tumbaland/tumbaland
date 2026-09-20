@@ -1,5 +1,5 @@
 import { Box, Typography } from '@mui/material';
-import { brand, ink } from '@tumbaland/components';
+import { brand, ink } from '@tumbaland/frontend-core';
 
 interface SectionHeadingProps {
   title: string;

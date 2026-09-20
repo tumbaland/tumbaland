@@ -65,7 +65,7 @@ export function createPlansService(config: PlansServiceConfig) {
 
       // A plan without resolved limits cannot be rendered honestly — every line
       // on its card is a limit — so drop it rather than draw a card with holes.
-      return plans.filter(plan => Boolean(plan?.effectiveLimits?.meters));
+      return plans.filter((plan) => Boolean(plan?.effectiveLimits?.meters));
     }
   };
 }

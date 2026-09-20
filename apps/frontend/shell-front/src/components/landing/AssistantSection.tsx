@@ -6,7 +6,7 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import AlbumIcon from '@mui/icons-material/PhotoAlbum';
 import { SectionHeading } from './SectionHeading';
-import { brand, glass, ink } from '@tumbaland/components';
+import { brand, glass, ink } from '@tumbaland/frontend-core';
 
 /**
  * How connecting actually works, with the one thing nobody can guess.

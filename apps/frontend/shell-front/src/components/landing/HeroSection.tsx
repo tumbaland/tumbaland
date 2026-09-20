@@ -1,6 +1,6 @@
 import { Box, Button, Typography } from '@mui/material';
 import GoogleIcon from '@mui/icons-material/Google';
-import { brand, brandButton, glass, gradient, ink } from '@tumbaland/components';
+import { brand, brandButton, glass, gradient, ink } from '@tumbaland/frontend-core';
 
 /**
  * The first screen, and the whole pitch.

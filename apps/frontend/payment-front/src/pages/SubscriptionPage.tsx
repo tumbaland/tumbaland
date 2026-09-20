@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Box, Typography, Button, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Paper, Chip, Avatar, Divider } from '@mui/material';
 import { paymentApi } from '../services/paymentApi';
 import { Subscription } from '../types';
-import { Loader } from '@tumbaland/components';
+import { Loader } from '@tumbaland/frontend-core';
 import { Subscriptions, CreditCard, Event, Cancel, Refresh } from '@mui/icons-material';
 
 const SubscriptionPage: React.FC = () => {

@@ -26,7 +26,14 @@ afterAll(() => {
 describe('getMyEntitlements', () => {
   it('reads the caller"s plan, limits and live usage', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
-      jsonResponse({ success: true, email: 'u@example.com', planCode: 'personal', status: 'active', limits, usage: { storageBytes: 512 } })
+      jsonResponse({
+        success: true,
+        email: 'u@example.com',
+        planCode: 'personal',
+        status: 'active',
+        limits,
+        usage: { storageBytes: 512 }
+      })
     );
 
     const result = await service.getMyEntitlements();

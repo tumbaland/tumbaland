@@ -25,11 +25,7 @@ export const setUser = (
   // Could store in localStorage for persistence if needed
 };
 
-export const setTag = (
-  key: string,
-  value: string,
-  options: { isDevelopment?: boolean } = {}
-) => {
+export const setTag = (key: string, value: string, options: { isDevelopment?: boolean } = {}) => {
   const config = { ...getMonitoringConfig(), ...options };
 
   if (config.isDevelopment) {
@@ -45,11 +41,7 @@ export const setTag = (
 };
 
 // Performance monitoring utilities (local only)
-export const startTransaction = (
-  name: string,
-  op: string,
-  options: { isDevelopment?: boolean } = {}
-) => {
+export const startTransaction = (name: string, op: string, options: { isDevelopment?: boolean } = {}) => {
   const config = { ...getMonitoringConfig(), ...options };
 
   const startTime = Date.now();

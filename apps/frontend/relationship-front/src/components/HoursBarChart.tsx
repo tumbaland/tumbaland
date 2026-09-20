@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useTenantFilter } from '@tumbaland/components';
+import { useTenantFilter } from '@tumbaland/frontend-core';
 import { logger } from '@tumbaland/frontend-core';
 import {
   Box,

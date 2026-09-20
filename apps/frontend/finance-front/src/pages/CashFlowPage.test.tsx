@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 
-vi.mock('@tumbaland/components', async (importOriginal) => {
+vi.mock('@tumbaland/frontend-core', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return { ...actual, useTenantFilter: () => undefined };
 });

@@ -1,6 +1,6 @@
 import { Suspense, useState } from 'react';
 import { useLocation } from 'react-router';
-import { Loader } from '@tumbaland/components';
+import { Loader } from '@tumbaland/frontend-core';
 import { getAppByRoute } from '../config/apps';
 import { forgetRemote, remoteComponent } from '../remotes';
 import { RemoteBoundary } from './RemoteBoundary';

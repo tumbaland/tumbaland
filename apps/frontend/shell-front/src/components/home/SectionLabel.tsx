@@ -1,5 +1,5 @@
 import { Typography } from '@mui/material';
-import { ink } from '@tumbaland/components';
+import { ink } from '@tumbaland/frontend-core';
 
 interface SectionLabelProps {
   id?: string;

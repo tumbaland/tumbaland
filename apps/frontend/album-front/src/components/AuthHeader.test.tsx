@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 
 const mockedUseTenant = vi.fn();
-vi.mock('@tumbaland/components', () => ({
+vi.mock('@tumbaland/frontend-core', () => ({
   AuthHeader: (props: any) => (
     <div>
       <div data-testid="is-authenticated">{String(props.isAuthenticated)}</div>

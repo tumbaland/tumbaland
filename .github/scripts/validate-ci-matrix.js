@@ -23,7 +23,7 @@ function listWorkspaceDirs(globPattern) {
 
 const actualWorkspaces = pkg.workspaces.flatMap(listWorkspaceDirs).sort();
 
-// libs/* are filtered individually in ci.yml (libs/core, libs/components,
+// libs/* are filtered individually in ci.yml (libs/backend-core,
 // libs/frontend-core) but only apps/backend/* and apps/frontend/* are meant
 // to appear as their own matrix entries — libs changes fan out via the
 // libs-changed anchor instead of a per-lib matrix job.

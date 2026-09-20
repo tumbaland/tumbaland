@@ -4,7 +4,13 @@ import { isInterceptingConsole } from './config';
 import { initConsoleInterception } from './console';
 
 describe('initConsoleInterception', () => {
-  const original = { error: console.error, warn: console.warn, log: console.log, info: console.info, debug: console.debug };
+  const original = {
+    error: console.error,
+    warn: console.warn,
+    log: console.log,
+    info: console.info,
+    debug: console.debug
+  };
 
   afterEach(() => {
     console.error = original.error;

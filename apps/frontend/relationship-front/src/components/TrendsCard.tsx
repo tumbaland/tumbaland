@@ -18,7 +18,7 @@ import {
   useTheme
 } from '@mui/material';
 import { TrendingUp, TrendingDown, TrendingFlat, FiberNew, DoNotDisturbOn } from '@mui/icons-material';
-import { useTenantFilter } from '@tumbaland/components';
+import { useTenantFilter } from '@tumbaland/frontend-core';
 import { useTrends } from '../hooks/useTrends';
 import { TrendDirection, TypeTrend } from '../services/statistics';
 

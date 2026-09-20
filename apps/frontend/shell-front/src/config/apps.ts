@@ -7,7 +7,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import GroupsIcon from '@mui/icons-material/Groups';
 import type { SvgIconProps } from '@mui/material/SvgIcon';
 import { AppConfig } from './ConfigProvider';
-import { moduleAccent } from '@tumbaland/components';
+import { moduleAccent } from '@tumbaland/frontend-core';
 import { canOfferPurchases } from '../services/platform';
 
 export interface AppConfigItem {

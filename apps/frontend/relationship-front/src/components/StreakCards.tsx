@@ -11,7 +11,7 @@ import {
   useTheme
 } from '@mui/material';
 import { LocalFireDepartment, EmojiEvents, HistoryToggleOff } from '@mui/icons-material';
-import { useTenantFilter } from '@tumbaland/components';
+import { useTenantFilter } from '@tumbaland/frontend-core';
 import { useStreaks } from '../hooks/useStreaks';
 import { TypeCadence } from '../services/statistics';
 import StatCard from './StatCard';

@@ -1,5 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
-import { ProtectedRoute } from '@tumbaland/components';
+import { ProtectedRoute } from '@tumbaland/frontend-core';
 import AppLayout from './components/AppLayout';
 import AppRoutes from './routes';
 import { APP_BASE } from './appBase';

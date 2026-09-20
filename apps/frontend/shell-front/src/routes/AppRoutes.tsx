@@ -1,5 +1,5 @@
 import { Routes, Route } from 'react-router';
-import { Loader } from '@tumbaland/components';
+import { Loader } from '@tumbaland/frontend-core';
 import HomePage from '../pages/HomePage';
 import LandingPage from '../pages/LandingPage';
 import PrivacyPage from '../pages/PrivacyPage';

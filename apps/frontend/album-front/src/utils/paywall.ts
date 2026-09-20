@@ -11,7 +11,7 @@
  * a paywall must not read the same.
  *
  * A copy of finance-front's, deliberately: the two fronts cannot import from
- * each other, and `@tumbaland/components` is presentational — this belongs in
+ * each other, and `@tumbaland/frontend-core` is presentational — this belongs in
  * `<UpgradeDialog>` when that lands, which is when both copies go away.
  */
 

@@ -49,7 +49,7 @@ export default defineConfig(({ mode }) => ({
     alias: {
       '@': resolve(__dirname, './src'),
       ...(mode === 'development' && {
-        '@tumbaland/components': resolve(__dirname, '../../../libs/components/src')
+        '@tumbaland/frontend-core': resolve(__dirname, '../../../libs/frontend-core/src')
       })
     }
   },

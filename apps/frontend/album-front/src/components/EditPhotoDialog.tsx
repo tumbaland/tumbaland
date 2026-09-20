@@ -14,7 +14,7 @@ import {
 import { Close as CloseIcon } from '@mui/icons-material';
 import { Photo, TagCount } from '../types';
 import TagInput from './TagInput';
-import { gradient } from '@tumbaland/components';
+import { gradient } from '@tumbaland/frontend-core';
 
 interface EditPhotoDialogProps {
   open: boolean;

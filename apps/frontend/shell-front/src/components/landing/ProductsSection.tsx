@@ -4,7 +4,7 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import GroupsIcon from '@mui/icons-material/Groups';
 import { SectionHeading } from './SectionHeading';
-import { glassInteractive, ink } from '@tumbaland/components';
+import { glassInteractive, ink } from '@tumbaland/frontend-core';
 
 interface Product {
   key: string;

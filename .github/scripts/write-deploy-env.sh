@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# Writes .env.app, the file every service's compose.yml reads on the Pi.
+#
+# One copy, called by all three deploy paths (release.yml, deploy-all.yml,
+# deploy-single-service.yml). It used to be forty lines of `echo` repeated in
+# each of them, which is how a variable ends up in two of the three: adding one
+# meant remembering all the places, and nothing failed loudly when you did not.
+#
+# Every value arrives as an environment variable — the workflow maps secrets
+# and vars onto these names. Nothing is read from the repository.
+set -euo pipefail
+
+# The names below are the whole contract. A service that needs a new one adds
+# it here and in the `env:` block of each workflow that calls this.
+KEYS=(
+  MONGODB_URI
+  JWT_SECRET
+  API_KEY_ENCRYPTION_SECRET
+  INTERNAL_SERVICE_TOKEN
+  GOOGLE_CLIENT_ID
+  GOOGLE_NATIVE_CLIENT_IDS
+  COOKIE_DOMAIN
+  CORS_ORIGIN
+  ALPHA_VANTAGE_API_KEY
+  GROUP_API_URL
+  GROUP_INTERNAL_URL
+  ALBUM_API_URL
+  AUTH_SERVICE_URL
+  AUTH_FRONT_URL
+  FINANCE_API_URL
+  RELATIONSHIP_FRONT_URL
+  ALBUM_FRONT_URL
+  FINANCE_FRONT_URL
+  RELATIONSHIP_API_URL
+  RELATIONSHIP_INTERNAL_URL
+  MCP_PUBLIC_URL
+  PUBLIC_API_URL
+  PAYMENT_API_URL
+  PAYMENT_INTERNAL_URL
+  STRIPE_SECRET_KEY
+  STRIPE_WEBHOOK_SECRET
+  PAYMENT_FRONT_URL
+  PAYMENT_URL
+  GROUP_FRONT_URL
+  ACCOUNT_FRONT_URL
+  SHELL_FRONT_URL
+  CLOUDFLARE_API_TOKEN
+  FILE_ACCESS_SECRET
+  LOGSTASH_HTTP_URL
+  FILE_SERVICE_URL
+  FILE_SERVICE_API_KEY
+  FILE_SERVICE_HMAC_SECRET
+  FILE_SERVICE_PUBLIC_URL
+)
+
+OUT="${1:-.env.app}"
+: > "$OUT"
+
+missing=()
+for key in "${KEYS[@]}"; do
+  value="${!key-}"
+  # Written even when empty, so compose sees the variable rather than warning
+  # about an unset one — but an empty secret is worth saying out loud, since
+  # the symptom otherwise shows up as a service failing minutes later.
+  [ -n "$value" ] || missing+=("$key")
+  printf '%s=%s\n' "$key" "$value" >> "$OUT"
+done
+
+if [ ${#missing[@]} -gt 0 ]; then
+  echo "::warning::empty in this environment: ${missing[*]}"
+fi
+
+echo "Wrote $OUT with ${#KEYS[@]} variables."

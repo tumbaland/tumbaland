@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { vi } from 'vitest';
 
-vi.mock('@tumbaland/components', () => ({
+vi.mock('@tumbaland/frontend-core', () => ({
   useTenantFilter: () => undefined
 }));
 

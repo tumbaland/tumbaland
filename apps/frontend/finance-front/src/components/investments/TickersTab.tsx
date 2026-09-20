@@ -29,7 +29,7 @@ import {
   ShowChart as ShowChartIcon,
   Sync as SyncIcon
 } from '@mui/icons-material';
-import { UsageMeter } from '@tumbaland/components';
+import { UsageMeter } from '@tumbaland/frontend-core';
 import { TrackedTicker } from '../../services/trackedTickerService';
 import { paywallMessage } from '../../utils/paywall';
 import {

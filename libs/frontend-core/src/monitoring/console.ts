@@ -3,11 +3,7 @@
 import { isInterceptingConsole, MonitoringContext, MonitoringLevel } from './config';
 
 // Type for the capture message function
-type CaptureMessageFn = (
-  message: string,
-  level: MonitoringLevel,
-  context?: MonitoringContext
-) => void;
+type CaptureMessageFn = (message: string, level: MonitoringLevel, context?: MonitoringContext) => void;
 
 type ConsoleMethodName = 'error' | 'warn' | 'log' | 'info' | 'debug';
 type ConsoleMethod = (...args: unknown[]) => void;
@@ -21,10 +17,7 @@ export const initConsoleInterception = (
   if (!captureMessageFn) return;
 
   // Helper function to conditionally intercept console methods
-  const interceptConsole = (
-    methodName: ConsoleMethodName,
-    level: MonitoringLevel
-  ) => {
+  const interceptConsole = (methodName: ConsoleMethodName, level: MonitoringLevel) => {
     if (!captureConsoleLevels.includes(level)) return;
 
     const originalMethod = console[methodName] as ConsoleMethod;
@@ -37,9 +30,7 @@ export const initConsoleInterception = (
 
       // Send to logging API with recursion protection
       try {
-        const message = args.map(arg =>
-          typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
-        ).join(' ');
+        const message = args.map((arg) => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' ');
 
         // Set interception flag to prevent recursion during capture
         window._monitoringInterceptingConsole = true;

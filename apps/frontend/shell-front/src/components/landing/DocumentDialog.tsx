@@ -5,7 +5,7 @@ import { documentProse } from '../DocumentPage';
 import { CONNECT_DOC, ConnectContent } from '../../pages/ConnectPage';
 import { PRIVACY_DOC, PrivacyContent } from '../../pages/PrivacyPage';
 import { TERMS_DOC, TermsContent } from '../../pages/TermsPage';
-import { ink } from '@tumbaland/components';
+import { ink } from '@tumbaland/frontend-core';
 
 /**
  * The connector guide, the privacy policy and the terms, read without leaving

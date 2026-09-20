@@ -18,7 +18,6 @@
     "@module-federation/runtime": "^2.9.0",
     "@mui/icons-material": "^9.4.0",
     "@mui/material": "^9.4.0",
-    "@tumbaland/components": "1.25.0",
     "@tumbaland/frontend-core": "1.14.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

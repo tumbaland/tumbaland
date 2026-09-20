@@ -1,4 +1,4 @@
-import { createConfigProvider } from '@tumbaland/components';
+import { createConfigProvider } from '@tumbaland/frontend-core';
 
 export interface AppConfig {
   FINANCE_API_URL?: string;

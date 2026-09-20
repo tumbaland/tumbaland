@@ -10,7 +10,7 @@ import {
   Share as ShareIcon
 } from '@mui/icons-material';
 import { Photo, Album } from '../../types';
-import { gradient } from '@tumbaland/components';
+import { gradient } from '@tumbaland/frontend-core';
 import { appPath } from '../../appBase';
 
 interface PhotoDetailHeaderProps {

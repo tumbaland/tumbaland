@@ -5,7 +5,7 @@ import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import { APPS, USER_APPS, isRouteActive } from '../config/apps';
-import { brand, ink } from '@tumbaland/components';
+import { brand, ink } from '@tumbaland/frontend-core';
 import { User } from '../types';
 import { AccountMenu } from './AccountMenu';
 

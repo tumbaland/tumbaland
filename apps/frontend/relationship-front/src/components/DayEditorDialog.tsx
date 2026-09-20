@@ -17,7 +17,7 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
-import { useTenantFilter } from '@tumbaland/components';
+import { useTenantFilter } from '@tumbaland/frontend-core';
 import { ApiError, logger } from '@tumbaland/frontend-core';
 import { ActivityLocation, ActivityType, Day, DayEntryInput, Place } from '../services/types';
 import { getActivityTypes } from '../services/activityTypes';

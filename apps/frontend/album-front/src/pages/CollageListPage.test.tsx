@@ -10,8 +10,8 @@ vi.mock('react-router', async (importOriginal) => {
   return { ...actual, useNavigate: () => mockedNavigate };
 });
 
-vi.mock('@tumbaland/components', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@tumbaland/components')>();
+vi.mock('@tumbaland/frontend-core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tumbaland/frontend-core')>();
   return { ...actual, useTenantFilter: () => undefined };
 });
 

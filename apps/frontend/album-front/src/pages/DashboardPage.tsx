@@ -1,5 +1,5 @@
 import React from 'react';
-import { ink, useTenantFilter } from '@tumbaland/components';
+import { ink, useTenantFilter } from '@tumbaland/frontend-core';
 import { Box, Container, Typography, Alert, Button, IconButton, LinearProgress, Tooltip } from '@mui/material';
 import { Refresh as RefreshIcon } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';

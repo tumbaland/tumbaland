@@ -9,7 +9,7 @@ const { createConfigProviderMock } = vi.hoisted(() => ({
   })
 }));
 
-vi.mock('@tumbaland/components', () => ({
+vi.mock('@tumbaland/frontend-core', () => ({
   createConfigProvider: createConfigProviderMock
 }));
 

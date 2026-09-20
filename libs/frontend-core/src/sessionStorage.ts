@@ -15,7 +15,7 @@ import { logger } from './monitoring';
  * cannot miss it.
  */
 
-/** Tenant (personal vs group) context — owned by `useTenant` in @tumbaland/components. */
+/** Tenant (personal vs group) context — owned by `useTenant` in @tumbaland/frontend-core. */
 export const TENANT_STORAGE_KEY = 'selectedTenant';
 
 const SESSION_SCOPED_KEYS = [TENANT_STORAGE_KEY];

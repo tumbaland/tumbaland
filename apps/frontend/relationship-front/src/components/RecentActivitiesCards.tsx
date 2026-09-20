@@ -17,7 +17,7 @@ import {
   alpha
 } from '@mui/material';
 import { ExpandMore, ExpandLess } from '@mui/icons-material';
-import { useTenantFilter } from '@tumbaland/components';
+import { useTenantFilter } from '@tumbaland/frontend-core';
 import { logger } from '@tumbaland/frontend-core';
 import { getRecentActivitiesSummary } from '../services/activities';
 import { ActivityEntry, ActivityType } from '../services/types';

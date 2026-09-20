@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Box, Typography, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Paper, Chip, ChipProps } from '@mui/material';
 import { paymentApi } from '../services/paymentApi';
 import { Subscription } from '../types';
-import { Loader } from '@tumbaland/components';
+import { Loader } from '@tumbaland/frontend-core';
 
 const statusColor: Record<Subscription['status'], ChipProps['color']> = {
   active: 'success',

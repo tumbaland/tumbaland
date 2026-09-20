@@ -10,7 +10,10 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
  */
 
 const METHODS = ['log', 'info', 'debug', 'warn', 'error'] as const;
-const nativeConsole = Object.fromEntries(METHODS.map((m) => [m, console[m]])) as Pick<Console, (typeof METHODS)[number]>;
+const nativeConsole = Object.fromEntries(METHODS.map((m) => [m, console[m]])) as Pick<
+  Console,
+  (typeof METHODS)[number]
+>;
 
 async function loadMonitoring(options: { isDevelopment: boolean }) {
   vi.resetModules();

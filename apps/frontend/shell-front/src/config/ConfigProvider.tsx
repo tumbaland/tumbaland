@@ -1,4 +1,4 @@
-import { createConfigProvider } from '@tumbaland/components';
+import { createConfigProvider } from '@tumbaland/frontend-core';
 import HeartBrokenIcon from '@mui/icons-material/HeartBroken';
 
 export interface AppConfig {

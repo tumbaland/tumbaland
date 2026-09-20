@@ -17,7 +17,7 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import { logger } from '@tumbaland/frontend-core';
 import { Photo, TagCount } from '../types';
 import TagInput, { normalizeTagList } from './TagInput';
-import { gradient } from '@tumbaland/components';
+import { gradient } from '@tumbaland/frontend-core';
 
 /** What to do with a tag that only some of the selected photos carry. */
 type PartialAction = 'keep' | 'add' | 'remove';

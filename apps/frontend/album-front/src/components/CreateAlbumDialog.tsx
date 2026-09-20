@@ -11,7 +11,7 @@ import {
   Alert,
   CircularProgress
 } from '@mui/material';
-import { gradient } from '@tumbaland/components';
+import { gradient } from '@tumbaland/frontend-core';
 
 interface CreateAlbumDialogProps {
   open: boolean;

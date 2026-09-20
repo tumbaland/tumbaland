@@ -66,13 +66,16 @@ if (libVersions.size === 0) {
 const drifted = [];
 
 for (const { path, manifest } of packages) {
-  if (libVersions.has(manifest.name)) {
-    continue; // a lib does not pin itself
-  }
-
   let changed = false;
   for (const field of DEPENDENCY_FIELDS) {
     for (const [lib, version] of libVersions) {
+      // A lib does not pin itself — but it does pin its siblings. Skipping the
+      // whole package when it happened to be a lib is what let
+      // `@tumbaland/components` keep asking for `@tumbaland/frontend-core: "*"`
+      // through every release: it was never examined, so `--check` passed.
+      if (lib === manifest.name) {
+        continue;
+      }
       const current = manifest[field]?.[lib];
       if (current === undefined || current === version) {
         continue;
