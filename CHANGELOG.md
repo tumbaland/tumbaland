@@ -1,4 +1,15 @@
 # Tumbalog
+## [0.0.500](https://github.com/toomastahves/tumbaland/compare/app-v0.0.499...app-v0.0.500) (2026-09-20)
+
+### Features
+
+* improve menu ui ([a8c9fd8](https://github.com/toomastahves/tumbaland/commit/a8c9fd8a0801721e28206e988a1883dbfd3ab9ed))
+* rework home page ([6c10c6f](https://github.com/toomastahves/tumbaland/commit/6c10c6f29434c528897daa86f16e8c4436906c56))
+
+### Chores
+
+* **release:** @tumbaland/frontend-core 1.16.0 ([fb8661f](https://github.com/toomastahves/tumbaland/commit/fb8661fbaa2f339dceef95b26d51d55d4b886028))
+
 ## [0.0.499](https://github.com/toomastahves/tumbaland/compare/app-v0.0.498...app-v0.0.499) (2026-09-20)
 
 ### Bug Fixes
