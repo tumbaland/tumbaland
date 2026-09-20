@@ -472,6 +472,10 @@ jobs:
               sleep 2
             done
             echo "$svc state: ${state:-unknown}"
+            if [ "$state" != "running" ]; then
+              echo "::error::$svc did not reach running state"
+              exit 1
+            fi
             sleep "$GAP_SECONDS"
           done
 
@@ -495,3 +499,32 @@ jobs:
             echo ""
             echo "$SERVICES_JSON" | jq -r '.[] | "- \(.)"'
           } >> "$GITHUB_STEP_SUMMARY"
+
+  # Keep rollback tags bounded without touching `latest`, SHA tags, or tags for
+  # services that were not part of this release. This runs only after the
+  # deployment marker was pushed successfully.
+  retain-image-tags:
+    needs: [changelog, build-plan, deploy]
+    if: >-
+      always() && needs.deploy.result == 'success' &&
+      needs['build-plan'].outputs.services != '[]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+
+      - name: Retain the newest 10 release tags per deployed service
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_RETAIN: '10'
+          SERVICES_JSON: ${{ needs['build-plan'].outputs.services }}
+        run: |
+          for service in $(echo "$SERVICES_JSON" | jq -r '.[]'); do
+            node scripts/cleanup-docker-tags.mjs "$DOCKERHUB_USERNAME" "tumbaland-$service"
+          done
