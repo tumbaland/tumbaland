@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.503](https://github.com/toomastahves/tumbaland/compare/app-v0.0.502...app-v0.0.503) (2026-09-20)
+
+### Bug Fixes
+
+* memory card images ([5108da8](https://github.com/toomastahves/tumbaland/commit/5108da827407f564e2ba7b53ded2635299075c26))
+
 ## [0.0.502](https://github.com/toomastahves/tumbaland/compare/app-v0.0.501...app-v0.0.502) (2026-09-20)
 
 ### Bug Fixes
