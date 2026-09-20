@@ -1,4 +1,21 @@
 # Tumbalog
+## [0.0.495](https://github.com/toomastahves/tumbaland/compare/app-v0.0.494...app-v0.0.495) (2026-09-20)
+
+### Features
+
+* add module federation ([dc4a94f](https://github.com/toomastahves/tumbaland/commit/dc4a94f8d3392090b91d7e0105ae79f4590c95d7))
+* improve pipeline performance ([eaa14b9](https://github.com/toomastahves/tumbaland/commit/eaa14b982a3fb2f9e09a95c0e33e8367adfdee9d))
+* improve pipelines, remove components library ([8af9135](https://github.com/toomastahves/tumbaland/commit/8af9135354911d3405c0e695d381cb2e0a35f8d2))
+
+### Bug Fixes
+
+* failing tests ([0f57afd](https://github.com/toomastahves/tumbaland/commit/0f57afd0e0eb32a82743938fb7b9f3ce87b63bbe))
+
+### Chores
+
+* **release:** @tumbaland/backend-core 1.45.0 ([938be23](https://github.com/toomastahves/tumbaland/commit/938be23fd3011cf955556b80a5ce42a365d509c0))
+* **release:** @tumbaland/frontend-core 1.15.0 ([aa6739c](https://github.com/toomastahves/tumbaland/commit/aa6739cf084c419d8dcaaacaa09d3ba2266ac090))
+
 ## [0.0.494](https://github.com/toomastahves/tumbaland/compare/app-v0.0.493...app-v0.0.494) (2026-09-19)
 
 ### Features
