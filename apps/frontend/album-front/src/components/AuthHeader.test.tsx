@@ -3,7 +3,12 @@ import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 
 const mockedUseTenant = vi.fn();
-vi.mock('@tumbaland/frontend-core', () => ({
+// Spread the real module: this file only stands in for the header and the
+// tenant hook, but @tumbaland/frontend-core also carries `logger`, which the
+// component calls when an auth check fails. A full replacement dropped it, and
+// the resulting rejection failed the run while every test still reported green.
+vi.mock('@tumbaland/frontend-core', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@tumbaland/frontend-core')>()),
   AuthHeader: (props: any) => (
     <div>
       <div data-testid="is-authenticated">{String(props.isAuthenticated)}</div>

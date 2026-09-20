@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AuthHeader as SharedAuthHeader, TenantSelector, useTenant } from '@tumbaland/frontend-core';
-import { logger } from '@tumbaland/frontend-core';
+import { AuthHeader as SharedAuthHeader, TenantSelector, logger, useTenant } from '@tumbaland/frontend-core';
 import { authService } from '../services/authService';
 import { User } from '../types';
 import { navigationItems } from '../config/navigation';

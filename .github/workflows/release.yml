@@ -52,6 +52,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Everything up to the first publish reads one commit: the one this run was
+  # dispatched from. `plan` used to take the branch tip instead, so a push
+  # landing mid-run could leave the plan describing code the verify matrix never
+  # tested. From `changelog` onwards the jobs do take the branch tip, because by
+  # then the library publishes have committed to it.
   plan:
     runs-on: ubuntu-latest
     outputs:
@@ -63,7 +68,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.ref_name }}
 
       - uses: actions/setup-node@v4
         with:
