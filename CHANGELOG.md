@@ -1,4 +1,12 @@
 # Tumbalog
+## [0.0.497](https://github.com/toomastahves/tumbaland/compare/app-v0.0.496...app-v0.0.497) (2026-09-20)
+
+### Features
+
+* add retention of last 10 tags ([5033a4c](https://github.com/toomastahves/tumbaland/commit/5033a4ca57cb1b4e1fd9e3b58e3c22fd7a2ccd4d))
+* allow config.json cors for all fronts ([2e2ceb7](https://github.com/toomastahves/tumbaland/commit/2e2ceb782fb125157a7a8db27649c66182daf3da))
+* implement tags on docker images ([9739a2d](https://github.com/toomastahves/tumbaland/commit/9739a2dc0870ba681ce90246acb88d10f0788e55))
+
 ## [0.0.496](https://github.com/toomastahves/tumbaland/compare/app-v0.0.495...app-v0.0.496) (2026-09-20)
 
 ### Features
