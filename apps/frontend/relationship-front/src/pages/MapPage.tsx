@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Box, Chip, CircularProgress, MenuItem, TextField, Typography } from '@mui/material';
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import { ensureLeafletStyles } from '../components/map/leafletStyles';
 import { useTenantFilter } from '@tumbaland/frontend-core';
 import { logger } from '@tumbaland/frontend-core';
 import { ActivityType, Place } from '../services/types';
@@ -10,6 +10,9 @@ import { getPlaces } from '../services/places';
 import { getActivityTypes } from '../services/activityTypes';
 import { PLACE_ZOOM, TILE_ATTRIBUTION, TILE_URL, WORLD_CENTER, WORLD_ZOOM, pinIcon } from '../components/map/mapConfig';
 import PlacePopup from '../components/map/PlacePopup';
+
+// The stylesheet has to reach the shell's document too; see leafletStyles.
+ensureLeafletStyles();
 
 /**
  * Keeps the viewport on the current set of pins as filters change.

@@ -1,23 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Autocomplete,
-  Box,
-  Button,
-  CircularProgress,
-  IconButton,
-  TextField,
-  Tooltip,
-  Typography
-} from '@mui/material';
+import { Autocomplete, Box, Button, CircularProgress, IconButton, TextField, Tooltip, Typography } from '@mui/material';
 import PlaceIcon from '@mui/icons-material/Place';
 import ClearIcon from '@mui/icons-material/Clear';
 import HistoryIcon from '@mui/icons-material/History';
 import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet';
 import type { LeafletMouseEvent, Marker as LeafletMarker } from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import { ensureLeafletStyles } from './leafletStyles';
 import { ActivityLocation, Place } from '../../services/types';
 import { GeocodeResult, searchPlaces } from '../../services/geocoding';
 import { PLACE_ZOOM, TILE_ATTRIBUTION, TILE_URL, WORLD_CENTER, WORLD_ZOOM, pinIcon } from './mapConfig';
+
+// The stylesheet has to reach the shell's document too; see leafletStyles.
+ensureLeafletStyles();
 
 /** An option in the dropdown: a place already visited, or a geocoder hit. */
 interface PickerOption {
