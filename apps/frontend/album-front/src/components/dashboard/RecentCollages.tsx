@@ -5,6 +5,7 @@ import { GridOn as GridOnIcon } from '@mui/icons-material';
 import { useCollageList } from '../../hooks/useCollage';
 import { CollagePreview } from '../collage/CollageCard';
 import { Collage } from '../../types/collage';
+import { appPath } from '../../appBase';
 
 /**
  * Four is what fits one row on a laptop and two on a phone without the tiles
@@ -46,7 +47,7 @@ const RecentCollages: React.FC = () => {
           Recent collages
         </Typography>
         <Box sx={{ flex: 1 }} />
-        <Button size="small" onClick={() => navigate('/collages')} sx={{ flexShrink: 0 }}>
+        <Button size="small" onClick={() => navigate(appPath('/collages'))} sx={{ flexShrink: 0 }}>
           See all
         </Button>
       </Stack>
@@ -68,7 +69,7 @@ const RecentCollages: React.FC = () => {
             // `?mode=view` — the list page opens a collage this way too. Without it
             // the route mounts the full editor, which is not what tapping a
             // thumbnail on a dashboard asks for.
-            onClick={() => navigate(`/collages/${collage._id}?mode=view`)}
+            onClick={() => navigate(appPath(`/collages/${collage._id}?mode=view`))}
             aria-label={`${collage.title}, edited ${formatEdited(collage.updatedAt)}`}
             sx={{
               p: 0,

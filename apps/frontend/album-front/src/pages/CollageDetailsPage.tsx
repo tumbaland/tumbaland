@@ -14,6 +14,7 @@ import CollagePhotoTray, { AlbumPhoto } from '../components/collage/CollagePhoto
 import CollagePhotoDialog from '../components/collage/CollagePhotoDialog';
 import CollageTextDialog from '../components/collage/CollageTextDialog';
 import { downloadBlob, exportCollageToPng } from '../components/collage/exportCollage';
+import { appPath } from '../appBase';
 
 /**
  * Longest edge of a newly placed photo, as a fraction of the canvas' shorter
@@ -136,7 +137,7 @@ const CollageDetailsPage: React.FC = () => {
 
   const handleBack = useCallback(() => {
     if (editor.isDirty && !window.confirm('You have unsaved changes. Leave anyway?')) return;
-    navigate('/collages');
+    navigate(appPath('/collages'));
   }, [editor.isDirty, navigate]);
 
   const setMode = useCallback(
@@ -237,7 +238,7 @@ const CollageDetailsPage: React.FC = () => {
         }}
       >
         <Typography color="error">{collageQuery.error ? 'Failed to load collage' : 'Collage not found'}</Typography>
-        <IconButton onClick={() => navigate('/collages')}>
+        <IconButton onClick={() => navigate(appPath('/collages'))}>
           <ArrowBackIcon />
         </IconButton>
       </Box>

@@ -9,6 +9,7 @@ import PortfolioValueChart from '../components/PortfolioValueChart';
 import AllocationCard from '../components/AllocationCard';
 import CashflowCard from '../components/CashflowCard';
 import { formatCurrency, formatPct } from '../utils/numberUtils';
+import { appPath } from '../appBase';
 
 const Dashboard: React.FC = () => {
   const tenantGroupId = useTenantFilter();
@@ -130,7 +131,7 @@ const Dashboard: React.FC = () => {
                       with the words the title no longer fit on its line. */}
                   <Button
                     component={Link}
-                    to="/investments"
+                    to={appPath('/investments')}
                     size="small"
                     aria-label="View holdings"
                     endIcon={<ArrowForward />}
@@ -172,7 +173,7 @@ const Dashboard: React.FC = () => {
             <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
               Add your first monthly check-in to see your net worth here.
             </Typography>
-            <Button component={Link} to="/net-worth" variant="contained">
+            <Button component={Link} to={appPath('/net-worth')} variant="contained">
               Go to Net Worth
             </Button>
           </CardContent>

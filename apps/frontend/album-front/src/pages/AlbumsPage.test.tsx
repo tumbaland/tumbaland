@@ -96,7 +96,7 @@ it('navigates to the album detail page when a card is clicked', async () => {
   renderPage();
   await userEvent.click(screen.getByText('Trip'));
 
-  expect(mockedNavigate).toHaveBeenCalledWith('/albums/a1');
+  expect(mockedNavigate).toHaveBeenCalledWith('/album/albums/a1');
 });
 
 it('opens the create dialog and creates an album', async () => {

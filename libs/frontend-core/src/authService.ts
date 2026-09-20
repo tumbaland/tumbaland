@@ -249,6 +249,22 @@ export function createAuthService(config: AuthServiceConfig) {
     async isAuthenticated(): Promise<boolean> {
       const result = await this.checkAuth();
       return result.authenticated;
+    },
+
+    /**
+     * The cached answer, without a round trip, or null when there is none.
+     *
+     * For the one caller that has to decide what to paint *before* it can
+     * await anything: a gate that starts every mount in a "checking" state
+     * flashes a spinner even when the answer has been sitting in memory for
+     * seconds. Callers that can wait use `checkAuth`, which this never
+     * replaces — it only answers "do we already know?".
+     */
+    getCachedAuth(): AuthResponse | null {
+      if (authCache && Date.now() - authCacheTime < AUTH_CACHE_TTL) {
+        return authCache;
+      }
+      return null;
     }
   };
 }

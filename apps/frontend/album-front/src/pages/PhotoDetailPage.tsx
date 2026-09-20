@@ -13,6 +13,7 @@ import EditPhotoDialog from '../components/EditPhotoDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import PhotoDetailHeader from '../components/photo-detail/PhotoDetailHeader';
 import PhotoBasicInfo from '../components/photo-detail/PhotoBasicInfo';
+import { appPath } from '../appBase';
 
 const PhotoDetailPage: React.FC = () => {
   const { albumId, photoId } = useParams<{ albumId: string; photoId: string }>();
@@ -36,7 +37,7 @@ const PhotoDetailPage: React.FC = () => {
     currentPhotoIndex >= 0 && currentPhotoIndex < albumPhotos.length - 1 ? albumPhotos[currentPhotoIndex + 1] : null;
 
   const goToPhoto = (targetPhotoId: string) => {
-    navigate(`/albums/${albumId}/photos/${targetPhotoId}`);
+    navigate(appPath(`/albums/${albumId}/photos/${targetPhotoId}`));
   };
   const handlePreviousPhoto = () => previousPhoto && goToPhoto(previousPhoto._id);
   const handleNextPhoto = () => nextPhoto && goToPhoto(nextPhoto._id);
@@ -48,10 +49,10 @@ const PhotoDetailPage: React.FC = () => {
 
       if (event.key === 'ArrowLeft' && previousPhoto) {
         event.preventDefault();
-        navigate(`/albums/${albumId}/photos/${previousPhoto._id}`);
+        navigate(appPath(`/albums/${albumId}/photos/${previousPhoto._id}`));
       } else if (event.key === 'ArrowRight' && nextPhoto) {
         event.preventDefault();
-        navigate(`/albums/${albumId}/photos/${nextPhoto._id}`);
+        navigate(appPath(`/albums/${albumId}/photos/${nextPhoto._id}`));
       }
     };
 
@@ -90,7 +91,7 @@ const PhotoDetailPage: React.FC = () => {
     setDeleting(true);
     try {
       await photoService.deletePhoto(photo._id);
-      navigate(`/albums/${albumId}`);
+      navigate(appPath(`/albums/${albumId}`));
     } catch (err) {
       alert('Failed to delete photo');
     } finally {
@@ -163,7 +164,7 @@ const PhotoDetailPage: React.FC = () => {
     return (
       <Container maxWidth="xl" sx={{ py: 4 }}>
         <Alert severity="error">{error || 'Photo not found'}</Alert>
-        <Button onClick={() => navigate(`/albums/${albumId}`)} sx={{ mt: 2 }}>
+        <Button onClick={() => navigate(appPath(`/albums/${albumId}`))} sx={{ mt: 2 }}>
           Back to Album
         </Button>
       </Container>

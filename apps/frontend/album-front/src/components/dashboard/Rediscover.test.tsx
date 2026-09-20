@@ -37,7 +37,7 @@ const renderCard = () =>
     <MemoryRouter initialEntries={['/dashboard']}>
       <Routes>
         <Route path="/dashboard" element={<Rediscover />} />
-        <Route path="/albums/:albumId/photos/:photoId" element={<div>photo page</div>} />
+        <Route path="/album/albums/:albumId/photos/:photoId" element={<div>photo page</div>} />
       </Routes>
     </MemoryRouter>
   );

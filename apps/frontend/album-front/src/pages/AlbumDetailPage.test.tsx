@@ -106,7 +106,7 @@ it('shows an error and a back link when the album fails to load', async () => {
 
   expect(await screen.findByText('down')).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: /back to albums/i }));
-  expect(mockedNavigate).toHaveBeenCalledWith('/albums');
+  expect(mockedNavigate).toHaveBeenCalledWith('/album/albums');
 });
 
 it('renders the album header and photos once loaded', async () => {
@@ -325,7 +325,7 @@ it('navigates to the photo detail page from the card menu', async () => {
   await openPhotoMenu();
   await userEvent.click(screen.getByText('View Details'));
 
-  expect(mockedNavigate).toHaveBeenCalledWith('/albums/album-1/photos/p1');
+  expect(mockedNavigate).toHaveBeenCalledWith('/album/albums/album-1/photos/p1');
 });
 
 it('changes page and page size via the pagination controls', async () => {

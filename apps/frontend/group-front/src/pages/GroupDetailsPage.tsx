@@ -14,6 +14,7 @@ import MemberMenu from '../components/group-details/MemberMenu';
 import AddMemberDialog from '../components/group-details/AddMemberDialog';
 import ChangeRoleDialog from '../components/group-details/ChangeRoleDialog';
 import EditGroupDialog from '../components/groups/EditGroupDialog';
+import { APP_BASE } from '../appBase';
 
 const GroupDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -151,7 +152,7 @@ const GroupDetailsPage: React.FC = () => {
         groupName={group.name}
         groupId={group._id}
         memberCount={group.members?.length ?? 0}
-        onBack={() => navigate('/')}
+        onBack={() => navigate(APP_BASE)}
         onEdit={() => setIsEditGroupOpen(true)}
         currentUserRole={currentUserRole}
       />

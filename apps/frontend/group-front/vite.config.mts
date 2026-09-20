@@ -1,10 +1,34 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { federation } from '@module-federation/vite';
+import {
+  TUMBALAND_FEDERATION_SHARED,
+  TUMBALAND_REMOTE_ENTRY,
+  TUMBALAND_REMOTE_MODULE
+} from '@tumbaland/frontend-core/federation';
 import { resolve } from 'path';
 
 export default defineConfig(({ mode }) => ({
-  plugins: [react()],
-  server: { port: 3006 },
+  plugins: [
+    react(),
+    // Besides running standalone, group-front is a module-federation remote:
+    // shell-front loads `./App` from this origin's remoteEntry.js. Vitest has
+    // no use for the federation build, so it is left out there.
+    ...(process.env.VITEST
+      ? []
+      : [
+          federation({
+            name: 'group',
+            filename: TUMBALAND_REMOTE_ENTRY,
+            exposes: { [TUMBALAND_REMOTE_MODULE]: './src/federation/RemoteApp.tsx' },
+            shared: TUMBALAND_FEDERATION_SHARED,
+            dts: false
+          })
+        ])
+  ],
+  server: { port: 3006,
+    // Absolute asset URLs in dev, so the shell's page fetches them from here.
+    origin: 'http://localhost:3006' },
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),

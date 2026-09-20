@@ -4,6 +4,7 @@ import { AccountBalanceWallet, ArrowForward } from '@mui/icons-material';
 import { Link } from 'react-router';
 import { DashboardData } from '../services/dashboardService';
 import { formatCurrency, formatPct, formatPeriod } from '../utils/numberUtils';
+import { appPath } from '../appBase';
 
 interface CashflowCardProps {
   cashflow: NonNullable<DashboardData['cashflow']>;
@@ -44,7 +45,7 @@ const CashflowCard: React.FC<CashflowCardProps> = ({ cashflow, currency = 'EUR' 
           <Typography variant="h6" sx={{ fontWeight: 600, flexGrow: 1, fontSize: { xs: '1.05rem', md: '1.25rem' } }}>
             Cash Flow
           </Typography>
-          <Button component={Link} to="/cash-flow" size="small" endIcon={<ArrowForward />}>
+          <Button component={Link} to={appPath('/cash-flow')} size="small" endIcon={<ArrowForward />}>
             Details
           </Button>
         </Box>

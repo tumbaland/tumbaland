@@ -20,6 +20,14 @@ export interface CreateConfigProviderOptions<TConfig extends { PUBLIC_API_URL?: 
   errorPageProps?: ErrorPageProps;
   /** Console levels to intercept in dev. Omit to use initMonitoring's own default (error + warn only). */
   devCaptureConsoleLevels?: ('debug' | 'info' | 'warn' | 'error')[];
+  /**
+   * Where the production config lives. Defaults to `/config.json`, which a
+   * browser resolves against the *page*. A module-federation remote runs inside
+   * shell-front's page, where that is the shell's file and carries none of this
+   * app's service URLs — so remotes pass a URL on their own origin, built as
+   * `new URL('/config.json', import.meta.url).href`.
+   */
+  configUrl?: string;
 }
 
 /**
@@ -48,10 +56,18 @@ export function createConfigProvider<TConfig extends { PUBLIC_API_URL?: string }
   }
 
   function ConfigProvider({ children }: { children: ReactNode }) {
-    const [config, setConfig] = useState<TConfig | null>(null);
+    // Starts from an already-loaded config: the shell mounts a remote's
+    // provider every time the user navigates into that app, and re-fetching
+    // — with a loader in between — on each visit is the reload federation is
+    // here to avoid.
+    const [config, setConfig] = useState<TConfig | null>(() => globalConfig);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+      if (globalConfig) {
+        return;
+      }
+
       if (options.isDev) {
         const devConfig = options.getDevConfig();
         console.log('Using development configuration from environment variables:', devConfig);
@@ -67,7 +83,7 @@ export function createConfigProvider<TConfig extends { PUBLIC_API_URL?: string }
         return;
       }
 
-      fetch('/config.json')
+      fetch(options.configUrl ?? '/config.json')
         .then((res) => {
           if (!res.ok) throw new Error('Config fetch failed');
           return res.json();

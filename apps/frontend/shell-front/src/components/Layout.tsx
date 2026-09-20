@@ -1,10 +1,9 @@
-import { useLocation, useNavigate } from 'react-router';
-import { useState, ReactNode, useCallback, useEffect, useRef } from 'react';
-import CircularProgress from '@mui/material/CircularProgress';
-import { ProtectedRoute, buildEmbeddedUrl, extractChildPath, surface, useShellBridge } from '@tumbaland/components';
+import { useLocation } from 'react-router';
+import { ReactNode, useEffect } from 'react';
+import { ProtectedRoute, surface } from '@tumbaland/components';
 import { AppNav } from './AppNav';
+import { RemoteOutlet } from './RemoteOutlet';
 import { getAppByRoute } from '../config/apps';
-import { useConfig } from '../config/ConfigProvider';
 import { authService } from '../services/authService';
 import { recordLastVisited } from '../services/lastVisited';
 import { useAuthState } from '../hooks/useAuthState';
@@ -15,16 +14,23 @@ interface LayoutProps {
   children: ReactNode;
 }
 
+/**
+ * The chrome around every page: the navigation, and whichever module owns the
+ * current address.
+ *
+ * Modules used to be iframes, one at a time, replaced on every switch. That
+ * threw away the running app's whole JS context each time — so opening a module
+ * re-checked the session, re-fetched its data, and lost whatever the previous
+ * one had on screen. They are module-federation remotes now: loaded once into
+ * this page and kept, so a second visit renders immediately and the navigation
+ * never unmounts.
+ */
 export default function Layout({ children }: LayoutProps) {
-  const [loading, setLoading] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
-  const config = useConfig();
   const theme = useTheme();
   // Read synchronously. The default first pass assumes a wide screen, which
   // would draw the rail on a phone for a frame before swapping in the tab bar.
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'), { noSsr: true });
-  const frameRef = useRef<HTMLIFrameElement>(null);
 
   // The navigation only links to apps that require a session, so signed-out
   // visitors (who see the public landing page at `/`) get no app chrome at all.
@@ -33,68 +39,6 @@ export default function Layout({ children }: LayoutProps) {
   const { authenticated, user } = useAuthState();
 
   const currentApp = getAppByRoute(location.pathname);
-  const appUrl = currentApp?.urlKey ? config[currentApp.urlKey] : undefined;
-  const appKey = currentApp && appUrl ? `${currentApp.route}|${appUrl}` : null;
-
-  // The iframe src is captured once per app: the deep-linked path rides along on
-  // first mount, but every later navigation goes over postMessage. Recomputing
-  // src per route would reload the whole child app on each click, so it is
-  // derived during render and only refreshed when the app itself changes.
-  const [frameSrc, setFrameSrc] = useState<{ key: string; src: string } | null>(null);
-  if (appKey && currentApp && appUrl && frameSrc?.key !== appKey) {
-    setFrameSrc({
-      key: appKey,
-      src: buildEmbeddedUrl(appUrl, extractChildPath(currentApp.route, location.pathname, location.search))
-    });
-  }
-  // Leaving for a page with no frame (home, say) unmounts the iframe, so the
-  // next visit builds its src afresh from the URL. Kept, the old src reloaded
-  // the app on whatever page it was last on: "Log today" on the home page,
-  // after a look at the map, opened the map. The navigate message meant to
-  // correct it is posted before the new frame has loaded, and is dropped.
-  if (!appKey && frameSrc) {
-    setFrameSrc(null);
-  }
-  const showIframe = appKey !== null && frameSrc?.key === appKey;
-
-  const handleChildNavigate = useCallback(
-    (shellPath: string, options: { replace: boolean }) => navigate(shellPath, { replace: options.replace }),
-    [navigate]
-  );
-
-  const handleChildTitle = useCallback((title: string) => {
-    if (title) document.title = title;
-  }, []);
-
-  // Signing out inside a framed app ends the shell's session too. A router
-  // navigation would keep this document — and its cached auth check — alive,
-  // so leave for `/` the hard way and let the shell boot signed out.
-  const handleChildLogout = useCallback(() => {
-    authService.clearAuthCache();
-    window.location.assign('/');
-  }, []);
-
-  // The framed app asks the shell whether it is signed in rather than calling
-  // /auth/verify itself, so opening a page renews the session once.
-  const handleAuthRequest = useCallback(() => authService.checkAuth(), []);
-
-  useShellBridge({
-    frameRef,
-    appRoute: currentApp?.route,
-    appUrl,
-    shellPath: location.pathname,
-    shellSearch: location.search,
-    onNavigate: handleChildNavigate,
-    onTitleChange: handleChildTitle,
-    onChildLogout: handleChildLogout,
-    onAuthRequest: handleAuthRequest
-  });
-
-  useEffect(() => {
-    if (appKey) {
-      setLoading(true);
-    }
-  }, [appKey]);
 
   // Remember the module being viewed so the home page can offer a way back.
   useEffect(() => {
@@ -135,43 +79,15 @@ export default function Layout({ children }: LayoutProps) {
           minWidth: 0,
           minHeight: 0,
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'stretch',
-          justifyContent: 'center',
           position: 'relative',
           overflow: 'auto'
         }}
       >
-        {showIframe ? (
+        {currentApp ? (
           <ProtectedRoute authService={authService}>
-            <>
-              {loading && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: surface.page,
-                    zIndex: 2
-                  }}
-                >
-                  <CircularProgress />
-                </div>
-              )}
-              <iframe
-                key={appKey!}
-                ref={frameRef}
-                src={frameSrc!.src}
-                title={currentApp!.name}
-                style={{ width: '100%', height: '100%', border: 'none', zIndex: 1 }}
-                allow="fullscreen"
-                onLoad={() => setLoading(false)}
-              />
-            </>
+            <RemoteOutlet />
           </ProtectedRoute>
         ) : (
           children

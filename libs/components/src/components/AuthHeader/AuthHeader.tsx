@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -19,7 +19,6 @@ import { AccountCircle, Logout, Person, Groups, Payment } from '@mui/icons-mater
 import { useNavigate, useLocation } from 'react-router';
 import { NotificationsMenu } from '../NotificationsMenu/NotificationsMenu';
 import { LoginButton } from '../LoginButton';
-import { readEmbedContext } from '../../routing/embedContext';
 
 export interface AuthHeaderUser {
   name: string;
@@ -115,7 +114,10 @@ export function AuthHeader({
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const isEmbedded = useMemo(() => embedded ?? readEmbedContext().embedded, [embedded]);
+  // Nothing infers this any more: the iframe flag it used to fall back on was
+  // set by the shell's frame `src`, and there is no frame. A caller that wants
+  // the header's own account menu hidden says so.
+  const isEmbedded = embedded ?? false;
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);

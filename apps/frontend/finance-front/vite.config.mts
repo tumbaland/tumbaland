@@ -1,5 +1,11 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { federation } from '@module-federation/vite';
+import {
+  TUMBALAND_FEDERATION_SHARED,
+  TUMBALAND_REMOTE_ENTRY,
+  TUMBALAND_REMOTE_MODULE
+} from '@tumbaland/frontend-core/federation';
 import { resolve } from 'path';
 import { cpus } from 'os';
 
@@ -17,9 +23,27 @@ const TEST_WORKERS = Math.max(2, Math.floor(cpus().length / 4));
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // Besides running standalone, finance-front is a module-federation remote:
+    // shell-front loads `./App` from this origin's remoteEntry.js. Vitest has
+    // no use for the federation build, so it is left out there.
+    ...(process.env.VITEST
+      ? []
+      : [
+          federation({
+            name: 'finance',
+            filename: TUMBALAND_REMOTE_ENTRY,
+            exposes: { [TUMBALAND_REMOTE_MODULE]: './src/federation/RemoteApp.tsx' },
+            shared: TUMBALAND_FEDERATION_SHARED,
+            dts: false
+          })
+        ])
+  ],
   server: {
-    port: 3003
+    port: 3003,
+    // Absolute asset URLs in dev, so the shell's page fetches them from here.
+    origin: 'http://localhost:3003'
   },
   resolve: {
     alias: {

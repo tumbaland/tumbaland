@@ -16,6 +16,10 @@ const factory = createConfigProvider<AppConfig>({
   serviceName: 'finance-front',
   isDev: import.meta.env.DEV,
   mode: import.meta.env.MODE,
+  // This app's own config.json, even when shell-front's page is the one
+  // running it: as a federated remote, a bare '/config.json' would resolve
+  // against the shell's origin and carry none of this app's service URLs.
+  configUrl: new URL(/* @vite-ignore */ '/config.json', import.meta.url).href,
   getDevConfig: () => ({
     FINANCE_API_URL: import.meta.env.VITE_FINANCE_API_URL,
     AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL,

@@ -11,6 +11,7 @@ import {
 } from '@mui/icons-material';
 import { Photo, Album } from '../../types';
 import { gradient } from '@tumbaland/components';
+import { appPath } from '../../appBase';
 
 interface PhotoDetailHeaderProps {
   photo: Photo;
@@ -43,13 +44,13 @@ const PhotoDetailHeader: React.FC<PhotoDetailHeaderProps> = ({
     <>
       {/* Breadcrumbs */}
       <Breadcrumbs sx={{ mb: 2 }}>
-        <Link component="button" variant="body1" onClick={() => onNavigate('/albums')} sx={{ textDecoration: 'none' }}>
+        <Link component="button" variant="body1" onClick={() => onNavigate(appPath('/albums'))} sx={{ textDecoration: 'none' }}>
           Albums
         </Link>
         <Link
           component="button"
           variant="body1"
-          onClick={() => onNavigate(`/albums/${album._id}`)}
+          onClick={() => onNavigate(appPath(`/albums/${album._id}`))}
           sx={{ textDecoration: 'none' }}
         >
           {album.name}
@@ -83,7 +84,7 @@ const PhotoDetailHeader: React.FC<PhotoDetailHeaderProps> = ({
       >
         <Box sx={{ mb: { xs: 2, md: 0 } }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <IconButton onClick={() => onNavigate(`/albums/${album._id}`)} sx={{ mr: 1, ml: -1 }}>
+            <IconButton onClick={() => onNavigate(appPath(`/albums/${album._id}`))} sx={{ mr: 1, ml: -1 }}>
               <ArrowBackIcon />
             </IconButton>
             <Typography

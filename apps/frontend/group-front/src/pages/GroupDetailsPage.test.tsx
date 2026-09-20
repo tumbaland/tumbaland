@@ -75,7 +75,7 @@ it('navigates back to the groups list', async () => {
 
   await userEvent.click(screen.getByRole('button', { name: /back to groups/i }));
 
-  expect(mockedNavigate).toHaveBeenCalledWith('/');
+  expect(mockedNavigate).toHaveBeenCalledWith('/groups');
 });
 
 it('logs and swallows a failed auth check without blocking the page', async () => {

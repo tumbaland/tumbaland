@@ -1,34 +1,12 @@
-export { EmbeddedRouter } from './EmbeddedRouter';
-export type { EmbeddedRouterProps } from './EmbeddedRouter';
-
-export { useShellBridge } from './useShellBridge';
-export type { ShellBridgeOptions } from './useShellBridge';
-
-export {
-  EMBED_FLAG,
-  EMBED_PATH,
-  buildEmbeddedUrl,
-  extractChildPath,
-  joinShellPath,
-  normalizeEmbedPath,
-  readEmbedContext,
-  safeUrl,
-  toOrigin
-} from './embedContext';
-export type { EmbedContext } from './embedContext';
-
-export {
-  APP_SOURCE,
-  SHELL_SOURCE,
-  isAppAuthRequestMessage,
-  isAppLocationMessage,
-  isNavigateTopMessage,
-  isShellNavigateMessage
-} from './messages';
-export type {
-  AppAuthRequestMessage,
-  AppLocationMessage,
-  NavigateTopMessage,
-  ShellAuthMessage,
-  ShellNavigateMessage
-} from './messages';
+/**
+ * What survives of the shell/child bridge.
+ *
+ * The rest — `EmbeddedRouter`, `useShellBridge`, the postMessage contract and
+ * the URL helpers that built an iframe `src` — existed only because each module
+ * ran in its own cross-origin document. Modules are module-federation remotes
+ * now, rendered in the shell's own React tree by `shell-front/src/remotes.ts`,
+ * so there is no frame to sync a location into and no second window to ask.
+ *
+ * `toOrigin` stays because it is a plain URL helper with callers of its own.
+ */
+export { toOrigin } from './embedContext';

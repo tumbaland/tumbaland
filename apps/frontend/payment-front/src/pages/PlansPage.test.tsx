@@ -109,7 +109,7 @@ it('navigates to checkout with the plan code when a plan button is clicked', asy
   const button = await screen.findAllByText('Get Started');
   await userEvent.click(button[1]); // pro plan
 
-  expect(mockedNavigate).toHaveBeenCalledWith('/subscription/checkout?plan=pro');
+  expect(mockedNavigate).toHaveBeenCalledWith('/payments/subscription/checkout?plan=pro');
 });
 
 it('navigates when switching to the free plan', async () => {
@@ -119,7 +119,7 @@ it('navigates when switching to the free plan', async () => {
 
   await userEvent.click(await screen.findByRole('button', { name: 'Switch to Free' }));
 
-  expect(mockedNavigate).toHaveBeenCalledWith('/subscription/checkout?plan=free');
+  expect(mockedNavigate).toHaveBeenCalledWith('/payments/subscription/checkout?plan=free');
 });
 
 describe('a granted (non-public) plan', () => {

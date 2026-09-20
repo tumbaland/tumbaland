@@ -4,6 +4,7 @@ import { Box, Card, Chip, Stack, Tooltip, Typography, alpha, useTheme } from '@m
 import { HistoryToggleOff as HistoryIcon, Image as ImageIcon } from '@mui/icons-material';
 import { useMemories } from '../hooks/useMemories';
 import { MemoryPhoto, MemoryYear } from '../types';
+import { appPath } from '../appBase';
 
 interface OnThisDayProps {
   groupId?: string;
@@ -176,7 +177,7 @@ const OnThisDay: React.FC<OnThisDayProps> = ({ groupId }) => {
         </Typography>
       </Stack>
 
-      <MemoryTiles year={year} onSelect={(photo) => navigate(`/albums/${photo.albumId}/photos/${photo._id}`)} />
+      <MemoryTiles year={year} onSelect={(photo) => navigate(appPath(`/albums/${photo.albumId}/photos/${photo._id}`))} />
     </Card>
   );
 };

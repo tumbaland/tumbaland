@@ -20,6 +20,7 @@ import { CollageEditModal } from '../components/collage/CollageEditModal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import CollageCard from '../components/collage/CollageCard';
 import { gradient } from '@tumbaland/components';
+import { appPath } from '../appBase';
 
 const CollageListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -59,15 +60,15 @@ const CollageListPage: React.FC = () => {
   const handleCreateCollage = async (input: CollageInput) => {
     const created = await createCollage(input);
     // jump straight into the editor for the new collage
-    navigate(`/collages/${created._id}`);
+    navigate(appPath(`/collages/${created._id}`));
   };
 
   const handleViewCollage = (collage: Collage) => {
-    navigate(`/collages/${collage._id}?mode=view`);
+    navigate(appPath(`/collages/${collage._id}?mode=view`));
   };
 
   const handleEditCollage = (collage: Collage) => {
-    navigate(`/collages/${collage._id}`);
+    navigate(appPath(`/collages/${collage._id}`));
   };
 
   const handleEditDetails = (collage: Collage) => {

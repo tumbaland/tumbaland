@@ -113,6 +113,10 @@ it('goes straight to the subscription page when the plan was switched in place',
   restore();
 });
 
+// Billing runs in the shell's own page now, so `window.top` is this window:
+// the iframe-escape ladder this page used to carry — touching top.location,
+// posting tumbaland:navigate-top, window.open('_top'), a synthetic anchor —
+// has nothing left to escape, and a plain redirect is the whole job.
 it('redirects to a Stripe checkout url for a paid plan', async () => {
   mockedListPlans.mockResolvedValue([proPlan]);
   mockedCreateCheckoutSession.mockResolvedValue({ url: 'https://checkout.stripe.com/pay/abc', sessionId: 'cs_123' });
@@ -232,117 +236,6 @@ it('gives up after ~30 polling attempts with no resolution', async () => {
 
   expect(await screen.findByText(/still processing after several minutes/i)).toBeInTheDocument();
   vi.useRealTimers();
-});
-
-it('navigates the top frame directly when embedded in a same-origin iframe', async () => {
-  mockedListPlans.mockResolvedValue([freePlan]);
-  mockedCreateCheckoutSession.mockResolvedValue({ free: true, url: '/subscription', subscription: { status: 'active' } });
-
-  const assign = vi.fn();
-  const originalTop = window.top;
-  Object.defineProperty(window, 'top', {
-    configurable: true,
-    value: { location: { href: 'https://app.example/', assign } }
-  });
-
-  renderAt('/subscription/checkout?plan=free');
-  await userEvent.click(await screen.findByRole('button', { name: 'Activate Free Plan' }));
-
-  await waitFor(() => expect(assign).toHaveBeenCalledWith(expect.stringContaining('/subscription')));
-  Object.defineProperty(window, 'top', { configurable: true, value: originalTop });
-});
-
-it('falls back to postMessage + window.open when the top frame is cross-origin', async () => {
-  mockedListPlans.mockResolvedValue([freePlan]);
-  mockedCreateCheckoutSession.mockResolvedValue({ free: true, url: '/subscription', subscription: { status: 'active' } });
-
-  const postMessage = vi.fn();
-  const originalTop = window.top;
-  Object.defineProperty(window, 'top', {
-    configurable: true,
-    value: {
-      get location(): never {
-        throw new Error('cross-origin');
-      }
-    }
-  });
-  Object.defineProperty(window, 'parent', { configurable: true, value: { postMessage } });
-  const openSpy = vi.spyOn(window, 'open').mockReturnValue({} as Window);
-
-  renderAt('/subscription/checkout?plan=free');
-  await userEvent.click(await screen.findByRole('button', { name: 'Activate Free Plan' }));
-
-  await waitFor(() => expect(postMessage).toHaveBeenCalledWith(
-    expect.objectContaining({ type: 'tumbaland:navigate-top' }),
-    '*'
-  ));
-  expect(openSpy).toHaveBeenCalledWith(expect.stringContaining('/subscription'), '_top');
-
-  openSpy.mockRestore();
-  Object.defineProperty(window, 'top', { configurable: true, value: originalTop });
-});
-
-it('leaves the redirect to the shell when embedded in it', async () => {
-  mockedListPlans.mockResolvedValue([freePlan]);
-  mockedCreateCheckoutSession.mockResolvedValue({ free: true, url: '/subscription', subscription: { status: 'active' } });
-
-  // The embed flag marks a frame whose parent is our shell, and the shell acts
-  // on navigate-top itself — escaping the frame here would race it.
-  window.history.replaceState({}, '', '/?embedded=1');
-  const postMessage = vi.fn();
-  const originalTop = window.top;
-  const originalParent = window.parent;
-  Object.defineProperty(window, 'top', {
-    configurable: true,
-    value: {
-      get location(): never {
-        throw new Error('cross-origin');
-      }
-    }
-  });
-  Object.defineProperty(window, 'parent', { configurable: true, value: { postMessage } });
-  const openSpy = vi.spyOn(window, 'open').mockReturnValue({} as Window);
-
-  renderAt('/subscription/checkout?plan=free');
-  await userEvent.click(await screen.findByRole('button', { name: 'Activate Free Plan' }));
-
-  await waitFor(() => expect(postMessage).toHaveBeenCalledWith(
-    expect.objectContaining({ type: 'tumbaland:navigate-top' }),
-    '*'
-  ));
-  expect(openSpy).not.toHaveBeenCalled();
-
-  openSpy.mockRestore();
-  Object.defineProperty(window, 'top', { configurable: true, value: originalTop });
-  Object.defineProperty(window, 'parent', { configurable: true, value: originalParent });
-  window.history.replaceState({}, '', '/');
-});
-
-it('falls back to a synthetic anchor click when window.open is blocked in a cross-origin iframe', async () => {
-  mockedListPlans.mockResolvedValue([freePlan]);
-  mockedCreateCheckoutSession.mockResolvedValue({ free: true, url: '/subscription', subscription: { status: 'active' } });
-
-  const originalTop = window.top;
-  Object.defineProperty(window, 'top', {
-    configurable: true,
-    value: {
-      get location(): never {
-        throw new Error('cross-origin');
-      }
-    }
-  });
-  Object.defineProperty(window, 'parent', { configurable: true, value: { postMessage: vi.fn() } });
-  const openSpy = vi.spyOn(window, 'open').mockReturnValue(null);
-  const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
-
-  renderAt('/subscription/checkout?plan=free');
-  await userEvent.click(await screen.findByRole('button', { name: 'Activate Free Plan' }));
-
-  await waitFor(() => expect(clickSpy).toHaveBeenCalled());
-
-  openSpy.mockRestore();
-  clickSpy.mockRestore();
-  Object.defineProperty(window, 'top', { configurable: true, value: originalTop });
 });
 
 it('closes the Terms dialog via its onClose handler (e.g. Escape/backdrop)', async () => {

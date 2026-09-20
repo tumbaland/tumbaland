@@ -29,5 +29,17 @@
     "@vitest/coverage-v8": "^4.1.11",
     "commit-and-tag-version": "^13.2.1",
     "typescript": "^6.0.3"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./federation": {
+      "types": "./dist/federation.d.ts",
+      "import": "./dist/federation.js",
+      "default": "./dist/federation.js"
+    }
   }
 }

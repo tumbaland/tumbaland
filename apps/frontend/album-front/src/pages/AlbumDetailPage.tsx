@@ -25,6 +25,7 @@ import EditPhotoDialog from '../components/EditPhotoDialog';
 import PhotoTagFilter from '../components/PhotoTagFilter';
 import TagPhotosDialog from '../components/TagPhotosDialog';
 import { Photo, TagMatch } from '../types';
+import { appPath } from '../appBase';
 
 const AlbumDetailPage: React.FC = () => {
   const { albumId } = useParams<{ albumId: string }>();
@@ -225,7 +226,7 @@ const AlbumDetailPage: React.FC = () => {
   };
 
   const handleViewPhotoDetails = (photo: Photo) => {
-    navigate(`/albums/${albumId}/photos/${photo._id}`);
+    navigate(appPath(`/albums/${albumId}/photos/${photo._id}`));
   };
 
   const handleUploadComplete = () => {
@@ -262,7 +263,7 @@ const AlbumDetailPage: React.FC = () => {
     return (
       <Container maxWidth="xl" sx={{ py: 4 }}>
         <Alert severity="error">{albumError || 'Album not found'}</Alert>
-        <Button onClick={() => navigate('/albums')} sx={{ mt: 2 }}>
+        <Button onClick={() => navigate(appPath('/albums'))} sx={{ mt: 2 }}>
           Back to Albums
         </Button>
       </Container>
@@ -275,7 +276,7 @@ const AlbumDetailPage: React.FC = () => {
           button repeats it over the photos. */}
       <AlbumHeader
         album={album}
-        onNavigateBack={() => navigate('/albums')}
+        onNavigateBack={() => navigate(appPath('/albums'))}
         onUploadPhotos={() => setShowUploadDialog(true)}
       />
 

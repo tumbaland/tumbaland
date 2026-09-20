@@ -153,7 +153,7 @@ it('navigates to view mode when a card is clicked', async () => {
   renderPage();
   await userEvent.click(screen.getByText('Summer trip'));
 
-  expect(mockedNavigate).toHaveBeenCalledWith('/collages/c1?mode=view');
+  expect(mockedNavigate).toHaveBeenCalledWith('/album/collages/c1?mode=view');
 });
 
 it('navigates to the editor via the card menu\'s "Open editor" action', async () => {
@@ -170,7 +170,7 @@ it('navigates to the editor via the card menu\'s "Open editor" action', async ()
   await userEvent.click(menuTrigger);
   await userEvent.click(screen.getByText('Open editor'));
 
-  expect(mockedNavigate).toHaveBeenCalledWith('/collages/c1');
+  expect(mockedNavigate).toHaveBeenCalledWith('/album/collages/c1');
 });
 
 it('creates a collage and navigates to its editor', async () => {

@@ -27,6 +27,7 @@ import CreateAlbumDialog from '../components/CreateAlbumDialog';
 import AlbumsGrid from '../components/AlbumsGrid';
 import AlbumsEmptyState from '../components/AlbumsEmptyState';
 import AlbumsHeader from '../components/AlbumsHeader';
+import { appPath } from '../appBase';
 
 const AlbumsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -110,7 +111,7 @@ const AlbumsPage: React.FC = () => {
   };
 
   const handleViewAlbum = (album: Album) => {
-    navigate(`/albums/${album._id}`);
+    navigate(appPath(`/albums/${album._id}`));
   };
 
   const handleOpenEditDialog = (album: Album) => {

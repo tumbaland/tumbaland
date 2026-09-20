@@ -107,5 +107,5 @@ it('formats amounts in the given currency', () => {
 it('links through to the cash flow page', () => {
   renderCard();
 
-  expect(screen.getByRole('link', { name: /details/i })).toHaveAttribute('href', '/cash-flow');
+  expect(screen.getByRole('link', { name: /details/i })).toHaveAttribute('href', '/finance/cash-flow');
 });

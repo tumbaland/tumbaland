@@ -12,6 +12,10 @@ vi.mock('../services/authService', () => ({
   }
 }));
 
+vi.mock('./RemoteOutlet', () => ({
+  RemoteOutlet: () => <div>remote module</div>
+}));
+
 import Layout from './Layout';
 import { ConfigContext } from '../config/ConfigProvider';
 import { authService } from '../services/authService';
@@ -59,84 +63,68 @@ beforeEach(() => {
   setMobile(false);
 });
 
-it('renders children directly on the home route (no iframe)', () => {
+it('renders its own children on the home route, with no module loaded', () => {
   renderAt('/');
   expect(screen.getByText('page content')).toBeInTheDocument();
+  expect(screen.queryByText('remote module')).not.toBeInTheDocument();
+});
+
+it('renders the module that owns the path, behind the session gate', async () => {
+  renderAt('/relationship', { RELATIONSHIP_FRONT_URL: 'https://relationship.example' });
+
+  expect(await screen.findByText('remote module')).toBeInTheDocument();
+  expect(screen.queryByText('page content')).not.toBeInTheDocument();
+});
+
+it('renders the module on a nested route too — its own routes match the rest', async () => {
+  renderAt('/relationship/journal', { RELATIONSHIP_FRONT_URL: 'https://relationship.example' });
+
+  expect(await screen.findByText('remote module')).toBeInTheDocument();
+});
+
+it('keeps no iframe anywhere: a module is code in this page now', async () => {
+  renderAt('/relationship', { RELATIONSHIP_FRONT_URL: 'https://relationship.example' });
+
+  await screen.findByText('remote module');
+  // An iframe threw the module's JS context away on every switch, which is
+  // what made each visit re-check the session and re-fetch its data.
   expect(document.querySelector('iframe')).toBeNull();
 });
 
-it('renders children when the route has no configured app url', () => {
-  renderAt('/relationship', {});
-  expect(screen.getByText('page content')).toBeInTheDocument();
-});
-
-it('renders a protected iframe and hides the loader once it loads', async () => {
-  renderAt('/relationship', { RELATIONSHIP_FRONT_URL: 'https://relationship.example' });
-
-  const iframe = await screen.findByTitle('Journal');
-  expect(iframe).toHaveAttribute('src', 'https://relationship.example/?embedded=1&embedPath=%2F');
-  expect(screen.getByRole('progressbar')).toBeInTheDocument();
-
-  iframe.dispatchEvent(new Event('load'));
-  await waitFor(() => expect(screen.queryByRole('progressbar')).not.toBeInTheDocument());
-});
-
-it('boots the iframe on a nested route and keeps the src stable as the child navigates', async () => {
-  renderAt('/relationship/journal', { RELATIONSHIP_FRONT_URL: 'https://relationship.example' });
-
-  const iframe = await screen.findByTitle('Journal');
-  expect(iframe).toHaveAttribute('src', 'https://relationship.example/?embedded=1&embedPath=%2Fjournal');
-
-  // A location report from the child updates the shell URL, never the src.
-  const event = new MessageEvent('message', {
-    data: { source: 'tumbaland-app', type: 'app:location', app: 'relationship-front', path: '/activity-types' },
-    origin: 'https://relationship.example'
-  });
-  Object.defineProperty(event, 'source', { value: (iframe as HTMLIFrameElement).contentWindow });
-  window.dispatchEvent(event);
-
-  await waitFor(() =>
-    expect(screen.getByTitle('Journal')).toHaveAttribute(
-      'src',
-      'https://relationship.example/?embedded=1&embedPath=%2Fjournal'
-    )
-  );
-});
-
-it('builds the frame from the current URL after a page without one, not from the last visit', async () => {
-  // The map, then home, then "Log today": the frame used to come back on the
-  // map, because it reused the src from the last visit and the navigate
-  // message meant to correct it was posted before the new frame had loaded.
+it('leaves the navigation mounted while the module under it changes', async () => {
+  setSession(true);
   function Go({ to }: { to: string }) {
     const navigate = useNavigate();
     return <button onClick={() => navigate(to)}>go {to}</button>;
   }
   const user = userEvent.setup();
   render(
-    <ConfigContext.Provider value={{ RELATIONSHIP_FRONT_URL: 'https://relationship.example' } as any}>
-      <MemoryRouter initialEntries={['/relationship/map']}>
+    <ConfigContext.Provider
+      value={
+        {
+          RELATIONSHIP_FRONT_URL: 'https://relationship.example',
+          ALBUM_FRONT_URL: 'https://album.example'
+        } as any
+      }
+    >
+      <MemoryRouter initialEntries={['/relationship']}>
         <Layout>
           <div>page content</div>
         </Layout>
-        <Go to="/" />
-        <Go to="/relationship/journal?date=2026-09-14" />
+        <Go to="/album" />
       </MemoryRouter>
     </ConfigContext.Provider>
   );
 
-  expect(await screen.findByTitle('Journal')).toHaveAttribute(
-    'src',
-    'https://relationship.example/?embedded=1&embedPath=%2Fmap'
-  );
+  const nav = await screen.findByRole('navigation', { name: 'Main' });
+  await screen.findByText('remote module');
 
-  await user.click(screen.getByRole('button', { name: 'go /' }));
-  await waitFor(() => expect(document.querySelector('iframe')).toBeNull());
+  await user.click(screen.getByRole('button', { name: 'go /album' }));
 
-  await user.click(screen.getByRole('button', { name: 'go /relationship/journal?date=2026-09-14' }));
-  expect(await screen.findByTitle('Journal')).toHaveAttribute(
-    'src',
-    'https://relationship.example/?embedded=1&embedPath=%2Fjournal%3Fdate%3D2026-09-14'
-  );
+  // The same nav element, not a replacement: crossing modules no longer tears
+  // down and rebuilds the chrome around them.
+  await waitFor(() => expect(screen.getByText('remote module')).toBeInTheDocument());
+  expect(screen.getByRole('navigation', { name: 'Main' })).toBe(nav);
 });
 
 it('hides the navigation from signed-out visitors', async () => {
@@ -169,7 +157,7 @@ it('puts the rail before the content on wide screens and the tab bar after it on
   expect(tabBar.compareDocumentPosition(screen.getByText('page content'))).toBe(Node.DOCUMENT_POSITION_PRECEDING);
 });
 
-it('shows an unauthorized page instead of the iframe when not authenticated', async () => {
+it('shows an unauthorized page instead of the module when not authenticated', async () => {
   const { authService } = await import('../services/authService');
   vi.mocked(authService.isAuthenticated).mockResolvedValueOnce(false);
 

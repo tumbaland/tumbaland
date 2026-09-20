@@ -6,9 +6,7 @@ import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import { useSearchParams } from 'react-router';
 import { logger } from '@tumbaland/frontend-core';
-import { readEmbedContext, toOrigin } from '@tumbaland/components';
 import { paymentApi } from '../services/paymentApi';
-import { ConfigContext } from '../config/ConfigProvider';
 import { Plan } from '../types';
 
 // Placeholder: fetch plans & show chosen plan, then user clicks "Confirm & Pay" which calls startSubscription
@@ -29,57 +27,26 @@ const SubscriptionCheckoutPage: React.FC = () => {
   const [termsOpen, setTermsOpen] = useState(false);
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
-  // Read through the context directly: this page is rendered bare in tests,
-  // where useConfig() would throw.
-  const config = React.useContext(ConfigContext);
-  // Inside our own shell the parent listens for navigate-top and drives the
-  // redirect itself; any other embedder does not, so we escape the frame.
-  const inShell = React.useMemo(() => readEmbedContext().embedded, []);
-  const shellOrigin = React.useMemo(() => toOrigin(config?.SHELL_FRONT_URL), [config?.SHELL_FRONT_URL]);
+  const formatPrice = (cents?: number) => (cents ? `${(cents / 100).toFixed(2)} € / month` : 'Free');
 
-  const formatPrice = (cents?: number) => (cents ? `${(cents/100).toFixed(2)} € / month` : 'Free');
-
-  // Helper: safe top-level navigation when embedded in a cross-origin iframe.
-  const navigateTop = (url: string) => {
-    const absUrl = (() => {
-      try { return new URL(url, window.location.origin).href; } catch { return url; }
-    })();
-    try {
-      if (window.top && window.top !== window.self) {
-        try {
-          // Touching top.location on cross-origin will throw
-          // If not thrown, we can navigate top directly
-          // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-          (window.top as Window).location.href;
-          (window.top as Window).location.assign(absUrl);
-          return;
-        } catch {
-          // Cross-origin: ask parent to navigate the top-level
-          window.parent.postMessage({ source: 'payment-front', type: 'tumbaland:navigate-top', url: absUrl }, shellOrigin ?? '*');
-          // Our shell acts on that message, so escaping the frame ourselves
-          // would race it. Only fall through for embedders that don't listen.
-          if (inShell) return;
-          // Best-effort fallback: try opening in the top browsing context from user gesture
-          // This often succeeds even when direct assignment is blocked in iframes
-          const opened = window.open(absUrl, '_top');
-          if (opened) return;
-          // Last resort: synthetic anchor click with target _top
-          const a = document.createElement('a');
-          a.href = absUrl;
-          a.target = '_top';
-          a.rel = 'noopener noreferrer';
-          a.style.display = 'none';
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          return;
-        }
+  /**
+   * Leaves for Stripe.
+   *
+   * This used to be forty lines of escaping a cross-origin iframe: touching
+   * `window.top.location`, posting `tumbaland:navigate-top` to the shell,
+   * opening `_top`, then a synthetic anchor as a last resort. Billing is a
+   * module-federation remote now and runs in the shell's own page, so
+   * `window.top` is this window and a plain redirect is the whole job.
+   */
+  const leaveForCheckout = (url: string) => {
+    const absolute = (() => {
+      try {
+        return new URL(url, window.location.origin).href;
+      } catch {
+        return url;
       }
-      // Not in iframe: regular same-tab navigation
-      window.location.assign(absUrl);
-    } catch {
-      window.location.href = absUrl;
-    }
+    })();
+    window.location.assign(absolute);
   };
 
   useEffect(() => {
@@ -125,7 +92,7 @@ const SubscriptionCheckoutPage: React.FC = () => {
           active = false;
           setPollEnded(true);
           // Use top-level redirect in case we are inside an iframe shell
-          navigateTop('/subscription');
+          leaveForCheckout('/subscription');
           return;
         }
         // If Stripe session itself reaches a terminal status (complete / expired) but sub not active yet
@@ -163,17 +130,17 @@ const SubscriptionCheckoutPage: React.FC = () => {
       // out — go straight to the subscription page showing the new plan.
       if ((res.free || res.changed) && res.subscription?.status === 'active') {
         const target = res.url || '/subscription';
-        navigateTop(target);
+        leaveForCheckout(target);
         return;
       }
       const fallbackUrl = (!res.url && res.sessionId?.startsWith('cs_')) ? `https://checkout.stripe.com/c/${res.sessionId}` : res.url;
       if (fallbackUrl) {
         setRedirecting(true);
         // Redirect in the same tab (top-level if embedded) via parent message when cross-origin
-        navigateTop(fallbackUrl);
+        leaveForCheckout(fallbackUrl);
       } else {
         // If neither free nor Stripe URL, navigate to subscription overview as safe default
-        navigateTop('/subscription');
+        leaveForCheckout('/subscription');
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to start checkout');

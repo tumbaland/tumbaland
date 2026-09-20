@@ -9,6 +9,7 @@ import {
 } from '@mui/icons-material';
 import { brand, ink, moduleAccent } from '@tumbaland/components';
 import { formatBytes } from '../../utils/formatBytes';
+import { appPath } from '../../appBase';
 
 interface StatisticsOverviewData {
   totalAlbums: number;
@@ -39,7 +40,7 @@ const StatisticsOverview: React.FC<StatisticsOverviewProps> = ({ data }) => {
       value: data.totalAlbums.toLocaleString(),
       Icon: PhotoLibraryIcon,
       color: brand.violet,
-      to: '/albums'
+      to: appPath('/albums')
     },
     { title: 'Total Photos', value: data.totalPhotos.toLocaleString(), Icon: PhotoIcon, color: moduleAccent.money },
     { title: 'Storage Used', value: formatBytes(data.totalStorage), Icon: StorageIcon, color: '#b45309' },

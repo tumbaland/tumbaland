@@ -14,6 +14,11 @@ export interface AppConfigItem {
   name: string;
   route: string;
   urlKey?: keyof AppConfig; // Key to get URL from config
+  /**
+   * The module-federation remote's name, as its own vite config declares it.
+   * The shell loads `<remote>/App` from that origin's remoteEntry.js.
+   */
+  remote?: string;
   icon: React.ComponentType<SvgIconProps>;
   color: string;
   /** Sells plans or takes payments, so left out where that is not allowed (see canOfferPurchases). */
@@ -33,6 +38,7 @@ export const APPS: AppConfigItem[] = [
     // page's "Back to" link and every service keep the original name.
     name: 'Journal',
     route: '/relationship',
+    remote: 'relationship',
     urlKey: 'RELATIONSHIP_FRONT_URL',
     icon: FavoriteIcon,
     color: moduleAccent.journal
@@ -40,6 +46,7 @@ export const APPS: AppConfigItem[] = [
   {
     name: 'Album',
     route: '/album',
+    remote: 'album',
     urlKey: 'ALBUM_FRONT_URL',
     icon: AlbumIcon,
     color: moduleAccent.album
@@ -48,6 +55,7 @@ export const APPS: AppConfigItem[] = [
     // Shown as Money, still served from /finance.
     name: 'Money',
     route: '/finance',
+    remote: 'finance',
     urlKey: 'FINANCE_FRONT_URL',
     icon: AttachMoneyIcon,
     color: moduleAccent.money
@@ -62,6 +70,7 @@ export const USER_APPS: AppConfigItem[] = [
   {
     name: 'Profile',
     route: '/account',
+    remote: 'account',
     urlKey: 'ACCOUNT_FRONT_URL',
     icon: PersonIcon,
     color: moduleAccent.profile
@@ -69,6 +78,7 @@ export const USER_APPS: AppConfigItem[] = [
   {
     name: 'Groups',
     route: '/groups',
+    remote: 'group',
     urlKey: 'GROUP_FRONT_URL',
     icon: GroupsIcon,
     color: moduleAccent.groups
@@ -76,6 +86,7 @@ export const USER_APPS: AppConfigItem[] = [
   {
     name: 'Billing',
     route: '/payments',
+    remote: 'payment',
     urlKey: 'PAYMENT_FRONT_URL',
     icon: PaymentIcon,
     color: moduleAccent.billing,
@@ -83,7 +94,16 @@ export const USER_APPS: AppConfigItem[] = [
   }
 ];
 
-const EMBEDDABLE_APPS = [...APPS, ...USER_APPS].filter((app) => app.route !== '/');
+/** A module the shell can load: one with a remote to load it from. */
+export type RemoteApp = AppConfigItem & { remote: string };
+
+/**
+ * The apps the shell loads as federation remotes — everything but its own Home.
+ * Exported for `remotes.ts`, which registers each one's entry point.
+ */
+export const EMBEDDABLE_APPS: RemoteApp[] = [...APPS, ...USER_APPS].filter(
+  (app): app is RemoteApp => app.route !== '/' && Boolean(app.remote)
+);
 
 /** Whether this platform may show the app at all: a native app lists no billing. */
 const isOffered = (app: AppConfigItem) => !app.purchases || canOfferPurchases();

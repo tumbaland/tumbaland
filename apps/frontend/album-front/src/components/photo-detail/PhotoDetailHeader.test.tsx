@@ -34,10 +34,10 @@ it('navigates to the albums list and the album page from the breadcrumb', async 
   render(<PhotoDetailHeader {...baseProps({ onNavigate })} />);
 
   await userEvent.click(screen.getByText('Albums'));
-  expect(onNavigate).toHaveBeenCalledWith('/albums');
+  expect(onNavigate).toHaveBeenCalledWith('/album/albums');
 
   await userEvent.click(screen.getByText('Vacation'));
-  expect(onNavigate).toHaveBeenCalledWith('/albums/album-42');
+  expect(onNavigate).toHaveBeenCalledWith('/album/albums/album-42');
 });
 
 it('calls onDownload, onEdit, and onDelete from their buttons', async () => {

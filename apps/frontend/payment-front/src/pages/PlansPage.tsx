@@ -5,6 +5,7 @@ import { paymentApi } from '../services/paymentApi';
 import { Plan, Subscription } from '../types';
 import { Loader } from '@tumbaland/components';
 import { Star, CheckCircle } from '@mui/icons-material';
+import { appPath } from '../appBase';
 
 const PlansPage: React.FC = () => {
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -186,7 +187,7 @@ const PlansPage: React.FC = () => {
                   <Button
                     fullWidth
                     variant="outlined"
-                    onClick={() => navigate(`/subscription/checkout?plan=${encodeURIComponent(plan.code)}`)}
+                    onClick={() => navigate(appPath(`/subscription/checkout?plan=${encodeURIComponent(plan.code)}`))}
                   >
                     Switch to Free
                   </Button>
@@ -194,7 +195,7 @@ const PlansPage: React.FC = () => {
                   <Button
                     fullWidth
                     variant="contained"
-                    onClick={() => navigate(`/subscription/checkout?plan=${encodeURIComponent(plan.code)}`)}
+                    onClick={() => navigate(appPath(`/subscription/checkout?plan=${encodeURIComponent(plan.code)}`))}
                     color="primary"
                   >
                     {subscription ? 'Change Plan' : 'Get Started'}

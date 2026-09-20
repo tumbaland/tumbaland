@@ -108,7 +108,7 @@ it('shows an error and a back button when the collage fails to load', async () =
 
   expect(screen.getByText('Failed to load collage')).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button'));
-  expect(mockedNavigate).toHaveBeenCalledWith('/collages');
+  expect(mockedNavigate).toHaveBeenCalledWith('/album/collages');
 });
 
 it('renders the toolbar (edit mode) and the collage title, initializing the editor', () => {
@@ -162,7 +162,7 @@ it('navigates back immediately when there are no unsaved changes', async () => {
 
   await userEvent.click(screen.getByRole('button', { name: /back to collages/i }));
 
-  expect(mockedNavigate).toHaveBeenCalledWith('/collages');
+  expect(mockedNavigate).toHaveBeenCalledWith('/album/collages');
 });
 
 it('confirms before navigating back when there are unsaved changes', async () => {
@@ -173,7 +173,7 @@ it('confirms before navigating back when there are unsaved changes', async () =>
   await userEvent.click(screen.getByRole('button', { name: /back to collages/i }));
 
   expect(confirmSpy).toHaveBeenCalled();
-  expect(mockedNavigate).toHaveBeenCalledWith('/collages');
+  expect(mockedNavigate).toHaveBeenCalledWith('/album/collages');
   confirmSpy.mockRestore();
 });
 

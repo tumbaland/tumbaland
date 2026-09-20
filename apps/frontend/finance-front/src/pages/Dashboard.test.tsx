@@ -49,7 +49,7 @@ it('shows the empty state when there is no net worth history', () => {
   });
   renderPage();
   expect(screen.getByText('No data yet')).toBeInTheDocument();
-  expect(screen.getByRole('link', { name: /go to net worth/i })).toHaveAttribute('href', '/net-worth');
+  expect(screen.getByRole('link', { name: /go to net worth/i })).toHaveAttribute('href', '/finance/net-worth');
 });
 
 it('renders KPIs, charts, and the holdings summary when data is present (singular "holding")', () => {
@@ -67,7 +67,7 @@ it('renders KPIs, charts, and the holdings summary when data is present (singula
   renderPage();
 
   expect(screen.getByText('Investments · 1 holding')).toBeInTheDocument();
-  expect(screen.getByRole('link', { name: /view holdings/i })).toHaveAttribute('href', '/investments');
+  expect(screen.getByRole('link', { name: /view holdings/i })).toHaveAttribute('href', '/finance/investments');
 });
 
 it('pluralizes the holdings count and colors a loss red', () => {

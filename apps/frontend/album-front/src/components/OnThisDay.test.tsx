@@ -217,7 +217,7 @@ it('opens the photo it was given, in its own album', async () => {
 
   await userEvent.click(screen.getByRole('button', { name: /beach\.jpg/ }));
 
-  expect(mockedNavigate).toHaveBeenCalledWith('/albums/a1/photos/p1');
+  expect(mockedNavigate).toHaveBeenCalledWith('/album/albums/a1/photos/p1');
 });
 
 it('labels a photo in plain punctuation, with no em dash', () => {

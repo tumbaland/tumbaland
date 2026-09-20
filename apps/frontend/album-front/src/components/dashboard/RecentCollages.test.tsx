@@ -31,8 +31,8 @@ const renderWidget = () =>
     <MemoryRouter initialEntries={['/dashboard']}>
       <Routes>
         <Route path="/dashboard" element={<RecentCollages />} />
-        <Route path="/collages" element={<div>collages page</div>} />
-        <Route path="/collages/:id" element={<CollageRoute />} />
+        <Route path="/album/collages" element={<div>collages page</div>} />
+        <Route path="/album/collages/:id" element={<CollageRoute />} />
       </Routes>
     </MemoryRouter>
   );

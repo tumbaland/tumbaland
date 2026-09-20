@@ -71,7 +71,7 @@ it('shows an error and a back link when the photo fails to load', async () => {
 
   expect(await screen.findByText('Failed to load photo details')).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: /back to album/i }));
-  expect(mockedNavigate).toHaveBeenCalledWith('/albums/album-1');
+  expect(mockedNavigate).toHaveBeenCalledWith('/album/albums/album-1');
 });
 
 it('renders the photo header once loaded', async () => {
@@ -92,10 +92,10 @@ it('navigates to the previous/next photo via the header controls', async () => {
   await screen.findByRole('button', { name: /previous photo/i });
 
   await userEvent.click(screen.getByRole('button', { name: /previous photo/i }));
-  expect(mockedNavigate).toHaveBeenCalledWith('/albums/album-1/photos/photo-1');
+  expect(mockedNavigate).toHaveBeenCalledWith('/album/albums/album-1/photos/photo-1');
 
   await userEvent.click(screen.getByRole('button', { name: /next photo/i }));
-  expect(mockedNavigate).toHaveBeenCalledWith('/albums/album-1/photos/photo-3');
+  expect(mockedNavigate).toHaveBeenCalledWith('/album/albums/album-1/photos/photo-3');
 });
 
 it('has no previous/next when at the start/end of the album', async () => {
@@ -132,5 +132,5 @@ it('deletes the photo and navigates back to the album', async () => {
   await userEvent.click(screen.getByRole('button', { name: /delete photo/i }));
 
   await waitFor(() => expect(photoService.deletePhoto).toHaveBeenCalledWith('photo-2'));
-  expect(mockedNavigate).toHaveBeenCalledWith('/albums/album-1');
+  expect(mockedNavigate).toHaveBeenCalledWith('/album/albums/album-1');
 });

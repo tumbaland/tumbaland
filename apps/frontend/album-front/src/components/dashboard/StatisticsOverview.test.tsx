@@ -15,7 +15,7 @@ const renderOverview = (overrides: Partial<typeof data> = {}) =>
     <MemoryRouter initialEntries={['/dashboard']}>
       <Routes>
         <Route path="/dashboard" element={<StatisticsOverview data={{ ...data, ...overrides }} />} />
-        <Route path="/albums" element={<div>albums page</div>} />
+        <Route path="/album/albums" element={<div>albums page</div>} />
       </Routes>
     </MemoryRouter>
   );

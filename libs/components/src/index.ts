@@ -44,37 +44,8 @@ export type { UsageMeterProps, UseEntitlementsResult } from './components/UsageM
 export { createConfigProvider } from './config/createConfigProvider';
 export type { CreateConfigProviderOptions } from './config/createConfigProvider';
 
-// Shell/iframe routing bridge: the shell owns the URL, embedded children run
-// headless on a MemoryRouter and sync their location over postMessage.
-export {
-  EmbeddedRouter,
-  useShellBridge,
-  EMBED_FLAG,
-  EMBED_PATH,
-  buildEmbeddedUrl,
-  extractChildPath,
-  joinShellPath,
-  normalizeEmbedPath,
-  readEmbedContext,
-  safeUrl,
-  toOrigin,
-  APP_SOURCE,
-  SHELL_SOURCE,
-  isAppAuthRequestMessage,
-  isAppLocationMessage,
-  isNavigateTopMessage,
-  isShellNavigateMessage
-} from './routing';
-export type {
-  EmbeddedRouterProps,
-  ShellBridgeOptions,
-  EmbedContext,
-  AppAuthRequestMessage,
-  AppLocationMessage,
-  NavigateTopMessage,
-  ShellAuthMessage,
-  ShellNavigateMessage
-} from './routing';
+// A plain URL helper; the iframe bridge it belonged to is gone (see routing/index).
+export { toOrigin } from './routing';
 
 // Theme: the palette, the MUI theme built from it, and the raw tokens for the
 // places that have to name a colour outside a `sx` prop.

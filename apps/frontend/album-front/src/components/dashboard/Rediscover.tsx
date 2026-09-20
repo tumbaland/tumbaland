@@ -4,6 +4,7 @@ import { Box, Button, Card, Skeleton, Stack, Typography } from '@mui/material';
 import { AutoAwesome as SparkleIcon, Casino as ShuffleIcon } from '@mui/icons-material';
 import { useRandomPhoto } from '../../hooks/useHighlights';
 import { HighlightPhoto } from '../../types';
+import { appPath } from '../../appBase';
 
 /** How long ago, in the words a person would use rather than a date. */
 const howLongAgo = (iso: string, now: Date): string => {
@@ -81,7 +82,7 @@ const Rediscover: React.FC<RediscoverProps> = ({ groupId }) => {
         <Box
           component="button"
           type="button"
-          onClick={() => navigate(`/albums/${photo.albumId}/photos/${photo._id}`)}
+          onClick={() => navigate(appPath(`/albums/${photo.albumId}/photos/${photo._id}`))}
           aria-label={`${photo.title || photo.originalName}, ${formatExact(photo)}, from ${photo.albumName}`}
           sx={{
             p: 0,

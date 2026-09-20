@@ -28,8 +28,8 @@ const renderStrip = () =>
     <MemoryRouter initialEntries={['/dashboard']}>
       <Routes>
         <Route path="/dashboard" element={<RecentUploads />} />
-        <Route path="/albums" element={<div>albums page</div>} />
-        <Route path="/albums/:albumId/photos/:photoId" element={<div>photo page</div>} />
+        <Route path="/album/albums" element={<div>albums page</div>} />
+        <Route path="/album/albums/:albumId/photos/:photoId" element={<div>photo page</div>} />
       </Routes>
     </MemoryRouter>
   );

@@ -4,6 +4,7 @@ import { Box, Button, Card, Stack, Tooltip, Typography, alpha, useTheme } from '
 import { AddPhotoAlternate as AddPhotoIcon, Image as ImageIcon } from '@mui/icons-material';
 import { useRecentPhotos } from '../../hooks/useHighlights';
 import { HighlightPhoto } from '../../types';
+import { appPath } from '../../appBase';
 
 /** Same ladder as the memories strip, so the two rows line up column for column. */
 const TILES_BY_WIDTH = { xs: 4, sm: 6, md: 8 } as const;
@@ -51,7 +52,7 @@ const RecentUploads: React.FC<RecentUploadsProps> = ({ groupId }) => {
           Just added
         </Typography>
         <Box sx={{ flex: 1 }} />
-        <Button size="small" onClick={() => navigate('/albums')} sx={{ flexShrink: 0 }}>
+        <Button size="small" onClick={() => navigate(appPath('/albums'))} sx={{ flexShrink: 0 }}>
           All albums
         </Button>
       </Stack>
@@ -75,7 +76,7 @@ const RecentUploads: React.FC<RecentUploadsProps> = ({ groupId }) => {
               <Box
                 component="button"
                 type="button"
-                onClick={() => navigate(`/albums/${photo.albumId}/photos/${photo._id}`)}
+                onClick={() => navigate(appPath(`/albums/${photo.albumId}/photos/${photo._id}`))}
                 aria-label={describe(photo)}
                 sx={{
                   width: '100%',
