@@ -23,19 +23,19 @@ const ASSURANCES: Assurance[] = [
     key: 'private',
     icon: GroupOffIcon,
     title: 'Private until you share',
-    body: 'Nothing is visible to anyone unless you create a group and invite them.'
+    body: 'Nothing is visible until you invite someone.'
   },
   {
     key: 'password',
     icon: LockIcon,
     title: 'No password to leak',
-    body: 'Sign-in goes through Google; Tumbaland never stores a password.'
+    body: 'Sign-in goes through Google. There is no password.'
   },
   {
     key: 'export',
     icon: DownloadIcon,
     title: 'Your data comes back out',
-    body: 'CSV exports and full-resolution photo downloads, whenever you want them.'
+    body: 'CSV exports and full-resolution photos, any time.'
   }
 ];
 
@@ -97,7 +97,7 @@ export function PrivacySection({ onOpen }: PrivacySectionProps) {
             Before you hand it anything
           </Typography>
           <Typography sx={{ fontSize: { xs: '0.95rem', md: '1.02rem' }, lineHeight: 1.55, color: ink.body }}>
-            A product that asks for your photos, your balance sheet, and your diary owes you straight
+            A product that asks for your photos, your balance sheet and your diary owes you straight
             answers.
           </Typography>
         </Box>

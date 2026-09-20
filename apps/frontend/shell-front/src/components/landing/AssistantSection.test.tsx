@@ -6,9 +6,9 @@ import AssistantSection from './AssistantSection';
 
 /**
  * The connector is what the page leads with now, so this section stopped being
- * an illustration and became the practical half: the address, the three steps,
- * and what the assistant can actually do once it is in. The staged conversation
- * that used to live here has moved into the hero, where it is the pitch.
+ * an illustration and became the practical half: the address and the three
+ * steps, and nothing beyond them. The conversation is the hero's job, and the
+ * example questions that used to sit here in cards are played there instead.
  */
 describe('AssistantSection', () => {
   it('names Claude, and leaves everything else to the standard', () => {
@@ -75,12 +75,12 @@ describe('AssistantSection', () => {
     });
   });
 
-  it('says what it can do as things a person would say, not as tool names', () => {
+  it('does not repeat the example questions the hero already plays', () => {
     render(<AssistantSection onOpenGuide={vi.fn()} />);
-    // `search_transactions` is accurate and tells a visitor nothing.
-    expect(screen.getByText(/what did we spend at Selver this year/)).toBeInTheDocument();
-    expect(screen.getByText(/when did we last go out for dinner/)).toBeInTheDocument();
-    expect(screen.queryByText(/search_transactions/)).not.toBeInTheDocument();
+    // This section carried three cards of them. The hero now runs those same
+    // questions against the real tools, so the cards were the claim twice.
+    expect(screen.queryByText(/what did we spend at Selver/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/when did we last go out for dinner/)).not.toBeInTheDocument();
   });
 
   it('opens the full guide over the page, and keeps its real address for a new tab', async () => {

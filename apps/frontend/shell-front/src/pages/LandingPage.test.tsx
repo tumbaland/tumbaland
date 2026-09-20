@@ -12,7 +12,6 @@ vi.mock('../services/authService', () => ({
 }));
 
 import LandingPage from './LandingPage';
-import { PRODUCTS } from '../components/landing/ProductsSection';
 
 function CurrentUrl() {
   const location = useLocation();
@@ -52,22 +51,38 @@ it('shows the connector address, which is the one thing nobody can guess', () =>
   expect(screen.getByText('https://mcp.tumbaland.eu/mcp')).toBeInTheDocument();
 });
 
-it('explains connecting before listing the modules', () => {
+it('explains connecting before showing the modules', () => {
   renderPage();
   const connect = screen.getByRole('heading', { name: /One address, and it is connected/ });
-  const modules = screen.getByRole('heading', { name: /Four things, one login/ });
+  const modules = screen.getByRole('heading', { name: /here is where it lands/ });
 
   // The hero makes a claim that only holds if connecting is this small a job.
   expect(connect.compareDocumentPosition(modules) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
 
-it('names each module the way the app nav does, with one sentence on what is in it', () => {
+it('shows the modules as screens of the app rather than paragraphs about them', () => {
   renderPage();
-  PRODUCTS.forEach((product) => {
-    expect(screen.getAllByText(product.name).length).toBeGreaterThan(0);
-    expect(screen.getByRole('heading', { name: product.headline })).toBeInTheDocument();
-    expect(screen.getByText(product.lede)).toBeInTheDocument();
+
+  // Four cards of headline-plus-sentence became three phones. Each is named
+  // the way the app nav names it, and carries one short line and no more.
+  ['Journal', 'Album', 'Money'].forEach((module) => {
+    expect(screen.getAllByText(module).length).toBeGreaterThan(0);
   });
+  expect(screen.getByText('Where your time went')).toBeInTheDocument();
+  expect(screen.getByText('Photos you can find')).toBeInTheDocument();
+  expect(screen.getByText('Every account in one number')).toBeInTheDocument();
+});
+
+it('says the screens are made up, rather than passing them off as somebody\'s', () => {
+  // They are the app's own layout, but the evenings, the balance and the
+  // holiday in them are invented, and a page that shows data owes that line.
+  renderPage();
+  expect(screen.getByText(/sample data/i)).toBeInTheDocument();
+});
+
+it('still says sharing exists, now that the fourth card has gone', () => {
+  renderPage();
+  expect(screen.getByText(/up to five people/)).toBeInTheDocument();
 });
 
 it('answers the privacy objection before the closing sign-in', () => {

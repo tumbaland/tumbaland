@@ -60,7 +60,7 @@ export function LandingFooter({ onSignIn, onOpen }: LandingFooterProps) {
           It&apos;s free. That&apos;s the whole offer.
         </Typography>
         <Typography sx={{ color: ink.body, fontSize: { xs: '0.95rem', md: '1rem' }, lineHeight: 1.55, mb: { xs: 2.25, md: 3.5 } }}>
-          Sign in with Google and it is all there. No setup, no card, nothing counting down.
+          No setup, no card, nothing counting down.
         </Typography>
         <Button
           variant="contained"

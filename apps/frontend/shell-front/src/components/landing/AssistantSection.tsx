@@ -1,21 +1,22 @@
 import { useCallback, useState } from 'react';
-import { Box, Button, Link, Paper, Tooltip, Typography } from '@mui/material';
+import { Box, Button, Link, Tooltip, Typography } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import CheckIcon from '@mui/icons-material/Check';
-import FavoriteIcon from '@mui/icons-material/Favorite';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
-import AlbumIcon from '@mui/icons-material/PhotoAlbum';
 import { SectionHeading } from './SectionHeading';
 import { brand, glass, ink } from '@tumbaland/frontend-core';
 
 /**
  * How connecting actually works, with the one thing nobody can guess.
  *
- * The real address, the three steps, and what the assistant can do once it is
- * in. The address is shown rather than hidden behind the guide because it is
- * the single detail that turns "sounds nice" into "I could set that up now".
- * Everything else about setup lives in the full guide, which opens over the
- * page rather than leaving it.
+ * The real address and the three steps, and nothing else. The address is shown
+ * rather than hidden behind the guide because it is the single detail that
+ * turns "sounds nice" into "I could set that up now"; everything else about
+ * setup lives in the full guide, which opens over the page rather than leaving
+ * it.
+ *
+ * It used to carry three cards of example questions as well. The exchange in
+ * the hero now plays every one of them against the real tools, so the cards
+ * were the same claim a second time, in text.
  */
 
 /** The MCP endpoint, exactly as it is pasted into a connector settings box. */
@@ -31,51 +32,17 @@ const STEPS: Step[] = [
   {
     n: 1,
     title: 'Add the address',
-    body: 'In Claude, or any assistant that takes MCP connectors, add a custom connector and paste the URL above.'
+    body: 'In Claude, or any assistant that takes MCP connectors.'
   },
   {
     n: 2,
     title: 'Pick what it can reach',
-    body: 'Sign in and approve. You choose the permissions and which journals it may act on.'
+    body: 'Sign in and approve. You choose what it may touch.'
   },
   {
     n: 3,
     title: 'Talk to it',
-    body: 'Switch the connector on in a chat and say what happened, or ask what you did.'
-  }
-];
-
-interface Capability {
-  key: string;
-  name: string;
-  color: string;
-  icon: React.ComponentType<{ sx?: object }>;
-  /** Phrased as things a person says, not as tool names. */
-  examples: string[];
-}
-
-/** Every line maps to a tool that exists. */
-const CAPABILITIES: Capability[] = [
-  {
-    key: 'relationship',
-    name: 'Journal',
-    color: '#ef4444',
-    icon: FavoriteIcon,
-    examples: ['“we cooked and watched a film last night”', '“when did we last go out for dinner?”']
-  },
-  {
-    key: 'finance',
-    name: 'Money',
-    color: '#22c55e',
-    icon: AttachMoneyIcon,
-    examples: ['“what did we spend at Selver this year?”', '“which subscriptions are we still paying for?”']
-  },
-  {
-    key: 'album',
-    name: 'Photos',
-    color: '#3b82f6',
-    icon: AlbumIcon,
-    examples: ['“what did we photograph this day last year?”', '“tag these ones as Spain”']
+    body: 'Say what happened, or ask what you did.'
   }
 ];
 
@@ -104,7 +71,7 @@ export function AssistantSection({ onOpenGuide }: AssistantSectionProps) {
       <SectionHeading
         eyebrow="How it connects"
         title="One address, and it is connected"
-        subtitle="Tumbaland is a standard MCP server, so a connector is all it takes. Nothing to install and nothing to run yourself. Claude is the one we have tested end to end."
+        subtitle="Tumbaland is a standard MCP server, so a connector is all it takes. Claude is the one we have tested end to end."
       />
 
       <Box sx={{ ...glass, maxWidth: 820, mx: 'auto', p: { xs: 1.75, md: 3 } }}>
@@ -193,86 +160,6 @@ export function AssistantSection({ onOpenGuide }: AssistantSectionProps) {
             </Box>
           ))}
         </Box>
-      </Box>
-
-      {/* A row you swipe on a phone, three across on a desktop. Stacked, the
-          three cards were a screen of scrolling to reach the privacy section. */}
-      <Box
-        sx={{
-          display: 'grid',
-          gridAutoFlow: { xs: 'column', md: 'row' },
-          gridAutoColumns: { xs: 'minmax(240px, 78%)', md: 'auto' },
-          gridTemplateColumns: { md: 'repeat(3, minmax(0, 1fr))' },
-          gap: { xs: 1.25, md: 2 },
-          maxWidth: 940,
-          mx: { xs: -2, md: 'auto' },
-          px: { xs: 2, md: 0 },
-          mt: { xs: 2, md: 4 },
-          pb: { xs: 0.5, md: 0 },
-          overflowX: { xs: 'auto', md: 'visible' },
-          scrollSnapType: { xs: 'x mandatory', md: 'none' },
-          scrollPaddingLeft: 16,
-          scrollbarWidth: 'none',
-          '&::-webkit-scrollbar': { display: 'none' }
-        }}
-      >
-        {CAPABILITIES.map((capability) => {
-          const Icon = capability.icon;
-          return (
-            <Paper
-              key={capability.key}
-              elevation={0}
-              sx={{
-                ...glass,
-                p: { xs: 1.75, md: 2.25 },
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 1,
-                scrollSnapAlign: 'start'
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Box
-                  sx={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 2,
-                    display: 'grid',
-                    placeItems: 'center',
-                    backgroundColor: `${capability.color}18`,
-                    color: capability.color,
-                    flexShrink: 0
-                  }}
-                >
-                  <Icon sx={{ fontSize: 16 }} />
-                </Box>
-                <Typography
-                  sx={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    letterSpacing: '0.11em',
-                    textTransform: 'uppercase',
-                    color: capability.color
-                  }}
-                >
-                  {capability.name}
-                </Typography>
-              </Box>
-
-              <Box component="ul" sx={{ m: 0, pl: 0, listStyle: 'none', display: 'grid', gap: 0.6 }}>
-                {capability.examples.map((example) => (
-                  <Box
-                    key={example}
-                    component="li"
-                    sx={{ color: ink.body, fontSize: { xs: '0.88rem', md: '0.93rem' }, lineHeight: 1.45 }}
-                  >
-                    {example}
-                  </Box>
-                ))}
-              </Box>
-            </Paper>
-          );
-        })}
       </Box>
 
       <Typography

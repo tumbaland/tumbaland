@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 
@@ -43,12 +43,34 @@ describe('HeroSection', () => {
     expect(screen.getByText(/Logged for Friday 4 September/)).toBeInTheDocument();
   });
 
+  it('plays the tools it really calls, under the reply they produced', () => {
+    renderHero();
+
+    // The claim is that something happens when you send it, and the tool names
+    // are the evidence. Each one ships on the MCP server under this name.
+    ['log_day', 'get_spending', 'get_photo_memories'].forEach((tool) => {
+      expect(screen.getByText(tool)).toBeInTheDocument();
+    });
+  });
+
+  it('shows the whole exchange where it cannot be played', () => {
+    renderHero();
+
+    // jsdom has no IntersectionObserver, which is also the case in a browser
+    // old enough to lack one and for anyone who asked for less motion. The
+    // conversation then sits there finished rather than never starting.
+    expect(screen.getByText(/Nine photos from Nice/)).toBeInTheDocument();
+  });
+
   it('hides the staged conversation from screen readers', () => {
     renderHero();
 
     // It is an illustration. Read aloud, a fabricated exchange sounds like real
-    // content, and the heading beside it already carries the meaning.
-    expect(screen.getByTestId('hero-exchange')).toHaveAttribute('aria-hidden', 'true');
+    // content, and the heading beside it already carries the meaning. The
+    // screen is what is hidden, not the whole block: a control that can be
+    // focused must never sit inside an aria-hidden subtree.
+    const exchange = screen.getByTestId('hero-exchange');
+    expect(within(exchange).getByTestId('phone-screen')).toHaveAttribute('aria-hidden', 'true');
   });
 
   it('shows both halves of the product in the exchange, not only the journal', () => {

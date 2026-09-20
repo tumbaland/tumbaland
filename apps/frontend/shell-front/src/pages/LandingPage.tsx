@@ -6,7 +6,7 @@ import BgImageBox from '../components/BgImageBox';
 import { LandingNav } from '../components/landing/LandingNav';
 import { HeroSection } from '../components/landing/HeroSection';
 import { AssistantSection } from '../components/landing/AssistantSection';
-import { ProductsSection } from '../components/landing/ProductsSection';
+import { ShowcaseSection } from '../components/landing/ShowcaseSection';
 import { PrivacySection } from '../components/landing/PrivacySection';
 import { LandingFooter } from '../components/landing/LandingFooter';
 import { DocumentDialog, DocumentKey, isDocumentKey } from '../components/landing/DocumentDialog';
@@ -26,6 +26,12 @@ export const READ_PARAM = 'read';
  * **The assistant leads.** The connector is the part nothing else on the shelf
  * has, so it is the hero and the section under it. The modules follow as what
  * the assistant can reach.
+ *
+ * **Shown, not described.** The hero plays the exchange as a recording, and
+ * the modules are three screens of the app rather than three paragraphs about
+ * them. Everything moving here is drawn in the page: there is no video file to
+ * pull down on a phone, and no screenshot of anybody's real journal, balance
+ * or holiday on a public page.
  *
  * **Nothing to buy.** Tumbaland is free, so there is no pricing, plan table or
  * FAQ about limits and supporting.
@@ -119,7 +125,7 @@ export function LandingPage() {
         {/* Straight after the hero, because the hero makes a claim that only
             holds if connecting is genuinely this small a job. */}
         <AssistantSection onOpenGuide={() => openDocument('connect')} />
-        <ProductsSection />
+        <ShowcaseSection />
         <PrivacySection onOpen={openDocument} />
         <LandingFooter onSignIn={handleSignIn} onOpen={openDocument} />
       </Box>
