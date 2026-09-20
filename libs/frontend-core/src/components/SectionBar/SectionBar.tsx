@@ -32,6 +32,13 @@ export interface SectionBarProps {
   compact?: boolean;
   /** Pinned to the right of the bar — where the shell puts the tenant selector. */
   end?: ReactNode;
+  /**
+   * Drawn at the left in place of the title, for a page that has something
+   * better to put there than its own name — the shell's home page puts the
+   * wordmark here. Shown on the same terms as the title, so a module with
+   * sections still spends the room on them.
+   */
+  lead?: ReactNode;
 }
 
 /** A section owns its own path and everything nested under it. */
@@ -61,7 +68,8 @@ export function SectionBar({
   items = [],
   currentRoute,
   compact = false,
-  end
+  end,
+  lead
 }: SectionBarProps) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const open = Boolean(anchorEl);
@@ -116,28 +124,29 @@ export function SectionBar({
 
   return (
     <Box component="header" sx={{ ...bar, minHeight: compact ? 56 : 68, px: compact ? 1.25 : 2 }}>
-      {showTitle && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
-          {Icon && (
-            <Box sx={{ ...tile, color: accent, backgroundColor: `${accent}14` }}>
-              <Icon fontSize="small" />
+      {showTitle &&
+        (lead ?? (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
+            {Icon && (
+              <Box sx={{ ...tile, color: accent, backgroundColor: `${accent}14` }}>
+                <Icon fontSize="small" />
+              </Box>
+            )}
+            <Box
+              component="span"
+              sx={{
+                fontSize: 17,
+                fontWeight: 700,
+                color: ink.strong,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}
+            >
+              {title}
             </Box>
-          )}
-          <Box
-            component="span"
-            sx={{
-              fontSize: 17,
-              fontWeight: 700,
-              color: ink.strong,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}
-          >
-            {title}
           </Box>
-        </Box>
-      )}
+        ))}
 
       {sections}
 

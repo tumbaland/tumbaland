@@ -32,6 +32,49 @@ interface GroupApiResponse {
 const STORAGE_KEY = TENANT_STORAGE_KEY;
 
 /**
+ * Which context each account last worked in, keyed by user id.
+ *
+ * Deliberately *not* in SESSION_SCOPED_KEYS: `logout()` clears the active
+ * selection above, which is right — `useTenantFilter` reads that key
+ * synchronously with no idea who is signed in, so leaving a group id there
+ * across a sign-out is what sent the next account's requests out with a
+ * groupId it is not a member of. This is the other half: a preference, per
+ * account, that survives a sign-out so signing back in returns you to the
+ * group you were working in rather than dropping you on Personal every time.
+ *
+ * Keyed by email rather than stamped with one, so a second account signing in
+ * on the same browser reads its own entry or none, never someone else's.
+ */
+const LAST_TENANT_KEY = 'lastTenantByUser';
+
+type LastTenantMap = Record<string, TenantOption>;
+
+const readLastTenants = (): LastTenantMap => {
+  try {
+    const raw = localStorage.getItem(LAST_TENANT_KEY);
+    return raw ? (JSON.parse(raw) as LastTenantMap) : {};
+  } catch (err) {
+    logger.warn('Failed to read the last tenant per account', { error: err });
+    return {};
+  }
+};
+
+/** The context this account was last in, or null for an account with no history. */
+const loadLastTenant = (userId?: string): TenantOption | null => {
+  if (!userId) return null;
+  return readLastTenants()[userId] ?? null;
+};
+
+const rememberLastTenant = (tenant: TenantOption, userId?: string): void => {
+  if (!userId) return;
+  try {
+    localStorage.setItem(LAST_TENANT_KEY, JSON.stringify({ ...readLastTenants(), [userId]: tenant }));
+  } catch (err) {
+    logger.warn('Failed to remember the last tenant', { error: err });
+  }
+};
+
+/**
  * The persisted selection, stamped with the account that made it.
  *
  * localStorage is per-origin, not per-account: sign out and sign in as
@@ -41,9 +84,16 @@ const STORAGE_KEY = TENANT_STORAGE_KEY;
  * the new account is not a member of, and the service answers 403 (which is
  * exactly what it should do). The stamp lets us recognize a selection that
  * belongs to someone else and drop it.
+ *
+ * The id, not the address: an email is a mutable attribute of an account, so
+ * a change of address would orphan the stamp and make the account's own
+ * selection read as somebody else's. A selection written by an older build
+ * carries `userEmail` and no `userId`; it reads as unstamped and is validated
+ * by group membership alone, exactly as anything written before stamping
+ * existed, and picks up an id the first time this account saves.
  */
 interface StoredTenant extends TenantOption {
-  userEmail?: string;
+  userId?: string;
 }
 
 /** The stamp is storage bookkeeping; consumers see a plain TenantOption. */
@@ -60,13 +110,13 @@ const CACHE_DURATION = 30000; // 30 seconds
 // user as well as URL: the cache outlives a sign-out, and handing the incoming
 // account the previous one's group list is how a stale selection gets
 // "validated" and survives.
-const fetchGroupsGlobally = async (groupApiUrl: string, userEmail?: string): Promise<TenantOption[]> => {
+const fetchGroupsGlobally = async (groupApiUrl: string, userId?: string): Promise<TenantOption[]> => {
   requestCounter++;
   logger.debug('fetchGroupsGlobally called', { requestNumber: requestCounter, groupApiUrl });
 
   // Check if we have a valid cached request for the same API URL and user
   const now = Date.now();
-  const cacheKey = `${userEmail ?? ''}|${groupApiUrl}`;
+  const cacheKey = `${userId ?? ''}|${groupApiUrl}`;
   if (
     globalGroupsFetchCache &&
     globalGroupsCacheKey === cacheKey &&
@@ -154,7 +204,7 @@ const fetchGroupsGlobally = async (groupApiUrl: string, userEmail?: string): Pro
  * Custom hook for managing tenant selection
  * Handles both personal account and group contexts
  */
-export const useTenant = (groupApiUrl: string, userEmail?: string): UseTenantResult => {
+export const useTenant = (groupApiUrl: string, userId?: string): UseTenantResult => {
   const [selectedTenant, setSelectedTenantState] = useState<TenantOption | null>(null);
   const [availableTenants, setAvailableTenants] = useState<TenantOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -178,23 +228,25 @@ export const useTenant = (groupApiUrl: string, userEmail?: string): UseTenantRes
   const saveTenant = useCallback(
     (tenant: TenantOption) => {
       try {
-        const stored: StoredTenant = { ...tenant, userEmail };
+        const stored: StoredTenant = { ...tenant, userId };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
       } catch (err) {
         logger.warn('Failed to save tenant selection', { error: err });
       }
+      // Outlives the sign-out that clears the line above.
+      rememberLastTenant(tenant, userId);
     },
-    [userEmail]
+    [userId]
   );
 
   // Fetch available groups from API using user authentication
   const fetchGroups = useCallback(async (): Promise<TenantOption[]> => {
-    return fetchGroupsGlobally(groupApiUrl, userEmail);
-  }, [groupApiUrl, userEmail]);
+    return fetchGroupsGlobally(groupApiUrl, userId);
+  }, [groupApiUrl, userId]);
 
   // Refresh tenants list
   const refreshTenants = useCallback(async () => {
-    if (!userEmail) {
+    if (!userId) {
       setLoading(false);
       return;
     }
@@ -221,23 +273,37 @@ export const useTenant = (groupApiUrl: string, userEmail?: string): UseTenantRes
       // A selection made by a different account is not ours to keep, even if
       // this account happens to belong to that group too — an unstamped one
       // predates this check and is validated by membership alone.
-      const belongsToThisUser = !savedTenant?.userEmail || savedTenant.userEmail === userEmail;
+      const belongsToThisUser = !savedTenant?.userId || savedTenant.userId === userId;
       const stillAMember = allTenants.some((t) => t.id === savedTenant?.id);
 
       if (savedTenant && belongsToThisUser && stillAMember) {
         setSelectedTenantState(toOption(savedTenant));
       } else {
-        // Fall back to personal: the saved tenant is gone, or was someone else's
-        setSelectedTenantState(personalTenant);
-        saveTenant(personalTenant);
+        // No active selection this account can use. Before falling back to
+        // Personal, see where this account was last working: a sign-out clears
+        // the active key, and without this every sign-in landed on Personal
+        // however long you had been in a group.
+        const lastUsed = loadLastTenant(userId);
+        const restorable =
+          lastUsed && lastUsed.type === 'group' && allTenants.some((tenant) => tenant.id === lastUsed.id)
+            ? lastUsed
+            : null;
+        const next = restorable ?? personalTenant;
+
+        setSelectedTenantState(next);
+        saveTenant(next);
 
         // Sibling components read the raw storage value synchronously on mount
         // (useTenantFilter), so by now they have already fired their requests
-        // against the discarded groupId and are showing 403s. Reload for the
-        // same reason switching tenant by hand reloads — it is the only way
-        // this app re-reads the context. Storage now says personal, so the
+        // against whatever storage said a moment ago — the discarded groupId,
+        // or nothing at all where we have just restored one. Reload for the
+        // same reason switching tenant by hand reloads: it is the only way
+        // this app re-reads the context. Storage now agrees with state, so the
         // next pass takes the branch above and this does not loop.
-        if (savedTenant?.type === 'group') {
+        if (restorable) {
+          logger.debug('Restored the context this account last used', { name: restorable.name });
+          window.location.reload();
+        } else if (savedTenant?.type === 'group') {
           logger.debug('Discarded a tenant selection this account cannot use; reloading');
           window.location.reload();
         }
@@ -263,7 +329,7 @@ export const useTenant = (groupApiUrl: string, userEmail?: string): UseTenantRes
     } finally {
       setLoading(false);
     }
-  }, [userEmail, fetchGroups, loadSavedTenant, saveTenant]);
+  }, [userId, fetchGroups, loadSavedTenant, saveTenant]);
 
   // Set selected tenant with page reload
   const setSelectedTenant = useCallback(

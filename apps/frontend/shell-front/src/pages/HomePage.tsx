@@ -8,8 +8,12 @@ import { ContinueCard } from '../components/home/ContinueCard';
 import { ModuleList } from '../components/home/ModuleList';
 import { DailyTodo } from '../components/home/DailyTodo';
 import { PlanUsageCard } from '../components/home/PlanUsageCard';
+import { MemoryCard } from '../components/home/MemoryCard';
+import { RecentPhotos } from '../components/home/RecentPhotos';
+import { RecentActivity } from '../components/home/RecentActivity';
 import { moduleForRoute } from '../components/home/modules';
 import { getLastVisited } from '../services/lastVisited';
+import { useHomeFeed } from '../hooks/useHomeFeed';
 import { User } from '../types';
 
 interface HomePageProps {
@@ -17,16 +21,22 @@ interface HomePageProps {
 }
 
 /**
- * The signed-in home: where the app opens, with the tab bar under it for
- * everything else.
+ * The signed-in home.
  *
- * Built like the first screen of a phone app rather than a web page: a title,
- * a row of one-tap actions, a way back to where you were, the modules as a
- * list, then the daily idea and your plan. On a wider screen the same parts sit
- * in two columns.
+ * It used to be navigation and nothing else: a greeting, four shortcuts, and
+ * two lists of places to go. Every module it linked to was already one tap
+ * away in the rail beside it, so the page said the same thing every day and
+ * gave nobody a reason to open it twice.
+ *
+ * It leads with the data now. The photo from this date in an earlier year is
+ * different every morning and is the whole argument for coming back; under it
+ * are the last few journal entries and the newest photos, so the page shows
+ * that the thing is being kept rather than listing the rooms it is kept in.
+ * The launcher is still here, below, where it does not cost anything.
  */
 export function HomePage({ user }: HomePageProps) {
   const navigate = useNavigate();
+  const { memories, photos, activities } = useHomeFeed();
 
   const handleOpen = useCallback((route: string) => navigate(route), [navigate]);
 
@@ -50,16 +60,22 @@ export function HomePage({ user }: HomePageProps) {
           maxWidth: 960,
           mx: 'auto',
           px: { xs: 2, md: 4 },
-          pt: { xs: 2.5, md: 6 },
+          pt: { xs: 2.5, md: 5 },
           pb: { xs: 3, md: 6 },
           display: 'flex',
           flexDirection: 'column',
-          gap: { xs: 2.5, md: 3.5 }
+          gap: { xs: 2.5, md: 3 }
         }}
       >
         <GreetingHeader name={user?.name} />
 
+        {/* Renders nothing on a date with no history, which is most of the
+            first year. The page reads fine without it. */}
+        {memories && <MemoryCard memories={memories} onOpen={handleOpen} />}
+
         <QuickActions onOpen={handleOpen} />
+
+        <RecentPhotos photos={photos} onOpen={handleOpen} />
 
         <Box
           sx={{
@@ -70,6 +86,7 @@ export function HomePage({ user }: HomePageProps) {
           }}
         >
           <Box sx={column}>
+            <RecentActivity activities={activities} onOpen={handleOpen} />
             {resume && <ContinueCard module={resume.module} route={resume.route} onOpen={handleOpen} />}
             <ModuleList onOpen={handleOpen} />
           </Box>

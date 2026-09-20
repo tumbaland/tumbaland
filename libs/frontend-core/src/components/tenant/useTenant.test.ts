@@ -25,7 +25,7 @@ beforeEach(() => {
 });
 
 describe('useTenant', () => {
-  it('does not fetch and sets loading:false when no userEmail is given', async () => {
+  it('does not fetch and sets loading:false when no user id is given', async () => {
     const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), undefined));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -36,7 +36,7 @@ describe('useTenant', () => {
 
   it('defaults to the Personal tenant when there is no saved selection', async () => {
     mockGroupsResponse([{ _id: 'g1', name: 'Group A' }]);
-    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'ada@example.com'));
+    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'user-ada'));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -46,14 +46,14 @@ describe('useTenant', () => {
     ]);
     expect(result.current.selectedTenant).toEqual({ id: 'personal', name: 'Personal', type: 'personal' });
     expect(localStorage.getItem('selectedTenant')).toBe(
-      JSON.stringify({ id: 'personal', name: 'Personal', type: 'personal', userEmail: 'ada@example.com' })
+      JSON.stringify({ id: 'personal', name: 'Personal', type: 'personal', userId: 'user-ada' })
     );
   });
 
   it('restores a saved tenant selection when it still exists among the fetched groups', async () => {
     localStorage.setItem('selectedTenant', JSON.stringify({ id: 'g1', name: 'Group A', type: 'group' }));
     mockGroupsResponse([{ _id: 'g1', name: 'Group A' }]);
-    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'ada@example.com'));
+    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'user-ada'));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -63,13 +63,13 @@ describe('useTenant', () => {
   it('falls back to Personal when the saved tenant no longer exists among the fetched groups', async () => {
     localStorage.setItem('selectedTenant', JSON.stringify({ id: 'stale-group', name: 'Gone', type: 'group' }));
     mockGroupsResponse([{ _id: 'g1', name: 'Group A' }]);
-    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'ada@example.com'));
+    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'user-ada'));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.selectedTenant).toEqual({ id: 'personal', name: 'Personal', type: 'personal' });
     expect(localStorage.getItem('selectedTenant')).toBe(
-      JSON.stringify({ id: 'personal', name: 'Personal', type: 'personal', userEmail: 'ada@example.com' })
+      JSON.stringify({ id: 'personal', name: 'Personal', type: 'personal', userId: 'user-ada' })
     );
   });
 
@@ -79,19 +79,19 @@ describe('useTenant', () => {
     // synchronously — every group-scoped request would go out as bea's group.
     localStorage.setItem(
       'selectedTenant',
-      JSON.stringify({ id: 'g1', name: 'Group A', type: 'group', userEmail: 'bea@example.com' })
+      JSON.stringify({ id: 'g1', name: 'Group A', type: 'group', userId: 'user-bea' })
     );
     mockGroupsResponse([{ _id: 'g1', name: 'Group A' }]);
     const reloadSpy = vi.fn();
     const originalLocation = window.location;
     Object.defineProperty(window, 'location', { writable: true, value: { ...originalLocation, reload: reloadSpy } });
 
-    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'ada@example.com'));
+    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'user-ada'));
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.selectedTenant).toEqual({ id: 'personal', name: 'Personal', type: 'personal' });
     expect(localStorage.getItem('selectedTenant')).toBe(
-      JSON.stringify({ id: 'personal', name: 'Personal', type: 'personal', userEmail: 'ada@example.com' })
+      JSON.stringify({ id: 'personal', name: 'Personal', type: 'personal', userId: 'user-ada' })
     );
     // Siblings already fired requests against the discarded id before this ran.
     expect(reloadSpy).toHaveBeenCalledTimes(1);
@@ -101,14 +101,14 @@ describe('useTenant', () => {
   it('does not reload when the discarded selection was Personal', async () => {
     localStorage.setItem(
       'selectedTenant',
-      JSON.stringify({ id: 'personal', name: 'Personal', type: 'personal', userEmail: 'bea@example.com' })
+      JSON.stringify({ id: 'personal', name: 'Personal', type: 'personal', userId: 'user-bea' })
     );
     mockGroupsResponse([]);
     const reloadSpy = vi.fn();
     const originalLocation = window.location;
     Object.defineProperty(window, 'location', { writable: true, value: { ...originalLocation, reload: reloadSpy } });
 
-    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'ada@example.com'));
+    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'user-ada'));
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(reloadSpy).not.toHaveBeenCalled();
@@ -121,7 +121,7 @@ describe('useTenant', () => {
       status: 500,
       statusText: 'Internal Server Error'
     });
-    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'ada@example.com'));
+    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'user-ada'));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -131,7 +131,7 @@ describe('useTenant', () => {
   });
 
   it('keeps showing the saved group when the groups fetch fails, matching what requests still send', async () => {
-    const saved = { id: 'g1', name: 'Group A', type: 'group', userEmail: 'ada@example.com' };
+    const saved = { id: 'g1', name: 'Group A', type: 'group', userId: 'user-ada' };
     localStorage.setItem('selectedTenant', JSON.stringify(saved));
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: false,
@@ -139,7 +139,7 @@ describe('useTenant', () => {
       statusText: 'Internal Server Error'
     });
 
-    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'ada@example.com'));
+    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'user-ada'));
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     // A transient failure is not evidence the selection is stale, so it stays
@@ -156,7 +156,7 @@ describe('useTenant', () => {
       statusText: 'OK',
       json: async () => ({ success: false, data: [] })
     });
-    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'ada@example.com'));
+    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'user-ada'));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -164,7 +164,7 @@ describe('useTenant', () => {
   });
 
   it('returns no groups (without fetching) when groupApiUrl is empty', async () => {
-    const { result } = renderHook(() => useTenant('', 'ada@example.com'));
+    const { result } = renderHook(() => useTenant('', 'user-ada'));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -176,8 +176,8 @@ describe('useTenant', () => {
     mockGroupsResponse([{ _id: 'g1', name: 'Group A' }]);
     const url = uniqueGroupApiUrl();
 
-    const first = renderHook(() => useTenant(url, 'ada@example.com'));
-    const second = renderHook(() => useTenant(url, 'ada@example.com'));
+    const first = renderHook(() => useTenant(url, 'user-ada'));
+    const second = renderHook(() => useTenant(url, 'user-ada'));
 
     await waitFor(() => expect(first.result.current.loading).toBe(false));
     await waitFor(() => expect(second.result.current.loading).toBe(false));
@@ -189,12 +189,12 @@ describe('useTenant', () => {
     mockGroupsResponse([{ _id: 'g1', name: 'Group A' }]);
     const url = uniqueGroupApiUrl();
 
-    const first = renderHook(() => useTenant(url, 'ada@example.com'));
+    const first = renderHook(() => useTenant(url, 'user-ada'));
     await waitFor(() => expect(first.result.current.loading).toBe(false));
 
     // Same URL, well inside the 30s cache window, but a different session —
     // reusing ada's groups here is what let a stale selection validate.
-    const second = renderHook(() => useTenant(url, 'bea@example.com'));
+    const second = renderHook(() => useTenant(url, 'user-bea'));
     await waitFor(() => expect(second.result.current.loading).toBe(false));
 
     expect(global.fetch).toHaveBeenCalledTimes(2);
@@ -206,7 +206,7 @@ describe('useTenant', () => {
     const originalLocation = window.location;
     Object.defineProperty(window, 'location', { writable: true, value: { ...originalLocation, reload: reloadSpy } });
 
-    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'ada@example.com'));
+    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'user-ada'));
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     const groupTenant = { id: 'g9', name: 'Group Nine', type: 'group' as const };
@@ -214,9 +214,7 @@ describe('useTenant', () => {
       result.current.setSelectedTenant(groupTenant);
     });
 
-    expect(localStorage.getItem('selectedTenant')).toBe(
-      JSON.stringify({ ...groupTenant, userEmail: 'ada@example.com' })
-    );
+    expect(localStorage.getItem('selectedTenant')).toBe(JSON.stringify({ ...groupTenant, userId: 'user-ada' }));
     expect(reloadSpy).toHaveBeenCalledTimes(1);
     Object.defineProperty(window, 'location', { writable: true, value: originalLocation });
   });
@@ -227,7 +225,7 @@ describe('useTenant', () => {
       throw new Error('storage blocked');
     });
 
-    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'ada@example.com'));
+    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'user-ada'));
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.selectedTenant).toEqual({ id: 'personal', name: 'Personal', type: 'personal' });
@@ -240,10 +238,123 @@ describe('useTenant', () => {
       throw new Error('quota exceeded');
     });
 
-    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'ada@example.com'));
+    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'user-ada'));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.selectedTenant).toEqual({ id: 'personal', name: 'Personal', type: 'personal' });
     setItemSpy.mockRestore();
+  });
+});
+
+describe('the context an account was last in', () => {
+  let originalLocation: Location;
+
+  afterEach(() => {
+    if (originalLocation) Object.defineProperty(window, 'location', { writable: true, value: originalLocation });
+  });
+
+  /**
+   * Watch reloads from here on. Installed after the arrange step rather than
+   * around it: arrange signs in and picks a group, which reloads for real, and
+   * a spy shared with the setup counts those too.
+   */
+  function watchReloads(): ReturnType<typeof vi.fn> {
+    const reloadSpy = vi.fn();
+    originalLocation = window.location;
+    Object.defineProperty(window, 'location', { writable: true, value: { ...originalLocation, reload: reloadSpy } });
+    return reloadSpy;
+  }
+
+  /**
+   * A first session that ends signed out, leaving what `logout()` leaves: the
+   * active selection cleared, the per-account memory kept.
+   */
+  async function signInPickAGroupAndOut() {
+    mockGroupsResponse([{ _id: 'g1', name: 'Group A' }]);
+    const first = renderHook(() => useTenant(uniqueGroupApiUrl(), 'user-ada'));
+    await waitFor(() => expect(first.result.current.loading).toBe(false));
+    act(() => first.result.current.setSelectedTenant({ id: 'g1', name: 'Group A', type: 'group' }));
+    first.unmount();
+
+    localStorage.removeItem('selectedTenant');
+  }
+
+  it('comes back after a sign-out instead of dropping the account on Personal', async () => {
+    await signInPickAGroupAndOut();
+    const reloadSpy = watchReloads();
+
+    mockGroupsResponse([{ _id: 'g1', name: 'Group A' }]);
+    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'user-ada'));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.selectedTenant).toEqual({ id: 'g1', name: 'Group A', type: 'group' });
+    // useTenantFilter read storage synchronously before this restored anything,
+    // so the requests already out were scoped to the wrong context.
+    expect(reloadSpy).toHaveBeenCalled();
+  });
+
+  it('is not handed to a different account signing in on the same browser', async () => {
+    await signInPickAGroupAndOut();
+    watchReloads();
+
+    // Grace belongs to the same group and still gets Personal: the memory is
+    // Ada's, and inheriting a colleague's working context is not a feature.
+    mockGroupsResponse([{ _id: 'g1', name: 'Group A' }]);
+    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'user-grace'));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.selectedTenant).toEqual({ id: 'personal', name: 'Personal', type: 'personal' });
+    expect(localStorage.getItem('selectedTenant')).toBe(
+      JSON.stringify({ id: 'personal', name: 'Personal', type: 'personal', userId: 'user-grace' })
+    );
+  });
+
+  it("keeps each account's memory separate", async () => {
+    await signInPickAGroupAndOut();
+    watchReloads();
+
+    mockGroupsResponse([{ _id: 'g1', name: 'Group A' }]);
+    const grace = renderHook(() => useTenant(uniqueGroupApiUrl(), 'user-grace'));
+    await waitFor(() => expect(grace.result.current.loading).toBe(false));
+    grace.unmount();
+    localStorage.removeItem('selectedTenant');
+
+    // Grace signing in and out wrote her own Personal; ada's group survives it.
+    mockGroupsResponse([{ _id: 'g1', name: 'Group A' }]);
+    const ada = renderHook(() => useTenant(uniqueGroupApiUrl(), 'user-ada'));
+    await waitFor(() => expect(ada.result.current.loading).toBe(false));
+
+    expect(ada.result.current.selectedTenant).toEqual({ id: 'g1', name: 'Group A', type: 'group' });
+  });
+
+  it('is dropped for a group the account has since left', async () => {
+    await signInPickAGroupAndOut();
+    watchReloads();
+
+    mockGroupsResponse([]);
+    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'user-ada'));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.selectedTenant).toEqual({ id: 'personal', name: 'Personal', type: 'personal' });
+  });
+
+  it('does not reload for a remembered Personal, which needs no context to apply', async () => {
+    mockGroupsResponse([{ _id: 'g1', name: 'Group A' }]);
+    const first = renderHook(() => useTenant(uniqueGroupApiUrl(), 'user-ada'));
+    await waitFor(() => expect(first.result.current.loading).toBe(false));
+    first.unmount();
+    localStorage.removeItem('selectedTenant');
+    const reloadSpy = watchReloads();
+
+    mockGroupsResponse([{ _id: 'g1', name: 'Group A' }]);
+    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), 'user-ada'));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.selectedTenant).toEqual({ id: 'personal', name: 'Personal', type: 'personal' });
+    expect(reloadSpy).not.toHaveBeenCalled();
   });
 });

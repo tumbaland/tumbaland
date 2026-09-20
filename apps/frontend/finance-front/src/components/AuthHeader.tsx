@@ -23,7 +23,7 @@ const AuthHeader: React.FC = () => {
     setSelectedTenant
   } = useTenant(
     config.GROUP_API_URL || '',
-    isAuthenticated && config.GROUP_API_URL ? user?.email : undefined
+    isAuthenticated && config.GROUP_API_URL ? user?.id : undefined
   );
 
   const handleLogout = async () => {

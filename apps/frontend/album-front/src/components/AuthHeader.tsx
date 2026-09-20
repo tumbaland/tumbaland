@@ -17,7 +17,7 @@ const AuthHeader: React.FC = () => {
     loading: tenantsLoading,
     error: tenantsError,
     setSelectedTenant
-  } = useTenant(config.GROUP_API_URL || '', isAuthenticated && config.GROUP_API_URL ? user?.email : undefined);
+  } = useTenant(config.GROUP_API_URL || '', isAuthenticated && config.GROUP_API_URL ? user?.id : undefined);
 
   useEffect(() => {
     const checkAuth = async () => {

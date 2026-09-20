@@ -1,0 +1,88 @@
+import { createApiClient } from '@tumbaland/frontend-core';
+import { getGlobalConfig } from '../config/ConfigProvider';
+
+/**
+ * What the home page shows of the data itself, rather than links to it.
+ *
+ * No `onUnauthorized` on either client, for the same reason the plan card has
+ * none: the home page is behind the session gate already, and a panel of
+ * photos is the last thing that should be allowed to bounce anyone to the
+ * login screen. A failed call hides its section.
+ */
+const albumApi = createApiClient({ baseUrl: () => getGlobalConfig().ALBUM_API_URL ?? '' });
+const journalApi = createApiClient({ baseUrl: () => getGlobalConfig().RELATIONSHIP_API_URL ?? '' });
+
+/** The envelope every Tumbaland service answers in. */
+interface Envelope<T> {
+  success: boolean;
+  data: T;
+}
+
+export interface HomePhoto {
+  _id: string;
+  title?: string;
+  originalName: string;
+  albumId: string;
+  /** Signed, and short-lived: never cache one past the render it was fetched for. */
+  signedUrl?: string;
+  thumbnailSignedUrl?: string;
+  createdAt: string;
+}
+
+export interface MemoryYear {
+  year: number;
+  yearsAgo: number;
+  /** How many this year has in the window, which may exceed `photos.length`. */
+  photoCount: number;
+  photos: Array<HomePhoto & { albumName: string; memoryDate: string }>;
+}
+
+export interface Memories {
+  date: string;
+  totalPhotos: number;
+  /** Most recent year first. */
+  years: MemoryYear[];
+}
+
+export interface RecentActivity {
+  _id: string;
+  date: string;
+  description?: string;
+  hours?: number;
+  location?: { name?: string };
+  /** Populated by the service, so the entry knows what kind of thing it was. */
+  typeId?: { _id: string; name: string; color?: string; icon?: string };
+}
+
+/** Whichever context the session is reading, as every scoped endpoint spells it. */
+const scope = (groupId?: string) => (groupId ? { groupId } : undefined);
+
+/** Photos from this same date in earlier years. Empty on a day with no history. */
+export const getMemories = async (groupId?: string): Promise<Memories> => {
+  const { data } = await albumApi.get<Envelope<Memories>>('/api/photos/memories', {
+    params: { ...scope(groupId), limitPerYear: 6 }
+  });
+  return data;
+};
+
+export const getRecentPhotos = async (groupId?: string, limit = 8): Promise<HomePhoto[]> => {
+  const { data } = await albumApi.get<Envelope<{ photos: HomePhoto[] }>>('/api/photos/recent', {
+    params: { ...scope(groupId), limit }
+  });
+  return data.photos ?? [];
+};
+
+export const getRecentActivities = async (limit = 5): Promise<RecentActivity[]> => {
+  // No groupId: this endpoint scopes itself to the caller and the groups they
+  // belong to, and takes no filter.
+  const { data } = await journalApi.get<Envelope<RecentActivity[]>>('/api/activities/recent', {
+    params: { limit }
+  });
+  return data ?? [];
+};
+
+/** Whether the home page can ask at all: a front deployed without these stays as it was. */
+export const homeFeedsConfigured = (): boolean => {
+  const config = getGlobalConfig();
+  return Boolean(config.ALBUM_API_URL) || Boolean(config.RELATIONSHIP_API_URL);
+};

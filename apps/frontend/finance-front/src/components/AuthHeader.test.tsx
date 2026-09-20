@@ -68,12 +68,14 @@ it('reports unauthenticated when there is no user', () => {
   expect(mockedUseTenant).toHaveBeenCalledWith('https://group.example', undefined);
 });
 
-it('passes the user email to useTenant only once authenticated with a group API url', () => {
-  mockedUseCurrentUser.mockReturnValue({ data: { email: 'jane@example.com' }, isLoading: false });
+it('passes the user id to useTenant only once authenticated with a group API url', () => {
+  // The id, not the address: an email is a mutable attribute of an account, and
+  // useTenant keys each account's remembered context by whatever it is given.
+  mockedUseCurrentUser.mockReturnValue({ data: { id: 'user-jane', email: 'jane@example.com' }, isLoading: false });
 
   render(<AuthHeader />);
 
-  expect(mockedUseTenant).toHaveBeenCalledWith('https://group.example', 'jane@example.com');
+  expect(mockedUseTenant).toHaveBeenCalledWith('https://group.example', 'user-jane');
 });
 
 it('redirects to login via authService', async () => {

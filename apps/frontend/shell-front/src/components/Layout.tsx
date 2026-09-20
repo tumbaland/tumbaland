@@ -40,7 +40,7 @@ export default function Layout({ children }: LayoutProps) {
   // flashes a nav it is about to lose.
   const { authenticated, user } = useAuthState();
   const { GROUP_API_URL } = useConfig();
-  const tenant = useTenant(GROUP_API_URL ?? '', authenticated ? user?.email : undefined);
+  const tenant = useTenant(GROUP_API_URL ?? '', authenticated ? user?.id : undefined);
 
   const currentApp = getAppByRoute(location.pathname);
 

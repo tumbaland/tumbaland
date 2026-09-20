@@ -9,6 +9,9 @@ export interface AppConfig {
   GROUP_FRONT_URL?: string;
   GROUP_API_URL?: string;
   PUBLIC_API_URL?: string;
+  /** album-service and relationship-service, for the home page's memories, photos and recent entries. */
+  ALBUM_API_URL?: string;
+  RELATIONSHIP_API_URL?: string;
   /** payment-service, for the plan and usage meters on the signed-in home page. */
   PAYMENT_API_URL?: string;
   ACCOUNT_FRONT_URL?: string;
@@ -28,6 +31,8 @@ const factory = createConfigProvider<AppConfig>({
     GROUP_FRONT_URL: import.meta.env.VITE_GROUP_FRONT_URL,
     GROUP_API_URL: import.meta.env.VITE_GROUP_API_URL,
     PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL,
+    ALBUM_API_URL: import.meta.env.VITE_ALBUM_API_URL,
+    RELATIONSHIP_API_URL: import.meta.env.VITE_RELATIONSHIP_API_URL,
     PAYMENT_API_URL: import.meta.env.VITE_PAYMENT_API_URL,
     ACCOUNT_FRONT_URL: import.meta.env.VITE_ACCOUNT_FRONT_URL,
     AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL,

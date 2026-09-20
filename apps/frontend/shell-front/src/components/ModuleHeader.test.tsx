@@ -68,10 +68,13 @@ it('keeps the tenant selector in the bar on every page', () => {
   expect(screen.getByText('tenant')).toBeInTheDocument();
 });
 
-it('names the shell home page, which owns no remote and so has no sections', () => {
+it('puts the wordmark on the home page rather than repeating "Home"', () => {
+  // The rail entry is lit and the greeting below says the same thing; the
+  // word in the corner was the third copy.
   renderHeader('/');
 
-  expect(screen.getByText('Home')).toBeInTheDocument();
+  expect(screen.getByText('Tumbaland')).toBeInTheDocument();
+  expect(screen.queryByText('Home')).not.toBeInTheDocument();
 });
 
 it('leaves a module with sections unnamed: the rail and the active pill already say it', () => {
