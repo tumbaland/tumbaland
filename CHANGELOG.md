@@ -1,4 +1,14 @@
 # Tumbalog
+## [0.0.501](https://github.com/toomastahves/tumbaland/compare/app-v0.0.500...app-v0.0.501) (2026-09-20)
+
+### Features
+
+* improve home page ([eed1b00](https://github.com/toomastahves/tumbaland/commit/eed1b0000781715fba91f80928f117171abb9e7a))
+
+### Chores
+
+* **release:** @tumbaland/frontend-core 1.17.0 ([5289d1e](https://github.com/toomastahves/tumbaland/commit/5289d1e64f693ed66d439b3681a577aee3d866c0))
+
 ## [0.0.500](https://github.com/toomastahves/tumbaland/compare/app-v0.0.499...app-v0.0.500) (2026-09-20)
 
 ### Features
