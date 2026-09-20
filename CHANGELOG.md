@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.496](https://github.com/toomastahves/tumbaland/compare/app-v0.0.495...app-v0.0.496) (2026-09-20)
+
+### Features
+
+* include missing libraries ([5754c75](https://github.com/toomastahves/tumbaland/commit/5754c7578078577e154a4eccc518b342c745ae67))
+
 ## [0.0.495](https://github.com/toomastahves/tumbaland/compare/app-v0.0.494...app-v0.0.495) (2026-09-20)
 
 ### Features
