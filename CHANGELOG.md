@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.498](https://github.com/toomastahves/tumbaland/compare/app-v0.0.497...app-v0.0.498) (2026-09-20)
+
+### Bug Fixes
+
+* release workflow deploy step ([910d345](https://github.com/toomastahves/tumbaland/commit/910d3450da622c2ec58d11d589ab298851740548))
+
 ## [0.0.497](https://github.com/toomastahves/tumbaland/compare/app-v0.0.496...app-v0.0.497) (2026-09-20)
 
 ### Features
