@@ -7,6 +7,7 @@ export {
   wordmark,
   glass,
   glassInteractive,
+  chrome,
   brandButton,
   section,
   gutter,

@@ -87,7 +87,10 @@ export const moduleAccent = {
   journal: '#e11d48',
   album: '#2563eb',
   money: '#15803d',
-  profile: ink.strong,
+  // The identity pink, in its readable form. This was `ink.strong`, which is
+  // a text colour: as the tint behind Profile's current section it drew a grey
+  // pill in the one place the product's own colour belongs.
+  profile: brand.pinkInk,
   groups: brand.violetInk,
   billing: '#4f46e5'
 } as const;
@@ -123,6 +126,24 @@ export const glass = {
   backdropFilter: 'blur(10px)',
   border: '1px solid rgba(255,255,255,0.7)',
   boxShadow: '0 10px 30px -22px rgba(31,38,135,0.5)'
+} as const;
+
+/**
+ * The frosted chrome around the content: the navigation rail, the tab bar under
+ * it on phones, and the header bar above it.
+ *
+ * Named once because the three meet at a corner. They each had their own
+ * rgba white and their own blur, so the seam between the rail and the bar it
+ * touches was visible as a faint step in the tint.
+ *
+ * Not `glass`: that is the card, which is rounded and has a light border of its
+ * own. A full-height rail with a 28px radius and a white outline is a card the
+ * page happens to be next to.
+ */
+export const chrome = {
+  background: 'rgba(255,255,255,0.78)',
+  backdropFilter: 'blur(14px) saturate(150%)',
+  WebkitBackdropFilter: 'blur(14px) saturate(150%)'
 } as const;
 
 /** A card that responds to being pointed at. `accent` tints the lifted shadow. */

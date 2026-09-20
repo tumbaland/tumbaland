@@ -68,6 +68,7 @@ export { LoginButton } from './components/LoginButton';
 export { NotificationsMenu } from './components/NotificationsMenu/NotificationsMenu';
 export { AuthHeader } from './components/AuthHeader';
 export { AppLayout } from './components/AppLayout';
+export { SectionBar } from './components/SectionBar';
 
 // Entitlements: the usage bar and the hook that feeds it
 export { UsageMeter, formatBytes, useEntitlements } from './components/UsageMeter';
@@ -87,6 +88,7 @@ export type { LoaderProps } from './components/Loader';
 export type { ErrorPageProps } from './components/ErrorPage';
 export type { AppErrorBoundaryProps } from './components/AppErrorBoundary';
 export type { AppLayoutProps } from './components/AppLayout';
+export type { SectionBarProps, SectionBarItem } from './components/SectionBar';
 export type { UnauthorizedPageProps } from './components/UnauthorizedPage';
 export type { ProtectedRouteProps, ProtectedRouteAuthService } from './components/ProtectedRoute';
 export type { LoginButtonProps } from './components/LoginButton';
@@ -119,6 +121,7 @@ export {
   wordmark,
   glass,
   glassInteractive,
+  chrome,
   brandButton,
   section,
   gutter,

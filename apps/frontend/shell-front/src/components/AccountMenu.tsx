@@ -12,7 +12,7 @@ import Typography from '@mui/material/Typography';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { getUserApps, isRouteActive } from '../config/apps';
 import { authService } from '../services/authService';
-import { ink } from '@tumbaland/frontend-core';
+import { ink, surface } from '@tumbaland/frontend-core';
 import { User } from '../types';
 
 interface AccountMenuProps {
@@ -61,8 +61,16 @@ export function AccountMenu({ user, anchorEl, currentRoute, mobile, onClose }: A
           to={app.route}
           selected={isRouteActive(app.route, currentRoute)}
           onClick={onClose}
+          sx={{
+            borderRadius: 2,
+            mx: 0.5,
+            color: isRouteActive(app.route, currentRoute) ? app.color : ink.body,
+            '&.Mui-selected': { backgroundColor: `${app.color}14`, color: app.color },
+            '&.Mui-selected:hover': { backgroundColor: `${app.color}20` },
+            '&:hover': { backgroundColor: surface.sunken }
+          }}
         >
-          <ListItemIcon>
+          <ListItemIcon sx={{ color: 'inherit' }}>
             <Icon fontSize="small" />
           </ListItemIcon>
           <ListItemText>{app.name}</ListItemText>
@@ -70,8 +78,8 @@ export function AccountMenu({ user, anchorEl, currentRoute, mobile, onClose }: A
       );
     }),
     <Divider key="sign-out-divider" />,
-    <MenuItem key="sign-out" onClick={handleSignOut}>
-      <ListItemIcon>
+    <MenuItem key="sign-out" onClick={handleSignOut} sx={{ borderRadius: 2, mx: 0.5 }}>
+      <ListItemIcon sx={{ color: 'inherit' }}>
         <LogoutIcon fontSize="small" />
       </ListItemIcon>
       <ListItemText>Sign out</ListItemText>
@@ -114,7 +122,16 @@ export function AccountMenu({ user, anchorEl, currentRoute, mobile, onClose }: A
       anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
       slotProps={{
-        paper: { sx: { ml: 1, minWidth: 240, maxWidth: 320, borderRadius: 3 } },
+        paper: {
+          sx: {
+            ml: 1,
+            minWidth: 240,
+            maxWidth: 320,
+            border: `1px solid ${surface.divider}`,
+            borderRadius: 3,
+            boxShadow: '0 14px 32px -20px rgba(88,28,135,0.45)'
+          }
+        },
         list: { 'aria-label': 'Account' }
       }}
     >

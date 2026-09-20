@@ -4,6 +4,7 @@ import { ChevronRight as ChevronRightIcon, MoreVert as MoreVertIcon } from '@mui
 import { Link as RouterLink } from 'react-router';
 import { Group } from '../../types';
 import { initials, tintFor } from './groupAvatar';
+import { appPath } from '../../appBase';
 
 interface GroupCardProps {
   group: Group;
@@ -38,7 +39,7 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, canModify, userRole, onMen
     >
       <Box
         component={RouterLink}
-        to={`/${group._id}`}
+        to={appPath(`/${group._id}`)}
         sx={{
           flex: 1,
           minWidth: 0,

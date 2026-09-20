@@ -24,7 +24,7 @@ function renderCard(overrides: Partial<{ group: Group; canModify: boolean; userR
 
 it('links to the group detail page', () => {
   renderCard();
-  expect(screen.getByRole('link')).toHaveAttribute('href', '/g1');
+  expect(screen.getByRole('link')).toHaveAttribute('href', '/groups/g1');
 });
 
 it('shows the plural member count', () => {
@@ -57,7 +57,7 @@ it('shows the menu button and calls onMenuOpen when modifiable', async () => {
 it('hides the menu button when not modifiable, and the whole row still opens the group', () => {
   renderCard({ canModify: false });
   expect(screen.queryByTestId('MoreVertIcon')).not.toBeInTheDocument();
-  expect(screen.getByRole('link')).toHaveAttribute('href', '/g1');
+  expect(screen.getByRole('link')).toHaveAttribute('href', '/groups/g1');
 });
 
 it('keeps the options button outside the link', () => {

@@ -10,7 +10,7 @@ import { recordLastVisited } from '../services/lastVisited';
 import { useAuthState } from '../hooks/useAuthState';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
-import { getModuleMenu } from './ModuleMenu';
+import { ModuleHeader } from './ModuleHeader';
 
 interface LayoutProps {
   children: ReactNode;
@@ -52,40 +52,34 @@ export default function Layout({ children }: LayoutProps) {
   }, [currentApp, location.pathname]);
 
   const nav = authenticated ? <AppNav currentRoute={location.pathname} user={user} mobile={isMobile} /> : null;
-  const tenantBar =
+
+  // One bar for the whole signed-in session: where you are, where else you can
+  // go inside it, and whose data you are looking at. It was a module dropdown
+  // and a tenant button in a hand-rolled div, while Profile and Billing drew a
+  // second row of tabs of their own underneath.
+  const header =
     authenticated && user ? (
-      <div
-        style={{
-          flexShrink: 0,
-          display: 'flex',
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: isMobile ? 8 : 16,
-          minHeight: 68,
-          padding: '10px 16px',
-          borderBottom: '1px solid rgba(15,23,42,0.08)',
-          background: 'rgba(255,255,255,0.72)',
-          backdropFilter: 'blur(14px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(14px) saturate(180%)'
-        }}
-      >
-        {getModuleMenu(currentApp, location.pathname)}
-        <TenantSelector
-          selectedTenant={tenant.selectedTenant}
-          tenants={tenant.availableTenants}
-          onTenantChange={tenant.setSelectedTenant}
-          loading={tenant.loading}
-          error={tenant.error}
-          sx={{
-            flex: isMobile ? '0 0 auto' : '0 1 min(360px, 38vw)',
-            width: isMobile ? 'clamp(140px, 42vw, 220px)' : undefined,
-            minWidth: isMobile ? 0 : 150,
-            '& button': { width: '100%', minWidth: 0, px: isMobile ? 1 : undefined },
-            '& button > .MuiBox-root': { minWidth: 0 },
-            '& button .MuiTypography-root:last-child': { maxWidth: isMobile ? 120 : 'min(260px, 55vw)' }
-          }}
-        />
-      </div>
+      <ModuleHeader
+        app={currentApp}
+        currentRoute={location.pathname}
+        mobile={isMobile}
+        end={
+          <TenantSelector
+            selectedTenant={tenant.selectedTenant}
+            tenants={tenant.availableTenants}
+            onTenantChange={tenant.setSelectedTenant}
+            loading={tenant.loading}
+            error={tenant.error}
+            compact={isMobile}
+            sx={{
+              flexShrink: 0,
+              maxWidth: isMobile ? 'clamp(120px, 40vw, 200px)' : 'min(280px, 32vw)',
+              '& button': { width: '100%', minWidth: 0 },
+              '& button > .MuiBox-root': { minWidth: 0 }
+            }}
+          />
+        }
+      />
     ) : null;
 
   return (
@@ -124,7 +118,7 @@ export default function Layout({ children }: LayoutProps) {
           overflow: 'auto'
         }}
       >
-        {tenantBar}
+        {header}
 
         <div
           style={{

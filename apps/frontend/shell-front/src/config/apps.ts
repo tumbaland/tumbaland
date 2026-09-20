@@ -14,6 +14,13 @@ import ShowChartIcon from '@mui/icons-material/ShowChart';
 import TuneIcon from '@mui/icons-material/Tune';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import MapIcon from '@mui/icons-material/Map';
+import DevicesIcon from '@mui/icons-material/Devices';
+import LinkIcon from '@mui/icons-material/Link';
+import VpnKeyIcon from '@mui/icons-material/VpnKey';
+import HistoryIcon from '@mui/icons-material/History';
+import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import type { SvgIconProps } from '@mui/material/SvgIcon';
 import { AppConfig } from './ConfigProvider';
 import { moduleAccent } from '@tumbaland/frontend-core';
@@ -98,6 +105,11 @@ export const APPS: AppConfigItem[] = [
 /**
  * About the person rather than their data. The navigation keeps these behind
  * its Account entry instead of listing them beside the modules.
+ *
+ * Their sections are listed here for the same reason every other module's are:
+ * the header bar draws them. Profile and Billing each used to build their own
+ * row of MUI `Tabs` inside the page, which put a second, differently styled
+ * navigation under the shell's own.
  */
 export const USER_APPS: AppConfigItem[] = [
   {
@@ -106,7 +118,14 @@ export const USER_APPS: AppConfigItem[] = [
     remote: 'account',
     urlKey: 'ACCOUNT_FRONT_URL',
     icon: PersonIcon,
-    color: moduleAccent.profile
+    color: moduleAccent.profile,
+    menu: [
+      { label: 'Profile', route: '/account/profile', icon: PersonIcon },
+      { label: 'Devices', route: '/account/devices', icon: DevicesIcon },
+      { label: 'Connections', route: '/account/connections', icon: LinkIcon },
+      { label: 'API keys', route: '/account/api-keys', icon: VpnKeyIcon },
+      { label: 'Activity', route: '/account/activity', icon: HistoryIcon }
+    ]
   },
   {
     name: 'Groups',
@@ -123,7 +142,12 @@ export const USER_APPS: AppConfigItem[] = [
     urlKey: 'PAYMENT_FRONT_URL',
     icon: PaymentIcon,
     color: moduleAccent.billing,
-    purchases: true
+    purchases: true,
+    menu: [
+      { label: 'Plans', route: '/payments/plans', icon: WorkspacePremiumIcon },
+      { label: 'Subscriptions', route: '/payments/subscriptions', icon: AutorenewIcon },
+      { label: 'Payments', route: '/payments/history', icon: ReceiptLongIcon }
+    ]
   }
 ];
 

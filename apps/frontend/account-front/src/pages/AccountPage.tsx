@@ -1,63 +1,39 @@
 import React from 'react';
-import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router';
-import { Box, Tabs, Tab } from '@mui/material';
+import { Routes, Route, Navigate } from 'react-router';
+import { Container } from '@mui/material';
 import ProfileTab from '../components/tabs/ProfileTab';
 import ApiKeysTab from '../components/tabs/ApiKeysTab';
 import ConnectionsTab from '../components/tabs/ConnectionsTab';
 import ActivityTab from '../components/tabs/ActivityTab';
 import DevicesTab from '../components/tabs/DevicesTab';
+import { gutter } from '@tumbaland/frontend-core';
 
-const AccountPage: React.FC = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  // One list drives both the labels and the routing, so a tab cannot end up
-  // selecting a path that renders something else.
-  //
-  // Keys and connections are two tabs rather than one screen because they are
-  // two different things a person does. A key is a secret to create, read back
-  // and paste somewhere; a connection is something already approved that you
-  // only ever revoke. Under one heading the "New key" button sat above a list
-  // of things no key was made for. Each tab links to the other, so "what can
-  // reach my data" still has one obvious answer.
-  const tabs = [
-    { path: '/profile', label: 'Profile' },
-    { path: '/devices', label: 'Devices' },
-    { path: '/connections', label: 'Connections' },
-    { path: '/api-keys', label: 'API keys' },
-    { path: '/activity', label: 'Activity' }
-  ];
-
-  const getActiveTab = () => {
-    const index = tabs.findIndex((tab) => location.pathname.includes(tab.path));
-    return index === -1 ? 0 : index;
-  };
-
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    navigate(tabs[newValue].path);
-  };
-
-  return (
-    <Box sx={{ width: '100%', mt: 2 }}>
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs value={getActiveTab()} onChange={handleTabChange} aria-label="account tabs">
-          {tabs.map((tab) => (
-            <Tab key={tab.path} label={tab.label} />
-          ))}
-        </Tabs>
-      </Box>
-      <Box sx={{ mt: 3 }}>
-        <Routes>
-          <Route path="" element={<Navigate to="profile" replace />} />
-          <Route path="profile" element={<ProfileTab />} />
-          <Route path="devices" element={<DevicesTab />} />
-          <Route path="connections" element={<ConnectionsTab />} />
-          <Route path="api-keys" element={<ApiKeysTab />} />
-          <Route path="activity" element={<ActivityTab />} />
-        </Routes>
-      </Box>
-    </Box>
-  );
-};
+/**
+ * This app's sections, one route each.
+ *
+ * The page used to draw its own row of MUI `Tabs` above them. Inside the shell
+ * that sat directly under the shell's own header, so Profile carried two
+ * navigations that looked nothing alike, and the tab labels were a second list
+ * that could drift from the routes below. The names now come from
+ * `../sections`, which both the shell's header and this app's standalone one
+ * read.
+ *
+ * The width cap and the gutter are here rather than in each section, so every
+ * one of the five is the same shape. Four of them were a bare `<Box>`: inside
+ * the shell, which hands a module the full width and no padding, they ran from
+ * the rail to the right edge while Profile sat capped at 800 in the middle.
+ */
+const AccountPage: React.FC = () => (
+  <Container maxWidth="md" sx={{ py: { xs: 2, sm: 3 }, px: gutter }}>
+    <Routes>
+      <Route path="" element={<Navigate to="profile" replace />} />
+      <Route path="profile" element={<ProfileTab />} />
+      <Route path="devices" element={<DevicesTab />} />
+      <Route path="connections" element={<ConnectionsTab />} />
+      <Route path="api-keys" element={<ApiKeysTab />} />
+      <Route path="activity" element={<ActivityTab />} />
+    </Routes>
+  </Container>
+);
 
 export default AccountPage;

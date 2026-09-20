@@ -7,10 +7,10 @@ const groupA: TenantOption = { id: 'g1', name: 'Group A', type: 'group', isSelec
 const groupB: TenantOption = { id: 'g2', name: 'Group B', type: 'group' };
 
 describe('TenantSelector', () => {
-  it('shows "Select Context" and a disabled button when there is no selection and no tenants', () => {
+  it('shows "Choose context" and a disabled button when there is no selection and no tenants', () => {
     render(<TenantSelector selectedTenant={null} tenants={[]} onTenantChange={vi.fn()} />);
 
-    expect(screen.getByText('Select Context')).toBeInTheDocument();
+    expect(screen.getByText('Choose context')).toBeInTheDocument();
     expect(screen.getByRole('button')).toBeDisabled();
   });
 
@@ -49,14 +49,14 @@ describe('TenantSelector', () => {
 
     await user.click(screen.getByRole('button'));
 
-    expect(screen.getByText('SELECT CONTEXT')).toBeInTheDocument();
+    expect(screen.getByText('Switch to')).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: /group a/i })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: /group b/i })).toBeInTheDocument();
 
     await user.click(screen.getByRole('menuitem', { name: /group a/i }));
 
     expect(onTenantChange).toHaveBeenCalledWith(groupA);
-    expect(screen.queryByText('SELECT CONTEXT')).not.toBeInTheDocument();
+    expect(screen.queryByText('Switch to')).not.toBeInTheDocument();
   });
 
   it('marks the currently selected tenant with the selected menu item state', async () => {
@@ -76,7 +76,7 @@ describe('TenantSelector', () => {
     );
 
     await user.click(screen.getByRole('button'));
-    expect(screen.getByText('SELECT CONTEXT')).toBeInTheDocument();
+    expect(screen.getByText('Switch to')).toBeInTheDocument();
 
     rerender(<TenantSelector selectedTenant={null} tenants={[]} onTenantChange={vi.fn()} />);
 

@@ -5,7 +5,7 @@ import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import { APPS, USER_APPS, isRouteActive } from '../config/apps';
-import { brand, ink } from '@tumbaland/frontend-core';
+import { brand, chrome, ink, surface } from '@tumbaland/frontend-core';
 import { User } from '../types';
 import { AccountMenu } from './AccountMenu';
 
@@ -147,12 +147,11 @@ function NavItem({ label, icon, color, active, mobile, to, onClick, expanded }: 
   );
 }
 
+/** The same frosted chrome the header bar is drawn in, so the two meet cleanly. */
 const glassBar = {
+  ...chrome,
   flexShrink: 0,
-  zIndex: 3,
-  background: 'rgba(255,255,255,0.72)',
-  backdropFilter: 'blur(14px) saturate(180%)',
-  WebkitBackdropFilter: 'blur(14px) saturate(180%)'
+  zIndex: 3
 } as const;
 
 const rail = {
@@ -165,7 +164,7 @@ const rail = {
   px: 0.5,
   py: 2,
   overflowY: 'auto',
-  borderRight: '1px solid rgba(15,23,42,0.06)'
+  borderRight: `1px solid ${surface.divider}`
 } as const;
 
 const bottomBar = {
@@ -174,7 +173,7 @@ const bottomBar = {
   px: 0.5,
   pt: 0.75,
   pb: 'calc(6px + env(safe-area-inset-bottom))',
-  borderTop: '1px solid rgba(15,23,42,0.08)'
+  borderTop: `1px solid ${surface.divider}`
 } as const;
 
 export default AppNav;

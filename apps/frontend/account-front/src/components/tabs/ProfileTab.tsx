@@ -196,14 +196,14 @@ const ProfileTab: React.FC = () => {
 
   if (loading) {
     return (
-      <Box sx={{ maxWidth: 800, mx: 'auto', display: 'flex', justifyContent: 'center', mt: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
         <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ maxWidth: 800, mx: 'auto', py: 2, px: 2 }}>
+    <Box>
       <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
         Account Settings
       </Typography>

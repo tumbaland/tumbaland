@@ -1,46 +1,29 @@
 import React from 'react';
-import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router';
-import { Box, Tabs, Tab } from '@mui/material';
+import { Routes, Route, Navigate } from 'react-router';
+import { Container } from '@mui/material';
 import PlansTab from '../components/tabs/PlansTab';
 import SubscriptionsTab from '../components/tabs/SubscriptionsTab';
 import PaymentsTab from '../components/tabs/PaymentsTab';
+import { gutter } from '@tumbaland/frontend-core';
 
-const PaymentsPage: React.FC = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  // Determine active tab based on current path
-  const getActiveTab = () => {
-    const path = location.pathname;
-    if (path.endsWith('/subscriptions')) return 1;
-    if (path.endsWith('/history')) return 2;
-    return 0; // plans, including the bare root
-  };
-
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    const paths = ['/plans', '/subscriptions', '/history'];
-    navigate(paths[newValue]);
-  };
-
-  return (
-    <Box sx={{ width: '100%', mt: 2 }}>
-      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs value={getActiveTab()} onChange={handleTabChange} aria-label="payments tabs">
-          <Tab label="Plans" />
-          <Tab label="Subscriptions" />
-          <Tab label="Payments" />
-        </Tabs>
-      </Box>
-      <Box sx={{ mt: 3 }}>
-        <Routes>
-          <Route path="/" element={<Navigate to="plans" replace />} />
-          <Route path="plans" element={<PlansTab />} />
-          <Route path="subscriptions" element={<SubscriptionsTab />} />
-          <Route path="history" element={<PaymentsTab />} />
-        </Routes>
-      </Box>
-    </Box>
-  );
-};
+/**
+ * This app's sections, one route each. The row of MUI `Tabs` that used to sit
+ * above them is gone: the header bar names the sections now, the same one the
+ * other modules get (see `../sections`).
+ *
+ * The width cap and the gutter are here rather than in each section, so all
+ * three are the same shape. Inside the shell a module is handed the full width
+ * and no padding, which left these running edge to edge.
+ */
+const PaymentsPage: React.FC = () => (
+  <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3 }, px: gutter }}>
+    <Routes>
+      <Route path="/" element={<Navigate to="plans" replace />} />
+      <Route path="plans" element={<PlansTab />} />
+      <Route path="subscriptions" element={<SubscriptionsTab />} />
+      <Route path="history" element={<PaymentsTab />} />
+    </Routes>
+  </Container>
+);
 
 export default PaymentsPage;
