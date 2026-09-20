@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.499](https://github.com/toomastahves/tumbaland/compare/app-v0.0.498...app-v0.0.499) (2026-09-20)
+
+### Bug Fixes
+
+* add group tenant select and menu back ([977ddd3](https://github.com/toomastahves/tumbaland/commit/977ddd32b3bcb6a6da23721f06d731b3b4ddcb9a))
+
 ## [0.0.498](https://github.com/toomastahves/tumbaland/compare/app-v0.0.497...app-v0.0.498) (2026-09-20)
 
 ### Bug Fixes
