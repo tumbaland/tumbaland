@@ -34,3 +34,14 @@ it('renders nothing when there are no photos yet', () => {
 
   expect(container).toBeEmptyDOMElement();
 });
+
+it('crops its tiles above centre, where faces are', () => {
+  // The middle of a portrait is a torso. Cropped rather than fitted, unlike
+  // the memory card: an 88px tile that letterboxed would be mostly blur.
+  render(<RecentPhotos photos={[photo('a')]} onOpen={vi.fn()} />);
+
+  const tile = document.querySelector('img') as HTMLImageElement;
+
+  expect(getComputedStyle(tile).objectFit).toBe('cover');
+  expect(getComputedStyle(tile).objectPosition).toBe('center 25%');
+});

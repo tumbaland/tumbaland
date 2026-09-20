@@ -159,3 +159,59 @@ it('renders nothing on a date with no history, rather than an empty-state card',
 
   expect(container).toBeEmptyDOMElement();
 });
+
+describe('what the card actually downloads', () => {
+  const day = (count: number) =>
+    memories([
+      {
+        year: 2024,
+        yearsAgo: 2,
+        photoCount: count,
+        photos: Array.from({ length: count }, (_, i) => photo(`p${i}`, { title: `Photo ${i}` }))
+      }
+    ]);
+
+  const sources = () => [...document.querySelectorAll('img')].map((img) => img.getAttribute('src'));
+
+  const fullSized = () => sources().filter((src) => src && !src.includes('-thumb'));
+
+  it('fetches the full-size photo only for the slide being shown', () => {
+    // Every slide used to load its original the moment the page opened, so a
+    // day with eight photos downloaded eight of them before showing one.
+    render(<MemoryCard memories={day(4)} onOpen={vi.fn()} />);
+
+    expect(fullSized()).toHaveLength(1);
+  });
+
+  it('shows every slide its thumbnail straight away, so no slide is an empty box', () => {
+    render(<MemoryCard memories={day(3)} onOpen={vi.fn()} />);
+
+    // Two per slide: one blurred to fill the card, one framed as the photo.
+    expect(sources().filter((src) => src?.includes('-thumb'))).toHaveLength(6);
+  });
+
+  it('keeps a full-size photo once a slide has been looked at', async () => {
+    render(<MemoryCard memories={day(3)} onOpen={vi.fn()} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Next photo' }));
+
+    // Both the first and the second, so stepping back is instant.
+    expect(fullSized()).toHaveLength(2);
+  });
+
+  it('shows the whole photo rather than a band across its middle', () => {
+    // The card is about 2.5 times as wide as it is tall, so cropping a
+    // portrait to fill it leaves a torso and puts the head above the top edge.
+    render(<MemoryCard memories={day(1)} onOpen={vi.fn()} />);
+
+    const [backdrop, ...photoLayers] = [...document.querySelectorAll('img')];
+
+    // Only the blurred layer behind is cropped, and it is there precisely so
+    // that nothing in front of it has to be.
+    expect(getComputedStyle(backdrop).objectFit).toBe('cover');
+    expect(photoLayers.length).toBeGreaterThan(0);
+    for (const layer of photoLayers) {
+      expect(getComputedStyle(layer).objectFit).toBe('contain');
+    }
+  });
+});

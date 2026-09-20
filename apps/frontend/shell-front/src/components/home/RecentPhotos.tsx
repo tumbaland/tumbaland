@@ -54,7 +54,17 @@ export function RecentPhotos({ photos, onOpen }: RecentPhotosProps) {
               src={photo.thumbnailSignedUrl ?? photo.signedUrl}
               alt=""
               loading="lazy"
-              sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              // A square crop of a tall photo, biased well above centre: the
+              // middle of a portrait is a torso. Cropped rather than fitted,
+              // unlike the memory card — an 88px tile that letterboxed would
+              // be mostly blur, and this is a glance, not a look.
+              sx={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                objectPosition: 'center 25%',
+                display: 'block'
+              }}
             />
           </ButtonBase>
         ))}

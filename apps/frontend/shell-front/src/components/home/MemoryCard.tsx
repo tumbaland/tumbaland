@@ -47,12 +47,21 @@ export function MemoryCard({ memories, onOpen }: MemoryCardProps) {
 
   // A new day's memories are a different set; staying on slide 4 of the last
   // one would land past the end.
-  useEffect(() => setIndex(0), [year?.year]);
+  useEffect(() => {
+    setIndex(0);
+    setLoaded(new Set([0]));
+  }, [year?.year]);
 
   const step = useCallback(
     (by: number) => setIndex((current) => (current + by + photos.length) % photos.length),
     [photos.length]
   );
+
+  // Which slides have been looked at, and so are worth the full-size file.
+  const [loaded, setLoaded] = useState<ReadonlySet<number>>(() => new Set([0]));
+  useEffect(() => {
+    setLoaded((shown) => (shown.has(index) ? shown : new Set(shown).add(index)));
+  }, [index]);
 
   if (!year || photos.length === 0) return null;
 
@@ -70,24 +79,56 @@ export function MemoryCard({ memories, onOpen }: MemoryCardProps) {
         boxShadow: '0 20px 44px -28px rgba(88,28,135,0.7)'
       }}
     >
-      {/* Every slide stays mounted and fades, so stepping through does not
+      {/* Every slide stays mounted and fades, so stepping back does not
           re-request an image the browser has already been given. */}
       {photos.map((photo, slide) => (
         <Box
           key={photo._id}
-          component="img"
-          src={photo.signedUrl ?? photo.thumbnailSignedUrl}
-          alt=""
           sx={{
             position: 'absolute',
             inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
             opacity: slide === index ? 1 : 0,
             transition: 'opacity .35s ease'
           }}
-        />
+        >
+          {/* Blurred and cropped to fill, behind the photo, so a shape that
+              does not match the card has something to sit on rather than bars
+              of flat colour. The 300px thumbnail is plenty at this blur. */}
+          <Box
+            component="img"
+            src={photo.thumbnailSignedUrl ?? photo.signedUrl}
+            alt=""
+            aria-hidden
+            sx={{ ...fill, objectFit: 'cover', filter: 'blur(18px)', transform: 'scale(1.15)' }}
+          />
+
+          {/* The thumbnail again, whole and framed exactly as the full-size
+              one will be, so it is on screen in a few tens of kilobytes and
+              nothing shifts when the real file arrives. */}
+          <Box
+            component="img"
+            src={photo.thumbnailSignedUrl ?? photo.signedUrl}
+            alt=""
+            aria-hidden
+            sx={{ ...fill, objectFit: 'contain' }}
+          />
+
+          {/* The real thing, fetched only for slides that have actually been
+              looked at. Every slide used to load its full-size original the
+              moment the page opened, so a day with eight photos downloaded
+              eight of them before showing one. */}
+          {loaded.has(slide) && (
+            <Box
+              component="img"
+              src={photo.signedUrl ?? photo.thumbnailSignedUrl}
+              alt=""
+              onLoad={(event) => {
+                (event.currentTarget as HTMLImageElement).style.opacity = '1';
+              }}
+              sx={{ ...fill, objectFit: 'contain', opacity: 0, transition: 'opacity .3s ease' }}
+            />
+          )}
+        </Box>
       ))}
 
       {/* Dark only where the words sit: a scrim over the whole photo is what
@@ -188,6 +229,25 @@ export function MemoryCard({ memories, onOpen }: MemoryCardProps) {
     </Box>
   );
 }
+
+/**
+ * A layer of the card, filling it. `objectFit` is set per layer.
+ *
+ * The photo itself is `contain`, not `cover`. This card is about two and a
+ * half times as wide as it is tall, so cropping a portrait to fill it leaves
+ * roughly a fifth of the photo's height on screen — and centred, that fifth is
+ * the middle: a torso, with the head above the top edge. Biasing the crop
+ * upward helps a little and still loses the head on anything genuinely tall,
+ * because there is no band of a portrait that is both a fifth of it and holds
+ * the whole subject. So nothing is cropped, and the shortfall is filled by a
+ * blurred copy behind rather than by cutting the picture.
+ */
+const fill = {
+  position: 'absolute',
+  inset: 0,
+  width: '100%',
+  height: '100%'
+} as const;
 
 interface ArrowProps {
   side: 'left' | 'right';
