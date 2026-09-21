@@ -8,7 +8,7 @@ import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternate
 import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
 import SentimentSatisfiedAltIcon from '@mui/icons-material/SentimentSatisfiedAlt';
 import { TOUCH_TARGET, brand, ink, surface } from '@tumbaland/frontend-core';
-import { FullEmojiPicker } from './FullEmojiPicker';
+import { FullEmojiPicker, loadEmojiPicker } from './FullEmojiPicker';
 import { UploadTray } from './UploadTray';
 import type { PendingUpload } from '../../types';
 
@@ -139,6 +139,8 @@ export function Composer({
 
       <IconButton
         aria-label="Add emoji"
+        onPointerEnter={() => void loadEmojiPicker().catch(() => {})}
+        onFocus={() => void loadEmojiPicker().catch(() => {})}
         onClick={(event) => setEmojiAnchor(event.currentTarget)}
         sx={{ color: ink.muted, width: TOUCH_TARGET, height: TOUCH_TARGET }}
       >

@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 // The composer's emoji button opens the full picker, whose real package
 // registers a custom element and opens an IndexedDB.
 vi.mock('./FullEmojiPicker', () => ({
+  loadEmojiPicker: () => Promise.resolve(),
   FullEmojiPicker: ({
     anchorEl,
     onPick

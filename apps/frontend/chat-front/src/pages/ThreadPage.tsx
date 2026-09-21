@@ -99,7 +99,7 @@ export default function ThreadPage() {
         anchorEl={picker?.anchor ?? null}
         onClose={() => setPicker(null)}
         onPick={(emoji) => picker && void thread.react(picker.messageId, emoji)}
-        onMore={(anchor) => picker && setMorePicker({ messageId: picker.messageId, anchor })}
+        onMore={() => picker && setMorePicker({ messageId: picker.messageId, anchor: picker.anchor })}
       />
 
       <FullEmojiPicker

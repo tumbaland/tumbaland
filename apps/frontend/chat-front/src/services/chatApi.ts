@@ -35,6 +35,20 @@ export interface SendPayload {
   replyTo?: string | null;
 }
 
+function attachmentRequest(attachment: Attachment) {
+  const { fileId, posterFileId, thumbnailFileId, mimetype, sizeBytes, width, height, durationMs } = attachment;
+  return {
+    fileId,
+    mimetype,
+    sizeBytes,
+    ...(posterFileId != null ? { posterFileId } : {}),
+    ...(thumbnailFileId != null ? { thumbnailFileId } : {}),
+    ...(width != null ? { width } : {}),
+    ...(height != null ? { height } : {}),
+    ...(durationMs != null ? { durationMs } : {})
+  };
+}
+
 export const chatApi = {
   async listConversations(): Promise<Conversation[]> {
     const json = await client.get<{ data: Conversation[] }>('/api/chat/conversations');
@@ -78,7 +92,10 @@ export const chatApi = {
   async sendMessage(conversationId: string, payload: SendPayload): Promise<Message> {
     const json = await client.post<{ data: Message }>(
       `/api/chat/conversations/${encodeURIComponent(conversationId)}/messages`,
-      payload
+      {
+        ...payload,
+        attachments: payload.attachments?.map(attachmentRequest)
+      }
     );
     return json.data;
   },

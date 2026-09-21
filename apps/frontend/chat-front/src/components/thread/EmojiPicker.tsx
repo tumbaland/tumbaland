@@ -3,6 +3,7 @@ import Box from '@mui/material/Box';
 import Popover from '@mui/material/Popover';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutlineOutlined';
 import { ink, surface } from '@tumbaland/frontend-core';
+import { loadEmojiPicker } from './FullEmojiPicker';
 
 /**
  * The quick reactions.
@@ -67,6 +68,8 @@ export function EmojiPicker({ anchorEl, onClose, onPick, onMore }: EmojiPickerPr
             component="button"
             type="button"
             aria-label="More emoji"
+            onPointerEnter={() => void loadEmojiPicker().catch(() => {})}
+            onFocus={() => void loadEmojiPicker().catch(() => {})}
             onClick={(event: React.MouseEvent<HTMLElement>) => {
               const anchor = event.currentTarget;
               onClose();

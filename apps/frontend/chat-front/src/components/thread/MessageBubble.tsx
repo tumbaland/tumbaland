@@ -108,68 +108,84 @@ export function MessageBubble({
         </Typography>
       )}
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexDirection: mine ? 'row-reverse' : 'row' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: mine ? 'flex-end' : 'flex-start', width: '100%' }}>
         <Box
-          onTouchStart={startPress}
-          onTouchEnd={cancelPress}
-          // A scroll must not fire the picker, and neither should lifting a
-          // finger somewhere else.
-          onTouchMove={cancelPress}
-          onTouchCancel={cancelPress}
           sx={{
+            position: 'relative',
+            width: 'fit-content',
             maxWidth: 'min(78%, 34rem)',
-            borderRadius: 3,
-            px: jumbo || mediaOnly ? 0 : 1.5,
-            py: jumbo || mediaOnly ? 0 : 1,
-            overflow: 'hidden',
-            bgcolor: jumbo ? 'transparent' : mine ? brand.pinkInk : surface.paper,
-            color: jumbo ? 'inherit' : mine ? '#fff' : ink.body,
-            border: jumbo || mine ? 'none' : `1px solid ${surface.sunken}`,
-            // A pending message is drawn faintly rather than with a spinner:
-            // on a good connection it is confirmed before a spinner would
-            // finish one rotation, and a flicker is worse than a shade.
-            opacity: pending ? 0.6 : 1,
-            transition: 'opacity .15s ease',
-            wordBreak: 'break-word'
+            ml: mine ? 5 : 0,
+            mr: mine ? 0 : 5
           }}
         >
-          {message.deletedAt ? (
-            <Typography variant="body2" sx={{ fontStyle: 'italic', color: ink.muted }}>
-              Message deleted
-            </Typography>
-          ) : (
-            <>
-              {message.attachments.length > 0 && (
-                <MediaGrid
-                  attachments={message.attachments}
-                  onOpen={(index) => onOpenMedia(message, index)}
-                />
-              )}
-              {message.body && (
-                <Typography
-                  variant={jumbo ? 'h3' : 'body2'}
-                  component="p"
-                  sx={{ whiteSpace: 'pre-wrap', lineHeight: jumbo ? 1.1 : 1.45 }}
-                >
-                  {message.body}
-                </Typography>
-              )}
-            </>
+          <Box
+            onTouchStart={startPress}
+            onTouchEnd={cancelPress}
+            // A scroll must not fire the picker, and neither should lifting a
+            // finger somewhere else.
+            onTouchMove={cancelPress}
+            onTouchCancel={cancelPress}
+            sx={{
+              maxWidth: '100%',
+              borderRadius: 3,
+              px: jumbo || mediaOnly ? 0 : 1.5,
+              py: jumbo || mediaOnly ? 0 : 1,
+              overflow: 'hidden',
+              bgcolor: jumbo ? 'transparent' : mine ? brand.pinkInk : surface.paper,
+              color: jumbo ? 'inherit' : mine ? '#fff' : ink.body,
+              border: jumbo || mine ? 'none' : `1px solid ${surface.sunken}`,
+              // A pending message is drawn faintly rather than with a spinner:
+              // on a good connection it is confirmed before a spinner would
+              // finish one rotation, and a flicker is worse than a shade.
+              opacity: pending ? 0.6 : 1,
+              transition: 'opacity .15s ease',
+              wordBreak: 'break-word'
+            }}
+          >
+            {message.deletedAt ? (
+              <Typography variant="body2" sx={{ fontStyle: 'italic', color: ink.muted }}>
+                Message deleted
+              </Typography>
+            ) : (
+              <>
+                {message.attachments.length > 0 && (
+                  <MediaGrid
+                    attachments={message.attachments}
+                    onOpen={(index) => onOpenMedia(message, index)}
+                  />
+                )}
+                {message.body && (
+                  <Typography
+                    variant={jumbo ? 'h3' : 'body2'}
+                    component="p"
+                    sx={{ whiteSpace: 'pre-wrap', lineHeight: jumbo ? 1.1 : 1.45 }}
+                  >
+                    {message.body}
+                  </Typography>
+                )}
+              </>
+            )}
+          </Box>
+
+          {/* Desktop affordance. Touch reaches the same picker by long press on
+              the bubble, handled by the list. */}
+          {hovered && !message.deletedAt && !pending && (
+            <IconButton
+              size="small"
+              aria-label="Add reaction"
+              onClick={(event: MouseEvent<HTMLElement>) => onPickEmoji(message.id, event.currentTarget)}
+              sx={{
+                position: 'absolute',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                ...(mine ? { right: '100%', mr: 0.5 } : { left: '100%', ml: 0.5 }),
+                color: ink.muted
+              }}
+            >
+              <AddReactionOutlinedIcon fontSize="small" />
+            </IconButton>
           )}
         </Box>
-
-        {/* Desktop affordance. Touch reaches the same picker by long press on
-            the bubble, handled by the list. */}
-        {hovered && !message.deletedAt && !pending && (
-          <IconButton
-            size="small"
-            aria-label="Add reaction"
-            onClick={(event: MouseEvent<HTMLElement>) => onPickEmoji(message.id, event.currentTarget)}
-            sx={{ color: ink.muted }}
-          >
-            <AddReactionOutlinedIcon fontSize="small" />
-          </IconButton>
-        )}
       </Box>
 
       {message.reactions.length > 0 && (

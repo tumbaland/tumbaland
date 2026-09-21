@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
 import Popover from '@mui/material/Popover';
+import type { PopoverActions } from '@mui/material/Popover';
 import Typography from '@mui/material/Typography';
 import { logger } from '@tumbaland/frontend-core';
 import { brand, ink, surface } from '@tumbaland/frontend-core';
@@ -62,6 +63,7 @@ export function FullEmojiPicker({ anchorEl, onClose, onPick }: FullEmojiPickerPr
   const open = Boolean(anchorEl);
   const [state, setState] = useState<'idle' | 'loading' | 'ready' | 'failed'>('idle');
   const host = useRef<HTMLDivElement | null>(null);
+  const popoverActions = useRef<PopoverActions>(null);
   /**
    * Whether the import has been started.
    *
@@ -111,14 +113,41 @@ export function FullEmojiPicker({ anchorEl, onClose, onPick }: FullEmojiPickerPr
     };
   }, [state, onPick, onClose]);
 
+  useEffect(() => {
+    if (!open) return;
+
+    const frame = requestAnimationFrame(() => popoverActions.current?.updatePosition());
+    const observer = host.current ? new ResizeObserver(() => popoverActions.current?.updatePosition()) : null;
+    if (observer && host.current) observer.observe(host.current);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      observer?.disconnect();
+    };
+  }, [open, state]);
+
   return (
     <Popover
       open={open}
       anchorEl={anchorEl}
+      action={popoverActions}
       onClose={onClose}
+      marginThreshold={8}
+      transitionDuration={0}
       anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
       transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-      slotProps={{ paper: { sx: { borderRadius: 3, overflow: 'hidden', bgcolor: surface.paper } } }}
+      slotProps={{
+        paper: {
+          sx: {
+            borderRadius: 3,
+            overflow: 'hidden',
+            bgcolor: surface.paper,
+            width: 'min(360px, calc(100vw - 16px))',
+            maxWidth: 'calc(100vw - 16px)',
+            maxHeight: 'calc(100vh - 16px)'
+          }
+        }
+      }}
     >
       {state === 'failed' ? (
         <Box sx={{ p: 2, maxWidth: 260 }}>
@@ -138,7 +167,9 @@ export function FullEmojiPicker({ anchorEl, onClose, onPick }: FullEmojiPickerPr
               '--button-hover-background': surface.sunken,
               '--indicator-color': brand.pinkInk,
               '--num-columns': 8,
-              height: 'min(400px, 60vh)',
+              width: '100%',
+              height: 'min(400px, calc(100vh - 96px))',
+              maxHeight: 'calc(100vh - 96px)',
               display: 'block'
             }
           }}
