@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.506](https://github.com/toomastahves/tumbaland/compare/app-v0.0.505...app-v0.0.506) (2026-09-21)
+
+### Bug Fixes
+
+* emojie selectors ([df53b4d](https://github.com/toomastahves/tumbaland/commit/df53b4da79d3e9648e50e20f5706b86f4240657c))
+
 ## [0.0.505](https://github.com/toomastahves/tumbaland/compare/app-v0.0.504...app-v0.0.505) (2026-09-21)
 
 ### Features
