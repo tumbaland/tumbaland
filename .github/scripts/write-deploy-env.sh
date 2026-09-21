@@ -45,6 +45,8 @@ KEYS=(
   PAYMENT_FRONT_URL
   PAYMENT_URL
   GROUP_FRONT_URL
+  CHAT_API_URL
+  CHAT_FRONT_URL
   ACCOUNT_FRONT_URL
   SHELL_FRONT_URL
   CLOUDFLARE_API_TOKEN
@@ -54,6 +56,12 @@ KEYS=(
   FILE_SERVICE_API_KEY
   FILE_SERVICE_HMAC_SECRET
   FILE_SERVICE_PUBLIC_URL
+  # Web Push, for chat notifications. The public key is handed to browsers; the
+  # private key never leaves chat-service. All three empty means chat runs
+  # without notifications rather than failing.
+  VAPID_PUBLIC_KEY
+  VAPID_PRIVATE_KEY
+  VAPID_SUBJECT
 )
 
 OUT="${1:-.env.app}"

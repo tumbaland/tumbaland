@@ -432,6 +432,11 @@ jobs:
           LOGSTASH_HTTP_URL: ${{ vars.LOGSTASH_HTTP_URL }}
           FILE_SERVICE_URL: ${{ vars.FILE_SERVICE_URL }}
           FILE_SERVICE_PUBLIC_URL: ${{ vars.FILE_SERVICE_PUBLIC_URL }}
+          CHAT_API_URL: ${{ vars.CHAT_API_URL }}
+          CHAT_FRONT_URL: ${{ vars.CHAT_FRONT_URL }}
+          VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT: ${{ vars.VAPID_SUBJECT }}
 
       - name: Stage compose files into the deploy tree
         run: |

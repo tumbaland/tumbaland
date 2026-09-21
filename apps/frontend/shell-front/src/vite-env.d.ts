@@ -15,6 +15,9 @@ interface ImportMetaEnv {
   readonly VITE_PAYMENT_API_URL: string
   readonly VITE_GROUP_FRONT_URL: string
   readonly VITE_GROUP_API_URL: string
+  readonly VITE_CHAT_FRONT_URL: string
+  readonly VITE_CHAT_API_URL: string
+  readonly VITE_VAPID_PUBLIC_KEY: string
   readonly VITE_ACCOUNT_FRONT_URL: string
 }
 

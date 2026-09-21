@@ -1,0 +1,202 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MessageBubble, isJumbo } from './MessageBubble';
+import type { ThreadMessage } from '../../types';
+
+const message = (overrides: Partial<ThreadMessage> = {}): ThreadMessage => ({
+  id: 'm1',
+  conversationId: 'c1',
+  senderId: 'u-tom',
+  senderEmail: 'tom@example.com',
+  senderName: 'Tom',
+  kind: 'text',
+  body: 'hello',
+  attachments: [],
+  replyTo: null,
+  reactions: [],
+  clientId: 'client-1',
+  editedAt: null,
+  deletedAt: null,
+  createdAt: '2026-09-21T10:00:00.000Z',
+  ...overrides
+});
+
+const noop = () => {};
+
+const renderBubble = (overrides: Partial<ThreadMessage> = {}, props: Partial<Parameters<typeof MessageBubble>[0]> = {}) =>
+  render(
+    <MessageBubble
+      message={message(overrides)}
+      mine={false}
+      showSender
+      onReact={noop}
+      onRetry={noop}
+      onPickEmoji={noop}
+      onOpenMedia={noop}
+      {...props}
+    />
+  );
+
+describe('isJumbo', () => {
+  it.each([['❤️'], ['👍'], ['😂😂'], ['🎉🎉🎉']])('treats a short emoji-only message as jumbo (%s)', (body) => {
+    expect(isJumbo(body)).toBe(true);
+  });
+
+  it('treats a skin-toned emoji as one emoji, not three', () => {
+    expect(isJumbo('👍🏽')).toBe(true);
+  });
+
+  it.each([['hello'], ['❤️ you'], ['😂😂😂😂'], ['']])('is not jumbo for %s', (body) => {
+    expect(isJumbo(body)).toBe(false);
+  });
+});
+
+describe('MessageBubble', () => {
+  it('shows the body', () => {
+    renderBubble();
+    expect(screen.getByText('hello')).toBeInTheDocument();
+  });
+
+  it('shows the sender name when asked', () => {
+    renderBubble();
+    expect(screen.getByText('Tom')).toBeInTheDocument();
+  });
+
+  it('hides the sender name on a grouped message', () => {
+    renderBubble({}, { showSender: false });
+    expect(screen.queryByText('Tom')).not.toBeInTheDocument();
+  });
+
+  it('never shows the sender name on your own message', () => {
+    renderBubble({}, { mine: true });
+    expect(screen.queryByText('Tom')).not.toBeInTheDocument();
+  });
+
+  it('replaces a deleted message with a note rather than removing it', () => {
+    renderBubble({ deletedAt: '2026-09-21T10:05:00.000Z', body: '' });
+    expect(screen.getByText('Message deleted')).toBeInTheDocument();
+  });
+
+  it('marks an edited message', () => {
+    renderBubble({ editedAt: '2026-09-21T10:05:00.000Z' });
+    expect(screen.getByText(/edited/)).toBeInTheDocument();
+  });
+
+  it('offers a retry on a failed send', async () => {
+    const onRetry = vi.fn();
+    renderBubble({ delivery: 'failed' }, { onRetry });
+
+    await userEvent.click(screen.getByText(/Tap to retry/));
+
+    // Retried with the same clientId, which is what makes the retry safe.
+    expect(onRetry).toHaveBeenCalledWith('client-1');
+  });
+
+  it('shows no timestamp on a failed message, since it never arrived', () => {
+    renderBubble({ delivery: 'failed' });
+    expect(screen.getByText(/Not sent/)).toBeInTheDocument();
+  });
+
+  it('renders reactions grouped with a count', () => {
+    renderBubble({
+      reactions: [
+        { userId: 'u-irja', name: 'Irja', emoji: '❤️', at: '2026-09-21T10:01:00.000Z' },
+        { userId: 'u-tom', name: 'Tom', emoji: '❤️', at: '2026-09-21T10:02:00.000Z' }
+      ]
+    });
+
+    expect(screen.getByRole('button', { name: /Irja, Tom/ })).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
+  });
+
+  it('toggles a reaction when its chip is clicked', async () => {
+    const onReact = vi.fn();
+    renderBubble(
+      { reactions: [{ userId: 'u-irja', name: 'Irja', emoji: '❤️', at: '2026-09-21T10:01:00.000Z' }] },
+      { onReact }
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /Irja/ }));
+
+    expect(onReact).toHaveBeenCalledWith('m1', '❤️');
+  });
+
+  it('renders a photo as an openable tile', () => {
+    renderBubble({
+      body: '',
+      attachments: [{ fileId: 'f1', mimetype: 'image/jpeg', sizeBytes: 100, url: 'https://files/f1' }]
+    });
+
+    expect(screen.getByRole('button', { name: 'Open photo' })).toBeInTheDocument();
+  });
+
+  it('opens the lightbox at the tile that was tapped', async () => {
+    const onOpenMedia = vi.fn();
+    renderBubble(
+      {
+        body: '',
+        attachments: [
+          { fileId: 'f1', mimetype: 'image/jpeg', sizeBytes: 100, url: 'https://files/f1' },
+          { fileId: 'f2', mimetype: 'image/jpeg', sizeBytes: 100, url: 'https://files/f2' }
+        ]
+      },
+      { onOpenMedia }
+    );
+
+    await userEvent.click(screen.getAllByRole('button', { name: 'Open photo' })[1]!);
+
+    expect(onOpenMedia).toHaveBeenCalledWith(expect.objectContaining({ id: 'm1' }), 1);
+  });
+});
+
+describe('long press', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  const bubbleOf = (container: HTMLElement) => container.querySelector('p')!.parentElement!;
+
+  it('opens the reaction picker after a held touch', () => {
+    // Touch has no hover, so the button beside the bubble can never appear.
+    const onPickEmoji = vi.fn();
+    const { container } = renderBubble({}, { onPickEmoji });
+
+    fireEvent.touchStart(bubbleOf(container));
+    vi.advanceTimersByTime(500);
+
+    expect(onPickEmoji).toHaveBeenCalledWith('m1', expect.any(HTMLElement));
+  });
+
+  it('does not fire on a quick tap', () => {
+    const onPickEmoji = vi.fn();
+    const { container } = renderBubble({}, { onPickEmoji });
+
+    fireEvent.touchStart(bubbleOf(container));
+    vi.advanceTimersByTime(100);
+    fireEvent.touchEnd(bubbleOf(container));
+    vi.advanceTimersByTime(500);
+
+    expect(onPickEmoji).not.toHaveBeenCalled();
+  });
+
+  it('does not fire when the finger moves, which is a scroll', () => {
+    const onPickEmoji = vi.fn();
+    const { container } = renderBubble({}, { onPickEmoji });
+
+    fireEvent.touchStart(bubbleOf(container));
+    fireEvent.touchMove(bubbleOf(container));
+    vi.advanceTimersByTime(500);
+
+    expect(onPickEmoji).not.toHaveBeenCalled();
+  });
+
+  it('does nothing on a message that is still sending', () => {
+    const onPickEmoji = vi.fn();
+    const { container } = renderBubble({ delivery: 'pending' }, { onPickEmoji });
+
+    fireEvent.touchStart(bubbleOf(container));
+    vi.advanceTimersByTime(500);
+
+    expect(onPickEmoji).not.toHaveBeenCalled();
+  });
+});

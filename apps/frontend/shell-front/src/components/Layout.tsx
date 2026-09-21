@@ -1,5 +1,5 @@
-import { useLocation } from 'react-router';
-import { ReactNode, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router';
+import { ReactNode, useEffect, useState } from 'react';
 import { ProtectedRoute, surface, TenantSelector, useTenant } from '@tumbaland/frontend-core';
 import { AppNav } from './AppNav';
 import { RemoteOutlet } from './RemoteOutlet';
@@ -8,6 +8,10 @@ import { useConfig } from '../config/ConfigProvider';
 import { authService } from '../services/authService';
 import { recordLastVisited } from '../services/lastVisited';
 import { useAuthState } from '../hooks/useAuthState';
+import { useUnreadChat } from '../hooks/useUnreadChat';
+import { UpdatePrompt } from './UpdatePrompt';
+import { onWorkerMessage, registerServiceWorker } from '../services/serviceWorker';
+import { refreshSubscription } from '../services/pushNotifications';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import { ModuleHeader } from './ModuleHeader';
@@ -51,6 +55,32 @@ export default function Layout({ children }: LayoutProps) {
   const tenant = useTenant(GROUP_API_URL ?? '', authenticated ? user?.id : undefined);
 
   const currentApp = getAppByRoute(location.pathname);
+  const navigate = useNavigate();
+  const [updateReady, setUpdateReady] = useState(false);
+
+  // The unread count for the Chat tab's badge and the installed app's icon.
+  const unreadChat = useUnreadChat(authenticated);
+
+  // The worker belongs to this origin, so it is registered here rather than in
+  // the chat module, which runs inside this page and has no worker of its own.
+  useEffect(() => registerServiceWorker(() => setUpdateReady(true)), []);
+
+  // Tapping a notification focuses an open window instead of opening a second
+  // one; the worker cannot route, so it asks the page to.
+  useEffect(
+    () =>
+      onWorkerMessage((message) => {
+        if (message.type === 'NAVIGATE') navigate(message.url);
+        if (message.type === 'PUSH_RESUBSCRIBED') void refreshSubscription();
+      }),
+    [navigate]
+  );
+
+  // Re-registered on every start: a push endpoint can be rotated at any time,
+  // and re-POSTing is how that is noticed. Silent, and never prompts.
+  useEffect(() => {
+    if (authenticated) void refreshSubscription();
+  }, [authenticated]);
 
   // Remember the module being viewed so the home page can offer a way back.
   useEffect(() => {
@@ -59,7 +89,9 @@ export default function Layout({ children }: LayoutProps) {
     }
   }, [currentApp, location.pathname]);
 
-  const nav = authenticated ? <AppNav currentRoute={location.pathname} user={user} mobile={isMobile} /> : null;
+  const nav = authenticated ? (
+    <AppNav currentRoute={location.pathname} user={user} mobile={isMobile} unreadChat={unreadChat} />
+  ) : null;
 
   // One bar for the whole signed-in session: where you are, where else you can
   // go inside it, and whose data you are looking at. It was a module dropdown
@@ -113,6 +145,8 @@ export default function Layout({ children }: LayoutProps) {
           phones, where it stays in reach of a thumb and clear of each
           module's own header. */}
       {!isMobile && nav}
+
+      <UpdatePrompt open={updateReady} onDismiss={() => setUpdateReady(false)} />
 
       <div
         style={{

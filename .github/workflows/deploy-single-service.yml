@@ -18,7 +18,9 @@ on:
           - account-front
           - payment-front
           - group-front
+          - chat-front
           - album-service
+          - chat-service
           - auth-service
           - finance-service
           - public-service
@@ -146,6 +148,11 @@ jobs:
           FILE_SERVICE_API_KEY: ${{ secrets.FILE_SERVICE_API_KEY }}
           FILE_SERVICE_HMAC_SECRET: ${{ secrets.FILE_SERVICE_HMAC_SECRET }}
           FILE_SERVICE_PUBLIC_URL: ${{ vars.FILE_SERVICE_PUBLIC_URL }}
+          CHAT_API_URL: ${{ vars.CHAT_API_URL }}
+          CHAT_FRONT_URL: ${{ vars.CHAT_FRONT_URL }}
+          VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT: ${{ vars.VAPID_SUBJECT }}
 
       - name: Stage compose file into the deploy tree
         env:

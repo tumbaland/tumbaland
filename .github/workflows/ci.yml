@@ -84,6 +84,10 @@ jobs:
               - *root-shared
               - *backend-libs-changed
               - 'apps/backend/auth-service/**'
+            apps/backend/chat-service:
+              - *root-shared
+              - *backend-libs-changed
+              - 'apps/backend/chat-service/**'
             apps/backend/file-service:
               - *root-shared
               - *backend-libs-changed
@@ -124,6 +128,10 @@ jobs:
               - *root-shared
               - *frontend-libs-changed
               - 'apps/frontend/auth-front/**'
+            apps/frontend/chat-front:
+              - *root-shared
+              - *frontend-libs-changed
+              - 'apps/frontend/chat-front/**'
             apps/frontend/finance-front:
               - *root-shared
               - *frontend-libs-changed

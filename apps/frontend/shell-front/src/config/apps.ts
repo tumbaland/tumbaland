@@ -1,4 +1,5 @@
 import AlbumIcon from '@mui/icons-material/PhotoAlbum';
+import ChatIcon from '@mui/icons-material/ChatBubble';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import HomeIcon from '@mui/icons-material/Home';
@@ -48,6 +49,22 @@ export interface ModuleMenuItem {
   icon: React.ComponentType<SvgIconProps>;
 }
 
+/**
+ * Chat's accent, pending a `@tumbaland/frontend-core` release.
+ *
+ * Every other module reads its colour from `moduleAccent`, which is where this
+ * belongs too. It cannot live there yet: the published package is what a Docker
+ * build installs (the Dockerfile copies one package.json and runs `npm i`, with
+ * no workspace to link against), so adding a key to the library's source only
+ * reaches production after that package is released. Editing the current
+ * version in place instead would put the registry and this repo out of step,
+ * which is the drift the README's release section exists to prevent.
+ *
+ * Teal, walked down until it clears AA against white like the rest of the set:
+ * 5.47:1. Move it to `moduleAccent.chat` on the next frontend-core release.
+ */
+const CHAT_ACCENT = '#0f766e';
+
 /** The modules, in the order the main navigation lists them. */
 export const APPS: AppConfigItem[] = [
   {
@@ -55,6 +72,16 @@ export const APPS: AppConfigItem[] = [
     route: '/',
     icon: HomeIcon,
     color: moduleAccent.home
+  },
+  {
+    // Second, right after Home: it is the one module that earns a visit every
+    // day, so it sits where a thumb reaches first on a phone.
+    name: 'Chat',
+    route: '/chat',
+    remote: 'chat',
+    urlKey: 'CHAT_FRONT_URL',
+    icon: ChatIcon,
+    color: CHAT_ACCENT
   },
   {
     // Shown as Journal, still served from /relationship: bookmarks, the home

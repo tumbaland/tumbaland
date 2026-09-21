@@ -1,0 +1,448 @@
+openapi: 3.0.3
+info:
+  title: Tumbaland chat-service
+  version: 1.0.0
+  description: |
+    Conversations, messages and Web Push registration for Tumbaland chat.
+
+    Access is decided entirely by group membership, read live from group-service
+    on every request. A conversation belongs to a group; anyone in that group
+    may read and post, and nobody else can tell the conversation exists.
+
+    The live stream (`/api/chat/stream`) is Server-Sent Events, not a WebSocket,
+    so it reuses the ordinary session cookie. It is mounted ahead of the request
+    rate limiter and carries a per-user connection cap instead.
+
+servers:
+  - url: https://chat-api.tumbaland.eu
+  - url: http://localhost:4004
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: access_token
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    Attachment:
+      type: object
+      required: [fileId, mimetype, sizeBytes]
+      properties:
+        fileId:
+          type: string
+          description: file-service path, e.g. `chat/<groupId>/<conversationId>/<uuid>/original.jpg`
+        posterFileId:
+          type: string
+          nullable: true
+          description: Still frame for a video, generated in the browser at upload time.
+        thumbnailFileId:
+          type: string
+          nullable: true
+        mimetype:
+          type: string
+          enum:
+            [
+              image/jpeg,
+              image/png,
+              image/webp,
+              image/gif,
+              image/heic,
+              image/heif,
+              video/mp4,
+              video/quicktime,
+              video/webm
+            ]
+        sizeBytes: { type: integer }
+        width: { type: integer, nullable: true }
+        height: { type: integer, nullable: true }
+        durationMs: { type: integer, nullable: true }
+
+    Reaction:
+      type: object
+      properties:
+        userId: { type: string }
+        name: { type: string }
+        emoji: { type: string }
+        at: { type: string, format: date-time }
+
+    Message:
+      type: object
+      properties:
+        id: { type: string }
+        conversationId: { type: string }
+        senderId: { type: string, description: The identity key. }
+        senderEmail: { type: string, description: Display and audit only. }
+        senderName: { type: string }
+        kind: { type: string, enum: [text, media, system] }
+        body: { type: string, description: Empty for a deleted message. }
+        attachments:
+          type: array
+          items: { $ref: '#/components/schemas/Attachment' }
+        replyTo: { type: string, nullable: true }
+        reactions:
+          type: array
+          items: { $ref: '#/components/schemas/Reaction' }
+        clientId: { type: string }
+        editedAt: { type: string, format: date-time, nullable: true }
+        deletedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    Conversation:
+      type: object
+      properties:
+        id: { type: string }
+        groupId: { type: string }
+        title: { type: string }
+        members:
+          type: array
+          description: Who has actually opened this conversation. Never an access check.
+          items:
+            type: object
+            properties:
+              userId: { type: string }
+              email: { type: string }
+              name: { type: string }
+              joinedAt: { type: string, format: date-time }
+        lastMessageAt: { type: string, format: date-time, nullable: true }
+        lastMessagePreview: { type: string }
+        lastMessageSender: { type: string }
+        unreadCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+
+    Error:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        error: { type: string }
+        message: { type: string }
+
+security:
+  - cookieAuth: []
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Readiness, including database connectivity
+      security: []
+      responses:
+        '200': { description: Healthy }
+        '503': { description: Database unreachable }
+
+  /api/chat/conversations:
+    get:
+      summary: The caller's conversations, newest activity first
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Conversation' }
+        '401': { description: Not signed in }
+    post:
+      summary: Create the conversation for a group, or return the existing one
+      description: |
+        Idempotent on `{ groupId, title }` through a unique index, so two phones
+        opening the app at the same moment cannot produce two conversations.
+        No member list is accepted: membership belongs to the group.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [groupId]
+              properties:
+                groupId: { type: string }
+                title: { type: string, maxLength: 120 }
+      responses:
+        '201':
+          description: Created, or the existing one
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Conversation' }
+        '403':
+          description: Not a member of that group
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/chat/unread:
+    get:
+      summary: Total unread across every conversation, for the nav badge
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      unread: { type: integer }
+
+  /api/chat/search:
+    get:
+      summary: Full-text search, scoped to conversations the caller can read
+      parameters:
+        - { in: query, name: q, schema: { type: string }, description: Search term. }
+        - in: query
+          name: conversationId
+          schema: { type: string }
+          description: Narrows to one conversation. Cannot widen the scope.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Message' }
+
+  /api/chat/stream:
+    get:
+      summary: Live event stream (Server-Sent Events)
+      description: |
+        `text/event-stream`. Events: `message.created`, `message.updated`,
+        `message.deleted`, `reaction.updated`, `typing`, `read`, and
+        `conversation.updated` (also used for the initial `ready` frame).
+
+        Each event carries an `id:` of its millisecond timestamp. On reconnect
+        the browser sends it back as `Last-Event-ID` and the server replays
+        anything missed within the last five minutes, which is what stops a
+        message sent during a brief network drop from being lost.
+
+        A heartbeat comment arrives every 25 seconds. The server closes the
+        connection after 30 minutes so the client reconnects and re-reads its
+        group membership; EventSource reconnects on its own.
+
+        At most 5 concurrent streams per user.
+      parameters:
+        - in: header
+          name: Last-Event-ID
+          schema: { type: string }
+          description: Set automatically by EventSource on reconnect.
+        - in: query
+          name: lastEventId
+          schema: { type: string }
+          description: Alternative to the header, for clients that cannot set one.
+      responses:
+        '200':
+          description: The stream
+          content:
+            text/event-stream:
+              schema: { type: string }
+        '429': { description: Too many open streams for this user }
+
+  /api/chat/conversations/{id}/messages:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string } }
+    get:
+      summary: A page of the thread, newest first
+      description: Cursored on `createdAt`, never on skip/offset, because a live thread grows under a reader.
+      parameters:
+        - { in: query, name: before, schema: { type: string, format: date-time } }
+        - { in: query, name: after, schema: { type: string, format: date-time } }
+        - { in: query, name: limit, schema: { type: integer, default: 50, maximum: 100 } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      messages:
+                        type: array
+                        items: { $ref: '#/components/schemas/Message' }
+                      nextCursor: { type: string, nullable: true }
+        '404': { description: No such conversation, or not the caller's to read }
+    post:
+      summary: Send a message
+      description: |
+        Idempotent on `clientId` through a unique index. A repeat returns the
+        stored message with **200** rather than an error: a retry after a
+        dropped response is the client behaving correctly, and answering with a
+        failure would show the user an error for a message that did arrive.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clientId]
+              properties:
+                clientId:
+                  type: string
+                  minLength: 8
+                  description: Generated by the client before the first attempt, repeated on every retry.
+                body: { type: string, maxLength: 8000 }
+                attachments:
+                  type: array
+                  maxItems: 10
+                  items: { $ref: '#/components/schemas/Attachment' }
+                replyTo: { type: string, nullable: true }
+      responses:
+        '201':
+          description: Stored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/Message' }
+        '200': { description: Already stored under this clientId }
+        '400': { description: Empty message, bad replyTo, or missing clientId }
+        '429': { description: Sending too fast }
+
+  /api/chat/conversations/{id}/messages/{messageId}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string } }
+      - { in: path, name: messageId, required: true, schema: { type: string } }
+    patch:
+      summary: Edit your own message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, maxLength: 8000 }
+      responses:
+        '200': { description: Updated }
+        '403': { description: Someone else's message }
+        '404': { description: No such message }
+    delete:
+      summary: Delete your own message
+      description: Soft delete. The row stays so replies keep resolving; the content is dropped.
+      responses:
+        '204': { description: Deleted }
+        '403': { description: Someone else's message }
+
+  /api/chat/conversations/{id}/messages/{messageId}/reactions:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string } }
+      - { in: path, name: messageId, required: true, schema: { type: string } }
+    put:
+      summary: Toggle your reaction
+      description: One reaction per person per message. A different emoji replaces rather than adds.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [emoji]
+              properties:
+                emoji: { type: string, description: At most 8 code points. }
+      responses:
+        '200': { description: The updated message }
+        '400': { description: Not an emoji }
+
+  /api/chat/conversations/{id}/read:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string } }
+    post:
+      summary: Move the read cursor forward
+      description: Never moves backwards, so a stale tab cannot resurrect a cleared notification.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lastReadMessageId: { type: string }
+      responses:
+        '204': { description: Recorded }
+
+  /api/chat/conversations/{id}/typing:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: string } }
+    post:
+      summary: Announce that the caller is typing
+      description: Fanned out on the stream, never stored.
+      responses:
+        '204': { description: Announced }
+
+  /api/chat/push/subscriptions:
+    post:
+      summary: Register this browser for Web Push
+      description: |
+        Called on every app start, not only when permission is granted: push
+        endpoints rotate, and re-registering is how a rotation is noticed. It
+        also refreshes `lastSeenAt` and forgives earlier delivery failures.
+
+        The service worker that owns this subscription lives on the shell's
+        origin, not on chat-front's.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [endpoint, keys]
+              properties:
+                endpoint: { type: string, format: uri }
+                keys:
+                  type: object
+                  required: [p256dh, auth]
+                  properties:
+                    p256dh: { type: string }
+                    auth: { type: string }
+                platform: { type: string, maxLength: 40 }
+      responses:
+        '201':
+          description: Registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      configured:
+                        type: boolean
+                        description: False when this deployment holds no VAPID keys, so nothing will ever be delivered.
+    delete:
+      summary: Unregister this browser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [endpoint]
+              properties:
+                endpoint: { type: string, format: uri }
+      responses:
+        '204': { description: Removed }

@@ -1,0 +1,155 @@
+import { createApiClient } from '@tumbaland/frontend-core';
+import { getGlobalConfig } from '../config/ConfigProvider';
+import type { Attachment, Conversation, Message, MessagePage, UploadTicket } from '../types';
+
+const client = createApiClient({
+  baseUrl: () => getGlobalConfig().CHAT_API_URL!,
+  onUnauthorized: () => {
+    const { AUTH_FRONT_URL } = getGlobalConfig();
+    if (AUTH_FRONT_URL) {
+      window.location.href = `${AUTH_FRONT_URL}?redirect_uri=${encodeURIComponent(window.location.href)}`;
+    }
+  }
+});
+
+/**
+ * The idempotency key for a send.
+ *
+ * Generated once per composed message and reused on every retry, so a dropped
+ * response cannot become a duplicate message. `randomUUID` needs a secure
+ * context, which an installed PWA always has, but the fallback keeps the app
+ * working on a plain-HTTP dev origin rather than throwing at the one moment
+ * the user pressed send.
+ */
+export function newClientId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `c-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export interface SendPayload {
+  clientId: string;
+  body?: string;
+  attachments?: Attachment[];
+  replyTo?: string | null;
+}
+
+export const chatApi = {
+  async listConversations(): Promise<Conversation[]> {
+    const json = await client.get<{ data: Conversation[] }>('/api/chat/conversations');
+    return json?.data ?? [];
+  },
+
+  async ensureConversation(groupId: string, title?: string): Promise<Conversation> {
+    const json = await client.post<{ data: Conversation }>('/api/chat/conversations', { groupId, title });
+    return json.data;
+  },
+
+  async unreadCount(): Promise<number> {
+    const json = await client.get<{ data: { unread: number } }>('/api/chat/unread');
+    return json?.data?.unread ?? 0;
+  },
+
+  async listMessages(
+    conversationId: string,
+    params: { before?: string; limit?: number } = {}
+  ): Promise<MessagePage> {
+    const json = await client.get<{ data: MessagePage }>(
+      `/api/chat/conversations/${encodeURIComponent(conversationId)}/messages`,
+      { params }
+    );
+    return json?.data ?? { messages: [], nextCursor: null };
+  },
+
+  async sendMessage(conversationId: string, payload: SendPayload): Promise<Message> {
+    const json = await client.post<{ data: Message }>(
+      `/api/chat/conversations/${encodeURIComponent(conversationId)}/messages`,
+      payload
+    );
+    return json.data;
+  },
+
+  async editMessage(conversationId: string, messageId: string, body: string): Promise<Message> {
+    const json = await client.patch<{ data: Message }>(
+      `/api/chat/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(messageId)}`,
+      { body }
+    );
+    return json.data;
+  },
+
+  async deleteMessage(conversationId: string, messageId: string): Promise<void> {
+    await client.delete(
+      `/api/chat/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(messageId)}`
+    );
+  },
+
+  async toggleReaction(conversationId: string, messageId: string, emoji: string): Promise<Message> {
+    const json = await client.put<{ data: Message }>(
+      `/api/chat/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(
+        messageId
+      )}/reactions`,
+      { emoji }
+    );
+    return json.data;
+  },
+
+  async markRead(conversationId: string, lastReadMessageId?: string): Promise<void> {
+    await client.post(`/api/chat/conversations/${encodeURIComponent(conversationId)}/read`, {
+      lastReadMessageId
+    });
+  },
+
+  /**
+   * Fire and forget. A failed typing notice is not worth surfacing, and
+   * throwing would put an error in the console on every keystroke burst.
+   */
+  async sendTyping(conversationId: string): Promise<void> {
+    try {
+      await client.post(`/api/chat/conversations/${encodeURIComponent(conversationId)}/typing`);
+    } catch {
+      // Ignored on purpose.
+    }
+  },
+
+  async search(term: string, conversationId?: string): Promise<Message[]> {
+    const json = await client.get<{ data: Message[] }>('/api/chat/search', {
+      params: { q: term, conversationId }
+    });
+    return json?.data ?? [];
+  },
+
+  async attachmentUploadUrl(
+    conversationId: string,
+    file: { filename: string; mimetype: string; sizeBytes: number }
+  ): Promise<UploadTicket> {
+    const json = await client.post<{ data: UploadTicket }>(
+      `/api/chat/conversations/${encodeURIComponent(conversationId)}/attachments/upload-url`,
+      file
+    );
+    return json.data;
+  },
+
+  /**
+   * Asks the service to make the display copy of an uploaded image.
+   *
+   * Never allowed to block a send: a failure comes back as a null id and the
+   * client falls back to showing the original.
+   */
+  async requestThumbnail(conversationId: string, fileId: string, mimetype: string): Promise<string | null> {
+    try {
+      const json = await client.post<{ data: { thumbnailFileId: string | null } }>(
+        `/api/chat/conversations/${encodeURIComponent(conversationId)}/attachments/thumbnail`,
+        { fileId, mimetype }
+      );
+      return json.data.thumbnailFileId;
+    } catch {
+      return null;
+    }
+  },
+
+  /** The URL the EventSource opens. Absolute, since the API is another origin. */
+  streamUrl(): string {
+    return `${getGlobalConfig().CHAT_API_URL}/api/chat/stream`;
+  }
+};

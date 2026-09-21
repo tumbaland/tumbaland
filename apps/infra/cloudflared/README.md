@@ -44,7 +44,8 @@ when the reason for wanting a tunnel is that nothing can reach the Pi at all.
    | `relationship.tumbaland.eu` | `file-service.tumbaland.eu` | `group-api.tumbaland.eu` |
    | `relationship-api.tumbaland.eu` | `api.tumbaland.eu` | `rabbitmq.tumbaland.eu` |
    | `finance.tumbaland.eu` | `mcp.tumbaland.eu` | `rabbitmq-metrics.tumbaland.eu` |
-   | `finance-api.tumbaland.eu` | | `beszel.tumbaland.eu` |
+   | `finance-api.tumbaland.eu` | `chat.tumbaland.eu` | `beszel.tumbaland.eu` |
+   | | `chat-api.tumbaland.eu` | |
 
    Saving a hostname replaces its DNS record with a proxied CNAME to
    `<tunnel-id>.cfargotunnel.com`. A subdomain you forget falls through to the

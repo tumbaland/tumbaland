@@ -8,6 +8,15 @@ export interface AppConfig {
   PAYMENT_FRONT_URL?: string;
   GROUP_FRONT_URL?: string;
   GROUP_API_URL?: string;
+  CHAT_FRONT_URL?: string;
+  /** chat-service, for the unread badge on the Chat tab. */
+  CHAT_API_URL?: string;
+  /**
+   * The Web Push application server key. Public by design: it is handed to
+   * the browser to subscribe with. Its private half lives only in
+   * chat-service and must never be given a VITE_ name.
+   */
+  VAPID_PUBLIC_KEY?: string;
   PUBLIC_API_URL?: string;
   /** album-service and relationship-service, for the home page's memories, photos and recent entries. */
   ALBUM_API_URL?: string;
@@ -30,6 +39,9 @@ const factory = createConfigProvider<AppConfig>({
     PAYMENT_FRONT_URL: import.meta.env.VITE_PAYMENT_FRONT_URL,
     GROUP_FRONT_URL: import.meta.env.VITE_GROUP_FRONT_URL,
     GROUP_API_URL: import.meta.env.VITE_GROUP_API_URL,
+    CHAT_FRONT_URL: import.meta.env.VITE_CHAT_FRONT_URL,
+    CHAT_API_URL: import.meta.env.VITE_CHAT_API_URL,
+    VAPID_PUBLIC_KEY: import.meta.env.VITE_VAPID_PUBLIC_KEY,
     PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL,
     ALBUM_API_URL: import.meta.env.VITE_ALBUM_API_URL,
     RELATIONSHIP_API_URL: import.meta.env.VITE_RELATIONSHIP_API_URL,

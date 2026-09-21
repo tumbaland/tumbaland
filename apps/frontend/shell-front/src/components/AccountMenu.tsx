@@ -14,6 +14,7 @@ import { getUserApps, isRouteActive } from '../config/apps';
 import { authService } from '../services/authService';
 import { ink, surface } from '@tumbaland/frontend-core';
 import { User } from '../types';
+import { NotificationSetting } from './NotificationSetting';
 
 interface AccountMenuProps {
   user: User | null;
@@ -77,6 +78,11 @@ export function AccountMenu({ user, anchorEl, currentRoute, mobile, onClose }: A
         </MenuItem>
       );
     }),
+    <Divider key="notifications-divider" />,
+    // A control the person operates, not a prompt on load: iOS refuses a
+    // permission request without a user gesture, and Chrome holds
+    // asking-on-load against the site.
+    <NotificationSetting key="notifications" />,
     <Divider key="sign-out-divider" />,
     <MenuItem key="sign-out" onClick={handleSignOut} sx={{ borderRadius: 2, mx: 0.5 }}>
       <ListItemIcon sx={{ color: 'inherit' }}>

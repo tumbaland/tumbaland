@@ -1,0 +1,45 @@
+services:
+  chat-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: toomastahves/tumbaland-chat-service:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    # Longer than the others: SIGTERM ends every open SSE stream first, then
+    # drains. 15s is enough for that and short enough not to stall a rollout.
+    stop_grace_period: 20s
+    ports:
+      - '4004:4004'
+    environment:
+      - PORT=4004
+      - NODE_ENV=production
+      - SERVICE_NAME=chat-service
+      - MONGODB_URI=${MONGODB_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      # Group membership is asked of group-service on each request
+      # (backend-core currentGroupsOf), and it is the only thing chat access is
+      # ever decided by.
+      - GROUP_INTERNAL_URL=${GROUP_INTERNAL_URL}
+      - AUTH_INTERNAL_URL=${AUTH_INTERNAL_URL}
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN}
+      - CORS_ORIGIN=${CORS_ORIGIN}
+      # Attachments. The bytes go straight from the browser to file-service with
+      # a signed URL; this service only mints those URLs, stores thumbnails and
+      # prunes a deleted message's folder.
+      - FILE_SERVICE_URL=${FILE_SERVICE_URL}
+      - FILE_SERVICE_API_KEY=${FILE_SERVICE_API_KEY}
+      # Entitlements: the storageBytes gate checks an upload against the
+      # conversation group owner's plan before a byte is written.
+      - PAYMENT_INTERNAL_URL=${PAYMENT_INTERNAL_URL}
+      # Web Push. Absent means no notifications, which the service logs once and
+      # then runs without: a missing key must not stop chat from working.
+      - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}
+      - VAPID_SUBJECT=${VAPID_SUBJECT}
+    init: true
+    networks:
+      - tumbanet
+
+networks:
+  tumbanet:
+    external: true

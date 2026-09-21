@@ -30,8 +30,8 @@ jobs:
     steps:
       - id: compute
         run: |
-          FRONT="account-front album-front auth-front finance-front group-front payment-front relationship-front shell-front"
-          BACK="album-service auth-service file-service finance-service group-service mcp-service payment-service public-service relationship-service"
+          FRONT="account-front album-front auth-front chat-front finance-front group-front payment-front relationship-front shell-front"
+          BACK="album-service auth-service chat-service file-service finance-service group-service mcp-service payment-service public-service relationship-service"
           case "${{ github.event.inputs.target }}" in
             all)          SVCS="$FRONT $BACK" ;;
             all-frontend) SVCS="$FRONT" ;;
@@ -147,6 +147,11 @@ jobs:
           FILE_SERVICE_API_KEY: ${{ secrets.FILE_SERVICE_API_KEY }}
           FILE_SERVICE_HMAC_SECRET: ${{ secrets.FILE_SERVICE_HMAC_SECRET }}
           FILE_SERVICE_PUBLIC_URL: ${{ vars.FILE_SERVICE_PUBLIC_URL }}
+          CHAT_API_URL: ${{ vars.CHAT_API_URL }}
+          CHAT_FRONT_URL: ${{ vars.CHAT_FRONT_URL }}
+          VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT: ${{ vars.VAPID_SUBJECT }}
 
       - name: Stage compose files into the deploy tree
         run: |

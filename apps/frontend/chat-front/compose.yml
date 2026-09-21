@@ -1,0 +1,23 @@
+services:
+  chat-front:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: toomastahves/tumbaland-chat-front:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      CHAT_API_URL: ${CHAT_API_URL}
+      AUTH_SERVICE_URL: ${AUTH_SERVICE_URL}
+      AUTH_FRONT_URL: ${AUTH_FRONT_URL}
+      CHAT_FRONT_URL: ${CHAT_FRONT_URL}
+      SHELL_FRONT_URL: ${SHELL_FRONT_URL}
+      PUBLIC_API_URL: ${PUBLIC_API_URL}
+    ports:
+      - '3013:80'
+    init: true
+    networks:
+      - tumbanet
+
+networks:
+  tumbanet:
+    external: true
