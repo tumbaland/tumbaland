@@ -51,7 +51,8 @@ function fakeRes() {
     end() {
       this.ended = true;
     },
-    on: (event: string, handler: () => void) => handlers.set(event, handler)
+    on: (event: string, handler: () => void) => handlers.set(event, handler),
+    fire: (event: string) => handlers.get(event)?.()
   };
 }
 
@@ -148,10 +149,21 @@ describe('subscription lifecycle', () => {
     for (let i = 0; i < MAX_STREAMS_PER_USER; i++) await run(fakeReq(), fakeRes());
 
     const res = fakeRes();
-    await expect(run(fakeReq(), res)).rejects.toThrow(/Too many open/);
+    await expect(run(fakeReq(), res)).resolves.toBeUndefined();
 
     expect(res.ended).toBe(true);
     expect(res.written.join('')).toContain('too_many_streams');
+  });
+
+  it('unsubscribes when the response closes', async () => {
+    const req = fakeReq();
+    const res = fakeRes();
+    await run(req, res);
+    expect(openStreamCount()).toBe(1);
+
+    res.fire('close');
+
+    expect(openStreamCount()).toBe(0);
   });
 });
 

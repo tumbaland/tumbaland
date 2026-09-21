@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { TooManyRequestsError, logger } from '@tumbaland/backend-core';
+import { logger } from '@tumbaland/backend-core';
 import { caller } from '../services/accessService';
 import { listConversations } from '../services/conversationService';
 import { listMessages } from '../services/messageService';
@@ -51,7 +51,7 @@ export const stream = async (req: Request, res: Response): Promise<void> => {
       })
     );
     res.end();
-    throw new TooManyRequestsError('Too many open chat streams for this session');
+    return;
   }
 
   // Tells the client the stream is live, and how often to expect a heartbeat so
@@ -94,13 +94,17 @@ export const stream = async (req: Request, res: Response): Promise<void> => {
     }
   }, MAX_STREAM_AGE_MS);
 
+  let closed = false;
   const close = (): void => {
+    if (closed) return;
+    closed = true;
     clearInterval(heartbeat);
     clearTimeout(recycle);
     unsubscribe();
   };
 
   req.on('close', close);
+  res.on('close', close);
   res.on('error', close);
 };
 
