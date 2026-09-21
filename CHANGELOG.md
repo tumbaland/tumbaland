@@ -1,4 +1,16 @@
 # Tumbalog
+## [0.0.505](https://github.com/toomastahves/tumbaland/compare/app-v0.0.504...app-v0.0.505) (2026-09-21)
+
+### Features
+
+* add chat ([b4d916d](https://github.com/toomastahves/tumbaland/commit/b4d916dfa68a74825ec40cee27b48ac52b841521))
+* add chat conversation starter ([f68870d](https://github.com/toomastahves/tumbaland/commit/f68870daf55c51a22aa52b148d36b6465235cdc1))
+
+### Bug Fixes
+
+* failing test ([4a8e03c](https://github.com/toomastahves/tumbaland/commit/4a8e03c34f60b2b0f657287ffeb3644933827129))
+* remove failing test ([bc8b264](https://github.com/toomastahves/tumbaland/commit/bc8b264f73deab964493e6e54eec7a5fefc0208e))
+
 ## [0.0.504](https://github.com/toomastahves/tumbaland/compare/app-v0.0.503...app-v0.0.504) (2026-09-20)
 
 ### Features
