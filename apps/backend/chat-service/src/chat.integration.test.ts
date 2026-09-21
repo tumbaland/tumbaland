@@ -713,3 +713,78 @@ describe('attachments', () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe('opening chat for the first time', () => {
+  it('creates a conversation for the group, so there is somewhere to talk', async () => {
+    // A group made in Groups does not create a conversation by itself. Without
+    // this the list is empty forever and there is no way in.
+    const res = await as(TOM).post('/api/chat/conversations/mine');
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].groupId).toBe('g1');
+  });
+
+  it('gives both people the same conversation', async () => {
+    const tom = await as(TOM).post('/api/chat/conversations/mine');
+    const irja = await as(IRJA).post('/api/chat/conversations/mine');
+
+    expect(irja.body.data[0].id).toBe(tom.body.data[0].id);
+  });
+
+  it('puts whoever opens it on the roster, so push has somewhere to send', async () => {
+    await as(TOM).post('/api/chat/conversations/mine');
+    const res = await as(IRJA).post('/api/chat/conversations/mine');
+
+    const members = res.body.data[0].members.map((m: { userId: string }) => m.userId);
+    expect(members).toEqual(expect.arrayContaining([TOM.id, IRJA.id]));
+  });
+
+  it('is safe to call on every open', async () => {
+    await as(TOM).post('/api/chat/conversations/mine');
+    await as(TOM).post('/api/chat/conversations/mine');
+    await as(TOM).post('/api/chat/conversations/mine');
+
+    expect(await Conversation.countDocuments({})).toBe(1);
+  });
+
+  it('holds when two phones open the app at the same moment', async () => {
+    await Promise.all([
+      as(TOM).post('/api/chat/conversations/mine'),
+      as(IRJA).post('/api/chat/conversations/mine')
+    ]);
+
+    expect(await Conversation.countDocuments({})).toBe(1);
+  });
+
+  it('takes the groups from the session, never from the caller', async () => {
+    // Persik is in g9, so this can only ever produce a g9 conversation.
+    const res = await as(PERSIK).post('/api/chat/conversations/mine').send({ groupId: 'g1' });
+
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].groupId).toBe('g9');
+    expect(await Conversation.countDocuments({ groupId: 'g1' })).toBe(0);
+  });
+
+  it('returns nothing for someone in no group at all', async () => {
+    const res = await as({ ...TOM, groups: [] }).post('/api/chat/conversations/mine');
+
+    expect(res.body.data).toEqual([]);
+    expect(await Conversation.countDocuments({})).toBe(0);
+  });
+
+  it('carries the unread count, so the list needs one request rather than two', async () => {
+    const id = await conversationInG1();
+    await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'hei' });
+
+    const res = await as(IRJA).post('/api/chat/conversations/mine');
+
+    expect(res.body.data[0].unreadCount).toBe(1);
+  });
+
+  it('needs a session', async () => {
+    const res = await request(app).post('/api/chat/conversations/mine');
+
+    expect(res.status).toBe(401);
+  });
+});

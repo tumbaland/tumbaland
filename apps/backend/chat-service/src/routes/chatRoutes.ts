@@ -35,6 +35,10 @@ const typingLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 120, message
 
 router.get('/conversations', ctrl.listConversations);
 router.post('/conversations', validate(createConversationSchema), ctrl.createConversation);
+// What the app opens with: ensures a conversation exists in each of the
+// caller's groups and returns them. No body, because the groups come from the
+// session rather than from the client.
+router.post('/conversations/mine', ctrl.ensureMyConversations);
 router.get('/unread', ctrl.unreadCount);
 
 // Web Push registration. The subscription belongs to the shell's origin, which

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import Alert from '@mui/material/Alert';
 import Avatar from '@mui/material/Avatar';
 import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import List from '@mui/material/List';
 import ListItemButton from '@mui/material/ListItemButton';
@@ -36,8 +37,11 @@ export default function ConversationsPage({ currentUserId }: ConversationsPagePr
   useEffect(() => {
     let active = true;
 
+    // Ensures before listing: a group made in Groups has no conversation until
+    // something creates one, so listing alone shows an empty screen with no way
+    // forward. Idempotent, so this is safe on every open.
     chatApi
-      .listConversations()
+      .ensureMyConversations()
       .then((list) => {
         if (!active) return;
         setConversations(list);
@@ -71,12 +75,16 @@ export default function ConversationsPage({ currentUserId }: ConversationsPagePr
     return (
       <Box sx={{ textAlign: 'center', py: 8, px: 3 }}>
         <Typography variant="h6" gutterBottom>
-          No conversations yet
+          Nobody to talk to yet
         </Typography>
-        <Typography variant="body2" sx={{ color: ink.muted }}>
-          Chat happens inside a group. Create one, add the person you want to talk to, and the
-          conversation appears here.
+        <Typography variant="body2" sx={{ color: ink.muted, mb: 3 }}>
+          Chat happens inside a group. Make one, add the person you want to talk to, and the
+          conversation appears here on its own.
         </Typography>
+        {/* A link rather than a sentence telling someone to go and find it. */}
+        <Button component={Link} to="/groups" variant="contained">
+          Set up a group
+        </Button>
       </Box>
     );
   }

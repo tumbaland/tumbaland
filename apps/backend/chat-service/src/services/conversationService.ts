@@ -82,6 +82,28 @@ export async function recordMember(conversation: IConversation, person: Caller):
 }
 
 /**
+ * Makes sure the caller has a conversation in each of their groups, then
+ * returns the lot.
+ *
+ * This is what the app calls on open. Chat is group-scoped, and a group having
+ * been created in Groups does not by itself create anywhere to talk: without
+ * this the conversation list is empty forever and there is no way in.
+ *
+ * The group ids come from `req.userGroups`, never from the client, so the
+ * caller cannot conjure a conversation in a group they are not in. Every
+ * create is idempotent through the unique `{ groupId, title }` index, which is
+ * what makes it safe to call on every launch and from two phones at once.
+ */
+export async function ensureConversationsForCaller(person: Caller): Promise<ConversationSummary[]> {
+  // Sequential rather than parallel: the common case is one group, and a
+  // burst of upserts against one index buys nothing worth the contention.
+  for (const groupId of person.groups) {
+    await ensureConversation(person, groupId);
+  }
+  return listConversations(person);
+}
+
+/**
  * The caller's conversations, newest activity first, each with its unread
  * count.
  *

@@ -37,6 +37,18 @@ export const createConversation = async (req: Request, res: Response): Promise<v
   );
 };
 
+/**
+ * The caller's conversations, creating any that do not exist yet.
+ *
+ * What the app opens with. A POST rather than a GET because it may create, and
+ * it returns the same shape the list does so the client needs one round trip
+ * rather than two.
+ */
+export const ensureMyConversations = async (req: Request, res: Response): Promise<void> => {
+  const person = caller(req);
+  sendSuccess(res, await conversations.ensureConversationsForCaller(person));
+};
+
 export const unreadCount = async (req: Request, res: Response): Promise<void> => {
   const person = caller(req);
   sendSuccess(res, { unread: await conversations.unreadTotal(person) });

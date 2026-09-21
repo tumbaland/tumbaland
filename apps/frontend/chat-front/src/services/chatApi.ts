@@ -41,6 +41,19 @@ export const chatApi = {
     return json?.data ?? [];
   },
 
+  /**
+   * The caller's conversations, creating any that are missing.
+   *
+   * What the app opens with. Chat is group-scoped and a group does not create
+   * a conversation by itself, so listing alone would show an empty screen with
+   * no way forward. The groups come from the session on the server, so this
+   * takes no body and cannot reach a group the caller is not in.
+   */
+  async ensureMyConversations(): Promise<Conversation[]> {
+    const json = await client.post<{ data: Conversation[] }>('/api/chat/conversations/mine');
+    return json?.data ?? [];
+  },
+
   async ensureConversation(groupId: string, title?: string): Promise<Conversation> {
     const json = await client.post<{ data: Conversation }>('/api/chat/conversations', { groupId, title });
     return json.data;
