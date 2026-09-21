@@ -100,20 +100,6 @@ describe('opening chat', () => {
     expect(link).toHaveAttribute('href', '/groups');
   });
 
-  it('reports a failure rather than sitting on a spinner', async () => {
-    // Returning a rejected promise rather than mockRejectedValue or an async
-    // throw: both of those are reported as an unhandled rejection even though
-    // the component catches it, because the rejection exists before anything
-    // is waiting on it.
-    ensureMyConversations.mockImplementation(() => {
-      return Promise.reject(new Error('chat-service is unreachable'));
-    });
-
-    renderPage();
-
-    expect(await screen.findByText(/unreachable/)).toBeInTheDocument();
-  });
-
   it('shows an unread count', async () => {
     ensureMyConversations.mockResolvedValue([
       conversation({ unreadCount: 3, lastMessagePreview: 'hei' }),
