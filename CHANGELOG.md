@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.507](https://github.com/toomastahves/tumbaland/compare/app-v0.0.506...app-v0.0.507) (2026-09-21)
+
+### Bug Fixes
+
+* stale connections ([8b1911a](https://github.com/toomastahves/tumbaland/commit/8b1911a38f4200e2f8f6abc07398c07ba49e6737))
+
 ## [0.0.506](https://github.com/toomastahves/tumbaland/compare/app-v0.0.505...app-v0.0.506) (2026-09-21)
 
 ### Bug Fixes
