@@ -40,9 +40,9 @@ export default function ConversationsPage({ currentUserId }: ConversationsPagePr
     // Ensures before listing: a group made in Groups has no conversation until
     // something creates one, so listing alone shows an empty screen with no way
     // forward. Idempotent, so this is safe on every open.
-    chatApi
-      .ensureMyConversations()
-      .then((list) => {
+    const loadConversations = async () => {
+      try {
+        const list = await chatApi.ensureMyConversations();
         if (!active) return;
         setConversations(list);
 
@@ -52,9 +52,14 @@ export default function ConversationsPage({ currentUserId }: ConversationsPagePr
         if (list.length === 1) {
           navigate(appPath(`/${list[0]!.id}`), { replace: true });
         }
-      })
-      .catch((cause: Error) => active && setError(cause.message))
-      .finally(() => active && setLoading(false));
+      } catch (cause) {
+        if (active) setError(cause instanceof Error ? cause.message : String(cause));
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    void loadConversations();
 
     return () => {
       active = false;

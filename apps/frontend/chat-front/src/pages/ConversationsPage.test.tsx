@@ -105,9 +105,9 @@ describe('opening chat', () => {
     // throw: both of those are reported as an unhandled rejection even though
     // the component catches it, because the rejection exists before anything
     // is waiting on it.
-    ensureMyConversations.mockImplementation(() =>
-      Promise.reject(new Error('chat-service is unreachable'))
-    );
+    ensureMyConversations.mockImplementation(() => {
+      return Promise.reject(new Error('chat-service is unreachable'));
+    });
 
     renderPage();
 
