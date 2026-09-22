@@ -26,7 +26,8 @@ import {
   thumbnailFileIdFor,
   withDownloadUrls
 } from './attachmentService';
-import type { MessageView } from './messageService';
+import { toView, type MessageView } from './messageService';
+import { Message } from '../models/Message';
 
 beforeEach(() => {
   getDownloadUrls.mockResolvedValue(new Map());
@@ -139,6 +140,27 @@ const view = (attachments: MessageView['attachments']): MessageView =>
   ({ id: 'm1', attachments }) as MessageView;
 
 describe('withDownloadUrls', () => {
+  it('preserves attachment fields from real Mongoose documents without leaking internals', async () => {
+    const attachment = {
+      fileId: 'chat/g1/c1/abc/original.jpg',
+      thumbnailFileId: 'chat/g1/c1/abc/thumb.webp',
+      mimetype: 'image/jpeg',
+      sizeBytes: 1234,
+      width: 640,
+      height: 480
+    };
+    const stored = new Message({ attachments: [attachment] });
+    getDownloadUrls.mockResolvedValue(new Map([[attachment.fileId, 'https://files/original']]));
+
+    const [result] = await withDownloadUrls([toView(stored)]);
+    const wire = JSON.parse(JSON.stringify(result));
+
+    expect(wire.attachments[0]).toMatchObject({ ...attachment, url: 'https://files/original' });
+    expect(wire.attachments[0]).not.toHaveProperty('_doc');
+    expect(wire.attachments[0]).not.toHaveProperty('__parentArray');
+    expect(stored.attachments[0]).not.toHaveProperty('url');
+  });
+
   it('asks for nothing when no message has an attachment', async () => {
     await withDownloadUrls([view([])]);
 

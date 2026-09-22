@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MediaGrid, columnsFor, formatDuration, isVideo, previewSrc } from './MediaGrid';
 import type { Attachment } from '../../types';
@@ -16,6 +16,10 @@ const video = (overrides: Partial<Attachment> = {}): Attachment =>
   photo({ fileId: 'v1', mimetype: 'video/mp4', url: 'https://files/v1', ...overrides });
 
 describe('isVideo', () => {
+  it('does not crash the thread if an older response is missing its media type', () => {
+    expect(isVideo({ fileId: 'f1', sizeBytes: 1000 } as Attachment)).toBe(false);
+  });
+
   it.each([['video/mp4'], ['video/quicktime'], ['video/webm']])('recognises %s', (mimetype) => {
     expect(isVideo(photo({ mimetype }))).toBe(true);
   });
@@ -79,6 +83,16 @@ describe('formatDuration', () => {
 });
 
 describe('MediaGrid', () => {
+  it('tries a refreshed signed URL after the previous URL failed', () => {
+    const { container, rerender } = render(<MediaGrid attachments={[photo()]} onOpen={() => {}} />);
+    fireEvent.error(container.querySelector('img')!);
+    expect(container.querySelector('img')).toBeNull();
+
+    rerender(<MediaGrid attachments={[photo({ url: 'https://files/f1?renewed' })]} onOpen={() => {}} />);
+
+    expect(container.querySelector('img')).toHaveAttribute('src', 'https://files/f1?renewed');
+  });
+
   it('renders a tile per attachment', () => {
     render(<MediaGrid attachments={[photo(), photo({ fileId: 'f2' })]} onOpen={() => {}} />);
 

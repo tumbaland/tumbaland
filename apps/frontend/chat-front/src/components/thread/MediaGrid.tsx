@@ -10,7 +10,7 @@ export interface MediaGridProps {
   onOpen: (index: number) => void;
 }
 
-export const isVideo = (attachment: Attachment) => attachment.mimetype.startsWith('video/');
+export const isVideo = (attachment: Attachment) => attachment.mimetype?.startsWith('video/') ?? false;
 
 /** What to show in the grid: the small copy where there is one. */
 export function previewSrc(attachment: Attachment): string | null {
@@ -75,14 +75,14 @@ interface MediaTileProps {
 }
 
 function MediaTile({ attachment, square, onOpen }: MediaTileProps) {
-  const [failed, setFailed] = useState(false);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const src = previewSrc(attachment);
   const video = isVideo(attachment);
   const duration = formatDuration(attachment.durationMs);
 
   // A signed URL expires, and file-service may be unreachable. Either way the
   // tile says so rather than showing a browser's broken-image glyph.
-  const unavailable = !src || failed;
+  const unavailable = !src || failedSrc === src;
 
   return (
     <Box
@@ -113,7 +113,7 @@ function MediaTile({ attachment, square, onOpen }: MediaTileProps) {
           src={src}
           alt=""
           loading="lazy"
-          onError={() => setFailed(true)}
+          onError={() => setFailedSrc(src)}
           sx={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }}
         />
       )}

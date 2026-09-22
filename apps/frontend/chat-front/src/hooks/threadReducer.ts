@@ -81,8 +81,13 @@ export function threadReducer(state: ThreadState, action: ThreadAction): ThreadS
       // Anything still pending is kept: a refetch triggered by a reconnect
       // must not drop a message the user typed while offline.
       const pending = state.messages.filter((message) => message.delivery === 'pending' || message.delivery === 'failed');
-      const loaded = [...action.messages].reverse() as ThreadMessage[];
-      const merged = pending.reduce((acc, message) => upsert(acc, message), loaded);
+      // Stored copies win over the outbox, including when the POST response
+      // was lost but the server did store the message.
+      const loaded = [...action.messages].reverse();
+      const merged = loaded.reduce(
+        (acc, message) => upsert(acc, { ...message, delivery: 'sent' }),
+        pending
+      ).sort(byTime);
 
       return { ...state, messages: merged, nextCursor: action.nextCursor, loading: false, error: null };
     }
@@ -112,7 +117,9 @@ export function threadReducer(state: ThreadState, action: ThreadAction): ThreadS
       return {
         ...state,
         messages: state.messages.map((message) =>
-          message.clientId === action.clientId ? { ...message, delivery: 'failed' as const } : message
+          message.clientId === action.clientId && message.delivery === 'pending'
+            ? { ...message, delivery: 'failed' as const }
+            : message
         )
       };
 

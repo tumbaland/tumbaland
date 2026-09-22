@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 
 const setBadge = vi.fn();
 let config: Record<string, string | undefined> = {};
@@ -28,6 +28,34 @@ afterEach(() => {
 });
 
 describe('useUnreadChat', () => {
+  it('clears the visible count when signing out', async () => {
+    const { result, rerender } = renderHook(({ enabled }) => useUnreadChat(enabled), {
+      initialProps: { enabled: true }
+    });
+    await waitFor(() => expect(result.current).toBe(3));
+
+    rerender({ enabled: false });
+
+    expect(result.current).toBe(0);
+    expect(setBadge).toHaveBeenLastCalledWith(0);
+  });
+
+  it('ignores a response body that finishes after sign-out', async () => {
+    let resolveBody!: (body: unknown) => void;
+    const json = vi.fn(() => new Promise((resolve) => { resolveBody = resolve; }));
+    fetchMock.mockResolvedValue({ ok: true, json });
+    const { result, rerender } = renderHook(({ enabled }) => useUnreadChat(enabled), {
+      initialProps: { enabled: true }
+    });
+    await waitFor(() => expect(json).toHaveBeenCalled());
+    rerender({ enabled: false });
+
+    await act(async () => resolveBody({ data: { unread: 9 } }));
+
+    expect(result.current).toBe(0);
+    expect(setBadge).toHaveBeenLastCalledWith(0);
+  });
+
   it('reads the count and reports it', async () => {
     const { result } = renderHook(() => useUnreadChat(true));
 

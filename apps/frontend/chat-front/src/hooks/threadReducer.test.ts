@@ -23,6 +23,18 @@ const message = (overrides: Partial<Message> = {}): Message => ({
 const stateWith = (messages: ThreadMessage[]): ThreadState => ({ ...initialThreadState, messages, loading: false });
 
 describe('loading a page', () => {
+  it.each(['pending', 'failed'] as const)('reconciles a %s send when a refetch proves it was delivered', (delivery) => {
+    const state = threadReducer(stateWith([{ ...message({ id: 'pending-1' }), delivery }]), {
+      type: 'loaded',
+      messages: [message()],
+      nextCursor: null
+    });
+
+    expect(state.messages).toHaveLength(1);
+    expect(state.messages[0]!.id).toBe('m1');
+    expect(lastStoredMessage(state.messages)?.id).toBe('m1');
+  });
+
   it('reverses the API order so the thread renders oldest first', () => {
     const state = threadReducer(initialThreadState, {
       type: 'loaded',
@@ -99,6 +111,13 @@ describe('older pages', () => {
 });
 
 describe('optimistic send', () => {
+  it('keeps a stream-confirmed message delivered when the POST response is lost', () => {
+    const echoed = threadReducer(initialThreadState, { type: 'received', message: message() });
+    const state = threadReducer(echoed, { type: 'sendFailed', clientId: 'client-1' });
+
+    expect(state.messages[0]!.delivery).toBe('sent');
+  });
+
   it('shows the message immediately as pending', () => {
     const state = threadReducer(initialThreadState, {
       type: 'optimistic',

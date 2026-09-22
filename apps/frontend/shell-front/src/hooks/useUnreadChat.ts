@@ -20,6 +20,7 @@ export function useUnreadChat(enabled: boolean): number {
 
   useEffect(() => {
     if (!enabled) {
+      setUnread(0);
       setBadge(0);
       return;
     }
@@ -36,6 +37,7 @@ export function useUnreadChat(enabled: boolean): number {
         const response = await fetch(`${CHAT_API_URL}/api/chat/unread`, { credentials: 'include' });
         if (!response.ok || !active) return;
         const json = (await response.json()) as { data?: { unread?: number } };
+        if (!active) return;
         const count = json.data?.unread ?? 0;
         setUnread(count);
         setBadge(count);
@@ -68,5 +70,5 @@ export function useUnreadChat(enabled: boolean): number {
     };
   }, [enabled]);
 
-  return unread;
+  return enabled ? unread : 0;
 }

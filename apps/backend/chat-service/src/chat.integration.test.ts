@@ -533,6 +533,35 @@ describe('search', () => {
 });
 
 describe('attachments', () => {
+  it('keeps media metadata and URLs across sending, retrying, reading, editing and reacting', async () => {
+    const id = await conversationInG1();
+    const attachment = {
+      fileId: `chat/g1/${id}/abc/original.jpg`,
+      thumbnailFileId: `chat/g1/${id}/abc/thumb.webp`,
+      mimetype: 'image/jpeg',
+      sizeBytes: 1234,
+      width: 640,
+      height: 480
+    };
+    const payload = { clientId: clientId(), attachments: [attachment] };
+    const sent = await as(TOM).post(`/api/chat/conversations/${id}/messages`).send(payload);
+    expect(sent.status).toBe(201);
+    const messageId = sent.body.data.id;
+    const retry = await as(TOM).post(`/api/chat/conversations/${id}/messages`).send(payload);
+    const page = await as(IRJA).get(`/api/chat/conversations/${id}/messages`);
+    const edited = await as(TOM).patch(`/api/chat/conversations/${id}/messages/${messageId}`).send({ body: 'Photo' });
+    const reacted = await as(IRJA).put(`/api/chat/conversations/${id}/messages/${messageId}/reactions`).send({ emoji: '❤️' });
+
+    for (const message of [sent.body.data, retry.body.data, page.body.data.messages[0], edited.body.data, reacted.body.data]) {
+      expect(message.attachments[0]).toMatchObject({
+        ...attachment,
+        url: `https://files.test/d/${attachment.fileId}`,
+        thumbnailUrl: `https://files.test/d/${attachment.thumbnailFileId}`
+      });
+      expect(message.attachments[0]).not.toHaveProperty('_doc');
+    }
+  });
+
   const image = { filename: 'holiday.jpg', mimetype: 'image/jpeg', sizeBytes: 500_000 };
 
   it('mints a signed upload URL inside the conversation\u2019s own folder', async () => {

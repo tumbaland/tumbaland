@@ -42,7 +42,10 @@ export interface MessageView {
   createdAt: Date;
 }
 
-export function toView(message: IMessage): MessageView {
+export function toView(document: IMessage): MessageView {
+  // Attachments and reactions are Mongoose subdocuments. Convert before
+  // enriching them: spreading a subdocument copies internals, not its fields.
+  const message = document.toObject();
   return {
     id: message._id.toString(),
     conversationId: message.conversationId,
@@ -256,7 +259,7 @@ export async function editMessage(
   message.editedAt = new Date();
   await message.save();
 
-  const view = toView(message);
+  const view = (await withDownloadUrls([toView(message)]))[0]!;
   publishToGroup(conversation.groupId, {
     type: 'message.updated',
     conversationId,
@@ -336,7 +339,7 @@ export async function toggleReaction(
   }
   await message.save();
 
-  const view = toView(message);
+  const view = (await withDownloadUrls([toView(message)]))[0]!;
   publishToGroup(conversation.groupId, {
     type: 'reaction.updated',
     conversationId,
