@@ -1,4 +1,11 @@
 # Tumbalog
+## [0.0.512](https://github.com/toomastahves/tumbaland/compare/app-v0.0.511...app-v0.0.512) (2026-09-22)
+
+### Features
+
+* add photos from chat automatically to albums ([73cd985](https://github.com/toomastahves/tumbaland/commit/73cd9857533543abbbba0fe1f3a59aa2fe532262))
+* quality of life chat fixes ([916fb4b](https://github.com/toomastahves/tumbaland/commit/916fb4bcf9a099d81858e922509a82af9d5d60b0))
+
 ## [0.0.511](https://github.com/toomastahves/tumbaland/compare/app-v0.0.510...app-v0.0.511) (2026-09-22)
 
 ### Features
