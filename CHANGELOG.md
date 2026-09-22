@@ -1,4 +1,14 @@
 # Tumbalog
+## [0.0.513](https://github.com/toomastahves/tumbaland/compare/app-v0.0.512...app-v0.0.513) (2026-09-22)
+
+### Features
+
+* hide money, add chat theme, improve video uploads ([2755308](https://github.com/toomastahves/tumbaland/commit/2755308d5f5d50bc5ae799fbc444a33490d4e87b))
+
+### Chores
+
+* **release:** @tumbaland/frontend-core 1.18.0 ([3d4f325](https://github.com/toomastahves/tumbaland/commit/3d4f325af86666e3ca61e35ca8adabce9abf1189))
+
 ## [0.0.512](https://github.com/toomastahves/tumbaland/compare/app-v0.0.511...app-v0.0.512) (2026-09-22)
 
 ### Features
