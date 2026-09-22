@@ -7,6 +7,9 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import DownloadIcon from '@mui/icons-material/Download';
 import IosShareIcon from '@mui/icons-material/IosShare';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import PhotoAlbumOutlinedIcon from '@mui/icons-material/PhotoAlbumOutlined';
+import Button from '@mui/material/Button';
 import { TOUCH_TARGET } from '@tumbaland/frontend-core';
 import type { Attachment } from '../../types';
 import { isVideo } from './MediaGrid';
@@ -16,6 +19,8 @@ export interface LightboxProps {
   /** Null when closed. */
   index: number | null;
   onClose: () => void;
+  /** Changes the album of the photo on screen. Without it, no album bar is drawn. */
+  onEditAlbum?: (index: number) => void;
 }
 
 /**
@@ -29,7 +34,7 @@ export function canShareFile(file: File): boolean {
   return typeof navigator !== 'undefined' && typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] });
 }
 
-export function Lightbox({ attachments, index, onClose }: LightboxProps) {
+export function Lightbox({ attachments, index, onClose, onEditAlbum }: LightboxProps) {
   const [current, setCurrent] = useState(index ?? 0);
   // Reset while rendering rather than in an effect, so reopening on another
   // message never draws one frame of whatever slide was open last time.
@@ -116,6 +121,7 @@ export function Lightbox({ attachments, index, onClose }: LightboxProps) {
           p: 2,
           // Clear of the close button above and the arrows either side.
           pt: `calc(${TOUCH_TARGET}px + env(safe-area-inset-top))`,
+          pb: onEditAlbum ? `calc(${TOUCH_TARGET + 16}px + env(safe-area-inset-bottom))` : 2,
           px: attachments.length > 1 ? 7 : 2
         }}
       >
@@ -140,6 +146,39 @@ export function Lightbox({ attachments, index, onClose }: LightboxProps) {
           />
         )}
       </Box>
+
+      {onEditAlbum && (
+        // Which album this one photo is in, and the way to change it.
+        <Box
+          sx={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 'env(safe-area-inset-bottom)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 1,
+            py: 1,
+            color: '#fff'
+          }}
+        >
+          <PhotoAlbumOutlinedIcon fontSize="small" />
+          <Box component="span" sx={{ fontSize: 14 }}>
+            {attachment.albumId ? `In ${attachment.albumName ?? 'an album'}` : 'Not in an album'}
+          </Box>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<EditOutlinedIcon />}
+            onClick={() => onEditAlbum(current)}
+            aria-label="Change this photo's album"
+            sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.5)', ml: 1 }}
+          >
+            {attachment.albumId ? 'Change' : 'Add to album'}
+          </Button>
+        </Box>
+      )}
 
       {attachments.length > 1 && (
         <>

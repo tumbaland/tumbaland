@@ -6,6 +6,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined';
 import { ink, surface } from '@tumbaland/frontend-core';
 import type { PendingUpload } from '../../types';
+import { firstFrameSrc } from './MediaGrid';
 
 export interface UploadTrayProps {
   uploads: PendingUpload[];
@@ -49,7 +50,7 @@ export function UploadTray({ uploads, onRemove }: UploadTrayProps) {
             {upload.mimetype.startsWith('video/') ? (
               <Box
                 component="video"
-                src={upload.previewUrl}
+                src={firstFrameSrc(upload.previewUrl)}
                 muted
                 playsInline
                 preload="metadata"

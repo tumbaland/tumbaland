@@ -459,16 +459,18 @@ class PhotoService {
 
     await assertPhotoReachable(photo.albumId, context, 'write');
 
-    // Delete associated files
-    try {
-      if (photo.minioFileId) {
-        await deleteFile(photo.minioFileId);
+    // A photo from chat only points at chat's files; they stay for the chat.
+    if (!photo.source) {
+      try {
+        if (photo.minioFileId) {
+          await deleteFile(photo.minioFileId);
+        }
+        if (photo.minioThumbnailFileId) {
+          await deleteFile(photo.minioThumbnailFileId);
+        }
+      } catch (error) {
+        logger.error('Failed to delete files for photo', { photoId, error: (error as Error)?.message });
       }
-      if (photo.minioThumbnailFileId) {
-        await deleteFile(photo.minioThumbnailFileId);
-      }
-    } catch (error) {
-      logger.error('Failed to delete files for photo', { photoId, error: (error as Error)?.message });
     }
 
     // Delete the photo record

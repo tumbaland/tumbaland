@@ -14,6 +14,9 @@ export interface IAttachment {
   width?: number;
   height?: number;
   durationMs?: number;
+  /** The album this file was saved to, once Album has it. Name kept for the "In Rome" mark. */
+  albumId?: string | null;
+  albumName?: string | null;
 }
 
 export interface IReaction {
@@ -60,7 +63,9 @@ const AttachmentSchema = new Schema<IAttachment>(
     sizeBytes: { type: Number, required: true, min: 0 },
     width: { type: Number, default: null },
     height: { type: Number, default: null },
-    durationMs: { type: Number, default: null }
+    durationMs: { type: Number, default: null },
+    albumId: { type: String, default: null },
+    albumName: { type: String, default: null }
   },
   { _id: false }
 );

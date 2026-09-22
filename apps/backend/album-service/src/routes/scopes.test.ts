@@ -24,7 +24,21 @@ const ROUTES_DIR = __dirname;
  */
 const PUBLIC_ROUTES = new Set(['get /by-file/:fileId']);
 
-const routeFiles = readdirSync(ROUTES_DIR).filter((file) => file.endsWith('.ts') && !file.endsWith('.test.ts'));
+/**
+ * Route files no person or API key can reach: service-to-service only, gated by
+ * the internal-service token instead of a scope. Checked for that gate below.
+ */
+const SERVICE_ONLY_FILES = new Set(['internalRoutes.ts']);
+
+const routeFiles = readdirSync(ROUTES_DIR).filter(
+  (file) => file.endsWith('.ts') && !file.endsWith('.test.ts') && !SERVICE_ONLY_FILES.has(file)
+);
+
+it('gates every service-only route file with the internal-service token', () => {
+  for (const file of SERVICE_ONLY_FILES) {
+    expect(readFileSync(join(ROUTES_DIR, file), 'utf8')).toContain('router.use(requireInternalServiceToken)');
+  }
+});
 
 const ROUTE_PATTERN = /router\.(get|post|put|patch|delete)\(\s*'([^']*)'([^;]*)/g;
 

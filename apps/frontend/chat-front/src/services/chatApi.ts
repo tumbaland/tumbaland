@@ -1,6 +1,17 @@
 import { createApiClient } from '@tumbaland/frontend-core';
 import { getGlobalConfig } from '../config/ConfigProvider';
-import type { Attachment, Conversation, ConversationDetail, Message, MessagePage, UploadTicket } from '../types';
+import type {
+  AlbumOption,
+  AlbumPlacement,
+  Attachment,
+  Conversation,
+  ConversationDetail,
+  Message,
+  MessagePage,
+  PhotoAlbum,
+  PhotoAlbumChoice,
+  UploadTicket
+} from '../types';
 
 const client = createApiClient({
   baseUrl: () => getGlobalConfig().CHAT_API_URL!,
@@ -33,6 +44,8 @@ export interface SendPayload {
   body?: string;
   attachments?: Attachment[];
   replyTo?: string | null;
+  /** "Not this one": keep this send out of the album. */
+  skipAlbum?: boolean;
 }
 
 function attachmentRequest(attachment: Attachment) {
@@ -126,6 +139,46 @@ export const chatApi = {
         messageId
       )}/reactions`,
       { emoji }
+    );
+    return json.data;
+  },
+
+  /** The group's albums, for the "photos go to" picker. */
+  async listAlbums(conversationId: string): Promise<AlbumOption[]> {
+    const json = await client.get<{ data: AlbumOption[] }>(
+      `/api/chat/conversations/${encodeURIComponent(conversationId)}/albums`
+    );
+    return json?.data ?? [];
+  },
+
+  /** Where this conversation's photos go, for everyone in it. */
+  async setPhotoAlbum(conversationId: string, choice: PhotoAlbumChoice): Promise<PhotoAlbum> {
+    const json = await client.put<{ data: PhotoAlbum }>(
+      `/api/chat/conversations/${encodeURIComponent(conversationId)}/photo-album`,
+      choice
+    );
+    return json.data;
+  },
+
+  /** Takes a message's files, or one of them, back out of their album. They stay in chat. */
+  async removeFromAlbum(conversationId: string, messageId: string, fileId?: string): Promise<Message> {
+    const query = fileId ? `?fileId=${encodeURIComponent(fileId)}` : '';
+    const json = await client.delete<{ data: Message }>(
+      `/api/chat/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(messageId)}/album${query}`
+    );
+    return json.data;
+  },
+
+  /** Puts a message's files, or one of them, in another album. */
+  async placeInAlbum(
+    conversationId: string,
+    messageId: string,
+    placement: AlbumPlacement,
+    fileId?: string
+  ): Promise<Message> {
+    const json = await client.put<{ data: Message }>(
+      `/api/chat/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(messageId)}/album`,
+      { ...placement, ...(fileId ? { fileId } : {}) }
     );
     return json.data;
   },

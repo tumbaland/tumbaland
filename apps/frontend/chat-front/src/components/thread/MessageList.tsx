@@ -10,6 +10,7 @@ import type { ConversationMember, ReadReceipt, ThreadMessage } from '../../types
 import { DaySeparator } from './DaySeparator';
 import { MessageBubble } from './MessageBubble';
 import { SeenMarker, placeSeenMarkers } from './SeenMarker';
+import { clockTime } from './clock';
 
 export interface MessageListProps {
   messages: ThreadMessage[];
@@ -21,6 +22,8 @@ export interface MessageListProps {
   onRetry: (clientId: string) => void;
   onPickEmoji: (messageId: string, anchor: HTMLElement) => void;
   onOpenMedia: (message: ThreadMessage, index: number) => void;
+  onOpenAlbum?: (albumId: string) => void;
+  onEditAlbum?: (messageId: string) => void;
   /** For senders' pictures and the "seen" markers. */
   members?: ConversationMember[];
   /** How far each of the others has read. */
@@ -35,6 +38,19 @@ const NEAR_BOTTOM_PX = 120;
 
 const sameDay = (a: string, b: string) => new Date(a).toDateString() === new Date(b).toDateString();
 
+/** "Irja set photos to go to Rome": a note about the conversation, not a message in it. */
+function SystemLine({ message }: { message: ThreadMessage }) {
+  return (
+    <Typography
+      variant="caption"
+      component="p"
+      sx={{ textAlign: 'center', color: ink.muted, my: 1.5, px: 2 }}
+    >
+      {message.body} · {clockTime(message.createdAt)}
+    </Typography>
+  );
+}
+
 /** Consecutive messages from one person within two minutes are grouped. */
 const GROUP_WINDOW_MS = 2 * 60 * 1000;
 
@@ -48,6 +64,8 @@ export function MessageList({
   onRetry,
   onPickEmoji,
   onOpenMedia,
+  onOpenAlbum,
+  onEditAlbum,
   members = NO_MEMBERS,
   reads = NO_READS
 }: MessageListProps) {
@@ -200,9 +218,19 @@ export function MessageList({
           {messages.map((message, index) => {
             const previous = messages[index - 1];
             const newDay = !previous || !sameDay(previous.createdAt, message.createdAt);
+            if (message.kind === 'system') {
+              return (
+                <Box key={message.clientId || message.id}>
+                  {newDay && <DaySeparator iso={message.createdAt} />}
+                  <SystemLine message={message} />
+                </Box>
+              );
+            }
+
             const showSender =
               newDay ||
               !previous ||
+              previous.kind === 'system' ||
               previous.senderId !== message.senderId ||
               new Date(message.createdAt).getTime() - new Date(previous.createdAt).getTime() > GROUP_WINDOW_MS;
 
@@ -217,6 +245,8 @@ export function MessageList({
                   onRetry={onRetry}
                   onPickEmoji={onPickEmoji}
                   onOpenMedia={onOpenMedia}
+                  onOpenAlbum={onOpenAlbum}
+                  onEditAlbum={onEditAlbum}
                   senderPicture={pictures.get(message.senderId)}
                 />
                 {seen.has(message.id) && <SeenMarker seers={seen.get(message.id)!} />}

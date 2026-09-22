@@ -202,8 +202,9 @@ export const deletePhoto = async (req: Request, res: Response): Promise<void> =>
 
   // Hand the bytes back. A cumulative meter that only counts up locks people
   // out of storage they freed months earlier.
+  // A photo from chat was never metered here; chat holds its bytes.
   const album = await Album.findById(deleted.albumId);
-  if (album) await releaseStoredBytes(storageActor(req), album, deleted.size);
+  if (album && !deleted.source) await releaseStoredBytes(storageActor(req), album, deleted.size);
 
   sendSuccess(res, undefined, 'Photo deleted successfully');
 };

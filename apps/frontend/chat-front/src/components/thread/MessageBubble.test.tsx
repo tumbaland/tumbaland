@@ -92,6 +92,46 @@ describe('MessageBubble', () => {
     expect(screen.queryByRole('button', { name: 'Message options' })).not.toBeInTheDocument();
   });
 
+  it('marks a photo saved to an album, and opens that album', async () => {
+    const onOpenAlbum = vi.fn();
+    renderBubble(
+      {
+        kind: 'media',
+        body: '',
+        attachments: [{ fileId: 'f1', mimetype: 'image/jpeg', sizeBytes: 1, albumId: 'a-rome', albumName: 'Rome' }]
+      },
+      { onOpenAlbum }
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'In Rome. Open album' }));
+
+    expect(onOpenAlbum).toHaveBeenCalledWith('a-rome');
+  });
+
+  it('moves the message’s photos from the pencil beside the mark', async () => {
+    const onEditAlbum = vi.fn();
+    renderBubble(
+      {
+        kind: 'media',
+        body: '',
+        attachments: [{ fileId: 'f1', mimetype: 'image/jpeg', sizeBytes: 1, albumId: 'a-rome', albumName: 'Rome' }]
+      },
+      { onOpenAlbum: () => {}, onEditAlbum }
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Change album' }));
+
+    expect(onEditAlbum).toHaveBeenCalledWith('m1');
+  });
+
+  it('shows no album mark on a photo that is not in one', () => {
+    renderBubble(
+      { kind: 'media', body: '', attachments: [{ fileId: 'f1', mimetype: 'image/jpeg', sizeBytes: 1 }] },
+      { onOpenAlbum: () => {} }
+    );
+    expect(screen.queryByText(/^In /)).not.toBeInTheDocument();
+  });
+
   it('marks an edited message', () => {
     renderBubble({ editedAt: '2026-09-21T10:05:00.000Z' });
     expect(screen.getByText(/edited/)).toBeInTheDocument();

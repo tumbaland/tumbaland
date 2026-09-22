@@ -1,10 +1,13 @@
 import Avatar from '@mui/material/Avatar';
 import { brand } from '@tumbaland/frontend-core';
+import { PresenceDot } from './PresenceDot';
 
 export interface MemberAvatarProps {
   name: string;
   picture?: string | null;
   size: number;
+  /** Draws the green dot. Left out where presence means nothing, such as "Seen". */
+  online?: boolean;
 }
 
 /**
@@ -13,18 +16,20 @@ export interface MemberAvatarProps {
  * Decorative: it always sits beside the name it stands for, so it is hidden
  * from screen readers rather than announced a second time.
  */
-export function MemberAvatar({ name, picture, size }: MemberAvatarProps) {
+export function MemberAvatar({ name, picture, size, online = false }: MemberAvatarProps) {
   return (
-    <Avatar
-      src={picture || undefined}
-      alt=""
-      aria-hidden
-      // The picture is served from another origin with no cookies needed, and
-      // this keeps the request from carrying any.
-      slotProps={{ img: { referrerPolicy: 'no-referrer', loading: 'lazy' } }}
-      sx={{ width: size, height: size, fontSize: size * 0.45, bgcolor: brand.pinkInk, flexShrink: 0 }}
-    >
-      {(name || '?').charAt(0).toUpperCase()}
-    </Avatar>
+    <PresenceDot online={online} size={size}>
+      <Avatar
+        src={picture || undefined}
+        alt=""
+        aria-hidden
+        // The picture is served from another origin with no cookies needed, and
+        // this keeps the request from carrying any.
+        slotProps={{ img: { referrerPolicy: 'no-referrer', loading: 'lazy' } }}
+        sx={{ width: size, height: size, fontSize: size * 0.45, bgcolor: brand.pinkInk, flexShrink: 0 }}
+      >
+        {(name || '?').charAt(0).toUpperCase()}
+      </Avatar>
+    </PresenceDot>
   );
 }

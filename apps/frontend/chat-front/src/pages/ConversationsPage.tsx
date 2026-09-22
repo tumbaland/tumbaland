@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import Alert from '@mui/material/Alert';
 import Avatar from '@mui/material/Avatar';
@@ -14,7 +14,10 @@ import { TOUCH_TARGET, brand, ink, surface } from '@tumbaland/frontend-core';
 import { appPath } from '../appBase';
 import { chatApi } from '../services/chatApi';
 import { dayLabel } from '../components/thread/DaySeparator';
-import type { Conversation } from '../types';
+import { PresenceDot } from '../components/thread/PresenceDot';
+import { useChatStream } from '../hooks/useChatStream';
+import { namesTyping, useTypingTracker } from '../hooks/useTypingTracker';
+import type { ChatEvent, Conversation, Message, Presence, TypingPayload } from '../types';
 
 /** The label for a conversation with no title: whoever else is in it. */
 function conversationName(conversation: Conversation, currentUserId: string): string {
@@ -28,6 +31,20 @@ function conversationName(conversation: Conversation, currentUserId: string): st
 /** Two people is a direct conversation; three or more is a group chat. */
 function isGroup(conversation: Conversation, currentUserId: string): boolean {
   return conversation.members.filter((member) => member.userId !== currentUserId).length > 1;
+}
+
+/** The list's one-line summary of a message, matching what the server stores. */
+function previewOf(message: Message): string {
+  if (message.body.trim()) return message.body.trim();
+  if (message.attachments.length === 0) return '';
+  const video = message.attachments.some((attachment) => attachment.mimetype.startsWith('video/'));
+  if (message.attachments.length === 1) return video ? 'Video' : 'Photo';
+  return `${message.attachments.length} attachments`;
+}
+
+/** Whether the other person in a direct message is online right now. */
+function otherOnline(conversation: Conversation, currentUserId: string): boolean {
+  return (conversation.presence ?? []).some((entry) => entry.userId !== currentUserId && entry.online);
 }
 
 /** The other person's picture in a direct message. */
@@ -46,26 +63,96 @@ export default function ConversationsPage({ currentUserId, onOpen }: Conversatio
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { typing, note: noteTyping, clear: clearTyping } = useTypingTracker();
+
+  // Ensures before listing: a group made in Groups has no conversation until
+  // something creates one, so listing alone shows an empty screen with no way
+  // forward. Idempotent, so this is safe on every open, and on every resync.
+  //
+  // The list is always shown, even with a single conversation: it is what
+  // the header's Chat button promises, and the way back out of a thread.
+  const loaded = useRef(false);
+  const load = useCallback(async () => {
+    try {
+      setConversations(await chatApi.ensureMyConversations());
+      loaded.current = true;
+      setError(null);
+    } catch (cause) {
+      // A failed background refresh keeps the list it already has; only a
+      // first load with nothing to show becomes an error screen.
+      if (!loaded.current) setError((cause as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    let active = true;
+    void load();
+  }, [load]);
 
-    // Ensures before listing: a group made in Groups has no conversation until
-    // something creates one, so listing alone shows an empty screen with no way
-    // forward. Idempotent, so this is safe on every open.
-    //
-    // The list is always shown, even with a single conversation: it is what
-    // the header's Chat button promises, and the way back out of a thread.
-    chatApi
-      .ensureMyConversations()
-      .then((list) => active && setConversations(list))
-      .catch((cause: Error) => active && setError(cause.message))
-      .finally(() => active && setLoading(false));
+  /** Keeps the list live: new messages, who is typing, who is online. */
+  const onEvent = useCallback(
+    (event: ChatEvent) => {
+      switch (event.type) {
+        case 'message.created': {
+          const message = event.payload as Message;
+          clearTyping(event.conversationId, message.senderId);
+          // A note like "Irja set photos to go to Rome" is neither a preview nor unread.
+          if (message.kind === 'system') break;
+          setConversations((previous) =>
+            previous
+              .map((conversation) =>
+                conversation.id === event.conversationId
+                  ? {
+                      ...conversation,
+                      lastMessageAt: message.createdAt,
+                      lastMessagePreview: previewOf(message),
+                      lastMessageSender: message.senderName,
+                      unreadCount: conversation.unreadCount + (message.senderId === currentUserId ? 0 : 1)
+                    }
+                  : conversation
+              )
+              // Newest activity first, as the server orders it.
+              .sort((a, b) => (b.lastMessageAt ?? '').localeCompare(a.lastMessageAt ?? ''))
+          );
+          break;
+        }
+        case 'message.updated':
+        case 'message.deleted':
+          // An edit or unsend may change the preview, which only the server
+          // can work out; one refetch is cheaper than mirroring its rules.
+          void load();
+          break;
+        case 'typing': {
+          const payload = event.payload as TypingPayload;
+          if (payload.userId !== currentUserId) noteTyping(event.conversationId, payload.userId, payload.name);
+          break;
+        }
+        case 'presence': {
+          const payload = event.payload as Presence;
+          setConversations((previous) =>
+            previous.map((conversation) =>
+              conversation.members.some((member) => member.userId === payload.userId)
+                ? {
+                    ...conversation,
+                    presence: [
+                      ...(conversation.presence ?? []).filter((entry) => entry.userId !== payload.userId),
+                      payload
+                    ]
+                  }
+                : conversation
+            )
+          );
+          break;
+        }
+        default:
+          break;
+      }
+    },
+    [currentUserId, load, noteTyping, clearTyping]
+  );
 
-    return () => {
-      active = false;
-    };
-  }, []);
+  useChatStream({ onEvent, onResync: load });
 
   if (loading) {
     return (
@@ -100,6 +187,7 @@ export default function ConversationsPage({ currentUserId, onOpen }: Conversatio
       {conversations.map((conversation) => {
         const name = conversationName(conversation, currentUserId);
         const group = isGroup(conversation, currentUserId);
+        const typers = namesTyping(typing, conversation.id);
         return (
           <ListItemButton
             key={conversation.id}
@@ -110,14 +198,16 @@ export default function ConversationsPage({ currentUserId, onOpen }: Conversatio
               borderBottom: `1px solid ${surface.sunken}`
             }}
           >
-            <Avatar
-              src={group ? undefined : otherPicture(conversation, currentUserId)}
-              alt=""
-              sx={{ bgcolor: group ? brand.purple : brand.pinkInk }}
-              aria-hidden
-            >
-              {group ? <GroupsIcon /> : name.charAt(0).toUpperCase()}
-            </Avatar>
+            <PresenceDot online={!group && otherOnline(conversation, currentUserId)} size={40}>
+              <Avatar
+                src={group ? undefined : otherPicture(conversation, currentUserId)}
+                alt=""
+                sx={{ bgcolor: group ? brand.purple : brand.pinkInk }}
+                aria-hidden
+              >
+                {group ? <GroupsIcon /> : name.charAt(0).toUpperCase()}
+              </Avatar>
+            </PresenceDot>
 
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography
@@ -130,9 +220,15 @@ export default function ConversationsPage({ currentUserId, onOpen }: Conversatio
               <Typography variant="caption" sx={{ color: ink.muted, display: 'block' }}>
                 {group ? `Group chat · ${conversation.members.length} people` : 'Direct message'}
               </Typography>
-              <Typography variant="body2" noWrap sx={{ color: ink.muted }}>
-                {conversation.lastMessagePreview || 'No messages yet'}
-              </Typography>
+              {typers.length > 0 ? (
+                <Typography variant="body2" noWrap sx={{ color: brand.pinkInk, fontStyle: 'italic' }}>
+                  {group ? `${typers[0]} is typing…` : 'typing…'}
+                </Typography>
+              ) : (
+                <Typography variant="body2" noWrap sx={{ color: ink.muted }}>
+                  {conversation.lastMessagePreview || 'No messages yet'}
+                </Typography>
+              )}
             </Box>
 
             <Box sx={{ textAlign: 'right', flexShrink: 0 }}>

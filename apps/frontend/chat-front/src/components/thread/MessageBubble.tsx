@@ -6,6 +6,8 @@ import Typography from '@mui/material/Typography';
 import AddReactionOutlinedIcon from '@mui/icons-material/AddReactionOutlined';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
+import PhotoAlbumOutlinedIcon from '@mui/icons-material/PhotoAlbumOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import { brand, ink, surface } from '@tumbaland/frontend-core';
 import type { ThreadMessage } from '../../types';
@@ -25,6 +27,10 @@ export interface MessageBubbleProps {
   onRetry: (clientId: string) => void;
   onPickEmoji: (messageId: string, anchor: HTMLElement) => void;
   onOpenMedia: (message: ThreadMessage, index: number) => void;
+  /** Opens the album a photo was saved to. Without it the mark is not drawn. */
+  onOpenAlbum?: (albumId: string) => void;
+  /** Moves this message's photos to another album: the pencil beside the mark. */
+  onEditAlbum?: (messageId: string) => void;
 }
 
 /**
@@ -73,8 +79,11 @@ export function MessageBubble({
   onReact,
   onRetry,
   onPickEmoji,
-  onOpenMedia
+  onOpenMedia,
+  onOpenAlbum,
+  onEditAlbum
 }: MessageBubbleProps) {
+  const saved = message.deletedAt ? undefined : message.attachments.find((attachment) => attachment.albumId);
   const [hovered, setHovered] = useState(false);
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -214,6 +223,45 @@ export function MessageBubble({
           )}
         </Box>
       </Box>
+
+      {saved && onOpenAlbum && (
+        <Box sx={{ display: 'inline-flex', alignItems: 'center' }}>
+          <Box
+            component="button"
+            type="button"
+            onClick={() => onOpenAlbum(saved.albumId!)}
+            aria-label={`In ${saved.albumName ?? 'album'}. Open album`}
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 0.5,
+              mx: 1,
+              mt: 0.25,
+              p: 0,
+              border: 'none',
+              background: 'none',
+              cursor: 'pointer',
+              font: 'inherit',
+              fontSize: 11,
+              color: ink.muted,
+              '&:hover': { color: brand.pinkInk, textDecoration: 'underline' }
+            }}
+          >
+            <PhotoAlbumOutlinedIcon sx={{ fontSize: 13 }} />
+            In {saved.albumName ?? 'album'}
+          </Box>
+          {onEditAlbum && (
+            <IconButton
+              size="small"
+              aria-label="Change album"
+              onClick={() => onEditAlbum(message.id)}
+              sx={{ p: 0.25, color: ink.muted, '&:hover': { color: brand.pinkInk } }}
+            >
+              <EditOutlinedIcon sx={{ fontSize: 13 }} />
+            </IconButton>
+          )}
+        </Box>
+      )}
 
       {message.reactions.length > 0 && (
         <ReactionRow reactions={message.reactions} mine={mine} onToggle={(emoji) => onReact(message.id, emoji)} />

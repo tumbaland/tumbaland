@@ -225,7 +225,8 @@ paths:
       summary: Live event stream (Server-Sent Events)
       description: |
         `text/event-stream`. Events: `message.created`, `message.updated`,
-        `message.deleted`, `reaction.updated`, `typing`, `read`, and
+        `message.deleted`, `reaction.updated`, `typing`, `read`, `presence`
+        (`{ userId, online, lastActiveAt }`, with an empty conversationId), and
         `conversation.updated` (also used for the initial `ready` frame).
 
         Each event carries an `id:` of its millisecond timestamp. On reconnect
@@ -236,6 +237,11 @@ paths:
         A heartbeat comment arrives every 25 seconds. The server closes the
         connection after 30 minutes so the client reconnects and re-reads its
         group membership; EventSource reconnects on its own.
+
+        Someone counts as online while they hold a stream open, or for 90
+        seconds after any chat request (the shell's unread poll among them).
+        Conversation lists and details carry a `presence` array for everyone
+        but the caller.
 
         At most 5 concurrent streams per user.
       parameters:
@@ -366,6 +372,61 @@ paths:
       responses:
         '200': { description: The updated message }
         '400': { description: Not an emoji }
+
+  /api/chat/conversations/{id}/albums:
+    get:
+      summary: The conversation group's albums, for the "photos go to" picker
+      responses:
+        '200': { description: '`[{ id, name, photoCount }]`, most recently changed first' }
+
+  /api/chat/conversations/{id}/photo-album:
+    put:
+      summary: Where this conversation's photos and videos are saved in Album
+      description: |
+        One setting for the whole conversation, changed by anyone in it, and
+        announced in the thread as a `system` message ("Irja set photos to go
+        to Rome"). After each send, every file is added to the chosen album as
+        an entry pointing at chat's own file, never a copy. Send
+        `skipAlbum: true` with a message to leave that one out. Unsending
+        removes the entries. If the album has been deleted, the setting goes
+        back to `unset`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - { type: object, required: [mode], properties: { mode: { enum: [off] } } }
+                - { type: object, required: [mode, albumId], properties: { mode: { enum: [album] }, albumId: { type: string } } }
+                - { type: object, required: [mode, newAlbumName], properties: { mode: { enum: [album] }, newAlbumName: { type: string } } }
+      responses:
+        '200': { description: '`{ mode, albumId, albumName }`' }
+        '400': { description: The album is not in this conversation's group }
+
+  /api/chat/conversations/{id}/messages/{messageId}/album:
+    put:
+      summary: Put a sent message's files, or one of them, in another album
+      description: |
+        Files already in an album are moved (a title or tags given in Album go
+        with them); files not in one are added. Does not change where the
+        conversation's new photos go. Anyone in the conversation may.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - { type: object, required: [albumId], properties: { albumId: { type: string }, fileId: { type: string } } }
+                - { type: object, required: [newAlbumName], properties: { newAlbumName: { type: string }, fileId: { type: string } } }
+      responses:
+        '200': { description: The updated message }
+        '400': { description: The album is not in this conversation's group }
+        '404': { description: No such message, or no such file on it }
+    delete:
+      summary: Take a message's files, or one (`?fileId=`), back out of their album (files stay in chat)
+      responses:
+        '200': { description: The updated message }
+        '404': { description: No such message in this conversation }
 
   /api/chat/conversations/{id}/read:
     parameters:

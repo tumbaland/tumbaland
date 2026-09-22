@@ -12,12 +12,29 @@ import {
   signUpload
 } from '../services/attachmentService';
 import { assertHeadroom } from '../services/storageUsage';
+import { presenceFor } from '../services/presenceService';
+import { listAlbums as listGroupAlbums } from '../services/albumClient';
+import * as photoAlbums from '../services/photoAlbumService';
+
+/** The list with who is online, for the dots on its avatars. Never the caller. */
+async function withPresence<T extends { members: Array<{ userId: string }> }>(
+  callerId: string,
+  summaries: T[]
+): Promise<Array<T & { presence: Awaited<ReturnType<typeof presenceFor>> }>> {
+  const presence = await presenceFor(
+    summaries.flatMap((summary) => summary.members.map((member) => member.userId)).filter((id) => id !== callerId)
+  );
+  return summaries.map((summary) => ({
+    ...summary,
+    presence: presence.filter((entry) => summary.members.some((member) => member.userId === entry.userId))
+  }));
+}
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from '../validation/schemas';
 import { BadRequestError } from '@tumbaland/backend-core';
 
 export const listConversations = async (req: Request, res: Response): Promise<void> => {
   const person = caller(req);
-  sendSuccess(res, await conversations.listConversations(person));
+  sendSuccess(res, await withPresence(person.id, await conversations.listConversations(person)));
 };
 
 export const createConversation = async (req: Request, res: Response): Promise<void> => {
@@ -52,14 +69,18 @@ export const createConversation = async (req: Request, res: Response): Promise<v
  */
 export const ensureMyConversations = async (req: Request, res: Response): Promise<void> => {
   const person = caller(req);
-  sendSuccess(res, await conversations.ensureConversationsForCaller(person));
+  sendSuccess(res, await withPresence(person.id, await conversations.ensureConversationsForCaller(person)));
 };
 
 /** One conversation with its members and read positions, for the thread page. */
 export const getConversation = async (req: Request, res: Response): Promise<void> => {
   const person = caller(req);
   const conversation = await requireConversation(person, req.params.id as string);
-  sendSuccess(res, await conversations.conversationDetail(person, conversation));
+  const detail = await conversations.conversationDetail(person, conversation);
+  const presence = await presenceFor(
+    detail.members.map((member) => member.userId).filter((id) => id !== person.id)
+  );
+  sendSuccess(res, { ...detail, presence });
 };
 
 export const unreadCount = async (req: Request, res: Response): Promise<void> => {
@@ -114,6 +135,34 @@ export const toggleReaction = async (req: Request, res: Response): Promise<void>
   const { emoji } = req.body as { emoji: string };
 
   sendSuccess(res, await messages.toggleReaction(person, conversation, req.params.messageId as string, emoji));
+};
+
+/** The group's albums, for the "photos go to" picker. */
+export const listAlbums = async (req: Request, res: Response): Promise<void> => {
+  const person = caller(req);
+  const conversation = await requireConversation(person, req.params.id as string);
+  sendSuccess(res, await listGroupAlbums(conversation.groupId));
+};
+
+export const setPhotoAlbum = async (req: Request, res: Response): Promise<void> => {
+  const person = caller(req);
+  const conversation = await requireConversation(person, req.params.id as string);
+  sendSuccess(res, await photoAlbums.setPhotoAlbum(person, conversation, req.body as photoAlbums.PhotoAlbumChoice));
+};
+
+export const removeFromAlbum = async (req: Request, res: Response): Promise<void> => {
+  const person = caller(req);
+  const conversation = await requireConversation(person, req.params.id as string);
+  const fileId = (req.query.fileId as string | undefined) || undefined;
+  sendSuccess(res, await photoAlbums.removeFromAlbum(conversation, req.params.messageId as string, fileId));
+};
+
+/** One message's photos, or one photo (`fileId`), into another album. */
+export const placeInAlbum = async (req: Request, res: Response): Promise<void> => {
+  const person = caller(req);
+  const conversation = await requireConversation(person, req.params.id as string);
+  const { fileId, ...placement } = req.body as photoAlbums.AlbumPlacement & { fileId?: string };
+  sendSuccess(res, await photoAlbums.placeInAlbum(person, conversation, req.params.messageId as string, placement, fileId));
 };
 
 export const markRead = async (req: Request, res: Response): Promise<void> => {

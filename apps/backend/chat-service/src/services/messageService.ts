@@ -10,6 +10,7 @@ import type { Caller } from './accessService';
 import { touchConversation } from './conversationService';
 import { notifyNewMessage } from './notificationService';
 import { publishToGroup } from './streamHub';
+import { forgetUnsent, saveToAlbum } from './photoAlbumService';
 
 export const MESSAGE_PAGE_SIZE = 50;
 export const MAX_MESSAGE_PAGE_SIZE = 100;
@@ -81,6 +82,8 @@ export interface SendInput {
   body?: string;
   attachments?: IAttachment[];
   replyTo?: string | null;
+  /** "Not this one" on the photo tray: keep this send out of the album. */
+  skipAlbum?: boolean;
 }
 
 export interface SendResult {
@@ -185,6 +188,9 @@ export async function sendMessage(
   // stored and the recipient's app will show it from the stream or the next
   // fetch regardless.
   void notifyNewMessage(conversation, person, view);
+
+  // After the reply, like the push: Album being slow must not hold up a send.
+  if (!input.skipAlbum) void saveToAlbum(conversation, message);
 
   return { message: view!, created };
 }
@@ -319,6 +325,9 @@ export async function deleteMessage(
   message.deletedAt = new Date();
   await message.save();
   await refreshPreview(conversationId, message);
+
+  // Before the files go: an album entry must never point at a deleted file.
+  if (attachments.length > 0) await forgetUnsent(messageId);
 
   // The record is soft-deleted so replies keep resolving, but the bytes are
   // not: keeping files nobody can see would charge the group's owner for

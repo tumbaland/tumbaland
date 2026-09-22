@@ -2,10 +2,6 @@ import { useEffect, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
-import IconButton from '@mui/material/IconButton';
-import Typography from '@mui/material/Typography';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { ink, surface } from '@tumbaland/frontend-core';
 import { ConfigProvider } from '../config/ConfigProvider';
 import ConversationsPage from '../pages/ConversationsPage';
 import ThreadPage from '../pages/ThreadPage';
@@ -88,37 +84,10 @@ function Panel() {
     );
   }
 
-  const current = conversations.find((conversation) => conversation.id === openId);
-  const others = current?.members.filter((member) => member.userId !== user.id) ?? [];
-  const name = current?.title || others.map((member) => member.name || member.email).join(', ') || 'Chat';
-
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
-      {conversations.length > 1 && (
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 0.5,
-            px: 0.5,
-            py: 0.25,
-            borderBottom: `1px solid ${surface.sunken}`,
-            bgcolor: surface.paper
-          }}
-        >
-          <IconButton size="small" aria-label="Back to conversations" onClick={() => open(null)}>
-            <ArrowBackIcon fontSize="small" />
-          </IconButton>
-          <Typography variant="subtitle2" noWrap sx={{ color: ink.strong }}>
-            {name}
-          </Typography>
-        </Box>
-      )}
-      <Box sx={{ flex: 1, minHeight: 0 }}>
-        {/* Keyed so switching conversations starts a clean thread. */}
-        <ThreadPage key={openId} conversationId={openId} />
-      </Box>
-    </Box>
+    // Keyed so switching conversations starts a clean thread. The thread's own
+    // header carries the way back when there is a list to go back to.
+    <ThreadPage key={openId} conversationId={openId} onBack={conversations.length > 1 ? () => open(null) : undefined} />
   );
 }
 

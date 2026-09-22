@@ -5,6 +5,7 @@ dotenv.config();
 import { connectDB, logger, registerShutdown, requireEnv } from '@tumbaland/backend-core';
 import app from './app';
 import { closeAll } from './services/streamHub';
+import { startPresenceSweep } from './services/presenceService';
 
 // Fail fast if the JWT secret is missing — auth must never run with a default
 requireEnv('JWT_SECRET');
@@ -29,7 +30,15 @@ const start = async (): Promise<void> => {
   // Graceful shutdown (SIGINT + SIGTERM: end the streams, drain HTTP, close the
   // DB). `closeAll` runs first because `server.close()` waits for in-flight
   // responses, and an SSE response never completes on its own.
-  registerShutdown({ serviceName: 'chat-service', server, onShutdown: closeAll });
+  const stopPresence = startPresenceSweep();
+  registerShutdown({
+    serviceName: 'chat-service',
+    server,
+    onShutdown: () => {
+      stopPresence();
+      closeAll();
+    }
+  });
 };
 
 start().catch((error: Error) => {

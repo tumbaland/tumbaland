@@ -58,7 +58,8 @@ export const sendMessageSchema = z
     clientId: z.string().min(8, 'clientId required').max(100),
     body: z.string().max(MAX_BODY_LENGTH).optional(),
     attachments: z.array(attachmentSchema).max(MAX_ATTACHMENTS).optional(),
-    replyTo: z.string().nullish()
+    replyTo: z.string().nullish(),
+    skipAlbum: z.boolean().optional()
   })
   .refine((value) => Boolean(value.body?.trim()) || (value.attachments?.length ?? 0) > 0, {
     message: 'A message needs text or an attachment'
@@ -94,6 +95,19 @@ export const thumbnailSchema = z.object({
   fileId: z.string().min(1, 'fileId required').max(512),
   mimetype: z.enum(ALLOWED_UPLOAD_TYPES as unknown as [string, ...string[]])
 });
+
+/** Where the conversation's photos go: an existing group album, a new one, or nowhere. */
+export const photoAlbumSchema = z.union([
+  z.object({ mode: z.literal('off') }),
+  z.object({ mode: z.literal('album'), albumId: z.string().min(1).max(64) }),
+  z.object({ mode: z.literal('album'), newAlbumName: z.string().trim().min(1, 'Name the album').max(100) })
+]);
+
+/** One message's photos, or one of them, into an existing album or a new one. */
+export const albumPlacementSchema = z.union([
+  z.object({ albumId: z.string().min(1).max(64), fileId: z.string().max(512).optional() }),
+  z.object({ newAlbumName: z.string().trim().min(1, 'Name the album').max(100), fileId: z.string().max(512).optional() })
+]);
 
 export const pushSubscriptionSchema = z.object({
   endpoint: z.string().url('endpoint must be a URL'),

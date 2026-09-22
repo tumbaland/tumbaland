@@ -1,10 +1,14 @@
 import { Router } from 'express';
 import { createRateLimiter, validate } from '@tumbaland/backend-core';
 import * as ctrl from '../controllers/chatController';
+import { caller } from '../services/accessService';
+import { touch as touchPresence } from '../services/presenceService';
 import {
   createConversationSchema,
   editMessageSchema,
   markReadSchema,
+  photoAlbumSchema,
+  albumPlacementSchema,
   pushSubscriptionSchema,
   reactionSchema,
   sendMessageSchema,
@@ -14,6 +18,14 @@ import {
 } from '../validation/schemas';
 
 const router = Router();
+
+// Every chat request is a sign of life, including the shell's minute-by-minute
+// unread poll, which is what lets presence mean "using Tumbaland" rather than
+// "has the chat open". Not awaited: it never fails a request.
+router.use((req, _res, next) => {
+  void touchPresence(caller(req));
+  next();
+});
 
 /**
  * Tighter than `standardRateLimiter` (300 per 15 minutes), because sending is
@@ -56,6 +68,11 @@ router.post('/conversations/:id/messages', sendLimiter, validate(sendMessageSche
 router.patch('/conversations/:id/messages/:messageId', validate(editMessageSchema), ctrl.editMessage);
 router.delete('/conversations/:id/messages/:messageId', ctrl.deleteMessage);
 router.put('/conversations/:id/messages/:messageId/reactions', validate(reactionSchema), ctrl.toggleReaction);
+// Album: where the conversation's photos go, and taking one message back out.
+router.get('/conversations/:id/albums', ctrl.listAlbums);
+router.put('/conversations/:id/photo-album', validate(photoAlbumSchema), ctrl.setPhotoAlbum);
+router.put('/conversations/:id/messages/:messageId/album', validate(albumPlacementSchema), ctrl.placeInAlbum);
+router.delete('/conversations/:id/messages/:messageId/album', ctrl.removeFromAlbum);
 // Attachments. The bytes go straight from the browser to file-service; only
 // the permission check, the quota gate and the thumbnail pass through here.
 router.post('/conversations/:id/attachments/upload-url', validate(uploadUrlSchema), ctrl.attachmentUploadUrl);

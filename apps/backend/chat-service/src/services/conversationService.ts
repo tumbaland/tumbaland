@@ -2,6 +2,7 @@ import { Conversation, IConversation, IConversationMember } from '../models/Conv
 import { Message } from '../models/Message';
 import { ReadState } from '../models/ReadState';
 import type { Caller } from './accessService';
+import { photoAlbumView, type PhotoAlbumView } from './photoAlbumService';
 
 export interface ConversationSummary {
   id: string;
@@ -141,6 +142,8 @@ export async function listConversations(person: Caller): Promise<ConversationSum
       $match: {
         deletedAt: null,
         senderId: { $ne: person.id },
+        // "Irja set photos to go to Rome" is not news worth a badge.
+        kind: { $ne: 'system' },
         $or: ids.map((id) => ({ conversationId: id, createdAt: { $gt: readAt.get(id) ?? new Date(0) } }))
       }
     },
@@ -182,7 +185,14 @@ export interface ReadReceipt {
 export async function conversationDetail(
   person: Caller,
   conversation: IConversation
-): Promise<{ id: string; groupId: string; title: string; members: IConversationMember[]; reads: ReadReceipt[] }> {
+): Promise<{
+  id: string;
+  groupId: string;
+  title: string;
+  members: IConversationMember[];
+  reads: ReadReceipt[];
+  photoAlbum: PhotoAlbumView;
+}> {
   const id = conversation._id.toString();
   const states = await ReadState.find({ conversationId: id, userId: { $ne: person.id } });
 
@@ -195,7 +205,8 @@ export async function conversationDetail(
       userId: state.userId,
       lastReadMessageId: state.lastReadMessageId ?? null,
       lastReadAt: state.lastReadAt
-    }))
+    })),
+    photoAlbum: photoAlbumView(conversation.photoAlbum)
   };
 }
 

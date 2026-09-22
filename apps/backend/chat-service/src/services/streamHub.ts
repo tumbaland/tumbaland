@@ -25,7 +25,8 @@ export type ChatEventType =
   | 'reaction.updated'
   | 'conversation.updated'
   | 'typing'
-  | 'read';
+  | 'read'
+  | 'presence';
 
 export interface ChatEvent {
   type: ChatEventType;

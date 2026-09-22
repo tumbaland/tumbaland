@@ -20,6 +20,32 @@ jest.mock('./services/fileServiceClient', () => ({
   deleteFolder: jest.fn(async () => undefined)
 }));
 
+// album-service, as chat sees it. The real routes are tested in album-service.
+class FakeAlbumGone extends Error {}
+const albumCalls = {
+  listAlbums: jest.fn(async () => [{ id: 'a-rome', name: 'Rome', photoCount: 3 }]),
+  getAlbum: jest.fn(async (_groupId: string, albumId: string) =>
+    albumId === 'a-rome'
+      ? { id: 'a-rome', name: 'Rome', photoCount: 3 }
+      : albumId === 'a-home'
+        ? { id: 'a-home', name: 'Home', photoCount: 0 }
+        : null
+  ),
+  createAlbum: jest.fn(async (_groupId: string, _userId: string, name: string) => ({ id: 'a-new', name, photoCount: 0 })),
+  addChatPhoto: jest.fn(async (input: { albumId: string }) => ({ photoId: 'p1', albumId: input.albumId, albumName: 'Rome' })),
+  removeChatPhotos: jest.fn(async () => ({ removed: 1 })),
+  moveChatPhotos: jest.fn(async (_messageId: string, input: { albumId: string }) => ({ moved: 1, albumId: input.albumId, albumName: 'Home' }))
+};
+jest.mock('./services/albumClient', () => ({
+  AlbumGoneError: FakeAlbumGone,
+  listAlbums: (...args: unknown[]) => (albumCalls.listAlbums as jest.Mock)(...args),
+  getAlbum: (...args: unknown[]) => (albumCalls.getAlbum as jest.Mock)(...args),
+  createAlbum: (...args: unknown[]) => (albumCalls.createAlbum as jest.Mock)(...args),
+  addChatPhoto: (...args: unknown[]) => (albumCalls.addChatPhoto as jest.Mock)(...args),
+  removeChatPhotos: (...args: unknown[]) => (albumCalls.removeChatPhotos as jest.Mock)(...args),
+  moveChatPhotos: (...args: unknown[]) => (albumCalls.moveChatPhotos as jest.Mock)(...args)
+}));
+
 const assertHeadroom = jest.fn();
 const recordStoredBytes = jest.fn();
 const releaseStoredBytes = jest.fn();
@@ -38,6 +64,8 @@ import app from './app';
 import { Conversation } from './models/Conversation';
 import { Message } from './models/Message';
 import { ReadState } from './models/ReadState';
+import { Presence } from './models/Presence';
+import { clearPresence } from './services/presenceService';
 import { clearSubscribers } from './services/streamHub';
 import { deleteFolder } from './services/fileServiceClient';
 
@@ -50,13 +78,29 @@ const PERSIK = { id: 'u-persik', email: 'persik@example.com', name: 'Persik', gr
 
 const tokenFor = (user: typeof TOM) => jwt.sign(user, 'test-secret', { expiresIn: '1h' });
 
-const as = (user: typeof TOM) => ({
-  get: (path: string) => request(app).get(path).set('Authorization', `Bearer ${tokenFor(user)}`),
-  post: (path: string) => request(app).post(path).set('Authorization', `Bearer ${tokenFor(user)}`),
-  patch: (path: string) => request(app).patch(path).set('Authorization', `Bearer ${tokenFor(user)}`),
-  put: (path: string) => request(app).put(path).set('Authorization', `Bearer ${tokenFor(user)}`),
-  delete: (path: string) => request(app).delete(path).set('Authorization', `Bearer ${tokenFor(user)}`)
+/**
+ * Each test arrives from its own address, as separate clients would. The send
+ * limiter counts per address, and the suite as a whole sends far more than one
+ * person would in five minutes.
+ */
+let testNumber = 0;
+let clientAddress = '10.0.0.1';
+beforeEach(() => {
+  testNumber++;
+  clientAddress = `10.0.${Math.floor(testNumber / 250)}.${(testNumber % 250) + 1}`;
 });
+
+const as = (user: typeof TOM) => {
+  const signed = (test: request.Test) =>
+    test.set('Authorization', `Bearer ${tokenFor(user)}`).set('X-Forwarded-For', clientAddress);
+  return {
+    get: (path: string) => signed(request(app).get(path)),
+    post: (path: string) => signed(request(app).post(path)),
+    patch: (path: string) => signed(request(app).patch(path)),
+    put: (path: string) => signed(request(app).put(path)),
+    delete: (path: string) => signed(request(app).delete(path))
+  };
+};
 
 beforeAll(async () => {
   mongo = await MongoMemoryServer.create();
@@ -67,6 +111,7 @@ beforeAll(async () => {
   await Message.syncIndexes();
   await Conversation.syncIndexes();
   await ReadState.syncIndexes();
+  await Presence.syncIndexes();
 }, 60_000);
 
 afterAll(async () => {
@@ -76,8 +121,14 @@ afterAll(async () => {
 
 afterEach(async () => {
   clearSubscribers();
+  clearPresence();
   jest.clearAllMocks();
-  await Promise.all([Conversation.deleteMany({}), Message.deleteMany({}), ReadState.deleteMany({})]);
+  await Promise.all([
+    Conversation.deleteMany({}),
+    Message.deleteMany({}),
+    ReadState.deleteMany({}),
+    Presence.deleteMany({})
+  ]);
 });
 
 /** A conversation in g1, which Tom and Irja are both in. */
@@ -923,5 +974,284 @@ describe('opening chat for the first time', () => {
     const res = await request(app).post('/api/chat/conversations/mine');
 
     expect(res.status).toBe(401);
+  });
+});
+
+describe('presence', () => {
+  /** Presence is recorded without holding up the request, so give it a moment. */
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 50));
+
+  it('shows the other person online once they have been active, and never the caller', async () => {
+    const id = await conversationInG1();
+    await as(IRJA).get(`/api/chat/conversations/${id}`);
+    await settle();
+
+    const res = await as(TOM).get(`/api/chat/conversations/${id}`);
+
+    expect(res.body.data.presence).toEqual([
+      { userId: IRJA.id, online: true, lastActiveAt: expect.any(String) }
+    ]);
+  });
+
+  it('carries presence on the conversation list too, for the dots there', async () => {
+    const id = await conversationInG1();
+    await as(IRJA).get(`/api/chat/conversations/${id}`);
+    await settle();
+
+    const res = await as(TOM).get('/api/chat/conversations');
+
+    expect(res.body.data[0].presence).toEqual([
+      { userId: IRJA.id, online: true, lastActiveAt: expect.any(String) }
+    ]);
+  });
+
+  it('counts the shell’s unread poll as being active', async () => {
+    const id = await conversationInG1();
+    // On the roster (she has opened the chat before), then quiet until now.
+    await as(IRJA).get(`/api/chat/conversations/${id}`);
+    await settle();
+    clearPresence();
+    await Presence.deleteMany({});
+
+    await as(IRJA).get('/api/chat/unread');
+    await settle();
+
+    const res = await as(TOM).get(`/api/chat/conversations/${id}`);
+    expect(res.body.data.presence[0]).toMatchObject({ userId: IRJA.id, online: true });
+  });
+});
+
+describe('saving photos to Album', () => {
+  /** Album work runs after the reply, so give it a moment. */
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 100));
+  const photo = (id: string, name = 'abc') => ({
+    fileId: `chat/g1/${id}/${name}/original.jpg`,
+    thumbnailFileId: `chat/g1/${id}/${name}/thumb.webp`,
+    mimetype: 'image/jpeg',
+    sizeBytes: 1000
+  });
+
+  it('asks first: a new conversation has no album chosen', async () => {
+    const id = await conversationInG1();
+    const res = await as(TOM).get(`/api/chat/conversations/${id}`);
+    expect(res.body.data.photoAlbum).toEqual({ mode: 'unset', albumId: null, albumName: null });
+  });
+
+  it('offers the group’s albums for the picker', async () => {
+    const id = await conversationInG1();
+    const res = await as(TOM).get(`/api/chat/conversations/${id}/albums`);
+    expect(res.body.data).toEqual([{ id: 'a-rome', name: 'Rome', photoCount: 3 }]);
+    expect(albumCalls.listAlbums).toHaveBeenCalledWith('g1');
+  });
+
+  it('sets the album for both people, and says so in the thread without counting it unread', async () => {
+    const id = await conversationInG1();
+
+    const res = await as(IRJA).put(`/api/chat/conversations/${id}/photo-album`).send({ mode: 'album', albumId: 'a-rome' });
+
+    expect(res.body.data).toEqual({ mode: 'album', albumId: 'a-rome', albumName: 'Rome' });
+    const seen = await as(TOM).get(`/api/chat/conversations/${id}`);
+    expect(seen.body.data.photoAlbum).toMatchObject({ albumName: 'Rome' });
+    const page = await as(TOM).get(`/api/chat/conversations/${id}/messages`);
+    expect(page.body.data.messages[0]).toMatchObject({ kind: 'system', body: 'Irja set photos to go to Rome' });
+    const list = await as(TOM).get('/api/chat/conversations');
+    expect(list.body.data[0].unreadCount).toBe(0);
+  });
+
+  it('creates a new album from the picker', async () => {
+    const id = await conversationInG1();
+
+    const res = await as(TOM).put(`/api/chat/conversations/${id}/photo-album`).send({ mode: 'album', newAlbumName: 'Paris' });
+
+    expect(albumCalls.createAlbum).toHaveBeenCalledWith('g1', TOM.id, 'Paris');
+    expect(res.body.data).toEqual({ mode: 'album', albumId: 'a-new', albumName: 'Paris' });
+  });
+
+  it('refuses an album that is not in the conversation’s group', async () => {
+    const id = await conversationInG1();
+    const res = await as(TOM).put(`/api/chat/conversations/${id}/photo-album`).send({ mode: 'album', albumId: 'a-elsewhere' });
+    expect(res.status).toBe(400);
+  });
+
+  it('saves each file of a sent photo message and marks it with the album', async () => {
+    const id = await conversationInG1();
+    await as(TOM).put(`/api/chat/conversations/${id}/photo-album`).send({ mode: 'album', albumId: 'a-rome' });
+
+    const sent = await as(TOM)
+      .post(`/api/chat/conversations/${id}/messages`)
+      .send({ clientId: clientId(), attachments: [photo(id), photo(id, 'def')] });
+    await settle();
+
+    expect(albumCalls.addChatPhoto).toHaveBeenCalledTimes(2);
+    expect(albumCalls.addChatPhoto).toHaveBeenCalledWith(
+      expect.objectContaining({ groupId: 'g1', albumId: 'a-rome', messageId: sent.body.data.id, fileId: photo(id).fileId })
+    );
+    const stored = await Message.findById(sent.body.data.id);
+    expect(stored!.attachments[0]).toMatchObject({ albumId: 'a-rome', albumName: 'Rome' });
+  });
+
+  it('leaves out a send marked "not this one"', async () => {
+    const id = await conversationInG1();
+    await as(TOM).put(`/api/chat/conversations/${id}/photo-album`).send({ mode: 'album', albumId: 'a-rome' });
+
+    await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), attachments: [photo(id)], skipAlbum: true });
+    await settle();
+
+    expect(albumCalls.addChatPhoto).not.toHaveBeenCalled();
+  });
+
+  it.each([['unset', undefined], ['off', { mode: 'off' }]])('saves nothing while %s', async (_label, choice) => {
+    const id = await conversationInG1();
+    if (choice) await as(TOM).put(`/api/chat/conversations/${id}/photo-album`).send(choice);
+
+    await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), attachments: [photo(id)] });
+    await settle();
+
+    expect(albumCalls.addChatPhoto).not.toHaveBeenCalled();
+  });
+
+  it('goes back to asking when the album was deleted in Album', async () => {
+    const id = await conversationInG1();
+    await as(TOM).put(`/api/chat/conversations/${id}/photo-album`).send({ mode: 'album', albumId: 'a-rome' });
+    albumCalls.addChatPhoto.mockRejectedValueOnce(new FakeAlbumGone());
+
+    await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), attachments: [photo(id)] });
+    await settle();
+
+    const res = await as(TOM).get(`/api/chat/conversations/${id}`);
+    expect(res.body.data.photoAlbum.mode).toBe('unset');
+  });
+
+  it('still sends when Album is down', async () => {
+    const id = await conversationInG1();
+    await as(TOM).put(`/api/chat/conversations/${id}/photo-album`).send({ mode: 'album', albumId: 'a-rome' });
+    albumCalls.addChatPhoto.mockRejectedValueOnce(new Error('album-service down'));
+
+    const sent = await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), attachments: [photo(id)] });
+    await settle();
+
+    expect(sent.status).toBe(201);
+  });
+
+  it('takes the photos out of the album on unsend, before the files go', async () => {
+    const id = await conversationInG1();
+    const sent = await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), attachments: [photo(id)] });
+
+    await as(TOM).delete(`/api/chat/conversations/${id}/messages/${sent.body.data.id}`);
+
+    expect(albumCalls.removeChatPhotos).toHaveBeenCalledWith(sent.body.data.id);
+    const removedAt = (albumCalls.removeChatPhotos as jest.Mock).mock.invocationCallOrder[0]!;
+    const deletedAt = (deleteFolder as jest.Mock).mock.invocationCallOrder[0]!;
+    expect(removedAt).toBeLessThan(deletedAt);
+  });
+
+  it('lets either person take a message back out of the album', async () => {
+    const id = await conversationInG1();
+    await as(TOM).put(`/api/chat/conversations/${id}/photo-album`).send({ mode: 'album', albumId: 'a-rome' });
+    const sent = await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), attachments: [photo(id)] });
+    await settle();
+
+    const res = await as(IRJA).delete(`/api/chat/conversations/${id}/messages/${sent.body.data.id}/album`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.attachments[0]).toMatchObject({ albumId: null });
+    expect(albumCalls.removeChatPhotos).toHaveBeenCalledWith(sent.body.data.id, undefined);
+    const stored = await Message.findById(sent.body.data.id);
+    expect(stored!.attachments[0]).toMatchObject({ albumId: null, albumName: null });
+  });
+
+  it('keeps someone outside the group out of the setting', async () => {
+    const id = await conversationInG1();
+    const res = await as(PERSIK).put(`/api/chat/conversations/${id}/photo-album`).send({ mode: 'off' });
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('changing a sent photo’s album', () => {
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 100));
+  const file = (id: string, name: string) => ({
+    fileId: `chat/g1/${id}/${name}/original.jpg`,
+    mimetype: 'image/jpeg',
+    sizeBytes: 1000
+  });
+
+  async function twoPhotosInRome() {
+    const id = await conversationInG1();
+    await as(TOM).put(`/api/chat/conversations/${id}/photo-album`).send({ mode: 'album', albumId: 'a-rome' });
+    const sent = await as(TOM)
+      .post(`/api/chat/conversations/${id}/messages`)
+      .send({ clientId: clientId(), attachments: [file(id, 'abc'), file(id, 'def')] });
+    expect(sent.status).toBe(201);
+    await settle();
+    jest.clearAllMocks();
+    return { id, messageId: sent.body.data.id as string };
+  }
+
+  it('moves one photo, and leaves the other and the conversation’s setting alone', async () => {
+    const { id, messageId } = await twoPhotosInRome();
+
+    const res = await as(IRJA)
+      .put(`/api/chat/conversations/${id}/messages/${messageId}/album`)
+      .send({ albumId: 'a-home', fileId: file(id, 'abc').fileId });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.attachments[0]).toMatchObject({ albumId: 'a-home', albumName: 'Home' });
+    expect(albumCalls.moveChatPhotos).toHaveBeenCalledWith(messageId, {
+      groupId: 'g1',
+      albumId: 'a-home',
+      fileIds: [file(id, 'abc').fileId]
+    });
+    const stored = await Message.findById(messageId);
+    expect(stored!.attachments.map((attachment) => attachment.albumName)).toEqual(['Home', 'Rome']);
+    const detail = await as(TOM).get(`/api/chat/conversations/${id}`);
+    expect(detail.body.data.photoAlbum.albumName).toBe('Rome');
+  });
+
+  it('adds a photo that was left out, rather than trying to move it', async () => {
+    const id = await conversationInG1();
+    const sent = await as(TOM)
+      .post(`/api/chat/conversations/${id}/messages`)
+      .send({ clientId: clientId(), attachments: [file(id, 'abc')], skipAlbum: true });
+
+    await as(TOM).put(`/api/chat/conversations/${id}/messages/${sent.body.data.id}/album`).send({ albumId: 'a-rome' });
+
+    expect(albumCalls.moveChatPhotos).not.toHaveBeenCalled();
+    expect(albumCalls.addChatPhoto).toHaveBeenCalledWith(expect.objectContaining({ albumId: 'a-rome', fileId: file(id, 'abc').fileId }));
+  });
+
+  it('can put a photo in a new album', async () => {
+    const { id, messageId } = await twoPhotosInRome();
+
+    await as(TOM).put(`/api/chat/conversations/${id}/messages/${messageId}/album`).send({ newAlbumName: 'Best of Rome' });
+
+    expect(albumCalls.createAlbum).toHaveBeenCalledWith('g1', TOM.id, 'Best of Rome');
+  });
+
+  it('takes out just one photo', async () => {
+    const { id, messageId } = await twoPhotosInRome();
+
+    await as(TOM).delete(`/api/chat/conversations/${id}/messages/${messageId}/album?fileId=${file(id, 'def').fileId}`);
+
+    expect(albumCalls.removeChatPhotos).toHaveBeenCalledWith(messageId, file(id, 'def').fileId);
+    const stored = await Message.findById(messageId);
+    expect(stored!.attachments.map((attachment) => attachment.albumName)).toEqual(['Rome', null]);
+  });
+
+  it('refuses a file that is not on the message', async () => {
+    const { id, messageId } = await twoPhotosInRome();
+
+    const res = await as(TOM)
+      .put(`/api/chat/conversations/${id}/messages/${messageId}/album`)
+      .send({ albumId: 'a-home', fileId: 'chat/g9/elsewhere/original.jpg' });
+
+    expect(res.status).toBe(404);
+  });
+
+  it('refuses an album from another group', async () => {
+    const { id, messageId } = await twoPhotosInRome();
+
+    const res = await as(TOM).put(`/api/chat/conversations/${id}/messages/${messageId}/album`).send({ albumId: 'a-elsewhere' });
+
+    expect(res.status).toBe(400);
   });
 });

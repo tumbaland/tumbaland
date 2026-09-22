@@ -3,6 +3,7 @@ import { logger } from '@tumbaland/backend-core';
 import { caller } from '../services/accessService';
 import { listConversations } from '../services/conversationService';
 import { listMessages } from '../services/messageService';
+import { touch } from '../services/presenceService';
 import { HEARTBEAT_MS, MAX_STREAM_AGE_MS, formatEvent, subscribe } from '../services/streamHub';
 
 /**
@@ -99,7 +100,12 @@ export const stream = async (req: Request, res: Response): Promise<void> => {
     clearInterval(heartbeat);
     clearTimeout(recycle);
     unsubscribe();
+    // Leaving counts as the last sign of life, so "Active now" lingers for the
+    // short window rather than the time since the stream opened.
+    void touch(person);
   };
+
+  void touch(person);
 
   req.on('close', close);
   res.on('close', close);

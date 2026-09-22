@@ -20,6 +20,22 @@ export interface IConversationMember {
   joinedAt: Date;
 }
 
+/**
+ * Where this conversation's photos and videos are saved in Album.
+ *
+ * One setting for the whole conversation, shared by everyone in it: when one
+ * person switches it to "Rome" for a trip, the other's photos go there too.
+ * `unset` until someone first chooses, which is when chat asks.
+ */
+export interface IPhotoAlbumSetting {
+  mode: 'unset' | 'album' | 'off';
+  albumId?: string | null;
+  /** Kept for display, so the composer can say where photos go without asking Album. */
+  albumName?: string | null;
+  setById?: string | null;
+  setAt?: Date | null;
+}
+
 export interface IConversation extends Document {
   _id: Types.ObjectId;
   /**
@@ -41,6 +57,7 @@ export interface IConversation extends Document {
   lastMessageAt?: Date;
   lastMessagePreview?: string;
   lastMessageSender?: string;
+  photoAlbum?: IPhotoAlbumSetting;
   deletedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -68,6 +85,19 @@ const ConversationSchema = new Schema<IConversation>(
     // Enough to draw the conversation list without loading a message.
     lastMessagePreview: { type: String, maxlength: 200, default: '' },
     lastMessageSender: { type: String, default: '' },
+    photoAlbum: {
+      type: new Schema<IPhotoAlbumSetting>(
+        {
+          mode: { type: String, enum: ['unset', 'album', 'off'], default: 'unset' },
+          albumId: { type: String, default: null },
+          albumName: { type: String, default: null },
+          setById: { type: String, default: null },
+          setAt: { type: Date, default: null }
+        },
+        { _id: false }
+      ),
+      default: () => ({ mode: 'unset' })
+    },
     deletedAt: { type: Date, default: null }
   },
   { timestamps: true }

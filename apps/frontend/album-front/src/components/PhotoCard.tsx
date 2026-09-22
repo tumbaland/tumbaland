@@ -113,7 +113,8 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
           photo.mimetype.startsWith('video/') ? (
             <Box
               component="video"
-              src={photo.thumbnailUrl}
+              // Asks for the frame 0.1s in, so iOS draws a still, not black.
+              src={`${photo.thumbnailUrl}#t=0.1`}
               sx={{
                 position: 'absolute',
                 top: 0,
@@ -145,7 +146,7 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
           photo.mimetype.startsWith('video/') ? (
             <Box
               component="video"
-              src={photo.signedUrl}
+              src={`${photo.signedUrl}#t=0.1`}
               sx={{
                 position: 'absolute',
                 top: 0,

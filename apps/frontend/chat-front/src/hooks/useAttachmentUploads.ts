@@ -105,7 +105,7 @@ export function useAttachmentUploads(conversationId: string | undefined): UseAtt
 
           // The poster is a second, separate upload into the same folder.
           let posterFileId: string | null = null;
-          if (poster && ticket.posterUploadFileId) {
+          if (poster?.blob && ticket.posterUploadFileId) {
             try {
               const posterTicket = await chatApi.attachmentUploadUrl(conversationId, {
                 filename: 'poster.jpg',

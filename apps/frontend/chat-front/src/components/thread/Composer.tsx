@@ -14,10 +14,12 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { TOUCH_TARGET, brand, ink, surface } from '@tumbaland/frontend-core';
 import { FullEmojiPicker, loadEmojiPicker } from './FullEmojiPicker';
 import { UploadTray } from './UploadTray';
-import type { PendingUpload } from '../../types';
+import { AlbumDestination } from './AlbumDestination';
+import type { PendingUpload, PhotoAlbum } from '../../types';
 
 export interface ComposerProps {
-  onSend: (body: string) => void;
+  /** Options only when photos go with it: whether to leave them out of the album. */
+  onSend: (body: string, options?: { skipAlbum: boolean }) => void;
   onTyping: () => void;
   disabled?: boolean;
   uploads?: PendingUpload[];
@@ -30,6 +32,10 @@ export interface ComposerProps {
   editing?: { id: string; body: string; hasMedia: boolean } | null;
   onSaveEdit?: (body: string) => void;
   onCancelEdit?: () => void;
+  /** Where the conversation's photos go. Absent where saving to Album is not offered. */
+  photoAlbum?: PhotoAlbum;
+  onChooseAlbum?: () => void;
+  onAlbumOff?: () => void;
 }
 
 /**
@@ -52,8 +58,13 @@ export function Composer({
   uploading,
   editing,
   onSaveEdit,
-  onCancelEdit
+  onCancelEdit,
+  photoAlbum,
+  onChooseAlbum,
+  onAlbumOff
 }: ComposerProps) {
+  /** "Not this one", for the photos on the tray now. Cleared after each send. */
+  const [skipAlbum, setSkipAlbum] = useState(false);
   const [value, setValue] = useState('');
   /** What was being typed before an edit took the box over, given back after. */
   const draft = useRef('');
@@ -105,7 +116,9 @@ export function Composer({
       else onSaveEdit?.(body);
       return;
     }
-    onSend(body);
+    if (ready > 0) onSend(body, { skipAlbum });
+    else onSend(body);
+    setSkipAlbum(false);
     setValue('');
     setToolsOpen(false);
     // Kept focused, so a conversation does not need a tap between each line.
@@ -174,6 +187,16 @@ export function Composer({
             <CloseIcon fontSize="small" />
           </IconButton>
         </Box>
+      )}
+
+      {!editing && uploads.length > 0 && photoAlbum && onChooseAlbum && onAlbumOff && (
+        <AlbumDestination
+          photoAlbum={photoAlbum}
+          skip={skipAlbum}
+          onToggleSkip={() => setSkipAlbum((skip) => !skip)}
+          onChoose={onChooseAlbum}
+          onTurnOff={onAlbumOff}
+        />
       )}
 
       {!editing && uploads.length > 0 && onRemoveUpload && (

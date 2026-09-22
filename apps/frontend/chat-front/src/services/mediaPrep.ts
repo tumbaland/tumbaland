@@ -109,21 +109,34 @@ export async function downscaleImage(file: File): Promise<PreparedFile> {
 /** How far into a clip the poster frame is taken from. */
 const POSTER_SEEK_SECONDS = 0.5;
 
-/** Give up rather than hang on a format the browser cannot decode. */
-const POSTER_TIMEOUT_MS = 5000;
+/**
+ * Give up rather than hang on a format the browser cannot decode. Generous,
+ * because a long clip from a phone can take a few seconds to open.
+ */
+const POSTER_TIMEOUT_MS = 10_000;
+
+/** Longest edge of a poster. It fills a chat bubble, not a screen. */
+export const MAX_POSTER_EDGE = 1280;
 
 export interface VideoPoster {
-  blob: Blob;
+  /** Null when the size and length could be read but no frame could be drawn. */
+  blob: Blob | null;
   width: number;
   height: number;
   durationMs: number;
 }
 
 /**
- * Captures a still frame from a video.
+ * Captures a still frame from a video, with its size and length.
+ *
+ * Loaded in full rather than metadata-only: Safari, and Chrome on some
+ * phones, never deliver a frame to a metadata-only element, so waiting for one
+ * was how a clip ended up with no poster. When a frame cannot be drawn (a
+ * format this browser cannot decode, such as HEVC in Chrome) whatever was
+ * learned is still returned, so the clip keeps its length label.
  *
  * Resolves to null rather than throwing on any failure: a missing poster costs
- * a grey rectangle until the video loads, while a thrown error would stop the
+ * a still of the video's own first frame, while a thrown error would stop the
  * message being sent at all.
  */
 export function captureVideoPoster(file: File): Promise<VideoPoster | null> {
@@ -131,6 +144,18 @@ export function captureVideoPoster(file: File): Promise<VideoPoster | null> {
     const url = URL.createObjectURL(file);
     const video = document.createElement('video');
     let settled = false;
+    let seeking = false;
+
+    /** What is known without a frame, for when drawing one fails. */
+    const metadataOnly = (): VideoPoster | null =>
+      video.videoWidth && video.videoHeight
+        ? {
+            blob: null,
+            width: video.videoWidth,
+            height: video.videoHeight,
+            durationMs: Math.round((video.duration || 0) * 1000)
+          }
+        : null;
 
     const finish = (result: VideoPoster | null) => {
       if (settled) return;
@@ -141,47 +166,45 @@ export function captureVideoPoster(file: File): Promise<VideoPoster | null> {
       resolve(result);
     };
 
-    const timer = setTimeout(() => finish(null), POSTER_TIMEOUT_MS);
+    const timer = setTimeout(() => finish(metadataOnly()), POSTER_TIMEOUT_MS);
 
     video.muted = true;
     // Required for iOS, which otherwise refuses to load a video without a
     // user gesture and never fires `loadeddata`.
     video.playsInline = true;
-    video.preload = 'metadata';
+    video.preload = 'auto';
 
-    video.onloadeddata = () => {
-      // Seeking past the first frame avoids the black frame many clips open on.
+    // Seeking past the first frame avoids the black frame many clips open on.
+    // Started from whichever of these arrives first; some browsers only send one.
+    const seek = () => {
+      if (seeking) return;
+      seeking = true;
       video.currentTime = Math.min(POSTER_SEEK_SECONDS, Math.max(0, (video.duration || 1) / 2));
     };
+    video.onloadedmetadata = seek;
+    video.onloadeddata = seek;
 
     video.onseeked = () => {
       try {
+        const width = video.videoWidth;
+        const height = video.videoHeight;
+        if (!width || !height) return finish(null);
+
+        const scale = Math.min(1, MAX_POSTER_EDGE / Math.max(width, height));
         const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        if (!canvas.width || !canvas.height) return finish(null);
+        canvas.width = Math.round(width * scale);
+        canvas.height = Math.round(height * scale);
 
         const context = canvas.getContext('2d');
-        if (!context) return finish(null);
+        if (!context) return finish(metadataOnly());
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        canvas.toBlob(
-          (blob) =>
-            finish(
-              blob
-                ? {
-                    blob,
-                    width: canvas.width,
-                    height: canvas.height,
-                    durationMs: Math.round((video.duration || 0) * 1000)
-                  }
-                : null
-            ),
-          'image/jpeg',
-          0.8
-        );
+        const durationMs = Math.round((video.duration || 0) * 1000);
+        // Width and height are the clip's own, which is what the layout wants;
+        // only the poster image itself is shrunk.
+        canvas.toBlob((blob) => finish({ blob, width, height, durationMs }), 'image/jpeg', 0.8);
       } catch {
-        finish(null);
+        finish(metadataOnly());
       }
     };
 

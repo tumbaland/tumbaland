@@ -362,8 +362,10 @@ class AlbumService {
     // Get all photos in the album
     const photos = await Photo.find({ albumId });
 
-    // Delete all photos and associated files
-    for (const photo of photos) {
+    // Delete all photos and associated files. Photos from chat only point at
+    // chat's files, which stay for the chat and were never metered here.
+    const owned = photos.filter((photo) => !photo.source);
+    for (const photo of owned) {
       try {
         if (photo.minioFileId) {
           await deleteFile(photo.minioFileId);
@@ -376,7 +378,7 @@ class AlbumService {
       }
     }
 
-    const freedBytes = photos.reduce((sum, photo) => sum + (photo.size ?? 0), 0);
+    const freedBytes = owned.reduce((sum, photo) => sum + (photo.size ?? 0), 0);
 
     // Delete all photos from database
     await Photo.deleteMany({ albumId });

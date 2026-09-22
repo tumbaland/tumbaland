@@ -27,7 +27,10 @@ export function placeSeenMarkers(
   members: ConversationMember[]
 ): Map<string, Seer[]> {
   const placed = new Map<string, Seer[]>();
-  const stored = messages.filter((message) => message.delivery !== 'pending' && message.delivery !== 'failed');
+  // System lines are notes about the conversation; "Seen" under one says nothing.
+  const stored = messages.filter(
+    (message) => message.delivery !== 'pending' && message.delivery !== 'failed' && message.kind !== 'system'
+  );
 
   for (const read of Object.values(reads)) {
     let index = read.lastReadMessageId ? stored.findIndex((message) => message.id === read.lastReadMessageId) : -1;

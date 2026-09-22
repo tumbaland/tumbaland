@@ -13,7 +13,29 @@ export interface Attachment {
   width?: number | null;
   height?: number | null;
   durationMs?: number | null;
+  /** The album this file was saved to, once Album has it. */
+  albumId?: string | null;
+  albumName?: string | null;
 }
+
+/** Where a conversation's photos go in Album. `unset` until someone chooses. */
+export interface PhotoAlbum {
+  mode: 'unset' | 'album' | 'off';
+  albumId: string | null;
+  albumName: string | null;
+}
+
+/** One of the group's albums, as the picker lists them. */
+export interface AlbumOption {
+  id: string;
+  name: string;
+  photoCount: number;
+}
+
+/** Where one sent message's photos, or one photo, should be. */
+export type AlbumPlacement = { albumId: string } | { newAlbumName: string };
+
+export type PhotoAlbumChoice = { mode: 'off' } | { mode: 'album'; albumId: string } | { mode: 'album'; newAlbumName: string };
 
 export interface Reaction {
   userId: string;
@@ -38,6 +60,14 @@ export interface ReadReceipt {
   lastReadAt: string;
 }
 
+/** Whether someone is using Tumbaland, and when they last were. */
+export interface Presence {
+  userId: string;
+  online: boolean;
+  /** Null when never seen. */
+  lastActiveAt: string | null;
+}
+
 /** One conversation as the thread page opens it. */
 export interface ConversationDetail {
   id: string;
@@ -46,6 +76,10 @@ export interface ConversationDetail {
   members: ConversationMember[];
   /** Everyone but the caller. */
   reads: ReadReceipt[];
+  /** Everyone but the caller. Absent from a server older than presence. */
+  presence?: Presence[];
+  /** Absent from a server older than saving to Album. */
+  photoAlbum?: PhotoAlbum;
 }
 
 export interface Conversation {
@@ -58,6 +92,8 @@ export interface Conversation {
   lastMessageSender: string;
   unreadCount: number;
   createdAt: string;
+  /** Everyone but the caller. Absent from a server older than presence. */
+  presence?: Presence[];
 }
 
 export interface Message {
@@ -104,7 +140,8 @@ export type ChatEventType =
   | 'reaction.updated'
   | 'conversation.updated'
   | 'typing'
-  | 'read';
+  | 'read'
+  | 'presence';
 
 export interface ChatEvent {
   type: ChatEventType;

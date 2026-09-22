@@ -31,6 +31,10 @@ services:
       # Entitlements: the storageBytes gate checks an upload against the
       # conversation group owner's plan before a byte is written.
       - PAYMENT_INTERNAL_URL=${PAYMENT_INTERNAL_URL}
+      # Album: photos and videos sent in chat are added to the conversation's
+      # chosen album (album-service /internal, gated by INTERNAL_SERVICE_TOKEN).
+      - ALBUM_INTERNAL_URL=${ALBUM_INTERNAL_URL}
+      - ALBUM_API_URL=${ALBUM_API_URL}
       # Web Push. Absent means no notifications, which the service logs once and
       # then runs without: a missing key must not stop chat from working.
       - VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}

@@ -139,3 +139,33 @@ describe('MediaGrid', () => {
     expect(onOpen).toHaveBeenCalledWith(0);
   });
 });
+
+describe('a video with no poster', () => {
+  it('shows the video’s own first frame instead of a broken image', () => {
+    const { container } = render(
+      <MediaGrid
+        attachments={[{ fileId: 'v1', mimetype: 'video/mp4', sizeBytes: 1, url: 'https://files.test/v1?token=x', posterUrl: null }]}
+        onOpen={() => {}}
+      />
+    );
+
+    const video = container.querySelector('video');
+    expect(video).toHaveAttribute('src', 'https://files.test/v1?token=x#t=0.1');
+    expect(screen.getByRole('button', { name: 'Open video' })).toBeInTheDocument();
+  });
+
+  it('falls back to the first frame when the poster itself will not load', () => {
+    const { container } = render(
+      <MediaGrid
+        attachments={[
+          { fileId: 'v1', mimetype: 'video/mp4', sizeBytes: 1, url: 'https://files.test/v1', posterUrl: 'https://files.test/p1' }
+        ]}
+        onOpen={() => {}}
+      />
+    );
+
+    fireEvent.error(container.querySelector('img')!);
+
+    expect(container.querySelector('video')).toHaveAttribute('src', 'https://files.test/v1#t=0.1');
+  });
+});

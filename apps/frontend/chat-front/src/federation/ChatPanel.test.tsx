@@ -8,7 +8,16 @@ vi.mock('../services/chatApi', () => ({ chatApi: { ensureMyConversations: () => 
 vi.mock('../config/ConfigProvider', () => ({ ConfigProvider: ({ children }: { children: React.ReactNode }) => children }));
 vi.mock('../hooks/useCurrentUser', () => ({ useCurrentUser: () => ({ user: { id: 'u-tom' }, loading: false }) }));
 vi.mock('../pages/ThreadPage', () => ({
-  default: ({ conversationId }: { conversationId: string }) => <div>thread {conversationId}</div>
+  default: ({ conversationId, onBack }: { conversationId: string; onBack?: () => void }) => (
+    <div>
+      thread {conversationId}
+      {onBack && (
+        <button type="button" onClick={onBack}>
+          Back to conversations
+        </button>
+      )}
+    </div>
+  )
 }));
 vi.mock('../pages/ConversationsPage', () => ({
   default: ({ onOpen }: { onOpen: (id: string) => void }) => (
@@ -55,7 +64,6 @@ it('starts on the list with several, opens one in place, and goes back', async (
 
   await userEvent.click(await screen.findByRole('button', { name: 'open c2' }));
   expect(screen.getByText('thread c2')).toBeInTheDocument();
-  expect(screen.getByText('Mari')).toBeInTheDocument();
 
   await userEvent.click(screen.getByRole('button', { name: 'Back to conversations' }));
   expect(screen.getByRole('button', { name: 'open c2' })).toBeInTheDocument();

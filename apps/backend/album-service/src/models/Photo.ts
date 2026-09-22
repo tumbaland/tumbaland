@@ -37,8 +37,21 @@ export interface IPhoto extends Document {
       };
     };
   };
+  /**
+   * Set on a photo that came from chat. Its files belong to chat-service: the
+   * album entry only points at them, so removing it from the album leaves the
+   * files alone, and its bytes are metered by chat rather than a second time
+   * here. Unsending the message in chat removes the entry.
+   */
+  source?: ChatPhotoSource | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface ChatPhotoSource {
+  kind: 'chat';
+  conversationId: string;
+  messageId: string;
 }
 
 const PhotoSchema: Schema = new Schema(
@@ -111,6 +124,17 @@ const PhotoSchema: Schema = new Schema(
           focalLength: String
         }
       }
+    },
+    source: {
+      type: new Schema(
+        {
+          kind: { type: String, enum: ['chat'], required: true },
+          conversationId: { type: String, required: true },
+          messageId: { type: String, required: true }
+        },
+        { _id: false }
+      ),
+      default: null
     }
   },
   {
@@ -120,6 +144,8 @@ const PhotoSchema: Schema = new Schema(
 
 // Indexes for performance
 PhotoSchema.index({ albumId: 1, createdAt: -1 });
+// Unsend and "Remove from album" find a chat message's entries by its id.
+PhotoSchema.index({ 'source.messageId': 1 }, { sparse: true });
 PhotoSchema.index({ title: 'text', description: 'text', tags: 'text' });
 
 // Attribution and a change trail; see auditPlugin.

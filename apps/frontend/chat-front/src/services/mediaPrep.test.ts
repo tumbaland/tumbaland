@@ -143,6 +143,7 @@ function stubVideo(options: { width?: number; height?: number; duration?: number
     videoHeight: options.height ?? 1080,
     duration: options.duration ?? 10,
     currentTime: 0,
+    onloadedmetadata: null,
     onloadeddata: null,
     onseeked: null,
     onerror: null,
@@ -156,6 +157,8 @@ function stubVideo(options: { width?: number; height?: number; duration?: number
           (video.onerror as (() => void) | null)?.();
           return;
         }
+        // Some browsers only send one of these; both must lead to one seek.
+        (video.onloadedmetadata as (() => void) | null)?.();
         (video.onloadeddata as (() => void) | null)?.();
         (video.onseeked as (() => void) | null)?.();
       }, 0);
@@ -217,9 +220,37 @@ describe('captureVideoPoster', () => {
     expect(await captureVideoPoster(fileOf('clip.mp4', 'video/mp4', 1000))).toBeNull();
   });
 
-  it('returns null when the canvas produces no blob', async () => {
-    stubMediaElements(stubVideo(), null);
+  it('keeps the size and length when no frame can be drawn, so the clip still shows its duration', async () => {
+    stubMediaElements(stubVideo({ width: 1280, height: 720, duration: 12 }), null);
 
-    expect(await captureVideoPoster(fileOf('clip.mp4', 'video/mp4', 1000))).toBeNull();
+    expect(await captureVideoPoster(fileOf('clip.mp4', 'video/mp4', 1000))).toEqual({
+      blob: null,
+      width: 1280,
+      height: 720,
+      durationMs: 12_000
+    });
+  });
+
+  it('loads the clip in full, since some browsers never give a frame to a metadata-only one', async () => {
+    const video = stubVideo();
+    stubMediaElements(video);
+
+    await captureVideoPoster(fileOf('clip.mp4', 'video/mp4', 1000));
+
+    expect(video.preload).toBe('auto');
+  });
+
+  it('draws a 4K frame at a bubble-sized resolution, but reports the clip’s own size', async () => {
+    const video = stubVideo({ width: 3840, height: 2160 });
+    const canvas = { width: 0, height: 0, getContext: () => ({ drawImage: vi.fn() }), toBlob: (callback: (blob: Blob | null) => void) => callback(new Blob(['p'])) };
+    vi.spyOn(document, 'createElement').mockImplementation(
+      (tag: string) => (tag === 'video' ? video : canvas) as unknown as HTMLElement
+    );
+
+    const poster = await captureVideoPoster(fileOf('clip.mp4', 'video/mp4', 1000));
+
+    expect(canvas.width).toBe(1280);
+    expect(canvas.height).toBe(720);
+    expect(poster).toMatchObject({ width: 3840, height: 2160 });
   });
 });

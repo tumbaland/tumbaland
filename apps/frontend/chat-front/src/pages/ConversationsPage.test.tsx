@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 
@@ -15,7 +15,16 @@ vi.mock('react-router', async () => {
   return { ...actual, useNavigate: () => navigate };
 });
 
+// The list's live connection, captured so a test can play events into it.
+let streamEvents: ((event: ChatEvent) => void) | null = null;
+vi.mock('../hooks/useChatStream', () => ({
+  useChatStream: ({ onEvent }: { onEvent: (event: ChatEvent) => void }) => {
+    streamEvents = onEvent;
+  }
+}));
+
 import ConversationsPage from './ConversationsPage';
+import type { ChatEvent } from '../types';
 
 const conversation = (overrides: Record<string, unknown> = {}) => ({
   id: 'c1',
@@ -136,5 +145,66 @@ describe('opening chat', () => {
     renderPage();
 
     await waitFor(() => expect(screen.getAllByText('No messages yet')[0]).toBeInTheDocument());
+  });
+});
+
+describe('live', () => {
+  const play = (event: Omit<ChatEvent, 'at'>) => act(() => streamEvents!({ at: Date.now(), ...event }));
+  const message = (overrides: Record<string, unknown> = {}) => ({
+    id: 'm9',
+    conversationId: 'c1',
+    senderId: 'u-irja',
+    senderEmail: 'irja@example.com',
+    senderName: 'Irja',
+    kind: 'text',
+    body: 'on my way',
+    attachments: [],
+    replyTo: null,
+    reactions: [],
+    clientId: 'x',
+    editedAt: null,
+    deletedAt: null,
+    createdAt: '2026-09-22T12:00:00.000Z',
+    ...overrides
+  });
+
+  it('shows a new message as the preview and counts it unread', async () => {
+    ensureMyConversations.mockResolvedValue([conversation()]);
+    renderPage();
+    await screen.findByText('Irja');
+
+    play({ type: 'message.created', conversationId: 'c1', payload: message() });
+
+    expect(screen.getByText('on my way')).toBeInTheDocument();
+    expect(screen.getByLabelText('1 unread')).toBeInTheDocument();
+  });
+
+  it('shows typing in place of the preview, and drops it when the message lands', async () => {
+    ensureMyConversations.mockResolvedValue([conversation({ lastMessagePreview: 'hei' })]);
+    renderPage();
+    await screen.findByText('hei');
+
+    play({ type: 'typing', conversationId: 'c1', payload: { userId: 'u-irja', name: 'Irja' } });
+    expect(screen.getByText('typing…')).toBeInTheDocument();
+    expect(screen.queryByText('hei')).not.toBeInTheDocument();
+
+    play({ type: 'message.created', conversationId: 'c1', payload: message() });
+    expect(screen.queryByText('typing…')).not.toBeInTheDocument();
+    expect(screen.getByText('on my way')).toBeInTheDocument();
+  });
+
+  it('lights the dot when the other person comes online', async () => {
+    ensureMyConversations.mockResolvedValue([conversation({ presence: [] })]);
+    const { container } = renderPage();
+    await screen.findByText('Irja');
+    expect(container.querySelector('.MuiBadge-dot')).toHaveClass('MuiBadge-invisible');
+
+    play({
+      type: 'presence',
+      conversationId: '',
+      payload: { userId: 'u-irja', online: true, lastActiveAt: '2026-09-22T12:00:00.000Z' }
+    });
+
+    expect(container.querySelector('.MuiBadge-dot')).not.toHaveClass('MuiBadge-invisible');
   });
 });

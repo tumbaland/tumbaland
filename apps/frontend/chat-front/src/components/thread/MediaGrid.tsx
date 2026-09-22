@@ -12,6 +12,13 @@ export interface MediaGridProps {
 
 export const isVideo = (attachment: Attachment) => attachment.mimetype?.startsWith('video/') ?? false;
 
+/**
+ * A link to a video that shows its first frame rather than a black box. The
+ * fragment asks for the frame 0.1s in; iOS Safari draws nothing for a
+ * metadata-only video without it.
+ */
+export const firstFrameSrc = (url: string) => `${url}#t=0.1`;
+
 /** What to show in the grid: the small copy where there is one. */
 export function previewSrc(attachment: Attachment): string | null {
   if (isVideo(attachment)) return attachment.posterUrl ?? null;
@@ -80,9 +87,15 @@ function MediaTile({ attachment, square, onOpen }: MediaTileProps) {
   const video = isVideo(attachment);
   const duration = formatDuration(attachment.durationMs);
 
+  // A clip whose poster could not be made when it was sent (a format that
+  // browser could not decode), or whose poster will not load, is drawn from
+  // the video itself instead.
+  const posterMissing = video && (!src || failedSrc === src);
+  const frameFrom = posterMissing && attachment.url ? attachment.url : null;
+
   // A signed URL expires, and file-service may be unreachable. Either way the
   // tile says so rather than showing a browser's broken-image glyph.
-  const unavailable = !src || failedSrc === src;
+  const unavailable = frameFrom ? failedSrc === frameFrom : !src || failedSrc === src;
 
   return (
     <Box
@@ -110,10 +123,29 @@ function MediaTile({ attachment, square, onOpen }: MediaTileProps) {
         <Box sx={{ display: 'grid', placeItems: 'center', height: '100%', minHeight: 120, color: ink.muted }}>
           <BrokenImageOutlinedIcon />
         </Box>
+      ) : frameFrom ? (
+        <Box
+          component="video"
+          src={firstFrameSrc(frameFrom)}
+          preload="metadata"
+          muted
+          playsInline
+          aria-hidden
+          onError={() => setFailedSrc(frameFrom)}
+          // A still, not a player: the tap belongs to the tile, which opens the lightbox.
+          sx={{
+            display: 'block',
+            width: '100%',
+            height: '100%',
+            maxHeight: square ? undefined : 360,
+            objectFit: 'cover',
+            pointerEvents: 'none'
+          }}
+        />
       ) : (
         <Box
           component="img"
-          src={src}
+          src={src ?? undefined}
           alt=""
           loading="lazy"
           onError={() => setFailedSrc(src)}

@@ -228,7 +228,8 @@ export function useChatStream({ onEvent, onResync, onStateChange, enabled = true
         'reaction.updated',
         'conversation.updated',
         'typing',
-        'read'
+        'read',
+        'presence'
       ]) {
         stream.addEventListener(type, handle as EventListener);
       }

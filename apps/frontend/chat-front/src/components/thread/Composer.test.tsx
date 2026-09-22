@@ -220,7 +220,7 @@ describe('attachments', () => {
 
     await userEvent.click(screen.getByLabelText('Send'));
 
-    expect(onSend).toHaveBeenCalledWith('');
+    expect(onSend).toHaveBeenCalledWith('', { skipAlbum: false });
   });
 
   it('will not send while an upload is still in flight', () => {
@@ -380,5 +380,76 @@ describe('editing', () => {
 
     rerender(<Composer {...props} editing={null} />);
     expect(screen.getByLabelText('Message')).toHaveValue('half a thought');
+  });
+});
+
+describe('saving to Album', () => {
+  const album = (mode: 'unset' | 'album' | 'off') => ({
+    mode,
+    albumId: mode === 'album' ? 'a-rome' : null,
+    albumName: mode === 'album' ? 'Rome' : null
+  });
+  const doneUpload = (): PendingUpload => ({
+    id: 'u1',
+    name: 'a.jpg',
+    mimetype: 'image/jpeg',
+    previewUrl: 'blob:x',
+    progress: 100,
+    status: 'done',
+    attachment: { fileId: 'f1', mimetype: 'image/jpeg', sizeBytes: 1 }
+  });
+  const renderWith = (mode: 'unset' | 'album' | 'off', props: Record<string, unknown> = {}) =>
+    render(
+      <Composer
+        onSend={() => {}}
+        onTyping={() => {}}
+        uploads={[doneUpload()]}
+        onAddFiles={() => {}}
+        onRemoveUpload={() => {}}
+        photoAlbum={album(mode)}
+        onChooseAlbum={() => {}}
+        onAlbumOff={() => {}}
+        {...props}
+      />
+    );
+
+  it('asks where photos go the first time, and can turn saving off', async () => {
+    const onChooseAlbum = vi.fn();
+    const onAlbumOff = vi.fn();
+    renderWith('unset', { onChooseAlbum, onAlbumOff });
+
+    expect(screen.getByText('Where should chat photos go?')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Choose album' }));
+    await userEvent.click(screen.getByRole('button', { name: "Don't save" }));
+
+    expect(onChooseAlbum).toHaveBeenCalled();
+    expect(onAlbumOff).toHaveBeenCalled();
+  });
+
+  it('says where the photos are going, and changing it opens the picker', async () => {
+    const onChooseAlbum = vi.fn();
+    renderWith('album', { onChooseAlbum });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Adding to Rome. Change album' }));
+
+    expect(onChooseAlbum).toHaveBeenCalled();
+  });
+
+  it('leaves one send out with "Not this one", then forgets it', async () => {
+    const onSend = vi.fn();
+    renderWith('album', { onSend });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Not this one' }));
+    await userEvent.click(screen.getByLabelText('Send'));
+    expect(onSend).toHaveBeenLastCalledWith('', { skipAlbum: true });
+
+    expect(screen.getByRole('button', { name: 'Not this one' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('shows nothing about albums without photos on the tray', () => {
+    render(
+      <Composer onSend={() => {}} onTyping={() => {}} photoAlbum={album('unset')} onChooseAlbum={() => {}} onAlbumOff={() => {}} />
+    );
+    expect(screen.queryByText('Where should chat photos go?')).not.toBeInTheDocument();
   });
 });

@@ -3,19 +3,23 @@ import { logger } from '@tumbaland/frontend-core';
 import { chatApi, newClientId } from '../services/chatApi';
 import { initialThreadState, lastStoredMessage, threadReducer } from './threadReducer';
 import { useChatStream, type ConnectionState } from './useChatStream';
+import { namesTyping, useTypingTracker } from './useTypingTracker';
 import type {
   Attachment,
   ChatEvent,
   ConversationMember,
+  AlbumPlacement,
   Message,
+  PhotoAlbum,
+  PhotoAlbumChoice,
+  Presence,
   ReadPayload,
   ReadReceipt,
   ThreadMessage,
   TypingPayload
 } from '../types';
 
-/** How long a typing indicator stays up without another notice. */
-const TYPING_TIMEOUT_MS = 4000;
+const UNSET_ALBUM: PhotoAlbum = { mode: 'unset', albumId: null, albumName: null };
 
 /** Minimum gap between typing notices sent while someone types continuously. */
 const TYPING_THROTTLE_MS = 2500;
@@ -32,7 +36,16 @@ export interface UseChatThreadResult {
   members: ConversationMember[];
   /** How far each of the others has read, by user id. Never includes the caller. */
   reads: Record<string, ReadReceipt>;
-  send: (body: string, attachments?: Attachment[]) => Promise<void>;
+  /** Who of the others is online, by user id. Never includes the caller. */
+  presence: Record<string, Presence>;
+  /** The conversation's own title, when it has one. */
+  title: string;
+  /** Where this conversation's photos go in Album. */
+  photoAlbum: PhotoAlbum;
+  setPhotoAlbum: (choice: PhotoAlbumChoice) => Promise<void>;
+  removeFromAlbum: (messageId: string, fileId?: string) => Promise<void>;
+  placeInAlbum: (messageId: string, placement: AlbumPlacement, fileId?: string) => Promise<void>;
+  send: (body: string, attachments?: Attachment[], options?: { skipAlbum?: boolean }) => Promise<void>;
   retry: (clientId: string) => Promise<void>;
   loadOlder: () => Promise<void>;
   react: (messageId: string, emoji: string) => Promise<void>;
@@ -44,9 +57,12 @@ export interface UseChatThreadResult {
 export function useChatThread(conversationId: string | undefined, currentUserId: string): UseChatThreadResult {
   const [state, dispatch] = useReducer(threadReducer, initialThreadState);
   const [connection, setConnection] = useState<ConnectionState>('connecting');
-  const [typing, setTyping] = useState<Record<string, { name: string; at: number }>>({});
+  const { typing, note: noteTyping, clear: clearTyping } = useTypingTracker();
   const [members, setMembers] = useState<ConversationMember[]>([]);
   const [reads, setReads] = useState<Record<string, ReadReceipt>>({});
+  const [presence, setPresence] = useState<Record<string, Presence>>({});
+  const [title, setTitle] = useState('');
+  const [photoAlbum, setPhotoAlbumState] = useState<PhotoAlbum>(UNSET_ALBUM);
 
   // The stream handler is created once and reads the current conversation from
   // this ref, so switching threads does not rebuild the connection. Written in
@@ -57,7 +73,7 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
   });
   const lastTypingSent = useRef(0);
   /** Bodies kept by clientId so a failed send can be retried unchanged. */
-  const outbox = useRef(new Map<string, { body: string; attachments: Attachment[] }>());
+  const outbox = useRef(new Map<string, { body: string; attachments: Attachment[]; skipAlbum: boolean }>());
 
   const load = useCallback(async () => {
     if (!conversationId) return;
@@ -72,6 +88,9 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
       .then((detail) => {
         if (conversationRef.current !== conversationId) return;
         setMembers(detail.members);
+        setTitle(detail.title ?? '');
+        setPhotoAlbumState(detail.photoAlbum ?? UNSET_ALBUM);
+        setPresence(Object.fromEntries((detail.presence ?? []).map((entry) => [entry.userId, entry])));
         setReads(
           Object.fromEntries(
             detail.reads.filter((read) => read.userId !== currentUserId).map((read) => [read.userId, read])
@@ -92,6 +111,9 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
   useEffect(() => {
     setMembers([]);
     setReads({});
+    setPresence({});
+    setTitle('');
+    setPhotoAlbumState(UNSET_ALBUM);
   }, [conversationId]);
 
   useEffect(() => {
@@ -114,6 +136,16 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
   /** Events for other conversations are ignored; one stream serves them all. */
   const onEvent = useCallback(
     (event: ChatEvent) => {
+      // About a person rather than a conversation, so it is taken before the
+      // conversation filter below. Kept for anyone; the header reads only this
+      // thread's members.
+      if (event.type === 'presence') {
+        const payload = event.payload as Presence;
+        if (payload.userId === currentUserId) return;
+        setPresence((previous) => ({ ...previous, [payload.userId]: payload }));
+        return;
+      }
+
       const current = conversationRef.current;
       if (!current || (event.conversationId && event.conversationId !== current)) return;
 
@@ -121,6 +153,8 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
         case 'message.created': {
           const message = event.payload as Message;
           dispatch({ type: 'received', message });
+          // Sending is the end of typing; the dots must not outlast the message.
+          clearTyping(current, message.senderId);
           // Someone who writes has read everything before it.
           if (message.senderId !== currentUserId) {
             setReads((previous) => ({
@@ -137,10 +171,16 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
         case 'message.deleted':
           dispatch({ type: 'removed', id: (event.payload as { id: string }).id });
           break;
+        case 'conversation.updated': {
+          // Someone changed where photos go, or the album was deleted.
+          const payload = event.payload as { photoAlbum?: PhotoAlbum } | null;
+          if (payload?.photoAlbum) setPhotoAlbumState(payload.photoAlbum);
+          break;
+        }
         case 'typing': {
           const payload = event.payload as TypingPayload;
           if (payload.userId === currentUserId) return;
-          setTyping((previous) => ({ ...previous, [payload.userId]: { name: payload.name, at: Date.now() } }));
+          noteTyping(current, payload.userId, payload.name);
           break;
         }
         case 'read': {
@@ -160,25 +200,10 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
           break;
       }
     },
-    [currentUserId]
+    [currentUserId, noteTyping, clearTyping]
   );
 
   useChatStream({ onEvent, onResync: load, onStateChange: setConnection });
-
-  // Typing indicators expire on a timer rather than on a "stopped" event:
-  // the sender may close the tab mid-word, and an indicator that never clears
-  // is worse than one that clears early.
-  useEffect(() => {
-    if (Object.keys(typing).length === 0) return;
-    const timer = setInterval(() => {
-      const cutoff = Date.now() - TYPING_TIMEOUT_MS;
-      setTyping((previous) => {
-        const next = Object.fromEntries(Object.entries(previous).filter(([, value]) => value.at > cutoff));
-        return Object.keys(next).length === Object.keys(previous).length ? previous : next;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [typing]);
 
   // Marking read is driven by the newest stored message rather than by a
   // scroll position: the thread is only rendered when it is on screen, and a
@@ -193,10 +218,15 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
   }, [conversationId, newestId]);
 
   const deliver = useCallback(
-    async (clientId: string, body: string, attachments: Attachment[]) => {
+    async (clientId: string, body: string, attachments: Attachment[], skipAlbum = false) => {
       if (!conversationId) return;
       try {
-        const stored = await chatApi.sendMessage(conversationId, { clientId, body, attachments });
+        const stored = await chatApi.sendMessage(conversationId, {
+          clientId,
+          body,
+          attachments,
+          ...(skipAlbum ? { skipAlbum } : {})
+        });
         dispatch({ type: 'confirmed', clientId, message: stored });
         outbox.current.delete(clientId);
       } catch (error) {
@@ -208,13 +238,14 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
   );
 
   const send = useCallback(
-    async (body: string, attachments: Attachment[] = []) => {
+    async (body: string, attachments: Attachment[] = [], options: { skipAlbum?: boolean } = {}) => {
       if (!conversationId) return;
       const trimmed = body.trim();
       if (!trimmed && attachments.length === 0) return;
 
       const clientId = newClientId();
-      outbox.current.set(clientId, { body: trimmed, attachments });
+      const skipAlbum = Boolean(options.skipAlbum);
+      outbox.current.set(clientId, { body: trimmed, attachments, skipAlbum });
 
       // Shown immediately, with the id it will keep. The server's copy
       // replaces it by clientId, so it never appears twice and never jumps.
@@ -239,7 +270,7 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
         }
       });
 
-      await deliver(clientId, trimmed, attachments);
+      await deliver(clientId, trimmed, attachments, skipAlbum);
     },
     [conversationId, currentUserId, deliver]
   );
@@ -273,7 +304,7 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
           delivery: 'pending'
         }
       });
-      await deliver(clientId, queued.body, queued.attachments);
+      await deliver(clientId, queued.body, queued.attachments, queued.skipAlbum);
     },
     [conversationId, currentUserId, deliver]
   );
@@ -309,6 +340,32 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
     [conversationId]
   );
 
+  const setPhotoAlbum = useCallback(
+    async (choice: PhotoAlbumChoice) => {
+      if (!conversationId) return;
+      setPhotoAlbumState(await chatApi.setPhotoAlbum(conversationId, choice));
+    },
+    [conversationId]
+  );
+
+  // Both answer with the updated message, which is shown straight away; the
+  // stream brings the same change to everyone else.
+  const removeFromAlbum = useCallback(
+    async (messageId: string, fileId?: string) => {
+      if (!conversationId) return;
+      dispatch({ type: 'updated', message: await chatApi.removeFromAlbum(conversationId, messageId, fileId) });
+    },
+    [conversationId]
+  );
+
+  const placeInAlbum = useCallback(
+    async (messageId: string, placement: AlbumPlacement, fileId?: string) => {
+      if (!conversationId) return;
+      dispatch({ type: 'updated', message: await chatApi.placeInAlbum(conversationId, messageId, placement, fileId) });
+    },
+    [conversationId]
+  );
+
   /** Throttled: typing fires per keystroke, the network should not. */
   const notifyTyping = useCallback(() => {
     if (!conversationId) return;
@@ -318,7 +375,7 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
     void chatApi.sendTyping(conversationId);
   }, [conversationId]);
 
-  const typingNames = useMemo(() => Object.values(typing).map((entry) => entry.name), [typing]);
+  const typingNames = useMemo(() => namesTyping(typing, conversationId), [typing, conversationId]);
 
   return {
     messages: state.messages,
@@ -330,6 +387,12 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
     typingNames,
     members,
     reads,
+    presence,
+    title,
+    photoAlbum,
+    setPhotoAlbum,
+    removeFromAlbum,
+    placeInAlbum,
     send,
     retry,
     loadOlder,

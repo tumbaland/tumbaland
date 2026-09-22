@@ -8,6 +8,8 @@ jest.mock('../services/conversationService', () => ({
 jest.mock('../services/messageService', () => ({
   listMessages: jest.fn(async () => ({ messages: [], nextCursor: null }))
 }));
+const touch = jest.fn(async () => undefined);
+jest.mock('../services/presenceService', () => ({ touch: (...args: unknown[]) => touch(...(args as [])) }));
 
 import { listConversations } from '../services/conversationService';
 import { listMessages } from '../services/messageService';
@@ -240,5 +242,19 @@ describe('Last-Event-ID replay', () => {
 
     // Still subscribed: live events work even though the backfill did not.
     expect(openStreamCount()).toBe(1);
+  });
+});
+
+describe('presence', () => {
+  it('counts opening and closing a stream as signs of life', async () => {
+    touch.mockClear();
+    const req = fakeReq();
+    const res = fakeRes();
+
+    await stream(req as unknown as Request, res as unknown as Response);
+    expect(touch).toHaveBeenCalledTimes(1);
+
+    req.fire('close');
+    expect(touch).toHaveBeenCalledTimes(2);
   });
 });

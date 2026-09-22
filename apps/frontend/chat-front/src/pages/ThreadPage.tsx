@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useParams } from 'react-router';
+import { useCallback, useState } from 'react';
+import { useNavigate, useParams } from 'react-router';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -11,6 +11,7 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import Snackbar from '@mui/material/Snackbar';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import PhotoAlbumOutlinedIcon from '@mui/icons-material/PhotoAlbumOutlined';
 import UndoIcon from '@mui/icons-material/Undo';
 import { surface } from '@tumbaland/frontend-core';
 import { Composer } from '../components/thread/Composer';
@@ -19,18 +20,23 @@ import { FullEmojiPicker } from '../components/thread/FullEmojiPicker';
 import { MessageList } from '../components/thread/MessageList';
 import { canChange } from '../components/thread/MessageBubble';
 import { TypingIndicator } from '../components/thread/TypingIndicator';
+import { ThreadHeader } from '../components/thread/ThreadHeader';
+import { AlbumPicker } from '../components/thread/AlbumPicker';
+import { chatApi } from '../services/chatApi';
 import { Lightbox } from '../components/thread/Lightbox';
 import { useAttachmentUploads } from '../hooks/useAttachmentUploads';
 import { useChatThread } from '../hooks/useChatThread';
 import { useCurrentUser } from '../hooks/useCurrentUser';
-import type { Attachment, ThreadMessage } from '../types';
+import type { PhotoAlbum, PhotoAlbumChoice, ThreadMessage } from '../types';
 
 export interface ThreadPageProps {
   /** Given by the side panel, which has no route to read it from. */
   conversationId?: string;
+  /** The side panel's way back to its list, drawn in the header. */
+  onBack?: () => void;
 }
 
-export default function ThreadPage({ conversationId: given }: ThreadPageProps = {}) {
+export default function ThreadPage({ conversationId: given, onBack }: ThreadPageProps = {}) {
   const params = useParams<{ conversationId: string }>();
   const conversationId = given ?? params.conversationId;
   const { user, loading: loadingUser } = useCurrentUser();
@@ -38,10 +44,16 @@ export default function ThreadPage({ conversationId: given }: ThreadPageProps = 
   // The full picker, once someone asks for an emoji the quick row does not
   // have. It remembers which message it was opened for.
   const [morePicker, setMorePicker] = useState<{ messageId: string; anchor: HTMLElement } | null>(null);
-  const [viewing, setViewing] = useState<{ attachments: Attachment[]; index: number } | null>(null);
+  // By message rather than a copy of its attachments, so the viewer shows an
+  // album change the moment it lands.
+  const [viewing, setViewing] = useState<{ messageId: string; index: number } | null>(null);
+  /** A sent message's photos being moved: all of them, or the one named. */
+  const [placing, setPlacing] = useState<{ messageId: string; fileId?: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [unsending, setUnsending] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [choosingAlbum, setChoosingAlbum] = useState(false);
+  const navigate = useNavigate();
 
   const thread = useChatThread(conversationId, user?.id ?? '');
   const uploads = useAttachmentUploads(conversationId);
@@ -77,24 +89,84 @@ export default function ThreadPage({ conversationId: given }: ThreadPageProps = 
     }
   };
 
-  /** Edit and Unsend, for the sender's own stored messages only. */
+  /**
+   * Edit and Unsend, for the sender's own stored messages only; the album for
+   * anyone, since it is the group's.
+   */
   const pickedMessage = find(picker?.messageId);
-  const actions: MessageAction[] =
-    pickedMessage && canChange(pickedMessage, pickedMessage.senderId === user?.id)
+  const pickedStored =
+    pickedMessage && !pickedMessage.deletedAt && pickedMessage.delivery !== 'pending' && pickedMessage.delivery !== 'failed';
+  const inAlbum = Boolean(pickedMessage?.attachments.some((attachment) => attachment.albumId));
+  const actions: MessageAction[] = [
+    ...(pickedMessage && pickedStored && pickedMessage.attachments.length > 0
+      ? [
+          {
+            label: inAlbum ? 'Change album…' : 'Add to album…',
+            icon: <PhotoAlbumOutlinedIcon fontSize="small" />,
+            onClick: () => setPlacing({ messageId: pickedMessage.id })
+          }
+        ]
+      : []),
+    ...(pickedMessage && canChange(pickedMessage, pickedMessage.senderId === user?.id)
       ? [
           { label: 'Edit', icon: <EditOutlinedIcon fontSize="small" />, onClick: () => setEditingId(pickedMessage.id) },
           { label: 'Unsend', icon: <UndoIcon fontSize="small" />, onClick: () => setUnsending(pickedMessage.id), danger: true }
         ]
-      : [];
+      : [])
+  ];
 
-  const send = (body: string) => {
+  const send = (body: string, options?: { skipAlbum: boolean }) => {
     // `take` empties the queue, so the attachments and the text leave together
     // and a second press cannot send the same files twice.
-    void thread.send(body, uploads.take());
+    void thread.send(body, uploads.take(), options);
   };
 
-  const openMedia = (message: ThreadMessage, index: number) =>
-    setViewing({ attachments: message.attachments, index });
+  const loadAlbums = useCallback(
+    () => (conversationId ? chatApi.listAlbums(conversationId) : Promise.resolve([])),
+    [conversationId]
+  );
+
+  const turnAlbumOff = async () => {
+    try {
+      await thread.setPhotoAlbum({ mode: 'off' });
+    } catch {
+      setActionError('Could not change that. Try again.');
+    }
+  };
+
+  const viewingMessage = find(viewing?.messageId);
+  const viewingStored =
+    viewingMessage && !viewingMessage.deletedAt && viewingMessage.delivery !== 'pending' && viewingMessage.delivery !== 'failed';
+
+  /** What the "Move to album" picker marks as current: the photo's album, or none. */
+  const placingMessage = find(placing?.messageId);
+  const placingFile = placingMessage?.attachments.find((attachment) =>
+    placing?.fileId ? attachment.fileId === placing.fileId : attachment.albumId
+  );
+  const placingCurrent: PhotoAlbum = placingFile?.albumId
+    ? { mode: 'album', albumId: placingFile.albumId, albumName: placingFile.albumName ?? null }
+    : { mode: 'off', albumId: null, albumName: null };
+
+  // Errors are left to the picker, which stays open and says so.
+  const place = async (choice: PhotoAlbumChoice) => {
+    if (!placing) return;
+    if (choice.mode === 'off') await thread.removeFromAlbum(placing.messageId, placing.fileId);
+    else
+      await thread.placeInAlbum(
+        placing.messageId,
+        'albumId' in choice ? { albumId: choice.albumId } : { newAlbumName: choice.newAlbumName },
+        placing.fileId
+      );
+  };
+
+  const albumLabel =
+    thread.photoAlbum.mode === 'album'
+      ? (thread.photoAlbum.albumName ?? 'An album')
+      : thread.photoAlbum.mode === 'off'
+        ? 'Not saving to Album'
+        : 'Not chosen yet';
+
+  const openMedia = (message: ThreadMessage, index: number) => setViewing({ messageId: message.id, index });
 
   if (loadingUser || (thread.loading && thread.messages.length === 0)) {
     return (
@@ -106,6 +178,23 @@ export default function ThreadPage({ conversationId: given }: ThreadPageProps = 
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, bgcolor: surface.default }}>
+      <ThreadHeader
+        members={thread.members}
+        currentUserId={user?.id ?? ''}
+        title={thread.title}
+        presence={thread.presence}
+        typingNames={thread.typingNames}
+        onBack={onBack}
+        menu={[
+          {
+            label: 'Photos go to',
+            secondary: albumLabel,
+            icon: <PhotoAlbumOutlinedIcon fontSize="small" />,
+            onClick: () => setChoosingAlbum(true)
+          }
+        ]}
+      />
+
       {/* The connection banner appears only when the transport has actually
           degraded. A permanently visible status line trains people to ignore
           it, which is the opposite of what it is for. */}
@@ -135,6 +224,8 @@ export default function ThreadPage({ conversationId: given }: ThreadPageProps = 
         onRetry={thread.retry}
         onPickEmoji={(messageId, anchor) => setPicker({ messageId, anchor })}
         onOpenMedia={openMedia}
+        onOpenAlbum={(albumId) => navigate(`/album/albums/${albumId}`)}
+        onEditAlbum={(messageId) => setPlacing({ messageId })}
         members={thread.members}
         reads={thread.reads}
       />
@@ -151,6 +242,26 @@ export default function ThreadPage({ conversationId: given }: ThreadPageProps = 
         editing={editing}
         onSaveEdit={(body) => void saveEdit(body)}
         onCancelEdit={() => setEditingId(null)}
+        photoAlbum={thread.photoAlbum}
+        onChooseAlbum={() => setChoosingAlbum(true)}
+        onAlbumOff={() => void turnAlbumOff()}
+      />
+
+      <AlbumPicker
+        open={choosingAlbum}
+        onClose={() => setChoosingAlbum(false)}
+        current={thread.photoAlbum}
+        loadAlbums={loadAlbums}
+        onChoose={thread.setPhotoAlbum}
+      />
+
+      <AlbumPicker
+        open={Boolean(placing)}
+        onClose={() => setPlacing(null)}
+        purpose="photo"
+        current={placingCurrent}
+        loadAlbums={loadAlbums}
+        onChoose={place}
       />
 
       <EmojiPicker
@@ -192,9 +303,12 @@ export default function ThreadPage({ conversationId: given }: ThreadPageProps = 
       </Snackbar>
 
       <Lightbox
-        attachments={viewing?.attachments ?? []}
-        index={viewing?.index ?? null}
+        attachments={viewingMessage?.attachments ?? []}
+        index={viewingMessage ? (viewing?.index ?? null) : null}
         onClose={() => setViewing(null)}
+        onEditAlbum={
+          viewingStored ? (index) => setPlacing({ messageId: viewingMessage.id, fileId: viewingMessage.attachments[index]?.fileId }) : undefined
+        }
       />
     </Box>
   );
