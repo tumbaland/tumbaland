@@ -3,7 +3,16 @@ import { logger } from '@tumbaland/frontend-core';
 import { chatApi, newClientId } from '../services/chatApi';
 import { initialThreadState, lastStoredMessage, threadReducer } from './threadReducer';
 import { useChatStream, type ConnectionState } from './useChatStream';
-import type { Attachment, ChatEvent, Message, ReadPayload, ThreadMessage, TypingPayload } from '../types';
+import type {
+  Attachment,
+  ChatEvent,
+  ConversationMember,
+  Message,
+  ReadPayload,
+  ReadReceipt,
+  ThreadMessage,
+  TypingPayload
+} from '../types';
 
 /** How long a typing indicator stays up without another notice. */
 const TYPING_TIMEOUT_MS = 4000;
@@ -19,8 +28,10 @@ export interface UseChatThreadResult {
   error: string | null;
   connection: ConnectionState;
   typingNames: string[];
-  /** Who has read up to the latest stored message, excluding the caller. */
-  readBy: string[];
+  /** Everyone who has opened the conversation, with their pictures. */
+  members: ConversationMember[];
+  /** How far each of the others has read, by user id. Never includes the caller. */
+  reads: Record<string, ReadReceipt>;
   send: (body: string, attachments?: Attachment[]) => Promise<void>;
   retry: (clientId: string) => Promise<void>;
   loadOlder: () => Promise<void>;
@@ -34,7 +45,8 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
   const [state, dispatch] = useReducer(threadReducer, initialThreadState);
   const [connection, setConnection] = useState<ConnectionState>('connecting');
   const [typing, setTyping] = useState<Record<string, { name: string; at: number }>>({});
-  const [readBy, setReadBy] = useState<string[]>([]);
+  const [members, setMembers] = useState<ConversationMember[]>([]);
+  const [reads, setReads] = useState<Record<string, ReadReceipt>>({});
 
   // The stream handler is created once and reads the current conversation from
   // this ref, so switching threads does not rebuild the connection. Written in
@@ -50,12 +62,36 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
   const load = useCallback(async () => {
     if (!conversationId) return;
     dispatch({ type: 'loading' });
+
+    // Alongside the messages, not before them: the thread is readable without
+    // pictures and read markers, so a slow or failed call here must not hold
+    // it up. Also re-run on every resync, which is how a read that happened
+    // while this device was offline gets its marker.
+    void chatApi
+      .getConversation(conversationId)
+      .then((detail) => {
+        if (conversationRef.current !== conversationId) return;
+        setMembers(detail.members);
+        setReads(
+          Object.fromEntries(
+            detail.reads.filter((read) => read.userId !== currentUserId).map((read) => [read.userId, read])
+          )
+        );
+      })
+      .catch((error: Error) => logger.warn('Could not load conversation details', { error: error.message }));
+
     try {
       const page = await chatApi.listMessages(conversationId, { limit: 50 });
       dispatch({ type: 'loaded', messages: page.messages, nextCursor: page.nextCursor });
     } catch (error) {
       dispatch({ type: 'failed', error: (error as Error).message });
     }
+  }, [conversationId, currentUserId]);
+
+  // Another thread's markers and pictures must not show while this one loads.
+  useEffect(() => {
+    setMembers([]);
+    setReads({});
   }, [conversationId]);
 
   useEffect(() => {
@@ -82,9 +118,18 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
       if (!current || (event.conversationId && event.conversationId !== current)) return;
 
       switch (event.type) {
-        case 'message.created':
-          dispatch({ type: 'received', message: event.payload as Message });
+        case 'message.created': {
+          const message = event.payload as Message;
+          dispatch({ type: 'received', message });
+          // Someone who writes has read everything before it.
+          if (message.senderId !== currentUserId) {
+            setReads((previous) => ({
+              ...previous,
+              [message.senderId]: { userId: message.senderId, lastReadMessageId: message.id, lastReadAt: message.createdAt }
+            }));
+          }
           break;
+        }
         case 'message.updated':
         case 'reaction.updated':
           dispatch({ type: 'updated', message: event.payload as Message });
@@ -101,7 +146,14 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
         case 'read': {
           const payload = event.payload as ReadPayload;
           if (payload.userId === currentUserId) return;
-          setReadBy((previous) => (previous.includes(payload.name) ? previous : [...previous, payload.name]));
+          setReads((previous) => ({
+            ...previous,
+            [payload.userId]: {
+              userId: payload.userId,
+              lastReadMessageId: payload.lastReadMessageId,
+              lastReadAt: payload.lastReadAt ?? new Date(event.at).toISOString()
+            }
+          }));
           break;
         }
         default:
@@ -276,7 +328,8 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
     error: state.error,
     connection,
     typingNames,
-    readBy,
+    members,
+    reads,
     send,
     retry,
     loadOlder,

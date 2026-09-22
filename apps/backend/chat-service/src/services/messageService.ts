@@ -376,7 +376,12 @@ export function publishRead(conversation: IConversation, person: Caller, lastRea
     type: 'read',
     conversationId: conversation._id.toString(),
     at: Date.now(),
-    payload: { userId: person.id, name: person.name, lastReadMessageId: lastReadMessageId ?? null }
+    payload: {
+      userId: person.id,
+      name: person.name,
+      lastReadMessageId: lastReadMessageId ?? null,
+      lastReadAt: new Date().toISOString()
+    }
   });
 }
 

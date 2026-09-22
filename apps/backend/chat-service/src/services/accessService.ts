@@ -9,6 +9,8 @@ export interface Caller {
   id: string;
   email: string;
   name: string;
+  /** Profile picture URL from the session, if they have one. */
+  picture?: string;
   groups: string[];
 }
 
@@ -21,6 +23,7 @@ export function caller(req: Request): Caller {
     id: user.id,
     email: (user.email || '').toLowerCase(),
     name: user.name || '',
+    picture: user.picture || undefined,
     groups: req.userGroups || []
   };
 }

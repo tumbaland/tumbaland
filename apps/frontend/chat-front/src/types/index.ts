@@ -26,7 +26,26 @@ export interface ConversationMember {
   userId: string;
   email: string;
   name: string;
+  /** Profile picture URL. Absent until they open chat with one set. */
+  picture?: string | null;
   joinedAt: string;
+}
+
+/** How far one of the others has read. */
+export interface ReadReceipt {
+  userId: string;
+  lastReadMessageId: string | null;
+  lastReadAt: string;
+}
+
+/** One conversation as the thread page opens it. */
+export interface ConversationDetail {
+  id: string;
+  groupId: string;
+  title: string;
+  members: ConversationMember[];
+  /** Everyone but the caller. */
+  reads: ReadReceipt[];
 }
 
 export interface Conversation {
@@ -103,6 +122,8 @@ export interface ReadPayload {
   userId: string;
   name: string;
   lastReadMessageId: string | null;
+  /** Absent from a server older than read times. */
+  lastReadAt?: string;
 }
 
 /** What the server returns when asked where to put an upload. */

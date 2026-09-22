@@ -28,6 +28,8 @@ export interface User {
   lastName?: string;
   name: string;
   picture?: string;
+  /** Whether the picture is one they uploaded, which they can remove. Google's cannot be. */
+  hasCustomPicture?: boolean;
   username?: string;
   lastLoginAt?: string;
   /**

@@ -4,6 +4,7 @@ import { verifyGoogleToken } from '../services/googleAuthService';
 import { UserPayload } from '../services/jwtService';
 import { clearSessionCookies, renewSession, startSession } from '../services/sessionService';
 import { User } from '../models/User';
+import { effectivePicture } from '../services/avatarService';
 import { Session, SignInMethod } from '../models/Session';
 
 /**
@@ -42,7 +43,9 @@ const signIn = async (req: Request, res: Response, googleUser: GoogleIdentity, m
         signupMethod: 'google',
         isApproved: true
       },
-      $set: { lastLoginAt: new Date() }
+      // Stored, not just put in the token, so a renewal can fall back to it
+      // after someone removes a picture they uploaded.
+      $set: { lastLoginAt: new Date(), googlePicture: googleUser.picture ?? null }
     },
     { new: true, upsert: true }
   );
@@ -56,7 +59,9 @@ const signIn = async (req: Request, res: Response, googleUser: GoogleIdentity, m
     id: dbUser._id.toString(), // Use MongoDB _id instead of Google sub
     email: googleUser.email || '',
     name: googleUser.name || '',
-    picture: googleUser.picture,
+    // One they uploaded wins over Google's, which would otherwise replace it
+    // at every sign-in.
+    picture: effectivePicture(dbUser),
     tokenVersion: dbUser.tokenVersion || 1
   };
 

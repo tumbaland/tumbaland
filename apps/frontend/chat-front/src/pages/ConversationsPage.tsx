@@ -30,6 +30,11 @@ function isGroup(conversation: Conversation, currentUserId: string): boolean {
   return conversation.members.filter((member) => member.userId !== currentUserId).length > 1;
 }
 
+/** The other person's picture in a direct message. */
+function otherPicture(conversation: Conversation, currentUserId: string): string | undefined {
+  return conversation.members.find((member) => member.userId !== currentUserId)?.picture || undefined;
+}
+
 export interface ConversationsPageProps {
   currentUserId: string;
 }
@@ -103,7 +108,12 @@ export default function ConversationsPage({ currentUserId }: ConversationsPagePr
               borderBottom: `1px solid ${surface.sunken}`
             }}
           >
-            <Avatar sx={{ bgcolor: group ? brand.purple : brand.pinkInk }} aria-hidden>
+            <Avatar
+              src={group ? undefined : otherPicture(conversation, currentUserId)}
+              alt=""
+              sx={{ bgcolor: group ? brand.purple : brand.pinkInk }}
+              aria-hidden
+            >
               {group ? <GroupsIcon /> : name.charAt(0).toUpperCase()}
             </Avatar>
 

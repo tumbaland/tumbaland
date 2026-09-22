@@ -3,8 +3,7 @@ import { useParams } from 'react-router';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
-import Typography from '@mui/material/Typography';
-import { ink, surface } from '@tumbaland/frontend-core';
+import { surface } from '@tumbaland/frontend-core';
 import { Composer } from '../components/thread/Composer';
 import { EmojiPicker } from '../components/thread/EmojiPicker';
 import { FullEmojiPicker } from '../components/thread/FullEmojiPicker';
@@ -76,13 +75,9 @@ export default function ThreadPage() {
         onRetry={thread.retry}
         onPickEmoji={(messageId, anchor) => setPicker({ messageId, anchor })}
         onOpenMedia={openMedia}
+        members={thread.members}
+        reads={thread.reads}
       />
-
-      {thread.readBy.length > 0 && (
-        <Typography variant="caption" sx={{ px: 2, color: ink.muted, textAlign: 'right' }}>
-          Read by {thread.readBy.join(', ')}
-        </Typography>
-      )}
 
       <TypingIndicator names={thread.typingNames} />
 

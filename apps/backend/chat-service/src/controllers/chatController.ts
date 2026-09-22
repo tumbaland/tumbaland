@@ -49,6 +49,13 @@ export const ensureMyConversations = async (req: Request, res: Response): Promis
   sendSuccess(res, await conversations.ensureConversationsForCaller(person));
 };
 
+/** One conversation with its members and read positions, for the thread page. */
+export const getConversation = async (req: Request, res: Response): Promise<void> => {
+  const person = caller(req);
+  const conversation = await requireConversation(person, req.params.id as string);
+  sendSuccess(res, await conversations.conversationDetail(person, conversation));
+};
+
 export const unreadCount = async (req: Request, res: Response): Promise<void> => {
   const person = caller(req);
   sendSuccess(res, { unread: await conversations.unreadTotal(person) });

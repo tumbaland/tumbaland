@@ -53,15 +53,17 @@ export async function ensureConversation(person: Caller, groupId: string, title 
  */
 export async function recordMember(conversation: IConversation, person: Caller): Promise<IConversation> {
   const known = conversation.members.find((member) => member.userId === person.id);
+  const picture = person.picture ?? null;
   if (known) {
-    // Keep the display name current without a write on every request.
-    if (known.name === person.name) return conversation;
+    // Keep the display name and picture current without a write on every request.
+    if (known.name === person.name && (known.picture ?? null) === picture) return conversation;
     await Conversation.updateOne(
       { _id: conversation._id, 'members.userId': person.id },
-      { $set: { 'members.$.name': person.name, 'members.$.email': person.email } }
+      { $set: { 'members.$.name': person.name, 'members.$.email': person.email, 'members.$.picture': picture } }
     );
     known.name = person.name;
     known.email = person.email;
+    known.picture = picture;
     return conversation;
   }
 
@@ -69,6 +71,7 @@ export async function recordMember(conversation: IConversation, person: Caller):
     userId: person.id,
     email: person.email,
     name: person.name,
+    picture,
     joinedAt: new Date()
   };
   // Guarded on the userId being absent, so two concurrent first requests from
@@ -159,6 +162,41 @@ export async function listConversations(person: Caller): Promise<ConversationSum
       createdAt: conversation.createdAt
     };
   });
+}
+
+/** How far one member has read, for the "seen" marker under a message. */
+export interface ReadReceipt {
+  userId: string;
+  lastReadMessageId: string | null;
+  lastReadAt: Date;
+}
+
+/**
+ * One conversation as the thread page opens it: who is in it, with their
+ * pictures, and how far each of the others has read.
+ *
+ * The read positions are what let the page mark a message as seen from the
+ * moment it opens. The stream only reports reads as they happen, so without
+ * these the marker would be missing until the other person read something new.
+ */
+export async function conversationDetail(
+  person: Caller,
+  conversation: IConversation
+): Promise<{ id: string; groupId: string; title: string; members: IConversationMember[]; reads: ReadReceipt[] }> {
+  const id = conversation._id.toString();
+  const states = await ReadState.find({ conversationId: id, userId: { $ne: person.id } });
+
+  return {
+    id,
+    groupId: conversation.groupId,
+    title: conversation.title ?? '',
+    members: conversation.members,
+    reads: states.map((state) => ({
+      userId: state.userId,
+      lastReadMessageId: state.lastReadMessageId ?? null,
+      lastReadAt: state.lastReadAt
+    }))
+  };
 }
 
 /** Total unread across every conversation, for the shell's nav badge. */

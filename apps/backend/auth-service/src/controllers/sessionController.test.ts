@@ -3,7 +3,9 @@ import request from 'supertest';
 jest.mock('../models/User', () => ({
   User: {
     findOne: jest.fn(),
-    findOneAndUpdate: jest.fn()
+    findOneAndUpdate: jest.fn(),
+    // Renewal reads the stored picture; none stored unless a test says so.
+    findById: jest.fn(() => ({ select: jest.fn().mockResolvedValue(null) }))
   }
 }));
 

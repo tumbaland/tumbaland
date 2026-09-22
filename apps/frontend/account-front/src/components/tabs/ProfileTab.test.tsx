@@ -14,8 +14,15 @@ vi.mock('../../services/profileService', () => ({
   profileService: {
     updateProfile: vi.fn(),
     requestDeletion: vi.fn(),
-    cancelDeletion: vi.fn()
+    cancelDeletion: vi.fn(),
+    uploadPicture: vi.fn(),
+    removePicture: vi.fn()
   }
+}));
+
+// Canvas is not available in jsdom; the resize itself is the browser's job.
+vi.mock('../../services/avatarImage', () => ({
+  squareAvatar: vi.fn(async () => new Blob(['jpeg'], { type: 'image/jpeg' }))
 }));
 
 vi.mock('@tumbaland/frontend-core', async () => {
@@ -315,5 +322,53 @@ describe('the danger zone', () => {
     expect(await screen.findByText(/Could not withdraw the request/i)).toBeInTheDocument();
     // The request is still standing, so the button that clears it has to stay.
     expect(screen.getByRole('button', { name: /Withdraw request/i })).toBeInTheDocument();
+  });
+});
+
+describe('profile picture', () => {
+  const photo = new File(['x'], 'me.jpg', { type: 'image/jpeg' });
+
+  it('uploads a chosen photo and shows it', async () => {
+    vi.mocked(profileService.uploadPicture).mockResolvedValue('https://auth.example/auth/avatars/u1?v=1');
+    const { container } = render(<ProfileTab />);
+    await screen.findByDisplayValue('Jane');
+
+    await userEvent.upload(screen.getByTestId('picture-input'), photo);
+
+    expect(await screen.findByText('Picture updated.')).toBeInTheDocument();
+    expect(profileService.uploadPicture).toHaveBeenCalledWith(expect.any(Blob));
+    expect(container.querySelector('img')).toHaveAttribute('src', 'https://auth.example/auth/avatars/u1?v=1');
+    // Now there is an upload, it can be taken away again.
+    expect(screen.getByRole('button', { name: 'Remove picture' })).toBeInTheDocument();
+  });
+
+  it('says why when the upload is refused', async () => {
+    vi.mocked(profileService.uploadPicture).mockRejectedValue(new Error('That picture is too large'));
+    render(<ProfileTab />);
+    await screen.findByDisplayValue('Jane');
+
+    await userEvent.upload(screen.getByTestId('picture-input'), photo);
+
+    expect(await screen.findByText('That picture is too large')).toBeInTheDocument();
+  });
+
+  it('offers no remove button for a picture that came from Google', async () => {
+    mockedGetProfile.mockResolvedValue({ ...user, picture: 'google.png', hasCustomPicture: false });
+    render(<ProfileTab />);
+    await screen.findByDisplayValue('Jane');
+
+    expect(screen.queryByRole('button', { name: 'Remove picture' })).not.toBeInTheDocument();
+  });
+
+  it('removes an uploaded picture, falling back to Google’s', async () => {
+    mockedGetProfile.mockResolvedValue({ ...user, picture: 'mine.jpg', hasCustomPicture: true });
+    vi.mocked(profileService.removePicture).mockResolvedValue('google.png');
+    const { container } = render(<ProfileTab />);
+    await screen.findByDisplayValue('Jane');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove picture' }));
+
+    await waitFor(() => expect(container.querySelector('img')).toHaveAttribute('src', 'google.png'));
+    expect(screen.queryByRole('button', { name: 'Remove picture' })).not.toBeInTheDocument();
   });
 });

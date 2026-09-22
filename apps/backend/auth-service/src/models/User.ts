@@ -10,6 +10,17 @@ export interface IUser extends Document {
   lastLoginAt?: Date;
   tokenVersion: number; // for token invalidation
   /**
+   * The picture the person uploaded themselves, as its public URL (see
+   * `Avatar`). Wins over `googlePicture` whenever it is set.
+   */
+  picture?: string | null;
+  /**
+   * The picture Google sent at the last sign-in. Kept apart from `picture` so
+   * signing in again cannot overwrite an uploaded one, and so removing an
+   * upload has something to fall back to.
+   */
+  googlePicture?: string | null;
+  /**
    * When the owner asked for the account to be removed, if they have.
    *
    * A request, not the removal. Nothing is deleted or disabled when this is
@@ -37,6 +48,8 @@ const UserSchema = new Schema<IUser>(
     isApproved: { type: Boolean, default: true },
     lastLoginAt: { type: Date },
     tokenVersion: { type: Number, default: 1 },
+    picture: { type: String, default: null },
+    googlePicture: { type: String, default: null },
     deletionRequestedAt: { type: Date, default: null }
   },
   { timestamps: true }

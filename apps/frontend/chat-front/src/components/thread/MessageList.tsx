@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -6,9 +6,10 @@ import Fab from '@mui/material/Fab';
 import Typography from '@mui/material/Typography';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { ink } from '@tumbaland/frontend-core';
-import type { ThreadMessage } from '../../types';
+import type { ConversationMember, ReadReceipt, ThreadMessage } from '../../types';
 import { DaySeparator } from './DaySeparator';
 import { MessageBubble } from './MessageBubble';
+import { SeenMarker, placeSeenMarkers } from './SeenMarker';
 
 export interface MessageListProps {
   messages: ThreadMessage[];
@@ -20,7 +21,14 @@ export interface MessageListProps {
   onRetry: (clientId: string) => void;
   onPickEmoji: (messageId: string, anchor: HTMLElement) => void;
   onOpenMedia: (message: ThreadMessage, index: number) => void;
+  /** For senders' pictures and the "seen" markers. */
+  members?: ConversationMember[];
+  /** How far each of the others has read. */
+  reads?: Record<string, ReadReceipt>;
 }
+
+const NO_MEMBERS: ConversationMember[] = [];
+const NO_READS: Record<string, ReadReceipt> = {};
 
 /** How close to the bottom still counts as "following the conversation". */
 const NEAR_BOTTOM_PX = 120;
@@ -39,10 +47,32 @@ export function MessageList({
   onReact,
   onRetry,
   onPickEmoji,
-  onOpenMedia
+  onOpenMedia,
+  members = NO_MEMBERS,
+  reads = NO_READS
 }: MessageListProps) {
   const scroller = useRef<HTMLDivElement | null>(null);
-  const bottom = useRef<HTMLDivElement | null>(null);
+  const content = useRef<HTMLDivElement | null>(null);
+
+  /**
+   * Straight to the newest message.
+   *
+   * Sets the list's own scroll offset rather than calling `scrollIntoView`,
+   * which also scrolls every scrollable ancestor -- including the shell's
+   * page -- and left the thread part-way down on open.
+   */
+  const scrollToBottom = useCallback((smooth = false) => {
+    const element = scroller.current;
+    if (!element) return;
+    if (smooth && typeof element.scrollTo === 'function') {
+      element.scrollTo({ top: element.scrollHeight, behavior: 'smooth' });
+    } else {
+      element.scrollTop = element.scrollHeight;
+    }
+  }, []);
+
+  const pictures = useMemo(() => new Map(members.map((member) => [member.userId, member.picture])), [members]);
+  const seen = useMemo(() => placeSeenMarkers(messages, reads, members), [messages, reads, members]);
   const [atBottom, setAtBottom] = useState(true);
   /** `atBottom` for the resize observer, which outlives any one render. */
   const atBottomRef = useRef(true);
@@ -96,29 +126,33 @@ export function MessageList({
     // Scrolling someone away from what they were reading because the other
     // person sent something is the single most irritating thing a chat can do.
     if (grewAtBottom && atBottom) {
-      bottom.current?.scrollIntoView({ block: 'end' });
+      scrollToBottom();
     }
-  }, [messages, atBottom]);
+  }, [messages, atBottom, scrollToBottom]);
 
   // The first render lands at the bottom without animating there.
   useEffect(() => {
-    bottom.current?.scrollIntoView({ block: 'end' });
-  }, []);
+    scrollToBottom();
+  }, [scrollToBottom]);
 
-  // The keyboard opening shrinks the list from below. Someone reading the
-  // latest message is still reading it with the keyboard up, so the list stays
-  // pinned to the bottom rather than leaving the newest lines under the composer.
+  /**
+   * Keeps the newest message in view while the thread settles.
+   *
+   * Photos, video posters and pictures arrive after the first render and push
+   * the content taller, so a thread that opened at the bottom ended up
+   * somewhere in the middle. The keyboard opening shrinks the list from below
+   * and does the same. Both are followed only while the reader is at the
+   * bottom: someone scrolled up to read something older stays where they are.
+   */
   useEffect(() => {
     const element = scroller.current;
     if (!element || typeof ResizeObserver === 'undefined') return;
 
-    let lastHeight = element.clientHeight;
     const observer = new ResizeObserver(() => {
-      const shrank = element.clientHeight < lastHeight;
-      lastHeight = element.clientHeight;
-      if (shrank && atBottomRef.current) element.scrollTop = element.scrollHeight;
+      if (atBottomRef.current) element.scrollTop = element.scrollHeight;
     });
     observer.observe(element);
+    if (content.current) observer.observe(content.current);
     return () => observer.disconnect();
   }, []);
 
@@ -142,59 +176,61 @@ export function MessageList({
           WebkitOverflowScrolling: 'touch'
         }}
       >
-        {hasOlder && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 1 }}>
-            {loadingOlder ? (
-              <CircularProgress size={18} />
-            ) : (
-              <Button size="small" onClick={onLoadOlder} sx={{ color: ink.muted }}>
-                Load earlier messages
-              </Button>
-            )}
-          </Box>
-        )}
-
-        {messages.length === 0 && (
-          <Box sx={{ textAlign: 'center', py: 6 }}>
-            <Typography variant="body2" sx={{ color: ink.muted }}>
-              No messages yet. Say something.
-            </Typography>
-          </Box>
-        )}
-
-        {messages.map((message, index) => {
-          const previous = messages[index - 1];
-          const newDay = !previous || !sameDay(previous.createdAt, message.createdAt);
-          const showSender =
-            newDay ||
-            !previous ||
-            previous.senderId !== message.senderId ||
-            new Date(message.createdAt).getTime() - new Date(previous.createdAt).getTime() > GROUP_WINDOW_MS;
-
-          return (
-            <Box key={message.clientId || message.id}>
-              {newDay && <DaySeparator iso={message.createdAt} />}
-              <MessageBubble
-                message={message}
-                mine={message.senderId === currentUserId}
-                showSender={showSender}
-                onReact={onReact}
-                onRetry={onRetry}
-                onPickEmoji={onPickEmoji}
-                onOpenMedia={onOpenMedia}
-              />
+        <Box ref={content}>
+          {hasOlder && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 1 }}>
+              {loadingOlder ? (
+                <CircularProgress size={18} />
+              ) : (
+                <Button size="small" onClick={onLoadOlder} sx={{ color: ink.muted }}>
+                  Load earlier messages
+                </Button>
+              )}
             </Box>
-          );
-        })}
+          )}
 
-        <div ref={bottom} />
+          {messages.length === 0 && (
+            <Box sx={{ textAlign: 'center', py: 6 }}>
+              <Typography variant="body2" sx={{ color: ink.muted }}>
+                No messages yet. Say something.
+              </Typography>
+            </Box>
+          )}
+
+          {messages.map((message, index) => {
+            const previous = messages[index - 1];
+            const newDay = !previous || !sameDay(previous.createdAt, message.createdAt);
+            const showSender =
+              newDay ||
+              !previous ||
+              previous.senderId !== message.senderId ||
+              new Date(message.createdAt).getTime() - new Date(previous.createdAt).getTime() > GROUP_WINDOW_MS;
+
+            return (
+              <Box key={message.clientId || message.id}>
+                {newDay && <DaySeparator iso={message.createdAt} />}
+                <MessageBubble
+                  message={message}
+                  mine={message.senderId === currentUserId}
+                  showSender={showSender}
+                  onReact={onReact}
+                  onRetry={onRetry}
+                  onPickEmoji={onPickEmoji}
+                  onOpenMedia={onOpenMedia}
+                  senderPicture={pictures.get(message.senderId)}
+                />
+                {seen.has(message.id) && <SeenMarker seers={seen.get(message.id)!} />}
+              </Box>
+            );
+          })}
+        </Box>
       </Box>
 
       {unread && (
         <Fab
           size="small"
           aria-label="Jump to latest"
-          onClick={() => bottom.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })}
+          onClick={() => scrollToBottom(true)}
           sx={{ position: 'absolute', right: 16, bottom: 16, bgcolor: 'background.paper' }}
         >
           <KeyboardArrowDownIcon />

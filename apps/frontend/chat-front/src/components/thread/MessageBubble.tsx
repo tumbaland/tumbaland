@@ -10,12 +10,16 @@ import { brand, ink, surface } from '@tumbaland/frontend-core';
 import type { ThreadMessage } from '../../types';
 import { MediaGrid } from './MediaGrid';
 import { ReactionRow } from './ReactionRow';
+import { MemberAvatar } from './MemberAvatar';
+import { clockTime } from './clock';
 
 export interface MessageBubbleProps {
   message: ThreadMessage;
   mine: boolean;
   /** Hidden when the message above is from the same person in the same minute. */
   showSender: boolean;
+  /** The sender's picture, shown beside their name. */
+  senderPicture?: string | null;
   onReact: (messageId: string, emoji: string) => void;
   onRetry: (clientId: string) => void;
   onPickEmoji: (messageId: string, anchor: HTMLElement) => void;
@@ -51,13 +55,6 @@ export function isJumbo(body: string): boolean {
   return glyphs > 0 && glyphs <= JUMBO_LIMIT;
 }
 
-/**
- * 24-hour HH:mm, whatever the browser's language. A phone set to English
- * would otherwise show "02:05 PM", which is not how anyone here reads a clock.
- */
-const time = (iso: string) =>
-  new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
-
 /** How long a touch must be held before it counts as a long press. */
 const LONG_PRESS_MS = 450;
 
@@ -65,6 +62,7 @@ export function MessageBubble({
   message,
   mine,
   showSender,
+  senderPicture,
   onReact,
   onRetry,
   onPickEmoji,
@@ -107,9 +105,12 @@ export function MessageBubble({
       }}
     >
       {showSender && !mine && (
-        <Typography variant="caption" sx={{ color: ink.muted, ml: 1.5, mb: 0.25 }}>
-          {message.senderName || message.senderEmail}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, ml: 0.5, mb: 0.5 }}>
+          <MemberAvatar name={message.senderName || message.senderEmail} picture={senderPicture} size={22} />
+          <Typography variant="caption" sx={{ color: ink.muted }}>
+            {message.senderName || message.senderEmail}
+          </Typography>
+        </Box>
       )}
 
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: mine ? 'flex-end' : 'flex-start', width: '100%' }}>
@@ -219,7 +220,7 @@ export function MessageBubble({
               </Tooltip>
             )}
             <Typography variant="caption" sx={{ color: ink.muted, fontSize: 11 }}>
-              {time(message.createdAt)}
+              {clockTime(message.createdAt)}
               {message.editedAt && ' · edited'}
             </Typography>
           </>

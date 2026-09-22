@@ -66,6 +66,7 @@ describe('getProfile', () => {
         lastName: 'Lovelace',
         name: 'Ada Lovelace',
         picture: 'pic.png',
+        hasCustomPicture: false,
         lastLoginAt,
         deletionRequestedAt: null
       },

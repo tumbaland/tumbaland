@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import { logger, UnauthorizedError } from '@tumbaland/backend-core';
 import { generateJWT, UserPayload } from './jwtService';
 import { deviceFamily } from './userAgent';
+import { effectivePicture } from './avatarService';
 import { IUser, User } from '../models/User';
 import { ISession, Session, SignInMethod } from '../models/Session';
 
@@ -240,13 +241,27 @@ export const renewSession = async (
     return claimsOf(user);
   }
 
+  // The picture is read fresh rather than copied from the old token, so one
+  // uploaded on another device reaches this one at its next renewal. Only on
+  // this path, which runs a few times an hour at most, not on every request.
+  const stored = await User.findById(user.id).select('picture googlePicture');
   return mintSessionToken(
     res,
     session,
     { id: user.id, email: user.email, tokenVersion: user.tokenVersion },
-    { name: user.name, picture: user.picture }
+    { name: user.name, picture: (stored && effectivePicture(stored)) ?? inheritedPicture(user.picture) }
   );
 };
+
+/**
+ * The old token's picture, when the database has none to offer.
+ *
+ * Someone who last signed in before Google pictures were stored has theirs
+ * only in the token, so it is carried over. An uploaded one is not: if the
+ * database no longer has it, it was removed, and its URL now answers 404.
+ */
+const inheritedPicture = (picture: string | undefined): string | undefined =>
+  picture && !picture.includes('/auth/avatars/') ? picture : undefined;
 
 /** Ends one of the person's sessions. False when there was no such session of theirs. */
 export const revokeSession = async (userId: string, sessionId: string): Promise<boolean> => {

@@ -50,6 +50,7 @@ router.get('/search', ctrl.search);
 // GET /api/chat/stream is deliberately not here: app.ts registers it ahead of
 // the rate limiter.
 
+router.get('/conversations/:id', ctrl.getConversation);
 router.get('/conversations/:id/messages', ctrl.listMessages);
 router.post('/conversations/:id/messages', sendLimiter, validate(sendMessageSchema), ctrl.sendMessage);
 router.patch('/conversations/:id/messages/:messageId', validate(editMessageSchema), ctrl.editMessage);

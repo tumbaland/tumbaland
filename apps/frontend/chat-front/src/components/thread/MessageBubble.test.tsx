@@ -100,6 +100,20 @@ describe('MessageBubble', () => {
     expect(screen.queryByText(/PM/)).not.toBeInTheDocument();
   });
 
+  it('shows the sender’s picture beside their name', () => {
+    const { container } = renderBubble({}, { senderPicture: 'https://auth.example/auth/avatars/u-tom?v=1' });
+
+    expect(screen.getByText('Tom')).toBeInTheDocument();
+    expect(container.querySelector('img')).toHaveAttribute('src', 'https://auth.example/auth/avatars/u-tom?v=1');
+  });
+
+  it('falls back to their initial when they have no picture', () => {
+    const { container } = renderBubble();
+
+    expect(container.querySelector('img')).toBeNull();
+    expect(screen.getByText('T')).toBeInTheDocument();
+  });
+
   it('shows no timestamp on a failed message, since it never arrived', () => {
     renderBubble({ delivery: 'failed' });
     expect(screen.getByText(/Not sent/)).toBeInTheDocument();

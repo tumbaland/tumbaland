@@ -451,6 +451,42 @@ describe('unread counts', () => {
   });
 });
 
+describe('the conversation as a thread opens it', () => {
+  it('lists how far each of the others has read, and not the caller', async () => {
+    const id = await conversationInG1();
+    const sent = await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'hei' });
+    await as(IRJA).post(`/api/chat/conversations/${id}/read`).send({ lastReadMessageId: sent.body.data.id });
+    await as(TOM).post(`/api/chat/conversations/${id}/read`).send({ lastReadMessageId: sent.body.data.id });
+
+    const res = await as(TOM).get(`/api/chat/conversations/${id}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.reads).toEqual([
+      expect.objectContaining({ userId: IRJA.id, lastReadMessageId: sent.body.data.id, lastReadAt: expect.any(String) })
+    ]);
+  });
+
+  it('carries each member’s picture, and keeps it current', async () => {
+    const id = await conversationInG1();
+    const withPicture = { ...IRJA, picture: 'https://auth.test/auth/avatars/u-irja?v=1' };
+    await as(withPicture).get(`/api/chat/conversations/${id}`);
+
+    const first = await as(TOM).get(`/api/chat/conversations/${id}`);
+    expect(first.body.data.members).toContainEqual(expect.objectContaining({ userId: IRJA.id, picture: withPicture.picture }));
+
+    const changed = { ...IRJA, picture: 'https://auth.test/auth/avatars/u-irja?v=2' };
+    await as(changed).get(`/api/chat/conversations/${id}`);
+
+    const second = await as(TOM).get(`/api/chat/conversations/${id}`);
+    expect(second.body.data.members).toContainEqual(expect.objectContaining({ userId: IRJA.id, picture: changed.picture }));
+  });
+
+  it('is hidden from someone outside the group', async () => {
+    const id = await conversationInG1();
+    expect((await as(PERSIK).get(`/api/chat/conversations/${id}`)).status).toBe(404);
+  });
+});
+
 describe('the conversation list', () => {
   it('carries a preview of the last message', async () => {
     const id = await conversationInG1();

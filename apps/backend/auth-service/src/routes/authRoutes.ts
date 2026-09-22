@@ -3,10 +3,14 @@ import { strictRateLimiter, validate, NotFoundError } from '@tumbaland/backend-c
 import { validateToken, googleRedirectCallback, logout, verifyAuth, refreshToken, invalidateUserTokens } from '../controllers/authController';
 import {
   cancelAccountDeletion,
+  deleteProfilePicture,
+  getAvatar,
   getProfile,
   requestAccountDeletion,
-  updateProfile
+  updateProfile,
+  updateProfilePicture
 } from '../controllers/profileController';
+import { AVATAR_TYPES, MAX_AVATAR_BYTES } from '../services/avatarService';
 import { getConnections, revokeConnection } from '../controllers/oauthController';
 import { getAuditTrail } from '../controllers/auditController';
 import { getSessions, revokeOtherSessions, revokeSession } from '../controllers/sessionController';
@@ -60,6 +64,20 @@ router.put('/profile', authenticateToken, requireApproved, validate(updateProfil
  * works exactly as it did before.
  */
 router.post('/profile/deletion', authenticateToken, requireApproved, requestAccountDeletion);
+
+// The picture is sent as the image bytes themselves, so this route parses its
+// own body; the app-wide JSON parser leaves image types alone.
+router.put(
+  '/profile/picture',
+  authenticateToken,
+  requireApproved,
+  express.raw({ type: AVATAR_TYPES, limit: MAX_AVATAR_BYTES }),
+  updateProfilePicture
+);
+router.delete('/profile/picture', authenticateToken, requireApproved, deleteProfilePicture);
+
+// Public: shown in <img> tags on every origin, which cannot attach a session.
+router.get('/avatars/:userId', getAvatar);
 router.delete('/profile/deletion', authenticateToken, requireApproved, cancelAccountDeletion);
 
 // Verify route now fully protected

@@ -3,7 +3,9 @@ import request from 'supertest';
 jest.mock('../models/User', () => ({
   User: {
     findOne: jest.fn(),
-    findOneAndUpdate: jest.fn()
+    findOneAndUpdate: jest.fn(),
+    // Renewal reads the stored picture; none stored unless a test says so.
+    findById: jest.fn(() => ({ select: jest.fn().mockResolvedValue(null) }))
   }
 }));
 
@@ -198,6 +200,29 @@ describe('POST /auth/validate', () => {
     expect(res.status).toBe(401);
     expect(res.body).toMatchObject({ success: false, message: 'Invalid Google token' });
     expect(mockedFindOneAndUpdate).not.toHaveBeenCalled();
+  });
+
+  it('keeps a picture the person uploaded instead of taking Google’s again', async () => {
+    mockedVerifyGoogleToken.mockResolvedValue({ email: 'ada@example.com', name: 'Ada', picture: 'google.png' });
+    mockedFindOneAndUpdate.mockResolvedValue({
+      _id: 'db-user-1',
+      email: 'ada@example.com',
+      tokenVersion: 1,
+      isApproved: true,
+      picture: 'https://auth.example/auth/avatars/db-user-1?v=1',
+      googlePicture: 'google.png'
+    });
+
+    const res = await request(app).post('/auth/validate').send({ idToken: 'good-token' });
+
+    expect(mockedFindOneAndUpdate).toHaveBeenCalledWith(
+      { email: 'ada@example.com' },
+      expect.objectContaining({ $set: expect.objectContaining({ googlePicture: 'google.png' }) }),
+      { new: true, upsert: true }
+    );
+    const setCookie = res.headers['set-cookie'] as unknown as string[];
+    const access = setCookie.find((c) => c.startsWith('access_token='))!.split(';')[0].split('=')[1];
+    expect(decodeJWT(access)).toMatchObject({ picture: 'https://auth.example/auth/avatars/db-user-1?v=1' });
   });
 
   it('rejects a Google payload with no email with 400', async () => {

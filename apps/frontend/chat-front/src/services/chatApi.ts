@@ -1,6 +1,6 @@
 import { createApiClient } from '@tumbaland/frontend-core';
 import { getGlobalConfig } from '../config/ConfigProvider';
-import type { Attachment, Conversation, Message, MessagePage, UploadTicket } from '../types';
+import type { Attachment, Conversation, ConversationDetail, Message, MessagePage, UploadTicket } from '../types';
 
 const client = createApiClient({
   baseUrl: () => getGlobalConfig().CHAT_API_URL!,
@@ -70,6 +70,12 @@ export const chatApi = {
 
   async ensureConversation(groupId: string, title?: string): Promise<Conversation> {
     const json = await client.post<{ data: Conversation }>('/api/chat/conversations', { groupId, title });
+    return json.data;
+  },
+
+  /** Members with their pictures, and how far each of the others has read. */
+  async getConversation(conversationId: string): Promise<ConversationDetail> {
+    const json = await client.get<{ data: ConversationDetail }>(`/api/chat/conversations/${conversationId}`);
     return json.data;
   },
 

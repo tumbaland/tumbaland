@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { NotFoundError, UnauthorizedError } from '@tumbaland/backend-core';
 import { User } from '../models/User';
+import { effectivePicture, loadAvatar, removeAvatar, saveAvatar } from '../services/avatarService';
+import { renewSession } from '../services/sessionService';
 
 export const getProfile = async (req: Request, res: Response): Promise<void> => {
   if (!req.user) {
@@ -20,7 +22,9 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
     firstName: dbUser.firstName,
     lastName: dbUser.lastName,
     name: req.user.name,
-    picture: req.user.picture,
+    picture: effectivePicture(dbUser) ?? req.user.picture,
+    // Whether there is an upload to remove. Google's picture cannot be.
+    hasCustomPicture: Boolean(dbUser.picture),
     lastLoginAt: dbUser.lastLoginAt,
     // Carried so the account page can show a standing request rather than
     // offering to make one that already exists.
@@ -71,7 +75,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
       firstName: updatedUser.firstName,
       lastName: updatedUser.lastName,
       name: req.user.name, // Keep original name from JWT
-      picture: req.user.picture // Keep original picture from JWT
+      picture: effectivePicture(updatedUser) ?? req.user.picture
     }
   });
 };
@@ -141,4 +145,58 @@ export const cancelAccountDeletion = async (req: Request, res: Response): Promis
     deletionRequestedAt: null,
     message: 'Your account will not be deleted.'
   });
+};
+
+/**
+ * Sets the person's picture from an uploaded image.
+ *
+ * The body is the image itself, not JSON: the account page has already cut it
+ * to a 256px square. The session token is re-signed straight away so the new
+ * picture shows everywhere on this device without waiting for a renewal;
+ * other devices pick it up at theirs.
+ */
+export const updateProfilePicture = async (req: Request, res: Response): Promise<void> => {
+  if (!req.user) {
+    throw new UnauthorizedError('Not authenticated');
+  }
+
+  const picture = await saveAvatar(req.user.id, req.body);
+  await renewSession(req, res, { reissue: true });
+
+  res.json({ success: true, picture });
+};
+
+/** Removes an uploaded picture, falling back to Google's if there is one. */
+export const deleteProfilePicture = async (req: Request, res: Response): Promise<void> => {
+  if (!req.user) {
+    throw new UnauthorizedError('Not authenticated');
+  }
+
+  const picture = await removeAvatar(req.user.id);
+  await renewSession(req, res, { reissue: true });
+
+  res.json({ success: true, picture: picture ?? null });
+};
+
+/**
+ * Serves an uploaded picture.
+ *
+ * Public, like the Google picture URLs it sits beside: it is shown in `<img>`
+ * tags on other origins and in notifications, none of which can attach a
+ * session. The URL carries a version, so it is cached for good and a new
+ * upload is a new URL.
+ */
+export const getAvatar = async (req: Request, res: Response): Promise<void> => {
+  const avatar = await loadAvatar(req.params.userId as string);
+  if (!avatar) {
+    throw new NotFoundError('No picture');
+  }
+
+  res.set({
+    'Content-Type': avatar.contentType,
+    'Cache-Control': 'public, max-age=31536000, immutable',
+    // The bytes were checked on upload; this stops a browser second-guessing it.
+    'X-Content-Type-Options': 'nosniff'
+  });
+  res.send(avatar.data);
 };

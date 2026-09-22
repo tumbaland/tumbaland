@@ -15,6 +15,8 @@ export interface IConversationMember {
   /** Carried for display and for the entitlement meters, which are email-keyed. */
   email: string;
   name: string;
+  /** Profile picture URL, kept current like the name. Absent for someone without one. */
+  picture?: string | null;
   joinedAt: Date;
 }
 
@@ -49,6 +51,7 @@ const ConversationMemberSchema = new Schema<IConversationMember>(
     userId: { type: String, required: true },
     email: { type: String, required: true, lowercase: true },
     name: { type: String, default: '' },
+    picture: { type: String, default: null },
     joinedAt: { type: Date, default: Date.now }
   },
   { _id: false }

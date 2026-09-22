@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -27,6 +27,7 @@ import {
 import { logger } from '@tumbaland/frontend-core';
 import { authService } from '../../services/authService';
 import { profileService } from '../../services/profileService';
+import { squareAvatar } from '../../services/avatarImage';
 import { User } from '../../types';
 
 const ProfileTab: React.FC = () => {
@@ -39,6 +40,8 @@ const ProfileTab: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [pictureBusy, setPictureBusy] = useState(false);
+  const pictureInput = useRef<HTMLInputElement | null>(null);
 
   // Null means no request standing. Held apart from `user` because it changes
   // on its own, without the rest of the profile being reloaded.
@@ -124,6 +127,40 @@ const ProfileTab: React.FC = () => {
       setMessage({ type: 'error', text: 'Failed to update profile. Please try again.' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePicturePicked = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // Cleared so choosing the same photo again after an error still fires.
+    event.target.value = '';
+    if (!file) return;
+
+    setPictureBusy(true);
+    setMessage(null);
+    try {
+      const picture = await profileService.uploadPicture(await squareAvatar(file));
+      setUser((previous) => (previous ? { ...previous, picture, hasCustomPicture: true } : previous));
+      setMessage({ type: 'success', text: 'Picture updated.' });
+    } catch (error) {
+      logger.error('ProfileTab: picture upload failed', error);
+      setMessage({ type: 'error', text: (error as Error).message || 'Could not save the picture' });
+    } finally {
+      setPictureBusy(false);
+    }
+  };
+
+  const handleRemovePicture = async () => {
+    setPictureBusy(true);
+    setMessage(null);
+    try {
+      const picture = await profileService.removePicture();
+      setUser((previous) => (previous ? { ...previous, picture, hasCustomPicture: false } : previous));
+    } catch (error) {
+      logger.error('ProfileTab: picture removal failed', error);
+      setMessage({ type: 'error', text: 'Could not remove the picture. Please try again.' });
+    } finally {
+      setPictureBusy(false);
     }
   };
 
@@ -230,12 +267,41 @@ const ProfileTab: React.FC = () => {
         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 200 }}>
             <Avatar
-              sx={{ width: 100, height: 100, mb: 2, border: '1px solid', borderColor: 'divider' }}
-              src={user?.picture || "/placeholder-avatar.jpg"}
+              sx={{ width: 100, height: 100, mb: 2, border: '1px solid', borderColor: 'divider', fontSize: 40 }}
+              src={user?.picture || undefined}
+              alt=""
+            >
+              {(firstName || user?.name || email).charAt(0).toUpperCase()}
+            </Avatar>
+            <input
+              ref={pictureInput}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={handlePicturePicked}
+              data-testid="picture-input"
             />
-            <Button size="small" variant="outlined" sx={{ textTransform: 'none' }}>
+            <Button
+              size="small"
+              variant="outlined"
+              sx={{ textTransform: 'none' }}
+              onClick={() => pictureInput.current?.click()}
+              disabled={pictureBusy}
+              startIcon={pictureBusy ? <CircularProgress size={14} /> : undefined}
+            >
               Change Picture
             </Button>
+            {user?.hasCustomPicture && (
+              <Button
+                size="small"
+                color="inherit"
+                sx={{ textTransform: 'none', mt: 0.5, color: 'text.secondary' }}
+                onClick={handleRemovePicture}
+                disabled={pictureBusy}
+              >
+                Remove picture
+              </Button>
+            )}
           </Box>
           
           <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
