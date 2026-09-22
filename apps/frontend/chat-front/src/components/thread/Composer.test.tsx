@@ -22,6 +22,9 @@ vi.mock('./FullEmojiPicker', () => ({
 import { Composer } from './Composer';
 import type { PendingUpload } from '../../types';
 
+/** Photo and emoji sit behind the arrow until it is tapped. */
+const openTools = () => fireEvent.click(screen.getByLabelText('Show photo and emoji'));
+
 /** Drives the `(hover: none)` query the composer uses to tell phone from desktop. */
 function setPointer(isPhone: boolean) {
   window.matchMedia = ((query: string) => ({
@@ -147,11 +150,34 @@ describe('attachments', () => {
   it('offers no attach button when the composer has uploads turned off', () => {
     render(<Composer onSend={() => {}} onTyping={() => {}} />);
 
+    openTools();
     expect(screen.queryByLabelText('Add photo or video')).not.toBeInTheDocument();
+  });
+
+  it('keeps photo and emoji behind the arrow until it is tapped', () => {
+    render(<Composer onSend={() => {}} onTyping={() => {}} onAddFiles={() => {}} onRemoveUpload={() => {}} />);
+
+    expect(screen.queryByLabelText('Add photo or video')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Add emoji')).not.toBeInTheDocument();
+
+    openTools();
+    expect(screen.getByLabelText('Hide photo and emoji')).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByLabelText('Add emoji')).toBeInTheDocument();
+  });
+
+  it('folds the tools away again after sending', async () => {
+    render(<Composer onSend={() => {}} onTyping={() => {}} onAddFiles={() => {}} onRemoveUpload={() => {}} />);
+    openTools();
+
+    await userEvent.type(screen.getByLabelText('Message'), 'hei');
+    await userEvent.click(screen.getByLabelText('Send'));
+
+    expect(screen.queryByLabelText('Add emoji')).not.toBeInTheDocument();
   });
 
   it('offers one picker button when uploads are on', () => {
     render(<Composer onSend={() => {}} onTyping={() => {}} onAddFiles={() => {}} onRemoveUpload={() => {}} />);
+    openTools();
 
     expect(screen.getByLabelText('Add photo or video')).toBeInTheDocument();
     expect(screen.queryByLabelText('Take a photo')).not.toBeInTheDocument();
@@ -278,6 +304,7 @@ describe('attachments', () => {
     const input = screen.getByLabelText('Message');
 
     await userEvent.type(input, 'hei ');
+    openTools();
     await userEvent.click(screen.getByLabelText('Add emoji'));
     await userEvent.click(screen.getByRole('button', { name: '❤️' }));
 

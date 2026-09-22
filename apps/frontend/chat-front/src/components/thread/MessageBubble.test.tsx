@@ -93,6 +93,13 @@ describe('MessageBubble', () => {
     expect(onRetry).toHaveBeenCalledWith('client-1');
   });
 
+  it('shows the time on a 24-hour clock', () => {
+    renderBubble({ createdAt: '2026-09-21T14:05:00' });
+
+    expect(screen.getByText('14:05')).toBeInTheDocument();
+    expect(screen.queryByText(/PM/)).not.toBeInTheDocument();
+  });
+
   it('shows no timestamp on a failed message, since it never arrived', () => {
     renderBubble({ delivery: 'failed' });
     expect(screen.getByText(/Not sent/)).toBeInTheDocument();

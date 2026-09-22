@@ -6,6 +6,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import SendIcon from '@mui/icons-material/Send';
 import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined';
 import SentimentSatisfiedAltIcon from '@mui/icons-material/SentimentSatisfiedAlt';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { TOUCH_TARGET, brand, ink, surface } from '@tumbaland/frontend-core';
 import { FullEmojiPicker, loadEmojiPicker } from './FullEmojiPicker';
 import { UploadTray } from './UploadTray';
@@ -44,6 +45,9 @@ export function Composer({
 }: ComposerProps) {
   const [value, setValue] = useState('');
   const [emojiAnchor, setEmojiAnchor] = useState<HTMLElement | null>(null);
+  // Photo and emoji sit behind an arrow, so the message box gets the width on
+  // a phone. Most lines are just text.
+  const [toolsOpen, setToolsOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
@@ -62,6 +66,7 @@ export function Composer({
     if (!canSend) return;
     onSend(body);
     setValue('');
+    setToolsOpen(false);
     // Kept focused, so a conversation does not need a tap between each line.
     inputRef.current?.focus();
   };
@@ -116,28 +121,45 @@ export function Composer({
       {uploads.length > 0 && onRemoveUpload && <UploadTray uploads={uploads} onRemove={onRemoveUpload} />}
 
       <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.5, p: 1 }}>
-      {/* One button. On a phone the system picker already offers the camera
-          beside the library, so a separate camera button was the same thing
-          twice. */}
-      {onAddFiles && (
-        <IconButton
-          aria-label="Add photo or video"
-          onClick={() => fileRef.current?.click()}
-          sx={{ color: ink.muted, width: TOUCH_TARGET, height: TOUCH_TARGET }}
-        >
-          <AddPhotoAlternateOutlinedIcon />
-        </IconButton>
-      )}
-
       <IconButton
-        aria-label="Add emoji"
+        aria-label={toolsOpen ? 'Hide photo and emoji' : 'Show photo and emoji'}
+        aria-expanded={toolsOpen}
+        onClick={() => setToolsOpen((open) => !open)}
+        // Warms the picker's download while the finger is on the way to it.
         onPointerEnter={() => void loadEmojiPicker().catch(() => {})}
-        onFocus={() => void loadEmojiPicker().catch(() => {})}
-        onClick={(event) => setEmojiAnchor(event.currentTarget)}
         sx={{ color: ink.muted, width: TOUCH_TARGET, height: TOUCH_TARGET }}
       >
-        <SentimentSatisfiedAltIcon />
+        <ChevronRightIcon
+          sx={{ transition: 'transform .2s ease', transform: toolsOpen ? 'rotate(180deg)' : 'none' }}
+        />
       </IconButton>
+
+      {toolsOpen && (
+        <>
+          {/* One button. On a phone the system picker already offers the
+              camera beside the library, so a separate camera button was the
+              same thing twice. */}
+          {onAddFiles && (
+            <IconButton
+              aria-label="Add photo or video"
+              onClick={() => fileRef.current?.click()}
+              sx={{ color: ink.muted, width: TOUCH_TARGET, height: TOUCH_TARGET }}
+            >
+              <AddPhotoAlternateOutlinedIcon />
+            </IconButton>
+          )}
+
+          <IconButton
+            aria-label="Add emoji"
+            onPointerEnter={() => void loadEmojiPicker().catch(() => {})}
+            onFocus={() => void loadEmojiPicker().catch(() => {})}
+            onClick={(event) => setEmojiAnchor(event.currentTarget)}
+            sx={{ color: ink.muted, width: TOUCH_TARGET, height: TOUCH_TARGET }}
+          >
+            <SentimentSatisfiedAltIcon />
+          </IconButton>
+        </>
+      )}
 
       <InputBase
         inputRef={inputRef}
@@ -155,6 +177,11 @@ export function Composer({
         inputProps={{ 'aria-label': 'Message' }}
         sx={{
           flex: 1,
+          // As tall as the buttons beside it, so one line of text sits level
+          // with Send rather than a few pixels below its top. Longer messages
+          // still grow upwards from here.
+          minHeight: TOUCH_TARGET,
+          boxSizing: 'border-box',
           px: 1.5,
           py: 1,
           borderRadius: 3,

@@ -26,7 +26,7 @@ const PUSH_STATE_CACHE = 'tumbaland-push-state';
  * hashed assets are cached as they are used, and listing them here would mean
  * regenerating this file on every build.
  */
-const SHELL_ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/favicon.svg'];
+const SHELL_ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/badge-96.png', '/favicon.svg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -140,7 +140,11 @@ self.addEventListener('push', (event) => {
   const options = {
     body: payload.body || 'New message',
     icon: '/icon-192.png',
-    badge: '/icon-192.png',
+    // The small icon in the Android status bar. Android keeps only its alpha
+    // channel and paints it white, so the full-colour app icon -- opaque edge
+    // to edge -- came out as a plain white square. This is the two hearts as a
+    // white silhouette on transparency.
+    badge: '/badge-96.png',
     // Collapses repeat notifications for one conversation into one line
     // instead of ten while a phone is in a pocket.
     tag: payload.tag || 'tumbaland',

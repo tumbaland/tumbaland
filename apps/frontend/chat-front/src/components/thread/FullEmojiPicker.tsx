@@ -62,7 +62,25 @@ interface EmojiClickEvent extends Event {
 export function FullEmojiPicker({ anchorEl, onClose, onPick }: FullEmojiPickerProps) {
   const open = Boolean(anchorEl);
   const [state, setState] = useState<'idle' | 'loading' | 'ready' | 'failed'>('idle');
-  const host = useRef<HTMLDivElement | null>(null);
+  /**
+   * The box the element goes into, as state rather than a ref.
+   *
+   * The popover renders through a portal that attaches its content one render
+   * after `open` flips. An effect keyed on a ref ran in the render before that,
+   * found no box, and only tried again if the parent happened to re-render --
+   * which typing does and tapping the message box or photo button does not.
+   * The paper then opened empty: a thin line where the picker should be.
+   * Holding the node in state re-runs the effect the moment the box exists.
+   */
+  const [host, setHost] = useState<HTMLDivElement | null>(null);
+  // Read through refs, so a parent re-rendering with new inline callbacks does
+  // not tear the picker down and rebuild it, losing its search and scroll.
+  const onPickRef = useRef(onPick);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onPickRef.current = onPick;
+    onCloseRef.current = onClose;
+  }, [onPick, onClose]);
   const popoverActions = useRef<PopoverActions>(null);
   /**
    * Whether the import has been started.
@@ -93,38 +111,45 @@ export function FullEmojiPicker({ anchorEl, onClose, onPick }: FullEmojiPickerPr
   // in JSX needs a global type declaration, and `emoji-click` is a DOM event
   // that React's synthetic system would not bind anyway.
   useEffect(() => {
-    if (state !== 'ready' || !host.current) return;
+    if (state !== 'ready' || !host) return;
 
     const element = document.createElement('emoji-picker');
     const onEmojiClick = (event: Event) => {
       const unicode = (event as EmojiClickEvent).detail?.unicode;
       if (unicode) {
-        onPick(unicode);
-        onClose();
+        onPickRef.current(unicode);
+        onCloseRef.current();
       }
     };
 
     element.addEventListener('emoji-click', onEmojiClick);
-    host.current.replaceChildren(element);
+    host.replaceChildren(element);
 
     return () => {
       element.removeEventListener('emoji-click', onEmojiClick);
       element.remove();
     };
-  }, [state, onPick, onClose]);
+  }, [state, host]);
 
   useEffect(() => {
     if (!open) return;
 
-    const frame = requestAnimationFrame(() => popoverActions.current?.updatePosition());
-    const observer = host.current ? new ResizeObserver(() => popoverActions.current?.updatePosition()) : null;
-    if (observer && host.current) observer.observe(host.current);
+    const reposition = () => popoverActions.current?.updatePosition();
+    const frame = requestAnimationFrame(reposition);
+    const observer = host ? new ResizeObserver(reposition) : null;
+    if (observer && host) observer.observe(host);
+    // Tapping the emoji button from the message box closes the phone's
+    // keyboard, which moves the button after the popover has measured it.
+    window.visualViewport?.addEventListener('resize', reposition);
+    window.addEventListener('resize', reposition);
 
     return () => {
       cancelAnimationFrame(frame);
       observer?.disconnect();
+      window.visualViewport?.removeEventListener('resize', reposition);
+      window.removeEventListener('resize', reposition);
     };
-  }, [open, state]);
+  }, [open, host]);
 
   return (
     <Popover
@@ -144,7 +169,7 @@ export function FullEmojiPicker({ anchorEl, onClose, onPick }: FullEmojiPickerPr
             bgcolor: surface.paper,
             width: 'min(360px, calc(100vw - 16px))',
             maxWidth: 'calc(100vw - 16px)',
-            maxHeight: 'calc(100vh - 16px)'
+            maxHeight: 'calc(100dvh - 16px)'
           }
         }
       }}
@@ -157,7 +182,7 @@ export function FullEmojiPicker({ anchorEl, onClose, onPick }: FullEmojiPickerPr
         </Box>
       ) : state === 'ready' ? (
         <Box
-          ref={host}
+          ref={setHost}
           sx={{
             // The element styles itself through custom properties rather than
             // a stylesheet, so the theme is handed to it this way.
@@ -168,8 +193,10 @@ export function FullEmojiPicker({ anchorEl, onClose, onPick }: FullEmojiPickerPr
               '--indicator-color': brand.pinkInk,
               '--num-columns': 8,
               width: '100%',
-              height: 'min(400px, calc(100vh - 96px))',
-              maxHeight: 'calc(100vh - 96px)',
+              // `dvh`: on a phone `vh` is the height with the browser's bars
+              // hidden, so a picker sized by it runs off the screen.
+              height: 'min(400px, calc(100dvh - 96px))',
+              maxHeight: 'calc(100dvh - 96px)',
               display: 'block'
             }
           }}

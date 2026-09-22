@@ -47,6 +47,22 @@ describe('FullEmojiPicker', () => {
     await waitFor(() => expect(baseElement.querySelector('emoji-picker')).toBeInTheDocument());
   });
 
+  it('fills the picker again when it is reopened, with nothing else re-rendering', async () => {
+    // The second open used to show an empty strip: the grid went in before the
+    // popover's portal had attached the box meant to hold it.
+    const anchor = document.createElement('button');
+    const onClose = () => {};
+    const onPick = () => {};
+    const { baseElement, rerender } = render(<FullEmojiPicker anchorEl={anchor} onClose={onClose} onPick={onPick} />);
+    await waitFor(() => expect(baseElement.querySelector('emoji-picker')).toBeInTheDocument());
+
+    rerender(<FullEmojiPicker anchorEl={null} onClose={onClose} onPick={onPick} />);
+    await waitFor(() => expect(baseElement.querySelector('emoji-picker')).toBeNull());
+
+    rerender(<FullEmojiPicker anchorEl={anchor} onClose={onClose} onPick={onPick} />);
+    await waitFor(() => expect(baseElement.querySelector('emoji-picker')).toBeInTheDocument());
+  });
+
   it('shows a loader while the chunk is on its way', () => {
     const anchor = document.createElement('button');
     render(<FullEmojiPicker anchorEl={anchor} onClose={() => {}} onPick={() => {}} />);
