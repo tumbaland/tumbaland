@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.511](https://github.com/toomastahves/tumbaland/compare/app-v0.0.510...app-v0.0.511) (2026-09-22)
+
+### Features
+
+* add avatar image for chats and profile ([68dbbad](https://github.com/toomastahves/tumbaland/commit/68dbbad6d1c4ecf728650e041e447d2c25d8508a))
+
 ## [0.0.510](https://github.com/toomastahves/tumbaland/compare/app-v0.0.509...app-v0.0.510) (2026-09-22)
 
 ### Bug Fixes
