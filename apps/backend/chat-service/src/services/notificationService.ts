@@ -1,48 +1,38 @@
 import { logger } from '@tumbaland/backend-core';
+import { setTimeout as delay } from 'timers/promises';
 import { IConversation } from '../models/Conversation';
 import { ReadState } from '../models/ReadState';
 import type { Caller } from './accessService';
 import { MessageView } from './messageService';
-import { sendToUsers } from './pushService';
-import { onlineInGroup } from './streamHub';
+import { isPushConfigured, sendToUsers } from './pushService';
 
 /**
- * How recently someone must have read the conversation to count as "looking at
- * it right now".
- *
- * Someone with the thread open has a live stream, which is the first check.
- * This is the second: a phone that has just backgrounded still has the app in
- * memory and the person is plainly present. Without it, two people typing at
- * each other get a buzz for every line.
+ * Give the foreground thread time to acknowledge this message. Having a
+ * stream open (possibly on another device) does not prove it was read.
  */
-const RECENTLY_ACTIVE_MS = 30_000;
+const READ_RECEIPT_GRACE_MS = 1500;
 
 /**
  * Who should get a phone buzz for this message.
  *
- * Everyone on the conversation's roster except the sender, minus anyone with
- * the app open, minus anyone who was reading it seconds ago.
+ * Everyone except the sender and people who have read this message already.
  */
 export async function recipientsFor(
   conversation: IConversation,
-  sender: Caller
+  sender: Caller,
+  messageCreatedAt: Date
 ): Promise<Array<{ userId: string; name: string }>> {
   const candidates = conversation.members.filter((member) => member.userId !== sender.id);
   if (candidates.length === 0) return [];
 
-  const online = onlineInGroup(conversation.groupId);
-  const offline = candidates.filter((member) => !online.has(member.userId));
-  if (offline.length === 0) return [];
-
-  const cutoff = new Date(Date.now() - RECENTLY_ACTIVE_MS);
   const recent = await ReadState.find({
     conversationId: conversation._id.toString(),
-    userId: { $in: offline.map((member) => member.userId) },
-    lastReadAt: { $gt: cutoff }
+    userId: { $in: candidates.map((member) => member.userId) },
+    lastReadAt: { $gte: messageCreatedAt }
   });
   const active = new Set(recent.map((state) => state.userId));
 
-  return offline
+  return candidates
     .filter((member) => !active.has(member.userId))
     .map((member) => ({ userId: member.userId, name: member.name }));
 }
@@ -61,7 +51,9 @@ export async function notifyNewMessage(
   message: MessageView
 ): Promise<void> {
   try {
-    const recipients = await recipientsFor(conversation, sender);
+    if (!isPushConfigured()) return;
+    await delay(READ_RECEIPT_GRACE_MS);
+    const recipients = await recipientsFor(conversation, sender, message.createdAt);
     if (recipients.length === 0) return;
 
     await sendToUsers(

@@ -30,15 +30,34 @@ export interface RegisterOptions {
  * Deliberately not on first paint: registration competes with the federated
  * modules for connections on the one load that decides how fast the app feels.
  */
-export function registerServiceWorker(onUpdateReady?: UpdateHandler, options: RegisterOptions = {}): void {
+export function registerServiceWorker(onUpdateReady?: UpdateHandler, options: RegisterOptions = {}): () => void {
   const { enabled = !import.meta.env.DEV } = options;
-  if (!enabled) return;
-  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+  if (!enabled || typeof window === 'undefined' || !('serviceWorker' in navigator)) return () => {};
 
-  window.addEventListener('load', () => {
+  let active = true;
+  let reloading = false;
+  // A first installation claiming its page is not an update. Reloading there
+  // can throw away the message the person started while the app was loading.
+  // Only that first claim is skipped: an update accepted later in the same
+  // session still has to reload onto the new code.
+  let hadController = Boolean(navigator.serviceWorker.controller);
+  const onControllerChange = () => {
+    if (!hadController) {
+      hadController = true;
+      return;
+    }
+    if (!active || reloading) return;
+    reloading = true;
+    window.location.reload();
+  };
+  navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+
+  const register = () => {
+    if (!active) return;
     navigator.serviceWorker
       .register('/sw.js')
       .then((registration) => {
+        if (!active) return;
         // Already waiting from a previous visit.
         if (registration.waiting) {
           waitingWorker = registration.waiting;
@@ -47,12 +66,12 @@ export function registerServiceWorker(onUpdateReady?: UpdateHandler, options: Re
 
         registration.addEventListener('updatefound', () => {
           const installing = registration.installing;
-          if (!installing) return;
+          if (!active || !installing) return;
 
           installing.addEventListener('statechange', () => {
             // `controller` is null on the very first install, which is not an
             // update and must not prompt.
-            if (installing.state === 'installed' && navigator.serviceWorker.controller) {
+            if (active && installing.state === 'installed' && navigator.serviceWorker.controller) {
               waitingWorker = installing;
               onUpdateReady?.();
             }
@@ -61,15 +80,17 @@ export function registerServiceWorker(onUpdateReady?: UpdateHandler, options: Re
       })
       .catch((error: Error) => logger.warn('Service worker registration failed', { error: error.message }));
 
-    // The new worker taking over is the moment to reload, rather than
-    // reloading immediately after asking it to activate.
-    let reloading = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (reloading) return;
-      reloading = true;
-      window.location.reload();
-    });
-  });
+  };
+
+  // Layout may mount after config/auth requests, long after `load` fired.
+  if (document.readyState === 'complete') register();
+  else window.addEventListener('load', register, { once: true });
+
+  return () => {
+    active = false;
+    window.removeEventListener('load', register);
+    navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+  };
 }
 
 /** Applies a waiting update. Called once the person accepts. */

@@ -78,21 +78,52 @@ export function decodeKey(base64: string): ArrayBuffer {
   return bytes.buffer;
 }
 
+const PUSH_STATE_CACHE = 'tumbaland-push-state';
+
+async function rememberPushConfig(): Promise<void> {
+  const { VAPID_PUBLIC_KEY, CHAT_API_URL } = getGlobalConfig();
+  await caches.open(PUSH_STATE_CACHE)
+    .then((cache) => cache.put('/__push-config', new Response(JSON.stringify({
+      publicKey: VAPID_PUBLIC_KEY, apiUrl: CHAT_API_URL
+    }))))
+    .catch(() => undefined);
+}
+
+async function readyRegistration(): Promise<ServiceWorkerRegistration> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('The app is still starting. Please try again.')), 15_000);
+      })
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** POSTs a subscription to chat-service, which stores it against the account. */
 async function registerWithServer(subscription: PushSubscriptionJSON): Promise<void> {
   const { CHAT_API_URL } = getGlobalConfig();
-  if (!CHAT_API_URL) return;
+  if (!CHAT_API_URL) throw new Error('Chat notifications are not configured for this deployment.');
 
-  await fetch(`${CHAT_API_URL}/api/chat/push/subscriptions`, {
+  const response = await fetch(`${CHAT_API_URL}/api/chat/push/subscriptions`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(15_000),
     body: JSON.stringify({
       endpoint: subscription.endpoint,
       keys: subscription.keys,
       platform: navigator.platform || ''
     })
   });
+  if (!response.ok) throw new Error('Could not save notification settings. Please try again.');
+  const result = (await response.json()) as { data?: { configured?: boolean } };
+  if (result.data?.configured !== true) {
+    throw new Error('The server is not configured to send notifications yet.');
+  }
 }
 
 /**
@@ -108,15 +139,14 @@ export async function enableNotifications(): Promise<PushSupport> {
 
   const { VAPID_PUBLIC_KEY } = getGlobalConfig();
   if (!VAPID_PUBLIC_KEY) {
-    logger.warn('No VAPID public key configured; chat notifications are unavailable');
-    return 'unsupported';
+    throw new Error('Chat notifications are not configured for this deployment.');
   }
 
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') return permission === 'denied' ? 'denied' : 'needs-permission';
 
   try {
-    const registration = await navigator.serviceWorker.ready;
+    const registration = await readyRegistration();
     const existing = await registration.pushManager.getSubscription();
     const subscription =
       existing ??
@@ -125,27 +155,28 @@ export async function enableNotifications(): Promise<PushSupport> {
         applicationServerKey: decodeKey(VAPID_PUBLIC_KEY)
       }));
 
-    // Stashed where the worker can read it: `pushsubscriptionchange` has to
-    // re-subscribe with the same key and a worker has no other storage that
-    // survives a restart.
-    await caches
-      .open('tumbaland-shell-v1')
-      .then((cache) => cache.put('/__vapid-key', new Response(VAPID_PUBLIC_KEY)))
-      .catch(() => undefined);
-
     await registerWithServer(subscription.toJSON());
+    await rememberPushConfig();
     return 'ready';
   } catch (error) {
     logger.warn('Could not subscribe to push', { error: (error as Error).message });
-    return 'unsupported';
+    throw new Error('Could not enable notifications. ' + (error as Error).message, { cause: error });
   }
 }
 
 export async function disableNotifications(): Promise<void> {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
   try {
-    const registration = await navigator.serviceWorker.ready;
+    const registration = await readyRegistration();
     const subscription = await registration.pushManager.getSubscription();
     if (!subscription) return;
+
+    // Stop delivery on this device even if the server is temporarily offline.
+    const unsubscribed = await subscription.unsubscribe();
+    if (!unsubscribed && await registration.pushManager.getSubscription()) {
+      throw new Error('Could not disable notifications. Please try again.');
+    }
+    await caches.open(PUSH_STATE_CACHE).then((cache) => cache.delete('/__push-config')).catch(() => undefined);
 
     const { CHAT_API_URL } = getGlobalConfig();
     if (CHAT_API_URL) {
@@ -153,12 +184,13 @@ export async function disableNotifications(): Promise<void> {
         method: 'DELETE',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ endpoint: subscription.endpoint })
-      });
+        body: JSON.stringify({ endpoint: subscription.endpoint }),
+        signal: AbortSignal.timeout(15_000)
+      }).catch(() => undefined);
     }
-    await subscription.unsubscribe();
   } catch (error) {
     logger.warn('Could not unsubscribe from push', { error: (error as Error).message });
+    throw error;
   }
 }
 
@@ -174,9 +206,12 @@ export async function refreshSubscription(): Promise<void> {
   if (pushSupport() !== 'ready') return;
 
   try {
-    const registration = await navigator.serviceWorker.ready;
+    const registration = await readyRegistration();
     const subscription = await registration.pushManager.getSubscription();
-    if (subscription) await registerWithServer(subscription.toJSON());
+    if (subscription) {
+      await registerWithServer(subscription.toJSON());
+      await rememberPushConfig();
+    }
   } catch (error) {
     logger.warn('Could not refresh the push subscription', { error: (error as Error).message });
   }

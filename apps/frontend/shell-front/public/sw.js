@@ -19,6 +19,7 @@
 
 const CACHE_VERSION = 'v1';
 const SHELL_CACHE = `tumbaland-shell-${CACHE_VERSION}`;
+const PUSH_STATE_CACHE = 'tumbaland-push-state';
 
 /**
  * Only what the app needs to paint something offline. Deliberately tiny:
@@ -44,7 +45,9 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== SHELL_CACHE).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(keys
+        .filter((key) => key.startsWith('tumbaland-shell-') && key !== SHELL_CACHE)
+        .map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
@@ -127,7 +130,8 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('push', (event) => {
   let payload = {};
   try {
-    payload = event.data ? event.data.json() : {};
+    const data = event.data ? event.data.json() : {};
+    payload = data && typeof data === 'object' ? data : {};
   } catch {
     payload = {};
   }
@@ -150,8 +154,8 @@ self.addEventListener('push', (event) => {
       self.registration.showNotification(title, options),
       // The dot on the home-screen icon. Supported on Android and on iOS 16.4+
       // for an installed app; absent elsewhere, hence the guard.
-      typeof payload.unread === 'number' && self.navigator.setAppBadge
-        ? self.navigator.setAppBadge(payload.unread).catch(() => undefined)
+      self.navigator.setAppBadge
+        ? self.navigator.setAppBadge(typeof payload.unread === 'number' ? payload.unread : undefined).catch(() => undefined)
         : Promise.resolve()
     ])
   );
@@ -166,19 +170,31 @@ self.addEventListener('push', (event) => {
  */
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const target = (event.notification.data && event.notification.data.url) || '/chat';
+  let target = new URL('/chat', self.location.origin);
+  try {
+    const requested = new URL(event.notification.data?.url || '/chat', self.location.origin);
+    if (requested.origin === self.location.origin) target = requested;
+  } catch { /* An invalid target still opens chat. */ }
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clients) => {
       for (const client of clients) {
-        // Same origin is enough: the client's own router handles the path, and
-        // matching the full URL would open a duplicate for a different thread.
         if (new URL(client.url).origin === self.location.origin && 'focus' in client) {
-          client.postMessage({ type: 'NAVIGATE', url: target });
-          return client.focus();
+          try {
+            // Focus first: the permission to raise a window only lasts briefly
+            // after the tap, and must not be spent waiting on a page load.
+            const focused = await client.focus();
+            // Routed in place rather than reloaded, so a half-typed message and
+            // the loaded modules survive. The page's message queue holds this
+            // until its listener is attached, so a just-woken page still gets it.
+            if (focused.url !== target.href) {
+              focused.postMessage({ type: 'NAVIGATE', url: target.pathname + target.search + target.hash });
+            }
+            return;
+          } catch { /* The window may have closed; try the next one. */ }
         }
       }
-      return self.clients.openWindow(target);
+      return self.clients.openWindow(target.href);
     })
   );
 });
@@ -194,20 +210,25 @@ self.addEventListener('notificationclick', (event) => {
 self.addEventListener('pushsubscriptionchange', (event) => {
   event.waitUntil(
     caches
-      .open(SHELL_CACHE)
-      .then((cache) => cache.match('/__vapid-key'))
-      .then((response) => (response ? response.text() : null))
-      .then((key) => {
-        if (!key) return null;
-        return self.registration.pushManager.subscribe({
+      .open(PUSH_STATE_CACHE)
+      .then((cache) => cache.match('/__push-config'))
+      .then((response) => (response ? response.json() : null))
+      .then(async (config) => {
+        if (!config?.publicKey || !config?.apiUrl) return;
+        const subscription = event.newSubscription || await self.registration.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: key
+          applicationServerKey: config.publicKey
         });
-      })
-      .then((subscription) => {
-        if (!subscription) return;
-        // The page re-registers on every start anyway; this tells any open one
-        // to do it now rather than waiting for the next launch.
+        // Rotation can happen with every window closed. Persist directly,
+        // using the same session cookie as the app, rather than only posting
+        // to windows that might not exist.
+        const response = await fetch(`${config.apiUrl}/api/chat/push/subscriptions`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(subscription.toJSON())
+        });
+        if (!response.ok) throw new Error('Could not register rotated push subscription');
         return self.clients
           .matchAll({ type: 'window', includeUncontrolled: true })
           .then((clients) =>

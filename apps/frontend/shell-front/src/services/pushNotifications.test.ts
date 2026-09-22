@@ -58,7 +58,7 @@ function setupBrowser(
   });
   if (hasPush) vi.stubGlobal('Notification', NotificationStub);
   vi.stubGlobal('caches', { open: vi.fn().mockResolvedValue({ put: vi.fn().mockResolvedValue(undefined) }) });
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }));
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ data: { configured: true } }) }));
   vi.stubGlobal('Response', class {});
 
   return NotificationStub;
@@ -173,6 +173,18 @@ describe('enableNotifications', () => {
     );
   });
 
+  it.each([401, 500])('does not claim success when registration fails (%i)', async (status) => {
+    setupBrowser({ permission: 'granted' });
+    vi.mocked(fetch).mockResolvedValue({ ok: false, status } as Response);
+    await expect(enableNotifications()).rejects.toThrow('Could not save notification settings');
+  });
+
+  it('reports missing server VAPID configuration', async () => {
+    setupBrowser({ permission: 'granted' });
+    vi.mocked(fetch).mockResolvedValue({ ok: true, json: async () => ({ data: { configured: false } }) } as Response);
+    await expect(enableNotifications()).rejects.toThrow('not configured');
+  });
+
   it('reuses an existing subscription rather than making a second one', async () => {
     const Notification = setupBrowser({ permission: 'granted' })!;
     Notification.requestPermission.mockResolvedValue('granted');
@@ -206,7 +218,7 @@ describe('enableNotifications', () => {
     setupBrowser({ permission: 'granted' });
     globalConfig.VAPID_PUBLIC_KEY = undefined;
 
-    expect(await enableNotifications()).toBe('unsupported');
+    await expect(enableNotifications()).rejects.toThrow();
     expect(pushManager.subscribe).not.toHaveBeenCalled();
   });
 
@@ -217,17 +229,17 @@ describe('enableNotifications', () => {
     expect(Notification).toBeUndefined();
   });
 
-  it('reports unsupported rather than throwing when subscribing fails', async () => {
+  it('reports a retryable error when subscribing fails', async () => {
     const Notification = setupBrowser({ permission: 'granted' })!;
     Notification.requestPermission.mockResolvedValue('granted');
     pushManager.subscribe.mockRejectedValue(new Error('AbortError'));
 
-    expect(await enableNotifications()).toBe('unsupported');
+    await expect(enableNotifications()).rejects.toThrow();
   });
 });
 
 describe('disableNotifications', () => {
-  it('tells the server and then unsubscribes', async () => {
+  it('unsubscribes and tells the server', async () => {
     setupBrowser({ permission: 'granted' });
     pushManager.getSubscription.mockResolvedValue(subscription);
 
@@ -238,6 +250,22 @@ describe('disableNotifications', () => {
       expect.objectContaining({ method: 'DELETE' })
     );
     expect(subscription.unsubscribe).toHaveBeenCalled();
+  });
+
+  it('still disables the browser subscription when the server is offline', async () => {
+    setupBrowser({ permission: 'granted' });
+    pushManager.getSubscription.mockResolvedValue(subscription);
+    vi.mocked(fetch).mockRejectedValue(new Error('offline'));
+    await expect(disableNotifications()).resolves.toBeUndefined();
+    expect(subscription.unsubscribe).toHaveBeenCalled();
+  });
+
+  it('does not claim success if the browser refuses to unsubscribe', async () => {
+    setupBrowser({ permission: 'granted' });
+    pushManager.getSubscription.mockResolvedValue(subscription);
+    subscription.unsubscribe.mockResolvedValueOnce(false);
+    await expect(disableNotifications()).rejects.toThrow('Could not disable');
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it('does nothing when there is no subscription', async () => {

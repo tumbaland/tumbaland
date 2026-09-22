@@ -151,6 +151,22 @@ describe('the heartbeat watchdog', () => {
     expect(first.closed).toBe(true);
   });
 
+  it('keeps an idle connection alive using heartbeat events without forwarding them', () => {
+    const onEvent = vi.fn();
+    renderHook(() => useChatStream({ onEvent, onResync: vi.fn() }));
+    act(() => latest().open());
+    const stream = latest();
+    for (let i = 0; i < 5; i++) {
+      act(() => {
+        vi.advanceTimersByTime(25_000);
+        stream.emit('heartbeat', {});
+      });
+    }
+    expect(stream.closed).toBe(false);
+    expect(onEvent).not.toHaveBeenCalled();
+    expect(FakeEventSource.instances).toHaveLength(1);
+  });
+
   it('stays connected while traffic keeps arriving', () => {
     renderHook(() => useChatStream({ onEvent: vi.fn(), onResync: vi.fn() }));
     act(() => latest().open());
@@ -168,6 +184,44 @@ describe('the heartbeat watchdog', () => {
 });
 
 describe('reconnecting', () => {
+  it('resyncs after a transient transport error, not just a CLOSED error', () => {
+    const onResync = vi.fn();
+    renderHook(() => useChatStream({ onEvent: vi.fn(), onResync }));
+    act(() => latest().open());
+    act(() => {
+      latest().readyState = FakeEventSource.CONNECTING;
+      latest().onerror?.();
+      vi.advanceTimersByTime(2000);
+      latest().open();
+      latest().emit('conversation.updated', ready);
+    });
+    expect(onResync).toHaveBeenCalled();
+  });
+
+  it('resumes polling after returning from the background at the stream cap', () => {
+    const onResync = vi.fn();
+    renderHook(() => useChatStream({ onEvent: vi.fn(), onResync }));
+    act(() => latest().emit('conversation.updated', { payload: { error: 'too_many_streams' } }));
+    visibility = 'hidden';
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+      vi.advanceTimersByTime(60_000);
+    });
+    expect(onResync).not.toHaveBeenCalled();
+    visibility = 'visible';
+    act(() => document.dispatchEvent(new Event('visibilitychange')));
+    onResync.mockClear();
+    act(() => vi.advanceTimersByTime(POLL_INTERVAL_MS));
+    expect(onResync).toHaveBeenCalled();
+    expect(FakeEventSource.instances).toHaveLength(1);
+  });
+
+  it('does not open a stream while the page starts hidden', () => {
+    visibility = 'hidden';
+    renderHook(() => useChatStream({ onEvent: vi.fn(), onResync: vi.fn() }));
+    expect(FakeEventSource.instances).toHaveLength(0);
+  });
+
   it('reports offline and retries after a hard failure', () => {
     const onStateChange = vi.fn();
     renderHook(() => useChatStream({ onEvent: vi.fn(), onResync: vi.fn(), onStateChange }));
@@ -256,7 +310,7 @@ describe('reconnecting', () => {
 });
 
 describe('going to the background', () => {
-  it('drops the connection after a grace period, so a hidden tab costs no battery', () => {
+  it('closes immediately when hidden before mobile timers can be frozen', () => {
     renderHook(() => useChatStream({ onEvent: vi.fn(), onResync: vi.fn() }));
     act(() => latest().open());
     const stream = latest();
@@ -264,13 +318,12 @@ describe('going to the background', () => {
     visibility = 'hidden';
     act(() => {
       document.dispatchEvent(new Event('visibilitychange'));
-      vi.advanceTimersByTime(31_000);
     });
 
     expect(stream.closed).toBe(true);
   });
 
-  it('keeps the connection through a brief switch away', () => {
+  it('rebuilds the connection even after a brief switch away', () => {
     renderHook(() => useChatStream({ onEvent: vi.fn(), onResync: vi.fn() }));
     act(() => latest().open());
     const stream = latest();
@@ -283,7 +336,8 @@ describe('going to the background', () => {
     visibility = 'visible';
     act(() => document.dispatchEvent(new Event('visibilitychange')));
 
-    expect(stream.closed).toBe(false);
+    expect(stream.closed).toBe(true);
+    expect(FakeEventSource.instances).toHaveLength(2);
   });
 
   it('reconnects and refetches on return', () => {
@@ -294,7 +348,6 @@ describe('going to the background', () => {
     visibility = 'hidden';
     act(() => {
       document.dispatchEvent(new Event('visibilitychange'));
-      vi.advanceTimersByTime(31_000);
     });
 
     const afterHidden = FakeEventSource.instances.length;

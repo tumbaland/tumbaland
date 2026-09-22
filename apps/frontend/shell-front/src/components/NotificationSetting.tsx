@@ -30,7 +30,7 @@ import {
 
 const EXPLANATION: Record<Exclude<PushSupport, 'ready' | 'needs-permission'>, string> = {
   'needs-install': 'Add Tumbaland to your Home Screen first, then turn this on from there.',
-  denied: 'Notifications are blocked. Turn them back on in your browser settings for this site.',
+  denied: 'Notifications are blocked. Enable them in your device or browser notification settings.',
   unsupported: 'This browser cannot show notifications.'
 };
 
@@ -38,6 +38,7 @@ export function NotificationSetting() {
   const [support, setSupport] = useState<PushSupport>('unsupported');
   const [enabled, setEnabled] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const state = pushSupport();
@@ -59,6 +60,7 @@ export function NotificationSetting() {
 
   const toggle = async () => {
     setBusy(true);
+    setError(null);
     try {
       if (enabled) {
         await disableNotifications();
@@ -68,6 +70,8 @@ export function NotificationSetting() {
         setSupport(result);
         setEnabled(result === 'ready');
       }
+    } catch (error) {
+      setError((error as Error).message || 'Could not change notifications. Please try again.');
     } finally {
       setBusy(false);
     }
@@ -91,6 +95,7 @@ export function NotificationSetting() {
 
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <ListItemText primary="Message notifications" sx={{ my: 0 }} />
+        {error && <Typography role="alert" variant="caption" color="error" sx={{ whiteSpace: 'normal' }}>{error}</Typography>}
         {unavailable && (
           <Typography variant="caption" sx={{ color: ink.muted, display: 'block', whiteSpace: 'normal' }}>
             {EXPLANATION[support]}

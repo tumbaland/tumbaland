@@ -13,58 +13,12 @@ it every day.
 
 ---
 
-## 1. Blocker: there is no way to start a conversation
-
-Chat cannot be used at all right now. `ensureConversation` exists in
-`chat-front/src/services/chatApi.ts` and nothing calls it. Creating a group in Groups is
-not enough: a conversation is a separate record, so the list stays empty and shows "No
-conversations yet" forever.
-
-**The fix.** chat-service already knows the caller's groups on every request
-(`req.userGroups`), so the client does not need to know a group id at all:
-
-- [ ] Add `POST /api/chat/conversations/mine` to chat-service: for each of
-      `req.userGroups`, call the existing `ensureConversation`, and return the list. It is
-      idempotent already, through the unique `{ groupId, title }` index, so calling it on
-      every app open is safe.
-- [ ] `ConversationsPage` calls it once before listing, rather than listing an empty
-      result. With one group that lands straight in the thread, which is the normal case
-      for two people.
-- [ ] Keep the empty state for someone with no group at all, but make it a link to
-      `/groups` rather than a sentence telling them to go there.
-
-Without this nothing else on this list matters.
-
----
-
-## 2. Deploy
-
-Nothing here is in the repo, so it has to be done by hand once.
-
-- [ ] **GitHub variables**: `CHAT_API_URL=https://chat-api.tumbaland.eu`,
-      `CHAT_FRONT_URL=https://chat.tumbaland.eu`, `VAPID_PUBLIC_KEY`,
-      `VAPID_SUBJECT=mailto:...`
-- [ ] **GitHub secret**: `VAPID_PRIVATE_KEY`. Generate the pair with
-      `npx web-push generate-vapid-keys`.
-- [ ] **`CORS_ORIGIN`** must include `https://tumbaland.eu`, or chat-api refuses the
-      shell's credentialed requests.
-- [ ] **Cloudflare tunnel**: add the public hostnames `chat.tumbaland.eu` and
-      `chat-api.tumbaland.eu`. A subdomain that is not added answers 404 rather than
-      failing loudly.
-- [ ] Deploy in this order: `tumbaland-proxy` (infrastructure), then `chat-service`, then
-      `chat-front`, then `shell-front` last, since that is what serves `sw.js`.
-
-VAPID is optional. With those three blank chat runs normally and simply sends no
-notifications, so it can be deployed before the keys exist.
-
----
-
-## 3. The first week of real use
+## 1. The first week of real use
 
 Each of these is something that will be wanted within days, roughly in the order it will
 come up.
 
-### 3.1 Unsend a message
+### 1.1 Unsend a message
 
 The backend and `useChatThread` both support editing and deleting. No UI calls either, so
 a message sent to the wrong person or with the wrong word stays.
@@ -75,7 +29,7 @@ a message sent to the wrong person or with the wrong word stays.
 - [ ] Editing puts the text back in the composer with a "save" state rather than opening a
       dialog.
 
-### 3.2 The read receipt is wrong
+### 1.2 The read receipt is wrong
 
 `readBy` in `useChatThread` accumulates names and is never cleared, so once she has read
 anything it says "Read by Irja" under everything, including messages she has not seen. A
@@ -85,7 +39,7 @@ receipt that is always on is worse than none.
       event) and show the tick on the newest message at or before it, rather than a line
       under the whole thread.
 
-### 3.3 Replying to a specific message
+### 1.3 Replying to a specific message
 
 `replyTo` works end to end in the API, the model and the stream. Nothing in the UI sets or
 shows it. With two people this matters more than it sounds: answering something from an
@@ -95,7 +49,7 @@ hour ago is otherwise ambiguous.
 - [ ] A preview strip above the composer, dismissible.
 - [ ] The quoted line inside the bubble, tapping which scrolls to the original.
 
-### 3.4 Messages typed with no signal
+### 1.4 Messages typed with no signal
 
 Nothing is queued. A message composed on the underground is marked failed and is lost on
 reload, because the outbox is in memory.
@@ -104,7 +58,7 @@ reload, because the outbox is in memory.
       reconnect. The `clientId` already makes a replay safe, so this is storage rather
       than new protocol.
 
-### 3.5 Searching your own history
+### 1.5 Searching your own history
 
 `chatApi.search` and the service route exist, with a text index. No UI.
 
@@ -113,7 +67,7 @@ reload, because the outbox is in memory.
 
 ---
 
-## 4. Worth doing once it is in daily use
+## 2. Worth doing once it is in daily use
 
 - [ ] **Share to Tumbaland from the phone's share sheet** (the old Phase 8). Android only:
       Safari does not implement Web Share Target, so on iOS the in-app picker stays the
@@ -130,7 +84,7 @@ reload, because the outbox is in memory.
 
 ---
 
-## 5. Known limits, written down rather than fixed
+## 3. Known limits, written down rather than fixed
 
 - **Single replica.** The SSE subscriber set lives in memory, so chat-service cannot run
   two containers without a pub/sub bus in front of `publishToGroup`. Every service here is
@@ -149,7 +103,7 @@ reload, because the outbox is in memory.
 
 ---
 
-## 6. Two things owed to the rest of the repo
+## 4. Two things owed to the rest of the repo
 
 Both are deferred for the same reason: a Docker build installs `@tumbaland/*` from the
 registry, so anything added to a library's source only reaches production after that

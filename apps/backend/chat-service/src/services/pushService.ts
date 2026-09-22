@@ -91,16 +91,13 @@ export async function removeSubscription(userId: string, endpoint: string): Prom
   await PushSubscription.deleteOne({ endpoint, userId });
 }
 
-/** How many failures an endpoint gets before it is dropped. */
-const MAX_FAILURES = 3;
-
 /**
  * Sends to every device the recipients have registered.
  *
  * Failures are handled per endpoint: a 404 or 410 means the browser threw the
  * subscription away and the row is deleted immediately. Anything else is
- * counted, and an endpoint that fails repeatedly is dropped too. Dead endpoints
- * otherwise accumulate until most of every send is errors.
+ * counted for diagnostics. Temporary provider outages must not permanently
+ * unsubscribe phones that are still registered.
  */
 export async function sendToUsers(userIds: string[], payload: PushPayload): Promise<number> {
   if (!isPushConfigured() || userIds.length === 0) return 0;
@@ -117,9 +114,12 @@ export async function sendToUsers(userIds: string[], payload: PushPayload): Prom
         await webpush.sendNotification(
           { endpoint: subscription.endpoint, keys: subscription.keys },
           body,
-          { TTL: 60 * 60 }
+          { TTL: 60 * 60, urgency: 'high', timeout: 10_000 }
         );
         delivered++;
+        if (subscription.failureCount > 0) {
+          await PushSubscription.updateOne({ _id: subscription._id }, { $set: { failureCount: 0 } });
+        }
       } catch (error) {
         const status = (error as { statusCode?: number }).statusCode;
 
@@ -129,14 +129,9 @@ export async function sendToUsers(userIds: string[], payload: PushPayload): Prom
           return;
         }
 
-        const failures = subscription.failureCount + 1;
-        if (failures >= MAX_FAILURES) {
-          await PushSubscription.deleteOne({ _id: subscription._id });
-        } else {
-          await PushSubscription.updateOne({ _id: subscription._id }, { $set: { failureCount: failures } });
-        }
+        await PushSubscription.updateOne({ _id: subscription._id }, { $inc: { failureCount: 1 } });
 
-        logger.warn('Web Push send failed', { status, failures, error: (error as Error).message });
+        logger.warn('Web Push send failed', { status, error: (error as Error).message });
       }
     })
   );

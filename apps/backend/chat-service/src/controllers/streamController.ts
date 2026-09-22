@@ -67,15 +67,13 @@ export const stream = async (req: Request, res: Response): Promise<void> => {
     })
   );
 
-  await replayMissed(req, res, person);
-
   const heartbeat = setInterval(() => {
-    // A comment line: valid SSE, ignored by EventSource, keeps the proxy from
-    // closing the connection.
+    // Comments are invisible to browser JavaScript. A named event keeps both
+    // the proxy and the client's watchdog alive without advancing the cursor.
     try {
-      res.write(': ping\n\n');
+      res.write('event: heartbeat\ndata: {}\n\n');
     } catch {
-      clearInterval(heartbeat);
+      close();
     }
   }, HEARTBEAT_MS);
 
@@ -106,6 +104,9 @@ export const stream = async (req: Request, res: Response): Promise<void> => {
   req.on('close', close);
   res.on('close', close);
   res.on('error', close);
+
+  // Install cleanup before any I/O: a phone can disappear during replay.
+  await replayMissed(req, res, person);
 };
 
 /**
@@ -133,9 +134,11 @@ async function replayMissed(
   try {
     const reachable = await listConversations(person);
     for (const conversation of reachable) {
+      if (res.destroyed || res.writableEnded) return;
       const page = await listMessages(conversation.id, { after: new Date(since).toISOString(), limit: 100 });
       // listMessages returns newest first; replay in the order they happened.
       for (const message of [...page.messages].reverse()) {
+        if (res.destroyed || res.writableEnded) return;
         res.write(
           formatEvent({
             type: 'message.created',

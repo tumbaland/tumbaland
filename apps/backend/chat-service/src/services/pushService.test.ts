@@ -145,16 +145,17 @@ describe('sendToUsers', () => {
     await sendToUsers(['u-irja'], payload());
 
     expect(mocked.deleteOne).not.toHaveBeenCalled();
-    expect(mocked.updateOne).toHaveBeenCalledWith({ _id: 'sub-1' }, { $set: { failureCount: 1 } });
+    expect(mocked.updateOne).toHaveBeenCalledWith({ _id: 'sub-1' }, { $inc: { failureCount: 1 } });
   });
 
-  it('drops a device that has failed too many times', async () => {
+  it('keeps registered devices through repeated provider outages', async () => {
     mocked.find.mockResolvedValue([subscription({ failureCount: 2 })]);
     sendNotification.mockRejectedValue(Object.assign(new Error('boom'), { statusCode: 500 }));
 
     await sendToUsers(['u-irja'], payload());
 
-    expect(mocked.deleteOne).toHaveBeenCalledWith({ _id: 'sub-1' });
+    expect(mocked.deleteOne).not.toHaveBeenCalled();
+    expect(mocked.updateOne).toHaveBeenCalledWith({ _id: 'sub-1' }, { $inc: { failureCount: 1 } });
   });
 
   it('keeps delivering to the healthy devices when one fails', async () => {

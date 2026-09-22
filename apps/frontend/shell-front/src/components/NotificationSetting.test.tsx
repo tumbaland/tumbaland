@@ -94,6 +94,29 @@ describe('when notifications can be turned on', () => {
     expect(disableNotifications).toHaveBeenCalled();
   });
 
+  it('shows registration errors and lets the user retry', async () => {
+    enableNotifications.mockRejectedValueOnce(new Error('Server unavailable. Try again.'));
+    render(<NotificationSetting />);
+    await userEvent.click(screen.getByText('Message notifications'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Server unavailable');
+    expect(screen.getByRole('switch')).not.toBeChecked();
+    expect(screen.getByRole('switch')).not.toBeDisabled();
+    await userEvent.click(screen.getByText('Message notifications'));
+    await waitFor(() => expect(screen.getByRole('switch')).toBeChecked());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('keeps the switch on if disabling fails', async () => {
+    pushSupport.mockReturnValue('ready');
+    getSubscription.mockResolvedValue({ endpoint: 'https://push/abc' });
+    disableNotifications.mockRejectedValueOnce(new Error('Could not disable notifications'));
+    render(<NotificationSetting />);
+    await waitFor(() => expect(screen.getByRole('switch')).toBeChecked());
+    await userEvent.click(screen.getByText('Message notifications'));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(screen.getByRole('switch')).toBeChecked();
+  });
+
   it('stays off when permission is refused', async () => {
     enableNotifications.mockResolvedValue('denied');
     render(<NotificationSetting />);
@@ -119,7 +142,7 @@ describe('when notifications cannot be turned on', () => {
 
     render(<NotificationSetting />);
 
-    expect(screen.getByText(/browser settings/)).toBeInTheDocument();
+    expect(screen.getByText(/device or browser/)).toBeInTheDocument();
   });
 
   it('says plainly when the browser cannot do it at all', () => {

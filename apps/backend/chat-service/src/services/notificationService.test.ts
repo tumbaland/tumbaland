@@ -1,4 +1,5 @@
-jest.mock('./pushService', () => ({ sendToUsers: jest.fn(async () => 1) }));
+jest.mock('./pushService', () => ({ sendToUsers: jest.fn(async () => 1), isPushConfigured: () => true }));
+jest.mock('timers/promises', () => ({ setTimeout: jest.fn(async () => undefined) }));
 jest.mock('./streamHub', () => ({ onlineInGroup: jest.fn(() => new Set<string>()) }));
 jest.mock('../models/ReadState', () => ({ ReadState: { find: jest.fn(async () => []) } }));
 
@@ -24,7 +25,7 @@ function member(userId: string, name: string) {
 }
 
 const message = (overrides: Partial<MessageView> = {}) =>
-  ({ id: 'm1', body: 'hello', attachments: [], ...overrides }) as MessageView;
+  ({ id: 'm1', body: 'hello', attachments: [], createdAt: new Date(), ...overrides }) as MessageView;
 
 beforeEach(() => {
   (onlineInGroup as jest.Mock).mockReturnValue(new Set<string>());
@@ -35,38 +36,38 @@ afterEach(() => jest.clearAllMocks());
 
 describe('recipientsFor', () => {
   it('is everyone on the roster except the sender', async () => {
-    expect(await recipientsFor(conversation(), TOM)).toEqual([{ userId: 'u-irja', name: 'Irja' }]);
+    expect(await recipientsFor(conversation(), TOM, new Date())).toEqual([{ userId: 'u-irja', name: 'Irja' }]);
   });
 
-  it('skips anyone with the app open', async () => {
+  it('notifies connected users who have not read this message', async () => {
     (onlineInGroup as jest.Mock).mockReturnValue(new Set(['u-irja']));
 
-    expect(await recipientsFor(conversation(), TOM)).toEqual([]);
+    expect(await recipientsFor(conversation(), TOM, new Date())).toEqual([{ userId: 'u-irja', name: 'Irja' }]);
   });
 
-  it('skips anyone who was reading the thread seconds ago', async () => {
+  it('skips only recipients who have read this message', async () => {
     // Two people typing at each other should not buzz each other's phones.
     (ReadState.find as jest.Mock).mockResolvedValue([{ userId: 'u-irja' }]);
 
-    expect(await recipientsFor(conversation(), TOM)).toEqual([]);
+    expect(await recipientsFor(conversation(), TOM, new Date())).toEqual([]);
   });
 
   it('still notifies someone whose last read was long ago', async () => {
     (ReadState.find as jest.Mock).mockResolvedValue([]);
 
-    expect(await recipientsFor(conversation(), TOM)).toHaveLength(1);
+    expect(await recipientsFor(conversation(), TOM, new Date())).toHaveLength(1);
   });
 
   it('is empty when the sender is the only person on the roster', async () => {
-    expect(await recipientsFor(conversation([member('u-tom', 'Tom')]), TOM)).toEqual([]);
+    expect(await recipientsFor(conversation([member('u-tom', 'Tom')]), TOM, new Date())).toEqual([]);
   });
 
-  it('asks nothing of the database when everyone is already online', async () => {
+  it('checks this message receipt even if someone has a stream open', async () => {
     (onlineInGroup as jest.Mock).mockReturnValue(new Set(['u-irja']));
 
-    await recipientsFor(conversation(), TOM);
+    await recipientsFor(conversation(), TOM, new Date());
 
-    expect(ReadState.find).not.toHaveBeenCalled();
+    expect(ReadState.find).toHaveBeenCalledWith(expect.objectContaining({ lastReadAt: { $gte: expect.any(Date) } }));
   });
 });
 
@@ -125,8 +126,8 @@ describe('notifyNewMessage', () => {
     expect((sendToUsers as jest.Mock).mock.calls[0]![1].body).toHaveLength(140);
   });
 
-  it('sends nothing when there is nobody to tell', async () => {
-    (onlineInGroup as jest.Mock).mockReturnValue(new Set(['u-irja']));
+  it('sends nothing when the recipient has already read it', async () => {
+    (ReadState.find as jest.Mock).mockResolvedValue([{ userId: 'u-irja' }]);
 
     await notifyNewMessage(conversation(), TOM, message());
 

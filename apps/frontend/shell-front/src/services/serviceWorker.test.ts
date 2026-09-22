@@ -41,6 +41,7 @@ beforeEach(() => {
   });
   vi.stubGlobal('window', {
     addEventListener: (event: string, handler: () => void) => event === 'load' && handler(),
+    removeEventListener: vi.fn(),
     location: { reload: vi.fn(), href: 'https://tumbaland.test/' }
   });
   __setWaitingWorker(null);
@@ -59,6 +60,45 @@ describe('registerServiceWorker', () => {
     await Promise.resolve();
 
     expect(register).toHaveBeenCalledWith('/sw.js');
+  });
+
+  it('registers when the layout mounts after the page has already loaded', async () => {
+    register.mockResolvedValue(fakeRegistration());
+    vi.spyOn(document, 'readyState', 'get').mockReturnValue('complete');
+    window.addEventListener = vi.fn();
+
+    registerServiceWorker(undefined, { enabled: true });
+    await Promise.resolve();
+
+    expect(register).toHaveBeenCalledWith('/sw.js');
+    vi.restoreAllMocks();
+  });
+
+  it('does not reload when the first worker claims the page', async () => {
+    controller = null;
+    register.mockResolvedValue(fakeRegistration());
+    registerServiceWorker(undefined, { enabled: true });
+    await Promise.resolve();
+    swListeners.get('controllerchange')?.(undefined);
+    expect(window.location.reload).not.toHaveBeenCalled();
+  });
+
+  it('reloads for an update accepted after the first worker claimed the page', async () => {
+    controller = null;
+    register.mockResolvedValue(fakeRegistration());
+    registerServiceWorker(undefined, { enabled: true });
+    await Promise.resolve();
+    swListeners.get('controllerchange')?.(undefined);
+    swListeners.get('controllerchange')?.(undefined);
+    expect(window.location.reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('removes listeners when the layout unmounts', () => {
+    register.mockResolvedValue(fakeRegistration());
+    const stop = registerServiceWorker(undefined, { enabled: true });
+    stop();
+    expect(swListeners.has('controllerchange')).toBe(false);
+    expect(window.removeEventListener).toHaveBeenCalledWith('load', expect.any(Function));
   });
 
   it('reports an update that was already waiting from a previous visit', async () => {

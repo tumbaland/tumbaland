@@ -123,14 +123,26 @@ describe('subscription lifecycle', () => {
     expect(openStreamCount()).toBe(0);
   });
 
-  it('sends a heartbeat comment so the proxy does not close the connection', async () => {
+  it('unsubscribes if the phone disconnects while replay is still loading', async () => {
+    let finish!: (rows: unknown[]) => void;
+    (listConversations as jest.Mock).mockReturnValueOnce(new Promise((resolve) => { finish = resolve; }));
+    const req = fakeReq({ 'Last-Event-ID': String(Date.now() - 1000) });
+    const pending = run(req, fakeRes());
+    req.fire('close');
+    expect(openStreamCount()).toBe(0);
+    finish([]);
+    await pending;
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  it('sends a heartbeat event the browser watchdog can observe', async () => {
     const res = fakeRes();
     await run(fakeReq(), res);
     const before = res.written.length;
 
     jest.advanceTimersByTime(25_000);
 
-    expect(res.written.slice(before).join('')).toContain(': ping');
+    expect(res.written.slice(before).join('')).toBe('event: heartbeat\ndata: {}\n\n');
   });
 
   it('stops the heartbeat once the client disconnects', async () => {

@@ -14,7 +14,7 @@ import type { ChatEvent } from '../types';
  *
  * - **A heartbeat watchdog.** iOS suspends a backgrounded EventSource without
  *   firing `error` or `close`. The connection looks open and delivers nothing,
- *   forever. The server sends a comment every 25s; if two go missing the
+ *   forever. The server sends a heartbeat event every 25s; if two go missing the
  *   connection is treated as dead and rebuilt.
  * - **Close when hidden.** A backgrounded tab holding a stream open is what
  *   makes chat apps eat battery. While hidden, push is the notification path;
@@ -34,9 +34,6 @@ const DEFAULT_HEARTBEAT_MS = 25_000;
 export const FAILURES_BEFORE_POLLING = 3;
 
 export const POLL_INTERVAL_MS = 10_000;
-
-/** How long a hidden tab keeps its stream before dropping it. */
-const HIDDEN_GRACE_MS = 30_000;
 
 export type ConnectionState = 'connecting' | 'live' | 'polling' | 'offline';
 
@@ -71,12 +68,13 @@ export function useChatStream({ onEvent, onResync, onStateChange, enabled = true
     let source: EventSource | null = null;
     let watchdog: ReturnType<typeof setTimeout> | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-    let hiddenTimer: ReturnType<typeof setTimeout> | null = null;
     let pollTimer: ReturnType<typeof setInterval> | null = null;
     let heartbeatMs = DEFAULT_HEARTBEAT_MS;
     let failures = 0;
     let lastEventId = '';
     let stopped = false;
+    let pollingOnly = false;
+    let hasConnected = false;
     /**
      * Whether this connection replaces one that dropped.
      *
@@ -114,7 +112,7 @@ export function useChatStream({ onEvent, onResync, onStateChange, enabled = true
     };
 
     const startPolling = () => {
-      if (pollTimer) return;
+      if (pollTimer || stopped || document.visibilityState === 'hidden') return;
       setState('polling');
       pollTimer = setInterval(() => onResyncRef.current(), POLL_INTERVAL_MS);
     };
@@ -137,10 +135,16 @@ export function useChatStream({ onEvent, onResync, onStateChange, enabled = true
     };
 
     function connect(): void {
-      if (stopped || source) return;
+      if (stopped || source || document.visibilityState === 'hidden') return;
+      if (pollingOnly || typeof EventSource === 'undefined') {
+        startPolling();
+        return;
+      }
+      clearTimers();
 
-      reconnecting = failures > 0;
-      setState('connecting');
+      reconnecting = hasConnected;
+      hasConnected = true;
+      setState(pollTimer ? 'polling' : 'connecting');
 
       // The last id is passed in the query string as well as relied on through
       // the browser's own `Last-Event-ID` header: after an explicit close the
@@ -151,32 +155,35 @@ export function useChatStream({ onEvent, onResync, onStateChange, enabled = true
 
       const stream = new EventSource(url.toString(), { withCredentials: true });
       source = stream;
+      // Also bounds an initial connection that never opens or reports error.
+      armWatchdog();
 
       stream.onopen = () => {
+        if (source !== stream || stopped) return;
         failures = 0;
         stopPolling();
         setState('live');
         armWatchdog();
       };
 
-      // A comment (the heartbeat) fires no event, but any traffic resets the
-      // browser's internal state; the watchdog is re-armed on every message,
-      // and the server's frames are frequent enough to serve as the signal.
-      stream.onmessage = () => armWatchdog();
+      const heartbeat = () => {
+        if (source === stream && !stopped) armWatchdog();
+      };
+      stream.onmessage = heartbeat;
+      stream.addEventListener('heartbeat', heartbeat);
 
       stream.onerror = () => {
-        // EventSource reconnects by itself, but only for a transport error. A
-        // 401 or a 429 closes it for good, and this is the only notice.
-        if (stream.readyState === EventSource.CLOSED) {
-          closeStream();
-          setState('offline');
-          scheduleReconnect();
-        }
+        if (source !== stream || stopped) return;
+        // Own every reconnect, including CONNECTING errors. Otherwise the
+        // browser can reconnect silently without triggering a thread resync.
+        closeStream();
+        setState('offline');
+        scheduleReconnect();
       };
 
       const handle = (event: MessageEvent) => {
+        if (source !== stream || stopped) return;
         armWatchdog();
-        if (event.lastEventId) lastEventId = event.lastEventId;
 
         let parsed: ChatEvent;
         try {
@@ -205,11 +212,12 @@ export function useChatStream({ onEvent, onResync, onStateChange, enabled = true
           // retrying would just take a slot from the tab the user is looking at.
           logger.warn('Too many chat streams open; falling back to polling');
           closeStream();
+          pollingOnly = true;
           startPolling();
-          stopped = true;
           return;
         }
 
+        if (event.lastEventId) lastEventId = event.lastEventId;
         onEventRef.current(parsed);
       };
 
@@ -228,17 +236,13 @@ export function useChatStream({ onEvent, onResync, onStateChange, enabled = true
 
     const onVisibility = () => {
       if (document.visibilityState === 'hidden') {
-        // A grace period, so switching apps for a moment does not cost a
-        // reconnect on the way back.
-        hiddenTimer = setTimeout(() => {
-          closeStream();
-          stopPolling();
-        }, HIDDEN_GRACE_MS);
+        // Mobile browsers may freeze timers immediately. Do not leave cleanup
+        // to a timer that may never run while the phone is locked.
+        closeStream();
+        stopPolling();
         return;
       }
 
-      if (hiddenTimer) clearTimeout(hiddenTimer);
-      hiddenTimer = null;
       if (!source && !stopped) {
         failures = 0;
         connect();
@@ -250,9 +254,11 @@ export function useChatStream({ onEvent, onResync, onStateChange, enabled = true
     };
 
     const onOnline = () => {
-      if (!source && !stopped) {
+      if (!stopped && document.visibilityState !== 'hidden') {
+        closeStream();
         failures = 0;
         connect();
+        onResyncRef.current();
       }
     };
 
@@ -264,7 +270,6 @@ export function useChatStream({ onEvent, onResync, onStateChange, enabled = true
       stopped = true;
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('online', onOnline);
-      if (hiddenTimer) clearTimeout(hiddenTimer);
       stopPolling();
       closeStream();
     };
