@@ -149,7 +149,7 @@ it('shows the navigation once a session is confirmed', async () => {
   renderAt('/');
 
   expect(await screen.findByRole('link', { name: 'Album' })).toBeInTheDocument();
-  expect(screen.getByRole('link', { name: 'Money' })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Journal' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Account' })).toBeInTheDocument();
 });
 

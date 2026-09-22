@@ -2,17 +2,17 @@
  * The exchange the hero plays.
  *
  * It is the whole pitch, so it is a session rather than a list of example
- * prompts: say what happened, then ask about the money, then go looking for
- * the photos. Three modules in three turns, which is the claim the page makes.
+ * prompts: say what happened, ask what you have been doing together, then go
+ * looking for the photos. All three are about the two of you, which is what
+ * the app is for.
  *
  * Every tool named here is one the MCP server actually ships, under the name
- * it actually has. The numbers are illustrative: they are shaped like a real
- * year of restaurant spending, but nobody's real spending belongs on a public
- * page.
+ * it actually has. The numbers are illustrative: nobody's real evenings belong
+ * on a public page.
  */
 
 /** What the answer arrives with. Each one is drawn by ChatPlayback. */
-export type ChatCard = 'entry' | 'spending' | 'photos';
+export type ChatCard = 'entry' | 'stats' | 'photos';
 
 export interface ChatTurn {
   from: 'you' | 'assistant';
@@ -30,12 +30,12 @@ export const CHAT: ChatTurn[] = [
     tools: ['list_activity_types', 'log_day'],
     card: 'entry'
   },
-  { from: 'you', text: 'how much did we spend on restaurants this year?' },
+  { from: 'you', text: 'what have we been doing most lately?' },
   {
     from: 'assistant',
-    text: '1,930 so far, against 1,871 last year. Slightly up, and steady month to month.',
-    tools: ['get_spending', 'get_spending_trends'],
-    card: 'spending'
+    text: 'Eating out, mostly: 9 dinners this month, up from 5. Walks have tailed off since the rain.',
+    tools: ['get_stats'],
+    card: 'stats'
   },
   { from: 'you', text: 'what did we photograph this day last year?' },
   {
@@ -55,12 +55,15 @@ export const ENTRY_CARD = {
   ]
 };
 
-/** Monthly restaurant spending, in order from January. Illustrative. */
-export const SPENDING_BY_MONTH = [148, 132, 166, 154, 205, 181, 243, 226, 174, 158, 162, 181];
-
-export const SPENDING_CARD = {
-  title: 'Restaurants, by month',
-  /** Drawn as a dashed line across the bars. */
-  average: 176,
-  averageLabel: 'avg 176'
+/**
+ * What get_stats answers with: each kind of activity, how often, and whether
+ * it is picking up or fading against the month before. Illustrative.
+ */
+export const STATS_CARD = {
+  title: 'This month, together',
+  rows: [
+    { name: 'Dining', count: 9, trend: 'up' as const },
+    { name: 'Movies', count: 6, trend: 'steady' as const },
+    { name: 'Walks', count: 3, trend: 'down' as const }
+  ]
 };

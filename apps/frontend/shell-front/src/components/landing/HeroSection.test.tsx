@@ -48,7 +48,7 @@ describe('HeroSection', () => {
 
     // The claim is that something happens when you send it, and the tool names
     // are the evidence. Each one ships on the MCP server under this name.
-    ['log_day', 'get_spending', 'get_photo_memories'].forEach((tool) => {
+    ['log_day', 'get_stats', 'get_photo_memories'].forEach((tool) => {
       expect(screen.getByText(tool)).toBeInTheDocument();
     });
   });
@@ -73,12 +73,13 @@ describe('HeroSection', () => {
     expect(within(exchange).getByTestId('phone-screen')).toHaveAttribute('aria-hidden', 'true');
   });
 
-  it('shows both halves of the product in the exchange, not only the journal', () => {
+  it('shows the exchange reading back as well as writing, and all of it about the two of you', () => {
     renderHero();
 
-    // One turn writes and one turn reads, and they are deliberately different
-    // modules: the claim is that it reaches everything, not that it takes notes.
-    expect(screen.getByText(/how much did we spend on restaurants/)).toBeInTheDocument();
+    // One turn writes and the next reads back what you have been doing
+    // together. Money was here once; a couple's app does not lead with it.
+    expect(screen.getByText(/what have we been doing most lately/)).toBeInTheDocument();
+    expect(screen.queryByText(/spend/i)).not.toBeInTheDocument();
   });
 
   it('says the connection is bounded before asking anyone to make one', () => {

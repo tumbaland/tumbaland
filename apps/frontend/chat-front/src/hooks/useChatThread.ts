@@ -9,6 +9,7 @@ import type {
   ChatEvent,
   ConversationMember,
   AlbumPlacement,
+  Appearance,
   Message,
   PhotoAlbum,
   PhotoAlbumChoice,
@@ -20,6 +21,7 @@ import type {
 } from '../types';
 
 const UNSET_ALBUM: PhotoAlbum = { mode: 'unset', albumId: null, albumName: null };
+const DEFAULT_APPEARANCE: Appearance = { theme: 'classic', backgroundFileId: null, backgroundUrl: null };
 
 /** Minimum gap between typing notices sent while someone types continuously. */
 const TYPING_THROTTLE_MS = 2500;
@@ -42,6 +44,9 @@ export interface UseChatThreadResult {
   title: string;
   /** Where this conversation's photos go in Album. */
   photoAlbum: PhotoAlbum;
+  /** How the thread looks, for everyone in it. */
+  appearance: Appearance;
+  setAppearance: (change: { theme?: string; backgroundFileId?: string | null }) => Promise<void>;
   setPhotoAlbum: (choice: PhotoAlbumChoice) => Promise<void>;
   removeFromAlbum: (messageId: string, fileId?: string) => Promise<void>;
   placeInAlbum: (messageId: string, placement: AlbumPlacement, fileId?: string) => Promise<void>;
@@ -63,6 +68,7 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
   const [presence, setPresence] = useState<Record<string, Presence>>({});
   const [title, setTitle] = useState('');
   const [photoAlbum, setPhotoAlbumState] = useState<PhotoAlbum>(UNSET_ALBUM);
+  const [appearance, setAppearanceState] = useState<Appearance>(DEFAULT_APPEARANCE);
 
   // The stream handler is created once and reads the current conversation from
   // this ref, so switching threads does not rebuild the connection. Written in
@@ -90,6 +96,7 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
         setMembers(detail.members);
         setTitle(detail.title ?? '');
         setPhotoAlbumState(detail.photoAlbum ?? UNSET_ALBUM);
+        setAppearanceState(detail.appearance ?? DEFAULT_APPEARANCE);
         setPresence(Object.fromEntries((detail.presence ?? []).map((entry) => [entry.userId, entry])));
         setReads(
           Object.fromEntries(
@@ -114,6 +121,7 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
     setPresence({});
     setTitle('');
     setPhotoAlbumState(UNSET_ALBUM);
+    setAppearanceState(DEFAULT_APPEARANCE);
   }, [conversationId]);
 
   useEffect(() => {
@@ -172,9 +180,11 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
           dispatch({ type: 'removed', id: (event.payload as { id: string }).id });
           break;
         case 'conversation.updated': {
-          // Someone changed where photos go, or the album was deleted.
-          const payload = event.payload as { photoAlbum?: PhotoAlbum } | null;
+          // Someone changed where photos go or how the thread looks, or the
+          // album or background photo went away.
+          const payload = event.payload as { photoAlbum?: PhotoAlbum; appearance?: Appearance } | null;
           if (payload?.photoAlbum) setPhotoAlbumState(payload.photoAlbum);
+          if (payload?.appearance) setAppearanceState(payload.appearance);
           break;
         }
         case 'typing': {
@@ -350,6 +360,14 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
 
   // Both answer with the updated message, which is shown straight away; the
   // stream brings the same change to everyone else.
+  const setAppearance = useCallback(
+    async (change: { theme?: string; backgroundFileId?: string | null }) => {
+      if (!conversationId) return;
+      setAppearanceState(await chatApi.setAppearance(conversationId, change));
+    },
+    [conversationId]
+  );
+
   const removeFromAlbum = useCallback(
     async (messageId: string, fileId?: string) => {
       if (!conversationId) return;
@@ -391,6 +409,8 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
     title,
     photoAlbum,
     setPhotoAlbum,
+    appearance,
+    setAppearance,
     removeFromAlbum,
     placeInAlbum,
     send,

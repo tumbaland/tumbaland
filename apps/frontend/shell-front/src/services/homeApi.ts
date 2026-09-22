@@ -23,6 +23,8 @@ export interface HomePhoto {
   title?: string;
   originalName: string;
   albumId: string;
+  /** A video is drawn as its first frame; its "thumbnail" link is the video itself. */
+  mimetype?: string;
   /** Signed, and short-lived: never cache one past the render it was fetched for. */
   signedUrl?: string;
   thumbnailSignedUrl?: string;

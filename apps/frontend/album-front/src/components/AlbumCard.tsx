@@ -1,8 +1,9 @@
 import React from 'react';
-import { Card, CardContent, CardMedia, Typography, Chip, Box, Menu, MenuItem } from '@mui/material';
+import { Card, CardContent, Typography, Chip, Box, Menu, MenuItem } from '@mui/material';
 import { PhotoLibrary as PhotoLibraryIcon } from '@mui/icons-material';
 import { Album } from '../types';
 import { formatBytes } from '../utils/formatBytes';
+import { MediaThumb } from '@tumbaland/frontend-core';
 
 interface AlbumCardProps {
   album: Album;
@@ -57,9 +58,9 @@ const AlbumCard: React.FC<AlbumCardProps> = ({ album, onView, onEdit, onDelete, 
     >
       <Box sx={{ position: 'relative', width: '100%', pt: '100%' /* 1:1 aspect ratio */ }}>
         {album.coverPhoto?.thumbnailSignedUrl || album.coverPhoto?.signedUrl ? (
-          <CardMedia
-            component="img"
-            image={album.coverPhoto.thumbnailSignedUrl || album.coverPhoto.signedUrl}
+          <MediaThumb
+            src={(album.coverPhoto.thumbnailSignedUrl || album.coverPhoto.signedUrl)!}
+            mimetype={album.coverPhoto.mimetype}
             alt={album.name}
             sx={{
               position: 'absolute',

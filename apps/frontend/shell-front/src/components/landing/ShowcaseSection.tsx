@@ -2,7 +2,8 @@ import { Box, Typography } from '@mui/material';
 import { ink, moduleAccent } from '@tumbaland/frontend-core';
 import { SectionHeading } from './SectionHeading';
 import { PhoneFrame } from './PhoneFrame';
-import { JournalScreen, MoneyScreen, AlbumScreen } from './MockScreens';
+import { JournalScreen, ChatScreen, AlbumScreen } from './MockScreens';
+import { CHAT_APP } from '../../config/apps';
 import { useInView } from './useInView';
 
 /**
@@ -10,7 +11,7 @@ import { useInView } from './useInView';
  * once as they come into view.
  *
  * This replaced four cards that each carried a headline and a sentence. The
- * sentences said what a journal, an album and a money tab are, which nobody
+ * sentences said what a journal, an album and a chat are, which nobody
  * needed telling; the screens say what this one looks like, which is the only
  * part a visitor cannot guess.
  *
@@ -18,10 +19,11 @@ import { useInView } from './useInView';
  * shrunk to a third of a 360px screen is three thumbnails of nothing.
  */
 
+/** Chat in the middle, standing forward: it is where the rest starts. */
 const SCREENS = [
   { key: 'journal', name: 'Journal', caption: 'Where your time went', color: moduleAccent.journal, Screen: JournalScreen },
-  { key: 'album', name: 'Album', caption: 'Photos you can find', color: moduleAccent.album, Screen: AlbumScreen },
-  { key: 'money', name: 'Money', caption: 'Every account in one number', color: moduleAccent.money, Screen: MoneyScreen }
+  { key: 'chat', name: 'Chat', caption: 'Photos file themselves', color: CHAT_APP.color, Screen: ChatScreen },
+  { key: 'album', name: 'Album', caption: 'Photos you can find', color: moduleAccent.album, Screen: AlbumScreen }
 ] as const;
 
 export function ShowcaseSection() {
@@ -85,10 +87,10 @@ export function ShowcaseSection() {
       </Box>
 
       <Typography sx={{ textAlign: 'center', mt: { xs: 2.5, md: 4 }, fontSize: { xs: '0.9rem', md: '0.95rem' }, color: ink.body }}>
-        Share any of it with up to five people.
+        Shared between the two of you, and anyone else you add to your group.
       </Typography>
       {/* Said once, plainly. The screens are the app's own layout, but the
-          evenings, the balance and the holiday in them are made up. */}
+          evenings, the messages and the holiday in them are made up. */}
       <Typography sx={{ textAlign: 'center', mt: 0.75, fontSize: 12.5, color: ink.muted }}>
         Screens shown with sample data.
       </Typography>

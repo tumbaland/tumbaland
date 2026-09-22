@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { Types } from 'mongoose';
 import { BadRequestError, ForbiddenError, NotFoundError, logger } from '@tumbaland/backend-core';
 import { Conversation, IConversation } from '../models/Conversation';
@@ -11,6 +12,7 @@ import { touchConversation } from './conversationService';
 import { notifyNewMessage } from './notificationService';
 import { publishToGroup } from './streamHub';
 import { forgetUnsent, saveToAlbum } from './photoAlbumService';
+import { forgetBackgroundIn } from './appearanceService';
 
 export const MESSAGE_PAGE_SIZE = 50;
 export const MAX_MESSAGE_PAGE_SIZE = 100;
@@ -195,6 +197,31 @@ export async function sendMessage(
   return { message: view!, created };
 }
 
+/**
+ * A line in the thread saying what changed, like "Irja set photos to go to
+ * Rome" or "Irja changed the theme to Ocean". Stored as a message so it is
+ * there on scroll-back; `system` messages are never counted unread and never
+ * notified.
+ */
+export async function postSystemLine(person: Caller, conversation: IConversation, body: string): Promise<void> {
+  const conversationId = conversation._id.toString();
+  const message = await Message.create({
+    conversationId,
+    senderEmail: person.email,
+    senderId: person.id,
+    senderName: person.name,
+    kind: 'system',
+    body,
+    clientId: `system-${randomUUID()}`
+  });
+  publishToGroup(conversation.groupId, {
+    type: 'message.created',
+    conversationId,
+    at: message.createdAt.getTime(),
+    payload: toView(message)
+  });
+}
+
 export interface PageInput {
   /** ISO timestamp; returns messages strictly older than this. */
   before?: string;
@@ -326,8 +353,12 @@ export async function deleteMessage(
   await message.save();
   await refreshPreview(conversationId, message);
 
-  // Before the files go: an album entry must never point at a deleted file.
-  if (attachments.length > 0) await forgetUnsent(messageId);
+  // Before the files go: an album entry, or the chat background, must never
+  // point at a deleted file.
+  if (attachments.length > 0) {
+    await forgetUnsent(messageId);
+    await forgetBackgroundIn(conversation, attachments.map((attachment) => attachment.fileId));
+  }
 
   // The record is soft-deleted so replies keep resolving, but the bytes are
   // not: keeping files nobody can see would charge the group's owner for

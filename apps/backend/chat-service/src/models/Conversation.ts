@@ -36,6 +36,16 @@ export interface IPhotoAlbumSetting {
   setAt?: Date | null;
 }
 
+/**
+ * How the thread looks, for everyone in it: a preset theme (bubble colour and
+ * background) and, optionally, one of the conversation's own photos behind it.
+ */
+export interface IAppearanceSetting {
+  theme: string;
+  /** A photo sent in this conversation. Cleared when that message is unsent. */
+  backgroundFileId?: string | null;
+}
+
 export interface IConversation extends Document {
   _id: Types.ObjectId;
   /**
@@ -58,6 +68,7 @@ export interface IConversation extends Document {
   lastMessagePreview?: string;
   lastMessageSender?: string;
   photoAlbum?: IPhotoAlbumSetting;
+  appearance?: IAppearanceSetting;
   deletedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -97,6 +108,16 @@ const ConversationSchema = new Schema<IConversation>(
         { _id: false }
       ),
       default: () => ({ mode: 'unset' })
+    },
+    appearance: {
+      type: new Schema<IAppearanceSetting>(
+        {
+          theme: { type: String, default: 'classic' },
+          backgroundFileId: { type: String, default: null }
+        },
+        { _id: false }
+      ),
+      default: () => ({ theme: 'classic' })
     },
     deletedAt: { type: Date, default: null }
   },

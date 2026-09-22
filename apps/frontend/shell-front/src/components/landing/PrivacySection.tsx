@@ -14,7 +14,7 @@ interface Assurance {
 
 /**
  * The objection this product has to answer before anything else: it is being
- * asked to hold photos, bank balances and a personal journal. Every claim here
+ * asked to hold photos, private messages and a personal journal. Every claim here
  * is one the codebase actually keeps: Google-only sign-in with no password
  * store, group-scoped access, and CSV and full-resolution exports.
  */
@@ -97,7 +97,7 @@ export function PrivacySection({ onOpen }: PrivacySectionProps) {
             Before you hand it anything
           </Typography>
           <Typography sx={{ fontSize: { xs: '0.95rem', md: '1.02rem' }, lineHeight: 1.55, color: ink.body }}>
-            A product that asks for your photos, your balance sheet and your diary owes you straight
+            A product that holds your photos, your messages and your diary owes you straight
             answers.
           </Typography>
         </Box>

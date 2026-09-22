@@ -13,7 +13,6 @@ import Snackbar from '@mui/material/Snackbar';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import PhotoAlbumOutlinedIcon from '@mui/icons-material/PhotoAlbumOutlined';
 import UndoIcon from '@mui/icons-material/Undo';
-import { surface } from '@tumbaland/frontend-core';
 import { Composer } from '../components/thread/Composer';
 import { EmojiPicker, type MessageAction } from '../components/thread/EmojiPicker';
 import { FullEmojiPicker } from '../components/thread/FullEmojiPicker';
@@ -22,6 +21,9 @@ import { canChange } from '../components/thread/MessageBubble';
 import { TypingIndicator } from '../components/thread/TypingIndicator';
 import { ThreadHeader } from '../components/thread/ThreadHeader';
 import { AlbumPicker } from '../components/thread/AlbumPicker';
+import { ThemePicker } from '../components/thread/ThemePicker';
+import { themeById } from '../components/thread/themes';
+import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined';
 import { chatApi } from '../services/chatApi';
 import { Lightbox } from '../components/thread/Lightbox';
 import { useAttachmentUploads } from '../hooks/useAttachmentUploads';
@@ -53,6 +55,7 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
   const [unsending, setUnsending] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [choosingAlbum, setChoosingAlbum] = useState(false);
+  const [choosingTheme, setChoosingTheme] = useState(false);
   const navigate = useNavigate();
 
   const thread = useChatThread(conversationId, user?.id ?? '');
@@ -159,6 +162,30 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
       );
   };
 
+  const theme = themeById(thread.appearance.theme);
+
+  // When the thread last saw each person: their read position or their last
+  // message, whichever is later. The header falls back to it when presence
+  // has no record of them.
+  const lastSeen: Record<string, string> = {};
+  const note = (userId: string, iso: string | undefined | null) => {
+    if (iso && (!lastSeen[userId] || new Date(iso) > new Date(lastSeen[userId]!))) lastSeen[userId] = iso;
+  };
+  for (const read of Object.values(thread.reads)) note(read.userId, read.lastReadAt);
+  for (const message of thread.messages) {
+    const stored = message.delivery !== 'pending' && message.delivery !== 'failed';
+    if (message.kind !== 'system' && stored) note(message.senderId, message.createdAt);
+  }
+
+  const makeBackground = async (fileId: string) => {
+    try {
+      await thread.setAppearance({ backgroundFileId: fileId });
+      setViewing(null);
+    } catch {
+      setActionError('Could not set that as the background. Try again.');
+    }
+  };
+
   const albumLabel =
     thread.photoAlbum.mode === 'album'
       ? (thread.photoAlbum.albumName ?? 'An album')
@@ -177,7 +204,36 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, bgcolor: surface.default }}>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        minHeight: 0,
+        background: theme.background,
+        position: 'relative',
+        // The photo layer below sits behind everything in this box and in
+        // front of nothing outside it.
+        isolation: 'isolate'
+      }}
+    >
+      {thread.appearance.backgroundUrl && (
+        <Box
+          aria-hidden
+          data-testid="chat-background"
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: -1,
+            backgroundImage: `url("${thread.appearance.backgroundUrl}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            // A veil, so the grey times and the white bubbles stay readable
+            // over whatever the photo is.
+            '&::after': { content: '""', position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.72)' }
+          }}
+        />
+      )}
       <ThreadHeader
         members={thread.members}
         currentUserId={user?.id ?? ''}
@@ -185,12 +241,21 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         presence={thread.presence}
         typingNames={thread.typingNames}
         onBack={onBack}
+        background={theme.header}
+        accent={theme.headerAccent}
+        lastSeen={lastSeen}
         menu={[
           {
             label: 'Photos go to',
             secondary: albumLabel,
             icon: <PhotoAlbumOutlinedIcon fontSize="small" />,
             onClick: () => setChoosingAlbum(true)
+          },
+          {
+            label: 'Theme',
+            secondary: thread.appearance.backgroundFileId ? `${theme.name}, with a photo` : theme.name,
+            icon: <PaletteOutlinedIcon fontSize="small" />,
+            onClick: () => setChoosingTheme(true)
           }
         ]}
       />
@@ -226,6 +291,7 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         onOpenMedia={openMedia}
         onOpenAlbum={(albumId) => navigate(`/album/albums/${albumId}`)}
         onEditAlbum={(messageId) => setPlacing({ messageId })}
+        accent={theme.bubble}
         members={thread.members}
         reads={thread.reads}
       />
@@ -245,6 +311,14 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         photoAlbum={thread.photoAlbum}
         onChooseAlbum={() => setChoosingAlbum(true)}
         onAlbumOff={() => void turnAlbumOff()}
+        accent={theme.bubble}
+      />
+
+      <ThemePicker
+        open={choosingTheme}
+        onClose={() => setChoosingTheme(false)}
+        appearance={thread.appearance}
+        onChange={thread.setAppearance}
       />
 
       <AlbumPicker
@@ -308,6 +382,14 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         onClose={() => setViewing(null)}
         onEditAlbum={
           viewingStored ? (index) => setPlacing({ messageId: viewingMessage.id, fileId: viewingMessage.attachments[index]?.fileId }) : undefined
+        }
+        onUseAsBackground={
+          viewingStored
+            ? (index) => {
+                const fileId = viewingMessage.attachments[index]?.fileId;
+                if (fileId) void makeBackground(fileId);
+              }
+            : undefined
         }
       />
     </Box>

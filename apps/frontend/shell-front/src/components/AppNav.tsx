@@ -5,7 +5,7 @@ import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-import { APPS, CHAT_APP, USER_APPS, isRouteActive } from '../config/apps';
+import { CHAT_APP, USER_APPS, getMainApps, isRouteActive } from '../config/apps';
 import { brand, chrome, ink, surface } from '@tumbaland/frontend-core';
 import { User } from '../types';
 import { AccountMenu } from './AccountMenu';
@@ -17,6 +17,8 @@ interface AppNavProps {
   mobile: boolean;
   /** Unread messages, shown on the tab bar's Chat entry. */
   unreadChat?: number;
+  /** Whether Money is in the menu: off unless turned on under Profile > Features. */
+  showMoney?: boolean;
 }
 
 /**
@@ -28,7 +30,7 @@ interface AppNavProps {
  * Account entry at the end, which is the only account menu there is: the framed
  * apps hide their own while embedded.
  */
-export function AppNav({ currentRoute, user, mobile, unreadChat = 0 }: AppNavProps) {
+export function AppNav({ currentRoute, user, mobile, unreadChat = 0, showMoney = false }: AppNavProps) {
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const menuOpen = Boolean(menuAnchor);
   const onAccountPage = USER_APPS.some((app) => isRouteActive(app.route, currentRoute));
@@ -36,7 +38,8 @@ export function AppNav({ currentRoute, user, mobile, unreadChat = 0 }: AppNavPro
   // On a phone Chat sits in the middle of the tab bar, under the thumb, rather
   // than in the header at the top of the screen. Wider screens keep it in the
   // header bar.
-  const entries = mobile ? [...APPS.slice(0, 2), CHAT_APP, ...APPS.slice(2)] : APPS;
+  const apps = getMainApps({ showMoney });
+  const entries = mobile ? [...apps.slice(0, 2), CHAT_APP, ...apps.slice(2)] : apps;
 
   return (
     <Box component="nav" aria-label="Main" sx={mobile ? bottomBar : rail}>

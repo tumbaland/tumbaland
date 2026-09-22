@@ -24,6 +24,8 @@ export interface MessageListProps {
   onOpenMedia: (message: ThreadMessage, index: number) => void;
   onOpenAlbum?: (albumId: string) => void;
   onEditAlbum?: (messageId: string) => void;
+  /** Your own bubbles' colour, from the conversation's theme. */
+  accent?: string;
   /** For senders' pictures and the "seen" markers. */
   members?: ConversationMember[];
   /** How far each of the others has read. */
@@ -66,11 +68,21 @@ export function MessageList({
   onOpenMedia,
   onOpenAlbum,
   onEditAlbum,
+  accent,
   members = NO_MEMBERS,
   reads = NO_READS
 }: MessageListProps) {
   const scroller = useRef<HTMLDivElement | null>(null);
   const content = useRef<HTMLDivElement | null>(null);
+
+  /**
+   * Whether the list follows the newest message: true until the reader
+   * scrolls up away from it. Read by the resize observer, which outlives any
+   * one render.
+   */
+  const atBottomRef = useRef(true);
+  /** Where the list was at the last scroll event, to tell the reader's scrolls from the content's. */
+  const lastScrollTop = useRef(0);
 
   /**
    * Straight to the newest message.
@@ -86,14 +98,15 @@ export function MessageList({
       element.scrollTo({ top: element.scrollHeight, behavior: 'smooth' });
     } else {
       element.scrollTop = element.scrollHeight;
+      // Recorded here too, so the next upward move is measured from where this
+      // left the list even if its own scroll event is merged away.
+      lastScrollTop.current = element.scrollTop;
     }
   }, []);
 
   const pictures = useMemo(() => new Map(members.map((member) => [member.userId, member.picture])), [members]);
   const seen = useMemo(() => placeSeenMarkers(messages, reads, members), [messages, reads, members]);
   const [atBottom, setAtBottom] = useState(true);
-  /** `atBottom` for the resize observer, which outlives any one render. */
-  const atBottomRef = useRef(true);
 
   /**
    * Height before an older page is prepended.
@@ -111,7 +124,17 @@ export function MessageList({
     if (!element) return;
 
     const distance = element.scrollHeight - element.scrollTop - element.clientHeight;
-    atBottomRef.current = distance < NEAR_BOTTOM_PX;
+    const movedUp = element.scrollTop < lastScrollTop.current - 1;
+    lastScrollTop.current = element.scrollTop;
+
+    // Only the reader scrolling up lets go of the bottom. Measuring the
+    // distance alone got this wrong on open: the scroll event from our own
+    // jump to the bottom can be handled after a batch of photos has loaded
+    // above it, so the distance was suddenly large, the list decided the
+    // reader had left, stopped following, and the thread opened part-way up.
+    // Content growing never moves the offset up; a reader scrolling does.
+    if (distance < NEAR_BOTTOM_PX) atBottomRef.current = true;
+    else if (movedUp) atBottomRef.current = false;
     setAtBottom(atBottomRef.current);
 
     // Fetching starts before the reader reaches the very top, so the next page
@@ -143,10 +166,10 @@ export function MessageList({
     // Follow new messages only when the reader is already at the bottom.
     // Scrolling someone away from what they were reading because the other
     // person sent something is the single most irritating thing a chat can do.
-    if (grewAtBottom && atBottom) {
+    if (grewAtBottom && atBottomRef.current) {
       scrollToBottom();
     }
-  }, [messages, atBottom, scrollToBottom]);
+  }, [messages, scrollToBottom]);
 
   // The first render lands at the bottom without animating there.
   useEffect(() => {
@@ -167,7 +190,9 @@ export function MessageList({
     if (!element || typeof ResizeObserver === 'undefined') return;
 
     const observer = new ResizeObserver(() => {
-      if (atBottomRef.current) element.scrollTop = element.scrollHeight;
+      if (!atBottomRef.current) return;
+      element.scrollTop = element.scrollHeight;
+      lastScrollTop.current = element.scrollTop;
     });
     observer.observe(element);
     if (content.current) observer.observe(content.current);
@@ -247,6 +272,7 @@ export function MessageList({
                   onOpenMedia={onOpenMedia}
                   onOpenAlbum={onOpenAlbum}
                   onEditAlbum={onEditAlbum}
+                  accent={accent}
                   senderPicture={pictures.get(message.senderId)}
                 />
                 {seen.has(message.id) && <SeenMarker seers={seen.get(message.id)!} />}

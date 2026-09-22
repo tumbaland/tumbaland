@@ -3,6 +3,7 @@ import DevicesIcon from '@mui/icons-material/Devices';
 import LinkIcon from '@mui/icons-material/Link';
 import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import HistoryIcon from '@mui/icons-material/History';
+import ToggleOnOutlinedIcon from '@mui/icons-material/ToggleOnOutlined';
 import type { SectionBarItem } from '@tumbaland/frontend-core';
 import { appPath } from './appBase';
 
@@ -21,6 +22,7 @@ import { appPath } from './appBase';
  */
 export const ACCOUNT_SECTIONS: SectionBarItem[] = [
   { label: 'Profile', route: appPath('/profile'), icon: PersonIcon },
+  { label: 'Features', route: appPath('/features'), icon: ToggleOnOutlinedIcon },
   { label: 'Devices', route: appPath('/devices'), icon: DevicesIcon },
   { label: 'Connections', route: appPath('/connections'), icon: LinkIcon },
   { label: 'API keys', route: appPath('/api-keys'), icon: VpnKeyIcon },

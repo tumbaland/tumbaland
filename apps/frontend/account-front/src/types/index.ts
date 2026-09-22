@@ -50,6 +50,8 @@ export interface AuthResponse {
 export interface UpdateProfileRequest {
   firstName?: string;
   lastName?: string;
+  /** Whether Money is in this person's menu. See FeaturesTab. */
+  showMoney?: boolean;
 }
 
 export interface UpdateProfileResponse {

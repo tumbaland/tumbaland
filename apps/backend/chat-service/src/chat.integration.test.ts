@@ -1255,3 +1255,73 @@ describe('changing a sent photo’s album', () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe('appearance', () => {
+  const photo = (id: string, name = 'abc') => ({
+    fileId: `chat/g1/${id}/${name}/original.jpg`,
+    mimetype: 'image/jpeg',
+    sizeBytes: 1000
+  });
+
+  it('starts on the classic theme with no background', async () => {
+    const id = await conversationInG1();
+    const res = await as(TOM).get(`/api/chat/conversations/${id}`);
+    expect(res.body.data.appearance).toEqual({ theme: 'classic', backgroundFileId: null, backgroundUrl: null });
+  });
+
+  it('changes the theme for both people, and says so in the thread', async () => {
+    const id = await conversationInG1();
+
+    const res = await as(IRJA).put(`/api/chat/conversations/${id}/appearance`).send({ theme: 'ocean' });
+
+    expect(res.body.data.theme).toBe('ocean');
+    expect((await as(TOM).get(`/api/chat/conversations/${id}`)).body.data.appearance.theme).toBe('ocean');
+    const page = await as(TOM).get(`/api/chat/conversations/${id}/messages`);
+    expect(page.body.data.messages[0]).toMatchObject({ kind: 'system', body: 'Irja changed the theme to Ocean' });
+  });
+
+  it('refuses a theme that does not exist', async () => {
+    const id = await conversationInG1();
+    const res = await as(TOM).put(`/api/chat/conversations/${id}/appearance`).send({ theme: 'neon' });
+    expect(res.status).toBe(400);
+  });
+
+  it('uses a photo from the conversation as the background, with a signed URL', async () => {
+    const id = await conversationInG1();
+    await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), attachments: [photo(id)] });
+
+    const res = await as(TOM).put(`/api/chat/conversations/${id}/appearance`).send({ backgroundFileId: photo(id).fileId });
+
+    expect(res.body.data).toMatchObject({
+      backgroundFileId: photo(id).fileId,
+      backgroundUrl: `https://files.test/d/${photo(id).fileId}`
+    });
+  });
+
+  it('refuses a background that is not a photo sent in this conversation', async () => {
+    const id = await conversationInG1();
+
+    const res = await as(TOM)
+      .put(`/api/chat/conversations/${id}/appearance`)
+      .send({ backgroundFileId: 'album/g9/someone-else/original.jpg' });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('drops the background when the photo behind it is unsent', async () => {
+    const id = await conversationInG1();
+    const sent = await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), attachments: [photo(id)] });
+    await as(TOM).put(`/api/chat/conversations/${id}/appearance`).send({ backgroundFileId: photo(id).fileId });
+
+    await as(TOM).delete(`/api/chat/conversations/${id}/messages/${sent.body.data.id}`);
+
+    const res = await as(TOM).get(`/api/chat/conversations/${id}`);
+    expect(res.body.data.appearance.backgroundFileId).toBeNull();
+  });
+
+  it('keeps someone outside the group out of it', async () => {
+    const id = await conversationInG1();
+    const res = await as(PERSIK).put(`/api/chat/conversations/${id}/appearance`).send({ theme: 'ocean' });
+    expect(res.status).toBe(404);
+  });
+});

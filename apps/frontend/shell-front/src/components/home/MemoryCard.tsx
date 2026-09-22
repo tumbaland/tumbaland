@@ -4,6 +4,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { ink } from '@tumbaland/frontend-core';
 import type { Memories, MemoryYear } from '../../services/homeApi';
+import { MediaThumb } from '@tumbaland/frontend-core';
 
 interface MemoryCardProps {
   memories: Memories;
@@ -94,10 +95,9 @@ export function MemoryCard({ memories, onOpen }: MemoryCardProps) {
           {/* Blurred and cropped to fill, behind the photo, so a shape that
               does not match the card has something to sit on rather than bars
               of flat colour. The 300px thumbnail is plenty at this blur. */}
-          <Box
-            component="img"
-            src={photo.thumbnailSignedUrl ?? photo.signedUrl}
-            alt=""
+          <MediaThumb
+            src={(photo.thumbnailSignedUrl ?? photo.signedUrl)!}
+            mimetype={photo.mimetype}
             aria-hidden
             sx={{ ...fill, objectFit: 'cover', filter: 'blur(18px)', transform: 'scale(1.15)' }}
           />
@@ -105,10 +105,9 @@ export function MemoryCard({ memories, onOpen }: MemoryCardProps) {
           {/* The thumbnail again, whole and framed exactly as the full-size
               one will be, so it is on screen in a few tens of kilobytes and
               nothing shifts when the real file arrives. */}
-          <Box
-            component="img"
-            src={photo.thumbnailSignedUrl ?? photo.signedUrl}
-            alt=""
+          <MediaThumb
+            src={(photo.thumbnailSignedUrl ?? photo.signedUrl)!}
+            mimetype={photo.mimetype}
             aria-hidden
             sx={{ ...fill, objectFit: 'contain' }}
           />
@@ -118,12 +117,11 @@ export function MemoryCard({ memories, onOpen }: MemoryCardProps) {
               moment the page opened, so a day with eight photos downloaded
               eight of them before showing one. */}
           {loaded.has(slide) && (
-            <Box
-              component="img"
-              src={photo.signedUrl ?? photo.thumbnailSignedUrl}
-              alt=""
+            <MediaThumb
+              src={(photo.signedUrl ?? photo.thumbnailSignedUrl)!}
+              mimetype={photo.mimetype}
               onLoad={(event) => {
-                (event.currentTarget as HTMLImageElement).style.opacity = '1';
+                event.currentTarget.style.opacity = '1';
               }}
               sx={{ ...fill, objectFit: 'contain', opacity: 0, transition: 'opacity .3s ease' }}
             />
@@ -145,7 +143,7 @@ export function MemoryCard({ memories, onOpen }: MemoryCardProps) {
       {/* The caption opens the album. A tap anywhere else on the card steps the
           carousel, so browsing the day never costs you the page. */}
       <ButtonBase
-        onClick={() => onOpen(`/album/albums/${current.albumId}`)}
+        onClick={() => onOpen(`/album/albums/${current.albumId}?view=${current._id}`)}
         aria-label={`Open ${albumName}`}
         sx={{
           position: 'absolute',

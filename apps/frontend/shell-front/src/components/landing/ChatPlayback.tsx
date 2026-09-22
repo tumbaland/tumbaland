@@ -7,7 +7,7 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { brand, gradient, ink, moduleAccent } from '@tumbaland/frontend-core';
 import { PhoneFrame, SCREEN } from './PhoneFrame';
 import { PhotoTile, type PhotoScene } from './PhotoTile';
-import { CHAT, ENTRY_CARD, SPENDING_BY_MONTH, SPENDING_CARD, type ChatTurn } from './chatScript';
+import { CHAT, ENTRY_CARD, STATS_CARD, type ChatTurn } from './chatScript';
 
 /**
  * The sample exchange, played the way a real one arrives: the message is sent,
@@ -25,6 +25,8 @@ import { CHAT, ENTRY_CARD, SPENDING_BY_MONTH, SPENDING_CARD, type ChatTurn } fro
  */
 
 const MONO = '"SFMono-Regular", Menlo, Consolas, monospace';
+/** A finished tool call, and a live connection. */
+const DONE_GREEN = '#15803d';
 const TOOL_MS = 620;
 const WORD_MS = 42;
 const CARD_MS = 1150;
@@ -117,57 +119,41 @@ function EntryCard({ progress }: { progress: number }) {
   );
 }
 
-const CHART = { width: 216, height: 64, gap: 3 };
-const PEAK = Math.max(...SPENDING_BY_MONTH);
+const TREND_MARK = { up: '↑', steady: '→', down: '↓' } as const;
+const TREND_LABEL = { up: 'picking up', steady: 'steady', down: 'fading' } as const;
+const TOP_COUNT = Math.max(...STATS_CARD.rows.map((row) => row.count));
 
-/** The year it read, as bars that grow in month order. */
-function SpendingCard({ progress }: { progress: number }) {
-  const barWidth = (CHART.width - CHART.gap * (SPENDING_BY_MONTH.length - 1)) / SPENDING_BY_MONTH.length;
-  const averageY = CHART.height - (SPENDING_CARD.average / PEAK) * CHART.height;
-
+/** What you have been doing together, as bars that grow in turn. */
+function StatsCard({ progress }: { progress: number }) {
   return (
     <Box sx={{ ...card, mt: '6px', p: '9px 10px' }}>
-      <Typography sx={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: moduleAccent.money, mb: '7px' }}>
-        {SPENDING_CARD.title}
+      <Typography sx={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: moduleAccent.journal, mb: '7px' }}>
+        {STATS_CARD.title}
       </Typography>
-
-      <Box component="svg" viewBox={`0 0 ${CHART.width} ${CHART.height}`} sx={{ display: 'block', width: '100%', height: 'auto' }}>
-        {SPENDING_BY_MONTH.map((amount, index) => {
-          const grown = stagger(progress, index, SPENDING_BY_MONTH.length);
-          const full = (amount / PEAK) * CHART.height;
-          const height = full * grown;
-          return (
-            <rect
-              key={index}
-              x={index * (barWidth + CHART.gap)}
-              y={CHART.height - height}
-              width={barWidth}
-              height={height}
-              rx={2}
-              fill={amount === PEAK ? moduleAccent.money : 'rgba(21,128,61,0.45)'}
-            />
-          );
-        })}
-        {/* The average, once the bars it averages are all standing. */}
-        <line
-          x1="0"
-          x2={CHART.width}
-          y1={averageY}
-          y2={averageY}
-          stroke={ink.muted}
-          strokeWidth="0.8"
-          strokeDasharray="3 3"
-          opacity={Math.max(0, (progress - 0.75) * 4)}
-        />
-      </Box>
-
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: '4px' }}>
-        {['Jan', SPENDING_CARD.averageLabel, 'Dec'].map((label) => (
-          <Typography key={label} sx={{ fontSize: 8.5, color: ink.muted, fontFamily: MONO }}>
-            {label}
-          </Typography>
-        ))}
-      </Box>
+      {STATS_CARD.rows.map((row, index) => {
+        const grown = stagger(progress, index, STATS_CARD.rows.length);
+        return (
+          <Box key={row.name} sx={{ display: 'flex', alignItems: 'center', gap: '7px', mt: index === 0 ? 0 : '6px' }}>
+            <Typography sx={{ fontSize: 10, fontWeight: 600, color: ink.strong, width: 44, flexShrink: 0 }}>{row.name}</Typography>
+            <Box sx={{ flexGrow: 1, height: 7, borderRadius: 999, background: 'rgba(239,68,68,0.10)', overflow: 'hidden' }}>
+              <Box
+                sx={{
+                  height: '100%',
+                  width: `${(row.count / TOP_COUNT) * 100 * grown}%`,
+                  borderRadius: 999,
+                  background: row.trend === 'down' ? 'rgba(239,68,68,0.45)' : moduleAccent.journal
+                }}
+              />
+            </Box>
+            <Typography
+              aria-label={`${row.count}, ${TREND_LABEL[row.trend]}`}
+              sx={{ fontSize: 9.5, fontFamily: MONO, color: ink.muted, width: 26, textAlign: 'right', opacity: grown }}
+            >
+              {row.count} {TREND_MARK[row.trend]}
+            </Typography>
+          </Box>
+        );
+      })}
     </Box>
   );
 }
@@ -205,7 +191,7 @@ function PhotosCard({ progress }: { progress: number }) {
 
 function Card({ kind, progress }: { kind: NonNullable<ChatTurn['card']>; progress: number }) {
   if (kind === 'entry') return <EntryCard progress={progress} />;
-  if (kind === 'spending') return <SpendingCard progress={progress} />;
+  if (kind === 'stats') return <StatsCard progress={progress} />;
   return <PhotosCard progress={progress} />;
 }
 
@@ -214,7 +200,7 @@ function ToolCall({ name, progress }: { name: string; progress: number }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: '5px', opacity: progress > 0 ? 1 : 0, transition: 'opacity .2s ease' }}>
       {done ? (
-        <CheckCircleIcon sx={{ fontSize: 11, color: moduleAccent.money }} />
+        <CheckCircleIcon sx={{ fontSize: 11, color: DONE_GREEN }} />
       ) : (
         <CircularProgress size={9} thickness={7} sx={{ color: brand.violetInk }} />
       )}
@@ -325,7 +311,7 @@ function Chrome({ children }: { children: React.ReactNode }) {
           borderBottom: '1px solid rgba(124,58,237,0.10)'
         }}
       >
-        <Box sx={{ width: 6, height: 6, borderRadius: '50%', background: moduleAccent.money, flexShrink: 0 }} />
+        <Box sx={{ width: 6, height: 6, borderRadius: '50%', background: DONE_GREEN, flexShrink: 0 }} />
         <Typography sx={{ fontSize: 10, color: ink.muted }}>Tumbaland connected</Typography>
       </Box>
 

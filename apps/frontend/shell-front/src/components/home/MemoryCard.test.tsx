@@ -58,7 +58,8 @@ it('names the day and the album, and opens the album from the caption', async ()
 
   await userEvent.click(screen.getByRole('button', { name: 'Open Tallinn' }));
 
-  expect(onOpen).toHaveBeenCalledWith('/album/albums/album-1');
+  // The album, with the photo on show already open large over it.
+  expect(onOpen).toHaveBeenCalledWith('/album/albums/album-1?view=a');
 });
 
 describe('several photos from the same day', () => {
@@ -136,7 +137,7 @@ describe('several photos from the same day', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Next photo' }));
     await userEvent.click(screen.getByRole('button', { name: 'Open Tallinn' }));
 
-    expect(onOpen).toHaveBeenCalledWith('/album/albums/album-2');
+    expect(onOpen).toHaveBeenCalledWith('/album/albums/album-2?view=b');
   });
 });
 

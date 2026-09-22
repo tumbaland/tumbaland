@@ -34,6 +34,12 @@ export interface IUser extends Document {
    * changes their mind, so the field also carries when they asked.
    */
   deletionRequestedAt?: Date | null;
+  /**
+   * Whether "My money" is listed in this person's own menu. Off unless they
+   * turn it on: a couple's app should not put someone's finances in the
+   * navigation by default, and their partner has no use for an empty one.
+   */
+  showMoney: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -50,7 +56,8 @@ const UserSchema = new Schema<IUser>(
     tokenVersion: { type: Number, default: 1 },
     picture: { type: String, default: null },
     googlePicture: { type: String, default: null },
-    deletionRequestedAt: { type: Date, default: null }
+    deletionRequestedAt: { type: Date, default: null },
+    showMoney: { type: Boolean, default: false }
   },
   { timestamps: true }
 );

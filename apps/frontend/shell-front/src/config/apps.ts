@@ -22,6 +22,7 @@ import HistoryIcon from '@mui/icons-material/History';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import ToggleOnOutlinedIcon from '@mui/icons-material/ToggleOnOutlined';
 import type { SvgIconProps } from '@mui/material/SvgIcon';
 import { AppConfig } from './ConfigProvider';
 import { moduleAccent } from '@tumbaland/frontend-core';
@@ -40,6 +41,8 @@ export interface AppConfigItem {
   color: string;
   /** Sells plans or takes payments, so left out where that is not allowed (see canOfferPurchases). */
   purchases?: boolean;
+  /** In the main menu only for someone who turned it on under Profile > Features (see useShowMoney). */
+  optIn?: boolean;
   menu?: ModuleMenuItem[];
 }
 
@@ -118,8 +121,12 @@ export const APPS: AppConfigItem[] = [
     ]
   },
   {
-    // Shown as Money, still served from /finance.
+    // Personal, not shared: someone's own finances have no place in the
+    // navigation of an app two people use together unless they ask for it.
+    // Listed only once turned on under Profile > Features. Still served from
+    // /finance, and its pages work by address either way.
     name: 'Money',
+    optIn: true,
     route: '/finance',
     remote: 'finance',
     urlKey: 'FINANCE_FRONT_URL',
@@ -154,6 +161,7 @@ export const USER_APPS: AppConfigItem[] = [
     color: moduleAccent.profile,
     menu: [
       { label: 'Profile', route: '/account/profile', icon: PersonIcon },
+      { label: 'Features', route: '/account/features', icon: ToggleOnOutlinedIcon },
       { label: 'Devices', route: '/account/devices', icon: DevicesIcon },
       { label: 'Connections', route: '/account/connections', icon: LinkIcon },
       { label: 'API keys', route: '/account/api-keys', icon: VpnKeyIcon },
@@ -200,6 +208,13 @@ const isOffered = (app: AppConfigItem) => !app.purchases || canOfferPurchases();
 
 /** The account entries to list on this platform. */
 export const getUserApps = () => USER_APPS.filter(isOffered);
+
+/**
+ * The main menu for this person: every module, and Money only once they have
+ * turned it on for themselves.
+ */
+export const getMainApps = ({ showMoney = false }: { showMoney?: boolean } = {}) =>
+  APPS.filter((app) => !app.optIn || showMoney);
 
 /**
  * Match an app by route prefix, so nested child routes like

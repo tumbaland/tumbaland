@@ -5,6 +5,7 @@ import { HistoryToggleOff as HistoryIcon, Image as ImageIcon } from '@mui/icons-
 import { useMemories } from '../hooks/useMemories';
 import { MemoryPhoto, MemoryYear } from '../types';
 import { appPath } from '../appBase';
+import { MediaThumb } from '@tumbaland/frontend-core';
 
 interface OnThisDayProps {
   groupId?: string;
@@ -112,9 +113,9 @@ const MemoryTiles: React.FC<MemoryTilesProps> = ({ year, onSelect }) => {
               }}
             >
               {src ? (
-                <Box
-                  component="img"
+                <MediaThumb
                   src={src}
+                  mimetype={photo.mimetype}
                   alt={photo.title || photo.originalName}
                   loading="lazy"
                   sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}

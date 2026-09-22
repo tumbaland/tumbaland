@@ -6,9 +6,9 @@ import { RemoteOutlet } from './RemoteOutlet';
 import { CHAT_APP, getAppByRoute, isRouteActive } from '../config/apps';
 import { useConfig } from '../config/ConfigProvider';
 import { authService } from '../services/authService';
-import { recordLastVisited } from '../services/lastVisited';
 import { useAuthState } from '../hooks/useAuthState';
 import { useUnreadChat } from '../hooks/useUnreadChat';
+import { useShowMoney } from '../hooks/useShowMoney';
 import { useKeyboardAwareHeight } from '../hooks/useKeyboardAwareHeight';
 import { UpdatePrompt } from './UpdatePrompt';
 import { onWorkerMessage, registerServiceWorker } from '../services/serviceWorker';
@@ -64,6 +64,8 @@ export default function Layout({ children }: LayoutProps) {
   // It stays hidden while the check is in flight so the landing page never
   // flashes a nav it is about to lose.
   const { authenticated, user } = useAuthState();
+  // Money is in the menu only for someone who turned it on under Features.
+  const { showMoney } = useShowMoney(authenticated ? user?.id : undefined);
   const { GROUP_API_URL } = useConfig();
   const tenant = useTenant(GROUP_API_URL ?? '', authenticated ? user?.id : undefined);
 
@@ -122,15 +124,14 @@ export default function Layout({ children }: LayoutProps) {
     if (authenticated) void refreshSubscription();
   }, [authenticated]);
 
-  // Remember the module being viewed so the home page can offer a way back.
-  useEffect(() => {
-    if (currentApp) {
-      recordLastVisited(location.pathname);
-    }
-  }, [currentApp, location.pathname]);
-
   const nav = authenticated ? (
-    <AppNav currentRoute={location.pathname} user={user} mobile={isMobile} unreadChat={unreadChat} />
+    <AppNav
+      currentRoute={location.pathname}
+      user={user}
+      mobile={isMobile}
+      unreadChat={unreadChat}
+      showMoney={showMoney}
+    />
   ) : null;
 
   // One bar for the whole signed-in session: where you are, where else you can

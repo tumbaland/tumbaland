@@ -36,6 +36,8 @@ export interface ComposerProps {
   photoAlbum?: PhotoAlbum;
   onChooseAlbum?: () => void;
   onAlbumOff?: () => void;
+  /** The send button's colour, from the conversation's theme. */
+  accent?: string;
 }
 
 /**
@@ -61,7 +63,8 @@ export function Composer({
   onCancelEdit,
   photoAlbum,
   onChooseAlbum,
-  onAlbumOff
+  onAlbumOff,
+  accent = brand.pinkInk
 }: ComposerProps) {
   /** "Not this one", for the photos on the tray now. Cleared after each send. */
   const [skipAlbum, setSkipAlbum] = useState(false);
@@ -179,7 +182,7 @@ export function Composer({
     >
       {editing && (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: 2, pr: 1, pt: 0.5 }}>
-          <EditOutlinedIcon sx={{ fontSize: 18, color: brand.pinkInk }} />
+          <EditOutlinedIcon sx={{ fontSize: 18, color: accent }} />
           <Typography variant="caption" sx={{ flex: 1, color: ink.muted, fontWeight: 600 }}>
             Editing message
           </Typography>
@@ -286,8 +289,8 @@ export function Composer({
           width: TOUCH_TARGET,
           height: TOUCH_TARGET,
           color: '#fff',
-          bgcolor: brand.pinkInk,
-          '&:hover': { bgcolor: brand.pinkInk, filter: 'brightness(0.94)' },
+          bgcolor: accent,
+          '&:hover': { bgcolor: accent, filter: 'brightness(0.94)' },
           '&.Mui-disabled': { bgcolor: surface.sunken, color: ink.muted }
         }}
       >

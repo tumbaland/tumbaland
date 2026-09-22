@@ -8,6 +8,7 @@ import {
   editMessageSchema,
   markReadSchema,
   photoAlbumSchema,
+  appearanceSchema,
   albumPlacementSchema,
   pushSubscriptionSchema,
   reactionSchema,
@@ -71,6 +72,8 @@ router.put('/conversations/:id/messages/:messageId/reactions', validate(reaction
 // Album: where the conversation's photos go, and taking one message back out.
 router.get('/conversations/:id/albums', ctrl.listAlbums);
 router.put('/conversations/:id/photo-album', validate(photoAlbumSchema), ctrl.setPhotoAlbum);
+// How the thread looks, for everyone in it.
+router.put('/conversations/:id/appearance', validate(appearanceSchema), ctrl.setAppearance);
 router.put('/conversations/:id/messages/:messageId/album', validate(albumPlacementSchema), ctrl.placeInAlbum);
 router.delete('/conversations/:id/messages/:messageId/album', ctrl.removeFromAlbum);
 // Attachments. The bytes go straight from the browser to file-service; only

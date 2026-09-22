@@ -10,9 +10,12 @@ interface QuickActionsProps {
  * The things people open the app to do, one tap each.
  *
  * On a phone they are a row of coloured squares with a label under each, the
- * layout a phone's own home screen taught everyone. From `md` up the same four
+ * layout a phone's own home screen taught everyone. From `md` up the same ones
  * sit in cards with the label beside the icon, where a bare icon would be lost
  * in the width.
+ *
+ * The row is centred and sized by how many actions there are, so removing one
+ * does not leave an empty slot at the end.
  */
 export function QuickActions({ onOpen }: QuickActionsProps) {
   return (
@@ -21,7 +24,13 @@ export function QuickActions({ onOpen }: QuickActionsProps) {
       aria-label="Quick actions"
       sx={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+        gridTemplateColumns: {
+          xs: `repeat(${QUICK_ACTIONS.length}, minmax(0, 1fr))`,
+          // Capped on a wide screen: three cards stretched across 960px read
+          // as a toolbar, not as three things to tap.
+          md: `repeat(${QUICK_ACTIONS.length}, minmax(0, 220px))`
+        },
+        justifyContent: 'center',
         gap: { xs: 1, md: 1.5 }
       }}
     >
@@ -35,7 +44,7 @@ export function QuickActions({ onOpen }: QuickActionsProps) {
               display: 'flex',
               flexDirection: { xs: 'column', md: 'row' },
               alignItems: 'center',
-              justifyContent: { xs: 'flex-start', md: 'flex-start' },
+              justifyContent: { xs: 'flex-start', md: 'center' },
               gap: { xs: 0.75, md: 1.25 },
               minWidth: 0,
               py: { xs: 0.5, md: 1.25 },

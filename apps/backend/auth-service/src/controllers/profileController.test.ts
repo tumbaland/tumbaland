@@ -68,7 +68,8 @@ describe('getProfile', () => {
         picture: 'pic.png',
         hasCustomPicture: false,
         lastLoginAt,
-        deletionRequestedAt: null
+        deletionRequestedAt: null,
+        showMoney: false
       },
       approved: true
     });
@@ -86,6 +87,35 @@ describe('getProfile', () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ user: expect.objectContaining({ deletionRequestedAt }) })
     );
+  });
+});
+
+describe('showMoney', () => {
+  it('is off for someone who never turned it on', async () => {
+    mockedFindById.mockResolvedValue({ isApproved: true });
+    const res = mockRes();
+
+    await getProfile(authedReq(), res);
+
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ user: expect.objectContaining({ showMoney: false }) }));
+  });
+
+  it('saves the switch and answers with it', async () => {
+    mockedFindByIdAndUpdate.mockResolvedValue({ _id: 'user-1', email: 'ada@example.com', showMoney: true });
+    const res = mockRes();
+
+    await updateProfile(authedReq({ body: { showMoney: true } }), res);
+
+    expect(mockedFindByIdAndUpdate).toHaveBeenCalledWith('user-1', { $set: { showMoney: true } }, { new: true });
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ user: expect.objectContaining({ showMoney: true }) }));
+  });
+
+  it('leaves the switch alone when a name is changed', async () => {
+    mockedFindByIdAndUpdate.mockResolvedValue({ _id: 'user-1', email: 'ada@example.com' });
+
+    await updateProfile(authedReq({ body: { firstName: 'Ada' } }), mockRes());
+
+    expect(mockedFindByIdAndUpdate).toHaveBeenCalledWith('user-1', { $set: { firstName: 'Ada' } }, { new: true });
   });
 });
 
@@ -129,7 +159,8 @@ describe('updateProfile', () => {
         firstName: 'Ada',
         lastName: 'Lovelace',
         name: 'Ada Lovelace',
-        picture: 'pic.png'
+        picture: 'pic.png',
+        showMoney: false
       }
     });
   });

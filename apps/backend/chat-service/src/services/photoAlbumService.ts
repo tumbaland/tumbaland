@@ -1,4 +1,3 @@
-import { randomUUID } from 'crypto';
 import { BadRequestError, NotFoundError, logger } from '@tumbaland/backend-core';
 import { Types } from 'mongoose';
 import { Conversation, IConversation, IPhotoAlbumSetting } from '../models/Conversation';
@@ -6,7 +5,7 @@ import { IMessage, Message } from '../models/Message';
 import type { Caller } from './accessService';
 import * as albums from './albumClient';
 import { withDownloadUrls } from './attachmentService';
-import { toView, type MessageView } from './messageService';
+import { postSystemLine, toView, type MessageView } from './messageService';
 import { publishToGroup } from './streamHub';
 
 /**
@@ -39,30 +38,6 @@ function announceSetting(conversation: IConversation, setting: IPhotoAlbumSettin
     conversationId: conversation._id.toString(),
     at: Date.now(),
     payload: { photoAlbum: photoAlbumView(setting) }
-  });
-}
-
-/**
- * A line in the thread saying what changed, like "Irja set photos to go to
- * Rome". Stored as a message so it is there on scroll-back; `system` messages
- * are never counted unread and never notified.
- */
-async function postSystemLine(person: Caller, conversation: IConversation, body: string): Promise<void> {
-  const conversationId = conversation._id.toString();
-  const message = await Message.create({
-    conversationId,
-    senderEmail: person.email,
-    senderId: person.id,
-    senderName: person.name,
-    kind: 'system',
-    body,
-    clientId: `system-${randomUUID()}`
-  });
-  publishToGroup(conversation.groupId, {
-    type: 'message.created',
-    conversationId,
-    at: message.createdAt.getTime(),
-    payload: toView(message)
   });
 }
 

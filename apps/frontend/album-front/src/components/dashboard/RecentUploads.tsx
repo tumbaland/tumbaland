@@ -5,6 +5,7 @@ import { AddPhotoAlternate as AddPhotoIcon, Image as ImageIcon } from '@mui/icon
 import { useRecentPhotos } from '../../hooks/useHighlights';
 import { HighlightPhoto } from '../../types';
 import { appPath } from '../../appBase';
+import { MediaThumb } from '@tumbaland/frontend-core';
 
 /** Same ladder as the memories strip, so the two rows line up column for column. */
 const TILES_BY_WIDTH = { xs: 4, sm: 6, md: 8 } as const;
@@ -105,9 +106,9 @@ const RecentUploads: React.FC<RecentUploadsProps> = ({ groupId }) => {
                 }}
               >
                 {src ? (
-                  <Box
-                    component="img"
+                  <MediaThumb
                     src={src}
+                    mimetype={photo.mimetype}
                     alt={photo.title || photo.originalName}
                     loading="lazy"
                     sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}

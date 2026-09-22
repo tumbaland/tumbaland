@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { vi } from 'vitest';
+import { describe, vi } from 'vitest';
 
 const mockedNavigate = vi.fn();
 vi.mock('react-router', async (importOriginal) => {
@@ -56,10 +56,10 @@ const mockedUseBulkTagMutation = vi.mocked(useBulkTagMutation);
 const bulkUpdateTags = vi.fn().mockResolvedValue({ matched: 1, modified: 1, tags: [] });
 const mockedGetAlbumById = albumService.getAlbumById as unknown as ReturnType<typeof vi.fn>;
 
-function renderPage() {
+function renderPage(path = '/albums/album-1') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter initialEntries={['/albums/album-1']}>
+    <MemoryRouter initialEntries={[path]}>
       <QueryClientProvider client={queryClient}>
         <Routes>
           <Route path="/albums/:albumId" element={<AlbumDetailPage />} />
@@ -442,5 +442,40 @@ describe('tagging and tag filtering', () => {
     await userEvent.click(screen.getByRole('button', { name: /^select$/i }));
 
     expect(screen.getByRole('button', { name: /^tag$/i })).toBeDisabled();
+  });
+});
+
+describe('opening a photo from a link', () => {
+  const photos = [makePhoto({ _id: 'p1', title: 'Harbour' }), makePhoto({ _id: 'p2', title: 'Pier' })];
+
+  it('opens the photo named by ?view large, over its album', async () => {
+    mockedUsePhotos.mockReturnValue(basePhotosReturn({ photos, pagination: { page: 1, limit: 24, total: 2, pages: 1 } }));
+
+    renderPage('/albums/album-1?view=p2');
+
+    const viewer = await screen.findByRole('dialog');
+    expect(within(viewer).getByRole('img', { name: 'Pier' })).toBeInTheDocument();
+  });
+
+  it('opens nothing for a photo that is not in the album, and leaves the album usable', async () => {
+    mockedUsePhotos.mockReturnValue(basePhotosReturn({ photos, pagination: { page: 1, limit: 24, total: 2, pages: 1 } }));
+
+    renderPage('/albums/album-1?view=gone');
+
+    expect(await screen.findByRole('heading', { name: 'Trip' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('waits for the whole album when the photo is past the first page', async () => {
+    const firstPage = basePhotosReturn({ photos: [photos[0]!], pagination: { page: 1, limit: 1, total: 2, pages: 2 } });
+    // The page query gives the first photo; the unpaginated one, the whole album.
+    mockedUsePhotos.mockImplementation((_albumId, options) =>
+      (options as { limit?: number } | undefined)?.limit ? firstPage : basePhotosReturn({ photos })
+    );
+
+    renderPage('/albums/album-1?view=p2');
+
+    const viewer = await screen.findByRole('dialog');
+    expect(within(viewer).getByRole('img', { name: 'Pier' })).toBeInTheDocument();
   });
 });

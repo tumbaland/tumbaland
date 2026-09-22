@@ -1,0 +1,124 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { MessageList } from './MessageList';
+import type { ThreadMessage } from '../../types';
+
+/**
+ * jsdom has no layout, so the list is given one: a viewport of 500px over
+ * content whose height the test controls, and a scroll offset clamped the way
+ * a browser clamps it. The resize observer is captured so a test can say
+ * "the photos above just finished loading".
+ */
+let contentHeight = 2000;
+const VIEWPORT = 500;
+let resized: (() => void) | null = null;
+
+class FakeResizeObserver {
+  constructor(callback: () => void) {
+    resized = callback;
+  }
+  observe() {}
+  disconnect() {}
+}
+
+const message = (index: number): ThreadMessage => ({
+  id: `m${index}`,
+  conversationId: 'c1',
+  senderId: index % 2 ? 'u-tom' : 'u-irja',
+  senderEmail: '',
+  senderName: index % 2 ? 'Tom' : 'Irja',
+  kind: 'text',
+  body: `message ${index}`,
+  attachments: [],
+  replyTo: null,
+  reactions: [],
+  clientId: `client-${index}`,
+  editedAt: null,
+  deletedAt: null,
+  createdAt: new Date(Date.UTC(2026, 8, 22, 10, index)).toISOString()
+});
+
+function renderList() {
+  const utils = render(
+    <MessageList
+      messages={Array.from({ length: 30 }, (_, index) => message(index))}
+      currentUserId="u-tom"
+      hasOlder={false}
+      loadingOlder={false}
+      onLoadOlder={() => {}}
+      onReact={() => {}}
+      onRetry={() => {}}
+      onPickEmoji={() => {}}
+      onOpenMedia={() => {}}
+    />
+  );
+  return { ...utils, list: screen.getByRole('log') };
+}
+
+beforeEach(() => {
+  contentHeight = 2000;
+  resized = null;
+  vi.stubGlobal('ResizeObserver', FakeResizeObserver);
+
+  let top = 0;
+  vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockImplementation(() => contentHeight);
+  vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockImplementation(() => VIEWPORT);
+  Object.defineProperty(HTMLElement.prototype, 'scrollTop', {
+    configurable: true,
+    get: () => top,
+    set: (value: number) => {
+      top = Math.max(0, Math.min(value, contentHeight - VIEWPORT));
+    }
+  });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+const bottom = () => contentHeight - VIEWPORT;
+
+describe('MessageList scrolling', () => {
+  it('opens at the newest message', () => {
+    const { list } = renderList();
+    expect(list.scrollTop).toBe(bottom());
+  });
+
+  it('stays at the newest message when photos load after its own jump to the bottom', () => {
+    const { list } = renderList();
+
+    // Photos above finish loading before the scroll event from the jump is
+    // handled: that event now reads a big gap to the bottom.
+    contentHeight = 2900;
+    fireEvent.scroll(list);
+    resized!();
+
+    // It was the content that moved, not the reader, so it follows.
+    expect(list.scrollTop).toBe(bottom());
+  });
+
+  it('leaves a reader who scrolled up where they are when content grows', () => {
+    const { list } = renderList();
+
+    list.scrollTop = 600;
+    fireEvent.scroll(list);
+    contentHeight = 2900;
+    resized!();
+
+    expect(list.scrollTop).toBe(600);
+  });
+
+  it('follows again once the reader scrolls back down to the bottom', () => {
+    const { list } = renderList();
+    list.scrollTop = 600;
+    fireEvent.scroll(list);
+
+    list.scrollTop = bottom();
+    fireEvent.scroll(list);
+    contentHeight = 2900;
+    resized!();
+
+    expect(list.scrollTop).toBe(bottom());
+  });
+});

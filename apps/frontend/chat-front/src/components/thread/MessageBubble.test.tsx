@@ -132,6 +132,11 @@ describe('MessageBubble', () => {
     expect(screen.queryByText(/^In /)).not.toBeInTheDocument();
   });
 
+  it('draws your own bubble in the theme colour', () => {
+    const { container } = renderBubble({}, { mine: true, accent: 'rgb(29, 78, 216)' });
+    expect(container.querySelector('p')!.parentElement).toHaveStyle({ backgroundColor: 'rgb(29, 78, 216)' });
+  });
+
   it('marks an edited message', () => {
     renderBubble({ editedAt: '2026-09-21T10:05:00.000Z' });
     expect(screen.getByText(/edited/)).toBeInTheDocument();

@@ -8,7 +8,7 @@ import {
   Close as CloseIcon,
   LocalOffer as LocalOfferIcon
 } from '@mui/icons-material';
-import { useParams, useNavigate } from 'react-router';
+import { useParams, useNavigate, useSearchParams } from 'react-router';
 import { usePhotos } from '../hooks/usePhotos';
 import { useAlbumTags, useBulkTagMutation } from '../hooks/useAlbumTags';
 import { usePhotoViewer } from '../hooks/usePhotoViewer';
@@ -106,6 +106,33 @@ const AlbumDetailPage: React.FC = () => {
     handleNextPhoto,
     handleClosePhotoViewer
   } = usePhotoViewer(allPhotos);
+
+  /**
+   * `?view=<photoId>` opens that photo in the viewer as the album arrives, so
+   * a link from elsewhere (the home page's photos) lands on the picture, not
+   * on a grid to hunt through. It waits until the photo is in the list the
+   * viewer steps through, which may be the unpaginated one that loads second,
+   * and then drops the parameter so closing the viewer leaves a plain album.
+   */
+  const [searchParams, setSearchParams] = useSearchParams();
+  const viewId = searchParams.get('view');
+  const wholeAlbumListed = pageHoldsWholeAlbum || fullPhotoList.length > 0;
+  useEffect(() => {
+    if (!viewId || photosLoading) return;
+    const target = allPhotos.find((photo) => photo._id === viewId);
+    if (!target && !wholeAlbumListed) return;
+    if (target) handleViewPhoto(target);
+    setSearchParams(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        next.delete('view');
+        return next;
+      },
+      { replace: true }
+    );
+    // handleViewPhoto is recreated every render; the photo list is what matters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewId, allPhotos, photosLoading, wholeAlbumListed, setSearchParams]);
 
   const handleDeletePhoto = async (photo: Photo) => {
     setPhotoToDelete(photo);

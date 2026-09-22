@@ -25,6 +25,14 @@ export interface PhotoAlbum {
   albumName: string | null;
 }
 
+/** How the thread looks, for everyone in it. */
+export interface Appearance {
+  theme: string;
+  backgroundFileId: string | null;
+  /** Signed and short-lived; null when there is no background or it could not be signed. */
+  backgroundUrl: string | null;
+}
+
 /** One of the group's albums, as the picker lists them. */
 export interface AlbumOption {
   id: string;
@@ -80,6 +88,8 @@ export interface ConversationDetail {
   presence?: Presence[];
   /** Absent from a server older than saving to Album. */
   photoAlbum?: PhotoAlbum;
+  /** Absent from a server older than themes. */
+  appearance?: Appearance;
 }
 
 export interface Conversation {

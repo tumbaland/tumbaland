@@ -6,6 +6,7 @@ import ApiKeysTab from '../components/tabs/ApiKeysTab';
 import ConnectionsTab from '../components/tabs/ConnectionsTab';
 import ActivityTab from '../components/tabs/ActivityTab';
 import DevicesTab from '../components/tabs/DevicesTab';
+import FeaturesTab from '../components/tabs/FeaturesTab';
 import { gutter } from '@tumbaland/frontend-core';
 
 /**
@@ -28,6 +29,7 @@ const AccountPage: React.FC = () => (
     <Routes>
       <Route path="" element={<Navigate to="profile" replace />} />
       <Route path="profile" element={<ProfileTab />} />
+      <Route path="features" element={<FeaturesTab />} />
       <Route path="devices" element={<DevicesTab />} />
       <Route path="connections" element={<ConnectionsTab />} />
       <Route path="api-keys" element={<ApiKeysTab />} />

@@ -28,7 +28,8 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
     lastLoginAt: dbUser.lastLoginAt,
     // Carried so the account page can show a standing request rather than
     // offering to make one that already exists.
-    deletionRequestedAt: dbUser.deletionRequestedAt ?? null
+    deletionRequestedAt: dbUser.deletionRequestedAt ?? null,
+    showMoney: dbUser.showMoney === true
   };
 
   res.json({
@@ -43,10 +44,11 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
     throw new UnauthorizedError('Not authenticated');
   }
 
-  const { firstName, lastName } = req.body;
+  const { firstName, lastName, showMoney } = req.body as { firstName?: string; lastName?: string; showMoney?: boolean };
 
   // Update the user in database - handle empty strings explicitly
-  const updateData: Partial<Record<'firstName' | 'lastName', string | null>> = {};
+  const updateData: Partial<Record<'firstName' | 'lastName', string | null>> & { showMoney?: boolean } = {};
+  if (showMoney !== undefined) updateData.showMoney = showMoney;
   if (firstName !== undefined) {
     const trimmedFirstName = firstName.trim();
     updateData.firstName = trimmedFirstName === '' ? null : trimmedFirstName;
@@ -75,7 +77,8 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
       firstName: updatedUser.firstName,
       lastName: updatedUser.lastName,
       name: req.user.name, // Keep original name from JWT
-      picture: effectivePicture(updatedUser) ?? req.user.picture
+      picture: effectivePicture(updatedUser) ?? req.user.picture,
+      showMoney: updatedUser.showMoney === true
     }
   });
 };

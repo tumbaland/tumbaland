@@ -70,6 +70,10 @@ export { AuthHeader } from './components/AuthHeader';
 export { AppLayout } from './components/AppLayout';
 export { SectionBar } from './components/SectionBar';
 
+// A photo, or a video's first frame, for any tile that shows either
+export { MediaThumb } from './components/MediaThumb';
+export type { MediaThumbProps } from './components/MediaThumb';
+
 // Entitlements: the usage bar and the hook that feeds it
 export { UsageMeter, formatBytes, useEntitlements } from './components/UsageMeter';
 

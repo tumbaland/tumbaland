@@ -65,16 +65,16 @@ it('shows the modules as screens of the app rather than paragraphs about them', 
 
   // Four cards of headline-plus-sentence became three phones. Each is named
   // the way the app nav names it, and carries one short line and no more.
-  ['Journal', 'Album', 'Money'].forEach((module) => {
+  ['Journal', 'Chat', 'Album'].forEach((module) => {
     expect(screen.getAllByText(module).length).toBeGreaterThan(0);
   });
   expect(screen.getByText('Where your time went')).toBeInTheDocument();
   expect(screen.getByText('Photos you can find')).toBeInTheDocument();
-  expect(screen.getByText('Every account in one number')).toBeInTheDocument();
+  expect(screen.getByText('Photos file themselves')).toBeInTheDocument();
 });
 
 it('says the screens are made up, rather than passing them off as somebody\'s', () => {
-  // They are the app's own layout, but the evenings, the balance and the
+  // They are the app's own layout, but the evenings, the messages and the
   // holiday in them are invented, and a page that shows data owes that line.
   renderPage();
   expect(screen.getByText(/sample data/i)).toBeInTheDocument();
@@ -82,7 +82,7 @@ it('says the screens are made up, rather than passing them off as somebody\'s', 
 
 it('still says sharing exists, now that the fourth card has gone', () => {
   renderPage();
-  expect(screen.getByText(/up to five people/)).toBeInTheDocument();
+  expect(screen.getByText(/anyone else you add to your group/)).toBeInTheDocument();
 });
 
 it('answers the privacy objection before the closing sign-in', () => {
@@ -97,7 +97,7 @@ it('answers the privacy objection before the closing sign-in', () => {
 
 it('names the three sensitive things once, not twice', () => {
   renderPage();
-  expect(screen.getAllByText(/balance sheet/i)).toHaveLength(1);
+  expect(screen.getAllByText(/your photos, your messages and your diary/i)).toHaveLength(1);
 });
 
 it('has nothing to buy: no prices, plans or supporter pitch', () => {

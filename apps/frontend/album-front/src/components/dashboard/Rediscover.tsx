@@ -5,6 +5,7 @@ import { AutoAwesome as SparkleIcon, Casino as ShuffleIcon } from '@mui/icons-ma
 import { useRandomPhoto } from '../../hooks/useHighlights';
 import { HighlightPhoto } from '../../types';
 import { appPath } from '../../appBase';
+import { MediaThumb } from '@tumbaland/frontend-core';
 
 /** How long ago, in the words a person would use rather than a date. */
 const howLongAgo = (iso: string, now: Date): string => {
@@ -94,9 +95,9 @@ const Rediscover: React.FC<RediscoverProps> = ({ groupId }) => {
             textAlign: 'left'
           }}
         >
-          <Box
-            component="img"
+          <MediaThumb
             src={src}
+            mimetype={photo.mimetype}
             alt={photo.title || photo.originalName}
             loading="lazy"
             sx={{

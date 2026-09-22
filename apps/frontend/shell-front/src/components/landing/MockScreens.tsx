@@ -1,20 +1,21 @@
 import { Box, Typography, type SxProps, type Theme } from '@mui/material';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import PhotoAlbumIcon from '@mui/icons-material/PhotoAlbum';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import HomeIcon from '@mui/icons-material/Home';
 import PlaceIcon from '@mui/icons-material/Place';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import { ink, moduleAccent } from '@tumbaland/frontend-core';
+import { brand, ink, moduleAccent } from '@tumbaland/frontend-core';
+import { CHAT_APP } from '../../config/apps';
 import { PhotoTile } from './PhotoTile';
 
 /**
- * The three screens the showcase shows: a month of the journal, the money, and
+ * The three screens the showcase shows: a month of the journal, a chat, and
  * the album. They are the app's own layout and the app's own module colours,
  * drawn at PhoneFrame's fixed canvas size and filled with sample data.
  *
  * Drawn rather than photographed because the only real screens Tumbaland has
- * are somebody's evenings, somebody's bank balance and somebody's holiday, and
+ * are somebody's evenings, somebody's messages and somebody's holiday, and
  * none of that belongs on a public page. The sample data is plausible and it
  * is labelled as sample under the phones.
  *
@@ -59,8 +60,9 @@ function ScreenHeader({ title, sub, accent }: { title: string; sub: string; acce
 const TABS = [
   { key: 'home', icon: HomeIcon, label: 'Home', color: moduleAccent.home },
   { key: 'journal', icon: FavoriteIcon, label: 'Journal', color: moduleAccent.journal },
+  { key: 'chat', icon: ChatBubbleIcon, label: 'Chat', color: CHAT_APP.color },
   { key: 'album', icon: PhotoAlbumIcon, label: 'Album', color: moduleAccent.album },
-  { key: 'money', icon: AttachMoneyIcon, label: 'Money', color: moduleAccent.money }
+  { key: 'account', icon: AccountCircleIcon, label: 'Account', color: ink.body }
 ] as const;
 
 /** Half of what makes a card read as a screen rather than a card. */
@@ -251,141 +253,107 @@ export function JournalScreen({ playing }: { playing: boolean }) {
   );
 }
 
-/* -------------------------------- Money --------------------------------- */
+/* --------------------------------- Chat --------------------------------- */
 
-/** Twelve months of net worth, in thousands. Illustrative. */
-const NET_WORTH = [39.2, 39.8, 40.6, 40.1, 41.4, 42.6, 43.2, 44.1, 45.4, 46.1, 47.2, 48.2];
+const CHAT_GREEN = '#16a34a';
 
-const CATEGORIES = [
-  { name: 'Groceries', amount: 412 },
-  { name: 'Restaurants', amount: 181 },
-  { name: 'Transport', amount: 96 }
-];
-
-/** What the net worth is made of. Illustrative. */
-const HOLDINGS = [
-  { name: 'Index funds', value: '21,400', change: '+1.8%', up: true },
-  { name: 'Savings', value: '18,610', change: '+0.3%', up: true },
-  { name: 'Current accounts', value: '8,200', change: '-2.1%', up: false }
-];
-
-const PLOT = { width: 252, height: 84 };
-
-/** The net worth line, and the area under it. */
-function netWorthPath(): { line: string; area: string } {
-  const low = Math.min(...NET_WORTH) - 1.5;
-  const high = Math.max(...NET_WORTH) + 0.8;
-  const points = NET_WORTH.map((value, index) => {
-    const x = (index / (NET_WORTH.length - 1)) * PLOT.width;
-    const y = PLOT.height - ((value - low) / (high - low)) * PLOT.height;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  });
-  return {
-    line: `M${points.join(' L')}`,
-    area: `M0,${PLOT.height} L${points.join(' L')} L${PLOT.width},${PLOT.height} Z`
-  };
+function Bubble({ mine, children, sx }: { mine?: boolean; children: React.ReactNode; sx?: SxProps<Theme> }) {
+  return (
+    <Box
+      sx={{
+        alignSelf: mine ? 'flex-end' : 'flex-start',
+        maxWidth: '78%',
+        px: '10px',
+        py: '6px',
+        borderRadius: '13px',
+        fontSize: 10.5,
+        lineHeight: 1.4,
+        color: mine ? '#fff' : ink.strong,
+        background: mine ? brand.pinkInk : 'rgba(255,255,255,0.9)',
+        border: mine ? 'none' : '1px solid rgba(255,255,255,0.95)',
+        ...sx
+      }}
+    >
+      {children}
+    </Box>
+  );
 }
 
-export function MoneyScreen({ playing }: { playing: boolean }) {
-  const { line, area } = netWorthPath();
-  const peak = Math.max(...CATEGORIES.map((category) => category.amount));
-
+/**
+ * A conversation, with the parts that make it this app's rather than any
+ * chat's: the photo filing itself into the trip's album, and who is around.
+ */
+export function ChatScreen({ playing }: { playing: boolean }) {
   return (
     <Screen>
-      <ScreenHeader title="Money" sub="Net worth" accent={moduleAccent.money} />
-
-      <Box sx={{ ...cardSx, ...reveal(playing, 0) }}>
-        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: '7px' }}>
-          <Typography sx={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.03em', color: ink.strong }}>48,210</Typography>
-          <Typography sx={{ fontSize: 11, fontWeight: 600, color: ink.muted }}>EUR</Typography>
-          <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: '3px', px: '6px', py: '2px', borderRadius: '999px', background: 'rgba(21,128,61,0.10)' }}>
-            <TrendingUpIcon sx={{ fontSize: 11, color: moduleAccent.money }} />
-            <Typography sx={{ fontSize: 9.5, fontWeight: 700, color: moduleAccent.money }}>2.4%</Typography>
+      {/* Who it is with, and that she is here now. */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', mb: '10px', px: '2px' }}>
+        <Box sx={{ position: 'relative', flexShrink: 0 }}>
+          <Box
+            sx={{
+              width: 28,
+              height: 28,
+              borderRadius: '50%',
+              display: 'grid',
+              placeItems: 'center',
+              fontSize: 12,
+              fontWeight: 700,
+              color: '#fff',
+              background: brand.pinkInk
+            }}
+          >
+            I
           </Box>
-        </Box>
-
-        <Box component="svg" viewBox={`0 0 ${PLOT.width} ${PLOT.height}`} sx={{ display: 'block', width: '100%', height: 'auto', mt: '8px' }}>
-          <path d={area} fill="rgba(21,128,61,0.12)" opacity={playing ? 1 : 0} style={{ transition: 'opacity .8s ease .9s' }} />
-          <path
-            d={line}
-            fill="none"
-            stroke={moduleAccent.money}
-            strokeWidth="2.2"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            pathLength={1}
-            strokeDasharray="1"
-            strokeDashoffset={playing ? 0 : 1}
-            style={{ transition: 'stroke-dashoffset 1.6s ease .2s' }}
+          <Box
+            sx={{
+              position: 'absolute',
+              right: -1,
+              bottom: -1,
+              width: 9,
+              height: 9,
+              borderRadius: '50%',
+              background: CHAT_GREEN,
+              boxShadow: '0 0 0 2px #fff'
+            }}
           />
         </Box>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: '3px' }}>
-          {['Oct', 'Mar', 'Sep'].map((month) => (
-            <Typography key={month} sx={{ fontSize: 8.5, color: ink.muted }}>
-              {month}
-            </Typography>
-          ))}
+        <Box>
+          <Typography sx={{ fontSize: 13, fontWeight: 800, color: ink.strong, lineHeight: 1.2 }}>Irja</Typography>
+          <Typography sx={{ fontSize: 9.5, color: ink.muted, lineHeight: 1.2 }}>Active now</Typography>
         </Box>
       </Box>
 
-      <Box sx={{ ...cardSx, mt: '10px', ...reveal(playing, 160) }}>
-        <Typography sx={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: ink.muted, mb: '8px' }}>
-          This month
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <Typography sx={{ textAlign: 'center', fontSize: 9, color: ink.muted, my: '2px', ...reveal(playing, 0) }}>
+          Irja set photos to go to Rome
         </Typography>
-        {CATEGORIES.map((category, index) => (
-          <Box key={category.name} sx={{ mb: index === CATEGORIES.length - 1 ? 0 : '9px' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: '4px' }}>
-              <Typography sx={{ fontSize: 10.5, fontWeight: 600, color: ink.strong }}>{category.name}</Typography>
-              <Typography sx={{ fontSize: 10.5, color: ink.body }}>{category.amount}</Typography>
-            </Box>
-            <Box sx={{ height: 5, borderRadius: '999px', background: 'rgba(15,23,42,0.06)', overflow: 'hidden' }}>
-              <Box
-                sx={{
-                  height: '100%',
-                  borderRadius: '999px',
-                  background: moduleAccent.money,
-                  width: playing ? `${(category.amount / peak) * 100}%` : 0,
-                  transition: `width .9s cubic-bezier(.22,.61,.36,1) ${400 + index * 130}ms`
-                }}
-              />
-            </Box>
-          </Box>
-        ))}
-      </Box>
 
-      <Box sx={{ ...cardSx, mt: '10px', ...reveal(playing, 300) }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          {[
-            { label: 'In', value: '2,140' },
-            { label: 'Out', value: '1,612' },
-            { label: 'Saved', value: '528' }
-          ].map((figure) => (
-            <Box key={figure.label}>
-              <Typography sx={{ fontSize: 9, color: ink.muted }}>{figure.label}</Typography>
-              <Typography sx={{ fontSize: 12, fontWeight: 700, color: ink.strong }}>{figure.value}</Typography>
-            </Box>
-          ))}
+        <Bubble sx={reveal(playing, 150)}>look where we ended up</Bubble>
+
+        <Box sx={{ alignSelf: 'flex-start', width: '70%', ...reveal(playing, 300) }}>
+          <PhotoTile scene="city" radius={13} sx={{ width: '100%', height: 116 }} />
+          {/* The photo is already in the trip's album; nobody had to put it there. */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '3px', mt: '3px', ml: '4px' }}>
+            <PhotoAlbumIcon sx={{ fontSize: 10, color: moduleAccent.album }} />
+            <Typography sx={{ fontSize: 9, fontWeight: 600, color: moduleAccent.album }}>In Rome</Typography>
+          </Box>
+        </Box>
+
+        <Bubble mine sx={reveal(playing, 500)}>
+          that one is going on our wall
+        </Bubble>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: '5px', ml: '4px', mt: '2px', ...reveal(playing, 700) }}>
+          <Box sx={{ display: 'flex', gap: '3px' }}>
+            {[0, 1, 2].map((dot) => (
+              <Box key={dot} sx={{ width: 4, height: 4, borderRadius: '50%', background: ink.muted, opacity: 0.4 + dot * 0.25 }} />
+            ))}
+          </Box>
+          <Typography sx={{ fontSize: 9, color: ink.muted }}>Irja is typing</Typography>
         </Box>
       </Box>
 
-      <Box sx={{ ...cardSx, mt: '10px', ...reveal(playing, 420) }}>
-        <Typography sx={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: ink.muted, mb: '8px' }}>
-          Accounts
-        </Typography>
-        {HOLDINGS.map((holding, index) => (
-          <Box key={holding.name} sx={{ display: 'flex', alignItems: 'center', gap: '8px', mt: index === 0 ? 0 : '7px' }}>
-            <Typography sx={{ fontSize: 10.5, fontWeight: 600, color: ink.strong, flexGrow: 1, minWidth: 0 }}>
-              {holding.name}
-            </Typography>
-            <Typography sx={{ fontSize: 10.5, color: ink.body }}>{holding.value}</Typography>
-            <Typography sx={{ fontSize: 9, fontWeight: 700, width: 32, textAlign: 'right', color: holding.up ? moduleAccent.money : '#b91c1c' }}>
-              {holding.change}
-            </Typography>
-          </Box>
-        ))}
-      </Box>
-
-      <TabBar active="money" />
+      <TabBar active="chat" />
     </Screen>
   );
 }

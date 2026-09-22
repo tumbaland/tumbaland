@@ -42,3 +42,26 @@ describe('Lightbox album bar', () => {
     expect(screen.queryByText('Not in an album')).not.toBeInTheDocument();
   });
 });
+
+describe('Use as background', () => {
+  it('makes the photo on screen the background', async () => {
+    const onUseAsBackground = vi.fn();
+    render(<Lightbox attachments={[photo()]} index={0} onClose={() => {}} onUseAsBackground={onUseAsBackground} />);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Use as background' }));
+
+    expect(onUseAsBackground).toHaveBeenCalledWith(0);
+  });
+
+  it('is not offered for a video', () => {
+    render(
+      <Lightbox
+        attachments={[photo({ mimetype: 'video/mp4' })]}
+        index={0}
+        onClose={() => {}}
+        onUseAsBackground={() => {}}
+      />
+    );
+    expect(screen.queryByRole('button', { name: 'Use as background' })).not.toBeInTheDocument();
+  });
+});

@@ -31,6 +31,8 @@ export interface MessageBubbleProps {
   onOpenAlbum?: (albumId: string) => void;
   /** Moves this message's photos to another album: the pencil beside the mark. */
   onEditAlbum?: (messageId: string) => void;
+  /** Your own bubbles' colour, from the conversation's theme. */
+  accent?: string;
 }
 
 /**
@@ -81,7 +83,8 @@ export function MessageBubble({
   onPickEmoji,
   onOpenMedia,
   onOpenAlbum,
-  onEditAlbum
+  onEditAlbum,
+  accent = brand.pinkInk
 }: MessageBubbleProps) {
   const saved = message.deletedAt ? undefined : message.attachments.find((attachment) => attachment.albumId);
   const [hovered, setHovered] = useState(false);
@@ -152,7 +155,7 @@ export function MessageBubble({
               px: jumbo || mediaOnly ? 0 : 1.5,
               py: jumbo || mediaOnly ? 0 : 1,
               overflow: 'hidden',
-              bgcolor: jumbo ? 'transparent' : mine ? brand.pinkInk : surface.paper,
+              bgcolor: jumbo ? 'transparent' : mine ? accent : surface.paper,
               color: jumbo ? 'inherit' : mine ? '#fff' : ink.body,
               border: jumbo || mine ? 'none' : `1px solid ${surface.sunken}`,
               // A pending message is drawn faintly rather than with a spinner:

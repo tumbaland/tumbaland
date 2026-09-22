@@ -3,6 +3,7 @@ import { Message } from '../models/Message';
 import { ReadState } from '../models/ReadState';
 import type { Caller } from './accessService';
 import { photoAlbumView, type PhotoAlbumView } from './photoAlbumService';
+import { appearanceView, type AppearanceView } from './appearanceService';
 
 export interface ConversationSummary {
   id: string;
@@ -192,6 +193,7 @@ export async function conversationDetail(
   members: IConversationMember[];
   reads: ReadReceipt[];
   photoAlbum: PhotoAlbumView;
+  appearance: AppearanceView;
 }> {
   const id = conversation._id.toString();
   const states = await ReadState.find({ conversationId: id, userId: { $ne: person.id } });
@@ -206,7 +208,8 @@ export async function conversationDetail(
       lastReadMessageId: state.lastReadMessageId ?? null,
       lastReadAt: state.lastReadAt
     })),
-    photoAlbum: photoAlbumView(conversation.photoAlbum)
+    photoAlbum: photoAlbumView(conversation.photoAlbum),
+    appearance: await appearanceView(conversation.appearance)
   };
 }
 

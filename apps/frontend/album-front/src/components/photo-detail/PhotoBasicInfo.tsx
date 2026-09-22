@@ -78,10 +78,19 @@ const PhotoBasicInfo: React.FC<PhotoBasicInfoProps> = ({
             border: '1px solid rgba(0,0,0,0.05)'
           }}
         >
+          {/* A video plays here: this is the item's own page, not a tile. It
+              was an <img> for everything, which drew a video as nothing. */}
           <Box
-            component="img"
-            src={displaySrc}
-            alt={photo.title || photo.originalName}
+            {...(photo.mimetype?.startsWith('video/')
+              ? {
+                  component: 'video' as const,
+                  src: photo.signedUrl ?? displaySrc,
+                  controls: true,
+                  playsInline: true,
+                  preload: 'metadata',
+                  'aria-label': photo.title || photo.originalName
+                }
+              : { component: 'img' as const, src: displaySrc, alt: photo.title || photo.originalName })}
             sx={{
               width: '100%',
               height: 'auto',

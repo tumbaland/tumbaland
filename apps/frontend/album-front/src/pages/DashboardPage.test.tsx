@@ -303,3 +303,25 @@ it('shows a non-blocking progress indicator and disables refresh while refetchin
   expect(screen.getByRole('button', { name: /refresh statistics/i })).toBeDisabled();
   expect(screen.getAllByRole('progressbar').length).toBeGreaterThan(0);
 });
+
+it('lists collages before "Remember this?", which shares the last line with storage', async () => {
+  mockedUseStatistics.mockReturnValue({ statistics, loading: false, isFetching: false, error: null, refetch: vi.fn() });
+  mockedUseCollageList.mockReturnValue({ data: collages, error: null });
+  mockedUseRandomPhoto.mockReturnValue({
+    photo: recentPhoto,
+    loading: false,
+    isFetching: false,
+    error: null,
+    showAnother: vi.fn()
+  });
+
+  renderPage();
+
+  const collage = await screen.findByText('Summer wall');
+  const remember = screen.getByText('Remember this?');
+  expect(collage.compareDocumentPosition(remember) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+  const lastLine = screen.getByTestId('rediscover-and-storage');
+  expect(within(lastLine).getByText('Remember this?')).toBeInTheDocument();
+  expect(within(lastLine).getByText('Storage Usage')).toBeInTheDocument();
+});

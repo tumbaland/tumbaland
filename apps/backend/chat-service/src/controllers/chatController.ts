@@ -15,6 +15,7 @@ import { assertHeadroom } from '../services/storageUsage';
 import { presenceFor } from '../services/presenceService';
 import { listAlbums as listGroupAlbums } from '../services/albumClient';
 import * as photoAlbums from '../services/photoAlbumService';
+import { setAppearance as changeAppearance, type AppearanceChange } from '../services/appearanceService';
 
 /** The list with who is online, for the dots on its avatars. Never the caller. */
 async function withPresence<T extends { members: Array<{ userId: string }> }>(
@@ -148,6 +149,12 @@ export const setPhotoAlbum = async (req: Request, res: Response): Promise<void> 
   const person = caller(req);
   const conversation = await requireConversation(person, req.params.id as string);
   sendSuccess(res, await photoAlbums.setPhotoAlbum(person, conversation, req.body as photoAlbums.PhotoAlbumChoice));
+};
+
+export const setAppearance = async (req: Request, res: Response): Promise<void> => {
+  const person = caller(req);
+  const conversation = await requireConversation(person, req.params.id as string);
+  sendSuccess(res, await changeAppearance(person, conversation, req.body as AppearanceChange));
 };
 
 export const removeFromAlbum = async (req: Request, res: Response): Promise<void> => {

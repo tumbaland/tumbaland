@@ -15,6 +15,7 @@ import { Close as CloseIcon } from '@mui/icons-material';
 import { Photo, TagCount } from '../types';
 import TagInput from './TagInput';
 import { gradient } from '@tumbaland/frontend-core';
+import { MediaThumb } from '@tumbaland/frontend-core';
 
 interface EditPhotoDialogProps {
   open: boolean;
@@ -114,14 +115,16 @@ const EditPhotoDialog: React.FC<EditPhotoDialogProps> = ({ open, photo, suggesti
               }}
             >
               {photo.signedUrl ? (
-                <img
+                <MediaThumb
                   src={photo.signedUrl}
+                  mimetype={photo.mimetype}
                   alt={photo.title || photo.originalName}
-                  style={{
+                  sx={{
                     width: '100%',
                     height: '100%',
                     objectFit: 'contain',
-                    padding: '8px'
+                    p: 1,
+                    boxSizing: 'border-box'
                   }}
                 />
               ) : (

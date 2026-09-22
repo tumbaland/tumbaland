@@ -1,6 +1,7 @@
 import { Box, ButtonBase } from '@mui/material';
 import { SectionLabel } from './SectionLabel';
 import type { HomePhoto } from '../../services/homeApi';
+import { MediaThumb } from '@tumbaland/frontend-core';
 
 interface RecentPhotosProps {
   photos: HomePhoto[];
@@ -35,7 +36,8 @@ export function RecentPhotos({ photos, onOpen }: RecentPhotosProps) {
         {photos.map((photo) => (
           <ButtonBase
             key={photo._id}
-            onClick={() => onOpen(`/album/albums/${photo.albumId}`)}
+            // The album, with this photo already open large over it.
+            onClick={() => onOpen(`/album/albums/${photo.albumId}?view=${photo._id}`)}
             aria-label={photo.title?.trim() || photo.originalName}
             sx={{
               flexShrink: 0,
@@ -49,9 +51,9 @@ export function RecentPhotos({ photos, onOpen }: RecentPhotosProps) {
               '&:active': { transform: 'scale(0.97)' }
             }}
           >
-            <Box
-              component="img"
-              src={photo.thumbnailSignedUrl ?? photo.signedUrl}
+            <MediaThumb
+              src={(photo.thumbnailSignedUrl ?? photo.signedUrl)!}
+              mimetype={photo.mimetype}
               alt=""
               loading="lazy"
               // A square crop of a tall photo, biased well above centre: the

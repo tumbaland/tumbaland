@@ -11,7 +11,8 @@ export const invalidateTokensSchema = z.object({
 
 export const updateProfileSchema = z.object({
   firstName: z.string().optional(),
-  lastName: z.string().optional()
+  lastName: z.string().optional(),
+  showMoney: z.boolean().optional()
 });
 
 export const approveUserSchema = z.object({

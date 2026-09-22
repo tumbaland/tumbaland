@@ -8,6 +8,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import DownloadIcon from '@mui/icons-material/Download';
 import IosShareIcon from '@mui/icons-material/IosShare';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import WallpaperIcon from '@mui/icons-material/Wallpaper';
 import PhotoAlbumOutlinedIcon from '@mui/icons-material/PhotoAlbumOutlined';
 import Button from '@mui/material/Button';
 import { TOUCH_TARGET } from '@tumbaland/frontend-core';
@@ -21,6 +22,8 @@ export interface LightboxProps {
   onClose: () => void;
   /** Changes the album of the photo on screen. Without it, no album bar is drawn. */
   onEditAlbum?: (index: number) => void;
+  /** Makes the photo on screen the chat's background. Offered for photos only. */
+  onUseAsBackground?: (index: number) => void;
 }
 
 /**
@@ -34,7 +37,7 @@ export function canShareFile(file: File): boolean {
   return typeof navigator !== 'undefined' && typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] });
 }
 
-export function Lightbox({ attachments, index, onClose, onEditAlbum }: LightboxProps) {
+export function Lightbox({ attachments, index, onClose, onEditAlbum, onUseAsBackground }: LightboxProps) {
   const [current, setCurrent] = useState(index ?? 0);
   // Reset while rendering rather than in an effect, so reopening on another
   // message never draws one frame of whatever slide was open last time.
@@ -85,6 +88,16 @@ export function Lightbox({ attachments, index, onClose, onEditAlbum }: LightboxP
       aria-label="Attachment"
     >
       <Box sx={{ position: 'absolute', top: 'env(safe-area-inset-top)', right: 0, zIndex: 2, display: 'flex' }}>
+        {onUseAsBackground && !isVideo(attachment) && (
+          <IconButton
+            onClick={() => onUseAsBackground(current)}
+            aria-label="Use as background"
+            title="Use as background"
+            sx={{ color: '#fff', width: TOUCH_TARGET, height: TOUCH_TARGET }}
+          >
+            <WallpaperIcon />
+          </IconButton>
+        )}
         {sharable && (
           <IconButton onClick={share} aria-label="Share" sx={{ color: '#fff', width: TOUCH_TARGET, height: TOUCH_TARGET }}>
             <IosShareIcon />

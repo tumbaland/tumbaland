@@ -12,7 +12,7 @@ const photo = (id: string, over: Partial<HomePhoto> = {}): HomePhoto => ({
   ...over
 });
 
-it('shows a thumbnail per photo and opens the album it belongs to', async () => {
+it('shows a thumbnail per photo and opens it large in its album', async () => {
   const onOpen = vi.fn();
   render(<RecentPhotos photos={[photo('a', { title: 'Pier' }), photo('b')]} onOpen={onOpen} />);
 
@@ -20,7 +20,7 @@ it('shows a thumbnail per photo and opens the album it belongs to', async () => 
 
   await userEvent.click(screen.getByRole('button', { name: 'Pier' }));
 
-  expect(onOpen).toHaveBeenCalledWith('/album/albums/album-a');
+  expect(onOpen).toHaveBeenCalledWith('/album/albums/album-a?view=a');
 });
 
 it('names a photo by its filename when it has no title', () => {

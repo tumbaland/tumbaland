@@ -109,6 +109,16 @@ export const albumPlacementSchema = z.union([
   z.object({ newAlbumName: z.string().trim().min(1, 'Name the album').max(100), fileId: z.string().max(512).optional() })
 ]);
 
+/** A theme, a background photo (or null to remove it), or both. */
+export const appearanceSchema = z
+  .object({
+    theme: z.string().min(1).max(32).optional(),
+    backgroundFileId: z.string().min(1).max(512).nullable().optional()
+  })
+  .refine((value) => value.theme !== undefined || value.backgroundFileId !== undefined, {
+    message: 'Nothing to change'
+  });
+
 export const pushSubscriptionSchema = z.object({
   endpoint: z.string().url('endpoint must be a URL'),
   keys: z.object({

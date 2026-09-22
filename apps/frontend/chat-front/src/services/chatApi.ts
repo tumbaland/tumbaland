@@ -2,6 +2,7 @@ import { createApiClient } from '@tumbaland/frontend-core';
 import { getGlobalConfig } from '../config/ConfigProvider';
 import type {
   AlbumOption,
+  Appearance,
   AlbumPlacement,
   Attachment,
   Conversation,
@@ -139,6 +140,18 @@ export const chatApi = {
         messageId
       )}/reactions`,
       { emoji }
+    );
+    return json.data;
+  },
+
+  /** Changes the theme or the background photo (null removes it), for everyone in the conversation. */
+  async setAppearance(
+    conversationId: string,
+    change: { theme?: string; backgroundFileId?: string | null }
+  ): Promise<Appearance> {
+    const json = await client.put<{ data: Appearance }>(
+      `/api/chat/conversations/${encodeURIComponent(conversationId)}/appearance`,
+      change
     );
     return json.data;
   },

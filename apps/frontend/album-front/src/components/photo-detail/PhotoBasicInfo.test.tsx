@@ -139,3 +139,14 @@ describe('inline tag editing', () => {
     expect(screen.getByRole('combobox')).toBeInTheDocument();
   });
 });
+
+it('plays a video on its own page, rather than drawing it as an empty image', () => {
+  const { container } = renderInfo({
+    photo: makePhoto({ title: 'Trevi', mimetype: 'video/mp4', signedUrl: '/clip.mp4', thumbnailUrl: '/clip.mp4' })
+  });
+
+  const video = container.querySelector('video')!;
+  expect(video).toHaveAttribute('src', '/clip.mp4');
+  expect(video).toHaveAttribute('controls');
+  expect(screen.queryByRole('img', { name: 'Trevi' })).not.toBeInTheDocument();
+});

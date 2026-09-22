@@ -100,3 +100,9 @@ it('opens as a bottom sheet on phones with the same entries', () => {
   expect(document.querySelector('.MuiDrawer-root')).not.toBeNull();
   expect(document.querySelector('.MuiPopover-root')).toBeNull();
 });
+
+
+it('holds no money switch or entry: those live under Profile > Features and the main menu', () => {
+  renderMenu({ route: '/' });
+  expect(screen.queryByText(/money/i)).not.toBeInTheDocument();
+});

@@ -122,30 +122,44 @@ const DashboardPage: React.FC = () => {
 
       {/* Things to look at, then the one figure worth a chart. Each card
           renders nothing when it has nothing, so the column closes up rather
-          than leaving a gap. Order is by how likely a card is to have
-          something: `OnThisDay` only fires on a day with history, which most
-          days in a young library are not. */}
+          than leaving a gap. `OnThisDay` only fires on a day with history,
+          which most days in a young library are not. Collages come before the
+          random pick, and "Remember this?" shares the last line with storage. */}
       <Box sx={{ display: 'grid', gap: { xs: 2, sm: 3 }, alignItems: 'start' }}>
         <OnThisDay groupId={selectedGroupId || undefined} />
 
         <RecentUploads groupId={selectedGroupId || undefined} />
 
-        <Rediscover groupId={selectedGroupId || undefined} />
-
         <RecentCollages />
 
-        <StorageChart
-          totalStorage={statistics.overview.totalStorage}
-          averagePhotoSize={statistics.overview.averagePhotoSize}
-          topAlbums={statistics.albums.map((album) => ({
-            albumId: album.albumId,
-            name: album.name,
-            totalSize: album.totalSize
-          }))}
-          storageLimit={entitlements?.limits?.meters?.storageBytes}
-          meteredStorage={entitlements?.usage?.storageBytes}
-          onUpgrade={goToPlans}
-        />
+        {/* Side by side where there is room, stacked on a phone. Wrapping
+            rather than a fixed two-column grid, so storage takes the whole
+            line on a day "Remember this?" has nothing to show. */}
+        <Box
+          data-testid="rediscover-and-storage"
+          sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'stretch',
+            gap: { xs: 2, sm: 3 },
+            '& > *': { flex: '1 1 360px', minWidth: 0 }
+          }}
+        >
+          <Rediscover groupId={selectedGroupId || undefined} />
+
+          <StorageChart
+            totalStorage={statistics.overview.totalStorage}
+            averagePhotoSize={statistics.overview.averagePhotoSize}
+            topAlbums={statistics.albums.map((album) => ({
+              albumId: album.albumId,
+              name: album.name,
+              totalSize: album.totalSize
+            }))}
+            storageLimit={entitlements?.limits?.meters?.storageBytes}
+            meteredStorage={entitlements?.usage?.storageBytes}
+            onUpgrade={goToPlans}
+          />
+        </Box>
       </Box>
     </Container>
   );

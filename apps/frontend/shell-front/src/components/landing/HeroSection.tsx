@@ -84,7 +84,7 @@ export function HeroSection({ onSignIn, onSeeHow }: HeroSectionProps) {
             mb: { xs: 2.5, md: 3.5 }
           }}
         >
-          Connect it once. Then it keeps your journal, reads your accounts and finds your photos.
+          Connect it once. Then it keeps your journal, finds your photos and remembers what you two did.
         </Typography>
 
         {/* Full width and stacked on a phone, where a thumb reaches for the
