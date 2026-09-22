@@ -1,4 +1,11 @@
 # Tumbalog
+## [0.0.508](https://github.com/toomastahves/tumbaland/compare/app-v0.0.507...app-v0.0.508) (2026-09-22)
+
+### Bug Fixes
+
+* media upload in chat ([7849943](https://github.com/toomastahves/tumbaland/commit/7849943ea30b435b389a5e5684d6830e735b8419))
+* various chat bugs ([6094c4b](https://github.com/toomastahves/tumbaland/commit/6094c4be79ce3c2aeab9ddd2ef7a493fbfcfeaa9))
+
 ## [0.0.507](https://github.com/toomastahves/tumbaland/compare/app-v0.0.506...app-v0.0.507) (2026-09-21)
 
 ### Bug Fixes
