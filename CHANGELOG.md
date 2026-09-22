@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.514](https://github.com/toomastahves/tumbaland/compare/app-v0.0.513...app-v0.0.514) (2026-09-22)
+
+### Features
+
+* add voice calls ([51bc3bb](https://github.com/toomastahves/tumbaland/commit/51bc3bba59c02373846d2d3b973ab67538f6c328))
+
 ## [0.0.513](https://github.com/toomastahves/tumbaland/compare/app-v0.0.512...app-v0.0.513) (2026-09-22)
 
 ### Features
