@@ -5,7 +5,6 @@ import InputBase from '@mui/material/InputBase';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import SendIcon from '@mui/icons-material/Send';
 import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined';
-import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
 import SentimentSatisfiedAltIcon from '@mui/icons-material/SentimentSatisfiedAlt';
 import { TOUCH_TARGET, brand, ink, surface } from '@tumbaland/frontend-core';
 import { FullEmojiPicker, loadEmojiPicker } from './FullEmojiPicker';
@@ -47,7 +46,6 @@ export function Composer({
   const [emojiAnchor, setEmojiAnchor] = useState<HTMLElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
-  const cameraRef = useRef<HTMLInputElement | null>(null);
 
   // On a phone Enter inserts a newline and the button sends; on a desktop
   // keyboard Enter sends and Shift+Enter breaks the line. Getting this the
@@ -118,23 +116,17 @@ export function Composer({
       {uploads.length > 0 && onRemoveUpload && <UploadTray uploads={uploads} onRemove={onRemoveUpload} />}
 
       <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.5, p: 1 }}>
+      {/* One button. On a phone the system picker already offers the camera
+          beside the library, so a separate camera button was the same thing
+          twice. */}
       {onAddFiles && (
-        <>
-          <IconButton
-            aria-label="Add photo or video"
-            onClick={() => fileRef.current?.click()}
-            sx={{ color: ink.muted, width: TOUCH_TARGET, height: TOUCH_TARGET }}
-          >
-            <AddPhotoAlternateOutlinedIcon />
-          </IconButton>
-          <IconButton
-            aria-label="Take a photo"
-            onClick={() => cameraRef.current?.click()}
-            sx={{ color: ink.muted, width: TOUCH_TARGET, height: TOUCH_TARGET, display: { xs: 'inline-flex', sm: 'none' } }}
-          >
-            <PhotoCameraOutlinedIcon />
-          </IconButton>
-        </>
+        <IconButton
+          aria-label="Add photo or video"
+          onClick={() => fileRef.current?.click()}
+          sx={{ color: ink.muted, width: TOUCH_TARGET, height: TOUCH_TARGET }}
+        >
+          <AddPhotoAlternateOutlinedIcon />
+        </IconButton>
       )}
 
       <IconButton
@@ -197,18 +189,7 @@ export function Composer({
           reacting is where the common few are almost always enough. */}
       <FullEmojiPicker anchorEl={emojiAnchor} onClose={() => setEmojiAnchor(null)} onPick={insertEmoji} />
 
-      {/* Two inputs, not one: `capture` on the shared picker would take every
-          selection straight to the camera and hide the photo library. */}
       <input ref={fileRef} type="file" accept={ACCEPTED} multiple hidden onChange={pick} data-testid="file-input" />
-      <input
-        ref={cameraRef}
-        type="file"
-        accept={ACCEPTED}
-        capture="environment"
-        hidden
-        onChange={pick}
-        data-testid="camera-input"
-      />
     </Box>
   );
 }

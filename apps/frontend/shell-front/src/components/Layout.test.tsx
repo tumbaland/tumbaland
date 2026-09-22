@@ -157,6 +157,24 @@ it('puts the rail before the content on wide screens and the tab bar after it on
   expect(tabBar.compareDocumentPosition(screen.getByText('page content'))).toBe(Node.DOCUMENT_POSITION_PRECEDING);
 });
 
+it('gives chat the whole phone screen, without the tab bar', async () => {
+  setSession(true);
+  setMobile(true);
+  renderAt('/chat/c1', { CHAT_FRONT_URL: 'https://chat.example' });
+
+  expect(await screen.findByText('remote module')).toBeInTheDocument();
+  expect(await screen.findByRole('link', { name: 'Back to conversations' })).toBeInTheDocument();
+  expect(screen.queryByRole('navigation', { name: 'Main' })).not.toBeInTheDocument();
+});
+
+it('keeps the tab bar out of chat on a phone only', async () => {
+  setSession(true);
+  setMobile(false);
+  renderAt('/chat', { CHAT_FRONT_URL: 'https://chat.example' });
+
+  expect(await screen.findByRole('navigation', { name: 'Main' })).toBeInTheDocument();
+});
+
 it('shows an unauthorized page instead of the module when not authenticated', async () => {
   const { authService } = await import('../services/authService');
   vi.mocked(authService.isAuthenticated).mockResolvedValueOnce(false);

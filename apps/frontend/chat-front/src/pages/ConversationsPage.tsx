@@ -9,6 +9,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import List from '@mui/material/List';
 import ListItemButton from '@mui/material/ListItemButton';
 import Typography from '@mui/material/Typography';
+import GroupsIcon from '@mui/icons-material/Groups';
 import { TOUCH_TARGET, brand, ink, surface } from '@tumbaland/frontend-core';
 import { appPath } from '../appBase';
 import { chatApi } from '../services/chatApi';
@@ -22,6 +23,11 @@ function conversationName(conversation: Conversation, currentUserId: string): st
   const others = conversation.members.filter((member) => member.userId !== currentUserId);
   if (others.length === 0) return 'Just you';
   return others.map((member) => member.name || member.email).join(', ');
+}
+
+/** Two people is a direct conversation; three or more is a group chat. */
+function isGroup(conversation: Conversation, currentUserId: string): boolean {
+  return conversation.members.filter((member) => member.userId !== currentUserId).length > 1;
 }
 
 export interface ConversationsPageProps {
@@ -40,26 +46,19 @@ export default function ConversationsPage({ currentUserId }: ConversationsPagePr
     // Ensures before listing: a group made in Groups has no conversation until
     // something creates one, so listing alone shows an empty screen with no way
     // forward. Idempotent, so this is safe on every open.
+    //
+    // The list is always shown, even with a single conversation: it is what
+    // the header's Chat button promises, and the way back out of a thread.
     chatApi
       .ensureMyConversations()
-      .then((list) => {
-        if (!active) return;
-        setConversations(list);
-
-        // With one conversation the list is a screen that exists only to be
-        // tapped through, so it is skipped. That is the normal case for two
-        // people, which is what this is for.
-        if (list.length === 1) {
-          navigate(appPath(`/${list[0]!.id}`), { replace: true });
-        }
-      })
+      .then((list) => active && setConversations(list))
       .catch((cause: Error) => active && setError(cause.message))
       .finally(() => active && setLoading(false));
 
     return () => {
       active = false;
     };
-  }, [navigate]);
+  }, []);
 
   if (loading) {
     return (
@@ -93,6 +92,7 @@ export default function ConversationsPage({ currentUserId }: ConversationsPagePr
     <List sx={{ py: 0 }}>
       {conversations.map((conversation) => {
         const name = conversationName(conversation, currentUserId);
+        const group = isGroup(conversation, currentUserId);
         return (
           <ListItemButton
             key={conversation.id}
@@ -103,7 +103,9 @@ export default function ConversationsPage({ currentUserId }: ConversationsPagePr
               borderBottom: `1px solid ${surface.sunken}`
             }}
           >
-            <Avatar sx={{ bgcolor: brand.pinkInk }}>{name.charAt(0).toUpperCase()}</Avatar>
+            <Avatar sx={{ bgcolor: group ? brand.purple : brand.pinkInk }} aria-hidden>
+              {group ? <GroupsIcon /> : name.charAt(0).toUpperCase()}
+            </Avatar>
 
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography
@@ -112,6 +114,9 @@ export default function ConversationsPage({ currentUserId }: ConversationsPagePr
                 sx={{ fontWeight: conversation.unreadCount > 0 ? 700 : 500 }}
               >
                 {name}
+              </Typography>
+              <Typography variant="caption" sx={{ color: ink.muted, display: 'block' }}>
+                {group ? `Group chat · ${conversation.members.length} people` : 'Direct message'}
               </Typography>
               <Typography variant="body2" noWrap sx={{ color: ink.muted }}>
                 {conversation.lastMessagePreview || 'No messages yet'}

@@ -4,10 +4,16 @@ import { MemoryRouter } from 'react-router';
 import { APPS, USER_APPS, getAppByRoute } from '../config/apps';
 import { ModuleHeader } from './ModuleHeader';
 
-function renderHeader(route: string, mobile = false) {
+function renderHeader(route: string, mobile = false, unreadChat = 0) {
   render(
     <MemoryRouter initialEntries={[route]}>
-      <ModuleHeader app={getAppByRoute(route)} currentRoute={route} mobile={mobile} end={<span>tenant</span>} />
+      <ModuleHeader
+        app={getAppByRoute(route)}
+        currentRoute={route}
+        mobile={mobile}
+        end={<span>tenant</span>}
+        unreadChat={unreadChat}
+      />
     </MemoryRouter>
   );
 }
@@ -99,4 +105,35 @@ it('takes every section straight from the app config, so no list can drift', () 
   for (const { route } of configured) {
     expect(route.startsWith('/')).toBe(true);
   }
+});
+
+describe('chat', () => {
+  it('is a button in the bar, with the unread count', () => {
+    renderHeader('/album/albums', true, 3);
+
+    const chat = screen.getByRole('link', { name: 'Chat, 3 unread' });
+    expect(chat).toHaveAttribute('href', '/chat');
+    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.getByText('tenant')).toBeInTheDocument();
+  });
+
+  it('shows no count when everything is read', () => {
+    renderHeader('/', true);
+    expect(screen.getByRole('link', { name: 'Chat' })).toBeInTheDocument();
+  });
+
+  it('offers the way home from the conversation list, in place of the tenant', () => {
+    renderHeader('/chat', true, 3);
+
+    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/');
+    expect(screen.queryByRole('link', { name: /Back to conversations/ })).not.toBeInTheDocument();
+    expect(screen.queryByText('tenant')).not.toBeInTheDocument();
+  });
+
+  it('offers the way back to the list from a thread', () => {
+    renderHeader('/chat/c1', true);
+
+    expect(screen.getByRole('link', { name: 'Back to conversations' })).toHaveAttribute('href', '/chat');
+    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/');
+  });
 });

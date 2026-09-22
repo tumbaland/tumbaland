@@ -3,12 +3,13 @@ import { ReactNode, useEffect, useState } from 'react';
 import { ProtectedRoute, surface, TenantSelector, useTenant } from '@tumbaland/frontend-core';
 import { AppNav } from './AppNav';
 import { RemoteOutlet } from './RemoteOutlet';
-import { getAppByRoute } from '../config/apps';
+import { CHAT_APP, getAppByRoute, isRouteActive } from '../config/apps';
 import { useConfig } from '../config/ConfigProvider';
 import { authService } from '../services/authService';
 import { recordLastVisited } from '../services/lastVisited';
 import { useAuthState } from '../hooks/useAuthState';
 import { useUnreadChat } from '../hooks/useUnreadChat';
+import { useKeyboardAwareHeight } from '../hooks/useKeyboardAwareHeight';
 import { UpdatePrompt } from './UpdatePrompt';
 import { onWorkerMessage, registerServiceWorker } from '../services/serviceWorker';
 import { refreshSubscription } from '../services/pushNotifications';
@@ -58,8 +59,16 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const [updateReady, setUpdateReady] = useState(false);
 
-  // The unread count for the Chat tab's badge and the installed app's icon.
+  // The unread count for the header's Chat button and the installed app's icon.
   const unreadChat = useUnreadChat(authenticated);
+
+  // Chat takes the whole screen on a phone: the tab bar under a thread costs a
+  // fifth of the height, and the header already carries the way back out.
+  const inChat = isRouteActive(CHAT_APP.route, location.pathname);
+
+  // How tall the app may be right now, which is less than the screen while the
+  // on-screen keyboard is up. See the hook for why `100dvh` alone is not enough.
+  const appHeight = useKeyboardAwareHeight();
 
   // The worker belongs to this origin, so it is registered here rather than in
   // the chat module, which runs inside this page and has no worker of its own.
@@ -90,7 +99,7 @@ export default function Layout({ children }: LayoutProps) {
   }, [currentApp, location.pathname]);
 
   const nav = authenticated ? (
-    <AppNav currentRoute={location.pathname} user={user} mobile={isMobile} unreadChat={unreadChat} />
+    <AppNav currentRoute={location.pathname} user={user} mobile={isMobile} />
   ) : null;
 
   // One bar for the whole signed-in session: where you are, where else you can
@@ -103,6 +112,7 @@ export default function Layout({ children }: LayoutProps) {
         app={currentApp}
         currentRoute={location.pathname}
         mobile={isMobile}
+        unreadChat={unreadChat}
         end={
           <TenantSelector
             selectedTenant={tenant.selectedTenant}
@@ -129,7 +139,7 @@ export default function Layout({ children }: LayoutProps) {
     // the status bar as well. The bottom edge is the tab bar's (see AppNav).
     <div
       style={{
-        height: '100dvh',
+        height: appHeight,
         width: '100%',
         boxSizing: 'border-box',
         paddingTop: 'env(safe-area-inset-top)',
@@ -180,7 +190,9 @@ export default function Layout({ children }: LayoutProps) {
             minHeight: 0,
             width: '100%',
             boxSizing: 'border-box',
-            paddingInline: isMobile ? 12 : 0,
+            // A thread runs edge to edge on a phone, like every messaging app;
+            // the gutter only wastes the width of a bubble.
+            paddingInline: isMobile && !inChat ? 12 : 0,
             ...(currentApp ? { maxWidth: CONTENT_MAX_WIDTH, marginInline: 'auto' } : null)
           }}
         >
@@ -194,7 +206,7 @@ export default function Layout({ children }: LayoutProps) {
         </div>
       </div>
 
-      {isMobile && nav}
+      {isMobile && !inChat && nav}
     </div>
   );
 }

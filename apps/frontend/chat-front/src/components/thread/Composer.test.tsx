@@ -150,11 +150,11 @@ describe('attachments', () => {
     expect(screen.queryByLabelText('Add photo or video')).not.toBeInTheDocument();
   });
 
-  it('offers a picker and a camera button when uploads are on', () => {
+  it('offers one picker button when uploads are on', () => {
     render(<Composer onSend={() => {}} onTyping={() => {}} onAddFiles={() => {}} onRemoveUpload={() => {}} />);
 
     expect(screen.getByLabelText('Add photo or video')).toBeInTheDocument();
-    expect(screen.getByLabelText('Take a photo')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Take a photo')).not.toBeInTheDocument();
   });
 
   it('accepts only images and video', () => {
@@ -163,11 +163,11 @@ describe('attachments', () => {
     expect(screen.getByTestId('file-input')).toHaveAttribute('accept', 'image/*,video/*');
   });
 
-  it('sends the camera straight to the camera, and the picker to the library', () => {
+  it('opens the library rather than going straight to the camera', () => {
     render(<Composer onSend={() => {}} onTyping={() => {}} onAddFiles={() => {}} onRemoveUpload={() => {}} />);
 
-    // One input with `capture` would hide the photo library entirely.
-    expect(screen.getByTestId('camera-input')).toHaveAttribute('capture', 'environment');
+    // `capture` would hide the photo library entirely; without it the system
+    // picker offers the camera and the library side by side.
     expect(screen.getByTestId('file-input')).not.toHaveAttribute('capture');
   });
 
@@ -271,15 +271,6 @@ describe('attachments', () => {
     fireEvent.paste(screen.getByLabelText('Message'), { clipboardData: { files: [] } });
 
     expect(onAddFiles).not.toHaveBeenCalled();
-  });
-
-  it('takes a photo straight from the camera', async () => {
-    const onAddFiles = vi.fn();
-    render(<Composer onSend={() => {}} onTyping={() => {}} onAddFiles={onAddFiles} onRemoveUpload={() => {}} />);
-
-    await userEvent.upload(screen.getByTestId('camera-input'), new File(['x'], 'shot.jpg', { type: 'image/jpeg' }));
-
-    expect(onAddFiles).toHaveBeenCalled();
   });
 
   it('inserts an emoji picked from the full picker', async () => {

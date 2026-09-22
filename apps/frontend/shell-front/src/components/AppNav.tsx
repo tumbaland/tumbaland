@@ -1,7 +1,6 @@
 import { MouseEvent, ReactNode, useState } from 'react';
 import { Link } from 'react-router';
 import Avatar from '@mui/material/Avatar';
-import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
@@ -15,8 +14,6 @@ interface AppNavProps {
   user: User | null;
   /** Phones get a tab bar under the content; anything wider gets a rail beside it. */
   mobile: boolean;
-  /** Unread messages, shown on the Chat entry. */
-  unreadChat?: number;
 }
 
 /**
@@ -28,7 +25,7 @@ interface AppNavProps {
  * Account entry at the end, which is the only account menu there is: the framed
  * apps hide their own while embedded.
  */
-export function AppNav({ currentRoute, user, mobile, unreadChat = 0 }: AppNavProps) {
+export function AppNav({ currentRoute, user, mobile }: AppNavProps) {
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const menuOpen = Boolean(menuAnchor);
   const onAccountPage = USER_APPS.some((app) => isRouteActive(app.route, currentRoute));
@@ -37,9 +34,6 @@ export function AppNav({ currentRoute, user, mobile, unreadChat = 0 }: AppNavPro
     <Box component="nav" aria-label="Main" sx={mobile ? bottomBar : rail}>
       {APPS.map((app) => {
         const Icon = app.icon;
-        // The count is dropped while Chat is open: the thread marks messages
-        // read as they are shown, so a badge there is about to be wrong.
-        const badge = app.route === '/chat' && !isRouteActive(app.route, currentRoute) ? unreadChat : 0;
 
         return (
           <NavItem
@@ -47,20 +41,7 @@ export function AppNav({ currentRoute, user, mobile, unreadChat = 0 }: AppNavPro
             to={app.route}
             label={app.name}
             color={app.color}
-            icon={
-              badge > 0 ? (
-                <Badge
-                  badgeContent={badge}
-                  color="error"
-                  max={99}
-                  aria-label={`${badge} unread message${badge === 1 ? '' : 's'}`}
-                >
-                  <Icon />
-                </Badge>
-              ) : (
-                <Icon />
-              )
-            }
+            icon={<Icon />}
             active={isRouteActive(app.route, currentRoute)}
             mobile={mobile}
           />

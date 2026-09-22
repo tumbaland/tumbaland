@@ -65,6 +65,22 @@ export interface ModuleMenuItem {
  */
 const CHAT_ACCENT = '#0f766e';
 
+/**
+ * Chat, which is deliberately not one of the tabs.
+ *
+ * It is a place you drop into and back out of rather than a module you work
+ * in, so it lives as an icon in the header bar, carrying the unread count, and
+ * a thread takes the whole screen instead of sharing it with the tab bar.
+ */
+export const CHAT_APP: AppConfigItem = {
+  name: 'Chat',
+  route: '/chat',
+  remote: 'chat',
+  urlKey: 'CHAT_FRONT_URL',
+  icon: ChatIcon,
+  color: CHAT_ACCENT
+};
+
 /** The modules, in the order the main navigation lists them. */
 export const APPS: AppConfigItem[] = [
   {
@@ -72,16 +88,6 @@ export const APPS: AppConfigItem[] = [
     route: '/',
     icon: HomeIcon,
     color: moduleAccent.home
-  },
-  {
-    // Second, right after Home: it is the one module that earns a visit every
-    // day, so it sits where a thumb reaches first on a phone.
-    name: 'Chat',
-    route: '/chat',
-    remote: 'chat',
-    urlKey: 'CHAT_FRONT_URL',
-    icon: ChatIcon,
-    color: CHAT_ACCENT
   },
   {
     // Shown as Journal, still served from /relationship: bookmarks, the home
@@ -185,7 +191,7 @@ export type RemoteApp = AppConfigItem & { remote: string };
  * The apps the shell loads as federation remotes — everything but its own Home.
  * Exported for `remotes.ts`, which registers each one's entry point.
  */
-export const EMBEDDABLE_APPS: RemoteApp[] = [...APPS, ...USER_APPS].filter(
+export const EMBEDDABLE_APPS: RemoteApp[] = [...APPS, CHAT_APP, ...USER_APPS].filter(
   (app): app is RemoteApp => app.route !== '/' && Boolean(app.remote)
 );
 

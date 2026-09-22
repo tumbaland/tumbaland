@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 
 const ensureMyConversations = vi.fn();
@@ -60,26 +61,44 @@ describe('opening chat', () => {
     await waitFor(() => expect(ensureMyConversations).toHaveBeenCalled());
   });
 
-  it('goes straight into the thread when there is only one', async () => {
+  it('shows the list even when there is only one conversation', async () => {
     ensureMyConversations.mockResolvedValue([conversation()]);
 
     renderPage();
 
-    // The list would be a screen that exists only to be tapped through, which
-    // is the normal case for two people.
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/chat/c1', { replace: true }));
+    // The header's Chat button promises the list, and it is the way back out
+    // of a thread; skipping it made a thread impossible to leave.
+    await waitFor(() => expect(screen.getByText('Irja')).toBeInTheDocument());
+    expect(navigate).not.toHaveBeenCalled();
   });
 
-  it('shows the list when there is more than one', async () => {
+  it('opens a thread when one is tapped', async () => {
+    ensureMyConversations.mockResolvedValue([conversation(), conversation({ id: 'c2', title: 'Plans' })]);
+
+    renderPage();
+    await userEvent.click(await screen.findByText('Plans'));
+
+    expect(navigate).toHaveBeenCalledWith('/chat/c2');
+  });
+
+  it('tells a direct message from a group chat', async () => {
     ensureMyConversations.mockResolvedValue([
       conversation(),
-      conversation({ id: 'c2', title: 'Plans' })
+      conversation({
+        id: 'c2',
+        title: 'Family',
+        members: [
+          { userId: 'u-tom', email: 'tom@example.com', name: 'Tom', joinedAt: '' },
+          { userId: 'u-irja', email: 'irja@example.com', name: 'Irja', joinedAt: '' },
+          { userId: 'u-mia', email: 'mia@example.com', name: 'Mia', joinedAt: '' }
+        ]
+      })
     ]);
 
     renderPage();
 
-    await waitFor(() => expect(screen.getByText('Plans')).toBeInTheDocument());
-    expect(navigate).not.toHaveBeenCalled();
+    expect(await screen.findByText('Direct message')).toBeInTheDocument();
+    expect(screen.getByText('Group chat · 3 people')).toBeInTheDocument();
   });
 
   it('names an untitled conversation after the other person', async () => {

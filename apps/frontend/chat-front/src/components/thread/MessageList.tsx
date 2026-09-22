@@ -44,6 +44,8 @@ export function MessageList({
   const scroller = useRef<HTMLDivElement | null>(null);
   const bottom = useRef<HTMLDivElement | null>(null);
   const [atBottom, setAtBottom] = useState(true);
+  /** `atBottom` for the resize observer, which outlives any one render. */
+  const atBottomRef = useRef(true);
 
   /**
    * Height before an older page is prepended.
@@ -61,7 +63,8 @@ export function MessageList({
     if (!element) return;
 
     const distance = element.scrollHeight - element.scrollTop - element.clientHeight;
-    setAtBottom(distance < NEAR_BOTTOM_PX);
+    atBottomRef.current = distance < NEAR_BOTTOM_PX;
+    setAtBottom(atBottomRef.current);
 
     // Fetching starts before the reader reaches the very top, so the next page
     // is usually already there by the time they would have seen a gap.
@@ -100,6 +103,23 @@ export function MessageList({
   // The first render lands at the bottom without animating there.
   useEffect(() => {
     bottom.current?.scrollIntoView({ block: 'end' });
+  }, []);
+
+  // The keyboard opening shrinks the list from below. Someone reading the
+  // latest message is still reading it with the keyboard up, so the list stays
+  // pinned to the bottom rather than leaving the newest lines under the composer.
+  useEffect(() => {
+    const element = scroller.current;
+    if (!element || typeof ResizeObserver === 'undefined') return;
+
+    let lastHeight = element.clientHeight;
+    const observer = new ResizeObserver(() => {
+      const shrank = element.clientHeight < lastHeight;
+      lastHeight = element.clientHeight;
+      if (shrank && atBottomRef.current) element.scrollTop = element.scrollHeight;
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
   }, []);
 
   const unread = !atBottom;
