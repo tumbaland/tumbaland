@@ -151,7 +151,11 @@ export type ChatEventType =
   | 'conversation.updated'
   | 'typing'
   | 'read'
-  | 'presence';
+  | 'presence'
+  | 'call.ringing'
+  | 'call.accepted'
+  | 'call.ended'
+  | 'call.signal';
 
 export interface ChatEvent {
   type: ChatEventType;
@@ -193,4 +197,56 @@ export interface PendingUpload {
   status: 'preparing' | 'uploading' | 'done' | 'failed';
   error?: string;
   attachment?: Attachment;
+}
+
+/** One entry of `RTCConfiguration.iceServers`, as chat-service hands it over. */
+export interface IceServer {
+  urls: string | string[];
+  username?: string;
+  credential?: string;
+}
+
+/** What a call connects with. `relay: false` means some networks will not connect. */
+export interface IceConfig {
+  iceServers: IceServer[];
+  relay: boolean;
+  expiresAt: string | null;
+}
+
+export interface CallPerson {
+  userId: string;
+  name: string;
+  picture: string | null;
+}
+
+export type CallEndReason = 'hangup' | 'declined' | 'cancelled' | 'missed' | 'dropped';
+
+/** A call as chat-service describes it, and as every `call.*` event but `call.signal` carries it. */
+export interface CallView {
+  id: string;
+  conversationId: string;
+  caller: CallPerson;
+  callees: CallPerson[];
+  /** The tab that placed the call. */
+  callerDeviceId: string;
+  answeredBy: string | null;
+  answeredDeviceId: string | null;
+  status: 'ringing' | 'active' | 'ended';
+  endReason: CallEndReason | null;
+  startedAt: string;
+  answeredAt: string | null;
+  endedAt: string | null;
+}
+
+/** An offer, an answer or an ICE candidate, on its way between the two devices. */
+export interface CallSignalData {
+  description?: { type: 'offer' | 'answer'; sdp: string };
+  candidate?: RTCIceCandidateInit | null;
+}
+
+export interface CallSignalPayload {
+  callId: string;
+  fromDeviceId: string;
+  toDeviceId: string;
+  data: CallSignalData;
 }

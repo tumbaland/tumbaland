@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { createRateLimiter, validate } from '@tumbaland/backend-core';
 import * as ctrl from '../controllers/chatController';
+import * as calls from '../controllers/callController';
 import { caller } from '../services/accessService';
 import { touch as touchPresence } from '../services/presenceService';
 import {
@@ -10,6 +11,8 @@ import {
   photoAlbumSchema,
   appearanceSchema,
   albumPlacementSchema,
+  callDeviceSchema,
+  callSignalSchema,
   pushSubscriptionSchema,
   reactionSchema,
   sendMessageSchema,
@@ -46,6 +49,23 @@ const sendLimiter = createRateLimiter({
  */
 const typingLimiter = createRateLimiter({ windowMs: 60 * 1000, max: 120, message: { success: false, message: 'ok' } });
 
+/** Ringing someone thirty times in five minutes is not a call. */
+const callStartLimiter = createRateLimiter({
+  windowMs: 5 * 60 * 1000,
+  max: 30,
+  message: { success: false, message: 'Too many calls, wait a moment' }
+});
+
+/**
+ * A call sends a dozen or two ICE candidates at the start and a few more on
+ * each network change. The ceiling is for a client stuck in a loop.
+ */
+const signalLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 300,
+  message: { success: false, message: 'Too many call signals' }
+});
+
 router.get('/conversations', ctrl.listConversations);
 router.post('/conversations', validate(createConversationSchema), ctrl.createConversation);
 // What the app opens with: ensures a conversation exists in each of the
@@ -59,6 +79,13 @@ router.get('/unread', ctrl.unreadCount);
 router.post('/push/subscriptions', validate(pushSubscriptionSchema), ctrl.subscribePush);
 router.delete('/push/subscriptions', validate(unsubscribeSchema), ctrl.unsubscribePush);
 router.get('/search', ctrl.search);
+router.get('/calls/ice-servers', calls.iceServers);
+router.get('/calls/current', calls.current);
+router.post('/conversations/:id/calls', callStartLimiter, validate(callDeviceSchema), calls.start);
+router.post('/calls/:callId/accept', validate(callDeviceSchema), calls.accept);
+router.post('/calls/:callId/decline', calls.decline);
+router.post('/calls/:callId/end', calls.end);
+router.post('/calls/:callId/signal', signalLimiter, validate(callSignalSchema), calls.signal);
 
 // GET /api/chat/stream is deliberately not here: app.ts registers it ahead of
 // the rate limiter.

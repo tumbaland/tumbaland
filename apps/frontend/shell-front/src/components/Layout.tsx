@@ -17,6 +17,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import { ModuleHeader } from './ModuleHeader';
 import { ChatPanel } from './ChatPanel';
+import { CallLayer } from './CallLayer';
 
 /** Whether the desktop chat panel was left open, so it stays that way across visits. */
 const CHAT_PANEL_KEY = 'tumbaland.chatPanel.open';
@@ -241,6 +242,8 @@ export default function Layout({ children }: LayoutProps) {
       </div>
 
       {showChatPanel && <ChatPanel onClose={toggleChatPanel} />}
+
+      {authenticated && <CallLayer />}
 
       {isMobile && !inThread && nav}
     </div>

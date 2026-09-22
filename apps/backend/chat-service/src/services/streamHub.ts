@@ -26,7 +26,11 @@ export type ChatEventType =
   | 'conversation.updated'
   | 'typing'
   | 'read'
-  | 'presence';
+  | 'presence'
+  | 'call.ringing'
+  | 'call.accepted'
+  | 'call.ended'
+  | 'call.signal';
 
 export interface ChatEvent {
   type: ChatEventType;
@@ -41,10 +45,19 @@ interface Subscriber {
   /** The groups this connection authenticated with, from `req.userGroups`. */
   groups: Set<string>;
   res: Response;
+  /** The tab's call device id, when the stream says (only the call listener does). */
+  deviceId: string | null;
 }
 
-/** How many concurrent streams one person may hold. */
-export const MAX_STREAMS_PER_USER = 5;
+/**
+ * How many concurrent streams one person may hold.
+ *
+ * Every open app holds two: the call listener, which is always mounted, and
+ * whatever chat view is open. A phone and a laptop with a second tab is six.
+ * Past the cap a client falls back to polling, and calls cannot ring or
+ * connect over polling, so the cap sits well clear of ordinary use.
+ */
+export const MAX_STREAMS_PER_USER = 12;
 
 /**
  * Heartbeat interval. The proxy closes an idle connection at its read timeout,
@@ -85,14 +98,19 @@ function bucket(userId: string): Set<Subscriber> {
  * Refuses past `MAX_STREAMS_PER_USER` so a page that leaks EventSource objects
  * cannot exhaust the connection pool for everyone else.
  */
-export function subscribe(userId: string, groups: string[], res: Response): (() => void) | null {
+export function subscribe(
+  userId: string,
+  groups: string[],
+  res: Response,
+  deviceId: string | null = null
+): (() => void) | null {
   const set = bucket(userId);
   if (set.size >= MAX_STREAMS_PER_USER) {
     logger.warn('Refusing chat stream: too many open for this user', { userId, open: set.size });
     return null;
   }
 
-  const subscriber: Subscriber = { userId, groups: new Set(groups), res };
+  const subscriber: Subscriber = { userId, groups: new Set(groups), res, deviceId };
   set.add(subscriber);
 
   return () => {
@@ -104,6 +122,18 @@ export function subscribe(userId: string, groups: string[], res: Response): (() 
 /** Whether this person has at least one stream open right now. */
 export function isOnline(userId: string): boolean {
   return (subscribers.get(userId)?.size ?? 0) > 0;
+}
+
+/**
+ * Whether this particular tab has a stream open. A call is between two tabs,
+ * and the person being online on a laptop says nothing about whether the phone
+ * that took the call is still there.
+ */
+export function isDeviceOnline(userId: string, deviceId: string): boolean {
+  for (const subscriber of subscribers.get(userId) ?? []) {
+    if (subscriber.deviceId === deviceId) return true;
+  }
+  return false;
 }
 
 /** Everyone currently connected who is in this group. */
@@ -151,6 +181,34 @@ export function publishToGroup(groupId: string, event: ChatEvent, exceptUserId?:
 
   for (const [userId, set] of subscribers) {
     if (exceptUserId && userId === exceptUserId) continue;
+
+    for (const subscriber of set) {
+      if (!subscriber.groups.has(groupId)) continue;
+      try {
+        subscriber.res.write(frame);
+      } catch (error) {
+        logger.warn('Dropping chat subscriber after a failed write', {
+          userId,
+          error: (error as Error).message
+        });
+        set.delete(subscriber);
+      }
+    }
+    if (set.size === 0) subscribers.delete(userId);
+  }
+}
+
+/**
+ * Sends an event to these people only, on every device they have open, and
+ * only on streams that authenticated with `groupId`. For calls: an offer is
+ * for the person being called, not the whole group.
+ */
+export function publishToUsers(userIds: string[], groupId: string, event: ChatEvent): void {
+  const frame = formatEvent(event);
+
+  for (const userId of new Set(userIds)) {
+    const set = subscribers.get(userId);
+    if (!set) continue;
 
     for (const subscriber of set) {
       if (!subscriber.groups.has(groupId)) continue;

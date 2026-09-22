@@ -23,7 +23,10 @@ export default defineConfig(({ mode }) => ({
             exposes: {
               [TUMBALAND_REMOTE_MODULE]: './src/federation/RemoteApp.tsx',
               // The desktop side panel: chat beside whatever module is open.
-              './Panel': './src/federation/ChatPanel.tsx'
+              './Panel': './src/federation/ChatPanel.tsx',
+              // Calls, mounted once by the shell above every page, so a call
+              // rings anywhere in the app and survives moving between pages.
+              './Calls': './src/federation/CallHost.tsx'
             },
             shared: TUMBALAND_FEDERATION_SHARED,
             dts: false

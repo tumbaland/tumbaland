@@ -19,6 +19,12 @@ export interface PushPayload {
   tag: string;
   url: string;
   unread?: number;
+  /**
+   * `call`: a ringing call, kept on screen until it is dealt with.
+   * `call-over`: replaces that notification and closes it at once, for a call
+   * answered or declined somewhere else.
+   */
+  kind?: 'call' | 'call-over';
 }
 
 let configured: boolean | null = null;
@@ -99,7 +105,11 @@ export async function removeSubscription(userId: string, endpoint: string): Prom
  * counted for diagnostics. Temporary provider outages must not permanently
  * unsubscribe phones that are still registered.
  */
-export async function sendToUsers(userIds: string[], payload: PushPayload): Promise<number> {
+export async function sendToUsers(
+  userIds: string[],
+  payload: PushPayload,
+  { ttlSeconds = 60 * 60 }: { ttlSeconds?: number } = {}
+): Promise<number> {
   if (!isPushConfigured() || userIds.length === 0) return 0;
 
   const subscriptions = await PushSubscription.find({ userId: { $in: userIds } });
@@ -114,7 +124,7 @@ export async function sendToUsers(userIds: string[], payload: PushPayload): Prom
         await webpush.sendNotification(
           { endpoint: subscription.endpoint, keys: subscription.keys },
           body,
-          { TTL: 60 * 60, urgency: 'high', timeout: 10_000 }
+          { TTL: ttlSeconds, urgency: 'high', timeout: 10_000 }
         );
         delivered++;
         if (subscription.failureCount > 0) {

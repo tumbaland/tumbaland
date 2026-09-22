@@ -3,6 +3,7 @@ import { ConfigProvider } from './config/ConfigProvider';
 import AppLayout from './components/AppLayout';
 import AppRoutes from './routes';
 import { APP_BASE } from './appBase';
+import { CallLayer } from './federation/CallHost';
 
 /**
  * chat-front run on its own, outside the shell.
@@ -21,6 +22,7 @@ function App() {
             <Route path="*" element={<Navigate to={APP_BASE} replace />} />
           </Routes>
         </AppLayout>
+        <CallLayer />
       </BrowserRouter>
     </ConfigProvider>
   );

@@ -6,7 +6,10 @@ import type {
   AlbumPlacement,
   Attachment,
   Conversation,
+  CallSignalData,
+  CallView,
   ConversationDetail,
+  IceConfig,
   Message,
   MessagePage,
   PhotoAlbum,
@@ -248,6 +251,45 @@ export const chatApi = {
     } catch {
       return null;
     }
+  },
+
+  /** STUN and TURN servers for a call. Fresh relay credentials every time, so never cached. */
+  async iceServers(): Promise<IceConfig> {
+    const json = await client.get<{ data: IceConfig }>('/api/chat/calls/ice-servers');
+    return json.data;
+  },
+
+  /** The call ringing or running for the signed-in person, if any. */
+  async currentCall(): Promise<CallView | null> {
+    const json = await client.get<{ data: CallView | null }>('/api/chat/calls/current');
+    return json?.data ?? null;
+  },
+
+  async startCall(conversationId: string, deviceId: string): Promise<CallView> {
+    const json = await client.post<{ data: CallView }>(
+      `/api/chat/conversations/${encodeURIComponent(conversationId)}/calls`,
+      { deviceId }
+    );
+    return json.data;
+  },
+
+  async acceptCall(callId: string, deviceId: string): Promise<CallView> {
+    const json = await client.post<{ data: CallView }>(`/api/chat/calls/${encodeURIComponent(callId)}/accept`, {
+      deviceId
+    });
+    return json.data;
+  },
+
+  async declineCall(callId: string): Promise<void> {
+    await client.post(`/api/chat/calls/${encodeURIComponent(callId)}/decline`, {});
+  },
+
+  async endCall(callId: string): Promise<void> {
+    await client.post(`/api/chat/calls/${encodeURIComponent(callId)}/end`, {});
+  },
+
+  async sendSignal(callId: string, deviceId: string, data: CallSignalData): Promise<void> {
+    await client.post(`/api/chat/calls/${encodeURIComponent(callId)}/signal`, { deviceId, data });
   },
 
   /** The URL the EventSource opens. Absolute, since the API is another origin. */

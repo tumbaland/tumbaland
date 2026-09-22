@@ -38,7 +38,11 @@ export const stream = async (req: Request, res: Response): Promise<void> => {
   });
   res.flushHeaders?.();
 
-  const unsubscribe = subscribe(person.id, person.groups, res);
+  // Only the call listener sends one; it lets a dropped call be told apart from
+  // the same person still having another tab open.
+  const rawDevice = req.query.deviceId;
+  const deviceId = typeof rawDevice === 'string' && rawDevice.length <= 64 ? rawDevice : null;
+  const unsubscribe = subscribe(person.id, person.groups, res, deviceId);
   if (!unsubscribe) {
     // Already at the per-user cap. Answered on the stream rather than as a
     // status code, because the headers are out: the client reads the reason

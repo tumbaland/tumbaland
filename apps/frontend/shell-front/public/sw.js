@@ -152,6 +152,28 @@ self.addEventListener('push', (event) => {
     data: { url: payload.url || '/chat' },
     timestamp: Date.now()
   };
+  // A ringing call stays on screen until it is dealt with, and buzzes like one.
+  // The server replaces it with "Missed call" under the same tag if nobody
+  // answers, and the page closes it once the call is picked up.
+  if (payload.kind === 'call') {
+    options.requireInteraction = true;
+    options.vibrate = [500, 250, 500, 250, 500, 250, 500];
+  }
+
+  // A call answered or declined on another device. Every push must show a
+  // notification, so this one replaces "Calling you" under the same tag and is
+  // closed straight away: the ringing call leaves the lock screen.
+  if (payload.kind === 'call-over') {
+    options.silent = true;
+    options.renotify = false;
+    event.waitUntil(
+      self.registration
+        .showNotification(title, options)
+        .then(() => self.registration.getNotifications({ tag: options.tag }))
+        .then((shown) => shown.forEach((notification) => notification.close()))
+    );
+    return;
+  }
 
   event.waitUntil(
     Promise.all([

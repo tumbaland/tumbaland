@@ -131,3 +131,35 @@ export const pushSubscriptionSchema = z.object({
 export const unsubscribeSchema = z.object({
   endpoint: z.string().url('endpoint must be a URL')
 });
+
+/**
+ * Which browser tab is in a call. Made up by the client per page load; it only
+ * has to tell one person's devices apart, never to authenticate anything.
+ */
+const deviceIdSchema = z.string().min(8).max(64);
+
+export const callDeviceSchema = z.object({ deviceId: deviceIdSchema });
+
+/**
+ * One WebRTC signal. The SDP ceiling is generous for an audio-only offer
+ * (a few kilobytes) and still stops the relay being used to shovel data.
+ */
+export const callSignalSchema = z.object({
+  deviceId: deviceIdSchema,
+  data: z
+    .object({
+      description: z.object({ type: z.enum(['offer', 'answer']), sdp: z.string().max(30_000) }).optional(),
+      candidate: z
+        .object({
+          candidate: z.string().max(1_000),
+          sdpMid: z.string().max(64).nullable().optional(),
+          sdpMLineIndex: z.number().int().min(0).max(64).nullable().optional(),
+          usernameFragment: z.string().max(256).nullable().optional()
+        })
+        .nullable()
+        .optional()
+    })
+    .refine((data) => data.description !== undefined || data.candidate !== undefined, {
+      message: 'A signal needs a description or a candidate'
+    })
+});

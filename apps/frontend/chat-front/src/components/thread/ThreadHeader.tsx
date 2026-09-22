@@ -8,6 +8,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import CallOutlinedIcon from '@mui/icons-material/CallOutlined';
 import type { ReactNode } from 'react';
 import { brand, ink, surface } from '@tumbaland/frontend-core';
 import type { ConversationMember, Presence } from '../../types';
@@ -30,6 +31,8 @@ export interface ThreadHeaderProps {
   accent?: string;
   /** When the chat last saw each person read or write, for when presence has no record of them. */
   lastSeen?: Record<string, string>;
+  /** Given for a two-person conversation: calls the other person. */
+  onCall?: () => void;
 }
 
 /** "Active 5 min ago" has to keep counting while the thread stays open. */
@@ -92,7 +95,8 @@ export function ThreadHeader({
   menu = [],
   background = surface.paper,
   accent = brand.pinkInk,
-  lastSeen
+  lastSeen,
+  onCall
 }: ThreadHeaderProps) {
   const now = useMinuteClock();
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
@@ -152,6 +156,12 @@ export function ThreadHeader({
           </Typography>
         )}
       </Box>
+
+      {onCall && (
+        <IconButton size="small" aria-label={`Call ${name || ''}`.trim()} onClick={onCall}>
+          <CallOutlinedIcon fontSize="small" />
+        </IconButton>
+      )}
 
       {menu.length > 0 && (
         <>

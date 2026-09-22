@@ -43,9 +43,24 @@ export interface UseChatStreamOptions {
   onResync: () => void;
   onStateChange?: (state: ConnectionState) => void;
   enabled?: boolean;
+  /**
+   * Keep the connection while the app is hidden. For a call in progress: the
+   * screen goes off against a cheek, and the call's signals and the server's
+   * "is this side still here" check both ride on this stream.
+   */
+  keepOpenWhenHidden?: boolean;
+  /** Identifies this tab to the server, for calls. Only the call listener sends one. */
+  deviceId?: string;
 }
 
-export function useChatStream({ onEvent, onResync, onStateChange, enabled = true }: UseChatStreamOptions): void {
+export function useChatStream({
+  onEvent,
+  onResync,
+  onStateChange,
+  enabled = true,
+  keepOpenWhenHidden = false,
+  deviceId
+}: UseChatStreamOptions): void {
   // Held in refs so reconnecting never depends on the caller memoising its
   // callbacks; a changed identity must not tear down a live connection.
   //
@@ -55,12 +70,21 @@ export function useChatStream({ onEvent, onResync, onStateChange, enabled = true
   const onEventRef = useRef(onEvent);
   const onResyncRef = useRef(onResync);
   const onStateRef = useRef(onStateChange);
+  const keepOpenRef = useRef(keepOpenWhenHidden);
+  /** Re-applies the hidden/visible rule when `keepOpenWhenHidden` changes. */
+  const recheckRef = useRef<(() => void) | null>(null);
 
   useInsertionEffect(() => {
     onEventRef.current = onEvent;
     onResyncRef.current = onResync;
     onStateRef.current = onStateChange;
+    keepOpenRef.current = keepOpenWhenHidden;
   });
+
+  // A call ending while the screen is off: close now, as hiding would have.
+  useEffect(() => {
+    recheckRef.current?.();
+  }, [keepOpenWhenHidden]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -84,6 +108,9 @@ export function useChatStream({ onEvent, onResync, onStateChange, enabled = true
      * refetch never ran, which is the one case it exists for.
      */
     let reconnecting = false;
+
+    /** Hidden, and nothing asking to stay connected through it. */
+    const away = () => document.visibilityState === 'hidden' && !keepOpenRef.current;
 
     const setState = (state: ConnectionState) => onStateRef.current?.(state);
 
@@ -112,7 +139,7 @@ export function useChatStream({ onEvent, onResync, onStateChange, enabled = true
     };
 
     const startPolling = () => {
-      if (pollTimer || stopped || document.visibilityState === 'hidden') return;
+      if (pollTimer || stopped || away()) return;
       setState('polling');
       pollTimer = setInterval(() => onResyncRef.current(), POLL_INTERVAL_MS);
     };
@@ -123,7 +150,7 @@ export function useChatStream({ onEvent, onResync, onStateChange, enabled = true
     };
 
     const scheduleReconnect = () => {
-      if (stopped || document.visibilityState === 'hidden') return;
+      if (stopped || away()) return;
 
       failures++;
       if (failures >= FAILURES_BEFORE_POLLING) startPolling();
@@ -135,7 +162,7 @@ export function useChatStream({ onEvent, onResync, onStateChange, enabled = true
     };
 
     function connect(): void {
-      if (stopped || source || document.visibilityState === 'hidden') return;
+      if (stopped || source || away()) return;
       if (pollingOnly || typeof EventSource === 'undefined') {
         startPolling();
         return;
@@ -152,6 +179,7 @@ export function useChatStream({ onEvent, onResync, onStateChange, enabled = true
       // exactly the reconnect that most needs the backfill.
       const url = new URL(chatApi.streamUrl());
       if (lastEventId) url.searchParams.set('lastEventId', lastEventId);
+      if (deviceId) url.searchParams.set('deviceId', deviceId);
 
       const stream = new EventSource(url.toString(), { withCredentials: true });
       source = stream;
@@ -229,14 +257,18 @@ export function useChatStream({ onEvent, onResync, onStateChange, enabled = true
         'conversation.updated',
         'typing',
         'read',
-        'presence'
+        'presence',
+        'call.ringing',
+        'call.accepted',
+        'call.ended',
+        'call.signal'
       ]) {
         stream.addEventListener(type, handle as EventListener);
       }
     }
 
     const onVisibility = () => {
-      if (document.visibilityState === 'hidden') {
+      if (away()) {
         // Mobile browsers may freeze timers immediately. Do not leave cleanup
         // to a timer that may never run while the phone is locked.
         closeStream();
@@ -255,7 +287,9 @@ export function useChatStream({ onEvent, onResync, onStateChange, enabled = true
     };
 
     const onOnline = () => {
-      if (!stopped && document.visibilityState !== 'hidden') {
+      // Includes a call with the screen off: a switch from Wi-Fi to 4G is
+      // exactly when the stream needs rebuilding.
+      if (!stopped && !away()) {
         closeStream();
         failures = 0;
         connect();
@@ -265,14 +299,16 @@ export function useChatStream({ onEvent, onResync, onStateChange, enabled = true
 
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('online', onOnline);
+    recheckRef.current = onVisibility;
     connect();
 
     return () => {
       stopped = true;
+      recheckRef.current = null;
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('online', onOnline);
       stopPolling();
       closeStream();
     };
-  }, [enabled]);
+  }, [enabled, deviceId]);
 }

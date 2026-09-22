@@ -25,6 +25,7 @@ import { ThemePicker } from '../components/thread/ThemePicker';
 import { themeById } from '../components/thread/themes';
 import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined';
 import { chatApi } from '../services/chatApi';
+import { requestCall } from '../services/callBus';
 import { Lightbox } from '../components/thread/Lightbox';
 import { useAttachmentUploads } from '../hooks/useAttachmentUploads';
 import { useChatThread } from '../hooks/useChatThread';
@@ -177,6 +178,13 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
     if (message.kind !== 'system' && stored) note(message.senderId, message.createdAt);
   }
 
+  // Calls are one to one: offered only when there is exactly one other person.
+  const others = thread.members.filter((member) => member.userId !== user?.id);
+  const callable =
+    user && conversationId && others.length === 1
+      ? { userId: others[0]!.userId, name: others[0]!.name || others[0]!.email, picture: others[0]!.picture ?? null }
+      : null;
+
   const makeBackground = async (fileId: string) => {
     try {
       await thread.setAppearance({ backgroundFileId: fileId });
@@ -244,6 +252,7 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         background={theme.header}
         accent={theme.headerAccent}
         lastSeen={lastSeen}
+        onCall={callable ? () => requestCall({ conversationId: conversationId!, peer: callable }) : undefined}
         menu={[
           {
             label: 'Photos go to',

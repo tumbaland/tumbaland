@@ -62,6 +62,11 @@ KEYS=(
   VAPID_PUBLIC_KEY
   VAPID_PRIVATE_KEY
   VAPID_SUBJECT
+  # Cloudflare's TURN relay, for calls. chat-service mints short-lived
+  # credentials with these; both empty means calls fall back to STUN, which
+  # fails between some networks but does not stop chat.
+  CLOUDFLARE_TURN_KEY_ID
+  CLOUDFLARE_TURN_API_TOKEN
 )
 
 OUT="${1:-.env.app}"

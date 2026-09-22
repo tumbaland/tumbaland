@@ -198,6 +198,132 @@ paths:
                     properties:
                       unread: { type: integer }
 
+  /api/chat/calls/ice-servers:
+    get:
+      summary: ICE servers for a call, with short-lived TURN relay credentials
+      description: >
+        Minted from Cloudflare's TURN service on every request and never cached. Without a
+        TURN key configured, or when Cloudflare fails, the answer is STUN only and `relay`
+        is false.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      iceServers:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            urls:
+                              oneOf:
+                                - { type: string }
+                                - { type: array, items: { type: string } }
+                            username: { type: string }
+                            credential: { type: string }
+                      relay: { type: boolean }
+                      expiresAt: { type: string, format: date-time, nullable: true }
+
+  /api/chat/calls/current:
+    get:
+      summary: The call ringing or running for the caller, or null
+      description: What an app opened from a "Calling you" notification asks, since the stream does not replay calls.
+      responses:
+        '200': { description: OK }
+
+  /api/chat/conversations/{id}/calls:
+    post:
+      summary: Start a voice call with the one other person in a conversation
+      description: >
+        Rings every device of the person called, over the stream (`call.ringing`) and by push.
+        Unanswered after 45 seconds it ends as missed. 400 unless the conversation has exactly
+        one other member; 409 when either person is already in a call.
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deviceId]
+              properties:
+                deviceId: { type: string, description: The calling tab, made up by the client per page load. }
+      responses:
+        '201': { description: Ringing }
+        '409': { description: Busy }
+
+  /api/chat/calls/{callId}/accept:
+    post:
+      summary: Answer on this device
+      description: The first device to answer wins; any other gets 409 "Answered on another device".
+      parameters:
+        - { in: path, name: callId, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [deviceId], properties: { deviceId: { type: string } } }
+      responses:
+        '200': { description: Answered (`call.accepted` goes to both people) }
+        '409': { description: Already answered or already over }
+
+  /api/chat/calls/{callId}/decline:
+    post:
+      summary: Say no to a ringing call
+      parameters:
+        - { in: path, name: callId, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Ended as declined }
+
+  /api/chat/calls/{callId}/end:
+    post:
+      summary: Hang up, from either side, at any stage
+      description: >
+        Idempotent. Leaves a line in the thread ("Call, 12 min" or "Missed call from Tom") and
+        sends `call.ended` to both people.
+      parameters:
+        - { in: path, name: callId, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Ended }
+
+  /api/chat/calls/{callId}/signal:
+    post:
+      summary: Pass a WebRTC offer, answer or ICE candidate to the other device
+      description: >
+        Only the device that placed the call and the one that answered it may signal. Delivered
+        as `call.signal` to the other device only.
+      parameters:
+        - { in: path, name: callId, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deviceId, data]
+              properties:
+                deviceId: { type: string }
+                data:
+                  type: object
+                  properties:
+                    description:
+                      type: object
+                      properties:
+                        type: { type: string, enum: [offer, answer] }
+                        sdp: { type: string }
+                    candidate: { type: object, nullable: true }
+      responses:
+        '204': { description: Relayed }
+        '409': { description: The call is not connected, or this device is not in it }
+
   /api/chat/search:
     get:
       summary: Full-text search, scoped to conversations the caller can read
