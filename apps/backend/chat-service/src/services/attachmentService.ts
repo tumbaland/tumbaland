@@ -33,6 +33,22 @@ export function buildFileId(groupId: string, conversationId: string, filename: s
   return `chat/${groupId}/${conversationId}/${randomUUID()}/original${safeExtension}`;
 }
 
+/** The folder every one of a conversation's uploads lives under. */
+export function conversationPrefix(groupId: string, conversationId: string): string {
+  return `chat/${groupId}/${conversationId}/`;
+}
+
+/**
+ * Whether a file id sits inside this conversation's folder.
+ *
+ * File ids arrive from the client, and the service signs download URLs for
+ * them and deletes their folders on unsend. Without this check a message could
+ * name any path in storage: another group's photos to read, or to delete.
+ */
+export function belongsToConversation(fileId: string, groupId: string, conversationId: string): boolean {
+  return fileId.startsWith(conversationPrefix(groupId, conversationId)) && !fileId.includes('..');
+}
+
 /** The thumbnail beside an original, in the same folder. */
 export function thumbnailFileIdFor(fileId: string): string {
   return `${path.posix.dirname(fileId)}/thumb.webp`;
@@ -91,7 +107,7 @@ export async function generateThumbnail(fileId: string, mimetype: string): Promi
 }
 
 /** Every file id a set of attachments refers to, originals and derivatives. */
-function fileIdsOf(attachments: IAttachment[]): string[] {
+export function fileIdsOf(attachments: IAttachment[]): string[] {
   return attachments.flatMap((attachment) =>
     [attachment.fileId, attachment.thumbnailFileId, attachment.posterFileId].filter(
       (value): value is string => Boolean(value)

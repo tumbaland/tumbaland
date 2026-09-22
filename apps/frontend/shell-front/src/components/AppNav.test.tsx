@@ -12,10 +12,13 @@ import { User } from '../types';
 
 const user: User = { id: 'u1', email: 'user@example.com', name: 'Jane Doe' };
 
-function renderNav(route: string, { mobile = false, who = user }: { mobile?: boolean; who?: User | null } = {}) {
+function renderNav(
+  route: string,
+  { mobile = false, who = user, unreadChat = 0 }: { mobile?: boolean; who?: User | null; unreadChat?: number } = {}
+) {
   return render(
     <MemoryRouter initialEntries={[route]}>
-      <AppNav currentRoute={route} user={who} mobile={mobile} />
+      <AppNav currentRoute={route} user={who} mobile={mobile} unreadChat={unreadChat} />
     </MemoryRouter>
   );
 }
@@ -67,4 +70,22 @@ it('offers the same entries as a tab bar on phones', async () => {
   expect(screen.getByRole('link', { name: 'Album' })).toHaveAttribute('aria-current', 'page');
   await userEvent.click(screen.getByRole('button', { name: 'Account' }));
   expect(await screen.findByRole('menuitem', { name: 'Profile' })).toBeInTheDocument();
+});
+
+it('puts Chat in the middle of the phone tab bar, with the unread count', () => {
+  renderNav('/', { mobile: true, unreadChat: 2 });
+
+  const labels = screen.getAllByRole('link').map((link) => link.getAttribute('aria-label') ?? link.textContent);
+  expect(labels).toEqual(['Home', 'Journal', 'Chat, 2 unread', 'Album', 'Money']);
+  expect(screen.getByRole('link', { name: 'Chat, 2 unread' })).toHaveAttribute('href', '/chat');
+});
+
+it('marks Chat as current inside chat on a phone', () => {
+  renderNav('/chat', { mobile: true });
+  expect(screen.getByRole('link', { name: 'Chat' })).toHaveAttribute('aria-current', 'page');
+});
+
+it('keeps Chat out of the rail on a wider screen, where the header has it', () => {
+  renderNav('/', { mobile: false });
+  expect(screen.queryByRole('link', { name: /^Chat/ })).not.toBeInTheDocument();
 });

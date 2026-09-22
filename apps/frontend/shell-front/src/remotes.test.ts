@@ -102,3 +102,17 @@ it('forgets a failed app so the next render can try again', async () => {
   // React caches a lazy component's rejection for good, so a retry needs a new one.
   expect(remoteComponent(album)).not.toBe(first);
 });
+
+it('loads another exposed module on request, cached apart from the app itself', async () => {
+  getGlobalConfig.mockReturnValue({ CHAT_FRONT_URL: 'https://chat.example' });
+  const { remoteComponent } = await import('./remotes');
+  const chat = EMBEDDABLE_APPS.find((app) => app.remote === 'chat')!;
+  loadRemote.mockResolvedValue({ default: () => null });
+
+  const panel = remoteComponent(chat, './Panel');
+  await resolveLazy(panel);
+
+  expect(loadRemote).toHaveBeenCalledWith('chat/Panel');
+  expect(remoteComponent(chat, './Panel')).toBe(panel);
+  expect(remoteComponent(chat)).not.toBe(panel);
+});

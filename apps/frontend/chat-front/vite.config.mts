@@ -20,7 +20,11 @@ export default defineConfig(({ mode }) => ({
           federation({
             name: 'chat',
             filename: TUMBALAND_REMOTE_ENTRY,
-            exposes: { [TUMBALAND_REMOTE_MODULE]: './src/federation/RemoteApp.tsx' },
+            exposes: {
+              [TUMBALAND_REMOTE_MODULE]: './src/federation/RemoteApp.tsx',
+              // The desktop side panel: chat beside whatever module is open.
+              './Panel': './src/federation/ChatPanel.tsx'
+            },
             shared: TUMBALAND_FEDERATION_SHARED,
             dts: false
           })

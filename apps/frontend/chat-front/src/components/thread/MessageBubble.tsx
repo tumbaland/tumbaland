@@ -5,6 +5,7 @@ import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import AddReactionOutlinedIcon from '@mui/icons-material/AddReactionOutlined';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined';
+import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import { brand, ink, surface } from '@tumbaland/frontend-core';
 import type { ThreadMessage } from '../../types';
@@ -53,6 +54,12 @@ export function isJumbo(body: string): boolean {
     /\p{Extended_Pictographic}/u.test(point)
   ).length;
   return glyphs > 0 && glyphs <= JUMBO_LIMIT;
+}
+
+/** Whether the sender may still edit or unsend this message. */
+export function canChange(message: ThreadMessage, mine: boolean): boolean {
+  const stored = message.delivery !== 'pending' && message.delivery !== 'failed';
+  return mine && stored && !message.deletedAt && message.kind !== 'system';
 }
 
 /** How long a touch must be held before it counts as a long press. */
@@ -149,7 +156,7 @@ export function MessageBubble({
           >
             {message.deletedAt ? (
               <Typography variant="body2" sx={{ fontStyle: 'italic', color: ink.muted }}>
-                Message deleted
+                Message unsent
               </Typography>
             ) : (
               <>
@@ -172,23 +179,38 @@ export function MessageBubble({
             )}
           </Box>
 
-          {/* Desktop affordance. Touch reaches the same picker by long press on
-              the bubble, handled by the list. */}
+          {/* Desktop affordance. Touch reaches the same popover, Edit and
+              Unsend included, by a long press on the bubble. */}
           {hovered && !message.deletedAt && !pending && (
-            <IconButton
-              size="small"
-              aria-label="Add reaction"
-              onClick={(event: MouseEvent<HTMLElement>) => onPickEmoji(message.id, event.currentTarget)}
+            <Box
               sx={{
                 position: 'absolute',
                 top: '50%',
                 transform: 'translateY(-50%)',
-                ...(mine ? { right: '100%', mr: 0.5 } : { left: '100%', ml: 0.5 }),
-                color: ink.muted
+                display: 'flex',
+                flexDirection: mine ? 'row-reverse' : 'row',
+                ...(mine ? { right: '100%', mr: 0.5 } : { left: '100%', ml: 0.5 })
               }}
             >
-              <AddReactionOutlinedIcon fontSize="small" />
-            </IconButton>
+              <IconButton
+                size="small"
+                aria-label="Add reaction"
+                onClick={(event: MouseEvent<HTMLElement>) => onPickEmoji(message.id, event.currentTarget)}
+                sx={{ color: ink.muted }}
+              >
+                <AddReactionOutlinedIcon fontSize="small" />
+              </IconButton>
+              {canChange(message, mine) && (
+                <IconButton
+                  size="small"
+                  aria-label="Message options"
+                  onClick={(event: MouseEvent<HTMLElement>) => onPickEmoji(message.id, event.currentTarget)}
+                  sx={{ color: ink.muted }}
+                >
+                  <MoreHorizIcon fontSize="small" />
+                </IconButton>
+              )}
+            </Box>
           )}
         </Box>
       </Box>

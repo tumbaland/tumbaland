@@ -37,9 +37,11 @@ function otherPicture(conversation: Conversation, currentUserId: string): string
 
 export interface ConversationsPageProps {
   currentUserId: string;
+  /** Opens a conversation in place, for the side panel. Without it a row navigates. */
+  onOpen?: (conversationId: string) => void;
 }
 
-export default function ConversationsPage({ currentUserId }: ConversationsPageProps) {
+export default function ConversationsPage({ currentUserId, onOpen }: ConversationsPageProps) {
   const navigate = useNavigate();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,7 +103,7 @@ export default function ConversationsPage({ currentUserId }: ConversationsPagePr
         return (
           <ListItemButton
             key={conversation.id}
-            onClick={() => navigate(appPath(`/${conversation.id}`))}
+            onClick={() => (onOpen ? onOpen(conversation.id) : navigate(appPath(`/${conversation.id}`)))}
             sx={{
               minHeight: TOUCH_TARGET + 16,
               gap: 1.5,

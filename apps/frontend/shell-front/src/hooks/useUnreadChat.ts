@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getGlobalConfig } from '../config/ConfigProvider';
 import { setBadge } from '../services/pushNotifications';
 
@@ -15,8 +15,9 @@ import { setBadge } from '../services/pushNotifications';
 
 const POLL_MS = 60_000;
 
-export function useUnreadChat(enabled: boolean): number {
+export function useUnreadChat(enabled: boolean, route?: string): number {
   const [unread, setUnread] = useState(0);
+  const refresh = useRef<() => void>(() => {});
 
   useEffect(() => {
     if (!enabled) {
@@ -47,6 +48,8 @@ export function useUnreadChat(enabled: boolean): number {
       }
     };
 
+    refresh.current = () => void read();
+
     const start = () => {
       if (timer) return;
       void read();
@@ -65,10 +68,22 @@ export function useUnreadChat(enabled: boolean): number {
 
     return () => {
       active = false;
+      refresh.current = () => {};
       stop();
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [enabled]);
+
+  // A route change is when a count most likely moved: leaving a thread that
+  // was just read. The first run is skipped; the poll above already read it.
+  const firstRoute = useRef(true);
+  useEffect(() => {
+    if (firstRoute.current) {
+      firstRoute.current = false;
+      return;
+    }
+    refresh.current();
+  }, [route]);
 
   return enabled ? unread : 0;
 }

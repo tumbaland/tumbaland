@@ -99,6 +99,9 @@ function MediaTile({ attachment, square, onOpen }: MediaTileProps) {
         width: '100%',
         aspectRatio: square ? '1 / 1' : undefined,
         minHeight: square ? undefined : 120,
+        // A tall portrait photo is cropped to this in the thread; the whole
+        // picture is one tap away in the lightbox.
+        maxHeight: square ? undefined : 360,
         bgcolor: surface.sunken,
         overflow: 'hidden'
       }}
@@ -114,7 +117,7 @@ function MediaTile({ attachment, square, onOpen }: MediaTileProps) {
           alt=""
           loading="lazy"
           onError={() => setFailedSrc(src)}
-          sx={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }}
+          sx={{ display: 'block', width: '100%', height: '100%', maxHeight: square ? undefined : 360, objectFit: 'cover' }}
         />
       )}
 

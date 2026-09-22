@@ -56,6 +56,20 @@ describe('useUnreadChat', () => {
     expect(setBadge).toHaveBeenLastCalledWith(0);
   });
 
+  it('re-reads the count when the route changes, so leaving a read thread clears the badge', async () => {
+    const { result, rerender } = renderHook(({ route }) => useUnreadChat(true, route), {
+      initialProps: { route: '/chat/c1' }
+    });
+    await waitFor(() => expect(result.current).toBe(3));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    fetchMock.mockResolvedValue(unread(0));
+    rerender({ route: '/' });
+
+    await waitFor(() => expect(result.current).toBe(0));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it('reads the count and reports it', async () => {
     const { result } = renderHook(() => useUnreadChat(true));
 

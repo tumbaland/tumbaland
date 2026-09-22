@@ -16,6 +16,18 @@ import { refreshSubscription } from '../services/pushNotifications';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import { ModuleHeader } from './ModuleHeader';
+import { ChatPanel } from './ChatPanel';
+
+/** Whether the desktop chat panel was left open, so it stays that way across visits. */
+const CHAT_PANEL_KEY = 'tumbaland.chatPanel.open';
+
+function readChatPanelOpen(): boolean {
+  try {
+    return localStorage.getItem(CHAT_PANEL_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
 
 interface LayoutProps {
   children: ReactNode;
@@ -59,12 +71,31 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate();
   const [updateReady, setUpdateReady] = useState(false);
 
-  // The unread count for the header's Chat button and the installed app's icon.
-  const unreadChat = useUnreadChat(authenticated);
+  // The unread count for the Chat button and the installed app's icon.
+  // Re-read on every route change, so the badge clears as soon as a thread
+  // that was just read is left rather than up to a minute later.
+  const [chatPanelOpen, setChatPanelOpen] = useState(readChatPanelOpen);
+  const toggleChatPanel = () => setChatPanelOpen((open) => !open);
+  useEffect(() => {
+    try {
+      localStorage.setItem(CHAT_PANEL_KEY, chatPanelOpen ? '1' : '0');
+    } catch {
+      // Private mode: it just starts closed next time.
+    }
+  }, [chatPanelOpen]);
+  // The panel reads and marks messages, so opening or closing it re-reads the
+  // count too.
+  const unreadChat = useUnreadChat(authenticated, `${location.pathname}|${chatPanelOpen}`);
 
-  // Chat takes the whole screen on a phone: the tab bar under a thread costs a
-  // fifth of the height, and the header already carries the way back out.
+  // A thread takes the whole screen on a phone: the tab bar under it costs a
+  // fifth of the height, and the header already carries the way back out. The
+  // conversation list keeps the tab bar, where Chat now lives.
   const inChat = isRouteActive(CHAT_APP.route, location.pathname);
+  const inThread = inChat && location.pathname.replace(/\/+$/, '') !== CHAT_APP.route;
+
+  // Desktop only, and not on the chat page itself, which would be the same
+  // conversation twice with two live connections.
+  const showChatPanel = authenticated && !isMobile && !inChat && chatPanelOpen;
 
   // How tall the app may be right now, which is less than the screen while the
   // on-screen keyboard is up. See the hook for why `100dvh` alone is not enough.
@@ -99,7 +130,7 @@ export default function Layout({ children }: LayoutProps) {
   }, [currentApp, location.pathname]);
 
   const nav = authenticated ? (
-    <AppNav currentRoute={location.pathname} user={user} mobile={isMobile} />
+    <AppNav currentRoute={location.pathname} user={user} mobile={isMobile} unreadChat={unreadChat} />
   ) : null;
 
   // One bar for the whole signed-in session: where you are, where else you can
@@ -113,6 +144,8 @@ export default function Layout({ children }: LayoutProps) {
         currentRoute={location.pathname}
         mobile={isMobile}
         unreadChat={unreadChat}
+        onToggleChat={isMobile ? undefined : toggleChatPanel}
+        chatOpen={showChatPanel}
         end={
           <TenantSelector
             selectedTenant={tenant.selectedTenant}
@@ -206,7 +239,9 @@ export default function Layout({ children }: LayoutProps) {
         </div>
       </div>
 
-      {isMobile && !inChat && nav}
+      {showChatPanel && <ChatPanel onClose={toggleChatPanel} />}
+
+      {isMobile && !inThread && nav}
     </div>
   );
 }

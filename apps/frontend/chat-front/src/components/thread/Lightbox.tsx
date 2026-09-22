@@ -31,37 +31,21 @@ export function canShareFile(file: File): boolean {
 
 export function Lightbox({ attachments, index, onClose }: LightboxProps) {
   const [current, setCurrent] = useState(index ?? 0);
-  const [sharable, setSharable] = useState(false);
-
-  useEffect(() => {
+  // Reset while rendering rather than in an effect, so reopening on another
+  // message never draws one frame of whatever slide was open last time.
+  const [openedAt, setOpenedAt] = useState(index);
+  if (index !== openedAt) {
+    setOpenedAt(index);
     if (index !== null) setCurrent(index);
-  }, [index]);
+  }
 
   const attachment = attachments[current];
 
-  // Whether sharing is possible depends on the file itself, so it is only
-  // known once the bytes are in hand.
-  useEffect(() => {
-    setSharable(false);
-    if (!attachment?.url) return;
-
-    let active = true;
-    // HEAD-free: the file is already cached from the thumbnail in most cases,
-    // and a failure simply leaves the button hidden.
-    fetch(attachment.url)
-      .then((response) => response.blob())
-      .then((blob) => {
-        if (!active) return;
-        setSharable(canShareFile(new File([blob], 'photo', { type: blob.type })));
-      })
-      .catch(() => {
-        /* Download remains available. */
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [attachment?.url]);
+  // Whether the share sheet takes files depends on the type, not the bytes,
+  // so an empty file of the same type answers it. Fetching the real one to
+  // ask meant downloading a whole video a second time just to draw a button.
+  const sharable =
+    Boolean(attachment?.url) && canShareFile(new File([], 'tumbaland', { type: attachment?.mimetype ?? '' }));
 
   useEffect(() => {
     if (index === null) return;
@@ -117,7 +101,24 @@ export function Lightbox({ attachments, index, onClose }: LightboxProps) {
         </IconButton>
       </Box>
 
-      <Box sx={{ display: 'grid', placeItems: 'center', height: '100%', p: 2 }}>
+      {/* Flex, not grid: a grid row sizes to its content, so the image's
+          max-height resolved against itself and a tall photo ran off the
+          bottom of a desktop screen. */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          minHeight: 0,
+          boxSizing: 'border-box',
+          overflow: 'hidden',
+          p: 2,
+          // Clear of the close button above and the arrows either side.
+          pt: `calc(${TOUCH_TARGET}px + env(safe-area-inset-top))`,
+          px: attachments.length > 1 ? 7 : 2
+        }}
+      >
         {!attachment.url ? (
           <Box sx={{ color: '#fff' }}>That file is not available right now.</Box>
         ) : isVideo(attachment) ? (
@@ -128,14 +129,14 @@ export function Lightbox({ attachments, index, onClose }: LightboxProps) {
             controls
             autoPlay
             playsInline
-            sx={{ maxWidth: '100%', maxHeight: '100%' }}
+            sx={{ display: 'block', maxWidth: '100%', maxHeight: '100%', minHeight: 0 }}
           />
         ) : (
           <Box
             component="img"
             src={attachment.url}
             alt=""
-            sx={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+            sx={{ display: 'block', maxWidth: '100%', maxHeight: '100%', minHeight: 0, objectFit: 'contain' }}
           />
         )}
       </Box>
@@ -146,7 +147,7 @@ export function Lightbox({ attachments, index, onClose }: LightboxProps) {
             onClick={() => setCurrent((value) => Math.max(0, value - 1))}
             disabled={current === 0}
             aria-label="Previous"
-            sx={{ position: 'absolute', left: 8, top: '50%', color: '#fff' }}
+            sx={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#fff' }}
           >
             <ChevronLeftIcon fontSize="large" />
           </IconButton>
@@ -154,7 +155,7 @@ export function Lightbox({ attachments, index, onClose }: LightboxProps) {
             onClick={() => setCurrent((value) => Math.min(attachments.length - 1, value + 1))}
             disabled={current === attachments.length - 1}
             aria-label="Next"
-            sx={{ position: 'absolute', right: 8, top: '50%', color: '#fff' }}
+            sx={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: '#fff' }}
           >
             <ChevronRightIcon fontSize="large" />
           </IconButton>

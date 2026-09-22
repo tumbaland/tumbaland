@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MessageBubble, isJumbo } from './MessageBubble';
+import { MessageBubble, canChange, isJumbo } from './MessageBubble';
 import type { ThreadMessage } from '../../types';
 
 const message = (overrides: Partial<ThreadMessage> = {}): ThreadMessage => ({
@@ -75,7 +75,21 @@ describe('MessageBubble', () => {
 
   it('replaces a deleted message with a note rather than removing it', () => {
     renderBubble({ deletedAt: '2026-09-21T10:05:00.000Z', body: '' });
-    expect(screen.getByText('Message deleted')).toBeInTheDocument();
+    expect(screen.getByText('Message unsent')).toBeInTheDocument();
+  });
+
+  it('offers options on hover for your own message only', async () => {
+    const onPickEmoji = vi.fn();
+    const { container, unmount } = renderBubble({}, { mine: true, onPickEmoji });
+    await userEvent.hover(container.firstElementChild!);
+    await userEvent.click(screen.getByRole('button', { name: 'Message options' }));
+    expect(onPickEmoji).toHaveBeenCalledWith('m1', expect.any(HTMLElement));
+    unmount();
+
+    const other = renderBubble({}, { mine: false });
+    await userEvent.hover(other.container.firstElementChild!);
+    expect(screen.getByRole('button', { name: 'Add reaction' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Message options' })).not.toBeInTheDocument();
   });
 
   it('marks an edited message', () => {
@@ -219,5 +233,23 @@ describe('long press', () => {
     vi.advanceTimersByTime(500);
 
     expect(onPickEmoji).not.toHaveBeenCalled();
+  });
+});
+
+describe('canChange', () => {
+  const base = message();
+
+  it('lets the sender change a stored message', () => {
+    expect(canChange(base, true)).toBe(true);
+  });
+
+  it.each([
+    ['someone else’s', base, false],
+    ['a pending', { ...base, delivery: 'pending' as const }, true],
+    ['a failed', { ...base, delivery: 'failed' as const }, true],
+    ['an unsent', { ...base, deletedAt: '2026-09-21T10:05:00.000Z' }, true],
+    ['a system', { ...base, kind: 'system' as const }, true]
+  ])('refuses %s message', (_label, target, mine) => {
+    expect(canChange(target, mine)).toBe(false);
   });
 });

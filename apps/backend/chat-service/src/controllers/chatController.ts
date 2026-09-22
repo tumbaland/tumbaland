@@ -4,7 +4,13 @@ import { caller, requireConversation, requireGroupMembership } from '../services
 import * as conversations from '../services/conversationService';
 import * as messages from '../services/messageService';
 import { isPushConfigured, removeSubscription, saveSubscription } from '../services/pushService';
-import { buildFileId, generateThumbnail, posterFileIdFor, signUpload } from '../services/attachmentService';
+import {
+  belongsToConversation,
+  buildFileId,
+  generateThumbnail,
+  posterFileIdFor,
+  signUpload
+} from '../services/attachmentService';
 import { assertHeadroom } from '../services/storageUsage';
 import { MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from '../validation/schemas';
 import { BadRequestError } from '@tumbaland/backend-core';
@@ -239,8 +245,7 @@ export const attachmentThumbnail = async (req: Request, res: Response): Promise<
 
   // The file has to be inside this conversation's folder, or this route would
   // read and rewrite any path in storage.
-  const prefix = `chat/${conversation.groupId}/${conversation._id.toString()}/`;
-  if (!fileId.startsWith(prefix) || fileId.includes('..')) {
+  if (!belongsToConversation(fileId, conversation.groupId, conversation._id.toString())) {
     throw new BadRequestError('That file does not belong to this conversation');
   }
 

@@ -1,8 +1,8 @@
 import { Types } from 'mongoose';
 import { BadRequestError, ForbiddenError, NotFoundError, logger } from '@tumbaland/backend-core';
-import { IConversation } from '../models/Conversation';
+import { Conversation, IConversation } from '../models/Conversation';
 import { IAttachment, IMessage, Message } from '../models/Message';
-import { bytesOf, folderFor, withDownloadUrls } from './attachmentService';
+import { belongsToConversation, bytesOf, fileIdsOf, folderFor, withDownloadUrls } from './attachmentService';
 import { deleteFolder } from './fileServiceClient';
 import { recordStoredBytes, releaseStoredBytes } from './storageUsage';
 import { ReadState } from '../models/ReadState';
@@ -107,6 +107,16 @@ export async function sendMessage(
 
   if (!body && attachments.length === 0) {
     throw new BadRequestError('A message needs text or an attachment');
+  }
+
+  // Every file must be one uploaded into this conversation. The ids come from
+  // the client, and this service later signs download URLs for them and
+  // deletes their folders on unsend.
+  const foreign = fileIdsOf(attachments).some(
+    (fileId) => !belongsToConversation(fileId, conversation.groupId, conversation._id.toString())
+  );
+  if (foreign) {
+    throw new BadRequestError('That file does not belong to this conversation');
   }
 
   if (input.replyTo) {
@@ -226,6 +236,29 @@ export async function listMessages(conversationId: string, input: PageInput): Pr
   };
 }
 
+/**
+ * Re-points the conversation list's preview after an edit or an unsend.
+ *
+ * Only when the changed message is the newest one: anything older is not what
+ * the preview shows. Without this an unsent message kept showing, word for
+ * word, in the list under the conversation's name.
+ */
+async function refreshPreview(conversationId: string, changed: IMessage): Promise<void> {
+  const newer = await Message.exists({ conversationId, createdAt: { $gt: changed.createdAt } });
+  if (newer) return;
+
+  const latest = await Message.findOne({ conversationId, deletedAt: null }).sort({ createdAt: -1 });
+  await Conversation.updateOne(
+    { _id: conversationId },
+    {
+      $set: {
+        lastMessagePreview: latest ? preview(latest.body, latest.attachments).slice(0, 200) : '',
+        lastMessageSender: latest?.senderName ?? ''
+      }
+    }
+  );
+}
+
 /** The caller's own message, or a 403/404 explaining which it was. */
 async function ownMessage(person: Caller, conversationId: string, messageId: string): Promise<IMessage> {
   if (!Types.ObjectId.isValid(messageId)) {
@@ -258,6 +291,7 @@ export async function editMessage(
   message.body = trimmed;
   message.editedAt = new Date();
   await message.save();
+  await refreshPreview(conversationId, message);
 
   const view = (await withDownloadUrls([toView(message)]))[0]!;
   publishToGroup(conversation.groupId, {
@@ -284,12 +318,15 @@ export async function deleteMessage(
   const attachments = [...message.attachments];
   message.deletedAt = new Date();
   await message.save();
+  await refreshPreview(conversationId, message);
 
   // The record is soft-deleted so replies keep resolving, but the bytes are
   // not: keeping files nobody can see would charge the group's owner for
-  // storage they cannot reach or free.
+  // storage they cannot reach or free. Every file's folder, not only the
+  // original's: a video's poster is uploaded under a ticket of its own and so
+  // lands in a folder of its own.
   if (attachments.length > 0) {
-    for (const folder of new Set(attachments.map((attachment) => folderFor(attachment.fileId)))) {
+    for (const folder of new Set(fileIdsOf(attachments).map(folderFor))) {
       await deleteFolder(folder).catch((error: Error) =>
         // The message is already gone from view. An orphaned file is a job for
         // the nightly reconciliation, not a reason to fail the delete.

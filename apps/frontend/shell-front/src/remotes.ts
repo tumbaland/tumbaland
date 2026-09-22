@@ -33,7 +33,8 @@ function ensureRemotesRegistered(): void {
 const components = new Map<string, LazyExoticComponent<ComponentType>>();
 
 /**
- * An app's exposed root as a lazy component.
+ * An app's exposed root as a lazy component, or another module it exposes
+ * (chat's `./Panel`, for the desktop side panel).
  *
  * Created once per app and kept, so after the first visit its code is already
  * loaded and moving back into it renders with no loader and no reboot. That is
@@ -41,8 +42,12 @@ const components = new Map<string, LazyExoticComponent<ComponentType>>();
  * JS context away on every switch, so each visit re-checked the session and
  * re-fetched everything the previous visit had already read.
  */
-export function remoteComponent(app: RemoteApp): LazyExoticComponent<ComponentType> {
-  let component = components.get(app.remote);
+export function remoteComponent(
+  app: RemoteApp,
+  module: string = TUMBALAND_REMOTE_MODULE
+): LazyExoticComponent<ComponentType> {
+  const key = `${app.remote}:${module}`;
+  let component = components.get(key);
   if (!component) {
     component = lazy(async () => {
       const baseUrl = app.urlKey ? getGlobalConfig()[app.urlKey] : undefined;
@@ -54,7 +59,7 @@ export function remoteComponent(app: RemoteApp): LazyExoticComponent<ComponentTy
       let loaded: { default: ComponentType } | null;
       try {
         loaded = await loadRemote<{ default: ComponentType }>(
-          `${app.remote}/${TUMBALAND_REMOTE_MODULE.replace(/^\.\//, '')}`
+          `${app.remote}/${module.replace(/^\.\//, '')}`
         );
       } catch (cause) {
         // The runtime's own message is a paragraph of diagnostics and a docs
@@ -67,7 +72,7 @@ export function remoteComponent(app: RemoteApp): LazyExoticComponent<ComponentTy
       }
       return loaded;
     });
-    components.set(app.remote, component);
+    components.set(key, component);
   }
   return component;
 }
@@ -76,6 +81,6 @@ export function remoteComponent(app: RemoteApp): LazyExoticComponent<ComponentTy
  * Drops a failed load so the next render tries again. React caches a lazy
  * component's rejection for good, so a retry needs a new one.
  */
-export function forgetRemote(app: RemoteApp): void {
-  components.delete(app.remote);
+export function forgetRemote(app: RemoteApp, module: string = TUMBALAND_REMOTE_MODULE): void {
+  components.delete(`${app.remote}:${module}`);
 }

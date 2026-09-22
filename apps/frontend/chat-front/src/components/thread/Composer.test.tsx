@@ -321,3 +321,64 @@ describe('attachments', () => {
     expect(onAddFiles).toHaveBeenCalledWith([file]);
   });
 });
+
+describe('editing', () => {
+  const editing = { id: 'm1', body: 'teh plan', hasMedia: false };
+
+  it('fills the box with the message and saves the change', async () => {
+    const onSaveEdit = vi.fn();
+    const onSend = vi.fn();
+    render(<Composer onSend={onSend} onTyping={() => {}} editing={editing} onSaveEdit={onSaveEdit} onCancelEdit={() => {}} />);
+
+    const box = screen.getByLabelText('Message');
+    expect(box).toHaveValue('teh plan');
+    expect(screen.getByText('Editing message')).toBeInTheDocument();
+
+    await userEvent.clear(box);
+    await userEvent.type(box, 'the plan');
+    await userEvent.click(screen.getByLabelText('Save edit'));
+
+    expect(onSaveEdit).toHaveBeenCalledWith('the plan');
+    expect(onSend).not.toHaveBeenCalled();
+  });
+
+  it('treats saving an unchanged message as a cancel, so it is not marked edited', async () => {
+    const onSaveEdit = vi.fn();
+    const onCancelEdit = vi.fn();
+    render(<Composer onSend={() => {}} onTyping={() => {}} editing={editing} onSaveEdit={onSaveEdit} onCancelEdit={onCancelEdit} />);
+
+    await userEvent.click(screen.getByLabelText('Save edit'));
+
+    expect(onSaveEdit).not.toHaveBeenCalled();
+    expect(onCancelEdit).toHaveBeenCalled();
+  });
+
+  it('cancels on Escape', async () => {
+    const onCancelEdit = vi.fn();
+    render(<Composer onSend={() => {}} onTyping={() => {}} editing={editing} onCancelEdit={onCancelEdit} />);
+
+    await userEvent.type(screen.getByLabelText('Message'), '{Escape}');
+
+    expect(onCancelEdit).toHaveBeenCalled();
+  });
+
+  it('will not empty a text message', async () => {
+    render(<Composer onSend={() => {}} onTyping={() => {}} editing={editing} onSaveEdit={() => {}} onCancelEdit={() => {}} />);
+
+    await userEvent.clear(screen.getByLabelText('Message'));
+
+    expect(screen.getByLabelText('Save edit')).toBeDisabled();
+  });
+
+  it('gives back what was being typed once the edit is over', async () => {
+    const props = { onSend: () => {}, onTyping: () => {}, onSaveEdit: () => {}, onCancelEdit: () => {} };
+    const { rerender } = render(<Composer {...props} />);
+    await userEvent.type(screen.getByLabelText('Message'), 'half a thought');
+
+    rerender(<Composer {...props} editing={editing} />);
+    expect(screen.getByLabelText('Message')).toHaveValue('teh plan');
+
+    rerender(<Composer {...props} editing={null} />);
+    expect(screen.getByLabelText('Message')).toHaveValue('half a thought');
+  });
+});

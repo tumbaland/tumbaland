@@ -502,13 +502,45 @@ describe('the conversation list', () => {
     });
   });
 
+  it('drops an unsent message from the preview', async () => {
+    const id = await conversationInG1();
+    await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'first' });
+    const oops = await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'oops' });
+
+    await as(TOM).delete(`/api/chat/conversations/${id}/messages/${oops.body.data.id}`);
+
+    const res = await as(IRJA).get('/api/chat/conversations');
+    expect(res.body.data[0].lastMessagePreview).toBe('first');
+  });
+
+  it('follows an edit of the newest message', async () => {
+    const id = await conversationInG1();
+    const sent = await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'teh' });
+
+    await as(TOM).patch(`/api/chat/conversations/${id}/messages/${sent.body.data.id}`).send({ body: 'the' });
+
+    const res = await as(IRJA).get('/api/chat/conversations');
+    expect(res.body.data[0].lastMessagePreview).toBe('the');
+  });
+
+  it('leaves the preview alone when an older message is edited', async () => {
+    const id = await conversationInG1();
+    const old = await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'old' });
+    await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'newest' });
+
+    await as(TOM).patch(`/api/chat/conversations/${id}/messages/${old.body.data.id}`).send({ body: 'older' });
+
+    const res = await as(IRJA).get('/api/chat/conversations');
+    expect(res.body.data[0].lastMessagePreview).toBe('newest');
+  });
+
   it('describes an attachment-only message rather than showing an empty preview', async () => {
     const id = await conversationInG1();
     await as(TOM)
       .post(`/api/chat/conversations/${id}/messages`)
       .send({
         clientId: clientId(),
-        attachments: [{ fileId: 'chat/g1/x/y.jpg', mimetype: 'image/jpeg', sizeBytes: 1000 }]
+        attachments: [{ fileId: `chat/g1/${id}/y/original.jpg`, mimetype: 'image/jpeg', sizeBytes: 1000 }]
       });
 
     const res = await as(IRJA).get('/api/chat/conversations');
@@ -723,6 +755,46 @@ describe('attachments', () => {
     // cannot reach or free.
     expect(deleteFolder).toHaveBeenCalledWith(`chat/g1/${id}/abc`);
     expect(releaseStoredBytes).toHaveBeenCalledWith('g1', 500_000);
+  });
+
+  it('deletes a video poster that was uploaded into a folder of its own', async () => {
+    const id = await conversationInG1();
+    const sent = await as(TOM)
+      .post(`/api/chat/conversations/${id}/messages`)
+      .send({
+        clientId: clientId(),
+        attachments: [
+          {
+            fileId: `chat/g1/${id}/clip/original.mp4`,
+            posterFileId: `chat/g1/${id}/still/original.jpg`,
+            mimetype: 'video/mp4',
+            sizeBytes: 100
+          }
+        ]
+      });
+
+    await as(TOM).delete(`/api/chat/conversations/${id}/messages/${sent.body.data.id}`);
+
+    expect(deleteFolder).toHaveBeenCalledWith(`chat/g1/${id}/clip`);
+    expect(deleteFolder).toHaveBeenCalledWith(`chat/g1/${id}/still`);
+  });
+
+  it.each([
+    ['another group', (id: string) => ({ fileId: `chat/g9/${id}/abc/original.jpg` })],
+    ['another module', () => ({ fileId: 'album/g1/secret/original.jpg' })],
+    ['a climb out with ..', (id: string) => ({ fileId: `chat/g1/${id}/../../g9/x/original.jpg` })],
+    ['a foreign thumbnail', (id: string) => ({ fileId: `chat/g1/${id}/abc/original.jpg`, thumbnailFileId: 'album/g1/x.webp' })]
+  ])('refuses a message carrying a file from %s', async (_label, file) => {
+    const id = await conversationInG1();
+
+    const res = await as(TOM)
+      .post(`/api/chat/conversations/${id}/messages`)
+      .send({ clientId: clientId(), attachments: [{ ...file(id), mimetype: 'image/jpeg', sizeBytes: 100 }] });
+
+    // Otherwise the service would sign a download URL for it, and delete its
+    // folder when the message was unsent.
+    expect(res.status).toBe(400);
+    expect(await Message.countDocuments()).toBe(0);
   });
 
   it('still deletes the message when the file delete fails', async () => {

@@ -1,10 +1,11 @@
 import { MouseEvent, ReactNode, useState } from 'react';
 import { Link } from 'react-router';
 import Avatar from '@mui/material/Avatar';
+import Badge from '@mui/material/Badge';
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-import { APPS, USER_APPS, isRouteActive } from '../config/apps';
+import { APPS, CHAT_APP, USER_APPS, isRouteActive } from '../config/apps';
 import { brand, chrome, ink, surface } from '@tumbaland/frontend-core';
 import { User } from '../types';
 import { AccountMenu } from './AccountMenu';
@@ -14,6 +15,8 @@ interface AppNavProps {
   user: User | null;
   /** Phones get a tab bar under the content; anything wider gets a rail beside it. */
   mobile: boolean;
+  /** Unread messages, shown on the tab bar's Chat entry. */
+  unreadChat?: number;
 }
 
 /**
@@ -25,23 +28,38 @@ interface AppNavProps {
  * Account entry at the end, which is the only account menu there is: the framed
  * apps hide their own while embedded.
  */
-export function AppNav({ currentRoute, user, mobile }: AppNavProps) {
+export function AppNav({ currentRoute, user, mobile, unreadChat = 0 }: AppNavProps) {
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const menuOpen = Boolean(menuAnchor);
   const onAccountPage = USER_APPS.some((app) => isRouteActive(app.route, currentRoute));
 
+  // On a phone Chat sits in the middle of the tab bar, under the thumb, rather
+  // than in the header at the top of the screen. Wider screens keep it in the
+  // header bar.
+  const entries = mobile ? [...APPS.slice(0, 2), CHAT_APP, ...APPS.slice(2)] : APPS;
+
   return (
     <Box component="nav" aria-label="Main" sx={mobile ? bottomBar : rail}>
-      {APPS.map((app) => {
+      {entries.map((app) => {
         const Icon = app.icon;
+        const isChat = app === CHAT_APP;
 
         return (
           <NavItem
             key={app.route}
             to={app.route}
             label={app.name}
+            ariaLabel={isChat && unreadChat > 0 ? `Chat, ${unreadChat} unread` : undefined}
             color={app.color}
-            icon={<Icon />}
+            icon={
+              isChat ? (
+                <Badge badgeContent={unreadChat} color="error" max={99} invisible={unreadChat === 0}>
+                  <Icon />
+                </Badge>
+              ) : (
+                <Icon />
+              )
+            }
             active={isRouteActive(app.route, currentRoute)}
             mobile={mobile}
           />
@@ -76,6 +94,8 @@ export function AppNav({ currentRoute, user, mobile }: AppNavProps) {
 
 interface NavItemProps {
   label: string;
+  /** Read out in place of the label, when the icon carries more (an unread count). */
+  ariaLabel?: string;
   icon: ReactNode;
   color: string;
   active: boolean;
@@ -86,7 +106,7 @@ interface NavItemProps {
   expanded?: boolean;
 }
 
-function NavItem({ label, icon, color, active, mobile, to, onClick, expanded }: NavItemProps) {
+function NavItem({ label, ariaLabel, icon, color, active, mobile, to, onClick, expanded }: NavItemProps) {
   const sx = {
     flex: mobile ? 1 : 'none',
     minWidth: 0,
@@ -135,7 +155,14 @@ function NavItem({ label, icon, color, active, mobile, to, onClick, expanded }: 
 
   if (to) {
     return (
-      <ButtonBase component={Link} to={to} aria-current={active ? 'page' : undefined} disableRipple sx={sx}>
+      <ButtonBase
+        component={Link}
+        to={to}
+        aria-current={active ? 'page' : undefined}
+        aria-label={ariaLabel}
+        disableRipple
+        sx={sx}
+      >
         {body}
       </ButtonBase>
     );

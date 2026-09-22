@@ -16,6 +16,14 @@ vi.mock('./RemoteOutlet', () => ({
   RemoteOutlet: () => <div>remote module</div>
 }));
 
+vi.mock('./ChatPanel', () => ({
+  ChatPanel: ({ onClose }: { onClose: () => void }) => (
+    <aside aria-label="Chat">
+      <button onClick={onClose}>Close chat</button>
+    </aside>
+  )
+}));
+
 import Layout from './Layout';
 import { ConfigContext } from '../config/ConfigProvider';
 import { authService } from '../services/authService';
@@ -61,6 +69,7 @@ function renderAt(path: string, config: Record<string, string> = {}) {
 beforeEach(() => {
   setSession(false);
   setMobile(false);
+  localStorage.clear();
 });
 
 it('renders its own children on the home route, with no module loaded', () => {
@@ -167,6 +176,14 @@ it('gives chat the whole phone screen, without the tab bar', async () => {
   expect(screen.queryByRole('navigation', { name: 'Main' })).not.toBeInTheDocument();
 });
 
+it('keeps the tab bar on the conversation list on a phone, where Chat is one of the tabs', async () => {
+  setSession(true);
+  setMobile(true);
+  renderAt('/chat', { CHAT_FRONT_URL: 'https://chat.example' });
+
+  expect(await screen.findByRole('navigation', { name: 'Main' })).toBeInTheDocument();
+});
+
 it('keeps the tab bar out of chat on a phone only', async () => {
   setSession(true);
   setMobile(false);
@@ -207,4 +224,51 @@ it("leaves the shell's own pages to set their own width", async () => {
 
   expect(content.style.maxWidth).toBe('');
   expect(content.style.marginInline).toBe('');
+});
+
+describe('the desktop chat panel', () => {
+  const albumConfig = { ALBUM_FRONT_URL: 'https://album.example', CHAT_FRONT_URL: 'https://chat.example' };
+
+  it('opens beside the module from the header button and closes again, without leaving the page', async () => {
+    setSession(true);
+    renderAt('/album', albumConfig);
+
+    const toggle = await screen.findByRole('button', { name: 'Chat' });
+    expect(screen.queryByRole('complementary', { name: 'Chat' })).not.toBeInTheDocument();
+
+    await userEvent.click(toggle);
+    expect(screen.getByRole('complementary', { name: 'Chat' })).toBeInTheDocument();
+    expect(screen.getByText('remote module')).toBeInTheDocument();
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Close chat' }));
+    expect(screen.queryByRole('complementary', { name: 'Chat' })).not.toBeInTheDocument();
+  });
+
+  it('stays open across visits once left open', async () => {
+    setSession(true);
+    localStorage.setItem('tumbaland.chatPanel.open', '1');
+    renderAt('/album', albumConfig);
+
+    expect(await screen.findByRole('complementary', { name: 'Chat' })).toBeInTheDocument();
+  });
+
+  it('is not drawn on the chat page itself, which would be the thread twice', async () => {
+    setSession(true);
+    localStorage.setItem('tumbaland.chatPanel.open', '1');
+    renderAt('/chat', albumConfig);
+
+    expect(await screen.findByText('remote module')).toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: 'Chat' })).not.toBeInTheDocument();
+  });
+
+  it('is never drawn on a phone, where Chat is a tab', async () => {
+    setSession(true);
+    setMobile(true);
+    localStorage.setItem('tumbaland.chatPanel.open', '1');
+    renderAt('/album', albumConfig);
+
+    expect(await screen.findByText('remote module')).toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: 'Chat' })).not.toBeInTheDocument();
+  });
 });

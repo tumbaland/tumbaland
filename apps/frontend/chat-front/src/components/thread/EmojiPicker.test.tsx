@@ -48,4 +48,31 @@ describe('EmojiPicker', () => {
     expect(onClose).toHaveBeenCalled();
     expect(onMore).toHaveBeenCalledWith(expect.any(HTMLElement));
   });
+
+  it('lists message actions under the reactions, and closes before running one', async () => {
+    const onClose = vi.fn();
+    const onEdit = vi.fn();
+    render(
+      <EmojiPicker
+        anchorEl={anchor()}
+        onClose={onClose}
+        onPick={() => {}}
+        actions={[
+          { label: 'Edit', icon: null, onClick: onEdit },
+          { label: 'Unsend', icon: null, onClick: () => {}, danger: true }
+        ]}
+      />
+    );
+
+    expect(screen.getByRole('menuitem', { name: 'Unsend' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Edit' }));
+
+    expect(onClose).toHaveBeenCalled();
+    expect(onEdit).toHaveBeenCalled();
+  });
+
+  it('shows no action list when there are none', () => {
+    render(<EmojiPicker anchorEl={anchor()} onClose={() => {}} onPick={() => {}} />);
+    expect(screen.queryByRole('menuitem')).not.toBeInTheDocument();
+  });
 });

@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { APPS, USER_APPS, getAppByRoute } from '../config/apps';
@@ -108,8 +109,8 @@ it('takes every section straight from the app config, so no list can drift', () 
 });
 
 describe('chat', () => {
-  it('is a button in the bar, with the unread count', () => {
-    renderHeader('/album/albums', true, 3);
+  it('is a button in the bar on a wider screen, with the unread count', () => {
+    renderHeader('/album/albums', false, 3);
 
     const chat = screen.getByRole('link', { name: 'Chat, 3 unread' });
     expect(chat).toHaveAttribute('href', '/chat');
@@ -118,8 +119,28 @@ describe('chat', () => {
   });
 
   it('shows no count when everything is read', () => {
-    renderHeader('/', true);
+    renderHeader('/', false);
     expect(screen.getByRole('link', { name: 'Chat' })).toBeInTheDocument();
+  });
+
+  it('toggles the side panel instead of navigating when given a toggle', async () => {
+    const onToggleChat = vi.fn();
+    render(
+      <MemoryRouter initialEntries={['/album']}>
+        <ModuleHeader app={undefined} currentRoute="/album" mobile={false} unreadChat={2} onToggleChat={onToggleChat} chatOpen />
+      </MemoryRouter>
+    );
+
+    const button = screen.getByRole('button', { name: 'Chat, 2 unread' });
+    expect(button).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(button);
+    expect(onToggleChat).toHaveBeenCalled();
+  });
+
+  it('leaves Chat to the tab bar on a phone', () => {
+    renderHeader('/album/albums', true, 3);
+    expect(screen.queryByRole('link', { name: /^Chat/ })).not.toBeInTheDocument();
+    expect(screen.getByText('tenant')).toBeInTheDocument();
   });
 
   it('offers the way home from the conversation list, in place of the tenant', () => {
