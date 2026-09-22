@@ -1,4 +1,10 @@
 # Tumbalog
+## [0.0.510](https://github.com/toomastahves/tumbaland/compare/app-v0.0.509...app-v0.0.510) (2026-09-22)
+
+### Bug Fixes
+
+* improve user experience in chat ([67e9a92](https://github.com/toomastahves/tumbaland/commit/67e9a929510612163737a921df7e0f480557a1b4))
+
 ## [0.0.509](https://github.com/toomastahves/tumbaland/compare/app-v0.0.508...app-v0.0.509) (2026-09-22)
 
 ### Features
