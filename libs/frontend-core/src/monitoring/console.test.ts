@@ -18,7 +18,7 @@ describe('initConsoleInterception', () => {
     console.log = original.log;
     console.info = original.info;
     console.debug = original.debug;
-    delete (window as any)._monitoringInterceptingConsole;
+    delete (window as unknown as Record<string, unknown>)._monitoringInterceptingConsole;
     vi.clearAllMocks();
   });
 
@@ -55,14 +55,14 @@ describe('initConsoleInterception', () => {
 
   it('sets and clears the recursion-guard flag around each intercepted call', () => {
     const captureMessageFn = vi.fn(() => {
-      expect((window as any)._monitoringInterceptingConsole).toBe(true);
+      expect((window as unknown as Record<string, unknown>)._monitoringInterceptingConsole).toBe(true);
     });
     console.error = vi.fn();
 
     initConsoleInterception(['error'], captureMessageFn);
     console.error('boom');
 
-    expect((window as any)._monitoringInterceptingConsole).toBe(false);
+    expect((window as unknown as Record<string, unknown>)._monitoringInterceptingConsole).toBe(false);
   });
 
   it('skips forwarding to captureMessageFn when already inside an intercepted call (recursion guard)', () => {

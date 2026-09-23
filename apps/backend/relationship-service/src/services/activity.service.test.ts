@@ -1,8 +1,8 @@
 jest.mock('../models/Activity', () => {
-  const Activity: any = jest.fn().mockImplementation((data: any) => ({
+  const Activity = jest.fn().mockImplementation((data: Record<string, unknown>) => ({
     ...data,
     save: jest.fn().mockResolvedValue({ ...data, _id: 'new-id' })
-  }));
+  })) as jest.Mock & Record<string, jest.Mock>;
   Activity.find = jest.fn();
   Activity.countDocuments = jest.fn();
   Activity.findOne = jest.fn();

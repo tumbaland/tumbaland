@@ -50,7 +50,7 @@ beforeEach(() => jest.clearAllMocks());
 
 describe('createAlbum', () => {
   it('creates the album and returns 201', async () => {
-    mocked.createAlbum.mockResolvedValue({ _id: 'a1', name: 'Trip' } as any);
+    mocked.createAlbum.mockResolvedValue({ _id: 'a1', name: 'Trip' } as never);
     const res = mockRes();
 
     await createAlbum(baseReq({ body: { name: 'Trip' } }), res);
@@ -89,7 +89,7 @@ describe('getAlbums', () => {
 
 describe('getAlbumById', () => {
   it('returns the album', async () => {
-    mocked.getAlbumById.mockResolvedValue({ _id: 'a1' } as any);
+    mocked.getAlbumById.mockResolvedValue({ _id: 'a1' } as never);
     const res = mockRes();
 
     await getAlbumById(baseReq({ params: { id: 'a1' } }), res);
@@ -101,7 +101,7 @@ describe('getAlbumById', () => {
 
 describe('updateAlbum', () => {
   it('updates the album', async () => {
-    mocked.updateAlbum.mockResolvedValue({ _id: 'a1', name: 'New' } as any);
+    mocked.updateAlbum.mockResolvedValue({ _id: 'a1', name: 'New' } as never);
     const res = mockRes();
 
     await updateAlbum(baseReq({ params: { id: 'a1' }, body: { name: 'New' } }), res);
@@ -110,7 +110,7 @@ describe('updateAlbum', () => {
   });
 
   it('does not read the storage scope for an edit that cannot move bytes', async () => {
-    mocked.updateAlbum.mockResolvedValue({ _id: 'a1', name: 'New' } as any);
+    mocked.updateAlbum.mockResolvedValue({ _id: 'a1', name: 'New' } as never);
 
     await updateAlbum(baseReq({ params: { id: 'a1' }, body: { name: 'New' } }), mockRes());
 
@@ -121,7 +121,7 @@ describe('updateAlbum', () => {
   it('moves the album bytes between meters when it changes group', async () => {
     // Pooled storage bills to the group owner, so a move changes who pays.
     mocked.getAlbumStorage.mockResolvedValue({ userId: 'user-1', groupId: undefined, bytes: 4_000 });
-    mocked.updateAlbum.mockResolvedValue({ _id: 'a1', userId: 'user-1', groupId: 'group-1' } as any);
+    mocked.updateAlbum.mockResolvedValue({ _id: 'a1', userId: 'user-1', groupId: 'group-1' } as never);
 
     await updateAlbum(baseReq({ params: { id: 'a1' }, body: { groupId: 'group-1' } }), mockRes());
 
@@ -154,7 +154,7 @@ describe('deleteAlbum', () => {
 
 describe('setCoverPhoto', () => {
   it('sets the cover photo', async () => {
-    mocked.setCoverPhoto.mockResolvedValue({ _id: 'a1', coverPhotoId: 'p1' } as any);
+    mocked.setCoverPhoto.mockResolvedValue({ _id: 'a1', coverPhotoId: 'p1' } as never);
     const res = mockRes();
 
     await setCoverPhoto(baseReq({ params: { id: 'a1' }, body: { photoId: 'p1' } }), res);
@@ -165,7 +165,7 @@ describe('setCoverPhoto', () => {
 
 describe('removeCoverPhoto', () => {
   it('removes the cover photo', async () => {
-    mocked.removeCoverPhoto.mockResolvedValue({ _id: 'a1' } as any);
+    mocked.removeCoverPhoto.mockResolvedValue({ _id: 'a1' } as never);
     const res = mockRes();
 
     await removeCoverPhoto(baseReq({ params: { id: 'a1' } }), res);

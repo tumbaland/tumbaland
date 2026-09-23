@@ -7,14 +7,14 @@ import logger from '../logging/logger';
 import { requestLogger, requestLoggerWithMetrics, simpleRequestLogger } from './requestLogger';
 
 function mockReqRes() {
-  const req: any = {
+  const req = {
     method: 'GET',
     url: '/albums/123',
-    correlationId: 'corr-1',
+    correlationId: 'corr-1' as string | undefined,
     ip: '127.0.0.1',
     get: jest.fn().mockReturnValue('test-agent')
   };
-  const res: any = { statusCode: 200, on: jest.fn() };
+  const res = { statusCode: 200, on: jest.fn() };
   return { req, res };
 }
 
@@ -25,7 +25,7 @@ describe('simpleRequestLogger', () => {
     const { req, res } = mockReqRes();
     const next = jest.fn();
 
-    simpleRequestLogger(req, res, next);
+    simpleRequestLogger(req as never, res as never, next);
 
     expect(logger.info).toHaveBeenCalledWith('→ GET /albums/123', {
       correlationId: 'corr-1',
@@ -40,7 +40,7 @@ describe('simpleRequestLogger', () => {
     delete req.correlationId;
     const next = jest.fn();
 
-    simpleRequestLogger(req, res, next);
+    simpleRequestLogger(req as never, res as never, next);
 
     expect(logger.info).toHaveBeenCalledWith(
       expect.any(String),
@@ -52,10 +52,10 @@ describe('simpleRequestLogger', () => {
     const { req, res } = mockReqRes();
     const next = jest.fn();
 
-    simpleRequestLogger(req, res, next);
+    simpleRequestLogger(req as never, res as never, next);
 
     expect(res.on).toHaveBeenCalledWith('finish', expect.any(Function));
-    const finishHandler = res.on.mock.calls.find((c: any[]) => c[0] === 'finish')[1];
+    const finishHandler = res.on.mock.calls.find((c) => c[0] === 'finish')![1];
     res.statusCode = 200;
     finishHandler();
 

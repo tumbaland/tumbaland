@@ -1,6 +1,8 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
+import type { ComponentProps } from 'react';
+import type TickerSearch from './TickerSearch';
 
 const mockedCreateMutateAsync = vi.fn();
 const mockedUpdateMutateAsync = vi.fn();
@@ -13,8 +15,8 @@ vi.mock('../../hooks/useHoldings', () => ({
 }));
 
 vi.mock('./TickerSearch', () => ({
-  default: ({ onSelect }: { onSelect: (r: any) => void }) => (
-    <button onClick={() => onSelect({ symbol: 'MSFT', name: 'Microsoft' })}>pick MSFT</button>
+  default: ({ onSelect }: ComponentProps<typeof TickerSearch>) => (
+    <button onClick={() => onSelect({ symbol: 'MSFT', name: 'Microsoft', type: 'Equity', region: 'United States', currency: 'USD', matchScore: '1.0000' })}>pick MSFT</button>
   )
 }));
 
@@ -120,6 +122,7 @@ it('creates a holding via the form, including a group id when tenant-scoped', as
     displayName: 'Microsoft',
     quantity: 3,
     avgBuyPrice: 200,
+    currency: 'USD',
     groupId: 'g1'
   });
   expect(notify).toHaveBeenCalledWith('Holding added — its ticker is now tracked for daily prices', 'success');

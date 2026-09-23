@@ -96,7 +96,7 @@ describe('getTrackedTickers', () => {
 
 describe('addTrackedTicker', () => {
   it('creates the tracked ticker and returns 201', async () => {
-    mocked.createTrackedTicker.mockResolvedValue({ _id: 't1' } as any);
+    mocked.createTrackedTicker.mockResolvedValue({ _id: 't1' } as never);
     const res = mockRes();
 
     await addTrackedTicker(baseReq({ body: { ticker: 'AAPL' } }), res);
@@ -105,7 +105,7 @@ describe('addTrackedTicker', () => {
   });
 
   it('meters the symbol being added, in the group it is added to', async () => {
-    mocked.createTrackedTicker.mockResolvedValue({ _id: 't1' } as any);
+    mocked.createTrackedTicker.mockResolvedValue({ _id: 't1' } as never);
     const res = mockRes();
 
     await addTrackedTicker(baseReq({ body: { ticker: 'AAPL', groupId: 'g1' }, userGroups: ['g1'] }), res);
@@ -120,7 +120,7 @@ describe('addTrackedTicker', () => {
 
 describe('editTrackedTicker', () => {
   it('returns 404 when the ticker does not exist', async () => {
-    mocked.getTrackedTickerById.mockResolvedValue(null as any);
+    mocked.getTrackedTickerById.mockResolvedValue(null as never);
     mocked.updateTrackedTicker.mockResolvedValue(null);
     const res = mockRes();
 
@@ -130,8 +130,8 @@ describe('editTrackedTicker', () => {
   });
 
   it('updates the tracked ticker', async () => {
-    mocked.getTrackedTickerById.mockResolvedValue({ _id: 't1', ticker: 'AAPL', isActive: true } as any);
-    mocked.updateTrackedTicker.mockResolvedValue({ _id: 't1' } as any);
+    mocked.getTrackedTickerById.mockResolvedValue({ _id: 't1', ticker: 'AAPL', isActive: true } as never);
+    mocked.updateTrackedTicker.mockResolvedValue({ _id: 't1' } as never);
     const res = mockRes();
 
     await editTrackedTicker(baseReq({ params: { id: 't1' } }), res);
@@ -145,8 +145,8 @@ describe('editTrackedTicker', () => {
       ticker: 'AAPL',
       groupId: 'g1',
       isActive: true
-    } as any);
-    mocked.updateTrackedTicker.mockResolvedValue({ _id: 't1' } as any);
+    } as never);
+    mocked.updateTrackedTicker.mockResolvedValue({ _id: 't1' } as never);
     const res = mockRes();
 
     await editTrackedTicker(baseReq({ params: { id: 't1' }, body: { isActive: false } }), res);
@@ -162,7 +162,7 @@ describe('editTrackedTicker', () => {
 
 describe('removeTrackedTicker', () => {
   it('deletes the tracked ticker', async () => {
-    mocked.deleteTrackedTicker.mockResolvedValue(undefined as any);
+    mocked.deleteTrackedTicker.mockResolvedValue(undefined as never);
     const res = mockRes();
 
     await removeTrackedTicker(baseReq({ params: { id: 't1' } }), res);
@@ -171,7 +171,7 @@ describe('removeTrackedTicker', () => {
   });
 
   it('offers the freed symbol back to the meter', async () => {
-    mocked.deleteTrackedTicker.mockResolvedValue({ ticker: 'AAPL', groupId: 'g1', isActive: true } as any);
+    mocked.deleteTrackedTicker.mockResolvedValue({ ticker: 'AAPL', groupId: 'g1', isActive: true } as never);
     const res = mockRes();
 
     await removeTrackedTicker(baseReq({ params: { id: 't1' } }), res);
@@ -184,7 +184,7 @@ describe('removeTrackedTicker', () => {
   });
 
   it('meters nothing when there was no row to delete', async () => {
-    mocked.deleteTrackedTicker.mockResolvedValue(null as any);
+    mocked.deleteTrackedTicker.mockResolvedValue(null as never);
     const res = mockRes();
 
     await removeTrackedTicker(baseReq({ params: { id: 't1' } }), res);

@@ -76,7 +76,7 @@ beforeEach(() => jest.clearAllMocks());
 describe('createPhoto', () => {
   it('looks up the album to derive groupId, then creates the photo', async () => {
     mockedAlbumFindById.mockResolvedValue({ userId: 'user-1', groupId: 'group-1' });
-    mockedPhotoService.createPhoto.mockResolvedValue({ _id: 'p1' } as any);
+    mockedPhotoService.createPhoto.mockResolvedValue({ _id: 'p1' } as never);
     const res = mockRes();
 
     await createPhoto(baseReq({ body: { albumId: 'a1', filename: 'x.jpg' } }), res);
@@ -92,7 +92,7 @@ describe('createPhoto', () => {
 
   it("records the stored bytes against the album's meter", async () => {
     mockedAlbumFindById.mockResolvedValue({ userId: 'user-1', groupId: 'group-1' });
-    mockedPhotoService.createPhoto.mockResolvedValue({ _id: 'p1', size: 5_000 } as any);
+    mockedPhotoService.createPhoto.mockResolvedValue({ _id: 'p1', size: 5_000 } as never);
 
     await createPhoto(baseReq({ body: { albumId: 'a1', size: 5_000 } }), mockRes());
 
@@ -199,7 +199,7 @@ describe('getPhotosByAlbum', () => {
 
 describe('getPhotoById', () => {
   it('returns the photo', async () => {
-    mockedPhotoService.getPhotoById.mockResolvedValue({ _id: 'p1' } as any);
+    mockedPhotoService.getPhotoById.mockResolvedValue({ _id: 'p1' } as never);
     const res = mockRes();
 
     await getPhotoById(baseReq({ params: { id: 'p1' } }), res);
@@ -213,7 +213,7 @@ describe('getPhotoById', () => {
 
 describe('updatePhoto', () => {
   it('updates the photo metadata', async () => {
-    mockedPhotoService.updatePhoto.mockResolvedValue({ _id: 'p1', title: 'New' } as any);
+    mockedPhotoService.updatePhoto.mockResolvedValue({ _id: 'p1', title: 'New' } as never);
     const res = mockRes();
 
     await updatePhoto(baseReq({ params: { id: 'p1' }, body: { title: 'New' } }), res);
@@ -227,7 +227,7 @@ describe('updatePhoto', () => {
 
 describe('deletePhoto', () => {
   it('deletes the photo and hands its bytes back to the meter', async () => {
-    mockedPhotoService.deletePhoto.mockResolvedValue({ albumId: 'a1', size: 2_048 } as any);
+    mockedPhotoService.deletePhoto.mockResolvedValue({ albumId: 'a1', size: 2_048 } as never);
     mockedAlbumFindById.mockResolvedValue({ userId: 'user-1', groupId: 'group-1' });
     const res = mockRes();
 
@@ -247,7 +247,7 @@ describe('deletePhoto', () => {
   it('still reports success when the album is already gone', async () => {
     // The album delete path frees its own bytes, so there is nothing to release
     // and nothing here should turn that into a 500 for the caller.
-    mockedPhotoService.deletePhoto.mockResolvedValue({ albumId: 'a1', size: 2_048 } as any);
+    mockedPhotoService.deletePhoto.mockResolvedValue({ albumId: 'a1', size: 2_048 } as never);
     mockedAlbumFindById.mockResolvedValue(null);
     const res = mockRes();
 
@@ -363,7 +363,7 @@ describe('uploading into an album the caller cannot write to', () => {
 
 describe('getPhotoByFileId', () => {
   it('returns the photo for a given fileId', async () => {
-    mockedPhotoService.getPhotoByFileId.mockResolvedValue({ _id: 'p1' } as any);
+    mockedPhotoService.getPhotoByFileId.mockResolvedValue({ _id: 'p1' } as never);
     const res = mockRes();
 
     await getPhotoByFileId(baseReq({ params: { fileId: 'file-1' } }), res);

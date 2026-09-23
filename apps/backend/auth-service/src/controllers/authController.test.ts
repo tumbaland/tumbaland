@@ -670,7 +670,7 @@ describe('admin routes', () => {
       });
       const usersList = [{ email: 'a@example.com' }, { email: 'b@example.com' }];
       const sortMock = jest.fn().mockReturnValue({ limit: jest.fn().mockResolvedValue(usersList) });
-      (User as any).find = jest.fn().mockReturnValue({ sort: sortMock });
+      (User as unknown as Record<string, unknown>).find = jest.fn().mockReturnValue({ sort: sortMock });
 
       const res = await request(app).get('/auth/admin/users').set('Cookie', `access_token=${token}`);
 

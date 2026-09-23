@@ -1,8 +1,8 @@
 jest.mock('../models/Album', () => {
-  const ctor: any = jest.fn().mockImplementation((data: any) => ({
+  const ctor = jest.fn().mockImplementation((data: Record<string, unknown>) => ({
     ...data,
     save: jest.fn().mockResolvedValue({ ...data, _id: 'new-album-id' })
-  }));
+  })) as jest.Mock & Record<string, jest.Mock>;
   ctor.findById = jest.fn();
   ctor.findByIdAndUpdate = jest.fn();
   ctor.findByIdAndDelete = jest.fn();
@@ -194,7 +194,11 @@ describe('setCoverPhoto', () => {
   });
 
   it('sets the cover photo when it belongs to the album', async () => {
-    const album: any = { _id: 'album-1', userId: 'user-1', save: jest.fn().mockResolvedValue(undefined) };
+    const album: { _id: string; userId: string; coverPhotoId?: string; save: jest.Mock } = {
+      _id: 'album-1',
+      userId: 'user-1',
+      save: jest.fn().mockResolvedValue(undefined)
+    };
     mockedFindById.mockResolvedValue(album);
     mockedPhotoFindOne.mockResolvedValue({ _id: 'photo-1', albumId: 'album-1' });
 
@@ -207,7 +211,7 @@ describe('setCoverPhoto', () => {
 
 describe('changing the cover of someone else’s album', () => {
   it('refuses to set it, even on a public album', async () => {
-    const album: any = { _id: 'album-1', userId: 'owner', isPublic: true, save: jest.fn() };
+    const album = { _id: 'album-1', userId: 'owner', isPublic: true, save: jest.fn() };
     mockedFindById.mockResolvedValue(album);
 
     await expect(albumService.setCoverPhoto('album-1', 'photo-1', ctx({ userId: 'stranger' }))).rejects.toMatchObject({
@@ -217,7 +221,7 @@ describe('changing the cover of someone else’s album', () => {
   });
 
   it('refuses to remove it', async () => {
-    const album: any = { _id: 'album-1', userId: 'owner', coverPhotoId: 'photo-1', save: jest.fn() };
+    const album = { _id: 'album-1', userId: 'owner', coverPhotoId: 'photo-1', save: jest.fn() };
     mockedFindById.mockResolvedValue(album);
 
     await expect(albumService.removeCoverPhoto('album-1', ctx({ userId: 'stranger' }))).rejects.toMatchObject({
@@ -235,7 +239,7 @@ describe('removeCoverPhoto', () => {
   });
 
   it('clears the cover photo', async () => {
-    const album: any = {
+    const album = {
       _id: 'album-1',
       userId: 'user-1',
       coverPhotoId: 'photo-1',
@@ -252,7 +256,7 @@ describe('removeCoverPhoto', () => {
 
 describe('createAlbum', () => {
   it('trims name/description/tags and stamps the userId', async () => {
-    const result: any = await albumService.createAlbum(
+    const result = await albumService.createAlbum(
       { name: '  Trip  ', description: '  desc  ', tags: [' a ', '', ' b '] },
       'user-1'
     );
@@ -265,7 +269,7 @@ describe('createAlbum', () => {
 });
 
 function albumsChainable(result: unknown[]) {
-  const query: any = {
+  const query = {
     sort: jest.fn().mockReturnThis(),
     skip: jest.fn().mockReturnThis(),
     limit: jest.fn().mockReturnThis(),
@@ -365,7 +369,7 @@ describe('getAlbumById', () => {
     // Album.aggregate is mocked here, so this can only verify the pipeline
     // we construct asks Mongo to $ifNull the fields — it can't exercise
     // Mongo's actual $ifNull evaluation the way a real-DB integration test
-    // could (see TODO.md's note on the data layer having no contract tests).
+    // could.
     mockedAggregate.mockResolvedValue([{ _id: 'a1', userId: 'user-1', isPublic: false }]);
 
     await albumService.getAlbumById('507f1f77bcf86cd799439011', ctx());

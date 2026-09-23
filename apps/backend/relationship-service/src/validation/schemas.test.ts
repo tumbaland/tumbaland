@@ -28,6 +28,24 @@ describe('createActivitySchema', () => {
   it('rejects a missing typeId', () => {
     expect(() => createActivitySchema.parse({ date: '2026-01-01' })).toThrow();
   });
+
+  it('stores the day as its UTC midnight', () => {
+    const result = createActivitySchema.parse({ date: '2026-01-01', typeId: 'type-1' });
+
+    expect(result.date.toISOString()).toBe('2026-01-01T00:00:00.000Z');
+  });
+
+  it.each([
+    ['a timestamp', 1767225600000, 'A valid date is required'],
+    ['a full ISO datetime', '2026-01-01T15:00:00Z', 'Date must be formatted as YYYY-MM-DD'],
+    ['a day that rolls into the next month', '2026-02-31', 'Invalid date'],
+    ['a missing date', undefined, 'A valid date is required']
+  ])('rejects %s', (_label, date, message) => {
+    const result = createActivitySchema.safeParse({ date, typeId: 'type-1' });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0].message).toBe(message);
+  });
 });
 
 describe('updateActivitySchema', () => {
@@ -35,6 +53,16 @@ describe('updateActivitySchema', () => {
     const result = updateActivitySchema.parse({ groupId: 'group-1' });
 
     expect(result.groupId).toBe('group-1');
+  });
+
+  it('leaves the date alone when an update does not move the entry', () => {
+    const result = updateActivitySchema.parse({ description: 'Padel' });
+
+    expect(result).not.toHaveProperty('date');
+  });
+
+  it('rejects moving an entry to a day that does not exist', () => {
+    expect(() => updateActivitySchema.parse({ date: '2025-02-29' })).toThrow('Invalid date');
   });
 });
 

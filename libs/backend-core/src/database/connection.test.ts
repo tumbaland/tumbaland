@@ -3,14 +3,14 @@ jest.mock('../logging/logger', () => ({
   default: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn(), http: jest.fn() }
 }));
 
-const connectionHandlers: Record<string, (...args: any[]) => void> = {};
+const connectionHandlers: Record<string, (...args: unknown[]) => void> = {};
 
 jest.mock('mongoose', () => ({
   __esModule: true,
   default: {
     connect: jest.fn(),
     connection: {
-      on: jest.fn((event: string, handler: (...args: any[]) => void) => {
+      on: jest.fn((event: string, handler: (...args: unknown[]) => void) => {
         connectionHandlers[event] = handler;
       }),
       close: jest.fn()

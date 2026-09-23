@@ -41,7 +41,7 @@ beforeEach(() => {
 
 describe('listOverrides', () => {
   it('lists every override newest first', async () => {
-    mocked.find.mockReturnValue({ sort: jest.fn().mockResolvedValue([{ userEmail: 'a@b.com' }]) } as any);
+    mocked.find.mockReturnValue({ sort: jest.fn().mockResolvedValue([{ userEmail: 'a@b.com' }]) } as never);
     const res = mockRes();
 
     await listOverrides(adminReq(), res);
@@ -52,7 +52,7 @@ describe('listOverrides', () => {
 
 describe('getOverride', () => {
   it('returns the override with the limits it actually produces', async () => {
-    mocked.findOne.mockResolvedValue({ userEmail: 'user@example.com', reason: 'friend' } as any);
+    mocked.findOne.mockResolvedValue({ userEmail: 'user@example.com', reason: 'friend' } as never);
     const res = mockRes();
 
     await getOverride(adminReq({ params: { email: 'User@Example.com' } }), res);
@@ -64,7 +64,7 @@ describe('getOverride', () => {
   });
 
   it('404s when the user has no override', async () => {
-    mocked.findOne.mockResolvedValue(null as any);
+    mocked.findOne.mockResolvedValue(null as never);
 
     await expect(getOverride(adminReq({ params: { email: 'nobody@example.com' } }), mockRes())).rejects.toMatchObject({
       name: 'NotFoundError'
@@ -74,7 +74,7 @@ describe('getOverride', () => {
 
 describe('upsertOverride', () => {
   it('replaces the stored override, so an adjustment can be removed', async () => {
-    mocked.findOneAndReplace.mockResolvedValue({ userEmail: 'user@example.com' } as any);
+    mocked.findOneAndReplace.mockResolvedValue({ userEmail: 'user@example.com' } as never);
     const res = mockRes();
 
     await upsertOverride(
@@ -100,7 +100,7 @@ describe('upsertOverride', () => {
   });
 
   it('stores an expiry, so a temporary bump does not quietly become permanent', async () => {
-    mocked.findOneAndReplace.mockResolvedValue({} as any);
+    mocked.findOneAndReplace.mockResolvedValue({} as never);
 
     await upsertOverride(
       adminReq({
@@ -130,7 +130,7 @@ describe('upsertOverride', () => {
 
 describe('deleteOverride', () => {
   it('removes the override and reports what the user is left with', async () => {
-    mocked.findOneAndDelete.mockResolvedValue({ userEmail: 'user@example.com' } as any);
+    mocked.findOneAndDelete.mockResolvedValue({ userEmail: 'user@example.com' } as never);
     mockedResolve.mockResolvedValue({
       email: 'user@example.com',
       planCode: 'free',
@@ -146,7 +146,7 @@ describe('deleteOverride', () => {
   });
 
   it('404s when there was nothing to remove', async () => {
-    mocked.findOneAndDelete.mockResolvedValue(null as any);
+    mocked.findOneAndDelete.mockResolvedValue(null as never);
 
     await expect(
       deleteOverride(adminReq({ params: { email: 'nobody@example.com' } }), mockRes())

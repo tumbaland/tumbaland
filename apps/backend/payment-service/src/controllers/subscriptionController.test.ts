@@ -13,9 +13,12 @@ jest.mock('../services/stripeService', () => ({
   stripe: { subscriptions: { update: jest.fn() } }
 }));
 
-import { Subscription } from '../models/Subscription';
+import { ISubscription, Subscription } from '../models/Subscription';
 import { stripe } from '../services/stripeService';
 import app from '../app';
+
+/** The fields of a Subscription document the handler reads and writes. */
+type FakeSubscription = Partial<Omit<ISubscription, 'save'>> & { id?: string; save: jest.Mock };
 
 const mockedFind = Subscription.find as unknown as jest.Mock;
 const mockedFindOne = Subscription.findOne as unknown as jest.Mock;
@@ -116,7 +119,7 @@ describe('POST /api/subscriptions/cancel', () => {
   // Stripe was asked to stop at period end, so the user keeps the access they already paid
   // for. Marking `canceled` here would revoke it immediately, mid-paid-period.
   it('cancels via Stripe (cancel_at_period_end) and marks the subscription canceling, not canceled', async () => {
-    const sub: any = {
+    const sub: FakeSubscription = {
       id: 'sub-doc-1',
       status: 'active',
       stripeSubscriptionId: 'sub_stripe_1',
@@ -142,7 +145,7 @@ describe('POST /api/subscriptions/cancel', () => {
   // A local-only cancel here would revoke access while Stripe kept invoicing — worse than
   // reporting the failure, so the record must be left exactly as it was.
   it('leaves the subscription untouched and reports 502 when the Stripe call fails', async () => {
-    const sub: any = {
+    const sub: FakeSubscription = {
       id: 'sub-doc-2',
       status: 'active',
       stripeSubscriptionId: 'sub_stripe_2',
@@ -160,7 +163,7 @@ describe('POST /api/subscriptions/cancel', () => {
   });
 
   it('cancels locally without calling Stripe when there is no stripeSubscriptionId (incomplete checkout)', async () => {
-    const sub: any = {
+    const sub: FakeSubscription = {
       id: 'sub-doc-3',
       status: 'incomplete',
       stripeSubscriptionId: undefined,

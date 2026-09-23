@@ -53,7 +53,7 @@ describe('authMiddleware', () => {
     });
 
     it('rejects an invalid/malformed token', async () => {
-      const req = mockReq({ cookies: { access_token: 'not-a-real-jwt' } } as any);
+      const req = mockReq({ cookies: { access_token: 'not-a-real-jwt' } } as never);
       const res = mockRes();
       const next = jest.fn();
 
@@ -67,7 +67,7 @@ describe('authMiddleware', () => {
 
     it('rejects a valid token when the DB user no longer exists', async () => {
       const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User', tokenVersion: 1 });
-      const req = mockReq({ cookies: { access_token: token } } as any);
+      const req = mockReq({ cookies: { access_token: token } } as never);
       const res = mockRes();
       const next = jest.fn();
       mockedFindOne.mockResolvedValue(null);
@@ -83,7 +83,7 @@ describe('authMiddleware', () => {
       // Simulates: token was issued when tokenVersion was 1, but
       // invalidate-tokens has since bumped the DB user's tokenVersion to 2.
       const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User', tokenVersion: 1 });
-      const req = mockReq({ cookies: { access_token: token } } as any);
+      const req = mockReq({ cookies: { access_token: token } } as never);
       const res = mockRes();
       const next = jest.fn();
       mockedFindOne.mockResolvedValue({ email: 'user@example.com', tokenVersion: 2, isApproved: true });
@@ -97,7 +97,7 @@ describe('authMiddleware', () => {
 
     it('accepts a valid token whose tokenVersion matches the DB user and attaches req.user/req.dbUser', async () => {
       const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User', tokenVersion: 1 });
-      const req = mockReq({ cookies: { access_token: token } } as any);
+      const req = mockReq({ cookies: { access_token: token } } as never);
       const res = mockRes();
       const next = jest.fn();
       const dbUser = { email: 'user@example.com', tokenVersion: 1, isApproved: true };
@@ -108,7 +108,7 @@ describe('authMiddleware', () => {
       expect(next).toHaveBeenCalledTimes(1);
       expect(res.status).not.toHaveBeenCalled();
       expect(req.user).toMatchObject({ email: 'user@example.com', tokenVersion: 1 });
-      expect((req as any).dbUser).toBe(dbUser);
+      expect((req as unknown as Record<string, unknown>).dbUser).toBe(dbUser);
     });
 
     it('copies the token’s groups onto req.userGroups', async () => {
@@ -122,7 +122,7 @@ describe('authMiddleware', () => {
         name: 'User',
         groups: ['g1', 'g2']
       });
-      const req = mockReq({ cookies: { access_token: token } } as any);
+      const req = mockReq({ cookies: { access_token: token } } as never);
       const next = jest.fn();
       mockedFindOne.mockResolvedValue({ email: 'user@example.com', isApproved: true });
 
@@ -134,7 +134,7 @@ describe('authMiddleware', () => {
 
     it('sets req.userGroups to an empty array when the token carries no groups', async () => {
       const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User' });
-      const req = mockReq({ cookies: { access_token: token } } as any);
+      const req = mockReq({ cookies: { access_token: token } } as never);
       mockedFindOne.mockResolvedValue({ email: 'user@example.com', isApproved: true });
 
       await authenticateToken(req, mockRes(), jest.fn());
@@ -146,7 +146,7 @@ describe('authMiddleware', () => {
 
     it('accepts a token with no tokenVersion claim (falsy tokenVersion skips the check)', async () => {
       const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User' });
-      const req = mockReq({ cookies: { access_token: token } } as any);
+      const req = mockReq({ cookies: { access_token: token } } as never);
       const res = mockRes();
       const next = jest.fn();
       mockedFindOne.mockResolvedValue({ email: 'user@example.com', tokenVersion: 7, isApproved: true });
@@ -159,7 +159,7 @@ describe('authMiddleware', () => {
 
     it('accepts a token passed via the Authorization: Bearer header when no cookie is present', async () => {
       const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User', tokenVersion: 1 });
-      const req = mockReq({ cookies: {}, headers: { authorization: `Bearer ${token}` } } as any);
+      const req = mockReq({ cookies: {}, headers: { authorization: `Bearer ${token}` } } as never);
       const res = mockRes();
       const next = jest.fn();
       mockedFindOne.mockResolvedValue({ email: 'user@example.com', tokenVersion: 1, isApproved: true });
@@ -185,7 +185,7 @@ describe('authMiddleware', () => {
     });
 
     it('proceeds without blocking even when the token is invalid', async () => {
-      const req = mockReq({ cookies: { access_token: 'garbage' } } as any);
+      const req = mockReq({ cookies: { access_token: 'garbage' } } as never);
       const res = mockRes();
       const next = jest.fn();
 
@@ -197,7 +197,7 @@ describe('authMiddleware', () => {
 
     it('attaches req.user and upserts the DB user when the token is valid', async () => {
       const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User', tokenVersion: 1 });
-      const req = mockReq({ cookies: { access_token: token } } as any);
+      const req = mockReq({ cookies: { access_token: token } } as never);
       const res = mockRes();
       const next = jest.fn();
       mockedFindOneAndUpdate.mockResolvedValue({ email: 'user@example.com' });
@@ -211,7 +211,7 @@ describe('authMiddleware', () => {
 
     it('accepts a token passed via the Authorization: Bearer header when no cookie is present', async () => {
       const token = generateJWT({ id: '1', email: 'user@example.com', name: 'User', tokenVersion: 1 });
-      const req = mockReq({ cookies: {}, headers: { authorization: `Bearer ${token}` } } as any);
+      const req = mockReq({ cookies: {}, headers: { authorization: `Bearer ${token}` } } as never);
       const res = mockRes();
       const next = jest.fn();
       mockedFindOneAndUpdate.mockResolvedValue({ email: 'user@example.com' });
@@ -237,7 +237,7 @@ describe('authMiddleware', () => {
     });
 
     it('rejects when the DB user lacks the required role', () => {
-      const req = mockReq({ dbUser: { roles: ['member'] } } as any);
+      const req = mockReq({ dbUser: { roles: ['member'] } } as never);
       const res = mockRes();
       const next = jest.fn();
 
@@ -248,7 +248,7 @@ describe('authMiddleware', () => {
     });
 
     it('calls next when the DB user has the required role', () => {
-      const req = mockReq({ dbUser: { roles: ['admin'] } } as any);
+      const req = mockReq({ dbUser: { roles: ['admin'] } } as never);
       const res = mockRes();
       const next = jest.fn();
 
@@ -272,7 +272,7 @@ describe('authMiddleware', () => {
     });
 
     it('rejects an unapproved user', () => {
-      const req = mockReq({ dbUser: { isApproved: false } } as any);
+      const req = mockReq({ dbUser: { isApproved: false } } as never);
       const res = mockRes();
       const next = jest.fn();
 
@@ -284,7 +284,7 @@ describe('authMiddleware', () => {
     });
 
     it('calls next for an approved user', () => {
-      const req = mockReq({ dbUser: { isApproved: true } } as any);
+      const req = mockReq({ dbUser: { isApproved: true } } as never);
       const res = mockRes();
       const next = jest.fn();
 

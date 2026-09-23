@@ -56,7 +56,7 @@ describe('metricsMiddleware', () => {
     expect(res.on).toHaveBeenCalledWith('finish', expect.any(Function));
     expect((await activeConnections.get()).values[0]?.value).toBe(before + 1);
 
-    (res as any)._finishHandler();
+    (res as unknown as { _finishHandler: () => void })._finishHandler();
 
     expect((await activeConnections.get()).values[0]?.value).toBe(before);
   });
@@ -71,7 +71,7 @@ describe('metricsMiddleware', () => {
     const totalSpy = jest.spyOn(httpRequestsTotal, 'labels');
 
     metricsMiddleware(req, res, next);
-    (res as any)._finishHandler();
+    (res as unknown as { _finishHandler: () => void })._finishHandler();
 
     expect(durationSpy).toHaveBeenCalledWith('POST', '/albums', '201');
     expect(totalSpy).toHaveBeenCalledWith('POST', '/albums', '201');

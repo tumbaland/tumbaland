@@ -55,7 +55,7 @@ const staffPlan = { _id: 'plan-id', code: 'staff' };
 beforeEach(() => {
   jest.clearAllMocks();
   saveMock.mockResolvedValue(undefined);
-  mockedPlan.findOne.mockResolvedValue(staffPlan as any);
+  mockedPlan.findOne.mockResolvedValue(staffPlan as never);
   mockedSubscription.findOne.mockResolvedValue(null);
 });
 

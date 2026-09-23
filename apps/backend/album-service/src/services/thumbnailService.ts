@@ -57,7 +57,7 @@ export const generateThumbnailFromBuffer = async (
     const metadata = await sharp(thumbnailBuffer).metadata();
 
     // Upload thumbnail to file-service
-    await uploadFile(thumbnailBuffer, thumbnailFileId, `image/${opts.format}`, thumbnailBuffer.length);
+    await uploadFile(thumbnailBuffer, thumbnailFileId, `image/${opts.format}`);
 
     logger.info(`Thumbnail generated and uploaded: ${thumbnailFileId}`, {
       originalSize: imageBuffer.length,

@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useNavigate } from 'react-router';
 import { vi } from 'vitest';
+import type { ContextType } from 'react';
 
 vi.mock('../services/authService', () => ({
   authService: {
@@ -56,7 +57,7 @@ function setMobile(isMobile: boolean) {
 
 function renderAt(path: string, config: Record<string, string> = {}) {
   return render(
-    <ConfigContext.Provider value={config as any}>
+    <ConfigContext.Provider value={config as never}>
       <MemoryRouter initialEntries={[path]}>
         <Layout>
           <div>page content</div>
@@ -113,7 +114,7 @@ it('leaves the navigation mounted while the module under it changes', async () =
         {
           RELATIONSHIP_FRONT_URL: 'https://relationship.example',
           ALBUM_FRONT_URL: 'https://album.example'
-        } as any
+        } as ContextType<typeof ConfigContext>
       }
     >
       <MemoryRouter initialEntries={['/relationship']}>

@@ -62,7 +62,7 @@ describe('getHoldings', () => {
 
 describe('addHolding', () => {
   it('creates the holding and returns 201', async () => {
-    mocked.createHolding.mockResolvedValue({ _id: 'h1' } as any);
+    mocked.createHolding.mockResolvedValue({ _id: 'h1' } as never);
     const res = mockRes();
 
     await addHolding(baseReq({ body: { ticker: 'AAPL' } }), res);
@@ -72,7 +72,7 @@ describe('addHolding', () => {
   });
 
   it('meters the ticker the holding starts tracking', async () => {
-    mocked.createHolding.mockResolvedValue({ _id: 'h1' } as any);
+    mocked.createHolding.mockResolvedValue({ _id: 'h1' } as never);
     const res = mockRes();
 
     await addHolding(baseReq({ body: { ticker: 'AAPL', groupId: 'g1' }, userGroups: ['g1'] }), res);
@@ -96,7 +96,7 @@ describe('editHolding', () => {
   });
 
   it('updates the holding', async () => {
-    mocked.updateHolding.mockResolvedValue({ _id: 'h1' } as any);
+    mocked.updateHolding.mockResolvedValue({ _id: 'h1' } as never);
     const res = mockRes();
 
     await editHolding(baseReq({ params: { id: 'h1' }, body: { quantity: 5 } }), res);
@@ -107,7 +107,7 @@ describe('editHolding', () => {
 
 describe('removeHolding', () => {
   it('deletes the holding', async () => {
-    mocked.deleteHolding.mockResolvedValue(undefined as any);
+    mocked.deleteHolding.mockResolvedValue(undefined as never);
     const res = mockRes();
 
     await removeHolding(baseReq({ params: { id: 'h1' } }), res);

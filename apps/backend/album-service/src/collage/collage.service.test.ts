@@ -1,8 +1,8 @@
 jest.mock('./collage.model', () => {
-  const CollageModel: any = jest.fn().mockImplementation((data: any) => ({
+  const CollageModel = jest.fn().mockImplementation((data: Record<string, unknown>) => ({
     ...data,
     save: jest.fn().mockResolvedValue(undefined)
-  }));
+  })) as jest.Mock & Record<string, jest.Mock>;
   CollageModel.findById = jest.fn();
   CollageModel.findByIdAndUpdate = jest.fn();
   CollageModel.findByIdAndDelete = jest.fn();
@@ -43,7 +43,7 @@ const collageInput = { title: 'My Collage', albumIds: ['album-1'], config: { pho
 describe('collage.service', () => {
   describe('createCollage', () => {
     it('stamps the userId onto the saved collage', async () => {
-      const result: any = await createCollage(collageInput, OWNER);
+      const result = await createCollage(collageInput, OWNER);
       expect(mockedCtor).toHaveBeenCalledWith(expect.objectContaining({ title: 'My Collage', userId: OWNER }));
       expect(result.userId).toBe(OWNER);
       expect(result.save).toHaveBeenCalled();

@@ -7,7 +7,7 @@ import { getMonitoringConfig, initMonitoring, isInterceptingConsole, updateMonit
 
 describe('isInterceptingConsole', () => {
   afterEach(() => {
-    delete (window as any)._monitoringInterceptingConsole;
+    delete (window as unknown as Record<string, unknown>)._monitoringInterceptingConsole;
   });
 
   it('is false when the global flag is unset', () => {
@@ -15,7 +15,7 @@ describe('isInterceptingConsole', () => {
   });
 
   it('is true once the global flag is set', () => {
-    (window as any)._monitoringInterceptingConsole = true;
+    (window as unknown as Record<string, unknown>)._monitoringInterceptingConsole = true;
     expect(isInterceptingConsole()).toBe(true);
   });
 });
@@ -95,8 +95,7 @@ describe('initMonitoring', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     (captureException as ReturnType<typeof vi.fn>).mockClear();
 
-    const event = new Event('unhandledrejection') as any;
-    event.reason = 'network down';
+    const event = Object.assign(new Event('unhandledrejection'), { reason: 'network down' });
     window.dispatchEvent(event);
 
     expect(captureException).toHaveBeenCalledWith(

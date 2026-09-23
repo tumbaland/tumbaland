@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { BadRequestError, ForbiddenError, sendSuccess, countRead } from '@tumbaland/backend-core';
+import { BadRequestError, sendSuccess, countRead } from '@tumbaland/backend-core';
 import * as transactionService from '../services/transaction.service';
 import { getCashflowSummary, DEFAULT_MONTHS } from '../services/cashflow.service';
 import { getAnalytics } from '../services/analytics.service';
@@ -18,17 +18,7 @@ import {
 } from '../services/transactionImport.service';
 import { exportTransactions } from '../services/transactionExport.service';
 import { TransactionType } from '../models/Transaction';
-
-function contextGroups(req: Request): string[] {
-  const { groupId } = req.query;
-  if (!groupId) return [];
-
-  const userGroups = req.userGroups || [];
-  if (!userGroups.includes(groupId as string)) {
-    throw new ForbiddenError('Access denied');
-  }
-  return [groupId as string];
-}
+import { contextGroupId, contextGroups } from '../utils/scope';
 
 function parseDate(value: unknown, field: string): Date | undefined {
   if (value === undefined) return undefined;
@@ -99,12 +89,9 @@ export const getCategories = async (req: Request, res: Response): Promise<void> 
 
 export const getSummary = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
-  const { groupId, months } = req.query;
-  const groups = contextGroups(req);
-
   const summary = await getCashflowSummary(user.id, {
-    months: parsePositiveInt(months, 'months') ?? DEFAULT_MONTHS,
-    groupId: groups.length > 0 ? (groupId as string) : undefined
+    months: parsePositiveInt(req.query.months, 'months') ?? DEFAULT_MONTHS,
+    groupId: contextGroupId(req)
   });
 
   sendSuccess(res, summary);
@@ -112,12 +99,9 @@ export const getSummary = async (req: Request, res: Response): Promise<void> => 
 
 export const getRecurring = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
-  const { groupId, months } = req.query;
-  const groups = contextGroups(req);
-
   const recurring = await getRecurringPayments(user.id, {
-    months: parsePositiveInt(months, 'months') ?? RECURRING_MONTHS,
-    groupId: groups.length > 0 ? (groupId as string) : undefined
+    months: parsePositiveInt(req.query.months, 'months') ?? RECURRING_MONTHS,
+    groupId: contextGroupId(req)
   });
 
   sendSuccess(res, recurring);
@@ -136,10 +120,7 @@ export const removeTransaction = async (req: Request, res: Response): Promise<vo
 /** Long-run trends: income and spending year on year, and what moved them. */
 export const getAnalyticsReport = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
-  const { groupId } = req.query;
-  const groups = contextGroups(req);
-
-  const analytics = await getAnalytics(user.id, groups.length > 0 ? (groupId as string) : undefined);
+  const analytics = await getAnalytics(user.id, contextGroupId(req));
 
   sendSuccess(res, analytics);
 };
@@ -155,8 +136,7 @@ export const getAnalyticsReport = async (req: Request, res: Response): Promise<v
  */
 export const importTransactions = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
-  const { groupId } = req.query;
-  const groups = contextGroups(req);
+  const groupId = contextGroupId(req);
   // Raw bytes, decoded here rather than by the body parser: the Pensionikeskus
   // export is ISO-8859-1 and every other file is UTF-8. Decoded as the wrong
   // one, "Osakute märkimine" becomes mojibake — and since that string is what
@@ -165,7 +145,7 @@ export const importTransactions = async (req: Request, res: Response): Promise<v
 
   const options = {
     userId: user.id,
-    groupId: groups.length > 0 ? (groupId as string) : undefined,
+    groupId,
     userGroups: req.userGroups || []
   };
 

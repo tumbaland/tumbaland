@@ -27,7 +27,7 @@ beforeEach(() => jest.clearAllMocks());
 
 describe('createCollage', () => {
   it('creates the collage and returns 201', async () => {
-    mocked.createCollage.mockResolvedValue({ _id: 'c1' } as any);
+    mocked.createCollage.mockResolvedValue({ _id: 'c1' } as never);
     const res = mockRes();
 
     await createCollage(baseReq({ body: { title: 'Trip' } }), res);
@@ -39,7 +39,7 @@ describe('createCollage', () => {
 
 describe('updateCollage', () => {
   it('updates the collage', async () => {
-    mocked.updateCollage.mockResolvedValue({ _id: 'c1', title: 'New' } as any);
+    mocked.updateCollage.mockResolvedValue({ _id: 'c1', title: 'New' } as never);
     const res = mockRes();
 
     await updateCollage(baseReq({ params: { id: 'c1' }, body: { title: 'New' } }), res);
@@ -50,7 +50,7 @@ describe('updateCollage', () => {
 
 describe('getCollageById', () => {
   it('returns collage + photos', async () => {
-    mocked.getCollageWithPhotos.mockResolvedValue({ collage: { _id: 'c1' }, photos: [] } as any);
+    mocked.getCollageWithPhotos.mockResolvedValue({ collage: { _id: 'c1' }, photos: [] } as never);
     const res = mockRes();
 
     await getCollageById(baseReq({ params: { id: 'c1' } }), res);
@@ -62,7 +62,7 @@ describe('getCollageById', () => {
 
 describe('getCollageList', () => {
   it('passes albumId/groupId query filters through', async () => {
-    mocked.getCollageList.mockResolvedValue([{ _id: 'c1' }] as any);
+    mocked.getCollageList.mockResolvedValue([{ _id: 'c1' }] as never);
     const res = mockRes();
 
     await getCollageList(baseReq({ query: { albumId: 'a1', groupId: 'g1' } }), res);

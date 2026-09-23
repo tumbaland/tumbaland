@@ -23,11 +23,14 @@ jest.mock('../services/stripeService', () => ({
   }
 }));
 
-import { Subscription } from '../models/Subscription';
+import { ISubscription, Subscription } from '../models/Subscription';
 import { Plan } from '../models/Plan';
 import { Payment } from '../models/Payment';
 import { stripe } from '../services/stripeService';
 import app from '../app';
+
+/** The fields of a Subscription document the handler reads and writes. */
+type FakeSubscription = Partial<Omit<ISubscription, 'save'>> & { id?: string; save: jest.Mock };
 
 const mockedSubFindOne = Subscription.findOne as jest.Mock;
 const mockedSubFindById = Subscription.findById as jest.Mock;
@@ -111,7 +114,7 @@ describe('POST /api/subscriptions/checkout-session', () => {
     mockedPlanFindOne.mockResolvedValue({ code: 'free', priceMonthlyCents: 0 });
     // A `canceling` record carries a cancelAt the UI renders as "Ends: <date>". Reactivating
     // without clearing it keeps advertising an expiry that no longer applies.
-    const existingSub: any = { userEmail: 'user@example.com', planCode: 'free', status: 'canceling', cancelAt: new Date('2026-09-01'), save: jest.fn().mockResolvedValue(undefined) };
+    const existingSub: FakeSubscription = { userEmail: 'user@example.com', planCode: 'free', status: 'canceling', cancelAt: new Date('2026-09-01'), save: jest.fn().mockResolvedValue(undefined) };
     mockedSubFindOne.mockResolvedValue(existingSub);
     mockedSubFind.mockResolvedValue([]);
 
@@ -171,7 +174,7 @@ describe('POST /api/subscriptions/checkout-session', () => {
   // stayed live at Stripe and kept invoicing alongside the new one.
   it('switches an existing subscription in place rather than selling a second one', async () => {
     mockedPlanFindOne.mockResolvedValue({ code: 'personal', _id: 'plan-personal', name: 'Personal', priceMonthlyCents: 600, stripePriceId: 'price_personal' });
-    const live: any = {
+    const live: FakeSubscription = {
       id: 'sub-family',
       userEmail: 'user@example.com',
       planCode: 'family',
@@ -219,7 +222,7 @@ describe('POST /api/subscriptions/checkout-session', () => {
   it('lets a canceling subscription be resumed by choosing its own plan again', async () => {
     // Choosing a plan is the clearest possible statement that the customer is staying.
     mockedPlanFindOne.mockResolvedValue({ code: 'personal', _id: 'plan-personal', name: 'Personal', priceMonthlyCents: 600, stripePriceId: 'price_personal' });
-    const live: any = {
+    const live: FakeSubscription = {
       id: 'sub-personal', userEmail: 'user@example.com', planCode: 'personal', status: 'canceling',
       cancelAt: new Date('2026-09-01'), stripeSubscriptionId: 'sub_stripe_personal', save: jest.fn().mockResolvedValue(undefined)
     };
@@ -259,7 +262,7 @@ describe('POST /api/subscriptions/checkout-session', () => {
     mockedPlanFindOne.mockResolvedValue({ code: 'free', priceMonthlyCents: 0 });
     mockedSubFindOne.mockResolvedValue(null);
     mockedSubCreate.mockResolvedValue({ id: 'sub-free', userEmail: 'user@example.com', planCode: 'free' });
-    const paid: any = {
+    const paid: FakeSubscription = {
       id: 'sub-family', userEmail: 'user@example.com', planCode: 'family', status: 'active',
       stripeSubscriptionId: 'sub_stripe_family', save: jest.fn().mockResolvedValue(undefined)
     };
@@ -278,7 +281,7 @@ describe('POST /api/subscriptions/checkout-session', () => {
 
   it('refuses the switch rather than guessing when Stripe cannot show the current item', async () => {
     mockedPlanFindOne.mockResolvedValue({ code: 'personal', _id: 'plan-personal', name: 'Personal', priceMonthlyCents: 600, stripePriceId: 'price_personal' });
-    const live: any = {
+    const live: FakeSubscription = {
       id: 'sub-family', userEmail: 'user@example.com', planCode: 'family', status: 'active',
       stripeSubscriptionId: 'sub_stripe_family', save: jest.fn()
     };
@@ -360,7 +363,7 @@ describe('POST /api/subscriptions/checkout-session', () => {
 
 describe('POST /api/stripe/webhook — checkout.session.completed', () => {
   it('activates an incomplete subscription and records a payment', async () => {
-    const sub: any = { status: 'incomplete', save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'pro', id: 'sub1' };
+    const sub: FakeSubscription = { status: 'incomplete', save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'pro', id: 'sub1' };
     mockedSubFindById.mockResolvedValue(sub);
     mockedPlanFindOne.mockResolvedValue({ code: 'pro', priceMonthlyCents: 1000 });
     mockedSubFind.mockResolvedValue([]);
@@ -380,7 +383,7 @@ describe('POST /api/stripe/webhook — checkout.session.completed', () => {
   });
 
   it('does nothing when the subscription is already active (not incomplete)', async () => {
-    const sub: any = { status: 'active', save: jest.fn() };
+    const sub: FakeSubscription = { status: 'active', save: jest.fn() };
     mockedSubFindById.mockResolvedValue(sub);
 
     const res = await postWebhookEvent('evt_checkout_2', 'checkout.session.completed', {
@@ -401,8 +404,8 @@ describe('POST /api/stripe/webhook — checkout.session.completed', () => {
   // subscription invoicing forever — the user pays for both plans while the database shows one.
   // It winds down at *period end* rather than immediately: that period is already paid for.
   it('winds the superseded paid subscription down at Stripe, not just locally', async () => {
-    const upgraded: any = { status: 'incomplete', save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'elite', id: 'sub-elite' };
-    const superseded: any = { status: 'active', planCode: 'pro', id: 'sub-pro', stripeSubscriptionId: 'sub_stripe_pro', save: jest.fn().mockResolvedValue(undefined) };
+    const upgraded: FakeSubscription = { status: 'incomplete', save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'elite', id: 'sub-elite' };
+    const superseded: FakeSubscription = { status: 'active', planCode: 'pro', id: 'sub-pro', stripeSubscriptionId: 'sub_stripe_pro', save: jest.fn().mockResolvedValue(undefined) };
     mockedSubFindById.mockResolvedValue(upgraded);
     mockedPlanFindOne.mockImplementation(async ({ code }: { code: string }) =>
       code === 'elite' ? { code: 'elite', priceMonthlyCents: 5000 } : { code: 'pro', priceMonthlyCents: 1000 }
@@ -427,8 +430,8 @@ describe('POST /api/stripe/webhook — checkout.session.completed', () => {
   // Direction-agnostic on purpose: the price comparison this replaced only ever cancelled
   // *cheaper* subscriptions, so a downgrade left the dearer one invoicing alongside the new one.
   it('supersedes a more expensive subscription too, which is the downgrade case', async () => {
-    const downgraded: any = { status: 'incomplete', save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'pro', id: 'sub-pro' };
-    const superseded: any = { status: 'active', planCode: 'elite', id: 'sub-elite', stripeSubscriptionId: 'sub_stripe_elite_old', save: jest.fn().mockResolvedValue(undefined) };
+    const downgraded: FakeSubscription = { status: 'incomplete', save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'pro', id: 'sub-pro' };
+    const superseded: FakeSubscription = { status: 'active', planCode: 'elite', id: 'sub-elite', stripeSubscriptionId: 'sub_stripe_elite_old', save: jest.fn().mockResolvedValue(undefined) };
     mockedSubFindById.mockResolvedValue(downgraded);
     mockedPlanFindOne.mockImplementation(async ({ code }: { code: string }) =>
       code === 'elite' ? { code: 'elite', priceMonthlyCents: 5000 } : { code: 'pro', priceMonthlyCents: 1000 }
@@ -449,7 +452,7 @@ describe('POST /api/stripe/webhook — checkout.session.completed', () => {
   // An admin grant is not superseded by a purchase: buying Personal must not consume
   // a staff or friend grant, which has no Stripe side to cancel in the first place.
   it('leaves comp grants out of the supersede query entirely', async () => {
-    const bought: any = { status: 'incomplete', save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'pro', id: 'sub-pro' };
+    const bought: FakeSubscription = { status: 'incomplete', save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'pro', id: 'sub-pro' };
     mockedSubFindById.mockResolvedValue(bought);
     mockedPlanFindOne.mockResolvedValue({ code: 'pro', priceMonthlyCents: 1000 });
     mockedSubFind.mockResolvedValue([]);
@@ -467,7 +470,7 @@ describe('POST /api/stripe/webhook — checkout.session.completed', () => {
   // A subscription still winding down is still billing until the period ends, so it has to be
   // in the supersede query — otherwise switching plans leaves it live at Stripe.
   it('supersedes a canceling subscription too', async () => {
-    const upgraded: any = { status: 'incomplete', save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'elite', id: 'sub-elite' };
+    const upgraded: FakeSubscription = { status: 'incomplete', save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'elite', id: 'sub-elite' };
     mockedSubFindById.mockResolvedValue(upgraded);
     mockedPlanFindOne.mockResolvedValue({ code: 'elite', priceMonthlyCents: 5000 });
     mockedSubFind.mockResolvedValue([]);
@@ -487,8 +490,8 @@ describe('POST /api/stripe/webhook — checkout.session.completed', () => {
   // An `incomplete` row was never paid for, so there is no period to protect — it goes at once,
   // which is what stops abandoned checkouts accumulating as live-looking rows.
   it('drops a superseded incomplete subscription immediately instead of winding it down', async () => {
-    const bought: any = { status: 'incomplete', save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'elite', id: 'sub-elite' };
-    const abandoned: any = { status: 'incomplete', planCode: 'pro', id: 'sub-pro', stripeSubscriptionId: 'sub_stripe_abandoned', save: jest.fn().mockResolvedValue(undefined) };
+    const bought: FakeSubscription = { status: 'incomplete', save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'elite', id: 'sub-elite' };
+    const abandoned: FakeSubscription = { status: 'incomplete', planCode: 'pro', id: 'sub-pro', stripeSubscriptionId: 'sub_stripe_abandoned', save: jest.fn().mockResolvedValue(undefined) };
     mockedSubFindById.mockResolvedValue(bought);
     mockedPlanFindOne.mockResolvedValue({ code: 'elite', priceMonthlyCents: 5000 });
     mockedSubFind.mockResolvedValue([abandoned]);
@@ -506,8 +509,8 @@ describe('POST /api/stripe/webhook — checkout.session.completed', () => {
 
   // A comp grant has nothing at Stripe, so there is no period to preserve and nothing to call.
   it('closes a superseded record that has no Stripe subscription without calling Stripe', async () => {
-    const bought: any = { status: 'incomplete', save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'elite', id: 'sub-elite' };
-    const local: any = { status: 'active', planCode: 'pro', id: 'sub-pro', save: jest.fn().mockResolvedValue(undefined) };
+    const bought: FakeSubscription = { status: 'incomplete', save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'elite', id: 'sub-elite' };
+    const local: FakeSubscription = { status: 'active', planCode: 'pro', id: 'sub-pro', save: jest.fn().mockResolvedValue(undefined) };
     mockedSubFindById.mockResolvedValue(bought);
     mockedPlanFindOne.mockResolvedValue({ code: 'elite', priceMonthlyCents: 5000 });
     mockedSubFind.mockResolvedValue([local]);
@@ -528,8 +531,8 @@ describe('POST /api/stripe/webhook — checkout.session.completed', () => {
   // locally would revoke the plan while Stripe kept charging for it — the same "access gone,
   // billing alive" failure Phase 0 removed from the user-facing cancel path.
   it('leaves the record untouched when the Stripe wind-down fails', async () => {
-    const upgraded: any = { status: 'incomplete', save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'elite', id: 'sub-elite' };
-    const superseded: any = { status: 'active', planCode: 'pro', id: 'sub-pro', stripeSubscriptionId: 'sub_stripe_pro', save: jest.fn().mockResolvedValue(undefined) };
+    const upgraded: FakeSubscription = { status: 'incomplete', save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'elite', id: 'sub-elite' };
+    const superseded: FakeSubscription = { status: 'active', planCode: 'pro', id: 'sub-pro', stripeSubscriptionId: 'sub_stripe_pro', save: jest.fn().mockResolvedValue(undefined) };
     mockedSubFindById.mockResolvedValue(upgraded);
     mockedPlanFindOne.mockImplementation(async ({ code }: { code: string }) =>
       code === 'elite' ? { code: 'elite', priceMonthlyCents: 5000 } : { code: 'pro', priceMonthlyCents: 1000 }
@@ -555,7 +558,7 @@ describe('POST /api/stripe/webhook — customer.subscription.updated', () => {
   // so this event is what keeps the local record honest — and it is the one the billing
   // portal will speak through once 5.2 lands.
   it('follows a price change onto the plan that price belongs to', async () => {
-    const sub: any = { planCode: 'family', status: 'active', save: jest.fn().mockResolvedValue(undefined) };
+    const sub: FakeSubscription = { planCode: 'family', status: 'active', save: jest.fn().mockResolvedValue(undefined) };
     mockedSubFindOne.mockResolvedValue(sub);
     mockedPlanFindOne.mockResolvedValue({ code: 'personal', _id: 'plan-personal', stripePriceId: 'price_personal' });
 
@@ -572,7 +575,7 @@ describe('POST /api/stripe/webhook — customer.subscription.updated', () => {
   });
 
   it('records a pending cancellation as canceling, with the date access actually ends', async () => {
-    const sub: any = { planCode: 'personal', status: 'active', save: jest.fn().mockResolvedValue(undefined) };
+    const sub: FakeSubscription = { planCode: 'personal', status: 'active', save: jest.fn().mockResolvedValue(undefined) };
     mockedSubFindOne.mockResolvedValue(sub);
     mockedPlanFindOne.mockResolvedValue(null);
 
@@ -589,7 +592,7 @@ describe('POST /api/stripe/webhook — customer.subscription.updated', () => {
   });
 
   it('reads dunning as past_due, and a resumed subscription as active again', async () => {
-    const dunning: any = { planCode: 'personal', status: 'active', save: jest.fn().mockResolvedValue(undefined) };
+    const dunning: FakeSubscription = { planCode: 'personal', status: 'active', save: jest.fn().mockResolvedValue(undefined) };
     mockedSubFindOne.mockResolvedValue(dunning);
     mockedPlanFindOne.mockResolvedValue(null);
 
@@ -598,7 +601,7 @@ describe('POST /api/stripe/webhook — customer.subscription.updated', () => {
     });
     expect(dunning.status).toBe('past_due');
 
-    const resumed: any = { planCode: 'personal', status: 'canceling', cancelAt: new Date(), save: jest.fn().mockResolvedValue(undefined) };
+    const resumed: FakeSubscription = { planCode: 'personal', status: 'canceling', cancelAt: new Date(), save: jest.fn().mockResolvedValue(undefined) };
     mockedSubFindOne.mockResolvedValue(resumed);
 
     await postWebhookEvent('evt_sub_updated_4', 'customer.subscription.updated', {
@@ -609,7 +612,7 @@ describe('POST /api/stripe/webhook — customer.subscription.updated', () => {
   });
 
   it('leaves a canceled record alone', async () => {
-    const sub: any = { planCode: 'personal', status: 'canceled', save: jest.fn() };
+    const sub: FakeSubscription = { planCode: 'personal', status: 'canceled', save: jest.fn() };
     mockedSubFindOne.mockResolvedValue(sub);
 
     await postWebhookEvent('evt_sub_updated_5', 'customer.subscription.updated', {
@@ -622,7 +625,7 @@ describe('POST /api/stripe/webhook — customer.subscription.updated', () => {
 
 describe('POST /api/stripe/webhook — invoice.payment_succeeded', () => {
   it('updates renewsAt and records a payment', async () => {
-    const sub: any = { save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'pro', id: 'sub1' };
+    const sub: FakeSubscription = { save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'pro', id: 'sub1' };
     mockedSubFindOne.mockResolvedValue(sub);
     mockedPlanFindOne.mockResolvedValue({ code: 'pro', priceMonthlyCents: 1000 });
     mockedPaymentFindOne.mockResolvedValue(null);
@@ -641,7 +644,7 @@ describe('POST /api/stripe/webhook — invoice.payment_succeeded', () => {
   });
 
   it('skips creating a duplicate payment for the same invoice', async () => {
-    const sub: any = { save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'pro', id: 'sub1' };
+    const sub: FakeSubscription = { save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'pro', id: 'sub1' };
     mockedSubFindOne.mockResolvedValue(sub);
     mockedPlanFindOne.mockResolvedValue({ code: 'pro', priceMonthlyCents: 1000 });
     mockedPaymentFindOne.mockResolvedValue({ _id: 'existing-payment' });
@@ -657,7 +660,7 @@ describe('POST /api/stripe/webhook — invoice.payment_succeeded', () => {
   });
 
   it('does not create a payment for a free plan', async () => {
-    const sub: any = { save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'free', id: 'sub1' };
+    const sub: FakeSubscription = { save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'free', id: 'sub1' };
     mockedSubFindOne.mockResolvedValue(sub);
     mockedPlanFindOne.mockResolvedValue({ code: 'free', priceMonthlyCents: 0 });
 
@@ -674,7 +677,7 @@ describe('POST /api/stripe/webhook — invoice.payment_succeeded', () => {
 
 describe('POST /api/stripe/webhook — customer.subscription.deleted', () => {
   it('marks the matching subscription canceled', async () => {
-    const sub: any = { status: 'active', save: jest.fn().mockResolvedValue(undefined) };
+    const sub: FakeSubscription = { status: 'active', save: jest.fn().mockResolvedValue(undefined) };
     mockedSubFindOne.mockResolvedValue(sub);
 
     const res = await postWebhookEvent('evt_deleted_1', 'customer.subscription.deleted', { id: 'sub_stripe_1' });
@@ -685,7 +688,7 @@ describe('POST /api/stripe/webhook — customer.subscription.deleted', () => {
   });
 
   it('leaves an already-canceled subscription alone', async () => {
-    const sub: any = { status: 'canceled', save: jest.fn() };
+    const sub: FakeSubscription = { status: 'canceled', save: jest.fn() };
     mockedSubFindOne.mockResolvedValue(sub);
 
     await postWebhookEvent('evt_deleted_2', 'customer.subscription.deleted', { id: 'sub_stripe_2' });
@@ -696,7 +699,7 @@ describe('POST /api/stripe/webhook — customer.subscription.deleted', () => {
   // This event is the only thing that ends a `canceling` subscription — it fires when the
   // paid period Stripe was told to run out actually runs out.
   it('flips a canceling subscription to canceled at period end', async () => {
-    const sub: any = { status: 'canceling', save: jest.fn().mockResolvedValue(undefined) };
+    const sub: FakeSubscription = { status: 'canceling', save: jest.fn().mockResolvedValue(undefined) };
     mockedSubFindOne.mockResolvedValue(sub);
 
     await postWebhookEvent('evt_deleted_3', 'customer.subscription.deleted', { id: 'sub_stripe_3' });
@@ -711,7 +714,7 @@ describe('POST /api/stripe/webhook — invoice.payment_failed vs canceling', () 
   // A subscription winding down will fail its final renewal by design. Flipping it to
   // past_due there would silently un-cancel it and put it back into dunning.
   it('does not drag a canceling subscription back into past_due', async () => {
-    const sub: any = { status: 'canceling', save: jest.fn() };
+    const sub: FakeSubscription = { status: 'canceling', save: jest.fn() };
     mockedSubFindOne.mockResolvedValue(sub);
 
     const res = await postWebhookEvent('evt_failed_canceling', 'invoice.payment_failed', {
@@ -756,7 +759,7 @@ describe('GET /api/subscriptions/checkout-session/:id', () => {
       subscription: { id: 'sub_stripe_1' },
       customer: 'cus_1'
     });
-    const subDoc: any = { id: 'sub1', status: 'incomplete', save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'pro' };
+    const subDoc: FakeSubscription = { id: 'sub1', status: 'incomplete', save: jest.fn().mockResolvedValue(undefined), userEmail: 'user@example.com', planCode: 'pro' };
     mockedSubFindById.mockResolvedValue(subDoc);
     mockedPlanFindOne.mockResolvedValue({ code: 'pro', priceMonthlyCents: 1000 });
     mockedSubFind.mockResolvedValue([]);
@@ -777,7 +780,7 @@ describe('GET /api/subscriptions/checkout-session/:id', () => {
       payment_status: 'paid',
       metadata: { subscriptionId: 'sub1' }
     });
-    const subDoc: any = { id: 'sub1', status: 'active', save: jest.fn() };
+    const subDoc: FakeSubscription = { id: 'sub1', status: 'active', save: jest.fn() };
     mockedSubFindById.mockResolvedValue(subDoc);
 
     await request(app).get('/api/subscriptions/checkout-session/cs_test_3').set('Cookie', authCookie());

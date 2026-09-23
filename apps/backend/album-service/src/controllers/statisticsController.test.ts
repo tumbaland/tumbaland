@@ -21,7 +21,7 @@ beforeEach(() => jest.clearAllMocks());
 
 describe('getAlbumStatistics', () => {
   it('passes the groupId filter and user context through to the service', async () => {
-    mocked.getAlbumStatistics.mockResolvedValue({ overview: { totalAlbums: 1 } } as any);
+    mocked.getAlbumStatistics.mockResolvedValue({ overview: { totalAlbums: 1 } } as never);
     const res = mockRes();
     const req = {
       user: { id: 'user-1' },

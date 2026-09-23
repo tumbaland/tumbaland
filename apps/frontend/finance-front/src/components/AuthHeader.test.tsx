@@ -1,14 +1,18 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
+import type { ComponentProps } from 'react';
+import type { AuthHeader as SharedAuthHeader } from '@tumbaland/frontend-core';
 
 const mockedUseTenant = vi.fn();
 vi.mock('@tumbaland/frontend-core', () => ({
-  AuthHeader: (props: any) => (
+  AuthHeader: (props: ComponentProps<typeof SharedAuthHeader>) => (
     <div>
       <div data-testid="is-authenticated">{String(props.isAuthenticated)}</div>
       <div data-testid="user-email">{props.user?.email ?? 'none'}</div>
-      <div data-testid="selected-tenant">{props.selectedTenant ?? 'none'}</div>
+      <div data-testid="selected-tenant">
+        {(typeof props.selectedTenant === 'object' ? props.selectedTenant?.name : props.selectedTenant) ?? 'none'}
+      </div>
       <button onClick={props.onLogin}>login</button>
       <button onClick={props.onLogout}>logout</button>
     </div>

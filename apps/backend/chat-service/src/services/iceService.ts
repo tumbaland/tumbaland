@@ -35,7 +35,7 @@ export interface IceConfig {
 
 /**
  * Longer than any call, so a call does not lose its relay midway. A call that
- * does outlive it refreshes with `setConfiguration` (TODO.md, phase 3).
+ * does outlive it refreshes with `setConfiguration`.
  */
 export const CREDENTIAL_TTL_SECONDS = 6 * 60 * 60;
 

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DAY_PATTERN, parseDay } from '../utils/day';
 
 /** Where an entry happened; only accepted for types with hasLocation. */
 export const locationSchema = z.object({
@@ -7,8 +8,24 @@ export const locationSchema = z.object({
   lng: z.number().min(-180).max(180)
 });
 
+/**
+ * A real calendar day as YYYY-MM-DD, stored as its UTC midnight. Stricter than
+ * `z.coerce.date`, which takes any timestamp and rolls 2026-02-31 into March.
+ */
+const daySchema = z
+  .string({ error: 'A valid date is required' })
+  .regex(DAY_PATTERN, 'Date must be formatted as YYYY-MM-DD')
+  .transform((day, ctx) => {
+    const date = parseDay(day);
+    if (!date) {
+      ctx.addIssue({ code: 'custom', message: 'Invalid date' });
+      return z.NEVER;
+    }
+    return date;
+  });
+
 export const createActivitySchema = z.object({
-  date: z.coerce.date({ error: 'A valid date is required' }),
+  date: daySchema,
   typeId: z.string().min(1, 'typeId is required'),
   description: z.string().max(500).optional(),
   hours: z.number().int().nonnegative().optional(),

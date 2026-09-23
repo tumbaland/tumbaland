@@ -42,7 +42,7 @@ describe('normalizeCollageConfig frame/transparency inference', () => {
         { photoId: 'a', transparentBackground: true }, // transparent → no frame
         { photoId: 'b', transparentBackground: false } // opaque → framed
       ]
-    } as any);
+    } as never);
 
     expect(doc.photos[0].frame).toBe(false);
     expect(doc.photos[1].frame).toBe(true);
@@ -51,20 +51,20 @@ describe('normalizeCollageConfig frame/transparency inference', () => {
   it('prefers an explicit v2 frame flag over legacy transparency', () => {
     const doc = normalizeCollageConfig({
       photos: [{ photoId: 'a', frame: true, transparentBackground: true }]
-    } as any);
+    } as never);
 
     expect(doc.photos[0].frame).toBe(true);
   });
 
   it('leaves frame undefined (inherit) when neither flag is present', () => {
-    const doc = normalizeCollageConfig({ photos: [{ photoId: 'a' }] } as any);
+    const doc = normalizeCollageConfig({ photos: [{ photoId: 'a' }] } as never);
     expect(doc.photos[0].frame).toBeUndefined();
   });
 
   it('derives document frameEnabled from the v1 photoTransparencyMode flag', () => {
-    expect(normalizeCollageConfig({ photoTransparencyMode: true } as any).frameEnabled).toBe(false);
-    expect(normalizeCollageConfig({ photoTransparencyMode: false } as any).frameEnabled).toBe(true);
+    expect(normalizeCollageConfig({ photoTransparencyMode: true } as never).frameEnabled).toBe(false);
+    expect(normalizeCollageConfig({ photoTransparencyMode: false } as never).frameEnabled).toBe(true);
     // default when unspecified: frames off
-    expect(normalizeCollageConfig({} as any).frameEnabled).toBe(false);
+    expect(normalizeCollageConfig({} as never).frameEnabled).toBe(false);
   });
 });

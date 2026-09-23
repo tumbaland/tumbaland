@@ -31,7 +31,7 @@ describe('healthCheck', () => {
   });
 
   it('responds 200 with dependencies.mongodb "connected" when Mongo readyState is 1', async () => {
-    jest.spyOn(mongoose, 'connection', 'get').mockReturnValue({ readyState: 1 } as any);
+    jest.spyOn(mongoose, 'connection', 'get').mockReturnValue({ readyState: 1 } as never);
     process.env.SERVICE_NAME = 'album-service';
     const res = mockRes();
 
@@ -48,7 +48,7 @@ describe('healthCheck', () => {
   });
 
   it('responds 503 with dependencies.mongodb "disconnected" when Mongo readyState is not 1', async () => {
-    jest.spyOn(mongoose, 'connection', 'get').mockReturnValue({ readyState: 0 } as any);
+    jest.spyOn(mongoose, 'connection', 'get').mockReturnValue({ readyState: 0 } as never);
     const res = mockRes();
 
     await healthCheck({} as Request, res);
@@ -63,7 +63,7 @@ describe('healthCheck', () => {
     delete process.env.SERVICE_NAME;
     delete process.env.npm_package_version;
     delete process.env.SERVICE_DESCRIPTION;
-    jest.spyOn(mongoose, 'connection', 'get').mockReturnValue({ readyState: 1 } as any);
+    jest.spyOn(mongoose, 'connection', 'get').mockReturnValue({ readyState: 1 } as never);
     const res = mockRes();
 
     await healthCheck({} as Request, res);

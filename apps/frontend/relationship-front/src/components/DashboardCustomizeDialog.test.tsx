@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
+import type { ComponentProps } from 'react';
 import DashboardCustomizeDialog from './DashboardCustomizeDialog';
 import { ActivityType } from '../services/types';
 
@@ -9,7 +10,9 @@ const types: ActivityType[] = [
   { _id: 't2', id: 't2', name: 'Gaming', slug: 'gaming', isActive: true, sortOrder: 1, createdAt: '', updatedAt: '', userId: 'u1' }
 ];
 
-function renderDialog(overrides: Partial<{ types: ActivityType[]; settings: any; onSave: any }> = {}) {
+function renderDialog(
+  overrides: Partial<Pick<ComponentProps<typeof DashboardCustomizeDialog>, 'types' | 'settings' | 'onSave'>> = {}
+) {
   const onClose = vi.fn();
   const onSave = overrides.onSave ?? vi.fn().mockResolvedValue(undefined);
   render(

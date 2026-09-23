@@ -49,7 +49,7 @@ describe('upsertSnapshot', () => {
   it('upserts a personal snapshot when no groupId is given', async () => {
     mockedFindOneAndUpdate.mockResolvedValue({ _id: 's1' });
 
-    await upsertSnapshot('2026-03', [{ ticker: 'AAPL' } as any], 'user-1');
+    await upsertSnapshot('2026-03', [{ ticker: 'AAPL' } as never], 'user-1');
 
     expect(mockedFindOneAndUpdate).toHaveBeenCalledWith(
       { userId: 'user-1', groupId: { $exists: false }, date: monthToDate('2026-03') },

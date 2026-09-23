@@ -1,17 +1,7 @@
 import { Request, Response } from 'express';
-import { ForbiddenError, sendSuccess } from '@tumbaland/backend-core';
+import { sendSuccess } from '@tumbaland/backend-core';
 import * as categoryRuleService from '../services/categoryRule.service';
-
-function contextGroups(req: Request): string[] {
-  const { groupId } = req.query;
-  if (!groupId) return [];
-
-  const userGroups = req.userGroups || [];
-  if (!userGroups.includes(groupId as string)) {
-    throw new ForbiddenError('Access denied');
-  }
-  return [groupId as string];
-}
+import { contextGroupId, contextGroups } from '../utils/scope';
 
 /** The owner's categorisation rules, in the order they run. */
 export const getCategoryRules = async (req: Request, res: Response): Promise<void> => {
@@ -31,11 +21,8 @@ export const getCategoryRules = async (req: Request, res: Response): Promise<voi
 export const createCategoryRule = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
   const userGroups = req.userGroups || [];
-  const { groupId } = req.query;
-  const groups = contextGroups(req);
-
   const { rule, replaced } = await categoryRuleService.saveRule(
-    { ...req.body, groupId: groups.length > 0 ? (groupId as string) : undefined },
+    { ...req.body, groupId: contextGroupId(req) },
     user.id,
     userGroups
   );
@@ -92,11 +79,10 @@ export const moveCategoryRule = async (req: Request, res: Response): Promise<voi
  */
 export const applyCategoryRules = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
-  const { groupId } = req.query;
-  const groups = contextGroups(req);
+  const groupId = contextGroupId(req);
 
-  const result = await categoryRuleService.applyRulesToExisting(user.id, groups, {
-    groupId: groups.length > 0 ? (groupId as string) : undefined,
+  const result = await categoryRuleService.applyRulesToExisting(user.id, contextGroups(req), {
+    groupId,
     onlyUncategorised: req.body?.onlyUncategorised
   });
 

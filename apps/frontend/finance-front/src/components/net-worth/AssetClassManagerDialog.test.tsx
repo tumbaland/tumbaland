@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
+import type { ComponentProps } from 'react';
+import type AssetClassModal from '../AssetClassModal';
 
 const mockedCreateMutateAsync = vi.fn();
 const mockedUpdateMutateAsync = vi.fn();
@@ -13,7 +15,7 @@ vi.mock('../../hooks/useAssetClasses', () => ({
 }));
 
 vi.mock('../AssetClassModal', () => ({
-  default: ({ open, onSubmit, form, title }: any) =>
+  default: ({ open, onSubmit, form, title }: ComponentProps<typeof AssetClassModal>) =>
     open ? (
       <div>
         <div>{title}</div>

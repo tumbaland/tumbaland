@@ -159,7 +159,11 @@ describe('startSpan', () => {
 
     startSpan('op', parentSpan);
 
-    const [name, undef, parentContext] = mockTracer.startSpan.mock.calls[0] as unknown as [string, undefined, any];
+    const [name, undef, parentContext] = mockTracer.startSpan.mock.calls[0] as unknown as [
+      string,
+      undefined,
+      { getValue?: unknown }
+    ];
     expect(name).toBe('op');
     expect(undef).toBeUndefined();
     // trace.setSpan(context.active(), parentSpan) returns a real Context, not the bare parentSpan.
@@ -227,15 +231,26 @@ describe('extractSpanContext', () => {
 
     const extracted = extractSpanContext({ traceparent: '00-abc-def-01' });
 
-    expect(typeof (extracted as any).getValue).toBe('function');
+    expect(typeof (extracted as unknown as Record<string, unknown>).getValue).toBe('function');
   });
 });
 
 describe('tracingMiddleware', () => {
   function mockReqRes() {
-    const req: any = { method: 'GET', path: '/albums', url: '/albums?x=1', headers: {} };
+    const req: {
+      method: string;
+      path: string;
+      url: string;
+      headers: object;
+      span?: { setAttribute: jest.Mock; end: jest.Mock };
+    } = {
+      method: 'GET',
+      path: '/albums',
+      url: '/albums?x=1',
+      headers: {}
+    };
     const handlers: Record<string, () => void> = {};
-    const res: any = {
+    const res = {
       statusCode: 200,
       on: jest.fn((event: string, handler: () => void) => {
         handlers[event] = handler;
@@ -249,11 +264,11 @@ describe('tracingMiddleware', () => {
     const { req, res } = mockReqRes();
     const next = jest.fn();
 
-    tracingMiddleware(req, res, next);
+    tracingMiddleware(req as never, res as never, next);
 
     expect(req.span).toBeDefined();
-    expect(req.span.setAttribute).toHaveBeenCalledWith('http.method', 'GET');
-    expect(req.span.setAttribute).toHaveBeenCalledWith('http.url', '/albums?x=1');
+    expect(req.span?.setAttribute).toHaveBeenCalledWith('http.method', 'GET');
+    expect(req.span?.setAttribute).toHaveBeenCalledWith('http.url', '/albums?x=1');
     expect(next).toHaveBeenCalledTimes(1);
   });
 
@@ -262,11 +277,11 @@ describe('tracingMiddleware', () => {
     const { req, res, handlers } = mockReqRes();
     const next = jest.fn();
 
-    tracingMiddleware(req, res, next);
+    tracingMiddleware(req as never, res as never, next);
     res.statusCode = 404;
     handlers.finish();
 
-    expect(req.span.setAttribute).toHaveBeenCalledWith('http.status_code', 404);
-    expect(req.span.end).toHaveBeenCalledTimes(1);
+    expect(req.span?.setAttribute).toHaveBeenCalledWith('http.status_code', 404);
+    expect(req.span?.end).toHaveBeenCalledTimes(1);
   });
 });

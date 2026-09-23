@@ -27,7 +27,7 @@ const activityTypes = [
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockedGetActivityTypes.mockResolvedValue({ data: activityTypes, pagination: {} as any });
+  mockedGetActivityTypes.mockResolvedValue({ data: activityTypes, pagination: {} as never });
 });
 
 it('shows a spinner while loading', () => {

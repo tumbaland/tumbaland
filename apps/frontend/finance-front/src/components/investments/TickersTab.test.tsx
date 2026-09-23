@@ -1,6 +1,8 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
+import type { ComponentProps } from 'react';
+import type TickerSearch from './TickerSearch';
 
 const mockedCreateMutateAsync = vi.fn();
 const mockedUpdateMutateAsync = vi.fn();
@@ -23,8 +25,8 @@ vi.mock('../../services/tickerPriceHistoryService', () => ({
 }));
 
 vi.mock('./TickerSearch', () => ({
-  default: ({ onSelect }: { onSelect: (r: any) => void }) => (
-    <button onClick={() => onSelect({ symbol: 'MSFT', name: 'Microsoft', currency: 'USD' })}>pick MSFT</button>
+  default: ({ onSelect }: ComponentProps<typeof TickerSearch>) => (
+    <button onClick={() => onSelect({ symbol: 'MSFT', name: 'Microsoft', type: 'Equity', region: 'United States', currency: 'USD', matchScore: '1.0000' })}>pick MSFT</button>
   )
 }));
 

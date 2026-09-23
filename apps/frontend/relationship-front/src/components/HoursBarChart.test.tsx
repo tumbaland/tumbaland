@@ -28,7 +28,7 @@ const activityTypes = [
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockedGetActivityTypes.mockResolvedValue({ data: activityTypes, pagination: {} as any });
+  mockedGetActivityTypes.mockResolvedValue({ data: activityTypes, pagination: {} as never });
 });
 
 it('shows a spinner while loading', () => {
@@ -68,7 +68,7 @@ it('renders per-type legend chips and computed summary stats, excluding hidden t
 });
 
 it('falls back to the raw slug when an activity type is not found in the types list', async () => {
-  mockedGetActivityTypes.mockResolvedValue({ data: [], pagination: {} as any });
+  mockedGetActivityTypes.mockResolvedValue({ data: [], pagination: {} as never });
   mockedGetBreakdown.mockResolvedValue([
     { month: '1', year: 2024, totalHours: 0, totalActivities: 0, activities: { mystery: { count: 1, hours: 1 } } }
   ]);

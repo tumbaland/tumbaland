@@ -27,8 +27,8 @@ deploys SSH'd in as, i.e. whatever `SERVER_USER` was) and make sure it is in the
 Getting this wrong is the failure mode to watch for. If the runner runs as a
 different user, `$HOME/tumbaland` is a *different, empty* directory, and the
 deploy silently comes up against empty data paths — file-service's
-`${FILE_DATA_PATH:-./data}` bind, tumbaland-proxy's `./certs`, consul's and
-prometheus' `./data`.
+`${FILE_DATA_PATH:-./data}` bind, tumbaland-proxy's `./certs`, prometheus'
+`./data`.
 
 1. GitHub → repo **Settings → Actions → Runners → New self-hosted runner**,
    architecture **ARM64**. Copy the registration token (it expires in ~1 hour).
@@ -79,8 +79,8 @@ No longer used, safe to delete once the first deploy succeeds: `SERVER_HOST`,
 ## Why compose is copied instead of run from the workspace
 
 Compose files bind-mount **relative** paths — tumbaland-proxy's `./certs`,
-consul's `./data` and `./server.json`, prometheus' `./data`, beszel's `./data` and
-`./socket`, file-service's `${FILE_DATA_PATH:-./data}`. Those resolve against the
+prometheus' `./data`, beszel's `./data` and `./socket`, file-service's
+`${FILE_DATA_PATH:-./data}`. Those resolve against the
 compose file's own directory, so running compose out of the runner workspace would
 point every one of them at `_work/`, which the runner wipes between jobs:
 certificates regenerated, datastores starting empty. The deploy job therefore
@@ -88,7 +88,7 @@ copies the compose file into `$DEPLOY_ROOT/<same relative path>` — exactly whe
 scp used to put it, beside the live data — and runs compose from there.
 
 Note what is **not** copied, matching the old scp behaviour: sidecar config files
-(`consul/server.json`, `prometheus/prometheus.yml`, `redis/redis.conf`) live on the
+(`prometheus/prometheus.yml`, `redis/redis.conf`) live on the
 server and are not managed by the deploy. Editing one in the repo does not ship it.
 
 ## Security: never run untrusted code on this runner

@@ -33,6 +33,9 @@ export * from './groups';
 // API keys (non-browser clients: MCP servers, scripts, agents)
 export * from './apiKeys';
 
+// file-service's internal API (signed URLs, server-side file reads and writes)
+export * from './fileService';
+
 // OAuth 2.1 authorization server, for assistants connecting over MCP
 export * from './oauth';
 export * from './audit';
@@ -62,6 +65,7 @@ export { generateCorrelationId, correlationMiddleware } from './utils/correlatio
 export { createApiResponse, sendSuccess, sendError } from './utils/response';
 export type { ApiResponse } from './utils/response';
 export { buildAccessQuery, canAccessResource } from './utils/permissionUtils';
+export { escapeRegex } from './utils/escapeRegex';
 
 // Metrics
 export {

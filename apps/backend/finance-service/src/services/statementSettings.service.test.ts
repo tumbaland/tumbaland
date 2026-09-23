@@ -20,7 +20,7 @@ const personalScope = {
 beforeEach(() => {
   jest.clearAllMocks();
   stored(null);
-  mockedUpsert.mockImplementation((_f: unknown, update: any) => Promise.resolve(update.$set));
+  mockedUpsert.mockImplementation((_f: unknown, update: { $set: unknown }) => Promise.resolve(update.$set));
 });
 
 describe('getSettings', () => {

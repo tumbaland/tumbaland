@@ -41,7 +41,7 @@ it('shows an error message when loading fails', async () => {
 });
 
 it('renders a card per activity type, with "No activities found" for an empty one', async () => {
-  mockedGetActivityTypes.mockResolvedValue({ data: types, pagination: {} as any });
+  mockedGetActivityTypes.mockResolvedValue({ data: types, pagination: {} as never });
   mockedGetSummary.mockResolvedValue({
     reading: { '1months': { activities: [{ _id: 'a1', date: '2024-05-01', description: 'Book club' }] } }
     // gaming has no entry at all for this timeline
@@ -56,7 +56,7 @@ it('renders a card per activity type, with "No activities found" for an empty on
 });
 
 it('shows an hours value or a checkmark when there is no description', async () => {
-  mockedGetActivityTypes.mockResolvedValue({ data: [types[0]], pagination: {} as any });
+  mockedGetActivityTypes.mockResolvedValue({ data: [types[0]], pagination: {} as never });
   mockedGetSummary.mockResolvedValue({
     reading: {
       '1months': {
@@ -75,7 +75,7 @@ it('shows an hours value or a checkmark when there is no description', async () 
 });
 
 it('expands and collapses a card with activities via the toggle button', async () => {
-  mockedGetActivityTypes.mockResolvedValue({ data: [types[0]], pagination: {} as any });
+  mockedGetActivityTypes.mockResolvedValue({ data: [types[0]], pagination: {} as never });
   mockedGetSummary.mockResolvedValue({
     reading: { '1months': { activities: [{ _id: 'a1', date: '2024-05-01', description: 'Book club' }] } }
   });
@@ -91,7 +91,7 @@ it('expands and collapses a card with activities via the toggle button', async (
 });
 
 it('switches the timeline and refetches', async () => {
-  mockedGetActivityTypes.mockResolvedValue({ data: types, pagination: {} as any });
+  mockedGetActivityTypes.mockResolvedValue({ data: types, pagination: {} as never });
   mockedGetSummary.mockResolvedValue({});
 
   render(<RecentActivitiesCards />);

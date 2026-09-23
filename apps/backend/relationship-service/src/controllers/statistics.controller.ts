@@ -11,7 +11,7 @@ import {
   getMilestones,
   getTrends,
   StatisticsFilters
-} from '../services/statistics.service';
+} from '../services/statistics';
 import { getDashboardSettings } from '../services/dashboardSettings.service';
 
 function parseYearParam(year: unknown): number | undefined {

@@ -59,7 +59,7 @@ describe('upsertSnapshot', () => {
   });
 
   it('accepts groupId from the body as well as the query', async () => {
-    mocked.upsertSnapshot.mockResolvedValue({ _id: 's1' } as any);
+    mocked.upsertSnapshot.mockResolvedValue({ _id: 's1' } as never);
     const res = mockRes();
 
     await upsertSnapshot(
@@ -71,7 +71,7 @@ describe('upsertSnapshot', () => {
   });
 
   it('saves a valid snapshot for the current user (no group)', async () => {
-    mocked.upsertSnapshot.mockResolvedValue({ _id: 's1' } as any);
+    mocked.upsertSnapshot.mockResolvedValue({ _id: 's1' } as never);
     const res = mockRes();
 
     await upsertSnapshot(baseReq({ params: { month: '2026-01' }, body: { entries: [{ ticker: 'AAPL' }] } }), res);
@@ -82,7 +82,7 @@ describe('upsertSnapshot', () => {
 
 describe('deleteSnapshot', () => {
   it('deletes the snapshot', async () => {
-    mocked.deleteSnapshot.mockResolvedValue(undefined as any);
+    mocked.deleteSnapshot.mockResolvedValue(undefined as never);
     const res = mockRes();
 
     await deleteSnapshot(baseReq({ params: { id: 's1' } }), res);

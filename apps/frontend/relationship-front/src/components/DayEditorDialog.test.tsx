@@ -83,26 +83,26 @@ it('shows an error message when loading the day fails', async () => {
 });
 
 it('shows a prompt when there are no activity types', async () => {
-  mockedGetTypes.mockResolvedValue({ data: [], pagination: {} as any });
+  mockedGetTypes.mockResolvedValue({ data: [], pagination: {} as never });
   render(<DayEditorDialog open date="2024-01-01" onClose={vi.fn()} onSaved={vi.fn()} />);
   expect(await screen.findByText(/add some with .Manage types. on the journal first/i)).toBeInTheDocument();
 });
 
 it('renders the formatted date as the title when not date-editable', async () => {
-  mockedGetTypes.mockResolvedValue({ data: [booleanType], pagination: {} as any });
+  mockedGetTypes.mockResolvedValue({ data: [booleanType], pagination: {} as never });
   render(<DayEditorDialog open date="2024-01-15" onClose={vi.fn()} onSaved={vi.fn()} />);
   expect(await screen.findByText('Monday, January 15, 2024')).toBeInTheDocument();
 });
 
 it('shows a date field and "Log a day" title when date-editable', async () => {
-  mockedGetTypes.mockResolvedValue({ data: [booleanType], pagination: {} as any });
+  mockedGetTypes.mockResolvedValue({ data: [booleanType], pagination: {} as never });
   render(<DayEditorDialog open date="2024-01-15" dateEditable onClose={vi.fn()} onSaved={vi.fn()} />);
   await screen.findByText('Log a day');
   expect(document.querySelector('input[type="date"]')).toHaveValue('2024-01-15');
 });
 
 it('pre-fills drafts from existing day entries', async () => {
-  mockedGetTypes.mockResolvedValue({ data: [numberType], pagination: {} as any });
+  mockedGetTypes.mockResolvedValue({ data: [numberType], pagination: {} as never });
   mockedGetDays.mockResolvedValue({
     days: [{ date: '2024-01-01', entries: [{ _id: 'e1', typeId: 'n1', hours: 3 }] }]
   });
@@ -112,7 +112,7 @@ it('pre-fills drafts from existing day entries', async () => {
 });
 
 it('toggles a boolean type on and saves it with no extra fields', async () => {
-  mockedGetTypes.mockResolvedValue({ data: [booleanType], pagination: {} as any });
+  mockedGetTypes.mockResolvedValue({ data: [booleanType], pagination: {} as never });
   mockedSaveDay.mockResolvedValue({ date: '2024-01-01', entries: [] });
   const onSaved = vi.fn();
   const onClose = vi.fn();
@@ -130,7 +130,7 @@ it('toggles a boolean type on and saves it with no extra fields', async () => {
 });
 
 it('enters hours for a number type and validates non-negative whole numbers', async () => {
-  mockedGetTypes.mockResolvedValue({ data: [numberType], pagination: {} as any });
+  mockedGetTypes.mockResolvedValue({ data: [numberType], pagination: {} as never });
   render(<DayEditorDialog open date="2024-01-01" onClose={vi.fn()} onSaved={vi.fn()} />);
 
   await screen.findByText('Exercise');
@@ -145,7 +145,7 @@ it('enters hours for a number type and validates non-negative whole numbers', as
 });
 
 it('adds and removes description drafts for a string type', async () => {
-  mockedGetTypes.mockResolvedValue({ data: [stringType], pagination: {} as any });
+  mockedGetTypes.mockResolvedValue({ data: [stringType], pagination: {} as never });
   mockedSaveDay.mockResolvedValue({ date: '2024-01-01', entries: [] });
   render(<DayEditorDialog open date="2024-01-01" onClose={vi.fn()} onSaved={vi.fn()} />);
 
@@ -168,7 +168,7 @@ it('adds and removes description drafts for a string type', async () => {
 });
 
 it('shows an error message when saving fails', async () => {
-  mockedGetTypes.mockResolvedValue({ data: [booleanType], pagination: {} as any });
+  mockedGetTypes.mockResolvedValue({ data: [booleanType], pagination: {} as never });
   mockedSaveDay.mockRejectedValue(new Error('save failed'));
   const onClose = vi.fn();
   render(<DayEditorDialog open date="2024-01-01" onClose={onClose} onSaved={vi.fn()} />);
@@ -182,7 +182,7 @@ it('shows an error message when saving fails', async () => {
 });
 
 it('calls onClose from the Cancel button', async () => {
-  mockedGetTypes.mockResolvedValue({ data: [booleanType], pagination: {} as any });
+  mockedGetTypes.mockResolvedValue({ data: [booleanType], pagination: {} as never });
   const onClose = vi.fn();
   render(<DayEditorDialog open date="2024-01-01" onClose={onClose} onSaved={vi.fn()} />);
   await screen.findByText('Kissed');

@@ -14,14 +14,14 @@ function mockGoogle(overrides: { initialize?: ReturnType<typeof vi.fn>; renderBu
       el.innerHTML = '<div role="button">Sign in with Google</div>';
     });
   const initialize = overrides.initialize ?? vi.fn();
-  (window as any).google = { accounts: { id: { initialize, renderButton } } };
+  (window as unknown as Record<string, unknown>).google = { accounts: { id: { initialize, renderButton } } };
   return { initialize, renderButton };
 }
 
 beforeEach(() => {
   vi.useFakeTimers();
   document.body.innerHTML = '<div id="google-signin-button"></div>';
-  delete (window as any).google;
+  delete (window as unknown as Record<string, unknown>).google;
 });
 
 afterEach(() => {

@@ -11,14 +11,14 @@ function mockRes(): Response {
 
 describe('healthCheck', () => {
   it('responds 200 when Mongo is connected', async () => {
-    jest.spyOn(mongoose, 'connection', 'get').mockReturnValue({ readyState: 1 } as any);
+    jest.spyOn(mongoose, 'connection', 'get').mockReturnValue({ readyState: 1 } as never);
     const res = mockRes();
     await healthCheck({} as Request, res);
     expect(res.status).toHaveBeenCalledWith(200);
   });
 
   it('responds 503 when Mongo is not connected', async () => {
-    jest.spyOn(mongoose, 'connection', 'get').mockReturnValue({ readyState: 0 } as any);
+    jest.spyOn(mongoose, 'connection', 'get').mockReturnValue({ readyState: 0 } as never);
     const res = mockRes();
     await healthCheck({} as Request, res);
     expect(res.status).toHaveBeenCalledWith(503);

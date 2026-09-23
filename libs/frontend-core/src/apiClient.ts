@@ -42,7 +42,7 @@ export class ApiError extends Error {
 /**
  * Generic authenticated JSON fetch wrapper — base URL handling, credentials,
  * correlation/session headers, structured errors, and an opt-in 401 →
- * redirect-to-auth hook, per TECHNICAL_REVIEW.md P1.3. `authService` and
+ * redirect-to-auth hook. `authService` and
  * `groupService` don't route through this: they use different auth
  * transports (cookie vs. Bearer token) that predate this client.
  */

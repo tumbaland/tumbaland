@@ -14,7 +14,7 @@ const mockedOverride = EntitlementOverride as jest.Mocked<typeof EntitlementOver
 
 /** `Subscription.find(...).populate(...)` */
 function mockSubscriptions(subs: unknown[]): void {
-  mockedSubscription.find.mockReturnValue({ populate: jest.fn().mockResolvedValue(subs) } as any);
+  mockedSubscription.find.mockReturnValue({ populate: jest.fn().mockResolvedValue(subs) } as never);
 }
 
 function sub(overrides: Record<string, unknown> = {}) {
@@ -32,8 +32,8 @@ beforeEach(() => {
   // Default: no upgrade target found.
   mockedPlan.findOne.mockReturnValue({
     sort: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue(null) })
-  } as any);
-  mockedOverride.findOne.mockResolvedValue(null as any);
+  } as never);
+  mockedOverride.findOne.mockResolvedValue(null as never);
 });
 
 describe('resolveEntitlements', () => {
@@ -59,7 +59,7 @@ describe('resolveEntitlements', () => {
 
   it('falls back to the free plan document for a user with no subscription', async () => {
     mockSubscriptions([]);
-    mockedPlan.findOne.mockResolvedValueOnce({ code: 'free', priceMonthlyCents: 0, limits: { meters: { seats: 2 } } } as any);
+    mockedPlan.findOne.mockResolvedValueOnce({ code: 'free', priceMonthlyCents: 0, limits: { meters: { seats: 2 } } } as never);
 
     const result = await resolveEntitlements('user@example.com');
 
@@ -121,7 +121,7 @@ describe('resolveEntitlements', () => {
 
   it('resolves to free, not to unlimited, when the plan was deleted under a live subscription', async () => {
     mockSubscriptions([sub({ planCode: 'ghost-plan', plan: undefined })]);
-    mockedPlan.findOne.mockResolvedValueOnce(null as any);
+    mockedPlan.findOne.mockResolvedValueOnce(null as never);
 
     const result = await resolveEntitlements('user@example.com');
 
@@ -132,10 +132,10 @@ describe('resolveEntitlements', () => {
   it('names the cheapest plan above the current price as the upgrade target', async () => {
     mockSubscriptions([]);
     mockedPlan.findOne
-      .mockResolvedValueOnce({ code: 'free', priceMonthlyCents: 0 } as any)
+      .mockResolvedValueOnce({ code: 'free', priceMonthlyCents: 0 } as never)
       .mockReturnValueOnce({
         sort: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue({ code: 'personal' }) })
-      } as any);
+      } as never);
 
     expect((await resolveEntitlements('user@example.com')).upgradeTo).toBe('personal');
   });
@@ -180,7 +180,7 @@ describe('comp grants', () => {
     mockSubscriptions([sub({ planCode: 'staff', isComp: true, plan: { code: 'staff', priceMonthlyCents: 0 } })]);
     mockedPlan.findOne.mockReturnValue({
       sort: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue({ code: 'personal' }) })
-    } as any);
+    } as never);
 
     expect((await resolveEntitlements('user@example.com')).upgradeTo).toBeUndefined();
   });
@@ -195,7 +195,7 @@ describe('comp grants', () => {
 describe('per-user overrides', () => {
   it('layers on top of the plan, leaving untouched meters alone', async () => {
     mockSubscriptions([sub({ plan: { code: 'support', priceMonthlyCents: 600, limits: { meters: { storageBytes: 100 } } } })]);
-    mockedOverride.findOne.mockResolvedValue({ meters: { storageBytes: 5000 }, reason: 'friend' } as any);
+    mockedOverride.findOne.mockResolvedValue({ meters: { storageBytes: 5000 }, reason: 'friend' } as never);
 
     const result = await resolveEntitlements('user@example.com');
 
@@ -206,12 +206,12 @@ describe('per-user overrides', () => {
 
   it('can grant a feature or unlimited retention to one user without touching the plan', async () => {
     mockSubscriptions([]);
-    mockedPlan.findOne.mockResolvedValueOnce({ code: 'free', priceMonthlyCents: 0 } as any);
+    mockedPlan.findOne.mockResolvedValueOnce({ code: 'free', priceMonthlyCents: 0 } as never);
     mockedOverride.findOne.mockResolvedValue({
       features: { cleanExport: true },
       retentionDays: UNLIMITED,
       reason: 'beta tester'
-    } as any);
+    } as never);
 
     const result = await resolveEntitlements('user@example.com');
 

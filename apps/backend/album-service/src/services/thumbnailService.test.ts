@@ -49,12 +49,7 @@ describe('generateThumbnailFromBuffer', () => {
       height: 200,
       size: thumbnailBuffer.length
     });
-    expect(mockedUploadFile).toHaveBeenCalledWith(
-      thumbnailBuffer,
-      'user-1/album-1/123/thumbnail.jpg',
-      'image/jpeg',
-      thumbnailBuffer.length
-    );
+    expect(mockedUploadFile).toHaveBeenCalledWith(thumbnailBuffer, 'user-1/album-1/123/thumbnail.jpg', 'image/jpeg');
   });
 
   it('falls back to the requested width/height when sharp metadata omits them', async () => {

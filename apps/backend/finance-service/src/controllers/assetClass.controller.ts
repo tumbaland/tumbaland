@@ -1,22 +1,18 @@
 import { Request, Response } from 'express';
-import { ForbiddenError, sendSuccess } from '@tumbaland/backend-core';
+import { sendSuccess } from '@tumbaland/backend-core';
 import * as assetClassService from '../services/assetClass.service';
+import { contextGroupId } from '../utils/scope';
 
 /**
  * Get asset classes
  */
 export const getAssetClasses = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
-  const userGroups = req.userGroups || [];
-  const { groupId } = req.query;
+  const groupId = contextGroupId(req);
 
   let assetClasses;
   if (groupId) {
-    // Get asset classes for specific group (user must be member)
-    if (!userGroups.includes(groupId as string)) {
-      throw new ForbiddenError('Access denied');
-    }
-    assetClasses = await assetClassService.getAssetClassesByGroup(groupId as string, user.id, userGroups);
+    assetClasses = await assetClassService.getAssetClassesByGroup(groupId, user.id, req.userGroups || []);
   } else {
     // No groupId specified: show only personal asset classes (no group)
     assetClasses = await assetClassService.getPersonalAssetClasses(user.id);
@@ -32,9 +28,7 @@ export const createAssetClass = async (req: Request, res: Response): Promise<voi
   const user = req.user!;
 
   // Creating a class in a group is writing into that group.
-  if (req.body.groupId && !(req.userGroups || []).includes(req.body.groupId)) {
-    throw new ForbiddenError('Access denied');
-  }
+  contextGroupId(req, req.body.groupId);
 
   const assetClassData = {
     ...req.body,

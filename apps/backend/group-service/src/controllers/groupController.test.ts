@@ -63,7 +63,7 @@ describe('userEmail resolution (via createGroup)', () => {
   });
 
   it('uses the authenticated user email for a normal request', async () => {
-    mocked.createGroup.mockResolvedValue({ _id: 'g1' } as any);
+    mocked.createGroup.mockResolvedValue({ _id: 'g1' } as never);
     const res = mockRes();
 
     await createGroup(baseReq({ body: { name: 'Family' } }), res);
@@ -73,7 +73,7 @@ describe('userEmail resolution (via createGroup)', () => {
   });
 
   it('uses the body userEmail for an internal service request', async () => {
-    mocked.createGroup.mockResolvedValue({ _id: 'g1' } as any);
+    mocked.createGroup.mockResolvedValue({ _id: 'g1' } as never);
     const res = mockRes();
 
     await createGroup(
@@ -87,7 +87,7 @@ describe('userEmail resolution (via createGroup)', () => {
 
 describe('listMine', () => {
   it('returns the list with each member’s activity filled in', async () => {
-    mocked.listMyGroups.mockResolvedValue([{ _id: 'g1' }, { _id: 'g2' }] as any);
+    mocked.listMyGroups.mockResolvedValue([{ _id: 'g1' }, { _id: 'g2' }] as never);
     const res = mockRes();
 
     await listMine(baseReq(), res);
@@ -104,7 +104,7 @@ describe('listMine', () => {
 
 describe('listMyDeleted', () => {
   it('returns deleted groups', async () => {
-    mocked.listMyDeletedGroups.mockResolvedValue([] as any);
+    mocked.listMyDeletedGroups.mockResolvedValue([] as never);
     const res = mockRes();
     await listMyDeleted(baseReq(), res);
     expect(mocked.listMyDeletedGroups).toHaveBeenCalledWith('user@example.com');
@@ -118,7 +118,7 @@ describe('listMyDeleted', () => {
 
 describe('getUserGroupIds', () => {
   it('returns just the ids', async () => {
-    mocked.listMyGroups.mockResolvedValue([{ _id: 'g1' }, { _id: 'g2' }] as any);
+    mocked.listMyGroups.mockResolvedValue([{ _id: 'g1' }, { _id: 'g2' }] as never);
     const res = mockRes();
 
     await getUserGroupIds(baseReq(), res);
@@ -127,7 +127,7 @@ describe('getUserGroupIds', () => {
   });
 
   it('is a pure read: every service asks it, so it must not write', async () => {
-    mocked.listMyGroups.mockResolvedValue([{ _id: 'g1' }] as any);
+    mocked.listMyGroups.mockResolvedValue([{ _id: 'g1' }] as never);
     const res = mockRes();
 
     await getUserGroupIds(
@@ -150,7 +150,7 @@ describe('getUserGroupIds', () => {
 
 describe('getOne', () => {
   it('returns the group', async () => {
-    mocked.getGroupIfMember.mockResolvedValue({ _id: 'g1' } as any);
+    mocked.getGroupIfMember.mockResolvedValue({ _id: 'g1' } as never);
     const res = mockRes();
 
     await getOne(baseReq({ params: { id: 'g1' } }), res);
@@ -163,7 +163,7 @@ describe('getOne', () => {
 
 describe('updateGroup', () => {
   it('updates the group name', async () => {
-    mocked.updateGroup.mockResolvedValue({ _id: 'g1', name: 'New' } as any);
+    mocked.updateGroup.mockResolvedValue({ _id: 'g1', name: 'New' } as never);
     const res = mockRes();
 
     await updateGroup(baseReq({ params: { id: 'g1' }, body: { name: 'New' } }), res);
@@ -185,7 +185,7 @@ describe('deleteGroup', () => {
 
 describe('restoreGroup', () => {
   it('restores the group', async () => {
-    mocked.restoreGroup.mockResolvedValue({ _id: 'g1' } as any);
+    mocked.restoreGroup.mockResolvedValue({ _id: 'g1' } as never);
     const res = mockRes();
 
     await restoreGroup(baseReq({ params: { id: 'g1' } }), res);
@@ -209,7 +209,7 @@ describe('addMember', () => {
   it('adds the member without signing them out: nothing is sent to auth-service', async () => {
     process.env.AUTH_INTERNAL_URL = 'https://auth.example';
     process.env.INTERNAL_SERVICE_TOKEN = 'test-token';
-    mocked.addMember.mockResolvedValue({ _id: 'g1' } as any);
+    mocked.addMember.mockResolvedValue({ _id: 'g1' } as never);
     const res = mockRes();
 
     await addMember(baseReq({ params: { id: 'g1' }, body: { email: 'new@example.com', role: 'member' } }), res);
@@ -222,7 +222,7 @@ describe('addMember', () => {
 
 describe('updateRole', () => {
   it('updates the role without signing the member out', async () => {
-    mocked.updateMemberRole.mockResolvedValue({ _id: 'g1' } as any);
+    mocked.updateMemberRole.mockResolvedValue({ _id: 'g1' } as never);
     const res = mockRes();
 
     await updateRole(baseReq({ params: { id: 'g1', memberEmail: 'member@example.com' }, body: { role: 'admin' } }), res);
@@ -234,7 +234,7 @@ describe('updateRole', () => {
 
 describe('removeMember', () => {
   it('removes the member without a token invalidation; their access ends through the membership lookup', async () => {
-    mocked.removeMember.mockResolvedValue({ _id: 'g1' } as any);
+    mocked.removeMember.mockResolvedValue({ _id: 'g1' } as never);
     const res = mockRes();
 
     await removeMember(baseReq({ params: { id: 'g1', memberEmail: 'member@example.com' } }), res);

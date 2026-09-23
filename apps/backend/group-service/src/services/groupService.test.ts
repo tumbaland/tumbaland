@@ -10,7 +10,7 @@ jest.mock('../models/Group', () => ({
 }));
 
 import mongoose, { Types } from 'mongoose';
-import { Group } from '../models/Group';
+import { Group, IGroupMember } from '../models/Group';
 import * as groupService from './groupService';
 
 const mockedCreate = Group.create as unknown as jest.Mock;
@@ -19,14 +19,25 @@ const mockedFindOne = Group.findOne as unknown as jest.Mock;
 const mockedFindById = Group.findById as unknown as jest.Mock;
 const mockedFindByIdAndDelete = Group.findByIdAndDelete as unknown as jest.Mock;
 
-function makeGroup(overrides: Partial<{ members: any[]; deletedAt: Date | null }> = {}) {
+/** The fields of a Group document these tests read and write. */
+interface FakeGroup {
+  _id: string;
+  name: string;
+  // lastActivity is stored as null until a member does something (the schema's default).
+  members: (Partial<Omit<IGroupMember, 'lastActivity'>> & { lastActivity?: Date | null })[];
+  deletedAt?: Date | null;
+  createdBy?: string;
+  save: jest.Mock;
+}
+
+function makeGroup(overrides: Partial<Pick<FakeGroup, 'members' | 'deletedAt'>> = {}): FakeGroup {
   return {
     _id: 'group-1',
     name: 'Family',
     members: overrides.members ?? [{ email: 'owner@example.com', role: 'owner' }],
     deletedAt: overrides.deletedAt,
     save: jest.fn().mockResolvedValue(undefined)
-  } as any;
+  };
 }
 
 beforeEach(() => {
@@ -178,7 +189,7 @@ describe('updateMemberRole', () => {
 
     const result = await groupService.updateMemberRole('group-1', 'owner@example.com', 'member@example.com', 'admin');
 
-    expect(result.members.find((m: any) => m.email === 'member@example.com')?.role).toBe('admin');
+    expect(result.members.find((m) => m.email === 'member@example.com')?.role).toBe('admin');
     expect(group.save).toHaveBeenCalledTimes(1);
   });
 });
@@ -192,7 +203,7 @@ describe('removeMember', () => {
 
     const result = await groupService.removeMember('group-1', 'member@example.com', 'member@example.com');
 
-    expect(result.members.some((m: any) => m.email === 'member@example.com')).toBe(false);
+    expect(result.members.some((m) => m.email === 'member@example.com')).toBe(false);
   });
 
   it('rejects a plain member removing someone else', async () => {
@@ -213,7 +224,7 @@ describe('removeMember', () => {
 
     const result = await groupService.removeMember('group-1', 'admin@example.com', 'member@example.com');
 
-    expect(result.members.some((m: any) => m.email === 'member@example.com')).toBe(false);
+    expect(result.members.some((m) => m.email === 'member@example.com')).toBe(false);
   });
 });
 
@@ -268,7 +279,7 @@ describe('the owner role', () => {
     await groupService.updateMemberRole('group-1', 'owner@example.com', 'admin@example.com', 'owner');
     await groupService.updateMemberRole('group-1', 'owner@example.com', 'owner@example.com', 'admin');
 
-    expect(group.members.map((m: any) => m.role)).toEqual(['admin', 'owner', 'member']);
+    expect(group.members.map((m) => m.role)).toEqual(['admin', 'owner', 'member']);
   });
 
   it('never leaves a group without an owner', async () => {

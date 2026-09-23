@@ -44,7 +44,7 @@ it('shows a spinner while loading', () => {
 });
 
 it('shows an empty state when there are no activity types', async () => {
-  mockedGetTypes.mockResolvedValue({ data: [], pagination: {} as any });
+  mockedGetTypes.mockResolvedValue({ data: [], pagination: {} as never });
   render(<ActivityTypesManagement />);
   expect(await screen.findByText('No Activity Types Found')).toBeInTheDocument();
   // the empty state is the only place to start from, so it carries the button too
@@ -58,7 +58,7 @@ it('shows an empty state when loading fails', async () => {
 });
 
 it('renders a row per activity type with its value type and color chips', async () => {
-  mockedGetTypes.mockResolvedValue({ data: types, pagination: {} as any });
+  mockedGetTypes.mockResolvedValue({ data: types, pagination: {} as never });
   render(<ActivityTypesManagement groupId="g1" />);
 
   await screen.findByText('Reading');
@@ -69,7 +69,7 @@ it('renders a row per activity type with its value type and color chips', async 
 });
 
 it('opens the create dialog from its own button and creates a new type', async () => {
-  mockedGetTypes.mockResolvedValue({ data: types, pagination: {} as any });
+  mockedGetTypes.mockResolvedValue({ data: types, pagination: {} as never });
   mockedCreate.mockResolvedValue(undefined);
   const onChanged = vi.fn();
   render(<ActivityTypesManagement onChanged={onChanged} />);
@@ -87,7 +87,7 @@ it('opens the create dialog from its own button and creates a new type', async (
 });
 
 it('opens the edit dialog with the selected type and updates it', async () => {
-  mockedGetTypes.mockResolvedValue({ data: types, pagination: {} as any });
+  mockedGetTypes.mockResolvedValue({ data: types, pagination: {} as never });
   mockedUpdate.mockResolvedValue(undefined);
   const onChanged = vi.fn();
   render(<ActivityTypesManagement onChanged={onChanged} />);
@@ -103,7 +103,7 @@ it('opens the edit dialog with the selected type and updates it', async () => {
 });
 
 it('deletes a type after confirmation', async () => {
-  mockedGetTypes.mockResolvedValue({ data: types, pagination: {} as any });
+  mockedGetTypes.mockResolvedValue({ data: types, pagination: {} as never });
   mockedDelete.mockResolvedValue(undefined);
   vi.spyOn(window, 'confirm').mockReturnValue(true);
   const onChanged = vi.fn();
@@ -118,7 +118,7 @@ it('deletes a type after confirmation', async () => {
 });
 
 it('does not delete when confirmation is declined', async () => {
-  mockedGetTypes.mockResolvedValue({ data: types, pagination: {} as any });
+  mockedGetTypes.mockResolvedValue({ data: types, pagination: {} as never });
   vi.spyOn(window, 'confirm').mockReturnValue(false);
   render(<ActivityTypesManagement />);
   await screen.findByText('Reading');
@@ -129,7 +129,7 @@ it('does not delete when confirmation is declined', async () => {
 });
 
 it('shows an alert when deletion fails', async () => {
-  mockedGetTypes.mockResolvedValue({ data: types, pagination: {} as any });
+  mockedGetTypes.mockResolvedValue({ data: types, pagination: {} as never });
   mockedDelete.mockRejectedValue(new Error('nope'));
   vi.spyOn(window, 'confirm').mockReturnValue(true);
   const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
@@ -166,7 +166,7 @@ describe('on mobile', () => {
   });
 
   it('renders cards instead of a table', async () => {
-    mockedGetTypes.mockResolvedValue({ data: types, pagination: {} as any });
+    mockedGetTypes.mockResolvedValue({ data: types, pagination: {} as never });
     render(<ActivityTypesManagement groupId="g1" />);
 
     await screen.findByText('Reading');
@@ -177,14 +177,14 @@ describe('on mobile', () => {
   });
 
   it('omits the color chip for a type with no color', async () => {
-    mockedGetTypes.mockResolvedValue({ data: types, pagination: {} as any });
+    mockedGetTypes.mockResolvedValue({ data: types, pagination: {} as never });
     render(<ActivityTypesManagement />);
     await screen.findByText('Running');
     expect(screen.queryByText('-')).not.toBeInTheDocument();
   });
 
   it('still supports editing and deleting from the card layout', async () => {
-    mockedGetTypes.mockResolvedValue({ data: types, pagination: {} as any });
+    mockedGetTypes.mockResolvedValue({ data: types, pagination: {} as never });
     mockedUpdate.mockResolvedValue(undefined);
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     mockedDelete.mockResolvedValue(undefined);

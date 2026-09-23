@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
+import type { ComponentProps } from 'react';
+import type { AuthHeader as SharedAuthHeader } from '@tumbaland/frontend-core';
 
 const mockedUseTenant = vi.fn();
 // Spread the real module: this file only stands in for the header and the
@@ -9,11 +11,13 @@ const mockedUseTenant = vi.fn();
 // the resulting rejection failed the run while every test still reported green.
 vi.mock('@tumbaland/frontend-core', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@tumbaland/frontend-core')>()),
-  AuthHeader: (props: any) => (
+  AuthHeader: (props: ComponentProps<typeof SharedAuthHeader>) => (
     <div>
       <div data-testid="is-authenticated">{String(props.isAuthenticated)}</div>
       <div data-testid="user-email">{props.user?.email ?? 'none'}</div>
-      <div data-testid="selected-tenant">{props.selectedTenant ?? 'none'}</div>
+      <div data-testid="selected-tenant">
+        {(typeof props.selectedTenant === 'object' ? props.selectedTenant?.name : props.selectedTenant) ?? 'none'}
+      </div>
       <button onClick={props.onLogin}>login</button>
       <button onClick={props.onLogout}>logout</button>
     </div>

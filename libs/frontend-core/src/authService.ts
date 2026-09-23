@@ -110,9 +110,8 @@ function authHeaders(): HeadersInit {
 
 /**
  * Builds a per-front auth service instance. Each of the 7 frontends that
- * previously hand-rolled their own (six divergent copies, per
- * TECHNICAL_REVIEW.md P1.3) now just wire this up with their own config
- * accessor:
+ * previously hand-rolled their own (six divergent copies) now just wire this
+ * up with their own config accessor:
  *
  *   export const authService = createAuthService({
  *     getAuthServiceUrl: () => getGlobalConfig().AUTH_SERVICE_URL!,

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 
-jest.mock('../services/statistics.service', () => ({
+jest.mock('../services/statistics', () => ({
   getRelationshipStatistics: jest.fn(),
   getMonthlyHours: jest.fn(),
   getMonthlyStatistics: jest.fn(),
@@ -16,7 +16,7 @@ jest.mock('../services/dashboardSettings.service', () => ({
   getDashboardSettings: jest.fn()
 }));
 
-import * as StatisticsService from '../services/statistics.service';
+import * as StatisticsService from '../services/statistics';
 import { getDashboardSettings } from '../services/dashboardSettings.service';
 import {
   getStatistics,

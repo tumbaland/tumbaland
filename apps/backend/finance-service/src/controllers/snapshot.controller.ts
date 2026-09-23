@@ -1,19 +1,13 @@
 import { Request, Response } from 'express';
-import { BadRequestError, ForbiddenError, sendSuccess } from '@tumbaland/backend-core';
+import { BadRequestError, sendSuccess } from '@tumbaland/backend-core';
 import * as snapshotService from '../services/snapshot.service';
+import { contextGroupId } from '../utils/scope';
 
 const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 
-function resolveGroupId(req: Request): string | undefined {
-  const groupId = (req.query.groupId || req.body?.groupId) as string | undefined;
-  if (!groupId) return undefined;
-
-  const userGroups = req.userGroups || [];
-  if (!userGroups.includes(groupId)) {
-    throw new ForbiddenError('Access denied');
-  }
-  return groupId;
-}
+/** Snapshot writes may name their group in the body as well as the query. */
+const resolveGroupId = (req: Request): string | undefined =>
+  contextGroupId(req, req.query.groupId || req.body?.groupId);
 
 export const getSnapshots = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;

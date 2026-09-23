@@ -17,7 +17,7 @@ function groupHeaders(): HeadersInit {
 /**
  * Builds a per-front group service instance, consolidating the
  * getUserGroups/getUserGroupIds pair that was duplicated across
- * album/finance/relationship-front (TECHNICAL_REVIEW.md P1.3).
+ * album/finance/relationship-front.
  *
  *   export const { getUserGroups, getUserGroupIds } = createGroupService({
  *     getGroupApiUrl: () => getGlobalConfig().GROUP_API_URL!

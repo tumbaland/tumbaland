@@ -11,7 +11,7 @@ jest.mock('../models/Plan', () => ({
 jest.mock('../models/Subscription', () => ({ Subscription: { find: jest.fn() } }));
 
 import { DEFAULT_PLAN_LIMITS, UNLIMITED } from '@tumbaland/backend-core';
-import { Plan } from '../models/Plan';
+import { IPlan, Plan } from '../models/Plan';
 import { Subscription } from '../models/Subscription';
 import {
   listPlans,
@@ -23,6 +23,9 @@ import {
   updatePlanStripePrices,
   getEntitlementCatalog
 } from './planController';
+
+/** The fields of a Plan document the handler reads and writes. */
+type FakePlan = Partial<Omit<IPlan, 'save'>> & { save: jest.Mock };
 
 const mocked = Plan as jest.Mocked<typeof Plan>;
 const mockedSubscription = Subscription as jest.Mocked<typeof Subscription>;
@@ -36,12 +39,12 @@ function mockRes(): Response {
 
 /** `Plan.find(...).sort(...)` for the catalog query. */
 function mockCatalog(plans: unknown[]): void {
-  mocked.find.mockReturnValue({ sort: jest.fn().mockResolvedValue(plans) } as any);
+  mocked.find.mockReturnValue({ sort: jest.fn().mockResolvedValue(plans) } as never);
 }
 
 /** `Subscription.find(...).distinct('planCode')` for the caller's own plans. */
 function mockMyPlanCodes(codes: string[]): void {
-  mockedSubscription.find.mockReturnValue({ distinct: jest.fn().mockResolvedValue(codes) } as any);
+  mockedSubscription.find.mockReturnValue({ distinct: jest.fn().mockResolvedValue(codes) } as never);
 }
 
 beforeEach(() => {
@@ -66,13 +69,13 @@ describe('listPlans', () => {
   it('appends the caller\'s own hidden plan after the catalog, so a staff account does not read as free', async () => {
     mocked.find.mockReturnValueOnce({
       sort: jest.fn().mockResolvedValue([{ code: 'free', priceMonthlyCents: 0 }, { code: 'family', priceMonthlyCents: 1200 }])
-    } as any);
+    } as never);
     mockMyPlanCodes(['staff']);
     // A granted plan is priced at zero, so sorting it in would land it next to
     // Free, in the middle of a ladder it isn't part of. It goes last.
     mocked.find.mockReturnValueOnce({
       sort: jest.fn().mockResolvedValue([{ code: 'staff', priceMonthlyCents: 0, isPublic: false }])
-    } as any);
+    } as never);
     const res = mockRes();
 
     await listPlans({ user: { email: 'Staff@Example.com' } } as Request, res);
@@ -105,7 +108,7 @@ describe('listPlans', () => {
   it('resolves the limits the pricing page renders, so a card cannot advertise a number nothing enforces', async () => {
     mocked.find.mockReturnValue({
       sort: jest.fn().mockResolvedValue([{ code: 'support', limits: { meters: { storageBytes: 999 } } }])
-    } as any);
+    } as never);
     const res = mockRes();
 
     await listPlans({} as Request, res);
@@ -119,7 +122,7 @@ describe('listPlans', () => {
 
 describe('listAllPlans', () => {
   it('includes inactive plans, which are exactly the ones an admin is editing', async () => {
-    mocked.find.mockReturnValue({ sort: jest.fn().mockResolvedValue([{ code: 'retired', isActive: false }]) } as any);
+    mocked.find.mockReturnValue({ sort: jest.fn().mockResolvedValue([{ code: 'retired', isActive: false }]) } as never);
     const res = mockRes();
 
     await listAllPlans({} as Request, res);
@@ -147,7 +150,7 @@ describe('getEntitlementCatalog', () => {
 describe('createPlan', () => {
   it('creates a single plan', async () => {
     mocked.findOne.mockResolvedValue(null);
-    mocked.create.mockResolvedValue({ code: 'pro' } as any);
+    mocked.create.mockResolvedValue({ code: 'pro' } as never);
     const res = mockRes();
 
     await createPlan({ body: { name: 'Pro', code: 'pro' } } as Request, res);
@@ -157,7 +160,7 @@ describe('createPlan', () => {
   });
 
   it('throws ConflictError when the code already exists', async () => {
-    mocked.findOne.mockResolvedValue({ code: 'pro' } as any);
+    mocked.findOne.mockResolvedValue({ code: 'pro' } as never);
     const res = mockRes();
 
     await expect(createPlan({ body: { code: 'pro' } } as Request, res)).rejects.toMatchObject({
@@ -167,7 +170,7 @@ describe('createPlan', () => {
 
   it('creates multiple plans when the body is an array', async () => {
     mocked.findOne.mockResolvedValue(null);
-    mocked.create.mockResolvedValueOnce({ code: 'a' } as any).mockResolvedValueOnce({ code: 'b' } as any);
+    mocked.create.mockResolvedValueOnce({ code: 'a' } as never).mockResolvedValueOnce({ code: 'b' } as never);
     const res = mockRes();
 
     await createPlan({ body: [{ code: 'a' }, { code: 'b' }] } as unknown as Request, res);
@@ -177,8 +180,8 @@ describe('createPlan', () => {
   });
 
   it('throws ConflictError for an array entry whose code already exists', async () => {
-    mocked.findOne.mockResolvedValueOnce(null).mockResolvedValueOnce({ code: 'b' } as any);
-    mocked.create.mockResolvedValueOnce({ code: 'a' } as any);
+    mocked.findOne.mockResolvedValueOnce(null).mockResolvedValueOnce({ code: 'b' } as never);
+    mocked.create.mockResolvedValueOnce({ code: 'a' } as never);
     const res = mockRes();
 
     await expect(createPlan({ body: [{ code: 'a' }, { code: 'b' }] } as unknown as Request, res)).rejects.toMatchObject({
@@ -196,7 +199,7 @@ describe('createPlansBulk', () => {
   });
 
   it('throws ConflictError when a code already exists in the DB', async () => {
-    mocked.find.mockReturnValue({ lean: jest.fn().mockResolvedValue([{ code: 'a' }]) } as any);
+    mocked.find.mockReturnValue({ lean: jest.fn().mockResolvedValue([{ code: 'a' }]) } as never);
     const res = mockRes();
 
     await expect(createPlansBulk({ body: [{ code: 'a' }] } as unknown as Request, res)).rejects.toMatchObject({
@@ -205,8 +208,8 @@ describe('createPlansBulk', () => {
   });
 
   it('inserts all plans when there are no conflicts', async () => {
-    mocked.find.mockReturnValue({ lean: jest.fn().mockResolvedValue([]) } as any);
-    mocked.insertMany.mockResolvedValue([{ code: 'a' }, { code: 'b' }] as any);
+    mocked.find.mockReturnValue({ lean: jest.fn().mockResolvedValue([]) } as never);
+    mocked.insertMany.mockResolvedValue([{ code: 'a' }, { code: 'b' }] as never);
     const res = mockRes();
 
     await createPlansBulk({ body: [{ code: 'a' }, { code: 'b' }] } as unknown as Request, res);
@@ -225,8 +228,8 @@ describe('updatePlan', () => {
   });
 
   it('applies only the fields present in the body', async () => {
-    const plan: any = { code: 'personal', name: 'Personal', isActive: true, save: jest.fn() };
-    mocked.findOne.mockResolvedValue(plan);
+    const plan: FakePlan = { code: 'personal', name: 'Personal', isActive: true, save: jest.fn() };
+    mocked.findOne.mockResolvedValue(plan as never);
 
     await updatePlan(
       { params: { code: 'personal' }, body: { priceMonthlyCents: 700, isActive: false } } as unknown as Request,
@@ -240,19 +243,19 @@ describe('updatePlan', () => {
   });
 
   it('merges limits rather than replacing them', async () => {
-    const plan: any = {
+    const plan: FakePlan = {
       code: 'personal',
       limits: { meters: { storageBytes: 100, seats: 2 } },
       save: jest.fn()
     };
-    mocked.findOne.mockResolvedValue(plan);
+    mocked.findOne.mockResolvedValue(plan as never);
 
     await updatePlan(
       { params: { code: 'personal' }, body: { limits: { meters: { seats: 5 } } } } as unknown as Request,
       mockRes()
     );
 
-    expect(plan.limits.meters).toEqual({ storageBytes: 100, seats: 5 });
+    expect(plan.limits?.meters).toEqual({ storageBytes: 100, seats: 5 });
   });
 });
 
@@ -266,12 +269,12 @@ describe('updatePlanLimits', () => {
   });
 
   it('merges a partial payload, so a form that only knows one meter cannot reset the rest', async () => {
-    const plan: any = {
+    const plan: FakePlan = {
       code: 'family',
       limits: { meters: { storageBytes: 100, seats: 5 }, features: { cleanExport: true }, retentionDays: 400 },
       save: jest.fn()
     };
-    mocked.findOne.mockResolvedValue(plan);
+    mocked.findOne.mockResolvedValue(plan as never);
     const res = mockRes();
 
     await updatePlanLimits(
@@ -288,20 +291,20 @@ describe('updatePlanLimits', () => {
   });
 
   it('drops the stored limits first when asked to replace', async () => {
-    const plan: any = { code: 'family', limits: { meters: { storageBytes: 100, seats: 5 } }, save: jest.fn() };
-    mocked.findOne.mockResolvedValue(plan);
+    const plan: FakePlan = { code: 'family', limits: { meters: { storageBytes: 100, seats: 5 } }, save: jest.fn() };
+    mocked.findOne.mockResolvedValue(plan as never);
 
     await updatePlanLimits(
       { params: { code: 'family' }, query: { replace: 'true' }, body: { meters: { seats: 3 } } } as unknown as Request,
       mockRes()
     );
 
-    expect(plan.limits.meters).toEqual({ seats: 3 });
+    expect(plan.limits?.meters).toEqual({ seats: 3 });
   });
 
   it('echoes the resolved numbers, including the ones defaults filled in', async () => {
-    const plan: any = { code: 'support', save: jest.fn() };
-    mocked.findOne.mockResolvedValue(plan);
+    const plan: FakePlan = { code: 'support', save: jest.fn() };
+    mocked.findOne.mockResolvedValue(plan as never);
     const res = mockRes();
 
     await updatePlanLimits(
@@ -326,8 +329,8 @@ describe('updatePlanStripePrices', () => {
   });
 
   it('updates the stripePriceId and saves', async () => {
-    const plan: any = { code: 'pro', save: jest.fn().mockResolvedValue(undefined) };
-    mocked.findOne.mockResolvedValue(plan);
+    const plan: FakePlan = { code: 'pro', save: jest.fn().mockResolvedValue(undefined) };
+    mocked.findOne.mockResolvedValue(plan as never);
     const res = mockRes();
 
     await updatePlanStripePrices(

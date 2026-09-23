@@ -1,5 +1,5 @@
 jest.mock('../models/TrackedTicker', () => {
-  const ctor: any = jest.fn().mockImplementation((data: any) => ({ ...data, save: jest.fn().mockResolvedValue({ ...data, _id: 't1' }) }));
+  const ctor = jest.fn().mockImplementation((data: Record<string, unknown>) => ({ ...data, save: jest.fn().mockResolvedValue({ ...data, _id: 't1' }) })) as jest.Mock & Record<string, jest.Mock>;
   ctor.find = jest.fn();
   ctor.findById = jest.fn();
   ctor.findByIdAndUpdate = jest.fn();
@@ -35,7 +35,7 @@ const mockedFindById = TrackedTicker.findById as unknown as jest.Mock;
 const mockedFindByIdAndUpdate = TrackedTicker.findByIdAndUpdate as unknown as jest.Mock;
 const mockedFindByIdAndDelete = TrackedTicker.findByIdAndDelete as unknown as jest.Mock;
 
-function sortable(result: any[]) {
+function sortable(result: unknown[]) {
   return { sort: jest.fn().mockResolvedValue(result) };
 }
 

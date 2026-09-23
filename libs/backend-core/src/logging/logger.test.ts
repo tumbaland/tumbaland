@@ -64,7 +64,7 @@ describe('logger', () => {
   describe('with LOG_TO_FILE=true in development', () => {
     it('creates the logs directory when it does not exist and adds a file transport', async () => {
       const existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(false);
-      const mkdirSpy = jest.spyOn(fs, 'mkdirSync').mockImplementation(() => undefined as any);
+      const mkdirSpy = jest.spyOn(fs, 'mkdirSync').mockImplementation(() => undefined as never);
 
       const logger = await loadLogger({ NODE_ENV: 'development', LOG_TO_FILE: 'true' });
 
@@ -77,7 +77,7 @@ describe('logger', () => {
 
     it('does not recreate the logs directory when it already exists', async () => {
       const existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(true);
-      const mkdirSpy = jest.spyOn(fs, 'mkdirSync').mockImplementation(() => undefined as any);
+      const mkdirSpy = jest.spyOn(fs, 'mkdirSync').mockImplementation(() => undefined as never);
 
       const logger = await loadLogger({ NODE_ENV: 'development', LOG_TO_FILE: 'true' });
 

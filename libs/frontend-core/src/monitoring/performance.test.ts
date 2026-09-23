@@ -35,7 +35,7 @@ beforeEach(() => {
 afterEach(() => {
   consoleLogSpy.mockRestore();
   consoleWarnSpy.mockRestore();
-  delete (window as any)._monitoringInterceptingConsole;
+  delete (window as unknown as Record<string, unknown>)._monitoringInterceptingConsole;
 });
 
 describe('setUser', () => {

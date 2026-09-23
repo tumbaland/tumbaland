@@ -1,9 +1,9 @@
 jest.mock('../models/Photo', () => {
-  const ctor: any = jest.fn().mockImplementation((data: any) => ({
+  const ctor = jest.fn().mockImplementation((data: Record<string, unknown>) => ({
     ...data,
     _id: 'new-photo-id',
     save: jest.fn().mockResolvedValue({ ...data, _id: 'new-photo-id' })
-  }));
+  })) as jest.Mock & Record<string, jest.Mock>;
   ctor.findById = jest.fn();
   ctor.findOne = jest.fn();
   ctor.find = jest.fn();
@@ -129,7 +129,7 @@ describe('createPhoto', () => {
   });
 
   it('creates the photo and sets it as the album cover when none is set', async () => {
-    const album: any = {
+    const album = {
       _id: 'a1',
       userId: 'user-1',
       coverPhotoId: undefined,
@@ -148,7 +148,7 @@ describe('createPhoto', () => {
   });
 
   it('does not overwrite an existing album cover', async () => {
-    const album: any = { _id: 'a1', userId: 'user-1', coverPhotoId: 'existing-cover', save: jest.fn() };
+    const album = { _id: 'a1', userId: 'user-1', coverPhotoId: 'existing-cover', save: jest.fn() };
     mockedAlbumFindById.mockResolvedValue(album);
     mockedFindOne.mockResolvedValue(null);
     mockedIsSupported.mockReturnValue(false);
@@ -160,7 +160,7 @@ describe('createPhoto', () => {
   });
 
   it('kicks off async thumbnail generation for supported image formats', async () => {
-    const album: any = { _id: 'a1', userId: 'user-1', coverPhotoId: 'x', save: jest.fn() };
+    const album = { _id: 'a1', userId: 'user-1', coverPhotoId: 'x', save: jest.fn() };
     mockedAlbumFindById.mockResolvedValue(album);
     mockedFindOne.mockResolvedValue(null);
     mockedIsSupported.mockReturnValue(true);
@@ -177,7 +177,7 @@ describe('createPhoto', () => {
   });
 
   it('logs (does not throw) when async thumbnail generation fails', async () => {
-    const album: any = { _id: 'a1', userId: 'user-1', coverPhotoId: 'x', save: jest.fn() };
+    const album = { _id: 'a1', userId: 'user-1', coverPhotoId: 'x', save: jest.fn() };
     mockedAlbumFindById.mockResolvedValue(album);
     mockedFindOne.mockResolvedValue(null);
     mockedIsSupported.mockReturnValue(true);
@@ -189,14 +189,14 @@ describe('createPhoto', () => {
 });
 
 describe('getPhotosByAlbum', () => {
-  function chainable(result: any[]) {
-    const query: any = {
+  /** A Mongoose query stand-in: chainable, and awaitable for `result`. */
+  function chainable(result: unknown[]) {
+    return {
       sort: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
-      skip: jest.fn().mockReturnThis()
+      skip: jest.fn().mockReturnThis(),
+      then: (resolve: (value: unknown[]) => unknown) => Promise.resolve(result).then(resolve)
     };
-    query.then = (resolve: any) => Promise.resolve(result).then(resolve);
-    return query;
   }
 
   it('throws NotFoundError when the album does not exist', async () => {
@@ -391,7 +391,7 @@ describe('deletePhoto', () => {
       minioFileId: 'file-1',
       minioThumbnailFileId: 'thumb-1'
     });
-    const album: any = { coverPhotoId: 'p1', save: jest.fn().mockResolvedValue(undefined) };
+    const album = { coverPhotoId: 'p1', save: jest.fn().mockResolvedValue(undefined) };
     mockedAlbumFindOne.mockResolvedValue(album);
 
     await photoService.deletePhoto('p1', OWNER);

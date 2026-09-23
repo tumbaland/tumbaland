@@ -2,10 +2,10 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 
 jest.mock('../models/AssetClass', () => {
-  const MockAssetClass: any = jest.fn().mockImplementation((data: any) => ({
+  const MockAssetClass = jest.fn().mockImplementation((data: Record<string, unknown>) => ({
     ...data,
     save: jest.fn().mockResolvedValue({ _id: 'new-asset-class-id', ...data })
-  }));
+  })) as jest.Mock & Record<string, jest.Mock>;
   MockAssetClass.find = jest.fn();
   MockAssetClass.findById = jest.fn();
   MockAssetClass.findByIdAndDelete = jest.fn();

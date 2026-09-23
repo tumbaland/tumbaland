@@ -1,8 +1,8 @@
 import mongoose from 'mongoose';
-import { BadRequestError, ForbiddenError } from '@tumbaland/backend-core';
+import { BadRequestError, ForbiddenError, escapeRegex } from '@tumbaland/backend-core';
 import { Activity, IActivity, IActivityLocation } from '../models/Activity';
 import { ActivityType, IActivityType } from '../models/ActivityType';
-import { escapeRegex } from '../utils/escapeRegex';
+import { DAY_PATTERN, parseDay } from '../utils/day';
 
 interface ActivityScopeQuery {
   groupId?: string;
@@ -32,20 +32,16 @@ export interface Day {
   entries: DayEntry[];
 }
 
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
 /** Parse a YYYY-MM-DD key into the UTC-midnight Date used for storage. */
 export function dayToDate(day: string): Date {
-  if (!DATE_PATTERN.test(day)) {
+  if (!DAY_PATTERN.test(day)) {
     throw new BadRequestError('Date must be formatted as YYYY-MM-DD');
   }
-  const date = new Date(`${day}T00:00:00.000Z`);
-  // A day that does not exist, like 2026-02-31, parses without complaint as
-  // the day it rolls over to (3 March). Saving a day replaces its entries, so
-  // that would silently delete whatever was logged on 3 March.
-  if (isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== day) {
-    throw new BadRequestError('Invalid date');
-  }
+  // A day that does not exist, like 2026-02-31, must not roll over to 3 March:
+  // saving a day replaces its entries, so that would silently delete whatever
+  // was logged on 3 March.
+  const date = parseDay(day);
+  if (!date) throw new BadRequestError('Invalid date');
   return date;
 }
 

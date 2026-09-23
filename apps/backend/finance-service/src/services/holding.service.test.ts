@@ -1,5 +1,5 @@
 jest.mock('../models/Holding', () => {
-  const ctor: any = jest.fn().mockImplementation((data: any) => ({ ...data, save: jest.fn().mockResolvedValue({ ...data, _id: 'h1' }) }));
+  const ctor = jest.fn().mockImplementation((data: Record<string, unknown>) => ({ ...data, save: jest.fn().mockResolvedValue({ ...data, _id: 'h1' }) })) as jest.Mock & Record<string, jest.Mock>;
   ctor.find = jest.fn();
   ctor.findById = jest.fn();
   ctor.findByIdAndUpdate = jest.fn();
@@ -8,7 +8,7 @@ jest.mock('../models/Holding', () => {
 });
 
 jest.mock('../models/TrackedTicker', () => {
-  const ctor: any = jest.fn().mockImplementation((data: any) => ({ ...data, save: jest.fn().mockResolvedValue(data) }));
+  const ctor = jest.fn().mockImplementation((data: Record<string, unknown>) => ({ ...data, save: jest.fn().mockResolvedValue(data) })) as jest.Mock & Record<string, jest.Mock>;
   ctor.find = jest.fn();
   ctor.findOne = jest.fn();
   return { __esModule: true, default: ctor };
@@ -44,7 +44,7 @@ const mockedAggregate = TickerPriceHistory.aggregate as unknown as jest.Mock;
 const mockedGetRates = getRates as unknown as jest.Mock;
 const mockedGetPositions = getPositions as unknown as jest.Mock;
 
-function sortable(result: any[]) {
+function sortable(result: unknown[]) {
   return { sort: jest.fn().mockResolvedValue(result) };
 }
 
@@ -191,7 +191,7 @@ describe('createHolding', () => {
   });
 
   it('reactivates an existing but inactive tracked ticker instead of creating a new one', async () => {
-    const existing: any = { isActive: false, save: jest.fn().mockResolvedValue(undefined) };
+    const existing = { isActive: false, save: jest.fn().mockResolvedValue(undefined) };
     mockedTrackedFindOne.mockResolvedValue(existing);
 
     await createHolding(input, 'user-1');
@@ -202,7 +202,7 @@ describe('createHolding', () => {
   });
 
   it('leaves an already-active tracked ticker untouched', async () => {
-    const existing: any = { isActive: true, save: jest.fn() };
+    const existing = { isActive: true, save: jest.fn() };
     mockedTrackedFindOne.mockResolvedValue(existing);
 
     await createHolding(input, 'user-1');
@@ -241,7 +241,7 @@ describe('updateHolding', () => {
     mockedHoldingFindById.mockResolvedValue({ userId: 'user-1', groupId: undefined });
     mockedHoldingFindByIdAndUpdate.mockResolvedValue({ _id: 'h1' });
 
-    await updateHolding('h1', { quantity: 5, displayName: 'ignored' } as any, 'user-1', []);
+    await updateHolding('h1', { quantity: 5, displayName: 'ignored' } as never, 'user-1', []);
 
     expect(mockedHoldingFindByIdAndUpdate).toHaveBeenCalledWith('h1', { quantity: 5 }, { new: true });
   });

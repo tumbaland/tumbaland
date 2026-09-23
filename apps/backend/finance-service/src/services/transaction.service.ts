@@ -1,5 +1,5 @@
 import Transaction, { ITransaction, TransactionType } from '../models/Transaction';
-import { ForbiddenError, NotFoundError, canAccessResource } from '@tumbaland/backend-core';
+import { ForbiddenError, NotFoundError, canAccessResource, escapeRegex } from '@tumbaland/backend-core';
 import { tenantScope } from '../utils/scope';
 
 export type SortField = 'date' | 'amount';
@@ -31,9 +31,6 @@ export interface TransactionPage {
 
 export const MAX_TRANSACTION_LIMIT = 2000;
 export const DEFAULT_TRANSACTION_LIMIT = 500;
-
-/** Escape user input before it becomes part of a regular expression. */
-const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export const buildFilter = (
   userId: string,

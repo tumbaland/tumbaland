@@ -1,8 +1,8 @@
 jest.mock('../models/ActivityType', () => {
-  const ActivityType: any = jest.fn().mockImplementation((data: any) => ({
+  const ActivityType = jest.fn().mockImplementation((data: Record<string, unknown>) => ({
     ...data,
     save: jest.fn().mockResolvedValue({ ...data, _id: 'new-id' })
-  }));
+  })) as jest.Mock & Record<string, jest.Mock>;
   ActivityType.findOne = jest.fn();
   ActivityType.find = jest.fn();
   ActivityType.findById = jest.fn();
@@ -102,7 +102,7 @@ describe('createActivityType', () => {
 
 describe('getActivityTypes', () => {
   describe('seeding an empty scope', () => {
-    const mockedInsertMany = (ActivityType as any).insertMany as jest.Mock;
+    const mockedInsertMany = (ActivityType as unknown as { insertMany: jest.Mock }).insertMany;
 
     it('seeds personal types under the user, with no group', async () => {
       mockedFind.mockReturnValue(mockFindChain([]));
@@ -115,8 +115,8 @@ describe('getActivityTypes', () => {
       // Absent rather than null: the personal uniqueness index is
       // `(userId, slug)` filtered on `groupId: null`, which matches a missing
       // field — so these are unique per user.
-      expect(documents.every((d: any) => d.userId === 'u1')).toBe(true);
-      expect(documents.every((d: any) => d.groupId === undefined)).toBe(true);
+      expect(documents.every((d: { userId?: string }) => d.userId === 'u1')).toBe(true);
+      expect(documents.every((d: { groupId?: string }) => d.groupId === undefined)).toBe(true);
     });
 
     it('seeds group types under the group, so they are unique per group', async () => {
@@ -126,7 +126,7 @@ describe('getActivityTypes', () => {
 
       await getActivityTypes({ userId: 'u1', groupId: 'g1' });
 
-      expect(mockedInsertMany.mock.calls[0][0].every((d: any) => d.groupId === 'g1')).toBe(true);
+      expect(mockedInsertMany.mock.calls[0][0].every((d: { groupId?: string }) => d.groupId === 'g1')).toBe(true);
     });
 
     it('does not seed when the scope already has types', async () => {
@@ -188,7 +188,7 @@ describe('getActivityTypes', () => {
     mockedFind.mockReturnValue(mockFindChain([]));
     mockedCountDocuments.mockResolvedValue(0);
 
-    await getActivityTypes({ userId: 'u1', groupId: null as any });
+    await getActivityTypes({ userId: 'u1', groupId: null as never });
 
     expect(mockedFind).toHaveBeenCalledWith({
       isActive: true,

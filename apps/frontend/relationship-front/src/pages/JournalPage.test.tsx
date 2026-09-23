@@ -2,6 +2,9 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
+import type { ComponentProps } from 'react';
+import type DayEditorDialog from '../components/DayEditorDialog';
+import type ActivityTypesDialog from '../components/ActivityTypesDialog';
 
 vi.mock('@tumbaland/frontend-core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tumbaland/frontend-core')>();
@@ -15,7 +18,7 @@ vi.mock('../services/activityTypes', () => ({
   getActivityTypes: vi.fn()
 }));
 vi.mock('../components/DayEditorDialog', () => ({
-  default: ({ open, date, dateEditable, onClose, onSaved }: any) =>
+  default: ({ open, date, dateEditable, onClose, onSaved }: ComponentProps<typeof DayEditorDialog>) =>
     open ? (
       <div>
         <div>
@@ -23,12 +26,12 @@ vi.mock('../components/DayEditorDialog', () => ({
           {dateEditable ? ' (date editable)' : ''}
         </div>
         <button onClick={onClose}>close-editor</button>
-        <button onClick={onSaved}>save-editor</button>
+        <button onClick={() => onSaved({ date: date ?? '', entries: [] })}>save-editor</button>
       </div>
     ) : null
 }));
 vi.mock('../components/ActivityTypesDialog', () => ({
-  default: ({ open, groupId, onClose, onChanged }: any) =>
+  default: ({ open, groupId, onClose, onChanged }: ComponentProps<typeof ActivityTypesDialog>) =>
     open ? (
       <div>
         <div>ActivityTypesDialog for {groupId}</div>
@@ -43,6 +46,7 @@ import { getActivityTypes } from '../services/activityTypes';
 import JournalPage from './JournalPage';
 
 const mockedGetDays = getDays as unknown as ReturnType<typeof vi.fn>;
+type GetDaysOptions = NonNullable<Parameters<typeof getDays>[0]>;
 const mockedGetActivityTypes = getActivityTypes as unknown as ReturnType<typeof vi.fn>;
 
 const readingType = { _id: 't1', id: 't1', name: 'Reading', slug: 'reading', color: '#111', isActive: true, sortOrder: 0, createdAt: '', updatedAt: '', userId: 'u1' };
@@ -57,14 +61,14 @@ const renderPage = (initialEntry = '/journal') =>
     </MemoryRouter>
   );
 
-const dayWithEntry = (date: string, overrides: Partial<any> = {}) => ({
+const dayWithEntry = (date: string, overrides: Record<string, unknown> = {}) => ({
   date,
   entries: [{ _id: 'e1', typeId: 't1', type: readingType, description: 'Book club', ...overrides }]
 });
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockedGetActivityTypes.mockResolvedValue({ data: [readingType], pagination: {} as any });
+  mockedGetActivityTypes.mockResolvedValue({ data: [readingType], pagination: {} as never });
 });
 
 it('shows a spinner while loading', () => {
@@ -216,7 +220,7 @@ it('drops the activity filter when that type no longer exists', async () => {
   await userEvent.click(await screen.findByText('Reading'));
   await waitFor(() => expect(mockedGetDays).toHaveBeenCalledWith(expect.objectContaining({ typeId: 't1' })));
 
-  mockedGetActivityTypes.mockResolvedValue({ data: [], pagination: {} as any });
+  mockedGetActivityTypes.mockResolvedValue({ data: [], pagination: {} as never });
   await userEvent.click(screen.getByRole('button', { name: 'Manage types' }));
   await userEvent.click(screen.getByText('change-types'));
 
@@ -246,8 +250,8 @@ it('exports a CSV when the Export button is clicked', async () => {
   });
   const createObjectURL = vi.fn().mockReturnValue('blob:mock');
   const revokeObjectURL = vi.fn();
-  (URL as any).createObjectURL = createObjectURL;
-  (URL as any).revokeObjectURL = revokeObjectURL;
+  (URL as unknown as Record<string, unknown>).createObjectURL = createObjectURL;
+  (URL as unknown as Record<string, unknown>).revokeObjectURL = revokeObjectURL;
   const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
   renderPage();
@@ -345,7 +349,7 @@ it('exports every matching day, not just the pages already loaded', async () => 
 
   // On screen: one page of the paginated view. The export must re-fetch and
   // walk every page rather than serialising what happens to be in state.
-  mockedGetDays.mockImplementation(({ limit, page }: any) => {
+  mockedGetDays.mockImplementation(({ limit, page }: GetDaysOptions) => {
     if (limit === 30) {
       return Promise.resolve({ days: [dayWithEntry('2024-05-01')], page: 1, totalPages: 3, total: 3 });
     }
@@ -370,7 +374,7 @@ it('exports every matching day, not just the pages already loaded', async () => 
 });
 
 it('reports a failure to export without wiping the journal', async () => {
-  mockedGetDays.mockImplementation(({ limit }: any) =>
+  mockedGetDays.mockImplementation(({ limit }: GetDaysOptions) =>
     limit === 30
       ? Promise.resolve({ days: [dayWithEntry('2024-05-01')], page: 1, totalPages: 1, total: 1 })
       : Promise.reject(new Error('boom'))

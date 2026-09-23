@@ -37,7 +37,8 @@ it('maps every VITE_* env var into the dev config', async () => {
     ALBUM_FRONT_URL: import.meta.env.VITE_ALBUM_FRONT_URL,
     ACCOUNT_FRONT_URL: import.meta.env.VITE_ACCOUNT_FRONT_URL,
     SHELL_FRONT_URL: import.meta.env.VITE_SHELL_FRONT_URL,
-    PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL
+    PUBLIC_API_URL: import.meta.env.VITE_PUBLIC_API_URL,
+    PAYMENT_API_URL: import.meta.env.VITE_PAYMENT_API_URL
   });
 });
 

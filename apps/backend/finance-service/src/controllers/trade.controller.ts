@@ -1,18 +1,7 @@
 import { Request, Response } from 'express';
-import { ForbiddenError, sendSuccess, countRead } from '@tumbaland/backend-core';
+import { sendSuccess, countRead } from '@tumbaland/backend-core';
 import * as tradeService from '../services/trade.service';
-
-/** Groups the caller is working in: the query group, or personal. */
-function contextGroups(req: Request): string[] {
-  const { groupId } = req.query;
-  if (!groupId) return [];
-
-  const userGroups = req.userGroups || [];
-  if (!userGroups.includes(groupId as string)) {
-    throw new ForbiddenError('Access denied');
-  }
-  return [groupId as string];
-}
+import { contextGroups } from '../utils/scope';
 
 export const getTrades = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;

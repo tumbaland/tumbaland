@@ -21,7 +21,7 @@ beforeEach(() => vi.clearAllMocks());
 
 it('loads settings and activity types together', async () => {
   mockedGetSettings.mockResolvedValue({ highlightTypeIds: ['t1'], hiddenTypeIds: [] });
-  mockedGetActivityTypes.mockResolvedValue({ data: [{ _id: 't1', name: 'Reading' }], pagination: {} as any });
+  mockedGetActivityTypes.mockResolvedValue({ data: [{ _id: 't1', name: 'Reading' }], pagination: {} as never });
 
   const { result } = renderHook(() => useDashboardSettings('g1'));
 
@@ -36,7 +36,7 @@ it('loads settings and activity types together', async () => {
 
 it('falls back to empty settings and logs when loading fails', async () => {
   mockedGetSettings.mockRejectedValue(new Error('down'));
-  mockedGetActivityTypes.mockResolvedValue({ data: [], pagination: {} as any });
+  mockedGetActivityTypes.mockResolvedValue({ data: [], pagination: {} as never });
 
   const { result } = renderHook(() => useDashboardSettings());
 
@@ -46,7 +46,7 @@ it('falls back to empty settings and logs when loading fails', async () => {
 
 it('optimistically updates then commits the saved settings', async () => {
   mockedGetSettings.mockResolvedValue({ highlightTypeIds: [], hiddenTypeIds: [] });
-  mockedGetActivityTypes.mockResolvedValue({ data: [], pagination: {} as any });
+  mockedGetActivityTypes.mockResolvedValue({ data: [], pagination: {} as never });
   mockedSaveSettings.mockResolvedValue({ highlightTypeIds: ['t2'], hiddenTypeIds: [] });
 
   const { result } = renderHook(() => useDashboardSettings('g1'));
@@ -62,7 +62,7 @@ it('optimistically updates then commits the saved settings', async () => {
 
 it('re-throws and logs when save fails', async () => {
   mockedGetSettings.mockResolvedValue({ highlightTypeIds: [], hiddenTypeIds: [] });
-  mockedGetActivityTypes.mockResolvedValue({ data: [], pagination: {} as any });
+  mockedGetActivityTypes.mockResolvedValue({ data: [], pagination: {} as never });
   mockedSaveSettings.mockRejectedValue(new Error('save failed'));
 
   const { result } = renderHook(() => useDashboardSettings());
@@ -76,9 +76,9 @@ it('re-throws and logs when save fails', async () => {
 });
 
 it('does not apply a stale response after the hook unmounts', async () => {
-  let resolveSettings: (v: any) => void;
+  let resolveSettings: (v: unknown) => void;
   mockedGetSettings.mockReturnValue(new Promise((resolve) => { resolveSettings = resolve; }));
-  mockedGetActivityTypes.mockResolvedValue({ data: [], pagination: {} as any });
+  mockedGetActivityTypes.mockResolvedValue({ data: [], pagination: {} as never });
 
   const { unmount } = renderHook(() => useDashboardSettings());
   unmount();

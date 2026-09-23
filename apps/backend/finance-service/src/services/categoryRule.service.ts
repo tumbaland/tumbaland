@@ -2,6 +2,7 @@ import CategoryRule, { ICategoryRule, MatchType } from '../models/CategoryRule';
 import Transaction, { TransactionType } from '../models/Transaction';
 import { BadRequestError, ForbiddenError, NotFoundError, canAccessResource } from '@tumbaland/backend-core';
 import { tenantScope } from '../utils/scope';
+import { hasNestedRepetition } from '../utils/nestedRepetition';
 import {
   CompiledRule,
   compileRules,
@@ -18,6 +19,26 @@ export interface CategoryRuleInput {
   type?: TransactionType;
   note?: string;
   groupId?: string;
+}
+
+/**
+ * Refuse a regex rule where its owner is looking at the field they typed it
+ * into. One that will not compile would be skipped silently at import time and
+ * appear to do nothing. One that repeats a repeating group can backtrack for
+ * minutes on a single row, and every import runs every rule on every row.
+ */
+function assertUsableRegex(pattern: string, { checkRepetition }: { checkRepetition: boolean }): void {
+  try {
+    new RegExp(pattern);
+  } catch {
+    throw new BadRequestError(`${pattern} is not a valid regular expression`);
+  }
+  if (checkRepetition && hasNestedRepetition(pattern)) {
+    throw new BadRequestError(
+      `${pattern} repeats a group that itself repeats, which can take minutes to run on one row. ` +
+        'Write the inner part without + or *, or split it into separate rules.'
+    );
+  }
 }
 
 /**
@@ -86,16 +107,7 @@ export const saveRule = async (
   }
 
   const matchType: MatchType = input.matchType || 'text';
-  // A regex that will not compile is worth refusing here, where the owner is
-  // looking at the field they typed it into. Left to matching time it would be
-  // skipped silently and the rule would appear to do nothing.
-  if (matchType === 'regex') {
-    try {
-      new RegExp(pattern);
-    } catch {
-      throw new BadRequestError(`${pattern} is not a valid regular expression`);
-    }
-  }
+  if (matchType === 'regex') assertUsableRegex(pattern, { checkRepetition: true });
 
   const scope = tenantScope(userId, input.groupId ? [input.groupId] : []);
   const existing = (await CategoryRule.find(scope)).find(
@@ -155,13 +167,11 @@ export const updateRule = async (
   if (data.type !== undefined) existing.type = data.type ?? undefined;
 
   // A rename can turn a working regex into one that will not compile, and a
-  // rule that silently stops matching is worse than a refused edit.
+  // rule that silently stops matching is worse than a refused edit. The
+  // repetition check only applies to a new pattern: a rule saved before it
+  // existed can still have its category changed.
   if ((existing.matchType || 'text') === 'regex') {
-    try {
-      new RegExp(existing.pattern);
-    } catch {
-      throw new BadRequestError(`${existing.pattern} is not a valid regular expression`);
-    }
+    assertUsableRegex(existing.pattern, { checkRepetition: data.pattern !== undefined });
   }
 
   return existing.save();

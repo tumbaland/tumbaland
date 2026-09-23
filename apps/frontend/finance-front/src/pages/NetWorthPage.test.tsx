@@ -1,6 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
+import type { ComponentProps } from 'react';
+import type CheckInDialog from '../components/net-worth/CheckInDialog';
+import type AssetClassManagerDialog from '../components/net-worth/AssetClassManagerDialog';
 
 vi.mock('@tumbaland/frontend-core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tumbaland/frontend-core')>();
@@ -15,7 +18,7 @@ vi.mock('../hooks/useSnapshots', () => ({
 vi.mock('../hooks/useAssetClasses', () => ({ useAssetClasses: vi.fn() }));
 
 vi.mock('../components/net-worth/CheckInDialog', () => ({
-  default: ({ open, onSubmit, onClose, editMonth, defaultMonth }: any) =>
+  default: ({ open, onSubmit, onClose, editMonth, defaultMonth }: ComponentProps<typeof CheckInDialog>) =>
     open ? (
       <div>
         <div>check-in dialog · {editMonth || defaultMonth}</div>
@@ -28,7 +31,7 @@ vi.mock('../components/net-worth/CheckInDialog', () => ({
 }));
 
 vi.mock('../components/net-worth/AssetClassManagerDialog', () => ({
-  default: ({ open, onClose }: any) => (open ? <div>class manager<button onClick={onClose}>close classes</button></div> : null)
+  default: ({ open, onClose }: ComponentProps<typeof AssetClassManagerDialog>) => (open ? <div>class manager<button onClick={onClose}>close classes</button></div> : null)
 }));
 
 import { useSnapshots, useSaveSnapshot, useDeleteSnapshot } from '../hooks/useSnapshots';

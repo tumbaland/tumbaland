@@ -28,8 +28,11 @@ describe('correlationMiddleware', () => {
 
     correlationMiddleware(req, res, next);
 
-    expect((req as any).correlationId).toMatch(/^[0-9a-f-]{36}$/i);
-    expect(res.setHeader).toHaveBeenCalledWith('x-correlation-id', (req as any).correlationId);
+    expect((req as unknown as Record<string, unknown>).correlationId).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(res.setHeader).toHaveBeenCalledWith(
+      'x-correlation-id',
+      (req as unknown as Record<string, unknown>).correlationId
+    );
     expect(next).toHaveBeenCalledTimes(1);
   });
 
@@ -40,7 +43,7 @@ describe('correlationMiddleware', () => {
 
     correlationMiddleware(req, res, next);
 
-    expect((req as any).correlationId).toBe('existing-id');
+    expect((req as unknown as Record<string, unknown>).correlationId).toBe('existing-id');
     expect(res.setHeader).toHaveBeenCalledWith('x-correlation-id', 'existing-id');
     expect(next).toHaveBeenCalledTimes(1);
   });

@@ -1,8 +1,8 @@
 jest.mock('../models/CategoryRule', () => {
-  const MockCategoryRule: any = jest.fn().mockImplementation((data: any) => ({
+  const MockCategoryRule = jest.fn().mockImplementation((data: Record<string, unknown>) => ({
     ...data,
     save: jest.fn().mockResolvedValue({ _id: 'new-rule-id', ...data })
-  }));
+  })) as jest.Mock & Record<string, jest.Mock>;
   MockCategoryRule.find = jest.fn();
   MockCategoryRule.findOne = jest.fn();
   MockCategoryRule.findById = jest.fn();
@@ -51,9 +51,7 @@ const stored = (over: Record<string, unknown> = {}) => ({
 /** `find()` used as a list (with `.sort()`) and as a plain await, as both occur. */
 const findReturns = (rules: unknown[]) => {
   mockedFind.mockImplementation(() => {
-    const result: any = Promise.resolve(rules);
-    result.sort = jest.fn().mockResolvedValue(rules);
-    return result;
+    return Object.assign(Promise.resolve(rules), { sort: jest.fn().mockResolvedValue(rules) });
   });
 };
 
@@ -201,6 +199,13 @@ describe('saveRule', () => {
     expect(MockedCategoryRule).not.toHaveBeenCalled();
   });
 
+  it('refuses a regex that repeats a repeating group, which can stall every import', async () => {
+    await expect(
+      saveRule({ pattern: '(A+)+$', matchType: 'regex', category: 'Slow' }, 'u1')
+    ).rejects.toThrow(/repeats a group that itself repeats/);
+    expect(MockedCategoryRule).not.toHaveBeenCalled();
+  });
+
   it('does not read the same text as an existing rule of the other match type', async () => {
     findReturns([stored({ pattern: 'BOLT', matchType: 'regex' })]);
 
@@ -268,6 +273,22 @@ describe('updateRule', () => {
     const rule = await updateRule('r1', { pattern: '\\bBOLT\\b(?! ?Food)' }, 'u1');
 
     expect(rule).toMatchObject({ pattern: '\\bBOLT\\b(?! ?Food)' });
+  });
+
+  it('refuses renaming a regex rule to one that repeats a repeating group', async () => {
+    const existing = stored({ matchType: 'regex', pattern: '\\bBOLT\\b' });
+    mockedFindById.mockResolvedValue(existing);
+
+    await expect(updateRule('r1', { pattern: '(\\w+\\s?)+' }, 'u1')).rejects.toThrow(
+      /repeats a group that itself repeats/
+    );
+    expect(existing.save).not.toHaveBeenCalled();
+  });
+
+  it('still lets a rule saved before the repetition check change category', async () => {
+    mockedFindById.mockResolvedValue(stored({ matchType: 'regex', pattern: '(\\w+\\s?)+' }));
+
+    expect(await updateRule('r1', { category: 'Food' }, 'u1')).toMatchObject({ category: 'Food' });
   });
 
   it('stores a note', async () => {

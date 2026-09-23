@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { BadRequestError, ForbiddenError, sendSuccess, sendError } from '@tumbaland/backend-core';
+import { BadRequestError, sendSuccess, sendError } from '@tumbaland/backend-core';
 import {
   getAllTrackedTickers,
   getTrackedTickerById,
@@ -14,6 +14,7 @@ import {
   withTickerSlot,
   withTickerUpdate
 } from '../services/trackedTickerUsage';
+import { contextGroups } from '../utils/scope';
 
 /**
  * Search ticker symbols via Alpha Vantage SYMBOL_SEARCH (costs 1 API call)
@@ -34,20 +35,8 @@ export const searchTrackedTickers = async (req: Request, res: Response): Promise
  */
 export const getTrackedTickers = async (req: Request, res: Response): Promise<void> => {
   const user = req.user!;
-  const userGroups = req.userGroups || [];
-  const { groupId } = req.query;
-
-  let tickers;
-  if (groupId) {
-    // Get tickers for specific group (user must be member)
-    if (!userGroups.includes(groupId as string)) {
-      throw new ForbiddenError('Access denied');
-    }
-    tickers = await getAllTrackedTickers(user.id, [groupId as string]);
-  } else {
-    // No groupId specified: show only personal tickers (no group)
-    tickers = await getAllTrackedTickers(user.id, []);
-  }
+  // The query group's tickers, or with no groupId only personal ones.
+  const tickers = await getAllTrackedTickers(user.id, contextGroups(req));
 
   sendSuccess(res, tickers);
 };
