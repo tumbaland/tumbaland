@@ -25,6 +25,11 @@ beforeEach(() => {
 });
 
 describe('useTenant', () => {
+  it('is ready at once with no account, since there is nothing to settle', () => {
+    const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), undefined));
+    expect(result.current.ready).toBe(true);
+  });
+
   it('does not fetch and sets loading:false when no user id is given', async () => {
     const { result } = renderHook(() => useTenant(uniqueGroupApiUrl(), undefined));
 
@@ -271,7 +276,10 @@ describe('the context an account was last in', () => {
    */
   async function signInPickAGroupAndOut() {
     mockGroupsResponse([{ _id: 'g1', name: 'Group A' }]);
-    const first = renderHook(() => useTenant(uniqueGroupApiUrl(), 'user-ada'));
+    // One URL for the hook's whole life: a new one each render refetches on
+    // every render, and a fetch landing after unmount would restore and reload.
+    const url = uniqueGroupApiUrl();
+    const first = renderHook(() => useTenant(url, 'user-ada'));
     await waitFor(() => expect(first.result.current.loading).toBe(false));
     act(() => first.result.current.setSelectedTenant({ id: 'g1', name: 'Group A', type: 'group' }));
     first.unmount();
@@ -292,6 +300,24 @@ describe('the context an account was last in', () => {
     // useTenantFilter read storage synchronously before this restored anything,
     // so the requests already out were scoped to the wrong context.
     expect(reloadSpy).toHaveBeenCalled();
+  });
+
+  it('comes back without a reload when the caller waits for it to be ready', async () => {
+    await signInPickAGroupAndOut();
+    const reloadSpy = watchReloads();
+
+    mockGroupsResponse([{ _id: 'g1', name: 'Group A' }]);
+    const url = uniqueGroupApiUrl();
+    const { result } = renderHook(() => useTenant(url, 'user-ada', { waitsForReady: true }));
+
+    // Not ready on the first render, before the groups fetch has started, so
+    // the shell can hold its content back instead of reloading afterwards.
+    expect(result.current.ready).toBe(false);
+    await waitFor(() => expect(result.current.ready).toBe(true));
+
+    expect(result.current.selectedTenant).toEqual({ id: 'g1', name: 'Group A', type: 'group' });
+    expect(JSON.parse(localStorage.getItem('selectedTenant')!)).toMatchObject({ id: 'g1' });
+    expect(reloadSpy).not.toHaveBeenCalled();
   });
 
   it('is not handed to a different account signing in on the same browser', async () => {

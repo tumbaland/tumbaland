@@ -58,6 +58,12 @@ describe('MessageBubble', () => {
     expect(screen.getByText('hello')).toBeInTheDocument();
   });
 
+  it('names the sender as they are called now, not as the message saved it', () => {
+    renderBubble({ senderName: 'Tom T' }, { senderName: 'Toomas Tahves' });
+    expect(screen.getByText('Toomas Tahves')).toBeInTheDocument();
+    expect(screen.queryByText('Tom T')).not.toBeInTheDocument();
+  });
+
   it('shows the sender name when asked', () => {
     renderBubble();
     expect(screen.getByText('Tom')).toBeInTheDocument();

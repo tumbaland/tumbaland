@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router';
 import { ReactNode, useEffect, useState } from 'react';
-import { ProtectedRoute, surface, TenantSelector, useTenant } from '@tumbaland/frontend-core';
+import { Loader, ProtectedRoute, surface, TenantSelector, useTenant } from '@tumbaland/frontend-core';
 import { AppNav } from './AppNav';
 import { RemoteOutlet } from './RemoteOutlet';
 import { CHAT_APP, getAppByRoute, isRouteActive } from '../config/apps';
@@ -68,7 +68,9 @@ export default function Layout({ children }: LayoutProps) {
   // Money is in the menu only for someone who turned it on under Features.
   const { showMoney } = useShowMoney(authenticated ? user?.id : undefined);
   const { GROUP_API_URL } = useConfig();
-  const tenant = useTenant(GROUP_API_URL ?? '', authenticated ? user?.id : undefined);
+  // Content waits for the context to settle (below), so a group restored on
+  // sign-in is just stored rather than reloading the page a second time.
+  const tenant = useTenant(GROUP_API_URL ?? '', authenticated ? user?.id : undefined, { waitsForReady: true });
 
   const currentApp = getAppByRoute(location.pathname);
   const navigate = useNavigate();
@@ -238,7 +240,11 @@ export default function Layout({ children }: LayoutProps) {
             ...(currentApp ? { maxWidth: CONTENT_MAX_WIDTH, marginInline: 'auto' } : null)
           }}
         >
-          {currentApp ? (
+          {authenticated && !tenant.ready ? (
+            // Every page reads the context as it mounts; drawn before it
+            // settles, it would load with the wrong group and need a reload.
+            <Loader message="Loading" />
+          ) : currentApp ? (
             <ProtectedRoute authService={authService}>
               <RemoteOutlet />
             </ProtectedRoute>

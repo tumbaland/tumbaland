@@ -27,7 +27,7 @@ const LoginPrompt: React.FC<LoginPromptProps> = ({ isLoading, initializationAtte
           variant="h5"
           sx={{
             fontWeight: 700,
-            color: "#1e293b",
+            color: "text.primary",
             mb: 1
           }}>
           Sign In

@@ -101,6 +101,29 @@ describe('createConfigProvider (dev mode)', () => {
 
     expect(getGlobalConfig()).toEqual(getDevConfig());
   });
+
+  it('renders children in every provider that mounts in the same render', async () => {
+    const { ConfigProvider } = createConfigProvider<TestConfig>({
+      serviceName: 'test-service',
+      isDev: true,
+      mode: 'development',
+      getDevConfig
+    });
+
+    render(
+      <>
+        <ConfigProvider>
+          <div data-testid="first" />
+        </ConfigProvider>
+        <ConfigProvider>
+          <div data-testid="second" />
+        </ConfigProvider>
+      </>
+    );
+
+    expect(await screen.findByTestId('first')).toBeInTheDocument();
+    expect(await screen.findByTestId('second')).toBeInTheDocument();
+  });
 });
 
 describe('createConfigProvider (production mode)', () => {

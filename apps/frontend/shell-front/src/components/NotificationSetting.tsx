@@ -83,9 +83,9 @@ export function NotificationSetting() {
     <MenuItem
       onClick={unavailable || busy ? undefined : toggle}
       disabled={unavailable || busy}
-      sx={{ borderRadius: 2, mx: 0.5, alignItems: 'flex-start', '&.Mui-disabled': { opacity: 1 } }}
+      sx={{ borderRadius: 2, mx: 0.5, alignItems: 'center', '&.Mui-disabled': { opacity: 1 } }}
     >
-      <ListItemIcon sx={{ color: 'inherit', mt: 0.5 }}>
+      <ListItemIcon sx={{ color: 'inherit' }}>
         {enabled ? (
           <NotificationsActiveOutlinedIcon fontSize="small" />
         ) : (

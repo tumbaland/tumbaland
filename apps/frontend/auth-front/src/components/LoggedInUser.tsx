@@ -32,7 +32,7 @@ const LoggedInUser: React.FC<LoggedInUserProps> = ({ user, onContinue, onLogout 
       gutterBottom
       sx={{
         fontWeight: 700,
-        color: "#1e293b"
+        color: "text.primary"
       }}>
       Welcome back, {user.name}!
     </Typography>

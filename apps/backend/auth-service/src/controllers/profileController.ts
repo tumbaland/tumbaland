@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { NotFoundError, UnauthorizedError } from '@tumbaland/backend-core';
 import { User } from '../models/User';
 import { effectivePicture, loadAvatar, removeAvatar, saveAvatar } from '../services/avatarService';
+import { effectiveName } from '../services/nameService';
 import { renewSession } from '../services/sessionService';
 
 export const getProfile = async (req: Request, res: Response): Promise<void> => {
@@ -21,7 +22,7 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
     email: req.user.email,
     firstName: dbUser.firstName,
     lastName: dbUser.lastName,
-    name: req.user.name,
+    name: effectiveName(dbUser) ?? req.user.name,
     picture: effectivePicture(dbUser) ?? req.user.picture,
     // Whether there is an upload to remove. Google's picture cannot be.
     hasCustomPicture: Boolean(dbUser.picture),
@@ -68,6 +69,12 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
     throw new NotFoundError('User not found');
   }
 
+  // Every service reads the name from the token, so it is re-signed now
+  // rather than at the next renewal: chat should say the new name straight away.
+  if (firstName !== undefined || lastName !== undefined) {
+    await renewSession(req, res, { reissue: true });
+  }
+
   // Return updated user info
   res.json({
     success: true,
@@ -76,7 +83,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
       email: updatedUser.email,
       firstName: updatedUser.firstName,
       lastName: updatedUser.lastName,
-      name: req.user.name, // Keep original name from JWT
+      name: effectiveName(updatedUser) ?? req.user.name,
       picture: effectivePicture(updatedUser) ?? req.user.picture,
       showMoney: updatedUser.showMoney === true
     }

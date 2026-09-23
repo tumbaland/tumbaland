@@ -21,6 +21,11 @@ export interface IUser extends Document {
    */
   googlePicture?: string | null;
   /**
+   * The name Google sent at the last sign-in. Shown only while the person has
+   * not set a first or last name of their own (see effectiveName).
+   */
+  googleName?: string | null;
+  /**
    * When the owner asked for the account to be removed, if they have.
    *
    * A request, not the removal. Nothing is deleted or disabled when this is
@@ -56,6 +61,7 @@ const UserSchema = new Schema<IUser>(
     tokenVersion: { type: Number, default: 1 },
     picture: { type: String, default: null },
     googlePicture: { type: String, default: null },
+    googleName: { type: String, default: null },
     deletionRequestedAt: { type: Date, default: null },
     showMoney: { type: Boolean, default: false }
   },

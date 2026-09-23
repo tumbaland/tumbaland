@@ -10,6 +10,13 @@ export interface UseTenantResult {
   selectedTenant: TenantOption | null;
   availableTenants: TenantOption[];
   loading: boolean;
+  /**
+   * The context for this account is settled: its groups are fetched and the
+   * stored selection is the one to use. Always true with no account. Unlike
+   * `loading`, false on the render where an account first arrives, before the
+   * fetch has even started.
+   */
+  ready: boolean;
   error: string | null;
   setSelectedTenant: (tenant: TenantOption) => void;
   refreshTenants: () => Promise<void>;
@@ -200,14 +207,30 @@ const fetchGroupsGlobally = async (groupApiUrl: string, userId?: string): Promis
   return globalGroupsFetchCache;
 };
 
+export interface UseTenantOptions {
+  /**
+   * The caller renders nothing that reads the selection until `ready`. Then
+   * nothing has gone out with the wrong context yet, and a selection restored
+   * or discarded on sign-in is simply stored, instead of reloading the page to
+   * make siblings read it again. The shell does this; a module run on its own
+   * does not.
+   */
+  waitsForReady?: boolean;
+}
+
 /**
  * Custom hook for managing tenant selection
  * Handles both personal account and group contexts
  */
-export const useTenant = (groupApiUrl: string, userId?: string): UseTenantResult => {
+export const useTenant = (
+  groupApiUrl: string,
+  userId?: string,
+  { waitsForReady = false }: UseTenantOptions = {}
+): UseTenantResult => {
   const [selectedTenant, setSelectedTenantState] = useState<TenantOption | null>(null);
   const [availableTenants, setAvailableTenants] = useState<TenantOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [settledFor, setSettledFor] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
   // Load saved tenant selection from localStorage
@@ -300,7 +323,9 @@ export const useTenant = (groupApiUrl: string, userId?: string): UseTenantResult
         // same reason switching tenant by hand reloads: it is the only way
         // this app re-reads the context. Storage now agrees with state, so the
         // next pass takes the branch above and this does not loop.
-        if (restorable) {
+        if (waitsForReady) {
+          logger.debug('Settled the context before anything read it', { name: next.name });
+        } else if (restorable) {
           logger.debug('Restored the context this account last used', { name: restorable.name });
           window.location.reload();
         } else if (savedTenant?.type === 'group') {
@@ -328,8 +353,9 @@ export const useTenant = (groupApiUrl: string, userId?: string): UseTenantResult
       setSelectedTenantState(savedTenant ? toOption(savedTenant) : personalTenant);
     } finally {
       setLoading(false);
+      setSettledFor(userId);
     }
-  }, [userId, fetchGroups, loadSavedTenant, saveTenant]);
+  }, [userId, fetchGroups, loadSavedTenant, saveTenant, waitsForReady]);
 
   // Set selected tenant with page reload
   const setSelectedTenant = useCallback(
@@ -355,6 +381,7 @@ export const useTenant = (groupApiUrl: string, userId?: string): UseTenantResult
     selectedTenant,
     availableTenants,
     loading,
+    ready: !userId || settledFor === userId,
     error,
     setSelectedTenant,
     refreshTenants

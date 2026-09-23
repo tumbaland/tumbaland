@@ -6,8 +6,10 @@ jest.mock('../models/User', () => ({
     findByIdAndUpdate: jest.fn()
   }
 }));
+jest.mock('../services/sessionService', () => ({ renewSession: jest.fn() }));
 
 import { User } from '../models/User';
+import { renewSession } from '../services/sessionService';
 import {
   cancelAccountDeletion,
   getProfile,
@@ -185,6 +187,33 @@ describe('updateProfile', () => {
     await updateProfile(authedReq({ body: {} }), res);
 
     expect(mockedFindByIdAndUpdate).toHaveBeenCalledWith('user-1', { $set: {} }, { new: true });
+  });
+
+  it('returns the name they set rather than the one Google put in the token', async () => {
+    mockedFindByIdAndUpdate.mockResolvedValue({ _id: 'user-1', email: 'ada@example.com', firstName: 'Augusta', lastName: 'King' });
+    const res = mockRes();
+
+    await updateProfile(authedReq({ body: { firstName: 'Augusta', lastName: 'King' } }), res);
+
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ user: expect.objectContaining({ name: 'Augusta King' }) }));
+  });
+
+  it('re-signs the session when the name changes, so chat shows it straight away', async () => {
+    mockedFindByIdAndUpdate.mockResolvedValue({ _id: 'user-1', email: 'ada@example.com', firstName: 'Augusta' });
+    const req = authedReq({ body: { firstName: 'Augusta' } });
+    const res = mockRes();
+
+    await updateProfile(req, res);
+
+    expect(renewSession).toHaveBeenCalledWith(req, res, { reissue: true });
+  });
+
+  it('leaves the session alone when only a feature changes', async () => {
+    mockedFindByIdAndUpdate.mockResolvedValue({ _id: 'user-1', email: 'ada@example.com', showMoney: true });
+
+    await updateProfile(authedReq({ body: { showMoney: true } }), mockRes());
+
+    expect(renewSession).not.toHaveBeenCalled();
   });
 });
 

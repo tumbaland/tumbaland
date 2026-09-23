@@ -105,6 +105,9 @@ export function MessageList({
   }, []);
 
   const pictures = useMemo(() => new Map(members.map((member) => [member.userId, member.picture])), [members]);
+  // Their name now, not the one saved on each message when it was sent, so a
+  // name changed on the account page shows on old messages too.
+  const names = useMemo(() => new Map(members.map((member) => [member.userId, member.name])), [members]);
   const seen = useMemo(() => placeSeenMarkers(messages, reads, members), [messages, reads, members]);
   const [atBottom, setAtBottom] = useState(true);
 
@@ -274,6 +277,7 @@ export function MessageList({
                   onEditAlbum={onEditAlbum}
                   accent={accent}
                   senderPicture={pictures.get(message.senderId)}
+                  senderName={names.get(message.senderId)}
                 />
                 {seen.has(message.id) && <SeenMarker seers={seen.get(message.id)!} />}
               </Box>

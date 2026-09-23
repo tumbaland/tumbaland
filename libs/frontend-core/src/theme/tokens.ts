@@ -291,8 +291,13 @@ export const PHONE = '@media (max-width:599.95px)';
  * Styles for dark only, the way `PHONE` is styles for phones:
  * `sx={{ color: accent, [DARK]: { color: accentOnDark(accent) } }}`.
  * Matches the attribute the theme sets on <html>.
+ *
+ * `html`, not `:root`: Emotion reads a selector that starts with a colon as a
+ * pseudo-class of the element itself and glues its class on the front, giving
+ * `.css-x:root[…] .css-x`, which matches nothing. Every dark override was
+ * silently dropped that way.
  */
-export const DARK = ':root[data-color-scheme="dark"] &';
+export const DARK = 'html[data-color-scheme="dark"] &';
 
 /**
  * An accent lifted for a dark background. The module and chat accents are

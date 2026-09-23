@@ -38,7 +38,7 @@ it('renders nothing while closed', () => {
   expect(screen.queryByRole('menu')).not.toBeInTheDocument();
 });
 
-it('shows who is signed in, the account pages and sign out, and nothing else', () => {
+it('shows who is signed in, the account pages, appearance and sign out, and nothing else', () => {
   renderMenu();
 
   expect(screen.getByRole('menu', { name: 'Account' })).toBeInTheDocument();
@@ -48,7 +48,7 @@ it('shows who is signed in, the account pages and sign out, and nothing else', (
     .getAllByRole('menuitem')
     .filter((item) => item.getAttribute('aria-disabled') !== 'true')
     .map((item) => item.textContent);
-  expect(actions).toEqual(['Profile', 'Groups', 'Billing', 'Sign out']);
+  expect(actions).toEqual(['Profile', 'Groups', 'Billing', 'AutoLightDark', 'Sign out']);
 });
 
 it('lists no Billing inside a native app, where store billing rules apply', () => {
@@ -60,7 +60,7 @@ it('lists no Billing inside a native app, where store billing rules apply', () =
       .getAllByRole('menuitem')
       .filter((item) => item.getAttribute('aria-disabled') !== 'true')
       .map((item) => item.textContent);
-    expect(actions).toEqual(['Profile', 'Groups', 'Sign out']);
+    expect(actions).toEqual(['Profile', 'Groups', 'AutoLightDark', 'Sign out']);
   } finally {
     delete window.Capacitor;
   }
@@ -105,4 +105,14 @@ it('opens as a bottom sheet on phones with the same entries', () => {
 it('holds no money switch or entry: those live under Profile > Features and the main menu', () => {
   renderMenu({ route: '/' });
   expect(screen.queryByText(/money/i)).not.toBeInTheDocument();
+});
+
+it('puts the appearance buttons above message notifications', () => {
+  renderMenu();
+
+  const rows = screen.getAllByRole('menuitem').map((item) => item.textContent ?? '');
+  const appearance = rows.findIndex((text) => text.includes('Auto'));
+  const notifications = rows.findIndex((text) => text.includes('Message notifications'));
+  expect(appearance).toBeGreaterThan(-1);
+  expect(appearance).toBeLessThan(notifications);
 });

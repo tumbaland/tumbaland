@@ -106,7 +106,7 @@ export type {
   AuthHeaderTenantOption,
   AuthHeaderTenantSelectorProps
 } from './components/AuthHeader';
-export type { TenantOption, TenantSelectorProps, UseTenantResult } from './components/tenant';
+export type { TenantOption, TenantSelectorProps, UseTenantOptions, UseTenantResult } from './components/tenant';
 export type { UsageMeterProps, UseEntitlementsResult } from './components/UsageMeter';
 
 // Config provider factory

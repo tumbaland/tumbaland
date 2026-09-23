@@ -9,24 +9,13 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import MenuList from '@mui/material/MenuList';
 import Typography from '@mui/material/Typography';
-import ListSubheader from '@mui/material/ListSubheader';
-import { useColorScheme } from '@mui/material/styles';
 import LogoutIcon from '@mui/icons-material/Logout';
-import CheckIcon from '@mui/icons-material/Check';
-import BrightnessAutoOutlinedIcon from '@mui/icons-material/BrightnessAutoOutlined';
-import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
-import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
 import { getUserApps, isRouteActive } from '../config/apps';
 import { authService } from '../services/authService';
-import { ink, surface, type ColorMode } from '@tumbaland/frontend-core';
+import { ink, surface } from '@tumbaland/frontend-core';
 import { User } from '../types';
 import { NotificationSetting } from './NotificationSetting';
-
-const COLOR_MODES: { value: ColorMode; label: string; Icon: typeof LogoutIcon }[] = [
-  { value: 'system', label: 'Auto', Icon: BrightnessAutoOutlinedIcon },
-  { value: 'light', label: 'Light', Icon: LightModeOutlinedIcon },
-  { value: 'dark', label: 'Dark', Icon: DarkModeOutlinedIcon }
-];
+import { AppearanceSetting } from './AppearanceSetting';
 
 interface AccountMenuProps {
   user: User | null;
@@ -41,7 +30,6 @@ interface AccountMenuProps {
 export function AccountMenu({ user, anchorEl, currentRoute, mobile, onClose }: AccountMenuProps) {
   const navigate = useNavigate();
   const open = Boolean(anchorEl);
-  const { mode, setMode } = useColorScheme();
 
   // Head for the landing page first: logout() reloads the document on success,
   // and reloading a module route signed out only shows "Access Restricted".
@@ -91,33 +79,12 @@ export function AccountMenu({ user, anchorEl, currentRoute, mobile, onClose }: A
         </MenuItem>
       );
     }),
-    <Divider key="notifications-divider" />,
+    <Divider key="settings-divider" />,
+    <AppearanceSetting key="appearance" />,
     // A control the person operates, not a prompt on load: iOS refuses a
     // permission request without a user gesture, and Chrome holds
     // asking-on-load against the site.
     <NotificationSetting key="notifications" />,
-    <ListSubheader key="appearance" disableSticky sx={{ lineHeight: 2.5, bgcolor: 'transparent', color: ink.muted }}>
-      Appearance
-    </ListSubheader>,
-    // Menu items rather than the toggle group Profile uses: a menu moves focus
-    // only between its items and closes on Tab, so buttons inside one cannot
-    // be reached from the keyboard.
-    ...COLOR_MODES.map(({ value, label, Icon }) => (
-      <MenuItem
-        key={`mode-${value}`}
-        role="menuitemradio"
-        aria-checked={(mode ?? 'system') === value}
-        selected={(mode ?? 'system') === value}
-        onClick={() => setMode(value)}
-        sx={{ borderRadius: 2, mx: 0.5 }}
-      >
-        <ListItemIcon sx={{ color: 'inherit' }}>
-          <Icon fontSize="small" />
-        </ListItemIcon>
-        <ListItemText>{label}</ListItemText>
-        {(mode ?? 'system') === value && <CheckIcon fontSize="small" sx={{ color: 'primary.main' }} />}
-      </MenuItem>
-    )),
     <Divider key="sign-out-divider" />,
     <MenuItem key="sign-out" onClick={handleSignOut} sx={{ borderRadius: 2, mx: 0.5 }}>
       <ListItemIcon sx={{ color: 'inherit' }}>

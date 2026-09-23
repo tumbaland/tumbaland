@@ -70,7 +70,13 @@ export function createConfigProvider<TConfig extends { PUBLIC_API_URL?: string }
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+      // Also adopted here, not only in the initial state: two providers that
+      // mount in the same render (the shell's chat panel and its call layer)
+      // both start from null, and in dev the first effect fills globalConfig
+      // before the second runs. Returning without setting it left the second
+      // on its loader for good.
       if (globalConfig) {
+        setConfig(globalConfig);
         return;
       }
 

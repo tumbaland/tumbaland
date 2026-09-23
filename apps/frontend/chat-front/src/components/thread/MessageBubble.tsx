@@ -26,6 +26,8 @@ export interface MessageBubbleProps {
   showSender: boolean;
   /** The sender's picture, shown beside their name. */
   senderPicture?: string | null;
+  /** The sender's current name. Falls back to the one saved on the message. */
+  senderName?: string;
   onReact: (messageId: string, emoji: string) => void;
   onRetry: (clientId: string) => void;
   onPickEmoji: (messageId: string, anchor: HTMLElement) => void;
@@ -118,6 +120,7 @@ export function MessageBubble({
   mine,
   showSender,
   senderPicture,
+  senderName,
   onReact,
   onRetry,
   onPickEmoji,
@@ -165,9 +168,9 @@ export function MessageBubble({
     >
       {showSender && !mine && (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, ml: 0.5, mb: 0.5 }}>
-          <MemberAvatar name={message.senderName || message.senderEmail} picture={senderPicture} size={22} />
+          <MemberAvatar name={senderName || message.senderName || message.senderEmail} picture={senderPicture} size={22} />
           <Typography variant="caption" sx={{ color: ink.muted }}>
-            {message.senderName || message.senderEmail}
+            {senderName || message.senderName || message.senderEmail}
           </Typography>
         </Box>
       )}

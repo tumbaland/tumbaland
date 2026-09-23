@@ -5,6 +5,7 @@ import { UserPayload } from '../services/jwtService';
 import { clearSessionCookies, renewSession, startSession } from '../services/sessionService';
 import { User } from '../models/User';
 import { effectivePicture } from '../services/avatarService';
+import { effectiveName } from '../services/nameService';
 import { Session, SignInMethod } from '../models/Session';
 
 /**
@@ -45,7 +46,7 @@ const signIn = async (req: Request, res: Response, googleUser: GoogleIdentity, m
       },
       // Stored, not just put in the token, so a renewal can fall back to it
       // after someone removes a picture they uploaded.
-      $set: { lastLoginAt: new Date(), googlePicture: googleUser.picture ?? null }
+      $set: { lastLoginAt: new Date(), googlePicture: googleUser.picture ?? null, googleName: googleUser.name ?? null }
     },
     { new: true, upsert: true }
   );
@@ -58,7 +59,8 @@ const signIn = async (req: Request, res: Response, googleUser: GoogleIdentity, m
   const userPayload: UserPayload = {
     id: dbUser._id.toString(), // Use MongoDB _id instead of Google sub
     email: googleUser.email || '',
-    name: googleUser.name || '',
+    // The name they set on the account page wins, as the picture does.
+    name: effectiveName(dbUser) ?? googleUser.name ?? '',
     // One they uploaded wins over Google's, which would otherwise replace it
     // at every sign-in.
     picture: effectivePicture(dbUser),

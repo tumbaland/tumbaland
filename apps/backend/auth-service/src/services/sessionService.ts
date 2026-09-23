@@ -4,6 +4,7 @@ import { logger, UnauthorizedError } from '@tumbaland/backend-core';
 import { generateJWT, UserPayload } from './jwtService';
 import { deviceFamily } from './userAgent';
 import { effectivePicture } from './avatarService';
+import { effectiveName } from './nameService';
 import { IUser, User } from '../models/User';
 import { ISession, Session, SignInMethod } from '../models/Session';
 
@@ -241,15 +242,18 @@ export const renewSession = async (
     return claimsOf(user);
   }
 
-  // The picture is read fresh rather than copied from the old token, so one
-  // uploaded on another device reaches this one at its next renewal. Only on
-  // this path, which runs a few times an hour at most, not on every request.
-  const stored = await User.findById(user.id).select('picture googlePicture');
+  // The picture and name are read fresh rather than copied from the old token,
+  // so a change made on another device reaches this one at its next renewal.
+  // Only on this path, which runs a few times an hour at most, not on every request.
+  const stored = await User.findById(user.id).select('picture googlePicture firstName lastName googleName');
   return mintSessionToken(
     res,
     session,
     { id: user.id, email: user.email, tokenVersion: user.tokenVersion },
-    { name: user.name, picture: (stored && effectivePicture(stored)) ?? inheritedPicture(user.picture) }
+    {
+      name: (stored && effectiveName(stored)) ?? user.name,
+      picture: (stored && effectivePicture(stored)) ?? inheritedPicture(user.picture)
+    }
   );
 };
 
