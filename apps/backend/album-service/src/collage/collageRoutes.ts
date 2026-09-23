@@ -10,6 +10,8 @@ router.use(authenticateToken);
 
 router.post('/', validate(createCollageSchema), collageController.createCollage);
 router.put('/:id', validate(updateCollageSchema), collageController.updateCollage);
+// Live editing (changes, presence, moving, the stream) is in
+// collageLiveRoutes, mounted ahead of the general rate limiter.
 router.get('/:id', collageController.getCollageById);
 // GET /collages?albumId=... to filter by album
 router.get('/', collageController.getCollageList);

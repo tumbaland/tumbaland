@@ -15,6 +15,10 @@ vi.mock('@tumbaland/frontend-core', async (importOriginal) => {
   return { ...actual, useTenantFilter: () => undefined };
 });
 
+vi.mock('../services/collageService', () => ({
+  collageService: { applyChanges: vi.fn().mockResolvedValue({ revision: 2 }) }
+}));
+
 vi.mock('../hooks/useCollage', () => ({
   useCollageList: vi.fn(),
   useCollageMutations: vi.fn()
@@ -207,6 +211,34 @@ it('opens the edit-details modal from the card menu', async () => {
   await userEvent.click(screen.getByText('Edit details'));
 
   expect(screen.getByText('Edit Collage')).toBeInTheDocument();
+});
+
+it('saves edited details without the layout, and the subtitle as a small change', async () => {
+  const { collageService } = await import('../services/collageService');
+  mockedUseCollageList.mockReturnValue({
+    data: [makeCollage({ _id: 'c1', title: 'Summer trip' })],
+    isLoading: false,
+    isFetching: false,
+    error: null
+  });
+  mutations.updateCollage.mockResolvedValue(undefined);
+
+  renderPage();
+  const menuTrigger = screen.getAllByRole('button').find((b) => b.querySelector('[data-testid="MoreVertIcon"]'))!;
+  await userEvent.click(menuTrigger);
+  await userEvent.click(screen.getByText('Edit details'));
+  await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+  await waitFor(() => expect(mutations.updateCollage).toHaveBeenCalled());
+  const [, details] = mutations.updateCollage.mock.calls[0]!;
+  expect(details).toMatchObject({ title: 'Summer trip' });
+  expect(details).not.toHaveProperty('config');
+  expect(collageService.applyChanges).toHaveBeenCalledWith('c1', [
+    { type: 'settings', values: { title: { text: 'Summer trip', subtitle: expect.any(String) } } }
+  ]);
+  // The update refreshes the list, so it goes after the subtitle is in.
+  const applied = (collageService.applyChanges as unknown as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0]!;
+  expect(mutations.updateCollage.mock.invocationCallOrder[0]).toBeGreaterThan(applied);
 });
 
 it('deletes a collage via the card menu and confirmation dialog', async () => {

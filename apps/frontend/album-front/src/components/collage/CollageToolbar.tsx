@@ -1,7 +1,8 @@
 import React from 'react';
-import { Badge, Box, Button, Divider, IconButton, MenuItem, Paper, Select, Tooltip, Typography } from '@mui/material';
+import { Box, CircularProgress, Divider, IconButton, MenuItem, Paper, Select, Tooltip, Typography } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import SaveIcon from '@mui/icons-material/Save';
+import CloudDoneOutlinedIcon from '@mui/icons-material/CloudDoneOutlined';
+import CloudOffOutlinedIcon from '@mui/icons-material/CloudOffOutlined';
 import UndoIcon from '@mui/icons-material/Undo';
 import RedoIcon from '@mui/icons-material/Redo';
 import TextFieldsIcon from '@mui/icons-material/TextFields';
@@ -12,6 +13,8 @@ import TuneIcon from '@mui/icons-material/Tune';
 import FlipToFrontIcon from '@mui/icons-material/FlipToFront';
 import FlipToBackIcon from '@mui/icons-material/FlipToBack';
 import FilterFramesIcon from '@mui/icons-material/FilterFrames';
+import type { SaveStatus } from '../../hooks/useCollageSync';
+import { CollagePeopleFaces, CollagePerson } from './CollagePeople';
 
 interface ColorSwatchProps {
   label: string;
@@ -41,8 +44,9 @@ const ColorSwatch: React.FC<ColorSwatchProps> = ({ label, value, onChange }) => 
 
 interface CollageToolbarProps {
   title: string;
-  isDirty: boolean;
-  saving: boolean;
+  saveStatus: SaveStatus;
+  /** Others with the collage open right now. */
+  people?: CollagePerson[];
   canUndo: boolean;
   canRedo: boolean;
   background: string;
@@ -51,7 +55,6 @@ interface CollageToolbarProps {
   zoom: number;
   hasSelection: boolean;
   onBack: () => void;
-  onSave: () => void;
   onUndo: () => void;
   onRedo: () => void;
   onAddText: () => void;
@@ -67,8 +70,40 @@ interface CollageToolbarProps {
   onSendBackward: () => void;
 }
 
+/**
+ * Where the save stands. There is no Save button: every change is saved a
+ * moment after it is made, and this says whether that has happened.
+ */
+const SaveIndicator: React.FC<{ status: SaveStatus }> = ({ status }) => {
+  const label = status === 'saved' ? 'Saved' : status === 'saving' ? 'Saving…' : 'Not saved, retrying';
+  return (
+    <Box
+      role="status"
+      aria-live="polite"
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 0.5,
+        mr: 0.5,
+        fontSize: '0.8rem',
+        color: status === 'retrying' ? 'warning.main' : 'text.secondary',
+        whiteSpace: 'nowrap'
+      }}
+    >
+      {status === 'saving' ? (
+        <CircularProgress size={12} thickness={5} color="inherit" />
+      ) : status === 'saved' ? (
+        <CloudDoneOutlinedIcon sx={{ fontSize: 16 }} />
+      ) : (
+        <CloudOffOutlinedIcon sx={{ fontSize: 16 }} />
+      )}
+      {label}
+    </Box>
+  );
+};
+
 const CollageToolbar: React.FC<CollageToolbarProps> = (props) => {
-  const { title, isDirty, saving, canUndo, canRedo, background, frameColor, frameEnabled, zoom, hasSelection } = props;
+  const { title, saveStatus, canUndo, canRedo, background, frameColor, frameEnabled, zoom, hasSelection } = props;
 
   return (
     <Paper
@@ -102,12 +137,10 @@ const CollageToolbar: React.FC<CollageToolbarProps> = (props) => {
         }}
       >
         {title}
-        {isDirty && (
-          <Box component="span" sx={{ color: 'warning.main', ml: 0.5 }}>
-            •
-          </Box>
-        )}
       </Typography>
+
+      <SaveIndicator status={saveStatus} />
+      <CollagePeopleFaces people={props.people ?? []} />
 
       <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
 
@@ -200,18 +233,6 @@ const CollageToolbar: React.FC<CollageToolbarProps> = (props) => {
           <DownloadIcon fontSize="small" />
         </IconButton>
       </Tooltip>
-      <Badge color="warning" variant="dot" invisible={!isDirty} overlap="circular">
-        <Button
-          onClick={props.onSave}
-          size="small"
-          variant="contained"
-          startIcon={<SaveIcon fontSize="small" />}
-          disabled={saving || !isDirty}
-          sx={{ textTransform: 'none', fontWeight: 600 }}
-        >
-          {saving ? 'Saving…' : 'Save'}
-        </Button>
-      </Badge>
     </Paper>
   );
 };

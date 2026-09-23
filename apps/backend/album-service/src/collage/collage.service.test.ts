@@ -93,7 +93,7 @@ describe('collage.service', () => {
 
       const result = await updateCollage('c1', collageInput, OWNER);
 
-      expect(mockedFindByIdAndUpdate).toHaveBeenCalledWith('c1', collageInput, { new: true });
+      expect(mockedFindByIdAndUpdate).toHaveBeenCalledWith('c1', { ...collageInput, $inc: { revision: 1 } }, { new: true });
       expect(result).toBe(updated);
     });
   });

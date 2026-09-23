@@ -1,9 +1,10 @@
 import { CollageInput } from './collage.types';
 import { CollageModel, ICollage } from './collage.model';
+import { applyChanges, CollageChange, StoredConfig } from './collageChanges';
 import Album from '../models/Album';
 import { getSignedUrlsBatch } from '../services/fileServiceClient';
 import mongoose, { PipelineStage } from 'mongoose';
-import { canAccessResource, ForbiddenError, logger, NotFoundError } from '@tumbaland/backend-core';
+import { canAccessResource, ConflictError, ForbiddenError, logger, NotFoundError } from '@tumbaland/backend-core';
 
 interface AggregatedPhoto {
   _id: unknown;
@@ -93,8 +94,54 @@ export const updateCollage = async (
     throw new ForbiddenError('Access denied');
   }
 
-  const collage = await CollageModel.findByIdAndUpdate(id, data, { new: true });
+  // Counted as a write like any other, so a batch of changes read before
+  // this one is retried against it rather than stored over it.
+  const collage = await CollageModel.findByIdAndUpdate(id, { ...data, $inc: { revision: 1 } }, { new: true });
   return collage;
+};
+
+export type CollageChanges = CollageChange[];
+
+/** How many times a batch is re-applied when another write lands first. */
+const CHANGE_ATTEMPTS = 5;
+
+/**
+ * Apply a batch of small changes to a collage's config.
+ *
+ * Read, apply, and store only if the revision is still the one read. When the
+ * other person's batch got there first, this one is applied again on top of
+ * theirs: both land, and neither overwrites the other.
+ */
+export const applyCollageChanges = async (
+  id: string,
+  changes: CollageChange[],
+  userId: string,
+  userGroups: string[] = []
+): Promise<{ revision: number }> => {
+  for (let attempt = 0; attempt < CHANGE_ATTEMPTS; attempt += 1) {
+    const current = await CollageModel.findById(id).select('userId groupId config revision').lean();
+    if (!current) {
+      throw new NotFoundError('Collage not found');
+    }
+    if (!canAccessResource(userId, current.userId || '', current.groupId, userGroups, false)) {
+      throw new ForbiddenError('Access denied');
+    }
+
+    const config = applyChanges((current.config ?? {}) as unknown as StoredConfig, changes);
+    // Collages from before revisions existed have no field at all, and
+    // `{ revision: 0 }` would not match them.
+    const seen = typeof current.revision === 'number' ? current.revision : { $exists: false };
+
+    const stored = await CollageModel.findOneAndUpdate(
+      { _id: id, revision: seen },
+      { $set: { config }, $inc: { revision: 1 } },
+      { returnDocument: 'after', projection: { revision: 1 } }
+    ).lean();
+    if (stored) return { revision: stored.revision };
+  }
+
+  logger.warn('Collage changes kept losing the race', { collageId: id });
+  throw new ConflictError('The collage is being changed too quickly. Try again.');
 };
 
 export const getCollageById = async (

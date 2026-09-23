@@ -1,4 +1,4 @@
-import React, { CSSProperties, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { CSSProperties, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Box } from '@mui/material';
 import BrokenImageIcon from '@mui/icons-material/BrokenImage';
 import { CollageEditor } from '../../hooks/useCollageEditor';
@@ -13,6 +13,7 @@ import {
   photoHasFrame,
   sourceCrop
 } from './collageDoc';
+import { CollagePerson, FOLLOW_TRANSITION, RemoteSelections, StageMotion } from './CollagePeople';
 
 export interface ResolvedPhoto {
   src?: string;
@@ -32,6 +33,10 @@ interface CollageStageProps {
   zoom: number;
   onEditItem?: (id: string) => void;
   onDropPhoto?: (photoId: string, x: number, y: number) => void;
+  /** Other people with the collage open; what they have selected is outlined. */
+  people?: CollagePerson[];
+  /** Items other people are moving right now, drawn where they have them. */
+  motions?: StageMotion[];
 }
 
 type GestureMode = 'move' | 'resize' | 'rotate';
@@ -91,9 +96,11 @@ const StagePhoto: React.FC<{
   resolved?: ResolvedPhoto;
   selected: boolean;
   readOnly: boolean;
+  /** Someone else is moving it: ease between their reported positions. */
+  followed?: boolean;
   onPointerDown: (e: React.PointerEvent, id: string) => void;
   onDoubleClick?: () => void;
-}> = ({ doc, photo, resolved, selected, readOnly, onPointerDown, onDoubleClick }) => {
+}> = ({ doc, photo, resolved, selected, readOnly, followed, onPointerDown, onDoubleClick }) => {
   const framed = photoHasFrame(doc, photo);
   const src = resolved?.src || resolved?.thumbSrc;
   const inset = framed ? FRAME_PADDING * 2 : 0;
@@ -116,7 +123,8 @@ const StagePhoto: React.FC<{
         userSelect: 'none',
         touchAction: 'none',
         outline: selected ? '2px solid #6366f1' : 'none',
-        outlineOffset: '2px'
+        outlineOffset: '2px',
+        transition: followed ? FOLLOW_TRANSITION : undefined
       }}
       onPointerDown={readOnly ? undefined : (e) => onPointerDown(e, photo.id)}
       onDoubleClick={readOnly ? undefined : onDoubleClick}
@@ -189,9 +197,10 @@ const StageText: React.FC<{
   text: CollageTextItem;
   selected: boolean;
   readOnly: boolean;
+  followed?: boolean;
   onPointerDown: (e: React.PointerEvent, id: string) => void;
   onDoubleClick?: () => void;
-}> = ({ text, selected, readOnly, onPointerDown, onDoubleClick }) => (
+}> = ({ text, selected, readOnly, followed, onPointerDown, onDoubleClick }) => (
   <Box
     data-item-id={text.id}
     sx={{
@@ -208,7 +217,8 @@ const StageText: React.FC<{
       touchAction: 'none',
       outline: selected ? '2px solid #6366f1' : readOnly ? 'none' : '1px dashed rgba(128,128,128,0.4)',
       outlineOffset: '2px',
-      borderRadius: '4px'
+      borderRadius: '4px',
+      transition: followed ? FOLLOW_TRANSITION : undefined
     }}
     onPointerDown={readOnly ? undefined : (e) => onPointerDown(e, text.id)}
     onDoubleClick={readOnly ? undefined : onDoubleClick}
@@ -301,9 +311,40 @@ const CollageStage: React.FC<CollageStageProps> = ({
   readOnly,
   zoom,
   onEditItem,
-  onDropPhoto
+  onDropPhoto,
+  people,
+  motions
 }) => {
-  const { doc, selectedId, selectedItem } = editor;
+  const { doc, selectedId, selectedItem, gestureActive } = editor;
+
+  // Where other people have the items they are moving. Your own drag of the
+  // same item wins on your screen: you are the one holding it.
+  const followed = useMemo(() => {
+    const at = new Map<string, StageMotion['item']>();
+    for (const motion of motions ?? []) {
+      if (gestureActive && motion.item.id === selectedId) continue;
+      at.set(motion.item.id, motion.item);
+    }
+    return at;
+  }, [motions, gestureActive, selectedId]);
+
+  /** The collage as drawn: moving items where their movers have them. */
+  const shown = useMemo(() => {
+    if (!doc || followed.size === 0) return doc;
+    const follow = <T extends { id: string; x: number; y: number; width: number; height: number }>(item: T): T => {
+      const at = followed.get(item.id);
+      if (!at) return item;
+      return {
+        ...item,
+        x: at.x,
+        y: at.y,
+        width: at.width,
+        height: at.height,
+        ...('rotation' in item && at.rotation !== undefined ? { rotation: at.rotation } : {})
+      };
+    };
+    return { ...doc, photos: doc.photos.map(follow), texts: doc.texts.map(follow) };
+  }, [doc, followed]);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const gestureRef = useRef<Gesture | null>(null);
@@ -491,7 +532,7 @@ const CollageStage: React.FC<CollageStageProps> = ({
               bgcolor: doc.background
             }}
           >
-            {doc.photos.map((photo) => (
+            {shown!.photos.map((photo) => (
               <StagePhoto
                 key={photo.id}
                 doc={doc}
@@ -499,16 +540,18 @@ const CollageStage: React.FC<CollageStageProps> = ({
                 resolved={resolvePhoto(photo.photoId)}
                 selected={!readOnly && selectedId === photo.id}
                 readOnly={readOnly}
+                followed={followed.has(photo.id)}
                 onPointerDown={handleItemPointerDown}
                 onDoubleClick={() => onEditItem?.(photo.id)}
               />
             ))}
-            {doc.texts.map((text) => (
+            {shown!.texts.map((text) => (
               <StageText
                 key={text.id}
                 text={text}
                 selected={!readOnly && selectedId === text.id}
                 readOnly={readOnly}
+                followed={followed.has(text.id)}
                 onPointerDown={handleItemPointerDown}
                 onDoubleClick={() => onEditItem?.(text.id)}
               />
@@ -541,6 +584,9 @@ const CollageStage: React.FC<CollageStageProps> = ({
                   pointerEvents: 'none'
                 }}
               />
+            )}
+            {people && people.length > 0 && (
+              <RemoteSelections doc={shown!} people={people} motions={motions} scale={scale} />
             )}
             {!readOnly && selectedItem && (
               <SelectionHandles

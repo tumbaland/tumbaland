@@ -72,7 +72,7 @@ it('prefills title, subtitle, and selected albums from initialData', () => {
   expect(screen.getByDisplayValue('Original subtitle')).toBeInTheDocument();
 });
 
-it('saves the updated title/subtitle/albums, preserving ownerId and merging the tenant groupId', async () => {
+it('saves the title, subtitle and albums with the tenant groupId, and never the layout', async () => {
   mockUseTenantFilter.mockReturnValue('group-1');
   const onSave = vi.fn().mockResolvedValue(undefined);
   const onClose = vi.fn();
@@ -84,15 +84,14 @@ it('saves the updated title/subtitle/albums, preserving ownerId and merging the 
   await userEvent.click(screen.getByRole('button', { name: 'Save' }));
 
   await waitFor(() => expect(onSave).toHaveBeenCalled());
-  expect(onSave).toHaveBeenCalledWith(
-    expect.objectContaining({
-      title: 'New title',
-      ownerId: 'user-1',
-      albumIds: ['album-1'],
-      groupId: 'group-1',
-      config: expect.objectContaining({ title: { text: 'New title', subtitle: 'Original subtitle' } })
-    })
-  );
+  // No config: someone may be editing the layout right now, and this
+  // dialog's copy of it could be minutes old.
+  expect(onSave).toHaveBeenCalledWith({
+    title: 'New title',
+    subtitle: 'Original subtitle',
+    albumIds: ['album-1'],
+    groupId: 'group-1'
+  });
   expect(onClose).toHaveBeenCalledTimes(1);
 });
 

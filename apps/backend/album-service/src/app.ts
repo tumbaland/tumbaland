@@ -7,6 +7,7 @@ import collageRoutes from './collage/collageRoutes';
 import internalRoutes from './routes/internalRoutes';
 import { healthCheck } from './controllers/healthController';
 import { errorHandler, createBaseApp, metricsHandler, standardRateLimiter } from '@tumbaland/backend-core';
+import collageLiveRoutes from './collage/collageLiveRoutes';
 
 // The rate limiter is mounted by hand below rather than by createBaseApp, so
 // /internal can be registered, and therefore exempted, ahead of it. chat-service
@@ -16,6 +17,11 @@ import { errorHandler, createBaseApp, metricsHandler, standardRateLimiter } from
 const app = createBaseApp({ rateLimiter: false });
 
 app.use('/internal', internalRoutes);
+
+// Live collage editing has budgets of its own (see collageLiveRoutes), so it is
+// registered ahead of the general limiter. It authenticates and checks access
+// to the collage like any other request.
+app.use('/api/collages', collageLiveRoutes);
 
 app.use(standardRateLimiter);
 

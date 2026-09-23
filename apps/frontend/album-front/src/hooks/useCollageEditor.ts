@@ -7,22 +7,24 @@ import {
   DEFAULT_TEXT_SIZE,
   newItemId
 } from '../components/collage/collageDoc';
+import { applyDocChange, diffDocs, DocChange, rebase } from '../components/collage/collageChanges';
 
 /**
  * Editor state with undo/redo. Continuous gestures (drag/resize/rotate)
- * update the doc without touching history; the pre-gesture doc is pushed
- * as a single undo step when the gesture ends.
+ * update the doc without touching history; what the whole gesture changed is
+ * recorded as a single undo step when it ends.
+ *
+ * History holds changes, not copies of the collage: undo reverses what this
+ * editor did to the items it touched and leaves everything else as it is now.
  */
 
 const HISTORY_LIMIT = 100;
 
 interface EditorState {
   doc: CollageDoc | null;
-  past: CollageDoc[];
-  future: CollageDoc[];
-  /** doc as of last save/load; reference equality marks the clean state */
-  savedDoc: CollageDoc | null;
-  /** snapshot taken when a gesture starts, pushed to past on gesture end */
+  past: DocChange[];
+  future: DocChange[];
+  /** snapshot taken when a gesture starts, diffed against the doc when it ends */
   gestureBase: CollageDoc | null;
   selectedId: string | null;
 }
@@ -37,10 +39,14 @@ type Action =
   | { type: 'gestureEnd' }
   | { type: 'undo' }
   | { type: 'redo' }
-  | { type: 'markSaved' }
-  | { type: 'select'; id: string | null };
+  | { type: 'select'; id: string | null }
+  | { type: 'rebase'; base: CollageDoc; incoming: CollageDoc };
 
-const pushPast = (past: CollageDoc[], doc: CollageDoc): CollageDoc[] => [...past, doc].slice(-HISTORY_LIMIT);
+const pushPast = (past: DocChange[], change: DocChange): DocChange[] => [...past, change].slice(-HISTORY_LIMIT);
+
+/** The selection, unless the item it names is gone. */
+const stillThere = (doc: CollageDoc, id: string | null): string | null =>
+  id && (doc.photos.some((p) => p.id === id) || doc.texts.some((t) => t.id === id)) ? id : null;
 
 const reducer = (state: EditorState, action: Action): EditorState => {
   switch (action.type) {
@@ -49,19 +55,19 @@ const reducer = (state: EditorState, action: Action): EditorState => {
         doc: action.doc,
         past: [],
         future: [],
-        savedDoc: action.doc,
         gestureBase: null,
         selectedId: null
       };
     case 'commit': {
       if (!state.doc) return state;
       const next = action.updater(state.doc);
-      if (next === state.doc && action.select === undefined) return state;
+      const change = diffDocs(state.doc, next);
+      if (!change && action.select === undefined) return state;
       return {
         ...state,
-        doc: next,
-        past: next === state.doc ? state.past : pushPast(state.past, state.doc),
-        future: next === state.doc ? state.future : [],
+        doc: change ? next : state.doc,
+        past: change ? pushPast(state.past, change) : state.past,
+        future: change ? [] : state.future,
         selectedId: action.select !== undefined ? action.select : state.selectedId
       };
     }
@@ -73,39 +79,54 @@ const reducer = (state: EditorState, action: Action): EditorState => {
       return { ...state, doc: action.updater(state.doc) };
     }
     case 'gestureEnd': {
-      if (!state.gestureBase) return state;
-      if (state.gestureBase === state.doc) return { ...state, gestureBase: null };
+      if (!state.gestureBase || !state.doc) return state;
+      const change = diffDocs(state.gestureBase, state.doc);
+      if (!change) return { ...state, gestureBase: null };
       return {
         ...state,
         gestureBase: null,
-        past: pushPast(state.past, state.gestureBase),
+        past: pushPast(state.past, change),
         future: []
       };
     }
     case 'undo': {
       if (!state.doc || state.past.length === 0) return state;
-      const prev = state.past[state.past.length - 1];
+      const change = state.past[state.past.length - 1];
+      const doc = applyDocChange(state.doc, change, 'back');
       return {
         ...state,
-        doc: prev,
+        doc,
         past: state.past.slice(0, -1),
-        future: [state.doc, ...state.future]
+        future: [change, ...state.future],
+        selectedId: stillThere(doc, state.selectedId)
       };
     }
     case 'redo': {
       if (!state.doc || state.future.length === 0) return state;
-      const [next, ...rest] = state.future;
+      const [change, ...rest] = state.future;
+      const doc = applyDocChange(state.doc, change, 'forward');
       return {
         ...state,
-        doc: next,
-        past: pushPast(state.past, state.doc),
-        future: rest
+        doc,
+        past: pushPast(state.past, change),
+        future: rest,
+        selectedId: stillThere(doc, state.selectedId)
       };
     }
-    case 'markSaved':
-      return { ...state, savedDoc: state.doc };
     case 'select':
       return state.selectedId === action.id ? state : { ...state, selectedId: action.id };
+    case 'rebase': {
+      // Someone else's saved changes, under this editor's own unsaved ones.
+      // Not an undo step: undo is for what you did.
+      if (!state.doc) return state;
+      const doc = rebase(state.doc, action.base, action.incoming);
+      return {
+        ...state,
+        doc,
+        gestureBase: state.gestureBase ? rebase(state.gestureBase, action.base, action.incoming) : null,
+        selectedId: stillThere(doc, state.selectedId)
+      };
+    }
     default:
       return state;
   }
@@ -115,7 +136,6 @@ const initialState: EditorState = {
   doc: null,
   past: [],
   future: [],
-  savedDoc: null,
   gestureBase: null,
   selectedId: null
 };
@@ -143,8 +163,12 @@ export const useCollageEditor = () => {
   const init = useCallback((newDoc: CollageDoc) => dispatch({ type: 'init', doc: newDoc }), []);
   const undo = useCallback(() => dispatch({ type: 'undo' }), []);
   const redo = useCallback(() => dispatch({ type: 'redo' }), []);
-  const markSaved = useCallback(() => dispatch({ type: 'markSaved' }), []);
   const select = useCallback((id: string | null) => dispatch({ type: 'select', id }), []);
+  /** Brings in a newer saved copy (`incoming`, built from `base`), keeping local edits on top. */
+  const applyIncoming = useCallback(
+    (base: CollageDoc, incoming: CollageDoc) => dispatch({ type: 'rebase', base, incoming }),
+    []
+  );
 
   const commit = useCallback(
     (updater: (d: CollageDoc) => CollageDoc, select?: string | null) => dispatch({ type: 'commit', updater, select }),
@@ -257,12 +281,13 @@ export const useCollageEditor = () => {
     selectedItem,
     canUndo: state.past.length > 0,
     canRedo: state.future.length > 0,
-    isDirty: state.doc !== null && state.doc !== state.savedDoc,
+    /** True while a drag, resize or rotate is under way. Autosave waits for it to end. */
+    gestureActive: state.gestureBase !== null,
     init,
     undo,
     redo,
-    markSaved,
     select,
+    applyIncoming,
     patchDoc,
     patchItem,
     addPhoto,

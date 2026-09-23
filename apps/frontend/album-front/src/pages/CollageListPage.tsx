@@ -17,6 +17,7 @@ import { useCollageList, useCollageMutations } from '../hooks/useCollage';
 import { Collage, CollageInput } from '../types/collage';
 import { CollageCreateModal } from '../components/collage/CollageCreateModal';
 import { CollageEditModal } from '../components/collage/CollageEditModal';
+import { collageService } from '../services/collageService';
 import ConfirmDialog from '../components/ConfirmDialog';
 import CollageCard from '../components/collage/CollageCard';
 import { gradient } from '@tumbaland/frontend-core';
@@ -231,9 +232,16 @@ const CollageListPage: React.FC = () => {
             setSelectedCollage(null);
           }}
           initialData={selectedCollage}
-          onSave={async (data) => {
+          onSave={async ({ subtitle, ...details }) => {
             if (selectedCollage) {
-              await updateCollage(selectedCollage._id, data);
+              // The subtitle as a change to the config, the details as a plain
+              // update: sending the whole config from here would overwrite
+              // anything someone is doing in the editor. The update goes last
+              // because it is what refreshes the list, which should see both.
+              await collageService.applyChanges(selectedCollage._id, [
+                { type: 'settings', values: { title: { text: details.title, subtitle } } }
+              ]);
+              await updateCollage(selectedCollage._id, details);
               setEditModalOpen(false);
               setSelectedCollage(null);
             }

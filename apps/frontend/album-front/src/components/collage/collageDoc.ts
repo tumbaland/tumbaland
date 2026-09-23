@@ -1,4 +1,4 @@
-import { CollageConfig } from '../../types/collage';
+import { CollageConfig, CollageConfigPhoto, CollageTextBox } from '../../types/collage';
 
 /**
  * Normalized, editor-friendly representation of a collage.
@@ -156,6 +156,40 @@ export const rotateCropClockwise = (crop: CollageCrop | undefined, turns: number
 export const sourceCrop = (photo: Pick<CollagePhotoItem, 'crop' | 'orientation'>): CollageCrop | undefined =>
   rotateCropClockwise(photo.crop, -orientationTurns(photo.orientation));
 
+/** One stored photo, as the editor holds it. Accepts v1 and v2 shapes. */
+export const normalizePhoto = (p: CollageConfigPhoto): CollagePhotoItem => {
+  // v1 kept the photo id in `photoId`, some very old configs only in `filename`
+  const photoId = p.photoId || p.filename || '';
+  // v1 stored transparency, not frames: transparent === no frame
+  let frame: boolean | undefined;
+  if (typeof p.frame === 'boolean') frame = p.frame;
+  else if (typeof p.transparentBackground === 'boolean') frame = !p.transparentBackground;
+  return {
+    id: typeof p.id === 'string' && p.id ? p.id : newItemId(),
+    photoId,
+    x: toNumber(p.x ?? p.position?.left, 100),
+    y: toNumber(p.y ?? p.position?.top, 100),
+    width: toNumber(p.width, 120),
+    height: toNumber(p.height, 120),
+    rotation: toNumber(p.rotation, 0),
+    orientation: normalizeOrientation(p.orientation),
+    caption: typeof p.caption === 'string' ? p.caption : '',
+    frame,
+    crop: normalizeCrop(p.crop)
+  };
+};
+
+export const normalizeText = (t: CollageTextBox): CollageTextItem => ({
+  id: typeof t.id === 'string' && t.id ? t.id : newItemId(),
+  text: typeof t.text === 'string' ? t.text : '',
+  x: toNumber(t.x, 100),
+  y: toNumber(t.y, 100),
+  width: toNumber(t.width, 180),
+  height: toNumber(t.height, 48),
+  fontSize: toNumber(t.fontSize, DEFAULT_TEXT_SIZE),
+  color: typeof t.color === 'string' ? t.color : DEFAULT_TEXT_COLOR
+});
+
 export const normalizeCollageConfig = (config?: CollageConfig | null): CollageDoc => {
   const cfg: Partial<CollageConfig> = config ?? {};
 
@@ -164,42 +198,8 @@ export const normalizeCollageConfig = (config?: CollageConfig | null): CollageDo
     height: toNumber(cfg.viewport?.height, DEFAULT_CANVAS.height)
   };
 
-  const photos: CollagePhotoItem[] = Array.isArray(cfg.photos)
-    ? cfg.photos.map((p): CollagePhotoItem => {
-        // v1 kept the photo id in `photoId`, some very old configs only in `filename`
-        const photoId = p.photoId || p.filename || '';
-        // v1 stored transparency, not frames: transparent === no frame
-        let frame: boolean | undefined;
-        if (typeof p.frame === 'boolean') frame = p.frame;
-        else if (typeof p.transparentBackground === 'boolean') frame = !p.transparentBackground;
-        return {
-          id: typeof p.id === 'string' && p.id ? p.id : newItemId(),
-          photoId,
-          x: toNumber(p.x ?? p.position?.left, 100),
-          y: toNumber(p.y ?? p.position?.top, 100),
-          width: toNumber(p.width, 120),
-          height: toNumber(p.height, 120),
-          rotation: toNumber(p.rotation, 0),
-          orientation: normalizeOrientation(p.orientation),
-          caption: typeof p.caption === 'string' ? p.caption : '',
-          frame,
-          crop: normalizeCrop(p.crop)
-        };
-      })
-    : [];
-
-  const texts: CollageTextItem[] = Array.isArray(cfg.texts)
-    ? cfg.texts.map((t): CollageTextItem => ({
-        id: typeof t.id === 'string' && t.id ? t.id : newItemId(),
-        text: typeof t.text === 'string' ? t.text : '',
-        x: toNumber(t.x, 100),
-        y: toNumber(t.y, 100),
-        width: toNumber(t.width, 180),
-        height: toNumber(t.height, 48),
-        fontSize: toNumber(t.fontSize, DEFAULT_TEXT_SIZE),
-        color: typeof t.color === 'string' ? t.color : DEFAULT_TEXT_COLOR
-      }))
-    : [];
+  const photos: CollagePhotoItem[] = Array.isArray(cfg.photos) ? cfg.photos.map(normalizePhoto) : [];
+  const texts: CollageTextItem[] = Array.isArray(cfg.texts) ? cfg.texts.map(normalizeText) : [];
 
   return {
     canvas,
@@ -212,43 +212,53 @@ export const normalizeCollageConfig = (config?: CollageConfig | null): CollageDo
   };
 };
 
+/** One photo as it is stored. Legacy keys are written too, for older readers. */
+export const serializePhoto = (p: CollagePhotoItem, frameEnabled: boolean): CollageConfigPhoto => ({
+  id: p.id,
+  photoId: p.photoId,
+  filename: p.photoId, // legacy readers used filename as the photo reference
+  caption: p.caption,
+  x: p.x,
+  y: p.y,
+  position: { left: p.x, top: p.y },
+  width: p.width,
+  height: p.height,
+  rotation: p.rotation,
+  orientation: p.orientation,
+  crop: p.crop,
+  frame: p.frame,
+  frameVisible: p.frame ?? frameEnabled,
+  transparentBackground: p.frame === undefined ? undefined : !p.frame
+});
+
+export const serializeText = (t: CollageTextItem): CollageTextBox => ({
+  id: t.id,
+  text: t.text,
+  x: t.x,
+  y: t.y,
+  width: t.width,
+  height: t.height,
+  fontSize: t.fontSize,
+  color: t.color
+});
+
+/** The collage-wide settings, under the config keys they are stored as. */
+export const serializeSettings = (doc: Pick<CollageDoc, 'canvas' | 'background' | 'frameColor' | 'frameEnabled'>) => ({
+  viewport: { width: doc.canvas.width, height: doc.canvas.height },
+  backgroundColor: doc.background,
+  borderColor: doc.frameColor,
+  photoTransparencyMode: !doc.frameEnabled
+});
+
 export const serializeCollageDoc = (doc: CollageDoc, existingConfig?: CollageConfig | null): CollageConfig => {
   return {
     ...(existingConfig ?? {}),
     version: '2.0',
     date: existingConfig?.date ?? new Date().toISOString(),
     theme: existingConfig?.theme ?? 'default',
-    viewport: { width: doc.canvas.width, height: doc.canvas.height },
-    backgroundColor: doc.background,
-    borderColor: doc.frameColor,
-    photoTransparencyMode: !doc.frameEnabled,
-    photos: doc.photos.map((p) => ({
-      id: p.id,
-      photoId: p.photoId,
-      filename: p.photoId, // legacy readers used filename as the photo reference
-      caption: p.caption,
-      x: p.x,
-      y: p.y,
-      position: { left: p.x, top: p.y },
-      width: p.width,
-      height: p.height,
-      rotation: p.rotation,
-      orientation: p.orientation,
-      crop: p.crop,
-      frame: p.frame,
-      frameVisible: p.frame ?? doc.frameEnabled,
-      transparentBackground: p.frame === undefined ? undefined : !p.frame
-    })),
-    texts: doc.texts.map((t) => ({
-      id: t.id,
-      text: t.text,
-      x: t.x,
-      y: t.y,
-      width: t.width,
-      height: t.height,
-      fontSize: t.fontSize,
-      color: t.color
-    }))
+    ...serializeSettings(doc),
+    photos: doc.photos.map((p) => serializePhoto(p, doc.frameEnabled)),
+    texts: doc.texts.map(serializeText)
   } as CollageConfig;
 };
 

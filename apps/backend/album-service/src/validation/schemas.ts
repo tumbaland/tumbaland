@@ -131,3 +131,61 @@ export const updateCollageSchema = z.object({
   albumIds: z.array(z.string()).optional(),
   groupId: z.string().optional()
 });
+
+const collageLayer = z.enum(['photos', 'texts']);
+const collageItemId = z.string().min(1).max(100);
+
+/** One autosave batch. See collage/collageChanges.ts for what each change does. */
+export const collageChangesSchema = z.object({
+  changes: z
+    .array(
+      z.discriminatedUnion('type', [
+        z.object({
+          type: z.literal('put'),
+          layer: collageLayer,
+          item: z.object({ id: collageItemId }).catchall(z.unknown()),
+          index: z.number().int().min(0).optional()
+        }),
+        z.object({ type: z.literal('remove'), layer: collageLayer, id: collageItemId }),
+        z.object({ type: z.literal('order'), layer: collageLayer, ids: z.array(collageItemId).max(1000) }),
+        z.object({
+          type: z.literal('settings'),
+          values: z
+            .object({
+              viewport: z.object({ width: z.number().positive(), height: z.number().positive() }),
+              backgroundColor: z.string().max(100),
+              borderColor: z.string().max(100),
+              photoTransparencyMode: z.boolean(),
+              /** The heading and subtitle shown with the collage. */
+              title: z.object({ text: z.string().max(200), subtitle: z.string().max(500) }).partial()
+            })
+            .partial()
+            .strict()
+        })
+      ])
+    )
+    .min(1)
+    .max(1000),
+  /** The tab sending this, so its own change is not echoed back to it. */
+  session: z.string().max(64).optional()
+});
+
+/** Where an item is mid-gesture, or null once it is let go. */
+export const collageMovingSchema = z.object({
+  session: z.string().min(8).max(64),
+  item: z
+    .object({
+      id: z.string().min(1).max(100),
+      x: z.number(),
+      y: z.number(),
+      width: z.number().positive(),
+      height: z.number().positive(),
+      rotation: z.number().optional()
+    })
+    .nullable()
+});
+
+export const collagePresenceSchema = z.object({
+  session: z.string().min(8).max(64),
+  selection: z.string().max(100).nullable()
+});

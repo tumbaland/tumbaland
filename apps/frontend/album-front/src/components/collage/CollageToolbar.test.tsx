@@ -6,8 +6,7 @@ import CollageToolbar from './CollageToolbar';
 function baseProps() {
   return {
     title: 'My collage',
-    isDirty: false,
-    saving: false,
+    saveStatus: 'saved' as const,
     canUndo: false,
     canRedo: false,
     background: '#111111',
@@ -16,7 +15,6 @@ function baseProps() {
     zoom: 1,
     hasSelection: false,
     onBack: vi.fn(),
-    onSave: vi.fn(),
     onUndo: vi.fn(),
     onRedo: vi.fn(),
     onAddText: vi.fn(),
@@ -33,25 +31,22 @@ function baseProps() {
   };
 }
 
-it('shows the title without a dirty marker when not dirty, and disables Save', () => {
+it('shows the title and that everything is saved, with no Save button', () => {
   render(<CollageToolbar {...baseProps()} />);
 
   expect(screen.getByText('My collage')).toBeInTheDocument();
-  expect(screen.queryByText('•')).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /^save$/i })).toBeDisabled();
+  expect(screen.getByRole('status')).toHaveTextContent('Saved');
+  expect(screen.queryByRole('button', { name: /^save$/i })).not.toBeInTheDocument();
 });
 
-it('shows a dirty marker and enables Save when isDirty', () => {
-  render(<CollageToolbar {...baseProps()} isDirty />);
-
-  expect(screen.getByText('•')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /^save$/i })).toBeEnabled();
+it('says when a change is being saved', () => {
+  render(<CollageToolbar {...baseProps()} saveStatus="saving" />);
+  expect(screen.getByRole('status')).toHaveTextContent('Saving…');
 });
 
-it('shows "Saving…" and disables Save while saving', () => {
-  render(<CollageToolbar {...baseProps()} isDirty saving />);
-
-  expect(screen.getByRole('button', { name: /saving/i })).toBeDisabled();
+it('says plainly when a save failed and is being retried', () => {
+  render(<CollageToolbar {...baseProps()} saveStatus="retrying" />);
+  expect(screen.getByRole('status')).toHaveTextContent('Not saved, retrying');
 });
 
 it('disables Undo/Redo based on canUndo/canRedo', () => {
@@ -66,9 +61,9 @@ it('disables Undo/Redo based on canUndo/canRedo', () => {
   expect(container.querySelector('[data-testid="RedoIcon"]')!.closest('button')).toBeEnabled();
 });
 
-it('calls onBack, onUndo, onRedo, onAddText, onPreview, onExport, and onSave', async () => {
+it('calls onBack, onUndo, onRedo, onAddText, onPreview and onExport', async () => {
   const props = baseProps();
-  const { container } = render(<CollageToolbar {...props} isDirty canUndo canRedo />);
+  const { container } = render(<CollageToolbar {...props} canUndo canRedo />);
 
   await userEvent.click(screen.getByRole('button', { name: /back to collages/i }));
   expect(props.onBack).toHaveBeenCalledTimes(1);
@@ -90,9 +85,6 @@ it('calls onBack, onUndo, onRedo, onAddText, onPreview, onExport, and onSave', a
 
   await userEvent.click(screen.getByRole('button', { name: /download as png/i }));
   expect(props.onExport).toHaveBeenCalledTimes(1);
-
-  await userEvent.click(screen.getByRole('button', { name: /^save$/i }));
-  expect(props.onSave).toHaveBeenCalledTimes(1);
 });
 
 it('toggles frame-enabled via the frame icon button', async () => {

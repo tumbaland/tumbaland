@@ -17,22 +17,20 @@ it('starts with no doc and a clean, non-undoable state', () => {
   expect(result.current.doc).toBeNull();
   expect(result.current.canUndo).toBe(false);
   expect(result.current.canRedo).toBe(false);
-  expect(result.current.isDirty).toBe(false);
   expect(result.current.selectedItem).toBeNull();
 });
 
-it('init loads a doc as the clean/saved baseline', () => {
+it('init loads a doc with no history', () => {
   const { result } = renderHook(() => useCollageEditor());
 
   act(() => result.current.init(emptyDoc));
 
   expect(result.current.doc).toBe(emptyDoc);
-  expect(result.current.isDirty).toBe(false);
   expect(result.current.canUndo).toBe(false);
 });
 
 describe('addPhoto / addText / removeItem', () => {
-  it('addPhoto appends a photo item, selects it, and marks the doc dirty', () => {
+  it('addPhoto appends a photo item, selects it, and makes it undoable', () => {
     const { result } = renderHook(() => useCollageEditor());
     act(() => result.current.init(emptyDoc));
 
@@ -53,7 +51,6 @@ describe('addPhoto / addText / removeItem', () => {
     expect(result.current.doc?.photos[0]).toMatchObject({ id: newId, photoId: 'photo-1' });
     expect(result.current.selectedId).toBe(newId);
     expect(result.current.selectedItem).toMatchObject({ kind: 'photo', item: { id: newId } });
-    expect(result.current.isDirty).toBe(true);
     expect(result.current.canUndo).toBe(true);
   });
 
@@ -300,18 +297,68 @@ describe('gestures', () => {
   });
 });
 
-describe('markSaved / select', () => {
-  it('markSaved clears the dirty flag at the current doc', () => {
+describe('undo only reverses what it recorded', () => {
+  const photo = (photoId: string) => ({ photoId, x: 0, y: 0, width: 10, height: 10, rotation: 0, caption: '' });
+
+  it('puts a deleted photo back at the same depth', () => {
     const { result } = renderHook(() => useCollageEditor());
     act(() => result.current.init(emptyDoc));
-    act(() => result.current.patchDoc({ background: '#222222' }));
-    expect(result.current.isDirty).toBe(true);
+    const ids: string[] = [];
+    act(() => {
+      ids.push(result.current.addPhoto(photo('a')));
+      ids.push(result.current.addPhoto(photo('b')));
+      ids.push(result.current.addPhoto(photo('c')));
+    });
 
-    act(() => result.current.markSaved());
+    act(() => result.current.removeItem(ids[1]));
+    act(() => result.current.undo());
 
-    expect(result.current.isDirty).toBe(false);
+    expect(result.current.doc?.photos.map((p) => p.photoId)).toEqual(['a', 'b', 'c']);
   });
 
+  it('leaves a later change to another photo alone', () => {
+    const { result } = renderHook(() => useCollageEditor());
+    act(() => result.current.init(emptyDoc));
+    const ids: string[] = [];
+    act(() => {
+      ids.push(result.current.addPhoto(photo('a')));
+      ids.push(result.current.addPhoto(photo('b')));
+    });
+    act(() => result.current.patchItem(ids[0], { x: 50 }));
+    act(() => result.current.patchItem(ids[1], { x: 70 }));
+
+    // Undo the move of "b", then of "a": each only touches its own photo.
+    act(() => result.current.undo());
+    expect(result.current.doc?.photos.map((p) => p.x)).toEqual([50, 0]);
+    act(() => result.current.undo());
+    expect(result.current.doc?.photos.map((p) => p.x)).toEqual([0, 0]);
+  });
+
+  it('drops the selection when undo takes the selected photo away', () => {
+    const { result } = renderHook(() => useCollageEditor());
+    act(() => result.current.init(emptyDoc));
+    act(() => {
+      result.current.addPhoto(photo('a'));
+    });
+    expect(result.current.selectedId).not.toBeNull();
+
+    act(() => result.current.undo());
+
+    expect(result.current.selectedId).toBeNull();
+  });
+
+  it('says when a gesture is under way, for autosave to wait on', () => {
+    const { result } = renderHook(() => useCollageEditor());
+    act(() => result.current.init(emptyDoc));
+
+    act(() => result.current.beginGesture());
+    expect(result.current.gestureActive).toBe(true);
+    act(() => result.current.endGesture());
+    expect(result.current.gestureActive).toBe(false);
+  });
+});
+
+describe('select', () => {
   it('select sets and clears the selected id', () => {
     const { result } = renderHook(() => useCollageEditor());
     act(() => result.current.init(emptyDoc));

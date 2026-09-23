@@ -1,5 +1,10 @@
 import { Request, Response } from 'express';
+import { BadRequestError, NotFoundError } from '@tumbaland/backend-core';
 import * as collageService from './collage.service';
+import * as live from './collageLive';
+
+/** A tab's own made-up id: letters, digits and dashes, like a UUID. */
+const SESSION = /^[A-Za-z0-9-]{8,64}$/;
 
 /**
  * Create a new collage
@@ -25,11 +30,145 @@ export const updateCollage = async (req: Request, res: Response): Promise<void> 
   const { id } = req.params;
 
   const collage = await collageService.updateCollage(id as string, req.body, user.id, userGroups);
+  // A whole-collage write replaces what everyone has open: they reload it.
+  live.publish(id as string, 'reload', { revision: collage?.revision });
   res.json({
     success: true,
     message: 'Collage updated successfully',
     data: collage
   });
+};
+
+/**
+ * Apply a batch of small changes: what the editor sends as it autosaves.
+ */
+export const applyCollageChanges = async (req: Request, res: Response): Promise<void> => {
+  const user = req.user!;
+  const userGroups = req.userGroups || [];
+  const { id } = req.params;
+
+  const { changes, session } = req.body as { changes: collageService.CollageChanges; session?: string };
+  const result = await collageService.applyCollageChanges(id as string, changes, user.id, userGroups);
+  live.publish(
+    id as string,
+    'changes',
+    { revision: result.revision, changes, by: { userId: user.id, name: user.name } },
+    session
+  );
+  res.json({ success: true, data: result });
+};
+
+/**
+ * GET /api/collages/:id/live?session=...
+ *
+ * A Server-Sent Events stream of what the other people with this collage open
+ * are doing: their saved changes, who is here, and what each has selected.
+ * The same shape as chat's stream, and the same three essentials: no proxy
+ * buffering, a heartbeat, and a bounded lifetime.
+ */
+export const liveStream = async (req: Request, res: Response): Promise<void> => {
+  const user = req.user!;
+  const { id } = req.params as { id: string };
+  const session = String(req.query.session ?? '');
+  if (!SESSION.test(session)) throw new BadRequestError('session is required');
+
+  // Checked before the stream opens, while an error can still be a status code.
+  const collage = await collageService.getCollageById(id, user.id, req.userGroups || []);
+  if (!collage) throw new NotFoundError('Collage not found');
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream; charset=utf-8',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no'
+  });
+  res.flushHeaders?.();
+
+  const leave = live.join(id, {
+    session,
+    userId: user.id,
+    name: user.name || user.email,
+    picture: user.picture ?? null,
+    selection: null,
+    res
+  });
+  if (!leave) {
+    res.write(live.formatFrame('ready', { error: 'too_many_viewers' }));
+    res.end();
+    return;
+  }
+
+  // The revision lets the editor see whether anything was saved between its
+  // loading the collage and this stream opening, and fetch it if so.
+  res.write(live.formatFrame('ready', { heartbeatMs: live.HEARTBEAT_MS, revision: collage.revision ?? 0 }));
+  live.publishPresence(id);
+
+  const heartbeat = setInterval(() => {
+    try {
+      res.write('event: heartbeat\ndata: {}\n\n');
+    } catch {
+      close();
+    }
+  }, live.HEARTBEAT_MS);
+
+  const recycle = setTimeout(() => {
+    try {
+      res.write('retry: 1000\n\n');
+      res.end();
+    } catch {
+      // Already gone.
+    }
+  }, live.MAX_STREAM_AGE_MS);
+
+  let closed = false;
+  const close = (): void => {
+    if (closed) return;
+    closed = true;
+    clearInterval(heartbeat);
+    clearTimeout(recycle);
+    leave();
+    live.publishPresence(id);
+  };
+
+  // The response, not the request: a GET's request side can report closed as
+  // soon as its empty body has been read.
+  res.on('close', close);
+  res.on('error', close);
+};
+
+/**
+ * POST /api/collages/:id/moving
+ *
+ * Where an item is while someone drags, resizes or turns it, about ten times a
+ * second, so the others see it move rather than jump when it is let go.
+ * Passed straight on and never stored: the save at the end of the gesture is
+ * what counts. `item: null` means it was let go.
+ */
+export const reportMoving = async (req: Request, res: Response): Promise<void> => {
+  const user = req.user!;
+  const { id } = req.params as { id: string };
+  const { session, item } = req.body as { session: string; item: Record<string, number | string> | null };
+
+  if (!live.isViewer(id, session, user.id)) throw new NotFoundError('Not watching this collage');
+  live.publish(id, 'moving', { session, userId: user.id, name: user.name || user.email, item }, session);
+  res.status(204).end();
+};
+
+/**
+ * POST /api/collages/:id/presence
+ *
+ * What this tab has selected, for the others to see outlined. Only a tab with
+ * the stream open counts; anyone else is answered as not found.
+ */
+export const setPresence = async (req: Request, res: Response): Promise<void> => {
+  const user = req.user!;
+  const { id } = req.params as { id: string };
+  const { session, selection } = req.body as { session: string; selection: string | null };
+
+  if (!live.setSelection(id, session, user.id, selection)) {
+    throw new NotFoundError('Not watching this collage');
+  }
+  res.status(204).end();
 };
 
 /**

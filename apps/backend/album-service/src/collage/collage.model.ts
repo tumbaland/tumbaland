@@ -37,6 +37,12 @@ export interface ICollage extends Document {
   albumIds: string[]; // Updated: albumIds array for multiple albums
   userId?: string; // User ID who created the collage
   groupId?: string; // Optional group association
+  /**
+   * Bumped on every write. A batch of changes is applied to the config it was
+   * read with and stored only if nothing else wrote in between, so two
+   * people editing at once cannot overwrite each other.
+   */
+  revision: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -47,7 +53,8 @@ const CollageSchema = new Schema<ICollage>(
     config: { type: Schema.Types.Mixed, required: true, default: () => ({ photos: [] }) },
     albumIds: { type: [String], required: true }, // Updated: albumIds as array
     userId: { type: String, index: true },
-    groupId: { type: String, index: true }
+    groupId: { type: String, index: true },
+    revision: { type: Number, default: 0 }
   },
   { timestamps: true }
 );

@@ -45,7 +45,7 @@ export const useCollageMutations = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, input }: { id: string; input: CollageInput }) => collageService.updateCollage(id, input),
+    mutationFn: ({ id, input }: { id: string; input: Partial<CollageInput> }) => collageService.updateCollage(id, input),
     onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: collageKeys.all });
       queryClient.invalidateQueries({ queryKey: collageKeys.detail(variables.id) });
@@ -62,7 +62,7 @@ export const useCollageMutations = () => {
 
   return {
     createCollage: createMutation.mutateAsync,
-    updateCollage: (id: string, input: CollageInput) => updateMutation.mutateAsync({ id, input }),
+    updateCollage: (id: string, input: Partial<CollageInput>) => updateMutation.mutateAsync({ id, input }),
     deleteCollage: deleteMutation.mutateAsync
   };
 };

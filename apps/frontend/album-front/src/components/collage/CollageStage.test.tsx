@@ -1,9 +1,10 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { useEffect } from 'react';
-import { vi } from 'vitest';
+import { describe, vi } from 'vitest';
 import { useCollageEditor } from '../../hooks/useCollageEditor';
 import CollageStage, { ResolvePhoto } from './CollageStage';
 import { CollageDoc } from './collageDoc';
+import type { StageMotion } from './CollagePeople';
 
 const baseDoc: CollageDoc = {
   canvas: { width: 1600, height: 900 },
@@ -31,6 +32,7 @@ function Harness({
   zoom = 1,
   onEditItem,
   onDropPhoto,
+  motions,
   resolvePhoto = () => ({ src: 'https://cdn.example/a.jpg', width: 800, height: 600, title: 'Beach day' })
 }: {
   doc: CollageDoc;
@@ -39,6 +41,7 @@ function Harness({
   onEditItem?: (id: string) => void;
   onDropPhoto?: (photoId: string, x: number, y: number) => void;
   resolvePhoto?: ResolvePhoto;
+  motions?: StageMotion[];
 }) {
   const editor = useCollageEditor();
   useEffect(() => {
@@ -54,6 +57,7 @@ function Harness({
       zoom={zoom}
       onEditItem={onEditItem}
       onDropPhoto={onDropPhoto}
+      motions={motions}
     />
   );
 }
@@ -288,4 +292,27 @@ it('maps a turned photo’s crop back onto the source image', () => {
 
   const img = screen.getByRole('img', { name: 'Beach day' });
   expect(img).toHaveStyle({ width: '100%', height: '200%', left: '-0%', top: '-0%' });
+});
+
+describe('an item someone else is moving', () => {
+  const theirs: StageMotion[] = [
+    { userId: 'u-irja', item: { id: 'photo-item-1', x: 500, y: 300, width: 200, height: 150 } }
+  ];
+  const photoBox = (container: HTMLElement) => container.querySelector('[data-item-id="photo-item-1"]') as HTMLElement;
+
+  it('is drawn where they have it, easing between their updates', () => {
+    const { container } = render(<Harness doc={baseDoc} motions={theirs} />);
+    const photo = photoBox(container);
+    expect(photo).toHaveStyle({ left: '500px', top: '300px' });
+    expect(getComputedStyle(photo).transition).toContain('left');
+  });
+
+  it('is drawn where you have it while you are dragging it yourself', () => {
+    const { container } = render(<Harness doc={baseDoc} motions={theirs} />);
+    const photo = photoBox(container);
+
+    fireEvent.pointerDown(photo, { clientX: 0, clientY: 0, pointerId: 1 });
+
+    expect(photoBox(container)).toHaveStyle({ left: '100px', top: '100px' });
+  });
 });

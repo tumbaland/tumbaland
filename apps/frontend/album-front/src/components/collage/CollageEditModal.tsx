@@ -15,14 +15,25 @@ import {
   InputAdornment
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import { Collage, CollageInput } from '../../types/collage';
+import { Collage } from '../../types/collage';
 import { useAlbums } from '../../hooks/useAlbums';
 import { useTenantFilter } from '@tumbaland/frontend-core';
+
+/**
+ * The details this dialog edits. Never the layout: that may be being edited by
+ * someone else right now, and this dialog's copy of it could be minutes old.
+ */
+export interface CollageDetailsInput {
+  title: string;
+  subtitle: string;
+  albumIds: string[];
+  groupId?: string;
+}
 
 interface CollageEditModalProps {
   open: boolean;
   onClose: () => void;
-  onSave: (input: CollageInput) => Promise<void>;
+  onSave: (input: CollageDetailsInput) => Promise<void>;
   initialData: Collage;
 }
 
@@ -55,11 +66,7 @@ export const CollageEditModal: React.FC<CollageEditModalProps> = ({ open, onClos
     try {
       await onSave({
         title,
-        config: {
-          ...initialData.config,
-          title: { text: title, subtitle }
-        },
-        ownerId: initialData.ownerId,
+        subtitle,
         albumIds,
         groupId: tenantGroupId // Include the active group ID from tenant context
       });

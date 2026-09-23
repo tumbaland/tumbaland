@@ -7,7 +7,20 @@ import EditIcon from '@mui/icons-material/Edit';
 import DownloadIcon from '@mui/icons-material/Download';
 import { useCollageDetails, useCollageMutations } from '../hooks/useCollage';
 import { useCollageEditor } from '../hooks/useCollageEditor';
-import { EDITOR_BACKDROP, normalizeCollageConfig, serializeCollageDoc } from '../components/collage/collageDoc';
+import { useCollageSync } from '../hooks/useCollageSync';
+import { CollageViewer, useCollageLive } from '../hooks/useCollageLive';
+import { useMotionReport, useRemoteMotion } from '../hooks/useCollageMotion';
+import { collageService } from '../services/collageService';
+import { CollagePerson, personColour } from '../components/collage/CollagePeople';
+import type { ServerChange } from '../components/collage/collageChanges';
+import {
+  CollageDoc,
+  EDITOR_BACKDROP,
+  newItemId,
+  normalizeCollageConfig,
+  serializeCollageDoc
+} from '../components/collage/collageDoc';
+import { CollageConfig } from '../types/collage';
 import CollageStage, { ResolvedPhoto } from '../components/collage/CollageStage';
 import CollageToolbar from '../components/collage/CollageToolbar';
 import CollagePhotoTray, { AlbumPhoto } from '../components/collage/CollagePhotoTray';
@@ -22,6 +35,36 @@ import { appPath } from '../appBase';
  */
 const PLACED_PHOTO_SCALE = 0.22;
 
+/**
+ * Whether the stored collage is from before every item had an id. Autosave
+ * names items by id, so such a collage is written whole once, first.
+ */
+/**
+ * The others with the collage open, one entry a person. Your own other tabs
+ * are not someone else.
+ */
+const othersIn = (viewers: CollageViewer[], session: string): CollagePerson[] => {
+  const me = viewers.find((viewer) => viewer.session === session)?.userId;
+  const people = new Map<string, CollagePerson>();
+  for (const viewer of viewers) {
+    if (viewer.session === session || viewer.userId === me) continue;
+    const known = people.get(viewer.userId);
+    // Two tabs of theirs: show the one with something selected.
+    if (known?.selection) continue;
+    people.set(viewer.userId, {
+      userId: viewer.userId,
+      name: viewer.name,
+      picture: viewer.picture,
+      color: personColour(viewer.userId),
+      selection: viewer.selection
+    });
+  }
+  return [...people.values()];
+};
+
+const needsIds = (config?: CollageConfig | null): boolean =>
+  (config?.photos ?? []).some((photo) => !photo.id) || (config?.texts ?? []).some((text) => !text.id);
+
 /** Full-screen collage editor / viewer. Route: /collages/:id[?mode=view] */
 const CollageDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -35,7 +78,9 @@ const CollageDetailsPage: React.FC = () => {
   const { doc, selectedItem } = editor;
 
   const [zoom, setZoom] = useState(0); // 0 = fit
-  const [saving, setSaving] = useState(false);
+  // This tab, to the server: its own changes are not sent back to it.
+  const [session] = useState(newItemId);
+  const [viewers, setViewers] = useState<CollageViewer[]>([]);
   const [editItemId, setEditItemId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
 
@@ -101,25 +146,79 @@ const CollageDetailsPage: React.FC = () => {
     [doc, editor]
   );
 
-  const handleSave = useCallback(async () => {
-    if (!collage || !doc) return;
-    setSaving(true);
-    try {
-      await updateCollage(collage._id, {
+  const saveWhole = useCallback(
+    async (whole: CollageDoc) => {
+      if (!collage) return undefined;
+      const stored = await updateCollage(collage._id, {
         title: collage.title,
-        config: serializeCollageDoc(doc, collage.config),
+        config: serializeCollageDoc(whole, collage.config),
         albumIds: collage.albumIds,
         groupId: collage.groupId
       });
-      editor.markSaved();
-      setToast({ message: 'Collage saved', severity: 'success' });
-    } catch (e) {
-      logger.error('Failed to save collage', e);
-      setToast({ message: 'Failed to save collage', severity: 'error' });
-    } finally {
-      setSaving(false);
-    }
-  }, [collage, doc, editor, updateCollage]);
+      return stored?.revision;
+    },
+    [collage, updateCollage]
+  );
+
+  const fetchLatest = useCallback(async () => {
+    const { collage: fresh } = await collageService.getCollageById(id as string);
+    return { doc: normalizeCollageConfig(fresh.config), revision: fresh.revision ?? 0 };
+  }, [id]);
+
+  const sync = useCollageSync({
+    collageId: collage?._id,
+    doc,
+    revision: collage?.revision,
+    session,
+    paused: editor.gestureActive,
+    saveWhole: collage && needsIds(collage.config) ? saveWhole : undefined,
+    fetchLatest,
+    onIncoming: editor.applyIncoming
+  });
+
+  const motion = useRemoteMotion();
+  const { settle } = motion;
+  const onChanges = useCallback(
+    (rev: number, changes: ServerChange[], by: { userId: string }) => {
+      sync.receive(rev, changes);
+      // Their save is in: the item is where they left it, no need to follow it.
+      settle(by.userId);
+    },
+    [sync, settle]
+  );
+
+  const live = useCollageLive({
+    collageId: collage?._id,
+    session,
+    enabled: Boolean(doc),
+    onChanges,
+    onPresence: setViewers,
+    onRevision: sync.checkRevision,
+    onMoving: motion.onMoving
+  });
+
+  const people = useMemo(() => othersIn(viewers, session), [viewers, session]);
+  // Only people still here: a tab that closed mid-drag leaves nothing behind.
+  const motions = useMemo(
+    () => motion.motions.filter((moving) => people.some((person) => person.userId === moving.userId)),
+    [motion.motions, people]
+  );
+
+  useMotionReport({
+    collageId: collage?._id,
+    session,
+    enabled: live.connected && !isViewMode,
+    active: editor.gestureActive,
+    item: selectedItem?.item
+  });
+
+  // What this tab has selected, for the others to see outlined. Sent again on
+  // reconnect, since the server forgets a tab when its stream closes.
+  const selectedId = isViewMode ? null : editor.selectedId;
+  useEffect(() => {
+    if (!collage || !live.connected) return;
+    collageService.setPresence(collage._id, session, selectedId).catch(() => undefined);
+  }, [collage, live.connected, session, selectedId]);
 
   const handleExport = useCallback(async () => {
     if (!doc) return;
@@ -135,10 +234,11 @@ const CollageDetailsPage: React.FC = () => {
     }
   }, [doc, collage, resolvePhoto]);
 
-  const handleBack = useCallback(() => {
-    if (editor.isDirty && !window.confirm('You have unsaved changes. Leave anyway?')) return;
+  const handleBack = useCallback(async () => {
+    const saved = await sync.flush();
+    if (!saved && !window.confirm('Your latest changes are not saved yet. Leave anyway?')) return;
     navigate(appPath('/collages'));
-  }, [editor.isDirty, navigate]);
+  }, [sync, navigate]);
 
   const setMode = useCallback(
     (view: boolean) => {
@@ -147,14 +247,14 @@ const CollageDetailsPage: React.FC = () => {
     [setSearchParams]
   );
 
-  // Warn about unsaved changes on tab close / reload
+  // Closing the tab mid-save would lose the last change: ask first.
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (editor.isDirty) e.preventDefault();
+      if (sync.unsaved) e.preventDefault();
     };
     window.addEventListener('beforeunload', onBeforeUnload);
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
-  }, [editor.isDirty]);
+  }, [sync.unsaved]);
 
   // Keyboard shortcuts (edit mode, and not while typing or in a dialog)
   useEffect(() => {
@@ -173,8 +273,9 @@ const CollageDetailsPage: React.FC = () => {
         e.preventDefault();
         editor.redo();
       } else if (mod && e.key.toLowerCase() === 's') {
+        // Saving happens by itself; the habit still gets an immediate save.
         e.preventDefault();
-        void handleSave();
+        void sync.flush();
       } else if ((e.key === 'Delete' || e.key === 'Backspace') && editor.selectedId) {
         e.preventDefault();
         editor.removeItem(editor.selectedId);
@@ -193,7 +294,7 @@ const CollageDetailsPage: React.FC = () => {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [editor, selectedItem, editItemId, isViewMode, handleSave]);
+  }, [editor, selectedItem, editItemId, isViewMode, sync]);
 
   const editingItem = useMemo(() => {
     if (!doc || !editItemId) return null;
@@ -259,8 +360,8 @@ const CollageDetailsPage: React.FC = () => {
       {!isViewMode && doc && (
         <CollageToolbar
           title={collage.title}
-          isDirty={editor.isDirty}
-          saving={saving}
+          saveStatus={sync.status}
+          people={people}
           canUndo={editor.canUndo}
           canRedo={editor.canRedo}
           background={doc.background}
@@ -268,8 +369,7 @@ const CollageDetailsPage: React.FC = () => {
           frameEnabled={doc.frameEnabled}
           zoom={zoom}
           hasSelection={Boolean(selectedItem)}
-          onBack={handleBack}
-          onSave={handleSave}
+          onBack={() => void handleBack()}
           onUndo={editor.undo}
           onRedo={editor.redo}
           onAddText={() => editor.addText()}
@@ -311,7 +411,11 @@ const CollageDetailsPage: React.FC = () => {
             </IconButton>
           </Tooltip>
           <Tooltip title="Back to collages">
-            <IconButton size="small" onClick={handleBack} sx={{ color: '#fff', bgcolor: 'rgba(0,0,0,0.4)' }}>
+            <IconButton
+              size="small"
+              onClick={() => void handleBack()}
+              sx={{ color: '#fff', bgcolor: 'rgba(0,0,0,0.4)' }}
+            >
               <ArrowBackIcon fontSize="small" />
             </IconButton>
           </Tooltip>
@@ -326,6 +430,8 @@ const CollageDetailsPage: React.FC = () => {
           readOnly={isViewMode}
           zoom={isViewMode ? 0 : zoom}
           onEditItem={setEditItemId}
+          people={people}
+          motions={motions}
           onDropPhoto={(photoId, x, y) => {
             const photo = photoById.get(photoId);
             if (photo) placePhoto(photo, { x, y });
@@ -367,4 +473,13 @@ const CollageDetailsPage: React.FC = () => {
   );
 };
 
-export default CollageDetailsPage;
+/**
+ * Keyed by the collage, so opening another one starts a fresh editor and
+ * autosave rather than diffing one collage against the other.
+ */
+const CollageDetailsRoute: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  return <CollageDetailsPage key={id} />;
+};
+
+export default CollageDetailsRoute;

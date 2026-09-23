@@ -61,6 +61,8 @@ export interface Collage {
   groupId?: string;
   createdAt: string;
   updatedAt: string;
+  /** Counts every save; absent on a collage from before revisions existed. */
+  revision?: number;
   thumbnail?: string;
 }
 
