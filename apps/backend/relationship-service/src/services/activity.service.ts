@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { ForbiddenError } from '@tumbaland/backend-core';
 import { Activity, IActivity } from '../models/Activity';
 import { IActivityType } from '../models/ActivityType';
+import { escapeRegex } from '../utils/escapeRegex';
 
 interface ActivityQuery {
   typeId?: mongoose.Types.ObjectId;
@@ -112,7 +113,7 @@ export const getActivities = async (
   }
 
   if (description) {
-    query.description = { $regex: description, $options: 'i' };
+    query.description = { $regex: escapeRegex(description), $options: 'i' };
   }
 
   // Apply permission filtering

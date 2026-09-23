@@ -60,6 +60,14 @@ describe('dayToDate', () => {
   it('rejects an impossible date', () => {
     expect(() => dayToDate('2024-13-40')).toThrow('Invalid date');
   });
+
+  it('rejects a day the month does not have, rather than rolling over into the next month', () => {
+    // Saving a day replaces it, so 2026-02-31 read as 3 March would delete
+    // what was logged on 3 March.
+    expect(() => dayToDate('2026-02-31')).toThrow('Invalid date');
+    expect(() => dayToDate('2025-02-29')).toThrow('Invalid date');
+    expect(dayToDate('2024-02-29').toISOString()).toBe('2024-02-29T00:00:00.000Z');
+  });
 });
 
 describe('saveDay', () => {
@@ -332,5 +340,15 @@ describe('getDays', () => {
     expect(match.typeId).toBeInstanceOf(mongoose.Types.ObjectId);
     expect(match.description).toEqual({ $regex: 'coffee', $options: 'i' });
     expect(match.date).toEqual({ $gte: new Date('2024-01-01'), $lte: new Date('2024-12-31') });
+  });
+
+  it('searches for the text as typed, not as a pattern', async () => {
+    mockedAggregate.mockResolvedValue([{ days: [], totalCount: [] }]);
+
+    await getDays({ userId: 'user-1', userGroupIds: [], search: 'c++ :)' });
+
+    const match = mockedAggregate.mock.calls[0][0][0].$match;
+    expect(match.description).toEqual({ $regex: 'c\\+\\+ :\\)', $options: 'i' });
+    expect(() => new RegExp(match.description.$regex)).not.toThrow();
   });
 });

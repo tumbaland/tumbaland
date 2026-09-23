@@ -149,26 +149,47 @@ export const importStatement = async (
     return { format: 'seb', imported: 0, duplicates: 0, skipped, period, rows: rows.length, categories: [] };
   }
 
-  // One query rather than one per row: which references are already held?
+  // One query rather than one per row: which references are already held,
+  // here or by this person anywhere else? A reference is unique per person
+  // (see the Transaction model), not per context, so a row they imported under
+  // their personal finances cannot be imported into a group too, and the
+  // reverse. Looking only in the current context used to miss those, and the
+  // write below then moved the personal rows into the group, corrections and
+  // all.
   const existing = await Transaction.find(
     {
-      ...tenantScope(options.userId, options.groupId ? [options.groupId] : []),
-      externalId: { $in: candidates.map((c) => c.externalId) }
+      externalId: { $in: candidates.map((c) => c.externalId) },
+      $or: [tenantScope(options.userId, options.groupId ? [options.groupId] : []), { userId: options.userId }]
     },
-    { externalId: 1 }
+    { externalId: 1, groupId: 1 }
   ).lean();
 
-  const held = new Set(existing.map((e) => e.externalId));
-  const fresh = candidates.filter((c) => !held.has(c.externalId));
+  const inThisContext = (row: { groupId?: string | null }) =>
+    options.groupId ? row.groupId === options.groupId : !row.groupId;
+  const held = new Set(existing.filter(inThisContext).map((e) => e.externalId));
+  const elsewhere = new Map(
+    existing.filter((e) => !inThisContext(e)).map((e) => [e.externalId, e.groupId ? 'a group' : 'your personal finances'])
+  );
+
+  const fresh = candidates.filter((c) => {
+    if (held.has(c.externalId)) return false;
+    const where = elsewhere.get(c.externalId);
+    if (where) {
+      note(`Already imported under ${where}`);
+      return false;
+    }
+    return true;
+  });
 
   if (fresh.length > 0) {
     // Upsert rather than insert: a row could arrive between the check above and
     // this write, and the unique index would otherwise abort the whole batch.
+    // `$setOnInsert`, so a row that did slip in is left exactly as it is.
     await Transaction.bulkWrite(
       fresh.map((t) => ({
         updateOne: {
           filter: { userId: t.userId, externalId: t.externalId },
-          update: { $set: t },
+          update: { $setOnInsert: t },
           upsert: true
         }
       })),
@@ -187,7 +208,7 @@ export const importStatement = async (
   return {
     format: 'seb',
     imported: fresh.length,
-    duplicates: candidates.length - fresh.length,
+    duplicates: candidates.filter((c) => held.has(c.externalId)).length,
     skipped,
     period,
     rows: rows.length,

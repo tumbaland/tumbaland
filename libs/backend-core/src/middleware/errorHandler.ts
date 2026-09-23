@@ -69,14 +69,11 @@ export const errorHandler: ErrorRequestHandler = (
     });
   }
 
-  // Add CORS headers to error responses
-  const origin = req.headers.origin;
-  if (origin && (origin.includes('localhost') || origin.includes('tumbaland.eu'))) {
-    res.header('Access-Control-Allow-Origin', origin);
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, x-correlation-id, x-session-id');
-  }
+  // No CORS headers here. The CORS middleware sets them for an allowed origin
+  // before the route runs, so an error response already carries them. This
+  // used to add them again for any origin that merely *contained*
+  // "tumbaland.eu" or "localhost", which let https://tumbaland.eu.example.com
+  // read error responses with the visitor's cookies.
 
   if (known) {
     res.status(known.statusCode).json({

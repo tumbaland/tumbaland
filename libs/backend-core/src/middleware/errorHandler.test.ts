@@ -80,24 +80,17 @@ describe('errorHandler', () => {
     expect(res.body.stack).toBeDefined();
   });
 
-  it('adds CORS headers to the error response for an allowed origin', async () => {
-    process.env.NODE_ENV = 'production';
-    const app = buildApp();
+  it.each([['https://tumbaland.eu.evil.example'], ['http://localhost.evil.example']])(
+    'adds no CORS headers of its own, even for a look-alike origin (%s)',
+    async (origin) => {
+      process.env.NODE_ENV = 'production';
+      const app = buildApp();
 
-    const res = await request(app).get('/boom').set('Origin', 'http://localhost:3000');
+      const res = await request(app).get('/boom').set('Origin', origin);
 
-    expect(res.headers['access-control-allow-origin']).toBe('http://localhost:3000');
-    expect(res.headers['access-control-allow-credentials']).toBe('true');
-  });
-
-  it('does not add CORS headers for a disallowed origin', async () => {
-    process.env.NODE_ENV = 'production';
-    const app = buildApp();
-
-    const res = await request(app).get('/boom').set('Origin', 'https://evil.example');
-
-    expect(res.headers['access-control-allow-origin']).toBeUndefined();
-  });
+      expect(res.headers['access-control-allow-origin']).toBeUndefined();
+    }
+  );
 
   describe('typed HttpError instances', () => {
     it('uses the error’s own status code and message, in production too', async () => {

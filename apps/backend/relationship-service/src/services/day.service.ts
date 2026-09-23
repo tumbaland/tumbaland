@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { BadRequestError, ForbiddenError } from '@tumbaland/backend-core';
 import { Activity, IActivity, IActivityLocation } from '../models/Activity';
 import { ActivityType, IActivityType } from '../models/ActivityType';
+import { escapeRegex } from '../utils/escapeRegex';
 
 interface ActivityScopeQuery {
   groupId?: string;
@@ -39,7 +40,10 @@ export function dayToDate(day: string): Date {
     throw new BadRequestError('Date must be formatted as YYYY-MM-DD');
   }
   const date = new Date(`${day}T00:00:00.000Z`);
-  if (isNaN(date.getTime())) {
+  // A day that does not exist, like 2026-02-31, parses without complaint as
+  // the day it rolls over to (3 March). Saving a day replaces its entries, so
+  // that would silently delete whatever was logged on 3 March.
+  if (isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== day) {
     throw new BadRequestError('Invalid date');
   }
   return date;
@@ -80,7 +84,7 @@ export const getDays = async (options: {
 
   const match: ActivityScopeQuery = scopeQuery(userId, groupId);
   if (typeId) match.typeId = new mongoose.Types.ObjectId(typeId);
-  if (search) match.description = { $regex: search, $options: 'i' };
+  if (search) match.description = { $regex: escapeRegex(search), $options: 'i' };
   if (startDate || endDate) {
     match.date = {};
     if (startDate) match.date.$gte = startDate;

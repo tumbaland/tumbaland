@@ -36,8 +36,30 @@ describe('createCorsMiddleware', () => {
   it('rejects an origin not on the whitelist', async () => {
     const res = await request(app).get('/ping').set('Origin', 'https://evil.example');
 
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(403);
     expect(res.headers['access-control-allow-origin']).toBeUndefined();
+  });
+
+  it('refuses an origin that only looks like an allowed one', async () => {
+    const res = await request(app).get('/ping').set('Origin', 'https://allowed.example.evil.example');
+
+    expect(res.status).toBe(403);
+    expect(res.headers['access-control-allow-origin']).toBeUndefined();
+  });
+
+  it('keeps the CORS headers on an error response, so the page can read why it failed', async () => {
+    const failing = express();
+    failing.use(createCorsMiddleware({ origins: 'https://allowed.example' }));
+    failing.get('/boom', () => {
+      throw new Error('kaboom');
+    });
+    failing.use(errorHandler);
+
+    const res = await request(failing).get('/boom').set('Origin', 'https://allowed.example');
+
+    expect(res.status).toBe(500);
+    expect(res.headers['access-control-allow-origin']).toBe('https://allowed.example');
+    expect(res.headers['access-control-allow-credentials']).toBe('true');
   });
 
   describe('the preflight', () => {
@@ -120,7 +142,7 @@ describe('bypassPaths', () => {
 
     const next = run(middleware, '/auth/profile', 'null');
 
-    expect(next).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('CORS') }));
+    expect(next).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 403 }));
   });
 
   it('matches by prefix, so nested oauth routes are covered too', () => {

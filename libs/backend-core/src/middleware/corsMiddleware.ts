@@ -1,6 +1,7 @@
 import cors from 'cors';
 import type { RequestHandler } from 'express';
 import logger from '../logging/logger';
+import { ForbiddenError } from '../errors/HttpError';
 
 export interface CorsMiddlewareOptions {
   /**
@@ -44,7 +45,9 @@ export function createCorsMiddleware(options: CorsMiddlewareOptions = {}): Reque
         return callback(null, true);
       }
       logger.warn('Blocked CORS origin', { origin });
-      return callback(new Error('Not allowed by CORS: ' + origin));
+      // A 403, not a plain Error: that became a 500 logged as a server bug
+      // for what is only a page on another site calling in.
+      return callback(new ForbiddenError('Origin not allowed'));
     },
     credentials: true,
     // PATCH belongs here as much as PUT: leaving it out lets the preflight

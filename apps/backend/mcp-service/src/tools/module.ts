@@ -115,9 +115,18 @@ export const groupIdFor = (tenant: Tenant): string | undefined =>
   tenant === PERSONAL_TENANT ? undefined : tenant;
 
 /** A day as people write it, and as every endpoint here expects it. */
+/** Whether a YYYY-MM-DD string names a real day: 2026-02-31 matches the pattern but is not one. */
+const isRealDay = (day: string): boolean => {
+  const date = new Date(`${day}T00:00:00.000Z`);
+  return !isNaN(date.getTime()) && date.toISOString().slice(0, 10) === day;
+};
+
 export const dateSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD')
+  // Checked here as well as by the journal, so the assistant hears "no such
+  // day" in plain words instead of a failed request.
+  .refine(isRealDay, 'That day does not exist')
   .describe('The day, as YYYY-MM-DD');
 
 export const entrySchema = z.object({

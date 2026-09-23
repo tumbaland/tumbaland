@@ -106,7 +106,7 @@ describe('importing', () => {
     await importStatement(statement(line()), { userId: 'u1', groupId: 'g1', userGroups: ['g1'] });
 
     const [operations] = mockedBulkWrite.mock.calls[0];
-    expect(operations[0].updateOne.update.$set).toMatchObject({ userId: 'u1', groupId: 'g1' });
+    expect(operations[0].updateOne.update.$setOnInsert).toMatchObject({ userId: 'u1', groupId: 'g1' });
   });
 
   it('upserts on the archive reference, so a race cannot abort the batch', async () => {
@@ -255,6 +255,40 @@ describe('overlapping imports', () => {
     const [operations] = mockedBulkWrite.mock.calls[0];
     expect(operations).toHaveLength(1);
     expect(operations[0].updateOne.filter.externalId).toBe('RO2');
+  });
+
+  it('does not move rows imported under personal finances into a group', async () => {
+    // Imported personally last month; now the same statement, into the group.
+    mockedFind.mockReturnValue({ lean: jest.fn().mockResolvedValue([{ externalId: 'RO1', groupId: null }]) });
+
+    const result = await importStatement(statement(line(), line({ archive: 'RO2' })), {
+      userId: 'u1',
+      groupId: 'g1',
+      userGroups: ['g1']
+    });
+
+    expect(result).toMatchObject({ imported: 1, duplicates: 0 });
+    expect(result.skipped).toEqual({ 'Already imported under your personal finances': 1 });
+    const [operations] = mockedBulkWrite.mock.calls[0];
+    expect(operations.map((op: { updateOne: { filter: { externalId: string } } }) => op.updateOne.filter.externalId)).toEqual(['RO2']);
+  });
+
+  it('says so, rather than claiming an import, when the rows are held in a group', async () => {
+    mockedFind.mockReturnValue({ lean: jest.fn().mockResolvedValue([{ externalId: 'RO1', groupId: 'g1' }]) });
+
+    const result = await importStatement(statement(line()), { userId: 'u1' });
+
+    expect(result).toMatchObject({ imported: 0, duplicates: 0 });
+    expect(result.skipped).toEqual({ 'Already imported under a group': 1 });
+    expect(mockedBulkWrite).not.toHaveBeenCalled();
+  });
+
+  it('never overwrites a row that slipped in between the check and the write', async () => {
+    await importStatement(statement(line()), { userId: 'u1' });
+
+    const [operations] = mockedBulkWrite.mock.calls[0];
+    expect(operations[0].updateOne.update).not.toHaveProperty('$set');
+    expect(operations[0].updateOne.update.$setOnInsert).toBeDefined();
   });
 
   it('writes nothing at all when the whole file is already held', async () => {
