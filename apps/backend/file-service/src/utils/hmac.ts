@@ -9,16 +9,18 @@ const HMAC_SECRET = (): string => {
 export type TokenOperation = 'upload' | 'download';
 
 /**
- * Build the HMAC message string: "operation:fileId:expiresMs"
+ * Build the HMAC message string: "operation:fileId:expiresMs", with
+ * ":maxBytes" on the end for an upload bound to a size.
  */
-const buildMessage = (operation: TokenOperation, fileId: string, expiresMs: number): string =>
-  `${operation}:${fileId}:${expiresMs}`;
+const buildMessage = (operation: TokenOperation, fileId: string, expiresMs: number, maxBytes?: number): string =>
+  maxBytes === undefined ? `${operation}:${fileId}:${expiresMs}` : `${operation}:${fileId}:${expiresMs}:${maxBytes}`;
 
 /**
- * Sign a token for a given operation + fileId + expiry.
+ * Sign a token for a given operation + fileId + expiry, and for an upload
+ * optionally the most bytes it may write.
  */
-export const signToken = (operation: TokenOperation, fileId: string, expiresMs: number): string => {
-  const message = buildMessage(operation, fileId, expiresMs);
+export const signToken = (operation: TokenOperation, fileId: string, expiresMs: number, maxBytes?: number): string => {
+  const message = buildMessage(operation, fileId, expiresMs, maxBytes);
   return crypto.createHmac('sha256', HMAC_SECRET()).update(message).digest('hex');
 };
 
@@ -29,11 +31,12 @@ export const verifyToken = (
   operation: TokenOperation,
   fileId: string,
   expiresMs: number,
-  token: string
+  token: string,
+  maxBytes?: number
 ): boolean => {
   if (Date.now() > expiresMs) return false;
 
-  const expected = signToken(operation, fileId, expiresMs);
+  const expected = signToken(operation, fileId, expiresMs, maxBytes);
   const expectedBuf = Buffer.from(expected, 'hex');
   const tokenBuf = Buffer.from(token, 'hex');
 

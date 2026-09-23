@@ -80,8 +80,10 @@ describe('notifyNewMessage', () => {
       body: 'hello',
       // One notification per conversation, not one per message.
       tag: 'c1',
-      url: '/chat/c1'
-    });
+      url: '/chat/c1',
+      conversationId: 'c1',
+      sentAt: expect.any(Number)
+    }, { topic: 'c1' });
   });
 
   it('describes an attachment instead of showing an empty body', async () => {

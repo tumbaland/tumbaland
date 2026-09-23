@@ -213,10 +213,19 @@ export async function conversationDetail(
   };
 }
 
-/** Total unread across every conversation, for the shell's nav badge. */
-export async function unreadTotal(person: Caller): Promise<number> {
+/**
+ * Unread across every conversation: the total for the shell's nav badge, and
+ * each conversation's own count for the service worker, which checks a push is
+ * still news before showing it.
+ */
+export async function unreadCounts(
+  person: Caller
+): Promise<{ unread: number; conversations: Record<string, number> }> {
   const summaries = await listConversations(person);
-  return summaries.reduce((total, summary) => total + summary.unreadCount, 0);
+  return {
+    unread: summaries.reduce((total, summary) => total + summary.unreadCount, 0),
+    conversations: Object.fromEntries(summaries.map((summary) => [summary.id, summary.unreadCount]))
+  };
 }
 
 /**

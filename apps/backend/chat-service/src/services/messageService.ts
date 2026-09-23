@@ -3,7 +3,7 @@ import { Types } from 'mongoose';
 import { BadRequestError, ForbiddenError, NotFoundError, logger } from '@tumbaland/backend-core';
 import { Conversation, IConversation } from '../models/Conversation';
 import { IAttachment, IMessage, Message } from '../models/Message';
-import { belongsToConversation, bytesOf, fileIdsOf, folderFor, withDownloadUrls } from './attachmentService';
+import { belongsToConversation, bytesOf, fileIdsOf, folderFor, withDownloadUrls, withStoredSizes } from './attachmentService';
 import { deleteFolder } from './fileServiceClient';
 import { recordStoredBytes, releaseStoredBytes } from './storageUsage';
 import { ReadState } from '../models/ReadState';
@@ -108,7 +108,7 @@ export async function sendMessage(
   input: SendInput
 ): Promise<SendResult> {
   const body = (input.body ?? '').trim();
-  const attachments = input.attachments ?? [];
+  let attachments = input.attachments ?? [];
 
   if (!body && attachments.length === 0) {
     throw new BadRequestError('A message needs text or an attachment');
@@ -138,6 +138,9 @@ export async function sendMessage(
       throw new BadRequestError('The message being replied to is not in this conversation');
     }
   }
+
+  // Charged by what is really stored, not by what the client says it sent.
+  attachments = await withStoredSizes(attachments);
 
   const conversationId = conversation._id.toString();
 
@@ -436,14 +439,23 @@ export async function markRead(
   lastReadMessageId?: string,
   at: Date = new Date()
 ): Promise<void> {
+  // The message id only moves forward too, or the other person's "seen" marker
+  // jumps back to whatever a tab that was hidden for hours last showed. Ids are
+  // ObjectIds, whose hex strings sort in creation order.
+  const current = { $ifNull: ['$lastReadMessageId', ''] };
   await ReadState.updateOne(
     { conversationId, userId: person.id },
-    {
-      $max: { lastReadAt: at },
-      $set: { lastReadMessageId: lastReadMessageId ?? null },
-      $setOnInsert: { conversationId, userId: person.id }
-    },
-    { upsert: true }
+    [
+      {
+        $set: {
+          lastReadAt: { $max: [{ $ifNull: ['$lastReadAt', new Date(0)] }, at] },
+          lastReadMessageId: lastReadMessageId
+            ? { $cond: [{ $gt: [lastReadMessageId, current] }, lastReadMessageId, '$lastReadMessageId'] }
+            : { $ifNull: ['$lastReadMessageId', null] }
+        }
+      }
+    ],
+    { upsert: true, updatePipeline: true }
   );
 }
 

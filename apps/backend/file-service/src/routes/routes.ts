@@ -28,7 +28,8 @@ router.post('/internal/download-url', requireApiKey, validate(generateDownloadUr
 router.post('/internal/download-urls', requireApiKey, validate(generateDownloadUrlsSchema), generateDownloadUrls);
 
 // ─── Internal: server-to-server file operations ───────────────────────────────
-router.put('/internal/files/folder', requireApiKey, validate(deleteFolderSchema), internalDeleteFolder); // must be before /:fileId
+// Before `DELETE /internal/files/*fileId`, which would otherwise take it as
+// deleting a file called "folder".
 router.delete('/internal/files/folder', requireApiKey, validate(deleteFolderSchema), internalDeleteFolder);
 router.get('/internal/files', requireApiKey, internalList);
 router.put('/internal/files/*fileId', requireApiKey, internalUpload);

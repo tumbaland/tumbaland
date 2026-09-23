@@ -20,6 +20,8 @@ jest.mock('../models/Album', () => ({
 }));
 
 jest.mock('./fileServiceClient', () => ({
+  albumFolder: jest.requireActual('./fileServiceClient').albumFolder,
+  storedSize: jest.fn(async () => 100),
   deleteFile: jest.fn(),
   getPhotoSignedUrl: jest.fn(),
   getPhotoSignedUrlsBatch: jest.fn(),
@@ -33,7 +35,7 @@ jest.mock('./thumbnailService', () => ({
 
 import Photo from '../models/Photo';
 import Album from '../models/Album';
-import { deleteFile, getPhotoSignedUrl, getPhotoSignedUrlsBatch, getFile } from './fileServiceClient';
+import { deleteFile, getPhotoSignedUrl, getPhotoSignedUrlsBatch, getFile, storedSize } from './fileServiceClient';
 import { generateThumbnailFromBuffer, isSupportedImageFormat } from './thumbnailService';
 import photoService from './photoService';
 
@@ -82,11 +84,37 @@ describe('createPhoto', () => {
   const baseInput = {
     filename: 'x.jpg',
     originalName: 'x.jpg',
-    minioFileId: 'file-1',
+    minioFileId: 'user-1/a1/123-abc/original.jpg',
     albumId: 'a1',
     mimetype: 'image/jpeg',
     size: 100
   };
+
+  it('refuses a file that was not uploaded to this album', async () => {
+    mockedAlbumFindById.mockResolvedValue({ _id: 'a1', userId: 'user-1' });
+
+    await expect(
+      photoService.createPhoto({ ...baseInput, minioFileId: 'group-9/a9/123-abc/original.jpg' }, 'user-1')
+    ).rejects.toMatchObject({ name: 'BadRequestError' });
+  });
+
+  it('refuses a photo whose upload never finished', async () => {
+    mockedAlbumFindById.mockResolvedValue({ _id: 'a1', userId: 'user-1' });
+    (storedSize as jest.Mock).mockResolvedValueOnce(null);
+
+    await expect(photoService.createPhoto(baseInput, 'user-1')).rejects.toMatchObject({ name: 'BadRequestError' });
+  });
+
+  it('records the size file-service holds, not the one the client reports', async () => {
+    mockedAlbumFindById.mockResolvedValue({ _id: 'a1', userId: 'user-1', coverPhotoId: 'x', save: jest.fn() });
+    mockedFindOne.mockResolvedValue(null);
+    mockedIsSupported.mockReturnValue(false);
+    (storedSize as jest.Mock).mockResolvedValueOnce(5_000_000);
+
+    await photoService.createPhoto({ ...baseInput, size: 1 }, 'user-1');
+
+    expect(mockedAlbumUpdateOne).toHaveBeenCalledWith({ _id: 'a1' }, { $inc: { photoCount: 1, totalSize: 5_000_000 } });
+  });
 
   it('throws NotFoundError when the album does not exist', async () => {
     mockedAlbumFindById.mockResolvedValue(null);
@@ -144,7 +172,7 @@ describe('createPhoto', () => {
     await new Promise((resolve) => setImmediate(resolve));
     await new Promise((resolve) => setImmediate(resolve));
 
-    expect(mockedGetFile).toHaveBeenCalledWith('file-1');
+    expect(mockedGetFile).toHaveBeenCalledWith(baseInput.minioFileId);
     expect(mockedFindByIdAndUpdate).toHaveBeenCalledWith('new-photo-id', { minioThumbnailFileId: 'thumb-1' });
   });
 

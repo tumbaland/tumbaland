@@ -9,7 +9,7 @@ import type { Attachment, PendingUpload } from '../types';
  *
  * The bytes never touch chat-service. Each file is prepared in the browser,
  * then PUT straight to file-service with a short-lived signed URL, and only the
- * resulting `fileId` travels with the message. That keeps a 200 MB video off
+ * resulting `fileId` travels with the message. That keeps a 95 MB video off
  * the service's heap and means an upload can be in flight while the person
  * keeps typing.
  *

@@ -100,6 +100,23 @@ describe('POST /api/stripe/webhook (signed events)', () => {
     expect(Subscription.findById).not.toHaveBeenCalled();
   });
 
+  it('lets Stripe retry an event whose handling failed, rather than dropping it as a duplicate', async () => {
+    const sub = { status: 'active', save: jest.fn().mockRejectedValueOnce(new Error('db down')).mockResolvedValue(undefined) };
+    (Subscription.findOne as jest.Mock).mockResolvedValue(sub);
+
+    const { payload, header } = signedRequest({
+      id: 'evt_test_retry_1',
+      type: 'invoice.payment_failed',
+      data: { object: { subscription: 'sub_retry' } }
+    });
+
+    expect((await postWebhook(payload, header)).status).toBe(500);
+
+    const retry = await postWebhook(payload, header);
+    expect(retry.body).toEqual({ received: true });
+    expect(sub.save).toHaveBeenCalledTimes(2);
+  });
+
   it('is idempotent: replaying the same event id a second time is a no-op', async () => {
     const sub = { status: 'active', save: jest.fn().mockResolvedValue(undefined) };
     (Subscription.findOne as jest.Mock).mockResolvedValue(sub);

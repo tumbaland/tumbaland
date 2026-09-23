@@ -1,5 +1,17 @@
+import crypto from 'crypto';
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken, TokenOperation } from '../utils/hmac';
+
+/**
+ * Whether two secrets match, in time that does not depend on where they differ.
+ * Both are hashed first so their lengths match, which `timingSafeEqual` needs,
+ * without the length check itself saying how long the real key is.
+ */
+const sameSecret = (given: string, expected: string): boolean =>
+  crypto.timingSafeEqual(
+    crypto.createHash('sha256').update(given).digest(),
+    crypto.createHash('sha256').update(expected).digest()
+  );
 
 /**
  * Middleware: internal API key authentication.
@@ -7,7 +19,8 @@ import { verifyToken, TokenOperation } from '../utils/hmac';
  */
 export const requireApiKey = (req: Request, res: Response, next: NextFunction): void => {
   const key = req.headers['x-internal-api-key'];
-  if (!key || key !== process.env.FILE_SERVICE_API_KEY) {
+  const expected = process.env.FILE_SERVICE_API_KEY;
+  if (!expected || typeof key !== 'string' || !sameSecret(key, expected)) {
     res.status(401).json({ success: false, message: 'Unauthorized' });
     return;
   }
@@ -34,9 +47,18 @@ export const requireSignedToken = (operation: TokenOperation) =>
       return;
     }
 
+    // The size an upload was signed for. Part of the signature, so it cannot
+    // be raised or dropped from the URL.
+    const { max } = req.query as { max?: string };
+    if (max !== undefined && !/^\d{1,15}$/.test(max)) {
+      res.status(400).json({ success: false, message: 'Invalid max value' });
+      return;
+    }
+    const maxBytes = max === undefined ? undefined : Number(max);
+
     let valid: boolean;
     try {
-      valid = verifyToken(operation, fileId, expiresMs, token);
+      valid = verifyToken(operation, fileId, expiresMs, token, maxBytes);
     } catch {
       res.status(500).json({ success: false, message: 'Token verification failed' });
       return;
@@ -47,5 +69,6 @@ export const requireSignedToken = (operation: TokenOperation) =>
       return;
     }
 
+    res.locals.maxBytes = maxBytes;
     next();
   };

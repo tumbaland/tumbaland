@@ -38,19 +38,25 @@ const bucketedExpiry = (expiresInMinutes: number): number => {
 
 /**
  * POST /internal/upload-url
- * Body: { fileId, mimetype?, expiresInMinutes? }
+ * Body: { fileId, mimetype?, expiresInMinutes?, maxBytes? }
  * Returns a signed PUT URL the browser can use to upload directly.
+ *
+ * `maxBytes` is the size the caller checked the storage quota against. It is
+ * signed into the URL and the upload is refused past it, so a browser cannot
+ * declare a small file and then send a big one.
  */
 export const generateUploadUrl = (req: Request, res: Response): void => {
-  const { fileId, expiresInMinutes = DEFAULT_UPLOAD_MINUTES } = req.body as {
+  const { fileId, expiresInMinutes = DEFAULT_UPLOAD_MINUTES, maxBytes } = req.body as {
     fileId: string;
     mimetype?: string;
     expiresInMinutes?: number;
+    maxBytes?: number;
   };
 
   const expiresMs = Date.now() + expiresInMinutes * 60 * 1000;
-  const token = signToken('upload', fileId, expiresMs);
-  const uploadUrl = `${FILE_SERVICE_PUBLIC_URL()}/files/upload/${fileId}?token=${token}&expires=${expiresMs}`;
+  const token = signToken('upload', fileId, expiresMs, maxBytes);
+  const sizeParam = maxBytes === undefined ? '' : `&max=${maxBytes}`;
+  const uploadUrl = `${FILE_SERVICE_PUBLIC_URL()}/files/upload/${fileId}?token=${token}&expires=${expiresMs}${sizeParam}`;
 
   sendSuccess(res, { uploadUrl, fileId, expiresMs, expiresInMinutes });
 };

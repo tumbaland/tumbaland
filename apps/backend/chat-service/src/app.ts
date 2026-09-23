@@ -1,6 +1,7 @@
 import express from 'express';
+import { ipKeyGenerator } from 'express-rate-limit';
 import path from 'path';
-import { authenticateToken, createBaseApp, errorHandler, metricsHandler, standardRateLimiter } from '@tumbaland/backend-core';
+import { authenticateToken, createBaseApp, createRateLimiter, errorHandler, metricsHandler } from '@tumbaland/backend-core';
 import chatRoutes from './routes/chatRoutes';
 import { stream } from './controllers/streamController';
 import { healthCheck } from './controllers/healthController';
@@ -31,9 +32,27 @@ app.use('/api/docs', express.static(path.join(__dirname, '../docs')));
 // it never calls next(), so nothing below sees the request.
 app.get('/api/chat/stream', authenticateToken, stream);
 
-app.use(standardRateLimiter);
+/**
+ * Two limits rather than the usual one per address.
+ *
+ * The couple using this usually share a home connection, so a per-address
+ * limit is one budget for both of them. Typing notices alone can spend 24 a
+ * minute each, and with sends, read receipts and the unread poll on top one
+ * evening's conversation could reach the standard 300 and lock them both out
+ * of the chat. So the real limit is per person per address, counted after
+ * sign-in, and the per-address one ahead of it only stops a flood, set well
+ * clear of what one household does.
+ */
+app.use(createRateLimiter({ max: 1500 }));
 
 app.use('/api', authenticateToken);
+app.use(
+  '/api',
+  createRateLimiter({
+    // authenticateToken has already turned away anyone without a user.
+    keyGenerator: (req) => `${req.user?.id ?? ''}@${ipKeyGenerator(req.ip ?? '')}`
+  })
+);
 app.use('/api/chat', chatRoutes);
 
 // Error handler

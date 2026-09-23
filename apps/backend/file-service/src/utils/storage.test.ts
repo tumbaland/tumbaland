@@ -1,7 +1,9 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { PassThrough } from 'stream';
 import {
+  writeStream,
   resolvePath,
   writeFile,
   readFile,
@@ -152,5 +154,28 @@ describe('listFiles', () => {
 
   it('returns an empty array when the directory does not exist', () => {
     expect(listFiles('does-not-exist')).toEqual([]);
+  });
+});
+
+describe('writeStream', () => {
+  it('keeps the previous file and leaves no partial one when the upload is cut off', async () => {
+    writeFile('a/photo.jpg', Buffer.from('old'));
+    const source = new PassThrough();
+
+    const writing = writeStream('a/photo.jpg', source);
+    source.write(Buffer.from('half of the new one'));
+    source.destroy(new Error('aborted'));
+
+    await expect(writing).rejects.toThrow('aborted');
+    expect(readFile('a/photo.jpg').toString()).toBe('old');
+    expect(fs.readdirSync(path.join(tmpDir, 'a'))).toEqual(['photo.jpg']);
+  });
+
+  it('returns the size it wrote', async () => {
+    const source = new PassThrough();
+    const writing = writeStream('b/clip.mp4', source);
+    source.end(Buffer.from('12345'));
+
+    expect(await writing).toBe(5);
   });
 });

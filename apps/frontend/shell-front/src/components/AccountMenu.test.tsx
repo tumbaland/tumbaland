@@ -3,11 +3,16 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { vi } from 'vitest';
 
+vi.mock('../services/pushNotifications', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../services/pushNotifications')>()),
+  forgetDeviceOnServer: vi.fn().mockResolvedValue(undefined)
+}));
 vi.mock('../services/authService', () => ({
   authService: { logout: vi.fn() }
 }));
 
 import { authService } from '../services/authService';
+import { forgetDeviceOnServer } from '../services/pushNotifications';
 import { AccountMenu } from './AccountMenu';
 import { User } from '../types';
 
@@ -88,6 +93,10 @@ it('signs out from the home route', async () => {
   await userEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }));
 
   await waitFor(() => expect(authService.logout).toHaveBeenCalled());
+  // Before the session goes, or the server would refuse to forget the device.
+  expect(vi.mocked(forgetDeviceOnServer).mock.invocationCallOrder[0]).toBeLessThan(
+    vi.mocked(authService.logout).mock.invocationCallOrder[0]!
+  );
   expect(screen.getByTestId('path')).toHaveTextContent(/^\/$/);
   expect(onClose).toHaveBeenCalled();
 });

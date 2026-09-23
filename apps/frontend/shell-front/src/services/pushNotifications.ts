@@ -178,19 +178,42 @@ export async function disableNotifications(): Promise<void> {
     }
     await caches.open(PUSH_STATE_CACHE).then((cache) => cache.delete('/__push-config')).catch(() => undefined);
 
-    const { CHAT_API_URL } = getGlobalConfig();
-    if (CHAT_API_URL) {
-      await fetch(`${CHAT_API_URL}/api/chat/push/subscriptions`, {
-        method: 'DELETE',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ endpoint: subscription.endpoint }),
-        signal: AbortSignal.timeout(15_000)
-      }).catch(() => undefined);
-    }
+    await unregisterWithServer(subscription.endpoint, 15_000);
   } catch (error) {
     logger.warn('Could not unsubscribe from push', { error: (error as Error).message });
     throw error;
+  }
+}
+
+async function unregisterWithServer(endpoint: string, timeoutMs: number): Promise<void> {
+  const { CHAT_API_URL } = getGlobalConfig();
+  if (!CHAT_API_URL) return;
+  await fetch(`${CHAT_API_URL}/api/chat/push/subscriptions`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ endpoint }),
+    signal: AbortSignal.timeout(timeoutMs)
+  }).catch(() => undefined);
+}
+
+/**
+ * Stops this device getting the signed-out person's messages. Call before
+ * signing out, while the session cookie still works.
+ *
+ * Only the server forgets the device. The browser keeps its subscription, so
+ * whoever signs in next gets it attached to their account by
+ * `refreshSubscription` without being asked for permission again. Bounded and
+ * silent: signing out must never wait on, or fail over, a notification setting.
+ */
+export async function forgetDeviceOnServer(): Promise<void> {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+  try {
+    const registration = await navigator.serviceWorker.getRegistration();
+    const subscription = await registration?.pushManager?.getSubscription();
+    if (subscription) await unregisterWithServer(subscription.endpoint, 3_000);
+  } catch (error) {
+    logger.warn('Could not detach push from the account', { error: (error as Error).message });
   }
 }
 

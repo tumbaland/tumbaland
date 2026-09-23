@@ -25,7 +25,14 @@ export const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm'
 export const ALLOWED_UPLOAD_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES];
 
 export const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
-export const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
+/**
+ * What file-service will actually take. The ceiling is Cloudflare, which
+ * refuses any request body over 100 MB on this plan, so this sits just under
+ * it. It was 200 MB, so a clip between the two got an upload URL and then
+ * failed partway through, instead of a message saying why. Going past it needs
+ * chunked uploads (see the cloudflared README).
+ */
+export const MAX_VIDEO_BYTES = 95 * 1024 * 1024;
 
 const attachmentSchema = z.object({
   fileId: z.string().min(1, 'fileId required'),

@@ -154,13 +154,16 @@ export const stripeWebhook = async (req: Request, res: Response): Promise<void> 
     return;
   }
 
-  // Idempotency guard: skip if processed
+  // Idempotency guard: skip if processed. The id is only recorded once the
+  // event has been handled (at the end of this function). Recording it first
+  // meant a handler that threw, on a database blip say, answered 500, and
+  // Stripe's retry was then skipped as a duplicate: the payment or the
+  // cancellation was never applied.
   const store = ensureEventStore();
   if (store.has(event.id)) {
     res.json({ received: true, duplicate: true });
     return;
   }
-  store.add(event.id);
   logger.info('[stripe] event', { eventId: event.id, type: event.type, apiVersion: event.api_version });
 
   switch (event.type) {
@@ -256,6 +259,7 @@ export const stripeWebhook = async (req: Request, res: Response): Promise<void> 
     default:
       break; // ignore others for now
   }
+  store.add(event.id);
   res.json({ received: true });
 };
 

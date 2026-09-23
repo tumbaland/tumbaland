@@ -1,24 +1,25 @@
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import request from 'supertest';
-
-jest.mock('../utils/storage', () => ({
-  writeFile: jest.fn(),
-  readFile: jest.fn(),
-  fileExists: jest.fn(),
-  getMetadata: jest.fn()
-}));
-
 import app from '../app';
-import * as storage from '../utils/storage';
 import { signToken } from '../utils/hmac';
 
-const mocked = storage as jest.Mocked<typeof storage>;
+let dataDir: string;
 
 beforeAll(() => {
   process.env.FILE_SERVICE_HMAC_SECRET = 'test-hmac-secret';
 });
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'file-service-public-'));
+  process.env.FILE_SERVICE_DATA_DIR = dataDir;
+});
+
+afterEach(() => {
+  fs.rmSync(dataDir, { recursive: true, force: true });
+  delete process.env.FILE_SERVICE_DATA_DIR;
+  delete process.env.FILE_SERVICE_MAX_UPLOAD_BYTES;
 });
 
 function signedQuery(operation: 'upload' | 'download', fileId: string) {
@@ -27,8 +28,14 @@ function signedQuery(operation: 'upload' | 'download', fileId: string) {
   return `token=${token}&expires=${expiresMs}`;
 }
 
+function stored(fileId: string, contents: string) {
+  const full = path.join(dataDir, fileId);
+  fs.mkdirSync(path.dirname(full), { recursive: true });
+  fs.writeFileSync(full, contents);
+}
+
 describe('PUT /files/upload/:fileId (uploadPublic)', () => {
-  it('writes the uploaded buffer and returns success', async () => {
+  it('writes the uploaded body to disk and returns success', async () => {
     const fileId = 'group/album/photo.jpg';
     const res = await request(app)
       .put(`/files/upload/${fileId}?${signedQuery('upload', fileId)}`)
@@ -36,13 +43,67 @@ describe('PUT /files/upload/:fileId (uploadPublic)', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ success: true, message: 'File uploaded', fileId });
-    expect(mocked.writeFile).toHaveBeenCalledWith(fileId, expect.any(Buffer));
+    expect(fs.readFileSync(path.join(dataDir, fileId), 'utf8')).toBe('image bytes');
   });
 
-  it('returns 500 when writeFile throws', async () => {
-    mocked.writeFile.mockImplementation(() => {
-      throw new Error('disk full');
-    });
+  it('refuses a body over the limit, and leaves nothing behind', async () => {
+    process.env.FILE_SERVICE_MAX_UPLOAD_BYTES = '10';
+    const fileId = 'group/album/big.mp4';
+
+    const res = await request(app)
+      .put(`/files/upload/${fileId}?${signedQuery('upload', fileId)}`)
+      .send(Buffer.alloc(11));
+
+    expect(res.status).toBe(413);
+    expect(res.body.message).toMatch(/too large/);
+    expect(fs.existsSync(path.join(dataDir, fileId))).toBe(false);
+  });
+
+  it('counts the bytes itself rather than trusting Content-Length', async () => {
+    process.env.FILE_SERVICE_MAX_UPLOAD_BYTES = '10';
+    const fileId = 'group/album/chunked.mp4';
+
+    // Chunked, so there is no Content-Length to refuse up front.
+    const req = request(app)
+      .put(`/files/upload/${fileId}?${signedQuery('upload', fileId)}`)
+      .set('Transfer-Encoding', 'chunked');
+    req.write(Buffer.alloc(8));
+    req.write(Buffer.alloc(8));
+    const res = await req;
+
+    expect(res.status).toBe(413);
+    expect(fs.readdirSync(path.join(dataDir, 'group/album'))).toEqual([]);
+  });
+
+  it('refuses more bytes than the upload was signed for', async () => {
+    const fileId = 'group/album/photo.jpg';
+    const expiresMs = Date.now() + 60_000;
+    const token = signToken('upload', fileId, expiresMs, 5);
+
+    const res = await request(app)
+      .put(`/files/upload/${fileId}?token=${token}&expires=${expiresMs}&max=5`)
+      .send(Buffer.from('more than five'));
+
+    expect(res.status).toBe(413);
+    expect(res.body.message).toMatch(/bigger than the size given/);
+    expect(fs.existsSync(path.join(dataDir, fileId))).toBe(false);
+  });
+
+  it('accepts a body within the signed size', async () => {
+    const fileId = 'group/album/photo.jpg';
+    const expiresMs = Date.now() + 60_000;
+    const token = signToken('upload', fileId, expiresMs, 5);
+
+    const res = await request(app)
+      .put(`/files/upload/${fileId}?token=${token}&expires=${expiresMs}&max=5`)
+      .send(Buffer.from('12345'));
+
+    expect(res.status).toBe(200);
+  });
+
+  it('returns 500 when the disk refuses the write', async () => {
+    // A file where the folder should be.
+    fs.writeFileSync(path.join(dataDir, 'group'), 'x');
     const fileId = 'group/album/photo.jpg';
 
     const res = await request(app)
@@ -64,19 +125,17 @@ describe('PUT /files/upload/:fileId (uploadPublic)', () => {
 
 describe('GET /files/download/:fileId (downloadPublic)', () => {
   it('returns 404 when the file does not exist', async () => {
-    mocked.fileExists.mockReturnValue(false);
     const fileId = 'missing.jpg';
 
     const res = await request(app).get(`/files/download/${fileId}?${signedQuery('download', fileId)}`);
 
     expect(res.status).toBe(404);
+    expect(res.headers['content-type']).toMatch(/application\/json/);
   });
 
   it('streams the file with a guessed image/jpeg content type', async () => {
-    mocked.fileExists.mockReturnValue(true);
-    mocked.readFile.mockReturnValue(Buffer.from('jpeg bytes'));
-    mocked.getMetadata.mockReturnValue({ size: 10, lastModified: new Date() });
     const fileId = 'group/album/photo.jpg';
+    stored(fileId, 'jpeg bytes');
 
     const res = await request(app).get(`/files/download/${fileId}?${signedQuery('download', fileId)}`);
 
@@ -86,11 +145,29 @@ describe('GET /files/download/:fileId (downloadPublic)', () => {
     expect(Buffer.isBuffer(res.body) ? res.body.toString() : res.text).toBe('jpeg bytes');
   });
 
+  it('answers a byte range, which iOS needs before it will play a video', async () => {
+    const fileId = 'group/album/clip.mp4';
+    stored(fileId, '0123456789');
+
+    const res = await request(app)
+      .get(`/files/download/${fileId}?${signedQuery('download', fileId)}`)
+      .set('Range', 'bytes=2-5')
+      .buffer(true)
+      .parse((response, callback) => {
+        const chunks: Buffer[] = [];
+        response.on('data', (chunk: Buffer) => chunks.push(chunk));
+        response.on('end', () => callback(null, Buffer.concat(chunks)));
+      });
+
+    expect(res.status).toBe(206);
+    expect(res.headers['content-range']).toBe('bytes 2-5/10');
+    expect(res.headers['content-type']).toBe('video/mp4');
+    expect((res.body as Buffer).toString()).toBe('2345');
+  });
+
   it('falls back to application/octet-stream for an unrecognized extension', async () => {
-    mocked.fileExists.mockReturnValue(true);
-    mocked.readFile.mockReturnValue(Buffer.from('data'));
-    mocked.getMetadata.mockReturnValue({ size: 4, lastModified: new Date() });
-    const fileId = 'group/album/file.xyz';
+    const fileId = 'group/album/file.html';
+    stored(fileId, '<script>');
 
     const res = await request(app).get(`/files/download/${fileId}?${signedQuery('download', fileId)}`);
 
@@ -98,14 +175,12 @@ describe('GET /files/download/:fileId (downloadPublic)', () => {
     expect(res.headers['content-type']).toBe('application/octet-stream');
   });
 
-  it('guesses video/mp4 for a .mp4 file', async () => {
-    mocked.fileExists.mockReturnValue(true);
-    mocked.readFile.mockReturnValue(Buffer.from('video bytes'));
-    mocked.getMetadata.mockReturnValue({ size: 11, lastModified: new Date() });
-    const fileId = 'group/album/clip.mp4';
+  it('does not serve a folder', async () => {
+    const fileId = 'group/album';
+    stored('group/album/photo.jpg', 'x');
 
     const res = await request(app).get(`/files/download/${fileId}?${signedQuery('download', fileId)}`);
 
-    expect(res.headers['content-type']).toBe('video/mp4');
+    expect(res.status).toBe(404);
   });
 });

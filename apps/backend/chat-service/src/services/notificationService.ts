@@ -56,6 +56,7 @@ export async function notifyNewMessage(
     const recipients = await recipientsFor(conversation, sender, message.createdAt);
     if (recipients.length === 0) return;
 
+    const conversationId = conversation._id.toString();
     await sendToUsers(
       recipients.map((recipient) => recipient.userId),
       {
@@ -64,9 +65,16 @@ export async function notifyNewMessage(
         // One notification per conversation rather than one per message: ten
         // messages while the phone is in a pocket should be one buzz and one
         // line in the shade, not ten.
-        tag: conversation._id.toString(),
-        url: `/chat/${conversation._id.toString()}`
-      }
+        tag: conversationId,
+        url: `/chat/${conversationId}`,
+        conversationId,
+        sentAt: new Date(message.createdAt).getTime()
+      },
+      // The same collapsing, one step earlier: while a browser is closed its
+      // push service holds only the newest push for each conversation. An
+      // ObjectId is 24 hex characters, inside the Topic header's 32
+      // base64url characters.
+      { topic: conversationId }
     );
   } catch (error) {
     logger.warn('Chat notification failed', { error: (error as Error).message });

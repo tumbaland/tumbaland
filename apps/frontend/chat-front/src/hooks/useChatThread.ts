@@ -26,6 +26,19 @@ const DEFAULT_APPEARANCE: Appearance = { theme: 'classic', backgroundFileId: nul
 /** Minimum gap between typing notices sent while someone types continuously. */
 const TYPING_THROTTLE_MS = 2500;
 
+/**
+ * Takes this conversation's message notification down on this device once it
+ * has been read here. Message pushes are tagged with the conversation id.
+ */
+function closeNotifications(conversationId: string): void {
+  if (!('serviceWorker' in navigator)) return;
+  void navigator.serviceWorker
+    .getRegistration()
+    .then((registration) => registration?.getNotifications({ tag: conversationId }))
+    .then((notifications) => notifications?.forEach((notification) => notification.close()))
+    .catch(() => undefined);
+}
+
 export interface UseChatThreadResult {
   messages: ThreadMessage[];
   loading: boolean;
@@ -220,11 +233,24 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
   // scroll-based cursor misfires on a short thread that never scrolls.
   const newest = lastStoredMessage(state.messages);
   const newestId = newest?.id;
+  //
+  // Also runs when the page comes back on screen: a message that arrived while
+  // it was hidden was not read then, and without this it stayed unread (and
+  // kept its notification) until the next message moved the cursor.
   useEffect(() => {
-    if (!conversationId || !newestId || document.visibilityState === 'hidden') return;
-    void chatApi.markRead(conversationId, newestId).catch(() => {
-      // A missed read receipt self-corrects on the next message.
-    });
+    if (!conversationId || !newestId) return;
+
+    const markRead = () => {
+      if (document.visibilityState === 'hidden') return;
+      void chatApi.markRead(conversationId, newestId).catch(() => {
+        // A missed read receipt self-corrects on the next message.
+      });
+      closeNotifications(conversationId);
+    };
+
+    markRead();
+    document.addEventListener('visibilitychange', markRead);
+    return () => document.removeEventListener('visibilitychange', markRead);
   }, [conversationId, newestId]);
 
   const deliver = useCallback(

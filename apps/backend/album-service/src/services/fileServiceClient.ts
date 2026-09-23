@@ -9,6 +9,7 @@
  *  - Signed URL generation       → browser-direct upload / download
  */
 
+import crypto from 'crypto';
 import https from 'https';
 import http from 'http';
 import { URL } from 'url';
@@ -108,13 +109,26 @@ export interface FileUploadResult {
   etag: string;
 }
 
+/**
+ * The folder every file uploaded into an album goes under. `createPhoto`
+ * checks a file id against it, so a photo can only point at a file that was
+ * uploaded for that album.
+ */
+export const albumFolder = (albumId: string, userId: string, groupId?: string): string =>
+  `${groupId || userId}/${albumId}/`;
+
+/**
+ * Unguessable, since the id is all that stands between one album's photos and
+ * another's: `Math.random` is not meant for that.
+ */
+const randomPart = (): string => crypto.randomBytes(8).toString('hex');
+
 export const generateFileId = (userId: string, albumId: string, originalFilename: string, groupId?: string): string => {
   const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 15);
+  const random = randomPart();
   const extension = originalFilename.split('.').pop();
-  const topLevelId = groupId || userId;
   const fileId = `${timestamp}-${random}`;
-  return `${topLevelId}/${albumId}/${fileId}/original.${extension}`;
+  return `${albumFolder(albumId, userId, groupId)}${fileId}/original.${extension}`;
 };
 
 export const generateThumbnailFileId = (
@@ -124,7 +138,7 @@ export const generateThumbnailFileId = (
   groupId?: string
 ): string => {
   const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 15);
+  const random = randomPart();
   const topLevelId = groupId || userId;
   const fileId = `${timestamp}-${random}`;
   return `${topLevelId}/${albumId}/${fileId}/thumbnail.jpg`;
@@ -151,12 +165,21 @@ export const getFileFolder = (fileId: string): string => {
 
 /**
  * Get a signed upload URL. The browser PUTs directly to this URL.
+ *
+ * `maxBytes` is signed into the URL and file-service refuses a bigger body, so
+ * the size the storage quota was checked against bounds what lands.
  */
-export const getUploadSignedUrl = async (fileId: string, _mimetype: string, expiresInMinutes = 15): Promise<string> => {
+export const getUploadSignedUrl = async (
+  fileId: string,
+  _mimetype: string,
+  expiresInMinutes = 15,
+  maxBytes?: number
+): Promise<string> => {
   const url = `${fileServiceBaseUrl()}/internal/upload-url`;
   const data = await requestJson<{ success: boolean; data: { uploadUrl: string } }>('POST', url, {
     fileId,
-    expiresInMinutes
+    expiresInMinutes,
+    ...(maxBytes === undefined ? {} : { maxBytes })
   });
   return data.data.uploadUrl;
 };
@@ -381,6 +404,19 @@ export const getFileMetadata = async (fileId: string): Promise<{ size: number; l
   const url = `${fileServiceBaseUrl()}/internal/meta/${fileId}`;
   const data = await requestJson<{ success: boolean; data: { size: number; lastModified: string } }>('GET', url);
   return { size: data.data.size, lastModified: new Date(data.data.lastModified) };
+};
+
+/**
+ * How many bytes a stored file really takes, or null when there is no such
+ * file (an upload that never finished).
+ */
+export const storedSize = async (fileId: string): Promise<number | null> => {
+  try {
+    return (await getFileMetadata(fileId)).size;
+  } catch (error) {
+    if (error instanceof FileServiceHttpError && error.status === 404) return null;
+    throw error;
+  }
 };
 
 /**

@@ -26,6 +26,20 @@ describe('POST /internal/upload-url', () => {
     expect(verifyToken('upload', 'a/b/photo.jpg', expires, token)).toBe(true);
   });
 
+  it('signs the size into the URL when given one', async () => {
+    const res = await request(app)
+      .post('/internal/upload-url')
+      .set('x-internal-api-key', API_KEY)
+      .send({ fileId: 'a/b/photo.jpg', maxBytes: 1234 });
+
+    const url = new URL(res.body.data.uploadUrl);
+    const token = url.searchParams.get('token')!;
+    const expires = Number(url.searchParams.get('expires'));
+    expect(url.searchParams.get('max')).toBe('1234');
+    expect(verifyToken('upload', 'a/b/photo.jpg', expires, token, 1234)).toBe(true);
+    expect(verifyToken('upload', 'a/b/photo.jpg', expires, token)).toBe(false);
+  });
+
   it('honors a custom expiresInMinutes', async () => {
     const res = await request(app)
       .post('/internal/upload-url')

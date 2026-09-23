@@ -120,6 +120,24 @@ describe('sendToUsers', () => {
     expect(JSON.parse(sendNotification.mock.calls[0]![1])).toEqual(payload());
   });
 
+  it('passes a topic through, so a closed browser gets only the newest push per conversation', async () => {
+    mocked.find.mockResolvedValue([subscription()]);
+    sendNotification.mockResolvedValue({});
+
+    await sendToUsers(['u-irja'], payload(), { topic: 'c1' });
+
+    expect(sendNotification.mock.calls[0]![2]).toEqual(expect.objectContaining({ topic: 'c1' }));
+  });
+
+  it('sends no topic unless asked', async () => {
+    mocked.find.mockResolvedValue([subscription()]);
+    sendNotification.mockResolvedValue({});
+
+    await sendToUsers(['u-irja'], payload());
+
+    expect(sendNotification.mock.calls[0]![2]).not.toHaveProperty('topic');
+  });
+
   it('does nothing when the recipient has no devices', async () => {
     expect(await sendToUsers(['u-irja'], payload())).toBe(0);
     expect(sendNotification).not.toHaveBeenCalled();

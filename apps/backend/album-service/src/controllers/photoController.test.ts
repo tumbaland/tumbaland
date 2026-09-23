@@ -283,12 +283,13 @@ describe('getUploadSignedUrlRequest', () => {
     const res = mockRes();
 
     await getUploadSignedUrlRequest(
-      baseReq({ body: { filename: 'photo.jpg', mimetype: 'image/jpeg', albumId: 'a1' } }),
+      baseReq({ body: { filename: 'photo.jpg', mimetype: 'image/jpeg', albumId: 'a1', sizeBytes: 2048 } }),
       res
     );
 
     expect(mockedGenerateFileId).toHaveBeenCalledWith('user-1', 'a1', 'photo.jpg', 'group-1');
-    expect(mockedGetUploadSignedUrl).toHaveBeenCalledWith('group-1/a1/123/original.jpg', 'image/jpeg', 15);
+    // Good for no more than the size the quota was checked against.
+    expect(mockedGetUploadSignedUrl).toHaveBeenCalledWith('group-1/a1/123/original.jpg', 'image/jpeg', 15, 2048);
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ uploadUrl: 'https://upload.example' }) })
     );

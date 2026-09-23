@@ -9,6 +9,7 @@ import {
   decodeKey,
   disableNotifications,
   enableNotifications,
+  forgetDeviceOnServer,
   isAppleBrowser,
   isStandalone,
   pushSupport,
@@ -39,7 +40,7 @@ function setupBrowser(
     userAgent: ua,
     platform: 'test',
     standalone,
-    serviceWorker: { ready: Promise.resolve({ pushManager }) },
+    serviceWorker: { ready: Promise.resolve({ pushManager }), getRegistration: () => Promise.resolve({ pushManager }) },
     setAppBadge: vi.fn().mockResolvedValue(undefined),
     clearAppBadge: vi.fn().mockResolvedValue(undefined)
   });
@@ -272,6 +273,36 @@ describe('disableNotifications', () => {
     setupBrowser({ permission: 'granted' });
 
     await disableNotifications();
+
+    expect(fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('forgetDeviceOnServer', () => {
+  it('tells the server to stop sending here, and keeps the browser subscribed for the next sign-in', async () => {
+    setupBrowser({ permission: 'granted' });
+    pushManager.getSubscription.mockResolvedValue(subscription);
+
+    await forgetDeviceOnServer();
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://chat-api.test/api/chat/push/subscriptions',
+      expect.objectContaining({ method: 'DELETE', body: JSON.stringify({ endpoint: subscription.endpoint }) })
+    );
+    expect(subscription.unsubscribe).not.toHaveBeenCalled();
+  });
+
+  it('never fails a sign-out', async () => {
+    setupBrowser({ permission: 'granted' });
+    pushManager.getSubscription.mockRejectedValue(new Error('broken'));
+
+    await expect(forgetDeviceOnServer()).resolves.toBeUndefined();
+  });
+
+  it('does nothing when this device never subscribed', async () => {
+    setupBrowser({ permission: 'granted' });
+
+    await forgetDeviceOnServer();
 
     expect(fetch).not.toHaveBeenCalled();
   });

@@ -108,7 +108,14 @@ export const uploadSignedUrlSchema = z.object({
   // bytes are written. Required rather than optional: an omitted size would be
   // a free pass, and a client that does not send it is one that has not been
   // updated, not one that should upload unmetered.
-  sizeBytes: z.number().int().positive('sizeBytes is required')
+  sizeBytes: z
+    .number()
+    .int()
+    .positive('sizeBytes is required')
+    // file-service refuses anything larger (Cloudflare caps a request at
+    // 100 MB). Said here, before the upload starts, rather than as a failed
+    // upload.
+    .max(95 * 1024 * 1024, 'That file is too large. The limit is 95 MB.')
 });
 
 export const createCollageSchema = z.object({

@@ -217,6 +217,73 @@ describe('removeMember', () => {
   });
 });
 
+describe('the owner role', () => {
+  const adminAndOwner = () =>
+    makeGroup({
+      members: [
+        { email: 'owner@example.com', role: 'owner' },
+        { email: 'admin@example.com', role: 'admin' },
+        { email: 'member@example.com', role: 'member' }
+      ]
+    });
+
+  it('stops an admin making themselves owner', async () => {
+    mockedFindOne.mockResolvedValue(adminAndOwner());
+
+    await expect(
+      groupService.updateMemberRole('group-1', 'admin@example.com', 'admin@example.com', 'owner')
+    ).rejects.toMatchObject({ name: 'ForbiddenError' });
+  });
+
+  it('stops an admin demoting the owner', async () => {
+    mockedFindOne.mockResolvedValue(adminAndOwner());
+
+    await expect(
+      groupService.updateMemberRole('group-1', 'admin@example.com', 'owner@example.com', 'member')
+    ).rejects.toMatchObject({ name: 'ForbiddenError' });
+  });
+
+  it('stops an admin removing the owner', async () => {
+    const group = adminAndOwner();
+    mockedFindOne.mockResolvedValue(group);
+
+    await expect(groupService.removeMember('group-1', 'admin@example.com', 'owner@example.com')).rejects.toMatchObject({
+      name: 'ForbiddenError'
+    });
+    expect(group.save).not.toHaveBeenCalled();
+  });
+
+  it('stops an admin adding someone as owner', async () => {
+    mockedFindOne.mockResolvedValue(adminAndOwner());
+
+    await expect(
+      groupService.addMember('group-1', 'admin@example.com', 'new@example.com', 'owner')
+    ).rejects.toMatchObject({ name: 'ForbiddenError' });
+  });
+
+  it('lets the owner hand ownership on, and then step down', async () => {
+    const group = adminAndOwner();
+    mockedFindOne.mockResolvedValue(group);
+
+    await groupService.updateMemberRole('group-1', 'owner@example.com', 'admin@example.com', 'owner');
+    await groupService.updateMemberRole('group-1', 'owner@example.com', 'owner@example.com', 'admin');
+
+    expect(group.members.map((m: any) => m.role)).toEqual(['admin', 'owner', 'member']);
+  });
+
+  it('never leaves a group without an owner', async () => {
+    mockedFindOne.mockResolvedValue(adminAndOwner());
+    await expect(
+      groupService.updateMemberRole('group-1', 'owner@example.com', 'owner@example.com', 'member')
+    ).rejects.toMatchObject({ name: 'ConflictError' });
+
+    mockedFindOne.mockResolvedValue(adminAndOwner());
+    await expect(groupService.removeMember('group-1', 'owner@example.com', 'owner@example.com')).rejects.toMatchObject({
+      name: 'ConflictError'
+    });
+  });
+});
+
 describe('checkMembership', () => {
   it('reports non-membership for an outsider', async () => {
     mockedFindOne.mockResolvedValue(makeGroup());

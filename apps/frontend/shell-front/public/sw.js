@@ -150,7 +150,9 @@ self.addEventListener('push', (event) => {
     tag: payload.tag || 'tumbaland',
     renotify: Boolean(payload.tag),
     data: { url: payload.url || '/chat' },
-    timestamp: Date.now()
+    // When the message was sent, not when the push arrived: a push held while
+    // the browser was closed should not read "now".
+    timestamp: typeof payload.sentAt === 'number' ? payload.sentAt : Date.now()
   };
   // A ringing call stays on screen until it is dealt with, and buzzes like one.
   // The server replaces it with "Missed call" under the same tag if nobody
@@ -164,28 +166,84 @@ self.addEventListener('push', (event) => {
   // notification, so this one replaces "Calling you" under the same tag and is
   // closed straight away: the ringing call leaves the lock screen.
   if (payload.kind === 'call-over') {
-    options.silent = true;
-    options.renotify = false;
-    event.waitUntil(
-      self.registration
-        .showNotification(title, options)
-        .then(() => self.registration.getNotifications({ tag: options.tag }))
-        .then((shown) => shown.forEach((notification) => notification.close()))
-    );
+    event.waitUntil(showAndClose(title, options));
     return;
   }
 
+  // A message push. The push service holds pushes while the browser is closed
+  // and hands the backlog over when it starts, so a message read an hour ago
+  // on the phone would otherwise pop up the moment the laptop app opens. The
+  // server is asked first; anything already read is dropped the same way as a
+  // call answered elsewhere.
   event.waitUntil(
-    Promise.all([
-      self.registration.showNotification(title, options),
-      // The dot on the home-screen icon. Supported on Android and on iOS 16.4+
-      // for an installed app; absent elsewhere, hence the guard.
-      self.navigator.setAppBadge
-        ? self.navigator.setAppBadge(typeof payload.unread === 'number' ? payload.unread : undefined).catch(() => undefined)
-        : Promise.resolve()
-    ])
+    unreadState(payload.conversationId).then(({ fresh, unread }) => {
+      if (!fresh) {
+        return Promise.all([showAndClose(title, options), typeof unread === 'number' ? setBadge(unread) : undefined]);
+      }
+      return Promise.all([
+        self.registration.showNotification(title, options),
+        setBadge(typeof unread === 'number' ? unread : payload.unread)
+      ]);
+    })
   );
 });
+
+/**
+ * Shows a notification and takes it straight down again, along with anything
+ * already shown under its tag.
+ *
+ * Every push must show a notification or the browser eventually revokes the
+ * subscription, so a push that turns out to be old news still shows one, just
+ * silently and only for an instant.
+ */
+function showAndClose(title, options) {
+  return self.registration
+    .showNotification(title, { ...options, silent: true, renotify: false, requireInteraction: false })
+    .then(() => self.registration.getNotifications({ tag: options.tag }))
+    .then((shown) => shown.forEach((notification) => notification.close()));
+}
+
+/**
+ * The dot on the home-screen icon. Supported on Android and on iOS 16.4+ for
+ * an installed app; absent elsewhere, hence the guard. With no count it shows
+ * a plain dot.
+ */
+function setBadge(count) {
+  if (!self.navigator.setAppBadge) return Promise.resolve();
+  if (count === 0) return self.navigator.clearAppBadge().catch(() => undefined);
+  return self.navigator.setAppBadge(typeof count === 'number' ? count : undefined).catch(() => undefined);
+}
+
+/**
+ * Whether a message push is still unread, and the total unread for the badge.
+ *
+ * Errs towards showing: offline, signed out, a slow server or a push from an
+ * older server without `conversationId` all count as fresh. A missed message
+ * is worse than a stale one.
+ */
+async function unreadState(conversationId) {
+  if (!conversationId) return { fresh: true };
+  try {
+    const stored = await caches.open(PUSH_STATE_CACHE).then((cache) => cache.match('/__push-config'));
+    const config = stored ? await stored.json() : null;
+    if (!config?.apiUrl) return { fresh: true };
+
+    // `background` keeps this from counting as the person being online.
+    const response = await fetch(`${config.apiUrl}/api/chat/unread?background=1`, {
+      credentials: 'include',
+      signal: AbortSignal.timeout(5000)
+    });
+    if (!response.ok) return { fresh: true };
+    const data = (await response.json())?.data;
+    const count = data?.conversations?.[conversationId];
+    return {
+      fresh: typeof count === 'number' ? count > 0 : true,
+      unread: typeof data?.unread === 'number' ? data.unread : undefined
+    };
+  } catch {
+    return { fresh: true };
+  }
+}
 
 /**
  * Opening a notification.

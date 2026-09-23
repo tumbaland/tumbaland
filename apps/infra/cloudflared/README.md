@@ -85,8 +85,8 @@ when the reason for wanting a tunnel is that nothing can reach the Pi at all.
 ## Edge limits that now apply
 
 - **Request bodies are capped at 100 MB** (Free/Pro; 200 MB Business). Every host
-  here is configured at or below `client_max_body_size 50M`
-  (`file-service`; the rest inherit nginx's 1 MB default), so nothing needs chunking today. A future feature that
+  here is configured at or below `client_max_body_size 100M`
+  (`file-service`, which itself stops uploads at 95 MB; the rest inherit nginx's 1 MB default), so nothing needs chunking today. A future feature that
   raises a limit past 100 MB would have to upload in `Content-Range` chunks
   instead — the visin repo has a worked example of that.
 - **Cloudflare returns 524 if the origin takes longer than 100 s** to start

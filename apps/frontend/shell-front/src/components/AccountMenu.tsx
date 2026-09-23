@@ -12,6 +12,7 @@ import Typography from '@mui/material/Typography';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { getUserApps, isRouteActive } from '../config/apps';
 import { authService } from '../services/authService';
+import { forgetDeviceOnServer } from '../services/pushNotifications';
 import { ink, surface } from '@tumbaland/frontend-core';
 import { User } from '../types';
 import { NotificationSetting } from './NotificationSetting';
@@ -36,6 +37,8 @@ export function AccountMenu({ user, anchorEl, currentRoute, mobile, onClose }: A
   const handleSignOut = async () => {
     onClose();
     navigate('/');
+    // Otherwise this device keeps showing their messages after they have gone.
+    await forgetDeviceOnServer();
     await authService.logout();
   };
 

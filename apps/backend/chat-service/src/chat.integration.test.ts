@@ -16,6 +16,8 @@ jest.mock('./services/fileServiceClient', () => ({
   getDownloadUrls: jest.fn(async (ids: string[]) => new Map(ids.map((id) => [id, `https://files.test/d/${id}`]))),
   uploadBuffer: jest.fn(async () => undefined),
   downloadBuffer: jest.fn(async () => Buffer.from('x')),
+  // What file-service holds, which is what the meter is charged from.
+  storedSize: jest.fn(async () => 1234 as number | null),
   // Async, like the real one: the caller chains .catch() on the result.
   deleteFolder: jest.fn(async () => undefined)
 }));
@@ -69,7 +71,7 @@ import { Call } from './models/Call';
 import { DROP_GRACE_MS, RING_TIMEOUT_MS, resetCallTimers, sweepCalls } from './services/callService';
 import { clearPresence } from './services/presenceService';
 import { clearSubscribers, subscribe } from './services/streamHub';
-import { deleteFolder } from './services/fileServiceClient';
+import { deleteFolder, getUploadUrl, storedSize } from './services/fileServiceClient';
 
 let mongo: MongoMemoryServer;
 
@@ -463,6 +465,17 @@ describe('unread counts', () => {
     expect((await as(TOM).get('/api/chat/unread')).body.data.unread).toBe(0);
   });
 
+  it('breaks the count down by conversation, for the worker checking a push is still news', async () => {
+    const id = await conversationInG1();
+    const sent = await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'one' });
+
+    expect((await as(IRJA).get('/api/chat/unread')).body.data.conversations).toEqual({ [id]: 1 });
+
+    await as(IRJA).post(`/api/chat/conversations/${id}/read`).send({ lastReadMessageId: sent.body.data.id });
+
+    expect((await as(IRJA).get('/api/chat/unread')).body.data.conversations).toEqual({ [id]: 0 });
+  });
+
   it('clears once the thread is marked read', async () => {
     const id = await conversationInG1();
     const sent = await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'one' });
@@ -496,6 +509,19 @@ describe('unread counts', () => {
 
     const after = await ReadState.findOne({ conversationId: id, userId: IRJA.id });
     expect(after!.lastReadAt.getTime()).toBe(ahead.getTime());
+  });
+
+  it('never moves the seen marker back to an older message', async () => {
+    const id = await conversationInG1();
+    const first = await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'one' });
+    const second = await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'two' });
+    await as(IRJA).post(`/api/chat/conversations/${id}/read`).send({ lastReadMessageId: second.body.data.id });
+
+    // A laptop tab hidden since the first message comes back on screen.
+    await as(IRJA).post(`/api/chat/conversations/${id}/read`).send({ lastReadMessageId: first.body.data.id });
+
+    const after = await ReadState.findOne({ conversationId: id, userId: IRJA.id });
+    expect(after!.lastReadMessageId).toBe(second.body.data.id);
   });
 
   it('does not count a deleted message', async () => {
@@ -769,17 +795,43 @@ describe('attachments', () => {
     expect(res.status).toBe(404);
   });
 
-  it('meters the bytes once the message carrying them exists', async () => {
+  it('meters the bytes once the message carrying them exists, by what is really stored', async () => {
     const id = await conversationInG1();
+    (storedSize as jest.Mock).mockResolvedValueOnce(500_000);
 
-    await as(TOM)
+    const sent = await as(TOM)
       .post(`/api/chat/conversations/${id}/messages`)
       .send({
         clientId: clientId(),
-        attachments: [{ fileId: `chat/g1/${id}/abc/original.jpg`, mimetype: 'image/jpeg', sizeBytes: 500_000 }]
+        // Says one byte; file-service holds half a megabyte.
+        attachments: [{ fileId: `chat/g1/${id}/abc/original.jpg`, mimetype: 'image/jpeg', sizeBytes: 1 }]
       });
 
     expect(recordStoredBytes).toHaveBeenCalledWith('g1', 500_000);
+    expect(sent.body.data.attachments[0].sizeBytes).toBe(500_000);
+  });
+
+  it('refuses a message whose upload never finished', async () => {
+    const id = await conversationInG1();
+    (storedSize as jest.Mock).mockResolvedValueOnce(null);
+
+    const res = await as(TOM)
+      .post(`/api/chat/conversations/${id}/messages`)
+      .send({
+        clientId: clientId(),
+        attachments: [{ fileId: `chat/g1/${id}/abc/original.jpg`, mimetype: 'image/jpeg', sizeBytes: 100 }]
+      });
+
+    expect(res.status).toBe(400);
+    expect(recordStoredBytes).not.toHaveBeenCalled();
+  });
+
+  it('asks for an upload URL good for no more than the size the quota was checked against', async () => {
+    const id = await conversationInG1();
+
+    await as(TOM).post(`/api/chat/conversations/${id}/attachments/upload-url`).send(image);
+
+    expect(getUploadUrl).toHaveBeenCalledWith(expect.any(String), 'image/jpeg', 15, image.sizeBytes);
   });
 
   it('hands back signed URLs with the thread, one batch for the page', async () => {
@@ -798,6 +850,7 @@ describe('attachments', () => {
 
   it('deletes the files and releases the bytes when a message is deleted', async () => {
     const id = await conversationInG1();
+    (storedSize as jest.Mock).mockResolvedValueOnce(500_000);
     const sent = await as(TOM)
       .post(`/api/chat/conversations/${id}/messages`)
       .send({
@@ -1023,6 +1076,21 @@ describe('presence', () => {
 
     const res = await as(TOM).get(`/api/chat/conversations/${id}`);
     expect(res.body.data.presence[0]).toMatchObject({ userId: IRJA.id, online: true });
+  });
+
+  it('does not count the service worker’s background check as being active', async () => {
+    const id = await conversationInG1();
+    await as(IRJA).get(`/api/chat/conversations/${id}`);
+    await settle();
+    clearPresence();
+    await Presence.deleteMany({});
+
+    // A push arrived on her locked phone; nobody is looking at the app.
+    await as(IRJA).get('/api/chat/unread?background=1');
+    await settle();
+
+    const res = await as(TOM).get(`/api/chat/conversations/${id}`);
+    expect(res.body.data.presence[0]).toMatchObject({ userId: IRJA.id, online: false });
   });
 });
 

@@ -238,7 +238,7 @@ export const getUploadSignedUrlRequest = async (req: Request, res: Response): Pr
   const fileId = generateFileId(userId, albumId, filename, album.groupId);
 
   // Get upload URL directly from file service
-  const uploadUrl = await getUploadSignedUrl(fileId, mimetype, 15);
+  const uploadUrl = await getUploadSignedUrl(fileId, mimetype, 15, sizeBytes);
 
   sendSuccess(res, { uploadUrl, minioFileId: fileId, albumId, expiresInMinutes: 15 });
 };

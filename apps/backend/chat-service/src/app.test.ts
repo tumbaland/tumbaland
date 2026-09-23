@@ -1,3 +1,4 @@
+import jwt from 'jsonwebtoken';
 import request from 'supertest';
 import app from './app';
 
@@ -37,5 +38,20 @@ describe('authentication', () => {
     const res = await request(app).get('/api/chat/conversations').set('x-internal-token', 'anything');
 
     expect(res.status).toBe(401);
+  });
+});
+
+describe('rate limiting', () => {
+  const token = (id: string) => jwt.sign({ id, email: `${id}@example.com`, name: id, groups: [] }, 'test-secret');
+  // No groups and no presence write, so this answers without a database.
+  const unread = (id: string) =>
+    request(app).get('/api/chat/unread?background=1').set('Authorization', `Bearer ${token(id)}`).set('X-Forwarded-For', '10.9.9.9');
+
+  it('counts each person on a shared home connection separately', async () => {
+    for (let i = 0; i < 300; i++) await unread('u-tom');
+
+    expect((await unread('u-tom')).status).toBe(429);
+    // Same address, other person: her chat still works.
+    expect((await unread('u-irja')).status).toBe(200);
   });
 });

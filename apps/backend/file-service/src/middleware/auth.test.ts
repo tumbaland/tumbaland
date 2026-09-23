@@ -3,7 +3,7 @@ import { requireApiKey, requireSignedToken } from './auth';
 import { signToken } from '../utils/hmac';
 
 function mockRes(): Response {
-  const res: Partial<Response> = {};
+  const res: Partial<Response> = { locals: {} };
   res.status = jest.fn().mockReturnValue(res);
   res.json = jest.fn().mockReturnValue(res);
   return res as Response;
@@ -52,6 +52,63 @@ describe('requireApiKey', () => {
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(next).not.toHaveBeenCalled();
+  });
+});
+
+describe('requireApiKey without a configured key', () => {
+  it('rejects everyone rather than matching an empty key', () => {
+    delete process.env.FILE_SERVICE_API_KEY;
+    const req = { headers: { 'x-internal-api-key': '' } } as unknown as Request;
+    const res = mockRes();
+    const next = jest.fn();
+
+    requireApiKey(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(next).not.toHaveBeenCalled();
+  });
+});
+
+describe('requireSignedToken with a signed size', () => {
+  function reqWith(query: Record<string, string>) {
+    return { query, params: { fileId: 'a/b/c.jpg' } } as unknown as Request;
+  }
+
+  it('passes the signed size on to the upload', () => {
+    const expiresMs = Date.now() + 60_000;
+    const token = signToken('upload', 'a/b/c.jpg', expiresMs, 1000);
+    const res = mockRes();
+    const next = jest.fn();
+
+    requireSignedToken('upload')(reqWith({ token, expires: String(expiresMs), max: '1000' }), res, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.locals.maxBytes).toBe(1000);
+  });
+
+  it.each([
+    ['raised', { max: '999999999' }],
+    ['dropped', {}]
+  ])('refuses a URL whose size was %s', (_label, change) => {
+    const expiresMs = Date.now() + 60_000;
+    const token = signToken('upload', 'a/b/c.jpg', expiresMs, 1000);
+    const res = mockRes();
+    const next = jest.fn();
+
+    requireSignedToken('upload')(reqWith({ token, expires: String(expiresMs), ...change }), res, next);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('rejects a size that is not a whole number', () => {
+    const expiresMs = Date.now() + 60_000;
+    const token = signToken('upload', 'a/b/c.jpg', expiresMs, 1000);
+    const res = mockRes();
+
+    requireSignedToken('upload')(reqWith({ token, expires: String(expiresMs), max: '1e3' }), res, jest.fn());
+
+    expect(res.status).toHaveBeenCalledWith(400);
   });
 });
 

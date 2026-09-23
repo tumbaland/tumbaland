@@ -40,18 +40,41 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
   return (await response.json()) as T;
 }
 
-/** A signed PUT URL the browser uploads to directly, never through this service. */
+/**
+ * A signed PUT URL the browser uploads to directly, never through this service.
+ *
+ * `maxBytes` is signed into the URL and file-service refuses a bigger body, so
+ * the size the storage quota was checked against is an upper bound on what
+ * lands.
+ */
 export async function getUploadUrl(
   fileId: string,
   mimetype: string,
-  expiresInMinutes = 15
+  expiresInMinutes = 15,
+  maxBytes?: number
 ): Promise<string> {
   const json = await call<{ data: { uploadUrl: string } }>('POST', '/internal/upload-url', {
     fileId,
     mimetype,
-    expiresInMinutes
+    expiresInMinutes,
+    ...(maxBytes === undefined ? {} : { maxBytes })
   });
   return json.data.uploadUrl;
+}
+
+/**
+ * How many bytes a stored file really takes, or null when there is no such
+ * file (an upload that never finished).
+ */
+export async function storedSize(fileId: string): Promise<number | null> {
+  const response = await fetch(`${baseUrl()}/internal/meta/${fileId}`, {
+    headers: { 'X-Internal-Api-Key': apiKey() },
+    signal: AbortSignal.timeout(TIMEOUT_MS)
+  });
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`file-service GET /internal/meta -> ${response.status}`);
+  const json = (await response.json()) as { data: { size: number } };
+  return json.data.size;
 }
 
 /**

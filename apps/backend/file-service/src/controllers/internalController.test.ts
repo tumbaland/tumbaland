@@ -135,20 +135,6 @@ describe('DELETE /internal/files/folder (internalDeleteFolder)', () => {
   });
 });
 
-describe('PUT /internal/files/folder (internalDeleteFolder, alternate method)', () => {
-  it('also supports PUT for folder deletion', async () => {
-    mocked.deleteByPrefix.mockReturnValue(1);
-
-    const res = await request(app)
-      .put('/internal/files/folder')
-      .set('x-internal-api-key', API_KEY)
-      .send({ prefix: 'albums/album-1' });
-
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual({ success: true, message: 'Deleted 1 file(s)', count: 1 });
-  });
-});
-
 describe('GET /internal/files (internalList)', () => {
   it('lists files, defaulting maxKeys to 1000 when not provided', async () => {
     mocked.listFiles.mockReturnValue([{ name: 'a.jpg', size: 10 }]);

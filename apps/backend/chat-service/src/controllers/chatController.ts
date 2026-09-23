@@ -86,7 +86,7 @@ export const getConversation = async (req: Request, res: Response): Promise<void
 
 export const unreadCount = async (req: Request, res: Response): Promise<void> => {
   const person = caller(req);
-  sendSuccess(res, { unread: await conversations.unreadTotal(person) });
+  sendSuccess(res, await conversations.unreadCounts(person));
 };
 
 export const listMessages = async (req: Request, res: Response): Promise<void> => {
@@ -268,7 +268,7 @@ export const attachmentUploadUrl = async (req: Request, res: Response): Promise<
   await assertHeadroom(person, conversation.groupId, sizeBytes);
 
   const fileId = buildFileId(conversation.groupId, conversation._id.toString(), filename);
-  const uploadUrl = await signUpload(fileId, mimetype);
+  const uploadUrl = await signUpload(fileId, mimetype, sizeBytes);
 
   sendSuccess(
     res,

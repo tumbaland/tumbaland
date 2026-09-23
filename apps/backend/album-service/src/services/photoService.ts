@@ -1,8 +1,16 @@
 import mongoose, { HydratedDocument } from 'mongoose';
 import Photo, { IPhoto } from '../models/Photo';
 import Album from '../models/Album';
-import { canAccessResource, ConflictError, logger, NotFoundError } from '@tumbaland/backend-core';
-import { deleteFile, getPhotoSignedUrl, getPhotoSignedUrlsBatch, getFile, SignedUrlData } from './fileServiceClient';
+import { BadRequestError, canAccessResource, ConflictError, logger, NotFoundError } from '@tumbaland/backend-core';
+import {
+  albumFolder,
+  deleteFile,
+  getPhotoSignedUrl,
+  getPhotoSignedUrlsBatch,
+  getFile,
+  SignedUrlData,
+  storedSize
+} from './fileServiceClient';
 import { generateThumbnailFromBuffer, isSupportedImageFormat } from './thumbnailService';
 
 export interface CreatePhotoInput {
@@ -171,7 +179,6 @@ class PhotoService {
       title,
       description,
       mimetype,
-      size,
       width,
       height,
       tags = [],
@@ -187,6 +194,19 @@ class PhotoService {
     const album = await Album.findById(albumId);
     if (!album || !canReachAlbum(album, { userId, userGroups }, 'write')) {
       throw new NotFoundError('Album not found');
+    }
+
+    // The file has to be one uploaded for this album. The id comes from the
+    // client, and a photo record is what download URLs are signed from, so an
+    // id from another album would hand out someone else's photo.
+    if (!actualMinioFileId.startsWith(albumFolder(albumId, userId, album.groupId ?? undefined))) {
+      throw new BadRequestError('That file was not uploaded to this album');
+    }
+
+    // Charged by what is really stored, not by the size the client reports.
+    const storedBytes = await storedSize(actualMinioFileId);
+    if (storedBytes === null) {
+      throw new BadRequestError('That upload did not finish. Try uploading it again.');
     }
 
     // Check if photo with this minioFileId already exists
@@ -205,7 +225,7 @@ class PhotoService {
       title: title?.trim(),
       description: description?.trim(),
       mimetype,
-      size,
+      size: storedBytes,
       width,
       height,
       tags: normalizeTags(tags),
@@ -217,7 +237,7 @@ class PhotoService {
     // Keep the album's denormalized photoCount/totalSize in sync so listing
     // and dashboard pages can read them directly instead of aggregating
     // across every photo on each request.
-    await Album.updateOne({ _id: albumId }, { $inc: { photoCount: 1, totalSize: size } });
+    await Album.updateOne({ _id: albumId }, { $inc: { photoCount: 1, totalSize: storedBytes } });
 
     // Generate thumbnail asynchronously for supported image formats (don't block photo creation)
     if (isSupportedImageFormat(mimetype)) {

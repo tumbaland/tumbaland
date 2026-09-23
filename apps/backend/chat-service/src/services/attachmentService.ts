@@ -1,9 +1,9 @@
 import { randomUUID } from 'crypto';
 import path from 'path';
 import sharp from 'sharp';
-import { logger } from '@tumbaland/backend-core';
+import { BadRequestError, logger } from '@tumbaland/backend-core';
 import type { IAttachment, IMessage } from '../models/Message';
-import { downloadBuffer, getDownloadUrls, getUploadUrl, uploadBuffer } from './fileServiceClient';
+import { downloadBuffer, getDownloadUrls, getUploadUrl, storedSize, uploadBuffer } from './fileServiceClient';
 import type { MessageView } from './messageService';
 
 /**
@@ -64,8 +64,9 @@ export function folderFor(fileId: string): string {
   return path.posix.dirname(fileId);
 }
 
-export async function signUpload(fileId: string, mimetype: string): Promise<string> {
-  return getUploadUrl(fileId, mimetype, 15);
+/** An upload URL good for at most `sizeBytes`, the size the quota was checked against. */
+export async function signUpload(fileId: string, mimetype: string, sizeBytes: number): Promise<string> {
+  return getUploadUrl(fileId, mimetype, 15, sizeBytes);
 }
 
 /** Longest edge of a generated thumbnail. */
@@ -139,6 +140,21 @@ export async function withDownloadUrls(messages: MessageView[]): Promise<Message
             posterUrl: attachment.posterFileId ? (urls.get(attachment.posterFileId) ?? null) : null
           }))
         }
+  );
+}
+
+/**
+ * The attachments with `sizeBytes` replaced by what file-service actually
+ * holds. The client's figure is what it says it uploaded, and the storage meter
+ * is charged from this, so it cannot be trusted; the stored size can.
+ */
+export async function withStoredSizes(attachments: IAttachment[]): Promise<IAttachment[]> {
+  return Promise.all(
+    attachments.map(async (attachment) => {
+      const size = await storedSize(attachment.fileId);
+      if (size === null) throw new BadRequestError('That upload did not finish. Try sending it again.');
+      return { ...attachment, sizeBytes: size };
+    })
   );
 }
 

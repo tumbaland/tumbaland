@@ -26,8 +26,12 @@ const router = Router();
 // Every chat request is a sign of life, including the shell's minute-by-minute
 // unread poll, which is what lets presence mean "using Tumbaland" rather than
 // "has the chat open". Not awaited: it never fails a request.
+//
+// The one exception is a request made with nobody at the screen: the service
+// worker checks whether a push is still unread with `?background=1`, and that
+// must not light up someone's online dot every time a message reaches them.
 router.use((req, _res, next) => {
-  void touchPresence(caller(req));
+  if (req.query.background !== '1') void touchPresence(caller(req));
   next();
 });
 

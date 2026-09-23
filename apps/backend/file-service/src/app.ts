@@ -27,13 +27,10 @@ const app = createBaseApp({ parseJson: false, parseCookies: false, rateLimiter: 
 // Raw body parser for file uploads – do NOT use express.json() before file routes.
 // We handle raw streams manually in controllers, so only parse JSON where needed.
 app.use((req, res, next) => {
-  // Skip JSON parsing for upload routes – they stream raw binary. Excludes
-  // /internal/files/folder specifically: it matches the same PUT+path-prefix
-  // check but takes a JSON body ({ prefix }), not a binary stream — without
-  // this exclusion its body was silently dropped and validation always failed.
-  const isRawUploadRoute =
-    (req.path.includes('/files/upload/') || req.path.includes('/internal/files/')) &&
-    req.path !== '/internal/files/folder';
+  // Skip JSON parsing for upload routes – they stream raw binary. Every PUT
+  // under these paths is an upload; the folder delete is a DELETE with a JSON
+  // body, which is parsed as usual.
+  const isRawUploadRoute = req.path.includes('/files/upload/') || req.path.includes('/internal/files/');
   if (isRawUploadRoute && req.method === 'PUT') return next();
   express.json()(req, res, next);
 });

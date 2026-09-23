@@ -20,6 +20,15 @@ export interface PushPayload {
   url: string;
   unread?: number;
   /**
+   * The conversation a message push is about. The worker asks the server
+   * whether it is still unread before showing anything, because a push can sit
+   * at the push service for up to its TTL while the browser is closed, and by
+   * the time it arrives it may have been read on another device.
+   */
+  conversationId?: string;
+  /** When the message was sent, in ms. Shown as the notification's time. */
+  sentAt?: number;
+  /**
    * `call`: a ringing call, kept on screen until it is dealt with.
    * `call-over`: replaces that notification and closes it at once, for a call
    * answered or declined somewhere else.
@@ -104,11 +113,15 @@ export async function removeSubscription(userId: string, endpoint: string): Prom
  * subscription away and the row is deleted immediately. Anything else is
  * counted for diagnostics. Temporary provider outages must not permanently
  * unsubscribe phones that are still registered.
+ *
+ * `topic` makes the push service keep only the newest undelivered push with
+ * that topic. A browser that was closed for an hour then gets one push per
+ * conversation when it starts, not one for every message it missed.
  */
 export async function sendToUsers(
   userIds: string[],
   payload: PushPayload,
-  { ttlSeconds = 60 * 60 }: { ttlSeconds?: number } = {}
+  { ttlSeconds = 60 * 60, topic }: { ttlSeconds?: number; topic?: string } = {}
 ): Promise<number> {
   if (!isPushConfigured() || userIds.length === 0) return 0;
 
@@ -124,7 +137,7 @@ export async function sendToUsers(
         await webpush.sendNotification(
           { endpoint: subscription.endpoint, keys: subscription.keys },
           body,
-          { TTL: ttlSeconds, urgency: 'high', timeout: 10_000 }
+          { TTL: ttlSeconds, urgency: 'high', timeout: 10_000, ...(topic ? { topic } : {}) }
         );
         delivered++;
         if (subscription.failureCount > 0) {

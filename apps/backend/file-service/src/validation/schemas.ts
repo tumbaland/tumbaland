@@ -3,7 +3,8 @@ import { z } from 'zod';
 export const generateUploadUrlSchema = z.object({
   fileId: z.string().min(1, 'fileId is required'),
   mimetype: z.string().optional(),
-  expiresInMinutes: z.number().optional()
+  expiresInMinutes: z.number().optional(),
+  maxBytes: z.number().int().nonnegative().optional()
 });
 
 export const generateDownloadUrlSchema = z.object({

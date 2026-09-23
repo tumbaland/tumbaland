@@ -181,6 +181,7 @@ export async function addMember(
   if (!group) throw new NotFoundError('Group not found');
   const myRole = memberRole(group, actingEmail);
   if (!myRole || (myRole !== 'owner' && myRole !== 'admin')) throw new ForbiddenError('Access denied');
+  if (role === 'owner' && myRole !== 'owner') throw new ForbiddenError('Only the owner can add another owner');
   
   // Check if user is already a member
   if (group.members.some((m) => m.email === memberEmail.toLowerCase())) {
@@ -199,6 +200,25 @@ export async function addMember(
 
 export function memberRole(group: IGroup, email: string): GroupRole | undefined {
   return group.members.find((m) => m.email === email.toLowerCase())?.role as GroupRole | undefined;
+}
+
+/**
+ * What an admin may not do, and what nobody may do, to the owner role.
+ *
+ * "Owner or admin" was the only check, so an admin could make themselves owner
+ * and then delete the group, or demote or remove the owner. And the last owner
+ * could step down or leave, orphaning the group: the group's usage bills to its
+ * owner, and with none the entitlement checks elsewhere fail.
+ */
+function assertOwnershipChange(group: IGroup, myRole: GroupRole, targetRole: GroupRole, newRole: GroupRole | null): void {
+  const touchesOwner = targetRole === 'owner' || newRole === 'owner';
+  if (touchesOwner && myRole !== 'owner') {
+    throw new ForbiddenError('Only the owner can change who owns the group');
+  }
+  const owners = group.members.filter((m) => m.role === 'owner').length;
+  if (targetRole === 'owner' && newRole !== 'owner' && owners <= 1) {
+    throw new ConflictError('The group needs an owner. Make someone else the owner first.');
+  }
 }
 
 export interface GroupOwner {
@@ -266,6 +286,7 @@ export async function updateMemberRole(
   if (!myRole || (myRole !== 'owner' && myRole !== 'admin')) throw new ForbiddenError('Access denied');
   const m = group.members.find((x) => x.email === memberEmail.toLowerCase());
   if (!m) throw new NotFoundError('Member not found');
+  assertOwnershipChange(group, myRole, m.role as GroupRole, role);
   m.role = role;
   await group.save();
   return group;
@@ -283,6 +304,8 @@ export async function removeMember(groupId: string, actingEmail: string, targetE
   const myRole = memberRole(group, actingEmail);
   if (!myRole) throw new ForbiddenError('Access denied');
   if (actingEmail.toLowerCase() !== targetEmail.toLowerCase() && myRole === 'member') throw new ForbiddenError('Access denied');
+  const targetRole = memberRole(group, targetEmail);
+  if (targetRole) assertOwnershipChange(group, myRole, targetRole, null);
   group.members = group.members.filter((m) => m.email !== targetEmail.toLowerCase());
   await group.save();
   return group;

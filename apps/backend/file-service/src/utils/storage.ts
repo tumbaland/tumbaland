@@ -1,5 +1,8 @@
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import { Transform, type Readable } from 'stream';
+import { pipeline } from 'stream/promises';
 import { logger } from '@tumbaland/backend-core';
 
 const DATA_DIR = (): string => process.env.FILE_SERVICE_DATA_DIR || '/data';
@@ -11,7 +14,7 @@ const DATA_DIR = (): string => process.env.FILE_SERVICE_DATA_DIR || '/data';
 export const resolvePath = (fileId: string): string => {
   // Sanitise: prevent path traversal
   const normalised = path.normalize(fileId).replace(/^(\.\.(\/|\\|$))+/, '');
-  return path.join(DATA_DIR(), normalised);
+  return path.resolve(DATA_DIR(), normalised.replace(/^[/\\]+/, ''));
 };
 
 /**
@@ -29,6 +32,55 @@ export const writeFile = (fileId: string, buffer: Buffer): void => {
   ensureDir(filePath);
   fs.writeFileSync(filePath, buffer);
   logger.info(`File written: ${fileId}`, { size: buffer.length });
+};
+
+/** Thrown by `writeStream` when a body runs past its limit. */
+export class TooLargeError extends Error {
+  constructor(readonly maxBytes: number) {
+    super(`Upload exceeds ${maxBytes} bytes`);
+  }
+}
+
+/**
+ * Writes a request body to disk as it arrives, and returns its size.
+ *
+ * Never holds the whole file in memory, so one large video cannot take the
+ * service down. Written to a temporary name and renamed into place, so a
+ * dropped connection or an oversized body leaves the previous file (if any)
+ * rather than a truncated one.
+ */
+export const writeStream = async (fileId: string, source: Readable, maxBytes = Infinity): Promise<number> => {
+  const filePath = resolvePath(fileId);
+  ensureDir(filePath);
+  const partial = `${filePath}.${crypto.randomBytes(6).toString('hex')}.part`;
+
+  let size = 0;
+  const counter = new Transform({
+    transform(chunk: Buffer, _encoding, callback) {
+      size += chunk.length;
+      if (size > maxBytes) callback(new TooLargeError(maxBytes));
+      else callback(null, chunk);
+    }
+  });
+
+  // The source is piped in rather than handed to `pipeline`, which would
+  // destroy it on error. For a request that means destroying its socket before
+  // the 413 can be sent, and the request logger then reads a socket that is no
+  // longer there. Left alone, the unread rest is dropped when the response
+  // closes the connection.
+  const written = pipeline(counter, fs.createWriteStream(partial));
+  source.on('error', (error) => counter.destroy(error));
+  source.pipe(counter);
+
+  try {
+    await written;
+    fs.renameSync(partial, filePath);
+  } catch (error) {
+    fs.rmSync(partial, { force: true });
+    throw error;
+  }
+  logger.info(`File written: ${fileId}`, { size });
+  return size;
 };
 
 /**
