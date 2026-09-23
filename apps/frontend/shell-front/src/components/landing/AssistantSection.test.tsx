@@ -1,19 +1,17 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 
 import AssistantSection from './AssistantSection';
 
 /**
- * The connector is what the page leads with now, so this section stopped being
- * an illustration and became the practical half: the address and the three
- * steps, and nothing beyond them. The conversation is the hero's job, and the
- * example questions that used to sit here in cards are played there instead.
+ * The connector, as something you can add: the recorded exchange beside the
+ * address and the three steps. It led the page once; the chat does now.
  */
 describe('AssistantSection', () => {
   it('names Claude, and leaves everything else to the standard', () => {
     render(<AssistantSection onOpenGuide={vi.fn()} />);
-    expect(screen.getByText(/In Claude, or any assistant that takes MCP connectors/)).toBeInTheDocument();
+    expect(screen.getByText(/connector settings in Claude/)).toBeInTheDocument();
     expect(screen.queryByText(/ChatGPT|Gemini/)).not.toBeInTheDocument();
   });
 
@@ -21,7 +19,7 @@ describe('AssistantSection', () => {
     render(<AssistantSection onOpenGuide={vi.fn()} />);
     // "Should work, because it is a standard" and "we have run it" are
     // different claims, and only one of them is this page's to make.
-    expect(screen.getByText(/Claude is the one we have tested end to end/)).toBeInTheDocument();
+    expect(screen.getByText(/We have tested it with Claude/)).toBeInTheDocument();
   });
 
   it('shows the connector address, which is the one thing nobody can guess', () => {
@@ -32,7 +30,7 @@ describe('AssistantSection', () => {
 
   it('says which standard it speaks, so it reads as ordinary rather than proprietary', () => {
     render(<AssistantSection onOpenGuide={vi.fn()} />);
-    expect(screen.getByText(/standard MCP server/)).toBeInTheDocument();
+    expect(screen.getByText(/Tumbaland is an MCP connector/)).toBeInTheDocument();
   });
 
   it('copies the address to the clipboard', async () => {
@@ -70,17 +68,47 @@ describe('AssistantSection', () => {
 
   it('gives the three steps in the order they are done', () => {
     render(<AssistantSection onOpenGuide={vi.fn()} />);
-    ['Add the address', 'Pick what it can reach', 'Talk to it'].forEach((step) => {
+    ['Add the address', 'Sign in', 'Talk to it'].forEach((step) => {
       expect(screen.getByText(step)).toBeInTheDocument();
     });
   });
 
-  it('does not repeat the example questions the hero already plays', () => {
+  it('shows the exchange rather than describing the protocol', () => {
     render(<AssistantSection onOpenGuide={vi.fn()} />);
-    // This section carried three cards of them. The hero now runs those same
-    // questions against the real tools, so the cards were the claim twice.
-    expect(screen.queryByText(/what did we spend at Selver/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/when did we last go out for dinner/)).not.toBeInTheDocument();
+
+    // "MCP server" and "connector" mean nothing to most people this page is
+    // for. What they want to know is what it feels like to use.
+    expect(screen.getByText(/we went to Sushi House on Friday/)).toBeInTheDocument();
+    expect(screen.getByText(/Logged for Friday 4 September/)).toBeInTheDocument();
+  });
+
+  it('plays the tools it really calls, under the reply they produced', () => {
+    render(<AssistantSection onOpenGuide={vi.fn()} />);
+
+    // Each one ships on the MCP server under this name.
+    ['log_day', 'get_stats', 'get_photo_memories'].forEach((tool) => {
+      expect(screen.getByText(tool)).toBeInTheDocument();
+    });
+  });
+
+  it('shows the whole exchange where it cannot be played', () => {
+    render(<AssistantSection onOpenGuide={vi.fn()} />);
+
+    // jsdom has no IntersectionObserver, like an old browser and like anyone
+    // who asked for less motion. The conversation then sits there finished.
+    expect(screen.getByText(/Nine photos from Nice/)).toBeInTheDocument();
+  });
+
+  it('hides the staged conversation from screen readers', () => {
+    render(<AssistantSection onOpenGuide={vi.fn()} />);
+    const exchange = screen.getByTestId('assistant-exchange');
+    expect(within(exchange).getByTestId('phone-screen')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('keeps the exchange about the two of you, with no money in it', () => {
+    render(<AssistantSection onOpenGuide={vi.fn()} />);
+    expect(screen.getByText(/what have we been doing most lately/)).toBeInTheDocument();
+    expect(screen.queryByText(/spend/i)).not.toBeInTheDocument();
   });
 
   it('opens the full guide over the page, and keeps its real address for a new tab', async () => {
@@ -99,7 +127,7 @@ describe('AssistantSection', () => {
     // The reassurance has to sit with the ask; a visitor who has to go looking
     // for it has already decided.
     render(<AssistantSection onOpenGuide={vi.fn()} />);
-    expect(screen.getByText(/only ever sees what you tick/)).toBeInTheDocument();
+    expect(screen.getByText(/only sees what you allow/)).toBeInTheDocument();
     expect(screen.getByText(/disconnect it from your account page/)).toBeInTheDocument();
   });
 });

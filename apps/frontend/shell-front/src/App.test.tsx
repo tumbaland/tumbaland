@@ -68,7 +68,7 @@ describe('App', () => {
 
     await waitFor(
       () => {
-        expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/tell your assistant/i);
+        expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/private app for the two of you/i);
       },
       { timeout: 5000 }
     );

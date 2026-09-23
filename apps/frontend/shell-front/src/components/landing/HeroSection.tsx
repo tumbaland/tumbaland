@@ -1,35 +1,36 @@
 import { Box, Button, Typography } from '@mui/material';
 import GoogleIcon from '@mui/icons-material/Google';
 import { brand, brandButton, ink } from '@tumbaland/frontend-core';
-import { ChatPlayback } from './ChatPlayback';
+import { PhoneFrame } from './PhoneFrame';
+import { ChatScreen } from './MockScreens';
+import { useInView } from './useInView';
 
 /**
  * The first screen, and the whole pitch.
  *
- * The assistant connector leads because it is the part nothing else on the
- * shelf has: you say what happened and it lands as a proper entry, and you ask
- * a question and the answer comes out of your own history.
+ * It leads with what the app is for: one private place for two people to talk,
+ * keep their photos and remember what they did. Chat is where that starts, so
+ * the right half is the chat, playing as it comes into view: a photo arrives
+ * and files itself into the trip's album, a reply, a call between the two of
+ * them. The rest of the page follows from that one screen.
  *
- * The right half is not an illustration of that, it is a recording of it: the
- * exchange plays out in a phone, tool calls and all. It used to be four
- * bubbles sitting there already answered, which showed the words but not the
- * one thing worth showing, that something really happens when you send it.
+ * The assistant connector used to lead. It is still on the page, further down,
+ * as something you can add, not as the reason to sign up.
  *
  * Laid out for a phone first. On a narrow screen the claim, the buttons and
  * the phone stack in that order; from `md` up they sit in two columns, the
  * claim beside its proof.
- *
- * Only Claude is named, because Claude is what has been tested end to end; the
- * standard covers the rest and can be named without naming a product.
  */
 
 interface HeroSectionProps {
   onSignIn: () => void;
-  /** Scrolls to the connector address and setup, one section down. */
-  onSeeHow: () => void;
+  /** Scrolls to the screens of the app, one section down. */
+  onSeeInside: () => void;
 }
 
-export function HeroSection({ onSignIn, onSeeHow }: HeroSectionProps) {
+export function HeroSection({ onSignIn, onSeeInside }: HeroSectionProps) {
+  const [phoneRef, playing] = useInView(0.3);
+
   return (
     <Box
       component="section"
@@ -47,19 +48,6 @@ export function HeroSection({ onSignIn, onSeeHow }: HeroSectionProps) {
     >
       <Box sx={{ textAlign: { xs: 'center', md: 'left' } }}>
         <Typography
-          sx={{
-            fontSize: { xs: 11, md: 12 },
-            fontWeight: 700,
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: brand.purple,
-            mb: { xs: 1.25, md: 2 }
-          }}
-        >
-          Works with Claude · and any MCP client
-        </Typography>
-
-        <Typography
           component="h1"
           sx={{
             fontSize: { xs: '2rem', sm: '2.5rem', md: '3.15rem' },
@@ -71,7 +59,7 @@ export function HeroSection({ onSignIn, onSeeHow }: HeroSectionProps) {
             mb: { xs: 1.5, md: 2.5 }
           }}
         >
-          Just tell your assistant. It writes it down.
+          A private app for the two of you.
         </Typography>
 
         <Typography
@@ -84,7 +72,7 @@ export function HeroSection({ onSignIn, onSeeHow }: HeroSectionProps) {
             mb: { xs: 2.5, md: 3.5 }
           }}
         >
-          Connect it once. Then it keeps your journal, finds your photos and remembers what you two did.
+          Chat and call each other. Photos you send in chat go straight into your shared album, and there is a journal for the things you do together.
         </Typography>
 
         {/* Full width and stacked on a phone, where a thumb reaches for the
@@ -113,7 +101,7 @@ export function HeroSection({ onSignIn, onSeeHow }: HeroSectionProps) {
           <Button
             variant="outlined"
             size="large"
-            onClick={onSeeHow}
+            onClick={onSeeInside}
             sx={{
               textTransform: 'none',
               fontSize: '1rem',
@@ -126,16 +114,20 @@ export function HeroSection({ onSignIn, onSeeHow }: HeroSectionProps) {
               '&:hover': { borderColor: brand.purple, backgroundColor: `${brand.purple}12` }
             }}
           >
-            See how it connects
+            See how it looks
           </Button>
         </Box>
 
         <Typography sx={{ fontSize: { xs: 12.5, md: 13.5 }, color: ink.muted }}>
-          Free · You pick what it can reach · Disconnect whenever
+          Free. Only the people you invite can see it.
         </Typography>
       </Box>
 
-      <ChatPlayback testId="hero-exchange" sx={{ width: '100%', maxWidth: { xs: 244, md: 270 }, mx: 'auto' }} />
+      <Box ref={phoneRef} data-testid="hero-chat" sx={{ width: '100%', maxWidth: { xs: 244, md: 270 }, mx: 'auto' }}>
+        <PhoneFrame sx={{ width: '100%' }}>
+          <ChatScreen playing={playing} />
+        </PhoneFrame>
+      </Box>
     </Box>
   );
 }

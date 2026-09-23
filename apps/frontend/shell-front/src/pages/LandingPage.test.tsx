@@ -31,18 +31,18 @@ beforeEach(() => {
   redirectToLogin.mockReset();
 });
 
-it('leads with the assistant, which is the part nothing else on the shelf has', () => {
+it('leads with what the app is for, a place for the two of you', () => {
   renderPage();
   const h1 = screen.getByRole('heading', { level: 1 });
 
-  expect(h1).toHaveTextContent(/tell your assistant/i);
+  expect(h1).toHaveTextContent(/private app for the two of you/i);
   // "your money" reads as though we hold it. We track it; we never touch it.
   expect(h1).not.toHaveTextContent(/your money/i);
 });
 
-it('claims only the client that has been tested, above the fold', () => {
+it('names only the client that has been tested', () => {
   renderPage();
-  expect(screen.getByText(/Works with Claude . and any MCP client/)).toBeInTheDocument();
+  expect(screen.getByText('Works with Claude')).toBeInTheDocument();
   expect(screen.queryByText(/ChatGPT|Gemini/)).not.toBeInTheDocument();
 });
 
@@ -51,53 +51,56 @@ it('shows the connector address, which is the one thing nobody can guess', () =>
   expect(screen.getByText('https://mcp.tumbaland.eu/mcp')).toBeInTheDocument();
 });
 
-it('explains connecting before showing the modules', () => {
+it('shows the app before the assistant, which is an extra', () => {
   renderPage();
-  const connect = screen.getByRole('heading', { name: /One address, and it is connected/ });
-  const modules = screen.getByRole('heading', { name: /here is where it lands/ });
+  const modules = screen.getByRole('heading', { name: /Your photos and your journal/ });
+  const assistant = screen.getByRole('heading', { name: /Use it from Claude/ });
 
-  // The hero makes a claim that only holds if connecting is this small a job.
-  expect(connect.compareDocumentPosition(modules) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(modules.compareDocumentPosition(assistant) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
 
-it('shows the modules as screens of the app rather than paragraphs about them', () => {
+it('shows the app as screens rather than paragraphs about it', () => {
   renderPage();
 
-  // Four cards of headline-plus-sentence became three phones. Each is named
-  // the way the app nav names it, and carries one short line and no more.
+  // Chat in the hero, the album and journal under it, each named the way the
+  // app nav names it, with one short line and no more.
   ['Journal', 'Chat', 'Album'].forEach((module) => {
     expect(screen.getAllByText(module).length).toBeGreaterThan(0);
   });
-  expect(screen.getByText('Where your time went')).toBeInTheDocument();
-  expect(screen.getByText('Photos you can find')).toBeInTheDocument();
-  expect(screen.getByText('Photos file themselves')).toBeInTheDocument();
+  expect(screen.getByText('What you did and where')).toBeInTheDocument();
+  expect(screen.getByText('Photos from this day in past years')).toBeInTheDocument();
+});
+
+it('keeps to the fundamentals, with no settings on show', () => {
+  renderPage();
+  expect(screen.queryByText(/dark mode|light mode|chat theme/i)).not.toBeInTheDocument();
 });
 
 it('says the screens are made up, rather than passing them off as somebody\'s', () => {
   // They are the app's own layout, but the evenings, the messages and the
   // holiday in them are invented, and a page that shows data owes that line.
   renderPage();
-  expect(screen.getByText(/sample data/i)).toBeInTheDocument();
+  expect(screen.getByText(/made-up data/i)).toBeInTheDocument();
 });
 
 it('still says sharing exists, now that the fourth card has gone', () => {
   renderPage();
-  expect(screen.getByText(/anyone else you add to your group/)).toBeInTheDocument();
+  expect(screen.getByText(/add other people to your group/)).toBeInTheDocument();
 });
 
 it('answers the privacy objection before the closing sign-in', () => {
   renderPage();
-  const privacy = screen.getByRole('heading', { name: /Before you hand it anything/ });
-  const closing = screen.getByRole('heading', { name: /It's free/ });
+  const privacy = screen.getByRole('heading', { name: /How your data is kept/ });
+  const closing = screen.getByRole('heading', { name: /Tumbaland is free/ });
   expect(privacy.compareDocumentPosition(closing) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
-  expect(screen.getByRole('heading', { name: /Private until you share/ })).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: /No password to leak/ })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: /Only your group/ })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: /Google sign-in/ })).toBeInTheDocument();
 });
 
 it('names the three sensitive things once, not twice', () => {
   renderPage();
-  expect(screen.getAllByText(/your photos, your messages and your diary/i)).toHaveLength(1);
+  expect(screen.getAllByText(/your photos, messages and journal/i)).toHaveLength(1);
 });
 
 it('has nothing to buy: no prices, plans or supporter pitch', () => {
@@ -131,13 +134,13 @@ it('sends every sign-in button to Google sign-in', async () => {
   expect(redirectToLogin).toHaveBeenCalledTimes(3);
 });
 
-it('scrolls to the setup rather than navigating away', async () => {
+it('scrolls to the screens of the app rather than navigating away', async () => {
   const scrollIntoView = vi.fn();
   Element.prototype.scrollIntoView = scrollIntoView;
   const user = userEvent.setup();
   renderPage();
 
-  await user.click(screen.getByRole('button', { name: /See how it connects/ }));
+  await user.click(screen.getByRole('button', { name: /See how it looks/ }));
 
   expect(scrollIntoView).toHaveBeenCalled();
   expect(redirectToLogin).not.toHaveBeenCalled();

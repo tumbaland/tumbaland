@@ -23,13 +23,17 @@ export const READ_PARAM = 'read';
  * screen rather than a mobile and a desktop version: the content is the same,
  * only the arrangement changes, and two copies would drift apart.
  *
- * **The assistant leads.** The connector is the part nothing else on the shelf
- * has, so it is the hero and the section under it. The modules follow as what
- * the assistant can reach.
+ * **What it is for leads.** One private place for two people to talk, keep
+ * their photos and remember what they did. The hero is the chat, where that
+ * starts; the album and the journal follow as where it ends up; the assistant
+ * connector comes after them, as something you can add.
  *
- * **Shown, not described.** The hero plays the exchange as a recording, and
- * the modules are three screens of the app rather than three paragraphs about
- * them. Everything moving here is drawn in the page: there is no video file to
+ * **Only the fundamentals.** What someone deciding to sign up needs to see, not
+ * every setting: no light and dark, no chat themes, no notification switches.
+ *
+ * **Shown, not described.** The chat plays in a phone, the album and journal
+ * are screens of the app rather than paragraphs about them, and the assistant
+ * is a recording of an exchange. Everything moving here is drawn in the page: there is no video file to
  * pull down on a phone, and no screenshot of anybody's real journal, balance
  * or holiday on a public page.
  *
@@ -53,8 +57,8 @@ export function LandingPage() {
     authService.redirectToLogin();
   }, []);
 
-  const handleSeeHow = useCallback(() => {
-    document.getElementById('assistant')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const handleSeeInside = useCallback(() => {
+    document.getElementById('modules')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
 
   const openDocument = useCallback(
@@ -121,11 +125,9 @@ export function LandingPage() {
 
       <Box sx={{ position: 'relative', zIndex: 1 }}>
         <LandingNav onSignIn={handleSignIn} />
-        <HeroSection onSignIn={handleSignIn} onSeeHow={handleSeeHow} />
-        {/* Straight after the hero, because the hero makes a claim that only
-            holds if connecting is genuinely this small a job. */}
-        <AssistantSection onOpenGuide={() => openDocument('connect')} />
+        <HeroSection onSignIn={handleSignIn} onSeeInside={handleSeeInside} />
         <ShowcaseSection />
+        <AssistantSection onOpenGuide={() => openDocument('connect')} />
         <PrivacySection onOpen={openDocument} />
         <LandingFooter onSignIn={handleSignIn} onOpen={openDocument} />
       </Box>

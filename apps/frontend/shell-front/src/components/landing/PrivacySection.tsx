@@ -22,20 +22,20 @@ const ASSURANCES: Assurance[] = [
   {
     key: 'private',
     icon: GroupOffIcon,
-    title: 'Private until you share',
-    body: 'Nothing is visible until you invite someone.'
+    title: 'Only your group',
+    body: 'Nobody sees anything until you invite them.'
   },
   {
     key: 'password',
     icon: LockIcon,
-    title: 'No password to leak',
-    body: 'Sign-in goes through Google. There is no password.'
+    title: 'Google sign-in',
+    body: 'You sign in with Google. Tumbaland does not store passwords.'
   },
   {
     key: 'export',
     icon: DownloadIcon,
-    title: 'Your data comes back out',
-    body: 'CSV exports and full-resolution photos, any time.'
+    title: 'Export any time',
+    body: 'Download your data as CSV and your photos at full size.'
   }
 ];
 
@@ -94,11 +94,10 @@ export function PrivacySection({ onOpen }: PrivacySectionProps) {
               mb: { xs: 1, md: 1.5 }
             }}
           >
-            Before you hand it anything
+            How your data is kept
           </Typography>
           <Typography sx={{ fontSize: { xs: '0.95rem', md: '1.02rem' }, lineHeight: 1.55, color: ink.body }}>
-            A product that holds your photos, your messages and your diary owes you straight
-            answers.
+            It holds your photos, messages and journal, so here is what happens to them.
           </Typography>
         </Box>
 

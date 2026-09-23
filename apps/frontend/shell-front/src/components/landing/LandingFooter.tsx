@@ -57,10 +57,10 @@ export function LandingFooter({ onSignIn, onOpen }: LandingFooterProps) {
             mb: { xs: 1, md: 1.5 }
           }}
         >
-          It&apos;s free. That&apos;s the whole offer.
+          Tumbaland is free.
         </Typography>
         <Typography sx={{ color: ink.body, fontSize: { xs: '0.95rem', md: '1rem' }, lineHeight: 1.55, mb: { xs: 2.25, md: 3.5 } }}>
-          No setup, no card, nothing counting down.
+          No card needed. Sign in with Google to start.
         </Typography>
         <Button
           variant="contained"

@@ -6,97 +6,63 @@ import HeroSection from './HeroSection';
 
 const renderHero = () => {
   const onSignIn = vi.fn();
-  const onSeeHow = vi.fn();
-  render(<HeroSection onSignIn={onSignIn} onSeeHow={onSeeHow} />);
-  return { onSignIn, onSeeHow };
+  const onSeeInside = vi.fn();
+  render(<HeroSection onSignIn={onSignIn} onSeeInside={onSeeInside} />);
+  return { onSignIn, onSeeInside };
 };
 
 describe('HeroSection', () => {
-  it('leads with the assistant rather than with a list of modules', () => {
+  it('leads with what the app is for: a place for two people, not a connector', () => {
     renderHero();
 
-    // The old headline named photos, finance and a journal, which puts
-    // Tumbaland beside four products it cannot out-feature. The connector is
-    // the part none of them have.
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-      /Just tell your assistant/
-    );
+    const h1 = screen.getByRole('heading', { level: 1 });
+    expect(h1).toHaveTextContent(/private app for the two of you/i);
+    // The assistant is further down the page, as something you can add.
+    expect(screen.queryByText(/MCP|assistant/i)).not.toBeInTheDocument();
   });
 
-  it('names only the client that has actually been tested', () => {
+  it('shows the chat rather than describing it', () => {
     renderHero();
 
-    // The page used to promise ChatGPT and Gemini as well, on the reasoning
-    // that both support MCP connectors — true of the protocol, and never true
-    // of anything anyone had run. The standard covers the rest without naming
-    // a product nobody has verified.
-    expect(screen.getByText(/Works with Claude . and any MCP client/)).toBeInTheDocument();
-    expect(screen.queryByText(/ChatGPT|Gemini/)).not.toBeInTheDocument();
+    // A photo that files itself into the trip's album, and a call between the
+    // two of them, are the parts no other messenger does in one place.
+    const chat = screen.getByTestId('hero-chat');
+    expect(within(chat).getByText('look where we ended up')).toBeInTheDocument();
+    expect(within(chat).getByText('In Rome')).toBeInTheDocument();
+    expect(within(chat).getByText(/Call, 14 min/)).toBeInTheDocument();
   });
 
-  it('shows the exchange rather than describing the protocol', () => {
+  it('renders the chat finished where nothing can animate it', () => {
+    // jsdom has no IntersectionObserver, like an old browser. The thread must
+    // arrive at its end state, not stay blank.
     renderHero();
-
-    // "MCP server" and "connector" mean nothing to the person this page is for.
-    // What they want to know is what it feels like to use.
-    expect(screen.getByText(/we went to Sushi House on Friday/)).toBeInTheDocument();
-    expect(screen.getByText(/Logged for Friday 4 September/)).toBeInTheDocument();
+    expect(screen.getByText('Irja is typing')).toBeInTheDocument();
   });
 
-  it('plays the tools it really calls, under the reply they produced', () => {
+  it('keeps the made-up conversation away from screen readers', () => {
     renderHero();
-
-    // The claim is that something happens when you send it, and the tool names
-    // are the evidence. Each one ships on the MCP server under this name.
-    ['log_day', 'get_stats', 'get_photo_memories'].forEach((tool) => {
-      expect(screen.getByText(tool)).toBeInTheDocument();
-    });
+    expect(within(screen.getByTestId('hero-chat')).getByTestId('phone-screen')).toHaveAttribute('aria-hidden', 'true');
   });
 
-  it('shows the whole exchange where it cannot be played', () => {
+  it('shows no settings, only what the app is', () => {
     renderHero();
-
-    // jsdom has no IntersectionObserver, which is also the case in a browser
-    // old enough to lack one and for anyone who asked for less motion. The
-    // conversation then sits there finished rather than never starting.
-    expect(screen.getByText(/Nine photos from Nice/)).toBeInTheDocument();
+    expect(screen.queryByText(/dark|light mode|theme|notification/i)).not.toBeInTheDocument();
   });
 
-  it('hides the staged conversation from screen readers', () => {
+  it('says it is free and private before asking anyone to sign in', () => {
     renderHero();
-
-    // It is an illustration. Read aloud, a fabricated exchange sounds like real
-    // content, and the heading beside it already carries the meaning. The
-    // screen is what is hidden, not the whole block: a control that can be
-    // focused must never sit inside an aria-hidden subtree.
-    const exchange = screen.getByTestId('hero-exchange');
-    expect(within(exchange).getByTestId('phone-screen')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByText('Free. Only the people you invite can see it.')).toBeInTheDocument();
   });
 
-  it('shows the exchange reading back as well as writing, and all of it about the two of you', () => {
-    renderHero();
-
-    // One turn writes and the next reads back what you have been doing
-    // together. Money was here once; a couple's app does not lead with it.
-    expect(screen.getByText(/what have we been doing most lately/)).toBeInTheDocument();
-    expect(screen.queryByText(/spend/i)).not.toBeInTheDocument();
-  });
-
-  it('says the connection is bounded before asking anyone to make one', () => {
-    renderHero();
-    expect(screen.getByText(/You pick what it can reach/)).toBeInTheDocument();
-    expect(screen.getByText(/Disconnect whenever/)).toBeInTheDocument();
-  });
-
-  it('offers signing in and reading how it works, and nothing else', async () => {
+  it('offers signing in and seeing inside, and nothing else', async () => {
     const user = userEvent.setup();
-    const { onSignIn, onSeeHow } = renderHero();
+    const { onSignIn, onSeeInside } = renderHero();
 
     await user.click(screen.getByRole('button', { name: /Continue with Google/ }));
     expect(onSignIn).toHaveBeenCalledTimes(1);
 
-    await user.click(screen.getByRole('button', { name: /See how it connects/ }));
-    expect(onSeeHow).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: /See how it looks/ }));
+    expect(onSeeInside).toHaveBeenCalledTimes(1);
 
     expect(screen.getAllByRole('button')).toHaveLength(2);
   });
