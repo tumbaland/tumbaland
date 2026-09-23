@@ -1,4 +1,11 @@
 # Tumbalog
+## [0.0.517](https://github.com/toomastahves/tumbaland/compare/app-v0.0.516...app-v0.0.517) (2026-09-23)
+
+### Features
+
+* add chat effects ([fb32fb4](https://github.com/toomastahves/tumbaland/commit/fb32fb4d2afabaa828721fd9487b3733ee7e5c83))
+* add live collage editor ([18aada6](https://github.com/toomastahves/tumbaland/commit/18aada69559993cd47650683ca01a08cf2ff7af9))
+
 ## [0.0.516](https://github.com/toomastahves/tumbaland/compare/app-v0.0.515...app-v0.0.516) (2026-09-23)
 
 ### Features
