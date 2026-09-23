@@ -1,4 +1,23 @@
 # Tumbalog
+## [0.0.516](https://github.com/toomastahves/tumbaland/compare/app-v0.0.515...app-v0.0.516) (2026-09-23)
+
+### Features
+
+* add env example files ([0cc429f](https://github.com/toomastahves/tumbaland/commit/0cc429fc9b882c809de6a392988b732fb01ee7f8))
+* extensive refactor and code cleaning ([a8af08e](https://github.com/toomastahves/tumbaland/commit/a8af08e68ee4d5f6d42ef22346ec864e609c850b))
+* mnore bug fixes ([9a99976](https://github.com/toomastahves/tumbaland/commit/9a9997612560592ab7e3d945c6a684ba56218a61))
+* remove unused vars ([317c8e9](https://github.com/toomastahves/tumbaland/commit/317c8e92a2a1a27a1157d655a1953abd820ecfb0))
+* various bug fixes ([baf63f9](https://github.com/toomastahves/tumbaland/commit/baf63f93e365af34d36699ff22a6887f919653b8))
+
+### Bug Fixes
+
+* failing test ([dab15d8](https://github.com/toomastahves/tumbaland/commit/dab15d8ce097af11c14b0b0e7fb9b0d509320636))
+
+### Chores
+
+* **release:** @tumbaland/backend-core 1.46.0 ([8832505](https://github.com/toomastahves/tumbaland/commit/88325053f8beecc0cb9ce3fdafeb746158ec9b46))
+* **release:** @tumbaland/frontend-core 1.20.0 ([7b7c6b6](https://github.com/toomastahves/tumbaland/commit/7b7c6b6cfcc664080375542d779d73a2bcfd03cb))
+
 ## [0.0.515](https://github.com/toomastahves/tumbaland/compare/app-v0.0.514...app-v0.0.515) (2026-09-23)
 
 ### Features
