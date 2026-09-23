@@ -318,7 +318,7 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
                               width: { xs: 3.5, sm: 10 },
                               height: { xs: 3.5, sm: 10 },
                               backgroundColor: color,
-                              border: '1px solid #e1e4e8',
+                              border: '1px solid var(--mui-palette-divider)',
                               borderRadius: '2px',
                               cursor: 'pointer',
                               transition: 'all 0.2s ease',
@@ -347,7 +347,7 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
             gap: 2,
             mt: 2,
             pt: 2,
-            borderTop: '1px solid #e0e0e0'
+            borderTop: '1px solid var(--mui-palette-divider)'
           }}
         >
           <Typography
@@ -371,7 +371,7 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
                   width: 12,
                   height: 12,
                   backgroundColor: getActivityColor(intensity * maxActivityCount, maxActivityCount),
-                  border: '1px solid #e1e4e8',
+                  border: '1px solid var(--mui-palette-divider)',
                   borderRadius: '2px'
                 }}
               />
@@ -390,7 +390,7 @@ const WeeklyHeatmap: React.FC<WeeklyHeatmapProps> = ({
             display: 'flex',
             justifyContent: 'space-around',
             pt: 2,
-            borderTop: '1px solid #e0e0e0',
+            borderTop: '1px solid var(--mui-palette-divider)',
             flexWrap: 'wrap',
             gap: 2
           }}

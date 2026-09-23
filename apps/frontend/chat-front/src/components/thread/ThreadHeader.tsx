@@ -119,7 +119,8 @@ export function ThreadHeader({
         gap: 1,
         px: onBack ? 0.5 : 1.5,
         py: 0.75,
-        borderBottom: '1px solid rgba(15,23,42,0.08)',
+        borderBottom: 1,
+        borderColor: 'divider',
         background,
         transition: 'background-color .2s ease',
         minHeight: 52

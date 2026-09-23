@@ -64,7 +64,7 @@ export default function Layout({ children }: LayoutProps) {
   // visitors (who see the public landing page at `/`) get no app chrome at all.
   // It stays hidden while the check is in flight so the landing page never
   // flashes a nav it is about to lose.
-  const { authenticated, user } = useAuthState();
+  const { authenticated, user, loading: authLoading } = useAuthState();
   // Money is in the menu only for someone who turned it on under Features.
   const { showMoney } = useShowMoney(authenticated ? user?.id : undefined);
   const { GROUP_API_URL } = useConfig();
@@ -173,7 +173,14 @@ export default function Layout({ children }: LayoutProps) {
     // already reports side insets in a browser, and an app's web view reports
     // the status bar as well. The bottom edge is the tab bar's (see AppNav).
     <div
+      // Signed out, everything here is public — the landing page and the
+      // documents — and it is drawn for light, with pastel mock screens that
+      // have no dark version. Scoping it light keeps it whole on a device set
+      // to dark. Not while the session is still being checked, so a signed-in
+      // person in dark does not see a light frame first.
+      data-color-scheme={!authLoading && !authenticated ? 'light' : undefined}
       style={{
+        colorScheme: !authLoading && !authenticated ? 'light' : undefined,
         height: appHeight,
         width: '100%',
         boxSizing: 'border-box',

@@ -14,17 +14,39 @@ import { publishToGroup } from './streamHub';
  * The themes themselves (colours, gradients) live in chat-front. The service
  * only knows their names, so a theme can be restyled without a deploy here.
  */
-export const THEMES = ['classic', 'ocean', 'forest', 'sunset', 'lavender', 'graphite'] as const;
+export const THEMES = [
+  'classic',
+  'ocean',
+  'forest',
+  'sunset',
+  'lavender',
+  'graphite',
+  'rose',
+  'teal',
+  'amber',
+  'midnight',
+  'berry',
+  'cocoa'
+] as const;
 export type ThemeId = (typeof THEMES)[number];
 
-/** Display names, for the line in the thread. Kept in step with chat-front's list. */
+/**
+ * Display names, for the line in the thread. Kept in step with chat-front's
+ * list by a test there, which reads this file.
+ */
 const THEME_NAMES: Record<ThemeId, string> = {
   classic: 'Classic',
   ocean: 'Ocean',
   forest: 'Forest',
   sunset: 'Sunset',
   lavender: 'Lavender',
-  graphite: 'Graphite'
+  graphite: 'Graphite',
+  rose: 'Rose',
+  teal: 'Teal',
+  amber: 'Amber',
+  midnight: 'Midnight',
+  berry: 'Berry',
+  cocoa: 'Cocoa'
 };
 
 export interface AppearanceView {

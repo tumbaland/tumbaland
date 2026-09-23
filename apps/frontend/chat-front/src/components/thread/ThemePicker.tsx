@@ -9,7 +9,7 @@ import Typography from '@mui/material/Typography';
 import CheckIcon from '@mui/icons-material/Check';
 import { ink, surface } from '@tumbaland/frontend-core';
 import type { Appearance } from '../../types';
-import { CHAT_THEMES, type ChatTheme } from './themes';
+import { CHAT_THEMES, chatColors, chatThemeVars } from './themes';
 
 export interface ThemePickerProps {
   open: boolean;
@@ -18,15 +18,19 @@ export interface ThemePickerProps {
   onChange: (change: { theme?: string; backgroundFileId?: string | null }) => Promise<void>;
 }
 
-/** A theme as a tiny thread: its background, one of their bubbles, one of yours. */
-function Swatch({ theme }: { theme: ChatTheme }) {
+/**
+ * A theme as a tiny thread: its background, one of their bubbles, one of yours.
+ * Drawn from the variables its button sets, so it shows the light or dark
+ * version to match what the thread will look like.
+ */
+function Swatch() {
   return (
     <Box
       aria-hidden
       sx={{
         height: 64,
         borderRadius: 2,
-        background: theme.background,
+        background: chatColors.background,
         border: `1px solid ${surface.sunken}`,
         display: 'flex',
         flexDirection: 'column',
@@ -35,8 +39,8 @@ function Swatch({ theme }: { theme: ChatTheme }) {
         px: 1
       }}
     >
-      <Box sx={{ alignSelf: 'flex-start', width: '55%', height: 12, borderRadius: 6, bgcolor: surface.paper }} />
-      <Box sx={{ alignSelf: 'flex-end', width: '45%', height: 12, borderRadius: 6, bgcolor: theme.bubble }} />
+      <Box sx={{ alignSelf: 'flex-start', width: '55%', height: 12, borderRadius: 6, bgcolor: chatColors.other }} />
+      <Box sx={{ alignSelf: 'flex-end', width: '45%', height: 12, borderRadius: 6, bgcolor: chatColors.bubble }} />
     </Box>
   );
 }
@@ -93,18 +97,19 @@ export function ThemePicker({ open, onClose, appearance, onChange }: ThemePicker
                 disabled={busy}
                 onClick={() => !selected && void change({ theme: theme.id })}
                 sx={{
+                  ...chatThemeVars(theme),
                   p: 0.5,
                   border: '2px solid',
-                  borderColor: selected ? theme.bubble : 'transparent',
+                  borderColor: selected ? chatColors.bubble : 'transparent',
                   borderRadius: 2.5,
                   background: 'none',
                   cursor: busy ? 'default' : 'pointer',
                   font: 'inherit',
                   textAlign: 'center',
-                  '&:focus-visible': { outline: `2px solid ${theme.bubble}`, outlineOffset: 2 }
+                  '&:focus-visible': { outline: `2px solid ${chatColors.bubble}`, outlineOffset: 2 }
                 }}
               >
-                <Swatch theme={theme} />
+                <Swatch />
                 <Box
                   sx={{
                     display: 'flex',
@@ -117,7 +122,7 @@ export function ThemePicker({ open, onClose, appearance, onChange }: ThemePicker
                     color: ink.body
                   }}
                 >
-                  {selected && <CheckIcon sx={{ fontSize: 14, color: theme.bubble }} />}
+                  {selected && <CheckIcon sx={{ fontSize: 14, color: chatColors.headerAccent }} />}
                   {theme.name}
                 </Box>
               </Box>

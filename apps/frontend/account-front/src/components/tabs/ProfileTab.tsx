@@ -24,7 +24,7 @@ import {
   HourglassTop,
   Undo
 } from '@mui/icons-material';
-import { logger } from '@tumbaland/frontend-core';
+import { ColorModeSetting, logger } from '@tumbaland/frontend-core';
 import { authService } from '../../services/authService';
 import { profileService } from '../../services/profileService';
 import { squareAvatar } from '../../services/avatarImage';
@@ -374,6 +374,12 @@ const ProfileTab: React.FC = () => {
           }
           label="Receive email notifications about account activity"
         />
+        <Box sx={{ mt: 2, maxWidth: 420 }}>
+          <ColorModeSetting label="Appearance" />
+          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.75 }}>
+            Auto follows this device. Saved on this device only.
+          </Typography>
+        </Box>
       </Paper>
       {/* Danger Zone */}
       <Paper
@@ -390,7 +396,7 @@ const ProfileTab: React.FC = () => {
         <Typography
           variant="h6"
           gutterBottom
-          sx={{ fontWeight: 600, color: deletionRequestedAt ? 'warning.dark' : 'error.main', mb: 1 }}
+          sx={{ fontWeight: 600, color: deletionRequestedAt ? 'warning.main' : 'error.main', mb: 1 }}
         >
           Danger Zone
         </Typography>

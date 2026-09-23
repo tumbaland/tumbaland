@@ -30,6 +30,11 @@ import { FrontierSim, SimPoint } from '../../utils/frontierSim';
 import FrontierChart from './FrontierChart';
 import CalculationBreakdown from './CalculationBreakdown';
 
+// Tints behind the buy/sell figures. Translucent, so they sit on light and
+// dark paper alike; the text on them is the theme's secondary and error.
+const VIOLET_TINT = 'rgba(139,92,246,0.14)';
+const RED_TINT = 'rgba(239,68,68,0.14)';
+
 interface FrontierSectionProps {
   sim: FrontierSim;
   targetPortfolio: SimPoint | null;
@@ -158,7 +163,7 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
             step={0.1}
             value={targetVol ?? sim.maxSharpe.vol}
             onChange={(_, v) => onTargetVolChange(v as number)}
-            sx={{ color: '#7c3aed', flex: 1 }}
+            sx={{ color: 'secondary.main', flex: 1 }}
           />
         </Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 0.5 }}>
@@ -201,9 +206,9 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
                   <Typography variant="caption" sx={{
                     color: "text.secondary"
                   }}>→</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#7c3aed', minWidth: 38 }}>{to}</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: 'secondary.main', minWidth: 38 }}>{to}</Typography>
                   <Chip size="small" label={fmt(delta)}
-                    sx={{ height: 18, fontSize: '0.68rem', bgcolor: delta >= 0 ? '#f3e8ff' : '#fee2e2', color: delta >= 0 ? '#6b21a8' : '#7f1d1d', '& .MuiChip-label': { px: 0.75 } }} />
+                    sx={{ height: 18, fontSize: '0.68rem', bgcolor: delta >= 0 ? VIOLET_TINT : RED_TINT, color: delta >= 0 ? 'secondary.main' : 'error.main', '& .MuiChip-label': { px: 0.75 } }} />
                 </Box>
               ))}
             </Box>
@@ -245,14 +250,14 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
                         <Typography sx={{ fontWeight: 600 }}>{row.ticker}</Typography>
                       </Tooltip>
                       {row.buyAmt > 0.5 ? (
-                        <Box sx={{ px: 1, py: 0.25, borderRadius: 1, bgcolor: '#f3e8ff' }}>
-                          <Typography variant="caption" sx={{ fontWeight: 700, color: '#6b21a8', whiteSpace: 'nowrap' }}>
+                        <Box sx={{ px: 1, py: 0.25, borderRadius: 1, bgcolor: VIOLET_TINT }}>
+                          <Typography variant="caption" sx={{ fontWeight: 700, color: 'secondary.main', whiteSpace: 'nowrap' }}>
                             ↑ €{Math.round(row.buyAmt).toLocaleString()}
                           </Typography>
                         </Box>
                       ) : row.buyAmt < -0.5 ? (
-                        <Box sx={{ px: 1, py: 0.25, borderRadius: 1, bgcolor: '#fee2e2' }}>
-                          <Typography variant="caption" sx={{ fontWeight: 700, color: '#991b1b', whiteSpace: 'nowrap' }}>
+                        <Box sx={{ px: 1, py: 0.25, borderRadius: 1, bgcolor: RED_TINT }}>
+                          <Typography variant="caption" sx={{ fontWeight: 700, color: 'error.main', whiteSpace: 'nowrap' }}>
                             ↓ €{Math.round(Math.abs(row.buyAmt)).toLocaleString()}
                           </Typography>
                         </Box>
@@ -267,7 +272,7 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
                       </Box>
                       <Box>
                         <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>Target</Typography>
-                        <Typography variant="body2" sx={{ color: '#7c3aed' }}>{row.targetPct.toFixed(1)}%</Typography>
+                        <Typography variant="body2" sx={{ color: 'secondary.main' }}>{row.targetPct.toFixed(1)}%</Typography>
                       </Box>
                       <Box>
                         <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>After</Typography>
@@ -283,7 +288,7 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
                 ))}
                 <Paper elevation={0} sx={{ p: 1.5, borderRadius: 2, bgcolor: 'action.hover', display: 'flex', justifyContent: 'space-between' }}>
                   <Typography sx={{ fontWeight: 600 }}>Total</Typography>
-                  <Typography sx={{ fontWeight: 700, color: '#6b21a8' }}>€{Math.round(investEuros).toLocaleString()}</Typography>
+                  <Typography sx={{ fontWeight: 700, color: 'secondary.main' }}>€{Math.round(investEuros).toLocaleString()}</Typography>
                 </Paper>
               </Box>
             ) : (
@@ -293,7 +298,7 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
                     <TableRow sx={{ '& th': { fontWeight: 600 } }}>
                       <TableCell>Ticker</TableCell>
                       <TableCell align="right">Now %</TableCell>
-                      <TableCell align="right" sx={{ color: '#7c3aed' }}>Target %</TableCell>
+                      <TableCell align="right" sx={{ color: 'secondary.main' }}>Target %</TableCell>
                       <TableCell align="right">{rebalanceMode ? 'Buy/Sell (€)' : 'Buy (€)'}</TableCell>
                       <TableCell align="right">After %</TableCell>
                     </TableRow>
@@ -307,17 +312,17 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
                           </Tooltip>
                         </TableCell>
                         <TableCell align="right">{row.currentPct.toFixed(1)}%</TableCell>
-                        <TableCell align="right" sx={{ color: '#7c3aed' }}>{row.targetPct.toFixed(1)}%</TableCell>
+                        <TableCell align="right" sx={{ color: 'secondary.main' }}>{row.targetPct.toFixed(1)}%</TableCell>
                         <TableCell align="right">
                           {row.buyAmt > 0.5 ? (
-                            <Box sx={{ display: 'inline-block', px: 1, py: 0.25, borderRadius: 1, bgcolor: '#f3e8ff' }}>
-                              <Typography variant="caption" sx={{ fontWeight: 700, color: '#6b21a8', whiteSpace: 'nowrap' }}>
+                            <Box sx={{ display: 'inline-block', px: 1, py: 0.25, borderRadius: 1, bgcolor: VIOLET_TINT }}>
+                              <Typography variant="caption" sx={{ fontWeight: 700, color: 'secondary.main', whiteSpace: 'nowrap' }}>
                                 ↑ €{Math.round(row.buyAmt).toLocaleString()}
                               </Typography>
                             </Box>
                           ) : row.buyAmt < -0.5 ? (
-                            <Box sx={{ display: 'inline-block', px: 1, py: 0.25, borderRadius: 1, bgcolor: '#fee2e2' }}>
-                              <Typography variant="caption" sx={{ fontWeight: 700, color: '#991b1b', whiteSpace: 'nowrap' }}>
+                            <Box sx={{ display: 'inline-block', px: 1, py: 0.25, borderRadius: 1, bgcolor: RED_TINT }}>
+                              <Typography variant="caption" sx={{ fontWeight: 700, color: 'error.main', whiteSpace: 'nowrap' }}>
                                 ↓ €{Math.round(Math.abs(row.buyAmt)).toLocaleString()}
                               </Typography>
                             </Box>
@@ -336,7 +341,7 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
                     ))}
                     <TableRow sx={{ bgcolor: 'action.hover' }}>
                       <TableCell colSpan={3} sx={{ fontWeight: 600 }}>Total</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 700, color: '#6b21a8' }}>€{Math.round(investEuros).toLocaleString()}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 700, color: 'secondary.main' }}>€{Math.round(investEuros).toLocaleString()}</TableCell>
                       <TableCell />
                     </TableRow>
                   </TableBody>
@@ -355,7 +360,7 @@ const FrontierSection: React.FC<FrontierSectionProps> = ({
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(4, minmax(0, 1fr))' }, gap: 2, mb: 3 }}>
         {[
           { label: 'Your Portfolio', point: sim.current, color: '#ef4444' },
-          { label: '◆ Target', point: targetPortfolio, color: '#7c3aed' },
+          { label: '◆ Target', point: targetPortfolio, color: 'secondary.main' },
           { label: '★ Max Sharpe', point: sim.maxSharpe, color: '#f59e0b' },
           { label: '● Min Risk', point: sim.minVol, color: '#1976d2' },
         ]

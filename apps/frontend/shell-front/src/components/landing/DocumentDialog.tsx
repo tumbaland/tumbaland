@@ -58,6 +58,9 @@ export function DocumentDialog({ doc, onClose }: DocumentDialogProps) {
 
   return (
     <Dialog
+      // Opens in a portal, outside the signed-out Layout that scopes the
+      // public pages to light, so it says so itself.
+      data-color-scheme="light"
       open={doc !== null}
       onClose={onClose}
       fullScreen={fullScreen}

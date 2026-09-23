@@ -38,42 +38,124 @@ export const brand = {
   purple: '#9333ea'
 } as const;
 
-/** Text, darkest to lightest. Slate rather than grey, to sit under the pink. */
-export const ink = {
-  strong: '#0f172a',
-  body: '#475569',
-  // #64748b, the slate this was, reads 4.48:1 on the sunken surface and 4.36:1
-  // on the pink top of the page wash — just under AA, on exactly the secondary
-  // text that ends up there. Two steps darker clears it on every surface.
-  muted: '#5f6d80',
-  /** Decorative only — 2.6:1 on white. Never put words a reader needs in this. */
-  faint: '#94a3b8'
+/**
+ * The colours that change between light and dark, per scheme.
+ *
+ * Pages never read these directly: they use `ink`, `surface`, `glass` and
+ * `chrome`, which point at CSS variables the theme writes for both schemes.
+ * That is what lets the ~180 places that say `color: ink.muted` follow the
+ * switch without each one knowing there is a switch. The raw values are here
+ * for the contrast tests and for the few places outside a React tree.
+ */
+export const schemes = {
+  light: {
+    /** Text, darkest to lightest. Slate rather than grey, to sit under the pink. */
+    ink: {
+      strong: '#0f172a',
+      body: '#475569',
+      // #64748b, the slate this was, reads 4.48:1 on the sunken surface and 4.36:1
+      // on the pink top of the page wash — just under AA, on exactly the secondary
+      // text that ends up there. Two steps darker clears it on every surface.
+      muted: '#5f6d80',
+      /** Decorative only — 2.6:1 on white. Never put words a reader needs in this. */
+      faint: '#94a3b8'
+    },
+    surface: {
+      // The pink-to-violet wash. It replaced three different radial gradients
+      // in the AppLayouts, so a module sits on the same backdrop as the shell.
+      page: 'radial-gradient(circle at 50% 0%, #fdf2fa 0%, #f3edff 55%, #fbfcff 100%)',
+      default: '#fbf9fd',
+      paper: '#ffffff',
+      /** Table heads, inset panels, anything one step back from `paper`. */
+      sunken: '#faf7fc',
+      divider: '#ece7f2',
+      // `divider` is opaque, which drew a hard grey rule across the frosted bar
+      // and undid the blending it is there for. This is the same idea in the
+      // brand's violet, at an alpha that reads as an edge rather than a border.
+      chromeEdge: 'rgba(124,58,237,0.10)',
+      /** Hover tint on neutral controls. */
+      hover: 'rgba(15,23,42,0.06)',
+      /** The veil over a background photo that text has to stay readable on. */
+      scrim: 'rgba(255,255,255,0.72)'
+    },
+    glass: {
+      background: 'rgba(255,255,255,0.62)',
+      border: 'rgba(255,255,255,0.7)',
+      shadow: 'rgba(31,38,135,0.5)'
+    },
+    // Tinted, not white. A flat white bar over the pink wash reads as a separate
+    // sheet laid on the page, with a hard edge where the two meet; the same bar
+    // carrying a little of the page's own pink sits in it instead. The alpha is
+    // what does the work — high enough to keep text legible over whatever
+    // scrolls under it, low enough that the wash still shows through.
+    chrome: 'rgba(253,244,250,0.72)',
+    /** The cloud photo behind the home and landing pages. */
+    backdrop: { opacity: '0.4', blend: 'normal' },
+    /** The browser's own bar, `<meta name="theme-color">`. The top of the wash. */
+    themeColor: '#fdf2fa'
+  },
+  dark: {
+    // Violet-tinted rather than neutral grey, so the brand still reads through.
+    ink: {
+      strong: '#f5f2fa',
+      body: '#cdc6d9',
+      muted: '#a79fb6',
+      faint: '#6e667d'
+    },
+    surface: {
+      page: 'radial-gradient(circle at 50% 0%, #2a1631 0%, #181427 55%, #100e17 100%)',
+      default: '#110f18',
+      paper: '#1a1724',
+      sunken: '#211d2d',
+      divider: '#2f2a3d',
+      chromeEdge: 'rgba(196,167,255,0.14)',
+      hover: 'rgba(255,255,255,0.08)',
+      scrim: 'rgba(17,15,24,0.7)'
+    },
+    glass: {
+      background: 'rgba(32,28,44,0.62)',
+      border: 'rgba(255,255,255,0.07)',
+      shadow: 'rgba(0,0,0,0.7)'
+    },
+    chrome: 'rgba(26,22,36,0.74)',
+    // Pastel clouds at 40% turn a dark page pink. Faint and screened, they
+    // read as a glow at the top instead.
+    backdrop: { opacity: '0.16', blend: 'screen' },
+    themeColor: '#110f18'
+  }
 } as const;
 
-/**
- * Page and card backgrounds.
- *
- * `page` replaces the three different radial gradients the AppLayouts each had
- * (two sky-blue, one indigo). It is the pink-to-violet wash, so a module opened
- * inside the shell's iframe sits on the same backdrop as the shell around it —
- * which is what made the seam between them visible before.
- */
-export const surface = {
-  page: 'radial-gradient(circle at 50% 0%, #fdf2fa 0%, #f3edff 55%, #fbfcff 100%)',
-  default: '#fbf9fd',
-  paper: '#ffffff',
-  /** Table heads, inset panels, anything one step back from `paper`. */
-  sunken: '#faf7fc',
-  divider: '#ece7f2',
-  /**
-   * The line where the chrome meets the content.
-   *
-   * `divider` is opaque, which drew a hard grey rule across the frosted bar
-   * and undid the blending it is there for. This is the same idea in the
-   * brand's violet, at an alpha that reads as an edge rather than a border.
-   */
-  chromeEdge: 'rgba(124,58,237,0.10)'
-} as const;
+export type ColorSchemeName = keyof typeof schemes;
+
+/** A token's CSS variable, e.g. `--tl-surface-chrome-edge`. */
+const cssVar = (group: string, key: string) =>
+  `--tl-${group}-${key.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`;
+
+const refs = <T extends Record<string, string>>(group: string, values: T) =>
+  Object.fromEntries(Object.keys(values).map((key) => [key, `var(${cssVar(group, key)})`])) as {
+    readonly [K in keyof T]: string;
+  };
+
+const flatten = (group: string, values: Record<string, string>) =>
+  Object.entries(values).map(([key, value]) => [cssVar(group, key), value]);
+
+/** One scheme as CSS custom properties. The theme writes these; nothing else should. */
+export function schemeCssVars(name: ColorSchemeName): Record<string, string> {
+  const scheme = schemes[name];
+  return Object.fromEntries([
+    ...flatten('ink', scheme.ink),
+    ...flatten('surface', scheme.surface),
+    ...flatten('glass', scheme.glass),
+    ...flatten('chrome', { background: scheme.chrome }),
+    ...flatten('backdrop', scheme.backdrop)
+  ]);
+}
+
+/** Text, darkest to lightest. Follows light and dark. */
+export const ink = refs('ink', schemes.light.ink);
+
+/** Page and card backgrounds. Follows light and dark. */
+export const surface = refs('surface', schemes.light.surface);
 
 export const gradient = {
   brand: `linear-gradient(135deg, ${brand.pink} 0%, ${brand.violet} 100%)`,
@@ -130,10 +212,10 @@ export const wordmark = {
  */
 export const glass = {
   borderRadius: 3.5,
-  background: 'rgba(255,255,255,0.62)',
+  background: 'var(--tl-glass-background)',
   backdropFilter: 'blur(10px)',
-  border: '1px solid rgba(255,255,255,0.7)',
-  boxShadow: '0 10px 30px -22px rgba(31,38,135,0.5)'
+  border: '1px solid var(--tl-glass-border)',
+  boxShadow: '0 10px 30px -22px var(--tl-glass-shadow)'
 } as const;
 
 /**
@@ -149,12 +231,8 @@ export const glass = {
  * page happens to be next to.
  */
 export const chrome = {
-  // Tinted, not white. A flat white bar over the pink wash reads as a separate
-  // sheet laid on the page, with a hard edge where the two meet; the same bar
-  // carrying a little of the page's own pink sits in it instead. The alpha is
-  // what does the work — high enough to keep text legible over whatever
-  // scrolls under it, low enough that the wash still shows through.
-  background: 'rgba(253,244,250,0.72)',
+  // Per scheme; see `schemes.*.chrome` for why it is tinted.
+  background: 'var(--tl-chrome-background)',
   backdropFilter: 'blur(16px) saturate(165%)',
   WebkitBackdropFilter: 'blur(16px) saturate(165%)'
 } as const;
@@ -208,3 +286,17 @@ export const TOUCH_TARGET = 44;
 
 /** Below `sm` — the phone layout. Matches `theme.breakpoints.down('sm')`. */
 export const PHONE = '@media (max-width:599.95px)';
+
+/**
+ * Styles for dark only, the way `PHONE` is styles for phones:
+ * `sx={{ color: accent, [DARK]: { color: accentOnDark(accent) } }}`.
+ * Matches the attribute the theme sets on <html>.
+ */
+export const DARK = ':root[data-color-scheme="dark"] &';
+
+/**
+ * An accent lifted for a dark background. The module and chat accents are
+ * walked down to clear AA on white, which leaves most of them under 3:1 on the
+ * dark surfaces; mixing in white keeps the hue and gets the contrast back.
+ */
+export const accentOnDark = (color: string, amount = 45) => `color-mix(in srgb, ${color}, #ffffff ${amount}%)`;

@@ -534,7 +534,8 @@ paths:
       summary: How the thread looks, for everyone in it
       description: |
         A preset theme (`classic`, `ocean`, `forest`, `sunset`, `lavender`,
-        `graphite`; their colours live in chat-front) and, optionally, a photo
+        `graphite`, `rose`, `teal`, `amber`, `midnight`, `berry`, `cocoa`;
+        their colours, light and dark, live in chat-front) and, optionally, a photo
         sent in this conversation as the background. Announced in the thread
         as a `system` message and to the group as `conversation.updated` with
         `{ appearance }`. Unsending the photo behind the background removes it.
@@ -545,7 +546,9 @@ paths:
             schema:
               type: object
               properties:
-                theme: { type: string }
+                theme:
+                  type: string
+                  enum: [classic, ocean, forest, sunset, lavender, graphite, rose, teal, amber, midnight, berry, cocoa]
                 backgroundFileId: { type: string, nullable: true, description: 'null removes the background' }
       responses:
         '200': { description: '`{ theme, backgroundFileId, backgroundUrl }`' }

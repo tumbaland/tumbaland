@@ -69,6 +69,7 @@ export { NotificationsMenu } from './components/NotificationsMenu/NotificationsM
 export { AuthHeader } from './components/AuthHeader';
 export { AppLayout } from './components/AppLayout';
 export { SectionBar } from './components/SectionBar';
+export { ColorModeSetting, useActivePalette, useThemeColorMeta } from './components/ColorModeSetting';
 
 // A photo, or a video's first frame, for any tile that shows either
 export { MediaThumb } from './components/MediaThumb';
@@ -93,6 +94,7 @@ export type { ErrorPageProps } from './components/ErrorPage';
 export type { AppErrorBoundaryProps } from './components/AppErrorBoundary';
 export type { AppLayoutProps } from './components/AppLayout';
 export type { SectionBarProps, SectionBarItem } from './components/SectionBar';
+export type { ColorMode, ColorModeSettingProps } from './components/ColorModeSetting';
 export type { UnauthorizedPageProps } from './components/UnauthorizedPage';
 export type { ProtectedRouteProps, ProtectedRouteAuthService } from './components/ProtectedRoute';
 export type { LoginButtonProps } from './components/LoginButton';
@@ -120,6 +122,8 @@ export {
   brand,
   ink,
   surface,
+  schemes,
+  schemeCssVars,
   gradient,
   moduleAccent,
   wordmark,
@@ -132,7 +136,13 @@ export {
   gutterSx,
   TOUCH_TARGET,
   PHONE,
+  DARK,
+  accentOnDark,
   createTumbalandTheme,
   tumbalandTheme,
-  TUMBALAND_COLORS
+  TUMBALAND_COLORS,
+  COLOR_SCHEME_ATTRIBUTE,
+  COLOR_MODE_STORAGE_KEY,
+  COLOR_SCHEME_STORAGE_KEY
 } from './theme';
+export type { ColorSchemeName } from './theme';

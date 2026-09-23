@@ -1,5 +1,5 @@
 import { createTumbalandTheme, tumbalandTheme } from './createTumbalandTheme';
-import { brand, ink, surface, moduleAccent, PHONE, TOUCH_TARGET } from './tokens';
+import { brand, ink, surface, moduleAccent, PHONE, schemeCssVars, schemes, TOUCH_TARGET } from './tokens';
 
 /** WCAG relative luminance, so the palette's contrast claims are checked rather than trusted. */
 function luminance(hex: string): number {
@@ -30,9 +30,11 @@ describe('createTumbalandTheme', () => {
   });
 
   it('accepts overrides without losing the base palette', () => {
-    const theme = createTumbalandTheme({ palette: { background: { default: '#000000' } } });
+    // Colours are per scheme now, so an override names the scheme it is for.
+    const theme = createTumbalandTheme({ colorSchemes: { dark: { palette: { background: { default: '#000000' } } } } });
 
-    expect(theme.palette.background.default).toBe('#000000');
+    expect(theme.colorSchemes.dark!.palette.background.default).toBe('#000000');
+    expect(theme.colorSchemes.dark!.palette.primary.main).toBe('#f062bd');
     expect(theme.palette.primary.main).toBe(brand.pinkInk);
   });
 
@@ -101,10 +103,53 @@ describe('palette contrast', () => {
   it('keeps body and muted text readable on every surface, the page wash included', () => {
     // '#fdf2fa' is the pink top of `surface.page`, which is the lightest thing
     // text sits on and the one the old muted slate failed against.
-    for (const shade of [ink.strong, ink.body, ink.muted]) {
-      for (const bg of [surface.paper, surface.sunken, surface.default, '#fdf2fa']) {
-        expect(contrast(shade, bg)).toBeGreaterThanOrEqual(4.5);
+    const { ink: light, surface: bg } = schemes.light;
+    for (const shade of [light.strong, light.body, light.muted]) {
+      for (const behind of [bg.paper, bg.sunken, bg.default, '#fdf2fa']) {
+        expect(contrast(shade, behind)).toBeGreaterThanOrEqual(4.5);
       }
     }
+  });
+
+  it('keeps the same text readable in dark, the top of its page glow included', () => {
+    const { ink: dark, surface: bg } = schemes.dark;
+    for (const shade of [dark.strong, dark.body, dark.muted]) {
+      for (const behind of [bg.paper, bg.sunken, bg.default, '#2a1631']) {
+        expect(contrast(shade, behind)).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
+  it('lightens the interactive colours for dark rather than reusing the light inks', () => {
+    const dark = createTumbalandTheme().colorSchemes.dark!.palette;
+    for (const colour of [dark.primary.main, dark.secondary.main]) {
+      expect(contrast(colour, schemes.dark.surface.paper)).toBeGreaterThanOrEqual(4.5);
+    }
+    expect(contrast(dark.primary.main, dark.primary.contrastText)).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+describe('light and dark', () => {
+  it('points the tokens pages use at variables, so they follow the scheme', () => {
+    expect(ink.muted).toBe('var(--tl-ink-muted)');
+    expect(surface.chromeEdge).toBe('var(--tl-surface-chrome-edge)');
+  });
+
+  it('defines every variable in both schemes', () => {
+    const light = schemeCssVars('light');
+    const dark = schemeCssVars('dark');
+
+    expect(Object.keys(dark).sort()).toEqual(Object.keys(light).sort());
+    expect(light['--tl-ink-muted']).toBe(schemes.light.ink.muted);
+    expect(dark['--tl-ink-muted']).toBe(schemes.dark.ink.muted);
+  });
+
+  it('switches on an attribute, so the choice can be made rather than only followed', () => {
+    const theme = createTumbalandTheme();
+    const baseline = theme.components?.MuiCssBaseline?.styleOverrides as Record<string, unknown>;
+
+    expect(theme.colorSchemes.dark).toBeDefined();
+    expect(baseline[':root[data-color-scheme="dark"], [data-color-scheme="dark"]']).toEqual(schemeCssVars('dark'));
+    expect(baseline[':root, [data-color-scheme="light"]']).toEqual(schemeCssVars('light'));
   });
 });

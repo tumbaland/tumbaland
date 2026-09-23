@@ -115,7 +115,7 @@ const LoginPage: React.FC = () => {
           maxWidth: 420,
           width: '100%',
           textAlign: 'center',
-          background: 'rgba(255, 255, 255, 0.75)',
+          background: 'color-mix(in srgb, var(--mui-palette-background-paper) 75%, transparent)',
           backdropFilter: 'blur(24px) saturate(180%)',
           WebkitBackdropFilter: 'blur(24px) saturate(180%)',
           border: '1px solid rgba(255, 255, 255, 0.8)',

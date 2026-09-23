@@ -1,5 +1,5 @@
 import { Box, ButtonBase, Typography } from '@mui/material';
-import { glass, ink, moduleAccent } from '@tumbaland/frontend-core';
+import { glass, ink, moduleAccent, surface } from '@tumbaland/frontend-core';
 import { SectionLabel } from './SectionLabel';
 import type { RecentActivity as Entry } from '../../services/homeApi';
 
@@ -113,9 +113,9 @@ export function RecentActivity({ activities, onOpen, now = new Date() }: RecentA
                 px: { xs: 1.75, md: 2.25 },
                 py: 1.25,
                 textAlign: 'left',
-                borderTop: index === 0 ? 'none' : '1px solid rgba(15,23,42,0.06)',
+                borderTop: index === 0 ? 'none' : `1px solid ${surface.divider}`,
                 WebkitTapHighlightColor: 'transparent',
-                '&:hover, &:active': { background: 'rgba(255,255,255,0.5)' }
+                '&:hover, &:active': { background: surface.hover }
               }}
             >
               {/* A dot in the type's own colour: enough to tell two kinds of

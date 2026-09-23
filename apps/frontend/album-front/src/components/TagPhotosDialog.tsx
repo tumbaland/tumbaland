@@ -122,7 +122,7 @@ const TagPhotosDialog: React.FC<TagPhotosDialogProps> = ({ open, photos, suggest
         paper: {
           sx: {
             borderRadius: 4,
-            background: 'rgba(255, 255, 255, 0.9)',
+            background: 'color-mix(in srgb, var(--mui-palette-background-paper) 90%, transparent)',
             backdropFilter: 'blur(12px)',
             border: '1px solid rgba(255, 255, 255, 0.6)'
           }

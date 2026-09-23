@@ -346,7 +346,7 @@ const StockGrowthChart: React.FC<StockGrowthChartProps> = ({ data, goal, mcBands
             justifyContent: 'space-between',
             mt: 2,
             pt: 2,
-            borderTop: '1px solid #e0e0e0',
+            borderTop: '1px solid var(--mui-palette-divider)',
             flexDirection: { xs: 'column', sm: 'row' },
             gap: { xs: 1, sm: 0 }
           }}

@@ -7,11 +7,10 @@ import {
   CircularProgress,
   Tooltip,
   Typography,
-  alpha,
-  useTheme
+  alpha
 } from '@mui/material';
 import { LocalFireDepartment, EmojiEvents, HistoryToggleOff } from '@mui/icons-material';
-import { useTenantFilter } from '@tumbaland/frontend-core';
+import { useTenantFilter, useActivePalette } from '@tumbaland/frontend-core';
 import { useStreaks } from '../hooks/useStreaks';
 import { TypeCadence } from '../services/statistics';
 import StatCard from './StatCard';
@@ -53,7 +52,7 @@ const formatDay = (day: string): string =>
  * overdue after ten days, one done twice a year is not.
  */
 const StreakCards: React.FC<StreakCardsProps> = ({ hiddenTypeIds, maxNudges = 4 }) => {
-  const theme = useTheme();
+  const palette = useActivePalette();
   const tenantGroupId = useTenantFilter();
   const { streaks, loading, error } = useStreaks(tenantGroupId);
 
@@ -131,14 +130,14 @@ const StreakCards: React.FC<StreakCardsProps> = ({ hiddenTypeIds, maxNudges = 4 
               ? 'consecutive days logged'
               : `nothing logged for ${dayCount(daysSinceLastEntry)}`
           }
-          color={streaks.currentStreak > 0 ? theme.palette.warning.main : theme.palette.text.disabled}
+          color={streaks.currentStreak > 0 ? palette.warning.main : palette.text.disabled}
         />
         <StatCard
           icon={<EmojiEvents />}
           title="Longest Streak"
           value={dayCount(streaks.longestStreak)}
           subtitle={longestRange}
-          color={theme.palette.secondary.main}
+          color={palette.secondary.main}
         />
         <Box sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' } }}>
           <StatCard
@@ -146,7 +145,7 @@ const StreakCards: React.FC<StreakCardsProps> = ({ hiddenTypeIds, maxNudges = 4 
             title="Days Logged"
             value={streaks.totalLoggedDays}
             subtitle={`most recent: ${lastTimeLabel(daysSinceLastEntry)}`}
-            color={theme.palette.info.main}
+            color={palette.info.main}
           />
         </Box>
 
@@ -171,7 +170,7 @@ const StreakCards: React.FC<StreakCardsProps> = ({ hiddenTypeIds, maxNudges = 4 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 1 }}>
               {nudges.map((type) => {
                 const urgent = type.overdueRatio >= URGENT_THRESHOLD;
-                const accent = urgent ? theme.palette.error.main : theme.palette.warning.main;
+                const accent = urgent ? palette.error.main : palette.warning.main;
                 const gap = Math.max(1, Math.round(type.typicalGapDays));
 
                 return (

@@ -4,6 +4,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Popover from '@mui/material/Popover';
 import type { PopoverActions } from '@mui/material/Popover';
 import Typography from '@mui/material/Typography';
+import { useColorScheme } from '@mui/material/styles';
 import { logger } from '@tumbaland/frontend-core';
 import { brand, ink, surface } from '@tumbaland/frontend-core';
 
@@ -130,6 +131,18 @@ export function FullEmojiPicker({ anchorEl, onClose, onPick }: FullEmojiPickerPr
       element.remove();
     };
   }, [state, host]);
+
+  // Left alone, the element follows the device's light or dark rather than the
+  // app's, which differ whenever someone has picked one in Appearance. Its own
+  // `light`/`dark` class overrides that. Separate from the effect above so a
+  // switch restyles the picker rather than rebuilding it.
+  const { colorScheme } = useColorScheme();
+  useEffect(() => {
+    const element = host?.querySelector('emoji-picker');
+    if (!element || !colorScheme) return;
+    element.classList.remove('light', 'dark');
+    element.classList.add(colorScheme);
+  }, [state, host, colorScheme]);
 
   useEffect(() => {
     if (!open) return;

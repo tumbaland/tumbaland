@@ -1,6 +1,7 @@
 import { useRef, useState, type MouseEvent } from 'react';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
+import Link from '@mui/material/Link';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import AddReactionOutlinedIcon from '@mui/icons-material/AddReactionOutlined';
@@ -10,6 +11,8 @@ import PhotoAlbumOutlinedIcon from '@mui/icons-material/PhotoAlbumOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import { brand, ink, surface } from '@tumbaland/frontend-core';
+import { chatColors } from './themes';
+import { linkify } from './linkify';
 import type { ThreadMessage } from '../../types';
 import { MediaGrid } from './MediaGrid';
 import { ReactionRow } from './ReactionRow';
@@ -72,6 +75,43 @@ export function canChange(message: ThreadMessage, mine: boolean): boolean {
 
 /** How long a touch must be held before it counts as a long press. */
 const LONG_PRESS_MS = 450;
+
+/**
+ * The text, with its web addresses as links. They open in a new tab, so a
+ * conversation is never navigated away from, and send no referrer: the page
+ * on the other end has no business knowing which chat it was shared in.
+ */
+function MessageText({ text, mine }: { text: string; mine: boolean }) {
+  return (
+    <>
+      {linkify(text).map((part, index) =>
+        part.kind === 'text' ? (
+          part.text
+        ) : (
+          <Link
+            key={index}
+            href={part.href}
+            target="_blank"
+            rel="noopener noreferrer nofollow"
+            // A long press on a bubble opens the reaction picker. On a link
+            // the browser's own long press (preview, copy) is the one wanted.
+            onTouchStart={(event) => event.stopPropagation()}
+            sx={{
+              color: mine ? 'inherit' : chatColors.link,
+              textDecorationColor: 'currentColor',
+              textUnderlineOffset: '2px',
+              // A long address with nowhere to break would widen the bubble
+              // past the screen.
+              overflowWrap: 'anywhere'
+            }}
+          >
+            {part.text}
+          </Link>
+        )
+      )}
+    </>
+  );
+}
 
 export function MessageBubble({
   message,
@@ -155,7 +195,7 @@ export function MessageBubble({
               px: jumbo || mediaOnly ? 0 : 1.5,
               py: jumbo || mediaOnly ? 0 : 1,
               overflow: 'hidden',
-              bgcolor: jumbo ? 'transparent' : mine ? accent : surface.paper,
+              bgcolor: jumbo ? 'transparent' : mine ? accent : chatColors.other,
               color: jumbo ? 'inherit' : mine ? '#fff' : ink.body,
               border: jumbo || mine ? 'none' : `1px solid ${surface.sunken}`,
               // A pending message is drawn faintly rather than with a spinner:
@@ -184,7 +224,7 @@ export function MessageBubble({
                     component="p"
                     sx={{ whiteSpace: 'pre-wrap', lineHeight: jumbo ? 1.1 : 1.45 }}
                   >
-                    {message.body}
+                    <MessageText text={message.body} mine={mine} />
                   </Typography>
                 )}
               </>
@@ -227,6 +267,12 @@ export function MessageBubble({
         </Box>
       </Box>
 
+      {/* Straight under the bubble, before the album line: a reaction is to
+          the message, and under "In Album" it read as belonging to that. */}
+      {message.reactions.length > 0 && (
+        <ReactionRow reactions={message.reactions} mine={mine} onToggle={(emoji) => onReact(message.id, emoji)} />
+      )}
+
       {saved && onOpenAlbum && (
         <Box sx={{ display: 'inline-flex', alignItems: 'center' }}>
           <Box
@@ -264,10 +310,6 @@ export function MessageBubble({
             </IconButton>
           )}
         </Box>
-      )}
-
-      {message.reactions.length > 0 && (
-        <ReactionRow reactions={message.reactions} mine={mine} onToggle={(emoji) => onReact(message.id, emoji)} />
       )}
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mx: 1, mt: 0.25 }}>

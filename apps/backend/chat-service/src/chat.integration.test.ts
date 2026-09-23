@@ -1285,6 +1285,16 @@ describe('appearance', () => {
     expect(page.body.data.messages[0]).toMatchObject({ kind: 'system', body: 'Irja changed the theme to Ocean' });
   });
 
+  it('accepts the newer themes and names them in the thread', async () => {
+    const id = await conversationInG1();
+
+    const res = await as(TOM).put(`/api/chat/conversations/${id}/appearance`).send({ theme: 'midnight' });
+
+    expect(res.body.data.theme).toBe('midnight');
+    const page = await as(IRJA).get(`/api/chat/conversations/${id}/messages`);
+    expect(page.body.data.messages[0]).toMatchObject({ kind: 'system', body: 'Tom changed the theme to Midnight' });
+  });
+
   it('refuses a theme that does not exist', async () => {
     const id = await conversationInG1();
     const res = await as(TOM).put(`/api/chat/conversations/${id}/appearance`).send({ theme: 'neon' });

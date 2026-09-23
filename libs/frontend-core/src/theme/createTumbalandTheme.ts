@@ -1,5 +1,14 @@
 import { createTheme, type Theme, type ThemeOptions } from '@mui/material/styles';
-import { brand, gutter, ink, PHONE, surface, TOUCH_TARGET } from './tokens';
+import { brand, gutter, ink, PHONE, schemeCssVars, schemes, surface, TOUCH_TARGET } from './tokens';
+
+// Tells MUI's types the theme carries CSS variables and both colour schemes,
+// which is what exposes `theme.vars`, `theme.colorSchemes` and the provider's
+// scheme props. Shipped in this package's types, so every front picks it up.
+declare module '@mui/material/styles' {
+  interface CssThemeVariables {
+    enabled: true;
+  }
+}
 
 const FONT_STACK = '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
@@ -22,30 +31,54 @@ const FONT_STACK = '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helv
  * buttons, 14px inputs that make iOS zoom the page on focus, dialogs that keep
  * desktop margins, tab strips that overflow rather than scroll.
  */
+/** The attribute on <html> that says which scheme is showing: `light` or `dark`. */
+export const COLOR_SCHEME_ATTRIBUTE = 'data-color-scheme';
+
+/**
+ * Where the person's choice (`system`, `light` or `dark`) is kept. Named, not
+ * MUI's default, so the pre-paint script in index.html can read the same key.
+ */
+export const COLOR_MODE_STORAGE_KEY = 'tumbaland-mode';
+export const COLOR_SCHEME_STORAGE_KEY = 'tumbaland-color-scheme';
+
+const lightPalette = {
+  primary: { main: brand.pinkInk, light: brand.pink, dark: brand.pinkInkDeep, contrastText: '#ffffff' },
+  secondary: { main: brand.violetInk, light: brand.violet, dark: '#6d28d9', contrastText: '#ffffff' },
+  success: { main: '#15803d' },
+  warning: { main: '#b45309' },
+  error: { main: '#dc2626' },
+  info: { main: '#0369a1' },
+  background: { default: schemes.light.surface.default, paper: schemes.light.surface.paper },
+  text: { primary: schemes.light.ink.strong, secondary: schemes.light.ink.body, disabled: schemes.light.ink.faint },
+  divider: schemes.light.surface.divider
+};
+
+/**
+ * The inks are walked *up* for dark: `pinkInk` is 3.9:1 on the dark paper, so
+ * anything readable gets a lighter pink, with dark text on it when it is a
+ * button fill rather than white.
+ */
+const darkPalette = {
+  primary: { main: '#f062bd', light: brand.pink, dark: brand.pinkInk, contrastText: '#1d0a17' },
+  secondary: { main: '#b197fc', light: brand.violet, dark: brand.violetInk, contrastText: '#170d2b' },
+  success: { main: '#4ade80' },
+  warning: { main: '#fbbf24' },
+  error: { main: '#f87171' },
+  info: { main: '#38bdf8' },
+  background: { default: schemes.dark.surface.default, paper: schemes.dark.surface.paper },
+  text: { primary: schemes.dark.ink.strong, secondary: schemes.dark.ink.body, disabled: schemes.dark.ink.faint },
+  divider: schemes.dark.surface.divider
+};
+
 export function createTumbalandTheme(overrides: ThemeOptions = {}): Theme {
   return createTheme(
     {
-      palette: {
-        primary: {
-          main: brand.pinkInk,
-          light: brand.pink,
-          dark: brand.pinkInkDeep,
-          contrastText: '#ffffff'
-        },
-        secondary: {
-          main: brand.violetInk,
-          light: brand.violet,
-          dark: '#6d28d9',
-          contrastText: '#ffffff'
-        },
-        success: { main: '#15803d' },
-        warning: { main: '#b45309' },
-        error: { main: '#dc2626' },
-        info: { main: '#0369a1' },
-        background: { default: surface.default, paper: surface.paper },
-        text: { primary: ink.strong, secondary: ink.body, disabled: ink.faint },
-        divider: surface.divider
-      },
+      // Colours are CSS variables, switched by an attribute on <html>. That is
+      // what makes one switch reach every front: the modules are federated
+      // into the shell's page, so they all read the same attribute, and a
+      // nested provider with the same prefix defers to the shell's.
+      cssVariables: { colorSchemeSelector: COLOR_SCHEME_ATTRIBUTE },
+      colorSchemes: { light: { palette: lightPalette }, dark: { palette: darkPalette } },
 
       typography: {
         fontFamily: FONT_STACK,
@@ -66,6 +99,14 @@ export function createTumbalandTheme(overrides: ThemeOptions = {}): Theme {
       components: {
         MuiCssBaseline: {
           styleOverrides: {
+            // The tokens pages use (`ink.muted`, `surface.sunken`, `glass`…)
+            // are variables; these are their values in each scheme.
+            // The attribute also works on an element, not only <html>: a page
+            // that is designed for light only (the public landing page) marks
+            // itself light and gets the light values inside it. MUI does the
+            // same for its own variables.
+            [`:root, [${COLOR_SCHEME_ATTRIBUTE}="light"]`]: schemeCssVars('light'),
+            [`:root[${COLOR_SCHEME_ATTRIBUTE}="dark"], [${COLOR_SCHEME_ATTRIBUTE}="dark"]`]: schemeCssVars('dark'),
             html: {
               // Landscape on iOS otherwise inflates body text on its own.
               WebkitTextSizeAdjust: '100%'
@@ -265,8 +306,9 @@ export function createTumbalandTheme(overrides: ThemeOptions = {}): Theme {
  */
 export const TUMBALAND_COLORS = {
   brand: brand.pinkInk,
-  themeColor: '#fdf2fa',
-  background: surface.default
+  themeColor: schemes.light.themeColor,
+  themeColorDark: schemes.dark.themeColor,
+  background: schemes.light.surface.default
 } as const;
 
 /** Built once at module scope — a theme rebuilt per render remounts styles. */

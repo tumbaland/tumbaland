@@ -190,7 +190,7 @@ const PhotoDetailPage: React.FC = () => {
       {/* Main Content */}
       <Box
         sx={{
-          background: 'rgba(255, 255, 255, 0.5)',
+          background: 'color-mix(in srgb, var(--mui-palette-background-paper) 50%, transparent)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
           borderRadius: 4,

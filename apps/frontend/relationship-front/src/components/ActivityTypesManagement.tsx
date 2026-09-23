@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { logger } from '@tumbaland/frontend-core';
+import { logger, useActivePalette } from '@tumbaland/frontend-core';
 import {
   Box,
   Button,
@@ -44,6 +44,7 @@ interface ActivityTypesManagementProps {
 
 const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ groupId, onChanged }) => {
   const theme = useTheme();
+  const palette = useActivePalette();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [activityTypes, setActivityTypes] = useState<ActivityType[]>([]);
   const [loading, setLoading] = useState(false);
@@ -233,7 +234,7 @@ const ActivityTypesManagement: React.FC<ActivityTypesManagementProps> = ({ group
           }}
         >
           <Table sx={{ width: '100%' }} aria-label="activity types table">
-            <TableHead sx={{ bgcolor: alpha(theme.palette.primary.main, 0.04) }}>
+            <TableHead sx={{ bgcolor: alpha(palette.primary.main, 0.04) }}>
               <TableRow>
                 <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Name</TableCell>
                 <TableCell sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>Type</TableCell>

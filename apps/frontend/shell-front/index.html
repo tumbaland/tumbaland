@@ -1,6 +1,17 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <!-- Sets light or dark before the first paint, from the same key the app's
+         theme provider keeps it under, so a dark page never flashes white. -->
+    <script>
+      (function () {
+        try {
+          var mode = localStorage.getItem('tumbaland-mode') || 'system';
+          var dark = mode === 'dark' || (mode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.setAttribute('data-color-scheme', dark ? 'dark' : 'light');
+        } catch (e) {}
+      })();
+    </script>
     <meta charset="UTF-8" />
     <!-- No maximum-scale: capping it blocks pinch-zoom, which fails WCAG 1.4.4. -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
@@ -36,7 +47,7 @@
     />
     <link rel="canonical" href="https://tumbaland.eu/" />
     <meta name="theme-color" content="#fdf2fa" />
-    <meta name="color-scheme" content="light" />
+    <meta name="color-scheme" content="light dark" />
 
     <!-- Open Graph: what a shared link looks like in Slack, WhatsApp, Discord, LinkedIn -->
     <meta property="og:type" content="website" />

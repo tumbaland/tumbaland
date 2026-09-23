@@ -314,7 +314,7 @@ const CumulativeTimeline: React.FC<CumulativeTimelineProps> = ({
             display: 'flex',
             justifyContent: 'space-around',
             pt: isMobile ? 1 : 2,
-            borderTop: '1px solid #e0e0e0',
+            borderTop: '1px solid var(--mui-palette-divider)',
             flexWrap: 'wrap',
             gap: isMobile ? 1 : 2
           }}

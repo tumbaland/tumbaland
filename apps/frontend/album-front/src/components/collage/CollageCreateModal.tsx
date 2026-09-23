@@ -120,7 +120,7 @@ export const CollageCreateModal: React.FC<CollageCreateModalProps> = ({ open, on
         paper: {
           sx: {
             borderRadius: 4,
-            background: 'rgba(255, 255, 255, 0.9)',
+            background: 'color-mix(in srgb, var(--mui-palette-background-paper) 90%, transparent)',
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'

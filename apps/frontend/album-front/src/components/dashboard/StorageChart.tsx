@@ -42,7 +42,7 @@ const StorageChart: React.FC<StorageChartProps> = ({
       sx={{
         borderRadius: 3,
         boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-        background: 'rgba(255,255,255,0.95)',
+        background: 'color-mix(in srgb, var(--mui-palette-background-paper) 95%, transparent)',
         backdropFilter: 'blur(10px)',
         border: '1px solid rgba(255,255,255,0.2)',
         height: '100%'
@@ -51,14 +51,14 @@ const StorageChart: React.FC<StorageChartProps> = ({
       <CardContent sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
           <StorageIcon sx={{ mr: 2, color: '#f59e0b' }} />
-          <Typography variant="h6" sx={{ fontWeight: 600, color: '#1e293b' }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary' }}>
             Storage Usage
           </Typography>
         </Box>
 
         <Box sx={{ mb: 3, display: 'flex', gap: 4 }}>
           <Box>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: '#1e293b', mb: 0.5 }}>
+            <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary', mb: 0.5 }}>
               {formatBytes(totalStorage)}
             </Typography>
             <Typography variant="body2" sx={{ color: '#64748b' }}>
@@ -66,7 +66,7 @@ const StorageChart: React.FC<StorageChartProps> = ({
             </Typography>
           </Box>
           <Box>
-            <Typography variant="h4" sx={{ fontWeight: 700, color: '#1e293b', mb: 0.5 }}>
+            <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary', mb: 0.5 }}>
               {formatBytes(averagePhotoSize)}
             </Typography>
             <Typography variant="body2" sx={{ color: '#64748b' }}>
@@ -104,7 +104,7 @@ const StorageChart: React.FC<StorageChartProps> = ({
             {topAlbums.map((album) => (
               <Box key={album.albumId} sx={{ mb: 1.25 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                  <Typography variant="body2" noWrap sx={{ color: '#1e293b', maxWidth: '70%' }}>
+                  <Typography variant="body2" noWrap sx={{ color: 'text.primary', maxWidth: '70%' }}>
                     {album.name}
                   </Typography>
                   <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 600 }}>
@@ -117,7 +117,7 @@ const StorageChart: React.FC<StorageChartProps> = ({
                   sx={{
                     height: 6,
                     borderRadius: 3,
-                    backgroundColor: '#e5e7eb',
+                    backgroundColor: 'var(--mui-palette-divider)',
                     '& .MuiLinearProgress-bar': {
                       borderRadius: 3,
                       backgroundColor: '#f59e0b'

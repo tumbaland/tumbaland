@@ -22,7 +22,9 @@ import { TypingIndicator } from '../components/thread/TypingIndicator';
 import { ThreadHeader } from '../components/thread/ThreadHeader';
 import { AlbumPicker } from '../components/thread/AlbumPicker';
 import { ThemePicker } from '../components/thread/ThemePicker';
-import { themeById } from '../components/thread/themes';
+import { chatColors, chatThemeVars, themeById } from '../components/thread/themes';
+import { surface } from '@tumbaland/frontend-core';
+import { recordEmoji } from '../components/thread/recentEmoji';
 import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined';
 import { chatApi } from '../services/chatApi';
 import { requestCall } from '../services/callBus';
@@ -218,7 +220,8 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         flexDirection: 'column',
         height: '100%',
         minHeight: 0,
-        background: theme.background,
+        ...chatThemeVars(theme),
+        background: chatColors.background,
         position: 'relative',
         // The photo layer below sits behind everything in this box and in
         // front of nothing outside it.
@@ -236,9 +239,9 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
             backgroundImage: `url("${thread.appearance.backgroundUrl}")`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            // A veil, so the grey times and the white bubbles stay readable
-            // over whatever the photo is.
-            '&::after': { content: '""', position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.72)' }
+            // A veil, so the grey times and the bubbles stay readable over
+            // whatever the photo is. Pale on light, dark on dark.
+            '&::after': { content: '""', position: 'absolute', inset: 0, background: surface.scrim }
           }}
         />
       )}
@@ -249,8 +252,8 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         presence={thread.presence}
         typingNames={thread.typingNames}
         onBack={onBack}
-        background={theme.header}
-        accent={theme.headerAccent}
+        background={chatColors.header}
+        accent={chatColors.headerAccent}
         lastSeen={lastSeen}
         onCall={callable ? () => requestCall({ conversationId: conversationId!, peer: callable }) : undefined}
         menu={[
@@ -300,7 +303,7 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         onOpenMedia={openMedia}
         onOpenAlbum={(albumId) => navigate(`/album/albums/${albumId}`)}
         onEditAlbum={(messageId) => setPlacing({ messageId })}
-        accent={theme.bubble}
+        accent={chatColors.bubble}
         members={thread.members}
         reads={thread.reads}
       />
@@ -320,7 +323,7 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         photoAlbum={thread.photoAlbum}
         onChooseAlbum={() => setChoosingAlbum(true)}
         onAlbumOff={() => void turnAlbumOff()}
-        accent={theme.bubble}
+        accent={chatColors.bubble}
       />
 
       <ThemePicker
@@ -350,7 +353,11 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
       <EmojiPicker
         anchorEl={picker?.anchor ?? null}
         onClose={() => setPicker(null)}
-        onPick={(emoji) => picker && void thread.react(picker.messageId, emoji)}
+        onPick={(emoji) => {
+          if (!picker) return;
+          recordEmoji(emoji);
+          void thread.react(picker.messageId, emoji);
+        }}
         onMore={() => picker && setMorePicker({ messageId: picker.messageId, anchor: picker.anchor })}
         actions={actions}
       />
@@ -358,7 +365,11 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
       <FullEmojiPicker
         anchorEl={morePicker?.anchor ?? null}
         onClose={() => setMorePicker(null)}
-        onPick={(emoji) => morePicker && void thread.react(morePicker.messageId, emoji)}
+        onPick={(emoji) => {
+          if (!morePicker) return;
+          recordEmoji(emoji);
+          void thread.react(morePicker.messageId, emoji);
+        }}
       />
 
       <Dialog open={Boolean(unsending)} onClose={() => setUnsending(null)} maxWidth="xs" fullWidth>

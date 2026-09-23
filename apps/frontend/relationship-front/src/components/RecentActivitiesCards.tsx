@@ -264,11 +264,11 @@ const RecentActivitiesCards: React.FC = () => {
                           display: expandedCards.has(activityType.slug) ? 'none' : 'block'
                         },
                         '&::-webkit-scrollbar-track': {
-                          background: '#f1f1f1',
+                          background: 'transparent',
                           borderRadius: '4px'
                         },
                         '&::-webkit-scrollbar-thumb': {
-                          background: '#888',
+                          background: 'var(--mui-palette-text-disabled)',
                           borderRadius: '4px'
                         },
                         '&::-webkit-scrollbar-thumb:hover': {

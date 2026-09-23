@@ -243,9 +243,10 @@ export function AuthHeader({
       elevation={0}
       sx={{
         background: 'transparent',
-        color: '#222',
+        color: 'text.primary',
         boxShadow: 'none',
-        borderBottom: '1px solid rgba(0,0,0,0.1)'
+        borderBottom: 1,
+        borderColor: 'divider'
       }}
     >
       <Toolbar>
@@ -264,7 +265,7 @@ export function AuthHeader({
                   py: { xs: 0.5, sm: 1 },
                   minWidth: 0,
                   borderRadius: 2,
-                  '&:hover': { background: 'rgba(0,0,0,0.04)' },
+                  '&:hover': { bgcolor: 'action.hover' },
                   maxWidth: { xs: '50vw', sm: '70vw' },
                   overflow: 'hidden',
                   whiteSpace: 'nowrap',
@@ -360,7 +361,7 @@ export function AuthHeader({
                   borderRadius: 2,
                   px: 2,
                   color: isActive ? 'primary.main' : 'inherit',
-                  '&:hover': { background: 'rgba(0,0,0,0.04)' }
+                  '&:hover': { bgcolor: 'action.hover' }
                 };
                 const Icon = item.icon;
                 return (

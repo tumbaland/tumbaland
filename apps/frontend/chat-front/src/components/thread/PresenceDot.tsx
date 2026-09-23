@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import Badge from '@mui/material/Badge';
+import { surface } from '@tumbaland/frontend-core';
 
 /** The green of "online": clear against both a photo and the page. */
 export const ONLINE_GREEN = '#16a34a';
@@ -29,7 +30,7 @@ export function PresenceDot({ online, size, children }: PresenceDotProps) {
           borderRadius: '50%',
           bgcolor: ONLINE_GREEN,
           // A ring in the page colour, so the dot reads as sitting on the avatar.
-          boxShadow: '0 0 0 2px #fff'
+          boxShadow: `0 0 0 2px ${surface.paper}`
         }
       }}
     >

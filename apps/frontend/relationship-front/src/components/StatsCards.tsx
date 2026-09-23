@@ -10,12 +10,11 @@ import {
   MenuItem,
   InputLabel,
   Typography,
-  useTheme,
   SelectChangeEvent
 } from '@mui/material';
 import { AccessTime, Favorite, Timeline, Event } from '@mui/icons-material';
 import { useStatistics } from '../hooks/useStatistics';
-import { useTenantFilter } from '@tumbaland/frontend-core';
+import { useTenantFilter, useActivePalette } from '@tumbaland/frontend-core';
 import StatCard from './StatCard';
 
 interface StatsCardsProps {
@@ -29,7 +28,7 @@ interface StatsCardsProps {
 }
 
 const StatsCards: React.FC<StatsCardsProps> = ({ highlightTypeIds, startDate }) => {
-  const theme = useTheme();
+  const palette = useActivePalette();
   const [timeframe, setTimeframe] = useState<string>('all');
 
   // Get the current tenant's group ID
@@ -171,7 +170,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ highlightTypeIds, startDate }) 
             title="Days"
             value={daysSince}
             subtitle={countFromLabel ? `days since ${countFromLabel}` : 'no entries yet'}
-            color={theme.palette.warning.main}
+            color={palette.warning.main}
           />
         </Box>
         <Box>
@@ -180,7 +179,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ highlightTypeIds, startDate }) 
             title="Total Hours"
             value={statistics.totalHours}
             subtitle={`${statistics.totalHours} hours for ${getTimeframeLabel()}`}
-            color={theme.palette.primary.main}
+            color={palette.primary.main}
           />
         </Box>
         {highlightedTypes.map((type) => (
@@ -190,7 +189,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ highlightTypeIds, startDate }) 
               title={`${type.name} Days`}
               value={type.uniqueDays}
               subtitle={`days with ${type.name.toLowerCase()} for ${getTimeframeLabel()}`}
-              color={type.color || theme.palette.error.main}
+              color={type.color || palette.error.main}
             />
           </Box>
         ))}
@@ -200,7 +199,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ highlightTypeIds, startDate }) 
             title="Total Activities"
             value={statistics.totalActivities}
             subtitle={`${statistics.totalActivities} activities for ${getTimeframeLabel()}`}
-            color={theme.palette.success.main}
+            color={palette.success.main}
           />
         </Box>
       </Box>

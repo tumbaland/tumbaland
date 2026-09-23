@@ -92,6 +92,32 @@ describe('MessageBubble', () => {
     expect(screen.queryByRole('button', { name: 'Message options' })).not.toBeInTheDocument();
   });
 
+  it('turns a web address into a link that opens in a new tab', () => {
+    renderBubble({ body: 'look https://example.com/trip now' });
+
+    const link = screen.getByRole('link', { name: 'https://example.com/trip' });
+    expect(link).toHaveAttribute('href', 'https://example.com/trip');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+    expect(screen.getByText(/look/)).toHaveTextContent('look https://example.com/trip now');
+  });
+
+  it('shows reactions on the photo, above the album mark', () => {
+    renderBubble(
+      {
+        kind: 'media',
+        body: '',
+        attachments: [{ fileId: 'f1', mimetype: 'image/jpeg', sizeBytes: 1, albumId: 'a-rome', albumName: 'Rome' }],
+        reactions: [{ userId: 'u-irja', name: 'Irja', emoji: '❤️', at: '2026-09-21T10:01:00.000Z' }]
+      },
+      { onOpenAlbum: noop }
+    );
+
+    const reaction = screen.getByRole('button', { name: '❤️, Irja' });
+    const album = screen.getByRole('button', { name: 'In Rome. Open album' });
+    expect(reaction.compareDocumentPosition(album) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('marks a photo saved to an album, and opens that album', async () => {
     const onOpenAlbum = vi.fn();
     renderBubble(

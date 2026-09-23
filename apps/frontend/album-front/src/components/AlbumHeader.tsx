@@ -29,7 +29,7 @@ const AlbumHeader: React.FC<AlbumHeaderProps> = ({ album, onNavigateBack, onUplo
           variant="h5"
           component="h1"
           noWrap
-          sx={{ flex: 1, minWidth: 0, fontWeight: 700, color: '#1e293b', fontSize: { xs: '1.25rem', sm: '1.75rem' } }}
+          sx={{ flex: 1, minWidth: 0, fontWeight: 700, color: 'text.primary', fontSize: { xs: '1.25rem', sm: '1.75rem' } }}
         >
           {album.name}
         </Typography>

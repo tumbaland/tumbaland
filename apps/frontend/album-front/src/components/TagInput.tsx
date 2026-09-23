@@ -105,7 +105,7 @@ const TagInput: React.FC<TagInputProps> = ({
           sx={{
             '& .MuiOutlinedInput-root': {
               borderRadius: 2,
-              backgroundColor: 'rgba(255, 255, 255, 0.5)',
+              backgroundColor: 'color-mix(in srgb, var(--mui-palette-background-paper) 50%, transparent)',
               '& fieldset': { borderColor: 'rgba(0, 0, 0, 0.1)' },
               '&:hover fieldset': { borderColor: 'rgba(99, 102, 241, 0.5)' },
               '&.Mui-focused fieldset': { borderColor: '#6366f1' }

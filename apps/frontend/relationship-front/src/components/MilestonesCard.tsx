@@ -8,11 +8,10 @@ import {
   LinearProgress,
   Tooltip,
   Typography,
-  alpha,
-  useTheme
+  alpha
 } from '@mui/material';
 import { Flag, Celebration } from '@mui/icons-material';
-import { useTenantFilter } from '@tumbaland/frontend-core';
+import { useTenantFilter, useActivePalette } from '@tumbaland/frontend-core';
 import { useMilestones } from '../hooks/useMilestones';
 import { Milestone } from '../services/statistics';
 
@@ -145,7 +144,7 @@ const MilestoneList: React.FC<MilestoneListProps> = ({ icon, title, emptyText, a
  * what has gone quiet, this says what is worth showing up for.
  */
 const MilestonesCard: React.FC<MilestonesCardProps> = ({ maxItems = 4 }) => {
-  const theme = useTheme();
+  const palette = useActivePalette();
   const tenantGroupId = useTenantFilter();
   const { milestones, loading, error } = useMilestones(tenantGroupId);
 
@@ -188,14 +187,14 @@ const MilestonesCard: React.FC<MilestonesCardProps> = ({ maxItems = 4 }) => {
           icon={<Flag />}
           title="Coming up"
           emptyText="Nothing on the horizon just yet."
-          accent={theme.palette.primary.main}
+          accent={palette.primary.main}
           milestones={milestones.upcoming.slice(0, maxItems)}
         />
         <MilestoneList
           icon={<Celebration />}
           title="Just reached"
           emptyText="No milestones passed recently."
-          accent={theme.palette.success.main}
+          accent={palette.success.main}
           milestones={milestones.recent.slice(0, maxItems)}
         />
       </Box>

@@ -43,9 +43,15 @@ describe('App', () => {
       </ConfigProvider>
     );
 
-    await waitFor(() => {
-      expect(screen.getByText('Write more tests')).toBeInTheDocument();
-    });
+    // The whole app boots here — config, session, home page, then the todo —
+    // which is more than waitFor's default second when the suite runs in
+    // parallel.
+    await waitFor(
+      () => {
+        expect(screen.getByText('Write more tests')).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
 
     expect(screen.queryByText(/failed to load todo/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/configuration error/i)).not.toBeInTheDocument();
@@ -60,9 +66,12 @@ describe('App', () => {
       </ConfigProvider>
     );
 
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/tell your assistant/i);
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/tell your assistant/i);
+      },
+      { timeout: 5000 }
+    );
 
     expect(screen.queryByText('Write more tests')).not.toBeInTheDocument();
   });

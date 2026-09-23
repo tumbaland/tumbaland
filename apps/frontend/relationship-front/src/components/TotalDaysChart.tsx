@@ -262,7 +262,7 @@ const TotalDaysChart: React.FC<TotalDaysChartProps> = ({
             display: 'flex',
             justifyContent: 'space-around',
             pt: 2,
-            borderTop: '1px solid #e0e0e0',
+            borderTop: '1px solid var(--mui-palette-divider)',
             flexWrap: 'wrap',
             gap: { xs: 2, sm: 0 }
           }}

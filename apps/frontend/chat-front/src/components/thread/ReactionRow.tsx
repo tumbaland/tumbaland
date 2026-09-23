@@ -22,8 +22,12 @@ export function ReactionRow({ reactions, mine, onToggle }: ReactionRowProps) {
         display: 'flex',
         flexWrap: 'wrap',
         gap: 0.5,
-        mt: 0.5,
+        // Tucked up over the bubble's bottom edge, so the pills sit on the
+        // message or photo they are for rather than floating below it.
+        mt: -1,
         mx: 1,
+        position: 'relative',
+        zIndex: 1,
         justifyContent: mine ? 'flex-end' : 'flex-start'
       }}
     >
@@ -41,8 +45,11 @@ export function ReactionRow({ reactions, mine, onToggle }: ReactionRowProps) {
               px: 0.75,
               py: 0.25,
               borderRadius: 999,
-              border: `1px solid ${surface.sunken}`,
+              // Over the bubble's edge now, so it needs a real edge of its own
+              // and a shadow to lift it off a photo.
+              border: `1px solid ${surface.divider}`,
               bgcolor: surface.paper,
+              boxShadow: '0 1px 3px rgba(15,23,42,0.18)',
               cursor: 'pointer',
               font: 'inherit',
               fontSize: 12,

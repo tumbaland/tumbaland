@@ -89,7 +89,7 @@ const StatisticsOverview: React.FC<StatisticsOverviewProps> = ({ data }) => {
             sx={{
               borderRadius: 3,
               boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-              background: 'rgba(255,255,255,0.95)',
+              background: 'color-mix(in srgb, var(--mui-palette-background-paper) 95%, transparent)',
               backdropFilter: 'blur(10px)',
               border: '1px solid rgba(255,255,255,0.2)',
               transition: 'transform 0.2s ease-in-out',

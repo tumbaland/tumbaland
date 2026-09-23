@@ -12,6 +12,7 @@ import {
   Switch,
   FormControlLabel,
   useTheme,
+  useColorScheme,
   useMediaQuery
 } from '@mui/material';
 import { Timeline } from '@mui/icons-material';
@@ -32,6 +33,7 @@ interface PortfolioValueChartProps {
 
 const PortfolioValueChart: React.FC<PortfolioValueChartProps> = ({ records, assetColors = {} }) => {
   const theme = useTheme();
+  const { colorScheme } = useColorScheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [timePeriod, setTimePeriod] = useState<string>('2');
   const [useLogScale, setUseLogScale] = useState<boolean>(false);
@@ -79,7 +81,9 @@ const PortfolioValueChart: React.FC<PortfolioValueChartProps> = ({ records, asse
         data: useLogScale
           ? filteredRecords.map(record => record.totalValue === 0 ? 0.01 : record.totalValue)
           : filteredRecords.map(record => record.totalValue),
-        color: '#000000',
+        // Black on light, near-white on dark: a series colour is an SVG
+        // attribute, where a CSS variable is not reliably resolved.
+        color: colorScheme === 'dark' ? '#f5f2fa' : '#000000',
         showMark: false,
         curve: 'monotoneX' as const
       }
@@ -104,7 +108,7 @@ const PortfolioValueChart: React.FC<PortfolioValueChartProps> = ({ records, asse
     });
 
     return { dates, series };
-  }, [filteredRecords]);
+  }, [filteredRecords, useLogScale, colorScheme]);
 
   // On a phone the axis has about 40px, so full amounts ("250 000") were cut
   // to "250…". Thousands as "250k" fit and read the same.
@@ -129,16 +133,16 @@ const PortfolioValueChart: React.FC<PortfolioValueChartProps> = ({ records, asse
         sx={{
           borderRadius: 3,
           boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-          background: 'rgba(255,255,255,0.95)',
+          background: 'var(--tl-glass-background)',
           backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255,255,255,0.2)',
+          border: '1px solid var(--tl-glass-border)',
           height: '100%'
         }}
       >
         <CardContent sx={{ p: { xs: 1.5, md: 4 }, '&:last-child': { pb: { xs: 1.5, md: 4 } } }}>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 1.5, md: 3 } }}>
             <Timeline sx={{ mr: { xs: 1, md: 2 }, color: '#667eea', fontSize: { xs: 20, md: 24 } }} />
-            <Typography variant="h6" sx={{ fontWeight: 600, color: '#1e293b', fontSize: { xs: '1.05rem', md: '1.25rem' } }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary', fontSize: { xs: '1.05rem', md: '1.25rem' } }}>
               Net Worth Over Time
             </Typography>
           </Box>
@@ -168,7 +172,7 @@ const PortfolioValueChart: React.FC<PortfolioValueChartProps> = ({ records, asse
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: { xs: 1, md: 3 }, flexWrap: 'wrap', gap: { xs: 1, md: 2 } }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Timeline sx={{ mr: { xs: 1, md: 2 }, color: '#667eea', fontSize: { xs: 20, md: 24 } }} />
-            <Typography variant="h6" sx={{ fontWeight: 600, color: '#1e293b', fontSize: { xs: '1.05rem', md: '1.25rem' } }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary', fontSize: { xs: '1.05rem', md: '1.25rem' } }}>
               Net Worth Over Time
             </Typography>
           </Box>

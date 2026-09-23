@@ -13,7 +13,10 @@ const BgImageBox = memo(function BgImageBox() {
         height: '100%',
         objectFit: 'cover',
         zIndex: 0,
-        opacity: 0.4,
+        // Per scheme, as variables rather than a dark-only style, so a page
+        // scoped to light (the landing page) keeps its light clouds.
+        opacity: 'var(--tl-backdrop-opacity)',
+        mixBlendMode: 'var(--tl-backdrop-blend)' as 'normal',
         pointerEvents: 'none',
         userSelect: 'none',
         // Enable hardware acceleration

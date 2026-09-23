@@ -20,6 +20,7 @@ vi.mock('./FullEmojiPicker', () => ({
 }));
 
 import { Composer } from './Composer';
+import { resetRecentEmojiCache } from './recentEmoji';
 import type { PendingUpload } from '../../types';
 
 /** Photo and emoji sit behind the arrow until it is tapped. */
@@ -451,5 +452,49 @@ describe('saving to Album', () => {
       <Composer onSend={() => {}} onTyping={() => {}} photoAlbum={album('unset')} onChooseAlbum={() => {}} onAlbumOff={() => {}} />
     );
     expect(screen.queryByText('Where should chat photos go?')).not.toBeInTheDocument();
+  });
+});
+
+describe('recent emoji', () => {
+  beforeEach(() => {
+    window.localStorage.removeItem('tumbaland-chat-recent-emoji');
+    resetRecentEmojiCache();
+  });
+
+  it('stays out of the way while the thread is being read', () => {
+    render(<Composer onSend={() => {}} onTyping={() => {}} />);
+    expect(screen.queryByRole('group', { name: 'Recent emoji' })).not.toBeInTheDocument();
+  });
+
+  it('shows a row of them once the message box is in use', async () => {
+    render(<Composer onSend={() => {}} onTyping={() => {}} />);
+
+    await userEvent.click(screen.getByLabelText('Message'));
+
+    expect(screen.getByRole('group', { name: 'Recent emoji' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add ❤️' })).toBeInTheDocument();
+  });
+
+  it('adds one where the cursor is, not at the end', async () => {
+    render(<Composer onSend={() => {}} onTyping={() => {}} />);
+    const input = screen.getByLabelText('Message') as HTMLTextAreaElement;
+
+    await userEvent.type(input, 'see you tonight');
+    input.setSelectionRange(8, 8);
+    await userEvent.click(screen.getByRole('button', { name: 'Add 🔥' }));
+
+    expect(input).toHaveValue('see you 🔥tonight');
+  });
+
+  it('learns the emoji in a sent message, keyboard ones included', async () => {
+    render(<Composer onSend={() => {}} onTyping={() => {}} />);
+    const input = screen.getByLabelText('Message');
+
+    await userEvent.type(input, 'yay 🦄');
+    await userEvent.click(screen.getByLabelText('Send'));
+    await userEvent.click(input);
+
+    const row = screen.getByRole('group', { name: 'Recent emoji' });
+    expect(row.firstElementChild).toHaveAccessibleName('Add 🦄');
   });
 });

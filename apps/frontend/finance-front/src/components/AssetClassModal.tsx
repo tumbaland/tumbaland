@@ -127,12 +127,12 @@ const AssetClassModal: React.FC<{
                 borderRadius: '50%',
                 backgroundColor: color,
                 cursor: 'pointer',
-                border: form.color === color ? '3px solid #000' : '2px solid #ccc',
+                border: form.color === color ? '3px solid var(--mui-palette-text-primary)' : '2px solid var(--mui-palette-divider)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 '&:hover': {
-                  border: '3px solid #666'
+                  border: '3px solid var(--mui-palette-text-secondary)'
                 }
               }}
               onClick={() => setForm((f) => ({ ...f, color }))}

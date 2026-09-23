@@ -6,7 +6,7 @@ import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import { CHAT_APP, USER_APPS, getMainApps, isRouteActive } from '../config/apps';
-import { brand, chrome, ink, surface } from '@tumbaland/frontend-core';
+import { accentOnDark, brand, chrome, DARK, ink, surface } from '@tumbaland/frontend-core';
 import { User } from '../types';
 import { AccountMenu } from './AccountMenu';
 
@@ -129,9 +129,10 @@ function NavItem({ label, ariaLabel, icon, color, active, mobile, to, onClick, e
       placeItems: 'center',
       color: active ? color : ink.body,
       backgroundColor: active ? `${color}1f` : 'transparent',
-      transition: 'background-color .2s ease, color .2s ease, transform .15s ease'
+      transition: 'background-color .2s ease, color .2s ease, transform .15s ease',
+      [DARK]: active ? { color: accentOnDark(color), backgroundColor: `${color}3d` } : {}
     },
-    '&:hover .nav-pill': { backgroundColor: active ? `${color}2e` : 'rgba(15,23,42,0.06)' },
+    '&:hover .nav-pill': { backgroundColor: active ? `${color}2e` : surface.hover },
     '&:active .nav-pill': { transform: 'scale(0.94)' },
     '&.Mui-focusVisible .nav-pill': { outline: `2px solid ${brand.violet}`, outlineOffset: 1 }
   } as const;

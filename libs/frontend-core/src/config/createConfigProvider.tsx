@@ -3,7 +3,8 @@ import { CssBaseline, ThemeProvider } from '@mui/material';
 import { Loader } from '../components/Loader';
 import { ErrorPage, ErrorPageProps } from '../components/ErrorPage';
 import { initMonitoring, initWebVitals } from '../monitoring';
-import { tumbalandTheme } from '../theme';
+import { COLOR_MODE_STORAGE_KEY, COLOR_SCHEME_STORAGE_KEY, tumbalandTheme } from '../theme';
+import { useThemeColorMeta } from '../components/ColorModeSetting';
 
 export interface CreateConfigProviderOptions<TConfig extends { PUBLIC_API_URL?: string }> {
   /** Passed to initMonitoring as the `service` tag. */
@@ -36,6 +37,11 @@ export interface CreateConfigProviderOptions<TConfig extends { PUBLIC_API_URL?: 
  * loading/error UI in one place. Each app still declares its own `AppConfig` shape and reads its own
  * `VITE_*` env vars via `getDevConfig`.
  */
+function ThemeColorMeta() {
+  useThemeColorMeta();
+  return null;
+}
+
 export function createConfigProvider<TConfig extends { PUBLIC_API_URL?: string }>(
   options: CreateConfigProviderOptions<TConfig>
 ) {
@@ -105,25 +111,29 @@ export function createConfigProvider<TConfig extends { PUBLIC_API_URL?: string }
         });
     }, []);
 
-    if (error) {
-      return <ErrorPage {...options.errorPageProps} />;
-    }
-
-    if (!config) {
-      return <Loader />;
-    }
-
-    const content = (
-      <>
-        <CssBaseline />
-        {children}
-      </>
-    );
-
+    // Outside the config gate, so the loader and the error page are themed
+    // too: on a device in dark they were drawn white until config.json came
+    // back. Inside the shell this provider is nested in the shell's own, and
+    // MUI hands a nested one the outer light/dark state rather than starting a
+    // second, so the storage keys only matter for whichever is outermost.
     return (
-      <ConfigContext.Provider value={config}>
-        <ThemeProvider theme={tumbalandTheme}>{content}</ThemeProvider>
-      </ConfigContext.Provider>
+      <ThemeProvider
+        theme={tumbalandTheme}
+        modeStorageKey={COLOR_MODE_STORAGE_KEY}
+        colorSchemeStorageKey={COLOR_SCHEME_STORAGE_KEY}
+        disableTransitionOnChange
+        noSsr
+      >
+        <CssBaseline enableColorScheme />
+        <ThemeColorMeta />
+        {error ? (
+          <ErrorPage {...options.errorPageProps} />
+        ) : !config ? (
+          <Loader />
+        ) : (
+          <ConfigContext.Provider value={config}>{children}</ConfigContext.Provider>
+        )}
+      </ThemeProvider>
     );
   }
 

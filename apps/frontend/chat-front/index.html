@@ -1,6 +1,17 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <!-- Sets light or dark before the first paint, from the same key the app's
+         theme provider keeps it under, so a dark page never flashes white. -->
+    <script>
+      (function () {
+        try {
+          var mode = localStorage.getItem('tumbaland-mode') || 'system';
+          var dark = mode === 'dark' || (mode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.setAttribute('data-color-scheme', dark ? 'dark' : 'light');
+        } catch (e) {}
+      })();
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />

@@ -227,7 +227,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
         paper: {
           sx: {
             borderRadius: 4,
-            background: 'rgba(255, 255, 255, 0.9)',
+            background: 'color-mix(in srgb, var(--mui-palette-background-paper) 90%, transparent)',
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
@@ -361,7 +361,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploa
               Selected Files ({files.length})
             </Typography>
 
-            <List dense sx={{ maxHeight: 200, overflow: 'auto', bgcolor: 'rgba(255,255,255,0.5)', borderRadius: 2 }}>
+            <List dense sx={{ maxHeight: 200, overflow: 'auto', bgcolor: 'color-mix(in srgb, var(--mui-palette-background-paper) 50%, transparent)', borderRadius: 2 }}>
               {files.map((fileItem) => (
                 <ListItem key={fileItem.id} divider sx={{ py: 1 }}>
                   <ListItemText

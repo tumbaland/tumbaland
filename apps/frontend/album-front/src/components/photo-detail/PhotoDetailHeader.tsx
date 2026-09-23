@@ -73,7 +73,7 @@ const PhotoDetailHeader: React.FC<PhotoDetailHeaderProps> = ({
           justifyContent: 'space-between',
           alignItems: { xs: 'stretch', md: 'flex-start' },
           mb: { xs: 2, sm: 4 },
-          background: 'rgba(255, 255, 255, 0.5)',
+          background: 'color-mix(in srgb, var(--mui-palette-background-paper) 50%, transparent)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
           p: { xs: 2, sm: 3 },
@@ -114,7 +114,7 @@ const PhotoDetailHeader: React.FC<PhotoDetailHeaderProps> = ({
                 aria-label="Previous photo"
                 sx={{
                   border: '1px solid rgba(0,0,0,0.12)',
-                  bgcolor: 'rgba(255,255,255,0.5)'
+                  bgcolor: 'color-mix(in srgb, var(--mui-palette-background-paper) 50%, transparent)'
                 }}
               >
                 <NavigateBeforeIcon fontSize="small" />
@@ -126,7 +126,7 @@ const PhotoDetailHeader: React.FC<PhotoDetailHeaderProps> = ({
                 aria-label="Next photo"
                 sx={{
                   border: '1px solid rgba(0,0,0,0.12)',
-                  bgcolor: 'rgba(255,255,255,0.5)'
+                  bgcolor: 'color-mix(in srgb, var(--mui-palette-background-paper) 50%, transparent)'
                 }}
               >
                 <NavigateNextIcon fontSize="small" />
@@ -150,10 +150,10 @@ const PhotoDetailHeader: React.FC<PhotoDetailHeaderProps> = ({
               fontWeight: 600,
               borderColor: 'rgba(0,0,0,0.12)',
               color: 'text.primary',
-              bgcolor: 'rgba(255,255,255,0.5)',
+              bgcolor: 'color-mix(in srgb, var(--mui-palette-background-paper) 50%, transparent)',
               '&:hover': {
                 borderColor: 'rgba(0,0,0,0.24)',
-                bgcolor: 'rgba(255,255,255,0.8)'
+                bgcolor: 'color-mix(in srgb, var(--mui-palette-background-paper) 80%, transparent)'
               }
             }}
           >
@@ -186,10 +186,10 @@ const PhotoDetailHeader: React.FC<PhotoDetailHeaderProps> = ({
               fontWeight: 600,
               borderColor: 'rgba(0,0,0,0.12)',
               color: 'text.primary',
-              bgcolor: 'rgba(255,255,255,0.5)',
+              bgcolor: 'color-mix(in srgb, var(--mui-palette-background-paper) 50%, transparent)',
               '&:hover': {
                 borderColor: 'rgba(0,0,0,0.24)',
-                bgcolor: 'rgba(255,255,255,0.8)'
+                bgcolor: 'color-mix(in srgb, var(--mui-palette-background-paper) 80%, transparent)'
               }
             }}
           >
@@ -204,7 +204,7 @@ const PhotoDetailHeader: React.FC<PhotoDetailHeaderProps> = ({
               borderRadius: 2,
               textTransform: 'none',
               fontWeight: 600,
-              bgcolor: 'rgba(255,255,255,0.5)',
+              bgcolor: 'color-mix(in srgb, var(--mui-palette-background-paper) 50%, transparent)',
               '&:hover': {
                 bgcolor: 'rgba(239, 68, 68, 0.08)'
               }

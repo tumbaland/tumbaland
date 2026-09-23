@@ -32,7 +32,7 @@ const PhotoSearchBar: React.FC<PhotoSearchBarProps> = ({ searchTerm, onSearchCha
         sx={{
           '& .MuiOutlinedInput-root': {
             borderRadius: 2,
-            backgroundColor: 'rgba(255, 255, 255, 0.75)',
+            backgroundColor: 'color-mix(in srgb, var(--mui-palette-background-paper) 75%, transparent)',
             '& fieldset': {
               borderColor: 'rgba(15, 23, 42, 0.12)'
             },

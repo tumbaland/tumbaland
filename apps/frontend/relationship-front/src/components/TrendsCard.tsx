@@ -14,11 +14,10 @@ import {
   Select,
   Tooltip,
   Typography,
-  alpha,
-  useTheme
+  alpha
 } from '@mui/material';
 import { TrendingUp, TrendingDown, TrendingFlat, FiberNew, DoNotDisturbOn } from '@mui/icons-material';
-import { useTenantFilter } from '@tumbaland/frontend-core';
+import { useTenantFilter, useActivePalette } from '@tumbaland/frontend-core';
 import { useTrends } from '../hooks/useTrends';
 import { TrendDirection, TypeTrend } from '../services/statistics';
 
@@ -73,15 +72,15 @@ interface ChangeChipProps {
 }
 
 const ChangeChip: React.FC<ChangeChipProps> = ({ direction, delta, pct, tooltip }) => {
-  const theme = useTheme();
+  const palette = useActivePalette();
   // 'new' is growth and 'stopped' is a fall, so they take the same colours as
   // up and down — the icon is what tells the two pairs apart.
   const color =
     direction === 'up' || direction === 'new'
-      ? theme.palette.success.main
+      ? palette.success.main
       : direction === 'down' || direction === 'stopped'
-        ? theme.palette.error.main
-        : theme.palette.text.secondary;
+        ? palette.error.main
+        : palette.text.secondary;
 
   return (
     <Tooltip title={tooltip}>
@@ -144,8 +143,8 @@ interface TrendRowProps {
  * filled its own row would make a type logged twice look like one logged fifty.
  */
 const TrendRow: React.FC<TrendRowProps> = ({ trend, scale }) => {
-  const theme = useTheme();
-  const color = trend.color || theme.palette.primary.main;
+  const palette = useActivePalette();
+  const color = trend.color || palette.primary.main;
   const bar = (value: number, dim: boolean) => (
     <LinearProgress
       variant="determinate"

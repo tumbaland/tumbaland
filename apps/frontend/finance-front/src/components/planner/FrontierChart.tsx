@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Paper, useTheme } from '@mui/material';
+import { Paper } from '@mui/material';
 import { FrontierSim, SimPoint } from '../../utils/frontierSim';
+import { useActivePalette } from '@tumbaland/frontend-core';
 
 interface FrontierChartProps {
   sim: FrontierSim;
@@ -27,7 +28,7 @@ function declutterLabelY(points: { key: string; y: number }[]): Record<string, n
 }
 
 const FrontierChart: React.FC<FrontierChartProps> = ({ sim, targetPortfolio }) => {
-  const theme = useTheme();
+  const palette = useActivePalette();
   const chartRef = useRef<HTMLDivElement>(null);
   const [chartWidth, setChartWidth] = useState(500);
 
@@ -72,8 +73,8 @@ const FrontierChart: React.FC<FrontierChartProps> = ({ sim, targetPortfolio }) =
   const yTicks = Array.from({ length: 8 }, (_, i) => minRet + (i / 7) * (maxRet - minRet));
   const xTicks = Array.from({ length: 10 }, (_, i) => minVol + (i / 9) * (maxVol - minVol));
 
-  const gridColor = theme.palette.divider;
-  const tickColor = theme.palette.text.secondary;
+  const gridColor = palette.divider;
+  const tickColor = palette.text.secondary;
 
   const labelY = declutterLabelY([
     { key: 'minVol', y: toY(sim.minVol.ret) },

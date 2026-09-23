@@ -40,7 +40,7 @@ const AlbumsGrid: React.FC<AlbumsGridProps> = ({ albums, onViewAlbum, onDeleteAl
                 position: 'absolute',
                 top: 8,
                 right: 8,
-                bgcolor: 'rgba(255,255,255,0.9)',
+                bgcolor: 'color-mix(in srgb, var(--mui-palette-background-paper) 90%, transparent)',
                 boxShadow: 1,
                 zIndex: 2,
                 '&:hover': { bgcolor: 'rgba(255,255,255,1)' }

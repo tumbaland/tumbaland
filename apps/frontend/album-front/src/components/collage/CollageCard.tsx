@@ -56,7 +56,7 @@ export const CollagePreview: React.FC<{ collage: Collage }> = ({ collage }) => {
             width: pct(p.width, vw),
             height: pct(p.height, vh),
             transform: `rotate(${p.rotation || 0}deg)`,
-            bgcolor: 'rgba(255,255,255,0.28)',
+            bgcolor: 'color-mix(in srgb, var(--mui-palette-background-paper) 28%, transparent)',
             border: '1px solid rgba(255,255,255,0.45)',
             borderRadius: '2px'
           }}
@@ -125,7 +125,7 @@ const CollageCard: React.FC<CollageCardProps> = ({ collage, onView, onEdit, onEd
         display: 'flex',
         flexDirection: 'column',
         borderRadius: 4,
-        background: 'rgba(255, 255, 255, 0.6)',
+        background: 'color-mix(in srgb, var(--mui-palette-background-paper) 60%, transparent)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
         border: '1px solid rgba(255, 255, 255, 0.4)',
@@ -137,7 +137,7 @@ const CollageCard: React.FC<CollageCardProps> = ({ collage, onView, onEdit, onEd
         '&:hover': {
           transform: 'translateY(-8px)',
           boxShadow: '0 12px 30px rgba(0,0,0,0.1)',
-          background: 'rgba(255, 255, 255, 0.8)'
+          background: 'color-mix(in srgb, var(--mui-palette-background-paper) 80%, transparent)'
         }
       }}
       onClick={() => onView(collage)}

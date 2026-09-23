@@ -116,7 +116,7 @@ const CollageListPage: React.FC = () => {
         <Typography
           variant="h5"
           component="h1"
-          sx={{ fontWeight: 700, color: '#1e293b', fontSize: { xs: '1.35rem', sm: '1.75rem' } }}
+          sx={{ fontWeight: 700, color: 'text.primary', fontSize: { xs: '1.35rem', sm: '1.75rem' } }}
         >
           Collages
         </Typography>
@@ -151,7 +151,7 @@ const CollageListPage: React.FC = () => {
                 <SearchIcon color="action" fontSize="small" />
               </InputAdornment>
             ),
-            sx: { borderRadius: 2, backgroundColor: 'rgba(255, 255, 255, 0.75)' }
+            sx: { borderRadius: 2, backgroundColor: 'color-mix(in srgb, var(--mui-palette-background-paper) 75%, transparent)' }
           }
         }}
         sx={{ mb: { xs: 1.5, sm: 3 }, maxWidth: { sm: 400 } }}

@@ -137,7 +137,7 @@ const PhotosGrid: React.FC<PhotosGridProps> = ({
         sx={{
           textAlign: 'center',
           py: 10,
-          background: 'rgba(255, 255, 255, 0.4)',
+          background: 'color-mix(in srgb, var(--mui-palette-background-paper) 40%, transparent)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
           borderRadius: 4,

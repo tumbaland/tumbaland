@@ -95,7 +95,7 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
         boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
         borderRadius: 3,
         overflow: 'hidden',
-        background: 'rgba(255, 255, 255, 0.7)',
+        background: 'color-mix(in srgb, var(--mui-palette-background-paper) 70%, transparent)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
         border: selected ? '2px solid' : '1px solid rgba(255, 255, 255, 0.5)',
@@ -242,8 +242,8 @@ const PhotoCard: React.FC<PhotoCardProps> = ({
               position: 'absolute',
               top: 8,
               right: 8,
-              bgcolor: 'rgba(255, 255, 255, 0.8)',
-              '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.9)' }
+              bgcolor: 'color-mix(in srgb, var(--mui-palette-background-paper) 80%, transparent)',
+              '&:hover': { bgcolor: 'color-mix(in srgb, var(--mui-palette-background-paper) 90%, transparent)' }
             }}
           >
             <MoreVertIcon fontSize="small" />

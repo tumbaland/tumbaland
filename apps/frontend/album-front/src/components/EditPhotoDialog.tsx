@@ -79,7 +79,7 @@ const EditPhotoDialog: React.FC<EditPhotoDialogProps> = ({ open, photo, suggesti
         paper: {
           sx: {
             borderRadius: 4,
-            background: 'rgba(255, 255, 255, 0.8)',
+            background: 'color-mix(in srgb, var(--mui-palette-background-paper) 80%, transparent)',
             backdropFilter: 'blur(12px)',
             WebkitBackdropFilter: 'blur(12px)',
             border: '1px solid rgba(255, 255, 255, 0.6)',
@@ -147,7 +147,7 @@ const EditPhotoDialog: React.FC<EditPhotoDialogProps> = ({ open, photo, suggesti
                 mb: 3,
                 '& .MuiOutlinedInput-root': {
                   borderRadius: 2,
-                  backgroundColor: 'rgba(255, 255, 255, 0.5)',
+                  backgroundColor: 'color-mix(in srgb, var(--mui-palette-background-paper) 50%, transparent)',
                   '& fieldset': {
                     borderColor: 'rgba(0, 0, 0, 0.1)'
                   },
@@ -184,7 +184,7 @@ const EditPhotoDialog: React.FC<EditPhotoDialogProps> = ({ open, photo, suggesti
               sx={{
                 '& .MuiOutlinedInput-root': {
                   borderRadius: 2,
-                  backgroundColor: 'rgba(255, 255, 255, 0.5)',
+                  backgroundColor: 'color-mix(in srgb, var(--mui-palette-background-paper) 50%, transparent)',
                   '& fieldset': {
                     borderColor: 'rgba(0, 0, 0, 0.1)'
                   },
