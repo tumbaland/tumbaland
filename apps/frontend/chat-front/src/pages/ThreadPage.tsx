@@ -19,6 +19,7 @@ import { FullEmojiPicker } from '../components/thread/FullEmojiPicker';
 import { MessageList } from '../components/thread/MessageList';
 import { canChange } from '../components/thread/MessageBubble';
 import { TypingIndicator } from '../components/thread/TypingIndicator';
+import { ScreenEffect } from '../components/thread/ScreenEffect';
 import { ThreadHeader } from '../components/thread/ThreadHeader';
 import { AlbumPicker } from '../components/thread/AlbumPicker';
 import { ThemePicker } from '../components/thread/ThemePicker';
@@ -32,7 +33,8 @@ import { Lightbox } from '../components/thread/Lightbox';
 import { useAttachmentUploads } from '../hooks/useAttachmentUploads';
 import { useChatThread } from '../hooks/useChatThread';
 import { useCurrentUser } from '../hooks/useCurrentUser';
-import type { PhotoAlbum, PhotoAlbumChoice, ThreadMessage } from '../types';
+import { useScreenEffects } from '../hooks/useScreenEffects';
+import type { PhotoAlbum, PhotoAlbumChoice, SendOptions, ThreadMessage } from '../types';
 
 export interface ThreadPageProps {
   /** Given by the side panel, which has no route to read it from. */
@@ -63,6 +65,7 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
 
   const thread = useChatThread(conversationId, user?.id ?? '');
   const uploads = useAttachmentUploads(conversationId);
+  const screenEffect = useScreenEffects(conversationId, thread.messages, user?.id ?? '', !thread.loading);
 
   const find = (id: string | null | undefined) => (id ? thread.messages.find((message) => message.id === id) : undefined);
 
@@ -121,7 +124,7 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
       : [])
   ];
 
-  const send = (body: string, options?: { skipAlbum: boolean }) => {
+  const send = (body: string, options?: SendOptions) => {
     // `take` empties the queue, so the attachments and the text leave together
     // and a second press cannot send the same files twice.
     void thread.send(body, uploads.take(), options);
@@ -309,6 +312,14 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
       />
 
       <TypingIndicator names={thread.typingNames} />
+
+      {screenEffect.playing && (
+        <ScreenEffect
+          key={screenEffect.playing.key}
+          effect={screenEffect.playing.effect}
+          onDone={screenEffect.done}
+        />
+      )}
 
       <Composer
         onSend={send}

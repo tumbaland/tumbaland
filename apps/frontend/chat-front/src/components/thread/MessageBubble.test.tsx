@@ -330,3 +330,20 @@ describe('canChange', () => {
     expect(canChange(target, mine)).toBe(false);
   });
 });
+
+describe('message effects', () => {
+  it('draws hearts around a message sent with them', () => {
+    renderBubble({ effect: 'hearts', body: 'miss you' });
+    expect(screen.getByTestId('bubble-effect-hearts')).toBeInTheDocument();
+  });
+
+  it('draws nothing around an ordinary message', () => {
+    renderBubble();
+    expect(screen.queryByTestId(/bubble-effect/)).not.toBeInTheDocument();
+  });
+
+  it('takes the effect away with an unsent message', () => {
+    renderBubble({ effect: 'kisses', deletedAt: '2026-09-21T10:05:00.000Z' });
+    expect(screen.queryByTestId(/bubble-effect/)).not.toBeInTheDocument();
+  });
+});

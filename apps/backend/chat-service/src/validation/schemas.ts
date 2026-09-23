@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MESSAGE_EFFECTS } from '../models/Message';
 
 /** Matches `Message.body`'s maxlength. Both exist: one rejects, one truncates. */
 export const MAX_BODY_LENGTH = 8000;
@@ -66,6 +67,7 @@ export const sendMessageSchema = z
     body: z.string().max(MAX_BODY_LENGTH).optional(),
     attachments: z.array(attachmentSchema).max(MAX_ATTACHMENTS).optional(),
     replyTo: z.string().nullish(),
+    effect: z.enum(MESSAGE_EFFECTS).nullish(),
     skipAlbum: z.boolean().optional()
   })
   .refine((value) => Boolean(value.body?.trim()) || (value.attachments?.length ?? 0) > 0, {

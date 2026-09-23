@@ -3,6 +3,8 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import InputBase from '@mui/material/InputBase';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import SendIcon from '@mui/icons-material/Send';
 import CheckIcon from '@mui/icons-material/Check';
@@ -10,17 +12,20 @@ import CloseIcon from '@mui/icons-material/Close';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined';
 import SentimentSatisfiedAltIcon from '@mui/icons-material/SentimentSatisfiedAlt';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { TOUCH_TARGET, brand, ink, surface } from '@tumbaland/frontend-core';
 import { FullEmojiPicker, loadEmojiPicker } from './FullEmojiPicker';
 import { UploadTray } from './UploadTray';
 import { AlbumDestination } from './AlbumDestination';
 import { emojiIn, recordEmoji, useRecentEmoji } from './recentEmoji';
-import type { PendingUpload, PhotoAlbum } from '../../types';
+import { EFFECTS } from './effects';
+import type { MessageEffect, PendingUpload, PhotoAlbum, SendOptions } from '../../types';
 
 export interface ComposerProps {
-  /** Options only when photos go with it: whether to leave them out of the album. */
-  onSend: (body: string, options?: { skipAlbum: boolean }) => void;
+  /**
+   * Options only when there are any: whether photos going with it stay out of
+   * the album, and the effect it was sent with.
+   */
+  onSend: (body: string, options?: SendOptions) => void;
   onTyping: () => void;
   disabled?: boolean;
   uploads?: PendingUpload[];
@@ -51,6 +56,9 @@ export interface ComposerProps {
  */
 const ACCEPTED = 'image/*,video/*';
 
+/** How long Send must be held before it offers effects instead of sending. */
+const HOLD_MS = 450;
+
 export function Composer({
   onSend,
   onTyping,
@@ -74,9 +82,10 @@ export function Composer({
   const draft = useRef('');
   const wasEditing = useRef(false);
   const [emojiAnchor, setEmojiAnchor] = useState<HTMLElement | null>(null);
-  // Photo and emoji sit behind an arrow, so the message box gets the width on
-  // a phone. Most lines are just text.
-  const [toolsOpen, setToolsOpen] = useState(false);
+  const [effectAnchor, setEffectAnchor] = useState<HTMLElement | null>(null);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Set once a hold has opened the menu, so letting go does not also send. */
+  const held = useRef(false);
   const [focused, setFocused] = useState(false);
   const recentEmoji = useRecentEmoji();
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -93,7 +102,6 @@ export function Composer({
       if (!wasEditing.current) draft.current = value;
       wasEditing.current = true;
       setValue(editing?.body ?? '');
-      setToolsOpen(false);
       inputRef.current?.focus();
     } else if (wasEditing.current) {
       wasEditing.current = false;
@@ -113,7 +121,7 @@ export function Composer({
     ? Boolean(value.trim() || editing.hasMedia) && !disabled
     : Boolean(value.trim() || ready > 0) && !disabled && !uploading;
 
-  const submit = () => {
+  const submit = (effect?: MessageEffect) => {
     const body = value.trim();
     if (!canSend) return;
     if (editing) {
@@ -122,13 +130,13 @@ export function Composer({
       else onSaveEdit?.(body);
       return;
     }
-    if (ready > 0) onSend(body, { skipAlbum });
+    const options: SendOptions = { ...(ready > 0 ? { skipAlbum } : {}), ...(effect ? { effect } : {}) };
+    if (Object.keys(options).length > 0) onSend(body, options);
     else onSend(body);
     // Emoji typed from the phone's own keyboard count as used too.
     recordEmoji(...emojiIn(body).reverse());
     setSkipAlbum(false);
     setValue('');
-    setToolsOpen(false);
     // Kept focused, so a conversation does not need a tap between each line.
     inputRef.current?.focus();
   };
@@ -158,6 +166,29 @@ export function Composer({
       event.preventDefault();
       onAddFiles(files);
     }
+  };
+
+  // Effects are for a new message. An edit keeps whatever it was sent with.
+  const offerEffects = canSend && !editing;
+
+  const cancelHold = () => {
+    if (holdTimer.current) clearTimeout(holdTimer.current);
+    holdTimer.current = null;
+  };
+
+  /**
+   * Holding Send, or right-clicking it, offers to send with an effect. It is
+   * the gesture other chat apps use for the same thing, and it keeps a plain
+   * tap a plain send.
+   */
+  const startHold = (event: React.PointerEvent<HTMLElement>) => {
+    held.current = false;
+    if (!offerEffects || event.button !== 0) return;
+    const anchor = event.currentTarget;
+    holdTimer.current = setTimeout(() => {
+      held.current = true;
+      setEffectAnchor(anchor);
+    }, HOLD_MS);
   };
 
   /**
@@ -224,8 +255,11 @@ export function Composer({
         <UploadTray uploads={uploads} onRemove={onRemoveUpload} />
       )}
 
-      {/* While writing only: a thread being read keeps its height. */}
-      {(focused || value.length > 0) && !disabled && (
+      {/* On a phone, while writing only: a thread being read keeps its height,
+          and the keyboard opening already reshapes the screen. On a desktop
+          it stays put, because appearing on focus and going on blur resized
+          the message list and made the whole thread jump each time. */}
+      {(!isPhone || focused || value.length > 0) && !disabled && (
         <Box
           role="group"
           aria-label="Recent emoji"
@@ -272,46 +306,17 @@ export function Composer({
       )}
 
       <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.5, p: 1 }}>
-      {!editing && (
-      <IconButton
-        aria-label={toolsOpen ? 'Hide photo and emoji' : 'Show photo and emoji'}
-        aria-expanded={toolsOpen}
-        onClick={() => setToolsOpen((open) => !open)}
-        // Warms the picker's download while the finger is on the way to it.
-        onPointerEnter={() => void loadEmojiPicker().catch(() => {})}
-        sx={{ color: ink.muted, width: TOUCH_TARGET, height: TOUCH_TARGET }}
-      >
-        <ChevronRightIcon
-          sx={{ transition: 'transform .2s ease', transform: toolsOpen ? 'rotate(180deg)' : 'none' }}
-        />
-      </IconButton>
-      )}
-
-      {toolsOpen && (
-        <>
-          {/* One button. On a phone the system picker already offers the
-              camera beside the library, so a separate camera button was the
-              same thing twice. */}
-          {onAddFiles && (
-            <IconButton
-              aria-label="Add photo or video"
-              onClick={() => fileRef.current?.click()}
-              sx={{ color: ink.muted, width: TOUCH_TARGET, height: TOUCH_TARGET }}
-            >
-              <AddPhotoAlternateOutlinedIcon />
-            </IconButton>
-          )}
-
-          <IconButton
-            aria-label="Add emoji"
-            onPointerEnter={() => void loadEmojiPicker().catch(() => {})}
-            onFocus={() => void loadEmojiPicker().catch(() => {})}
-            onClick={(event) => setEmojiAnchor(event.currentTarget)}
-            sx={{ color: ink.muted, width: TOUCH_TARGET, height: TOUCH_TARGET }}
-          >
-            <SentimentSatisfiedAltIcon />
-          </IconButton>
-        </>
+      {/* One button. On a phone the system picker already offers the camera
+          beside the library, so a separate camera button was the same thing
+          twice. */}
+      {!editing && onAddFiles && (
+        <IconButton
+          aria-label="Add photo or video"
+          onClick={() => fileRef.current?.click()}
+          sx={{ color: ink.muted, width: TOUCH_TARGET, height: TOUCH_TARGET }}
+        >
+          <AddPhotoAlternateOutlinedIcon />
+        </IconButton>
       )}
 
       <InputBase
@@ -330,6 +335,32 @@ export function Composer({
         maxRows={6}
         disabled={disabled}
         inputProps={{ 'aria-label': 'Message' }}
+        // Inside the box, at its end, so the message gets the row's width and
+        // the only thing beside it is the photo button.
+        endAdornment={
+          <IconButton
+            aria-label="Add emoji"
+            onPointerEnter={() => void loadEmojiPicker().catch(() => {})}
+            onFocus={() => void loadEmojiPicker().catch(() => {})}
+            // Keeps the focus, and on a phone the keyboard, in the message box.
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={(event) => setEmojiAnchor(event.currentTarget)}
+            sx={{
+              // Level with the last line as the box grows, and pulled into
+              // its padding so it does not make a one-line box any taller.
+              alignSelf: 'flex-end',
+              width: 36,
+              height: 36,
+              my: -0.5,
+              mr: -1,
+              ml: 0.5,
+              color: ink.muted,
+              bgcolor: 'transparent'
+            }}
+          >
+            <SentimentSatisfiedAltIcon fontSize="small" />
+          </IconButton>
+        }
         sx={{
           flex: 1,
           // As tall as the buttons beside it, so one line of text sits level
@@ -351,10 +382,31 @@ export function Composer({
       <IconButton
         type="submit"
         aria-label={editing ? 'Save edit' : 'Send'}
+        aria-haspopup={offerEffects ? 'menu' : undefined}
         disabled={!canSend}
+        onPointerDown={startHold}
+        onPointerUp={cancelHold}
+        onPointerLeave={cancelHold}
+        onPointerCancel={cancelHold}
+        onContextMenu={(event) => {
+          if (!offerEffects) return;
+          event.preventDefault();
+          cancelHold();
+          setEffectAnchor(event.currentTarget);
+        }}
+        onClick={(event) => {
+          // The press that opened the menu ends in a click; it chose nothing yet.
+          if (held.current) {
+            event.preventDefault();
+            held.current = false;
+          }
+        }}
         sx={{
           width: TOUCH_TARGET,
           height: TOUCH_TARGET,
+          // A long press on a phone would otherwise select or preview the button.
+          WebkitTouchCallout: 'none',
+          userSelect: 'none',
           color: '#fff',
           bgcolor: accent,
           '&:hover': { bgcolor: accent, filter: 'brightness(0.94)' },
@@ -369,6 +421,32 @@ export function Composer({
       {/* The full picker here rather than the six quick reactions: writing a
           message is where someone reaches for a specific emoji, while
           reacting is where the common few are almost always enough. */}
+      <Menu
+        anchorEl={effectAnchor}
+        open={Boolean(effectAnchor)}
+        onClose={() => setEffectAnchor(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        // Sending puts the focus back in the message box; handing it to the
+        // Send button on close would take it away again.
+        disableRestoreFocus
+      >
+        {EFFECTS.map((effect) => (
+          <MenuItem
+            key={effect.id}
+            onClick={() => {
+              setEffectAnchor(null);
+              submit(effect.id);
+            }}
+          >
+            <Box component="span" aria-hidden sx={{ fontSize: 20, mr: 1.5, lineHeight: 1 }}>
+              {effect.emoji}
+            </Box>
+            {effect.label}
+          </MenuItem>
+        ))}
+      </Menu>
+
       <FullEmojiPicker anchorEl={emojiAnchor} onClose={() => setEmojiAnchor(null)} onPick={insertEmoji} />
 
       <input ref={fileRef} type="file" accept={ACCEPTED} multiple hidden onChange={pick} data-testid="file-input" />

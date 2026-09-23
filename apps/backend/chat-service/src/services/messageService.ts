@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { Types } from 'mongoose';
 import { BadRequestError, ForbiddenError, NotFoundError, logger } from '@tumbaland/backend-core';
 import { Conversation, IConversation } from '../models/Conversation';
-import { IAttachment, IMessage, Message } from '../models/Message';
+import { IAttachment, IMessage, Message, MessageEffect } from '../models/Message';
 import { belongsToConversation, bytesOf, fileIdsOf, folderFor, withDownloadUrls, withStoredSizes } from './attachmentService';
 import { deleteFolder } from './fileServiceClient';
 import { recordStoredBytes, releaseStoredBytes } from './storageUsage';
@@ -38,6 +38,7 @@ export interface MessageView {
   body: string;
   attachments: AttachmentView[];
   replyTo: string | null;
+  effect: MessageEffect | null;
   reactions: Array<{ userId: string; name: string; emoji: string; at: Date }>;
   clientId: string;
   editedAt: Date | null;
@@ -62,6 +63,7 @@ export function toView(document: IMessage): MessageView {
     body: message.deletedAt ? '' : message.body,
     attachments: message.deletedAt ? [] : message.attachments,
     replyTo: message.replyTo ?? null,
+    effect: message.deletedAt ? null : (message.effect ?? null),
     reactions: message.deletedAt ? [] : message.reactions,
     clientId: message.clientId,
     editedAt: message.editedAt ?? null,
@@ -84,6 +86,7 @@ export interface SendInput {
   body?: string;
   attachments?: IAttachment[];
   replyTo?: string | null;
+  effect?: MessageEffect | null;
   /** "Not this one" on the photo tray: keep this send out of the album. */
   skipAlbum?: boolean;
 }
@@ -156,6 +159,7 @@ export async function sendMessage(
       body,
       attachments,
       replyTo: input.replyTo ?? null,
+      effect: input.effect ?? null,
       clientId: input.clientId
     });
   } catch (error) {

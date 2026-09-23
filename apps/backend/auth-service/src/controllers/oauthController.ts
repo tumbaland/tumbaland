@@ -1,26 +1,25 @@
-import { createHmac, timingSafeEqual } from 'crypto';
 import { Request, Response } from 'express';
 import {
   BadRequestError,
   findClient,
   isRegisteredRedirect,
   issueAuthorizationCode,
-  issueRefreshToken,
   logger,
-  mintAccessToken,
   parseScopes,
-  redeemAuthorizationCode,
-  redeemRefreshToken,
   registerClient,
-  listConnections,
-  revokeRefreshTokensForUser,
-  NotFoundError,
-  sendSuccess,
-  requireEnv,
   API_KEY_SCOPES,
   PERSONAL_TENANT
 } from '@tumbaland/backend-core';
 import type { ApiKeyScope } from '@tumbaland/backend-core';
+import { renderConsentPage } from '../services/consentPage';
+import {
+  authFrontUrl,
+  consentToken,
+  consentTokenValid,
+  issuer,
+  mcpResource,
+  tenantNamesFor
+} from '../services/oauthConsent';
 
 /**
  * OAuth 2.1 authorization server, for assistants connecting over MCP.
@@ -29,16 +28,6 @@ import type { ApiKeyScope } from '@tumbaland/backend-core';
  * authenticated here by the same Google session the web app uses, so consent is
  * something they give while signed in rather than a second set of credentials.
  */
-
-const issuer = (): string =>
-  (process.env.AUTH_SERVICE_PUBLIC_URL || 'https://auth-api.tumbaland.eu').replace(/\/$/, '');
-
-/** The one resource this server issues tokens for. */
-const mcpResource = (): string =>
-  (process.env.MCP_PUBLIC_URL || 'https://mcp.tumbaland.eu').replace(/\/$/, '');
-
-const authFrontUrl = (): string =>
-  (process.env.AUTH_FRONT_URL || 'https://auth.tumbaland.eu').replace(/\/$/, '');
 
 /**
  * RFC 8414 metadata: how a client discovers where to send the user and where to
@@ -161,96 +150,6 @@ async function validateAuthorizeRequest(req: Request): Promise<AuthorizeParams> 
 }
 
 /**
- * A token binding the consent form to this user and this request.
- *
- * Without it the decision endpoint is a plain cookie-authenticated POST, and
- * any page on the internet could submit one on a signed-in visitor's behalf —
- * granting an authorization code to a client the user never saw. Deriving it
- * rather than storing it keeps the endpoint stateless; binding it to the user
- * stops an attacker minting one from their own session, and to the code
- * challenge stops it being reused for a different authorization.
- */
-const consentToken = (userId: string, clientId: string, codeChallenge: string): string =>
-  createHmac('sha256', requireEnv('JWT_SECRET'))
-    .update(`consent:${userId}:${clientId}:${codeChallenge}`)
-    .digest('hex');
-
-const consentTokenValid = (
-  presented: unknown,
-  userId: string,
-  clientId: string,
-  codeChallenge: string
-): boolean => {
-  if (typeof presented !== 'string') return false;
-  const expected = Buffer.from(consentToken(userId, clientId, codeChallenge));
-  const given = Buffer.from(presented);
-  if (expected.length !== given.length) return false;
-  return timingSafeEqual(expected, given);
-};
-
-const scopeLabel = (scope: string): string => {
-  const [area, access] = scope.split(':');
-  const areas: Record<string, string> = {
-    relationship: 'your journal',
-    album: 'your photos',
-    finance: 'your finances'
-  };
-  return `${access === 'write' ? 'Add to and change' : 'Read'} ${areas[area] ?? area}`;
-};
-
-const escapeHtml = (value: string): string =>
-  value.replace(/[&<>"']/g, (c) =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string
-  );
-
-
-/**
- * What each tenant the approver could pick is called.
- *
- * The consent screen used to render `Group 539ad2` — the tail of an ObjectId —
- * which asks someone to choose between options they cannot tell apart. Names
- * come from group-service over the internal channel auth-service already uses
- * for the `groups` claim, so this needs no new configuration.
- *
- * A failure here degrades to the id rather than blocking: a consent screen that
- * will not render because a sibling service is slow is worse than one with an
- * ugly label on it.
- */
-const tenantNamesFor = async (email: string, groupIds: string[]): Promise<Record<string, string>> => {
-  const names: Record<string, string> = { [PERSONAL_TENANT]: 'My own data' };
-  for (const id of groupIds) names[id] = `Group ${id.slice(-6)}`;
-
-  const groupServiceUrl = process.env.GROUP_API_URL;
-  const internalToken = process.env.INTERNAL_SERVICE_TOKEN;
-  if (!groupServiceUrl || !internalToken || groupIds.length === 0) return names;
-
-  try {
-    const response = await fetch(
-      `${groupServiceUrl}/api/groups/mine?userEmail=${encodeURIComponent(email)}`,
-      {
-        headers: {
-          'x-internal-token': internalToken,
-          'x-service-id': 'auth-service'
-        },
-        signal: AbortSignal.timeout(3000)
-      }
-    );
-    if (!response.ok) return names;
-
-    const body = (await response.json()) as { success?: boolean; data?: { _id?: string; name?: string }[] };
-    for (const group of body.data ?? []) {
-      if (group?._id && group.name) names[String(group._id)] = group.name;
-    }
-  } catch (error) {
-    logger.warn('Could not resolve group names for the consent screen', {
-      error: (error as Error)?.message
-    });
-  }
-
-  return names;
-};
-
-/**
  * The authorization endpoint.
  *
  * An unauthenticated visitor is sent through the ordinary login and returned
@@ -281,69 +180,23 @@ export const authorize = async (req: Request, res: Response): Promise<void> => {
 
   // Server-rendered, because a consent screen must come from the authorization
   // server itself — a page the client could influence is not consent.
-  res.type('html').send(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Connect to Tumbaland</title>
-<style>
-  body{font-family:system-ui,sans-serif;background:#f6f6f7;margin:0;padding:2rem;color:#1a1a1a}
-  .card{max-width:26rem;margin:2rem auto;background:#fff;border-radius:12px;padding:1.75rem;
-        box-shadow:0 1px 3px rgba(0,0,0,.1)}
-  h1{font-size:1.25rem;margin:0 0 .25rem}
-  p.sub{color:#666;margin:0 0 1.25rem;font-size:.9rem}
-  ul{list-style:none;padding:0;margin:0 0 1.25rem}
-  li{padding:.5rem .75rem;background:#f2f7ff;border-radius:8px;margin-bottom:.4rem;font-size:.9rem}
-  label{display:block;font-size:.85rem;color:#444;margin:0 0 .35rem}
-  select{width:100%;padding:.55rem;border:1px solid #ccc;border-radius:8px;margin-bottom:1.25rem}
-  .tenants{margin:0 0 1rem}
-  .tenant{display:flex;align-items:center;gap:.55rem;padding:.5rem .75rem;background:#fafafa;
-          border:1px solid #eee;border-radius:8px;margin-bottom:.35rem;font-size:.9rem;color:#1a1a1a}
-  .tenant input{margin:0}
-  .row{display:flex;gap:.6rem}
-  button{flex:1;padding:.7rem;border-radius:8px;border:0;font-size:.95rem;cursor:pointer}
-  .approve{background:#1a73e8;color:#fff}
-  .deny{background:#eee;color:#333}
-  .who{font-size:.8rem;color:#888;margin-top:1rem;text-align:center}
-</style></head><body>
-<div class="card">
-  <h1>Connect ${escapeHtml(client?.clientName ?? 'an application')}</h1>
-  <p class="sub">It is asking to access your Tumbaland account.</p>
-  <ul>${params.scopes.map((s) => `<li>${escapeHtml(scopeLabel(s))}</li>`).join('')}</ul>
-  <form method="POST" action="${issuer()}/oauth/authorize">
-    <label>Which data may it act on?</label>
-    <div class="tenants">
-      ${tenants
-        .map(
-          (tenant) => `<label class="tenant">
-        <input type="checkbox" name="tenant" value="${escapeHtml(tenant)}" checked>
-        <span>${escapeHtml(names[tenant] ?? tenant)}</span>
-      </label>`
-        )
-        .join('')}
-    </div>
-    <label for="defaultTenant">When it is not told which, use</label>
-    <select id="defaultTenant" name="defaultTenant">
-      ${tenants
-        .map(
-          (tenant) =>
-            `<option value="${escapeHtml(tenant)}"${tenant === suggestedDefault ? ' selected' : ''}>${escapeHtml(names[tenant] ?? tenant)}</option>`
-        )
-        .join('')}
-    </select>
-    <input type="hidden" name="client_id" value="${escapeHtml(params.clientId)}">
-    <input type="hidden" name="redirect_uri" value="${escapeHtml(params.redirectUri)}">
-    <input type="hidden" name="scope" value="${escapeHtml(params.scopes.join(' '))}">
-    <input type="hidden" name="resource" value="${escapeHtml(params.resource)}">
-    <input type="hidden" name="code_challenge" value="${escapeHtml(params.codeChallenge)}">
-    <input type="hidden" name="state" value="${escapeHtml(params.state ?? '')}">
-    <input type="hidden" name="consent_token" value="${consentToken(req.user.id, params.clientId, params.codeChallenge)}">
-    <div class="row">
-      <button type="submit" name="decision" value="deny" class="deny">Cancel</button>
-      <button type="submit" name="decision" value="approve" class="approve">Connect</button>
-    </div>
-  </form>
-  <p class="who">Signed in as ${escapeHtml(req.user.email)}</p>
-</div></body></html>`);
+  res.type('html').send(
+    renderConsentPage({
+      action: `${issuer()}/oauth/authorize`,
+      clientName: client?.clientName,
+      clientId: params.clientId,
+      redirectUri: params.redirectUri,
+      state: params.state,
+      scopes: params.scopes,
+      resource: params.resource,
+      codeChallenge: params.codeChallenge,
+      consentToken: consentToken(req.user.id, params.clientId, params.codeChallenge),
+      tenants,
+      tenantNames: names,
+      suggestedDefault,
+      email: req.user.email
+    })
+  );
 };
 
 /**
@@ -444,150 +297,4 @@ export const authorizeDecision = async (req: Request, res: Response): Promise<vo
 
   back.searchParams.set('code', code);
   res.redirect(back.toString());
-};
-
-const tokenError = (res: Response, error: string, description: string): void => {
-  res.status(400).json({ error, error_description: description });
-};
-
-/**
- * The token endpoint: authorization codes and refresh tokens both land here.
- *
- * Errors use OAuth's own codes rather than the service's HttpError shapes,
- * because clients parse them — a client that gets `invalid_grant` knows to start
- * a fresh authorization, where a 400 with prose tells it nothing.
- */
-export const token = async (req: Request, res: Response): Promise<void> => {
-  const {
-    grant_type: grantType,
-    code,
-    redirect_uri: redirectUri,
-    client_id: clientId,
-    code_verifier: codeVerifier,
-    refresh_token: refreshToken
-  } = req.body as Record<string, string | undefined>;
-
-  if (!clientId) return tokenError(res, 'invalid_client', 'client_id is required');
-
-  if (grantType === 'authorization_code') {
-    if (!code || !redirectUri || !codeVerifier) {
-      return tokenError(res, 'invalid_request', 'code, redirect_uri and code_verifier are required');
-    }
-
-    const result = await redeemAuthorizationCode(code, clientId, redirectUri, codeVerifier);
-    if (!result.ok || !result.code) {
-      logger.warn('OAuth code exchange rejected', { rejection: result.rejection, clientId });
-      return tokenError(res, 'invalid_grant', 'The authorization code is not valid');
-    }
-
-    const granted = result.code;
-    const scopes = granted.scopes as ApiKeyScope[];
-    // Resolved once here and carried on the token: an audit trail has to name
-    // the assistant, and nothing downstream can turn a client id into a name.
-    const clientName = (await findClient(clientId))?.clientName ?? 'A connected app';
-    const minted = mintAccessToken({
-      userId: granted.userId,
-      email: granted.userEmail,
-      name: granted.userName,
-      resource: granted.resource,
-      issuer: issuer(),
-      scopes,
-      tenants: granted.tenants,
-      defaultTenant: granted.defaultTenant,
-      tenantNames: granted.tenantNames ?? {},
-      // Named on the token so an audit trail can say which assistant acted.
-      // Nothing downstream can resolve a client id, and `jti` rotates hourly.
-      clientId,
-      clientName
-    });
-
-    const refresh = await issueRefreshToken({
-      clientId,
-      userId: granted.userId,
-      scopes,
-      tenants: granted.tenants,
-      defaultTenant: granted.defaultTenant,
-      tenantNames: granted.tenantNames ?? {},
-      resource: granted.resource
-    });
-
-    res.json({
-      access_token: minted.accessToken,
-      token_type: 'Bearer',
-      expires_in: minted.expiresIn,
-      scope: minted.scope,
-      refresh_token: refresh.token
-    });
-    return;
-  }
-
-  if (grantType === 'refresh_token') {
-    if (!refreshToken) return tokenError(res, 'invalid_request', 'refresh_token is required');
-
-    const result = await redeemRefreshToken(refreshToken, clientId);
-    if (!result.ok || !result.userId) {
-      if (result.reused) {
-        logger.warn('Refresh token reuse detected; the grant has been revoked', { clientId });
-      }
-      return tokenError(res, 'invalid_grant', 'The refresh token is not valid');
-    }
-
-    const minted = mintAccessToken({
-      userId: result.userId,
-      // The snapshot lives on the code, not the refresh token; the access token
-      // only needs these for display, and the id is what authorizes anything.
-      email: '',
-      name: '',
-      resource: result.resource!,
-      issuer: issuer(),
-      scopes: result.scopes ?? [],
-      tenants: result.tenants!.allowed,
-      defaultTenant: result.tenants!.default,
-      tenantNames: result.tenantNames ?? {},
-      clientId,
-      clientName: (await findClient(clientId))?.clientName ?? 'A connected app'
-    });
-
-    res.json({
-      access_token: minted.accessToken,
-      token_type: 'Bearer',
-      expires_in: minted.expiresIn,
-      scope: minted.scope,
-      // Rotated: the token just presented is dead, and the client must store
-      // this one or its next refresh will read as a reuse.
-      refresh_token: result.rotatedToken
-    });
-    return;
-  }
-
-  return tokenError(res, 'unsupported_grant_type', `Unsupported grant_type: ${grantType}`);
-};
-
-/**
- * The assistants a user has connected.
- *
- * Read from refresh tokens rather than a separate record, because a refresh
- * token *is* the connection: while one is live the assistant can keep minting
- * access tokens, and once it is gone the connection is over.
- */
-export const getConnections = async (req: Request, res: Response): Promise<void> => {
-  sendSuccess(res, await listConnections(req.user!.id));
-};
-
-/**
- * Disconnect an assistant.
- *
- * Revoking the refresh token is what actually cuts it off. Any access token it
- * already holds keeps working until it expires — at most an hour — which is the
- * trade made when access tokens were made stateless, and worth saying plainly
- * in the UI rather than implying the cut is instant.
- */
-export const revokeConnection = async (req: Request, res: Response): Promise<void> => {
-  const clientId = String(req.params.clientId);
-  const revoked = await revokeRefreshTokensForUser(req.user!.id, clientId);
-
-  if (revoked === 0) throw new NotFoundError('No active connection for that application');
-
-  logger.info('OAuth connection revoked', { userId: req.user!.id, clientId, revoked });
-  sendSuccess(res, { clientId, revoked });
 };

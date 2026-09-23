@@ -15,6 +15,7 @@ import { chatColors } from './themes';
 import { linkify } from './linkify';
 import type { ThreadMessage } from '../../types';
 import { MediaGrid } from './MediaGrid';
+import { BubbleEffect } from './BubbleEffect';
 import { ReactionRow } from './ReactionRow';
 import { MemberAvatar } from './MemberAvatar';
 import { clockTime } from './clock';
@@ -233,6 +234,8 @@ export function MessageBubble({
               </>
             )}
           </Box>
+
+          {message.effect && !message.deletedAt && <BubbleEffect effect={message.effect} mine={mine} />}
 
           {/* Desktop affordance. Touch reaches the same popover, Edit and
               Unsend included, by a long press on the bubble. */}

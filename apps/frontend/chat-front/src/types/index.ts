@@ -106,6 +106,16 @@ export interface Conversation {
   presence?: Presence[];
 }
 
+/** What a message was sent with: around its bubble, and across the screen when it arrives. */
+export type MessageEffect = 'hearts' | 'confetti' | 'kisses';
+
+/** How a message is sent, beyond its text and attachments. */
+export interface SendOptions {
+  /** "Not this one" on the photo tray: keep this send out of the album. */
+  skipAlbum?: boolean;
+  effect?: MessageEffect;
+}
+
 export interface Message {
   id: string;
   conversationId: string;
@@ -116,6 +126,8 @@ export interface Message {
   body: string;
   attachments: Attachment[];
   replyTo: string | null;
+  /** Absent from a server older than effects. */
+  effect?: MessageEffect | null;
   reactions: Reaction[];
   clientId: string;
   editedAt: string | null;

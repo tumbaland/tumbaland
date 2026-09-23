@@ -11,7 +11,7 @@ import {
   updateProfilePicture
 } from '../controllers/profileController';
 import { AVATAR_TYPES, MAX_AVATAR_BYTES } from '../services/avatarService';
-import { getConnections, revokeConnection } from '../controllers/oauthController';
+import { getConnections, revokeConnection } from '../controllers/oauthConnectionController';
 import { getAuditTrail } from '../controllers/auditController';
 import { getSessions, revokeOtherSessions, revokeSession } from '../controllers/sessionController';
 import {

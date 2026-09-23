@@ -36,11 +36,10 @@ import {
   authorizationServerMetadata,
   registerOAuthClient,
   authorize,
-  authorizeDecision,
-  token,
-  getConnections,
-  revokeConnection
+  authorizeDecision
 } from './oauthController';
+import { token } from './oauthTokenController';
+import { getConnections, revokeConnection } from './oauthConnectionController';
 
 const mockedFindClient = findClient as jest.Mock;
 const mockedRegister = registerClient as jest.Mock;

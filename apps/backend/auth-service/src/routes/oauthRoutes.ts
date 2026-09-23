@@ -5,9 +5,9 @@ import {
   authorizationServerMetadata,
   registerOAuthClient,
   authorize,
-  authorizeDecision,
-  token
+  authorizeDecision
 } from '../controllers/oauthController';
+import { token } from '../controllers/oauthTokenController';
 import { optionalAuth, authenticateToken, requireApproved } from '../middleware/authMiddleware';
 
 const router = Router();

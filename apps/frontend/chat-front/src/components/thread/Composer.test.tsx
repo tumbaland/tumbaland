@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 // The composer's emoji button opens the full picker, whose real package
 // registers a custom element and opens an IndexedDB.
@@ -22,9 +22,6 @@ vi.mock('./FullEmojiPicker', () => ({
 import { Composer } from './Composer';
 import { resetRecentEmojiCache } from './recentEmoji';
 import type { PendingUpload } from '../../types';
-
-/** Photo and emoji sit behind the arrow until it is tapped. */
-const openTools = () => fireEvent.click(screen.getByLabelText('Show photo and emoji'));
 
 /** Drives the `(hover: none)` query the composer uses to tell phone from desktop. */
 function setPointer(isPhone: boolean) {
@@ -151,34 +148,26 @@ describe('attachments', () => {
   it('offers no attach button when the composer has uploads turned off', () => {
     render(<Composer onSend={() => {}} onTyping={() => {}} />);
 
-    openTools();
     expect(screen.queryByLabelText('Add photo or video')).not.toBeInTheDocument();
   });
 
-  it('keeps photo and emoji behind the arrow until it is tapped', () => {
+  it('shows the photo and emoji buttons straight away, with no arrow to open first', () => {
     render(<Composer onSend={() => {}} onTyping={() => {}} onAddFiles={() => {}} onRemoveUpload={() => {}} />);
 
-    expect(screen.queryByLabelText('Add photo or video')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('Add emoji')).not.toBeInTheDocument();
-
-    openTools();
-    expect(screen.getByLabelText('Hide photo and emoji')).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByLabelText('Add photo or video')).toBeInTheDocument();
     expect(screen.getByLabelText('Add emoji')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Show photo and emoji')).not.toBeInTheDocument();
   });
 
-  it('folds the tools away again after sending', async () => {
-    render(<Composer onSend={() => {}} onTyping={() => {}} onAddFiles={() => {}} onRemoveUpload={() => {}} />);
-    openTools();
+  it('keeps the emoji button inside the message box', () => {
+    render(<Composer onSend={() => {}} onTyping={() => {}} />);
 
-    await userEvent.type(screen.getByLabelText('Message'), 'hei');
-    await userEvent.click(screen.getByLabelText('Send'));
-
-    expect(screen.queryByLabelText('Add emoji')).not.toBeInTheDocument();
+    const box = screen.getByLabelText('Message').closest('.MuiInputBase-root');
+    expect(box).toContainElement(screen.getByLabelText('Add emoji'));
   });
 
   it('offers one picker button when uploads are on', () => {
     render(<Composer onSend={() => {}} onTyping={() => {}} onAddFiles={() => {}} onRemoveUpload={() => {}} />);
-    openTools();
 
     expect(screen.getByLabelText('Add photo or video')).toBeInTheDocument();
     expect(screen.queryByLabelText('Take a photo')).not.toBeInTheDocument();
@@ -305,7 +294,6 @@ describe('attachments', () => {
     const input = screen.getByLabelText('Message');
 
     await userEvent.type(input, 'hei ');
-    openTools();
     await userEvent.click(screen.getByLabelText('Add emoji'));
     await userEvent.click(screen.getByRole('button', { name: '❤️' }));
 
@@ -461,18 +449,30 @@ describe('recent emoji', () => {
     resetRecentEmojiCache();
   });
 
-  it('stays out of the way while the thread is being read', () => {
+  it('stays out of the way on a phone while the thread is being read', () => {
+    setPointer(true);
     render(<Composer onSend={() => {}} onTyping={() => {}} />);
     expect(screen.queryByRole('group', { name: 'Recent emoji' })).not.toBeInTheDocument();
   });
 
-  it('shows a row of them once the message box is in use', async () => {
+  it('shows a row of them on a phone once the message box is in use', async () => {
+    setPointer(true);
     render(<Composer onSend={() => {}} onTyping={() => {}} />);
 
     await userEvent.click(screen.getByLabelText('Message'));
 
     expect(screen.getByRole('group', { name: 'Recent emoji' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add ❤️' })).toBeInTheDocument();
+  });
+
+  it('keeps the row in place on a desktop, so focusing the box does not move the thread', async () => {
+    render(<Composer onSend={() => {}} onTyping={() => {}} />);
+    expect(screen.getByRole('group', { name: 'Recent emoji' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByLabelText('Message'));
+    await userEvent.tab();
+
+    expect(screen.getByRole('group', { name: 'Recent emoji' })).toBeInTheDocument();
   });
 
   it('adds one where the cursor is, not at the end', async () => {
@@ -496,5 +496,67 @@ describe('recent emoji', () => {
 
     const row = screen.getByRole('group', { name: 'Recent emoji' });
     expect(row.firstElementChild).toHaveAccessibleName('Add 🦄');
+  });
+});
+
+describe('send with an effect', () => {
+  it('offers hearts, confetti and kisses on a right-click of Send', async () => {
+    const onSend = vi.fn();
+    render(<Composer onSend={onSend} onTyping={() => {}} />);
+
+    await userEvent.type(screen.getByLabelText('Message'), 'miss you');
+    fireEvent.contextMenu(screen.getByLabelText('Send'));
+    await userEvent.click(screen.getByRole('menuitem', { name: /Send with hearts/ }));
+
+    expect(onSend).toHaveBeenCalledWith('miss you', { effect: 'hearts' });
+    expect(screen.getByLabelText('Message')).toHaveValue('');
+  });
+
+  it('offers them when Send is held, without sending on letting go', async () => {
+    vi.useFakeTimers();
+    try {
+      const onSend = vi.fn();
+      render(<Composer onSend={onSend} onTyping={() => {}} />);
+      fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'yay' } });
+      const send = screen.getByLabelText('Send');
+
+      fireEvent.pointerDown(send, { button: 0 });
+      act(() => vi.advanceTimersByTime(500));
+      fireEvent.pointerUp(send);
+      fireEvent.click(send);
+
+      expect(onSend).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole('menuitem', { name: /Send with confetti/ }));
+      expect(onSend).toHaveBeenCalledWith('yay', { effect: 'confetti' });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('still sends plainly on a tap', async () => {
+    const onSend = vi.fn();
+    render(<Composer onSend={onSend} onTyping={() => {}} />);
+
+    await userEvent.type(screen.getByLabelText('Message'), 'hei');
+    await userEvent.click(screen.getByLabelText('Send'));
+
+    expect(onSend).toHaveBeenCalledWith('hei');
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('offers no effects while editing a message', () => {
+    render(
+      <Composer
+        onSend={() => {}}
+        onTyping={() => {}}
+        editing={{ id: 'm1', body: 'hello', hasMedia: false }}
+        onSaveEdit={() => {}}
+        onCancelEdit={() => {}}
+      />
+    );
+
+    fireEvent.contextMenu(screen.getByLabelText('Save edit'));
+
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 });

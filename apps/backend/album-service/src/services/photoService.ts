@@ -1,17 +1,14 @@
-import mongoose, { HydratedDocument } from 'mongoose';
+import { HydratedDocument } from 'mongoose';
 import Photo, { IPhoto } from '../models/Photo';
 import Album from '../models/Album';
-import { BadRequestError, canAccessResource, ConflictError, logger, NotFoundError } from '@tumbaland/backend-core';
-import {
-  albumFolder,
-  deleteFile,
-  getPhotoSignedUrl,
-  getPhotoSignedUrlsBatch,
-  getFile,
-  SignedUrlData,
-  storedSize
-} from './fileServiceClient';
+import { BadRequestError, ConflictError, logger, NotFoundError } from '@tumbaland/backend-core';
+import { albumFolder, deleteFile, getFile, storedSize } from './fileServiceClient';
 import { generateThumbnailFromBuffer, isSupportedImageFormat } from './thumbnailService';
+import { assertPhotoReachable, canReachAlbum, PhotoAccessContext } from './photoAccess';
+import { bulkUpdateTags, BulkTagInput, getAlbumTags, normalizeTags, TagCount, TagMatch } from './photoTags';
+import { attachSignedUrls, enrichPhotoWithSignedUrl, PhotoWithSignedUrls } from './photoUrls';
+
+export type { PhotoWithSignedUrls } from './photoUrls';
 
 export interface CreatePhotoInput {
   filename: string;
@@ -42,31 +39,6 @@ interface PhotoQuery {
   tags?: { $in: string[] } | { $all: string[] };
 }
 
-export interface PhotoWithSignedUrls {
-  _id: unknown;
-  filename: string;
-  originalName: string;
-  minioFileId?: string;
-  minioThumbnailFileId?: string;
-  albumId: string;
-  title?: string;
-  description?: string;
-  mimetype: string;
-  size: number;
-  width?: number;
-  height?: number;
-  tags: string[];
-  metadata: IPhoto['metadata'];
-  createdAt: Date;
-  updatedAt: Date;
-  signedUrl?: string;
-  signedUrlExpiresAt?: string;
-  signedUrlExpiresInMinutes?: number;
-  thumbnailSignedUrl?: string;
-  thumbnailSignedUrlExpiresAt?: string;
-  thumbnailSignedUrlExpiresInMinutes?: number;
-}
-
 export interface GetPhotosFilter {
   page?: number;
   limit?: number;
@@ -75,90 +47,6 @@ export interface GetPhotosFilter {
   /** 'all' (default) keeps photos carrying every selected tag; 'any' widens to a union. */
   tagMatch?: TagMatch;
 }
-
-export type TagMatch = 'any' | 'all';
-
-export interface TagCount {
-  tag: string;
-  count: number;
-}
-
-export interface BulkTagInput {
-  photoIds: string[];
-  add?: string[];
-  remove?: string[];
-}
-
-/** Who is asking. Every by-id operation below needs one. */
-export interface PhotoAccessContext {
-  userId: string;
-  userGroups: string[];
-}
-
-/**
- * A photo is reachable exactly when its album is.
- *
- * Photos carry no owner of their own, so every check has to go through the
- * album, and until now none of them did: `getPhotoById`, `updatePhoto`,
- * `deletePhoto` and `bulkUpdateTags` all took an id and nothing else. Any
- * signed-in caller could read, retitle, retag or delete any other account's
- * photo by naming its id, and `getPhotoById` answers with a working signed URL
- * to the image file itself.
- */
-/**
- * Reading and writing are different questions. A public album can be looked at
- * by anyone, but only its owner or its group may change what is in it. Using the
- * read answer for writes let any signed-in caller retag, retitle or delete the
- * photos in someone else's public album.
- */
-type PhotoAccess = 'read' | 'write';
-
-/** Whether the caller may reach an album, for reading or for writing. */
-const canReachAlbum = (
-  album: { userId: string; groupId?: string; isPublic?: boolean },
-  { userId, userGroups }: PhotoAccessContext,
-  access: PhotoAccess
-): boolean => canAccessResource(userId, album.userId, album.groupId, userGroups, access === 'read' && !!album.isPublic);
-
-const reachableAlbumIds = async (
-  albumIds: string[],
-  context: PhotoAccessContext,
-  access: PhotoAccess
-): Promise<Set<string>> => {
-  const albums = await Album.find({ _id: { $in: albumIds } })
-    .select('_id userId groupId isPublic')
-    .lean();
-
-  return new Set(albums.filter((album) => canReachAlbum(album, context, access)).map((album) => String(album._id)));
-};
-
-/** Throws unless the caller may reach the album this photo sits in. */
-const assertPhotoReachable = async (
-  albumId: unknown,
-  context: PhotoAccessContext,
-  access: PhotoAccess
-): Promise<void> => {
-  const reachable = await reachableAlbumIds([String(albumId)], context, access);
-  if (!reachable.has(String(albumId))) {
-    // Same message as a missing photo: distinguishing "not yours" from "not
-    // there" confirms an id exists to someone guessing at them.
-    throw new NotFoundError('Photo not found');
-  }
-};
-
-/**
- * Tags are user-typed, so the same idea arrives as "Beach", "beach " and
- * "BEACH". Trimming and case-folding on the way in keeps one bucket per idea —
- * otherwise filtering and the tag list both fragment.
- */
-export const normalizeTags = (tags: string[] = []): string[] => {
-  const seen = new Set<string>();
-  for (const tag of tags) {
-    const normalized = typeof tag === 'string' ? tag.trim().toLowerCase() : '';
-    if (normalized.length > 0) seen.add(normalized);
-  }
-  return Array.from(seen);
-};
 
 class PhotoService {
   /**
@@ -302,7 +190,7 @@ class PhotoService {
 
     const [photos, total] = await Promise.all([photosQuery, Photo.countDocuments(query)]);
 
-    const photosWithUrls = await this.attachSignedUrls(photos);
+    const photosWithUrls = await attachSignedUrls(photos);
 
     return {
       photos: photosWithUrls,
@@ -330,7 +218,7 @@ class PhotoService {
     const albumId = (photo.albumId as unknown as { _id?: unknown })?._id ?? photo.albumId;
     await assertPhotoReachable(albumId, context, 'read');
 
-    return this.enrichPhotoWithSignedUrl(photo);
+    return enrichPhotoWithSignedUrl(photo);
   }
 
   /**
@@ -368,100 +256,17 @@ class PhotoService {
     return Photo.findByIdAndUpdate(photoId, updateData, { new: true });
   }
 
-  /**
-   * List every tag used by an album's photos, most used first.
-   *
-   * Feeds the filter row and the tag-input suggestions, so the person tagging
-   * a photo reuses the vocabulary already in the album instead of inventing a
-   * near-duplicate of it.
-   */
-  async getAlbumTags(albumId: string, context: PhotoAccessContext): Promise<TagCount[]> {
-    // Checked before the lookup so a malformed id surfaces as a 404 rather
-    // than a BSON cast error out of the aggregation below.
-    if (!mongoose.Types.ObjectId.isValid(albumId)) {
-      throw new NotFoundError('Album not found');
-    }
-
-    const album = await Album.findById(albumId);
-    if (!album || !canReachAlbum(album, context, 'read')) {
-      throw new NotFoundError('Album not found');
-    }
-
-    const rows = await Photo.aggregate<{ _id: string; count: number }>([
-      { $match: { albumId: new mongoose.Types.ObjectId(albumId) } },
-      { $unwind: '$tags' },
-      { $group: { _id: '$tags', count: { $sum: 1 } } },
-      { $sort: { count: -1, _id: 1 } }
-    ]);
-
-    return rows.map((row) => ({ tag: row._id, count: row.count }));
+  /** List every tag used by an album's photos, most used first. See photoTags. */
+  getAlbumTags(albumId: string, context: PhotoAccessContext): Promise<TagCount[]> {
+    return getAlbumTags(albumId, context);
   }
 
-  /**
-   * Add and/or remove tags across many photos at once.
-   *
-   * Tagging one photo at a time through `updatePhoto` is the reason albums go
-   * untagged; this is what the grid's multi-select hands off to. Adds and
-   * removes are applied in that order per photo, so a tag in both lists ends up
-   * removed.
-   */
-  async bulkUpdateTags(
+  /** Add and/or remove tags across many photos at once. See photoTags. */
+  bulkUpdateTags(
     input: BulkTagInput,
     context: PhotoAccessContext
   ): Promise<{ matched: number; modified: number; tags: TagCount[] }> {
-    const requested = (input.photoIds || []).filter((id) => mongoose.Types.ObjectId.isValid(id));
-    const add = normalizeTags(input.add);
-    const remove = normalizeTags(input.remove);
-
-    // Answered before any lookup: a request naming no photos, or asking for no
-    // change, has nothing to check reachability for.
-    if (requested.length === 0 || (add.length === 0 && remove.length === 0)) {
-      return { matched: 0, modified: 0, tags: [] };
-    }
-
-    // Narrowed to photos the caller can actually reach, rather than checked
-    // afterwards: an unreachable id is dropped silently, so a caller learns
-    // nothing about whether it existed.
-    const candidates = await Photo.find({ _id: { $in: requested } })
-      .select('_id albumId')
-      .lean();
-    const reachable = await reachableAlbumIds(
-      [...new Set(candidates.map((photo) => String(photo.albumId)))],
-      context,
-      'write'
-    );
-    const photoIds = candidates
-      .filter((photo) => reachable.has(String(photo.albumId)))
-      .map((photo) => String(photo._id));
-
-    if (photoIds.length === 0) {
-      return { matched: 0, modified: 0, tags: [] };
-    }
-
-    const filter = { _id: { $in: photoIds.map((id) => new mongoose.Types.ObjectId(id)) } };
-    let matched = 0;
-    let modified = 0;
-
-    if (add.length > 0) {
-      // $addToSet keeps the operation idempotent: re-tagging a photo that
-      // already carries the tag is a no-op rather than a duplicate entry.
-      const result = await Photo.updateMany(filter, { $addToSet: { tags: { $each: add } } });
-      matched = result.matchedCount ?? 0;
-      modified += result.modifiedCount ?? 0;
-    }
-
-    if (remove.length > 0) {
-      const result = await Photo.updateMany(filter, { $pull: { tags: { $in: remove } } });
-      matched = Math.max(matched, result.matchedCount ?? 0);
-      modified += result.modifiedCount ?? 0;
-    }
-
-    // Hand back the album's refreshed tag list so the client can update its
-    // filter row without a second round trip.
-    const photo = await Photo.findById(photoIds[0]).select('albumId');
-    const tags = photo ? await this.getAlbumTags(photo.albumId.toString(), context) : [];
-
-    return { matched, modified, tags };
+    return bulkUpdateTags(input, context);
   }
 
   /**
@@ -509,6 +314,11 @@ class PhotoService {
     return photo;
   }
 
+  /** Attach original + thumbnail signed URLs to a set of photos. See photoUrls. */
+  attachSignedUrls(photos: HydratedDocument<IPhoto>[]): Promise<PhotoWithSignedUrls[]> {
+    return attachSignedUrls(photos);
+  }
+
   /**
    * Private helper: Generate thumbnail asynchronously
    */
@@ -538,117 +348,6 @@ class PhotoService {
         logger.error('Failed to generate thumbnail', { error: (error as Error)?.message });
       }
     });
-  }
-
-  /**
-   * Attach original + thumbnail signed URLs to a set of photos, in two batch
-   * calls rather than one round trip per photo. Shared by every listing that
-   * hands photos to a client — an album page, a memories strip — so they all
-   * get the same URL shape and the same "a URL failure degrades, never fails
-   * the request" behaviour.
-   */
-  async attachSignedUrls(photos: HydratedDocument<IPhoto>[]): Promise<PhotoWithSignedUrls[]> {
-    if (photos.length === 0) return [];
-
-    let signedUrlMap: Record<string, SignedUrlData> = {};
-    try {
-      signedUrlMap = await getPhotoSignedUrlsBatch(photos, false, 60);
-    } catch (error) {
-      logger.error('Failed to fetch batch signed URLs for photos', { error: (error as Error)?.message });
-    }
-
-    // Only photos that actually have a thumbnail are worth a second batch call.
-    const photosWithThumbnails = photos.filter((photo) => photo.minioThumbnailFileId);
-    let thumbnailSignedUrlMap: Record<string, SignedUrlData> = {};
-
-    if (photosWithThumbnails.length > 0) {
-      try {
-        thumbnailSignedUrlMap = await getPhotoSignedUrlsBatch(photosWithThumbnails, true, 60);
-      } catch (error) {
-        logger.error('Failed to fetch batch signed URLs for thumbnails', { error: (error as Error)?.message });
-      }
-    }
-
-    return photos.map((photo) => this.enrichPhotoWithUrls(photo, signedUrlMap, thumbnailSignedUrlMap));
-  }
-
-  /**
-   * Private helper: Enrich photo with signed URL
-   */
-  private async enrichPhotoWithSignedUrl(photo: HydratedDocument<IPhoto>): Promise<PhotoWithSignedUrls> {
-    try {
-      const signedUrlData = await getPhotoSignedUrl(photo, false, 60);
-      const result: PhotoWithSignedUrls = {
-        ...photo.toObject()
-      };
-
-      if (signedUrlData) {
-        result.signedUrl = signedUrlData.signedUrl;
-        result.signedUrlExpiresAt = signedUrlData.expiresAt;
-        result.signedUrlExpiresInMinutes = signedUrlData.expiresInMinutes;
-      }
-
-      // Add thumbnail URL if available
-      if (photo.minioThumbnailFileId) {
-        try {
-          const thumbnailSignedUrlData = await getPhotoSignedUrl(photo, true, 60);
-          if (thumbnailSignedUrlData) {
-            result.thumbnailSignedUrl = thumbnailSignedUrlData.signedUrl;
-            result.thumbnailSignedUrlExpiresAt = thumbnailSignedUrlData.expiresAt;
-            result.thumbnailSignedUrlExpiresInMinutes = thumbnailSignedUrlData.expiresInMinutes;
-          }
-        } catch (error) {
-          logger.error('Failed to get thumbnail signed URL', { error: (error as Error)?.message });
-        }
-      }
-
-      return result;
-    } catch (error) {
-      logger.error('Failed to get signed URL', { error: (error as Error)?.message });
-      return photo.toObject();
-    }
-  }
-
-  /**
-   * Private helper: Enrich photo with URLs from maps
-   */
-  private enrichPhotoWithUrls(
-    photo: HydratedDocument<IPhoto>,
-    signedUrlMap: Record<string, SignedUrlData>,
-    thumbnailSignedUrlMap: Record<string, SignedUrlData>
-  ): PhotoWithSignedUrls {
-    const signedUrlData = signedUrlMap[photo.minioFileId || ''];
-    const photoObj = photo.toObject();
-
-    const result: PhotoWithSignedUrls = { ...photoObj };
-
-    if (signedUrlData) {
-      result.signedUrl = signedUrlData.signedUrl;
-      result.signedUrlExpiresAt = signedUrlData.expiresAt;
-      result.signedUrlExpiresInMinutes = signedUrlData.expiresInMinutes;
-    }
-
-    // For photos with minioThumbnailFileId, try to get thumbnail signed URL
-    if (photo.minioThumbnailFileId) {
-      const thumbnailSignedUrlData = thumbnailSignedUrlMap[photo.minioFileId || ''];
-      if (thumbnailSignedUrlData) {
-        result.thumbnailSignedUrl = thumbnailSignedUrlData.signedUrl;
-        result.thumbnailSignedUrlExpiresAt = thumbnailSignedUrlData.expiresAt;
-        result.thumbnailSignedUrlExpiresInMinutes = thumbnailSignedUrlData.expiresInMinutes;
-      }
-    } else {
-      // For photos without thumbnails (GIFs, videos), use original as thumbnail
-      if (signedUrlData) {
-        result.thumbnailSignedUrl = signedUrlData.signedUrl;
-        result.thumbnailSignedUrlExpiresAt = signedUrlData.expiresAt;
-        result.thumbnailSignedUrlExpiresInMinutes = signedUrlData.expiresInMinutes;
-      }
-    }
-
-    // Explicitly include thumbnail photo IDs for frontend
-    result.minioThumbnailFileId = photo.minioThumbnailFileId;
-
-    return result;
   }
 }
 

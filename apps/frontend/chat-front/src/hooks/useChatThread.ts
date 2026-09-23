@@ -11,11 +11,13 @@ import type {
   AlbumPlacement,
   Appearance,
   Message,
+  MessageEffect,
   PhotoAlbum,
   PhotoAlbumChoice,
   Presence,
   ReadPayload,
   ReadReceipt,
+  SendOptions,
   ThreadMessage,
   TypingPayload
 } from '../types';
@@ -63,7 +65,7 @@ export interface UseChatThreadResult {
   setPhotoAlbum: (choice: PhotoAlbumChoice) => Promise<void>;
   removeFromAlbum: (messageId: string, fileId?: string) => Promise<void>;
   placeInAlbum: (messageId: string, placement: AlbumPlacement, fileId?: string) => Promise<void>;
-  send: (body: string, attachments?: Attachment[], options?: { skipAlbum?: boolean }) => Promise<void>;
+  send: (body: string, attachments?: Attachment[], options?: SendOptions) => Promise<void>;
   retry: (clientId: string) => Promise<void>;
   loadOlder: () => Promise<void>;
   react: (messageId: string, emoji: string) => Promise<void>;
@@ -92,7 +94,9 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
   });
   const lastTypingSent = useRef(0);
   /** Bodies kept by clientId so a failed send can be retried unchanged. */
-  const outbox = useRef(new Map<string, { body: string; attachments: Attachment[]; skipAlbum: boolean }>());
+  const outbox = useRef(
+    new Map<string, { body: string; attachments: Attachment[]; skipAlbum: boolean; effect?: MessageEffect }>()
+  );
 
   const load = useCallback(async () => {
     if (!conversationId) return;
@@ -254,14 +258,15 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
   }, [conversationId, newestId]);
 
   const deliver = useCallback(
-    async (clientId: string, body: string, attachments: Attachment[], skipAlbum = false) => {
+    async (clientId: string, body: string, attachments: Attachment[], skipAlbum = false, effect?: MessageEffect) => {
       if (!conversationId) return;
       try {
         const stored = await chatApi.sendMessage(conversationId, {
           clientId,
           body,
           attachments,
-          ...(skipAlbum ? { skipAlbum } : {})
+          ...(skipAlbum ? { skipAlbum } : {}),
+          ...(effect ? { effect } : {})
         });
         dispatch({ type: 'confirmed', clientId, message: stored });
         outbox.current.delete(clientId);
@@ -274,14 +279,15 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
   );
 
   const send = useCallback(
-    async (body: string, attachments: Attachment[] = [], options: { skipAlbum?: boolean } = {}) => {
+    async (body: string, attachments: Attachment[] = [], options: SendOptions = {}) => {
       if (!conversationId) return;
       const trimmed = body.trim();
       if (!trimmed && attachments.length === 0) return;
 
       const clientId = newClientId();
       const skipAlbum = Boolean(options.skipAlbum);
-      outbox.current.set(clientId, { body: trimmed, attachments, skipAlbum });
+      const { effect } = options;
+      outbox.current.set(clientId, { body: trimmed, attachments, skipAlbum, effect });
 
       // Shown immediately, with the id it will keep. The server's copy
       // replaces it by clientId, so it never appears twice and never jumps.
@@ -297,6 +303,7 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
           body: trimmed,
           attachments,
           replyTo: null,
+          effect: effect ?? null,
           reactions: [],
           clientId,
           editedAt: null,
@@ -306,7 +313,7 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
         }
       });
 
-      await deliver(clientId, trimmed, attachments, skipAlbum);
+      await deliver(clientId, trimmed, attachments, skipAlbum, effect);
     },
     [conversationId, currentUserId, deliver]
   );
@@ -332,6 +339,7 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
           body: queued.body,
           attachments: queued.attachments,
           replyTo: null,
+          effect: queued.effect ?? null,
           reactions: [],
           clientId,
           editedAt: null,
@@ -340,7 +348,7 @@ export function useChatThread(conversationId: string | undefined, currentUserId:
           delivery: 'pending'
         }
       });
-      await deliver(clientId, queued.body, queued.attachments, queued.skipAlbum);
+      await deliver(clientId, queued.body, queued.attachments, queued.skipAlbum, queued.effect);
     },
     [conversationId, currentUserId, deliver]
   );

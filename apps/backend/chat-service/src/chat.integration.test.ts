@@ -659,6 +659,49 @@ describe('replies', () => {
   });
 });
 
+describe('message effects', () => {
+  it('keeps the effect a message was sent with, for the other person to see', async () => {
+    const id = await conversationInG1();
+    await as(TOM)
+      .post(`/api/chat/conversations/${id}/messages`)
+      .send({ clientId: clientId(), body: 'miss you', effect: 'hearts' });
+
+    const res = await as(IRJA).get(`/api/chat/conversations/${id}/messages`);
+
+    expect(res.body.data.messages[0].effect).toBe('hearts');
+  });
+
+  it('sends an ordinary message with no effect', async () => {
+    const id = await conversationInG1();
+
+    const res = await as(TOM).post(`/api/chat/conversations/${id}/messages`).send({ clientId: clientId(), body: 'hi' });
+
+    expect(res.body.data.effect).toBeNull();
+  });
+
+  it('refuses an effect it does not know', async () => {
+    const id = await conversationInG1();
+
+    const res = await as(TOM)
+      .post(`/api/chat/conversations/${id}/messages`)
+      .send({ clientId: clientId(), body: 'hi', effect: 'fireworks' });
+
+    expect(res.status).toBe(400);
+  });
+
+  it('drops the effect when the message is unsent', async () => {
+    const id = await conversationInG1();
+    const sent = await as(TOM)
+      .post(`/api/chat/conversations/${id}/messages`)
+      .send({ clientId: clientId(), body: 'oops', effect: 'confetti' });
+
+    await as(TOM).delete(`/api/chat/conversations/${id}/messages/${sent.body.data.id}`);
+    const res = await as(IRJA).get(`/api/chat/conversations/${id}/messages`);
+
+    expect(res.body.data.messages[0].effect).toBeNull();
+  });
+});
+
 describe('search', () => {
   it('finds a message the caller can read', async () => {
     const id = await conversationInG1();

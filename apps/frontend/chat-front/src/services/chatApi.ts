@@ -11,6 +11,7 @@ import type {
   ConversationDetail,
   IceConfig,
   Message,
+  MessageEffect,
   MessagePage,
   PhotoAlbum,
   PhotoAlbumChoice,
@@ -48,6 +49,7 @@ export interface SendPayload {
   body?: string;
   attachments?: Attachment[];
   replyTo?: string | null;
+  effect?: MessageEffect;
   /** "Not this one": keep this send out of the album. */
   skipAlbum?: boolean;
 }
