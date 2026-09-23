@@ -132,7 +132,6 @@ jobs:
           echo "KIBANA_SYSTEM_PASSWORD=${{ secrets.KIBANA_SYSTEM_PASSWORD }}" >> .env.infra
           echo "KIBANA_ADMIN_PASSWORD=${{ secrets.KIBANA_ADMIN_PASSWORD }}" >> .env.infra
           echo "ELASTIC_ENCRYPTIONKEY=${{ secrets.ELASTIC_ENCRYPTIONKEY }}" >> .env.infra
-          echo "XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${{ secrets.XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY }}" >> .env.infra
           echo "RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}" >> .env.infra
           RABBITMQ_PASSWORD="${{ secrets.RABBITMQ_PASSWORD }}" && echo "RABBITMQ_URL=amqp://admin:$RABBITMQ_PASSWORD@rabbitmq:5672/tumbaland" >> .env.infra
 
