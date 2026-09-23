@@ -129,6 +129,7 @@ describe('issueAuthorizationCode', () => {
       resource: 'https://mcp.tumbaland.eu',
       codeChallenge: CHALLENGE
     });
+    const after = Date.now();
 
     const [doc] = mockedCodeCreate.mock.calls[0];
     expect(doc).toMatchObject({
@@ -138,7 +139,8 @@ describe('issueAuthorizationCode', () => {
       tenantNames: { g1: 'Irja & Tom' },
       scopes: ['relationship:read']
     });
-    expect(doc.expiresAt.getTime() - before).toBeLessThanOrEqual(60_000);
+    expect(doc.expiresAt.getTime()).toBeGreaterThanOrEqual(before);
+    expect(doc.expiresAt.getTime() - after).toBeLessThanOrEqual(60_000);
   });
 });
 
