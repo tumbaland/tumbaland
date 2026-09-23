@@ -1,4 +1,16 @@
 # Tumbalog
+## [0.0.515](https://github.com/toomastahves/tumbaland/compare/app-v0.0.514...app-v0.0.515) (2026-09-23)
+
+### Features
+
+* add dark theme ([1f78232](https://github.com/toomastahves/tumbaland/commit/1f78232c6cfac59c54d9ce439ffa5a81b7980fd4))
+* improve landing page ([cd005cd](https://github.com/toomastahves/tumbaland/commit/cd005cd968fed7daa68fa29b81eeb4c31654d236))
+* quality of life improvements ([6d680c4](https://github.com/toomastahves/tumbaland/commit/6d680c4baaddf5a5e7994683cb9700257c5ad4ae))
+
+### Chores
+
+* **release:** @tumbaland/frontend-core 1.19.0 ([5308dce](https://github.com/toomastahves/tumbaland/commit/5308dce11e0c788c4bb92080cdd64fa86204f9a7))
+
 ## [0.0.514](https://github.com/toomastahves/tumbaland/compare/app-v0.0.513...app-v0.0.514) (2026-09-22)
 
 ### Features
