@@ -20,7 +20,6 @@ services:
       # (backend-core currentGroupsOf), and it is the only thing chat access is
       # ever decided by.
       - GROUP_INTERNAL_URL=${GROUP_INTERNAL_URL}
-      - AUTH_INTERNAL_URL=${AUTH_INTERNAL_URL}
       - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN}
       - CORS_ORIGIN=${CORS_ORIGIN}
       # Attachments. The bytes go straight from the browser to file-service with

@@ -398,8 +398,6 @@ jobs:
           ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          FILE_ACCESS_SECRET: ${{ secrets.FILE_ACCESS_SECRET }}
           FILE_SERVICE_API_KEY: ${{ secrets.FILE_SERVICE_API_KEY }}
           FILE_SERVICE_HMAC_SECRET: ${{ secrets.FILE_SERVICE_HMAC_SECRET }}
           GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
@@ -410,7 +408,6 @@ jobs:
           GROUP_INTERNAL_URL: ${{ vars.GROUP_INTERNAL_URL }}
           ALBUM_API_URL: ${{ vars.ALBUM_API_URL }}
           ALBUM_INTERNAL_URL: ${{ vars.ALBUM_INTERNAL_URL }}
-          AUTH_INTERNAL_URL: ${{ vars.AUTH_INTERNAL_URL }}
           AUTH_SERVICE_URL: ${{ vars.AUTH_SERVICE_URL }}
           AUTH_FRONT_URL: ${{ vars.AUTH_FRONT_URL }}
           FINANCE_API_URL: ${{ vars.FINANCE_API_URL }}
@@ -429,7 +426,6 @@ jobs:
           GROUP_FRONT_URL: ${{ vars.GROUP_FRONT_URL }}
           ACCOUNT_FRONT_URL: ${{ vars.ACCOUNT_FRONT_URL }}
           SHELL_FRONT_URL: ${{ vars.SHELL_FRONT_URL }}
-          LOGSTASH_HTTP_URL: ${{ vars.LOGSTASH_HTTP_URL }}
           FILE_SERVICE_URL: ${{ vars.FILE_SERVICE_URL }}
           FILE_SERVICE_PUBLIC_URL: ${{ vars.FILE_SERVICE_PUBLIC_URL }}
           CHAT_API_URL: ${{ vars.CHAT_API_URL }}

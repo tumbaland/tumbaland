@@ -29,20 +29,24 @@ npm workspaces monorepo with three workspace groups:
 | shell-front | 3000 | | relationship-service | 4001 |
 | relationship-front | 3001 | | album-service | 4002 |
 | album-front | 3002 | | finance-service | 4003 |
-| finance-front | 3003 | | auth-service | 5001 |
-| auth-front | 3004 | | file-service | 5002 |
-| payment-front | 3005 | | public-service | 5003 |
-| group-front | 3006 | | payment-service | 5005 |
-| account-front | 3007 | | group-service | 5006 |
+| finance-front | 3003 | | chat-service | 4004 |
+| auth-front | 3004 | | auth-service | 5001 |
+| payment-front | 3005 | | file-service | 5002 |
+| group-front | 3006 | | public-service | 5003 |
+| account-front | 3007 | | payment-service | 5005 |
+| chat-front | 3008 | | group-service | 5006 |
 | | | | mcp-service | 5007 |
 
-See `.env.example` for the full variable list (`VITE_*` for frontends, plain names for backend
-services).
+Every app has an `.env.example` listing exactly what it reads, with localhost defaults: plain
+names for backend services, `VITE_*` for frontends. The root `.env.example` is the production
+list, the names `.github/scripts/write-deploy-env.sh` writes for the compose files.
 
 ## Quick Start
 
 1. **Copy and configure environment variables:**
-   - Copy `.env.example` to `.env` for each app root directory and fill in missing values.
+   - Copy `.env.example` to `.env` in each app directory and fill in the blanks. The secrets
+     (`MONGODB_URI`, `JWT_SECRET`, `INTERNAL_SERVICE_TOKEN`, `FILE_SERVICE_API_KEY`) must be the
+     same in every service that has them.
 
 2. **Start local development:**
 
