@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useCallback, useEffect, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -31,6 +31,7 @@ import PaletteOutlinedIcon from '@mui/icons-material/PaletteOutlined';
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
 import { chatApi } from '../services/chatApi';
 import { requestCall } from '../services/callBus';
+import { clearShare, isMedia, readShare, sharedMessage } from '../services/sharedInbox';
 import { Lightbox } from '../components/thread/Lightbox';
 import { useAttachmentUploads } from '../hooks/useAttachmentUploads';
 import { useChatThread } from '../hooks/useChatThread';
@@ -69,6 +70,48 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
   const thread = useChatThread(conversationId, user?.id ?? '');
   const uploads = useAttachmentUploads(conversationId);
   const screenEffect = useScreenEffects(conversationId, thread.messages, user?.id ?? '', !thread.loading);
+
+  /**
+   * Something shared from another app, sent here by the shell's /share page
+   * with `?shared=1`. It goes into the composer, not straight out: the link
+   * in the box and the photos on the tray, so the person can add a line or
+   * change their mind before pressing Send.
+   *
+   * The side panel never takes it. It shows on desktop next to other pages,
+   * and would pick up a share meant for an album.
+   *
+   * The share is cleared only once it is in the composer, so a render that
+   * is thrown away half-way leaves it for the next one to pick up.
+   */
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sharing = !given && searchParams.has('shared');
+  const [prefill, setPrefill] = useState<string>();
+  const addUploads = uploads.add;
+  useEffect(() => {
+    if (!sharing || !conversationId) return;
+    let active = true;
+    void readShare().then(async (share) => {
+      if (!active) return;
+      if (share) {
+        const media = share.files.filter(isMedia);
+        if (media.length > 0) void addUploads(media);
+        const text = sharedMessage(share);
+        if (text) setPrefill(text);
+        await clearShare();
+      }
+      setSearchParams(
+        (previous) => {
+          const next = new URLSearchParams(previous);
+          next.delete('shared');
+          return next;
+        },
+        { replace: true }
+      );
+    });
+    return () => {
+      active = false;
+    };
+  }, [sharing, conversationId, addUploads, setSearchParams]);
 
   const find = (id: string | null | undefined) => (id ? thread.messages.find((message) => message.id === id) : undefined);
 
@@ -352,6 +395,7 @@ export default function ThreadPage({ conversationId: given, onBack }: ThreadPage
         onChooseAlbum={() => setChoosingAlbum(true)}
         onAlbumOff={() => void turnAlbumOff()}
         accent={chatColors.bubble}
+        prefill={prefill}
       />
 
       <ThemePicker

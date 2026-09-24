@@ -18,15 +18,18 @@ vi.mock('../components/FileUpload', () => ({
   default: ({
     open,
     onUploadComplete,
-    onClose
+    onClose,
+    initialFiles
   }: {
     open: boolean;
     onUploadComplete: () => void;
     onClose: () => void;
+    initialFiles?: File[];
   }) =>
     open ? (
       <div>
         file upload
+        {initialFiles?.length ? <span>{initialFiles.map((file) => file.name).join(', ')} ready</span> : null}
         <button onClick={onUploadComplete}>simulate upload complete</button>
         <button onClick={onClose}>simulate close upload</button>
       </div>
@@ -39,11 +42,17 @@ vi.mock('../hooks/useAlbumTags', () => ({
   useBulkTagMutation: vi.fn(),
   albumTagKeys: { all: ['photo-tags'], album: (albumId: string) => ['photo-tags', albumId] }
 }));
+vi.mock('../services/sharedInbox', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../services/sharedInbox')>()),
+  readShare: vi.fn(),
+  clearShare: vi.fn()
+}));
 vi.mock('../services/albumService', () => ({ albumService: { getAlbumById: vi.fn(), setCoverPhoto: vi.fn() } }));
 
 import { usePhotos } from '../hooks/usePhotos';
 import { useAlbumTags, useBulkTagMutation } from '../hooks/useAlbumTags';
 import { albumService } from '../services/albumService';
+import { clearShare, readShare } from '../services/sharedInbox';
 import { makeAlbum, makePhoto } from '../test/fixtures';
 import AlbumDetailPage from './AlbumDetailPage';
 
@@ -477,5 +486,35 @@ describe('opening a photo from a link', () => {
 
     const viewer = await screen.findByRole('dialog');
     expect(within(viewer).getByRole('img', { name: 'Pier' })).toBeInTheDocument();
+  });
+});
+
+describe('photos shared from another app', () => {
+  it('opens the upload dialog with the shared photos in it, leaving out anything else', async () => {
+    vi.mocked(readShare).mockResolvedValue({
+      title: '',
+      text: '',
+      url: '',
+      files: [
+        new File(['x'], 'beach.jpg', { type: 'image/jpeg' }),
+        new File(['x'], 'notes.pdf', { type: 'application/pdf' })
+      ],
+      receivedAt: 0
+    });
+
+    renderPage('/albums/album-1?shared=1');
+
+    expect(await screen.findByText('beach.jpg ready')).toBeInTheDocument();
+    await waitFor(() => expect(clearShare).toHaveBeenCalled());
+  });
+
+  it('opens nothing when the share has gone', async () => {
+    vi.mocked(readShare).mockResolvedValue(null);
+
+    renderPage('/albums/album-1?shared=1');
+
+    expect(await screen.findByRole('heading', { name: 'Trip' })).toBeInTheDocument();
+    await waitFor(() => expect(readShare).toHaveBeenCalled());
+    expect(screen.queryByText('file upload')).not.toBeInTheDocument();
   });
 });

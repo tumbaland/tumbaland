@@ -560,3 +560,32 @@ describe('send with an effect', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 });
+
+describe('a share from another app', () => {
+  it('puts the shared link in the box for the person to send', async () => {
+    const onSend = vi.fn();
+    render(<Composer onSend={onSend} onTyping={() => {}} prefill="https://youtu.be/abc" />);
+
+    expect(screen.getByLabelText('Message')).toHaveValue('https://youtu.be/abc');
+    expect(onSend).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByLabelText('Send'));
+    expect(onSend).toHaveBeenCalledWith('https://youtu.be/abc');
+  });
+
+  it('leaves an edit in progress alone', () => {
+    const { rerender } = render(
+      <Composer onSend={() => {}} onTyping={() => {}} editing={{ id: 'm1', body: 'old text', hasMedia: false }} />
+    );
+    rerender(
+      <Composer
+        onSend={() => {}}
+        onTyping={() => {}}
+        editing={{ id: 'm1', body: 'old text', hasMedia: false }}
+        prefill="https://youtu.be/abc"
+      />
+    );
+
+    expect(screen.getByLabelText('Message')).toHaveValue('old text');
+  });
+});

@@ -12,7 +12,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined';
 import SentimentSatisfiedAltIcon from '@mui/icons-material/SentimentSatisfiedAlt';
-import { TOUCH_TARGET, brand, ink, surface } from '@tumbaland/frontend-core';
+import { PHONE, TOUCH_TARGET, brand, ink, surface } from '@tumbaland/frontend-core';
 import { FullEmojiPicker, loadEmojiPicker } from './FullEmojiPicker';
 import { UploadTray } from './UploadTray';
 import { AlbumDestination } from './AlbumDestination';
@@ -44,15 +44,19 @@ export interface ComposerProps {
   onAlbumOff?: () => void;
   /** The send button's colour, from the conversation's theme. */
   accent?: string;
+  /**
+   * Text put in the box for the person to send or change: a link shared from
+   * another app. Applied each time it changes, never while an edit has the box.
+   */
+  prefill?: string;
 }
 
 /**
  * What the picker offers.
  *
  * On both iOS and Android this opens the photo library, recent files and the
- * camera, which covers most of what "easy to share from a phone" means. The
- * system share sheet in the other direction (sharing *into* the app) needs a
- * service worker and is Phase 8.
+ * camera. The other direction, sharing into the app from the phone's share
+ * menu, arrives through the shell's /share page and `prefill`.
  */
 const ACCEPTED = 'image/*,video/*';
 
@@ -73,7 +77,8 @@ export function Composer({
   photoAlbum,
   onChooseAlbum,
   onAlbumOff,
-  accent = brand.pinkInk
+  accent = brand.pinkInk,
+  prefill
 }: ComposerProps) {
   /** "Not this one", for the photos on the tray now. Cleared after each send. */
   const [skipAlbum, setSkipAlbum] = useState(false);
@@ -112,6 +117,12 @@ export function Composer({
     // overwrite what is being typed over it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingId]);
+
+  useEffect(() => {
+    if (!prefill || wasEditing.current) return;
+    setValue(prefill);
+    inputRef.current?.focus();
+  }, [prefill]);
 
   const ready = uploads.filter((upload) => upload.status === 'done').length;
   // A message may be attachments alone, but never an attachment still in
@@ -351,6 +362,11 @@ export function Composer({
               alignSelf: 'flex-end',
               width: 36,
               height: 36,
+              // The theme gives every icon button a 44px minimum on a phone,
+              // which made the box 52px against the 44px photo and Send
+              // buttons beside it, and left them sitting low. Undone inside
+              // the same query, or the theme's rule wins by coming later.
+              [PHONE]: { minWidth: 36, minHeight: 36 },
               my: -0.5,
               mr: -1,
               ml: 0.5,

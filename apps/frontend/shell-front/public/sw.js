@@ -75,9 +75,14 @@ function isUncacheable(url) {
 
 self.addEventListener('fetch', (event) => {
   const request = event.request;
-  if (request.method !== 'GET') return;
-
   const url = new URL(request.url);
+
+  if (request.method === 'POST' && url.origin === self.location.origin && url.pathname === SHARE_PATH) {
+    event.respondWith(receiveShare(request));
+    return;
+  }
+
+  if (request.method !== 'GET') return;
   // Cross-origin requests are left alone entirely: the federated modules, the
   // APIs and the file service all live elsewhere and manage their own caching.
   if (url.origin !== self.location.origin) return;
@@ -116,6 +121,62 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+// ─── Share target ────────────────────────────────────────────────────────────
+
+/**
+ * A link, text or photos shared into the app from another one.
+ *
+ * The manifest's `share_target` posts them to /share. There is no server
+ * behind that path, only static files, so the post is caught here and never
+ * leaves the phone: it is kept in a cache and the app is opened on /share,
+ * where the person says where it goes. Chat and album run inside that page,
+ * on this origin, so they read it back from the same cache.
+ *
+ * One share at a time. A new one replaces whatever was still waiting, since
+ * nobody expects a link shared yesterday and abandoned to come back.
+ *
+ * The layout below is read by `sharedInbox.ts` in shell-, chat- and
+ * album-front; change them together.
+ *   /__share/meta      JSON { title, text, url, files: [{ name, type }], receivedAt }
+ *   /__share/file/<n>  the nth file's bytes
+ */
+const SHARE_PATH = '/share';
+const SHARE_CACHE = 'tumbaland-share';
+
+async function receiveShare(request) {
+  try {
+    const form = await request.formData();
+    const field = (name) => {
+      const value = form.get(name);
+      return typeof value === 'string' ? value.trim() : '';
+    };
+    const files = form.getAll('files').filter((file) => typeof file !== 'string' && file.size > 0);
+
+    await caches.delete(SHARE_CACHE);
+    const cache = await caches.open(SHARE_CACHE);
+    await Promise.all(
+      files.map((file, index) =>
+        cache.put(`/__share/file/${index}`, new Response(file, { headers: { 'Content-Type': file.type || 'application/octet-stream' } }))
+      )
+    );
+    // Written last, so a page that finds the meta also finds every file.
+    const meta = {
+      title: field('title'),
+      text: field('text'),
+      url: field('url'),
+      files: files.map((file) => ({ name: file.name, type: file.type })),
+      receivedAt: Date.now()
+    };
+    await cache.put('/__share/meta', new Response(JSON.stringify(meta), { headers: { 'Content-Type': 'application/json' } }));
+  } catch {
+    // Too big for the phone's storage, or a form that would not parse. The
+    // page opens anyway and says nothing came through, which beats an error
+    // screen from the browser.
+  }
+  // 303 so the app loads /share with a GET rather than re-posting it.
+  return Response.redirect(new URL(SHARE_PATH, self.location.origin).href, 303);
+}
 
 // ─── Push ────────────────────────────────────────────────────────────────────
 

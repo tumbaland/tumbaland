@@ -26,6 +26,7 @@ import PhotoTagFilter from '../components/PhotoTagFilter';
 import TagPhotosDialog from '../components/TagPhotosDialog';
 import { Photo, TagMatch } from '../types';
 import { appPath } from '../appBase';
+import { clearShare, isMedia, readShare } from '../services/sharedInbox';
 
 const AlbumDetailPage: React.FC = () => {
   const { albumId } = useParams<{ albumId: string }>();
@@ -133,6 +134,41 @@ const AlbumDetailPage: React.FC = () => {
     // handleViewPhoto is recreated every render; the photo list is what matters.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewId, allPhotos, photosLoading, wholeAlbumListed, setSearchParams]);
+
+  /**
+   * `?shared=1` is the shell's /share page sending photos shared from another
+   * app. They open in the upload dialog rather than uploading straight away,
+   * so the person sees what is going in and presses Upload themselves.
+   *
+   * The share is cleared only once the dialog has the files, so a render that
+   * is thrown away half-way leaves it for the next one.
+   */
+  const sharing = searchParams.has('shared');
+  const [sharedFiles, setSharedFiles] = useState<File[]>();
+  useEffect(() => {
+    if (!sharing) return;
+    let active = true;
+    void readShare().then(async (share) => {
+      if (!active) return;
+      const media = share?.files.filter(isMedia) ?? [];
+      if (media.length > 0) {
+        setSharedFiles(media);
+        setShowUploadDialog(true);
+      }
+      if (share) await clearShare();
+      setSearchParams(
+        (previous) => {
+          const next = new URLSearchParams(previous);
+          next.delete('shared');
+          return next;
+        },
+        { replace: true }
+      );
+    });
+    return () => {
+      active = false;
+    };
+  }, [sharing, setSearchParams]);
 
   const handleDeletePhoto = async (photo: Photo) => {
     setPhotoToDelete(photo);
@@ -407,7 +443,11 @@ const AlbumDetailPage: React.FC = () => {
       <FileUpload
         albumId={albumId || ''}
         open={showUploadDialog}
-        onClose={() => setShowUploadDialog(false)}
+        initialFiles={sharedFiles}
+        onClose={() => {
+          setShowUploadDialog(false);
+          setSharedFiles(undefined);
+        }}
         onUploadComplete={handleUploadComplete}
       />
 

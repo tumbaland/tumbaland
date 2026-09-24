@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { logger } from '@tumbaland/frontend-core';
 import {
@@ -33,6 +33,8 @@ interface FileUploadProps {
   open: boolean;
   onClose: () => void;
   onUploadComplete: () => void;
+  /** Files already chosen when it opens: photos shared from another app. */
+  initialFiles?: File[];
 }
 
 interface FileWithId {
@@ -40,8 +42,14 @@ interface FileWithId {
   id: string;
 }
 
-const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploadComplete }) => {
+const FileUpload: React.FC<FileUploadProps> = ({ albumId, open, onClose, onUploadComplete, initialFiles }) => {
   const [files, setFiles] = useState<FileWithId[]>([]);
+
+  // Replaces rather than adds, so running twice cannot list a photo twice.
+  useEffect(() => {
+    if (!initialFiles?.length) return;
+    setFiles(initialFiles.map((file, index) => ({ file, id: `shared-${Date.now()}-${index}` })));
+  }, [initialFiles]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);

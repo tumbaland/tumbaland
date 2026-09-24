@@ -1,5 +1,7 @@
 import { Routes, Route } from 'react-router';
-import { Loader } from '@tumbaland/frontend-core';
+import { Loader, ProtectedRoute } from '@tumbaland/frontend-core';
+import SharePage from '../pages/SharePage';
+import { authService } from '../services/authService';
 import HomePage from '../pages/HomePage';
 import LandingPage from '../pages/LandingPage';
 import PrivacyPage from '../pages/PrivacyPage';
@@ -32,6 +34,16 @@ export default function AppRoutes() {
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/connect" element={<ConnectPage />} />
       <Route path="/terms" element={<TermsPage />} />
+      {/* What another app's share menu opens. Signed out, the share waits in
+          the worker's cache through the login and is still here after it. */}
+      <Route
+        path="/share"
+        element={
+          <ProtectedRoute authService={authService}>
+            <SharePage />
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   );
 }
